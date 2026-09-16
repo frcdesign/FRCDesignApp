@@ -20,6 +20,7 @@ import { useIsInsertableHidden } from "../../library/visibility";
 import { CardThumbnail } from "../../thumbnails/components/thumbnail";
 import { useIsAssemblyInPartStudio } from "../../insert/insert-hooks";
 import { ChangeOrderItems } from "../../../components/change-order";
+import { MenuSection } from "../../../components/app-menu";
 import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
 import {
     openCannotDeriveAssemblyAlert,
@@ -131,50 +132,51 @@ function FavoriteMenuItems(props: FavoriteMenuItemsProps): ReactNode {
     return (
         <>
             {isConnected && (
-                <>
+                <MenuSection label="Insert">
                     <QuickInsertItems
                         insertable={insertable}
                         selection={favorite.defaultSelection}
                         isFavorite
                         source={InsertSource.FAVORITES}
                     />
-                    <Menu.Divider />
-                </>
+                </MenuSection>
             )}
-            <Menu.Item
-                leftSection={<PencilIcon size={IconSize.SMALL} />}
-                onClick={() => {
-                    if (!insertable.isConfigurable) {
-                        openCannotEditDefaultConfigurationAlert();
-                        return;
-                    }
-                    openFavoriteMenu({
-                        favoriteId: favorite.id,
-                        insertableName: insertable.name,
-                        selection: favorite.defaultSelection
-                    });
-                }}
-            >
-                Edit default configuration
-            </Menu.Item>
-            <Menu.Divider />
-            <ChangeOrderItems
-                id={favorite.id}
-                order={favoriteOrder}
-                onOrderChange={(newOrder) => {
-                    if (vendorFilters !== undefined) {
-                        openCannotReorderAlert();
-                        return;
-                    }
-                    setFavoriteOrderMutation.mutate(newOrder);
-                }}
-            />
-            <OpenDocumentItems path={insertable.path} />
-            <Menu.Divider />
-            <FavoriteInsertableItem
-                favorite={favorite}
-                insertable={insertable}
-            />
+            <MenuSection label="Favorites">
+                <Menu.Item
+                    leftSection={<PencilIcon size={IconSize.SMALL} />}
+                    onClick={() => {
+                        if (!insertable.isConfigurable) {
+                            openCannotEditDefaultConfigurationAlert();
+                            return;
+                        }
+                        openFavoriteMenu({
+                            favoriteId: favorite.id,
+                            insertableName: insertable.name,
+                            selection: favorite.defaultSelection
+                        });
+                    }}
+                >
+                    Edit default configuration
+                </Menu.Item>
+                <ChangeOrderItems
+                    id={favorite.id}
+                    order={favoriteOrder}
+                    onOrderChange={(newOrder) => {
+                        if (vendorFilters !== undefined) {
+                            openCannotReorderAlert();
+                            return;
+                        }
+                        setFavoriteOrderMutation.mutate(newOrder);
+                    }}
+                />
+                <FavoriteInsertableItem
+                    favorite={favorite}
+                    insertable={insertable}
+                />
+            </MenuSection>
+            <MenuSection label="Document">
+                <OpenDocumentItems path={insertable.path} />
+            </MenuSection>
         </>
     );
 }

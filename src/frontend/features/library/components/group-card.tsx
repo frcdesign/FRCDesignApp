@@ -14,7 +14,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { PropsWithChildren, ReactNode } from "react";
 import { GroupOut } from "@backend/features/library/contract";
 import { ChangeOrderItems } from "../../../components/change-order";
-import { AdminOptionsSubmenu } from "../../../components/app-menu";
+import { AdminMenuSection, MenuSection } from "../../../components/app-menu";
 import { ReloadThumbnailMenuItem } from "../../../components/reload-thumbnail-item";
 import { CardTitle, ItemRow } from "../../../components/item-row";
 import { OpenDocumentItems } from "../../../components/open-document-items";
@@ -81,21 +81,21 @@ export function GroupMenuItems(props: GroupMenuItemsProps): ReactNode {
     const { group } = props;
     return (
         <>
-            <OpenDocumentItems path={group.path} />
-            <AdminOptionsSubmenu>
-                <GroupAdminContextMenu group={group} />
-            </AdminOptionsSubmenu>
+            <MenuSection label="Document">
+                <OpenDocumentItems path={group.path} />
+            </MenuSection>
+            {/* Owns its own section, so a group with no build status leaves no
+                Admin label standing over nothing. */}
+            <GroupAdminMenuItems group={group} />
         </>
     );
 }
 
-interface GroupAdminContextMenuProps {
+interface GroupAdminMenuItemsProps {
     group: GroupOut;
 }
 
-function GroupAdminContextMenu({
-    group
-}: GroupAdminContextMenuProps): ReactNode {
+function GroupAdminMenuItems({ group }: GroupAdminMenuItemsProps): ReactNode {
     const groupId = group.id;
     const isHome = useIsHome();
     const buildStatusQuery = useBuildStatusQuery();
@@ -107,7 +107,7 @@ function GroupAdminContextMenu({
     if (!groupStatus) return null;
 
     return (
-        <>
+        <AdminMenuSection>
             {isHome && (
                 <ChangeOrderItems
                     id={groupId}
@@ -131,7 +131,7 @@ function GroupAdminContextMenu({
                     <AddGroupItem />
                 </>
             )}
-        </>
+        </AdminMenuSection>
     );
 }
 

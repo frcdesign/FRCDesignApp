@@ -1,10 +1,10 @@
 import { useSearch } from "@tanstack/react-router";
-import { ReactNode, useCallback, useEffect, useState } from "react";
+import { ReactNode, useCallback, useState } from "react";
 import { type Favorite } from "@backend/features/favorites/contract";
 import { InsertableOut } from "@backend/features/library/contract";
 import { ElementType } from "@backend/lib/onshape/element-type";
 import { Button, Checkbox, Group } from "@mantine/core";
-import { InfoIcon, PlusIcon } from "@phosphor-icons/react";
+import { PlusIcon } from "@phosphor-icons/react";
 import { IconSize } from "../../../lib/style-constants";
 import {
     AppModalBody,
@@ -12,10 +12,13 @@ import {
     AppModalTop
 } from "../../../components/app-modal";
 import { useMenuTitle } from "../../../components/app-title";
-import { showQuickInsertTip, useThumbnailWaitTip } from "../insert-tips";
+import {
+    showQuickInsertTip,
+    useSignInPreviewTip,
+    useThumbnailWaitTip
+} from "../insert-tips";
 import { PreviewImageCard } from "../../thumbnails/components/thumbnail";
 import { FavoriteButton } from "../../favorites/components/favorite-button";
-import { renderNotification } from "../../../lib/notifications";
 import { MenuButton } from "../../../components/app-menu";
 import { InsertableMenuItems } from "../../library/components/insertable-card";
 import { ConfigurationWrapper } from "./configurations";
@@ -32,10 +35,8 @@ import {
 } from "@backend/features/configurations/contract";
 import { useFavorite } from "../../favorites/queries";
 import { useGetUiState, updateUiState } from "../../../lib/ui-state";
-import { notifications } from "@mantine/notifications";
-import { RequireSignIn, useAccessData } from "../../auth/access-level";
+import { RequireSignIn } from "../../auth/access-level";
 import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
-import { startSignIn } from "../../auth/sign-in";
 import { InsertSource } from "@backend/features/analytics/usage";
 
 interface InsertMenuContentProps {
@@ -82,7 +83,6 @@ function useInsertSelection(initialSelection?: Selection) {
 export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
     const { insertable, modalId, openedAt, onInsert, source } = props;
     const favorite = useFavorite(insertable.id);
-    const { signedIn, isPending } = useAccessData();
     useThumbnailWaitTip();
 
     const {
@@ -105,14 +105,7 @@ export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
         name: insertable.name,
         record: record ?? soleRecord
     });
-
-    useEffect(() => {
-        // Only once known: pending reads as signed out, which would prompt a
-        // signed-in caller to sign in.
-        if (!isPending && !signedIn) {
-            showSignInPreviewToast();
-        }
-    }, [signedIn, isPending]);
+    useSignInPreviewTip(!isUnchanged);
 
     let parameters: ReactNode = null;
     if (insertable.isConfigurable) {
@@ -306,18 +299,4 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
             </Button>
         </Group>
     );
-}
-
-/** Prompts a not-signed-in viewer that the live preview needs Onshape. */
-function showSignInPreviewToast() {
-    notifications.hide("sign-in-preview");
-    notifications.show({
-        id: "sign-in-preview",
-        color: "blue",
-        icon: <InfoIcon size={IconSize.MEDIUM} />,
-        message: renderNotification(
-            "Sign in to Onshape to see the selection preview.",
-            { text: "Sign in", onClick: startSignIn }
-        )
-    });
 }

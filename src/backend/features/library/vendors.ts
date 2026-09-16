@@ -130,7 +130,9 @@ export function getVendorPartUrl(
         case Vendor.WCP:
             return `https://wcproducts.com/products/${query.toLowerCase()}`;
         case Vendor.AM:
-            return `https://andymark.com/pages/search-results-page?q=${query.toLowerCase()}`;
+            // AndyMark redirects a bare part number to the product page for it,
+            // and 404s when it sells no such part.
+            return `https://andymark.com/${query.toLowerCase()}`;
         case Vendor.REV:
             return `https://www.revrobotics.com/search.php?search_query=${query}&section=product`;
         case Vendor.TTB:

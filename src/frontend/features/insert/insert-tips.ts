@@ -1,7 +1,9 @@
 import { useEffect } from "react";
-import { showInfoToast } from "../../lib/notifications";
+import { renderNotification, showInfoToast } from "../../lib/notifications";
 import { useIsThumbnailRendering } from "../thumbnails/queries";
 import { useIsConnectedToOnshape } from "../../lib/onshape-params";
+import { useAccessData } from "../auth/access-level";
+import { startSignIn } from "../auth/sign-in";
 
 /** An insert this soon after opening didn't need anything from the menu. */
 const QUICK_INSERT_WINDOW_MS = 1500;
@@ -56,4 +58,28 @@ export function useThumbnailWaitTip(): void {
         }, THUMBNAIL_WAIT_MS);
         return () => clearTimeout(timer);
     }, [isRendering, isConnected]);
+}
+
+/**
+ * Points out, to a signed-out viewer who has just changed a parameter, that the
+ * preview is not following them: with no Onshape session the box falls back to
+ * the element's stored thumbnail, which shows the default selection whatever
+ * they pick. Raised on the change rather than on opening, where the two agree.
+ */
+export function useSignInPreviewTip(isSelectionEdited: boolean): void {
+    const { signedIn, isPending } = useAccessData();
+
+    useEffect(() => {
+        // Pending reads as signed out, which would prompt a signed-in caller.
+        if (isPending || signedIn || !isSelectionEdited) {
+            return;
+        }
+        showInfoToast(
+            renderNotification(
+                "Sign in to Onshape to see a preview of your selection.",
+                { text: "Sign in", onClick: startSignIn }
+            ),
+            { id: "sign-in-preview", autoClose: TIP_AUTO_CLOSE_MS }
+        );
+    }, [signedIn, isPending, isSelectionEdited]);
 }

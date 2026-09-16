@@ -17,13 +17,14 @@ import {
     NAVBAR_ROW_HEIGHT,
     StatusColor
 } from "../lib/style-constants";
-import { ReactNode, RefObject, useEffect, useRef } from "react";
+import { ReactNode, RefObject, useEffect, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
+import { useDebouncedCallback } from "@mantine/hooks";
 
 import { AppBrand } from "./app-brand";
 import { openSettingsMenu } from "../features/settings/open-settings-menu";
 import { VendorMenu } from "../features/settings/components/vendor-filters";
-import { useGetUiState, updateUiState } from "../lib/ui-state";
+import { getUiState, updateUiState } from "../lib/ui-state";
 import { getLibraryName, useLibraryId } from "../lib/library";
 import {
     RequireAccessLevel,
@@ -199,11 +200,28 @@ function selectAllInputText(ref: RefObject<HTMLInputElement | null>) {
     input.setSelectionRange(0, length);
 }
 
+/**
+ * How long typing pauses before the search runs. Each stored query re-searches
+ * the index and rebuilds the result list, which is enough work to be felt
+ * between keystrokes; a wait this short still lands the results while the
+ * caller is looking at the box.
+ */
+const SEARCH_DEBOUNCE_MS = 200;
+
 function SearchBar() {
     const ref = useRef<HTMLInputElement>(null);
     const wasFocused = useRef(false);
-    const uiState = useGetUiState();
     const libraryId = useLibraryId();
+    // The box owns what is typed and the stored query follows a pause later, so
+    // a keystroke re-renders this input rather than every list reading the query.
+    const [query, setQuery] = useState(() => getUiState().searchQuery ?? "");
+    const runSearch = useDebouncedCallback(
+        (value: string) => {
+            updateUiState({ searchQuery: value === "" ? undefined : value });
+        },
+        // Flushed on unmount, so what was typed is what comes back next time.
+        { delay: SEARCH_DEBOUNCE_MS, flushOnUnmount: true }
+    );
 
     // `autoFocus` fires before the ref attaches, so onFocus has nothing to select
     // through on the first open and last time's query keeps the caret after it.
@@ -211,13 +229,13 @@ function SearchBar() {
         selectAllInputText(ref);
     }, []);
 
-    const clearButton = uiState.searchQuery ? (
+    const clearButton = query ? (
         <Input.ClearButton
             aria-label="Clear input"
             onClick={() => {
-                if (ref.current) {
-                    ref.current.value = "";
-                }
+                setQuery("");
+                // Nothing to wait out: the list should empty on the click.
+                runSearch.cancel();
                 updateUiState({ searchQuery: undefined });
             }}
         />
@@ -232,7 +250,7 @@ function SearchBar() {
             leftSection={<MagnifyingGlassIcon size={IconSize.SMALL} />}
             placeholder={`Search ${getLibraryName(libraryId)}...`}
             ref={ref}
-            value={uiState.searchQuery ?? ""}
+            value={query}
             onFocus={() => {
                 selectAllInputText(ref);
             }}
@@ -252,8 +270,8 @@ function SearchBar() {
             }}
             onChange={(event) => {
                 const value = event.currentTarget.value;
-                const query = value === "" ? undefined : value;
-                updateUiState({ searchQuery: query });
+                setQuery(value);
+                runSearch(value);
             }}
             rightSection={clearButton}
         />

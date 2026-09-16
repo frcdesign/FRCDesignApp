@@ -1,5 +1,4 @@
 import { decodeConfiguration } from "@backend/features/configurations/utils";
-import { Menu } from "@mantine/core";
 import { PropsWithChildren, ReactNode } from "react";
 import { Favorite } from "@backend/features/favorites/contract";
 import { InsertableOut } from "@backend/features/library/contract";
@@ -21,7 +20,7 @@ import {
     type RowMatch
 } from "../../../components/item-row";
 import { OpenDocumentItems } from "../../../components/open-document-items";
-import { AdminOptionsSubmenu } from "../../../components/app-menu";
+import { AdminMenuSection, MenuSection } from "../../../components/app-menu";
 import { ReloadThumbnailMenuItem } from "../../../components/reload-thumbnail-item";
 import { QuickInsertItems } from "../../insert/components/quick-insert-items";
 import { openCannotDeriveAssemblyAlert } from "../../../components/alerts";
@@ -171,31 +170,33 @@ export function InsertableMenuItems(
     return (
         <>
             {!inInsertMenu && isConnected && (
-                <>
+                <MenuSection label="Insert">
                     <QuickInsertItems
                         insertable={insertable}
                         selection={selection}
                         isFavorite={favorite !== undefined}
                         source={source}
                     />
-                    <Menu.Divider />
-                </>
+                </MenuSection>
             )}
             <RequireSignIn>
-                <FavoriteInsertableItem
-                    favorite={favorite}
-                    insertable={insertable}
-                    selection={selection}
-                    configurationKey={configurationKey}
-                />
-                <Menu.Divider />
+                <MenuSection label="Favorites">
+                    <FavoriteInsertableItem
+                        favorite={favorite}
+                        insertable={insertable}
+                        selection={selection}
+                        configurationKey={configurationKey}
+                    />
+                </MenuSection>
             </RequireSignIn>
-            <OpenDocumentItems path={{ ...insertable.path, selection }} />
-            <AdminOptionsSubmenu>
+            <MenuSection label="Document">
+                <OpenDocumentItems path={{ ...insertable.path, selection }} />
+            </MenuSection>
+            <AdminMenuSection>
                 <ReloadThumbnailMenuItem
                     target={{ insertableId: insertable.id }}
                 />
-            </AdminOptionsSubmenu>
+            </AdminMenuSection>
         </>
     );
 }

@@ -13,11 +13,7 @@ describe("getVendorPartUrl", () => {
     it.each([
         [Vendor.WCP, "WCP-1025", "https://wcproducts.com/products/wcp-1025"],
         [Vendor.MCM, "91251A445", "https://www.mcmaster.com/91251A445/"],
-        [
-            Vendor.AM,
-            "AM-5833",
-            "https://andymark.com/pages/search-results-page?q=am-5833"
-        ],
+        [Vendor.AM, "AM-5833", "https://andymark.com/am-5833"],
         [
             Vendor.REV,
             "REV-42-1442",

@@ -14,7 +14,7 @@ interface ChangeOrderMenuProps {
     onOrderChange: (newOrder: string[]) => void;
 }
 
-/** Move-up/move-down items, with a trailing divider when either is shown. */
+/** The move items a list's order allows, and nothing when it allows none. */
 export function ChangeOrderItems(props: ChangeOrderMenuProps): ReactNode {
     const { id, order, onOrderChange } = props;
 
@@ -86,7 +86,6 @@ export function ChangeOrderItems(props: ChangeOrderMenuProps): ReactNode {
                     Move to bottom
                 </Menu.Item>
             )}
-            <Menu.Divider />
         </>
     );
 }
