@@ -1,5 +1,5 @@
 import { ReactNode, useCallback } from "react";
-import { Badge, Button, HoverCard, Stack, Text } from "@mantine/core";
+import { Button, Center, HoverCard, Stack, Text } from "@mantine/core";
 import { CheckIcon, PlusIcon, TargetIcon, XIcon } from "@phosphor-icons/react";
 import { INSERT_LOCATION_NAME } from "@backend/features/insert-location/contract";
 import { type TargetElement } from "../../../lib/onshape-launch";
@@ -12,6 +12,7 @@ import {
     IconSize,
     StatusColor
 } from "../../../lib/style-constants";
+import { StatusIcon } from "../../../components/status-icon";
 import {
     useAddInsertLocationMutation,
     useInsertLocationQuery,
@@ -19,17 +20,17 @@ import {
 } from "../queries";
 
 /**
- * Whether the assembly has somewhere to insert to, as a pill that lights the
- * connector up on hover. Renders nowhere but an assembly the caller is signed
- * in to: a derive has no insert location, and the query needs a session.
+ * Whether the assembly has somewhere to insert to, as a badged icon that lights
+ * the connector up on hover. Renders nowhere but an assembly the caller is
+ * signed in to: a derive has no insert location, and the query needs a session.
  */
-export function InsertLocationPill(): ReactNode {
+export function InsertLocationStatus(): ReactNode {
     const target = useInsertLocationTarget();
     const { data, isPending, isError } = useInsertLocationQuery(target);
 
-    // Waiting rather than assuming: a pill that flips from a cross to a tick on
-    // every open would read as the assembly having changed. A failed read has
-    // not established there is no insert location, so it says nothing at all.
+    // Waiting rather than assuming: a badge that flips from a cross to a tick
+    // on every open would read as the assembly having changed. A failed read
+    // has not established there is none, so it says nothing at all.
     if (!target || isPending || isError) {
         return null;
     }
@@ -75,23 +76,22 @@ function InsertLocationHoverCard(
             onClose={onClose}
         >
             <HoverCard.Target>
-                <Badge
-                    variant="light"
-                    color={found ? StatusColor.SUCCESS : StatusColor.WARNING}
-                    size="md"
-                    my="auto"
-                    leftSection={<TargetIcon size={IconSize.SMALL} />}
-                    rightSection={
-                        found ? (
-                            <CheckIcon size={IconSize.SMALL} />
-                        ) : (
-                            <XIcon size={IconSize.SMALL} />
-                        )
-                    }
-                    aria-label={
-                        found ? "Insert location found" : "No insert location"
-                    }
-                />
+                {/* Wrapped, because HoverCard.Target attaches a ref to its
+                    child and StatusIcon does not take one. */}
+                <Center my="auto">
+                    <StatusIcon
+                        icon={TargetIcon}
+                        status={found ? CheckIcon : XIcon}
+                        color={
+                            found ? StatusColor.SUCCESS : StatusColor.WARNING
+                        }
+                        label={
+                            found
+                                ? "Insert location found"
+                                : "No insert location"
+                        }
+                    />
+                </Center>
             </HoverCard.Target>
             <HoverCard.Dropdown p="md">
                 <Stack gap="sm" w={260}>

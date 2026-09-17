@@ -44,7 +44,7 @@ import { useJobStatus } from "../lib/refresh";
 import { LibraryId } from "@backend/features/library/library-id";
 import { queryClient } from "../lib/query-client";
 import { getLibraryVersionQuery } from "../features/library/queries";
-import { InsertLocationPill } from "../features/insert-location/components/insert-location-pill";
+import { InsertLocationStatus } from "../features/insert-location/components/insert-location-status";
 
 /**
  * The bar every page is topped by: the brand, then whatever that page puts
@@ -88,7 +88,7 @@ export function AppNavbar(): ReactNode {
             <NavbarRow>
                 <LibraryTabs />
                 <Group gap="xs" wrap="nowrap" ml="auto">
-                    <InsertLocationPill />
+                    <InsertLocationStatus />
                     <JobIndicator />
                     <SignInButton />
                     <SettingsButton />
