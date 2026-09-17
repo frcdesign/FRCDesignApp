@@ -1,82 +1,78 @@
 /** Finding the insert location in an assembly, and working out where it sits. */
-import { INSERT_LOCATION_NAME } from "./contract";
+import { INSERT_LOCATION_SKETCH_ID, INSERT_LOCATION_SOURCE } from "./contract";
 import { OnshapeApi } from "../../lib/onshape/client";
 import { getAssembly } from "../../lib/onshape/endpoints/assemblies";
 import { type ElementPath } from "../../lib/onshape/path";
-import { toTransform } from "../../lib/onshape/objects/transform";
 import {
     type OnshapeAssemblyDefinition,
-    type OnshapeAssemblyFeature
+    type OnshapeAssemblyInstance
 } from "../../lib/onshape/types";
 
-const MATE_CONNECTOR = "mateConnector";
+/** The instance type Onshape gives a sketch inserted into an assembly. */
+const FEATURE_INSTANCE = "Feature";
 
 /**
- * The assembly, asked for the way the insert location needs it:
- * `includeMateFeatures` is what puts the connectors in the feature list, and
- * `includeMateConnectors` is what puts each one's coordinate system with it.
+ * The assembly as the insert location needs it. A sketch is not a solid, so
+ * without `includeNonSolids` the marker is not in the response at all.
  */
-function getAssemblyMateConnectors(
+export function getAssemblyWithMarkers(
     onshapeApi: OnshapeApi,
     assemblyPath: ElementPath
 ): Promise<OnshapeAssemblyDefinition> {
-    return getAssembly(onshapeApi, assemblyPath, {
-        includeMateFeatures: true,
-        includeMateConnectors: true
-    });
+    return getAssembly(onshapeApi, assemblyPath, { includeNonSolids: true });
 }
 
-function getMateConnectors(
+/**
+ * The marker's instance, matched on the tab and sketch it came from rather than
+ * on its name, which anybody can rename. The version is left out of the match:
+ * an assembly can hold a marker inserted from an older one.
+ */
+export function findInsertLocationInstance(
     assembly: OnshapeAssemblyDefinition
-): OnshapeAssemblyFeature[] {
-    return assembly.rootAssembly.features.filter(
-        (feature) =>
-            feature.featureType === MATE_CONNECTOR && !feature.suppressed
-    );
-}
-
-/** The insert location connector, by the name the app gives it when adding one. */
-export function findInsertLocationFeature(
-    assembly: OnshapeAssemblyDefinition
-): OnshapeAssemblyFeature | undefined {
-    return getMateConnectors(assembly).find(
-        (connector) => connector.featureData?.name === INSERT_LOCATION_NAME
+): OnshapeAssemblyInstance | undefined {
+    return assembly.rootAssembly.instances.find(
+        (instance) =>
+            instance.type === FEATURE_INSTANCE &&
+            !instance.suppressed &&
+            instance.documentId === INSERT_LOCATION_SOURCE.documentId &&
+            instance.elementId === INSERT_LOCATION_SOURCE.elementId &&
+            instance.featureId === INSERT_LOCATION_SKETCH_ID
     );
 }
 
 /**
- * Where a connector sits, as a transform an insert can be placed by. Undefined
- * when the connector is gone, or when Onshape sent no coordinate system with it
- * — the insert then lands at the origin rather than failing.
+ * Where a top-level instance sits, as a transform an insert can be placed by.
+ * Undefined when the instance is gone, which is what a marker deleted since the
+ * app opened looks like — the insert then lands at the origin.
  */
-export function getMateConnectorTransform(
+export function getInstanceTransform(
     assembly: OnshapeAssemblyDefinition,
-    mateConnectorId: string
+    instanceId: string
 ): number[] | undefined {
-    const connector = getMateConnectors(assembly).find(
-        (candidate) => candidate.id === mateConnectorId
-    );
-    return toTransform(connector?.featureData?.mateConnectorCS);
+    return assembly.rootAssembly.occurrences?.find(
+        (occurrence) =>
+            occurrence.path.length === 1 && occurrence.path[0] === instanceId
+    )?.transform;
 }
 
-/** {@link findInsertLocationFeature} against the assembly as it is now. */
+/** {@link findInsertLocationInstance} against the assembly as it is now. */
 export async function findInsertLocation(
     onshapeApi: OnshapeApi,
     assemblyPath: ElementPath
 ): Promise<string | undefined> {
-    const assembly = await getAssemblyMateConnectors(onshapeApi, assemblyPath);
-    return findInsertLocationFeature(assembly)?.id;
+    const assembly = await getAssemblyWithMarkers(onshapeApi, assemblyPath);
+    return findInsertLocationInstance(assembly)?.id;
 }
 
 /**
  * Where the insert location is now, which only Onshape knows: the caller has
- * the connector's id, and it moves whenever somebody drags it.
+ * the marker's instance id, and it moves whenever somebody drags it.
  */
 export async function getInsertLocationTransform(
     onshapeApi: OnshapeApi,
     assemblyPath: ElementPath,
-    mateConnectorId: string
+    instanceId: string
 ): Promise<number[] | undefined> {
-    const assembly = await getAssemblyMateConnectors(onshapeApi, assemblyPath);
-    return getMateConnectorTransform(assembly, mateConnectorId);
+    const assembly = await getAssemblyWithMarkers(onshapeApi, assemblyPath);
+    return getInstanceTransform(assembly, instanceId);
 }

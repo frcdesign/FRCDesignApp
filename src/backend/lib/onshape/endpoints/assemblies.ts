@@ -7,6 +7,7 @@ import { ElementType } from "../element-type";
 import { IDENTITY_TRANSFORM } from "../objects/transform";
 import {
     OnshapeAssemblyDefinition,
+    OnshapeBoundingBox,
     OnshapeCreatedFeature,
     OnshapeInsertInstancesResponse
 } from "../types";
@@ -76,6 +77,53 @@ export function addElementToAssembly(
         instance.isWholePartStudio = true;
     }
 
+    return insertInstance(client, assemblyPath, instance, transform);
+}
+
+/**
+ * What the assembly's geometry spans, in metres. Sketches are left out, so a
+ * marker already in the assembly does not widen it.
+ */
+export function getAssemblyBoundingBox(
+    client: OnshapeApi,
+    assemblyPath: ElementPath
+): Promise<OnshapeBoundingBox> {
+    return client.get(
+        apiPath("assemblies", assemblyPath, toElementApiPath, {
+            endRoute: "boundingboxes"
+        }),
+        { query: { includeSketches: "false" } }
+    );
+}
+
+/**
+ * Inserts one part studio feature — a sketch — as an instance of its own.
+ * Onshape takes the same instance definition as a part insert, naming the
+ * feature in place of the part types to include.
+ */
+export function addFeatureToAssembly(
+    client: OnshapeApi,
+    assemblyPath: ElementPath,
+    elementPath: ElementPath,
+    featureId: string,
+    transform?: number[]
+): Promise<OnshapeInsertInstancesResponse> {
+    assertWorkspace(assemblyPath);
+    return insertInstance(
+        client,
+        assemblyPath,
+        { ...toElementApiObject(elementPath), featureId },
+        transform
+    );
+}
+
+/** The one call both inserts are: an instance, and where to land it. */
+function insertInstance(
+    client: OnshapeApi,
+    assemblyPath: ElementPath,
+    instance: Record<string, unknown>,
+    transform?: number[]
+): Promise<OnshapeInsertInstancesResponse> {
     return client.post(
         apiPath("assemblies", assemblyPath, toElementApiPath, {
             endRoute: "transformedinstances"

@@ -230,20 +230,20 @@ describe("insertable routes", () => {
         await seedAssembly(db);
         vi.spyOn(AssemblyEndpoints, "getAssembly").mockResolvedValue({
             rootAssembly: {
-                features: [
+                features: [],
+                instances: [],
+                occurrences: [
                     {
-                        id: "mc",
-                        featureType: "mateConnector",
-                        featureData: {
-                            mateConnectorCS: {
-                                origin: [1, 2, 3],
-                                xAxis: [1, 0, 0],
-                                zAxis: [0, 0, 1]
-                            }
-                        }
+                        path: ["marker"],
+                        // prettier-ignore
+                        transform: [
+                            1, 0, 0, 1,
+                            0, 1, 0, 2,
+                            0, 0, 1, 3,
+                            0, 0, 0, 1
+                        ]
                     }
-                ],
-                instances: []
+                ]
             },
             parts: [],
             subAssemblies: []
@@ -257,7 +257,7 @@ describe("insertable routes", () => {
             jsonRequest("POST", {
                 targetPath,
                 fasten: false,
-                insertLocationId: "mc"
+                insertLocationId: "marker"
             }),
             env
         );
@@ -280,12 +280,12 @@ describe("insertable routes", () => {
         );
     });
 
-    // A connector can be deleted between the app opening and an insert, and an
+    // A marker can be deleted between the app opening and an insert, and an
     // insert at the origin beats refusing to insert at all.
     it("POST /add-to-assembly inserts at the origin when the location is gone", async () => {
         await seedAssembly(db);
         vi.spyOn(AssemblyEndpoints, "getAssembly").mockResolvedValue({
-            rootAssembly: { features: [], instances: [] },
+            rootAssembly: { features: [], instances: [], occurrences: [] },
             parts: [],
             subAssemblies: []
         });
@@ -298,7 +298,7 @@ describe("insertable routes", () => {
             jsonRequest("POST", {
                 targetPath,
                 fasten: false,
-                insertLocationId: "mc"
+                insertLocationId: "marker"
             }),
             env
         );

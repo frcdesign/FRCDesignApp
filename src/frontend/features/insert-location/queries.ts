@@ -46,10 +46,10 @@ export function useInsertLocationQuery(target: TargetElement | undefined) {
     });
 }
 
-/** The connector the insert should land on, or nothing when there is none. */
+/** The marker the insert should land on, or nothing when there is none. */
 export function useInsertLocationId(): string | undefined {
     const target = useInsertLocationTarget();
-    return useInsertLocationQuery(target).data?.mateConnectorId ?? undefined;
+    return useInsertLocationQuery(target).data?.instanceId ?? undefined;
 }
 
 /** Adds the connector to the assembly, and takes the answer as the new state. */
@@ -62,10 +62,10 @@ export function useAddInsertLocationMutation(target: TargetElement) {
             }),
         onSuccess: (result) => {
             queryClient.setQueryData(insertLocationQueryKey(target), result);
-            showSuccessToast("Added an insert location mate connector.");
+            showSuccessToast("Added an insert location.");
         },
         onError: getAppErrorHandler(
-            "Unexpectedly failed to add an insert location mate connector."
+            "Unexpectedly failed to add an insert location."
         )
     });
 }

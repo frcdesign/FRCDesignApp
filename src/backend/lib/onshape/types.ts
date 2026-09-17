@@ -226,40 +226,31 @@ export interface OnshapeDocumentContents {
 
 // === assemblies (GET /assemblies/.../e/{eid}, POST .../{transformedinstances,features}) ===
 
-/**
- * A mate connector's frame. Onshape's schema names the axes after its Java
- * getters, so both spellings are declared and readers take whichever arrives.
- */
-export interface OnshapeMateConnectorCS {
-    origin?: number[];
-    xAxis?: number[];
-    zAxis?: number[];
-    getxAxis?: number[];
-    getzAxis?: number[];
-}
-
 /** A feature in an assembly's root or a subassembly. */
 export interface OnshapeAssemblyFeature {
     featureType: string;
     id: string;
-    suppressed?: boolean;
-    /**
-     * Present on mate connectors. Onshape's schema declares only `name`;
-     * `occurrence` (the path to the connector) and `mateConnectorCS` (where it
-     * sits) are undocumented, so neither is guaranteed to arrive.
-     */
-    featureData?: {
-        occurrence?: string[];
-        name?: string;
-        mateConnectorCS?: OnshapeMateConnectorCS;
-    };
+    /** Present on mate connectors; its `occurrence` is the path to the connector. */
+    featureData?: { occurrence: string[] };
 }
 
-/** A top-level instance (part or subassembly) in the root assembly. */
-interface OnshapeAssemblyInstance {
+/** A top-level instance in the root assembly. */
+export interface OnshapeAssemblyInstance {
     id: string;
-    /** "Part" or "Assembly". */
+    /** "Part", "Assembly", or "Feature" for an inserted sketch. */
     type: string;
+    suppressed?: boolean;
+    /** The tab the instance came from, and the feature within it for a sketch. */
+    documentId?: string;
+    elementId?: string;
+    featureId?: string;
+}
+
+/** Where one instance sits, as a row-major 4×4 and the path that owns it. */
+interface OnshapeOccurrence {
+    /** Instance ids from the root down; one entry for a top-level instance. */
+    path: string[];
+    transform: number[];
 }
 
 /** A part in the assembly's flattened `parts` list. */
@@ -277,11 +268,23 @@ export interface OnshapeAssemblyDefinition {
     rootAssembly: {
         features: OnshapeAssemblyFeature[];
         instances: OnshapeAssemblyInstance[];
+        /** Optional only so a test fixture can leave out what it does not read. */
+        occurrences?: OnshapeOccurrence[];
         /** The assembly's "Part number" property, when set. */
         partNumber?: string;
     };
     parts: OnshapeAssemblyPart[];
     subAssemblies: OnshapeSubAssembly[];
+}
+
+/** GET /assemblies/.../boundingboxes response, in metres. */
+export interface OnshapeBoundingBox {
+    lowX: number;
+    lowY: number;
+    lowZ: number;
+    highX: number;
+    highY: number;
+    highZ: number;
 }
 
 /** POST /assemblies/.../transformedinstances response (the subset we read). */

@@ -1,123 +1,95 @@
 import { describe, expect, it } from "vitest";
-import { INSERT_LOCATION_NAME } from "./contract";
-import { findInsertLocationFeature, getMateConnectorTransform } from "./parse";
+import { INSERT_LOCATION_SKETCH_ID, INSERT_LOCATION_SOURCE } from "./contract";
+import { findInsertLocationInstance, getInstanceTransform } from "./parse";
 import {
     type OnshapeAssemblyDefinition,
-    type OnshapeAssemblyFeature
+    type OnshapeAssemblyInstance
 } from "../../lib/onshape/types";
 
+const MARKER: OnshapeAssemblyInstance = {
+    id: "marker",
+    type: "Feature",
+    documentId: INSERT_LOCATION_SOURCE.documentId,
+    elementId: INSERT_LOCATION_SOURCE.elementId,
+    featureId: INSERT_LOCATION_SKETCH_ID
+};
+
 function toAssembly(
-    features: OnshapeAssemblyFeature[]
+    instances: OnshapeAssemblyInstance[],
+    occurrences?: { path: string[]; transform: number[] }[]
 ): OnshapeAssemblyDefinition {
     return {
-        rootAssembly: { features, instances: [] },
+        rootAssembly: { features: [], instances, occurrences },
         parts: [],
         subAssemblies: []
     };
 }
 
-const INSERT_LOCATION: OnshapeAssemblyFeature = {
-    id: "mc",
-    featureType: "mateConnector",
-    featureData: {
-        name: INSERT_LOCATION_NAME,
-        mateConnectorCS: {
-            origin: [1, 2, 3],
-            xAxis: [1, 0, 0],
-            zAxis: [0, 0, 1]
-        }
-    }
-};
-
-describe("findInsertLocationFeature", () => {
-    it("finds the mate connector named after the insert location", () => {
+describe("findInsertLocationInstance", () => {
+    it("finds the sketch the app inserts, among other instances", () => {
         const assembly = toAssembly([
-            { id: "mate", featureType: "mate" },
-            { id: "other", featureType: "mateConnector" },
-            INSERT_LOCATION
+            { id: "part", type: "Part" },
+            MARKER,
+            { id: "sub", type: "Assembly" }
         ]);
-        expect(findInsertLocationFeature(assembly)?.id).toBe("mc");
+        expect(findInsertLocationInstance(assembly)?.id).toBe("marker");
     });
 
-    it("ignores a suppressed one, which nothing can be inserted at", () => {
-        const assembly = toAssembly([{ ...INSERT_LOCATION, suppressed: true }]);
-        expect(findInsertLocationFeature(assembly)).toBeUndefined();
+    // An assembly can hold a marker inserted before the sketch was revised.
+    it("matches whatever version the marker was inserted from", () => {
+        const assembly = toAssembly([
+            { ...MARKER, documentVersion: "older" } as OnshapeAssemblyInstance
+        ]);
+        expect(findInsertLocationInstance(assembly)?.id).toBe("marker");
     });
 
-    it("finds nothing in an assembly with no insert location", () => {
+    it("ignores a suppressed marker, which nothing can insert at", () => {
         expect(
-            findInsertLocationFeature(
-                toAssembly([{ id: "other", featureType: "mateConnector" }])
+            findInsertLocationInstance(
+                toAssembly([{ ...MARKER, suppressed: true }])
+            )
+        ).toBeUndefined();
+    });
+
+    it("ignores a sketch inserted from some other tab", () => {
+        expect(
+            findInsertLocationInstance(
+                toAssembly([{ ...MARKER, elementId: "elsewhere" }])
             )
         ).toBeUndefined();
     });
 });
 
-describe("getMateConnectorTransform", () => {
-    it("puts the connector's axes in the columns and its origin last", () => {
-        // prettier-ignore
-        expect(
-            getMateConnectorTransform(toAssembly([INSERT_LOCATION]), "mc")
-        ).toEqual([
-            1, 0, 0, 1,
-            0, 1, 0, 2,
-            0, 0, 1, 3,
-            0, 0, 0, 1
-        ]);
+describe("getInstanceTransform", () => {
+    // prettier-ignore
+    const transform = [
+        1, 0, 0, -0.139,
+        0, 1, 0, -0.026,
+        0, 0, 1, 0.081,
+        0, 0, 0, 1
+    ];
+
+    it("reads where a top-level instance has been dragged to", () => {
+        const assembly = toAssembly(
+            [MARKER],
+            [{ path: ["marker"], transform }]
+        );
+        expect(getInstanceTransform(assembly, "marker")).toEqual(transform);
     });
 
-    it("derives the y axis from the two Onshape names", () => {
-        const rotated: OnshapeAssemblyFeature = {
-            ...INSERT_LOCATION,
-            featureData: {
-                mateConnectorCS: {
-                    origin: [0, 0, 0],
-                    xAxis: [0, 1, 0],
-                    zAxis: [1, 0, 0]
-                }
-            }
-        };
-        // prettier-ignore
-        expect(
-            getMateConnectorTransform(toAssembly([rotated]), "mc")
-        ).toEqual([
-            0, 0, 1, 0,
-            1, 0, 0, 0,
-            0, 1, 0, 0,
-            0, 0, 0, 1
-        ]);
+    // A deeper path is the same instance inside a subassembly, which is a
+    // different thing in a different place.
+    it("ignores an occurrence nested under another instance", () => {
+        const assembly = toAssembly(
+            [MARKER],
+            [{ path: ["sub", "marker"], transform }]
+        );
+        expect(getInstanceTransform(assembly, "marker")).toBeUndefined();
     });
 
-    it("reads the axis spelling Onshape's own schema uses", () => {
-        const getters: OnshapeAssemblyFeature = {
-            ...INSERT_LOCATION,
-            featureData: {
-                mateConnectorCS: {
-                    origin: [0, 0, 0],
-                    getxAxis: [1, 0, 0],
-                    getzAxis: [0, 0, 1]
-                }
-            }
-        };
+    it("has no transform for an instance that is no longer there", () => {
         expect(
-            getMateConnectorTransform(toAssembly([getters]), "mc")
-        ).toBeDefined();
-    });
-
-    it("has no transform for a connector sent without a coordinate system", () => {
-        const bare: OnshapeAssemblyFeature = {
-            id: "mc",
-            featureType: "mateConnector",
-            featureData: { name: INSERT_LOCATION_NAME }
-        };
-        expect(
-            getMateConnectorTransform(toAssembly([bare]), "mc")
-        ).toBeUndefined();
-    });
-
-    it("has no transform for a connector that is no longer there", () => {
-        expect(
-            getMateConnectorTransform(toAssembly([INSERT_LOCATION]), "gone")
+            getInstanceTransform(toAssembly([], []), "marker")
         ).toBeUndefined();
     });
 });

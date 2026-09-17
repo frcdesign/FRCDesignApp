@@ -51,25 +51,26 @@ export function sendOpenFeatureMessage(
 }
 
 /** Onshape wants every request identified; only one of ours is ever up. */
-const MATE_CONNECTOR_HIGHLIGHT_ID = "highlight-mate-connector";
+const INSERT_LOCATION_HIGHLIGHT_ID = "highlight-insert-location";
 
 /**
- * Lights up a mate connector in the Onshape viewport until
- * {@link sendStopRequestMessage}. A mate connector is a body rather than an
- * entity, and Onshape addresses it by the id of the feature that made it.
+ * Lights the insert location marker up in the Onshape viewport until
+ * {@link sendStopRequestMessage}. The marker is an inserted sketch, so what is
+ * highlighted is its instance in this assembly rather than anything in the tab
+ * it came from.
  */
-export function sendHighlightMateConnectorMessage(
+export function sendHighlightInsertLocationMessage(
     elementPath: ElementPath,
-    mateConnectorId: string
+    instanceId: string
 ) {
     sendMessage(elementPath, {
         messageName: MessageType.REQUEST_HIGHLIGHT_SELECTION,
-        messageId: MATE_CONNECTOR_HIGHLIGHT_ID,
+        messageId: INSERT_LOCATION_HIGHLIGHT_ID,
         selections: [
             {
                 selectionType: "BODY",
                 bodyType: "MATE_CONNECTOR",
-                selectionId: mateConnectorId
+                selectionId: instanceId
             }
         ]
     });

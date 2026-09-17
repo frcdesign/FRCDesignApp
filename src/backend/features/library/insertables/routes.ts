@@ -254,7 +254,7 @@ const addToPartStudioBody = insertBody.extend({
 
 const addToAssemblyBody = insertBody.extend({
     fasten: z.boolean().default(false),
-    /** The assembly's insert location connector, when it has one. */
+    /** The insert location marker's instance id, when the assembly has one. */
     insertLocationId: z.string().optional()
 });
 
@@ -398,7 +398,7 @@ insertableRoutes.post(
             configuration = toShortestConfiguration(selection, parameters);
         }
 
-        // Resolved here rather than sent by the client: the connector moves
+        // Resolved here rather than sent by the client: the marker moves
         // whenever somebody drags it, so only Onshape knows where it is now.
         const transform = body.insertLocationId
             ? await getInsertLocationTransform(

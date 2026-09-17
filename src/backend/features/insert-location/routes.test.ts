@@ -6,8 +6,12 @@ import {
     jsonRequest
 } from "../../../__test_utils__";
 import * as AssemblyEndpoints from "../../lib/onshape/endpoints/assemblies";
-import { INSERT_LOCATION_NAME, type InsertLocationOut } from "./contract";
-import { type OnshapeAssemblyFeature } from "../../lib/onshape/types";
+import {
+    INSERT_LOCATION_SKETCH_ID,
+    INSERT_LOCATION_SOURCE,
+    type InsertLocationOut
+} from "./contract";
+import { type OnshapeAssemblyInstance } from "../../lib/onshape/types";
 
 const targetPath = {
     documentId: "doc-target",
@@ -18,25 +22,27 @@ const targetPath = {
 
 const targetQuery = new URLSearchParams(targetPath).toString();
 
-function mockAssembly(features: OnshapeAssemblyFeature[]) {
+const MARKER: OnshapeAssemblyInstance = {
+    id: "marker",
+    type: "Feature",
+    documentId: INSERT_LOCATION_SOURCE.documentId,
+    elementId: INSERT_LOCATION_SOURCE.elementId,
+    featureId: INSERT_LOCATION_SKETCH_ID
+};
+
+function mockAssembly(instances: OnshapeAssemblyInstance[]) {
     return vi.spyOn(AssemblyEndpoints, "getAssembly").mockResolvedValue({
-        rootAssembly: { features, instances: [] },
+        rootAssembly: { features: [], instances, occurrences: [] },
         parts: [],
         subAssemblies: []
     });
 }
 
-const INSERT_LOCATION: OnshapeAssemblyFeature = {
-    id: "mc",
-    featureType: "mateConnector",
-    featureData: { name: INSERT_LOCATION_NAME }
-};
-
 describe("insert location routes", () => {
     afterEach(() => vi.restoreAllMocks());
 
     it("GET names the assembly's insert location", async () => {
-        mockAssembly([INSERT_LOCATION]);
+        mockAssembly([MARKER]);
 
         const res = await createTestApp().request(
             `/api/insert-location?${targetQuery}`,
@@ -46,12 +52,12 @@ describe("insert location routes", () => {
 
         expect(res.status).toBe(200);
         expect(await res.json()).toEqual({
-            mateConnectorId: "mc"
+            instanceId: "marker"
         } satisfies InsertLocationOut);
     });
 
     it("GET answers null for an assembly without one", async () => {
-        mockAssembly([{ id: "other", featureType: "mateConnector" }]);
+        mockAssembly([{ id: "part", type: "Part" }]);
 
         const res = await createTestApp().request(
             `/api/insert-location?${targetQuery}`,
@@ -60,7 +66,7 @@ describe("insert location routes", () => {
         );
 
         expect(await res.json()).toEqual({
-            mateConnectorId: null
+            instanceId: null
         } satisfies InsertLocationOut);
     });
 
@@ -74,11 +80,18 @@ describe("insert location routes", () => {
         expect(res.status).toBe(401);
     });
 
-    it("POST adds a mate connector named after the insert location", async () => {
+    it("POST inserts the marker sketch clear of the geometry", async () => {
         mockAssembly([]);
+        vi.spyOn(AssemblyEndpoints, "getAssemblyBoundingBox").mockResolvedValue(
+            { lowX: -1, lowY: -1, lowZ: -1, highX: 1, highY: 0.1, highZ: 1 }
+        );
         const spy = vi
-            .spyOn(AssemblyEndpoints, "addAssemblyFeature")
-            .mockResolvedValue({ feature: { featureId: "new-mc" } });
+            .spyOn(AssemblyEndpoints, "addFeatureToAssembly")
+            .mockResolvedValue({
+                insertInstanceResponses: [
+                    { occurrences: [{ path: ["new-marker"] }] }
+                ]
+            });
 
         const res = await createTestApp().request(
             "/api/insert-location",
@@ -88,22 +101,47 @@ describe("insert location routes", () => {
 
         expect(res.status).toBe(200);
         expect(await res.json()).toEqual({
-            mateConnectorId: "new-mc"
+            instanceId: "new-marker"
         } satisfies InsertLocationOut);
+
+        // Past the nearest face of the box, which is +y at 0.1.
+        const transform = spy.mock.calls[0][4];
+        expect(transform?.[7]).toBeCloseTo(0.11);
         expect(spy).toHaveBeenCalledWith(
             MOCK_ONSHAPE_API,
             targetPath,
-            expect.objectContaining({
-                btType: "BTMMateConnector-66",
-                featureType: "mateConnector",
-                name: INSERT_LOCATION_NAME
-            })
+            INSERT_LOCATION_SOURCE,
+            INSERT_LOCATION_SKETCH_ID,
+            expect.anything()
         );
     });
 
+    it("POST still adds a marker when the bounding box cannot be read", async () => {
+        mockAssembly([]);
+        vi.spyOn(AssemblyEndpoints, "getAssemblyBoundingBox").mockRejectedValue(
+            new Error("no geometry")
+        );
+        const spy = vi
+            .spyOn(AssemblyEndpoints, "addFeatureToAssembly")
+            .mockResolvedValue({
+                insertInstanceResponses: [
+                    { occurrences: [{ path: ["new-marker"] }] }
+                ]
+            });
+
+        const res = await createTestApp().request(
+            "/api/insert-location",
+            jsonRequest("POST", { targetPath }),
+            env
+        );
+
+        expect(res.status).toBe(200);
+        expect(spy.mock.calls[0][4]?.slice(3, 4)).toEqual([0]);
+    });
+
     it("POST keeps the one already there rather than adding a second", async () => {
-        mockAssembly([INSERT_LOCATION]);
-        const spy = vi.spyOn(AssemblyEndpoints, "addAssemblyFeature");
+        mockAssembly([MARKER]);
+        const spy = vi.spyOn(AssemblyEndpoints, "addFeatureToAssembly");
 
         const res = await createTestApp().request(
             "/api/insert-location",
@@ -112,7 +150,7 @@ describe("insert location routes", () => {
         );
 
         expect(await res.json()).toEqual({
-            mateConnectorId: "mc"
+            instanceId: "marker"
         } satisfies InsertLocationOut);
         expect(spy).not.toHaveBeenCalled();
     });

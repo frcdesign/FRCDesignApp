@@ -3,10 +3,18 @@ import { getApp } from "../../lib/context";
 import { validate } from "../../lib/validate";
 import { requireSignInMiddleware } from "../auth/guards";
 import { INSTANCE_TYPES } from "../../lib/onshape/path";
-import { addAssemblyFeature } from "../../lib/onshape/endpoints/assemblies";
-import { originMateConnector } from "../../lib/onshape/objects/assembly-features";
-import { INSERT_LOCATION_NAME, type InsertLocationOut } from "./contract";
+import {
+    addFeatureToAssembly,
+    getAssemblyBoundingBox
+} from "../../lib/onshape/endpoints/assemblies";
+import { toTranslation } from "../../lib/onshape/objects/transform";
+import {
+    INSERT_LOCATION_SKETCH_ID,
+    INSERT_LOCATION_SOURCE,
+    type InsertLocationOut
+} from "./contract";
 import { findInsertLocation } from "./parse";
+import { toMarkerPoint } from "./placement";
 
 export const insertLocationRoutes = getApp();
 
@@ -24,12 +32,12 @@ insertLocationRoutes.get(
     requireSignInMiddleware,
     validate("query", assemblyPathSchema),
     async (c) => {
-        const mateConnectorId = await findInsertLocation(
+        const instanceId = await findInsertLocation(
             await c.var.getOnshapeApi(),
             c.req.valid("query")
         );
         return c.json({
-            mateConnectorId: mateConnectorId ?? null
+            instanceId: instanceId ?? null
         } satisfies InsertLocationOut);
     }
 );
@@ -43,22 +51,38 @@ insertLocationRoutes.post(
         const onshapeApi = await c.var.getOnshapeApi();
         const { targetPath } = c.req.valid("json");
 
-        // A second one by the same name would leave the lookup picking between
-        // them, so an assembly that already has one keeps it.
+        // A second marker would leave the lookup picking between them, so an
+        // assembly that already has one keeps it.
         const existing = await findInsertLocation(onshapeApi, targetPath);
         if (existing) {
             return c.json({
-                mateConnectorId: existing
+                instanceId: existing
             } satisfies InsertLocationOut);
         }
 
-        const created = await addAssemblyFeature(
+        // Clear of the geometry, so the marker can be grabbed and dragged.
+        // A box we cannot read is not a reason to refuse to add one.
+        const box = await getAssemblyBoundingBox(onshapeApi, targetPath).catch(
+            () => undefined
+        );
+
+        const inserted = await addFeatureToAssembly(
             onshapeApi,
             targetPath,
-            originMateConnector(INSERT_LOCATION_NAME)
+            INSERT_LOCATION_SOURCE,
+            INSERT_LOCATION_SKETCH_ID,
+            toTranslation(toMarkerPoint(box))
         );
+
+        // The insert answers with the occurrence it made, whose path is the new
+        // instance's own id. Looked up again if it did not, rather than leaving
+        // the caller thinking the marker is still missing.
+        const instanceId =
+            inserted.insertInstanceResponses?.[0]?.occurrences?.[0]?.path[0] ??
+            (await findInsertLocation(onshapeApi, targetPath));
+
         return c.json({
-            mateConnectorId: created.feature.featureId
+            instanceId: instanceId ?? null
         } satisfies InsertLocationOut);
     }
 );

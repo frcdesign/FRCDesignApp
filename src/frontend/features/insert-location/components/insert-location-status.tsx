@@ -4,7 +4,7 @@ import { CheckIcon, PlusIcon, TargetIcon, XIcon } from "@phosphor-icons/react";
 import { INSERT_LOCATION_NAME } from "@backend/features/insert-location/contract";
 import { type TargetElement } from "../../../lib/onshape-launch";
 import {
-    sendHighlightMateConnectorMessage,
+    sendHighlightInsertLocationMessage,
     sendStopRequestMessage
 } from "../../../lib/messages";
 import {
@@ -38,34 +38,34 @@ export function InsertLocationStatus(): ReactNode {
     return (
         <InsertLocationHoverCard
             target={target}
-            mateConnectorId={data?.mateConnectorId ?? null}
+            instanceId={data?.instanceId ?? null}
         />
     );
 }
 
 interface InsertLocationHoverCardProps {
     target: TargetElement;
-    /** The connector to highlight, or null when the assembly has none. */
-    mateConnectorId: string | null;
+    /** The marker to highlight, or null when the assembly has none. */
+    instanceId: string | null;
 }
 
 function InsertLocationHoverCard(
     props: InsertLocationHoverCardProps
 ): ReactNode {
-    const { target, mateConnectorId } = props;
-    const found = mateConnectorId !== null;
+    const { target, instanceId } = props;
+    const found = instanceId !== null;
 
     const onOpen = useCallback(() => {
-        if (mateConnectorId) {
-            sendHighlightMateConnectorMessage(target, mateConnectorId);
+        if (instanceId) {
+            sendHighlightInsertLocationMessage(target, instanceId);
         }
-    }, [target, mateConnectorId]);
+    }, [target, instanceId]);
 
     const onClose = useCallback(() => {
-        if (mateConnectorId) {
+        if (instanceId) {
             sendStopRequestMessage(target);
         }
-    }, [target, mateConnectorId]);
+    }, [target, instanceId]);
 
     return (
         <HoverCard
