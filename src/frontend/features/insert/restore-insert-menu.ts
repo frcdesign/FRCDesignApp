@@ -26,7 +26,18 @@ export function useRestoreInsertMenu(): void {
     const isSignedIn = useIsSignedIn();
 
     useEffect(() => {
-        if (restored || !openInsertableId || !libraryQuery.isSuccess) {
+        if (restored) {
+            return;
+        }
+        // Nothing was recorded, so there is nothing to wait for. Staying armed
+        // instead would have the first menu the caller opens themselves —
+        // which writes this same field — reopened on top of itself, leaving a
+        // second copy behind when they close the one they can see.
+        if (!openInsertableId) {
+            restored = true;
+            return;
+        }
+        if (!libraryQuery.isSuccess) {
             return;
         }
         // A favorite is worth waiting for, being what decides how the menu

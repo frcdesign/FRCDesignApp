@@ -50,36 +50,24 @@ export function sendOpenFeatureMessage(
     });
 }
 
-/** Onshape wants every request identified; only one of ours is ever up. */
-const INSERT_LOCATION_HIGHLIGHT_ID = "highlight-insert-location";
-
-/**
- * Lights the insert location marker up in the Onshape viewport until
- * {@link sendStopRequestMessage}. The marker is an inserted sketch, so what is
- * highlighted is its instance in this assembly rather than anything in the tab
- * it came from.
+/*
+ * Selecting and highlighting are not here. Lighting the insert location up in
+ * the viewport was tried and set aside: `requestSelectionHighlight` answered
+ * every payload we sent it `statusCode: "SUCCESS"` and painted nothing, and we
+ * never established whether it paints anything at all in an assembly. What was
+ * learned along the way, none of which Onshape documents:
+ *
+ * - A `requestSelection` filter is one specifier per level, not the single
+ *   `entityTypeSpecifier` the docs describe. A mate connector is
+ *   `selectionTypeSpecifier: ["BODY"]` with
+ *   `bodyTypeSpecifier: ["MATE_CONNECTOR"]`, and `geometryTypeSpecifier` sits
+ *   under a `GEOMETRY` one.
+ * - A highlight cancels whatever selection request is outstanding rather than
+ *   sitting alongside it.
+ * - An inbound SELECTION reports an assembly instance as a `selectionType` of
+ *   `OCCURRENCE`, carrying an `occurrencePath`. Do not send that back: Onshape
+ *   takes it and the instance list falls over.
  */
-export function sendHighlightInsertLocationMessage(
-    elementPath: ElementPath,
-    instanceId: string
-) {
-    sendMessage(elementPath, {
-        messageName: MessageType.REQUEST_HIGHLIGHT_SELECTION,
-        messageId: INSERT_LOCATION_HIGHLIGHT_ID,
-        selections: [
-            {
-                selectionType: "BODY",
-                bodyType: "MATE_CONNECTOR",
-                selectionId: instanceId
-            }
-        ]
-    });
-}
-
-/** Ends whatever request is pending, which is how a highlight is taken back. */
-export function sendStopRequestMessage(elementPath: ElementPath) {
-    sendMessage(elementPath, { messageName: MessageType.STOP_REQUEST });
-}
 
 enum MessageType {
     APPLICATION_INIT = "applicationInit",

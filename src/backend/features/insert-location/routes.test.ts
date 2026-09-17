@@ -65,9 +65,7 @@ describe("insert location routes", () => {
             env
         );
 
-        expect(await res.json()).toEqual({
-            instanceId: null
-        } satisfies InsertLocationOut);
+        expect(await res.json()).toEqual({} satisfies InsertLocationOut);
     });
 
     it("GET requires a signed-in caller, the assembly being theirs", async () => {

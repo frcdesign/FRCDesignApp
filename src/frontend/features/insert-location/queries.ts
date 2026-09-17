@@ -49,7 +49,7 @@ export function useInsertLocationQuery(target: TargetElement | undefined) {
 /** The marker the insert should land on, or nothing when there is none. */
 export function useInsertLocationId(): string | undefined {
     const target = useInsertLocationTarget();
-    return useInsertLocationQuery(target).data?.instanceId ?? undefined;
+    return useInsertLocationQuery(target).data?.instanceId;
 }
 
 /** Adds the connector to the assembly, and takes the answer as the new state. */

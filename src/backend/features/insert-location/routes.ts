@@ -36,9 +36,7 @@ insertLocationRoutes.get(
             await c.var.getOnshapeApi(),
             c.req.valid("query")
         );
-        return c.json({
-            instanceId: instanceId ?? null
-        } satisfies InsertLocationOut);
+        return c.json({ instanceId } satisfies InsertLocationOut);
     }
 );
 
@@ -81,8 +79,6 @@ insertLocationRoutes.post(
             inserted.insertInstanceResponses?.[0]?.occurrences?.[0]?.path[0] ??
             (await findInsertLocation(onshapeApi, targetPath));
 
-        return c.json({
-            instanceId: instanceId ?? null
-        } satisfies InsertLocationOut);
+        return c.json({ instanceId } satisfies InsertLocationOut);
     }
 );

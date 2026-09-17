@@ -1,17 +1,14 @@
-import { ReactNode, useCallback } from "react";
-import { Button, Center, HoverCard, Stack, Text } from "@mantine/core";
-import { CheckIcon, PlusIcon, TargetIcon, XIcon } from "@phosphor-icons/react";
-import { INSERT_LOCATION_NAME } from "@backend/features/insert-location/contract";
+import { ReactNode } from "react";
+import { Button, Center, EmptyState, HoverCard } from "@mantine/core";
+import {
+    CheckIcon,
+    PlusIcon,
+    TargetIcon,
+    WarningIcon
+} from "@phosphor-icons/react";
 import { type TargetElement } from "../../../lib/onshape-launch";
-import {
-    sendHighlightInsertLocationMessage,
-    sendStopRequestMessage
-} from "../../../lib/messages";
-import {
-    FontWeight,
-    IconSize,
-    StatusColor
-} from "../../../lib/style-constants";
+import { IconSize, StatusColor } from "../../../lib/style-constants";
+import { AppIcon } from "../../../components/app-icon";
 import { StatusIcon } from "../../../components/status-icon";
 import {
     useAddInsertLocationMutation,
@@ -20,15 +17,15 @@ import {
 } from "../queries";
 
 /**
- * Whether the assembly has somewhere to insert to, as a badged icon that lights
- * the connector up on hover. Renders nowhere but an assembly the caller is
- * signed in to: a derive has no insert location, and the query needs a session.
+ * Whether the assembly has somewhere to insert to, as a badged icon saying
+ * which. Renders nowhere but an assembly the caller is signed in to: a derive
+ * has no insert location, and the query needs a session.
  */
 export function InsertLocationStatus(): ReactNode {
     const target = useInsertLocationTarget();
     const { data, isPending, isError } = useInsertLocationQuery(target);
 
-    // Waiting rather than assuming: a badge that flips from a cross to a tick
+    // Waiting rather than assuming: a badge that flips from a warning to a tick
     // on every open would read as the assembly having changed. A failed read
     // has not established there is none, so it says nothing at all.
     if (!target || isPending || isError) {
@@ -38,77 +35,69 @@ export function InsertLocationStatus(): ReactNode {
     return (
         <InsertLocationHoverCard
             target={target}
-            instanceId={data?.instanceId ?? null}
+            instanceId={data?.instanceId}
         />
     );
 }
 
 interface InsertLocationHoverCardProps {
     target: TargetElement;
-    /** The marker to highlight, or null when the assembly has none. */
-    instanceId: string | null;
+    /** The marker's instance, or nothing when the assembly has none. */
+    instanceId?: string;
 }
 
 function InsertLocationHoverCard(
     props: InsertLocationHoverCardProps
 ): ReactNode {
     const { target, instanceId } = props;
-    const found = instanceId !== null;
+    const found = instanceId !== undefined;
 
-    const onOpen = useCallback(() => {
-        if (instanceId) {
-            sendHighlightInsertLocationMessage(target, instanceId);
-        }
-    }, [target, instanceId]);
-
-    const onClose = useCallback(() => {
-        if (instanceId) {
-            sendStopRequestMessage(target);
-        }
-    }, [target, instanceId]);
+    // The bubble shows the state alone: unlike the bar, it is already about
+    // one thing, and its title says which.
+    const stateIcon = found ? CheckIcon : WarningIcon;
+    const stateColor = found ? StatusColor.SUCCESS : StatusColor.WARNING;
 
     return (
-        <HoverCard
-            shadow="md"
-            position="bottom-end"
-            withArrow
-            onOpen={onOpen}
-            onClose={onClose}
-        >
+        <HoverCard shadow="md" position="bottom-end" withArrow>
             <HoverCard.Target>
                 {/* Wrapped, because HoverCard.Target attaches a ref to its
                     child and StatusIcon does not take one. */}
                 <Center my="auto">
                     <StatusIcon
                         icon={TargetIcon}
-                        status={found ? CheckIcon : XIcon}
-                        color={
-                            found ? StatusColor.SUCCESS : StatusColor.WARNING
-                        }
-                        label={
-                            found
-                                ? "Insert location found"
-                                : "No insert location"
-                        }
+                        status={stateIcon}
+                        color={stateColor}
                     />
                 </Center>
             </HoverCard.Target>
             <HoverCard.Dropdown p="md">
-                <Stack gap="sm" w={260}>
-                    <Stack gap={4}>
-                        <Text size="sm" fw={FontWeight.SEMI_BOLD}>
-                            {found
-                                ? "Insert location found"
-                                : "No insert location found"}
-                        </Text>
-                        <Text size="sm" c={StatusColor.DIMMED}>
-                            {found
-                                ? `New parts will insert at the ${INSERT_LOCATION_NAME} mate connector.`
-                                : "New parts will insert at the origin."}
-                        </Text>
-                    </Stack>
-                    {!found && <AddInsertLocationButton target={target} />}
-                </Stack>
+                <EmptyState
+                    align="left"
+                    size="sm"
+                    icon={
+                        <AppIcon
+                            icon={stateIcon}
+                            size={IconSize.CONTROL}
+                            color={stateColor}
+                        />
+                    }
+                    title={
+                        found
+                            ? "Insert location active"
+                            : "No insert location found"
+                    }
+                    description={
+                        found
+                            ? "New parts will be placed at the insert location."
+                            : "New parts will be placed at the origin."
+                    }
+                >
+                    {!found && (
+                        <EmptyState.Actions>
+                            <AddInsertLocationButton target={target} />
+                        </EmptyState.Actions>
+                    )}
+                </EmptyState>
             </HoverCard.Dropdown>
         </HoverCard>
     );

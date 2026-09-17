@@ -88,6 +88,13 @@ export const RENDER_BACKGROUND =
     "light-dark(var(--mantine-color-gray-1), var(--mantine-color-body))";
 
 /**
+ * What a subtle gray control draws its icon in — the color Mantine resolves
+ * `variant="subtle"` to. A bare icon standing beside one has to be given it,
+ * or it takes the body text color and reads darker than its neighbours.
+ */
+export const CONTROL_ICON_COLOR = "var(--mantine-color-gray-light-color)";
+
+/**
  * Text reads as centred on its cap height, a pixel above its line box, so an
  * icon centred on that box looks low. `text-box` clips descenders under truncation.
  */
