@@ -1,6 +1,6 @@
 import { ReactNode, useCallback } from "react";
 import { Badge, Button, HoverCard, Stack, Text } from "@mantine/core";
-import { CheckIcon, CrosshairSimpleIcon, XIcon } from "@phosphor-icons/react";
+import { CheckIcon, PlusIcon, TargetIcon, XIcon } from "@phosphor-icons/react";
 import { INSERT_LOCATION_NAME } from "@backend/features/insert-location/contract";
 import { type TargetElement } from "../../../lib/onshape-launch";
 import {
@@ -77,10 +77,10 @@ function InsertLocationHoverCard(
             <HoverCard.Target>
                 <Badge
                     variant="light"
-                    color={found ? StatusColor.SUCCESS : StatusColor.NEUTRAL}
+                    color={found ? StatusColor.SUCCESS : StatusColor.WARNING}
                     size="md"
                     my="auto"
-                    leftSection={<CrosshairSimpleIcon size={IconSize.SMALL} />}
+                    leftSection={<TargetIcon size={IconSize.SMALL} />}
                     rightSection={
                         found ? (
                             <CheckIcon size={IconSize.SMALL} />
@@ -127,10 +127,11 @@ function AddInsertLocationButton(
         <Button
             size="compact-sm"
             variant="light"
+            leftSection={<PlusIcon size={IconSize.SMALL} />}
             loading={addMutation.isPending}
             onClick={() => addMutation.mutate()}
         >
-            Add insert location mate connector
+            Add insert location
         </Button>
     );
 }
