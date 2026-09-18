@@ -1,50 +1,83 @@
-import { Button, List, Stack, Text, TextInput, Textarea } from "@mantine/core";
+import {
+    Button,
+    Checkbox,
+    List,
+    Stack,
+    Text,
+    TextInput,
+    Textarea
+} from "@mantine/core";
 import { modals } from "@mantine/modals";
 import { ArrowLineUpIcon } from "@phosphor-icons/react";
 import { useState, type ReactNode } from "react";
 import {
+    LinkDirection,
     MAX_VERSION_NAME_LENGTH,
+    PushScopeKind,
+    type LinkedWorkspace,
     type PushScope,
     type WorkspacePath
 } from "@backend/features/version-manager/contract";
 import { AppModalBody, AppModalFooter } from "../../../components/app-modal";
 import { IconSize, StatusColor } from "../../../lib/style-constants";
 import { useNextVersionNameQuery, usePushVersionMutation } from "../queries";
+import { showQuickActionTip } from "../version-manager-tips";
 
 export interface PushVersionFormProps {
     workspace: WorkspacePath;
-    /** Decided by whatever opened this; the form only names the version. */
-    scope: PushScope;
-    /** The children the push reaches, for the line above the button. */
+    /** The one child to push to; absent for every child. */
+    target?: LinkedWorkspace;
+    /** What the push reaches, named for the list above the button. */
     targets: string[];
-    /** Whether it carries on past them, which the list cannot show. */
-    recursive: boolean;
     /** Mantine's id for the modal this sits in, so a push can close it. */
     modalId: string;
 }
 
 /**
- * Names the version a push cuts. Only reached from a menu: the quick buttons
- * push under the name Onshape's own dialog would give it, and this is for the
- * times the version is worth calling something.
+ * What a push does before it runs: what the version is called, and how far it
+ * travels. This is what the Push buttons open; the menus hold the versions of
+ * it that skip straight past this.
  */
 export function PushVersionForm(props: PushVersionFormProps): ReactNode {
-    const { workspace, scope, targets, recursive, modalId } = props;
+    const { workspace, target, targets, modalId } = props;
     // Undefined until somebody types: the field then shows the name Onshape is
     // about to be asked for, and what they type replaces it. Derived rather
     // than written into state when the query answers, which would be a state
     // write from an effect.
     const [typedName, setTypedName] = useState<string>();
     const [description, setDescription] = useState("");
+    const [recursive, setRecursive] = useState(false);
     const suggested = useNextVersionNameQuery(workspace);
     const push = usePushVersionMutation(workspace);
 
     const name = typedName ?? suggested.data?.name ?? "";
+    // Nothing here was touched, so the form did nothing a menu item would not
+    // have done — which is what the tip is for.
+    const isEdited = typedName !== undefined || description !== "" || recursive;
+
+    const scope: PushScope = target
+        ? {
+              kind: PushScopeKind.ONE,
+              workspace: target.workspace,
+              recursive
+          }
+        : {
+              kind: recursive
+                  ? PushScopeKind.DESCENDANTS
+                  : PushScopeKind.CHILDREN
+          };
 
     const submit = () => {
         push.mutate(
             { name, description: description.trim(), scope },
-            { onSuccess: () => modals.close(modalId) }
+            {
+                onSuccess: () => {
+                    modals.close(modalId);
+                    if (!isEdited) {
+                        showQuickActionTip(LinkDirection.CHILD);
+                    }
+                }
+            }
         );
     };
 
@@ -74,6 +107,14 @@ export function PushVersionForm(props: PushVersionFormProps): ReactNode {
                     value={description}
                     onChange={(event) =>
                         setDescription(event.currentTarget.value)
+                    }
+                />
+                <Checkbox
+                    label="Recursive push"
+                    description="Also updates everything linked further downstream, cutting a version of each workspace on the way so the next one can reference it."
+                    checked={recursive}
+                    onChange={(event) =>
+                        setRecursive(event.currentTarget.checked)
                     }
                 />
                 <PushTargets targets={targets} recursive={recursive} />

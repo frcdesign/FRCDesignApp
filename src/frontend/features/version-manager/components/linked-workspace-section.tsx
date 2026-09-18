@@ -23,7 +23,6 @@ import {
     PullScopeKind,
     PushScopeKind,
     type LinkedWorkspace,
-    type PushScope,
     type WorkspacePath
 } from "@backend/features/version-manager/contract";
 import { MenuButton, MenuSection } from "../../../components/app-menu";
@@ -31,9 +30,12 @@ import { ItemRow, ItemTable } from "../../../components/item-row";
 import { SectionNotice } from "../../../components/app-zero-state";
 import { TruncatedText } from "../../../components/truncated-text";
 import { IconSize, NO_SHRINK, StatusColor } from "../../../lib/style-constants";
-import { getUiState } from "../../../lib/ui-state";
 import { makeUrl, openUrlInNewTab } from "../../../lib/url";
-import { openPushVersionModal } from "../open-push-version-modal";
+import {
+    openPullReferencesModal,
+    openPushVersionModal
+} from "../open-version-modals";
+import { retireQuickActionTip } from "../version-manager-tips";
 import {
     useIsVersionJobRunning,
     usePullReferencesMutation,
@@ -147,13 +149,20 @@ function ActionButton(props: ActionButtonProps): ReactNode {
 /**
  * Everything a section and its rows can set running, held once per direction so
  * the header outside the accordion panel and the rows inside it share a run.
+ *
+ * The buttons open a form; the menus run the same thing without one. Both end
+ * in the same mutation, which is why they are declared together.
  */
 export interface LinkActions {
     isRunning: boolean;
     /** What the run going is aimed at: {@link ALL_TARGET} or a link's id. */
     activeTarget: string | undefined;
-    runAll: (recursive: boolean) => void;
-    runOne: (linked: LinkedWorkspace, recursive: boolean) => void;
+    /** Opens the form for everything in this direction, or for one link. */
+    openAll: () => void;
+    openOne: (linked: LinkedWorkspace) => void;
+    /** Runs it there and then, under the defaults the form would have shown. */
+    quickAll: (recursive: boolean) => void;
+    quickOne: (linked: LinkedWorkspace, recursive: boolean) => void;
     /** Parents only: every out-of-date reference, linked or not. */
     updateAllReferences: () => void;
 }
@@ -169,23 +178,53 @@ export function useLinkActions(
     const [startedTarget, setStartedTarget] = useState<string>();
     const isChild = direction === LinkDirection.CHILD;
 
-    /**
-     * A push runs on the click or asks for a name first, which the navbar's
-     * checkbox decides. Read at the click rather than subscribed to: nothing
-     * here re-renders when it changes.
-     */
-    const startPush = (scope: PushScope, title: string, targets: string[]) => {
-        if (getUiState().isQuickPush) {
-            push.mutate({ scope });
+    const runQuick = (
+        each: LinkedWorkspace | undefined,
+        recursive: boolean
+    ) => {
+        // They have found the shortcut, so the form stops pointing at it.
+        retireQuickActionTip();
+        setStartedTarget(each ? each.linkId : ALL_TARGET);
+        if (isChild) {
+            push.mutate({
+                scope: each
+                    ? {
+                          kind: PushScopeKind.ONE,
+                          workspace: each.workspace,
+                          recursive
+                      }
+                    : {
+                          kind: recursive
+                              ? PushScopeKind.DESCENDANTS
+                              : PushScopeKind.CHILDREN
+                      }
+            });
             return;
         }
-        openPushVersionModal(workspace, {
-            scope,
-            title,
-            targets,
-            recursive:
-                scope.kind === PushScopeKind.DESCENDANTS ||
-                (scope.kind === PushScopeKind.ONE && scope.recursive)
+        pull.mutate(
+            each
+                ? { kind: PullScopeKind.ONE, workspace: each.workspace }
+                : { kind: PullScopeKind.PARENTS }
+        );
+    };
+
+    const open = (each?: LinkedWorkspace) => {
+        setStartedTarget(each ? each.linkId : ALL_TARGET);
+        const names = each ? [toName(each)] : linked.map(toName);
+        if (isChild) {
+            openPushVersionModal(workspace, {
+                title: each ? `Push to ${toName(each)}` : "Push to every child",
+                target: each,
+                targets: names
+            });
+            return;
+        }
+        openPullReferencesModal(workspace, {
+            title: each
+                ? `Pull from ${toName(each)}`
+                : "Pull from every parent",
+            source: each,
+            sources: names
         });
     };
 
@@ -194,42 +233,12 @@ export function useLinkActions(
         // Derived rather than cleared when the run ends: clearing would be a
         // state write from an effect, and a stale target simply goes unused.
         activeTarget: isRunning ? startedTarget : undefined,
-        runAll: (recursive) => {
-            setStartedTarget(ALL_TARGET);
-            if (!isChild) {
-                pull.mutate({ kind: PullScopeKind.PARENTS });
-                return;
-            }
-            startPush(
-                {
-                    kind: recursive
-                        ? PushScopeKind.DESCENDANTS
-                        : PushScopeKind.CHILDREN
-                },
-                recursive ? "Recursive push" : "Push to every child",
-                linked.map(toName)
-            );
-        },
-        runOne: (each, recursive) => {
-            setStartedTarget(each.linkId);
-            if (!isChild) {
-                pull.mutate({
-                    kind: PullScopeKind.ONE,
-                    workspace: each.workspace
-                });
-                return;
-            }
-            startPush(
-                {
-                    kind: PushScopeKind.ONE,
-                    workspace: each.workspace,
-                    recursive
-                },
-                `Push to ${toName(each)}`,
-                [toName(each)]
-            );
-        },
+        openAll: () => open(),
+        openOne: (each) => open(each),
+        quickAll: (recursive) => runQuick(undefined, recursive),
+        quickOne: (each, recursive) => runQuick(each, recursive),
         updateAllReferences: () => {
+            retireQuickActionTip();
             setStartedTarget(ALL_TARGET);
             pull.mutate({ kind: PullScopeKind.ALL });
         }
@@ -248,6 +257,7 @@ export function SectionActions(props: SectionActionsProps): ReactNode {
     const { isRunning, activeTarget } = actions;
     const copy = DIRECTION_COPY[direction];
     const isChild = direction === LinkDirection.CHILD;
+    const disabled = isRunning || linked.length === 0;
 
     return (
         <>
@@ -255,23 +265,17 @@ export function SectionActions(props: SectionActionsProps): ReactNode {
                 direction={direction}
                 label={copy.allAction}
                 loading={activeTarget === ALL_TARGET}
-                disabled={isRunning || linked.length === 0}
-                onClick={() => actions.runAll(false)}
+                disabled={disabled}
+                onClick={actions.openAll}
             />
             <MenuButton>
-                {isChild ? (
-                    <MenuSection label="Push">
-                        <Menu.Item
-                            leftSection={
-                                <TreeStructureIcon size={IconSize.MEDIUM} />
-                            }
-                            disabled={isRunning || linked.length === 0}
-                            onClick={() => actions.runAll(true)}
-                        >
-                            Recursive push
-                        </Menu.Item>
-                    </MenuSection>
-                ) : (
+                <QuickMenuSection
+                    direction={direction}
+                    disabled={disabled}
+                    onQuick={() => actions.quickAll(false)}
+                    onQuickRecursive={() => actions.quickAll(true)}
+                />
+                {!isChild && (
                     <MenuSection label="Pull">
                         {/* Every out-of-date reference, linked or not, which is
                             the one thing the parent list cannot express. */}
@@ -288,6 +292,51 @@ export function SectionActions(props: SectionActionsProps): ReactNode {
                 )}
             </MenuButton>
         </>
+    );
+}
+
+interface QuickMenuSectionProps {
+    direction: LinkDirection;
+    disabled: boolean;
+    onQuick: () => void;
+    onQuickRecursive: () => void;
+}
+
+/**
+ * The shortcuts past the form, which every menu carries: the same run the form
+ * would make from its defaults, and — pushing — the same one carried on down.
+ */
+function QuickMenuSection(props: QuickMenuSectionProps): ReactNode {
+    const { direction, disabled, onQuick, onQuickRecursive } = props;
+    const isChild = direction === LinkDirection.CHILD;
+
+    return (
+        <MenuSection label={isChild ? "Push" : "Pull"}>
+            <Menu.Item
+                leftSection={
+                    <DirectionIcon
+                        direction={direction}
+                        size={IconSize.MEDIUM}
+                    />
+                }
+                disabled={disabled}
+                onClick={onQuick}
+            >
+                {isChild ? "Quick push" : "Quick pull"}
+            </Menu.Item>
+            {/* No recursive pull: a pull writes only to this workspace, and
+                going further would mean versioning a parent's own parents,
+                which is a push and theirs to make. */}
+            {isChild && (
+                <Menu.Item
+                    leftSection={<TreeStructureIcon size={IconSize.MEDIUM} />}
+                    disabled={disabled}
+                    onClick={onQuickRecursive}
+                >
+                    Quick recursive push
+                </Menu.Item>
+            )}
+        </MenuSection>
     );
 }
 
@@ -370,34 +419,12 @@ function LinkedWorkspaceRow(props: LinkedWorkspaceRowProps): ReactNode {
 
     const menuItems = (
         <>
-            <MenuSection label={copy.rowAction}>
-                <Menu.Item
-                    leftSection={
-                        <DirectionIcon
-                            direction={direction}
-                            size={IconSize.MEDIUM}
-                        />
-                    }
-                    disabled={disabled}
-                    onClick={() => actions.runOne(linked, false)}
-                >
-                    {copy.rowAction}
-                </Menu.Item>
-                {/* No recursive pull: a pull writes only to this workspace, and
-                    going further would mean versioning a parent's own parents,
-                    which is a push and theirs to make. */}
-                {isChild && (
-                    <Menu.Item
-                        leftSection={
-                            <TreeStructureIcon size={IconSize.MEDIUM} />
-                        }
-                        disabled={disabled}
-                        onClick={() => actions.runOne(linked, true)}
-                    >
-                        Recursive push
-                    </Menu.Item>
-                )}
-            </MenuSection>
+            <QuickMenuSection
+                direction={direction}
+                disabled={disabled}
+                onQuick={() => actions.quickOne(linked, false)}
+                onQuickRecursive={() => actions.quickOne(linked, true)}
+            />
             <MenuSection label="Link">
                 {linked.isOpenable && (
                     <Menu.Item
@@ -432,7 +459,7 @@ function LinkedWorkspaceRow(props: LinkedWorkspaceRowProps): ReactNode {
                     loading={actions.activeTarget === linked.linkId}
                     disabled={disabled}
                     forbidden={!allowed}
-                    onClick={() => actions.runOne(linked, false)}
+                    onClick={() => actions.openOne(linked)}
                 />
             }
         />
