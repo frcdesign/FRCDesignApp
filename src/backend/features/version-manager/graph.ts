@@ -94,3 +94,33 @@ export function pushOrder(
     // The root leads, having been visited last.
     return order.slice(1);
 }
+
+/**
+ * `workspace` and everything below it, as a set of keys — what a push aimed at
+ * one child keeps when it carries on recursively.
+ */
+export function descendantKeys(
+    edges: WorkspaceEdge[],
+    workspace: WorkspacePath
+): Set<string> {
+    const found = new Set<string>([toKey(workspace)]);
+    let frontier = [workspace];
+    while (frontier.length > 0) {
+        const next: WorkspacePath[] = [];
+        for (const each of frontier) {
+            for (const child of childrenOf(edges, each)) {
+                const key = toKey(child);
+                if (found.has(key)) continue;
+                found.add(key);
+                next.push(child);
+            }
+        }
+        frontier = next;
+    }
+    return found;
+}
+
+/** The key {@link descendantKeys} answers in, so a caller can test against it. */
+export function workspaceKey(workspace: WorkspacePath): string {
+    return toKey(workspace);
+}

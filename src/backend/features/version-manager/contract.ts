@@ -57,30 +57,49 @@ export interface WorkspaceLinksData {
     children: LinkedWorkspace[];
 }
 
-/**
- * How far a push travels.
- *
- * - `direct` — this workspace's children, left un-versioned.
- * - `recursive` — every descendant, versioning each so the next one has
- *   something to reference.
- * - `one` — a single child, which is what a row's own push does.
- */
-export type PushScope =
-    | { kind: "direct" }
-    | { kind: "recursive" }
-    | { kind: "one"; workspace: WorkspacePath };
+/** How far a push travels; see {@link PushScope}. */
+export enum PushScopeKind {
+    CHILDREN = "children",
+    DESCENDANTS = "descendants",
+    ONE = "one"
+}
 
 /**
- * Where a pull takes its versions from.
+ * What a push reaches.
+ *
+ * - `children` — this workspace's children, left un-versioned.
+ * - `descendants` — every workspace below it, versioning each so the next one
+ *   has something to reference.
+ * - `one` — a single child, which is what a row's own push does; `recursive`
+ *   carries it on through that child's own descendants.
+ */
+export type PushScope =
+    | { kind: PushScopeKind.CHILDREN }
+    | { kind: PushScopeKind.DESCENDANTS }
+    | { kind: PushScopeKind.ONE; workspace: WorkspacePath; recursive: boolean };
+
+/** Where a pull takes its versions from; see {@link PullScope}. */
+export enum PullScopeKind {
+    PARENTS = "parents",
+    ALL = "all",
+    ONE = "one"
+}
+
+/**
+ * What a pull reads.
  *
  * - `parents` — this workspace's linked parents.
  * - `all` — every out-of-date reference, linked or not.
  * - `one` — a single parent, which is what a row's own pull does.
+ *
+ * There is no recursive pull: a pull only writes to this workspace, and going
+ * further would mean versioning a parent's own parents — which is a push, and
+ * theirs to make.
  */
 export type PullScope =
-    | { kind: "parents" }
-    | { kind: "all" }
-    | { kind: "one"; workspace: WorkspacePath };
+    | { kind: PullScopeKind.PARENTS }
+    | { kind: PullScopeKind.ALL }
+    | { kind: PullScopeKind.ONE; workspace: WorkspacePath };
 
 /** What a finished push or pull did. */
 export interface VersionJobResult {
@@ -123,3 +142,24 @@ export const EMPTY_JOB_RESULT: VersionJobResult = {
 
 /** How long a version name may be, matching what Onshape accepts. */
 export const MAX_VERSION_NAME_LENGTH = 256;
+
+/**
+ * The names Onshape's own version dialog offers, which a push with no name of
+ * its own follows: the highest `V<n>` a document already has, plus one.
+ */
+export const VERSION_NAME_PATTERN = /^V(\d+)$/;
+
+/**
+ * The next `V<n>` after the names given, per document — so two documents in one
+ * push each get their own number rather than sharing the higher one.
+ */
+export function nextVersionName(existingNames: string[]): string {
+    let highest = 0;
+    for (const name of existingNames) {
+        const match = VERSION_NAME_PATTERN.exec(name.trim());
+        if (match) {
+            highest = Math.max(highest, Number.parseInt(match[1], 10));
+        }
+    }
+    return `V${highest + 1}`;
+}

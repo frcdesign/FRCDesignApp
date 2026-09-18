@@ -8,7 +8,7 @@ import { OnshapeVersionInfo } from "../types";
  *
  * Versions are returned in chronological order, with the oldest version ("Start") first.
  */
-function getVersions(
+export function getVersions(
     client: OnshapeApi,
     documentPath: DocumentPath
 ): Promise<OnshapeVersionInfo[]> {

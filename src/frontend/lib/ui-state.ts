@@ -30,6 +30,9 @@ const SyncedStateSchema = z.object({
 const LocalStateSchema = z.object({
     isFavoritesOpen: z.boolean().default(false),
     isLibraryOpen: z.boolean().default(true),
+    /** The version manager's two sections, which open like the home page's. */
+    isParentsOpen: z.boolean().default(true),
+    isChildrenOpen: z.boolean().default(true),
     /** Vendor filters per library, so switching libraries keeps each one's;
      * a library with no entry has every vendor active. */
     vendorFilters: z

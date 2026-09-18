@@ -5,11 +5,15 @@ import {
 } from "cloudflare:workers";
 import type { AppBindings } from "../../lib/context";
 import { getOnshapeApiFromSessionId } from "../auth/request-auth";
-import { createVersion } from "../../lib/onshape/endpoints/versions";
+import {
+    createVersion,
+    getVersions
+} from "../../lib/onshape/endpoints/versions";
 import type { OnshapeVersionInfo } from "../../lib/onshape/types";
 import { ONSHAPE_STEP_RETRIES } from "../load/steps";
 import {
     EMPTY_JOB_RESULT,
+    nextVersionName,
     type VersionJobResult,
     type WorkspacePath
 } from "./contract";
@@ -39,7 +43,12 @@ interface JobParamsBase {
 
 export interface PushJobParams extends JobParamsBase {
     kind: "push";
-    name: string;
+    /**
+     * Absent for a quick push, where each document is versioned as Onshape's
+     * own dialog would name it: see {@link nextVersionName}. A name given here
+     * is used for every version the run cuts.
+     */
+    name?: string;
     description: string;
     /** In the order they have to run; see `pushOrder`. */
     steps: PushStep[];
@@ -123,11 +132,28 @@ export class VersionManagerWorkflow extends WorkflowEntrypoint<
         );
         const { workspace, name, description } = params;
 
+        /**
+         * Cuts the version, under the name given or the one Onshape's own
+         * dialog would offer. Per document, so a recursive push numbers each
+         * one from its own history rather than carrying the first one's number.
+         */
+        const cutVersion = async (
+            target: WorkspacePath
+        ): Promise<OnshapeVersionInfo> => {
+            const versionName =
+                name ??
+                nextVersionName(
+                    (await getVersions(client, target)).map(
+                        (version) => version.name
+                    )
+                );
+            return createVersion(client, target, versionName, description);
+        };
+
         const rootVersion = await step.do(
             "create-version",
             { retries: ONSHAPE_STEP_RETRIES },
-            (): Promise<OnshapeVersionInfo> =>
-                createVersion(client, workspace, name, description)
+            (): Promise<OnshapeVersionInfo> => cutVersion(workspace)
         );
 
         // Every version this run has cut, which is what the workspaces further
@@ -164,7 +190,7 @@ export class VersionManagerWorkflow extends WorkflowEntrypoint<
                 `create-version-${index}`,
                 { retries: ONSHAPE_STEP_RETRIES },
                 (): Promise<OnshapeVersionInfo> =>
-                    createVersion(client, pushStep.workspace, name, description)
+                    cutVersion(pushStep.workspace)
             );
             pinnedVersions[pushStep.workspace.documentId] = version.id;
             result.createdVersions++;

@@ -20,11 +20,18 @@ import {
     isSameWorkspace,
     LinkDirection,
     MAX_VERSION_NAME_LENGTH,
+    PullScopeKind,
+    PushScopeKind,
     toWorkspacePath,
     type LinkedWorkspace,
     type WorkspacePath
 } from "./contract";
-import { LinkCycleError, pushOrder } from "./graph";
+import {
+    descendantKeys,
+    LinkCycleError,
+    pushOrder,
+    workspaceKey
+} from "./graph";
 import { getJobStatus, rememberJob } from "./jobs";
 import {
     addLink,
@@ -60,34 +67,37 @@ const addLinkBody = z.object({
     direction: z.enum(LinkDirection)
 });
 
-/** A scope that names one linked workspace, which both directions have. */
-const oneScope = z.object({
-    kind: z.literal("one"),
-    workspace: workspaceSchema
-});
-
 const pushScope = z.discriminatedUnion("kind", [
-    z.object({ kind: z.literal("direct") }),
-    z.object({ kind: z.literal("recursive") }),
-    oneScope
+    z.object({ kind: z.literal(PushScopeKind.CHILDREN) }),
+    z.object({ kind: z.literal(PushScopeKind.DESCENDANTS) }),
+    z.object({
+        kind: z.literal(PushScopeKind.ONE),
+        workspace: workspaceSchema,
+        /** Carries the push on through that child's own descendants. */
+        recursive: z.boolean().default(false)
+    })
 ]);
 
 const pullScope = z.discriminatedUnion("kind", [
-    z.object({ kind: z.literal("parents") }),
-    z.object({ kind: z.literal("all") }),
-    oneScope
+    z.object({ kind: z.literal(PullScopeKind.PARENTS) }),
+    z.object({ kind: z.literal(PullScopeKind.ALL) }),
+    z.object({
+        kind: z.literal(PullScopeKind.ONE),
+        workspace: workspaceSchema
+    })
 ]);
 
 const pushBody = z.object({
     workspace: workspaceSchema,
-    name: z.string().min(1).max(MAX_VERSION_NAME_LENGTH),
+    /** Absent for a quick push; the workflow names it as Onshape would. */
+    name: z.string().min(1).max(MAX_VERSION_NAME_LENGTH).optional(),
     description: z.string().max(10_000).optional(),
-    scope: pushScope.default({ kind: "direct" })
+    scope: pushScope.default({ kind: PushScopeKind.CHILDREN })
 });
 
 const pullBody = z.object({
     workspace: workspaceSchema,
-    scope: pullScope.default({ kind: "parents" })
+    scope: pullScope.default({ kind: PullScopeKind.PARENTS })
 });
 
 type WorkspaceInput = z.infer<typeof workspaceSchema>;
@@ -239,11 +249,11 @@ versionManagerRoutes.post(
         const client = await c.var.getOnshapeApi();
 
         const order = await resolvePushOrder(c, workspace, scope);
-        // Only the recursive walk versions what it passes through; it is the
-        // one scope whose later steps need a version to reference.
+        // Only a walk that carries on versions what it passes through; it is
+        // what the workspaces past this one have to reference.
         const steps: PushStep[] = order.map((each) => ({
             workspace: each,
-            createVersion: scope.kind === "recursive"
+            createVersion: isRecursive(scope)
         }));
 
         // Checked across the whole run before it starts: a push that cuts a
@@ -284,6 +294,14 @@ versionManagerRoutes.post(
     }
 );
 
+/** Whether the push carries on past the workspaces it first reaches. */
+function isRecursive(scope: PushScopeInput): boolean {
+    return (
+        scope.kind === PushScopeKind.DESCENDANTS ||
+        (scope.kind === PushScopeKind.ONE && scope.recursive)
+    );
+}
+
 /**
  * The workspaces the push has to update, in order, with the two ways the graph
  * can refuse to give one turned into something the caller can act on.
@@ -294,7 +312,7 @@ async function resolvePushOrder(
     scope: PushScopeInput
 ): Promise<WorkspacePath[]> {
     const db = getDb(c.env.DB);
-    const recursive = scope.kind === "recursive";
+    const recursive = isRecursive(scope);
     const edges = recursive
         ? await collectDescendantEdges(db, workspace)
         : (await getChildLinks(db, workspace)).map(toEdge);
@@ -312,18 +330,21 @@ async function resolvePushOrder(
         throw error;
     }
 
-    if (scope.kind === "one") {
+    if (scope.kind === PushScopeKind.ONE) {
         // Narrowed rather than trusted: a workspace nobody linked is not one
         // this push has any business writing to.
         const target = toWorkspace(scope.workspace);
-        const linked = order.find((each) => isSameWorkspace(each, target));
-        if (!linked) {
+        if (!order.some((each) => isSameWorkspace(each, target))) {
             throw handledError(
                 "That workspace is no longer a child of this one.",
                 HttpStatus.CONFLICT
             );
         }
-        return [linked];
+        // Filtered rather than rebuilt, so what survives keeps the order the
+        // whole graph put it in: a workspace fed by two of these still comes
+        // after both.
+        const kept = descendantKeys(edges, target);
+        order = order.filter((each) => kept.has(workspaceKey(each)));
     }
 
     // A version is pinned per document, so one document appearing twice leaves
@@ -383,12 +404,12 @@ async function resolvePullSources(
     workspace: WorkspacePath,
     scope: PullScopeInput
 ): Promise<string[] | undefined> {
-    if (scope.kind === "all") {
+    if (scope.kind === PullScopeKind.ALL) {
         return undefined;
     }
 
     const rows = await getParentLinks(getDb(c.env.DB), workspace);
-    if (scope.kind === "one") {
+    if (scope.kind === PullScopeKind.ONE) {
         const parent = toWorkspace(scope.workspace);
         const row = rows.find((each) =>
             isSameWorkspace(toEdge(each).parent, parent)

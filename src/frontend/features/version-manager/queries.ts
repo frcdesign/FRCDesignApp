@@ -19,7 +19,6 @@ import {
     workspaceLinksQueryKey
 } from "../../lib/query-keys";
 import { useIsSignedIn } from "../auth/access-level";
-import { defaultVersionName } from "./version-name";
 
 /** How often a running push or pull is asked whether it has finished. */
 const JOB_POLL_MS = 2000;
@@ -91,7 +90,11 @@ export function useRemoveLinkMutation(workspace: WorkspacePath) {
 }
 
 export interface PushVersionArgs {
-    /** Absent for the ordinary case: see {@link defaultVersionName}. */
+    /**
+     * Absent for the ordinary case, which is most of them: the server then
+     * names each version as Onshape's own dialog would, V<n> after the highest
+     * the document already has.
+     */
     name?: string;
     description?: string;
     scope: PushScope;
@@ -106,11 +109,11 @@ export function usePushVersionMutation(workspace: WorkspacePath) {
         mutationKey: ["push-version", workspace],
         mutationFn: ({ name, description, scope }: PushVersionArgs) =>
             apiPost<{ jobId: string }>("/push-version", {
+                // An empty name is left off rather than sent: the name is what
+                // the server defaults, and "" is not a name.
                 body: {
                     workspace,
-                    // Defaulted here rather than at each button, so every path
-                    // that pushes without asking lands on the same name.
-                    name: name?.trim() || defaultVersionName(),
+                    name: name?.trim() || undefined,
                     description,
                     scope
                 }
