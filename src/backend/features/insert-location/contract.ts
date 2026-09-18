@@ -19,8 +19,9 @@ export const INSERT_LOCATION_SOURCE: ElementPath = {
 };
 
 /**
- * The sketch inside that tab. An assembly instance of a sketch names the
- * feature it came from, which is how one is told from any other insert.
+ * The sketch inside that tab: what an assembly gets an instance of. Only the
+ * insert names it — recognizing a marker goes by the tab, so an assembly
+ * holding one from before the sketch was redrawn still counts.
  */
 export const INSERT_LOCATION_SKETCH_ID = "FoHmJsKNNEuStrH_0";
 

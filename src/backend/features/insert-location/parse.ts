@@ -1,5 +1,5 @@
 /** Finding the insert location in an assembly, and working out where it sits. */
-import { INSERT_LOCATION_SKETCH_ID, INSERT_LOCATION_SOURCE } from "./contract";
+import { INSERT_LOCATION_SOURCE } from "./contract";
 import { OnshapeApi } from "../../lib/onshape/client";
 import { getAssembly } from "../../lib/onshape/endpoints/assemblies";
 import { type ElementPath } from "../../lib/onshape/path";
@@ -7,9 +7,6 @@ import {
     type OnshapeAssemblyDefinition,
     type OnshapeAssemblyInstance
 } from "../../lib/onshape/types";
-
-/** The instance type Onshape gives a sketch inserted into an assembly. */
-const FEATURE_INSTANCE = "Feature";
 
 /**
  * The assembly as the insert location needs it. A sketch is not a solid, so
@@ -22,21 +19,46 @@ export function getAssemblyWithMarkers(
     return getAssembly(onshapeApi, assemblyPath, { includeNonSolids: true });
 }
 
+/** Whether something an assembly names came from the marker's tab. */
+function isFromSourceTab(reference: {
+    documentId?: string;
+    elementId?: string;
+}): boolean {
+    return (
+        reference.documentId === INSERT_LOCATION_SOURCE.documentId &&
+        reference.elementId === INSERT_LOCATION_SOURCE.elementId
+    );
+}
+
 /**
- * The marker's instance, matched on the tab and sketch it came from rather than
- * on its name, which anybody can rename. The version is left out of the match:
- * an assembly can hold a marker inserted from an older one.
+ * The marker's instance, matched on the tab it came from rather than on its
+ * name, which anybody can rename. The version is left out of the match: an
+ * assembly can hold a marker inserted from an older one. So is the sketch's own
+ * feature id — the tab holds nothing but that sketch, so anything an assembly
+ * holds from it is a marker, and an id that has to be right is an id that can
+ * go stale.
+ *
+ * Which fields Onshape fills in on a sketch instance is not something it
+ * documents, and a marker that inserted fine was not found again, so both
+ * places the tab can be named are accepted: the instance itself, and the
+ * `partStudioFeatures` entry its `featureId` points at.
  */
 export function findInsertLocationInstance(
     assembly: OnshapeAssemblyDefinition
 ): OnshapeAssemblyInstance | undefined {
+    const markerFeatureIds = new Set(
+        (assembly.partStudioFeatures ?? [])
+            .filter(isFromSourceTab)
+            .map((feature) => feature.featureId)
+            .filter((featureId) => featureId !== undefined)
+    );
+
     return assembly.rootAssembly.instances.find(
         (instance) =>
-            instance.type === FEATURE_INSTANCE &&
             !instance.suppressed &&
-            instance.documentId === INSERT_LOCATION_SOURCE.documentId &&
-            instance.elementId === INSERT_LOCATION_SOURCE.elementId &&
-            instance.featureId === INSERT_LOCATION_SKETCH_ID
+            (isFromSourceTab(instance) ||
+                (instance.featureId !== undefined &&
+                    markerFeatureIds.has(instance.featureId)))
     );
 }
 

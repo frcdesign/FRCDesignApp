@@ -263,6 +263,16 @@ interface OnshapeSubAssembly {
     features: OnshapeAssemblyFeature[];
 }
 
+/**
+ * A part studio feature an instance was inserted from, in the assembly's
+ * flattened `partStudioFeatures` list — what `parts` is for part instances.
+ */
+interface OnshapeAssemblyPsFeature {
+    documentId?: string;
+    elementId?: string;
+    featureId?: string;
+}
+
 /** GET /assemblies/d/{did}/{wvm}/{wvmid}/e/{eid} (the subset we read). */
 export interface OnshapeAssemblyDefinition {
     rootAssembly: {
@@ -275,6 +285,8 @@ export interface OnshapeAssemblyDefinition {
     };
     parts: OnshapeAssemblyPart[];
     subAssemblies: OnshapeSubAssembly[];
+    /** Absent when the assembly holds no instance of a part studio feature. */
+    partStudioFeatures?: OnshapeAssemblyPsFeature[];
 }
 
 /** GET /assemblies/.../boundingboxes response, in metres. */

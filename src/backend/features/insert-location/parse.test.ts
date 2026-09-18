@@ -16,12 +16,14 @@ const MARKER: OnshapeAssemblyInstance = {
 
 function toAssembly(
     instances: OnshapeAssemblyInstance[],
-    occurrences?: { path: string[]; transform: number[] }[]
+    occurrences?: { path: string[]; transform: number[] }[],
+    partStudioFeatures?: OnshapeAssemblyDefinition["partStudioFeatures"]
 ): OnshapeAssemblyDefinition {
     return {
         rootAssembly: { features: [], instances, occurrences },
         parts: [],
-        subAssemblies: []
+        subAssemblies: [],
+        partStudioFeatures
     };
 }
 
@@ -57,6 +59,57 @@ describe("findInsertLocationInstance", () => {
                 toAssembly([{ ...MARKER, elementId: "elsewhere" }])
             )
         ).toBeUndefined();
+    });
+
+    // The marker inserted from a version of the tab we no longer name, so the
+    // sketch's own id is no longer what it was when the constant was written.
+    it("matches a sketch id the constant does not name", () => {
+        const assembly = toAssembly([{ ...MARKER, featureId: "redrawn" }]);
+        expect(findInsertLocationInstance(assembly)?.id).toBe("marker");
+    });
+
+    // Onshape naming the tab only on the partStudioFeatures entry, which is the
+    // shape the instance list alone cannot be matched against.
+    it("finds a marker whose instance names only its feature", () => {
+        const assembly = toAssembly(
+            [{ id: "marker", type: "Feature", featureId: "sketch" }],
+            undefined,
+            [
+                {
+                    documentId: INSERT_LOCATION_SOURCE.documentId,
+                    elementId: INSERT_LOCATION_SOURCE.elementId,
+                    featureId: "sketch"
+                }
+            ]
+        );
+        expect(findInsertLocationInstance(assembly)?.id).toBe("marker");
+    });
+
+    it("ignores a feature inserted from some other tab's sketch", () => {
+        const assembly = toAssembly(
+            [{ id: "other", type: "Feature", featureId: "sketch" }],
+            undefined,
+            [
+                {
+                    documentId: INSERT_LOCATION_SOURCE.documentId,
+                    elementId: "elsewhere",
+                    featureId: "sketch"
+                }
+            ]
+        );
+        expect(findInsertLocationInstance(assembly)).toBeUndefined();
+    });
+
+    // An instance naming no feature at all, against a tab whose entry names no
+    // feature either: nothing lines up, so nothing matches.
+    it("does not pair an instance and an entry by what both leave out", () => {
+        const assembly = toAssembly([{ id: "part", type: "Part" }], undefined, [
+            {
+                documentId: INSERT_LOCATION_SOURCE.documentId,
+                elementId: INSERT_LOCATION_SOURCE.elementId
+            }
+        ]);
+        expect(findInsertLocationInstance(assembly)).toBeUndefined();
     });
 });
 
