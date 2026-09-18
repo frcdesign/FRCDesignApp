@@ -53,6 +53,31 @@ export interface WorkspaceLinksData {
     downstream: LinkedWorkspace[];
 }
 
+/**
+ * How far a push travels.
+ *
+ * - `direct` — the workspaces that reference this one, left un-versioned.
+ * - `recursive` — everything reachable past them, versioning each so the next
+ *   one has something to reference.
+ * - `one` — a single linked workspace, which is what a row's own push does.
+ */
+export type PushScope =
+    | { kind: "direct" }
+    | { kind: "recursive" }
+    | { kind: "one"; workspace: WorkspacePath };
+
+/**
+ * Where a pull takes its versions from.
+ *
+ * - `linked` — the workspaces linked upstream.
+ * - `all` — every out-of-date reference, linked or not.
+ * - `one` — a single linked workspace, which is what a row's own pull does.
+ */
+export type PullScope =
+    | { kind: "linked" }
+    | { kind: "all" }
+    | { kind: "one"; workspace: WorkspacePath };
+
 /** What a finished push or pull did. */
 export interface VersionJobResult {
     /** Workspaces whose references were updated. */

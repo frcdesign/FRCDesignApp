@@ -96,7 +96,7 @@ function VersionManager(props: VersionManagerProps): ReactNode {
                     leftSection={<ArrowLineDownIcon size={IconSize.SMALL} />}
                     loading={pull.isPending}
                     disabled={isRunning || links.upstream.length === 0}
-                    onClick={() => pull.mutate("linked")}
+                    onClick={() => pull.mutate({ kind: "linked" })}
                 >
                     Pull latest
                 </Button>
@@ -109,7 +109,7 @@ function VersionManager(props: VersionManagerProps): ReactNode {
                                 <ArrowsClockwiseIcon size={IconSize.MEDIUM} />
                             }
                             disabled={isRunning}
-                            onClick={() => pull.mutate("all")}
+                            onClick={() => pull.mutate({ kind: "all" })}
                         >
                             Update all references
                         </Menu.Item>
@@ -121,18 +121,22 @@ function VersionManager(props: VersionManagerProps): ReactNode {
                 direction={LinkDirection.UPSTREAM}
                 title="Pulls from"
                 description="Workspaces this one references. Pulling moves this workspace's references onto their newest versions."
-                placeholder="Link to a workspace this one uses..."
                 linked={links.upstream}
                 emptyMessage="No workspaces linked upstream."
+                onQuickAction={(linked) =>
+                    pull.mutate({ kind: "one", workspace: linked.workspace })
+                }
             />
             <LinkedWorkspaceList
                 workspace={workspace}
                 direction={LinkDirection.DOWNSTREAM}
                 title="Pushes to"
                 description="Workspaces that reference this one. Pushing creates a version here and moves their references onto it."
-                placeholder="Link to a workspace that uses this one..."
                 linked={links.downstream}
                 emptyMessage="No workspaces linked downstream."
+                onQuickAction={(linked) =>
+                    openPushVersionModal(workspace, links.downstream, linked)
+                }
             />
         </Stack>
     );

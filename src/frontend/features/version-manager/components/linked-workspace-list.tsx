@@ -1,12 +1,14 @@
-import { Group, Menu, Stack, Text } from "@mantine/core";
+import { ActionIcon, Group, Menu, Stack, Text, Tooltip } from "@mantine/core";
 import {
+    ArrowLineDownIcon,
+    ArrowLineUpIcon,
     ArrowSquareOutIcon,
     LinkBreakIcon,
     WarningIcon
 } from "@phosphor-icons/react";
 import { type ReactNode } from "react";
 import {
-    type LinkDirection,
+    LinkDirection,
     type LinkedWorkspace,
     type WorkspacePath
 } from "@backend/features/version-manager/contract";
@@ -17,7 +19,7 @@ import { SectionNotice } from "../../../components/app-zero-state";
 import { TruncatedText } from "../../../components/truncated-text";
 import { IconSize, StatusColor } from "../../../lib/style-constants";
 import { makeUrl, openUrlInNewTab } from "../../../lib/url";
-import { useRemoveLinkMutation } from "../queries";
+import { useIsVersionJobRunning, useRemoveLinkMutation } from "../queries";
 import { AddLinkInput } from "./add-link-input";
 
 interface LinkedWorkspaceListProps {
@@ -26,9 +28,10 @@ interface LinkedWorkspaceListProps {
     title: string;
     /** What linking in this direction does, shown above the list. */
     description: string;
-    placeholder: string;
     linked: LinkedWorkspace[];
     emptyMessage: string;
+    /** Runs this row's own push or pull; see {@link QuickActionButton}. */
+    onQuickAction: (linked: LinkedWorkspace) => void;
 }
 
 /** One direction's links, with the input that adds another. */
@@ -40,22 +43,19 @@ export function LinkedWorkspaceList(
         direction,
         title,
         description,
-        placeholder,
         linked,
-        emptyMessage
+        emptyMessage,
+        onQuickAction
     } = props;
     const removeLink = useRemoveLinkMutation(workspace);
+    const isRunning = useIsVersionJobRunning(workspace);
 
     return (
         <Section title={title}>
             <Text size="sm" c={StatusColor.DIMMED}>
                 {description}
             </Text>
-            <AddLinkInput
-                workspace={workspace}
-                direction={direction}
-                placeholder={placeholder}
-            />
+            <AddLinkInput workspace={workspace} direction={direction} />
             {linked.length === 0 ? (
                 <SectionNotice
                     title={emptyMessage}
@@ -73,7 +73,10 @@ export function LinkedWorkspaceList(
                         <LinkedWorkspaceRow
                             key={each.linkId}
                             linked={each}
+                            direction={direction}
+                            isRunning={isRunning}
                             onRemove={() => removeLink.mutate(each.linkId)}
+                            onQuickAction={() => onQuickAction(each)}
                         />
                     ))}
                 </ItemTable>
@@ -84,15 +87,33 @@ export function LinkedWorkspaceList(
 
 interface LinkedWorkspaceRowProps {
     linked: LinkedWorkspace;
+    direction: LinkDirection;
+    /** A run is already going, and a second one would race it. */
+    isRunning: boolean;
     onRemove: () => void;
+    onQuickAction: () => void;
 }
 
 function LinkedWorkspaceRow(props: LinkedWorkspaceRowProps): ReactNode {
-    const { linked, onRemove } = props;
+    const { linked, direction, isRunning, onRemove, onQuickAction } = props;
     const url = makeUrl(linked.workspace);
+    const isPush = direction === LinkDirection.DOWNSTREAM;
 
     const menuItems = (
         <MenuSection label="Link">
+            <Menu.Item
+                leftSection={
+                    isPush ? (
+                        <ArrowLineUpIcon size={IconSize.MEDIUM} />
+                    ) : (
+                        <ArrowLineDownIcon size={IconSize.MEDIUM} />
+                    )
+                }
+                disabled={isRunning || !canAct(linked, isPush)}
+                onClick={onQuickAction}
+            >
+                {isPush ? "Push to this workspace" : "Pull from this workspace"}
+            </Menu.Item>
             {linked.isOpenable && (
                 <Menu.Item
                     leftSection={<ArrowSquareOutIcon size={IconSize.MEDIUM} />}
@@ -116,7 +137,79 @@ function LinkedWorkspaceRow(props: LinkedWorkspaceRowProps): ReactNode {
             left={<LinkedWorkspaceTitle linked={linked} />}
             menuItems={menuItems}
             onClick={linked.isOpenable ? () => openUrlInNewTab(url) : undefined}
+            rightSection={
+                <QuickActionButton
+                    linked={linked}
+                    isPush={isPush}
+                    isRunning={isRunning}
+                    onClick={onQuickAction}
+                />
+            }
         />
+    );
+}
+
+/**
+ * Whether this row can be acted on at all: a push writes to the linked
+ * workspace, so it needs the permissions Onshape reported for it; a pull only
+ * reads it, which being openable already establishes.
+ */
+function canAct(linked: LinkedWorkspace, isPush: boolean): boolean {
+    return isPush ? linked.canPush : linked.isOpenable;
+}
+
+interface QuickActionButtonProps {
+    linked: LinkedWorkspace;
+    isPush: boolean;
+    isRunning: boolean;
+    onClick: () => void;
+}
+
+/**
+ * This row's own push or pull, for moving one link rather than all of them.
+ *
+ * A pull runs on the click; a push opens the version form first, because a
+ * version cannot be cut without a name.
+ */
+function QuickActionButton(props: QuickActionButtonProps): ReactNode {
+    const { linked, isPush, isRunning, onClick } = props;
+    const disabled = isRunning || !canAct(linked, isPush);
+
+    const label = isPush
+        ? "Push a version to this workspace"
+        : "Pull this workspace's latest version";
+
+    return (
+        <Tooltip
+            withArrow
+            label={
+                disabled && !isRunning
+                    ? "You do not have permission to do this in Onshape."
+                    : label
+            }
+        >
+            {/* A span, so the tooltip still has something to hang off when the
+                button inside it is disabled and stops firing events. */}
+            <span>
+                <ActionIcon
+                    variant="subtle"
+                    color={StatusColor.NEUTRAL}
+                    aria-label={label}
+                    disabled={disabled}
+                    onClick={(event) => {
+                        // The row itself opens Onshape; this button does not.
+                        event.stopPropagation();
+                        onClick();
+                    }}
+                >
+                    {isPush ? (
+                        <ArrowLineUpIcon size={IconSize.MEDIUM} />
+                    ) : (
+                        <ArrowLineDownIcon size={IconSize.MEDIUM} />
+                    )}
+                </ActionIcon>
+            </span>
+        </Tooltip>
     );
 }
 

@@ -60,22 +60,42 @@ const addLinkBody = z.object({
     direction: z.enum(LinkDirection)
 });
 
+/** A scope that names one linked workspace, which both directions have. */
+const oneScope = z.object({
+    kind: z.literal("one"),
+    workspace: workspaceSchema
+});
+
+const pushScope = z.discriminatedUnion("kind", [
+    z.object({ kind: z.literal("direct") }),
+    z.object({ kind: z.literal("recursive") }),
+    oneScope
+]);
+
+const pullScope = z.discriminatedUnion("kind", [
+    z.object({ kind: z.literal("linked") }),
+    z.object({ kind: z.literal("all") }),
+    oneScope
+]);
+
 const pushBody = z.object({
     workspace: workspaceSchema,
     name: z.string().min(1).max(MAX_VERSION_NAME_LENGTH),
     description: z.string().max(10_000).optional(),
-    /** Carry on past the workspaces that reference this one, versioning each. */
-    recursive: z.boolean().default(false)
+    scope: pushScope.default({ kind: "direct" })
 });
 
 const pullBody = z.object({
     workspace: workspaceSchema,
-    /** "linked" restricts the pull to the upstream links; "all" takes every
-     * out-of-date reference the workspace has. */
-    scope: z.enum(["linked", "all"]).default("linked")
+    scope: pullScope.default({ kind: "linked" })
 });
 
 type WorkspaceInput = z.infer<typeof workspaceSchema>;
+
+// The parsed scopes, whose workspace is the wire's two ids rather than the
+// contract's whole path; `toWorkspace` is what makes one of the other.
+type PushScopeInput = z.infer<typeof pushScope>;
+type PullScopeInput = z.infer<typeof pullScope>;
 
 function toWorkspace(input: WorkspaceInput): WorkspacePath {
     return toWorkspacePath(input.documentId, input.instanceId);
@@ -212,14 +232,17 @@ versionManagerRoutes.post(
     requireSignInMiddleware,
     validate("json", pushBody),
     async (c) => {
-        const { name, description = "", recursive } = c.req.valid("json");
-        const workspace = toWorkspace(c.req.valid("json").workspace);
+        const body = c.req.valid("json");
+        const { name, description = "", scope } = body;
+        const workspace = toWorkspace(body.workspace);
         const client = await c.var.getOnshapeApi();
 
-        const order = await resolvePushOrder(c, workspace, recursive);
+        const order = await resolvePushOrder(c, workspace, scope);
+        // Only the recursive walk versions what it passes through; it is the
+        // one scope whose later steps need a version to reference.
         const steps: PushStep[] = order.map((each) => ({
             workspace: each,
-            createVersion: recursive
+            createVersion: scope.kind === "recursive"
         }));
 
         // Checked across the whole run before it starts: a push that cuts a
@@ -267,9 +290,10 @@ versionManagerRoutes.post(
 async function resolvePushOrder(
     c: AppContext,
     workspace: WorkspacePath,
-    recursive: boolean
+    scope: PushScopeInput
 ): Promise<WorkspacePath[]> {
     const db = getDb(c.env.DB);
+    const recursive = scope.kind === "recursive";
     const edges = recursive
         ? await collectDownstreamEdges(db, workspace)
         : (await getDownstreamLinks(db, workspace)).map(toEdge);
@@ -285,6 +309,20 @@ async function resolvePushOrder(
             );
         }
         throw error;
+    }
+
+    if (scope.kind === "one") {
+        // Narrowed rather than trusted: a workspace nobody linked is not one
+        // this push has any business writing to.
+        const target = toWorkspace(scope.workspace);
+        const linked = order.find((each) => isSameWorkspace(each, target));
+        if (!linked) {
+            throw handledError(
+                "That workspace is no longer linked to this one.",
+                HttpStatus.CONFLICT
+            );
+        }
+        return [linked];
     }
 
     // A version is pinned per document, so one document appearing twice leaves
@@ -306,8 +344,9 @@ versionManagerRoutes.post(
     requireSignInMiddleware,
     validate("json", pullBody),
     async (c) => {
-        const { scope } = c.req.valid("json");
-        const workspace = toWorkspace(c.req.valid("json").workspace);
+        const body = c.req.valid("json");
+        const { scope } = body;
+        const workspace = toWorkspace(body.workspace);
 
         const client = await c.var.getOnshapeApi();
         await requirePermissions(
@@ -317,17 +356,7 @@ versionManagerRoutes.post(
             OnshapePermission.WRITE
         );
 
-        let sourceDocumentIds: string[] | undefined;
-        if (scope === "linked") {
-            const rows = await getUpstreamLinks(getDb(c.env.DB), workspace);
-            if (rows.length === 0) {
-                throw handledError(
-                    "This workspace has no linked workspaces to pull from.",
-                    HttpStatus.CONFLICT
-                );
-            }
-            sourceDocumentIds = rows.map((row) => row.sourceDocumentId);
-        }
+        const sourceDocumentIds = await resolvePullSources(c, workspace, scope);
 
         const instance = await c.env.VERSION_MANAGER_WORKFLOW.create({
             params: {
@@ -342,6 +371,43 @@ versionManagerRoutes.post(
         return c.json({ jobId: instance.id });
     }
 );
+
+/**
+ * The documents a pull takes its versions from, or undefined for all of them.
+ * Narrowed to the links, so a pull only moves references the graph accounts for.
+ */
+async function resolvePullSources(
+    c: AppContext,
+    workspace: WorkspacePath,
+    scope: PullScopeInput
+): Promise<string[] | undefined> {
+    if (scope.kind === "all") {
+        return undefined;
+    }
+
+    const rows = await getUpstreamLinks(getDb(c.env.DB), workspace);
+    if (scope.kind === "one") {
+        const source = toWorkspace(scope.workspace);
+        const row = rows.find((each) =>
+            isSameWorkspace(toEdge(each).source, source)
+        );
+        if (!row) {
+            throw handledError(
+                "That workspace is no longer linked to this one.",
+                HttpStatus.CONFLICT
+            );
+        }
+        return [row.sourceDocumentId];
+    }
+
+    if (rows.length === 0) {
+        throw handledError(
+            "This workspace has no linked workspaces to pull from.",
+            HttpStatus.CONFLICT
+        );
+    }
+    return rows.map((row) => row.sourceDocumentId);
+}
 
 /** GET /api/version-job?documentId=&instanceId=&jobId= */
 versionManagerRoutes.get(

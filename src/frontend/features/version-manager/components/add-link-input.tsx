@@ -1,5 +1,5 @@
-import { Button, Group, TextInput } from "@mantine/core";
-import { LinkIcon } from "@phosphor-icons/react";
+import { Button, Card, Group, TextInput } from "@mantine/core";
+import { LinkIcon, PlusIcon } from "@phosphor-icons/react";
 import { useState, type ReactNode } from "react";
 import {
     isSameWorkspace,
@@ -14,16 +14,18 @@ import { useAddLinkMutation } from "../queries";
 interface AddLinkInputProps {
     workspace: WorkspacePath;
     direction: LinkDirection;
-    /** What linking in this direction means, e.g. "a workspace to push to". */
-    placeholder: string;
 }
 
 /**
  * Links a workspace by its Onshape url, which is the one handle on a document
  * everybody already has: copy the link, paste it here.
+ *
+ * A card with the field and its button on one row, the way the app this came
+ * from had it — it sits at the head of the list it adds to, so it reads as one
+ * of the rows rather than as a form above them.
  */
 export function AddLinkInput(props: AddLinkInputProps): ReactNode {
-    const { workspace, direction, placeholder } = props;
+    const { workspace, direction } = props;
     const [url, setUrl] = useState("");
     const addLink = useAddLinkMutation(workspace);
 
@@ -43,27 +45,31 @@ export function AddLinkInput(props: AddLinkInputProps): ReactNode {
     };
 
     return (
-        <Group gap="xs" wrap="nowrap" align="flex-start">
-            <TextInput
-                flex={1}
-                size="sm"
-                leftSection={<LinkIcon size={IconSize.SMALL} />}
-                placeholder={placeholder}
-                value={url}
-                onChange={(event) => setUrl(event.currentTarget.value)}
-                onKeyDown={(event) => {
-                    if (event.key === "Enter") submit();
-                }}
-            />
-            <Button
-                size="sm"
-                variant="light"
-                loading={addLink.isPending}
-                disabled={url.trim() === ""}
-                onClick={submit}
-            >
-                Link
-            </Button>
-        </Group>
+        <Card withBorder padding="xs" radius="md">
+            <Group gap="xs" wrap="nowrap">
+                <TextInput
+                    flex={1}
+                    size="sm"
+                    variant="unstyled"
+                    leftSection={<LinkIcon size={IconSize.SMALL} />}
+                    placeholder="Document link"
+                    value={url}
+                    onChange={(event) => setUrl(event.currentTarget.value)}
+                    onKeyDown={(event) => {
+                        if (event.key === "Enter") submit();
+                    }}
+                />
+                <Button
+                    size="compact-sm"
+                    variant="subtle"
+                    leftSection={<PlusIcon size={IconSize.SMALL} />}
+                    loading={addLink.isPending}
+                    disabled={url.trim() === ""}
+                    onClick={submit}
+                >
+                    Add
+                </Button>
+            </Group>
+        </Card>
     );
 }

@@ -1,6 +1,8 @@
 import { skipToken, useMutation, useQuery } from "@tanstack/react-query";
 import {
     LinkDirection,
+    type PullScope,
+    type PushScope,
     VersionJobState,
     type VersionJobResult,
     type VersionJobStatus,
@@ -90,7 +92,7 @@ export function useRemoveLinkMutation(workspace: WorkspacePath) {
 export interface PushVersionArgs {
     name: string;
     description?: string;
-    recursive: boolean;
+    scope: PushScope;
 }
 
 /**
@@ -112,7 +114,7 @@ export function usePushVersionMutation(workspace: WorkspacePath) {
 export function usePullReferencesMutation(workspace: WorkspacePath) {
     return useMutation({
         mutationKey: ["pull-references", workspace],
-        mutationFn: (scope: "linked" | "all") =>
+        mutationFn: (scope: PullScope) =>
             apiPost<{ jobId: string }>("/pull-references", {
                 body: { workspace, scope }
             }),

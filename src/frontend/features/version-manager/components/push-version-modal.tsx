@@ -24,6 +24,12 @@ interface PushVersionFormProps {
     workspace: WorkspacePath;
     /** The workspaces a direct push updates, which the form names. */
     downstream: LinkedWorkspace[];
+    /**
+     * The one workspace to push to, when the push was started from its row.
+     * A version still has to be named, so the row opens this form rather than
+     * running straight off — it only narrows what the push reaches.
+     */
+    target?: LinkedWorkspace;
     /** Mantine's id for the modal this sits in, so a push can close it. */
     modalId: string;
 }
@@ -34,7 +40,7 @@ interface PushVersionFormProps {
  * documents, which a direct push never does.
  */
 export function PushVersionForm(props: PushVersionFormProps): ReactNode {
-    const { workspace, downstream, modalId } = props;
+    const { workspace, downstream, target, modalId } = props;
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
     const [recursive, setRecursive] = useState(false);
@@ -42,7 +48,13 @@ export function PushVersionForm(props: PushVersionFormProps): ReactNode {
 
     const submit = () => {
         push.mutate(
-            { name: name.trim(), description: description.trim(), recursive },
+            {
+                name: name.trim(),
+                description: description.trim(),
+                scope: target
+                    ? { kind: "one", workspace: target.workspace }
+                    : { kind: recursive ? "recursive" : "direct" }
+            },
             { onSuccess: () => modals.close(modalId) }
         );
     };
@@ -69,17 +81,24 @@ export function PushVersionForm(props: PushVersionFormProps): ReactNode {
                         setDescription(event.currentTarget.value)
                     }
                 />
-                <PushTargets downstream={downstream} />
-                <Checkbox
-                    label="Keep going past them"
-                    description="Also updates everything linked further downstream, cutting a version of each workspace on the way so the next one can reference it."
-                    checked={recursive}
-                    onChange={(event) =>
-                        setRecursive(event.currentTarget.checked)
-                    }
+                <PushTargets
+                    downstream={target ? [target] : downstream}
+                    recursive={recursive}
                 />
+                {/* A push aimed at one workspace has nowhere further to go, so
+                    the option that would carry it there is not offered. */}
+                {!target && (
+                    <Checkbox
+                        label="Recursive push"
+                        description="Also updates everything linked further downstream, cutting a version of each workspace on the way so the next one can reference it."
+                        checked={recursive}
+                        onChange={(event) =>
+                            setRecursive(event.currentTarget.checked)
+                        }
+                    />
+                )}
                 {recursive && (
-                    <Callout text="This creates versions in the linked documents, not just in this one." />
+                    <Callout text="A recursive push creates versions in the linked documents, not just in this one." />
                 )}
             </AppModalBody>
             <AppModalFooter>
@@ -98,9 +117,14 @@ export function PushVersionForm(props: PushVersionFormProps): ReactNode {
     );
 }
 
+interface PushTargetsProps {
+    downstream: LinkedWorkspace[];
+    recursive: boolean;
+}
+
 /** The workspaces the push updates, so the button is not a leap of faith. */
-function PushTargets(props: { downstream: LinkedWorkspace[] }): ReactNode {
-    const { downstream } = props;
+function PushTargets(props: PushTargetsProps): ReactNode {
+    const { downstream, recursive } = props;
 
     if (downstream.length === 0) {
         return (
@@ -122,6 +146,11 @@ function PushTargets(props: { downstream: LinkedWorkspace[] }): ReactNode {
                         {each.documentName ?? "A document you cannot open"}
                     </List.Item>
                 ))}
+                {/* Named rather than listed: what lies past them is the
+                    server's walk of the graph, not something this form knows. */}
+                {recursive && (
+                    <List.Item>everything linked past them</List.Item>
+                )}
             </List>
         </Stack>
     );
