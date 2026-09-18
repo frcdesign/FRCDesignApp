@@ -1,10 +1,5 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import { Button, Group, Menu, Stack } from "@mantine/core";
-import {
-    ArrowLineDownIcon,
-    ArrowLineUpIcon,
-    ArrowsClockwiseIcon
-} from "@phosphor-icons/react";
+import { Stack } from "@mantine/core";
 import { type ReactNode } from "react";
 import {
     LinkDirection,
@@ -12,19 +7,12 @@ import {
     type WorkspacePath
 } from "@backend/features/version-manager/contract";
 import { SectionLoading, SectionNotice } from "../../components/app-zero-state";
-import { MenuButton, MenuSection } from "../../components/app-menu";
-import { IconSize } from "../../lib/style-constants";
 import { getUiState } from "../../lib/ui-state";
 import { toTargetWorkspace } from "../../lib/onshape-launch";
 import { useTargetWorkspace } from "../../lib/onshape-params";
-import { LinkedWorkspaceList } from "../../features/version-manager/components/linked-workspace-list";
+import { LinkedWorkspaceSection } from "../../features/version-manager/components/linked-workspace-section";
 import { VersionJobStatus } from "../../features/version-manager/components/version-job-status";
-import { openPushVersionModal } from "../../features/version-manager/open-push-version-modal";
-import {
-    useIsVersionJobRunning,
-    usePullReferencesMutation,
-    useWorkspaceLinksQuery
-} from "../../features/version-manager/queries";
+import { useWorkspaceLinksQuery } from "../../features/version-manager/queries";
 import { useIsSignedIn } from "../../features/auth/access-level";
 
 export const Route = createFileRoute("/app/version-manager")({
@@ -62,11 +50,13 @@ interface VersionManagerProps {
     workspace: WorkspacePath;
 }
 
+/**
+ * The two link lists, each owning its own push or pull: there is no page-level
+ * action, because every action belongs to one direction or one row.
+ */
 function VersionManager(props: VersionManagerProps): ReactNode {
     const { workspace } = props;
     const linksQuery = useWorkspaceLinksQuery(workspace);
-    const pull = usePullReferencesMutation(workspace);
-    const isRunning = useIsVersionJobRunning(workspace);
 
     if (linksQuery.isPending) {
         return <SectionLoading title="Loading linked workspaces..." />;
@@ -80,63 +70,15 @@ function VersionManager(props: VersionManagerProps): ReactNode {
     return (
         <Stack p="sm" gap="lg">
             <VersionJobStatus workspace={workspace} />
-            <Group gap="sm">
-                <Button
-                    variant="light"
-                    leftSection={<ArrowLineUpIcon size={IconSize.SMALL} />}
-                    disabled={isRunning}
-                    onClick={() =>
-                        openPushVersionModal(workspace, links.downstream)
-                    }
-                >
-                    Push version
-                </Button>
-                <Button
-                    variant="light"
-                    leftSection={<ArrowLineDownIcon size={IconSize.SMALL} />}
-                    loading={pull.isPending}
-                    disabled={isRunning || links.upstream.length === 0}
-                    onClick={() => pull.mutate({ kind: "linked" })}
-                >
-                    Pull latest
-                </Button>
-                <MenuButton large>
-                    <MenuSection label="Pull">
-                        {/* Every out-of-date reference, linked or not, which is
-                            the one thing the links cannot express. */}
-                        <Menu.Item
-                            leftSection={
-                                <ArrowsClockwiseIcon size={IconSize.MEDIUM} />
-                            }
-                            disabled={isRunning}
-                            onClick={() => pull.mutate({ kind: "all" })}
-                        >
-                            Update all references
-                        </Menu.Item>
-                    </MenuSection>
-                </MenuButton>
-            </Group>
-            <LinkedWorkspaceList
+            <LinkedWorkspaceSection
                 workspace={workspace}
-                direction={LinkDirection.UPSTREAM}
-                title="Pulls from"
-                description="Workspaces this one references. Pulling moves this workspace's references onto their newest versions."
-                linked={links.upstream}
-                emptyMessage="No workspaces linked upstream."
-                onQuickAction={(linked) =>
-                    pull.mutate({ kind: "one", workspace: linked.workspace })
-                }
+                direction={LinkDirection.PARENT}
+                linked={links.parents}
             />
-            <LinkedWorkspaceList
+            <LinkedWorkspaceSection
                 workspace={workspace}
-                direction={LinkDirection.DOWNSTREAM}
-                title="Pushes to"
-                description="Workspaces that reference this one. Pushing creates a version here and moves their references onto it."
-                linked={links.downstream}
-                emptyMessage="No workspaces linked downstream."
-                onQuickAction={(linked) =>
-                    openPushVersionModal(workspace, links.downstream, linked)
-                }
+                direction={LinkDirection.CHILD}
+                linked={links.children}
             />
         </Stack>
     );

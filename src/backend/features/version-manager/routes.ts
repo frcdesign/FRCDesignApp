@@ -28,11 +28,11 @@ import { LinkCycleError, pushOrder } from "./graph";
 import { getJobStatus, rememberJob } from "./jobs";
 import {
     addLink,
-    collectDownstreamEdges,
+    collectDescendantEdges,
     deleteLink,
-    getDownstreamLinks,
+    getChildLinks,
     getLink,
-    getUpstreamLinks,
+    getParentLinks,
     otherEnd,
     toEdge,
     toLinkedWorkspace
@@ -73,7 +73,7 @@ const pushScope = z.discriminatedUnion("kind", [
 ]);
 
 const pullScope = z.discriminatedUnion("kind", [
-    z.object({ kind: z.literal("linked") }),
+    z.object({ kind: z.literal("parents") }),
     z.object({ kind: z.literal("all") }),
     oneScope
 ]);
@@ -87,7 +87,7 @@ const pushBody = z.object({
 
 const pullBody = z.object({
     workspace: workspaceSchema,
-    scope: pullScope.default({ kind: "linked" })
+    scope: pullScope.default({ kind: "parents" })
 });
 
 type WorkspaceInput = z.infer<typeof workspaceSchema>;
@@ -135,23 +135,23 @@ versionManagerRoutes.get(
         );
 
         const db = getDb(c.env.DB);
-        const [upstreamRows, downstreamRows] = await Promise.all([
-            getUpstreamLinks(db, workspace),
-            getDownstreamLinks(db, workspace)
+        const [parentRows, childRows] = await Promise.all([
+            getParentLinks(db, workspace),
+            getChildLinks(db, workspace)
         ]);
 
-        const describe = (rows: typeof upstreamRows) =>
+        const describe = (rows: typeof parentRows) =>
             Promise.all(
                 rows.map((row) =>
                     toLinkedWorkspace(client, row.id, otherEnd(row, workspace))
                 )
             );
-        const [upstream, downstream]: LinkedWorkspace[][] = await Promise.all([
-            describe(upstreamRows),
-            describe(downstreamRows)
+        const [parents, children]: LinkedWorkspace[][] = await Promise.all([
+            describe(parentRows),
+            describe(childRows)
         ]);
 
-        return c.json({ upstream, downstream });
+        return c.json({ parents, children });
     }
 );
 
@@ -186,11 +186,12 @@ versionManagerRoutes.post(
             OnshapePermission.READ
         );
 
-        const [source, target] =
-            body.direction === LinkDirection.UPSTREAM
+        // A parent provides to this workspace; a child takes from it.
+        const [parent, child] =
+            body.direction === LinkDirection.PARENT
                 ? [linked, workspace]
                 : [workspace, linked];
-        await addLink(getDb(c.env.DB), source, target);
+        await addLink(getDb(c.env.DB), parent, child);
 
         return c.json({ success: true });
     }
@@ -210,10 +211,10 @@ versionManagerRoutes.delete(
         // Either end: a link belongs to both workspaces, so being able to edit
         // one of them is enough to take it back.
         const client = await c.var.getOnshapeApi();
-        const { source, target } = toEdge(row);
+        const { parent, child } = toEdge(row);
         const allowed = await Promise.all([
-            hasPermissions(client, source, OnshapePermission.WRITE),
-            hasPermissions(client, target, OnshapePermission.WRITE)
+            hasPermissions(client, parent, OnshapePermission.WRITE),
+            hasPermissions(client, child, OnshapePermission.WRITE)
         ]);
         if (!allowed.some(Boolean)) {
             throw forbiddenError(
@@ -295,8 +296,8 @@ async function resolvePushOrder(
     const db = getDb(c.env.DB);
     const recursive = scope.kind === "recursive";
     const edges = recursive
-        ? await collectDownstreamEdges(db, workspace)
-        : (await getDownstreamLinks(db, workspace)).map(toEdge);
+        ? await collectDescendantEdges(db, workspace)
+        : (await getChildLinks(db, workspace)).map(toEdge);
 
     let order: WorkspacePath[];
     try {
@@ -318,7 +319,7 @@ async function resolvePushOrder(
         const linked = order.find((each) => isSameWorkspace(each, target));
         if (!linked) {
             throw handledError(
-                "That workspace is no longer linked to this one.",
+                "That workspace is no longer a child of this one.",
                 HttpStatus.CONFLICT
             );
         }
@@ -374,7 +375,8 @@ versionManagerRoutes.post(
 
 /**
  * The documents a pull takes its versions from, or undefined for all of them.
- * Narrowed to the links, so a pull only moves references the graph accounts for.
+ * Narrowed to the parents, so a pull only moves references the graph accounts
+ * for.
  */
 async function resolvePullSources(
     c: AppContext,
@@ -385,15 +387,15 @@ async function resolvePullSources(
         return undefined;
     }
 
-    const rows = await getUpstreamLinks(getDb(c.env.DB), workspace);
+    const rows = await getParentLinks(getDb(c.env.DB), workspace);
     if (scope.kind === "one") {
-        const source = toWorkspace(scope.workspace);
+        const parent = toWorkspace(scope.workspace);
         const row = rows.find((each) =>
-            isSameWorkspace(toEdge(each).source, source)
+            isSameWorkspace(toEdge(each).parent, parent)
         );
         if (!row) {
             throw handledError(
-                "That workspace is no longer linked to this one.",
+                "That workspace is no longer a parent of this one.",
                 HttpStatus.CONFLICT
             );
         }
@@ -402,7 +404,7 @@ async function resolvePullSources(
 
     if (rows.length === 0) {
         throw handledError(
-            "This workspace has no linked workspaces to pull from.",
+            "This workspace has no parents to pull from.",
             HttpStatus.CONFLICT
         );
     }

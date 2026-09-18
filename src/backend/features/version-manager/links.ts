@@ -26,13 +26,13 @@ const MAX_LINKED_WORKSPACES = 100;
 
 export function toEdge(row: WorkspaceLinkRow): WorkspaceEdge {
     return {
-        source: toWorkspacePath(row.sourceDocumentId, row.sourceWorkspaceId),
-        target: toWorkspacePath(row.targetDocumentId, row.targetWorkspaceId)
+        parent: toWorkspacePath(row.sourceDocumentId, row.sourceWorkspaceId),
+        child: toWorkspacePath(row.targetDocumentId, row.targetWorkspaceId)
     };
 }
 
-/** The links where `workspace` provides the content. */
-export function getDownstreamLinks(
+/** The links to the workspaces `workspace` provides content to. */
+export function getChildLinks(
     db: Db,
     workspace: WorkspacePath
 ): Promise<WorkspaceLinkRow[]> {
@@ -48,8 +48,8 @@ export function getDownstreamLinks(
         .all();
 }
 
-/** The links where `workspace` is the one referencing. */
-export function getUpstreamLinks(
+/** The links to the workspaces `workspace` takes content from. */
+export function getParentLinks(
     db: Db,
     workspace: WorkspacePath
 ): Promise<WorkspaceLinkRow[]> {
@@ -82,16 +82,16 @@ export function getLink(
  */
 export async function addLink(
     db: Db,
-    source: WorkspacePath,
-    target: WorkspacePath
+    parent: WorkspacePath,
+    child: WorkspacePath
 ): Promise<void> {
     await db
         .insert(workspaceLinks)
         .values({
-            sourceDocumentId: source.documentId,
-            sourceWorkspaceId: source.instanceId,
-            targetDocumentId: target.documentId,
-            targetWorkspaceId: target.instanceId,
+            sourceDocumentId: parent.documentId,
+            sourceWorkspaceId: parent.instanceId,
+            targetDocumentId: child.documentId,
+            targetWorkspaceId: child.instanceId,
             createdAt: new Date()
         })
         .onConflictDoNothing();
@@ -102,13 +102,13 @@ export async function deleteLink(db: Db, linkId: string): Promise<void> {
 }
 
 /**
- * The edges reachable downstream of `root`, gathered a frontier at a time so a
- * push reads the part of the graph it is going to walk rather than the table.
+ * The edges below `root`, gathered a frontier at a time so a push reads the
+ * part of the graph it is going to walk rather than the whole table.
  *
  * Revisits are skipped, so a cycle terminates here and is reported by
  * `pushOrder`, which is where an order would have to exist for one.
  */
-export async function collectDownstreamEdges(
+export async function collectDescendantEdges(
     db: Db,
     root: WorkspacePath
 ): Promise<WorkspaceEdge[]> {
@@ -124,14 +124,14 @@ export async function collectDownstreamEdges(
             visited.add(key);
             if (visited.size > MAX_LINKED_WORKSPACES) {
                 throw new Error(
-                    `More than ${MAX_LINKED_WORKSPACES} linked workspaces downstream of ${root.documentId}`
+                    `More than ${MAX_LINKED_WORKSPACES} workspaces linked below ${root.documentId}`
                 );
             }
-            const rows = await getDownstreamLinks(db, workspace);
+            const rows = await getChildLinks(db, workspace);
             for (const row of rows) {
                 const edge = toEdge(row);
                 edges.push(edge);
-                next.push(edge.target);
+                next.push(edge.child);
             }
         }
         frontier = next;
@@ -204,6 +204,6 @@ export function otherEnd(
     row: WorkspaceLinkRow,
     workspace: WorkspacePath
 ): WorkspacePath {
-    const { source, target } = toEdge(row);
-    return isSameWorkspace(source, workspace) ? target : source;
+    const { parent, child } = toEdge(row);
+    return isSameWorkspace(parent, workspace) ? child : parent;
 }

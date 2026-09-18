@@ -25,12 +25,16 @@ export function isSameWorkspace(a: WorkspacePath, b: WorkspacePath): boolean {
  * Which side of a link a workspace is being asked about, from the workspace the
  * panel is open in:
  *
- * - `upstream` — workspaces it consumes, which it pulls from.
- * - `downstream` — workspaces that consume it, which it pushes to.
+ * - `parent` — a workspace it references, which it pulls from.
+ * - `child` — a workspace that references it, which it pushes to.
+ *
+ * Note this is the opposite of an assembly tree's sense, where the assembly is
+ * the parent of the parts in it. Here the document a change starts in is the
+ * parent, and the change flows down to its children.
  */
 export enum LinkDirection {
-    UPSTREAM = "upstream",
-    DOWNSTREAM = "downstream"
+    PARENT = "parent",
+    CHILD = "child"
 }
 
 /**
@@ -49,17 +53,17 @@ export interface LinkedWorkspace {
 }
 
 export interface WorkspaceLinksData {
-    upstream: LinkedWorkspace[];
-    downstream: LinkedWorkspace[];
+    parents: LinkedWorkspace[];
+    children: LinkedWorkspace[];
 }
 
 /**
  * How far a push travels.
  *
- * - `direct` — the workspaces that reference this one, left un-versioned.
- * - `recursive` — everything reachable past them, versioning each so the next
- *   one has something to reference.
- * - `one` — a single linked workspace, which is what a row's own push does.
+ * - `direct` — this workspace's children, left un-versioned.
+ * - `recursive` — every descendant, versioning each so the next one has
+ *   something to reference.
+ * - `one` — a single child, which is what a row's own push does.
  */
 export type PushScope =
     | { kind: "direct" }
@@ -69,12 +73,12 @@ export type PushScope =
 /**
  * Where a pull takes its versions from.
  *
- * - `linked` — the workspaces linked upstream.
+ * - `parents` — this workspace's linked parents.
  * - `all` — every out-of-date reference, linked or not.
- * - `one` — a single linked workspace, which is what a row's own pull does.
+ * - `one` — a single parent, which is what a row's own pull does.
  */
 export type PullScope =
-    | { kind: "linked" }
+    | { kind: "parents" }
     | { kind: "all" }
     | { kind: "one"; workspace: WorkspacePath };
 

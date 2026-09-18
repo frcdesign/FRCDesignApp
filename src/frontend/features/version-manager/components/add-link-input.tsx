@@ -21,8 +21,8 @@ interface AddLinkInputProps {
  * everybody already has: copy the link, paste it here.
  *
  * A card with the field and its button on one row, the way the app this came
- * from had it — it sits at the head of the list it adds to, so it reads as one
- * of the rows rather than as a form above them.
+ * from had it, under the list it adds to — so the links read first and the way
+ * to add one is where the list ends.
  */
 export function AddLinkInput(props: AddLinkInputProps): ReactNode {
     const { workspace, direction } = props;

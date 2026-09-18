@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { toWorkspacePath, type WorkspacePath } from "./contract";
 import {
-    downstreamOf,
+    childrenOf,
     LinkCycleError,
     pushOrder,
     type WorkspaceEdge
@@ -12,8 +12,8 @@ function ws(name: string): WorkspacePath {
     return toWorkspacePath(name, `${name}-w`);
 }
 
-function edge(source: string, target: string): WorkspaceEdge {
-    return { source: ws(source), target: ws(target) };
+function edge(parent: string, child: string): WorkspaceEdge {
+    return { parent: ws(parent), child: ws(child) };
 }
 
 /** What the order says, in the shorthand these tests are written in. */
@@ -21,17 +21,17 @@ function names(workspaces: WorkspacePath[]): string[] {
     return workspaces.map((workspace) => workspace.documentId);
 }
 
-describe("downstreamOf", () => {
+describe("childrenOf", () => {
     it("returns each workspace once, however many edges reach it", () => {
         const edges = [edge("a", "b"), edge("a", "b"), edge("a", "c")];
-        expect(names(downstreamOf(edges, ws("a")))).toEqual(["b", "c"]);
+        expect(names(childrenOf(edges, ws("a")))).toEqual(["b", "c"]);
     });
 });
 
 describe("pushOrder", () => {
     const chain = [edge("a", "b"), edge("b", "c")];
 
-    it("stops at the direct consumers when not recursive", () => {
+    it("stops at the direct children when not recursive", () => {
         expect(names(pushOrder(chain, ws("a"), false))).toEqual(["b"]);
     });
 

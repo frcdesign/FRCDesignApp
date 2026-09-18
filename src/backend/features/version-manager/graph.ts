@@ -4,14 +4,13 @@
  */
 import { isSameWorkspace, type WorkspacePath } from "./contract";
 
+/** One link: the parent provides the content, the child references it. */
 export interface WorkspaceEdge {
-    /** Provides the content. */
-    source: WorkspacePath;
-    /** References it. */
-    target: WorkspacePath;
+    parent: WorkspacePath;
+    child: WorkspacePath;
 }
 
-/** Thrown when the links downstream of a workspace lead back to it. */
+/** Thrown when a workspace's descendants lead back to it. */
 export class LinkCycleError extends Error {
     constructor(readonly workspace: WorkspacePath) {
         super(
@@ -27,18 +26,18 @@ function toKey(workspace: WorkspacePath): string {
 }
 
 /** The workspaces that reference `workspace` directly. */
-export function downstreamOf(
+export function childrenOf(
     edges: WorkspaceEdge[],
     workspace: WorkspacePath
 ): WorkspacePath[] {
     const seen = new Set<string>();
     const found: WorkspacePath[] = [];
     for (const edge of edges) {
-        if (!isSameWorkspace(edge.source, workspace)) continue;
-        const key = toKey(edge.target);
+        if (!isSameWorkspace(edge.parent, workspace)) continue;
+        const key = toKey(edge.child);
         if (seen.has(key)) continue;
         seen.add(key);
-        found.push(edge.target);
+        found.push(edge.child);
     }
     return found;
 }
@@ -48,11 +47,10 @@ export function downstreamOf(
  * update them. `root` itself is not among them: it is versioned first, and
  * nothing in it changes.
  *
- * A direct push stops at the workspaces that reference `root`. A recursive one
- * carries on through everything reachable from it, ordered so a workspace comes
- * after every workspace in the run that it references — a workspace fed by two
- * of them has to wait for both, which is why this is a topological order and
- * not a breadth-first walk.
+ * A direct push stops at `root`'s children. A recursive one carries on through
+ * every descendant, ordered so a workspace comes after every workspace in the
+ * run that it references — a child of two of them has to wait for both, which
+ * is why this is a topological order and not a breadth-first walk.
  *
  * @throws {LinkCycleError} when the reachable subgraph is not acyclic. There is
  * no order to run a cycle in, so the caller is told rather than left with a
@@ -64,7 +62,7 @@ export function pushOrder(
     recursive: boolean
 ): WorkspacePath[] {
     if (!recursive) {
-        return downstreamOf(edges, root);
+        return childrenOf(edges, root);
     }
 
     const finished = new Set<string>();
@@ -81,7 +79,7 @@ export function pushOrder(
             return;
         }
         active.add(key);
-        for (const next of downstreamOf(edges, workspace)) {
+        for (const next of childrenOf(edges, workspace)) {
             visit(next);
         }
         active.delete(key);

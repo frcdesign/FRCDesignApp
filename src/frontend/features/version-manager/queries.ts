@@ -19,6 +19,7 @@ import {
     workspaceLinksQueryKey
 } from "../../lib/query-keys";
 import { useIsSignedIn } from "../auth/access-level";
+import { defaultVersionName } from "./version-name";
 
 /** How often a running push or pull is asked whether it has finished. */
 const JOB_POLL_MS = 2000;
@@ -90,7 +91,8 @@ export function useRemoveLinkMutation(workspace: WorkspacePath) {
 }
 
 export interface PushVersionArgs {
-    name: string;
+    /** Absent for the ordinary case: see {@link defaultVersionName}. */
+    name?: string;
     description?: string;
     scope: PushScope;
 }
@@ -102,9 +104,16 @@ export interface PushVersionArgs {
 export function usePushVersionMutation(workspace: WorkspacePath) {
     return useMutation({
         mutationKey: ["push-version", workspace],
-        mutationFn: (args: PushVersionArgs) =>
+        mutationFn: ({ name, description, scope }: PushVersionArgs) =>
             apiPost<{ jobId: string }>("/push-version", {
-                body: { workspace, ...args }
+                body: {
+                    workspace,
+                    // Defaulted here rather than at each button, so every path
+                    // that pushes without asking lands on the same name.
+                    name: name?.trim() || defaultVersionName(),
+                    description,
+                    scope
+                }
             }),
         onSuccess: ({ jobId }) => adoptJob(workspace, jobId),
         onError: getAppErrorHandler("Unexpectedly failed to push the version.")

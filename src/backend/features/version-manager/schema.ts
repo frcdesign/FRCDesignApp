@@ -13,7 +13,8 @@ import {
 
 /**
  * One directed edge: the target workspace references content from the source.
- * Push runs along it, pull runs against it.
+ * Push runs along it, pull runs against it — so the source is what the contract
+ * calls the parent, and the target its child.
  *
  * Stored once rather than as a row per end. The implementation this came from
  * kept both, which meant a link could half-exist when only one of the two

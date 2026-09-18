@@ -1,37 +1,39 @@
 import {
-    type LinkedWorkspace,
+    type PushScope,
     type WorkspacePath
 } from "@backend/features/version-manager/contract";
 import { openAppModal } from "../../components/open-app-modal";
 import { PushVersionForm } from "./components/push-version-modal";
 
+interface PushVersionModalProps {
+    /** What the push reaches, decided by whatever opened this. */
+    scope: PushScope;
+    title: string;
+    /** The children it updates, named for the form to list. */
+    targets: string[];
+    recursive: boolean;
+}
+
 /**
  * Kept out of the component file so that file exports only components, which
  * is what lets React Refresh swap it in place instead of reloading its callers.
- *
- * `target` narrows the push to one linked workspace, which is what a row's own
- * push button asks for; the version still has to be named either way.
  */
 export function openPushVersionModal(
     workspace: WorkspacePath,
-    downstream: LinkedWorkspace[],
-    target?: LinkedWorkspace
+    props: PushVersionModalProps
 ): void {
     const modalId = "push-version";
     openAppModal({
         modalId,
-        title: target ? `Push to ${targetName(target)}` : "Push version",
+        title: props.title,
         children: (
             <PushVersionForm
                 workspace={workspace}
-                downstream={downstream}
-                target={target}
+                scope={props.scope}
+                targets={props.targets}
+                recursive={props.recursive}
                 modalId={modalId}
             />
         )
     });
-}
-
-function targetName(target: LinkedWorkspace): string {
-    return target.documentName ?? "the linked workspace";
 }
