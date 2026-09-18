@@ -15,6 +15,7 @@ import { getAppErrorHandler } from "../../lib/errors";
 import { showSuccessToast } from "../../lib/notifications";
 import { queryClient } from "../../lib/query-client";
 import {
+    nextVersionNameQueryKey,
     versionJobQueryKey,
     workspaceLinksQueryKey
 } from "../../lib/query-keys";
@@ -168,6 +169,28 @@ export function useVersionJobQuery(workspace: WorkspacePath | undefined) {
             query.state.data?.state === VersionJobState.RUNNING
                 ? JOB_POLL_MS
                 : false
+    });
+}
+
+/**
+ * The name a push would give the version it cuts, which the naming form opens
+ * with. Read fresh each time the form opens: somebody else may have cut a
+ * version since, and offering a number Onshape has already used is worse than
+ * waiting a moment for the real one.
+ */
+export function useNextVersionNameQuery(workspace: WorkspacePath | undefined) {
+    const isSignedIn = useIsSignedIn();
+    return useQuery<{ name: string }>({
+        queryKey: nextVersionNameQueryKey(workspace),
+        queryFn:
+            workspace && isSignedIn
+                ? () =>
+                      apiGet("/next-version-name", {
+                          query: toWorkspaceQuery(workspace)
+                      })
+                : skipToken,
+        staleTime: 0,
+        refetchInterval: false
     });
 }
 

@@ -8,6 +8,7 @@ import {
     hasPermissions,
     OnshapePermission
 } from "../../lib/onshape/endpoints/permissions";
+import { getVersions } from "../../lib/onshape/endpoints/versions";
 import {
     getWorkspaceLinkParam,
     workspaceLinkRoute
@@ -20,6 +21,7 @@ import {
     isSameWorkspace,
     LinkDirection,
     MAX_VERSION_NAME_LENGTH,
+    nextVersionName,
     PullScopeKind,
     PushScopeKind,
     toWorkspacePath,
@@ -446,5 +448,33 @@ versionManagerRoutes.get(
             query.jobId
         );
         return c.json(status);
+    }
+);
+
+/**
+ * GET /api/next-version-name?documentId=&instanceId=
+ *
+ * What a push with no name of its own would call the version it cuts here. The
+ * naming form shows it, so what it offers is the name that would have been used
+ * rather than a guess made without asking Onshape.
+ */
+versionManagerRoutes.get(
+    "/next-version-name",
+    requireSignInMiddleware,
+    cacheMiddleware(),
+    validate("query", workspaceQuery),
+    async (c) => {
+        const workspace = toWorkspace(c.req.valid("query"));
+        const client = await c.var.getOnshapeApi();
+        await requirePermissions(
+            client,
+            workspace,
+            "read this document",
+            OnshapePermission.READ
+        );
+        const versions = await getVersions(client, workspace);
+        return c.json({
+            name: nextVersionName(versions.map((version) => version.name))
+        });
     }
 );

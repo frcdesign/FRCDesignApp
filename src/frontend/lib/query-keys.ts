@@ -107,3 +107,8 @@ export function workspaceLinksQueryKey(workspace: InstancePath | undefined) {
 export function versionJobQueryKey(workspace: InstancePath | undefined) {
     return ["version-job", workspace];
 }
+
+/** The name a push would give the version it cuts here, read from Onshape. */
+export function nextVersionNameQueryKey(workspace: InstancePath | undefined) {
+    return ["next-version-name", workspace];
+}

@@ -33,6 +33,9 @@ const LocalStateSchema = z.object({
     /** The version manager's two sections, which open like the home page's. */
     isParentsOpen: z.boolean().default(true),
     isChildrenOpen: z.boolean().default(true),
+    /** Whether a push runs on the click rather than opening the naming form.
+     * On by default: seeing a change downstream is what pushing usually is. */
+    isQuickPush: z.boolean().default(true),
     /** Vendor filters per library, so switching libraries keeps each one's;
      * a library with no entry has every vendor active. */
     vendorFilters: z

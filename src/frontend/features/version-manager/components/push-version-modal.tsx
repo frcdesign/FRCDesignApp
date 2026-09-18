@@ -9,7 +9,7 @@ import {
 } from "@backend/features/version-manager/contract";
 import { AppModalBody, AppModalFooter } from "../../../components/app-modal";
 import { IconSize, StatusColor } from "../../../lib/style-constants";
-import { usePushVersionMutation } from "../queries";
+import { useNextVersionNameQuery, usePushVersionMutation } from "../queries";
 
 export interface PushVersionFormProps {
     workspace: WorkspacePath;
@@ -30,12 +30,16 @@ export interface PushVersionFormProps {
  */
 export function PushVersionForm(props: PushVersionFormProps): ReactNode {
     const { workspace, scope, targets, recursive, modalId } = props;
-    // Left empty rather than seeded with the V number: reading it means asking
-    // Onshape for the document's versions, and leaving it empty already means
-    // "the one you would have picked".
-    const [name, setName] = useState("");
+    // Undefined until somebody types: the field then shows the name Onshape is
+    // about to be asked for, and what they type replaces it. Derived rather
+    // than written into state when the query answers, which would be a state
+    // write from an effect.
+    const [typedName, setTypedName] = useState<string>();
     const [description, setDescription] = useState("");
+    const suggested = useNextVersionNameQuery(workspace);
     const push = usePushVersionMutation(workspace);
+
+    const name = typedName ?? suggested.data?.name ?? "";
 
     const submit = () => {
         push.mutate(
@@ -49,10 +53,16 @@ export function PushVersionForm(props: PushVersionFormProps): ReactNode {
             <AppModalBody>
                 <TextInput
                     label="Version name"
-                    placeholder="Leave empty for the next V number"
+                    placeholder={
+                        suggested.isPending
+                            ? "Reading this document's versions..."
+                            : "Leave empty for the next V number"
+                    }
                     maxLength={MAX_VERSION_NAME_LENGTH}
                     value={name}
-                    onChange={(event) => setName(event.currentTarget.value)}
+                    onChange={(event) =>
+                        setTypedName(event.currentTarget.value)
+                    }
                     data-autofocus
                 />
                 <Textarea
@@ -72,7 +82,7 @@ export function PushVersionForm(props: PushVersionFormProps): ReactNode {
                 <Button
                     variant="light"
                     ml="auto"
-                    leftSection={<ArrowLineUpIcon size={IconSize.SMALL} />}
+                    rightSection={<ArrowLineUpIcon size={IconSize.SMALL} />}
                     loading={push.isPending}
                     onClick={submit}
                 >

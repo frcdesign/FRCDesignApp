@@ -1,4 +1,12 @@
-import { Button, Group, Menu, Stack, Text } from "@mantine/core";
+import {
+    Button,
+    Group,
+    Loader,
+    Menu,
+    Stack,
+    Text,
+    Tooltip
+} from "@mantine/core";
 import {
     ArrowLineDownIcon,
     ArrowLineUpIcon,
@@ -6,16 +14,16 @@ import {
     ArrowSquareOutIcon,
     FileIcon,
     LinkBreakIcon,
-    PencilSimpleIcon,
-    TreeStructureIcon,
-    WarningIcon
+    ProhibitIcon,
+    TreeStructureIcon
 } from "@phosphor-icons/react";
-import { type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import {
     LinkDirection,
     PullScopeKind,
     PushScopeKind,
     type LinkedWorkspace,
+    type PushScope,
     type WorkspacePath
 } from "@backend/features/version-manager/contract";
 import { MenuButton, MenuSection } from "../../../components/app-menu";
@@ -23,6 +31,7 @@ import { ItemRow, ItemTable } from "../../../components/item-row";
 import { SectionNotice } from "../../../components/app-zero-state";
 import { TruncatedText } from "../../../components/truncated-text";
 import { IconSize, NO_SHRINK, StatusColor } from "../../../lib/style-constants";
+import { getUiState } from "../../../lib/ui-state";
 import { makeUrl, openUrlInNewTab } from "../../../lib/url";
 import { openPushVersionModal } from "../open-push-version-modal";
 import {
@@ -37,21 +46,28 @@ import { AddLinkInput } from "./add-link-input";
 export const DIRECTION_COPY = {
     [LinkDirection.PARENT]: {
         title: "Parents",
-        quickAction: "Quick pull",
+        allAction: "Pull all",
+        rowAction: "Pull",
+        running: "Pulling from Onshape...",
         description:
             "Workspaces this one references. Pulling moves this workspace's references onto their latest versions.",
         empty: "No parents linked."
     },
     [LinkDirection.CHILD]: {
         title: "Children",
-        quickAction: "Quick push",
+        allAction: "Push all",
+        rowAction: "Push",
+        running: "Pushing to Onshape...",
         description:
             "Workspaces that reference this one. Pushing creates a version here and moves their references onto it.",
         empty: "No children linked."
     }
 } as const;
 
-/** The arrow a direction is marked with, in its title and on its actions. */
+/** What a run can be aimed at: everything in a direction, or one link. */
+const ALL_TARGET = "all";
+
+/** The arrow a direction is marked with, on its title and its buttons. */
 export function DirectionIcon(props: {
     direction: LinkDirection;
     size?: number;
@@ -64,34 +80,214 @@ export function DirectionIcon(props: {
     );
 }
 
-interface QuickActionButtonProps {
+interface ActionButtonProps {
     direction: LinkDirection;
+    label: string;
+    /** This button's run is the one going, so it carries the spinner. */
+    loading: boolean;
     disabled: boolean;
+    /** Why it is disabled, when Onshape is the reason. */
+    forbidden?: boolean;
     onClick: () => void;
 }
 
 /**
- * The button on a section's header: pushes or pulls everything in it, with no
- * version to name and nothing to confirm, which is what nearly every use of
- * this page is.
+ * A push or a pull, with its arrow after the label. Reports its own progress:
+ * a run outlives the click, so the button that started it is where it is shown
+ * rather than in a banner over the page.
  */
-export function QuickActionButton(props: QuickActionButtonProps): ReactNode {
-    const { direction, disabled, onClick } = props;
+function ActionButton(props: ActionButtonProps): ReactNode {
+    const {
+        direction,
+        label,
+        loading,
+        disabled,
+        forbidden = false,
+        onClick
+    } = props;
+
+    const tooltip = forbidden
+        ? "You do not have permission to do this in Onshape."
+        : loading
+          ? DIRECTION_COPY[direction].running
+          : label;
+
     return (
-        <Button
-            size="compact-sm"
-            variant="light"
-            leftSection={
-                <DirectionIcon direction={direction} size={IconSize.SMALL} />
+        <Tooltip withArrow label={tooltip}>
+            {/* A span, so the tooltip still has something to hang off when the
+                button inside it is disabled and stops firing events. */}
+            <span style={NO_SHRINK}>
+                <Button
+                    size="compact-sm"
+                    variant="light"
+                    rightSection={
+                        loading ? (
+                            <Loader size={IconSize.SMALL} />
+                        ) : (
+                            <DirectionIcon
+                                direction={direction}
+                                size={IconSize.SMALL}
+                            />
+                        )
+                    }
+                    disabled={disabled}
+                    onClick={(event) => {
+                        // The row itself opens Onshape; this button does not.
+                        event.stopPropagation();
+                        onClick();
+                    }}
+                >
+                    {label}
+                </Button>
+            </span>
+        </Tooltip>
+    );
+}
+
+/**
+ * Everything a section and its rows can set running, held once per direction so
+ * the header outside the accordion panel and the rows inside it share a run.
+ */
+export interface LinkActions {
+    isRunning: boolean;
+    /** What the run going is aimed at: {@link ALL_TARGET} or a link's id. */
+    activeTarget: string | undefined;
+    runAll: (recursive: boolean) => void;
+    runOne: (linked: LinkedWorkspace, recursive: boolean) => void;
+    /** Parents only: every out-of-date reference, linked or not. */
+    updateAllReferences: () => void;
+}
+
+export function useLinkActions(
+    workspace: WorkspacePath,
+    direction: LinkDirection,
+    linked: LinkedWorkspace[]
+): LinkActions {
+    const pull = usePullReferencesMutation(workspace);
+    const push = usePushVersionMutation(workspace);
+    const isRunning = useIsVersionJobRunning(workspace);
+    const [startedTarget, setStartedTarget] = useState<string>();
+    const isChild = direction === LinkDirection.CHILD;
+
+    /**
+     * A push runs on the click or asks for a name first, which the navbar's
+     * checkbox decides. Read at the click rather than subscribed to: nothing
+     * here re-renders when it changes.
+     */
+    const startPush = (scope: PushScope, title: string, targets: string[]) => {
+        if (getUiState().isQuickPush) {
+            push.mutate({ scope });
+            return;
+        }
+        openPushVersionModal(workspace, {
+            scope,
+            title,
+            targets,
+            recursive:
+                scope.kind === PushScopeKind.DESCENDANTS ||
+                (scope.kind === PushScopeKind.ONE && scope.recursive)
+        });
+    };
+
+    return {
+        isRunning,
+        // Derived rather than cleared when the run ends: clearing would be a
+        // state write from an effect, and a stale target simply goes unused.
+        activeTarget: isRunning ? startedTarget : undefined,
+        runAll: (recursive) => {
+            setStartedTarget(ALL_TARGET);
+            if (!isChild) {
+                pull.mutate({ kind: PullScopeKind.PARENTS });
+                return;
             }
-            // The title beside it is what gives on a narrow panel; a label
-            // reading "Quick" is worse than a truncated document name.
-            style={NO_SHRINK}
-            disabled={disabled}
-            onClick={onClick}
-        >
-            {DIRECTION_COPY[direction].quickAction}
-        </Button>
+            startPush(
+                {
+                    kind: recursive
+                        ? PushScopeKind.DESCENDANTS
+                        : PushScopeKind.CHILDREN
+                },
+                recursive ? "Recursive push" : "Push to every child",
+                linked.map(toName)
+            );
+        },
+        runOne: (each, recursive) => {
+            setStartedTarget(each.linkId);
+            if (!isChild) {
+                pull.mutate({
+                    kind: PullScopeKind.ONE,
+                    workspace: each.workspace
+                });
+                return;
+            }
+            startPush(
+                {
+                    kind: PushScopeKind.ONE,
+                    workspace: each.workspace,
+                    recursive
+                },
+                `Push to ${toName(each)}`,
+                [toName(each)]
+            );
+        },
+        updateAllReferences: () => {
+            setStartedTarget(ALL_TARGET);
+            pull.mutate({ kind: PullScopeKind.ALL });
+        }
+    };
+}
+
+interface SectionActionsProps {
+    direction: LinkDirection;
+    linked: LinkedWorkspace[];
+    actions: LinkActions;
+}
+
+/** The whole section's button and menu, which sit in its header. */
+export function SectionActions(props: SectionActionsProps): ReactNode {
+    const { direction, linked, actions } = props;
+    const { isRunning, activeTarget } = actions;
+    const copy = DIRECTION_COPY[direction];
+    const isChild = direction === LinkDirection.CHILD;
+
+    return (
+        <>
+            <ActionButton
+                direction={direction}
+                label={copy.allAction}
+                loading={activeTarget === ALL_TARGET}
+                disabled={isRunning || linked.length === 0}
+                onClick={() => actions.runAll(false)}
+            />
+            <MenuButton>
+                {isChild ? (
+                    <MenuSection label="Push">
+                        <Menu.Item
+                            leftSection={
+                                <TreeStructureIcon size={IconSize.MEDIUM} />
+                            }
+                            disabled={isRunning || linked.length === 0}
+                            onClick={() => actions.runAll(true)}
+                        >
+                            Recursive push
+                        </Menu.Item>
+                    </MenuSection>
+                ) : (
+                    <MenuSection label="Pull">
+                        {/* Every out-of-date reference, linked or not, which is
+                            the one thing the parent list cannot express. */}
+                        <Menu.Item
+                            leftSection={
+                                <ArrowsClockwiseIcon size={IconSize.MEDIUM} />
+                            }
+                            disabled={isRunning}
+                            onClick={actions.updateAllReferences}
+                        >
+                            Update all references
+                        </Menu.Item>
+                    </MenuSection>
+                )}
+            </MenuButton>
+        </>
     );
 }
 
@@ -99,21 +295,15 @@ interface LinkedWorkspaceSectionProps {
     workspace: WorkspacePath;
     direction: LinkDirection;
     linked: LinkedWorkspace[];
+    actions: LinkActions;
 }
 
-/**
- * One direction's links, and the field that adds another underneath them.
- *
- * Every action runs on the click — a push takes the name Onshape's own dialog
- * would give it, since naming a version is not what somebody wanting their
- * change downstream came here to do. Naming one lives in a menu.
- */
+/** One direction's links, and the field that adds another underneath them. */
 export function LinkedWorkspaceSection(
     props: LinkedWorkspaceSectionProps
 ): ReactNode {
-    const { workspace, direction, linked } = props;
+    const { workspace, direction, linked, actions } = props;
     const removeLink = useRemoveLinkMutation(workspace);
-    const actions = useLinkActions(workspace, direction);
     const copy = DIRECTION_COPY[direction];
 
     return (
@@ -150,143 +340,17 @@ export function LinkedWorkspaceSection(
     );
 }
 
-/**
- * Everything a section and its rows can set running, in one place so the header
- * outside the accordion panel and the rows inside it drive the same mutations.
- */
-export interface LinkActions {
-    isRunning: boolean;
-    /** Push to, or pull from, everything in this direction. */
-    quickAll: () => void;
-    /** The same for one linked workspace. */
-    quickOne: (linked: LinkedWorkspace) => void;
-    /** Children only: carry the push on past them. */
-    recursiveAll: () => void;
-    recursiveOne: (linked: LinkedWorkspace) => void;
-    /** Children only: name the version first. */
-    nameAll: (linked: LinkedWorkspace[]) => void;
-    nameOne: (linked: LinkedWorkspace) => void;
-    /** Parents only: every out-of-date reference, linked or not. */
-    updateAllReferences: () => void;
-}
-
-export function useLinkActions(
-    workspace: WorkspacePath,
-    direction: LinkDirection
-): LinkActions {
-    const pull = usePullReferencesMutation(workspace);
-    const push = usePushVersionMutation(workspace);
-    const isRunning = useIsVersionJobRunning(workspace);
-    const isChild = direction === LinkDirection.CHILD;
-
-    const one = (linked: LinkedWorkspace, recursive: boolean) => {
-        if (isChild) {
-            push.mutate({
-                scope: {
-                    kind: PushScopeKind.ONE,
-                    workspace: linked.workspace,
-                    recursive
-                }
-            });
-        } else {
-            pull.mutate({
-                kind: PullScopeKind.ONE,
-                workspace: linked.workspace
-            });
-        }
-    };
-
-    return {
-        isRunning,
-        quickAll: () => {
-            if (isChild) {
-                push.mutate({ scope: { kind: PushScopeKind.CHILDREN } });
-            } else {
-                pull.mutate({ kind: PullScopeKind.PARENTS });
-            }
-        },
-        quickOne: (linked) => one(linked, false),
-        recursiveAll: () =>
-            push.mutate({ scope: { kind: PushScopeKind.DESCENDANTS } }),
-        recursiveOne: (linked) => one(linked, true),
-        nameAll: (linked) =>
-            openPushVersionModal(workspace, {
-                scope: { kind: PushScopeKind.CHILDREN },
-                title: "Push to every child",
-                targets: linked.map(toName),
-                recursive: false
-            }),
-        nameOne: (linked) =>
-            openPushVersionModal(workspace, {
-                scope: {
-                    kind: PushScopeKind.ONE,
-                    workspace: linked.workspace,
-                    recursive: false
-                },
-                title: `Push to ${toName(linked)}`,
-                targets: [toName(linked)],
-                recursive: false
-            }),
-        updateAllReferences: () => pull.mutate({ kind: PullScopeKind.ALL })
-    };
-}
-
-interface SectionMenuProps {
-    direction: LinkDirection;
-    linked: LinkedWorkspace[];
-    actions: LinkActions;
-}
-
-/** The section's own options, beside its quick button. */
-export function SectionMenu(props: SectionMenuProps): ReactNode {
-    const { direction, linked, actions } = props;
-    const { isRunning } = actions;
-    const disabled = isRunning || linked.length === 0;
-
-    if (direction === LinkDirection.PARENT) {
-        return (
-            <MenuButton>
-                <MenuSection label="Pull">
-                    {/* Every out-of-date reference, linked or not, which is the
-                        one thing the parent list cannot express. */}
-                    <Menu.Item
-                        leftSection={
-                            <ArrowsClockwiseIcon size={IconSize.MEDIUM} />
-                        }
-                        disabled={isRunning}
-                        onClick={actions.updateAllReferences}
-                    >
-                        Update all references
-                    </Menu.Item>
-                </MenuSection>
-            </MenuButton>
-        );
-    }
-
-    return (
-        <MenuButton>
-            <MenuSection label="Push">
-                <Menu.Item
-                    leftSection={<TreeStructureIcon size={IconSize.MEDIUM} />}
-                    disabled={disabled}
-                    onClick={actions.recursiveAll}
-                >
-                    Recursive push
-                </Menu.Item>
-                <Menu.Item
-                    leftSection={<PencilSimpleIcon size={IconSize.MEDIUM} />}
-                    disabled={isRunning}
-                    onClick={() => actions.nameAll(linked)}
-                >
-                    Push with a name...
-                </Menu.Item>
-            </MenuSection>
-        </MenuButton>
-    );
-}
-
 function toName(linked: LinkedWorkspace): string {
     return linked.documentName ?? "a document you cannot open";
+}
+
+/**
+ * Whether this link can be acted on: a push writes to the linked workspace, so
+ * it needs the permissions Onshape reported for it; a pull only reads it, which
+ * being openable already establishes.
+ */
+function canAct(linked: LinkedWorkspace, isChild: boolean): boolean {
+    return isChild ? linked.canPush : linked.isOpenable;
 }
 
 interface LinkedWorkspaceRowProps {
@@ -300,15 +364,13 @@ function LinkedWorkspaceRow(props: LinkedWorkspaceRowProps): ReactNode {
     const { linked, direction, actions, onRemove } = props;
     const url = makeUrl(linked.workspace);
     const isChild = direction === LinkDirection.CHILD;
-    // A push writes to the linked workspace, so it needs the permissions
-    // Onshape reported for it; a pull only reads it, which being openable
-    // already establishes.
-    const canAct = isChild ? linked.canPush : linked.isOpenable;
-    const disabled = actions.isRunning || !canAct;
+    const allowed = canAct(linked, isChild);
+    const disabled = actions.isRunning || !allowed;
+    const copy = DIRECTION_COPY[direction];
 
     const menuItems = (
         <>
-            <MenuSection label={isChild ? "Push" : "Pull"}>
+            <MenuSection label={copy.rowAction}>
                 <Menu.Item
                     leftSection={
                         <DirectionIcon
@@ -317,9 +379,9 @@ function LinkedWorkspaceRow(props: LinkedWorkspaceRowProps): ReactNode {
                         />
                     }
                     disabled={disabled}
-                    onClick={() => actions.quickOne(linked)}
+                    onClick={() => actions.runOne(linked, false)}
                 >
-                    {DIRECTION_COPY[direction].quickAction}
+                    {copy.rowAction}
                 </Menu.Item>
                 {/* No recursive pull: a pull writes only to this workspace, and
                     going further would mean versioning a parent's own parents,
@@ -330,20 +392,9 @@ function LinkedWorkspaceRow(props: LinkedWorkspaceRowProps): ReactNode {
                             <TreeStructureIcon size={IconSize.MEDIUM} />
                         }
                         disabled={disabled}
-                        onClick={() => actions.recursiveOne(linked)}
+                        onClick={() => actions.runOne(linked, true)}
                     >
                         Recursive push
-                    </Menu.Item>
-                )}
-                {isChild && (
-                    <Menu.Item
-                        leftSection={
-                            <PencilSimpleIcon size={IconSize.MEDIUM} />
-                        }
-                        disabled={disabled}
-                        onClick={() => actions.nameOne(linked)}
-                    >
-                        Push with a name...
                     </Menu.Item>
                 )}
             </MenuSection>
@@ -371,11 +422,43 @@ function LinkedWorkspaceRow(props: LinkedWorkspaceRowProps): ReactNode {
 
     return (
         <ItemRow
-            left={<LinkedWorkspaceTitle linked={linked} />}
+            left={<LinkedWorkspaceTitle linked={linked} allowed={allowed} />}
             menuItems={menuItems}
             onClick={linked.isOpenable ? () => openUrlInNewTab(url) : undefined}
+            rightSection={
+                <ActionButton
+                    direction={direction}
+                    label={copy.rowAction}
+                    loading={actions.activeTarget === linked.linkId}
+                    disabled={disabled}
+                    forbidden={!allowed}
+                    onClick={() => actions.runOne(linked, false)}
+                />
+            }
         />
     );
+}
+
+/** What a link the caller has no permission on says, in place of its name. */
+function MissingAccess(props: { size?: "sm" | "xs" }): ReactNode {
+    const { size = "xs" } = props;
+    return (
+        <Group gap={4} wrap="nowrap" miw={0}>
+            <ProhibitIcon
+                size={size === "sm" ? IconSize.MEDIUM : IconSize.TINY}
+                color={`var(--mantine-color-${StatusColor.ERROR}-filled)`}
+            />
+            <Text size={size} c={StatusColor.ERROR}>
+                Missing access
+            </Text>
+        </Group>
+    );
+}
+
+interface LinkedWorkspaceTitleProps {
+    linked: LinkedWorkspace;
+    /** Whether this direction's action can be run on it. */
+    allowed: boolean;
 }
 
 /**
@@ -383,19 +466,13 @@ function LinkedWorkspaceRow(props: LinkedWorkspaceRowProps): ReactNode {
  * shows that it exists and nothing else: what it points at is not theirs to
  * know, and the row is still theirs to remove.
  */
-function LinkedWorkspaceTitle(props: { linked: LinkedWorkspace }): ReactNode {
-    const { linked } = props;
+function LinkedWorkspaceTitle(props: LinkedWorkspaceTitleProps): ReactNode {
+    const { linked, allowed } = props;
 
     if (!linked.isOpenable) {
         return (
             <Group gap="sm" wrap="nowrap" flex={1} miw={0}>
-                <WarningIcon
-                    size={IconSize.MEDIUM}
-                    color={StatusColor.WARNING}
-                />
-                <Text size="sm" c={StatusColor.DIMMED}>
-                    A document you cannot open
-                </Text>
+                <MissingAccess size="sm" />
             </Group>
         );
     }
@@ -410,10 +487,15 @@ function LinkedWorkspaceTitle(props: { linked: LinkedWorkspace }): ReactNode {
                 <TruncatedText hoverText={documentName} size="sm">
                     {documentName}
                 </TruncatedText>
-                {linked.workspaceName && (
-                    <Text size="xs" c={StatusColor.DIMMED} truncate>
-                        {linked.workspaceName}
-                    </Text>
+                {/* Readable but not writable, which only a push runs into. */}
+                {!allowed ? (
+                    <MissingAccess />
+                ) : (
+                    linked.workspaceName && (
+                        <Text size="xs" c={StatusColor.DIMMED} truncate>
+                            {linked.workspaceName}
+                        </Text>
+                    )
                 )}
             </Stack>
         </Group>

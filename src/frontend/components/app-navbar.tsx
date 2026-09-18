@@ -46,6 +46,7 @@ import { queryClient } from "../lib/query-client";
 import { getLibraryVersionQuery } from "../features/library/queries";
 import { InsertLocationStatus } from "../features/insert-location/components/insert-location-status";
 import { useIsVersionManager } from "../features/version-manager/navigation";
+import { VersionManagerNavbar } from "../features/version-manager/components/version-manager-navbar";
 import { useTargetWorkspace } from "../lib/onshape-params";
 
 /**
@@ -86,7 +87,7 @@ export function NavbarRow(props: PropsWithChildren): ReactNode {
  */
 export function AppNavbar(): ReactNode {
     // Search and its filters belong to a library, and the version manager is
-    // not one; its page fills the room they leave.
+    // not one; it puts its own row in their place.
     const isVersionManager = useIsVersionManager();
 
     return (
@@ -100,7 +101,9 @@ export function AppNavbar(): ReactNode {
                     <SettingsButton />
                 </Group>
             </NavbarRow>
-            {!isVersionManager && (
+            {isVersionManager ? (
+                <VersionManagerNavbar />
+            ) : (
                 <Group gap="xs" px="sm" h={NAVBAR_ROW_HEIGHT} wrap="nowrap">
                     <SearchBar />
                     <VendorMenu />

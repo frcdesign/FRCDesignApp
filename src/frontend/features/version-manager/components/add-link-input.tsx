@@ -62,7 +62,7 @@ export function AddLinkInput(props: AddLinkInputProps): ReactNode {
                 <Button
                     size="compact-sm"
                     variant="subtle"
-                    leftSection={<PlusIcon size={IconSize.SMALL} />}
+                    rightSection={<PlusIcon size={IconSize.SMALL} />}
                     loading={addLink.isPending}
                     disabled={url.trim() === ""}
                     onClick={submit}
