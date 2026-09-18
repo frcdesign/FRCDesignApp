@@ -28,6 +28,7 @@ import {
     SectionActions,
     useLinkActions
 } from "../../features/version-manager/components/linked-workspace-section";
+import { VersionManagerZeroState } from "../../features/version-manager/components/version-manager-zero-state";
 import { useVersionJobToasts } from "../../features/version-manager/job-toasts";
 import { useWorkspaceLinksQuery } from "../../features/version-manager/queries";
 import { useIsSignedIn } from "../../features/auth/access-level";
@@ -87,6 +88,12 @@ function VersionManager(props: VersionManagerProps): ReactNode {
     }
 
     const links: WorkspaceLinksData = linksQuery.data;
+    // Nothing linked in either direction: the sections would both be empty, and
+    // an empty section says neither what this page is for nor what to do next.
+    if (links.parents.length === 0 && links.children.length === 0) {
+        return <VersionManagerZeroState workspace={workspace} />;
+    }
+
     const opened = [
         ...(uiState.isParentsOpen ? [LinkDirection.PARENT] : []),
         ...(uiState.isChildrenOpen ? [LinkDirection.CHILD] : [])

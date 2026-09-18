@@ -46,7 +46,7 @@ import { AddLinkInput } from "./add-link-input";
 export const DIRECTION_COPY = {
     [LinkDirection.PARENT]: {
         title: "Parents",
-        allAction: "Pull all",
+        allAction: "Pull from all",
         rowAction: "Pull",
         running: "Pulling from Onshape...",
         description:
@@ -55,7 +55,7 @@ export const DIRECTION_COPY = {
     },
     [LinkDirection.CHILD]: {
         title: "Children",
-        allAction: "Push all",
+        allAction: "Push to all",
         rowAction: "Push",
         running: "Pushing to Onshape...",
         description:
