@@ -190,7 +190,7 @@ export interface OnshapeDocumentInfo {
      * Optional because nothing here has confirmed Onshape always sends it; the
      * load throws rather than guessing when it is absent.
      */
-    defaultWorkspace?: { id: string };
+    defaultWorkspace?: { id: string; name?: string };
 }
 
 /** A folder (group) node in the document contents tree. */
@@ -355,4 +355,41 @@ interface OnshapePartStudioFeature {
 /** GET /partstudios/d/{did}/{wvm}/{wvmid}/e/{eid}/features (the subset we read). */
 export interface OnshapeFeatureListResponse {
     features: OnshapePartStudioFeature[];
+}
+
+// === external references (GET /documents/d/{did}/w/{wid}/externalreferences) ===
+
+/**
+ * One external instance a tab references: the document and version it lives in,
+ * and which of that instance's tabs are referenced.
+ */
+export interface OnshapeExternalReference {
+    documentId: string;
+    /** The referenced instance's id. Always a version: references are to versions. */
+    id: string;
+    /** Onshape's own verdict on whether a newer version exists. */
+    isOutOfDate: boolean;
+    referencedElements: string[];
+}
+
+/**
+ * GET /documents/d/{did}/w/{wid}/externalreferences (the subset we read).
+ *
+ * Undocumented and OAuth-only, as far as the app that first used it could tell;
+ * this shape is carried over from that implementation rather than from Onshape's
+ * API spec, so treat it as unverified against the current API.
+ */
+export interface OnshapeExternalReferences {
+    /** Keyed by the referencing tab's element id. */
+    elementExternalReferences: Record<string, OnshapeExternalReference[]>;
+    /** The newest version of each referenced document. */
+    latestVersions: { documentId: string; id: string }[];
+}
+
+// === workspaces (GET /documents/d/{did}/workspaces) ===
+
+/** An item from GET /documents/d/{did}/workspaces (the subset we read). */
+export interface OnshapeWorkspaceInfo {
+    id: string;
+    name: string;
 }

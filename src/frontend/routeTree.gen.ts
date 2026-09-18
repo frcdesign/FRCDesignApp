@@ -13,6 +13,7 @@ import { Route as DashboardRouteRouteImport } from './routes/dashboard/route'
 import { Route as AppRouteRouteImport } from './routes/app/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
+import { Route as AppVersionManagerRouteImport } from './routes/app/version-manager'
 import { Route as PagesVersionErrorRouteImport } from './routes/_pages/version-error'
 import { Route as PagesSetupRouteImport } from './routes/_pages/setup'
 import { Route as PagesSafariErrorRouteImport } from './routes/_pages/safari-error'
@@ -47,6 +48,11 @@ const DashboardIndexRoute = DashboardIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => DashboardRouteRoute,
+} as any)
+const AppVersionManagerRoute = AppVersionManagerRouteImport.update({
+  id: '/version-manager',
+  path: '/version-manager',
+  getParentRoute: () => AppRouteRoute,
 } as any)
 const PagesVersionErrorRoute = PagesVersionErrorRouteImport.update({
   id: '/_pages/version-error',
@@ -137,6 +143,7 @@ export interface FileRoutesByFullPath {
   '/safari-error': typeof PagesSafariErrorRoute
   '/setup': typeof PagesSetupRoute
   '/version-error': typeof PagesVersionErrorRoute
+  '/app/version-manager': typeof AppVersionManagerRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/app/library/$libraryId': typeof AppLibraryLibraryIdRouteRouteWithChildren
   '/dashboard/library/$libraryId': typeof DashboardLibraryLibraryIdRouteRouteWithChildren
@@ -156,6 +163,7 @@ export interface FileRoutesByTo {
   '/safari-error': typeof PagesSafariErrorRoute
   '/setup': typeof PagesSetupRoute
   '/version-error': typeof PagesVersionErrorRoute
+  '/app/version-manager': typeof AppVersionManagerRoute
   '/dashboard': typeof DashboardIndexRoute
   '/dashboard/library/$libraryId/part': typeof DashboardLibraryLibraryIdPartRoute
   '/dashboard/library/$libraryId/unused': typeof DashboardLibraryLibraryIdUnusedRoute
@@ -175,6 +183,7 @@ export interface FileRoutesById {
   '/_pages/safari-error': typeof PagesSafariErrorRoute
   '/_pages/setup': typeof PagesSetupRoute
   '/_pages/version-error': typeof PagesVersionErrorRoute
+  '/app/version-manager': typeof AppVersionManagerRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/app/library/$libraryId': typeof AppLibraryLibraryIdRouteRouteWithChildren
   '/dashboard/library/$libraryId': typeof DashboardLibraryLibraryIdRouteRouteWithChildren
@@ -197,6 +206,7 @@ export interface FileRouteTypes {
     | '/safari-error'
     | '/setup'
     | '/version-error'
+    | '/app/version-manager'
     | '/dashboard/'
     | '/app/library/$libraryId'
     | '/dashboard/library/$libraryId'
@@ -216,6 +226,7 @@ export interface FileRouteTypes {
     | '/safari-error'
     | '/setup'
     | '/version-error'
+    | '/app/version-manager'
     | '/dashboard'
     | '/dashboard/library/$libraryId/part'
     | '/dashboard/library/$libraryId/unused'
@@ -234,6 +245,7 @@ export interface FileRouteTypes {
     | '/_pages/safari-error'
     | '/_pages/setup'
     | '/_pages/version-error'
+    | '/app/version-manager'
     | '/dashboard/'
     | '/app/library/$libraryId'
     | '/dashboard/library/$libraryId'
@@ -286,6 +298,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/dashboard/'
       preLoaderRoute: typeof DashboardIndexRouteImport
       parentRoute: typeof DashboardRouteRoute
+    }
+    '/app/version-manager': {
+      id: '/app/version-manager'
+      path: '/version-manager'
+      fullPath: '/app/version-manager'
+      preLoaderRoute: typeof AppVersionManagerRouteImport
+      parentRoute: typeof AppRouteRoute
     }
     '/_pages/version-error': {
       id: '/_pages/version-error'
@@ -406,10 +425,12 @@ const AppLibraryLibraryIdRouteRouteWithChildren =
   )
 
 interface AppRouteRouteChildren {
+  AppVersionManagerRoute: typeof AppVersionManagerRoute
   AppLibraryLibraryIdRouteRoute: typeof AppLibraryLibraryIdRouteRouteWithChildren
 }
 
 const AppRouteRouteChildren: AppRouteRouteChildren = {
+  AppVersionManagerRoute: AppVersionManagerRoute,
   AppLibraryLibraryIdRouteRoute: AppLibraryLibraryIdRouteRouteWithChildren,
 }
 

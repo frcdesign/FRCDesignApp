@@ -8,6 +8,7 @@ export {
     LoadLibraryWorkflow
 } from "./features/load/workflows";
 export { ThumbnailRenderer } from "./features/thumbnails/renderer";
+export { VersionManagerWorkflow } from "./features/version-manager/workflow";
 import { createApp } from "./app";
 import { productionAuth } from "./features/auth/request-auth";
 

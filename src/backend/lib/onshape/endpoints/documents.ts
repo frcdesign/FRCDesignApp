@@ -1,12 +1,20 @@
 import { OnshapeApi } from "../client";
 import {
     DocumentPath,
+    ElementPath,
     InstancePath,
     toDocumentApiPath,
+    toElementApiObject,
+    toElementApiPath,
     toInstanceApiPath
 } from "../path";
 import { apiPath } from "../api-path";
-import { OnshapeDocumentContents, OnshapeDocumentInfo } from "../types";
+import {
+    OnshapeDocumentContents,
+    OnshapeDocumentInfo,
+    OnshapeExternalReferences,
+    OnshapeWorkspaceInfo
+} from "../types";
 
 /** Describes possible part types. */
 export enum PartType {
@@ -55,5 +63,66 @@ export function getUnitInfo(
         apiPath("documents", instancePath, toInstanceApiPath, {
             endRoute: "unitinfo"
         })
+    );
+}
+
+/** The document's workspaces, which is where a workspace's own name comes from. */
+export function getWorkspaces(
+    client: OnshapeApi,
+    documentPath: DocumentPath
+): Promise<OnshapeWorkspaceInfo[]> {
+    return client.get(
+        apiPath("documents", documentPath, toDocumentApiPath, {
+            endRoute: "workspaces"
+        })
+    );
+}
+
+/**
+ * Every external instance each of the workspace's tabs references, and the
+ * newest version of each of those documents.
+ *
+ * See {@link OnshapeExternalReferences}: this endpoint is undocumented, so both
+ * the path and the response shape come from the implementation this was ported
+ * from rather than from Onshape.
+ */
+export function getExternalReferences(
+    client: OnshapeApi,
+    instancePath: InstancePath
+): Promise<OnshapeExternalReferences> {
+    return client.get(
+        apiPath("documents", instancePath, toInstanceApiPath, {
+            endRoute: "externalreferences"
+        })
+    );
+}
+
+/** Repoints a reference from one path to another; both name the same tab. */
+export interface ReferenceUpdate {
+    fromReference: ElementPath;
+    toReference: ElementPath;
+}
+
+/**
+ * Repoints the references one tab makes. Onshape answers with no body worth
+ * reading, so a caller learns only that it did not throw.
+ */
+export function updateReferences(
+    client: OnshapeApi,
+    elementPath: ElementPath,
+    referenceUpdates: ReferenceUpdate[]
+): Promise<void> {
+    return client.postNone(
+        apiPath("elements", elementPath, toElementApiPath, {
+            endRoute: "updatereferences"
+        }),
+        {
+            body: {
+                referenceUpdates: referenceUpdates.map((update) => ({
+                    fromReference: toElementApiObject(update.fromReference),
+                    toReference: toElementApiObject(update.toReference)
+                }))
+            }
+        }
     );
 }

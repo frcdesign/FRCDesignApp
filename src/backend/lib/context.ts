@@ -3,6 +3,7 @@ import type {
     AddGroupParams,
     LoadLibraryParams
 } from "../features/load/workflows";
+import type { VersionJobParams } from "../features/version-manager/workflow";
 import type { ThumbnailRenderer } from "../features/thumbnails/renderer";
 import { type AccessLevel } from "../features/auth/access-level";
 import { type OAuthApi } from "./onshape/client";
@@ -15,6 +16,8 @@ export interface AppBindings {
     BLOB: R2Bucket;
     LOAD_LIBRARY_WORKFLOW: Workflow<LoadLibraryParams>;
     ADD_GROUP_WORKFLOW: Workflow<AddGroupParams>;
+    /** Pushes and pulls, which are chains of Onshape writes; see the workflow. */
+    VERSION_MANAGER_WORKFLOW: Workflow<VersionJobParams>;
     /** One per Onshape user; every thumbnail Onshape renders queues here. */
     THUMBNAIL_RENDERER: DurableObjectNamespace<ThumbnailRenderer>;
     ADMIN_TEAM: string;

@@ -95,3 +95,15 @@ export function renderQueryKey(url: string) {
 export function storedThumbnailQueryKey(url: string | undefined) {
     return ["storage-thumbnail", url];
 }
+
+/**
+ * The version manager's queries, keyed by the workspace they are about and kept
+ * outside the library prefix: a library reload moves nothing here.
+ */
+export function workspaceLinksQueryKey(workspace: InstancePath | undefined) {
+    return ["workspace-links", workspace];
+}
+
+export function versionJobQueryKey(workspace: InstancePath | undefined) {
+    return ["version-job", workspace];
+}

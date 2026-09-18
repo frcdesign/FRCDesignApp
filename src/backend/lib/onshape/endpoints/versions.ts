@@ -1,5 +1,5 @@
 import { OnshapeApi } from "../client";
-import { DocumentPath, toDocumentApiPath } from "../path";
+import { DocumentPath, InstancePath, toDocumentApiPath } from "../path";
 import { apiPath } from "../api-path";
 import { OnshapeVersionInfo } from "../types";
 
@@ -26,5 +26,30 @@ export function getLatestVersion(
 ): Promise<OnshapeVersionInfo> {
     return getVersions(client, documentPath).then(
         (versions) => versions[versions.length - 1]
+    );
+}
+
+/**
+ * Cuts a version of a workspace. Onshape takes the instance in the body as well
+ * as the document in the path, which is why this asks for a whole instance.
+ */
+export function createVersion(
+    client: OnshapeApi,
+    instancePath: InstancePath,
+    name: string,
+    description = ""
+): Promise<OnshapeVersionInfo> {
+    return client.post(
+        apiPath("documents", instancePath, toDocumentApiPath, {
+            endRoute: "versions"
+        }),
+        {
+            body: {
+                name,
+                description,
+                documentId: instancePath.documentId,
+                workspaceId: instancePath.instanceId
+            }
+        }
     );
 }

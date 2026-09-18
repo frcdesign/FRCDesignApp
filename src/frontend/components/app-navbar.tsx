@@ -45,6 +45,8 @@ import { LibraryId } from "@backend/features/library/library-id";
 import { queryClient } from "../lib/query-client";
 import { getLibraryVersionQuery } from "../features/library/queries";
 import { InsertLocationStatus } from "../features/insert-location/components/insert-location-status";
+import { useIsVersionManager } from "../features/version-manager/navigation";
+import { useTargetWorkspace } from "../lib/onshape-params";
 
 /**
  * The bar every page is topped by: the brand, then whatever that page puts
@@ -83,10 +85,14 @@ export function NavbarRow(props: PropsWithChildren): ReactNode {
  * brand and settings alongside, over a row holding search and its filters.
  */
 export function AppNavbar(): ReactNode {
+    // Search and its filters belong to a library, and the version manager is
+    // not one; its page fills the room they leave.
+    const isVersionManager = useIsVersionManager();
+
     return (
         <Stack gap={0}>
             <NavbarRow>
-                <LibraryTabs />
+                <AppTabs />
                 <Group gap="xs" wrap="nowrap" ml="auto">
                     <InsertLocationStatus />
                     <JobIndicator />
@@ -94,10 +100,12 @@ export function AppNavbar(): ReactNode {
                     <SettingsButton />
                 </Group>
             </NavbarRow>
-            <Group gap="xs" px="sm" h={NAVBAR_ROW_HEIGHT} wrap="nowrap">
-                <SearchBar />
-                <VendorMenu />
-            </Group>
+            {!isVersionManager && (
+                <Group gap="xs" px="sm" h={NAVBAR_ROW_HEIGHT} wrap="nowrap">
+                    <SearchBar />
+                    <VendorMenu />
+                </Group>
+            )}
         </Stack>
     );
 }
@@ -142,9 +150,21 @@ function RunningJobLoader(): ReactNode {
     );
 }
 
-/** Switches libraries; the url is what actually selects one. */
-function LibraryTabs(): ReactNode {
+/**
+ * The value the version manager's tab takes. Not a library id, so it can never
+ * collide with one.
+ */
+const VERSION_MANAGER_TAB = "version-manager";
+
+/**
+ * The app's top-level pages: a tab per library, and the version manager after
+ * them when the panel was opened somewhere it has a document to act on. The url
+ * is what actually selects one.
+ */
+function AppTabs(): ReactNode {
     const currentLibraryId = useLibraryId();
+    const isVersionManager = useIsVersionManager();
+    const targetWorkspace = useTargetWorkspace();
     const navigate = useNavigate();
 
     // Warm the versions on hover, so picking one has nothing left to wait for.
@@ -154,12 +174,20 @@ function LibraryTabs(): ReactNode {
         }
     };
 
+    const currentTab = isVersionManager
+        ? VERSION_MANAGER_TAB
+        : currentLibraryId;
+
     return (
         <Tabs
-            value={currentLibraryId}
+            value={currentTab}
             onMouseEnter={prefetchVersions}
             onChange={(value) => {
-                if (!value || value === currentLibraryId) {
+                if (!value || value === currentTab) {
+                    return;
+                }
+                if (value === VERSION_MANAGER_TAB) {
+                    void navigate({ to: "/app/version-manager" });
                     return;
                 }
                 const libraryId = value as LibraryId;
@@ -193,12 +221,19 @@ function LibraryTabs(): ReactNode {
                 }
             }}
         >
-            <Tabs.List aria-label="Libraries">
+            <Tabs.List aria-label="Pages">
                 {Object.values(LibraryId).map((libraryId) => (
                     <Tabs.Tab key={libraryId} value={libraryId}>
                         {getLibraryName(libraryId)}
                     </Tabs.Tab>
                 ))}
+                {/* Only where there is a workspace to push or pull, which is
+                    what the page acts on; standalone there is none. */}
+                {targetWorkspace && (
+                    <Tabs.Tab value={VERSION_MANAGER_TAB}>
+                        Version manager
+                    </Tabs.Tab>
+                )}
             </Tabs.List>
         </Tabs>
     );

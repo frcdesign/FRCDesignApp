@@ -4,8 +4,10 @@ import {
     type ColorTheme,
     type OnshapeLaunch,
     type TargetElement,
-    toTargetElement
+    toTargetElement,
+    toTargetWorkspace
 } from "./onshape-launch";
+import { type WorkspacePath } from "@backend/features/version-manager/contract";
 
 /**
  * Takes a launch off the url into the store, which the app reads it from for
@@ -26,6 +28,11 @@ export function useTargetElement(): TargetElement | undefined {
  */
 export function useIsConnectedToOnshape(): boolean {
     return useTargetElement() !== undefined;
+}
+
+/** The workspace the panel was opened in; nothing when it was opened outside one. */
+export function useTargetWorkspace(): WorkspacePath | undefined {
+    return toTargetWorkspace(useGetUiState());
 }
 
 export function useOnshapeServer(): string | undefined {

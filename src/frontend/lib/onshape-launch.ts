@@ -9,6 +9,7 @@
 import * as z from "zod";
 import { ElementType } from "@backend/lib/onshape/element-type";
 import { INSTANCE_TYPES, type ElementPath } from "@backend/lib/onshape/path";
+import { type WorkspacePath } from "@backend/features/version-manager/contract";
 
 /** A resolved color scheme, as Onshape provides it; Theme adds "system" on top. */
 export const ColorThemeType = z.enum(["light", "dark"]);
@@ -62,6 +63,21 @@ export function toTargetElement(
         return undefined;
     }
     return { documentId, instanceId, instanceType, elementId, elementType };
+}
+
+/**
+ * The workspace the version manager acts on. Unlike {@link toTargetElement} it
+ * wants no tab: pushing and pulling move the whole workspace's references, and
+ * which tab the panel was opened from has nothing to do with it.
+ */
+export function toTargetWorkspace(
+    launch: OnshapeLaunch
+): WorkspacePath | undefined {
+    const { documentId, instanceId, instanceType } = launch;
+    if (!documentId || !instanceId || instanceType !== "w") {
+        return undefined;
+    }
+    return { documentId, instanceId, instanceType };
 }
 
 /** Whether a launch names a document the app cannot be used in. */

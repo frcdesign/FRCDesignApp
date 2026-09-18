@@ -15,3 +15,7 @@ export function toInsertablePath(insertableId: string): string {
 export function toFavoritePath(favoriteId: string): string {
     return `/favorite/${favoriteId}`;
 }
+
+export function toWorkspaceLinkPath(linkId: string): string {
+    return `/workspace-link/${linkId}`;
+}
