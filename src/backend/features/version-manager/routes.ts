@@ -9,7 +9,6 @@ import {
     OnshapePermission
 } from "../../lib/onshape/endpoints/permissions";
 import { getInsertables } from "../../lib/onshape/endpoints/documents";
-import { getWorkspaceThumbnail } from "../../lib/onshape/endpoints/thumbnails";
 import { getVersions } from "../../lib/onshape/endpoints/versions";
 import {
     getWorkspaceLinkParam,
@@ -18,7 +17,6 @@ import {
 import { getDb } from "../../db/client";
 import { validate } from "../../lib/validate";
 import { requireSignInMiddleware } from "../auth/guards";
-import { ThumbnailSize } from "../thumbnails/contract";
 import { getSessionId } from "../auth/session";
 import {
     isSameWorkspace,
@@ -62,11 +60,6 @@ const workspaceSchema = z.object({
 });
 
 const workspaceQuery = workspaceSchema;
-
-const thumbnailQuery = workspaceSchema.extend({
-    /** Which of Onshape's two stored sizes to serve. */
-    size: z.enum(ThumbnailSize).default(ThumbnailSize.SMALL)
-});
 
 const jobQuery = workspaceSchema.extend({
     /** The run the client is watching; without one, the workspace's latest. */
@@ -672,63 +665,6 @@ versionManagerRoutes.get(
         const versions = await getVersions(client, workspace);
         return c.json({
             name: nextVersionName(versions.map((version) => version.name))
-        });
-    }
-);
-
-/**
- * Long enough that a row and the card it opens on hover share one fetch, short
- * enough that a workspace somebody just changed looks current again soon. Not
- * one of {@link CachePolicy}'s three: a workspace thumbnail is neither
- * immutable, as a rendered configuration's is, nor unstorable.
- */
-const WORKSPACE_THUMBNAIL_CACHE = "private, max-age=300";
-
-/**
- * `GET /api/workspace-thumbnail?documentId=&instanceId=&size=`
- *
- * The linked workspace's own thumbnail, proxied: Onshape serves it only to an
- * OAuth caller, so the browser cannot fetch it directly. Nothing is stored or
- * rendered — this is the picture Onshape already keeps for the document.
- *
- * A workspace with no thumbnail answers 404, which the client shows as the same
- * placeholder any other missing image gets.
- *
- * Requires read on the workspace.
- */
-versionManagerRoutes.get(
-    "/workspace-thumbnail",
-    requireSignInMiddleware,
-    validate("query", thumbnailQuery),
-    async (c) => {
-        const query = c.req.valid("query");
-        const workspace = toWorkspace(query);
-        const client = await c.var.getOnshapeApi();
-        await requirePermissions(
-            client,
-            workspace,
-            "read this document",
-            OnshapePermission.READ
-        );
-
-        let bytes: ArrayBuffer;
-        try {
-            bytes = await getWorkspaceThumbnail(client, workspace, query.size);
-        } catch (error) {
-            // A document Onshape has no picture for, which is an answer rather
-            // than a failure: the client falls back to the placeholder.
-            console.warn(
-                `No thumbnail for ${workspace.documentId}/${workspace.instanceId}`,
-                error
-            );
-            return c.body(null, HttpStatus.NOT_FOUND);
-        }
-
-        return new Response(bytes, {
-            headers: {
-                "Content-Type": "image/png",
-                "Cache-Control": WORKSPACE_THUMBNAIL_CACHE
-            }
         });
     }
 );

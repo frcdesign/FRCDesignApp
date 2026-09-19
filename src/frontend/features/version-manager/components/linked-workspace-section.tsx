@@ -562,6 +562,9 @@ function LinkedWorkspaceThumbnail(props: {
     }
     return (
         <CardThumbnail
+            // Onshape's own urls, fetched by the browser rather than through
+            // us; see `workspaceThumbnailUrl`.
+            isExternal
             smallThumbnailUrl={workspaceThumbnailUrl(
                 linked.workspace,
                 ThumbnailSize.SMALL

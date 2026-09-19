@@ -2,6 +2,7 @@
  * What the version manager's routes take and answer. A leaf: the frontend
  * imports it, so nothing Worker-only belongs here.
  */
+import { onshapeApiUrl } from "../../lib/onshape/api-base";
 import { type InstancePath } from "../../lib/onshape/path";
 
 /**
@@ -146,20 +147,22 @@ export const EMPTY_JOB_RESULT: VersionJobResult = {
 };
 
 /**
- * Where the client fetches a linked workspace's thumbnail. Built here so the
- * url the browser asks for is declared beside the route that answers it, the
- * way `features/thumbnails/keys.ts` does for a rendered one.
+ * A linked workspace's thumbnail, straight from Onshape rather than through us.
+ * The browser is already signed in to Onshape — the app is running inside it —
+ * so the image element can fetch this itself, and the bytes never cross the
+ * worker.
+ *
+ * Unverified against real Onshape: it rests on the session cookie reaching a
+ * cross-site request from our frame. Where it does not, the row shows the same
+ * placeholder as a workspace with no thumbnail at all.
  */
 export function workspaceThumbnailUrl(
     workspace: WorkspacePath,
     size: string
 ): string {
-    const query = new URLSearchParams({
-        documentId: workspace.documentId,
-        instanceId: workspace.instanceId,
-        size
-    });
-    return `/api/workspace-thumbnail?${query.toString()}`;
+    return onshapeApiUrl(
+        `/thumbnails/d/${workspace.documentId}/w/${workspace.instanceId}/s/${size}`
+    );
 }
 
 /** How long a version name may be, matching what Onshape accepts. */

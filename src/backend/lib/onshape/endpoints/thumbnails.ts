@@ -1,34 +1,10 @@
 import { type ConfigurationKey } from "../../../features/configurations/contract";
 import { OnshapeApi } from "../client";
 import { assertInstanceType } from "../assertions";
-import {
-    ElementPath,
-    InstancePath,
-    toElementApiPath,
-    toInstanceApiPath
-} from "../path";
+import { ElementPath, toElementApiPath } from "../path";
 import { apiPath } from "../api-path";
 import { ThumbnailSize } from "../../../features/thumbnails/contract";
 import { getInsertables } from "./documents";
-
-/**
- * `GET /thumbnails/d/{did}/w/{wid}/s/{size}`
- *
- * The whole workspace's thumbnail — what Onshape shows the document as, which
- * it keeps current on its own. Nothing here renders it or waits for one: a
- * workspace either has a thumbnail or does not, unlike a configuration, whose
- * render has to be asked for and waited out.
- */
-export function getWorkspaceThumbnail(
-    client: OnshapeApi,
-    workspacePath: InstancePath,
-    size = ThumbnailSize.SMALL
-): Promise<ArrayBuffer> {
-    assertInstanceType(workspacePath, "w");
-    const path =
-        apiPath("thumbnails", workspacePath, toInstanceApiPath) + "/s/" + size;
-    return client.getImage(path);
-}
 
 /**
  * `GET /thumbnails/d/{did}/{wv}/{wvid}/e/{eid}/s/{size}`
