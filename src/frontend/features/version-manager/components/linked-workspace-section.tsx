@@ -49,7 +49,7 @@ import {
     usePushVersionMutation,
     useRemoveLinkMutation
 } from "../queries";
-import { AddLinkInput } from "./add-link-input";
+import { AddLinkRow } from "./add-link-input";
 
 /** What each direction is called and does, kept in one place. */
 export const DIRECTION_COPY = {
@@ -387,12 +387,15 @@ export function LinkedWorkspaceSection(
         <>
             {linked.length === 0 && (
                 <SectionNotice
+                    // Beside the text rather than over it: one line saying a
+                    // list is empty should not take a list's worth of room.
+                    align="left"
                     title={copy.empty}
                     description={null}
                     icon={
                         <AppIcon
                             icon={LinkBreakIcon}
-                            size={IconSize.PAGE}
+                            size={IconSize.SECTION}
                             color={PrimaryColor.FILLED}
                         />
                     }
@@ -410,7 +413,7 @@ export function LinkedWorkspaceSection(
                         onRemove={() => removeLink.mutate(each.linkId)}
                     />
                 ))}
-                <AddLinkInput workspace={workspace} direction={direction} />
+                <AddLinkRow workspace={workspace} direction={direction} />
             </ItemTable>
         </>
     );

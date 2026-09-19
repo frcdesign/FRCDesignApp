@@ -14,11 +14,13 @@ interface ZeroStateProps {
     description?: ReactNode;
     action?: ReactNode;
     className?: string;
+    /** Left puts the icon beside the text rather than above it. @default center */
+    align?: "center" | "left";
 }
 
 /** The centered block every empty, loading and error state is built from. */
 function ZeroState(props: ZeroStateProps): ReactNode {
-    const { icon, title, description, action, className } = props;
+    const { icon, title, description, action, className, align } = props;
 
     return (
         <EmptyState
@@ -26,6 +28,7 @@ function ZeroState(props: ZeroStateProps): ReactNode {
             title={title}
             description={description}
             size="sm"
+            align={align}
             className={className}
             pt={24}
             pb={24}
@@ -53,6 +56,8 @@ interface NoticeProps {
     /** @default a danger-colored cross */
     icon?: ReactNode;
     action?: JSX.Element;
+    /** Left puts the icon beside the text rather than above it. @default center */
+    align?: "center" | "left";
 }
 
 function resolveDescription(
@@ -69,7 +74,13 @@ function resolveDescription(
  * empty result or a prompt when given an `icon` and `description` of its own.
  */
 export function SectionNotice(props: NoticeProps): ReactNode {
-    const { title, action, className, icon = DEFAULT_ERROR_ICON } = props;
+    const {
+        title,
+        action,
+        className,
+        align,
+        icon = DEFAULT_ERROR_ICON
+    } = props;
     return (
         <ZeroState
             className={className}
@@ -77,6 +88,7 @@ export function SectionNotice(props: NoticeProps): ReactNode {
             icon={icon}
             description={resolveDescription(props.description)}
             action={action}
+            align={align}
         />
     );
 }
