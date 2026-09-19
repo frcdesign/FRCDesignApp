@@ -48,7 +48,6 @@ export function VersionManagerZeroState(
 ): ReactNode {
     return (
         <PageNotice
-            justifyUp
             icon={
                 <AppIcon
                     icon={TreeStructureIcon}
@@ -57,7 +56,7 @@ export function VersionManagerZeroState(
                 />
             }
             title="Welcome to Version Manager!"
-            description="Version manager lets you automatically push and pull versions between Onshape documents. To get started, paste the link to another Onshape document you use."
+            description="Version manager lets you automatically push and pull versions between Onshape documents. For example, if your Intake lives in a different document from the rest of your Robot, you can link your Intake document and your Robot document and push changes between them automatically. To get started, paste the link to another associated Onshape document."
             action={<AddFirstLinkCard workspace={props.workspace} />}
         />
     );
@@ -112,7 +111,7 @@ function AddFirstLinkCard(props: AddFirstLinkCardProps): ReactNode {
  * it only bites in a browser — where a form spanning the window reads as the
  * page rather than as one thing to fill in.
  */
-const CARD_WIDTH = 480;
+const CARD_WIDTH = 620;
 
 /** Mantine's card carries the border; what being picked looks like is ours. */
 const SELECTED_CARD = {
