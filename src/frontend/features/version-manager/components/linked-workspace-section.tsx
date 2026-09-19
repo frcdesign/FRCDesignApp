@@ -1,5 +1,6 @@
 import {
     Button,
+    Center,
     Group,
     Loader,
     Menu,
@@ -13,6 +14,7 @@ import {
     ArrowsClockwiseIcon,
     ArrowSquareOutIcon,
     FileIcon,
+    InfoIcon,
     LinkBreakIcon,
     ProhibitIcon,
     TreeStructureIcon
@@ -69,6 +71,10 @@ export const DIRECTION_COPY = {
 /** What a run can be aimed at: everything in a direction, or one link. */
 const ALL_TARGET = "all";
 
+/** Phosphor takes a CSS color, which the theme's dimmed name is not. */
+const DIMMED_ICON = "var(--mantine-color-dimmed)";
+const ERROR_ICON = "var(--mantine-color-error)";
+
 /** The arrow a direction is marked with, on its title and its buttons. */
 export function DirectionIcon(props: {
     direction: LinkDirection;
@@ -79,6 +85,26 @@ export function DirectionIcon(props: {
         <ArrowLineUpIcon size={size} />
     ) : (
         <ArrowLineDownIcon size={size} />
+    );
+}
+
+/**
+ * What a direction means, on the title rather than over the list: a line of
+ * explanation earns its room the first few times and never again, which is
+ * what a bubble is for.
+ */
+export function DirectionInfo(props: { direction: LinkDirection }): ReactNode {
+    return (
+        <Tooltip
+            withArrow
+            multiline
+            w={260}
+            label={DIRECTION_COPY[props.direction].description}
+        >
+            <Center>
+                <InfoIcon size={IconSize.SMALL} color={DIMMED_ICON} />
+            </Center>
+        </Tooltip>
     );
 }
 
@@ -357,9 +383,6 @@ export function LinkedWorkspaceSection(
 
     return (
         <Stack gap="sm" p="sm">
-            <Text size="sm" c={StatusColor.DIMMED}>
-                {copy.description}
-            </Text>
             {linked.length === 0 ? (
                 <SectionNotice
                     title={copy.empty}
@@ -451,34 +474,47 @@ function LinkedWorkspaceRow(props: LinkedWorkspaceRowProps): ReactNode {
         <ItemRow
             left={<LinkedWorkspaceTitle linked={linked} allowed={allowed} />}
             menuItems={menuItems}
+            // The menu below carries the same items, in the order this row
+            // wants them: the action first, then what to do with the link.
+            moreButton={false}
             onClick={linked.isOpenable ? () => openUrlInNewTab(url) : undefined}
             rightSection={
-                <ActionButton
-                    direction={direction}
-                    label={copy.rowAction}
-                    loading={actions.activeTarget === linked.linkId}
-                    disabled={disabled}
-                    forbidden={!allowed}
-                    onClick={() => actions.openOne(linked)}
-                />
+                <Group gap={4} wrap="nowrap">
+                    {/* Absent rather than disabled where Onshape says no: the
+                        row already says so in red, and the menu shows the two
+                        runs greyed out. */}
+                    {allowed && (
+                        <ActionButton
+                            direction={direction}
+                            label={copy.rowAction}
+                            loading={actions.activeTarget === linked.linkId}
+                            disabled={actions.isRunning}
+                            onClick={() => actions.openOne(linked)}
+                        />
+                    )}
+                    <MenuButton>{menuItems}</MenuButton>
+                </Group>
             }
         />
     );
 }
 
-/** What a link the caller has no permission on says, in place of its name. */
-function MissingAccess(props: { size?: "sm" | "xs" }): ReactNode {
-    const { size = "xs" } = props;
+interface MissingAccessProps {
+    /** What Onshape will not let them do, e.g. "open this document". */
+    reason: string;
+}
+
+/** Why a link cannot be acted on, in the place its subtitle would have been. */
+function MissingAccess(props: MissingAccessProps): ReactNode {
     return (
-        <Group gap={4} wrap="nowrap" miw={0}>
-            <ProhibitIcon
-                size={size === "sm" ? IconSize.MEDIUM : IconSize.TINY}
-                color={`var(--mantine-color-${StatusColor.ERROR}-filled)`}
-            />
-            <Text size={size} c={StatusColor.ERROR}>
+        <Stack gap={0} miw={0}>
+            <Text size="sm" c={StatusColor.ERROR}>
                 Missing access
             </Text>
-        </Group>
+            <Text size="xs" c={StatusColor.ERROR} truncate>
+                You cannot {props.reason}
+            </Text>
+        </Stack>
     );
 }
 
@@ -499,7 +535,8 @@ function LinkedWorkspaceTitle(props: LinkedWorkspaceTitleProps): ReactNode {
     if (!linked.isOpenable) {
         return (
             <Group gap="sm" wrap="nowrap" flex={1} miw={0}>
-                <MissingAccess size="sm" />
+                <ProhibitIcon size={IconSize.MEDIUM} color={ERROR_ICON} />
+                <MissingAccess reason="open this document" />
             </Group>
         );
     }
@@ -509,14 +546,16 @@ function LinkedWorkspaceTitle(props: LinkedWorkspaceTitleProps): ReactNode {
 
     return (
         <Group gap="sm" wrap="nowrap" flex={1} miw={0}>
-            <FileIcon size={IconSize.MEDIUM} color={StatusColor.DIMMED} />
+            <FileIcon size={IconSize.MEDIUM} color={DIMMED_ICON} />
             <Stack gap={0} miw={0}>
                 <TruncatedText hoverText={documentName} size="sm">
                     {documentName}
                 </TruncatedText>
                 {/* Readable but not writable, which only a push runs into. */}
                 {!allowed ? (
-                    <MissingAccess />
+                    <Text size="xs" c={StatusColor.ERROR} truncate>
+                        Missing access &mdash; you cannot edit this document
+                    </Text>
                 ) : (
                     linked.workspaceName && (
                         <Text size="xs" c={StatusColor.DIMMED} truncate>

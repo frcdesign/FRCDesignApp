@@ -52,7 +52,7 @@ export function AddLinkInput(props: AddLinkInputProps): ReactNode {
                     size="sm"
                     variant="unstyled"
                     leftSection={<LinkIcon size={IconSize.SMALL} />}
-                    placeholder="Document link"
+                    placeholder="Paste an Onshape document link"
                     value={url}
                     onChange={(event) => setUrl(event.currentTarget.value)}
                     onKeyDown={(event) => {

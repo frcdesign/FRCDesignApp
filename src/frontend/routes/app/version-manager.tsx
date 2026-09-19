@@ -23,6 +23,7 @@ import { toTargetWorkspace } from "../../lib/onshape-launch";
 import { useTargetWorkspace } from "../../lib/onshape-params";
 import {
     DirectionIcon,
+    DirectionInfo,
     DIRECTION_COPY,
     LinkedWorkspaceSection,
     SectionActions,
@@ -175,7 +176,10 @@ function LinkSection(props: LinkSectionProps): ReactNode {
                     miw={0}
                     icon={<DirectionIcon direction={direction} />}
                 >
-                    <AppTitle title={DIRECTION_COPY[direction].title} />
+                    <AppTitle
+                        title={DIRECTION_COPY[direction].title}
+                        rightSection={<DirectionInfo direction={direction} />}
+                    />
                 </Accordion.Control>
                 <SectionActions
                     direction={direction}
