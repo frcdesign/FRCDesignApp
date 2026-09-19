@@ -1,6 +1,4 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import { Accordion, ActionIcon, Group } from "@mantine/core";
-import { CaretDownIcon } from "@phosphor-icons/react";
 import { type ReactNode } from "react";
 import {
     LinkDirection,
@@ -8,16 +6,9 @@ import {
     type WorkspaceLinksData,
     type WorkspacePath
 } from "@backend/features/version-manager/contract";
+import { AppSection, AppSections } from "../../components/app-section";
 import { AppTitle } from "../../components/app-title";
 import { SectionLoading, SectionNotice } from "../../components/app-zero-state";
-import {
-    BORDER,
-    IconSize,
-    NO_SHRINK,
-    SECTION_HEADER_HEIGHT,
-    StatusColor,
-    TITLE_ICON_NUDGE
-} from "../../lib/style-constants";
 import { getUiState, updateUiState, useGetUiState } from "../../lib/ui-state";
 import { toTargetWorkspace } from "../../lib/onshape-launch";
 import { useTargetWorkspace } from "../../lib/onshape-params";
@@ -108,27 +99,7 @@ function VersionManager(props: VersionManagerProps): ReactNode {
     };
 
     return (
-        <Accordion
-            multiple
-            variant="unstyled"
-            value={opened}
-            onChange={handleChange}
-            styles={{
-                control: {
-                    minHeight: SECTION_HEADER_HEIGHT,
-                    // Mantine brightens a control to pure white or black; a
-                    // section header is a title, so it reads in the text color.
-                    color: "var(--mantine-color-text)"
-                },
-                label: { paddingBlock: 0 },
-                content: { padding: 0, borderBottom: BORDER },
-                icon: TITLE_ICON_NUDGE,
-                // The header row ends with a chevron of its own, past the
-                // buttons; Mantine's sits against the label, which is not the
-                // far right of anything.
-                chevron: { display: "none" }
-            }}
-        >
+        <AppSections opened={opened} onChange={handleChange}>
             <LinkSection
                 workspace={workspace}
                 direction={LinkDirection.PARENT}
@@ -141,7 +112,7 @@ function VersionManager(props: VersionManagerProps): ReactNode {
                 linked={links.children}
                 opened={uiState.isChildrenOpen}
             />
-        </Accordion>
+        </AppSections>
     );
 }
 
@@ -153,88 +124,45 @@ interface LinkSectionProps {
     opened: boolean;
 }
 
-/**
- * One accordion section. Its buttons sit beside the control rather than inside
- * it — a button cannot be nested in a button — and the chevron comes after
- * them, at the end of the row.
- */
+/** One direction's section: its links, and the run they share. */
 function LinkSection(props: LinkSectionProps): ReactNode {
     const { workspace, direction, linked, opened } = props;
     const actions = useLinkActions(workspace, direction, linked);
+    const copy = DIRECTION_COPY[direction];
 
     return (
-        <Accordion.Item value={direction}>
-            <Group
-                gap="xs"
-                wrap="nowrap"
-                pr="sm"
-                style={{ borderBottom: BORDER }}
-            >
-                <Accordion.Control
-                    className="interactive"
-                    // Shrinkable, so the buttons beside it keep their width.
-                    miw={0}
-                    icon={<DirectionIcon direction={direction} />}
-                >
-                    <AppTitle
-                        title={DIRECTION_COPY[direction].title}
-                        rightSection={<DirectionInfo direction={direction} />}
-                    />
-                </Accordion.Control>
+        <AppSection
+            value={direction}
+            name={copy.title}
+            title={
+                <AppTitle
+                    title={copy.title}
+                    rightSection={<DirectionInfo direction={direction} />}
+                />
+            }
+            icon={<DirectionIcon direction={direction} />}
+            actions={
                 <SectionActions
                     direction={direction}
                     linked={linked}
                     actions={actions}
                 />
-                <SectionChevron direction={direction} opened={opened} />
-            </Group>
-            <Accordion.Panel>
-                <LinkedWorkspaceSection
-                    workspace={workspace}
-                    direction={direction}
-                    linked={linked}
-                    actions={actions}
-                />
-            </Accordion.Panel>
-        </Accordion.Item>
-    );
-}
-
-interface SectionChevronProps {
-    direction: LinkDirection;
-    opened: boolean;
-}
-
-/**
- * The section's own chevron, at the end of the header row. Mantine's is hidden
- * and this stands in for it, so it lands past the buttons rather than against
- * the title.
- */
-function SectionChevron(props: SectionChevronProps): ReactNode {
-    const { direction, opened } = props;
-    const isParents = direction === LinkDirection.PARENT;
-
-    return (
-        <ActionIcon
-            variant="subtle"
-            color={StatusColor.NEUTRAL}
-            aria-label={`${opened ? "Collapse" : "Expand"} ${DIRECTION_COPY[direction].title}`}
-            style={NO_SHRINK}
-            onClick={() =>
+            }
+            opened={opened}
+            onToggle={() =>
                 updateUiState(
-                    isParents
+                    direction === LinkDirection.PARENT
                         ? { isParentsOpen: !opened }
                         : { isChildrenOpen: !opened }
                 )
             }
         >
-            <CaretDownIcon
-                size={IconSize.MEDIUM}
-                style={{
-                    transform: opened ? "rotate(180deg)" : undefined,
-                    transition: "transform 200ms ease"
-                }}
+            <LinkedWorkspaceSection
+                workspace={workspace}
+                direction={direction}
+                linked={linked}
+                actions={actions}
             />
-        </ActionIcon>
+        </AppSection>
     );
 }

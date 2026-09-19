@@ -141,27 +141,21 @@ export async function collectDescendantEdges(
 
 /**
  * Fills in what the client shows for a linked workspace: its names, and whether
- * the caller may read it and write to it.
+ * the caller may read it at all.
  *
  * A workspace the caller cannot read comes back openable-false and unnamed —
- * they are being shown that a link exists, not what it points at.
+ * they are being shown that a link exists, not what it points at. Whether they
+ * may *write* to it is not asked here: the push route checks that across the
+ * whole run before it starts, so a row that cannot be pushed to says so when it
+ * is pushed to rather than sitting there greyed out.
  */
 export async function toLinkedWorkspace(
     client: OnshapeApi,
     linkId: string,
     workspace: WorkspacePath
 ): Promise<LinkedWorkspace> {
-    const [canRead, canPush] = await Promise.all([
-        hasPermissions(client, workspace, OnshapePermission.READ),
-        hasPermissions(
-            client,
-            workspace,
-            OnshapePermission.WRITE,
-            OnshapePermission.LINK
-        )
-    ]);
-    if (!canRead) {
-        return { linkId, workspace, isOpenable: false, canPush: false };
+    if (!(await hasPermissions(client, workspace, OnshapePermission.READ))) {
+        return { linkId, workspace, isOpenable: false };
     }
 
     try {
@@ -170,7 +164,6 @@ export async function toLinkedWorkspace(
             linkId,
             workspace,
             isOpenable: true,
-            canPush,
             documentName: document.name,
             workspaceName: await getWorkspaceName(client, workspace, document)
         };
@@ -178,7 +171,7 @@ export async function toLinkedWorkspace(
         // Readable a moment ago and not now, or a document that has since been
         // deleted: the link is still real, so show it without the names.
         console.warn(`Failed to describe linked workspace ${linkId}`, error);
-        return { linkId, workspace, isOpenable: false, canPush: false };
+        return { linkId, workspace, isOpenable: false };
     }
 }
 

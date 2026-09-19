@@ -1,14 +1,9 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
-import { Accordion, Badge } from "@mantine/core";
+import { Badge } from "@mantine/core";
+import { AppSection, AppSections } from "../../../../components/app-section";
 import { AppTitle } from "../../../../components/app-title";
 import { BooksIcon, MagnifyingGlassIcon } from "@phosphor-icons/react";
-import {
-    BORDER,
-    IconSize,
-    PrimaryColor,
-    SECTION_HEADER_HEIGHT,
-    TITLE_ICON_NUDGE
-} from "../../../../lib/style-constants";
+import { IconSize, PrimaryColor } from "../../../../lib/style-constants";
 import { ReactNode, useState } from "react";
 import { GroupCard } from "../../../../features/library/components/group-card";
 import { ItemTable } from "../../../../components/item-row";
@@ -42,8 +37,11 @@ export const Route = createFileRoute("/app/library/$libraryId/")({
 /** One accordion section: what it shows, and where its open state lives. */
 interface Section {
     value: string;
+    /** Names the section, and titles it where `title` is left out. */
+    name: string;
     icon: ReactNode;
-    title: ReactNode;
+    /** A title of its own, for a section whose header carries more than a name. */
+    title?: ReactNode;
     panel: ReactNode;
     opened: boolean;
     setOpened: (opened: boolean) => void;
@@ -60,8 +58,8 @@ function useHomeSections(): Section[] {
     // Shown signed out too, where the panel says what signing in would add.
     const favorites: Section = {
         value: "favorites",
+        name: "Favorites",
         icon: <FavoriteIcon size={IconSize.MEDIUM} />,
-        title: <AppTitle title="Favorites" />,
         panel: <FavoritesList />,
         opened: uiState.isFavoritesOpen,
         setOpened: (opened) => updateUiState({ isFavoritesOpen: opened })
@@ -69,13 +67,13 @@ function useHomeSections(): Section[] {
 
     const search: Section = {
         value: "search",
+        name: "Search Results",
         icon: (
             <MagnifyingGlassIcon
                 size={IconSize.MEDIUM}
                 color={PrimaryColor.FILLED}
             />
         ),
-        title: <AppTitle title="Search Results" />,
         panel: (
             <SearchResults
                 query={uiState.searchQuery ?? ""}
@@ -89,6 +87,7 @@ function useHomeSections(): Section[] {
 
     const library: Section = {
         value: "library",
+        name: getLibraryName(libraryId),
         icon: <BooksIcon size={IconSize.MEDIUM} color={PrimaryColor.FILLED} />,
         title: <LibraryTitle libraryId={libraryId} />,
         panel: <LibraryList />,
@@ -115,41 +114,26 @@ function SectionAccordion(props: SectionAccordionProps): ReactNode {
     };
 
     return (
-        <Accordion
-            multiple
-            variant="unstyled"
-            value={sections
+        <AppSections
+            opened={sections
                 .filter((section) => section.opened)
                 .map((section) => section.value)}
             onChange={handleChange}
-            styles={{
-                // On the control, so a collapsed section still divides from
-                // the next one; content closes off an open one.
-                control: {
-                    borderBottom: BORDER,
-                    minHeight: SECTION_HEADER_HEIGHT,
-                    // Mantine brightens a control to pure white or black; a section header is a title
-                    // like the group page's, so it reads in the same text color.
-                    color: "var(--mantine-color-text)"
-                },
-                // Its own padding would outgrow that height.
-                label: { paddingBlock: 0 },
-                content: { padding: 0, borderBottom: BORDER },
-                icon: TITLE_ICON_NUDGE
-            }}
         >
             {sections.map((section) => (
-                <Accordion.Item key={section.value} value={section.value}>
-                    <Accordion.Control
-                        icon={section.icon}
-                        className="interactive"
-                    >
-                        {section.title}
-                    </Accordion.Control>
-                    <Accordion.Panel>{section.panel}</Accordion.Panel>
-                </Accordion.Item>
+                <AppSection
+                    key={section.value}
+                    value={section.value}
+                    name={section.name}
+                    title={section.title}
+                    icon={section.icon}
+                    opened={section.opened}
+                    onToggle={() => section.setOpened(!section.opened)}
+                >
+                    {section.panel}
+                </AppSection>
             ))}
-        </Accordion>
+        </AppSections>
     );
 }
 

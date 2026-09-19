@@ -46,8 +46,6 @@ export interface LinkedWorkspace {
     linkId: string;
     workspace: WorkspacePath;
     isOpenable: boolean;
-    /** Whether the caller may run a push that writes to this workspace. */
-    canPush: boolean;
     documentName?: string;
     workspaceName?: string;
 }

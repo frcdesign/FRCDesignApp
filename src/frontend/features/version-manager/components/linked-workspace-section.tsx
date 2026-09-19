@@ -4,7 +4,6 @@ import {
     Group,
     Loader,
     Menu,
-    Stack,
     Text,
     Tooltip
 } from "@mantine/core";
@@ -113,8 +112,6 @@ interface ActionButtonProps {
     /** This button's run is the one going, so it carries the spinner. */
     loading: boolean;
     disabled: boolean;
-    /** Why it is disabled, when Onshape is the reason. */
-    forbidden?: boolean;
     onClick: () => void;
 }
 
@@ -124,20 +121,8 @@ interface ActionButtonProps {
  * rather than in a banner over the page.
  */
 function ActionButton(props: ActionButtonProps): ReactNode {
-    const {
-        direction,
-        label,
-        loading,
-        disabled,
-        forbidden = false,
-        onClick
-    } = props;
-
-    const tooltip = forbidden
-        ? "You do not have permission to do this in Onshape."
-        : loading
-          ? DIRECTION_COPY[direction].running
-          : label;
+    const { direction, label, loading, disabled, onClick } = props;
+    const tooltip = loading ? DIRECTION_COPY[direction].running : label;
 
     return (
         <Tooltip withArrow label={tooltip}>
@@ -381,7 +366,7 @@ export function LinkedWorkspaceSection(
     const copy = DIRECTION_COPY[direction];
 
     return (
-        <Stack gap="sm" p="sm">
+        <>
             {linked.length === 0 && (
                 <SectionNotice
                     title={copy.empty}
@@ -408,21 +393,12 @@ export function LinkedWorkspaceSection(
                 ))}
                 <AddLinkInput workspace={workspace} direction={direction} />
             </ItemTable>
-        </Stack>
+        </>
     );
 }
 
 function toName(linked: LinkedWorkspace): string {
     return linked.documentName ?? "a document you cannot open";
-}
-
-/**
- * Whether this link can be acted on: a push writes to the linked workspace, so
- * it needs the permissions Onshape reported for it; a pull only reads it, which
- * being openable already establishes.
- */
-function canAct(linked: LinkedWorkspace, isChild: boolean): boolean {
-    return isChild ? linked.canPush : linked.isOpenable;
 }
 
 interface LinkedWorkspaceRowProps {
@@ -435,9 +411,7 @@ interface LinkedWorkspaceRowProps {
 function LinkedWorkspaceRow(props: LinkedWorkspaceRowProps): ReactNode {
     const { linked, direction, actions, onRemove } = props;
     const url = makeUrl(linked.workspace);
-    const isChild = direction === LinkDirection.CHILD;
-    const allowed = canAct(linked, isChild);
-    const disabled = actions.isRunning || !allowed;
+    const disabled = actions.isRunning;
     const copy = DIRECTION_COPY[direction];
 
     const menuItems = (
@@ -472,7 +446,7 @@ function LinkedWorkspaceRow(props: LinkedWorkspaceRowProps): ReactNode {
 
     return (
         <ItemRow
-            left={<LinkedWorkspaceTitle linked={linked} allowed={allowed} />}
+            left={<LinkedWorkspaceTitle linked={linked} />}
             menuItems={menuItems}
             // The menu below carries the same items, in the order this row
             // wants them: the action first, then what to do with the link.
@@ -480,18 +454,13 @@ function LinkedWorkspaceRow(props: LinkedWorkspaceRowProps): ReactNode {
             onClick={linked.isOpenable ? () => openUrlInNewTab(url) : undefined}
             rightSection={
                 <Group gap={4} wrap="nowrap">
-                    {/* Absent rather than disabled where Onshape says no: the
-                        row already says so in red, and the menu shows the two
-                        runs greyed out. */}
-                    {allowed && (
-                        <ActionButton
-                            direction={direction}
-                            label={copy.rowAction}
-                            loading={actions.activeTarget === linked.linkId}
-                            disabled={actions.isRunning}
-                            onClick={() => actions.openOne(linked)}
-                        />
-                    )}
+                    <ActionButton
+                        direction={direction}
+                        label={copy.rowAction}
+                        loading={actions.activeTarget === linked.linkId}
+                        disabled={actions.isRunning}
+                        onClick={() => actions.openOne(linked)}
+                    />
                     <MenuButton>{menuItems}</MenuButton>
                 </Group>
             }
@@ -529,8 +498,6 @@ function LinkedWorkspaceThumbnail(props: {
 
 interface LinkedWorkspaceTitleProps {
     linked: LinkedWorkspace;
-    /** Whether this direction's action can be run on it. */
-    allowed: boolean;
 }
 
 /**
@@ -540,7 +507,7 @@ interface LinkedWorkspaceTitleProps {
  * remove.
  */
 function LinkedWorkspaceTitle(props: LinkedWorkspaceTitleProps): ReactNode {
-    const { linked, allowed } = props;
+    const { linked } = props;
     const thumbnail = <LinkedWorkspaceThumbnail linked={linked} />;
 
     if (!linked.isOpenable) {
@@ -565,17 +532,10 @@ function LinkedWorkspaceTitle(props: LinkedWorkspaceTitleProps): ReactNode {
             title={linked.documentName ?? "Untitled document"}
             thumbnail={thumbnail}
             subtitle={
-                // Readable but not writable, which only a push runs into.
-                !allowed ? (
-                    <Text size="xs" c={StatusColor.ERROR} truncate>
-                        Missing access &mdash; you cannot edit this document
+                linked.workspaceName && (
+                    <Text size="xs" c={StatusColor.DIMMED} truncate>
+                        {linked.workspaceName}
                     </Text>
-                ) : (
-                    linked.workspaceName && (
-                        <Text size="xs" c={StatusColor.DIMMED} truncate>
-                            {linked.workspaceName}
-                        </Text>
-                    )
                 )
             }
         />
