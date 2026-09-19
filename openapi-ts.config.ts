@@ -55,7 +55,11 @@ const UNION_BASES: string[] = [
 
 /**
  * Fields trimmed because they pull in large, unrelated schema trees we don't use
- * (thumbnail/owner/workspace chains — ~40 schemas for `BTDocumentInfo` alone).
+ * (thumbnail/owner chains — ~40 schemas for `BTDocumentInfo` alone).
+ *
+ * `defaultWorkspace` is no longer among them: `getDocumentWorkspaces` brings
+ * `BTWorkspaceInfo` in regardless, so keeping it costs two lines and confirms
+ * the `name` the version manager reads off it.
  *
  * A field can be declared both directly on a schema *and* re-declared on its `allOf`
  * bases, so every place it appears needs its own entry to make it disappear.
@@ -68,17 +72,11 @@ const OMIT: Record<string, string[]> = {
         "owner",
         "createdBy",
         "modifiedBy",
-        "defaultWorkspace",
         "documentLabels",
         "permission"
     ],
     BTGlobalTreeNodeInfo: ["owner", "createdBy", "modifiedBy"],
-    BTGlobalTreeNodeSummaryInfo: [
-        "defaultWorkspace",
-        "documentLabels",
-        "permission",
-        "thumbnail"
-    ],
+    BTGlobalTreeNodeSummaryInfo: ["documentLabels", "permission", "thumbnail"],
     // Same thumbnail/user-chain trim on the other included operations.
     BTVersionInfo: ["creator", "lastModifier", "thumbnail"],
     BTDocumentElementInfo: ["thumbnailInfo"]
@@ -97,6 +95,11 @@ export default defineConfig({
                     "GET /elements/d/{did}/{wvm}/{wvmid}/e/{eid}/configuration",
                     "GET /elements/d/{did}/{wvm}/{wvmid}/e/{eid}/configurationencodings/{cid}",
                     "GET /documents/d/{did}/versions",
+                    "POST /documents/d/{did}/versions",
+                    "GET /documents/d/{did}/workspaces",
+                    "GET /documents/{did}/permissionset",
+                    "GET /documents/d/{did}/{wv}/{wvid}/externalreferences",
+                    "POST /elements/d/{did}/w/{wid}/e/{eid}/updatereferences",
                     "GET /documents/d/{did}/{wvm}/{wvmid}/contents",
                     "GET /documents/{did}",
                     "GET /assemblies/d/{did}/{wvm}/{wvmid}/e/{eid}",

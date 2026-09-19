@@ -91,8 +91,9 @@ export function getWorkspaces(
  * See {@link OnshapeExternalReferences}: this endpoint is undocumented and
  * OAuth-only, so both the path and the response shape come from the
  * implementation this was ported from rather than from Onshape's own spec.
- * It is deliberately absent from `openapi-ts.config.ts` for that reason —
- * codegen has nothing to say about an operation the spec does not carry.
+ * Confirmed absent from that spec: every other Onshape call the version
+ * manager makes is listed in `openapi-ts.config.ts`, and adding this one there
+ * generates nothing.
  */
 export function getExternalReferences(
     client: OnshapeApi,
