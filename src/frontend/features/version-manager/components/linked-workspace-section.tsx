@@ -44,6 +44,7 @@ import {
 import { retireQuickActionTip } from "../version-manager-tips";
 import {
     useIsVersionJobRunning,
+    useMoveLinkMutation,
     usePullReferencesMutation,
     usePushVersionMutation,
     useRemoveLinkMutation
@@ -74,6 +75,12 @@ export const DIRECTION_COPY = {
             "Workspaces that reference this one. Pushing creates a version here and moves their references onto it.",
         empty: "No linked children"
     }
+} as const;
+
+/** The other side of the list a link is in, which is where a move sends it. */
+const OTHER_DIRECTION = {
+    [LinkDirection.PARENT]: LinkDirection.CHILD,
+    [LinkDirection.CHILD]: LinkDirection.PARENT
 } as const;
 
 /** What a run can be aimed at: everything in a direction, or one link. */
@@ -384,6 +391,7 @@ export function LinkedWorkspaceSection(
 ): ReactNode {
     const { workspace, direction, linked, actions } = props;
     const removeLink = useRemoveLinkMutation(workspace);
+    const moveLink = useMoveLinkMutation(workspace);
     const copy = DIRECTION_COPY[direction];
 
     return (
@@ -414,6 +422,12 @@ export function LinkedWorkspaceSection(
                         direction={direction}
                         actions={actions}
                         onRemove={() => removeLink.mutate(each.linkId)}
+                        onMove={() =>
+                            moveLink.mutate({
+                                linkId: each.linkId,
+                                direction: OTHER_DIRECTION[direction]
+                            })
+                        }
                     />
                 ))}
                 <AddLinkRow workspace={workspace} direction={direction} />
@@ -431,10 +445,12 @@ interface LinkedWorkspaceRowProps {
     direction: LinkDirection;
     actions: LinkActions;
     onRemove: () => void;
+    /** Files the link under the other direction. */
+    onMove: () => void;
 }
 
 function LinkedWorkspaceRow(props: LinkedWorkspaceRowProps): ReactNode {
-    const { linked, direction, actions, onRemove } = props;
+    const { linked, direction, actions, onRemove, onMove } = props;
     const url = makeUrl(linked.workspace);
     const disabled = actions.isRunning;
     const copy = DIRECTION_COPY[direction];
@@ -459,6 +475,21 @@ function LinkedWorkspaceRow(props: LinkedWorkspaceRowProps): ReactNode {
                         Open document
                     </Menu.Item>
                 )}
+                {/* Linked the wrong way up is a paste into the wrong field,
+                    which is a move rather than a delete and a re-add. */}
+                <Menu.Item
+                    leftSection={
+                        <DirectionIcon
+                            direction={OTHER_DIRECTION[direction]}
+                            size={IconSize.MEDIUM}
+                        />
+                    }
+                    onClick={onMove}
+                >
+                    {direction === LinkDirection.PARENT
+                        ? "Move to child"
+                        : "Move to parent"}
+                </Menu.Item>
                 <Menu.Item
                     color={StatusColor.ERROR}
                     leftSection={<LinkBreakIcon size={IconSize.MEDIUM} />}

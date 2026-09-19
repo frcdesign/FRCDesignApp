@@ -77,6 +77,29 @@ export function useAddLinkMutation(workspace: WorkspacePath) {
     });
 }
 
+interface MoveLinkArgs {
+    linkId: string;
+    /** What the other end should be once the move is done. */
+    direction: LinkDirection;
+}
+
+/** Turns a link around, for one filed the wrong way up. */
+export function useMoveLinkMutation(workspace: WorkspacePath) {
+    return useMutation({
+        mutationKey: ["move-workspace-link", workspace],
+        mutationFn: ({ linkId, direction }: MoveLinkArgs) =>
+            apiPost<{ success: boolean }>(
+                toWorkspaceLinkPath(linkId) + "/move",
+                { body: { workspace, direction } }
+            ),
+        onSuccess: async () => {
+            showSuccessToast("Moved the link.");
+            await refreshLinks(workspace);
+        },
+        onError: getAppErrorHandler("Unexpectedly failed to move the link.")
+    });
+}
+
 export function useRemoveLinkMutation(workspace: WorkspacePath) {
     return useMutation({
         mutationKey: ["remove-workspace-link", workspace],

@@ -45,6 +45,7 @@ import {
     getLink,
     getParentLinks,
     otherEnd,
+    reverseLink,
     toEdge,
     toLinkedWorkspace
 } from "./links";
@@ -73,6 +74,13 @@ const jobQuery = workspaceSchema.extend({
 const addLinkBody = z.object({
     workspace: workspaceSchema,
     linked: workspaceSchema,
+    direction: z.enum(LinkDirection)
+});
+
+const moveLinkBody = z.object({
+    /** The end the caller is looking from, which the direction is relative to. */
+    workspace: workspaceSchema,
+    /** What the other end should be once the move is done. */
     direction: z.enum(LinkDirection)
 });
 
@@ -269,6 +277,74 @@ versionManagerRoutes.delete(
         }
 
         await deleteLink(db, linkId);
+        return c.json({ success: true });
+    }
+);
+
+/**
+ * `POST /api/workspace-link/:linkId/move`
+ *
+ * Turns a link around: a parent becomes a child, or a child a parent. Answers
+ * success where it is already the way round the caller asked for, that being
+ * the state they wanted.
+ *
+ * Requires write on the caller's workspace and read on the other end — a move
+ * is an unlink and a link in the other direction, so it asks for what linking
+ * asks for.
+ */
+versionManagerRoutes.post(
+    workspaceLinkRoute() + "/move",
+    requireSignInMiddleware,
+    validate("json", moveLinkBody),
+    async (c) => {
+        const linkId = getWorkspaceLinkParam(c);
+        const body = c.req.valid("json");
+        const workspace = toWorkspace(body.workspace);
+        const db = getDb(c.env.DB);
+
+        const row = await getLink(db, linkId);
+        if (!row) {
+            throw handledError(
+                "That link no longer exists.",
+                HttpStatus.NOT_FOUND
+            );
+        }
+
+        const edge = toEdge(row);
+        const linked = otherEnd(row, workspace);
+        if (
+            !isSameWorkspace(edge.parent, workspace) &&
+            !isSameWorkspace(edge.child, workspace)
+        ) {
+            throw handledError(
+                "That link does not belong to this workspace.",
+                HttpStatus.BAD_REQUEST
+            );
+        }
+
+        // What the other end is now, from the caller's end.
+        const current = isSameWorkspace(edge.parent, workspace)
+            ? LinkDirection.CHILD
+            : LinkDirection.PARENT;
+        if (current === body.direction) {
+            return c.json({ success: true });
+        }
+
+        const client = await c.var.getOnshapeApi();
+        await requirePermissions(
+            client,
+            workspace,
+            "edit this document",
+            OnshapePermission.WRITE
+        );
+        await requirePermissions(
+            client,
+            linked,
+            "read the linked document",
+            OnshapePermission.READ
+        );
+
+        await reverseLink(db, row);
         return c.json({ success: true });
     }
 );

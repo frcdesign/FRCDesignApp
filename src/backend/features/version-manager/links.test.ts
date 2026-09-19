@@ -9,7 +9,8 @@ import {
     getChildLinks,
     getLink,
     getParentLinks,
-    otherEnd
+    otherEnd,
+    reverseLink
 } from "./links";
 import { workspaceLinks } from "./schema";
 
@@ -66,6 +67,31 @@ describe("links", () => {
         await deleteLink(db, row.id);
         expect(await getLink(db, row.id)).toBeUndefined();
         expect(await getChildLinks(db, ws("library"))).toEqual([]);
+    });
+
+    it("turns a link around in place", async () => {
+        await addLink(db, ws("library"), ws("robot"));
+        const [row] = await getChildLinks(db, ws("library"));
+
+        await reverseLink(db, row);
+
+        expect(await getChildLinks(db, ws("library"))).toEqual([]);
+        const reversed = await getChildLinks(db, ws("robot"));
+        expect(reversed).toHaveLength(1);
+        // The same row, so nothing that holds its id is left pointing at a
+        // link that no longer exists.
+        expect(reversed[0].id).toBe(row.id);
+    });
+
+    it("drops a link turned into one that already exists", async () => {
+        await addLink(db, ws("a"), ws("b"));
+        await addLink(db, ws("b"), ws("a"));
+        const [row] = await getChildLinks(db, ws("a"));
+
+        await reverseLink(db, row);
+
+        expect(await getLink(db, row.id)).toBeUndefined();
+        expect(await getChildLinks(db, ws("b"))).toHaveLength(1);
     });
 
     it("names the far end of a link", async () => {

@@ -97,6 +97,55 @@ export async function addLink(
         .onConflictDoNothing();
 }
 
+/** The row for one edge, in the direction given. */
+export function findLink(
+    db: Db,
+    parent: WorkspacePath,
+    child: WorkspacePath
+): Promise<WorkspaceLinkRow | undefined> {
+    return db
+        .select()
+        .from(workspaceLinks)
+        .where(
+            and(
+                eq(workspaceLinks.sourceDocumentId, parent.documentId),
+                eq(workspaceLinks.sourceWorkspaceId, parent.instanceId),
+                eq(workspaceLinks.targetDocumentId, child.documentId),
+                eq(workspaceLinks.targetWorkspaceId, child.instanceId)
+            )
+        )
+        .get();
+}
+
+/**
+ * Turns an edge around, so what provided content now takes it. The row is
+ * rewritten rather than deleted and re-added: one row is one edge, and a delete
+ * whose insert did not land would lose the link.
+ */
+export async function reverseLink(
+    db: Db,
+    row: WorkspaceLinkRow
+): Promise<void> {
+    const { parent, child } = toEdge(row);
+    // Two workspaces can each provide to the other, and a row is unique across
+    // its four ids — so where the reverse is already there, turning this one
+    // around would collide with it. Dropping it leaves what was asked for.
+    if (await findLink(db, child, parent)) {
+        await deleteLink(db, row.id);
+        return;
+    }
+
+    await db
+        .update(workspaceLinks)
+        .set({
+            sourceDocumentId: row.targetDocumentId,
+            sourceWorkspaceId: row.targetWorkspaceId,
+            targetDocumentId: row.sourceDocumentId,
+            targetWorkspaceId: row.sourceWorkspaceId
+        })
+        .where(eq(workspaceLinks.id, row.id));
+}
+
 export async function deleteLink(db: Db, linkId: string): Promise<void> {
     await db.delete(workspaceLinks).where(eq(workspaceLinks.id, linkId));
 }
