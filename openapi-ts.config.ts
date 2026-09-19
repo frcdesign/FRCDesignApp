@@ -101,6 +101,7 @@ export default defineConfig({
                     "GET /documents/d/{did}/{wv}/{wvid}/externalreferences",
                     "POST /elements/d/{did}/w/{wid}/e/{eid}/updatereferences",
                     "GET /documents/d/{did}/{wvm}/{wvmid}/contents",
+                    "GET /documents/d/{did}/{wv}/{wvid}/insertables",
                     "GET /documents/{did}",
                     "GET /assemblies/d/{did}/{wvm}/{wvmid}/e/{eid}",
                     "GET /parts/d/{did}/{wvm}/{wvmid}/e/{eid}",

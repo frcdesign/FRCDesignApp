@@ -13,6 +13,7 @@ import {
     OnshapeDocumentContents,
     OnshapeDocumentInfo,
     OnshapeExternalReferences,
+    OnshapeInsertables,
     OnshapeWorkspaceInfo
 } from "../types";
 
@@ -44,6 +45,27 @@ export function getContents(
             endRoute: "contents"
         }),
         { query: { withThumbnails: includeThumbnails } }
+    );
+}
+
+/**
+ * `GET /documents/d/{did}/{wv}/{wvid}/insertables`
+ *
+ * What can be inserted from an instance, and how far a workspace has moved
+ * since its last version. Every `include*` flag defaults to false, so a caller
+ * after the counters alone passes no query at all and Onshape enumerates
+ * nothing.
+ */
+export function getInsertables(
+    client: OnshapeApi,
+    instancePath: InstancePath,
+    query: Record<string, string | boolean> = {}
+): Promise<OnshapeInsertables> {
+    return client.get(
+        apiPath("documents", instancePath, toInstanceApiPath, {
+            endRoute: "insertables"
+        }),
+        { query }
     );
 }
 

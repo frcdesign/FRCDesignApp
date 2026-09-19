@@ -38,8 +38,8 @@ interface CardTitleProps {
     disabled?: boolean;
     /** Colors the title, for a row whose name is itself a problem. */
     titleColor?: string;
-    /** Optional build-status badge rendered after the title. */
-    buildStatusBadge?: ReactNode;
+    /** A badge after the title: a build status, a count of pending changes. */
+    badge?: ReactNode;
     /**
      * The caller's own second line, in place of the part name and number — for
      * a row whose subject is not a part, like a linked workspace. It styles
@@ -53,7 +53,7 @@ export function CardTitle(props: CardTitleProps): ReactNode {
         match,
         title,
         thumbnail,
-        buildStatusBadge,
+        badge,
         subtitle,
         titleColor,
         disabled = false
@@ -79,7 +79,7 @@ export function CardTitle(props: CardTitleProps): ReactNode {
                     rather than inside the paragraph the title renders as. */}
                 {subtitle ?? <PartNameAndNumber title={title} match={match} />}
             </Stack>
-            {buildStatusBadge}
+            {badge}
         </Group>
     );
 }

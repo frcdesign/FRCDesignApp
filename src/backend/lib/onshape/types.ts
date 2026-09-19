@@ -386,6 +386,28 @@ export interface OnshapeExternalReferences {
     latestVersions: { documentId: string; id: string }[];
 }
 
+// === insertables (GET /documents/d/{did}/{wv}/{wvid}/insertables) ===
+
+/** One thing that can be inserted from an instance (the subset we read). */
+interface OnshapeInsertable {
+    predictableThumbnailId?: string;
+}
+
+/**
+ * GET /documents/d/{did}/{wv}/{wvid}/insertables (the subset we read).
+ *
+ * Every `include*` flag defaults to false, so a call that asks for none of them
+ * comes back with no items and the counters alone.
+ */
+export interface OnshapeInsertables {
+    items?: OnshapeInsertable[];
+    /**
+     * Edits made in the workspace that its latest version does not carry.
+     * Absent for a version, which is a snapshot and cannot have moved on.
+     */
+    changesSinceVersionSave?: number;
+}
+
 // === workspaces (GET /documents/d/{did}/workspaces) ===
 
 /** An item from GET /documents/d/{did}/workspaces (the subset we read). */

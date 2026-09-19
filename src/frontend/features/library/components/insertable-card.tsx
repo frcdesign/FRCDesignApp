@@ -108,7 +108,7 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
             match={match}
             title={insertable.name}
             thumbnail={thumbnail}
-            buildStatusBadge={
+            badge={
                 <InsertableStatusBadge
                     insertableId={insertable.id}
                     name={insertable.name}

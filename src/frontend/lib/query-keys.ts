@@ -104,6 +104,13 @@ export function workspaceLinksQueryKey(workspace: InstancePath | undefined) {
     return ["workspace-links", workspace];
 }
 
+/** What each linked parent has changed since its last version. */
+export function unversionedChangesQueryKey(
+    workspace: InstancePath | undefined
+) {
+    return ["unversioned-changes", workspace];
+}
+
 export function versionJobQueryKey(workspace: InstancePath | undefined) {
     return ["version-job", workspace];
 }

@@ -99,6 +99,13 @@ export type PullScope =
     | { kind: PullScopeKind.ALL }
     | { kind: PullScopeKind.ONE; workspace: WorkspacePath };
 
+/**
+ * How far each linked workspace has moved since its own last version, by link
+ * id. A workspace with no count is one Onshape did not answer for — absent
+ * rather than zero, since zero means something.
+ */
+export type UnversionedChanges = Record<string, number>;
+
 /** What a finished push or pull did. */
 export interface VersionJobResult {
     /** Workspaces whose references were updated. */

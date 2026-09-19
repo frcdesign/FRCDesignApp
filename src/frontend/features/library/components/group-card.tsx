@@ -58,7 +58,7 @@ export function GroupCard(props: GroupCardProps): ReactNode {
                             largeThumbnailUrl={group.largeThumbnailUrl}
                         />
                     }
-                    buildStatusBadge={
+                    badge={
                         <GroupStatusBadge
                             groupId={group.id}
                             name={group.name}

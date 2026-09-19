@@ -1,4 +1,5 @@
 import {
+    Badge,
     Button,
     Center,
     Group,
@@ -43,11 +44,13 @@ import {
 } from "../open-version-modals";
 import { retireQuickActionTip } from "../version-manager-tips";
 import {
+    plural,
     useIsVersionJobRunning,
     useMoveLinkMutation,
     usePullReferencesMutation,
     usePushVersionMutation,
-    useRemoveLinkMutation
+    useRemoveLinkMutation,
+    useUnversionedChangesQuery
 } from "../queries";
 import { AddLinkRow } from "./add-link-input";
 
@@ -392,6 +395,11 @@ export function LinkedWorkspaceSection(
     const { workspace, direction, linked, actions } = props;
     const removeLink = useRemoveLinkMutation(workspace);
     const moveLink = useMoveLinkMutation(workspace);
+    // Parents only: a child's unversioned changes are its own business, where a
+    // parent's are edits a pull from it would not bring in.
+    const changes = useUnversionedChangesQuery(
+        direction === LinkDirection.PARENT ? workspace : undefined
+    );
     const copy = DIRECTION_COPY[direction];
 
     return (
@@ -420,6 +428,7 @@ export function LinkedWorkspaceSection(
                         key={each.linkId}
                         linked={each}
                         direction={direction}
+                        unversionedChanges={changes.data?.[each.linkId]}
                         actions={actions}
                         onRemove={() => removeLink.mutate(each.linkId)}
                         onMove={() =>
@@ -443,6 +452,8 @@ function toName(linked: LinkedWorkspace): string {
 interface LinkedWorkspaceRowProps {
     linked: LinkedWorkspace;
     direction: LinkDirection;
+    /** Edits this workspace has made since its own last version, when known. */
+    unversionedChanges?: number;
     actions: LinkActions;
     onRemove: () => void;
     /** Files the link under the other direction. */
@@ -450,7 +461,8 @@ interface LinkedWorkspaceRowProps {
 }
 
 function LinkedWorkspaceRow(props: LinkedWorkspaceRowProps): ReactNode {
-    const { linked, direction, actions, onRemove, onMove } = props;
+    const { linked, direction, unversionedChanges, actions, onRemove, onMove } =
+        props;
     const url = makeUrl(linked.workspace);
     const disabled = actions.isRunning;
     const copy = DIRECTION_COPY[direction];
@@ -503,7 +515,12 @@ function LinkedWorkspaceRow(props: LinkedWorkspaceRowProps): ReactNode {
 
     return (
         <ItemRow
-            left={<LinkedWorkspaceTitle linked={linked} />}
+            left={
+                <LinkedWorkspaceTitle
+                    linked={linked}
+                    unversionedChanges={unversionedChanges}
+                />
+            }
             menuItems={menuItems}
             // The menu below carries the same items, in the order this row
             // wants them: the action first, then what to do with the link.
@@ -559,6 +576,7 @@ function LinkedWorkspaceThumbnail(props: {
 
 interface LinkedWorkspaceTitleProps {
     linked: LinkedWorkspace;
+    unversionedChanges?: number;
 }
 
 /**
@@ -568,7 +586,7 @@ interface LinkedWorkspaceTitleProps {
  * remove.
  */
 function LinkedWorkspaceTitle(props: LinkedWorkspaceTitleProps): ReactNode {
-    const { linked } = props;
+    const { linked, unversionedChanges } = props;
     const thumbnail = <LinkedWorkspaceThumbnail linked={linked} />;
 
     if (!linked.isOpenable) {
@@ -592,6 +610,7 @@ function LinkedWorkspaceTitle(props: LinkedWorkspaceTitleProps): ReactNode {
             // say.
             title={linked.documentName ?? "Untitled document"}
             thumbnail={thumbnail}
+            badge={<UnversionedChangesBadge changes={unversionedChanges} />}
             subtitle={
                 linked.workspaceName && (
                     <Text size="xs" c={StatusColor.DIMMED} truncate>
@@ -600,5 +619,42 @@ function LinkedWorkspaceTitle(props: LinkedWorkspaceTitleProps): ReactNode {
                 )
             }
         />
+    );
+}
+
+interface UnversionedChangesBadgeProps {
+    /** Undefined where Onshape was not asked, or would not answer. */
+    changes: number | undefined;
+}
+
+/**
+ * What the workspace has changed since its own last version. A pull moves onto
+ * a version, so these are the edits it would leave behind — the count is the
+ * one thing a row cannot say by naming the document.
+ */
+function UnversionedChangesBadge(
+    props: UnversionedChangesBadgeProps
+): ReactNode {
+    const { changes } = props;
+    if (!changes) {
+        return null;
+    }
+
+    return (
+        <Tooltip
+            withArrow
+            multiline
+            w={240}
+            label={`${plural(changes, "change")} since this document's last version. A pull moves onto that version, so they are not in it yet.`}
+        >
+            <Badge
+                size="sm"
+                variant="light"
+                color={StatusColor.NEUTRAL}
+                style={NO_SHRINK}
+            >
+                {changes}
+            </Badge>
+        </Tooltip>
     );
 }

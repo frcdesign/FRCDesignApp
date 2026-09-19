@@ -9,6 +9,7 @@ import {
 } from "../path";
 import { apiPath } from "../api-path";
 import { ThumbnailSize } from "../../../features/thumbnails/contract";
+import { getInsertables } from "./documents";
 
 /**
  * `GET /thumbnails/d/{did}/w/{wid}/s/{size}`
@@ -53,20 +54,15 @@ export async function getThumbnailId(
     elementPath: ElementPath,
     configurationKey?: ConfigurationKey
 ): Promise<string> {
-    const query = new URLSearchParams({
-        includeParts: "true",
-        includeAssemblies: "true",
-        includeCompositeParts: "true",
+    const query: Record<string, string | boolean> = {
+        includeParts: true,
+        includeAssemblies: true,
+        includeCompositeParts: true,
         elementId: elementPath.elementId
-    });
-    if (configurationKey) query.set("configuration", configurationKey);
+    };
+    if (configurationKey) query.configuration = configurationKey;
 
-    const insertables = await client.get(
-        apiPath("documents", elementPath, toInstanceApiPath, {
-            endRoute: "insertables"
-        }),
-        { query }
-    );
+    const insertables = await getInsertables(client, elementPath, query);
     // A configuration matching nothing comes back with no items at all.
     const thumbnailId = insertables.items?.[0]?.predictableThumbnailId;
     if (!thumbnailId) {

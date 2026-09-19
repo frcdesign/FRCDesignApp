@@ -8,6 +8,7 @@ import {
     hasPermissions,
     OnshapePermission
 } from "../../lib/onshape/endpoints/permissions";
+import { getInsertables } from "../../lib/onshape/endpoints/documents";
 import { getWorkspaceThumbnail } from "../../lib/onshape/endpoints/thumbnails";
 import { getVersions } from "../../lib/onshape/endpoints/versions";
 import {
@@ -28,6 +29,7 @@ import {
     PushScopeKind,
     toWorkspacePath,
     type LinkedWorkspace,
+    type UnversionedChanges,
     type WorkspacePath
 } from "./contract";
 import {
@@ -278,6 +280,59 @@ versionManagerRoutes.delete(
 
         await deleteLink(db, linkId);
         return c.json({ success: true });
+    }
+);
+
+/**
+ * `GET /api/unversioned-changes`
+ *
+ * How far each linked parent has moved since its own last version, keyed by
+ * link id. A pull moves this workspace onto a parent's latest *version*, so a
+ * parent with unversioned changes has edits a pull cannot bring in — which is
+ * the one thing the list cannot say on its own.
+ *
+ * Args: `documentId`, `instanceId` of the workspace in view.
+ * Requires read on it; a parent Onshape refuses is left out rather than failing
+ * the lot.
+ */
+versionManagerRoutes.get(
+    "/unversioned-changes",
+    requireSignInMiddleware,
+    validate("query", workspaceQuery),
+    async (c) => {
+        const workspace = toWorkspace(c.req.valid("query"));
+        const client = await c.var.getOnshapeApi();
+        await requirePermissions(
+            client,
+            workspace,
+            "read this document",
+            OnshapePermission.READ
+        );
+
+        const rows = await getParentLinks(getDb(c.env.DB), workspace);
+        const changes: UnversionedChanges = {};
+        await Promise.all(
+            rows.map(async (row) => {
+                const parent = otherEnd(row, workspace);
+                try {
+                    // No `include` flags: they all default to false, so this
+                    // asks Onshape to enumerate nothing and answer the counters.
+                    const insertables = await getInsertables(client, parent);
+                    if (insertables.changesSinceVersionSave !== undefined) {
+                        changes[row.id] = insertables.changesSinceVersionSave;
+                    }
+                } catch (error) {
+                    // A parent the caller cannot read, or one Onshape would not
+                    // answer for: the row itself still renders.
+                    console.warn(
+                        `Failed to count changes in ${parent.documentId}`,
+                        error
+                    );
+                }
+            })
+        );
+
+        return c.json(changes);
     }
 );
 

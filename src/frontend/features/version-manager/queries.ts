@@ -5,6 +5,7 @@ import {
     type PushScope,
     VersionJobState,
     type VersionJobResult,
+    type UnversionedChanges,
     type VersionJobStatus,
     type WorkspaceLinksData,
     type WorkspacePath
@@ -16,6 +17,7 @@ import { showSuccessToast } from "../../lib/notifications";
 import { queryClient } from "../../lib/query-client";
 import {
     nextVersionNameQueryKey,
+    unversionedChangesQueryKey,
     versionJobQueryKey,
     workspaceLinksQueryKey
 } from "../../lib/query-keys";
@@ -44,6 +46,30 @@ export function useWorkspaceLinksQuery(workspace: WorkspacePath | undefined) {
             workspace && isSignedIn
                 ? () =>
                       apiGet("/workspace-links", {
+                          query: toWorkspaceQuery(workspace)
+                      })
+                : skipToken,
+        refetchInterval: false
+    });
+}
+
+/**
+ * What each parent has changed since its own last version — the edits a pull
+ * would not bring in, because a pull moves onto a version.
+ *
+ * A query of its own rather than part of the list: it is one Onshape call per
+ * parent, and the list should not wait on them to render.
+ */
+export function useUnversionedChangesQuery(
+    workspace: WorkspacePath | undefined
+) {
+    const isSignedIn = useIsSignedIn();
+    return useQuery<UnversionedChanges>({
+        queryKey: unversionedChangesQueryKey(workspace),
+        queryFn:
+            workspace && isSignedIn
+                ? () =>
+                      apiGet("/unversioned-changes", {
                           query: toWorkspaceQuery(workspace)
                       })
                 : skipToken,
@@ -250,6 +276,7 @@ export function describeJobResult(result: VersionJobResult): string {
     return sentence.charAt(0).toUpperCase() + sentence.slice(1);
 }
 
-function plural(count: number, noun: string): string {
+/** "1 change", "2 changes" — the counted noun both the toast and a badge use. */
+export function plural(count: number, noun: string): string {
     return `${count} ${noun}${count === 1 ? "" : "s"}`;
 }
