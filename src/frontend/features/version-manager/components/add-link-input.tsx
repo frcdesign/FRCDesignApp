@@ -107,21 +107,18 @@ export function AddLinkRow(props: AddLinkProps): ReactNode {
 
 /**
  * The same field where it is the page's one instruction rather than a list's
- * last row: labelled, bordered, and with a button that says what it adds.
+ * last row: bordered, and with a button that says what it adds.
  */
 export function AddLinkField(props: AddLinkProps): ReactNode {
     const { workspace, direction } = props;
     const form = useAddLinkForm(workspace, direction);
 
     return (
-        // Bottom-aligned, so the button sits on the input rather than on its
-        // label.
-        <Group gap="sm" wrap="nowrap" align="flex-end">
+        <Group gap="sm" wrap="nowrap">
             <TextInput
                 flex={1}
-                label="Onshape document link"
                 leftSection={<LinkIcon size={IconSize.SMALL} />}
-                placeholder="https://cad.onshape.com/documents/..."
+                placeholder="Onshape document link..."
                 value={form.url}
                 onChange={(event) => form.setUrl(event.currentTarget.value)}
                 onKeyDown={(event) => {

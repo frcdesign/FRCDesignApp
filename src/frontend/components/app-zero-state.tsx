@@ -16,11 +16,21 @@ interface ZeroStateProps {
     className?: string;
     /** Left puts the icon beside the text rather than above it. @default center */
     align?: "center" | "left";
+    /** Room above and below; tighter inside a card than on a page. @default 24 */
+    py?: number;
 }
 
 /** The centered block every empty, loading and error state is built from. */
 function ZeroState(props: ZeroStateProps): ReactNode {
-    const { icon, title, description, action, className, align } = props;
+    const {
+        icon,
+        title,
+        description,
+        action,
+        className,
+        align,
+        py = 24
+    } = props;
 
     return (
         <EmptyState
@@ -30,8 +40,8 @@ function ZeroState(props: ZeroStateProps): ReactNode {
             size="sm"
             align={align}
             className={className}
-            pt={24}
-            pb={24}
+            pt={py}
+            pb={py}
         >
             <EmptyState.Actions>{action}</EmptyState.Actions>
         </EmptyState>
@@ -58,6 +68,8 @@ interface NoticeProps {
     action?: JSX.Element;
     /** Left puts the icon beside the text rather than above it. @default center */
     align?: "center" | "left";
+    /** Room above and below; tighter inside a card than on a page. @default 24 */
+    py?: number;
 }
 
 function resolveDescription(
@@ -79,6 +91,7 @@ export function SectionNotice(props: NoticeProps): ReactNode {
         action,
         className,
         align,
+        py,
         icon = DEFAULT_ERROR_ICON
     } = props;
     return (
@@ -89,6 +102,7 @@ export function SectionNotice(props: NoticeProps): ReactNode {
             description={resolveDescription(props.description)}
             action={action}
             align={align}
+            py={py}
         />
     );
 }

@@ -1,29 +1,33 @@
-import { Card, Divider, Radio, SimpleGrid, Stack, Text } from "@mantine/core";
-import { TreeStructureIcon } from "@phosphor-icons/react";
+import { Card, Divider, Radio, SimpleGrid, Stack } from "@mantine/core";
+import {
+    ArrowLineDownIcon,
+    ArrowLineUpIcon,
+    TreeStructureIcon
+} from "@phosphor-icons/react";
 import { useState, type ReactNode } from "react";
 import {
     LinkDirection,
     type WorkspacePath
 } from "@backend/features/version-manager/contract";
 import { AppIcon } from "../../../components/app-icon";
-import { PageNotice } from "../../../components/app-zero-state";
-import {
-    FontWeight,
-    IconSize,
-    PrimaryColor,
-    StatusColor
-} from "../../../lib/style-constants";
+import { PageNotice, SectionNotice } from "../../../components/app-zero-state";
+import { IconSize, PrimaryColor } from "../../../lib/style-constants";
 import { AddLinkField } from "./add-link-input";
 
-/** What each direction is called, and what picking it would mean. */
+/**
+ * What each direction is called, what picking it would mean, and the arrow that
+ * runs it: down for what this document pulls in, up for what it pushes out.
+ */
 const DIRECTION_CHOICE = {
     [LinkDirection.PARENT]: {
         label: "A parent",
+        icon: ArrowLineDownIcon,
         description:
             "A parent is a document this one uses. You pull its latest versions in."
     },
     [LinkDirection.CHILD]: {
         label: "A child",
+        icon: ArrowLineUpIcon,
         description:
             "A child is a document that uses this one. You push versions of this document out to it."
     }
@@ -78,7 +82,7 @@ function AddFirstLinkCard(props: AddFirstLinkCardProps): ReactNode {
     return (
         // Left, where the notice above it is centred: this is a form, and a
         // centred label over a field reads as a heading for the whole card.
-        <Card withBorder w="100%" p="md" radius="md" ta="left">
+        <Card withBorder w="100%" maw={CARD_WIDTH} p="md" radius="md" ta="left">
             <Stack gap="md">
                 <Radio.Group
                     value={direction}
@@ -103,6 +107,13 @@ function AddFirstLinkCard(props: AddFirstLinkCardProps): ReactNode {
     );
 }
 
+/**
+ * How wide the card gets before it stops. The panel is narrower than this, so
+ * it only bites in a browser — where a form spanning the window reads as the
+ * page rather than as one thing to fill in.
+ */
+const CARD_WIDTH = 480;
+
 /** Mantine's card carries the border; what being picked looks like is ours. */
 const SELECTED_CARD = {
     borderColor: PrimaryColor.FILLED,
@@ -126,19 +137,24 @@ function DirectionCard(props: DirectionCardProps): ReactNode {
     return (
         <Radio.Card
             withBorder
-            p="sm"
+            px="sm"
             radius="sm"
             value={direction}
             style={selected ? SELECTED_CARD : undefined}
         >
-            <Stack gap={4}>
-                <Text size="sm" fw={FontWeight.SEMI_BOLD}>
-                    {choice.label}
-                </Text>
-                <Text size="xs" c={StatusColor.DIMMED}>
-                    {choice.description}
-                </Text>
-            </Stack>
+            <SectionNotice
+                align="left"
+                py={12}
+                icon={
+                    <AppIcon
+                        icon={choice.icon}
+                        size={IconSize.SECTION}
+                        color={PrimaryColor.FILLED}
+                    />
+                }
+                title={choice.label}
+                description={choice.description}
+            />
         </Radio.Card>
     );
 }

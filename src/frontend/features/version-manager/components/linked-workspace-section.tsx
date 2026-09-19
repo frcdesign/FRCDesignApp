@@ -26,7 +26,6 @@ import {
     type WorkspacePath
 } from "@backend/features/version-manager/contract";
 import { ThumbnailSize } from "@backend/features/thumbnails/contract";
-import { AppIcon } from "../../../components/app-icon";
 import { MenuButton, MenuSection } from "../../../components/app-menu";
 import { CardTitle, ItemRow, ItemTable } from "../../../components/item-row";
 import { SectionNotice } from "../../../components/app-zero-state";
@@ -62,7 +61,7 @@ export const DIRECTION_COPY = {
         running: "Pulling from Onshape...",
         description:
             "Workspaces this one references. Pulling moves this workspace's references onto their latest versions.",
-        empty: "No parents linked."
+        empty: "No linked parents"
     },
     [LinkDirection.CHILD]: {
         title: "Children",
@@ -73,7 +72,7 @@ export const DIRECTION_COPY = {
         running: "Pushing to Onshape...",
         description:
             "Workspaces that reference this one. Pushing creates a version here and moves their references onto it.",
-        empty: "No children linked."
+        empty: "No linked children"
     }
 } as const;
 
@@ -83,16 +82,20 @@ const ALL_TARGET = "all";
 /** Phosphor takes a CSS color, which the theme's dimmed name is not. */
 const DIMMED_ICON = "var(--mantine-color-dimmed)";
 
-/** The arrow a direction is marked with, on its title and its buttons. */
-export function DirectionIcon(props: {
+interface DirectionIconProps {
     direction: LinkDirection;
     size?: number;
-}): ReactNode {
-    const { direction, size = IconSize.MEDIUM } = props;
+    /** Left out inside a button, which has already set the color it reads in. */
+    color?: string;
+}
+
+/** The arrow a direction is marked with, on its title and its buttons. */
+export function DirectionIcon(props: DirectionIconProps): ReactNode {
+    const { direction, size = IconSize.MEDIUM, color } = props;
     return direction === LinkDirection.CHILD ? (
-        <ArrowLineUpIcon size={size} />
+        <ArrowLineUpIcon size={size} color={color} />
     ) : (
-        <ArrowLineDownIcon size={size} />
+        <ArrowLineDownIcon size={size} color={color} />
     );
 }
 
@@ -393,8 +396,8 @@ export function LinkedWorkspaceSection(
                     title={copy.empty}
                     description={null}
                     icon={
-                        <AppIcon
-                            icon={LinkBreakIcon}
+                        <DirectionIcon
+                            direction={direction}
                             size={IconSize.SECTION}
                             color={PrimaryColor.FILLED}
                         />
