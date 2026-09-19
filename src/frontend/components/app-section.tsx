@@ -84,6 +84,11 @@ export function AppSection(props: AppSectionProps): ReactNode {
     return (
         <Accordion.Item value={value}>
             <Group
+                // The whole row highlights, not the control: the buttons and
+                // the chevron beside it are part of the same header, and a
+                // highlight that stopped where they begin would look like a
+                // second thing had started there.
+                className="interactive"
                 gap="xs"
                 wrap="nowrap"
                 pr="sm"
@@ -92,7 +97,6 @@ export function AppSection(props: AppSectionProps): ReactNode {
                 style={{ borderBottom: BORDER }}
             >
                 <Accordion.Control
-                    className="interactive"
                     // Shrinkable, so the buttons beside it keep their width.
                     miw={0}
                     icon={icon}

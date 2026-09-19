@@ -26,11 +26,17 @@ import {
     type WorkspacePath
 } from "@backend/features/version-manager/contract";
 import { ThumbnailSize } from "@backend/features/thumbnails/contract";
+import { AppIcon } from "../../../components/app-icon";
 import { MenuButton, MenuSection } from "../../../components/app-menu";
 import { CardTitle, ItemRow, ItemTable } from "../../../components/item-row";
 import { SectionNotice } from "../../../components/app-zero-state";
 import { CardThumbnail } from "../../thumbnails/components/thumbnail";
-import { IconSize, NO_SHRINK, StatusColor } from "../../../lib/style-constants";
+import {
+    IconSize,
+    NO_SHRINK,
+    PrimaryColor,
+    StatusColor
+} from "../../../lib/style-constants";
 import { makeUrl, openUrlInNewTab } from "../../../lib/url";
 import {
     openPullReferencesModal,
@@ -51,6 +57,8 @@ export const DIRECTION_COPY = {
         title: "Parents",
         allAction: "Pull from all",
         rowAction: "Pull",
+        quickAll: "Quick pull from every parent",
+        quickRow: "Quick pull",
         running: "Pulling from Onshape...",
         description:
             "Workspaces this one references. Pulling moves this workspace's references onto their latest versions.",
@@ -60,6 +68,8 @@ export const DIRECTION_COPY = {
         title: "Children",
         allAction: "Push to all",
         rowAction: "Push",
+        quickAll: "Quick push to every child",
+        quickRow: "Quick push",
         running: "Pushing to Onshape...",
         description:
             "Workspaces that reference this one. Pushing creates a version here and moves their references onto it.",
@@ -109,6 +119,8 @@ export function DirectionInfo(props: { direction: LinkDirection }): ReactNode {
 interface ActionButtonProps {
     direction: LinkDirection;
     label: string;
+    /** What it runs, which its label does not say: every button is a quick one. */
+    tooltip: string;
     /** This button's run is the one going, so it carries the spinner. */
     loading: boolean;
     disabled: boolean;
@@ -121,11 +133,11 @@ interface ActionButtonProps {
  * rather than in a banner over the page.
  */
 function ActionButton(props: ActionButtonProps): ReactNode {
-    const { direction, label, loading, disabled, onClick } = props;
-    const tooltip = loading ? DIRECTION_COPY[direction].running : label;
+    const { direction, label, tooltip, loading, disabled, onClick } = props;
+    const hint = loading ? DIRECTION_COPY[direction].running : tooltip;
 
     return (
-        <Tooltip withArrow label={tooltip}>
+        <Tooltip withArrow label={hint}>
             {/* A span, so the tooltip still has something to hang off when the
                 button inside it is disabled and stops firing events. */}
             <span style={NO_SHRINK}>
@@ -160,8 +172,9 @@ function ActionButton(props: ActionButtonProps): ReactNode {
  * Everything a section and its rows can set running, held once per direction so
  * the header outside the accordion panel and the rows inside it share a run.
  *
- * The buttons open a form; the menus run the same thing without one. Both end
- * in the same mutation, which is why they are declared together.
+ * The buttons run it there and then; the form is behind a click on the row and
+ * in the menus. Both end in the same mutation, which is why they are declared
+ * together.
  */
 export interface LinkActions {
     isRunning: boolean;
@@ -170,7 +183,7 @@ export interface LinkActions {
     /** Opens the form for everything in this direction, or for one link. */
     openAll: () => void;
     openOne: (linked: LinkedWorkspace) => void;
-    /** Runs it there and then, under the defaults the form would have shown. */
+    /** Runs it under the defaults the form would have shown. */
     quickAll: (recursive: boolean) => void;
     quickOne: (linked: LinkedWorkspace, recursive: boolean) => void;
     /** Parents only: every out-of-date reference, linked or not. */
@@ -274,15 +287,17 @@ export function SectionActions(props: SectionActionsProps): ReactNode {
             <ActionButton
                 direction={direction}
                 label={copy.allAction}
+                tooltip={copy.quickAll}
                 loading={activeTarget === ALL_TARGET}
                 disabled={disabled}
-                onClick={actions.openAll}
+                onClick={() => actions.quickAll(false)}
             />
             <MenuButton>
-                <QuickMenuSection
+                <ActionMenuSection
                     direction={direction}
+                    formLabel={`${copy.allAction}...`}
                     disabled={disabled}
-                    onQuick={() => actions.quickAll(false)}
+                    onOpenForm={actions.openAll}
                     onQuickRecursive={() => actions.quickAll(true)}
                 />
                 {!isChild && (
@@ -305,19 +320,22 @@ export function SectionActions(props: SectionActionsProps): ReactNode {
     );
 }
 
-interface QuickMenuSectionProps {
+interface ActionMenuSectionProps {
     direction: LinkDirection;
+    /** Ends in an ellipsis: it opens the form rather than running anything. */
+    formLabel: string;
     disabled: boolean;
-    onQuick: () => void;
+    onOpenForm: () => void;
     onQuickRecursive: () => void;
 }
 
 /**
- * The shortcuts past the form, which every menu carries: the same run the form
- * would make from its defaults, and — pushing — the same one carried on down.
+ * What the buttons do not: the form, for a run that wants a version name or a
+ * wider scope, and — pushing — the recursive walk.
  */
-function QuickMenuSection(props: QuickMenuSectionProps): ReactNode {
-    const { direction, disabled, onQuick, onQuickRecursive } = props;
+function ActionMenuSection(props: ActionMenuSectionProps): ReactNode {
+    const { direction, formLabel, disabled, onOpenForm, onQuickRecursive } =
+        props;
     const isChild = direction === LinkDirection.CHILD;
 
     return (
@@ -330,9 +348,9 @@ function QuickMenuSection(props: QuickMenuSectionProps): ReactNode {
                     />
                 }
                 disabled={disabled}
-                onClick={onQuick}
+                onClick={onOpenForm}
             >
-                {isChild ? "Quick push" : "Quick pull"}
+                {formLabel}
             </Menu.Item>
             {/* No recursive pull: a pull writes only to this workspace, and
                 going further would mean versioning a parent's own parents,
@@ -372,9 +390,10 @@ export function LinkedWorkspaceSection(
                     title={copy.empty}
                     description={null}
                     icon={
-                        <LinkBreakIcon
+                        <AppIcon
+                            icon={LinkBreakIcon}
                             size={IconSize.PAGE}
-                            color={StatusColor.DIMMED}
+                            color={PrimaryColor.FILLED}
                         />
                     }
                 />
@@ -416,10 +435,11 @@ function LinkedWorkspaceRow(props: LinkedWorkspaceRowProps): ReactNode {
 
     const menuItems = (
         <>
-            <QuickMenuSection
+            <ActionMenuSection
                 direction={direction}
+                formLabel={`${copy.rowAction}...`}
                 disabled={disabled}
-                onQuick={() => actions.quickOne(linked, false)}
+                onOpenForm={() => actions.openOne(linked)}
                 onQuickRecursive={() => actions.quickOne(linked, true)}
             />
             <MenuSection label="Link">
@@ -451,15 +471,19 @@ function LinkedWorkspaceRow(props: LinkedWorkspaceRowProps): ReactNode {
             // The menu below carries the same items, in the order this row
             // wants them: the action first, then what to do with the link.
             moreButton={false}
-            onClick={linked.isOpenable ? () => openUrlInNewTab(url) : undefined}
+            // The form, where the button beside it is the run itself. Opening
+            // the document moved to the menu: this list is for pushing and
+            // pulling, and that is what a row should be one click from.
+            onClick={() => actions.openOne(linked)}
             rightSection={
                 <Group gap={4} wrap="nowrap">
                     <ActionButton
                         direction={direction}
                         label={copy.rowAction}
+                        tooltip={copy.quickRow}
                         loading={actions.activeTarget === linked.linkId}
                         disabled={actions.isRunning}
-                        onClick={() => actions.openOne(linked)}
+                        onClick={() => actions.quickOne(linked, false)}
                     />
                     <MenuButton>{menuItems}</MenuButton>
                 </Group>

@@ -1,5 +1,7 @@
 import { createTheme, type MantineColorsTuple } from "@mantine/core";
+import { useMatch } from "@tanstack/react-router";
 import { LibraryId } from "@backend/features/library/library-id";
+import { useIsVersionManager } from "./features/version-manager/navigation";
 import { FILLED_SHADE } from "./lib/style-constants";
 
 /**
@@ -34,16 +36,45 @@ export function getLibraryColor(libraryId: string): string {
     }
 }
 
+/**
+ * The colors of the pages that are not a library's. Each says which part of the
+ * app is showing, the way a library's color says which library is.
+ */
+export enum AppColor {
+    /** FRCDesign's own, whichever library the dashboard is reporting on. */
+    DASHBOARD = "frcGreen",
+    /** The version manager acts on the open document, which is no library's. */
+    VERSION_MANAGER = "blue"
+}
+
+/**
+ * What the app is themed in right now: the page's own color where it has one,
+ * and the library's otherwise.
+ */
+export function useAppColor(libraryId: string): string {
+    const isDashboard =
+        useMatch({ from: "/dashboard", shouldThrow: false }) !== undefined;
+    const isVersionManager = useIsVersionManager();
+
+    if (isDashboard) {
+        return AppColor.DASHBOARD;
+    }
+    if (isVersionManager) {
+        return AppColor.VERSION_MANAGER;
+    }
+    return getLibraryColor(libraryId);
+}
+
 /** A library's color as Mantine's `color.shade`, for a chart series or tile. */
 export function getLibraryShade(libraryId: string): string {
     return `${getLibraryColor(libraryId)}.${FILLED_SHADE}`;
 }
 
-/** The frame stays neutral; a library's color is an accent on its controls. */
-export function createAppTheme(libraryId: string) {
+/** The frame stays neutral; the page's color is an accent on its controls. */
+export function createAppTheme(primaryColor: string) {
     return createTheme({
         colors: { frcGreen },
-        primaryColor: getLibraryColor(libraryId),
+        primaryColor,
         autoContrast: true,
         // Mantine's "md" default reads soft for a dense CAD panel.
         defaultRadius: "sm",

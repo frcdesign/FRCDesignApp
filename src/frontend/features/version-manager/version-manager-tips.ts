@@ -14,14 +14,14 @@ const MAX_TIPS = 3;
 
 const TIP_TEXT = {
     [LinkDirection.CHILD]:
-        "Tip: pick Quick push from a row's menu to push without opening this form.",
+        "Tip: the Push buttons push straight away, without opening this form.",
     [LinkDirection.PARENT]:
-        "Tip: pick Quick pull from a row's menu to pull without opening this form."
+        "Tip: the Pull buttons pull straight away, without opening this form."
 } as const;
 
 /**
  * Points out the shortcut to somebody whose last run did not need the form:
- * they opened it, changed nothing, and ran what a menu item would have run.
+ * they opened it, changed nothing, and ran what the button would have run.
  *
  * Quiet after {@link MAX_TIPS}, and silent from the moment they take the
  * shortcut themselves — see {@link retireQuickActionTip}.

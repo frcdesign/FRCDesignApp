@@ -6,7 +6,7 @@ import { Notifications } from "@mantine/notifications";
 import { ReactNode, useMemo } from "react";
 import { useColorScheme } from "@mantine/hooks";
 import { queryClient } from "../lib/query-client";
-import { createAppTheme } from "../theme";
+import { createAppTheme, useAppColor } from "../theme";
 import { getColorTheme } from "../lib/onshape-params";
 import { useGetUiState } from "../lib/ui-state";
 import { NotFoundError, RootCrash } from "../components/root-error";
@@ -24,11 +24,9 @@ function RootComponent(): ReactNode {
     // The library comes off the url, so the first paint is already its color.
     const params = useParams({ strict: false });
     const { theme: savedTheme, libraryId, systemTheme } = useGetUiState();
+    const color = useAppColor(params.libraryId ?? libraryId);
 
-    const theme = useMemo(
-        () => createAppTheme(params.libraryId ?? libraryId),
-        [params.libraryId, libraryId]
-    );
+    const theme = useMemo(() => createAppTheme(color), [color]);
 
     // Onshape's own scheme, taken off the launch; standalone there is none,
     // and the OS is what "system" means.
