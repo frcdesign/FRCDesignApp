@@ -1,4 +1,4 @@
-import { Button, Card, Group, TextInput } from "@mantine/core";
+import { Button, Group, Table, TextInput } from "@mantine/core";
 import { LinkIcon, PlusIcon } from "@phosphor-icons/react";
 import { useState, type ReactNode } from "react";
 import {
@@ -23,9 +23,9 @@ interface AddLinkInputProps {
  * Links a workspace by its Onshape url, which is the one handle on a document
  * everybody already has: copy the link, paste it here.
  *
- * A card with the field and its button on one row, the way the app this came
- * from had it, under the list it adds to — so the links read first and the way
- * to add one is where the list ends.
+ * The last row of the list it adds to, on the same grid as the links above it:
+ * a card of its own sat inside the table and left both it and the row above at
+ * a different height from the rest.
  */
 export function AddLinkInput(props: AddLinkInputProps): ReactNode {
     const { workspace, direction } = props;
@@ -46,31 +46,33 @@ export function AddLinkInput(props: AddLinkInputProps): ReactNode {
     };
 
     return (
-        <Card withBorder padding="xs" radius="md">
-            <Group gap="xs" wrap="nowrap">
-                <TextInput
-                    flex={1}
-                    size="sm"
-                    variant="unstyled"
-                    leftSection={<LinkIcon size={IconSize.SMALL} />}
-                    placeholder="Onshape document link..."
-                    value={url}
-                    onChange={(event) => setUrl(event.currentTarget.value)}
-                    onKeyDown={(event) => {
-                        if (event.key === "Enter") submit();
-                    }}
-                />
-                <Button
-                    size="compact-sm"
-                    variant="subtle"
-                    rightSection={<PlusIcon size={IconSize.SMALL} />}
-                    loading={addLink.isPending}
-                    disabled={url.trim() === ""}
-                    onClick={submit}
-                >
-                    Add
-                </Button>
-            </Group>
-        </Card>
+        <Table.Tr>
+            <Table.Td>
+                <Group gap="xs" wrap="nowrap">
+                    <TextInput
+                        flex={1}
+                        size="sm"
+                        variant="unstyled"
+                        leftSection={<LinkIcon size={IconSize.SMALL} />}
+                        placeholder="Onshape document link..."
+                        value={url}
+                        onChange={(event) => setUrl(event.currentTarget.value)}
+                        onKeyDown={(event) => {
+                            if (event.key === "Enter") submit();
+                        }}
+                    />
+                    <Button
+                        size="compact-sm"
+                        variant="subtle"
+                        rightSection={<PlusIcon size={IconSize.SMALL} />}
+                        loading={addLink.isPending}
+                        disabled={url.trim() === ""}
+                        onClick={submit}
+                    >
+                        Add
+                    </Button>
+                </Group>
+            </Table.Td>
+        </Table.Tr>
     );
 }

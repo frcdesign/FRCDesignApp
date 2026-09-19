@@ -13,10 +13,8 @@ import {
     ArrowLineUpIcon,
     ArrowsClockwiseIcon,
     ArrowSquareOutIcon,
-    FileIcon,
     InfoIcon,
     LinkBreakIcon,
-    ProhibitIcon,
     TreeStructureIcon
 } from "@phosphor-icons/react";
 import { useState, type ReactNode } from "react";
@@ -24,13 +22,15 @@ import {
     LinkDirection,
     PullScopeKind,
     PushScopeKind,
+    workspaceThumbnailUrl,
     type LinkedWorkspace,
     type WorkspacePath
 } from "@backend/features/version-manager/contract";
+import { ThumbnailSize } from "@backend/features/thumbnails/contract";
 import { MenuButton, MenuSection } from "../../../components/app-menu";
-import { ItemRow, ItemTable } from "../../../components/item-row";
+import { CardTitle, ItemRow, ItemTable } from "../../../components/item-row";
 import { SectionNotice } from "../../../components/app-zero-state";
-import { TruncatedText } from "../../../components/truncated-text";
+import { CardThumbnail } from "../../thumbnails/components/thumbnail";
 import { IconSize, NO_SHRINK, StatusColor } from "../../../lib/style-constants";
 import { makeUrl, openUrlInNewTab } from "../../../lib/url";
 import {
@@ -73,7 +73,6 @@ const ALL_TARGET = "all";
 
 /** Phosphor takes a CSS color, which the theme's dimmed name is not. */
 const DIMMED_ICON = "var(--mantine-color-dimmed)";
-const ERROR_ICON = "var(--mantine-color-error)";
 
 /** The arrow a direction is marked with, on its title and its buttons. */
 export function DirectionIcon(props: {
@@ -383,7 +382,7 @@ export function LinkedWorkspaceSection(
 
     return (
         <Stack gap="sm" p="sm">
-            {linked.length === 0 ? (
+            {linked.length === 0 && (
                 <SectionNotice
                     title={copy.empty}
                     description={null}
@@ -394,20 +393,21 @@ export function LinkedWorkspaceSection(
                         />
                     }
                 />
-            ) : (
-                <ItemTable>
-                    {linked.map((each) => (
-                        <LinkedWorkspaceRow
-                            key={each.linkId}
-                            linked={each}
-                            direction={direction}
-                            actions={actions}
-                            onRemove={() => removeLink.mutate(each.linkId)}
-                        />
-                    ))}
-                </ItemTable>
             )}
-            <AddLinkInput workspace={workspace} direction={direction} />
+            {/* The field is a row of the same table, so it sits on the grid
+                every other row does rather than in a card of its own. */}
+            <ItemTable>
+                {linked.map((each) => (
+                    <LinkedWorkspaceRow
+                        key={each.linkId}
+                        linked={each}
+                        direction={direction}
+                        actions={actions}
+                        onRemove={() => removeLink.mutate(each.linkId)}
+                    />
+                ))}
+                <AddLinkInput workspace={workspace} direction={direction} />
+            </ItemTable>
         </Stack>
     );
 }
@@ -499,22 +499,31 @@ function LinkedWorkspaceRow(props: LinkedWorkspaceRowProps): ReactNode {
     );
 }
 
-interface MissingAccessProps {
-    /** What Onshape will not let them do, e.g. "open this document". */
-    reason: string;
-}
-
-/** Why a link cannot be acted on, in the place its subtitle would have been. */
-function MissingAccess(props: MissingAccessProps): ReactNode {
+/**
+ * A linked workspace's thumbnail: the one Onshape keeps for the document, at
+ * the size every row uses, with the same hover card as a part's.
+ *
+ * A workspace nobody can read gets none asked for — the placeholder is the
+ * answer, and it keeps the row the height of its neighbours.
+ */
+function LinkedWorkspaceThumbnail(props: {
+    linked: LinkedWorkspace;
+}): ReactNode {
+    const { linked } = props;
+    if (!linked.isOpenable) {
+        return <CardThumbnail />;
+    }
     return (
-        <Stack gap={0} miw={0}>
-            <Text size="sm" c={StatusColor.ERROR}>
-                Missing access
-            </Text>
-            <Text size="xs" c={StatusColor.ERROR} truncate>
-                You cannot {props.reason}
-            </Text>
-        </Stack>
+        <CardThumbnail
+            smallThumbnailUrl={workspaceThumbnailUrl(
+                linked.workspace,
+                ThumbnailSize.SMALL
+            )}
+            largeThumbnailUrl={workspaceThumbnailUrl(
+                linked.workspace,
+                ThumbnailSize.LARGE
+            )}
+        />
     );
 }
 
@@ -525,34 +534,39 @@ interface LinkedWorkspaceTitleProps {
 }
 
 /**
- * The document and workspace a link points at. A link the caller cannot read
- * shows that it exists and nothing else: what it points at is not theirs to
- * know, and the row is still theirs to remove.
+ * The document and workspace a link points at, on the same block every list in
+ * the app uses. A link the caller cannot read shows that it exists and nothing
+ * else: what it points at is not theirs to know, and the row is still theirs to
+ * remove.
  */
 function LinkedWorkspaceTitle(props: LinkedWorkspaceTitleProps): ReactNode {
     const { linked, allowed } = props;
+    const thumbnail = <LinkedWorkspaceThumbnail linked={linked} />;
 
     if (!linked.isOpenable) {
         return (
-            <Group gap="sm" wrap="nowrap" flex={1} miw={0}>
-                <ProhibitIcon size={IconSize.MEDIUM} color={ERROR_ICON} />
-                <MissingAccess reason="open this document" />
-            </Group>
+            <CardTitle
+                title="Missing access"
+                thumbnail={thumbnail}
+                titleColor={StatusColor.ERROR}
+                subtitle={
+                    <Text size="xs" c={StatusColor.ERROR} truncate>
+                        You cannot open this document
+                    </Text>
+                }
+            />
         );
     }
 
-    // Readable but unnamed: the document answered, and had nothing to say.
-    const documentName = linked.documentName ?? "Untitled document";
-
     return (
-        <Group gap="sm" wrap="nowrap" flex={1} miw={0}>
-            <FileIcon size={IconSize.MEDIUM} color={DIMMED_ICON} />
-            <Stack gap={0} miw={0}>
-                <TruncatedText hoverText={documentName} size="sm">
-                    {documentName}
-                </TruncatedText>
-                {/* Readable but not writable, which only a push runs into. */}
-                {!allowed ? (
+        <CardTitle
+            // Readable but unnamed: the document answered, and had nothing to
+            // say.
+            title={linked.documentName ?? "Untitled document"}
+            thumbnail={thumbnail}
+            subtitle={
+                // Readable but not writable, which only a push runs into.
+                !allowed ? (
                     <Text size="xs" c={StatusColor.ERROR} truncate>
                         Missing access &mdash; you cannot edit this document
                     </Text>
@@ -562,8 +576,8 @@ function LinkedWorkspaceTitle(props: LinkedWorkspaceTitleProps): ReactNode {
                             {linked.workspaceName}
                         </Text>
                     )
-                )}
-            </Stack>
-        </Group>
+                )
+            }
+        />
     );
 }

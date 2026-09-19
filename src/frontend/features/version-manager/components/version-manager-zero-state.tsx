@@ -12,6 +12,7 @@ import {
     PrimaryColor,
     StatusColor
 } from "../../../lib/style-constants";
+import { ItemTable } from "../../../components/item-row";
 import { AddLinkInput } from "./add-link-input";
 
 interface VersionManagerZeroStateProps {
@@ -63,7 +64,14 @@ export function VersionManagerZeroState(
                             ? "A parent is a document this one uses. You pull its latest versions in."
                             : "A child is a document that uses this one. You push versions of this document out to it."}
                     </Text>
-                    <AddLinkInput workspace={workspace} direction={direction} />
+                    {/* The field is a table row, so it needs the table it is
+                        a row of even where it stands alone. */}
+                    <ItemTable>
+                        <AddLinkInput
+                            workspace={workspace}
+                            direction={direction}
+                        />
+                    </ItemTable>
                 </Stack>
             }
         />

@@ -140,6 +140,23 @@ export const EMPTY_JOB_RESULT: VersionJobResult = {
     createdVersions: 0
 };
 
+/**
+ * Where the client fetches a linked workspace's thumbnail. Built here so the
+ * url the browser asks for is declared beside the route that answers it, the
+ * way `features/thumbnails/keys.ts` does for a rendered one.
+ */
+export function workspaceThumbnailUrl(
+    workspace: WorkspacePath,
+    size: string
+): string {
+    const query = new URLSearchParams({
+        documentId: workspace.documentId,
+        instanceId: workspace.instanceId,
+        size
+    });
+    return `/api/workspace-thumbnail?${query.toString()}`;
+}
+
 /** How long a version name may be, matching what Onshape accepts. */
 export const MAX_VERSION_NAME_LENGTH = 256;
 

@@ -36,8 +36,16 @@ interface CardTitleProps {
     match?: RowMatch;
     /** Dims the text, for a row that cannot be acted on. */
     disabled?: boolean;
+    /** Colors the title, for a row whose name is itself a problem. */
+    titleColor?: string;
     /** Optional build-status badge rendered after the title. */
     buildStatusBadge?: ReactNode;
+    /**
+     * The caller's own second line, in place of the part name and number — for
+     * a row whose subject is not a part, like a linked workspace. It styles
+     * itself, the line under a part being the only one this component knows.
+     */
+    subtitle?: ReactNode;
 }
 
 export function CardTitle(props: CardTitleProps): ReactNode {
@@ -46,6 +54,8 @@ export function CardTitle(props: CardTitleProps): ReactNode {
         title,
         thumbnail,
         buildStatusBadge,
+        subtitle,
+        titleColor,
         disabled = false
     } = props;
 
@@ -58,7 +68,7 @@ export function CardTitle(props: CardTitleProps): ReactNode {
                 <TruncatedText
                     hoverText={title}
                     size="sm"
-                    c={disabled ? "dimmed" : undefined}
+                    c={titleColor ?? (disabled ? "dimmed" : undefined)}
                 >
                     <HighlightedText
                         text={title}
@@ -67,7 +77,7 @@ export function CardTitle(props: CardTitleProps): ReactNode {
                 </TruncatedText>
                 {/* The line under the title, so it sits beside it in the stack
                     rather than inside the paragraph the title renders as. */}
-                <PartNameAndNumber title={title} match={match} />
+                {subtitle ?? <PartNameAndNumber title={title} match={match} />}
             </Stack>
             {buildStatusBadge}
         </Group>
