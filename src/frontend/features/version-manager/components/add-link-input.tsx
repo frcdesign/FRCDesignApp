@@ -8,7 +8,10 @@ import {
 } from "@backend/features/version-manager/contract";
 import { IconSize } from "../../../lib/style-constants";
 import { showErrorToast } from "../../../lib/notifications";
-import { parseOnshapeWorkspace } from "../../../lib/url";
+import {
+    INVALID_WORKSPACE_URL,
+    parseOnshapeWorkspace
+} from "../../../lib/onshape-url";
 import { useAddLinkMutation } from "../queries";
 
 interface AddLinkInputProps {
@@ -32,9 +35,7 @@ export function AddLinkInput(props: AddLinkInputProps): ReactNode {
     const submit = () => {
         const linked = parseOnshapeWorkspace(url);
         if (!linked) {
-            showErrorToast(
-                "That does not look like a link to an Onshape workspace. Copy the url from the document's address bar."
-            );
+            showErrorToast(INVALID_WORKSPACE_URL);
             return;
         }
         if (isSameWorkspace(linked, workspace)) {
@@ -52,7 +53,7 @@ export function AddLinkInput(props: AddLinkInputProps): ReactNode {
                     size="sm"
                     variant="unstyled"
                     leftSection={<LinkIcon size={IconSize.SMALL} />}
-                    placeholder="Paste an Onshape document link"
+                    placeholder="Onshape document link..."
                     value={url}
                     onChange={(event) => setUrl(event.currentTarget.value)}
                     onKeyDown={(event) => {

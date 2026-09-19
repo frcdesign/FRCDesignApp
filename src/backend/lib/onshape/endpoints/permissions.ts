@@ -17,7 +17,10 @@ export enum OnshapePermission {
 }
 
 /**
- * The caller's permissions on a document.
+ * `GET /documents/{did}/permissionset`
+ *
+ * The caller's permissions on a document. Note the bare document id: this is
+ * one of the endpoints that takes no `/d/` segment.
  *
  * A document shared with nobody answers 403 rather than an empty list, so that
  * is read as no permissions: the caller is being told they cannot see it, which

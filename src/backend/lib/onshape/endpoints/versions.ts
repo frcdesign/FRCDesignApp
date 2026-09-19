@@ -4,6 +4,8 @@ import { apiPath } from "../api-path";
 import { OnshapeVersionInfo } from "../types";
 
 /**
+ * `GET /documents/d/{did}/versions`
+ *
  * Fetches a list of versions of a document.
  *
  * Versions are returned in chronological order, with the oldest version ("Start") first.
@@ -30,8 +32,11 @@ export function getLatestVersion(
 }
 
 /**
+ * `POST /documents/d/{did}/versions`
+ *
  * Cuts a version of a workspace. Onshape takes the instance in the body as well
  * as the document in the path, which is why this asks for a whole instance.
+ * Requires write on the document.
  */
 export function createVersion(
     client: OnshapeApi,

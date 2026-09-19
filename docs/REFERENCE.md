@@ -81,11 +81,12 @@ All rendering happens inside the workflow, which keeps Onshape's thumbnail id se
 
 Cloudflare Workflows let you run a long-running background job that survives beyond a single HTTP request's time limit. They are the only async primitive here — there are no Queues, Durable Objects, or cron triggers. The two load workflows live in `src/backend/features/load/workflows.ts`; the thumbnail one lives with the feature it serves, in `src/backend/features/thumbnails/workflow.ts`:
 
-| Binding                 | Class                 | What it does                                                                         |
-| ----------------------- | --------------------- | ------------------------------------------------------------------------------------ |
-| `LOAD_LIBRARY_WORKFLOW` | `LoadLibraryWorkflow` | Reloads every group whose document has a new version, then rebuilds the search index |
-| `ADD_GROUP_WORKFLOW`    | `AddGroupWorkflow`    | Adds an Onshape document to a library and loads it                                   |
-| `THUMBNAIL_WORKFLOW`    | `ThumbnailWorkflow`   | Renders one configuration's thumbnails and stores them in R2                         |
+| Binding                    | Class                    | What it does                                                                                 |
+| -------------------------- | ------------------------ | -------------------------------------------------------------------------------------------- |
+| `LOAD_LIBRARY_WORKFLOW`    | `LoadLibraryWorkflow`    | Reloads every group whose document has a new version, then rebuilds the search index         |
+| `ADD_GROUP_WORKFLOW`       | `AddGroupWorkflow`       | Adds an Onshape document to a library and loads it                                           |
+| `THUMBNAIL_WORKFLOW`       | `ThumbnailWorkflow`      | Renders one configuration's thumbnails and stores them in R2                                 |
+| `VERSION_MANAGER_WORKFLOW` | `VersionManagerWorkflow` | Runs one push or pull: cuts versions and moves external references between linked workspaces |
 
 Loading a group means walking the document structure, downloading metadata for every part and assembly, probing each indexed configuration, generating thumbnails, and writing it all to D1 — far too long for a single HTTP request. The request kicks the workflow off and returns immediately.
 
@@ -167,15 +168,16 @@ owns, `lib/` for cross-cutting plumbing, and a small set of files at the root.
     An element's own part number and material live on `insertables.part_data`; a `configurations` row exists exactly when the element has parameters to configure.
     - `thumbnails/` — rendering and R2 storage (`store.ts`), its Workflow, the routes, and the key and URL scheme the client shares
     - `build-checker/` — build issues, the checks that raise them, and the build-status endpoint
+    - `version-manager/` — links between Onshape workspaces and the pushes and pulls along them: `schema.ts` (its own table, holding no foreign key into the rest), `graph.ts` (the pure walk that orders a push), `references.ts` (the reference-update engine), `links.ts`, `jobs.ts`, and the Workflow that runs both operations
     - `favorites/`, `search/`
 
 ### `src/frontend/`
 
 - `main.tsx` — React root; wraps the app in `QueryClientProvider` and `MantineProvider`
 - `routes/` — file-based TanStack Router routes
-- `lib/` — cross-cutting helpers: `api-client.ts` (fetch wrappers), `query-keys.ts` (every query key in one place), `query-client.ts`, `ui-state.ts` (localStorage state), `refresh.ts`, `notifications.tsx`
+- `lib/` — cross-cutting helpers: `api-client.ts` (fetch wrappers), `query-keys.ts` (every query key in one place), `query-client.ts`, `ui-state.ts` (localStorage state), `refresh.ts`, `notifications.tsx`, `onshape-url.ts` (reading a pasted Onshape url, which both groups and version-manager links are added by)
 - `components/` — UI used by more than one feature, plus the app shell (`app-navbar.tsx`, `alerts.tsx`, `root-error.tsx`)
-- `features/` — `library/`, `favorites/`, `insert/`, `search/`, `settings/`, `thumbnails/`, `build-status/`, `auth/`, each with a `queries.ts` and a `components/` directory
+- `features/` — `library/`, `favorites/`, `insert/`, `search/`, `settings/`, `thumbnails/`, `build-status/`, `version-manager/`, `auth/`, each with a `queries.ts` and a `components/` directory
 
 Other top-level files:
 

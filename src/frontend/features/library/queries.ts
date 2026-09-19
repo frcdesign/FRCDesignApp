@@ -28,7 +28,10 @@ import {
 } from "../../lib/notifications";
 import { getAppErrorHandler, appError } from "../../lib/errors";
 import { modals } from "@mantine/modals";
-import { parseOnshapeDocumentId } from "../../lib/url";
+import {
+    INVALID_DOCUMENT_URL,
+    parseOnshapeDocumentId
+} from "../../lib/onshape-url";
 import { useRefreshLibrary } from "../../lib/refresh";
 
 export function getLibraryQuery(libraryId: LibraryId, cacheVersion: number) {
@@ -218,7 +221,7 @@ export function useAddGroupMutation(selectedGroupId?: string) {
         mutationFn: async (url: string) => {
             const newDocumentId = parseOnshapeDocumentId(url);
             if (!newDocumentId) {
-                throw appError("Failed to parse url.");
+                throw appError(INVALID_DOCUMENT_URL);
             }
             showLoadingToast("Adding document...", "add-group");
             modals.closeAll();

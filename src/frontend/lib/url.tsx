@@ -8,7 +8,6 @@ import {
     isConfigurablePath
 } from "@backend/lib/onshape/path";
 import { encodeConfiguration } from "@backend/features/configurations/utils";
-import { type WorkspacePath } from "@backend/features/version-manager/contract";
 import { notifications } from "@mantine/notifications";
 import { LinkIcon } from "@phosphor-icons/react";
 import { IconSize } from "./style-constants";
@@ -43,51 +42,6 @@ export function makeUrl(path: DocumentPath): string {
             encodeURIComponent(encodeConfiguration(path.selection));
     }
     return url;
-}
-
-/**
- * The document a pasted Onshape url names, or undefined when it names none.
- * Only the document id: a url pointing at a workspace or a tab carries more,
- * but a link to the document itself does not, and both are worth accepting.
- */
-export function parseOnshapeDocumentId(urlString: string): string | undefined {
-    // Example pathname: /documents/{documentId}/w/{workspaceId}/e/{elementId}
-    const url = URL.parse(urlString);
-    if (!url) {
-        return undefined;
-    }
-    const [, documents, documentId] = url.pathname.split("/");
-    return documents === "documents" && documentId ? documentId : undefined;
-}
-
-/**
- * The workspace a pasted Onshape url names, or undefined when it names none.
- *
- * Only a workspace will do: the version manager writes to what it is given, and
- * a version or a microversion cannot be written to. A url that stops at the
- * document has no workspace to take, so it is refused rather than resolved to
- * the default one — which would be a different workspace than the one whoever
- * copied the link was looking at.
- */
-export function parseOnshapeWorkspace(
-    urlString: string
-): WorkspacePath | undefined {
-    // Example pathname: /documents/{documentId}/w/{workspaceId}/e/{elementId}
-    const url = URL.parse(urlString);
-    if (!url) {
-        return undefined;
-    }
-    const [, documents, documentId, instanceType, instanceId] =
-        url.pathname.split("/");
-    if (
-        documents !== "documents" ||
-        !documentId ||
-        instanceType !== "w" ||
-        !instanceId
-    ) {
-        return undefined;
-    }
-    return { documentId, instanceId, instanceType: "w" };
 }
 
 /**

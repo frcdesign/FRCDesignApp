@@ -66,7 +66,11 @@ export function getUnitInfo(
     );
 }
 
-/** The document's workspaces, which is where a workspace's own name comes from. */
+/**
+ * `GET /documents/d/{did}/workspaces`
+ *
+ * The document's workspaces, which is where a workspace's own name comes from.
+ */
 export function getWorkspaces(
     client: OnshapeApi,
     documentPath: DocumentPath
@@ -79,12 +83,16 @@ export function getWorkspaces(
 }
 
 /**
+ * `GET /documents/d/{did}/w/{wid}/externalreferences`
+ *
  * Every external instance each of the workspace's tabs references, and the
  * newest version of each of those documents.
  *
- * See {@link OnshapeExternalReferences}: this endpoint is undocumented, so both
- * the path and the response shape come from the implementation this was ported
- * from rather than from Onshape.
+ * See {@link OnshapeExternalReferences}: this endpoint is undocumented and
+ * OAuth-only, so both the path and the response shape come from the
+ * implementation this was ported from rather than from Onshape's own spec.
+ * It is deliberately absent from `openapi-ts.config.ts` for that reason —
+ * codegen has nothing to say about an operation the spec does not carry.
  */
 export function getExternalReferences(
     client: OnshapeApi,
@@ -104,8 +112,15 @@ export interface ReferenceUpdate {
 }
 
 /**
- * Repoints the references one tab makes. Onshape answers with no body worth
- * reading, so a caller learns only that it did not throw.
+ * `POST /elements/d/{did}/w/{wid}/e/{eid}/updatereferences`
+ *
+ * Repoints the references one tab makes: each update names the element path a
+ * reference points at now and the one it should point at instead, which for a
+ * version bump is the same tab in a newer version.
+ *
+ * Onshape answers with no body worth reading, so a caller learns only that it
+ * did not throw. Requires write on the tab's document, and link on each
+ * document being referenced.
  */
 export function updateReferences(
     client: OnshapeApi,

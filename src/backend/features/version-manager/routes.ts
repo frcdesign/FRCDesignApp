@@ -130,7 +130,16 @@ async function requirePermissions(
     }
 }
 
-/** GET /api/workspace-links?documentId=&instanceId= */
+/**
+ * `GET /api/workspace-links?documentId=&instanceId=`
+ *
+ * The links either side of a workspace, as {@link WorkspaceLinksData}: the
+ * parents it pulls from and the children it pushes to. Each one is resolved
+ * against Onshape for its names and the caller's permissions, so a link to
+ * something they cannot read comes back unopenable and unnamed.
+ *
+ * Requires read on the workspace being asked about.
+ */
 versionManagerRoutes.get(
     "/workspace-links",
     requireSignInMiddleware,
@@ -167,7 +176,17 @@ versionManagerRoutes.get(
     }
 );
 
-/** POST /api/workspace-links */
+/**
+ * `POST /api/workspace-links`
+ *
+ * Links another workspace to this one. The body names the caller's workspace,
+ * the one being linked, and which side of the relationship it takes
+ * ({@link LinkDirection}). Adding a link that exists is not an error.
+ *
+ * Requires write on the caller's workspace and read on the one being linked:
+ * linking is an edit to this document's graph, and pointing at something they
+ * cannot see is not one they should be able to make.
+ */
 versionManagerRoutes.post(
     "/workspace-links",
     requireSignInMiddleware,
@@ -209,7 +228,15 @@ versionManagerRoutes.post(
     }
 );
 
-/** DELETE /api/workspace-link/:linkId */
+/**
+ * `DELETE /api/workspace-link/:linkId`
+ *
+ * Removes a link. Deleting one that is already gone is the state the caller
+ * asked for, so it answers success.
+ *
+ * Requires write on either end: a link belongs to both workspaces, so being
+ * able to edit one of them is enough to take it back.
+ */
 versionManagerRoutes.delete(
     workspaceLinkRoute(),
     requireSignInMiddleware,
@@ -239,7 +266,20 @@ versionManagerRoutes.delete(
     }
 );
 
-/** POST /api/push-version */
+/**
+ * `POST /api/push-version`
+ *
+ * Starts a push: cuts a version of the caller's workspace, then moves the
+ * references of the children named by {@link PushScope} onto it. An absent
+ * `name` is the ordinary case — the run then names each version as Onshape's
+ * own dialog would. Answers the run's `jobId`, which `/api/version-job` reports
+ * on; the work itself happens in {@link VersionManagerWorkflow}.
+ *
+ * Requires write and link on the caller's workspace, write on every workspace
+ * the run would touch, and link on each one it would version. Checked across
+ * the whole run before it starts: a push that cuts a version and then finds it
+ * cannot finish has already changed the document it was called on.
+ */
 versionManagerRoutes.post(
     "/push-version",
     requireSignInMiddleware,
@@ -362,7 +402,16 @@ async function resolvePushOrder(
     return order;
 }
 
-/** POST /api/pull-references */
+/**
+ * `POST /api/pull-references`
+ *
+ * Starts a pull: moves this workspace's out-of-date references onto the latest
+ * versions of whatever {@link PullScope} names — its linked parents, one of
+ * them, or every document it references. Answers the run's `jobId`.
+ *
+ * Requires write on the caller's workspace, which is the only one a pull
+ * changes.
+ */
 versionManagerRoutes.post(
     "/pull-references",
     requireSignInMiddleware,
@@ -434,7 +483,14 @@ async function resolvePullSources(
     return rows.map((row) => row.sourceDocumentId);
 }
 
-/** GET /api/version-job?documentId=&instanceId=&jobId= */
+/**
+ * `GET /api/version-job?documentId=&instanceId=&jobId=`
+ *
+ * How a push or pull is going, as {@link VersionJobStatus}, and what it did
+ * once it is done. `jobId` names the run the client is watching; without one
+ * this answers for whatever the workspace last started, which is how a panel
+ * that was closed and reopened finds a run still going.
+ */
 versionManagerRoutes.get(
     "/version-job",
     requireSignInMiddleware,
@@ -452,11 +508,14 @@ versionManagerRoutes.get(
 );
 
 /**
- * GET /api/next-version-name?documentId=&instanceId=
+ * `GET /api/next-version-name?documentId=&instanceId=`
  *
- * What a push with no name of its own would call the version it cuts here. The
- * naming form shows it, so what it offers is the name that would have been used
- * rather than a guess made without asking Onshape.
+ * What a push with no name of its own would call the version it cuts here —
+ * `V<n>` after the highest the document already carries, which is what
+ * Onshape's own dialog offers. The naming form opens on it, so what it shows is
+ * the name that would have been used rather than a guess made without asking.
+ *
+ * Requires read on the workspace.
  */
 versionManagerRoutes.get(
     "/next-version-name",
