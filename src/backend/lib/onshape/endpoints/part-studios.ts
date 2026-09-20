@@ -2,7 +2,13 @@ import { OnshapeApi } from "../client";
 import { assertInstanceType } from "../assertions";
 import { ElementPath, toElementApiPath } from "../path";
 import { apiPath } from "../api-path";
-import { OnshapeCreatedFeature, OnshapeFeatureListResponse } from "../types";
+import {
+    OnshapeCreatedFeature,
+    OnshapeFeatureListResponse,
+    OnshapePartStudioExportFormat,
+    OnshapePartStudioTranslationResponse
+} from "../types";
+import { ConfigurationKey } from "@backend/features/configurations/contract";
 
 export function addPartStudioFeature(
     client: OnshapeApi,
@@ -31,6 +37,26 @@ export function getFeatures(
                 includeSketches: "false",
                 noSketchGeometry: "true",
                 includeGeometryIds: "false"
+            }
+        }
+    );
+}
+export function startPartstuidoTranslation(
+    client: OnshapeApi,
+    partStudioPath: ElementPath,
+    Format: OnshapePartStudioExportFormat,
+    configurationKey: ConfigurationKey
+): Promise<OnshapePartStudioTranslationResponse> {
+    return client.get(
+        apiPath("partstudios", partStudioPath, toElementApiPath, {
+            endRoute: "translations"
+        }),
+        {
+            query: {
+                formatName: Format,
+                storeInDocument: false,
+                translate: true,
+                configuration: configurationKey
             }
         }
     );

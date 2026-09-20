@@ -7,10 +7,13 @@ import { ElementType } from "../element-type";
 import { IDENTITY_TRANSFORM } from "../objects/transform";
 import {
     OnshapeAssemblyDefinition,
+    OnshapeAssemblyExportFormat,
+    OnshapeAssemblyTranslationResponse,
     OnshapeBoundingBox,
     OnshapeCreatedFeature,
     OnshapeInsertInstancesResponse
 } from "../types";
+import { ConfigurationKey } from "@backend/features/configurations/contract";
 
 /** Retrieves information about an assembly. */
 export function getAssembly(
@@ -159,5 +162,25 @@ export function addAssemblyFeature(
             featureId
         }),
         { body: { feature } }
+    );
+}
+export function startAssemblyTranslation(
+    client: OnshapeApi,
+    assemblyPath: ElementPath,
+    Format: OnshapeAssemblyExportFormat,
+    configurationKey: ConfigurationKey
+): Promise<OnshapeAssemblyTranslationResponse> {
+    return client.get(
+        apiPath("partstudios", assemblyPath, toElementApiPath, {
+            endRoute: "translations"
+        }),
+        {
+            query: {
+                formatName: Format,
+                storeInDocument: false,
+                translate: true,
+                configuation: configurationKey
+            }
+        }
     );
 }

@@ -356,3 +356,31 @@ interface OnshapePartStudioFeature {
 export interface OnshapeFeatureListResponse {
     features: OnshapePartStudioFeature[];
 }
+/** POST /partstudios/d/{did}/{wv}/{wvid}/e/{eid}/translations */
+export interface OnshapePartStudioTranslationResponse {
+    tid?: string;
+    failureReason?: string;
+}
+/** POST /assemblies/d/{did}/{wv}/{wvid}/e/{eid}/translations */
+export interface OnshapeAssemblyTranslationResponse {
+    tid?: string;
+    failureReason?: string;
+}
+
+/** GET /translations/{tid}. */
+export interface OnshapeTranslationResponse {
+    requestState: "DONE" | "ACTIVE" | "FAILED";
+    resultExternalDataIds?: string[];
+    failureReason?: "String";
+}
+export enum OnshapeAssemblyExportFormat {
+    PARASOILD = "PARASOILD",
+    STEP = "STEP",
+    OBJ = "OBJ"
+}
+export enum OnshapePartStudioExportFormat {
+    PARASOILD = "PARASOILD",
+    STEP = "STEP",
+    OBJ = "OBJ",
+    STL = "STL"
+}
