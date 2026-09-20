@@ -8,7 +8,10 @@ import {
     hasPermissions,
     OnshapePermission
 } from "../../lib/onshape/endpoints/permissions";
-import { getInsertables } from "../../lib/onshape/endpoints/documents";
+import {
+    getDocument,
+    getInsertables
+} from "../../lib/onshape/endpoints/documents";
 import { getVersions } from "../../lib/onshape/endpoints/versions";
 import {
     getWorkspaceLinkParam,
@@ -182,9 +185,41 @@ versionManagerRoutes.get(
             describe(childRows)
         ]);
 
-        return c.json({ parents, children });
+        return c.json({
+            parents,
+            children,
+            documentName: await getOwnDocumentName(
+                client,
+                workspace,
+                parents,
+                children
+            )
+        });
     }
 );
+
+/**
+ * The workspace's own document name, for the zero state's copy; see
+ * {@link WorkspaceLinksData.documentName} for why only then. A document that
+ * will not describe itself goes unnamed rather than failing the list, which the
+ * caller can still read.
+ */
+async function getOwnDocumentName(
+    client: OnshapeApi,
+    workspace: WorkspacePath,
+    parents: LinkedWorkspace[],
+    children: LinkedWorkspace[]
+): Promise<string | undefined> {
+    if (parents.length > 0 || children.length > 0) {
+        return undefined;
+    }
+    try {
+        return (await getDocument(client, workspace)).name;
+    } catch (error) {
+        console.warn("Failed to read this workspace's document name", error);
+        return undefined;
+    }
+}
 
 /**
  * `POST /api/workspace-links`

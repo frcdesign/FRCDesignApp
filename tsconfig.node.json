@@ -18,5 +18,11 @@
         "noUnusedParameters": true,
         "noFallthroughCasesInSwitch": true
     },
-    "include": ["vite.config.ts", "vitest.config.ts", "scripts/**/*.ts"]
+    "include": [
+        "vite.config.ts",
+        "vitest.config.ts",
+        "drizzle.config.ts",
+        "openapi-ts.config.ts",
+        "scripts/**/*.ts"
+    ]
 }

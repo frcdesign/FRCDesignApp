@@ -51,11 +51,7 @@ export default defineConfig([
             globals: globals.browser,
             parserOptions: {
                 projectService: {
-                    allowDefaultProject: [
-                        "drizzle.config.ts",
-                        "openapi-ts.config.ts",
-                        "worker-configuration.d.ts"
-                    ]
+                    allowDefaultProject: ["worker-configuration.d.ts"]
                 },
                 tsconfigRootDir: import.meta.dirname
             }
@@ -76,9 +72,10 @@ export default defineConfig([
         rules: { "@typescript-eslint/no-unsafe-assignment": "off" }
     },
     {
-        // Build configuration, which walks Onshape's OpenAPI document and reads
-        // an environment this project's tsconfigs do not describe.
-        files: ["*.config.ts"],
+        // Walks Onshape's OpenAPI document, which arrives as `any` and would
+        // have to be modelled schema object by schema object to stop being one.
+        // The other config files are typed like the rest of the project.
+        files: ["openapi-ts.config.ts"],
         rules: {
             "@typescript-eslint/no-explicit-any": "off",
             "@typescript-eslint/no-unsafe-assignment": "off",
@@ -86,27 +83,6 @@ export default defineConfig([
             "@typescript-eslint/no-unsafe-return": "off",
             "@typescript-eslint/no-unsafe-argument": "off",
             "@typescript-eslint/no-unsafe-call": "off"
-        }
-    },
-    {
-        // Onshape's API is untyped, and typing the whole of it is not on the
-        // cards, so `any` flows out of the client and through whatever parses
-        // its responses. Scoped here rather than switched off everywhere: the
-        // frontend and the features have contracts of their own, and should be
-        // told when an `any` reaches them.
-        files: [
-            "src/backend/lib/onshape/**/*.ts",
-            "src/backend/features/load/**/*.ts",
-            "src/backend/features/configurations/input-parser.ts"
-        ],
-        rules: {
-            "@typescript-eslint/no-explicit-any": "off",
-            "@typescript-eslint/no-unsafe-assignment": "off",
-            "@typescript-eslint/no-unsafe-member-access": "off",
-            "@typescript-eslint/no-unsafe-return": "off",
-            "@typescript-eslint/no-unsafe-argument": "off",
-            "@typescript-eslint/no-unsafe-call": "off",
-            "@typescript-eslint/no-unsafe-enum-comparison": "off"
         }
     }
 ]);

@@ -19,13 +19,19 @@ export function getUserId(client: OAuthApi): Promise<string> {
     return getSessionInfo(client).then((info) => info.id);
 }
 
+/** What a team says about the caller; Onshape sends a good deal more. */
+interface TeamInfo {
+    admin?: boolean;
+    member?: boolean;
+}
+
 /** Returns the access level of the authenticated user relative to a given team. */
 export async function getAccessLevel(
     client: OnshapeApi,
     teamId: string
 ): Promise<AccessLevel> {
     try {
-        const teamInfo = await client.get(
+        const teamInfo = await client.get<TeamInfo>(
             apiPath("teams", undefined, undefined, { endId: teamId })
         );
         if (teamInfo.admin) return AccessLevel.ADMIN;

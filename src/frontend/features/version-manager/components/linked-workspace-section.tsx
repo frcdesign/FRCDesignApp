@@ -408,7 +408,6 @@ export function LinkedWorkspaceSection(
                 <SectionNotice
                     // Beside the text rather than over it: one line saying a
                     // list is empty should not take a list's worth of room.
-                    align="left"
                     title={copy.empty}
                     description={null}
                     icon={
@@ -648,7 +647,7 @@ function UnversionedChangesBadge(
             withArrow
             multiline
             w={240}
-            label={`${plural(changes, "change")} since this document's last version. A pull moves onto that version, so they are not in it yet.`}
+            label={`${plural(changes, "change")} since this document's last version.`}
         >
             <Badge
                 size="sm"

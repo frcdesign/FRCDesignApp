@@ -71,7 +71,13 @@ export abstract class OnshapeApi {
         init: RequestInit
     ): Promise<Response>;
 
-    async get(path: string, options?: QueryOptions): Promise<any> {
+    /**
+     * Onshape's responses are not typed, so the caller says what it expects and
+     * `json()` is taken at its word here, rather than an `any` spreading out of
+     * every call. A caller that says nothing gets `unknown`, which the compiler
+     * then makes it narrow before reading.
+     */
+    async get<T = unknown>(path: string, options?: QueryOptions): Promise<T> {
         const res = await this._call("GET", path, options);
         return res.json();
     }
@@ -95,7 +101,8 @@ export abstract class OnshapeApi {
         return res.arrayBuffer();
     }
 
-    async post(path: string, options?: PostOptions): Promise<any> {
+    /** See {@link OnshapeApi.get} for what the type parameter claims. */
+    async post<T = unknown>(path: string, options?: PostOptions): Promise<T> {
         const res = await this._call("POST", path, options, options?.body);
         return res.json();
     }
@@ -104,7 +111,11 @@ export abstract class OnshapeApi {
         await this._call("POST", path, options, options?.body);
     }
 
-    async delete(path: string, options?: QueryOptions): Promise<any> {
+    /** See {@link OnshapeApi.get} for what the type parameter claims. */
+    async delete<T = unknown>(
+        path: string,
+        options?: QueryOptions
+    ): Promise<T> {
         const res = await this._call("DELETE", path, options);
         return res.json();
     }

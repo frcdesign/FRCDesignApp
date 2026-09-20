@@ -231,7 +231,7 @@ function AppTabs(): ReactNode {
                     what the page acts on; standalone there is none. */}
                 {targetWorkspace && (
                     <Tabs.Tab value={VERSION_MANAGER_TAB}>
-                        Version manager
+                        Version Manager
                     </Tabs.Tab>
                 )}
             </Tabs.List>

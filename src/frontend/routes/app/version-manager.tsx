@@ -83,7 +83,12 @@ function VersionManager(props: VersionManagerProps): ReactNode {
     // Nothing linked in either direction: the sections would both be empty, and
     // an empty section says neither what this page is for nor what to do next.
     if (links.parents.length === 0 && links.children.length === 0) {
-        return <VersionManagerZeroState workspace={workspace} />;
+        return (
+            <VersionManagerZeroState
+                workspace={workspace}
+                documentName={links.documentName}
+            />
+        );
     }
 
     const opened = [
