@@ -22,6 +22,7 @@ import { LibraryId } from "@backend/features/library/library-id";
 import { getLibraryName } from "../../lib/library";
 import { BORDER, IconSize, NAVBAR_ROW_HEIGHT } from "../../lib/style-constants";
 import { NavbarRow, SettingsButton } from "../../components/app-navbar";
+import { LibraryStatusBadge } from "../../components/library-status-badge";
 import { RangeControl } from "./range-control";
 import {
     DASHBOARDS,
@@ -133,6 +134,9 @@ function LibraryMenu({ dashboard }: LibraryMenuProps): ReactNode {
                     <Menu.Item
                         key={libraryId}
                         disabled={libraryId === current}
+                        rightSection={
+                            <LibraryStatusBadge libraryId={libraryId} />
+                        }
                         onClick={() =>
                             void navigate({
                                 to:

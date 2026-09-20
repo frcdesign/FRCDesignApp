@@ -1,22 +1,30 @@
 import {
     ActionIcon,
+    Badge,
+    Box,
     Button,
     Divider,
     Group,
     Input,
     Loader,
+    Menu,
     Stack,
     Tabs,
     TextInput,
     Tooltip
 } from "@mantine/core";
-import { GearIcon, MagnifyingGlassIcon } from "@phosphor-icons/react";
+import {
+    CaretDownIcon,
+    GearIcon,
+    MagnifyingGlassIcon
+} from "@phosphor-icons/react";
 import {
     BORDER,
     FRAME_BACKGROUND,
     IconSize,
     NAVBAR_DIVIDER_COLOR,
     NAVBAR_ROW_HEIGHT,
+    NO_SHRINK,
     StatusColor
 } from "../lib/style-constants";
 import {
@@ -31,6 +39,8 @@ import { useNavigate } from "@tanstack/react-router";
 import { useDebouncedCallback } from "@mantine/hooks";
 
 import { AppBrand } from "./app-brand";
+import { useHasRoom } from "../lib/layout";
+import { LibraryStatusBadge } from "./library-status-badge";
 import { openSettingsMenu } from "../features/settings/open-settings-menu";
 import { VendorMenu } from "../features/settings/components/vendor-filters";
 import { getUiState, updateUiState } from "../lib/ui-state";
@@ -92,8 +102,10 @@ export function AppNavbar(): ReactNode {
     return (
         <Stack gap={0}>
             <NavbarRow>
-                <AppTabs />
-                <Group gap="xs" wrap="nowrap" ml="auto">
+                <PagePicker />
+                {/* Whole whatever the width: these are controls rather than
+                    labels, and half a button is no use to anyone. */}
+                <Group gap="xs" wrap="nowrap" ml="auto" style={NO_SHRINK}>
                     <InsertLocationStatus />
                     <JobIndicator />
                     <SignInButton />
@@ -156,15 +168,75 @@ function RunningJobLoader(): ReactNode {
  */
 const VERSION_MANAGER_TAB = "version-manager";
 
+/** Cuts text that will not fit short, rather than through a letter. */
+const ELIDE_TEXT = { overflow: "hidden", textOverflow: "ellipsis" };
+
+/** What the version manager's page is called wherever it is offered. */
+const VERSION_MANAGER_LABEL = "Version Manager";
+
+/** Marks the newest page out. Drop it once the page is no longer news. */
+const NEW_BADGE = (
+    <Badge size="xs" variant="light" color={StatusColor.INFO}>
+        New
+    </Badge>
+);
+
+/** One of the app's top-level pages, as both the tab row and the menu list it. */
+interface AppPage {
+    /** A library id, or {@link VERSION_MANAGER_TAB}. */
+    value: string;
+    label: string;
+    /** What marks the page out, wherever it is listed. */
+    badge?: ReactNode;
+}
+
+function useAppPages(): AppPage[] {
+    const targetWorkspace = useTargetWorkspace();
+    const isVersionManager = useIsVersionManager();
+
+    const libraries = Object.values(LibraryId).map((libraryId) => ({
+        value: libraryId,
+        label: getLibraryName(libraryId)
+    }));
+
+    // Only where there is a workspace to push or pull, which is what the page
+    // acts on; standalone there is none. Listed while it is showing either way,
+    // so the picker can never be naming a page it does not offer.
+    if (!targetWorkspace && !isVersionManager) {
+        return libraries;
+    }
+    return [
+        ...libraries,
+        {
+            value: VERSION_MANAGER_TAB,
+            label: VERSION_MANAGER_LABEL,
+            badge: NEW_BADGE
+        }
+    ];
+}
+
+/**
+ * The width the tabs need to lay out without scrolling. Measured rather than
+ * derived: the brand, the four tabs and the controls beside them come to ~850px
+ * today, so a fifth page or a longer name wants measuring again. Erring high
+ * only offers the dropdown to a window that could have held the row; erring low
+ * brings back the row that scrolls.
+ */
+const TABS_MIN_WIDTH = 900;
+
 /**
  * The app's top-level pages: a tab per library, and the version manager after
  * them when the panel was opened somewhere it has a document to act on. The url
  * is what actually selects one.
+ *
+ * Narrow — which the Onshape panel usually is — four names do not fit, so the
+ * same pages are offered as a dropdown rather than as a row that scrolls.
  */
-function AppTabs(): ReactNode {
+function PagePicker(): ReactNode {
+    const pages = useAppPages();
     const currentLibraryId = useLibraryId();
     const isVersionManager = useIsVersionManager();
-    const targetWorkspace = useTargetWorkspace();
+    const hasRoomForTabs = useHasRoom(TABS_MIN_WIDTH);
     const navigate = useNavigate();
 
     // Warm the versions on hover, so picking one has nothing left to wait for.
@@ -174,43 +246,56 @@ function AppTabs(): ReactNode {
         }
     };
 
-    const currentTab = isVersionManager
-        ? VERSION_MANAGER_TAB
-        : currentLibraryId;
+    const current = isVersionManager ? VERSION_MANAGER_TAB : currentLibraryId;
+
+    const selectPage = (value: string | null) => {
+        if (!value || value === current) {
+            return;
+        }
+        if (value === VERSION_MANAGER_TAB) {
+            void navigate({ to: "/app/version-manager" });
+            return;
+        }
+        const libraryId = value as LibraryId;
+        // Write-behind: the url displays it, this only decides where `/init`
+        // lands next time.
+        updateUiState({ libraryId });
+        void navigate({
+            to: "/app/library/$libraryId",
+            params: { libraryId }
+        });
+    };
+
+    if (!hasRoomForTabs) {
+        return (
+            <PageMenu
+                pages={pages}
+                current={current}
+                onHover={prefetchVersions}
+                onSelect={selectPage}
+            />
+        );
+    }
 
     return (
         <Tabs
-            value={currentTab}
+            value={current}
             onMouseEnter={prefetchVersions}
-            onChange={(value) => {
-                if (!value || value === currentTab) {
-                    return;
-                }
-                if (value === VERSION_MANAGER_TAB) {
-                    void navigate({ to: "/app/version-manager" });
-                    return;
-                }
-                const libraryId = value as LibraryId;
-                // Write-behind: the url displays it, this only decides where
-                // `/init` lands next time.
-                updateUiState({ libraryId });
-                void navigate({
-                    to: "/app/library/$libraryId",
-                    params: { libraryId }
-                });
-            }}
+            onChange={selectPage}
             styles={{
                 // Hides the line under the tab list alone; the row owns one
                 // that spans it. The active indicator is colored separately.
                 root: { "--tab-border-color": "transparent", minWidth: 0 },
-                // Three full names outgrow a narrow panel; scrolling beats
-                // reflowing the navbar into two rows.
                 list: {
                     // Full height, so the underline lands on the row's border
                     // rather than partway up a taller bar.
                     height: "100%",
                     flexWrap: "nowrap",
+                    // A tab is a pixel taller than the row it sits in, being
+                    // pulled down onto the border; `overflow-x` alone would let
+                    // that pixel scroll vertically.
                     overflowX: "auto",
+                    overflowY: "hidden",
                     scrollbarWidth: "none"
                 },
                 // Pulled onto that divider, so the active tab's indicator
@@ -222,20 +307,68 @@ function AppTabs(): ReactNode {
             }}
         >
             <Tabs.List aria-label="Pages">
-                {Object.values(LibraryId).map((libraryId) => (
-                    <Tabs.Tab key={libraryId} value={libraryId}>
-                        {getLibraryName(libraryId)}
+                {pages.map((page) => (
+                    <Tabs.Tab
+                        key={page.value}
+                        value={page.value}
+                        rightSection={page.badge}
+                    >
+                        {page.label}
                     </Tabs.Tab>
                 ))}
-                {/* Only where there is a workspace to push or pull, which is
-                    what the page acts on; standalone there is none. */}
-                {targetWorkspace && (
-                    <Tabs.Tab value={VERSION_MANAGER_TAB}>
-                        Version Manager
-                    </Tabs.Tab>
-                )}
             </Tabs.List>
         </Tabs>
+    );
+}
+
+interface PageMenuProps {
+    pages: AppPage[];
+    /** The page showing, which the button names and the menu greys out. */
+    current: string;
+    onHover: () => void;
+    onSelect: (value: string) => void;
+}
+
+/** The same pages as a dropdown, for a navbar too narrow to lay them in a row. */
+function PageMenu(props: PageMenuProps): ReactNode {
+    const { pages, current, onHover, onSelect } = props;
+    const currentPage = pages.find((page) => page.value === current);
+
+    return (
+        <Menu position="bottom-start" withinPortal>
+            <Menu.Target>
+                <Button
+                    variant="subtle"
+                    color={StatusColor.NEUTRAL}
+                    my="auto"
+                    px="xs"
+                    onMouseEnter={onHover}
+                    rightSection={<CaretDownIcon size={IconSize.SMALL} />}
+                >
+                    {/* Mantine's label clips a name too long for the button;
+                        a block inside it, allowed to shrink, elides instead. */}
+                    <Box miw={0} style={ELIDE_TEXT}>
+                        {currentPage?.label}
+                    </Box>
+                </Button>
+            </Menu.Target>
+            <Menu.Dropdown>
+                {pages.map((page) => (
+                    <Menu.Item
+                        key={page.value}
+                        disabled={page.value === current}
+                        rightSection={
+                            page.badge ?? (
+                                <LibraryStatusBadge libraryId={page.value} />
+                            )
+                        }
+                        onClick={() => onSelect(page.value)}
+                    >
+                        {page.label}
+                    </Menu.Item>
+                ))}
+            </Menu.Dropdown>
+        </Menu>
     );
 }
 
