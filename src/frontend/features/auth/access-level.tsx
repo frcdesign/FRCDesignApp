@@ -70,6 +70,16 @@ export function useIsSignedIn(): boolean {
     return accessData.signedIn;
 }
 
+/**
+ * Whether the caller has no Onshape session to work with, and so is offered one.
+ * Pending reads as signed in: nothing is offered until the answer arrives, and
+ * inside Onshape's panel signed in is the answer.
+ */
+export function useNeedsSignIn(): boolean {
+    const { signedIn, isPending } = useAccessData();
+    return !signedIn && !isPending;
+}
+
 interface RequireAccessLevelProps extends PropsWithChildren {
     /** @default AccessLevel.EDITOR */
     accessLevel?: AccessLevel;

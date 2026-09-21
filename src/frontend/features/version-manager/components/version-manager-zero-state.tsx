@@ -38,23 +38,19 @@ const DIRECTION_CHOICE = {
         label: "A parent",
         icon: ArrowLineDownIcon,
         description: (documentName: string) =>
-            `I want to pull changes from the linked document into ${documentName}.`
+            `I want to pull changes from the linked document into this document (${documentName}).`
     },
     [LinkDirection.CHILD]: {
         label: "A child",
         icon: ArrowLineUpIcon,
         description: (documentName: string) =>
-            `I want to push changes from ${documentName} to the linked document.`
+            `I want to push changes from this document (${documentName}) to the linked document.`
     }
 } as const;
 
-/** What the copy calls this document when Onshape has not named it. */
-const THIS_DOCUMENT = "this document";
-
 interface VersionManagerZeroStateProps {
     workspace: WorkspacePath;
-    /** What Onshape calls the open document; see {@link THIS_DOCUMENT}. */
-    documentName?: string;
+    documentName: string;
 }
 
 /**
@@ -82,7 +78,7 @@ export function VersionManagerZeroState(
                     <LinkExampleDiagram />
                     <AddFirstLinkCard
                         workspace={props.workspace}
-                        documentName={props.documentName ?? THIS_DOCUMENT}
+                        documentName={props.documentName}
                     />
                 </Stack>
             }
@@ -146,7 +142,7 @@ const CARD_WIDTH = 600;
 /** Mantine's card carries the border; what being picked looks like is ours. */
 const SELECTED_CARD = {
     borderColor: PrimaryColor.FILLED,
-    backgroundColor: "var(--mantine-primary-color-light)"
+    backgroundColor: PrimaryColor.LIGHT
 };
 
 interface DirectionCardProps {
@@ -193,10 +189,8 @@ function DirectionCard(props: DirectionCardProps): ReactNode {
     );
 }
 
-/**
- * The picture's documents: a robot assembled from three subsystems, each in a
- * document of its own, which is the arrangement version manager is for.
- */
+/** A robot assembled from three subsystems, each in a document of its own,
+ * which is the arrangement version manager is for. */
 const EXAMPLE_PARENTS = [
     "Intake document",
     "Drivetrain document",
@@ -204,18 +198,14 @@ const EXAMPLE_PARENTS = [
 ];
 const EXAMPLE_CHILD = "Robot document";
 
-/**
- * The middle of an outer column, as a share of the diagram's width. The
- * connector is drawn across the whole diagram rather than inside the grid, so
- * it has to be told where the columns it joins are.
- */
+/** Where an outer column's middle falls: the connector is drawn across the
+ * whole diagram rather than inside the grid, so it is told where to join. */
 const OUTER_COLUMN_CENTER = `${100 / 6}%`;
 
 /**
- * The room between two documents. It is padding inside the columns rather than
- * a gap between them, so the columns stay exact thirds of the diagram and the
- * connector can be positioned against them; the rows then hang the same amount
- * outside it, to line the outer documents up with the card below.
+ * The room between two documents, as padding inside the columns rather than a
+ * gap between them: the columns stay exact thirds for the connector to be drawn
+ * against, and the rows hang this far outside to line up with the card below.
  */
 const COLUMN_GUTTER = 10;
 
@@ -231,10 +221,9 @@ const ARROW_HEIGHT = 7;
 const LINE_COLOR = "var(--mantine-color-default-border)";
 
 /**
- * What a link is, drawn: three subsystem documents, and the robot document that
- * uses all three. Which way round a pair of documents goes is the thing to have
- * right before pasting one in, and a picture says it in less room than the
- * paragraph it would take.
+ * What a link is, drawn: three subsystem documents, and the robot that uses all
+ * three. Which way round a pair goes is the thing to have right before pasting
+ * one in, and a picture says it in less room than the paragraph did.
  */
 function LinkExampleDiagram(): ReactNode {
     return (
@@ -248,7 +237,7 @@ function LinkExampleDiagram(): ReactNode {
             </SimpleGrid>
             <DiagramLabel>Parents</DiagramLabel>
             <Connector />
-            <DiagramLabel>Child</DiagramLabel>
+            <DiagramLabel>Children</DiagramLabel>
             <SimpleGrid cols={3} spacing={0}>
                 {/* The middle column, so the robot is the width of one of the
                     documents above it rather than of all three. */}
@@ -299,11 +288,11 @@ function DiagramLabel(props: DiagramLabelProps): ReactNode {
 
 /**
  * The bracket under the three documents: each drops, turns in, and meets the
- * one line that carries the arrow down to the child.
+ * line that carries the arrow down to the child.
  *
- * The arrowhead is a box with no size of its own and three borders — the usual
- * CSS triangle. Its point lands exactly where the line stops, which an icon,
- * padded inside its own box, would only land near.
+ * The arrowhead is the usual CSS triangle — a box with no size of its own and
+ * three borders — so that its point lands exactly where the line stops, which
+ * an icon, padded inside its own box, would only land near.
  */
 function Connector(): ReactNode {
     return (
@@ -332,8 +321,7 @@ function Connector(): ReactNode {
                     borderBottomRightRadius: RADIUS
                 }}
             />
-            {/* The middle document's own drop, which carries straight on
-                through the bracket and down to the arrow. */}
+            {/* The middle document's drop, carrying on through the bracket. */}
             <Box
                 pos="absolute"
                 top={0}

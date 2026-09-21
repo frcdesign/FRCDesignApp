@@ -72,10 +72,9 @@ export abstract class OnshapeApi {
     ): Promise<Response>;
 
     /**
-     * Onshape's responses are not typed, so the caller says what it expects and
-     * `json()` is taken at its word here, rather than an `any` spreading out of
-     * every call. A caller that says nothing gets `unknown`, which the compiler
-     * then makes it narrow before reading.
+     * Onshape's responses are not typed, so the caller says what it expects
+     * rather than an `any` spreading out of every call. One that says nothing
+     * gets `unknown`, which the compiler makes it narrow before reading.
      */
     async get<T = unknown>(path: string, options?: QueryOptions): Promise<T> {
         const res = await this._call("GET", path, options);

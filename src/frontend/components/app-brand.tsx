@@ -1,5 +1,6 @@
 import { Box, Center, Group, Text } from "@mantine/core";
 import { type ReactNode } from "react";
+import { useNeedsSignIn } from "../features/auth/access-level";
 import { useHasRoom } from "../lib/layout";
 import {
     FontWeight,
@@ -16,21 +17,27 @@ import frcDesignBook from "/frc-design-book.svg";
 const FRC_DESIGN_URL = "https://frcdesign.org";
 
 /**
- * The width the navbar needs before the app's name earns its room. Under it the
- * name is what gives way — the page you are on and the controls beside it are
- * what the bar is for — and an initial and an ellipsis say less than the tile
- * already does. Measured against the rest of the row; see `TABS_MIN_WIDTH`.
+ * Where the name stops fitting beside the rest of the row, measured: under it
+ * the tile stands in, and the name is never shown part-way.
  */
-const WORDMARK_MIN_WIDTH = 500;
+const WORDMARK_MIN_WIDTH = 440;
+
+/**
+ * What the sign-in button takes out of the row while it is showing. The only
+ * thing in the bar whose width comes and goes, and never there in the panel —
+ * see `TABS_MIN_WIDTH` for what the rest of the row is measured as.
+ */
+const SIGN_IN_WIDTH = 100;
 
 /** The book and the app's name, in every navbar, linking out to FRCDesign.org. */
 export function AppBrand(): ReactNode {
-    const hasRoomForWordmark = useHasRoom(WORDMARK_MIN_WIDTH);
+    const needsSignIn = useNeedsSignIn();
+    const hasRoomForWordmark = useHasRoom(
+        needsSignIn ? WORDMARK_MIN_WIDTH + SIGN_IN_WIDTH : WORDMARK_MIN_WIDTH
+    );
 
     return (
-        // `miw` so the name can give: a flex item will not shrink below the
-        // longest word it holds unless it is allowed to.
-        <Group gap="xs" wrap="nowrap" h="100%" miw={0}>
+        <Group gap="xs" wrap="nowrap" h="100%">
             <Center
                 component="a"
                 href={FRC_DESIGN_URL}
@@ -60,9 +67,6 @@ export function AppBrand(): ReactNode {
                     // The navbar's own text color, rather than a link's blue.
                     c="inherit"
                     td="none"
-                    // The row's give between here and the cutoff above: the
-                    // app's own name shortens before the page's does.
-                    truncate
                 >
                     FRCDesignApp
                 </Text>

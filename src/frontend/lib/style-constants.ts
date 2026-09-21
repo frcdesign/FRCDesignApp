@@ -143,6 +143,8 @@ export const SECTION_HEADER_HEIGHT = 48;
 export enum PrimaryColor {
     /** The current library's color, e.g. green for FRCDesign. */
     FILLED = "var(--mantine-primary-color-filled)",
+    /** The same color as a tint, to sit content on. */
+    LIGHT = "var(--mantine-primary-color-light)",
     /** What reads on top of it, typically white. */
     CONTRAST = "var(--mantine-primary-color-contrast)"
 }

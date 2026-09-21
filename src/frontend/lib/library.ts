@@ -51,6 +51,18 @@ export function getLibraryName(libraryId: string): string {
     throw new Error("Unknown library: " + libraryId);
 }
 
+/** The program a library's parts are for, which the page menu files it under. */
+export function getLibraryProgram(libraryId: string): string {
+    switch (libraryId) {
+        case LibraryId.FRC_DESIGN_LIB:
+        case LibraryId.MKCAD:
+            return "FRC";
+        case LibraryId.FTC_DESIGN_LIB:
+            return "FTC";
+    }
+    throw new Error("Unknown library: " + libraryId);
+}
+
 /** Where a library is in its life; undefined once it is simply supported. */
 export function getLibraryStatus(libraryId: string): string | undefined {
     switch (libraryId) {

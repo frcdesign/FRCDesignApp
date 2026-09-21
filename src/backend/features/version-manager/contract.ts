@@ -54,14 +54,8 @@ export interface LinkedWorkspace {
 export interface WorkspaceLinksData {
     parents: LinkedWorkspace[];
     children: LinkedWorkspace[];
-    /**
-     * What Onshape calls the workspace's own document, which the zero state
-     * names in its copy. Asked for only when nothing is linked, since that is
-     * the only time it is shown — a name nothing displays is an Onshape call
-     * spent for nothing — so an empty name here means unasked as often as
-     * unknown.
-     */
-    documentName?: string;
+    /** What Onshape calls the workspace's own document, which the copy names. */
+    documentName: string;
 }
 
 /** How far a push travels; see {@link PushScope}. */

@@ -1,7 +1,6 @@
 import {
     ActionIcon,
     Badge,
-    Box,
     Button,
     Divider,
     Group,
@@ -41,13 +40,18 @@ import { useDebouncedCallback } from "@mantine/hooks";
 import { AppBrand } from "./app-brand";
 import { useHasRoom } from "../lib/layout";
 import { LibraryStatusBadge } from "./library-status-badge";
+import { MenuSection } from "./app-menu";
 import { openSettingsMenu } from "../features/settings/open-settings-menu";
 import { VendorMenu } from "../features/settings/components/vendor-filters";
 import { getUiState, updateUiState } from "../lib/ui-state";
-import { getLibraryName, useLibraryId } from "../lib/library";
+import {
+    getLibraryName,
+    getLibraryProgram,
+    useLibraryId
+} from "../lib/library";
 import {
     RequireAccessLevel,
-    useAccessData
+    useNeedsSignIn
 } from "../features/auth/access-level";
 import { startSignIn } from "../features/auth/sign-in";
 import { useJobStatus } from "../lib/refresh";
@@ -62,6 +66,11 @@ import { useTargetWorkspace } from "../lib/onshape-params";
  * The bar every page is topped by: the brand, then whatever that page puts
  * beside it. Stretched so a full-height child lands its underline on the row's
  * own border.
+ *
+ * Narrow, the row gives in one order, and nothing else in it has to be told
+ * about widths: the brand folds to its tile at a width of its own, the controls
+ * are pinned because half a button is no use, and the pages — the only thing
+ * left that can — take whatever squeeze is still on, clipping their name.
  */
 export function NavbarRow(props: PropsWithChildren): ReactNode {
     const { children } = props;
@@ -103,8 +112,6 @@ export function AppNavbar(): ReactNode {
         <Stack gap={0}>
             <NavbarRow>
                 <PagePicker />
-                {/* Whole whatever the width: these are controls rather than
-                    labels, and half a button is no use to anyone. */}
                 <Group gap="xs" wrap="nowrap" ml="auto" style={NO_SHRINK}>
                     <InsertLocationStatus />
                     <JobIndicator />
@@ -127,10 +134,10 @@ export function AppNavbar(): ReactNode {
  * the current location, after which access-data reports the caller signed in.
  */
 function SignInButton(): ReactNode {
-    const { signedIn, isPending } = useAccessData();
-    // Waiting rather than assuming signed out: the placeholder would flash the
-    // button on every load for a caller who is already signed in.
-    if (isPending || signedIn) return null;
+    const needsSignIn = useNeedsSignIn();
+    // Waiting rather than assuming signed out: the button would otherwise
+    // flash on every load for a caller who is already signed in.
+    if (!needsSignIn) return null;
 
     return (
         <Button variant="outline" size="sm" my="auto" onClick={startSignIn}>
@@ -168,9 +175,6 @@ function RunningJobLoader(): ReactNode {
  */
 const VERSION_MANAGER_TAB = "version-manager";
 
-/** Cuts text that will not fit short, rather than through a letter. */
-const ELIDE_TEXT = { overflow: "hidden", textOverflow: "ellipsis" };
-
 /** What the version manager's page is called wherever it is offered. */
 const VERSION_MANAGER_LABEL = "Version Manager";
 
@@ -181,11 +185,16 @@ const NEW_BADGE = (
     </Badge>
 );
 
+/** What the menu files the pages that are not a library under. */
+const UTILITIES_GROUP = "Utilities";
+
 /** One of the app's top-level pages, as both the tab row and the menu list it. */
 interface AppPage {
     /** A library id, or {@link VERSION_MANAGER_TAB}. */
     value: string;
     label: string;
+    /** The heading the menu lists it under: its program, or the utilities. */
+    group: string;
     /** What marks the page out, wherever it is listed. */
     badge?: ReactNode;
 }
@@ -196,12 +205,13 @@ function useAppPages(): AppPage[] {
 
     const libraries = Object.values(LibraryId).map((libraryId) => ({
         value: libraryId,
-        label: getLibraryName(libraryId)
+        label: getLibraryName(libraryId),
+        group: getLibraryProgram(libraryId)
     }));
 
     // Only where there is a workspace to push or pull, which is what the page
     // acts on; standalone there is none. Listed while it is showing either way,
-    // so the picker can never be naming a page it does not offer.
+    // so the picker cannot end up naming a page it does not offer.
     if (!targetWorkspace && !isVersionManager) {
         return libraries;
     }
@@ -210,19 +220,22 @@ function useAppPages(): AppPage[] {
         {
             value: VERSION_MANAGER_TAB,
             label: VERSION_MANAGER_LABEL,
+            group: UTILITIES_GROUP,
             badge: NEW_BADGE
         }
     ];
 }
 
 /**
- * The width the tabs need to lay out without scrolling. Measured rather than
- * derived: the brand, the four tabs and the controls beside them come to ~850px
- * today, so a fifth page or a longer name wants measuring again. Erring high
- * only offers the dropdown to a window that could have held the row; erring low
- * brings back the row that scrolls.
+ * Where the pages stop being a row and become a dropdown. Measured against the
+ * row the panel has: four tabs, the brand, and the controls, at ~780 together.
+ *
+ * Nothing budgets for the sign-in button or the loading spinner. The panel is
+ * signed in — so the button is never in a row with the version manager's tab —
+ * and the spinner is an editor's, only while a load runs. On the rare row that
+ * carries one, the pages give, which is what they are there to do.
  */
-const TABS_MIN_WIDTH = 900;
+const TABS_MIN_WIDTH = 790;
 
 /**
  * The app's top-level pages: a tab per library, and the version manager after
@@ -283,20 +296,21 @@ function PagePicker(): ReactNode {
             onMouseEnter={prefetchVersions}
             onChange={selectPage}
             styles={{
-                // Hides the line under the tab list alone; the row owns one
-                // that spans it. The active indicator is colored separately.
-                root: { "--tab-border-color": "transparent", minWidth: 0 },
+                root: {
+                    // Hides the line under the tab list alone; the row owns
+                    // one that spans it. The indicator is colored separately.
+                    "--tab-border-color": "transparent",
+                    // A row too narrow for its tabs cuts the last one short
+                    // rather than laying it over the controls.
+                    overflow: "hidden"
+                },
                 list: {
                     // Full height, so the underline lands on the row's border
                     // rather than partway up a taller bar.
                     height: "100%",
-                    flexWrap: "nowrap",
-                    // A tab is a pixel taller than the row it sits in, being
-                    // pulled down onto the border; `overflow-x` alone would let
-                    // that pixel scroll vertically.
-                    overflowX: "auto",
-                    overflowY: "hidden",
-                    scrollbarWidth: "none"
+                    // One row of tabs or none: a wrapped tab would double the
+                    // height of the bar it sits in.
+                    flexWrap: "nowrap"
                 },
                 // Pulled onto that divider, so the active tab's indicator
                 // replaces it rather than stacking a line above it.
@@ -319,6 +333,23 @@ function PagePicker(): ReactNode {
             </Tabs.List>
         </Tabs>
     );
+}
+
+/**
+ * The pages under their headings, each heading in the order its first page
+ * comes in. The tab row keeps the flat order; only the menu has room to group.
+ */
+function groupPages(pages: AppPage[]): [string, AppPage[]][] {
+    const groups = new Map<string, AppPage[]>();
+    for (const page of pages) {
+        const group = groups.get(page.group);
+        if (group) {
+            group.push(page);
+        } else {
+            groups.set(page.group, [page]);
+        }
+    }
+    return [...groups];
 }
 
 interface PageMenuProps {
@@ -345,27 +376,29 @@ function PageMenu(props: PageMenuProps): ReactNode {
                     onMouseEnter={onHover}
                     rightSection={<CaretDownIcon size={IconSize.SMALL} />}
                 >
-                    {/* Mantine's label clips a name too long for the button;
-                        a block inside it, allowed to shrink, elides instead. */}
-                    <Box miw={0} style={ELIDE_TEXT}>
-                        {currentPage?.label}
-                    </Box>
+                    {currentPage?.label}
                 </Button>
             </Menu.Target>
             <Menu.Dropdown>
-                {pages.map((page) => (
-                    <Menu.Item
-                        key={page.value}
-                        disabled={page.value === current}
-                        rightSection={
-                            page.badge ?? (
-                                <LibraryStatusBadge libraryId={page.value} />
-                            )
-                        }
-                        onClick={() => onSelect(page.value)}
-                    >
-                        {page.label}
-                    </Menu.Item>
+                {groupPages(pages).map(([group, groupPages]) => (
+                    <MenuSection key={group} label={group}>
+                        {groupPages.map((page) => (
+                            <Menu.Item
+                                key={page.value}
+                                disabled={page.value === current}
+                                rightSection={
+                                    page.badge ?? (
+                                        <LibraryStatusBadge
+                                            libraryId={page.value}
+                                        />
+                                    )
+                                }
+                                onClick={() => onSelect(page.value)}
+                            >
+                                {page.label}
+                            </Menu.Item>
+                        ))}
+                    </MenuSection>
                 ))}
             </Menu.Dropdown>
         </Menu>

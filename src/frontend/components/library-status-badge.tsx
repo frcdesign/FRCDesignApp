@@ -10,11 +10,9 @@ interface LibraryStatusBadgeProps {
 }
 
 /**
- * Where a library is in its life — beta, deprecated — wherever it is named
- * outside its own page, and nothing at all for one that is simply supported.
- *
- * Gray rather than the app's accent: in a list of libraries the accent is the
- * current library's, not the row's, and blue is what marks a page as new.
+ * Where a library is in its life — beta, deprecated — and nothing at all for one
+ * that is simply supported. Blue rather than the app's accent, which in a list
+ * of libraries is the current library's rather than the row's.
  */
 export function LibraryStatusBadge(props: LibraryStatusBadgeProps): ReactNode {
     const status = getLibraryStatus(props.libraryId);
@@ -25,7 +23,7 @@ export function LibraryStatusBadge(props: LibraryStatusBadgeProps): ReactNode {
         <Badge
             size={props.size ?? "xs"}
             variant="light"
-            color={StatusColor.NEUTRAL}
+            color={StatusColor.INFO}
         >
             {status}
         </Badge>

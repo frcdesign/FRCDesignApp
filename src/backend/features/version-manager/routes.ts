@@ -147,9 +147,10 @@ async function requirePermissions(
  * `GET /api/workspace-links?documentId=&instanceId=`
  *
  * The links either side of a workspace, as {@link WorkspaceLinksData}: the
- * parents it pulls from and the children it pushes to. Each one is resolved
- * against Onshape for its names and the caller's permissions, so a link to
- * something they cannot read comes back unopenable and unnamed.
+ * parents it pulls from and the children it pushes to, and the workspace's own
+ * document name. Each link is resolved against Onshape for its names and the
+ * caller's permissions, so a link to something they cannot read comes back
+ * unopenable and unnamed.
  *
  * Requires read on the workspace being asked about.
  */
@@ -169,9 +170,12 @@ versionManagerRoutes.get(
         );
 
         const db = getDb(c.env.DB);
-        const [parentRows, childRows] = await Promise.all([
+        // The caller has read on the workspace, so Onshape describing it is
+        // taken for granted: a failure here is unexpected and says so.
+        const [parentRows, childRows, document] = await Promise.all([
             getParentLinks(db, workspace),
-            getChildLinks(db, workspace)
+            getChildLinks(db, workspace),
+            getDocument(client, workspace)
         ]);
 
         const describe = (rows: typeof parentRows) =>
@@ -185,41 +189,9 @@ versionManagerRoutes.get(
             describe(childRows)
         ]);
 
-        return c.json({
-            parents,
-            children,
-            documentName: await getOwnDocumentName(
-                client,
-                workspace,
-                parents,
-                children
-            )
-        });
+        return c.json({ parents, children, documentName: document.name });
     }
 );
-
-/**
- * The workspace's own document name, for the zero state's copy; see
- * {@link WorkspaceLinksData.documentName} for why only then. A document that
- * will not describe itself goes unnamed rather than failing the list, which the
- * caller can still read.
- */
-async function getOwnDocumentName(
-    client: OnshapeApi,
-    workspace: WorkspacePath,
-    parents: LinkedWorkspace[],
-    children: LinkedWorkspace[]
-): Promise<string | undefined> {
-    if (parents.length > 0 || children.length > 0) {
-        return undefined;
-    }
-    try {
-        return (await getDocument(client, workspace)).name;
-    } catch (error) {
-        console.warn("Failed to read this workspace's document name", error);
-        return undefined;
-    }
-}
 
 /**
  * `POST /api/workspace-links`
