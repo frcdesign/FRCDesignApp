@@ -78,8 +78,7 @@ export interface MetricTerms {
     denominator: number;
 }
 
-/** The totals {@link rangeValue} divides, kept apart so a share can be
- * folded once and divided once. */
+/** The totals {@link rangeValue} divides. */
 export function rangeTerms(
     points: DailyMetricPoint[],
     metric: MetricDefinition

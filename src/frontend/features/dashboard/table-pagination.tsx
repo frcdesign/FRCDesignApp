@@ -1,11 +1,10 @@
 import { Group, Pagination } from "@mantine/core";
 import { useState, type ReactNode } from "react";
 
-/** Rows one page of a dashboard table shows, short enough to read at a glance. */
+/** Short enough that a page of a dashboard table reads at a glance. */
 export const ROWS_PER_PAGE = 10;
 
 interface Paged<T> {
-    /** The rows of the current page. */
     rows: T[];
     page: number;
     pageCount: number;

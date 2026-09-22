@@ -1,8 +1,9 @@
-import { Anchor, Breadcrumbs, Text } from "@mantine/core";
+import { Anchor, Text } from "@mantine/core";
 import { useNavigate } from "@tanstack/react-router";
 import { useMemo, useState, type ReactNode } from "react";
 import { getLibraryName } from "../../lib/library";
 import { AppTreemap } from "./treemap-chart";
+import { AppBreadcrumbs } from "../../components/breadcrumbs";
 import { SectionCard } from "../../components/section";
 import {
     toNodes,
@@ -52,7 +53,7 @@ export function UsageTreemap({
 
     return (
         <SectionCard title="Usage breakdown">
-            <AppBreadcrumbs root={root} path={path} onSelect={setPath} />
+            <TreemapTrail root={root} path={path} onSelect={setPath} />
             {nodes.length === 0 ? (
                 <Text c="dimmed" py="xl" ta="center">
                     Nothing was inserted in this range.
@@ -64,18 +65,14 @@ export function UsageTreemap({
     );
 }
 
-interface AppBreadcrumbsProps {
+interface TreemapTrailProps {
     root: TreemapPath;
     path: TreemapPath;
     onSelect: (path: TreemapPath) => void;
 }
 
 /** Every level above the current one, each clickable to climb back to it. */
-function AppBreadcrumbs({
-    root,
-    path,
-    onSelect
-}: AppBreadcrumbsProps): ReactNode {
+function TreemapTrail({ root, path, onSelect }: TreemapTrailProps): ReactNode {
     const steps: { label: string; to: TreemapPath }[] = [];
 
     if (root.libraryId === undefined) {
@@ -98,7 +95,7 @@ function AppBreadcrumbs({
 
     return (
         // Spaced off the chart below, which otherwise sits on the trail.
-        <Breadcrumbs separator="›" mb="sm">
+        <AppBreadcrumbs mb="sm">
             {steps.map((step, index) =>
                 index === steps.length - 1 ? (
                     <Text key={step.label} size="sm">
@@ -114,6 +111,6 @@ function AppBreadcrumbs({
                     </Anchor>
                 )
             )}
-        </Breadcrumbs>
+        </AppBreadcrumbs>
     );
 }

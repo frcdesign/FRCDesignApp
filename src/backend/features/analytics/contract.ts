@@ -177,8 +177,8 @@ export interface ConfigurationValueUsage {
     count: number;
     isDefault: boolean;
     /**
-     * The option the app lands on here because the declared default is not
-     * offered in this instance — Onshape's own fallback, not a declared default.
+     * The option the app lands on here, the declared default not being offered
+     * in this instance; see `resolveSelectedOption`.
      */
     isImplicitDefault?: boolean;
 }
@@ -196,7 +196,7 @@ export interface ConfigurationParameterUsage {
     /**
      * The controlling choices this instance is shown under, outermost first —
      * ["Generic"] for the list a Generic vendor offers. Empty when nothing
-     * conditions the parameter, which is every parameter of a flat configuration.
+     * conditions the parameter.
      */
     path: string[];
     /** Recorded values counted here, the base for percentages. */

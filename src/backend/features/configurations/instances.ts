@@ -129,7 +129,6 @@ function wholeInstance(parameter: ConfigurationParameter): ParameterInstance {
     };
 }
 
-/** The ids a condition reads, added to `into`. */
 function readIds(
     condition: VisibilityCondition | undefined,
     into: Set<string>
@@ -250,8 +249,8 @@ function valuesOf(
 }
 
 /**
- * What to call the way here. A controller every combination reaches this
- * instance through says nothing about it — it is why it is not in the path.
+ * The steps naming this instance. A controller whose every value leads here
+ * says nothing about it, so it is left out.
  */
 function toPath(
     group: PartialSelection[],

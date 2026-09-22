@@ -5,7 +5,7 @@ import { type ReactNode } from "react";
 const REASON =
     "This option is the default because it is the first visible option and the default option is not present.";
 
-/** Wide enough for the reason to wrap into three lines rather than a ribbon. */
+/** Wide enough for the reason to wrap rather than run out as one ribbon. */
 const TOOLTIP_WIDTH = 260;
 
 interface ImplicitDefaultBadgeProps {

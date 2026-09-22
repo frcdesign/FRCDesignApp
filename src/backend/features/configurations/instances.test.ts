@@ -12,7 +12,6 @@ import {
     quantityParam
 } from "../../../__test_utils__/configuration-fixtures";
 
-/** An option condition naming the options it controls. */
 function shownWhen(
     controlledOptions: string[],
     id: string,

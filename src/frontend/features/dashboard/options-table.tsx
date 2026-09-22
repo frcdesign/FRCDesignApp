@@ -104,10 +104,9 @@ function OptionRow({ libraryId, option }: OptionRowProps): ReactNode {
         >
             <Table.Td>{option.partName}</Table.Td>
             <Table.Td>
-                <Group gap="xs" wrap="nowrap">
-                    <ParameterPath path={option.parameterPath} />
-                    {option.parameterName}
-                </Group>
+                <ParameterPath path={option.parameterPath}>
+                    <span>{option.parameterName}</span>
+                </ParameterPath>
             </Table.Td>
             <Table.Td>
                 <OptionLabel value={option.value} />

@@ -46,8 +46,8 @@ export function ConfigurationBreakdown({
     return (
         <Stack>
             {parameters.map((parameter) => (
-                /* Two instances of one parameter are told apart by the choices
-                   leading to them, which is what the card is titled with. */
+                /* The path is what tells two instances of one parameter
+                   apart, and what the card is titled with. */
                 <ParameterCard
                     key={`${parameter.parameterId}-${parameter.path.join(">")}`}
                     parameter={parameter}
@@ -66,8 +66,9 @@ function ParameterCard({ parameter }: ParameterCardProps): ReactNode {
         <Card withBorder padding="md" radius="md">
             <Group justify="space-between" mb="sm" wrap="wrap">
                 <Group gap="xs">
-                    <ParameterPath path={parameter.path} />
-                    <Title order={5}>{parameter.name}</Title>
+                    <ParameterPath path={parameter.path}>
+                        <Title order={5}>{parameter.name}</Title>
+                    </ParameterPath>
                     <Badge variant="light" color={CATEGORY_COLOR} size="sm">
                         {parameter.type}
                     </Badge>
@@ -108,8 +109,8 @@ interface ValueRowProps {
 
 function ValueRow({ value, total }: ValueRowProps): ReactNode {
     const percent = total === 0 ? 0 : (value.count / total) * 100;
-    // Both are what an insert lands on with nothing picked, so both are read
-    // as the value the rest of the list is being measured against.
+    // Both are what an insert lands on with nothing picked, so both read as
+    // the value the rest of the list is measured against.
     const lands = value.isDefault || value.isImplicitDefault;
 
     return (
