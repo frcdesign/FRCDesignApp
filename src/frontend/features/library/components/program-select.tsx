@@ -1,10 +1,18 @@
-import { Group, Stack, Text, UnstyledButton } from "@mantine/core";
-import { ArrowRightIcon, BookOpenTextIcon } from "@phosphor-icons/react";
+import {
+    Anchor,
+    Group,
+    Modal,
+    Stack,
+    Text,
+    UnstyledButton
+} from "@mantine/core";
+import { ArrowRightIcon, BooksIcon } from "@phosphor-icons/react";
 import { useNavigate } from "@tanstack/react-router";
 import { ReactNode } from "react";
 import { LibraryId } from "@backend/features/library/library-id";
+import { AppBrandMark } from "../../../components/app-brand";
 import { AppIcon } from "../../../components/app-icon";
-import { PageNotice } from "../../../components/app-zero-state";
+import { SectionNotice } from "../../../components/app-zero-state";
 import {
     BORDER,
     FontWeight,
@@ -20,22 +28,24 @@ interface Program {
     libraryId: LibraryId;
     /** What a team calls the program it competes in. */
     name: string;
-    fullName: string;
 }
 
 /** What the app is offered for. MKCad is deprecated, so nobody is started in it. */
 const PROGRAMS: Program[] = [
-    {
-        libraryId: LibraryId.FRC_DESIGN_LIB,
-        name: "FRC®",
-        fullName: "FIRST® Robotics Competition"
-    },
-    {
-        libraryId: LibraryId.FTC_DESIGN_LIB,
-        name: "FTC®",
-        fullName: "FIRST® Tech Challenge"
-    }
+    { libraryId: LibraryId.FRC_DESIGN_LIB, name: "FRC" },
+    { libraryId: LibraryId.FTC_DESIGN_LIB, name: "FTC" }
 ];
+
+/** FIRST's own site, which their notice has to name. */
+const FIRST_URL = "https://www.firstinspires.org";
+
+/**
+ * The registration both names carry, as the small raised asterisk rather than
+ * a ® glyph, which is heavy beside a three-letter name.
+ */
+function RegisteredMark(): ReactNode {
+    return <sup>*</sup>;
+}
 
 interface ProgramCardProps {
     program: Program;
@@ -45,7 +55,8 @@ interface ProgramCardProps {
 /** One program to pick, named the way its teams name it, over its library. */
 function ProgramCard(props: ProgramCardProps): ReactNode {
     const { program, onSelect } = props;
-    const { libraryId, name, fullName } = program;
+    const { libraryId, name } = program;
+    const shade = getLibraryShade(libraryId);
 
     return (
         <UnstyledButton
@@ -56,21 +67,20 @@ function ProgramCard(props: ProgramCardProps): ReactNode {
                 onSelect(libraryId);
             }}
         >
-            <Group gap="sm" wrap="nowrap">
+            <Group gap="md" wrap="nowrap">
+                {/* The library's own books, in its own color, so the two
+                    choices read as the two libraries they open. */}
+                <AppIcon
+                    icon={BooksIcon}
+                    size={IconSize.SECTION}
+                    color={shade}
+                />
                 <Stack gap={2} flex={1} miw={0} ta="left">
-                    {/* The library's own color, so the two choices read as the
-                        two apps they open rather than one list. */}
-                    <Text
-                        size="xl"
-                        fw={FontWeight.BOLD}
-                        c={getLibraryShade(libraryId)}
-                    >
+                    <Text size="xl" fw={FontWeight.BOLD} c={shade}>
                         {name}
+                        <RegisteredMark />
                     </Text>
                     <Text size="sm">{getLibraryName(libraryId)}</Text>
-                    <Text size="xs" c={StatusColor.DIMMED}>
-                        {fullName}
-                    </Text>
                 </Stack>
                 <ArrowRightIcon size={IconSize.MEDIUM} />
             </Group>
@@ -78,13 +88,33 @@ function ProgramCard(props: ProgramCardProps): ReactNode {
     );
 }
 
+/** FIRST's required notice, under the two names it covers. */
+function TrademarkDisclaimer(): ReactNode {
+    return (
+        <Text size="xs" c={StatusColor.DIMMED} ta="center">
+            FRC
+            <RegisteredMark /> and FTC
+            <RegisteredMark /> are registered trademarks of{" "}
+            <Text component="span" inherit fs="italic">
+                FIRST
+            </Text>{" "}
+            (
+            <Anchor href={FIRST_URL} target="_blank" inherit>
+                www.firstinspires.org
+            </Anchor>
+            ) which is not overseeing, involved with, or responsible for this
+            activity, product, or service.
+        </Text>
+    );
+}
+
 /**
- * What a new user sees in place of a library: which program they build for,
- * which picks the library the app opens in from then on. The answer is stored
- * like any other synced setting, so it is asked once per account rather than
- * once per browser — and the navbar's tabs answer it too, being the same choice.
+ * What a new user is met with: which program they build for, which picks the
+ * library the app opens in from then on. The answer is stored like any other
+ * synced setting, so it is asked once per account rather than once per browser.
  */
 export function ProgramSelect(): ReactNode {
+    const { libraryChosen } = useGetUiState();
     const navigate = useNavigate();
 
     const selectProgram = (libraryId: LibraryId) => {
@@ -93,28 +123,44 @@ export function ProgramSelect(): ReactNode {
     };
 
     return (
-        <PageNotice
-            icon={<AppIcon icon={BookOpenTextIcon} size={IconSize.PAGE} />}
-            title="Welcome to the FRCDesignApp!"
-            description="To get started, select your library. You can switch between libraries at any time using the top navbar."
-            action={
-                // Stacked and full width: two side by side would each be
-                // narrower than their own name in Onshape's panel.
-                <Stack gap="sm" w="100%" maw={320}>
-                    {PROGRAMS.map((program) => (
-                        <ProgramCard
-                            key={program.libraryId}
-                            program={program}
-                            onSelect={selectProgram}
-                        />
-                    ))}
-                </Stack>
-            }
-        />
+        <Modal
+            opened={!libraryChosen}
+            // Picking is the only way out, so a close has nothing to do.
+            onClose={() => undefined}
+            withCloseButton={false}
+            closeOnClickOutside={false}
+            closeOnEscape={false}
+            centered
+            size="lg"
+            padding="lg"
+            styles={{
+                // Drawn like the app's other modals, which the manager frames.
+                content: { border: BORDER }
+            }}
+        >
+            {/* Takes the focus the trap would otherwise land on the first
+                program, which reads as that one being pre-selected. */}
+            <Stack data-autofocus tabIndex={-1} style={{ outline: "none" }}>
+                <SectionNotice
+                    icon={<AppBrandMark size={IconSize.PAGE} />}
+                    title="Welcome to the FRCDesignApp!"
+                    description="To get started, select your library. You can switch between libraries at any time using the top navbar."
+                    action={
+                        // Stacked and full width: two side by side would each
+                        // be narrower than their own name in Onshape's panel.
+                        <Stack gap="sm" w="100%" maw={320}>
+                            {PROGRAMS.map((program) => (
+                                <ProgramCard
+                                    key={program.libraryId}
+                                    program={program}
+                                    onSelect={selectProgram}
+                                />
+                            ))}
+                        </Stack>
+                    }
+                />
+                <TrademarkDisclaimer />
+            </Stack>
+        </Modal>
     );
-}
-
-/** Whether the app still has to ask which library the caller wants. */
-export function useNeedsProgram(): boolean {
-    return !useGetUiState().libraryChosen;
 }

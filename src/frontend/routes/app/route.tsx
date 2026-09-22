@@ -25,10 +25,7 @@ import {
 } from "../../lib/app-params";
 import { parseSearch } from "../../lib/search-params";
 import { AppNavbar } from "../../components/app-navbar";
-import {
-    ProgramSelect,
-    useNeedsProgram
-} from "../../features/library/components/program-select";
+import { ProgramSelect } from "../../features/library/components/program-select";
 import { SectionLoading } from "../../components/app-zero-state";
 import { useMessageListener } from "../../lib/messages";
 import { updateUiState } from "../../lib/ui-state";
@@ -112,7 +109,6 @@ function App() {
     // The navbar (control row + always-open filters) is self-sizing, so measure
     // it and feed its height to AppShell rather than hardcoding one.
     const { ref: headerRef, height: headerHeight } = useElementSize();
-    const needsProgram = useNeedsProgram();
 
     useMessageListener();
 
@@ -142,12 +138,12 @@ function App() {
                 <Suspense
                     fallback={<SectionLoading title="Loading library..." />}
                 >
-                    {/* A library nobody has asked for yet is no page to show,
-                        so the welcome stands in for it rather than over it. */}
-                    {needsProgram ? <ProgramSelect /> : <Outlet />}
+                    <Outlet />
                 </Suspense>
                 <TanStackRouterDevtools />
             </AppShell.Main>
+            {/* Over whichever library the app opened in, until it is answered. */}
+            <ProgramSelect />
         </AppShell>
     );
 }
