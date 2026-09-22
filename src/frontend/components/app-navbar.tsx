@@ -27,7 +27,6 @@ import {
     useRef,
     useState
 } from "react";
-import { useNavigate } from "@tanstack/react-router";
 import { useDebouncedCallback } from "@mantine/hooks";
 
 import { AppBrand } from "./app-brand";
@@ -35,7 +34,7 @@ import { openSettingsMenu } from "../features/settings/open-settings-menu";
 import { VendorMenu } from "../features/settings/components/vendor-filters";
 import { getUiState, updateUiState } from "../lib/ui-state";
 import { getLibraryName, useLibraryId } from "../lib/library";
-import { APP_TABS, getTabName, useTabId } from "../lib/tabs";
+import { APP_TABS, getTabName, useNavigateToTab } from "../lib/tabs";
 import {
     RequireAccessLevel,
     useAccessData
@@ -146,8 +145,8 @@ function RunningJobLoader(): ReactNode {
 
 /** Switches tabs; the url is what actually selects one. */
 function AppTabs(): ReactNode {
-    const currentTabId = useTabId();
-    const navigate = useNavigate();
+    const currentTabId = useLibraryId();
+    const navigateToTab = useNavigateToTab();
 
     // Warm the versions on hover, so picking one has nothing left to wait for.
     const prefetchVersions = () => {
@@ -168,7 +167,7 @@ function AppTabs(): ReactNode {
                 // Write-behind: the url displays it, this only decides where
                 // `/init` lands next time.
                 updateUiState({ tabId });
-                void navigate({ to: "/app/tab/$tabId", params: { tabId } });
+                navigateToTab(tabId);
             }}
             styles={{
                 // Hides the line under the tab list alone; the row owns one

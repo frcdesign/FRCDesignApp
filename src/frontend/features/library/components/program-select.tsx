@@ -1,6 +1,5 @@
 import { Anchor, Group, Stack, Text, UnstyledButton } from "@mantine/core";
 import { ArrowRightIcon, BooksIcon } from "@phosphor-icons/react";
-import { useNavigate } from "@tanstack/react-router";
 import { ReactNode } from "react";
 import { LibraryId } from "@backend/features/library/library-id";
 import { type AppTab } from "@backend/features/settings/app-tab";
@@ -16,6 +15,7 @@ import {
     StatusColor
 } from "../../../lib/style-constants";
 import { getLibraryName } from "../../../lib/library";
+import { useNavigateToTab } from "../../../lib/tabs";
 import { getLibraryShade } from "../../../theme";
 import { updateUiState, useGetUiState } from "../../../lib/ui-state";
 
@@ -107,11 +107,11 @@ function TrademarkDisclaimer(): ReactNode {
  */
 export function ProgramSelect(): ReactNode {
     const { tabId } = useGetUiState();
-    const navigate = useNavigate();
+    const navigateToTab = useNavigateToTab();
 
     const selectTab = (tabId: AppTab) => {
         updateUiState({ tabId });
-        void navigate({ to: "/app/tab/$tabId", params: { tabId } });
+        navigateToTab(tabId);
     };
 
     return (

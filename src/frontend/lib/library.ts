@@ -5,26 +5,24 @@ import {
     DEFAULT_LIBRARY,
     LibraryId
 } from "@backend/features/library/library-id";
-import { isLibraryTab } from "@backend/features/settings/app-tab";
-import { useTabId } from "./tabs";
 
 /**
  * Returns the library being displayed, which the url is the source of truth
- * for. Its callers are a library's own pages and the controls beside them, so
- * a tab that is not a library falls back as sitting outside the route does.
+ * for. Callers can sit outside the library route — modals mount at the root
+ * and error components replace the match — so it falls back rather than throw.
  */
 export function useLibraryId(): LibraryId {
-    const tabId = useTabId();
+    const params = useParams({
+        from: "/app/library/$libraryId",
+        shouldThrow: false
+    });
     // The dashboard scopes to a library of its own, which its settings menu
     // offers the app for.
     const dashboardParams = useParams({
         from: "/dashboard/library/$libraryId",
         shouldThrow: false
     });
-    if (isLibraryTab(tabId)) {
-        return tabId;
-    }
-    return dashboardParams?.libraryId ?? DEFAULT_LIBRARY;
+    return params?.libraryId ?? dashboardParams?.libraryId ?? DEFAULT_LIBRARY;
 }
 
 const LibraryIdType = z.enum(LibraryId);
@@ -67,7 +65,7 @@ export function getLibraryStatus(libraryId: string): string | undefined {
 export function useIsHome(): boolean {
     return (
         useMatch({
-            from: "/app/tab/$tabId/",
+            from: "/app/library/$libraryId/",
             shouldThrow: false
         }) !== undefined
     );

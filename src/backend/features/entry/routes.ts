@@ -11,7 +11,12 @@ import { isSignedIn } from "../auth/request-auth";
 import { getSessionCompanyId, PERSONAL_COMPANY_ID } from "../auth/session";
 import { DEFAULT_SETTINGS } from "../settings/settings";
 import { DEFAULT_LIBRARY } from "../library/library-id";
-import { type AppTab, isLibraryTab, toAppTab } from "../settings/app-tab";
+import {
+    type AppTab,
+    getTabPath,
+    isLibraryTab,
+    toAppTab
+} from "../settings/app-tab";
 import { trackAppOpen, trackInBackground } from "../analytics/tracking";
 
 /** Marks the `/init` a sign-in returns to; see {@link needsSignIn}. */
@@ -111,7 +116,9 @@ async function getAppEntry(c: AppContext): Promise<AppEntry> {
         search.set("tabId", chosenTab);
     }
     const tabId = chosenTab ?? DEFAULT_LIBRARY;
-    const path = `/app/tab/${tabId}`;
+    const path = getTabPath(tabId);
+    // Only a library has groups to resume in; the join above already returns
+    // none for a tab that is not one.
     const groupPath = user?.groupId ? `${path}/groups/${user.groupId}` : path;
     return { url: `${groupPath}?${search.toString()}`, userId, tabId };
 }

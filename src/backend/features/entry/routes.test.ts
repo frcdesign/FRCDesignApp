@@ -38,7 +38,7 @@ describe("GET /init", () => {
 
         expect(res.status).toBe(302);
         const location = new URL(res.headers.get("Location")!, "http://x");
-        expect(location.pathname).toBe(`/app/tab/${LibraryId.MKCAD}`);
+        expect(location.pathname).toBe(`/app/library/${LibraryId.MKCAD}`);
         // The Onshape params have to survive the redirect.
         expect(location.searchParams.get("documentId")).toBe("doc");
         expect(location.searchParams.get("workspaceId")).toBe("ws");
@@ -55,9 +55,8 @@ describe("GET /init", () => {
         );
 
         const location = new URL(res.headers.get("Location")!, "http://x");
-        expect(location.pathname).toBe(
-            `/app/tab/${UtilityTab.VERSION_MANAGER}`
-        );
+        // A utility is a page of its own, not one of the libraries.
+        expect(location.pathname).toBe(`/app/${UtilityTab.VERSION_MANAGER}`);
         expect(await db.select().from(events).get()).toBeUndefined();
     });
 
@@ -77,7 +76,7 @@ describe("GET /init", () => {
         );
 
         const location = new URL(res.headers.get("Location")!, "http://x");
-        expect(location.pathname).toBe(`/app/tab/${DEFAULT_LIBRARY}`);
+        expect(location.pathname).toBe(`/app/library/${DEFAULT_LIBRARY}`);
         expect(location.searchParams.get("documentId")).toBe("doc");
     });
 
@@ -90,7 +89,7 @@ describe("GET /init", () => {
 
         expect(res.status).toBe(302);
         expect(res.headers.get("Location")).toContain(
-            `/app/tab/${LibraryId.FRC_DESIGN_LIB}`
+            `/app/library/${LibraryId.FRC_DESIGN_LIB}`
         );
     });
 
@@ -141,14 +140,14 @@ describe("GET /init", () => {
         };
 
         expect(await seededTab()).toEqual([
-            `/app/tab/${DEFAULT_LIBRARY}`,
+            `/app/library/${DEFAULT_LIBRARY}`,
             null
         ]);
 
         await seedLibrary(db);
         await db.insert(users).values({ id: TEST_USER_ID });
         expect(await seededTab()).toEqual([
-            `/app/tab/${DEFAULT_LIBRARY}`,
+            `/app/library/${DEFAULT_LIBRARY}`,
             null
         ]);
 
@@ -157,7 +156,7 @@ describe("GET /init", () => {
             .set({ tabId: LibraryId.FTC_DESIGN_LIB })
             .where(eq(users.id, TEST_USER_ID));
         expect(await seededTab()).toEqual([
-            `/app/tab/${LibraryId.FTC_DESIGN_LIB}`,
+            `/app/library/${LibraryId.FTC_DESIGN_LIB}`,
             LibraryId.FTC_DESIGN_LIB
         ]);
     });
@@ -185,7 +184,7 @@ describe("GET /init", () => {
         await seedResume(TEST_LIBRARY_ID, TEST_GROUP_ID);
 
         expect(await entryPath()).toBe(
-            `/app/tab/${TEST_LIBRARY_ID}/groups/${TEST_GROUP_ID}`
+            `/app/library/${TEST_LIBRARY_ID}/groups/${TEST_GROUP_ID}`
         );
     });
 
@@ -194,7 +193,7 @@ describe("GET /init", () => {
     it("falls back to the library when the group has been deleted", async () => {
         await seedResume(TEST_LIBRARY_ID, "deleted-group");
 
-        expect(await entryPath()).toBe(`/app/tab/${TEST_LIBRARY_ID}`);
+        expect(await entryPath()).toBe(`/app/library/${TEST_LIBRARY_ID}`);
     });
 
     // Whichever library they switched to, they have not opened a group in it.
@@ -202,7 +201,7 @@ describe("GET /init", () => {
         await seedGroup(db);
         await seedResume(LibraryId.MKCAD, TEST_GROUP_ID);
 
-        expect(await entryPath()).toBe(`/app/tab/${LibraryId.MKCAD}`);
+        expect(await entryPath()).toBe(`/app/library/${LibraryId.MKCAD}`);
     });
 
     it("versions the open it records", async () => {
@@ -259,7 +258,7 @@ describe("GET /init", () => {
 
         expect(res.status).toBe(302);
         const entry = new URL(res.headers.get("Location")!, "http://x");
-        expect(entry.pathname).toBe(`/app/tab/${LibraryId.FRC_DESIGN_LIB}`);
+        expect(entry.pathname).toBe(`/app/library/${LibraryId.FRC_DESIGN_LIB}`);
         // Spent, so it never reaches the app or a later sign-in.
         expect(entry.searchParams.has("signInAttempted")).toBe(false);
     });
@@ -287,7 +286,9 @@ describe("GET /init", () => {
         );
 
         const location = new URL(res.headers.get("Location")!, "http://x");
-        expect(location.pathname).toBe(`/app/tab/${LibraryId.FRC_DESIGN_LIB}`);
+        expect(location.pathname).toBe(
+            `/app/library/${LibraryId.FRC_DESIGN_LIB}`
+        );
     });
 
     // Nobody is signed in, so there is no row to read and no open to record.

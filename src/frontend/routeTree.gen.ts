@@ -21,12 +21,12 @@ import { Route as PagesGrantDeniedRouteImport } from './routes/_pages/grant-deni
 import { Route as PagesCookieErrorRouteImport } from './routes/_pages/cookie-error'
 import { Route as PagesBetaCompleteRouteImport } from './routes/_pages/beta-complete'
 import { Route as DashboardLibraryLibraryIdRouteRouteImport } from './routes/dashboard/library/$libraryId/route'
-import { Route as AppTabTabIdRouteRouteImport } from './routes/app/tab/$tabId/route'
+import { Route as AppLibraryLibraryIdRouteRouteImport } from './routes/app/library/$libraryId/route'
 import { Route as DashboardLibraryLibraryIdIndexRouteImport } from './routes/dashboard/library/$libraryId/index'
-import { Route as AppTabTabIdIndexRouteImport } from './routes/app/tab/$tabId/index'
+import { Route as AppLibraryLibraryIdIndexRouteImport } from './routes/app/library/$libraryId/index'
 import { Route as DashboardLibraryLibraryIdUnusedRouteImport } from './routes/dashboard/library/$libraryId/unused'
 import { Route as DashboardLibraryLibraryIdPartRouteImport } from './routes/dashboard/library/$libraryId/part'
-import { Route as AppTabTabIdGroupsGroupIdRouteImport } from './routes/app/tab/$tabId/groups/$groupId'
+import { Route as AppLibraryLibraryIdGroupsGroupIdRouteImport } from './routes/app/library/$libraryId/groups/$groupId'
 
 const DashboardRouteRoute = DashboardRouteRouteImport.update({
   id: '/dashboard',
@@ -89,22 +89,24 @@ const DashboardLibraryLibraryIdRouteRoute =
     path: '/library/$libraryId',
     getParentRoute: () => DashboardRouteRoute,
   } as any)
-const AppTabTabIdRouteRoute = AppTabTabIdRouteRouteImport.update({
-  id: '/tab/$tabId',
-  path: '/tab/$tabId',
-  getParentRoute: () => AppRouteRoute,
-} as any)
+const AppLibraryLibraryIdRouteRoute =
+  AppLibraryLibraryIdRouteRouteImport.update({
+    id: '/library/$libraryId',
+    path: '/library/$libraryId',
+    getParentRoute: () => AppRouteRoute,
+  } as any)
 const DashboardLibraryLibraryIdIndexRoute =
   DashboardLibraryLibraryIdIndexRouteImport.update({
     id: '/',
     path: '/',
     getParentRoute: () => DashboardLibraryLibraryIdRouteRoute,
   } as any)
-const AppTabTabIdIndexRoute = AppTabTabIdIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => AppTabTabIdRouteRoute,
-} as any)
+const AppLibraryLibraryIdIndexRoute =
+  AppLibraryLibraryIdIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AppLibraryLibraryIdRouteRoute,
+  } as any)
 const DashboardLibraryLibraryIdUnusedRoute =
   DashboardLibraryLibraryIdUnusedRouteImport.update({
     id: '/unused',
@@ -117,11 +119,11 @@ const DashboardLibraryLibraryIdPartRoute =
     path: '/part',
     getParentRoute: () => DashboardLibraryLibraryIdRouteRoute,
   } as any)
-const AppTabTabIdGroupsGroupIdRoute =
-  AppTabTabIdGroupsGroupIdRouteImport.update({
+const AppLibraryLibraryIdGroupsGroupIdRoute =
+  AppLibraryLibraryIdGroupsGroupIdRouteImport.update({
     id: '/groups/$groupId',
     path: '/groups/$groupId',
-    getParentRoute: () => AppTabTabIdRouteRoute,
+    getParentRoute: () => AppLibraryLibraryIdRouteRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -136,13 +138,13 @@ export interface FileRoutesByFullPath {
   '/setup': typeof PagesSetupRoute
   '/version-error': typeof PagesVersionErrorRoute
   '/dashboard/': typeof DashboardIndexRoute
-  '/app/tab/$tabId': typeof AppTabTabIdRouteRouteWithChildren
+  '/app/library/$libraryId': typeof AppLibraryLibraryIdRouteRouteWithChildren
   '/dashboard/library/$libraryId': typeof DashboardLibraryLibraryIdRouteRouteWithChildren
   '/dashboard/library/$libraryId/part': typeof DashboardLibraryLibraryIdPartRoute
   '/dashboard/library/$libraryId/unused': typeof DashboardLibraryLibraryIdUnusedRoute
-  '/app/tab/$tabId/': typeof AppTabTabIdIndexRoute
+  '/app/library/$libraryId/': typeof AppLibraryLibraryIdIndexRoute
   '/dashboard/library/$libraryId/': typeof DashboardLibraryLibraryIdIndexRoute
-  '/app/tab/$tabId/groups/$groupId': typeof AppTabTabIdGroupsGroupIdRoute
+  '/app/library/$libraryId/groups/$groupId': typeof AppLibraryLibraryIdGroupsGroupIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -157,9 +159,9 @@ export interface FileRoutesByTo {
   '/dashboard': typeof DashboardIndexRoute
   '/dashboard/library/$libraryId/part': typeof DashboardLibraryLibraryIdPartRoute
   '/dashboard/library/$libraryId/unused': typeof DashboardLibraryLibraryIdUnusedRoute
-  '/app/tab/$tabId': typeof AppTabTabIdIndexRoute
+  '/app/library/$libraryId': typeof AppLibraryLibraryIdIndexRoute
   '/dashboard/library/$libraryId': typeof DashboardLibraryLibraryIdIndexRoute
-  '/app/tab/$tabId/groups/$groupId': typeof AppTabTabIdGroupsGroupIdRoute
+  '/app/library/$libraryId/groups/$groupId': typeof AppLibraryLibraryIdGroupsGroupIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -174,13 +176,13 @@ export interface FileRoutesById {
   '/_pages/setup': typeof PagesSetupRoute
   '/_pages/version-error': typeof PagesVersionErrorRoute
   '/dashboard/': typeof DashboardIndexRoute
-  '/app/tab/$tabId': typeof AppTabTabIdRouteRouteWithChildren
+  '/app/library/$libraryId': typeof AppLibraryLibraryIdRouteRouteWithChildren
   '/dashboard/library/$libraryId': typeof DashboardLibraryLibraryIdRouteRouteWithChildren
   '/dashboard/library/$libraryId/part': typeof DashboardLibraryLibraryIdPartRoute
   '/dashboard/library/$libraryId/unused': typeof DashboardLibraryLibraryIdUnusedRoute
-  '/app/tab/$tabId/': typeof AppTabTabIdIndexRoute
+  '/app/library/$libraryId/': typeof AppLibraryLibraryIdIndexRoute
   '/dashboard/library/$libraryId/': typeof DashboardLibraryLibraryIdIndexRoute
-  '/app/tab/$tabId/groups/$groupId': typeof AppTabTabIdGroupsGroupIdRoute
+  '/app/library/$libraryId/groups/$groupId': typeof AppLibraryLibraryIdGroupsGroupIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -196,13 +198,13 @@ export interface FileRouteTypes {
     | '/setup'
     | '/version-error'
     | '/dashboard/'
-    | '/app/tab/$tabId'
+    | '/app/library/$libraryId'
     | '/dashboard/library/$libraryId'
     | '/dashboard/library/$libraryId/part'
     | '/dashboard/library/$libraryId/unused'
-    | '/app/tab/$tabId/'
+    | '/app/library/$libraryId/'
     | '/dashboard/library/$libraryId/'
-    | '/app/tab/$tabId/groups/$groupId'
+    | '/app/library/$libraryId/groups/$groupId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -217,9 +219,9 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/dashboard/library/$libraryId/part'
     | '/dashboard/library/$libraryId/unused'
-    | '/app/tab/$tabId'
+    | '/app/library/$libraryId'
     | '/dashboard/library/$libraryId'
-    | '/app/tab/$tabId/groups/$groupId'
+    | '/app/library/$libraryId/groups/$groupId'
   id:
     | '__root__'
     | '/'
@@ -233,13 +235,13 @@ export interface FileRouteTypes {
     | '/_pages/setup'
     | '/_pages/version-error'
     | '/dashboard/'
-    | '/app/tab/$tabId'
+    | '/app/library/$libraryId'
     | '/dashboard/library/$libraryId'
     | '/dashboard/library/$libraryId/part'
     | '/dashboard/library/$libraryId/unused'
-    | '/app/tab/$tabId/'
+    | '/app/library/$libraryId/'
     | '/dashboard/library/$libraryId/'
-    | '/app/tab/$tabId/groups/$groupId'
+    | '/app/library/$libraryId/groups/$groupId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -341,11 +343,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardLibraryLibraryIdRouteRouteImport
       parentRoute: typeof DashboardRouteRoute
     }
-    '/app/tab/$tabId': {
-      id: '/app/tab/$tabId'
-      path: '/tab/$tabId'
-      fullPath: '/app/tab/$tabId'
-      preLoaderRoute: typeof AppTabTabIdRouteRouteImport
+    '/app/library/$libraryId': {
+      id: '/app/library/$libraryId'
+      path: '/library/$libraryId'
+      fullPath: '/app/library/$libraryId'
+      preLoaderRoute: typeof AppLibraryLibraryIdRouteRouteImport
       parentRoute: typeof AppRouteRoute
     }
     '/dashboard/library/$libraryId/': {
@@ -355,12 +357,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardLibraryLibraryIdIndexRouteImport
       parentRoute: typeof DashboardLibraryLibraryIdRouteRoute
     }
-    '/app/tab/$tabId/': {
-      id: '/app/tab/$tabId/'
+    '/app/library/$libraryId/': {
+      id: '/app/library/$libraryId/'
       path: '/'
-      fullPath: '/app/tab/$tabId/'
-      preLoaderRoute: typeof AppTabTabIdIndexRouteImport
-      parentRoute: typeof AppTabTabIdRouteRoute
+      fullPath: '/app/library/$libraryId/'
+      preLoaderRoute: typeof AppLibraryLibraryIdIndexRouteImport
+      parentRoute: typeof AppLibraryLibraryIdRouteRoute
     }
     '/dashboard/library/$libraryId/unused': {
       id: '/dashboard/library/$libraryId/unused'
@@ -376,35 +378,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardLibraryLibraryIdPartRouteImport
       parentRoute: typeof DashboardLibraryLibraryIdRouteRoute
     }
-    '/app/tab/$tabId/groups/$groupId': {
-      id: '/app/tab/$tabId/groups/$groupId'
+    '/app/library/$libraryId/groups/$groupId': {
+      id: '/app/library/$libraryId/groups/$groupId'
       path: '/groups/$groupId'
-      fullPath: '/app/tab/$tabId/groups/$groupId'
-      preLoaderRoute: typeof AppTabTabIdGroupsGroupIdRouteImport
-      parentRoute: typeof AppTabTabIdRouteRoute
+      fullPath: '/app/library/$libraryId/groups/$groupId'
+      preLoaderRoute: typeof AppLibraryLibraryIdGroupsGroupIdRouteImport
+      parentRoute: typeof AppLibraryLibraryIdRouteRoute
     }
   }
 }
 
-interface AppTabTabIdRouteRouteChildren {
-  AppTabTabIdIndexRoute: typeof AppTabTabIdIndexRoute
-  AppTabTabIdGroupsGroupIdRoute: typeof AppTabTabIdGroupsGroupIdRoute
+interface AppLibraryLibraryIdRouteRouteChildren {
+  AppLibraryLibraryIdIndexRoute: typeof AppLibraryLibraryIdIndexRoute
+  AppLibraryLibraryIdGroupsGroupIdRoute: typeof AppLibraryLibraryIdGroupsGroupIdRoute
 }
 
-const AppTabTabIdRouteRouteChildren: AppTabTabIdRouteRouteChildren = {
-  AppTabTabIdIndexRoute: AppTabTabIdIndexRoute,
-  AppTabTabIdGroupsGroupIdRoute: AppTabTabIdGroupsGroupIdRoute,
-}
+const AppLibraryLibraryIdRouteRouteChildren: AppLibraryLibraryIdRouteRouteChildren =
+  {
+    AppLibraryLibraryIdIndexRoute: AppLibraryLibraryIdIndexRoute,
+    AppLibraryLibraryIdGroupsGroupIdRoute:
+      AppLibraryLibraryIdGroupsGroupIdRoute,
+  }
 
-const AppTabTabIdRouteRouteWithChildren =
-  AppTabTabIdRouteRoute._addFileChildren(AppTabTabIdRouteRouteChildren)
+const AppLibraryLibraryIdRouteRouteWithChildren =
+  AppLibraryLibraryIdRouteRoute._addFileChildren(
+    AppLibraryLibraryIdRouteRouteChildren,
+  )
 
 interface AppRouteRouteChildren {
-  AppTabTabIdRouteRoute: typeof AppTabTabIdRouteRouteWithChildren
+  AppLibraryLibraryIdRouteRoute: typeof AppLibraryLibraryIdRouteRouteWithChildren
 }
 
 const AppRouteRouteChildren: AppRouteRouteChildren = {
-  AppTabTabIdRouteRoute: AppTabTabIdRouteRouteWithChildren,
+  AppLibraryLibraryIdRouteRoute: AppLibraryLibraryIdRouteRouteWithChildren,
 }
 
 const AppRouteRouteWithChildren = AppRouteRoute._addFileChildren(

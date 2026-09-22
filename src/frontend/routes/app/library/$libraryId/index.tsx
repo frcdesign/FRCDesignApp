@@ -31,7 +31,7 @@ import {
 import { useGetUiState, updateUiState } from "../../../../lib/ui-state";
 import { useVendorFilters } from "../../../../features/settings/components/vendor-filters";
 
-export const Route = createFileRoute("/app/tab/$tabId/")({
+export const Route = createFileRoute("/app/library/$libraryId/")({
     component: HomeList,
     // Back in the library itself, which is where entry should resume.
     onEnter: () => {

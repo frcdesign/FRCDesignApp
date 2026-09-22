@@ -27,11 +27,8 @@ function RootComponent(): ReactNode {
     const { theme: savedTheme, tabId, systemTheme } = useGetUiState();
 
     const theme = useMemo(
-        () =>
-            createAppTheme(
-                params.tabId ?? params.libraryId ?? tabId ?? DEFAULT_LIBRARY
-            ),
-        [params.tabId, params.libraryId, tabId]
+        () => createAppTheme(params.libraryId ?? tabId ?? DEFAULT_LIBRARY),
+        [params.libraryId, tabId]
     );
 
     // Onshape's own scheme, taken off the launch; standalone there is none,

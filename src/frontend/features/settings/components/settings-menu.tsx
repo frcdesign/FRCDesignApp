@@ -9,7 +9,7 @@ import {
     hasEditorAccess,
     isWithinAccessLevel
 } from "@backend/features/auth/access-level";
-import { type AppTab } from "@backend/features/settings/app-tab";
+import { type AppTab, getTabPath } from "@backend/features/settings/app-tab";
 import { InputRow } from "../../../components/input-row";
 import { OpenUrlButton } from "../../../components/open-url-button";
 import { Section } from "../../../components/section";
@@ -23,7 +23,6 @@ import { useGetUiState, updateUiState } from "../../../lib/ui-state";
 import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
 import { SETUP_URL } from "../../../lib/url";
 import { useLibraryId } from "../../../lib/library";
-import { useTabId } from "../../../lib/tabs";
 import { ReloadGroupsButton } from "../../library/components/reload-groups-button";
 
 /** The FRCDesign Discord, where feedback and support now live. */
@@ -98,9 +97,6 @@ export function SettingsMenuContent(): ReactNode {
 }
 
 function UserSettings(): ReactNode {
-    const tabId = useTabId();
-    // Off the dashboard's own url, which is where the app link below leads
-    // back from; the tab above is the default there.
     const libraryId = useLibraryId();
     const isConnected = useIsConnectedToOnshape();
     const isDashboard = useIsDashboard();
@@ -112,7 +108,10 @@ function UserSettings(): ReactNode {
                 the standalone app is roomier than. */}
             {isConnected && (
                 <InputRow spread label="Open outside Onshape">
-                    <OpenUrlButton text="Open app" url={standaloneUrl(tabId)} />
+                    <OpenUrlButton
+                        text="Open app"
+                        url={standaloneUrl(libraryId)}
+                    />
                 </InputRow>
             )}
             {/* The dashboard is where the app is the thing worth offering. */}
@@ -160,7 +159,7 @@ function UserSettings(): ReactNode {
  * what would keep it embedded. Settings follow on their own, being this browser's.
  */
 function standaloneUrl(tabId: AppTab): string {
-    return new URL(`/app/tab/${tabId}`, window.location.origin).href;
+    return new URL(getTabPath(tabId), window.location.origin).href;
 }
 
 /** Whether the dashboard is showing, rather than the app itself. */

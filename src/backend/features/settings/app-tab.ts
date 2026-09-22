@@ -21,6 +21,14 @@ export function isLibraryTab(tab: AppTab): tab is LibraryId {
 }
 
 /**
+ * Where a tab opens. A library is one of many under one route, so it is named
+ * by its id; a utility is a page of its own, and its id is that page's path.
+ */
+export function getTabPath(tabId: AppTab): string {
+    return isLibraryTab(tabId) ? `/app/library/${tabId}` : `/app/${tabId}`;
+}
+
+/**
  * A stored tab, or the default when it is not one the app still knows: the
  * column is plain text under its `$type`, so a row can name anything.
  */

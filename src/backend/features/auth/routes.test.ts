@@ -80,10 +80,10 @@ describe("GET /auth/sign-out", () => {
     it("drops the session and everything keyed to it", async () => {
         await seedSession("session-1");
 
-        const res = await signOut("/app/tab/frc-design-lib", "session-1");
+        const res = await signOut("/app/library/frc-design-lib", "session-1");
 
         expect(res.status).toBe(302);
-        expect(res.headers.get("Location")).toBe("/app/tab/frc-design-lib");
+        expect(res.headers.get("Location")).toBe("/app/library/frc-design-lib");
         expect(await env.KV.get("tokens:session-1")).toBeNull();
         expect(await env.KV.get("access-level:session-1")).toBeNull();
         expect(res.headers.get("Set-Cookie")).toContain(`${SESSION_COOKIE}=;`);
