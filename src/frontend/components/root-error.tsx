@@ -13,7 +13,7 @@ import {
 import { CheckIcon, CopyIcon, HouseIcon } from "@phosphor-icons/react";
 import { IconSize } from "../lib/style-constants";
 import { ReloadGroupsButton } from "../features/library/components/reload-groups-button";
-import { DEFAULT_SETTINGS } from "@backend/features/settings/settings";
+import { DEFAULT_LIBRARY } from "@backend/features/library/library-id";
 
 /**
  * Catch-all error state for when a route below the root fails to load.
@@ -111,7 +111,7 @@ export function NotFoundError(): ReactNode {
             onClick={() => {
                 void navigate({
                     to: "/app/tab/$tabId",
-                    params: { tabId: DEFAULT_SETTINGS.tabId }
+                    params: { tabId: DEFAULT_LIBRARY }
                 });
             }}
         >

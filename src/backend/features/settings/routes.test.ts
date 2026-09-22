@@ -38,15 +38,12 @@ describe("settings routes", () => {
         expect(row?.theme).toBe(Theme.DARK);
     });
 
-    it("POST /settings records the answered program prompt", async () => {
+    it("POST /settings records the tab the caller chose", async () => {
         const app = createTestApp();
 
         const res = await app.request(
             "/api/settings",
-            jsonRequest("POST", {
-                tabId: LibraryId.FTC_DESIGN_LIB,
-                libraryChosen: true
-            }),
+            jsonRequest("POST", { tabId: LibraryId.FTC_DESIGN_LIB }),
             env
         );
         expect(res.status).toBe(200);
@@ -57,7 +54,6 @@ describe("settings routes", () => {
             .where(eq(users.id, TEST_USER_ID))
             .get();
         expect(row?.tabId).toBe(LibraryId.FTC_DESIGN_LIB);
-        expect(row?.libraryChosen).toBe(true);
     });
 
     it("POST /settings records and clears the open group", async () => {

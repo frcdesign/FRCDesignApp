@@ -1,7 +1,7 @@
 {
     "version": "6",
     "dialect": "sqlite",
-    "id": "0ec0fc8f-7833-4eca-b377-7e2a88950dae",
+    "id": "e6721d92-2860-44eb-88bc-490997cb8cf7",
     "prevId": "de7516f7-b83e-435a-9122-699912eefaec",
     "tables": {
         "configurations": {
@@ -487,13 +487,12 @@
                     "autoincrement": false,
                     "default": "'system'"
                 },
-                "library_id": {
-                    "name": "library_id",
+                "tab_id": {
+                    "name": "tab_id",
                     "type": "text",
                     "primaryKey": false,
-                    "notNull": true,
-                    "autoincrement": false,
-                    "default": "'frc-design-lib'"
+                    "notNull": false,
+                    "autoincrement": false
                 },
                 "group_id": {
                     "name": "group_id",
@@ -501,28 +500,10 @@
                     "primaryKey": false,
                     "notNull": false,
                     "autoincrement": false
-                },
-                "library_chosen": {
-                    "name": "library_chosen",
-                    "type": "integer",
-                    "primaryKey": false,
-                    "notNull": true,
-                    "autoincrement": false,
-                    "default": false
                 }
             },
             "indexes": {},
-            "foreignKeys": {
-                "users_library_id_libraries_id_fk": {
-                    "name": "users_library_id_libraries_id_fk",
-                    "tableFrom": "users",
-                    "tableTo": "libraries",
-                    "columnsFrom": ["library_id"],
-                    "columnsTo": ["id"],
-                    "onDelete": "no action",
-                    "onUpdate": "no action"
-                }
-            },
+            "foreignKeys": {},
             "compositePrimaryKeys": {},
             "uniqueConstraints": {},
             "checkConstraints": {}
@@ -1173,7 +1154,9 @@
     "_meta": {
         "schemas": {},
         "tables": {},
-        "columns": {}
+        "columns": {
+            "\"users\".\"library_id\"": "\"users\".\"tab_id\""
+        }
     },
     "internal": {
         "indexes": {}

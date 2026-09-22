@@ -1,16 +1,11 @@
-import {
-    Anchor,
-    Group,
-    Modal,
-    Stack,
-    Text,
-    UnstyledButton
-} from "@mantine/core";
+import { Anchor, Group, Stack, Text, UnstyledButton } from "@mantine/core";
 import { ArrowRightIcon, BooksIcon } from "@phosphor-icons/react";
 import { useNavigate } from "@tanstack/react-router";
 import { ReactNode } from "react";
 import { LibraryId } from "@backend/features/library/library-id";
+import { type AppTab } from "@backend/features/settings/app-tab";
 import { AppBrandMark } from "../../../components/app-brand";
+import { AppModal, AppModalBody } from "../../../components/app-modal";
 import { AppIcon } from "../../../components/app-icon";
 import { ZeroState } from "../../../components/app-zero-state";
 import {
@@ -46,10 +41,10 @@ function RegisteredMark(): ReactNode {
 
 interface ProgramCardProps {
     program: Program;
-    onSelect: (libraryId: LibraryId) => void;
+    onSelect: (tabId: AppTab) => void;
 }
 
-/** One program to pick, named the way its teams name it, over its library. */
+/** One program to pick, named the way its teams do, over the library it opens. */
 function ProgramCard(props: ProgramCardProps): ReactNode {
     const { program, onSelect } = props;
     const { libraryId, name } = program;
@@ -65,8 +60,8 @@ function ProgramCard(props: ProgramCardProps): ReactNode {
             }}
         >
             <Group gap="md" wrap="nowrap">
-                {/* The library's own books, in its own color, so the two
-                    choices read as the two libraries they open. */}
+                {/* In the library's own color, so the two choices read as the
+                    two libraries they open. */}
                 <AppIcon
                     icon={BooksIcon}
                     size={IconSize.SECTION}
@@ -106,38 +101,22 @@ function TrademarkDisclaimer(): ReactNode {
 }
 
 /**
- * What a new user is met with: which program they build for, which picks the
- * library the app opens in from then on. The answer is stored like any other
- * synced setting, so it is asked once per account rather than once per browser.
+ * What a new user is met with: which program they build for, which becomes the
+ * tab the app opens in. Stored like any other synced setting, so it is asked
+ * once per account rather than once per browser.
  */
 export function ProgramSelect(): ReactNode {
-    const { libraryChosen } = useGetUiState();
+    const { tabId } = useGetUiState();
     const navigate = useNavigate();
 
-    const selectProgram = (libraryId: LibraryId) => {
-        updateUiState({ tabId: libraryId, libraryChosen: true });
-        void navigate({ to: "/app/tab/$tabId", params: { tabId: libraryId } });
+    const selectTab = (tabId: AppTab) => {
+        updateUiState({ tabId });
+        void navigate({ to: "/app/tab/$tabId", params: { tabId } });
     };
 
     return (
-        <Modal
-            opened={!libraryChosen}
-            // Picking is the only way out, so a close has nothing to do.
-            onClose={() => undefined}
-            withCloseButton={false}
-            closeOnClickOutside={false}
-            closeOnEscape={false}
-            centered
-            size="lg"
-            padding="lg"
-            styles={{
-                // Drawn like the app's other modals, which the manager frames.
-                content: { border: BORDER }
-            }}
-        >
-            {/* Takes the focus the trap would otherwise land on the first
-                program, which reads as that one being pre-selected. */}
-            <Stack data-autofocus tabIndex={-1} style={{ outline: "none" }}>
+        <AppModal opened={tabId === null} dismissible={false} size="lg">
+            <AppModalBody>
                 <ZeroState
                     icon={<AppBrandMark size={IconSize.PAGE} />}
                     title="Welcome to the FRCDesignApp!"
@@ -150,14 +129,14 @@ export function ProgramSelect(): ReactNode {
                                 <ProgramCard
                                     key={program.libraryId}
                                     program={program}
-                                    onSelect={selectProgram}
+                                    onSelect={selectTab}
                                 />
                             ))}
                         </Stack>
                     }
                 />
                 <TrademarkDisclaimer />
-            </Stack>
-        </Modal>
+            </AppModalBody>
+        </AppModal>
     );
 }

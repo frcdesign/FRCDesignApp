@@ -11,6 +11,7 @@ import { Suspense } from "react";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import * as z from "zod";
 import { Theme } from "@backend/features/settings/settings";
+import { AppTabType } from "../../lib/tabs";
 import { adoptOnshapeLaunch } from "../../lib/onshape-params";
 import {
     isReadOnlyInstance,
@@ -35,16 +36,12 @@ import { RootAppError } from "../../components/root-error";
 const LaunchSearchType = OnshapeLaunchType.extend({
     /** The caller's saved theme, from their row. */
     theme: z.enum(Theme).optional().catch(undefined),
-    /** Set when their row says they have answered the program prompt. Either
-     * spelling: the router JSON-parses a value that is valid JSON. */
-    libraryChosen: z
-        .union([z.boolean(), z.stringbool()])
-        .optional()
-        .catch(undefined)
+    /** The tab their row names, when it names one. */
+    tabId: AppTabType.optional().catch(undefined)
 });
 
 /** What the entry redirect seeds off the caller's row, beside the launch. */
-const ENTRY_KEYS = ["theme", "libraryChosen"] as const;
+const ENTRY_KEYS = ["theme", "tabId"] as const;
 
 type LaunchSearch = z.infer<typeof LaunchSearchType>;
 
@@ -67,10 +64,10 @@ export const Route = createFileRoute("/app")({
         if (search.theme) {
             updateUiState({ theme: search.theme }, { sync: false });
         }
-        // Seeded only when it is true, so this never un-answers the prompt for
-        // a caller who answered it here while signed out.
-        if (search.libraryChosen) {
-            updateUiState({ libraryChosen: true }, { sync: false });
+        // Seeded only when the row names one, so a tab chosen here while
+        // signed out is not cleared.
+        if (search.tabId) {
+            updateUiState({ tabId: search.tabId }, { sync: false });
         }
         // Nothing to insert into, so the app cannot do its one job here.
         if (isReadOnlyInstance(search)) {

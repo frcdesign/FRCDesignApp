@@ -18,9 +18,8 @@ describe("makeUrl", () => {
         );
     });
 
-    // The link is escaped once, by the url. A quantity reaching Onshape as
-    // `%2520m` is the value `0.381%20m`, which is no quantity — what the link
-    // looked like while the key's own encoding was put in the url.
+    // Once, by the url: a quantity that reaches Onshape as `%2520m` is the
+    // value `0.381%20m`, which is no quantity.
     it("escapes a configuration once", () => {
         const url = makeUrl({
             ...element,

@@ -172,21 +172,12 @@ export const users = sqliteTable("users", {
         .$type<Theme>()
         .notNull()
         .default(DEFAULT_SETTINGS.theme),
-    // The tab last opened, which entry resumes in: a library, or one of the
-    // app's own utilities. No foreign key, since only half its values name a
-    // library row; an id the app has dropped resolves to the default on read.
-    tabId: text("tab_id")
-        .$type<AppTab>()
-        .notNull()
-        .default(DEFAULT_SETTINGS.tabId),
-    // The group last opened in that tab's library, which entry resumes in. Null
-    // for the library itself; a stale one resolves to that, so it is never cleaned.
-    groupId: text("group_id"),
-    // Set when the user answers the program prompt; until then the tab above
-    // is only the default they were handed.
-    libraryChosen: integer("library_chosen", { mode: "boolean" })
-        .notNull()
-        .default(DEFAULT_SETTINGS.libraryChosen)
+    // The tab last opened, which entry resumes in. Null until one is picked.
+    // No foreign key: only some tabs name a library row.
+    tabId: text("tab_id").$type<AppTab>(),
+    // The group last opened in that tab, which entry resumes in. Null for the
+    // tab itself; a stale one resolves to that, so it is never cleaned.
+    groupId: text("group_id")
 });
 
 export const favorites = sqliteTable(

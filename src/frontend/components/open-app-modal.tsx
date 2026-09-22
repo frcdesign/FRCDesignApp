@@ -1,11 +1,13 @@
 import { modals } from "@mantine/modals";
 import type { ReactNode } from "react";
-import { BORDER, FRAME_BACKGROUND } from "../lib/style-constants";
+import { APP_MODAL_STYLES } from "./app-modal";
 
-const COLUMN = { display: "flex", flexDirection: "column" } as const;
-
-/** Passes the card's capped height down to the body, which is what scrolls. */
-const FILL_COLUMN = { ...COLUMN, flex: 1, minHeight: 0 } as const;
+const FILL_COLUMN = {
+    display: "flex",
+    flexDirection: "column",
+    flex: 1,
+    minHeight: 0
+} as const;
 
 interface OpenAppModalProps {
     title: ReactNode;
@@ -39,23 +41,6 @@ export function openAppModal(props: OpenAppModalProps): void {
         ),
         onClose,
         centered: true,
-        styles: {
-            // Drawn, not just shadowed, so the card reads as one panel.
-            // A column that clips rather than scrolls: Mantine scrolls the
-            // whole card by default, which carries the footer away with it, so
-            // the scrolling is left to the body alone.
-            content: { border: BORDER, overflow: "hidden", ...COLUMN },
-            header: {
-                background: FRAME_BACKGROUND,
-                borderBottom: BORDER,
-                padding: "var(--mantine-spacing-sm)",
-                // Otherwise a Mantine minimum, not the padding, sets the height.
-                minHeight: 0
-            },
-            // Shrinkable, so a long title ellipsizes rather than running under
-            // the close button.
-            title: { minWidth: 0 },
-            body: { padding: 0, ...FILL_COLUMN }
-        }
+        styles: APP_MODAL_STYLES
     });
 }

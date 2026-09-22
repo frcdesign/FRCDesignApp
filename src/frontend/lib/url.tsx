@@ -36,8 +36,7 @@ export function makeUrl(path: DocumentPath): string {
     }
     if (isConfigurablePath(path)) {
         // Onshape's own parameter, so it keeps Onshape's name. The query form,
-        // which this escape is the one layer over: a key's own encoding would
-        // reach Onshape with that layer intact and read as a literal `%20`.
+        // this escape being the one layer Onshape unwraps.
         url +=
             "?configuration=" +
             encodeURIComponent(encodeQueryConfiguration(path.selection));

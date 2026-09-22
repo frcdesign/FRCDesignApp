@@ -5,6 +5,7 @@ import { ModalsProvider } from "@mantine/modals";
 import { Notifications } from "@mantine/notifications";
 import { ReactNode, useMemo } from "react";
 import { useColorScheme } from "@mantine/hooks";
+import { DEFAULT_LIBRARY } from "@backend/features/library/library-id";
 import { queryClient } from "../lib/query-client";
 import { createAppTheme } from "../theme";
 import { getColorTheme } from "../lib/onshape-params";
@@ -26,7 +27,10 @@ function RootComponent(): ReactNode {
     const { theme: savedTheme, tabId, systemTheme } = useGetUiState();
 
     const theme = useMemo(
-        () => createAppTheme(params.tabId ?? params.libraryId ?? tabId),
+        () =>
+            createAppTheme(
+                params.tabId ?? params.libraryId ?? tabId ?? DEFAULT_LIBRARY
+            ),
         [params.tabId, params.libraryId, tabId]
     );
 

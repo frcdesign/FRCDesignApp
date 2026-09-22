@@ -107,9 +107,8 @@ describe("configuration text", () => {
 });
 
 describe("encodeQueryConfiguration", () => {
-    // What reaches Onshape is this, escaped once more by whatever puts it in a
-    // query — so a space has to still be a space here. Their own examples read
-    // `dia1=1+m`, which is this form after that one escape.
+    // Escaped once more by whatever puts it in a query, so a space has to
+    // still be a space here; Onshape's own examples read `dia1=1+m`.
     it("leaves a quantity's space for the query layer to escape", () => {
         expect(encodeQueryConfiguration({ length: "0.0508 m" })).toBe(
             "length=0.0508 m"

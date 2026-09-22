@@ -14,9 +14,8 @@ export const settingsRoutes = getApp();
 const settingsBody = z.object({
     theme: z.enum(Theme).optional(),
     tabId: z.union([z.enum(LibraryId), z.enum(UtilityTab)]).optional(),
-    // Null on leaving a group: the caller resumes in the library itself.
-    groupId: z.string().nullable().optional(),
-    libraryChosen: z.boolean().optional()
+    // Null on leaving a group: the caller resumes in the tab itself.
+    groupId: z.string().nullable().optional()
 });
 
 /** POST /api/settings — update the caller's stored settings */
@@ -30,8 +29,8 @@ settingsRoutes.post(
 
         const db = getDb(c.env.DB);
 
-        // The tab is plain text with a default, so a row can be created without
-        // naming one; nothing points at a library row that has to exist first.
+        // The tab is nullable, so a row can be created without naming one:
+        // a caller who has not chosen has no tab to record.
         await db.insert(users).values({ id: userId }).onConflictDoNothing();
 
         if (Object.keys(body).length > 0) {

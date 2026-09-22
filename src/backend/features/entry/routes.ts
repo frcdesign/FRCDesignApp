@@ -10,6 +10,7 @@ import { getApp, type AppContext } from "../../lib/context";
 import { isSignedIn } from "../auth/request-auth";
 import { getSessionCompanyId, PERSONAL_COMPANY_ID } from "../auth/session";
 import { DEFAULT_SETTINGS } from "../settings/settings";
+import { DEFAULT_LIBRARY } from "../library/library-id";
 import { type AppTab, isLibraryTab, toAppTab } from "../settings/app-tab";
 import { trackAppOpen, trackInBackground } from "../analytics/tracking";
 
@@ -56,19 +57,18 @@ interface AppEntry {
     url: string;
     /** Absent when nobody is signed in, so there is no one to look up. */
     userId?: string;
+    /** Where the caller lands: the default until they have chosen. */
     tabId: AppTab;
 }
 
 /** Where the caller left off, as their row records it. */
 function getUserEntry(db: Db, userId: string) {
-    // The join is the check on the stored group: one deleted, left behind by a
-    // library switch, or belonging to no library at all — which is every group
-    // against a utility tab — comes back null and lands the caller in the tab.
+    // The join is the check on the stored group: one deleted, or left behind by
+    // a tab switch, comes back null and lands the caller in the tab itself.
     return db
         .select({
             tabId: users.tabId,
             theme: users.theme,
-            libraryChosen: users.libraryChosen,
             groupId: groups.id
         })
         .from(users)
@@ -98,17 +98,19 @@ async function getAppEntry(c: AppContext): Promise<AppEntry> {
         search.set("systemTheme", systemTheme);
     }
     search.set("theme", user?.theme ?? DEFAULT_SETTINGS.theme);
-    // Seeded only when the account has answered the program prompt. The store
-    // keeps its own answer — and is the one thing a caller nobody is signed in
-    // as has — so a false here would ask a second time rather than say less.
-    if (user?.libraryChosen) {
-        search.set("libraryChosen", "true");
-    }
 
     // Checked rather than trusted, as the stored group above is: the frontend
     // 404s an id it does not know, and this url is the only thing between a
     // stale row and the caller's panel.
-    const tabId = toAppTab(user?.tabId, DEFAULT_SETTINGS.tabId);
+    const chosenTab = user?.tabId
+        ? toAppTab(user.tabId, DEFAULT_LIBRARY)
+        : undefined;
+    // A caller with no tab lands in the default library, where the welcome
+    // asks for one; the seed is how the app tells the two apart.
+    if (chosenTab) {
+        search.set("tabId", chosenTab);
+    }
+    const tabId = chosenTab ?? DEFAULT_LIBRARY;
     const path = `/app/tab/${tabId}`;
     const groupPath = user?.groupId ? `${path}/groups/${user.groupId}` : path;
     return { url: `${groupPath}?${search.toString()}`, userId, tabId };
@@ -124,8 +126,7 @@ entryRoutes.get("/init", cacheMiddleware(), async (c) => {
     const { url, userId, tabId } = await getAppEntry(c);
     // Reaching here is exactly "the panel was opened", and it is the only entry
     // Onshape uses. Best-effort, so the redirect never waits on it. Only a
-    // library open is logged: the log is library-scoped, and a utility tab has
-    // nothing to count under until it has an event of its own.
+    // library open is logged, the log being library-scoped.
     if (userId && isLibraryTab(tabId)) {
         await trackInBackground(c, () =>
             trackAppOpen(c, { libraryId: tabId, userId })

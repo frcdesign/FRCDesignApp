@@ -12,10 +12,9 @@ import {
  * Takes a launch off the url into the store, which the app reads it from for
  * the rest of the tab's life. Called before the url is stripped of it.
  *
- * The launch's own fields and no others: callers pass the whole search, which
- * also carries what the entry redirect seeded off the caller's row, and writing
- * one of those here posts it straight back. Only the fields the url names, too,
- * since this runs again on the navigation that strips them.
+ * The launch's own fields, since the search also carries what entry seeded off
+ * the caller's row, and writing one of those here posts it straight back. Only
+ * the ones the url names, since this runs again on the strip.
  */
 export function adoptOnshapeLaunch(search: OnshapeLaunch): void {
     updateUiState(

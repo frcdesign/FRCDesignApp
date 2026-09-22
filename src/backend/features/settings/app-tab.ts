@@ -1,9 +1,6 @@
 /**
- * What the navbar offers, and so what the app resumes into: one of the
- * libraries, or one of the app's own utilities. Onshape calls its elements
- * tabs as well — these are the app's own, which is what `App` says here.
- *
- * A leaf, so both sides can name a tab without reaching anything Worker-only.
+ * What the navbar offers, and so what the app resumes into. Onshape calls its
+ * elements tabs too, which is what the `App` in the name holds off.
  */
 import { LibraryId } from "../library/library-id";
 
@@ -24,9 +21,8 @@ export function isLibraryTab(tab: AppTab): tab is LibraryId {
 }
 
 /**
- * A stored tab, or the default when it is not one the app still knows. The
- * column is plain text under its `$type`, so a row written before an id changed
- * — or by hand — reads back as something no route can render.
+ * A stored tab, or the default when it is not one the app still knows: the
+ * column is plain text under its `$type`, so a row can name anything.
  */
 export function toAppTab(tabId: string | undefined, fallback: AppTab): AppTab {
     return APP_TABS.includes(tabId as AppTab) ? (tabId as AppTab) : fallback;

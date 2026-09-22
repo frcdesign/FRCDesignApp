@@ -89,9 +89,9 @@ function seed(db, dump) {
         INSERT OR IGNORE INTO groups (id, library_id, name, document_id, version_id)
             VALUES ('g1', 'frc-design-lib', 'Tubes', 'd1', 'v1');
     `);
-    // Named per migration, as the configurations key below is: 0004 renames
-    // this one. Not the default library, so a column that lost its values to
-    // one is not mistaken for a column that kept them.
+    // Named per migration, as the configurations key below is: 0003 renames
+    // this one. Not the library a lost value would default to, which is how
+    // the check tells a kept value from a refilled one.
     const tab = hasColumn(db, "users", "tab_id") ? "tab_id" : "library_id";
     db.exec(
         `INSERT OR IGNORE INTO users (id, "${tab}") VALUES ('u1', 'mkcad')`

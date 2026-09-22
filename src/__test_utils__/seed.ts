@@ -1,4 +1,3 @@
-import { DEFAULT_SETTINGS } from "@backend/features/settings/settings";
 import { type AppTab, isLibraryTab } from "@backend/features/settings/app-tab";
 import { type Db } from "@backend/db/client";
 import {
@@ -27,7 +26,10 @@ import {
 } from "@backend/features/configurations/contract";
 import { type ElementPath, type InstancePath } from "@backend/lib/onshape/path";
 import { ElementType } from "@backend/lib/onshape/element-type";
-import { LibraryId } from "@backend/features/library/library-id";
+import {
+    DEFAULT_LIBRARY,
+    LibraryId
+} from "@backend/features/library/library-id";
 
 export const TEST_LIBRARY_ID = LibraryId.FRC_DESIGN_LIB;
 export const TEST_USER_ID = "test-user"; // matches createTestApp's default userId
@@ -99,7 +101,7 @@ export async function seedLibrary(
 export async function seedUser(
     db: Db,
     id: string = TEST_USER_ID,
-    tabId: AppTab = DEFAULT_SETTINGS.tabId
+    tabId: AppTab = DEFAULT_LIBRARY
 ): Promise<string> {
     if (isLibraryTab(tabId)) {
         await seedLibrary(db, tabId);

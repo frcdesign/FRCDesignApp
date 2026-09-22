@@ -143,7 +143,7 @@ export function encodeConfiguration(configuration?: Selection): string {
         .join(";");
 }
 
-/** What `escapeForQuery` replaces, being what the text form is structured by. */
+/** The characters the text form is structured by, which a value must not spell. */
 const QUERY_ESCAPES: Record<string, string> = {
     "%": "%25",
     ";": "%3B",
@@ -158,14 +158,11 @@ function escapeForQuery(value: string): string {
  * The form Onshape's `configuration` query parameter takes: the same
  * assignments, with only the three structural characters escaped.
  *
- * Putting it in a query escapes it once more — `URLSearchParams` for our own
- * calls, `encodeURIComponent` for a document url — and Onshape's examples show
- * a quantity arriving with exactly that one layer: `dia1=1+m`, `theta=2+degree`.
- * A value percent-encoded here would reach them with the extra layer intact, so
- * `0.381 m` would be read as the literal `0.381%20m`, which is no quantity.
- *
- * Escaping the structural three still keeps a typed `;` from ending an
- * assignment, and `decodeConfiguration` reads this form back as well.
+ * Putting it in a query escapes it once more, and Onshape's examples show a
+ * quantity arriving with exactly that one layer — `dia1=1+m`, `theta=2+degree`
+ * — so a value percent-encoded here reaches them as the literal `0.381%20m`,
+ * which is no quantity. The structural three still keep a typed `;` from ending
+ * an assignment, and `decodeConfiguration` reads this form back too.
  */
 export function encodeQueryConfiguration(configuration?: Selection): string {
     if (!configuration) {

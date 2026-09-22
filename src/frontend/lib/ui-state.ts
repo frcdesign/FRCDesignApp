@@ -23,13 +23,11 @@ const AppTabType = z.union([LibraryIdType, z.enum(Object.values(UtilityTab))]);
  */
 const SyncedStateSchema = z.object({
     theme: ThemeType.default(DEFAULT_SETTINGS.theme),
-    /** The tab last opened: a library, or one of the app's own utilities. */
-    tabId: AppTabType.default(DEFAULT_SETTINGS.tabId),
-    /** The group last opened in it; null for a tab's own page. */
-    groupId: z.string().nullable().default(DEFAULT_SETTINGS.groupId),
-    /** Whether the program prompt has been answered, which is what stops it
-     * being asked again. */
-    libraryChosen: z.boolean().default(DEFAULT_SETTINGS.libraryChosen)
+    /** The tab last opened; null until one is picked, which the welcome asks
+     * for. */
+    tabId: AppTabType.nullable().default(DEFAULT_SETTINGS.tabId),
+    /** The group last opened in that tab; null for the tab itself. */
+    groupId: z.string().nullable().default(DEFAULT_SETTINGS.groupId)
 });
 
 /** Kept until the browser's storage is cleared: preferences, and where to resume. */

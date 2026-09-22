@@ -4,9 +4,9 @@ import { eq } from "drizzle-orm";
 import { users } from "../../db/schema";
 import { events } from "../analytics/schema";
 import { EVENT_SCHEMA_VERSION, EventType } from "../analytics/usage";
-import { LibraryId } from "../library/library-id";
+import { DEFAULT_LIBRARY, LibraryId } from "../library/library-id";
 import { type AppTab, UtilityTab } from "../settings/app-tab";
-import { DEFAULT_SETTINGS, Theme } from "../settings/settings";
+import { Theme } from "../settings/settings";
 import {
     TEST_GROUP_ID,
     TEST_USER_ID,
@@ -43,8 +43,7 @@ describe("GET /init", () => {
         expect(location.searchParams.get("workspaceId")).toBe("ws");
     });
 
-    // A tab need not be a library: a utility resumes the same way, and has no
-    // library for the open to be counted under.
+    // A utility tab resumes the same way, and has no library to count under.
     it("resumes in a utility tab, and logs no library open", async () => {
         await seedUser(db, TEST_USER_ID, UtilityTab.VERSION_MANAGER);
 
@@ -76,7 +75,7 @@ describe("GET /init", () => {
         );
 
         const location = new URL(res.headers.get("Location")!, "http://x");
-        expect(location.pathname).toBe(`/app/tab/${DEFAULT_SETTINGS.tabId}`);
+        expect(location.pathname).toBe(`/app/tab/${DEFAULT_LIBRARY}`);
         expect(location.searchParams.get("documentId")).toBe("doc");
     });
 
@@ -123,29 +122,41 @@ describe("GET /init", () => {
         expect(location.searchParams.get("theme")).toBe(Theme.SYSTEM);
     });
 
-    // The prompt asks again until the account has answered it, so the absence
-    // of the parameter is what a new user is sent away with.
-    it("seeds the answered program prompt, and nothing for a new user", async () => {
-        const chosen = async () => {
+    // The seed is what tells the app a tab was chosen; without one the caller
+    // lands in the default library for the welcome to ask over.
+    it("seeds the tab a row names, and none for a user who has not chosen", async () => {
+        const seededTab = async () => {
             const res = await createTestApp().request(
                 "/init",
                 jsonRequest("GET"),
                 env
             );
             const location = new URL(res.headers.get("Location")!, "http://x");
-            return location.searchParams.get("libraryChosen");
+            return [
+                location.pathname,
+                location.searchParams.get("tabId")
+            ] as const;
         };
 
-        expect(await chosen()).toBeNull();
+        expect(await seededTab()).toEqual([
+            `/app/tab/${DEFAULT_LIBRARY}`,
+            null
+        ]);
 
-        await seedUser(db);
-        expect(await chosen()).toBeNull();
+        await db.insert(users).values({ id: TEST_USER_ID });
+        expect(await seededTab()).toEqual([
+            `/app/tab/${DEFAULT_LIBRARY}`,
+            null
+        ]);
 
         await db
             .update(users)
-            .set({ libraryChosen: true })
+            .set({ tabId: LibraryId.FTC_DESIGN_LIB })
             .where(eq(users.id, TEST_USER_ID));
-        expect(await chosen()).toBe("true");
+        expect(await seededTab()).toEqual([
+            `/app/tab/${LibraryId.FTC_DESIGN_LIB}`,
+            LibraryId.FTC_DESIGN_LIB
+        ]);
     });
 
     /** The tab and group a user left off in, as their row records them. */

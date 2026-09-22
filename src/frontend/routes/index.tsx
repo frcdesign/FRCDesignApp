@@ -1,4 +1,5 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
+import { DEFAULT_LIBRARY } from "@backend/features/library/library-id";
 import { getUiState, updateUiState } from "../lib/ui-state";
 import { showSuccessToast } from "../lib/notifications";
 import { RootAppError } from "../components/root-error";
@@ -8,6 +9,7 @@ import { RootAppError } from "../components/root-error";
 export const Route = createFileRoute("/")({
     beforeLoad: ({ search }) => {
         const { tabId, groupId, justSignedIn } = getUiState();
+        const tab = tabId ?? DEFAULT_LIBRARY;
         if (justSignedIn) {
             updateUiState({ justSignedIn: false });
             // Onshape only sends the caller back here on success, so arriving
@@ -18,13 +20,13 @@ export const Route = createFileRoute("/")({
         if (groupId) {
             throw redirect({
                 to: "/app/tab/$tabId/groups/$groupId",
-                params: { tabId, groupId },
+                params: { tabId: tab, groupId },
                 search
             });
         }
         throw redirect({
             to: "/app/tab/$tabId",
-            params: { tabId },
+            params: { tabId: tab },
             search
         });
     },
