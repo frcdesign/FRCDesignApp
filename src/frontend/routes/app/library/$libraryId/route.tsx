@@ -9,6 +9,7 @@ import {
 import { getSearchDbQuery } from "../../../../features/search/queries";
 import { parseLibraryId } from "../../../../lib/library";
 import { useAppParamMirror } from "../../../../lib/app-params";
+import { updateUiState } from "../../../../lib/ui-state";
 import { useRestoreInsertMenu } from "../../../../features/insert/restore-insert-menu";
 
 export const Route = createFileRoute("/app/library/$libraryId")({
@@ -16,6 +17,21 @@ export const Route = createFileRoute("/app/library/$libraryId")({
     params: {
         parse: ({ libraryId }) => ({ libraryId: parseLibraryId(libraryId) }),
         stringify: ({ libraryId }) => ({ libraryId })
+    },
+    /**
+     * The url is what selects a library, so the store follows it here, as the
+     * group below does. Without this the two disagree whenever the app opens
+     * anywhere but the store's default — a resume from the caller's row, or a
+     * store that came back empty, which is every launch in a panel whose
+     * storage Onshape's iframe has partitioned away. Switching back to the
+     * library the store still named would then change nothing, post nothing,
+     * and leave the row resuming where it always had.
+     *
+     * Not synced: this value came from the row in the first place, and a
+     * switch — which is a change against what is stored here — posts its own.
+     */
+    onEnter: (match) => {
+        updateUiState({ libraryId: match.params.libraryId }, { sync: false });
     },
     loader: async ({ params }) => {
         const { libraryId } = params;
