@@ -1,10 +1,11 @@
 import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
-import { libraries, users } from "../../db/schema";
+import { users } from "../../db/schema";
 import { events } from "../analytics/schema";
 import { EVENT_SCHEMA_VERSION, EventType } from "../analytics/usage";
 import { LibraryId } from "../library/library-id";
+import { type AppTab, UtilityTab } from "../settings/app-tab";
 import { DEFAULT_SETTINGS, Theme } from "../settings/settings";
 import {
     TEST_GROUP_ID,
@@ -36,26 +37,36 @@ describe("GET /init", () => {
 
         expect(res.status).toBe(302);
         const location = new URL(res.headers.get("Location")!, "http://x");
-        expect(location.pathname).toBe(`/app/library/${LibraryId.MKCAD}`);
+        expect(location.pathname).toBe(`/app/tab/${LibraryId.MKCAD}`);
         // The Onshape params have to survive the redirect.
         expect(location.searchParams.get("documentId")).toBe("doc");
         expect(location.searchParams.get("workspaceId")).toBe("ws");
     });
 
-    // The frontend 404s a library id it does not know, so a row naming one the
-    // app has dropped would strand the caller on every panel open.
-    it("sends a user whose stored library is unknown to the default", async () => {
-        const staleLibraryId = "old-frc-lib";
-        await db
-            .insert(libraries)
-            .values({ id: staleLibraryId as LibraryId })
-            .onConflictDoNothing();
+    // A tab need not be a library: a utility resumes the same way, and has no
+    // library for the open to be counted under.
+    it("resumes in a utility tab, and logs no library open", async () => {
+        await seedUser(db, TEST_USER_ID, UtilityTab.VERSION_MANAGER);
+
+        const res = await createTestApp().request(
+            "/init",
+            jsonRequest("GET"),
+            env
+        );
+
+        const location = new URL(res.headers.get("Location")!, "http://x");
+        expect(location.pathname).toBe(
+            `/app/tab/${UtilityTab.VERSION_MANAGER}`
+        );
+        expect(await db.select().from(events).get()).toBeUndefined();
+    });
+
+    // The frontend 404s a tab id it does not know, so a row naming one the app
+    // has dropped would strand the caller on every panel open.
+    it("sends a user whose stored tab is unknown to the default", async () => {
         await db
             .insert(users)
-            .values({
-                id: TEST_USER_ID,
-                libraryId: staleLibraryId as LibraryId
-            })
+            .values({ id: TEST_USER_ID, tabId: "old-frc-lib" as AppTab })
             .onConflictDoNothing();
 
         const res = await createTestApp().request(
@@ -65,9 +76,7 @@ describe("GET /init", () => {
         );
 
         const location = new URL(res.headers.get("Location")!, "http://x");
-        expect(location.pathname).toBe(
-            `/app/library/${DEFAULT_SETTINGS.libraryId}`
-        );
+        expect(location.pathname).toBe(`/app/tab/${DEFAULT_SETTINGS.tabId}`);
         expect(location.searchParams.get("documentId")).toBe("doc");
     });
 
@@ -80,7 +89,7 @@ describe("GET /init", () => {
 
         expect(res.status).toBe(302);
         expect(res.headers.get("Location")).toContain(
-            `/app/library/${LibraryId.FRC_DESIGN_LIB}`
+            `/app/tab/${LibraryId.FRC_DESIGN_LIB}`
         );
     });
 
@@ -139,9 +148,9 @@ describe("GET /init", () => {
         expect(await chosen()).toBe("true");
     });
 
-    /** The library and group a user left off in, as their row records them. */
-    async function seedResume(libraryId: LibraryId, groupId: string | null) {
-        await seedUser(db, TEST_USER_ID, libraryId);
+    /** The tab and group a user left off in, as their row records them. */
+    async function seedResume(tabId: AppTab, groupId: string | null) {
+        await seedUser(db, TEST_USER_ID, tabId);
         await db
             .update(users)
             .set({ groupId })
@@ -162,7 +171,7 @@ describe("GET /init", () => {
         await seedResume(TEST_LIBRARY_ID, TEST_GROUP_ID);
 
         expect(await entryPath()).toBe(
-            `/app/library/${TEST_LIBRARY_ID}/groups/${TEST_GROUP_ID}`
+            `/app/tab/${TEST_LIBRARY_ID}/groups/${TEST_GROUP_ID}`
         );
     });
 
@@ -171,7 +180,7 @@ describe("GET /init", () => {
     it("falls back to the library when the group has been deleted", async () => {
         await seedResume(TEST_LIBRARY_ID, "deleted-group");
 
-        expect(await entryPath()).toBe(`/app/library/${TEST_LIBRARY_ID}`);
+        expect(await entryPath()).toBe(`/app/tab/${TEST_LIBRARY_ID}`);
     });
 
     // Whichever library they switched to, they have not opened a group in it.
@@ -179,7 +188,7 @@ describe("GET /init", () => {
         await seedGroup(db);
         await seedResume(LibraryId.MKCAD, TEST_GROUP_ID);
 
-        expect(await entryPath()).toBe(`/app/library/${LibraryId.MKCAD}`);
+        expect(await entryPath()).toBe(`/app/tab/${LibraryId.MKCAD}`);
     });
 
     it("versions the open it records", async () => {
@@ -236,7 +245,7 @@ describe("GET /init", () => {
 
         expect(res.status).toBe(302);
         const entry = new URL(res.headers.get("Location")!, "http://x");
-        expect(entry.pathname).toBe(`/app/library/${LibraryId.FRC_DESIGN_LIB}`);
+        expect(entry.pathname).toBe(`/app/tab/${LibraryId.FRC_DESIGN_LIB}`);
         // Spent, so it never reaches the app or a later sign-in.
         expect(entry.searchParams.has("signInAttempted")).toBe(false);
     });
@@ -264,9 +273,7 @@ describe("GET /init", () => {
         );
 
         const location = new URL(res.headers.get("Location")!, "http://x");
-        expect(location.pathname).toBe(
-            `/app/library/${LibraryId.FRC_DESIGN_LIB}`
-        );
+        expect(location.pathname).toBe(`/app/tab/${LibraryId.FRC_DESIGN_LIB}`);
     });
 
     // Nobody is signed in, so there is no row to read and no open to record.

@@ -42,20 +42,19 @@ import { useLibraryId } from "../../../../../lib/library";
 import { updateUiState, useGetUiState } from "../../../../../lib/ui-state";
 import { AppIcon } from "../../../../../components/app-icon";
 
-export const Route = createFileRoute("/app/library/$libraryId/groups/$groupId")(
-    {
-        component: GroupList,
-        onEnter: (match) => {
-            updateUiState({ groupId: match.params.groupId });
-        }
+export const Route = createFileRoute("/app/tab/$tabId/groups/$groupId")({
+    component: GroupList,
+    onEnter: (match) => {
+        updateUiState({ groupId: match.params.groupId });
     }
-);
+});
 
 function GroupList(): ReactNode {
     const navigate = useNavigate();
     const libraryQuery = useLibraryQuery();
-    const { libraryId, groupId } = useParams({
-        from: "/app/library/$libraryId/groups/$groupId"
+    const libraryId = useLibraryId();
+    const { groupId } = useParams({
+        from: "/app/tab/$tabId/groups/$groupId"
     });
 
     const uiState = useGetUiState();
@@ -83,8 +82,8 @@ function GroupList(): ReactNode {
                         leftSection={<ArrowUUpLeftIcon size={IconSize.SMALL} />}
                         onClick={() => {
                             void navigate({
-                                to: "/app/library/$libraryId",
-                                params: { libraryId }
+                                to: "/app/tab/$tabId",
+                                params: { tabId: libraryId }
                             });
                         }}
                     >
@@ -147,8 +146,8 @@ function GroupHeaderRow(props: GroupHeaderRowProps): ReactNode {
             className="interactive"
             onClick={() =>
                 void navigate({
-                    to: "/app/library/$libraryId",
-                    params: { libraryId }
+                    to: "/app/tab/$tabId",
+                    params: { tabId: libraryId }
                 })
             }
             px="md"

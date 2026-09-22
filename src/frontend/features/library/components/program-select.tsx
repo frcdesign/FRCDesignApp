@@ -115,8 +115,8 @@ export function ProgramSelect(): ReactNode {
     const navigate = useNavigate();
 
     const selectProgram = (libraryId: LibraryId) => {
-        updateUiState({ libraryId, libraryChosen: true });
-        void navigate({ to: "/app/library/$libraryId", params: { libraryId } });
+        updateUiState({ tabId: libraryId, libraryChosen: true });
+        void navigate({ to: "/app/tab/$tabId", params: { tabId: libraryId } });
     };
 
     return (

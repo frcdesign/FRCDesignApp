@@ -8,6 +8,7 @@ import {
 import { ElementType } from "../lib/onshape/element-type";
 import { FastenInfo } from "../features/library/insertables/fasten";
 import { LibraryId } from "../features/library/library-id";
+import { AppTab } from "../features/settings/app-tab";
 import { DEFAULT_SETTINGS, Theme } from "../features/settings/settings";
 import { Vendor } from "../features/library/vendors";
 import {
@@ -171,16 +172,18 @@ export const users = sqliteTable("users", {
         .$type<Theme>()
         .notNull()
         .default(DEFAULT_SETTINGS.theme),
-    // The row this points at is upserted wherever one is written, since the default
-    // below is applied by an insert that names no library at all.
-    libraryId: libraryId()
-        .default(DEFAULT_SETTINGS.libraryId)
-        .references(() => libraries.id),
-    // The group last opened in that library, which entry resumes in. Null for
-    // the library itself; a stale one resolves to that, so it is never cleaned.
+    // The tab last opened, which entry resumes in: a library, or one of the
+    // app's own utilities. No foreign key, since only half its values name a
+    // library row; an id the app has dropped resolves to the default on read.
+    tabId: text("tab_id")
+        .$type<AppTab>()
+        .notNull()
+        .default(DEFAULT_SETTINGS.tabId),
+    // The group last opened in that tab's library, which entry resumes in. Null
+    // for the library itself; a stale one resolves to that, so it is never cleaned.
     groupId: text("group_id"),
-    // Set when the user answers the program prompt; until then the library
-    // above is only the default they were handed.
+    // Set when the user answers the program prompt; until then the tab above
+    // is only the default they were handed.
     libraryChosen: integer("library_chosen", { mode: "boolean" })
         .notNull()
         .default(DEFAULT_SETTINGS.libraryChosen)

@@ -21,7 +21,8 @@ const frcGreen: MantineColorsTuple = [
 
 /**
  * Falls back rather than throwing: the root themes the app even when the url
- * names a library that does not exist, which the route 404s separately.
+ * names a library that does not exist — which the route 404s separately — or
+ * a tab that is not a library, which has no library color of its own.
  */
 export function getLibraryColor(libraryId: string): string {
     switch (libraryId) {

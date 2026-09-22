@@ -2,6 +2,7 @@ import { useSyncExternalStore } from "react";
 import * as z from "zod";
 import { AccessLevel } from "@backend/features/auth/access-level";
 import { LibraryId } from "@backend/features/library/library-id";
+import { UtilityTab } from "@backend/features/settings/app-tab";
 import { Vendor } from "@backend/features/library/vendors";
 import { DEFAULT_SETTINGS, Theme } from "@backend/features/settings/settings";
 import { OnshapeLaunchType } from "./onshape-launch";
@@ -13,6 +14,7 @@ const VendorType = z.enum(Object.values(Vendor));
 const AccessLevelType = z.enum(Object.values(AccessLevel));
 const ThemeType = z.enum(Object.values(Theme));
 const LibraryIdType = z.enum(Object.values(LibraryId));
+const AppTabType = z.union([LibraryIdType, z.enum(Object.values(UtilityTab))]);
 
 /**
  * Kept locally and pushed to the caller's row, so a browser that has never run
@@ -21,8 +23,9 @@ const LibraryIdType = z.enum(Object.values(LibraryId));
  */
 const SyncedStateSchema = z.object({
     theme: ThemeType.default(DEFAULT_SETTINGS.theme),
-    libraryId: LibraryIdType.default(DEFAULT_SETTINGS.libraryId),
-    /** The group last opened in that library; null for the library itself. */
+    /** The tab last opened: a library, or one of the app's own utilities. */
+    tabId: AppTabType.default(DEFAULT_SETTINGS.tabId),
+    /** The group last opened in it; null for a tab's own page. */
     groupId: z.string().nullable().default(DEFAULT_SETTINGS.groupId),
     /** Whether the program prompt has been answered, which is what stops it
      * being asked again. */

@@ -6,14 +6,14 @@ import { z } from "zod";
 import { validate } from "../../lib/validate";
 import { requireSignInMiddleware } from "../auth/guards";
 import { LibraryId } from "../library/library-id";
-import { ensureLibrary } from "../library/db";
-import { DEFAULT_SETTINGS, Theme } from "./settings";
+import { UtilityTab } from "./app-tab";
+import { Theme } from "./settings";
 
 export const settingsRoutes = getApp();
 
 const settingsBody = z.object({
     theme: z.enum(Theme).optional(),
-    libraryId: z.enum(LibraryId).optional(),
+    tabId: z.union([z.enum(LibraryId), z.enum(UtilityTab)]).optional(),
     // Null on leaving a group: the caller resumes in the library itself.
     groupId: z.string().nullable().optional(),
     libraryChosen: z.boolean().optional()
@@ -30,15 +30,9 @@ settingsRoutes.post(
 
         const db = getDb(c.env.DB);
 
-        const libraryId = body.libraryId ?? DEFAULT_SETTINGS.libraryId;
-
-        // The row names its library rather than leaning on the column default,
-        // so the library ensured here is the one the foreign key points at.
-        await ensureLibrary(db, libraryId);
-        await db
-            .insert(users)
-            .values({ id: userId, libraryId })
-            .onConflictDoNothing();
+        // The tab is plain text with a default, so a row can be created without
+        // naming one; nothing points at a library row that has to exist first.
+        await db.insert(users).values({ id: userId }).onConflictDoNothing();
 
         if (Object.keys(body).length > 0) {
             await db.update(users).set(body).where(eq(users.id, userId));

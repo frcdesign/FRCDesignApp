@@ -5,15 +5,8 @@ export enum LibraryId {
 }
 
 /**
- * A stored library id, or the default when it is not one the app still knows.
- * The column is plain text under its `$type`, so a row written before an id
- * changed — or by hand — reads back as something no route can render.
+ * The library the app falls back to: what a caller with no choice of their own
+ * opens in, and what a library-scoped reader uses when the tab showing is not
+ * a library.
  */
-export function toLibraryId(
-    libraryId: string | undefined,
-    fallback: LibraryId
-): LibraryId {
-    return Object.values(LibraryId).includes(libraryId as LibraryId)
-        ? (libraryId as LibraryId)
-        : fallback;
-}
+export const DEFAULT_LIBRARY = LibraryId.FRC_DESIGN_LIB;

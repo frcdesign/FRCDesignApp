@@ -1,6 +1,6 @@
 /**
  * `/init` is where Onshape lands. It gates on auth, then resumes the caller in
- * the library and theme they last used.
+ * the tab and theme they last used.
  */
 import { and, eq } from "drizzle-orm";
 import { getDb, type Db } from "../../db/client";
@@ -10,7 +10,7 @@ import { getApp, type AppContext } from "../../lib/context";
 import { isSignedIn } from "../auth/request-auth";
 import { getSessionCompanyId, PERSONAL_COMPANY_ID } from "../auth/session";
 import { DEFAULT_SETTINGS } from "../settings/settings";
-import { LibraryId, toLibraryId } from "../library/library-id";
+import { type AppTab, isLibraryTab, toAppTab } from "../settings/app-tab";
 import { trackAppOpen, trackInBackground } from "../analytics/tracking";
 
 /** Marks the `/init` a sign-in returns to; see {@link needsSignIn}. */
@@ -56,16 +56,17 @@ interface AppEntry {
     url: string;
     /** Absent when nobody is signed in, so there is no one to look up. */
     userId?: string;
-    libraryId: LibraryId;
+    tabId: AppTab;
 }
 
 /** Where the caller left off, as their row records it. */
 function getUserEntry(db: Db, userId: string) {
-    // The join is the check on the stored group: one deleted, or left behind by
-    // a library switch, comes back null and lands the caller in the library.
+    // The join is the check on the stored group: one deleted, left behind by a
+    // library switch, or belonging to no library at all — which is every group
+    // against a utility tab — comes back null and lands the caller in the tab.
     return db
         .select({
-            libraryId: users.libraryId,
+            tabId: users.tabId,
             theme: users.theme,
             libraryChosen: users.libraryChosen,
             groupId: groups.id
@@ -73,10 +74,7 @@ function getUserEntry(db: Db, userId: string) {
         .from(users)
         .leftJoin(
             groups,
-            and(
-                eq(groups.id, users.groupId),
-                eq(groups.libraryId, users.libraryId)
-            )
+            and(eq(groups.id, users.groupId), eq(groups.libraryId, users.tabId))
         )
         .where(eq(users.id, userId))
         .get();
@@ -110,10 +108,10 @@ async function getAppEntry(c: AppContext): Promise<AppEntry> {
     // Checked rather than trusted, as the stored group above is: the frontend
     // 404s an id it does not know, and this url is the only thing between a
     // stale row and the caller's panel.
-    const libraryId = toLibraryId(user?.libraryId, DEFAULT_SETTINGS.libraryId);
-    const path = `/app/library/${libraryId}`;
+    const tabId = toAppTab(user?.tabId, DEFAULT_SETTINGS.tabId);
+    const path = `/app/tab/${tabId}`;
     const groupPath = user?.groupId ? `${path}/groups/${user.groupId}` : path;
-    return { url: `${groupPath}?${search.toString()}`, userId, libraryId };
+    return { url: `${groupPath}?${search.toString()}`, userId, tabId };
 }
 
 export const entryRoutes = getApp();
@@ -123,12 +121,14 @@ entryRoutes.get("/init", cacheMiddleware(), async (c) => {
     if (await needsSignIn(c)) {
         return c.redirect(getSignInUrl(c));
     }
-    const { url, userId, libraryId } = await getAppEntry(c);
+    const { url, userId, tabId } = await getAppEntry(c);
     // Reaching here is exactly "the panel was opened", and it is the only entry
-    // Onshape uses. Best-effort, so the redirect never waits on it.
-    if (userId) {
+    // Onshape uses. Best-effort, so the redirect never waits on it. Only a
+    // library open is logged: the log is library-scoped, and a utility tab has
+    // nothing to count under until it has an event of its own.
+    if (userId && isLibraryTab(tabId)) {
         await trackInBackground(c, () =>
-            trackAppOpen(c, { libraryId, userId })
+            trackAppOpen(c, { libraryId: tabId, userId })
         );
     }
     return c.redirect(url);

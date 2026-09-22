@@ -110,9 +110,10 @@ one in place does not rewrite what the auth tests assert.
 
 Where to point it:
 
-- `/` — redirects to the last library used, from `localStorage`.
-- `/app/library/<library-id>` — a library; ids are in `library-id.ts`.
-- `/app/library/<library-id>/groups/<group-id>` — one group.
+- `/` — redirects to the last tab used, from `localStorage`.
+- `/app/tab/<tab-id>` — a tab: a library today, ids in `library-id.ts`; the
+  ones that are not libraries are in `app-tab.ts`.
+- `/app/tab/<tab-id>/groups/<group-id>` — one group of a library tab.
 
 Insert and derive key off a full element path in the search params, which is
 what `useIsConnectedToOnshape` tests, so standalone hides them. Append what

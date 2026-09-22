@@ -35,6 +35,7 @@ import { openSettingsMenu } from "../features/settings/open-settings-menu";
 import { VendorMenu } from "../features/settings/components/vendor-filters";
 import { getUiState, updateUiState } from "../lib/ui-state";
 import { getLibraryName, useLibraryId } from "../lib/library";
+import { APP_TABS, getTabName, useTabId } from "../lib/tabs";
 import {
     RequireAccessLevel,
     useAccessData
@@ -42,6 +43,7 @@ import {
 import { startSignIn } from "../features/auth/sign-in";
 import { useJobStatus } from "../lib/refresh";
 import { LibraryId } from "@backend/features/library/library-id";
+import { type AppTab } from "@backend/features/settings/app-tab";
 import { queryClient } from "../lib/query-client";
 import { getLibraryVersionQuery } from "../features/library/queries";
 import { InsertLocationStatus } from "../features/insert-location/components/insert-location-status";
@@ -86,7 +88,7 @@ export function AppNavbar(): ReactNode {
     return (
         <Stack gap={0}>
             <NavbarRow>
-                <LibraryTabs />
+                <AppTabs />
                 <Group gap="xs" wrap="nowrap" ml="auto">
                     <InsertLocationStatus />
                     <JobIndicator />
@@ -142,9 +144,9 @@ function RunningJobLoader(): ReactNode {
     );
 }
 
-/** Switches libraries; the url is what actually selects one. */
-function LibraryTabs(): ReactNode {
-    const currentLibraryId = useLibraryId();
+/** Switches tabs; the url is what actually selects one. */
+function AppTabs(): ReactNode {
+    const currentTabId = useTabId();
     const navigate = useNavigate();
 
     // Warm the versions on hover, so picking one has nothing left to wait for.
@@ -156,20 +158,17 @@ function LibraryTabs(): ReactNode {
 
     return (
         <Tabs
-            value={currentLibraryId}
+            value={currentTabId}
             onMouseEnter={prefetchVersions}
             onChange={(value) => {
-                if (!value || value === currentLibraryId) {
+                if (!value || value === currentTabId) {
                     return;
                 }
-                const libraryId = value as LibraryId;
+                const tabId = value as AppTab;
                 // Write-behind: the url displays it, this only decides where
                 // `/init` lands next time.
-                updateUiState({ libraryId });
-                void navigate({
-                    to: "/app/library/$libraryId",
-                    params: { libraryId }
-                });
+                updateUiState({ tabId });
+                void navigate({ to: "/app/tab/$tabId", params: { tabId } });
             }}
             styles={{
                 // Hides the line under the tab list alone; the row owns one
@@ -193,10 +192,10 @@ function LibraryTabs(): ReactNode {
                 }
             }}
         >
-            <Tabs.List aria-label="Libraries">
-                {Object.values(LibraryId).map((libraryId) => (
-                    <Tabs.Tab key={libraryId} value={libraryId}>
-                        {getLibraryName(libraryId)}
+            <Tabs.List aria-label="Tabs">
+                {APP_TABS.map((tabId) => (
+                    <Tabs.Tab key={tabId} value={tabId}>
+                        {getTabName(tabId)}
                     </Tabs.Tab>
                 ))}
             </Tabs.List>

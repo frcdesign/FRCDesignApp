@@ -44,8 +44,8 @@ export function GroupCard(props: GroupCardProps): ReactNode {
         <ItemRow
             onClick={() => {
                 void navigate({
-                    to: "/app/library/$libraryId/groups/$groupId",
-                    params: { libraryId, groupId: group.id }
+                    to: "/app/tab/$tabId/groups/$groupId",
+                    params: { tabId: libraryId, groupId: group.id }
                 });
             }}
             left={

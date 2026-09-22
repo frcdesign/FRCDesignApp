@@ -110,8 +110,8 @@ export function NotFoundError(): ReactNode {
             leftSection={<HouseIcon size={IconSize.MEDIUM} />}
             onClick={() => {
                 void navigate({
-                    to: "/app/library/$libraryId",
-                    params: { libraryId: DEFAULT_SETTINGS.libraryId }
+                    to: "/app/tab/$tabId",
+                    params: { tabId: DEFAULT_SETTINGS.tabId }
                 });
             }}
         >

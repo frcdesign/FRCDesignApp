@@ -44,7 +44,7 @@ describe("settings routes", () => {
         const res = await app.request(
             "/api/settings",
             jsonRequest("POST", {
-                libraryId: LibraryId.FTC_DESIGN_LIB,
+                tabId: LibraryId.FTC_DESIGN_LIB,
                 libraryChosen: true
             }),
             env
@@ -56,7 +56,7 @@ describe("settings routes", () => {
             .from(users)
             .where(eq(users.id, TEST_USER_ID))
             .get();
-        expect(row?.libraryId).toBe(LibraryId.FTC_DESIGN_LIB);
+        expect(row?.tabId).toBe(LibraryId.FTC_DESIGN_LIB);
         expect(row?.libraryChosen).toBe(true);
     });
 

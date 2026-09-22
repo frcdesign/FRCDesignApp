@@ -85,10 +85,17 @@ function seed(db, dump) {
         return;
     }
     db.exec(`
-        INSERT OR IGNORE INTO libraries (id) VALUES ('frc-design-lib');
+        INSERT OR IGNORE INTO libraries (id) VALUES ('frc-design-lib'), ('mkcad');
         INSERT OR IGNORE INTO groups (id, library_id, name, document_id, version_id)
             VALUES ('g1', 'frc-design-lib', 'Tubes', 'd1', 'v1');
     `);
+    // Named per migration, as the configurations key below is: 0004 renames
+    // this one. Not the default library, so a column that lost its values to
+    // one is not mistaken for a column that kept them.
+    const tab = hasColumn(db, "users", "tab_id") ? "tab_id" : "library_id";
+    db.exec(
+        `INSERT OR IGNORE INTO users (id, "${tab}") VALUES ('u1', 'mkcad')`
+    );
     for (const i of [1, 2, 3]) {
         db.exec(
             "INSERT OR IGNORE INTO insertables (id, element_id, group_id, document_id," +
@@ -145,6 +152,18 @@ function run(dump, populated) {
             if (populated) seed(db, dump);
         }
         // A rename must keep the values, not just the row count.
+        if (populated && hasColumn(db, "users", "tab_id")) {
+            const tabs = db
+                .prepare("SELECT tab_id AS tab FROM users")
+                .all()
+                .map((row) => row.tab)
+                .filter((tab) => tab !== "mkcad");
+            if (tabs.length) {
+                failures.push(
+                    `users.tab_id holds ${tabs.slice(0, 3).join(", ")}, not the seeded tab`
+                );
+            }
+        }
         if (populated && hasColumn(db, "configurations", "insertable_id")) {
             const bad = db
                 .prepare("SELECT insertable_id AS key FROM configurations")

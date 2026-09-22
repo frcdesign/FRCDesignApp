@@ -1,4 +1,5 @@
 import { DEFAULT_SETTINGS } from "@backend/features/settings/settings";
+import { type AppTab, isLibraryTab } from "@backend/features/settings/app-tab";
 import { type Db } from "@backend/db/client";
 import {
     configurations,
@@ -94,17 +95,16 @@ export async function seedLibrary(
     return id;
 }
 
-/**
- * Seeds the library too: `users.library_id` defaults to one and references it,
- * which is what `ensureLibrary` does ahead of the same insert in the app.
- */
+/** Seeds the tab's library too, so a group seeded in it has one to belong to. */
 export async function seedUser(
     db: Db,
     id: string = TEST_USER_ID,
-    libraryId: LibraryId = DEFAULT_SETTINGS.libraryId
+    tabId: AppTab = DEFAULT_SETTINGS.tabId
 ): Promise<string> {
-    await seedLibrary(db, libraryId);
-    await db.insert(users).values({ id, libraryId }).onConflictDoNothing();
+    if (isLibraryTab(tabId)) {
+        await seedLibrary(db, tabId);
+    }
+    await db.insert(users).values({ id, tabId }).onConflictDoNothing();
     return id;
 }
 

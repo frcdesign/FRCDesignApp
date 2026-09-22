@@ -142,8 +142,8 @@ function useSearchAllDocuments(): () => void {
     const libraryId = useLibraryId();
     return () =>
         void navigate({
-            to: "/app/library/$libraryId",
-            params: { libraryId }
+            to: "/app/tab/$tabId",
+            params: { tabId: libraryId }
         });
 }
 

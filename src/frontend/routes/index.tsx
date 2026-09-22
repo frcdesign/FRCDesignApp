@@ -7,7 +7,7 @@ import { RootAppError } from "../components/root-error";
 // own launch is served before this route.
 export const Route = createFileRoute("/")({
     beforeLoad: ({ search }) => {
-        const { libraryId, groupId, justSignedIn } = getUiState();
+        const { tabId, groupId, justSignedIn } = getUiState();
         if (justSignedIn) {
             updateUiState({ justSignedIn: false });
             // Onshape only sends the caller back here on success, so arriving
@@ -17,14 +17,14 @@ export const Route = createFileRoute("/")({
         // Whatever Onshape launched with rides along; only the path is ours.
         if (groupId) {
             throw redirect({
-                to: "/app/library/$libraryId/groups/$groupId",
-                params: { libraryId, groupId },
+                to: "/app/tab/$tabId/groups/$groupId",
+                params: { tabId, groupId },
                 search
             });
         }
         throw redirect({
-            to: "/app/library/$libraryId",
-            params: { libraryId },
+            to: "/app/tab/$tabId",
+            params: { tabId },
             search
         });
     },

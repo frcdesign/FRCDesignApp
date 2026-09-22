@@ -21,13 +21,13 @@ export const Route = createRootRoute({
 });
 
 function RootComponent(): ReactNode {
-    // The library comes off the url, so the first paint is already its color.
+    // The tab comes off the url, so the first paint is already its color.
     const params = useParams({ strict: false });
-    const { theme: savedTheme, libraryId, systemTheme } = useGetUiState();
+    const { theme: savedTheme, tabId, systemTheme } = useGetUiState();
 
     const theme = useMemo(
-        () => createAppTheme(params.libraryId ?? libraryId),
-        [params.libraryId, libraryId]
+        () => createAppTheme(params.tabId ?? params.libraryId ?? tabId),
+        [params.tabId, params.libraryId, tabId]
     );
 
     // Onshape's own scheme, taken off the launch; standalone there is none,
