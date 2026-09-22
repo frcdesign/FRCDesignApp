@@ -114,6 +114,31 @@ describe("GET /init", () => {
         expect(location.searchParams.get("theme")).toBe(Theme.SYSTEM);
     });
 
+    // The prompt asks again until the account has answered it, so the absence
+    // of the parameter is what a new user is sent away with.
+    it("seeds the answered program prompt, and nothing for a new user", async () => {
+        const chosen = async () => {
+            const res = await createTestApp().request(
+                "/init",
+                jsonRequest("GET"),
+                env
+            );
+            const location = new URL(res.headers.get("Location")!, "http://x");
+            return location.searchParams.get("libraryChosen");
+        };
+
+        expect(await chosen()).toBeNull();
+
+        await seedUser(db);
+        expect(await chosen()).toBeNull();
+
+        await db
+            .update(users)
+            .set({ libraryChosen: true })
+            .where(eq(users.id, TEST_USER_ID));
+        expect(await chosen()).toBe("true");
+    });
+
     /** The library and group a user left off in, as their row records them. */
     async function seedResume(libraryId: LibraryId, groupId: string | null) {
         await seedUser(db, TEST_USER_ID, libraryId);

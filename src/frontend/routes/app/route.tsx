@@ -25,6 +25,7 @@ import {
 } from "../../lib/app-params";
 import { parseSearch } from "../../lib/search-params";
 import { AppNavbar } from "../../components/app-navbar";
+import { ProgramSelectModal } from "../../features/library/components/program-select";
 import { SectionLoading } from "../../components/app-zero-state";
 import { useMessageListener } from "../../lib/messages";
 import { updateUiState } from "../../lib/ui-state";
@@ -33,8 +34,17 @@ import { RootAppError } from "../../components/root-error";
 /** What the entry redirect carries and the app takes off the url. */
 const LaunchSearchType = OnshapeLaunchType.extend({
     /** The caller's saved theme, from their row. */
-    theme: z.enum(Theme).optional().catch(undefined)
+    theme: z.enum(Theme).optional().catch(undefined),
+    /** Set when their row says they have answered the program prompt. Either
+     * spelling: the router JSON-parses a value that is valid JSON. */
+    libraryChosen: z
+        .union([z.boolean(), z.stringbool()])
+        .optional()
+        .catch(undefined)
 });
+
+/** What the entry redirect seeds off the caller's row, beside the launch. */
+const ENTRY_KEYS = ["theme", "libraryChosen"] as const;
 
 type LaunchSearch = z.infer<typeof LaunchSearchType>;
 
@@ -57,6 +67,11 @@ export const Route = createFileRoute("/app")({
         if (search.theme) {
             updateUiState({ theme: search.theme }, { sync: false });
         }
+        // Seeded only when it is true, so this never un-answers the prompt for
+        // a caller who answered it here while signed out.
+        if (search.libraryChosen) {
+            updateUiState({ libraryChosen: true }, { sync: false });
+        }
         // Nothing to insert into, so the app cannot do its one job here.
         if (isReadOnlyInstance(search)) {
             throw redirect({ to: "/version-error", replace: true });
@@ -74,7 +89,7 @@ export const Route = createFileRoute("/app")({
 
 function isLaunch(search: LaunchSearch): boolean {
     return (
-        search.theme !== undefined ||
+        ENTRY_KEYS.some((key) => search[key] !== undefined) ||
         LAUNCH_KEYS.some((key) => search[key] !== undefined)
     );
 }
@@ -85,7 +100,7 @@ function isLaunch(search: LaunchSearch): boolean {
  */
 function strippedOfLaunch(search: LaunchSearch & AppParams): AppParams {
     const cleared = Object.fromEntries(
-        [...LAUNCH_KEYS, "theme"].map((key) => [key, undefined])
+        [...LAUNCH_KEYS, ...ENTRY_KEYS].map((key) => [key, undefined])
     );
     return { ...search, ...cleared };
 }
@@ -127,6 +142,8 @@ function App() {
                 </Suspense>
                 <TanStackRouterDevtools />
             </AppShell.Main>
+            {/* Over whichever library the app opened in, until it is answered. */}
+            <ProgramSelectModal />
         </AppShell>
     );
 }

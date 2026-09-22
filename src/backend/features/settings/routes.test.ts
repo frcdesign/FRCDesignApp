@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it } from "vitest";
 import { users } from "../../db/schema";
+import { LibraryId } from "../library/library-id";
 
 import { Theme } from "./settings";
 import {
@@ -35,6 +36,28 @@ describe("settings routes", () => {
             .where(eq(users.id, TEST_USER_ID))
             .get();
         expect(row?.theme).toBe(Theme.DARK);
+    });
+
+    it("POST /settings records the answered program prompt", async () => {
+        const app = createTestApp();
+
+        const res = await app.request(
+            "/api/settings",
+            jsonRequest("POST", {
+                libraryId: LibraryId.FTC_DESIGN_LIB,
+                libraryChosen: true
+            }),
+            env
+        );
+        expect(res.status).toBe(200);
+
+        const row = await db
+            .select()
+            .from(users)
+            .where(eq(users.id, TEST_USER_ID))
+            .get();
+        expect(row?.libraryId).toBe(LibraryId.FTC_DESIGN_LIB);
+        expect(row?.libraryChosen).toBe(true);
     });
 
     it("POST /settings records and clears the open group", async () => {

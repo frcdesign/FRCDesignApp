@@ -178,7 +178,12 @@ export const users = sqliteTable("users", {
         .references(() => libraries.id),
     // The group last opened in that library, which entry resumes in. Null for
     // the library itself; a stale one resolves to that, so it is never cleaned.
-    groupId: text("group_id")
+    groupId: text("group_id"),
+    // Set when the user answers the program prompt; until then the library
+    // above is only the default they were handed.
+    libraryChosen: integer("library_chosen", { mode: "boolean" })
+        .notNull()
+        .default(DEFAULT_SETTINGS.libraryChosen)
 });
 
 export const favorites = sqliteTable(

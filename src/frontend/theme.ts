@@ -34,7 +34,8 @@ export function getLibraryColor(libraryId: string): string {
     }
 }
 
-/** A library's color as Mantine's `color.shade`, for a chart series or tile. */
+/** A library's color as Mantine's `color.shade`, for a chart series, a tile,
+ * or text that should read as the library. */
 export function getLibraryShade(libraryId: string): string {
     return `${getLibraryColor(libraryId)}.${FILLED_SHADE}`;
 }

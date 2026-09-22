@@ -67,6 +67,7 @@ function getUserEntry(db: Db, userId: string) {
         .select({
             libraryId: users.libraryId,
             theme: users.theme,
+            libraryChosen: users.libraryChosen,
             groupId: groups.id
         })
         .from(users)
@@ -99,6 +100,12 @@ async function getAppEntry(c: AppContext): Promise<AppEntry> {
         search.set("systemTheme", systemTheme);
     }
     search.set("theme", user?.theme ?? DEFAULT_SETTINGS.theme);
+    // Seeded only when the account has answered the program prompt. The store
+    // keeps its own answer — and is the one thing a caller nobody is signed in
+    // as has — so a false here would ask a second time rather than say less.
+    if (user?.libraryChosen) {
+        search.set("libraryChosen", "true");
+    }
 
     // Checked rather than trusted, as the stored group above is: the frontend
     // 404s an id it does not know, and this url is the only thing between a

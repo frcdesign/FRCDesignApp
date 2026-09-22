@@ -23,7 +23,10 @@ const SyncedStateSchema = z.object({
     theme: ThemeType.default(DEFAULT_SETTINGS.theme),
     libraryId: LibraryIdType.default(DEFAULT_SETTINGS.libraryId),
     /** The group last opened in that library; null for the library itself. */
-    groupId: z.string().nullable().default(DEFAULT_SETTINGS.groupId)
+    groupId: z.string().nullable().default(DEFAULT_SETTINGS.groupId),
+    /** Whether the program prompt has been answered, which is what stops it
+     * being asked again. */
+    libraryChosen: z.boolean().default(DEFAULT_SETTINGS.libraryChosen)
 });
 
 /** Kept until the browser's storage is cleared: preferences, and where to resume. */
