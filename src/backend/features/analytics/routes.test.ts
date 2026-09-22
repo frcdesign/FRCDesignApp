@@ -44,7 +44,7 @@ import {
     type PartUsageOut
 } from "./contract";
 import { MONTH_DAYS } from "./measures";
-import { toDayKey } from "./day";
+import { addDays, toDayKey, toReportingDay } from "./day";
 import { BuildIssueType } from "../build-checker/issues";
 
 const db = getDb(env.DB);
@@ -663,7 +663,7 @@ describe("analytics routes", () => {
 
         it("plots recent inserts per day, oldest first", async () => {
             await seedPartStudio(db);
-            await seedInserts(2);
+            await seedInserts(2, { day: toReportingDay(Date.now()) });
 
             const res = await anonymousGet(partsUrl());
             const body: PartUsageOut[] = await res.json();
@@ -675,14 +675,28 @@ describe("analytics routes", () => {
             );
         });
 
+        it("ends the sparkline yesterday, so today cannot dip it", async () => {
+            await seedPartStudio(db);
+            await seedInserts(9);
+
+            const res = await anonymousGet(partsUrl());
+            const body: PartUsageOut[] = await res.json();
+
+            expect(body[0].recent.at(-1)).toBe(0);
+        });
+
         it("adds up a day's targets in the sparkline and the count", async () => {
             // One row per target, so a part used both ways in a day would
             // otherwise plot whichever row came back last.
+            const last = toReportingDay(Date.now());
             await seedPartStudio(db);
-            await seedInserts(2, { target: ElementType.PART_STUDIO });
-            await seedInserts(3, { target: ElementType.ASSEMBLY });
+            await seedInserts(2, {
+                day: last,
+                target: ElementType.PART_STUDIO
+            });
+            await seedInserts(3, { day: last, target: ElementType.ASSEMBLY });
             await seedInserts(1, {
-                day: toDayKey(Date.now() - 24 * 3600 * 1000),
+                day: addDays(last, -1),
                 target: ElementType.ASSEMBLY
             });
 

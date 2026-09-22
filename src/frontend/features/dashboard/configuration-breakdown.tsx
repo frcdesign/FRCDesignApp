@@ -16,9 +16,11 @@ import type {
 import {
     CATEGORY_COLOR,
     FontWeight,
-    MUTED_MARK
+    MUTED_MARK,
+    StatusColor
 } from "../../lib/style-constants";
 import { formatCount, formatPercent } from "./format";
+import { ParameterPath } from "./parameter-path";
 
 interface ConfigurationBreakdownProps {
     parameters: ConfigurationParameterUsage[];
@@ -26,7 +28,8 @@ interface ConfigurationBreakdownProps {
 
 /**
  * Per-parameter value counts, which is how a wrong default shows itself: the
- * default sitting below another value, or options nobody ever picks.
+ * default sitting below another value, or options nobody ever picks. One card
+ * per instance, so a list another choice filters is read one branch at a time.
  */
 export function ConfigurationBreakdown({
     parameters
@@ -42,8 +45,10 @@ export function ConfigurationBreakdown({
     return (
         <Stack>
             {parameters.map((parameter) => (
+                /* Two instances of one parameter are told apart by the choices
+                   leading to them, which is what the card is titled with. */
                 <ParameterCard
-                    key={parameter.parameterId}
+                    key={`${parameter.parameterId}-${parameter.path.join(">")}`}
                     parameter={parameter}
                 />
             ))}
@@ -60,6 +65,7 @@ function ParameterCard({ parameter }: ParameterCardProps): ReactNode {
         <Card withBorder padding="md" radius="md">
             <Group justify="space-between" mb="sm" wrap="wrap">
                 <Group gap="xs">
+                    <ParameterPath path={parameter.path} />
                     <Title order={5}>{parameter.name}</Title>
                     <Badge variant="light" color={CATEGORY_COLOR} size="sm">
                         {parameter.type}
@@ -101,6 +107,9 @@ interface ValueRowProps {
 
 function ValueRow({ value, total }: ValueRowProps): ReactNode {
     const percent = total === 0 ? 0 : (value.count / total) * 100;
+    // Both are what an insert lands on with nothing picked, so both are read
+    // as the value the rest of the list is being measured against.
+    const lands = value.isDefault || value.isImplicitDefault;
 
     return (
         <div>
@@ -109,15 +118,11 @@ function ValueRow({ value, total }: ValueRowProps): ReactNode {
                     <Text
                         size="sm"
                         c={value.count === 0 ? "dimmed" : undefined}
-                        fw={value.isDefault ? FontWeight.SEMI_BOLD : undefined}
+                        fw={lands ? FontWeight.SEMI_BOLD : undefined}
                     >
                         {value.label}
                     </Text>
-                    {value.isDefault && (
-                        <Badge size="xs" variant="light">
-                            Default
-                        </Badge>
-                    )}
+                    <DefaultBadge value={value} />
                 </Group>
                 <Text size="sm" c="dimmed">
                     {formatCount(value.count)} ({formatPercent(percent)})
@@ -125,9 +130,35 @@ function ValueRow({ value, total }: ValueRowProps): ReactNode {
             </Group>
             <Progress
                 value={percent}
-                color={value.isDefault ? undefined : MUTED_MARK}
+                color={lands ? undefined : MUTED_MARK}
                 size="sm"
             />
         </div>
     );
+}
+
+interface DefaultBadgeProps {
+    value: ConfigurationValueUsage;
+}
+
+/**
+ * Which kind of default this is, if either: the one the parameter declares, or
+ * the one the app falls to because the declared one is not offered here.
+ */
+function DefaultBadge({ value }: DefaultBadgeProps): ReactNode {
+    if (value.isImplicitDefault) {
+        return (
+            <Badge size="xs" variant="light" color={StatusColor.INFO}>
+                Implicit default
+            </Badge>
+        );
+    }
+    if (value.isDefault) {
+        return (
+            <Badge size="xs" variant="light">
+                Default
+            </Badge>
+        );
+    }
+    return null;
 }

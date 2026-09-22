@@ -10,8 +10,11 @@ import { getGrowth, recentWindows, toComparison } from "./growth";
 
 const db = getDb(env.DB);
 
-/** Late August: outside both seasons, so season comparisons use whole ones. */
-const TODAY = "2026-08-27";
+/**
+ * The last complete day, which is what the routes report through. Late August:
+ * outside both seasons, so season comparisons use whole ones.
+ */
+const THROUGH = "2026-08-26";
 
 async function seedInserts(
     day: string,
@@ -34,7 +37,7 @@ async function seedActive(day: string, userId: string) {
         .onConflictDoNothing();
 }
 
-const WINDOWS = recentWindows(TODAY);
+const WINDOWS = recentWindows(THROUGH);
 const LABELS = {
     label: "current",
     baselineLabel: "before",
@@ -42,8 +45,8 @@ const LABELS = {
 };
 
 describe("recentWindows", () => {
-    it("ends yesterday, so a part-finished today cannot drag it down", () => {
-        expect(WINDOWS.current.to).toBe("2026-08-26");
+    it("ends on the day it is given, which is the last complete one", () => {
+        expect(WINDOWS.current.to).toBe(THROUGH);
     });
 
     it("puts two equal, adjacent windows back to back", () => {
@@ -101,7 +104,7 @@ describe("getGrowth", () => {
         await seedInserts("2026-08-10", 30); // current
         await seedInserts("2026-07-10", 20); // previous
 
-        const growth = await getGrowth(db, TODAY, "2026-01-01");
+        const growth = await getGrowth(db, THROUGH, "2026-01-01");
 
         expect(growth.recent.inserts.current).toBe(30);
         expect(growth.recent.inserts.previous).toBe(20);
@@ -114,19 +117,19 @@ describe("getGrowth", () => {
         await seedActive("2026-08-11", "user-a");
         await seedActive("2026-07-10", "user-a");
 
-        const growth = await getGrowth(db, TODAY, "2026-01-01");
+        const growth = await getGrowth(db, THROUGH, "2026-01-01");
 
         expect(growth.recent.activeUsers.current).toBe(1);
         expect(growth.recent.activeUsers.previous).toBe(1);
     });
 
-    it("compares whole seasons when today is between them", async () => {
+    it("compares whole seasons when the window falls between them", async () => {
         // August is off-season, and app-wide seasons run Sept-Apr so both
         // competitions are covered by one window.
         await seedInserts("2026-03-01", 100);
         await seedInserts("2025-03-01", 50);
 
-        const growth = await getGrowth(db, TODAY, "2024-09-01");
+        const growth = await getGrowth(db, THROUGH, "2024-09-01");
 
         expect(growth.season.inserts.label).toBe("2025–26 season");
         expect(growth.season.inserts.baselineLabel).toBe("2024–25 season");
@@ -142,7 +145,7 @@ describe("getGrowth", () => {
         // the app on FRC's span would drop this entirely.
         await seedInserts("2025-10-15", 40);
 
-        const growth = await getGrowth(db, TODAY, "2024-09-01");
+        const growth = await getGrowth(db, THROUGH, "2024-09-01");
 
         expect(growth.season.inserts.current).toBe(40);
     });
@@ -158,7 +161,7 @@ describe("getGrowth", () => {
         await seedActive("2026-03-01", "user-a");
         await seedActive("2026-03-02", "user-b");
 
-        const { season } = await getGrowth(db, TODAY, "2024-09-01");
+        const { season } = await getGrowth(db, THROUGH, "2024-09-01");
 
         expect(season.appOpens.current).toBe(12);
         expect(season.activeUsers.current).toBe(2);
@@ -184,7 +187,7 @@ describe("getGrowth", () => {
     it("withholds the season change before a second season exists", async () => {
         await seedInserts("2026-03-01", 100);
 
-        const growth = await getGrowth(db, TODAY, "2025-09-01");
+        const growth = await getGrowth(db, THROUGH, "2025-09-01");
 
         expect(growth.season.inserts.current).toBe(100);
         expect(growth.season.inserts.changeRatio).toBeUndefined();
@@ -194,7 +197,7 @@ describe("getGrowth", () => {
     });
 
     it("reports nothing rather than failing with no data at all", async () => {
-        const growth = await getGrowth(db, TODAY, undefined);
+        const growth = await getGrowth(db, THROUGH, undefined);
 
         expect(growth.recent.inserts.current).toBe(0);
         expect(growth.recent.inserts.changeRatio).toBeUndefined();
@@ -210,7 +213,7 @@ describe("getGrowth", () => {
 
         const growth = await getGrowth(
             db,
-            TODAY,
+            THROUGH,
             "2026-01-01",
             TEST_LIBRARY_ID
         );
@@ -219,7 +222,7 @@ describe("getGrowth", () => {
         // FTCDesignLib runs Sept–Apr, so its off-season season differs.
         const ftc = await getGrowth(
             db,
-            TODAY,
+            THROUGH,
             "2026-01-01",
             LibraryId.FTC_DESIGN_LIB
         );

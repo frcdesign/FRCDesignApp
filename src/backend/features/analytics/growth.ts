@@ -25,16 +25,17 @@ interface Window {
 }
 
 /**
- * The two trailing windows to compare, ending yesterday: a part-finished today
- * would manufacture a decline every morning that recovers by evening.
+ * The two trailing windows to compare, ending on the last reported day: a
+ * part-finished today would manufacture a decline every morning that recovers
+ * by evening.
  */
-export function recentWindows(today: string): {
+export function recentWindows(through: string): {
     current: Window;
     previous: Window;
 } {
-    // Yesterday back a month, inclusive: the -1 is what makes the span the
-    // count of days rather than one more than it.
-    const to = addDays(today, -1);
+    // A month back from it, inclusive: the -1 is what makes the span the count
+    // of days rather than one more than it.
+    const to = through;
     const from = addDays(to, -(MONTH_DAYS - 1));
 
     // The equal window immediately before, ending the day before `from`, so the
@@ -192,14 +193,17 @@ async function measure(
 /**
  * Growth for a library, or for the app when no library is given. The app spans
  * Sept–Apr, which covers FRC's Jan–Apr, so its season is named without a program.
+ *
+ * `through` is the last complete day, not today: every window here ends on it,
+ * so a season to date is not half a day short of the stretch it is compared to.
  */
 export async function getGrowth(
     db: Db,
-    today: string,
+    through: string,
     trackingSince: string | undefined,
     libraryId?: LibraryId
 ): Promise<GrowthOut> {
-    const windows = recentWindows(today);
+    const windows = recentWindows(through);
     const recentLabels = {
         label: `Last ${MONTH_DAYS} days`,
         baselineLabel: `the ${MONTH_DAYS} days before`,
@@ -207,7 +211,7 @@ export async function getGrowth(
     };
 
     const program = libraryId ? LIBRARY_PROGRAM[libraryId] : Program.FTC;
-    const season = seasonWindow(program, today);
+    const season = seasonWindow(program, through);
     const baseline = baselineWindow(season);
     const seasonWindows = {
         current: { from: season.from, to: season.to },

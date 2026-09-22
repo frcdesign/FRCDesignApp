@@ -19,7 +19,7 @@ import {
 import { LibraryId } from "../library/library-id";
 import { type PartUsageOut } from "./contract";
 import { MONTH_DAYS, usesPerMonth } from "./measures";
-import { addDays, toDayKey, type DayRange } from "./day";
+import { addDays, toReportingDay, type DayRange } from "./day";
 import { toElementPath } from "../../lib/onshape/path";
 import { type ConfigurationParameter } from "../configurations/contract";
 
@@ -47,28 +47,30 @@ export function getPartRows(
     if (options.visibleOnly) {
         filters.push(eq(insertables.isVisible, true));
     }
-    return db
-        .select({
-            elementId: insertables.elementId,
-            name: insertables.name,
-            groupName: groups.name,
-            documentId: insertables.documentId,
-            versionId: insertables.versionId,
-            isVisible: insertables.isVisible,
-            firstInsertedAt: insertableStats.firstInsertedAt
-        })
-        .from(insertables)
-        .leftJoin(
-            insertableStats,
-            and(
-                eq(insertableStats.libraryId, insertables.libraryId),
-                eq(insertableStats.elementId, insertables.elementId)
+    return (
+        db
+            .select({
+                elementId: insertables.elementId,
+                name: insertables.name,
+                groupName: groups.name,
+                documentId: insertables.documentId,
+                versionId: insertables.versionId,
+                isVisible: insertables.isVisible,
+                firstInsertedAt: insertableStats.firstInsertedAt
+            })
+            .from(insertables)
+            .leftJoin(
+                insertableStats,
+                and(
+                    eq(insertableStats.libraryId, insertables.libraryId),
+                    eq(insertableStats.elementId, insertables.elementId)
+                )
             )
-        )
-        // `groupId` is a non-null FK that cascades, so a row always matches.
-        .innerJoin(groups, eq(groups.id, insertables.groupId))
-        .where(and(...filters))
-        .all();
+            // `groupId` is a non-null FK that cascades, so a row always matches.
+            .innerJoin(groups, eq(groups.id, insertables.groupId))
+            .where(and(...filters))
+            .all()
+    );
 }
 
 /** One part counted over the window rather than over its whole history. */
@@ -179,15 +181,16 @@ function emptySparkline(): number[] {
 
 /**
  * Daily insert counts per part over the trailing window, as dense arrays the
- * table can plot directly.
+ * table can plot directly. Ends on the last complete day, as every other
+ * series does, so no row trails off into a half-recorded today.
  */
 export async function getPartSparklines(
     db: Db,
     libraryId: LibraryId
 ): Promise<Map<string, number[]>> {
-    const today = toDayKey(Date.now());
+    const last = toReportingDay(Date.now());
     const days = Array.from({ length: MONTH_DAYS }, (_, i) =>
-        addDays(today, i - (MONTH_DAYS - 1))
+        addDays(last, i - (MONTH_DAYS - 1))
     );
     const dayIndex = new Map(days.map((day, i) => [day, i]));
 

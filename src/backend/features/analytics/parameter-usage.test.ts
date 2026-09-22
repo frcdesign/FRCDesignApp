@@ -1,10 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
+    OptionVisibilityType,
     ParameterType,
+    VisibilityType,
     type ConfigurationParameter
 } from "../configurations/contract";
 import { buildParameterUsage } from "./parameter-usage";
-import { quantityParam } from "../../../__test_utils__/configuration-fixtures";
+import {
+    enumParam,
+    quantityParam
+} from "../../../__test_utils__/configuration-fixtures";
 
 describe("buildParameterUsage", () => {
     const enumParameter: ConfigurationParameter = {
@@ -62,6 +67,89 @@ describe("buildParameterUsage", () => {
         expect(usage.values).toEqual([
             { value: "0.0254 m", label: "1 in", count: 5, isDefault: true },
             { value: "0.0508 m", label: "2 in", count: 2, isDefault: false }
+        ]);
+    });
+
+    it("counts each branch of a filtered list against its own options", () => {
+        const vendor = enumParam("vendor", ["generic", "wcp"]);
+        const size = enumParam("size", ["s1", "s2", "s3"], {
+            optionConditions: [
+                {
+                    type: OptionVisibilityType.LIST,
+                    controlledOptions: ["s1"],
+                    condition: {
+                        type: VisibilityType.EQUAL,
+                        id: "vendor",
+                        value: "generic"
+                    }
+                },
+                {
+                    type: OptionVisibilityType.LIST,
+                    controlledOptions: ["s2", "s3"],
+                    condition: {
+                        type: VisibilityType.EQUAL,
+                        id: "vendor",
+                        value: "wcp"
+                    }
+                }
+            ]
+        });
+
+        const [, generic, wcp] = buildParameterUsage(
+            [vendor, size],
+            [
+                { parameterId: "size", value: "s1", count: 4 },
+                { parameterId: "size", value: "s2", count: 6 }
+            ]
+        );
+
+        expect(generic.path).toEqual(["generic"]);
+        expect(generic.total).toBe(4);
+        expect(generic.values.map((value) => value.value)).toEqual(["s1"]);
+
+        expect(wcp.path).toEqual(["wcp"]);
+        // s3 was never picked, and the branch it belongs to is where it shows.
+        expect(wcp.total).toBe(6);
+        expect(wcp.values.map((value) => value.value)).toEqual(["s2", "s3"]);
+    });
+
+    it("flags the option a branch lands on when the default is not offered", () => {
+        const vendor = enumParam("vendor", ["generic", "wcp"]);
+        const size = enumParam("size", ["s1", "s2"], {
+            // The declared default is s1, which only generic offers.
+            optionConditions: [
+                {
+                    type: OptionVisibilityType.LIST,
+                    controlledOptions: ["s1"],
+                    condition: {
+                        type: VisibilityType.EQUAL,
+                        id: "vendor",
+                        value: "generic"
+                    }
+                }
+            ]
+        });
+
+        const [, generic, wcp] = buildParameterUsage([vendor, size], []);
+
+        expect(
+            generic.values.map((value) => [
+                value.value,
+                value.isDefault,
+                value.isImplicitDefault
+            ])
+        ).toEqual([
+            ["s1", true, undefined],
+            ["s2", false, undefined]
+        ]);
+        expect(wcp.values).toEqual([
+            {
+                value: "s2",
+                label: "s2",
+                count: 0,
+                isDefault: false,
+                isImplicitDefault: true
+            }
         ]);
     });
 

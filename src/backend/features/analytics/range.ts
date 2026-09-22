@@ -5,7 +5,7 @@ import { min } from "drizzle-orm";
 import z from "zod";
 import { type Db } from "../../db/client";
 import { dailyMetrics } from "./schema";
-import { addDays, toDayKey, type DayRange } from "./day";
+import { addDays, toReportingDay, type DayRange } from "./day";
 
 /** The uses a part must be at or below for the low-usage reports to list it. */
 const DEFAULT_UNUSED_THRESHOLD = 5;
@@ -60,15 +60,16 @@ export async function getTrackingSince(db: Db): Promise<string | undefined> {
 }
 
 /**
- * Narrows a range to the days tracking covers. `to` is held to today as well:
- * nothing was recorded tomorrow, and an unclamped one runs to any year asked for.
+ * Narrows a range to the days tracking covers. `to` is held to the last
+ * reported day as well: today is still filling, nothing was recorded tomorrow,
+ * and an unclamped end runs to any year asked for.
  */
 export function clampRange(
     range: DayRange,
     since: string | undefined,
-    today: string = toDayKey(Date.now())
+    latest: string = toReportingDay(Date.now())
 ): DayRange {
-    const to = range.to > today ? today : range.to;
+    const to = range.to > latest ? latest : range.to;
     if (since === undefined) return { from: to, to };
     return { from: range.from < since ? since : range.from, to };
 }

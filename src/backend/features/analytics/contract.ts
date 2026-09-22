@@ -176,14 +176,30 @@ export interface ConfigurationValueUsage {
     label: string;
     count: number;
     isDefault: boolean;
+    /**
+     * The option the app lands on here because the declared default is not
+     * offered in this instance — Onshape's own fallback, not a declared default.
+     */
+    isImplicitDefault?: boolean;
 }
 
+/**
+ * One parameter as it is shown under one set of controlling choices. A list
+ * another choice filters has an entry per branch, so the options in each are
+ * only the ones that branch offers.
+ */
 export interface ConfigurationParameterUsage {
     parameterId: string;
     name: string;
     type: string;
     defaultValue?: string;
-    /** Total recorded values for this parameter, the base for percentages. */
+    /**
+     * The controlling choices this instance is shown under, outermost first —
+     * ["Generic"] for the list a Generic vendor offers. Empty when nothing
+     * conditions the parameter, which is every parameter of a flat configuration.
+     */
+    path: string[];
+    /** Recorded values counted here, the base for percentages. */
     total: number;
     values: ConfigurationValueUsage[];
 }
@@ -197,6 +213,9 @@ export interface UnusedOptionOut {
     partName: string;
     parameterId: string;
     parameterName: string;
+    /** The choices the parameter is shown under; see
+     * {@link ConfigurationParameterUsage.path}. */
+    parameterPath: string[];
     value: ConfigurationValueUsage;
     /** Every recorded value for this parameter, which the count is a
      * fraction of. */

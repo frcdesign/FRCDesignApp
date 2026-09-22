@@ -1,6 +1,6 @@
 import {
     addDays,
-    toDayKey,
+    toReportingDay,
     type DayRange
 } from "@backend/features/analytics/day";
 
@@ -30,13 +30,18 @@ export function isRangePreset(value: unknown): value is RangePreset {
     return typeof value === "string" && value in RANGE_PRESETS;
 }
 
-/** Resolves a preset to the concrete day bounds the API expects. */
+/**
+ * Resolves a preset to the concrete day bounds the API expects, ending on the
+ * last complete day: today is still filling, and a preset that reached into it
+ * put a dip at the end of every chart.
+ */
 export function toDayRange(preset: RangePreset): DayRange {
-    const today = toDayKey(Date.now());
+    const to = toReportingDay(Date.now());
     const { days } = RANGE_PRESETS[preset];
     return {
         // The app has no data before 2026, so "all time" just reaches back far.
-        from: days === undefined ? "2000-01-01" : addDays(today, -days),
-        to: today
+        // Both bounds are inclusive, so the -1 is what makes "7 days" seven.
+        from: days === undefined ? "2000-01-01" : addDays(to, -(days - 1)),
+        to
     };
 }

@@ -33,6 +33,15 @@ export function addDays(day: string, count: number): string {
     return new Date(at).toISOString().slice(0, 10);
 }
 
+/**
+ * The last day a report covers: yesterday, since today is still filling. Ending
+ * a series on a part-finished day puts a dip at the right of every chart that
+ * recovers by the next morning.
+ */
+export function toReportingDay(timestamp: number): string {
+    return addDays(toDayKey(timestamp), -1);
+}
+
 /** Both bounds inclusive, as every day key comparison here is. */
 export interface DayRange {
     from: string;

@@ -97,7 +97,8 @@ function AppBreadcrumbs({
     }
 
     return (
-        <Breadcrumbs separator="›">
+        // Spaced off the chart below, which otherwise sits on the trail.
+        <Breadcrumbs separator="›" mb="sm">
             {steps.map((step, index) =>
                 index === steps.length - 1 ? (
                     <Text key={step.label} size="sm">

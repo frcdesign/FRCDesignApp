@@ -107,7 +107,7 @@ export function isIndexedParameter(
  * What enumeration varies this parameter over, given what is fixed so far. None
  * when visibility leaves it no option, which leaves it for Onshape to default.
  */
-function parameterValues(
+export function parameterValues(
     parameter: EnumParameter | BooleanParameter,
     selection: PartialSelection,
     parameters: ConfigurationParameter[]

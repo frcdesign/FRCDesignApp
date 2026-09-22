@@ -8,6 +8,8 @@ import type {
 import { LibraryId } from "@backend/features/library/library-id";
 import { StatusColor } from "../../lib/style-constants";
 import { formatCount, formatFraction } from "./format";
+import { ParameterPath } from "./parameter-path";
+import { TablePagination, usePagedRows } from "./table-pagination";
 
 /** Below this the part and parameter names wrap into each other. */
 const MIN_TABLE_WIDTH = 760;
@@ -28,6 +30,8 @@ export function OptionsTable({
     options,
     emptyMessage
 }: OptionsTableProps): ReactNode {
+    const paged = usePagedRows(options);
+
     if (options.length === 0) {
         return (
             <Text c="dimmed" py="xl" ta="center">
@@ -37,35 +41,43 @@ export function OptionsTable({
     }
 
     return (
-        <Table.ScrollContainer minWidth={MIN_TABLE_WIDTH}>
-            <Table striped highlightOnHover>
-                <Table.Thead>
-                    <Table.Tr>
-                        {COLUMNS.map((column, index) => (
-                            <Table.Th
-                                key={column}
-                                ta={
-                                    index >= COLUMNS.length - NUMERIC_COLUMNS
-                                        ? "right"
-                                        : undefined
-                                }
-                            >
-                                {column}
-                            </Table.Th>
+        <>
+            <Table.ScrollContainer minWidth={MIN_TABLE_WIDTH}>
+                <Table striped highlightOnHover>
+                    <Table.Thead>
+                        <Table.Tr>
+                            {COLUMNS.map((column, index) => (
+                                <Table.Th
+                                    key={column}
+                                    ta={
+                                        index >=
+                                        COLUMNS.length - NUMERIC_COLUMNS
+                                            ? "right"
+                                            : undefined
+                                    }
+                                >
+                                    {column}
+                                </Table.Th>
+                            ))}
+                        </Table.Tr>
+                    </Table.Thead>
+                    <Table.Tbody>
+                        {paged.rows.map((option) => (
+                            <OptionRow
+                                key={`${option.path.elementId}-${option.parameterId}-${option.parameterPath.join(">")}-${option.value.value}`}
+                                libraryId={libraryId}
+                                option={option}
+                            />
                         ))}
-                    </Table.Tr>
-                </Table.Thead>
-                <Table.Tbody>
-                    {options.map((option) => (
-                        <OptionRow
-                            key={`${option.path.elementId}-${option.parameterId}-${option.value.value}`}
-                            libraryId={libraryId}
-                            option={option}
-                        />
-                    ))}
-                </Table.Tbody>
-            </Table>
-        </Table.ScrollContainer>
+                    </Table.Tbody>
+                </Table>
+            </Table.ScrollContainer>
+            <TablePagination
+                page={paged.page}
+                pageCount={paged.pageCount}
+                onChange={paged.setPage}
+            />
+        </>
     );
 }
 
@@ -90,7 +102,12 @@ function OptionRow({ libraryId, option }: OptionRowProps): ReactNode {
             }
         >
             <Table.Td>{option.partName}</Table.Td>
-            <Table.Td>{option.parameterName}</Table.Td>
+            <Table.Td>
+                <Group gap="xs" wrap="nowrap">
+                    <ParameterPath path={option.parameterPath} />
+                    {option.parameterName}
+                </Group>
+            </Table.Td>
             <Table.Td>
                 <OptionLabel value={option.value} />
             </Table.Td>
@@ -117,7 +134,13 @@ function OptionLabel({ value }: OptionLabelProps): ReactNode {
                 </Badge>
             )}
             {/* A default nobody picks is the strongest signal the parameter
-                is wrong. */}
+                is wrong. An implicit one is stronger still: it is what this
+                branch lands on without anyone having declared it. */}
+            {value.isImplicitDefault && (
+                <Badge color={StatusColor.WARNING} size="sm">
+                    Implicit default
+                </Badge>
+            )}
             {value.isDefault && (
                 <Badge color={StatusColor.WARNING} size="sm">
                     Default

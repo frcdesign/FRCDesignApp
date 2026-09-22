@@ -16,7 +16,7 @@ describe("clampRange", () => {
         ).toEqual({ from: "2026-06-01", to: TODAY });
     });
 
-    it("holds the end to today, so no chart densifies days that cannot have happened", () => {
+    it("holds the end to the last reported day, so no chart densifies days that cannot have happened", () => {
         expect(
             clampRange(
                 { from: "2026-01-01", to: "9999-12-31" },

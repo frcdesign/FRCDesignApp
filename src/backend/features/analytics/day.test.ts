@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addDays, toDayKey } from "./day";
+import { addDays, toDayKey, toReportingDay } from "./day";
 
 describe("toDayKey", () => {
     // The whole point of reporting in a fixed US zone: an evening build session
@@ -38,5 +38,20 @@ describe("addDays", () => {
         expect(addDays("2026-03-07", 1)).toBe("2026-03-08");
         expect(addDays("2026-03-08", 1)).toBe("2026-03-09");
         expect(addDays("2026-10-31", 1)).toBe("2026-11-01");
+    });
+});
+
+describe("toReportingDay", () => {
+    it("reports through yesterday, since today is still filling", () => {
+        expect(toReportingDay(Date.parse("2026-09-11T02:00:00Z"))).toBe(
+            "2026-09-09"
+        );
+    });
+
+    it("steps back from the local day, which crosses a month", () => {
+        // 10pm Eastern on 30 Sep, which UTC already calls October.
+        expect(toReportingDay(Date.parse("2026-10-01T02:00:00Z"))).toBe(
+            "2026-09-29"
+        );
     });
 });

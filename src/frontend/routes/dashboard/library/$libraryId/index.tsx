@@ -25,9 +25,6 @@ import { UsageTreemap } from "../../../../features/dashboard/usage-treemap";
 import { LifetimeTiles } from "../../../../features/dashboard/lifetime-tiles";
 import { SectionCard } from "../../../../components/section";
 
-/** Enough to see the head of the distribution without a wall of rows. */
-const MOST_USED_LIMIT = 10;
-
 export const Route = createFileRoute("/dashboard/library/$libraryId/")({
     component: LibraryOverview
 });
@@ -87,11 +84,11 @@ function LibraryBody({
 
             <SectionCard title="Most used parts">
                 {parts.data ? (
+                    // Sorted most used first, so the head of the distribution
+                    // is the first page and the zeroes are pages away.
                     <PartsTable
                         libraryId={libraryId}
-                        // Now that unused parts are included, this would
-                        // otherwise trail off into a list of zeroes.
-                        parts={parts.data.slice(0, MOST_USED_LIMIT)}
+                        parts={parts.data}
                         emptyMessage="No parts have been inserted from this library yet."
                     />
                 ) : (

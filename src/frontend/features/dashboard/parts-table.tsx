@@ -20,6 +20,7 @@ import {
     type SortColumn,
     type SortState
 } from "./parts-sort";
+import { TablePagination, usePagedRows } from "./table-pagination";
 
 /** Small enough to sit in a row without stretching it. */
 const ROW_SPARKLINE = { h: 24, w: 80 };
@@ -80,11 +81,11 @@ export function PartsTable({
     search = ""
 }: PartsTableProps): ReactNode {
     const [sort, setSort] = useState<SortState>(DEFAULT_SORT);
-
     const shown = useMemo(
         () => filterAndSort(parts, search, sort),
         [parts, search, sort]
     );
+    const paged = usePagedRows(shown);
 
     const toggle = (column: SortColumn): void => {
         setSort((prev) => nextSort(prev, column));
@@ -99,37 +100,44 @@ export function PartsTable({
     }
 
     return (
-        <Table.ScrollContainer minWidth={900}>
-            <Table striped highlightOnHover>
-                <Table.Thead>
-                    <Table.Tr>
-                        {SORTABLE_COLUMNS.map((heading) => (
-                            <SortableTh
-                                key={heading.column}
-                                {...heading}
-                                sort={sort}
-                                onToggle={toggle}
+        <>
+            <Table.ScrollContainer minWidth={900}>
+                <Table striped highlightOnHover>
+                    <Table.Thead>
+                        <Table.Tr>
+                            {SORTABLE_COLUMNS.map((heading) => (
+                                <SortableTh
+                                    key={heading.column}
+                                    {...heading}
+                                    sort={sort}
+                                    onToggle={toggle}
+                                />
+                            ))}
+                            <Table.Th w={COLUMN_WIDTH.sparkline}>
+                                Last {MONTH_DAYS} days
+                            </Table.Th>
+                            <Table.Th w={COLUMN_WIDTH.onshape} ta="center">
+                                Onshape
+                            </Table.Th>
+                        </Table.Tr>
+                    </Table.Thead>
+                    <Table.Tbody>
+                        {paged.rows.map((part) => (
+                            <PartRow
+                                key={part.path.elementId}
+                                libraryId={libraryId}
+                                part={part}
                             />
                         ))}
-                        <Table.Th w={COLUMN_WIDTH.sparkline}>
-                            Last {MONTH_DAYS} days
-                        </Table.Th>
-                        <Table.Th w={COLUMN_WIDTH.onshape} ta="center">
-                            Onshape
-                        </Table.Th>
-                    </Table.Tr>
-                </Table.Thead>
-                <Table.Tbody>
-                    {shown.map((part) => (
-                        <PartRow
-                            key={part.path.elementId}
-                            libraryId={libraryId}
-                            part={part}
-                        />
-                    ))}
-                </Table.Tbody>
-            </Table>
-        </Table.ScrollContainer>
+                    </Table.Tbody>
+                </Table>
+            </Table.ScrollContainer>
+            <TablePagination
+                page={paged.page}
+                pageCount={paged.pageCount}
+                onChange={paged.setPage}
+            />
+        </>
     );
 }
 

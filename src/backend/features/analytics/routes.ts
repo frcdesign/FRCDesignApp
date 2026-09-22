@@ -18,7 +18,7 @@ import { ParameterType } from "../configurations/contract";
 import { usesPerMonth } from "./measures";
 import { getGrowth } from "./growth";
 import { toElementPath } from "../../lib/onshape/path";
-import { toDayKey } from "./day";
+import { toReportingDay } from "./day";
 import { getHealthCounts } from "./health";
 import { buildParameterUsage } from "./parameter-usage";
 import {
@@ -75,7 +75,7 @@ analyticsRoutes.get(
                 getSeries(db, range),
                 getMetricSeries(db, range),
                 getSources(db, requested),
-                getGrowth(db, toDayKey(Date.now()), trackingSince)
+                getGrowth(db, toReportingDay(Date.now()), trackingSince)
             ]);
 
         const out: AnalyticsOverviewOut = {
@@ -105,7 +105,7 @@ analyticsRoutes.get(
         const [totals, metricSeries, growth] = await Promise.all([
             getTotals(db, libraryId),
             getMetricSeries(db, range, libraryId),
-            getGrowth(db, toDayKey(Date.now()), trackingSince, libraryId)
+            getGrowth(db, toReportingDay(Date.now()), trackingSince, libraryId)
         ]);
 
         const out: LibrarySummaryOut = {
@@ -238,6 +238,7 @@ analyticsRoutes.get(
                         partName: part.name,
                         parameterId: parameter.parameterId,
                         parameterName: parameter.name,
+                        parameterPath: parameter.path,
                         value,
                         parameterTotal: parameter.total
                     });
