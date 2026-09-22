@@ -180,7 +180,7 @@ const VERSION_MANAGER_LABEL = "Version Manager";
 
 /** Marks the newest page out. Drop it once the page is no longer news. */
 const NEW_BADGE = (
-    <Badge size="xs" variant="light" color={StatusColor.INFO}>
+    <Badge size="xs" variant="light">
         New
     </Badge>
 );

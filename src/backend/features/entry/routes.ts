@@ -11,6 +11,7 @@ import { isSignedIn } from "../auth/request-auth";
 import { getSessionCompanyId, PERSONAL_COMPANY_ID } from "../auth/session";
 import { DEFAULT_SETTINGS } from "../settings/settings";
 import { LibraryId, toLibraryId } from "../library/library-id";
+import { WORKSPACE_INSTANCE_TYPE } from "../../lib/onshape/path";
 import { trackAppOpen, trackInBackground } from "../analytics/tracking";
 
 /** Marks the `/init` a sign-in returns to; see {@link needsSignIn}. */
@@ -59,6 +60,18 @@ interface AppEntry {
     libraryId: LibraryId;
 }
 
+/**
+ * Whether the panel was launched somewhere the version manager can act on: a
+ * workspace, rather than a version or a launch carrying no element at all.
+ */
+function hasTargetWorkspace(search: URLSearchParams): boolean {
+    return (
+        search.get("documentId") !== null &&
+        search.get("instanceId") !== null &&
+        search.get("instanceType") === WORKSPACE_INSTANCE_TYPE
+    );
+}
+
 /** Where the caller left off, as their row records it. */
 function getUserEntry(db: Db, userId: string) {
     // The join is the check on the stored group: one deleted, or left behind by
@@ -67,7 +80,8 @@ function getUserEntry(db: Db, userId: string) {
         .select({
             libraryId: users.libraryId,
             theme: users.theme,
-            groupId: groups.id
+            groupId: groups.id,
+            isVersionManagerOpen: users.isVersionManagerOpen
         })
         .from(users)
         .leftJoin(
@@ -106,7 +120,13 @@ async function getAppEntry(c: AppContext): Promise<AppEntry> {
     const libraryId = toLibraryId(user?.libraryId, DEFAULT_SETTINGS.libraryId);
     const path = `/app/library/${libraryId}`;
     const groupPath = user?.groupId ? `${path}/groups/${user.groupId}` : path;
-    return { url: `${groupPath}?${search.toString()}`, userId, libraryId };
+    // The version manager only exists where there is a workspace to push or
+    // pull; without one the caller resumes in their library as usual.
+    const resumePath =
+        user?.isVersionManagerOpen && hasTargetWorkspace(search)
+            ? "/app/version-manager"
+            : groupPath;
+    return { url: `${resumePath}?${search.toString()}`, userId, libraryId };
 }
 
 export const entryRoutes = getApp();

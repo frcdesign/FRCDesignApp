@@ -14,9 +14,9 @@ const MAX_TIPS = 3;
 
 const TIP_TEXT = {
     [LinkDirection.CHILD]:
-        "Tip: the Push buttons push straight away, without opening this form.",
+        "Tip: the Quick push buttons push straight away, without opening this form.",
     [LinkDirection.PARENT]:
-        "Tip: the Pull buttons pull straight away, without opening this form."
+        "Tip: the Quick pull buttons pull straight away, without opening this form."
 } as const;
 
 /**

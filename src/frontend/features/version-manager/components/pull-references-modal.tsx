@@ -1,75 +1,99 @@
-import { Button, List, SegmentedControl, Stack, Text } from "@mantine/core";
+import { Button, Text, TextInput, Textarea } from "@mantine/core";
 import { modals } from "@mantine/modals";
 import { ArrowLineDownIcon } from "@phosphor-icons/react";
 import { useState, type ReactNode } from "react";
 import {
     LinkDirection,
+    MAX_VERSION_NAME_LENGTH,
     PullScopeKind,
     type LinkedWorkspace,
-    type PullScope,
     type WorkspacePath
 } from "@backend/features/version-manager/contract";
 import { AppModalBody, AppModalFooter } from "../../../components/app-modal";
 import { IconSize, StatusColor } from "../../../lib/style-constants";
-import { usePullReferencesMutation } from "../queries";
+import { useNextVersionNameQuery, usePullReferencesMutation } from "../queries";
 import { showQuickActionTip } from "../version-manager-tips";
 
 export interface PullReferencesFormProps {
     workspace: WorkspacePath;
-    /** The one parent to pull from; absent for every parent. */
-    source?: LinkedWorkspace;
-    /** What the pull reads, named for the list above the button. */
-    sources: string[];
+    /** The parent to pull from, which the run versions. */
+    source: LinkedWorkspace;
+    /** What that parent is called, for the line above the button. */
+    sourceName: string;
     modalId: string;
 }
 
 /**
- * What a pull does before it runs. There is no version to name, so what this
- * asks instead is how wide to cast: the parents somebody linked, or every
- * out-of-date reference the workspace has, linked or not.
+ * What a pull does before it runs: what to call the version it cuts in the
+ * parent, this workspace then moving onto that. The Quick pull buttons run
+ * without it, under the defaults shown here.
  */
 export function PullReferencesForm(props: PullReferencesFormProps): ReactNode {
-    const { workspace, source, sources, modalId } = props;
-    const [everything, setEverything] = useState(false);
+    const { workspace, source, sourceName, modalId } = props;
+    // Undefined until somebody types; see the push form, which this mirrors.
+    const [typedName, setTypedName] = useState<string>();
+    const [description, setDescription] = useState("");
+    const suggested = useNextVersionNameQuery(source.workspace);
     const pull = usePullReferencesMutation(workspace);
 
-    // Aimed at one parent there is nothing to widen, so the choice is not
-    // offered and the run is one a menu item would have made.
-    const isEdited = everything;
-
-    const scope: PullScope = source
-        ? { kind: PullScopeKind.ONE, workspace: source.workspace }
-        : {
-              kind: everything ? PullScopeKind.ALL : PullScopeKind.PARENTS
-          };
+    const name = typedName ?? suggested.data?.name ?? "";
+    // Nothing here was touched, so the form did nothing a menu item would not
+    // have done — which is what the tip is for.
+    const isEdited = typedName !== undefined || description !== "";
 
     const submit = () => {
-        pull.mutate(scope, {
-            onSuccess: () => {
-                modals.close(modalId);
-                if (!isEdited) {
-                    showQuickActionTip(LinkDirection.PARENT);
+        pull.mutate(
+            {
+                name,
+                description: description.trim(),
+                scope: {
+                    kind: PullScopeKind.ONE,
+                    workspace: source.workspace
+                }
+            },
+            {
+                onSuccess: () => {
+                    modals.close(modalId);
+                    if (!isEdited) {
+                        showQuickActionTip(LinkDirection.PARENT);
+                    }
                 }
             }
-        });
+        );
     };
 
     return (
         <>
             <AppModalBody>
-                {!source && (
-                    <SegmentedControl
-                        size="xs"
-                        fullWidth
-                        value={everything ? "all" : "linked"}
-                        onChange={(value) => setEverything(value === "all")}
-                        data={[
-                            { value: "linked", label: "Linked parents" },
-                            { value: "all", label: "All references" }
-                        ]}
-                    />
-                )}
-                <PullSources sources={sources} everything={everything} />
+                <TextInput
+                    label="Version name"
+                    placeholder={
+                        suggested.isPending
+                            ? "Reading that document's versions..."
+                            : "Leave empty for the next V number"
+                    }
+                    maxLength={MAX_VERSION_NAME_LENGTH}
+                    value={name}
+                    onChange={(event) =>
+                        setTypedName(event.currentTarget.value)
+                    }
+                    data-autofocus
+                />
+                <Textarea
+                    label="Description"
+                    placeholder="Optional"
+                    autosize
+                    minRows={2}
+                    maxRows={5}
+                    value={description}
+                    onChange={(event) =>
+                        setDescription(event.currentTarget.value)
+                    }
+                />
+                <Text size="sm" c={StatusColor.DIMMED}>
+                    A version of {sourceName} is created, and this document's
+                    references to it move onto that version.
+                </Text>
             </AppModalBody>
             <AppModalFooter>
                 <Button
@@ -83,39 +107,5 @@ export function PullReferencesForm(props: PullReferencesFormProps): ReactNode {
                 </Button>
             </AppModalFooter>
         </>
-    );
-}
-
-interface PullSourcesProps {
-    sources: string[];
-    everything: boolean;
-}
-
-/** What the pull will move this workspace's references onto. */
-function PullSources(props: PullSourcesProps): ReactNode {
-    const { sources, everything } = props;
-
-    if (everything) {
-        return (
-            <Text size="sm" c={StatusColor.DIMMED}>
-                Every out-of-date reference in this workspace moves onto the
-                latest version, including references to documents nobody has
-                linked here.
-            </Text>
-        );
-    }
-
-    return (
-        <Stack gap={4}>
-            <Text size="sm">
-                References to these documents will move onto their latest
-                versions:
-            </Text>
-            <List size="sm" c={StatusColor.DIMMED}>
-                {sources.map((name) => (
-                    <List.Item key={name}>{name}</List.Item>
-                ))}
-            </List>
-        </Stack>
     );
 }

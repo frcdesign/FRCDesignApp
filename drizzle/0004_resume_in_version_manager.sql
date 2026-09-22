@@ -1,0 +1,1 @@
+ALTER TABLE `users` ADD `is_version_manager_open` integer DEFAULT false NOT NULL;

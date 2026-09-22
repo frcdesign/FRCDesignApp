@@ -8,10 +8,8 @@ import {
     hasPermissions,
     OnshapePermission
 } from "../../lib/onshape/endpoints/permissions";
-import {
-    getDocument,
-    getInsertables
-} from "../../lib/onshape/endpoints/documents";
+import { getDocument } from "../../lib/onshape/endpoints/documents";
+import { getWorkspaceThumbnail } from "../../lib/onshape/endpoints/thumbnails";
 import { getVersions } from "../../lib/onshape/endpoints/versions";
 import {
     getWorkspaceLinkParam,
@@ -20,6 +18,7 @@ import {
 import { getDb } from "../../db/client";
 import { validate } from "../../lib/validate";
 import { requireSignInMiddleware } from "../auth/guards";
+import { ThumbnailSize } from "../thumbnails/contract";
 import { getSessionId } from "../auth/session";
 import {
     isSameWorkspace,
@@ -30,7 +29,6 @@ import {
     PushScopeKind,
     toWorkspacePath,
     type LinkedWorkspace,
-    type UnversionedChanges,
     type WorkspacePath
 } from "./contract";
 import {
@@ -63,6 +61,11 @@ const workspaceSchema = z.object({
 });
 
 const workspaceQuery = workspaceSchema;
+
+const thumbnailQuery = workspaceSchema.extend({
+    /** Which of Onshape's two stored sizes to serve. */
+    size: z.enum(ThumbnailSize).default(ThumbnailSize.SMALL)
+});
 
 const jobQuery = workspaceSchema.extend({
     /** The run the client is watching; without one, the workspace's latest. */
@@ -112,6 +115,9 @@ const pushBody = z.object({
 
 const pullBody = z.object({
     workspace: workspaceSchema,
+    /** Absent for a quick pull; the workflow names it as Onshape would. */
+    name: z.string().min(1).max(MAX_VERSION_NAME_LENGTH).optional(),
+    description: z.string().max(10_000).optional(),
     scope: pullScope.default({ kind: PullScopeKind.PARENTS })
 });
 
@@ -150,7 +156,8 @@ async function requirePermissions(
  * parents it pulls from and the children it pushes to, and the workspace's own
  * document name. Each link is resolved against Onshape for its names and the
  * caller's permissions, so a link to something they cannot read comes back
- * unopenable and unnamed.
+ * unopenable and unnamed; a parent also carries what it has changed since its
+ * own last version, which is what a pull would leave behind.
  *
  * Requires read on the workspace being asked about.
  */
@@ -178,15 +185,20 @@ versionManagerRoutes.get(
             getDocument(client, workspace)
         ]);
 
-        const describe = (rows: typeof parentRows) =>
+        const describe = (rows: typeof parentRows, countChanges: boolean) =>
             Promise.all(
                 rows.map((row) =>
-                    toLinkedWorkspace(client, row.id, otherEnd(row, workspace))
+                    toLinkedWorkspace(
+                        client,
+                        row.id,
+                        otherEnd(row, workspace),
+                        countChanges
+                    )
                 )
             );
         const [parents, children]: LinkedWorkspace[][] = await Promise.all([
-            describe(parentRows),
-            describe(childRows)
+            describe(parentRows, true),
+            describe(childRows, false)
         ]);
 
         return c.json({ parents, children, documentName: document.name });
@@ -280,59 +292,6 @@ versionManagerRoutes.delete(
 
         await deleteLink(db, linkId);
         return c.json({ success: true });
-    }
-);
-
-/**
- * `GET /api/unversioned-changes`
- *
- * How far each linked parent has moved since its own last version, keyed by
- * link id. A pull moves this workspace onto a parent's latest *version*, so a
- * parent with unversioned changes has edits a pull cannot bring in — which is
- * the one thing the list cannot say on its own.
- *
- * Args: `documentId`, `instanceId` of the workspace in view.
- * Requires read on it; a parent Onshape refuses is left out rather than failing
- * the lot.
- */
-versionManagerRoutes.get(
-    "/unversioned-changes",
-    requireSignInMiddleware,
-    validate("query", workspaceQuery),
-    async (c) => {
-        const workspace = toWorkspace(c.req.valid("query"));
-        const client = await c.var.getOnshapeApi();
-        await requirePermissions(
-            client,
-            workspace,
-            "read this document",
-            OnshapePermission.READ
-        );
-
-        const rows = await getParentLinks(getDb(c.env.DB), workspace);
-        const changes: UnversionedChanges = {};
-        await Promise.all(
-            rows.map(async (row) => {
-                const parent = otherEnd(row, workspace);
-                try {
-                    // No `include` flags: they all default to false, so this
-                    // asks Onshape to enumerate nothing and answer the counters.
-                    const insertables = await getInsertables(client, parent);
-                    if (insertables.changesSinceVersionSave !== undefined) {
-                        changes[row.id] = insertables.changesSinceVersionSave;
-                    }
-                } catch (error) {
-                    // A parent the caller cannot read, or one Onshape would not
-                    // answer for: the row itself still renders.
-                    console.warn(
-                        `Failed to count changes in ${parent.documentId}`,
-                        error
-                    );
-                }
-            })
-        );
-
-        return c.json(changes);
     }
 );
 
@@ -543,12 +502,17 @@ async function resolvePushOrder(
 /**
  * `POST /api/pull-references`
  *
- * Starts a pull: moves this workspace's out-of-date references onto the latest
- * versions of whatever {@link PullScope} names — its linked parents, one of
- * them, or every document it references. Answers the run's `jobId`.
+ * Starts a pull: versions each parent {@link PullScope} names — one of them or
+ * all of them — and moves this workspace's references onto what was cut. A
+ * reference points at a version, so a parent's unversioned edits are only
+ * pullable once there is one holding them. Answers the run's `jobId`.
  *
- * Requires write on the caller's workspace, which is the only one a pull
- * changes.
+ * The exception is every-reference scope, which versions nothing: those
+ * documents are not linked here and are nobody's to cut a version in, so it
+ * moves onto whatever versions they already have.
+ *
+ * Requires write on the caller's workspace, and write and link on each parent
+ * it would version. Checked before the run starts, as a push's are.
  */
 versionManagerRoutes.post(
     "/pull-references",
@@ -556,7 +520,7 @@ versionManagerRoutes.post(
     validate("json", pullBody),
     async (c) => {
         const body = c.req.valid("json");
-        const { scope } = body;
+        const { name, description = "", scope } = body;
         const workspace = toWorkspace(body.workspace);
 
         const client = await c.var.getOnshapeApi();
@@ -567,14 +531,26 @@ versionManagerRoutes.post(
             OnshapePermission.WRITE
         );
 
-        const sourceDocumentIds = await resolvePullSources(c, workspace, scope);
+        const sources = await resolvePullSources(c, workspace, scope);
+        for (const source of sources ?? []) {
+            await requirePermissions(
+                client,
+                source,
+                "create a version in every document this pull reads",
+                OnshapePermission.WRITE,
+                // The reference this workspace ends up carrying points at it.
+                OnshapePermission.LINK
+            );
+        }
 
         const instance = await c.env.VERSION_MANAGER_WORKFLOW.create({
             params: {
                 kind: "pull",
                 sessionId: getSessionId(c),
                 workspace,
-                sourceDocumentIds
+                sources,
+                name,
+                description
             }
         });
         await rememberJob(c.env, workspace, instance.id);
@@ -584,15 +560,15 @@ versionManagerRoutes.post(
 );
 
 /**
- * The documents a pull takes its versions from, or undefined for all of them.
- * Narrowed to the parents, so a pull only moves references the graph accounts
- * for.
+ * The parents a pull versions and takes those versions from, or undefined for
+ * every out-of-date reference. Narrowed to the parents, so a pull only moves
+ * references the graph accounts for.
  */
 async function resolvePullSources(
     c: AppContext,
     workspace: WorkspacePath,
     scope: PullScopeInput
-): Promise<string[] | undefined> {
+): Promise<WorkspacePath[] | undefined> {
     if (scope.kind === PullScopeKind.ALL) {
         return undefined;
     }
@@ -609,7 +585,7 @@ async function resolvePullSources(
                 HttpStatus.CONFLICT
             );
         }
-        return [row.sourceDocumentId];
+        return [toEdge(row).parent];
     }
 
     if (rows.length === 0) {
@@ -618,7 +594,7 @@ async function resolvePullSources(
             HttpStatus.CONFLICT
         );
     }
-    return rows.map((row) => row.sourceDocumentId);
+    return rows.map((row) => toEdge(row).parent);
 }
 
 /**
@@ -672,6 +648,63 @@ versionManagerRoutes.get(
         const versions = await getVersions(client, workspace);
         return c.json({
             name: nextVersionName(versions.map((version) => version.name))
+        });
+    }
+);
+
+/**
+ * Long enough that a row and the card it opens on hover share one fetch, short
+ * enough that a workspace somebody just changed looks current again soon. Not
+ * one of {@link CachePolicy}'s three: a workspace thumbnail is neither
+ * immutable, as a rendered configuration's is, nor unstorable.
+ */
+const WORKSPACE_THUMBNAIL_CACHE = "private, max-age=300";
+
+/**
+ * `GET /api/workspace-thumbnail?documentId=&instanceId=&size=`
+ *
+ * The linked workspace's own thumbnail, proxied: Onshape serves it only to an
+ * OAuth caller, so the browser cannot fetch it directly. Nothing is stored or
+ * rendered — this is the picture Onshape already keeps for the document.
+ *
+ * A workspace with no thumbnail answers 404, which the client shows as the same
+ * placeholder any other missing image gets.
+ *
+ * Requires read on the workspace.
+ */
+versionManagerRoutes.get(
+    "/workspace-thumbnail",
+    requireSignInMiddleware,
+    validate("query", thumbnailQuery),
+    async (c) => {
+        const query = c.req.valid("query");
+        const workspace = toWorkspace(query);
+        const client = await c.var.getOnshapeApi();
+        await requirePermissions(
+            client,
+            workspace,
+            "read this document",
+            OnshapePermission.READ
+        );
+
+        let bytes: ArrayBuffer;
+        try {
+            bytes = await getWorkspaceThumbnail(client, workspace, query.size);
+        } catch (error) {
+            // A document Onshape has no picture for, which is an answer rather
+            // than a failure: the client falls back to the placeholder.
+            console.warn(
+                `No thumbnail for ${workspace.documentId}/${workspace.instanceId}`,
+                error
+            );
+            return c.body(null, HttpStatus.NOT_FOUND);
+        }
+
+        return new Response(bytes, {
+            headers: {
+                "Content-Type": "image/png",
+                "Cache-Control": WORKSPACE_THUMBNAIL_CACHE
+            }
         });
     }
 );

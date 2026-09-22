@@ -6,6 +6,7 @@ import type { Db } from "../../db/client";
 import type { OnshapeApi } from "../../lib/onshape/client";
 import {
     getDocument,
+    getInsertables,
     getWorkspaces
 } from "../../lib/onshape/endpoints/documents";
 import {
@@ -201,7 +202,9 @@ export async function collectDescendantEdges(
 export async function toLinkedWorkspace(
     client: OnshapeApi,
     linkId: string,
-    workspace: WorkspacePath
+    workspace: WorkspacePath,
+    /** Parents only; see {@link LinkedWorkspace.unversionedChanges}. */
+    countChanges = false
 ): Promise<LinkedWorkspace> {
     if (!(await hasPermissions(client, workspace, OnshapePermission.READ))) {
         return { linkId, workspace, isOpenable: false };
@@ -209,18 +212,48 @@ export async function toLinkedWorkspace(
 
     try {
         const document = await getDocument(client, workspace);
+        const [workspaceName, unversionedChanges] = await Promise.all([
+            getWorkspaceName(client, workspace, document),
+            countChanges
+                ? countUnversionedChanges(client, workspace)
+                : undefined
+        ]);
         return {
             linkId,
             workspace,
             isOpenable: true,
             documentName: document.name,
-            workspaceName: await getWorkspaceName(client, workspace, document)
+            workspaceName,
+            unversionedChanges
         };
     } catch (error) {
         // Readable a moment ago and not now, or a document that has since been
         // deleted: the link is still real, so show it without the names.
         console.warn(`Failed to describe linked workspace ${linkId}`, error);
         return { linkId, workspace, isOpenable: false };
+    }
+}
+
+/**
+ * What the workspace has changed since its own last version. Counted rather
+ * than failed on: a parent Onshape will not answer for is a row without a
+ * badge, not a list that does not render.
+ */
+async function countUnversionedChanges(
+    client: OnshapeApi,
+    workspace: WorkspacePath
+): Promise<number | undefined> {
+    try {
+        // No `include` flags: they all default to false, so this asks Onshape
+        // to enumerate nothing and answer the counters.
+        const insertables = await getInsertables(client, workspace);
+        return insertables.changesSinceVersionSave;
+    } catch (error) {
+        console.warn(
+            `Failed to count changes in ${workspace.documentId}`,
+            error
+        );
+        return undefined;
     }
 }
 

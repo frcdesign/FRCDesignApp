@@ -4,6 +4,7 @@ import {
     type WorkflowStep
 } from "cloudflare:workers";
 import type { AppBindings } from "../../lib/context";
+import type { OnshapeApi } from "../../lib/onshape/client";
 import { getOnshapeApiFromSessionId } from "../auth/request-auth";
 import {
     createVersion,
@@ -57,10 +58,16 @@ export interface PushJobParams extends JobParamsBase {
 export interface PullJobParams extends JobParamsBase {
     kind: "pull";
     /**
-     * The documents to pull from. Absent means every out-of-date reference,
-     * which is what the old app called "update all references".
+     * The parents to pull from: each is versioned, and this workspace's
+     * references are moved onto that version. Absent means every out-of-date
+     * reference instead — what the old app called "update all references" —
+     * which versions nothing, the documents behind those references being
+     * nobody's to cut a version in.
      */
-    sourceDocumentIds?: string[];
+    sources?: WorkspacePath[];
+    /** Absent for a quick pull; the run then names each version as Onshape would. */
+    name?: string;
+    description: string;
 }
 
 export type VersionJobParams = PushJobParams | PullJobParams;
@@ -99,6 +106,32 @@ export class VersionManagerWorkflow extends WorkflowEntrypoint<
         }
     }
 
+    /**
+     * Cuts a version, under the name given or the one Onshape's own dialog
+     * would offer. Per document, so a run that versions several numbers each
+     * from its own history rather than carrying the first one's number.
+     */
+    private async _cutVersion(
+        client: OnshapeApi,
+        target: WorkspacePath,
+        name: string | undefined,
+        description: string
+    ): Promise<OnshapeVersionInfo> {
+        const versionName =
+            name ??
+            nextVersionName(
+                (await getVersions(client, target)).map(
+                    (version) => version.name
+                )
+            );
+        return createVersion(client, target, versionName, description);
+    }
+
+    /**
+     * A pull versions each parent and moves this workspace onto what it just
+     * cut: a reference points at a version, so the parent's unversioned edits
+     * are only pullable once there is one holding them.
+     */
     private async _pull(
         params: PullJobParams,
         step: WorkflowStep
@@ -107,17 +140,42 @@ export class VersionManagerWorkflow extends WorkflowEntrypoint<
             this.env.KV,
             params.sessionId
         );
+        const { sources, name, description } = params;
+
+        // Keyed by document, which the route has already made unambiguous by
+        // refusing a run naming one twice.
+        const pinnedVersions: Record<string, string> = {};
+        for (const [index, source] of (sources ?? []).entries()) {
+            const version = await step.do(
+                `create-version-${index}`,
+                { retries: ONSHAPE_STEP_RETRIES },
+                (): Promise<OnshapeVersionInfo> =>
+                    this._cutVersion(client, source, name, description)
+            );
+            pinnedVersions[source.documentId] = version.id;
+        }
+
         const counts = await step.do(
             "pull-references",
             { retries: ONSHAPE_STEP_RETRIES },
             (): Promise<ReferenceUpdateCounts> =>
-                updateOutdatedReferences(client, params.workspace, {
-                    onlyDocumentIds: params.sourceDocumentIds
-                })
+                updateOutdatedReferences(
+                    client,
+                    params.workspace,
+                    // Every out-of-date reference where nothing was versioned,
+                    // and otherwise the versions this run has just cut.
+                    sources
+                        ? {
+                              onlyDocumentIds: Object.keys(pinnedVersions),
+                              pinnedVersions
+                          }
+                        : {}
+                )
         );
         return {
             ...EMPTY_JOB_RESULT,
             ...counts,
+            createdVersions: Object.keys(pinnedVersions).length,
             updatedWorkspaces: counts.updatedElements > 0 ? 1 : 0
         };
     }
@@ -132,23 +190,8 @@ export class VersionManagerWorkflow extends WorkflowEntrypoint<
         );
         const { workspace, name, description } = params;
 
-        /**
-         * Cuts the version, under the name given or the one Onshape's own
-         * dialog would offer. Per document, so a recursive push numbers each
-         * one from its own history rather than carrying the first one's number.
-         */
-        const cutVersion = async (
-            target: WorkspacePath
-        ): Promise<OnshapeVersionInfo> => {
-            const versionName =
-                name ??
-                nextVersionName(
-                    (await getVersions(client, target)).map(
-                        (version) => version.name
-                    )
-                );
-            return createVersion(client, target, versionName, description);
-        };
+        const cutVersion = (target: WorkspacePath) =>
+            this._cutVersion(client, target, name, description);
 
         const rootVersion = await step.do(
             "create-version",

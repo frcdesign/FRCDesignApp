@@ -13,6 +13,12 @@ export interface Settings {
     libraryId: LibraryId;
     /** The group they last opened in it; null for the library itself. */
     groupId: string | null;
+    /**
+     * Whether the version manager was the page last open, which entry resumes
+     * in ahead of the library — where the panel has a workspace for it to act
+     * on, and so has the page at all.
+     */
+    isVersionManagerOpen: boolean;
 }
 
 export type SettingsUpdate = Partial<Settings>;
@@ -20,5 +26,6 @@ export type SettingsUpdate = Partial<Settings>;
 export const DEFAULT_SETTINGS: Settings = {
     theme: Theme.SYSTEM,
     libraryId: LibraryId.FRC_DESIGN_LIB,
-    groupId: null
+    groupId: null,
+    isVersionManagerOpen: false
 };

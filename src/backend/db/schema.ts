@@ -178,7 +178,14 @@ export const users = sqliteTable("users", {
         .references(() => libraries.id),
     // The group last opened in that library, which entry resumes in. Null for
     // the library itself; a stale one resolves to that, so it is never cleaned.
-    groupId: text("group_id")
+    groupId: text("group_id"),
+    // Set while the version manager is the page they are on, which entry
+    // resumes in ahead of the library above.
+    isVersionManagerOpen: integer("is_version_manager_open", {
+        mode: "boolean"
+    })
+        .notNull()
+        .default(DEFAULT_SETTINGS.isVersionManagerOpen)
 });
 
 export const favorites = sqliteTable(

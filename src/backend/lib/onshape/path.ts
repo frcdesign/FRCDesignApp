@@ -4,6 +4,9 @@ import { Selection } from "../../features/configurations/contract";
  * and the runtime list validators check against both derive from it. */
 export const INSTANCE_TYPES = ["w", "v", "m"] as const;
 
+/** The one that can be edited, and so the one the app acts on. */
+export const WORKSPACE_INSTANCE_TYPE = "w";
+
 export type InstanceType = (typeof INSTANCE_TYPES)[number];
 
 export interface DocumentPath {
@@ -102,9 +105,7 @@ function toInstanceTypeKey(instanceType: InstanceType): InstanceTypeKey {
  * Returns the named-ID object that Onshape API bodies/query params expect,
  * e.g. `{ documentId, workspaceId }` rather than the `/d/.../w/...` path form.
  */
-function toInstanceApiObject(
-    path: InstancePath
-): Record<string, string> {
+function toInstanceApiObject(path: InstancePath): Record<string, string> {
     return {
         documentId: path.documentId,
         [toInstanceTypeKey(path.instanceType)]: path.instanceId

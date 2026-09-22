@@ -2,7 +2,6 @@
  * What the version manager's routes take and answer. A leaf: the frontend
  * imports it, so nothing Worker-only belongs here.
  */
-import { onshapeApiUrl } from "../../lib/onshape/api-base";
 import { type InstancePath } from "../../lib/onshape/path";
 
 /**
@@ -49,6 +48,13 @@ export interface LinkedWorkspace {
     isOpenable: boolean;
     documentName?: string;
     workspaceName?: string;
+    /**
+     * Parents only: how far this one has moved since its own last version. A
+     * pull moves onto a version, so these are the edits it would leave behind.
+     * Absent rather than zero where Onshape would not say, zero meaning caught
+     * up.
+     */
+    unversionedChanges?: number;
 }
 
 export interface WorkspaceLinksData {
@@ -102,13 +108,6 @@ export type PullScope =
     | { kind: PullScopeKind.ALL }
     | { kind: PullScopeKind.ONE; workspace: WorkspacePath };
 
-/**
- * How far each linked workspace has moved since its own last version, by link
- * id. A workspace with no count is one Onshape did not answer for — absent
- * rather than zero, since zero means something.
- */
-export type UnversionedChanges = Record<string, number>;
-
 /** What a finished push or pull did. */
 export interface VersionJobResult {
     /** Workspaces whose references were updated. */
@@ -149,22 +148,20 @@ export const EMPTY_JOB_RESULT: VersionJobResult = {
 };
 
 /**
- * A linked workspace's thumbnail, straight from Onshape rather than through us.
- * The browser is already signed in to Onshape — the app is running inside it —
- * so the image element can fetch this itself, and the bytes never cross the
- * worker.
- *
- * Unverified against real Onshape: it rests on the session cookie reaching a
- * cross-site request from our frame. Where it does not, the row shows the same
- * placeholder as a workspace with no thumbnail at all.
+ * Where the client fetches a linked workspace's thumbnail. Built here so the
+ * url the browser asks for is declared beside the route that answers it, the
+ * way `features/thumbnails/keys.ts` does for a rendered one.
  */
 export function workspaceThumbnailUrl(
     workspace: WorkspacePath,
     size: string
 ): string {
-    return onshapeApiUrl(
-        `/thumbnails/d/${workspace.documentId}/w/${workspace.instanceId}/s/${size}`
-    );
+    const query = new URLSearchParams({
+        documentId: workspace.documentId,
+        instanceId: workspace.instanceId,
+        size
+    });
+    return `/api/workspace-thumbnail?${query.toString()}`;
 }
 
 /** How long a version name may be, matching what Onshape accepts. */

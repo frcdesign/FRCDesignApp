@@ -9,10 +9,15 @@ import {
 import { getSearchDbQuery } from "../../../../features/search/queries";
 import { parseLibraryId } from "../../../../lib/library";
 import { useAppParamMirror } from "../../../../lib/app-params";
+import { updateUiState } from "../../../../lib/ui-state";
 import { useRestoreInsertMenu } from "../../../../features/insert/restore-insert-menu";
 
 export const Route = createFileRoute("/app/library/$libraryId")({
     component: Library,
+    // A library is where entry resumes again, rather than the version manager.
+    onEnter: () => {
+        updateUiState({ isVersionManagerOpen: false });
+    },
     params: {
         parse: ({ libraryId }) => ({ libraryId: parseLibraryId(libraryId) }),
         stringify: ({ libraryId }) => ({ libraryId })

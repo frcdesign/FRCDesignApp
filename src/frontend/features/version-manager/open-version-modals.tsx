@@ -14,8 +14,8 @@ import { PushVersionForm } from "./components/push-version-modal";
 
 interface PushModalProps {
     title: string;
-    /** The one child to push to; absent for every child. */
-    target?: LinkedWorkspace;
+    /** The child to push to; a whole direction has no form. */
+    target: LinkedWorkspace;
     targets: string[];
 }
 
@@ -40,9 +40,9 @@ export function openPushVersionModal(
 
 interface PullModalProps {
     title: string;
-    /** The one parent to pull from; absent for every parent. */
-    source?: LinkedWorkspace;
-    sources: string[];
+    /** The parent to pull from; a whole direction has no form. */
+    source: LinkedWorkspace;
+    sourceName: string;
 }
 
 export function openPullReferencesModal(
@@ -57,7 +57,7 @@ export function openPullReferencesModal(
             <PullReferencesForm
                 workspace={workspace}
                 source={props.source}
-                sources={props.sources}
+                sourceName={props.sourceName}
                 modalId={modalId}
             />
         )

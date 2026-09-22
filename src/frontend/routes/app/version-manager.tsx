@@ -27,6 +27,10 @@ import { useIsSignedIn } from "../../features/auth/access-level";
 
 export const Route = createFileRoute("/app/version-manager")({
     component: VersionManagerPage,
+    // Where entry resumes next time, as a library would be.
+    onEnter: () => {
+        updateUiState({ isVersionManagerOpen: true });
+    },
     beforeLoad: () => {
         // Nothing to act on: the tab that leads here is hidden without a
         // workspace, so this only catches a url typed or restored by hand.
@@ -132,7 +136,7 @@ interface LinkSectionProps {
 /** One direction's section: its links, and the run they share. */
 function LinkSection(props: LinkSectionProps): ReactNode {
     const { workspace, direction, linked, opened } = props;
-    const actions = useLinkActions(workspace, direction, linked);
+    const actions = useLinkActions(workspace, direction);
     const copy = DIRECTION_COPY[direction];
 
     return (

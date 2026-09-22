@@ -23,7 +23,12 @@ const SyncedStateSchema = z.object({
     theme: ThemeType.default(DEFAULT_SETTINGS.theme),
     libraryId: LibraryIdType.default(DEFAULT_SETTINGS.libraryId),
     /** The group last opened in that library; null for the library itself. */
-    groupId: z.string().nullable().default(DEFAULT_SETTINGS.groupId)
+    groupId: z.string().nullable().default(DEFAULT_SETTINGS.groupId),
+    /** Whether the version manager is the page open, which entry resumes in
+     * where the panel has a workspace for it to act on. */
+    isVersionManagerOpen: z
+        .boolean()
+        .default(DEFAULT_SETTINGS.isVersionManagerOpen)
 });
 
 /** Kept until the browser's storage is cleared: preferences, and where to resume. */

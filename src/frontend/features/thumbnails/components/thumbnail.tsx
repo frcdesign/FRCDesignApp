@@ -15,12 +15,7 @@ import { ElementPath } from "@backend/lib/onshape/path";
 import { Box, Card, Center, HoverCard, Loader } from "@mantine/core";
 import { QuestionIcon } from "@phosphor-icons/react";
 
-import {
-    ComponentPropsWithRef,
-    PropsWithChildren,
-    ReactNode,
-    useState
-} from "react";
+import { ComponentPropsWithRef, PropsWithChildren, ReactNode } from "react";
 import {
     type ConfigurationKey,
     DEFAULT_CONFIGURATION_KEY
@@ -77,16 +72,11 @@ interface CardThumbnailProps {
     largeThumbnailUrl?: string;
     /** Set to show a specific configuration rather than the element default. */
     target?: ThumbnailTarget;
-    /**
-     * Set where the urls are Onshape's own rather than ours — see
-     * {@link ThumbnailProps.isExternal}.
-     */
-    isExternal?: boolean;
 }
 
 /** Both sizes come from one configuration, so a row and its hover never disagree. */
 export function CardThumbnail(props: CardThumbnailProps): ReactNode {
-    const { smallThumbnailUrl, largeThumbnailUrl, target, isExternal } = props;
+    const { smallThumbnailUrl, largeThumbnailUrl, target } = props;
 
     // Asked for by key whether or not this row may queue one: the route serves
     // what is already stored either way, so a row that cannot queue still shows
@@ -126,7 +116,6 @@ export function CardThumbnail(props: CardThumbnailProps): ReactNode {
                     heightAndWidth={getHeightAndWidth(ThumbnailSize.SMALL, 0.8)}
                     spinnerSize={25}
                     isRendering={isRendering}
-                    isExternal={isExternal}
                 />
             </HoverCard.Target>
             <HoverCard.Dropdown p="xs">
@@ -136,7 +125,6 @@ export function CardThumbnail(props: CardThumbnailProps): ReactNode {
                     heightAndWidth={getHeightAndWidth(ThumbnailSize.LARGE, 0.6)}
                     spinnerSize={48}
                     isRendering={isRendering}
-                    isExternal={isExternal}
                 />
             </HoverCard.Dropdown>
         </HoverCard>
@@ -190,13 +178,6 @@ interface ThumbnailProps extends ComponentPropsWithRef<"div"> {
     heightAndWidth: HeightAndWidth;
     /** Whether a miss is a render still running, and so worth polling out. */
     isRendering?: boolean;
-    /**
-     * Onshape's own url rather than one of ours. It is handed straight to the
-     * image element: fetching it first would be a cross-origin request, which
-     * fails on Onshape's own terms where the element itself loads fine. A
-     * refusal then arrives on the element, which is what `onError` is for.
-     */
-    isExternal?: boolean;
 }
 
 function Thumbnail(props: ThumbnailProps): ReactNode {
@@ -206,21 +187,14 @@ function Thumbnail(props: ThumbnailProps): ReactNode {
         heightAndWidth,
         spinnerSize,
         isRendering,
-        isExternal = false,
         ...centerProps
     } = props;
-    // The one url the element itself has rejected; kept rather than a flag, so
-    // a new url is tried afresh without an effect to clear anything.
-    const [brokenUrl, setBrokenUrl] = useState<string>();
 
-    const probedUrl = isExternal ? undefined : url;
     const imageQuery = useQuery({
-        queryKey: storedThumbnailQueryKey(probedUrl),
+        queryKey: storedThumbnailQueryKey(url),
         // Narrowed here rather than guarded inside: `enabled` is what keeps it
         // from running, and the query function should not restate that.
-        queryFn: probedUrl
-            ? ({ signal }) => loadImage(probedUrl, signal)
-            : skipToken,
+        queryFn: url ? ({ signal }) => loadImage(url, signal) : skipToken,
         retry: isRendering ? retryRender : STORED_RETRIES,
         retryDelay: isRendering ? POLL_INTERVAL_MS : undefined
     });
@@ -235,22 +209,14 @@ function Thumbnail(props: ThumbnailProps): ReactNode {
 
     // The configuration's own render once it lands, and nothing after that:
     // the fallback stands in for it, it does not replace it.
-    const shownUrl = (isExternal ? url : imageQuery.data) ?? fallbackQuery.data;
-    const isBroken = shownUrl !== undefined && shownUrl === brokenUrl;
+    const shownUrl = imageQuery.data ?? fallbackQuery.data;
 
     let content;
-    if (shownUrl !== undefined && !isBroken) {
+    if (shownUrl !== undefined) {
         content = (
-            <img
-                src={shownUrl}
-                {...heightAndWidth}
-                style={FIT_INSIDE_BOX}
-                // Bytes that are gone, or a url the browser was refused: the
-                // placeholder, rather than the broken-image glyph.
-                onError={() => setBrokenUrl(shownUrl)}
-            />
+            <img src={shownUrl} {...heightAndWidth} style={FIT_INSIDE_BOX} />
         );
-    } else if (url === undefined || imageQuery.isError || isBroken) {
+    } else if (url === undefined || imageQuery.isError) {
         content = <QuestionIcon size={spinnerSize} />;
     } else {
         content = <Loader size={spinnerSize} />;
