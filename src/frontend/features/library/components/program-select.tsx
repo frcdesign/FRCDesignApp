@@ -12,7 +12,7 @@ import { ReactNode } from "react";
 import { LibraryId } from "@backend/features/library/library-id";
 import { AppBrandMark } from "../../../components/app-brand";
 import { AppIcon } from "../../../components/app-icon";
-import { SectionNotice } from "../../../components/app-zero-state";
+import { ZeroState } from "../../../components/app-zero-state";
 import {
     BORDER,
     FontWeight,
@@ -39,12 +39,9 @@ const PROGRAMS: Program[] = [
 /** FIRST's own site, which their notice has to name. */
 const FIRST_URL = "https://www.firstinspires.org";
 
-/**
- * The registration both names carry, as the small raised asterisk rather than
- * a ® glyph, which is heavy beside a three-letter name.
- */
+/** The registration these names carry, raised off the name it follows. */
 function RegisteredMark(): ReactNode {
-    return <sup>*</sup>;
+    return <sup>&reg;</sup>;
 }
 
 interface ProgramCardProps {
@@ -97,8 +94,8 @@ function TrademarkDisclaimer(): ReactNode {
             <RegisteredMark /> are registered trademarks of{" "}
             <Text component="span" inherit fs="italic">
                 FIRST
-            </Text>{" "}
-            (
+            </Text>
+            <RegisteredMark /> (
             <Anchor href={FIRST_URL} target="_blank" inherit>
                 www.firstinspires.org
             </Anchor>
@@ -141,7 +138,7 @@ export function ProgramSelect(): ReactNode {
             {/* Takes the focus the trap would otherwise land on the first
                 program, which reads as that one being pre-selected. */}
             <Stack data-autofocus tabIndex={-1} style={{ outline: "none" }}>
-                <SectionNotice
+                <ZeroState
                     icon={<AppBrandMark size={IconSize.PAGE} />}
                     title="Welcome to the FRCDesignApp!"
                     description="To get started, select your library. You can switch between libraries at any time using the top navbar."

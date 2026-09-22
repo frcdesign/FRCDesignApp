@@ -16,8 +16,12 @@ interface ZeroStateProps {
     className?: string;
 }
 
-/** The centered block every empty, loading and error state is built from. */
-function ZeroState(props: ZeroStateProps): ReactNode {
+/**
+ * The centered block every empty, loading and error state is built from, and
+ * what anything else standing in for content should use rather than laying one
+ * out again.
+ */
+export function ZeroState(props: ZeroStateProps): ReactNode {
     const { icon, title, description, action, className } = props;
 
     return (
