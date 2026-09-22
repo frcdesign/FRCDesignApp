@@ -2,6 +2,7 @@ import { OnshapeApi } from "../client";
 import { ElementPath, toElementApiPath } from "../path";
 import { apiPath } from "../api-path";
 import { type ConfigurationKey } from "../../../features/configurations/contract";
+import { toQueryConfiguration } from "../../../features/configurations/utils";
 import type { OnshapeMetadataObject } from "../types";
 
 /** Returns an element's metadata properties for a given configuration. */
@@ -15,7 +16,10 @@ export function getElementMetadata(
     const query: Record<string, string> = {
         includeComputedProperties: "false"
     };
-    if (configurationKey) query.configuration = configurationKey;
+    // The query form, not the key: this is escaped again on its way out.
+    if (configurationKey) {
+        query.configuration = toQueryConfiguration(configurationKey);
+    }
     return client.get(apiPath("metadata", elementPath, toElementApiPath), {
         query
     });

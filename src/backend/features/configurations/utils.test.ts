@@ -2,10 +2,12 @@ import { describe, expect, it } from "vitest";
 import {
     decodeConfiguration,
     encodeConfiguration,
+    encodeQueryConfiguration,
     evaluateCondition,
     findRecordForConfiguration,
     getPartUrl,
-    getVisibleOptions
+    getVisibleOptions,
+    toQueryConfiguration
 } from "./utils";
 import {
     OptionVisibilityType,
@@ -101,6 +103,45 @@ describe("configuration text", () => {
     it("keeps a typed separator from setting another parameter", () => {
         const encoded = encodeConfiguration({ label: "a;other=evil" });
         expect(decodeConfiguration(encoded).other).toBeUndefined();
+    });
+});
+
+describe("encodeQueryConfiguration", () => {
+    // What reaches Onshape is this, escaped once more by whatever puts it in a
+    // query — so a space has to still be a space here. Their own examples read
+    // `dia1=1+m`, which is this form after that one escape.
+    it("leaves a quantity's space for the query layer to escape", () => {
+        expect(encodeQueryConfiguration({ length: "0.0508 m" })).toBe(
+            "length=0.0508 m"
+        );
+        expect(
+            new URLSearchParams({
+                configuration: encodeQueryConfiguration({ length: "0.0508 m" })
+            }).toString()
+        ).toBe("configuration=length%3D0.0508+m");
+    });
+
+    it("still escapes the characters the form is structured by", () => {
+        expect(encodeQueryConfiguration({ label: "a;other=evil" })).toBe(
+            "label=a%3Bother%3Devil"
+        );
+        expect(encodeQueryConfiguration({ label: "50% off" })).toBe(
+            "label=50%25 off"
+        );
+    });
+
+    it("round-trips a value holding the separators", () => {
+        const configuration = { label: "a;other=evil", other: "x" };
+        expect(
+            decodeConfiguration(encodeQueryConfiguration(configuration))
+        ).toEqual(configuration);
+    });
+
+    it("rewrites a key into the query form", () => {
+        expect(toQueryConfiguration("length=0.0508%20m;size=l")).toBe(
+            "length=0.0508 m;size=l"
+        );
+        expect(toQueryConfiguration("")).toBe("");
     });
 });
 

@@ -130,11 +130,9 @@ export function getPartUrl(
  * assignment. {@link decodeConfiguration} is the other half, and `utils.test.ts`
  * pins the round trip.
  *
- * Onshape's own encoding is not documented as far as I can tell; percent-encoding
- * is what this codebase's request bodies already sent, so it is what both halves
- * now agree on. Whether Onshape decodes a configuration in a query string once or
- * twice has not been checked against a live document — if a value with a `%` or a
- * space comes back wrong from Onshape, that is the thing to check first.
+ * This is the form a key is stored and addressed by, and the form a request body
+ * carries, where nothing escapes it a second time. A query parameter is escaped
+ * again in transport, so it takes {@link encodeQueryConfiguration} instead.
  */
 export function encodeConfiguration(configuration?: Selection): string {
     if (!configuration) {
@@ -143,6 +141,44 @@ export function encodeConfiguration(configuration?: Selection): string {
     return Object.entries(configuration)
         .map(([id, value]) => `${id}=${encodeURIComponent(value)}`)
         .join(";");
+}
+
+/** What `escapeForQuery` replaces, being what the text form is structured by. */
+const QUERY_ESCAPES: Record<string, string> = {
+    "%": "%25",
+    ";": "%3B",
+    "=": "%3D"
+};
+
+function escapeForQuery(value: string): string {
+    return value.replace(/[%;=]/g, (character) => QUERY_ESCAPES[character]);
+}
+
+/**
+ * The form Onshape's `configuration` query parameter takes: the same
+ * assignments, with only the three structural characters escaped.
+ *
+ * Putting it in a query escapes it once more — `URLSearchParams` for our own
+ * calls, `encodeURIComponent` for a document url — and Onshape's examples show
+ * a quantity arriving with exactly that one layer: `dia1=1+m`, `theta=2+degree`.
+ * A value percent-encoded here would reach them with the extra layer intact, so
+ * `0.381 m` would be read as the literal `0.381%20m`, which is no quantity.
+ *
+ * Escaping the structural three still keeps a typed `;` from ending an
+ * assignment, and `decodeConfiguration` reads this form back as well.
+ */
+export function encodeQueryConfiguration(configuration?: Selection): string {
+    if (!configuration) {
+        return "";
+    }
+    return Object.entries(configuration)
+        .map(([id, value]) => `${id}=${escapeForQuery(value)}`)
+        .join(";");
+}
+
+/** The same, for a configuration already encoded as a key. */
+export function toQueryConfiguration(configurationKey: string): string {
+    return encodeQueryConfiguration(decodeConfiguration(configurationKey));
 }
 
 /** The assignments a configuration text names, each still `id=value`. */

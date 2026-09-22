@@ -7,7 +7,7 @@ import {
     ConfigurablePath,
     isConfigurablePath
 } from "@backend/lib/onshape/path";
-import { encodeConfiguration } from "@backend/features/configurations/utils";
+import { encodeQueryConfiguration } from "@backend/features/configurations/utils";
 import { notifications } from "@mantine/notifications";
 import { LinkIcon } from "@phosphor-icons/react";
 import { IconSize } from "./style-constants";
@@ -35,11 +35,12 @@ export function makeUrl(path: DocumentPath): string {
         url += `/e/${path.elementId}`;
     }
     if (isConfigurablePath(path)) {
-        // Onshape's own parameter, so it keeps Onshape's name. Escaped here:
-        // the helper's raw output is what their api takes.
+        // Onshape's own parameter, so it keeps Onshape's name. The query form,
+        // which this escape is the one layer over: a key's own encoding would
+        // reach Onshape with that layer intact and read as a literal `%20`.
         url +=
             "?configuration=" +
-            encodeURIComponent(encodeConfiguration(path.selection));
+            encodeURIComponent(encodeQueryConfiguration(path.selection));
     }
     return url;
 }

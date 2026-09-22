@@ -1,4 +1,5 @@
 import { type ConfigurationKey } from "../../../features/configurations/contract";
+import { toQueryConfiguration } from "../../../features/configurations/utils";
 import { OnshapeApi } from "../client";
 import { assertInstanceType } from "../assertions";
 import { ElementPath, toElementApiPath, toInstanceApiPath } from "../path";
@@ -31,7 +32,10 @@ export async function getThumbnailId(
         includeCompositeParts: "true",
         elementId: elementPath.elementId
     });
-    if (configurationKey) query.set("configuration", configurationKey);
+    // The query form, not the key: this is escaped again on its way out.
+    if (configurationKey) {
+        query.set("configuration", toQueryConfiguration(configurationKey));
+    }
 
     const insertables = await client.get(
         apiPath("documents", elementPath, toInstanceApiPath, {
