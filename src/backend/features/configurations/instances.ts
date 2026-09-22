@@ -8,6 +8,7 @@ import {
     type EnumOption,
     type PartialSelection,
     ParameterType,
+    type Selection,
     type VisibilityCondition,
     VisibilityType
 } from "./contract";
@@ -40,6 +41,12 @@ export interface ParameterInstance {
     /** What it offers here, in declaration order; empty for anything that is
      * not an enum, which declares no options to filter. */
     options: EnumOption[];
+    /**
+     * The {@link toInstanceKeys} keys whose counts belong to this instance.
+     * Absent where the parameter is reported whole, which every recorded key
+     * counts towards — including one written before it had conditions.
+     */
+    keys?: string[];
     /**
      * The option the app lands on here because the declared default is not
      * offered; see `resolveSelectedOption`, which falls through to the first.
@@ -116,6 +123,9 @@ function instancesOf(
         parameter,
         path: toPath(group.combinations, combinations, controllers),
         options: group.options,
+        keys: group.combinations.map((combination) =>
+            toInstanceKey(controllers, combination)
+        ),
         implicitDefaultId: toImplicitDefault(parameter, group.options)
     }));
 }
@@ -127,6 +137,48 @@ function wholeInstance(parameter: ConfigurationParameter): ParameterInstance {
         path: [],
         options: parameter.type === ParameterType.ENUM ? parameter.options : []
     };
+}
+
+/**
+ * What one selection chose for the parameters controlling `controllers`, as the
+ * text a count is stored under. Absent values are left out, so a controller a
+ * condition hid keys the same way enumeration leaves it unset.
+ */
+function toInstanceKey(
+    controllers: ConfigurationParameter[],
+    selection: PartialSelection
+): string {
+    return controllers
+        .filter((controller) => selection[controller.id] !== undefined)
+        .map(
+            (controller) =>
+                `${controller.id}=${encodeURIComponent(selection[controller.id]!)}`
+        )
+        .join(";");
+}
+
+/**
+ * The key each of a selection's values is counted under, by parameter id. This
+ * is what lets a branch be counted on its own: an option two branches offer is
+ * one value, and only the key says which branch chose it.
+ *
+ * Read against the parameters declared when the insert happened, and compared
+ * against the ones declared now. A condition added or removed since leaves the
+ * old keys matching no instance, which is what a rebuild from the log fixes.
+ */
+export function toInstanceKeys(
+    selection: Selection,
+    parameters: ConfigurationParameter[]
+): Record<string, string> {
+    const keys: Record<string, string> = {};
+    for (const parameter of parameters) {
+        if (selection[parameter.id] === undefined) continue;
+        keys[parameter.id] = toInstanceKey(
+            controllingParameters(parameter, parameters),
+            selection
+        );
+    }
+    return keys;
 }
 
 function readIds(

@@ -148,6 +148,7 @@ async function seedInserts(
                     dailyConfigurationMetrics.elementId,
                     dailyConfigurationMetrics.parameterId,
                     dailyConfigurationMetrics.value,
+                    dailyConfigurationMetrics.instanceKey,
                     dailyConfigurationMetrics.day
                 ],
                 set: {

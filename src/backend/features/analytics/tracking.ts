@@ -69,17 +69,21 @@ export async function trackInsert(
     const db = getDb(c.env.DB);
     const now = Date.now();
 
-    await record(db, {
-        ...core(EventType.INSERT, now, event),
-        ...event.path,
-        insertableId: event.insertableId,
-        targetElementType: event.targetElementType,
-        selection: appliedSelection(event.selection, event.parameters),
-        isFavorite: event.isFavorite,
-        isQuickInsert: event.isQuickInsert,
-        source: event.source,
-        fasten: event.fasten
-    });
+    await record(
+        db,
+        {
+            ...core(EventType.INSERT, now, event),
+            ...event.path,
+            insertableId: event.insertableId,
+            targetElementType: event.targetElementType,
+            selection: appliedSelection(event.selection, event.parameters),
+            isFavorite: event.isFavorite,
+            isQuickInsert: event.isQuickInsert,
+            source: event.source,
+            fasten: event.fasten
+        },
+        event.parameters
+    );
 }
 
 export async function trackAppOpen(
@@ -89,10 +93,12 @@ export async function trackAppOpen(
     const db = getDb(c.env.DB);
     const now = Date.now();
 
-    await record(db, {
-        ...core(EventType.APP_OPEN, now, event),
-        ...NOT_AN_INSERT
-    });
+    // An app open configures nothing, so it has no parameters to key by.
+    await record(
+        db,
+        { ...core(EventType.APP_OPEN, now, event), ...NOT_AN_INSERT },
+        []
+    );
 }
 
 /**
@@ -128,10 +134,14 @@ function core(
  * The two halves of a write, batched so neither lands without the other. Kept
  * apart so the counting can move to a batch job without touching the recording.
  */
-async function record(db: Db, event: LoggedEvent): Promise<void> {
+async function record(
+    db: Db,
+    event: LoggedEvent,
+    parameters: ConfigurationParameter[]
+): Promise<void> {
     const writes: BatchItem<"sqlite">[] = [
         db.insert(events).values(event),
-        ...rollupWrites(db, event)
+        ...rollupWrites(db, event, parameters)
     ];
 
     await db.batch(writes as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]]);

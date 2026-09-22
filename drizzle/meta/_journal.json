@@ -29,6 +29,13 @@
             "when": 1790053337692,
             "tag": "0003_user_tab",
             "breakpoints": true
+        },
+        {
+            "idx": 4,
+            "version": "6",
+            "when": 1790116094276,
+            "tag": "0004_configuration_instance_key",
+            "breakpoints": true
         }
     ]
 }

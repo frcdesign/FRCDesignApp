@@ -24,6 +24,15 @@ const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
  */
 export const rangeQuery = z.object({ from: day, to: day });
 
+/**
+ * A range the caller may leave off entirely, for a read that defaults to every
+ * recorded day rather than stating the window it covers.
+ */
+export const optionalRangeQuery = z.object({
+    from: day.optional(),
+    to: day.optional()
+});
+
 /** A range, plus the cutoff the low-usage reports list at or below. */
 export const thresholdQuery = rangeQuery.extend({
     threshold: z.coerce

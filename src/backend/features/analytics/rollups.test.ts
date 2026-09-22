@@ -131,7 +131,9 @@ describe("rollupWrites", () => {
             await db.delete(table);
         }
         const log = await db.select().from(events).all();
-        const writes = log.reverse().flatMap((row) => rollupWrites(db, row));
+        const writes = log
+            .reverse()
+            .flatMap((row) => rollupWrites(db, row, SIZE_PARAMETERS));
         await db.batch([writes[0], ...writes.slice(1)]);
 
         expect(await readRollups()).toEqual(live);

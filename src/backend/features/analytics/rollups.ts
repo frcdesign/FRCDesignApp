@@ -1,5 +1,7 @@
 import type { BatchItem } from "drizzle-orm/batch";
 import { type Db } from "../../db/client";
+import { type ConfigurationParameter } from "../configurations/contract";
+import { toInstanceKeys } from "../configurations/instances";
 import { earliest, increment, latest } from "../../db/updates";
 import { EventType } from "./usage";
 import { asInsert, type LoggedInsert } from "./logged-event";
@@ -17,12 +19,18 @@ import {
 } from "./schema";
 
 /**
- * Every counter one event feeds, derived from the row alone — which is what lets
- * a replay rebuild the rollups exactly, or move them to a batch job.
+ * Every counter one event feeds, derived from the row and the parameters the
+ * part declares — which is what lets a replay rebuild the rollups exactly, or
+ * move them to a batch job.
+ *
+ * `parameters` is only read to key a configuration count by the branch it was
+ * chosen in; everything else comes from the row. Pass the part's declared
+ * parameters, or none for an event that configured nothing.
  */
 export function rollupWrites(
     db: Db,
-    event: LoggedEvent
+    event: LoggedEvent,
+    parameters: ConfigurationParameter[]
 ): BatchItem<"sqlite">[] {
     const writes = [
         countDay(db, event),
@@ -39,7 +47,7 @@ export function rollupWrites(
         countPartDay(db, insert),
         markPartUser(db, insert),
         countPartLifetime(db, insert),
-        ...countValues(db, insert)
+        ...countValues(db, insert, parameters)
     ];
 }
 
@@ -229,9 +237,17 @@ function countPartLifetime(db: Db, event: LoggedInsert) {
         });
 }
 
-/** One counter per parameter value the insert applied. */
-function countValues(db: Db, event: LoggedInsert): BatchItem<"sqlite">[] {
+/**
+ * One counter per parameter value the insert applied, keyed by the branch it
+ * was chosen in so a value two branches offer can be counted for each.
+ */
+function countValues(
+    db: Db,
+    event: LoggedInsert,
+    parameters: ConfigurationParameter[]
+): BatchItem<"sqlite">[] {
     if (!event.selection) return [];
+    const keys = toInstanceKeys(event.selection, parameters);
 
     return Object.entries(event.selection).map(([parameterId, value]) =>
         db
@@ -242,6 +258,9 @@ function countValues(db: Db, event: LoggedInsert): BatchItem<"sqlite">[] {
                 elementId: event.elementId,
                 parameterId,
                 value,
+                // A parameter the part no longer declares has no branch to be
+                // in, which is what an empty key already means.
+                instanceKey: keys[parameterId] ?? "",
                 count: 1
             })
             .onConflictDoUpdate({
@@ -250,6 +269,7 @@ function countValues(db: Db, event: LoggedInsert): BatchItem<"sqlite">[] {
                     dailyConfigurationMetrics.elementId,
                     dailyConfigurationMetrics.parameterId,
                     dailyConfigurationMetrics.value,
+                    dailyConfigurationMetrics.instanceKey,
                     dailyConfigurationMetrics.day
                 ],
                 set: {

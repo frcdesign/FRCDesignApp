@@ -189,11 +189,25 @@ export const dailyConfigurationMetrics = sqliteTable(
         elementId: text("element_id").notNull(),
         parameterId: text("parameter_id").notNull(),
         value: text("value").notNull(),
+        /**
+         * What the insert chose for the parameters deciding whether this one was
+         * shown, from `toInstanceKeys`. Empty for a parameter nothing conditions,
+         * and on every row written before this column existed. Without it an
+         * option two branches both offer cannot be counted for either.
+         */
+        instanceKey: text("instance_key").notNull().default(""),
         count: integer("count").notNull().default(0)
     },
     (t) => [
         primaryKey({
-            columns: [t.libraryId, t.elementId, t.parameterId, t.value, t.day]
+            columns: [
+                t.libraryId,
+                t.elementId,
+                t.parameterId,
+                t.value,
+                t.instanceKey,
+                t.day
+            ]
         }),
         index("daily_configuration_metrics_day_idx").on(t.libraryId, t.day)
     ]
