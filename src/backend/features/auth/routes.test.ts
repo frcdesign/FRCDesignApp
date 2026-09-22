@@ -104,9 +104,9 @@ describe("GET /auth/sign-out", () => {
 
 describe("GET /auth/sign-in", () => {
     /** The route's response to a caller starting a sign-in. */
-    function signIn(query: string, sessionId?: string, origin = "") {
+    function signIn(query: string, sessionId?: string) {
         return createTestApp().request(
-            `${origin}/auth/sign-in?redirectUrl=%2Finit&${query}`,
+            `/auth/sign-in?redirectUrl=%2Finit&${query}`,
             {
                 method: "GET",
                 headers: sessionId
@@ -119,29 +119,18 @@ describe("GET /auth/sign-in", () => {
     }
 
     /** The Onshape authorization url the route sends the caller to. */
-    async function authorizationUrl(
-        query: string,
-        origin?: string
-    ): Promise<URL> {
-        const res = await signIn(query, undefined, origin);
+    async function authorizationUrl(query: string): Promise<URL> {
+        const res = await signIn(query);
         expect(res.status).toBe(302);
         return new URL(res.headers.get("Location")!);
     }
 
-    it("names the callback on the host the sign-in came in on", async () => {
+    // Named by neither half of the flow, so Onshape returns the caller to
+    // whichever redirect url its OAuth app registers — which is why a host
+    // wants an app of its own.
+    it("names no callback, leaving it to the OAuth app", async () => {
         const url = await authorizationUrl("");
-        expect(url.searchParams.get("redirect_uri")).toBe(
-            "http://localhost/auth/callback"
-        );
-    });
-
-    // The cutover case: two hosts on one OAuth app, each sign-in coming back to
-    // the host it started on.
-    it("names each host's own, not one host's for both", async () => {
-        const url = await authorizationUrl("", "https://app.frcdesign.org");
-        expect(url.searchParams.get("redirect_uri")).toBe(
-            "https://app.frcdesign.org/auth/callback"
-        );
+        expect(url.searchParams.get("redirect_uri")).toBeNull();
     });
 
     it("scopes the sign-in to the enterprise that launched it", async () => {

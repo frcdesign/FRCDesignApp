@@ -16,8 +16,9 @@ const AUTH_ENDPOINT = "https://oauth.onshape.com/oauth/authorize";
 export const TOKEN_ENDPOINT = "https://oauth.onshape.com/oauth/token";
 
 /**
- * Defaulted, since only the authorization request and the code exchange carry a
- * redirect uri: arctic sends none on a refresh whatever the client holds.
+ * No redirect uri, so neither the authorization request nor the code exchange
+ * names one and Onshape returns the caller to whichever its OAuth app
+ * registers — so a host wants an app registering its own callback.
  */
 export function getOauthClient(): OAuth2Client {
     return new OAuth2Client(env.OAUTH_CLIENT_ID, env.OAUTH_CLIENT_SECRET, null);
