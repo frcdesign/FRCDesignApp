@@ -8,6 +8,7 @@ import type {
 import { LibraryId } from "@backend/features/library/library-id";
 import { StatusColor } from "../../lib/style-constants";
 import { formatCount, formatFraction } from "./format";
+import { ImplicitDefaultBadge } from "./implicit-default";
 import { ParameterPath } from "./parameter-path";
 import { TablePagination, usePagedRows } from "./table-pagination";
 
@@ -137,9 +138,7 @@ function OptionLabel({ value }: OptionLabelProps): ReactNode {
                 is wrong. An implicit one is stronger still: it is what this
                 branch lands on without anyone having declared it. */}
             {value.isImplicitDefault && (
-                <Badge color={StatusColor.WARNING} size="sm">
-                    Implicit default
-                </Badge>
+                <ImplicitDefaultBadge color={StatusColor.WARNING} size="sm" />
             )}
             {value.isDefault && (
                 <Badge color={StatusColor.WARNING} size="sm">

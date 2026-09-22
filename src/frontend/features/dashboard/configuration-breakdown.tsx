@@ -20,6 +20,7 @@ import {
     StatusColor
 } from "../../lib/style-constants";
 import { formatCount, formatPercent } from "./format";
+import { ImplicitDefaultBadge } from "./implicit-default";
 import { ParameterPath } from "./parameter-path";
 
 interface ConfigurationBreakdownProps {
@@ -148,9 +149,11 @@ interface DefaultBadgeProps {
 function DefaultBadge({ value }: DefaultBadgeProps): ReactNode {
     if (value.isImplicitDefault) {
         return (
-            <Badge size="xs" variant="light" color={StatusColor.INFO}>
-                Implicit default
-            </Badge>
+            <ImplicitDefaultBadge
+                size="xs"
+                variant="light"
+                color={StatusColor.INFO}
+            />
         );
     }
     if (value.isDefault) {

@@ -7,6 +7,7 @@ import {
 } from "./contract";
 import { toParameterInstances } from "./instances";
 import {
+    boolParam,
     enumParam,
     quantityParam
 } from "../../../__test_utils__/configuration-fixtures";
@@ -110,6 +111,44 @@ describe("toParameterInstances", () => {
             "new › vendor",
             "generic › size",
             "new › wcp › size"
+        ]);
+    });
+
+    it("names a checkbox by its own name and the state it is in", () => {
+        // A checkbox has no option names to borrow, so "true" on its own would
+        // say nothing about which checkbox it is.
+        const hub = boolParam("hub");
+        const style = enumParam("style", ["plain", "splined"], {
+            optionConditions: [shownWhen(["splined"], "hub", "true")]
+        });
+
+        // Checked first, which is the order combinations are enumerated in.
+        expect(labels([hub, style])).toEqual([
+            "hub",
+            "hub: Yes › style",
+            "hub: No › style"
+        ]);
+    });
+
+    it("names both choices when a checkbox and a list each narrow the options", () => {
+        const vendor = enumParam("vendor", ["generic", "wcp"]);
+        const hub = boolParam("hub");
+        // Two independent conditions, so the four combinations leave four
+        // different lists and each path has to name both choices.
+        const style = enumParam("style", ["plain", "wcpOnly", "hubbed"], {
+            optionConditions: [
+                shownWhen(["wcpOnly"], "vendor", "wcp"),
+                shownWhen(["hubbed"], "hub", "true")
+            ]
+        });
+
+        expect(labels([vendor, hub, style])).toEqual([
+            "vendor",
+            "hub",
+            "generic › hub: Yes › style",
+            "generic › hub: No › style",
+            "wcp › hub: Yes › style",
+            "wcp › hub: No › style"
         ]);
     });
 

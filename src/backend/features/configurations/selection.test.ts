@@ -161,8 +161,15 @@ describe("formatValue", () => {
         expect(formatValue(length, "0.0508 m")).toBe("2 in");
     });
 
+    it("reads a checkbox as its state rather than as the text it is stored as", () => {
+        expect(formatValue(flag, "true")).toBe("Yes");
+        expect(formatValue(flag, "false")).toBe("No");
+    });
+
     it("leaves everything else as stored", () => {
         expect(formatValue(size, "l")).toBe("l");
+        // An option id needs the options to be named, which this does not have.
+        expect(formatValue(flag, "unset")).toBe("unset");
     });
 });
 

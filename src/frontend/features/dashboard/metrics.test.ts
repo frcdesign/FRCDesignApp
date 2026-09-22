@@ -198,23 +198,6 @@ describe("rangeValue", () => {
     });
 });
 
-describe("metric descriptions", () => {
-    it("names a denominator for exactly the shares", () => {
-        for (const metric of Object.values(METRICS)) {
-            expect(!!metric.denominatorLabel, metric.key).toBe(
-                isPercentage(metric)
-            );
-        }
-    });
-
-    it("gives every metric a description and a numerator label", () => {
-        for (const metric of Object.values(METRICS)) {
-            expect(metric.description.length, metric.key).toBeGreaterThan(40);
-            expect(metric.numeratorLabel, metric.key).toBeTruthy();
-        }
-    });
-});
-
 describe("rangeTerms", () => {
     it("returns the numbers the share is divided from", () => {
         const points = [

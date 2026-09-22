@@ -24,11 +24,6 @@ type MetricKey =
 export interface MetricDefinition {
     key: MetricKey;
     label: string;
-    /** Shown under the info icon, with room to explain properly. */
-    description: string;
-    /** Names what is being counted, and what it is counted against. */
-    numeratorLabel: string;
-    denominatorLabel?: string;
     /** Percentages divide by `denominator`; counts leave it undefined. */
     numerator: (point: DailyMetricPoint) => number;
     denominator?: (point: DailyMetricPoint) => number;
@@ -43,9 +38,6 @@ export const METRICS: Record<MetricKey, MetricDefinition> = {
     inserts: {
         key: "inserts",
         label: "Total uses",
-        description:
-            "The total number of times a part was inserted by the app.",
-        numeratorLabel: "Total uses",
         numerator: (point) => point.inserts,
         lifetimeValue: (totals) => totals.inserts,
         detailLabel: "Total uses"
@@ -53,10 +45,6 @@ export const METRICS: Record<MetricKey, MetricDefinition> = {
     fastenFraction: {
         key: "fastenFraction",
         label: "Insert and fasten",
-        description:
-            "The percentage of inserts into assemblies which are done using insert and fasten.",
-        numeratorLabel: "Insert and fasten inserts",
-        denominatorLabel: "Inserts into an assembly",
         numerator: (point) => point.fastenInserts,
         // Onshape only offers fasten on an assembly target.
         denominator: (point) => point.targets[ElementType.ASSEMBLY],
@@ -67,10 +55,6 @@ export const METRICS: Record<MetricKey, MetricDefinition> = {
     quickFraction: {
         key: "quickFraction",
         label: "Quick insert",
-        description:
-            "The percentage of inserts which are done via the right click context menu.",
-        numeratorLabel: "Quick inserts",
-        denominatorLabel: "All inserts",
         numerator: (point) => point.quickInserts,
         denominator: (point) => point.inserts,
         lifetimeDenominator: (totals) => totals.inserts,
@@ -80,10 +64,6 @@ export const METRICS: Record<MetricKey, MetricDefinition> = {
     assemblyFraction: {
         key: "assemblyFraction",
         label: "Into an assembly",
-        description:
-            "The percentage of inserts into an assembly (as opposed to a part studio).",
-        numeratorLabel: "Inserts into an assembly",
-        denominatorLabel: "All inserts",
         numerator: (point) => point.targets[ElementType.ASSEMBLY],
         denominator: (point) => point.inserts,
         lifetimeValue: (totals) => totals.targets[ElementType.ASSEMBLY],
@@ -98,7 +78,8 @@ export interface MetricTerms {
     denominator: number;
 }
 
-/** The totals the range value is computed from, for showing the workings. */
+/** The totals {@link rangeValue} divides, kept apart so a share can be
+ * folded once and divided once. */
 export function rangeTerms(
     points: DailyMetricPoint[],
     metric: MetricDefinition

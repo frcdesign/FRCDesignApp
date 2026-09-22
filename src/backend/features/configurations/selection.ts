@@ -172,12 +172,23 @@ export function fromKey(
     return toSelection(decodeConfiguration(key), parameters);
 }
 
-/** A quantity in the unit its parameter declares, rather than the base unit it
- * is stored in; everything else already reads as stored. */
+/**
+ * A value as a person reads it: a quantity in the unit its parameter declares
+ * rather than the base unit it is stored in, and a checkbox as its state. An
+ * enum's value is its option id, which only its own options can name, so the
+ * caller holding them spells that one.
+ */
 export function formatValue(
     parameter: ConfigurationParameter,
     value: string
 ): string {
+    if (parameter.type === ParameterType.BOOLEAN) {
+        // Anything else was not written by `canonicalizeValue`, so it rides as
+        // stored rather than being read as a "No".
+        if (value === "true") return "Yes";
+        if (value === "false") return "No";
+        return value;
+    }
     if (parameter.type !== ParameterType.QUANTITY) {
         return value;
     }

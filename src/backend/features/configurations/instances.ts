@@ -12,6 +12,7 @@ import {
     VisibilityType
 } from "./contract";
 import { parameterValues } from "./combinations";
+import { formatValue } from "./selection";
 import { evaluateCondition, getOption, getVisibleOptions } from "./utils";
 
 /**
@@ -266,23 +267,31 @@ function toPath(
         if (chosen.size === 0 || chosen.size === every.size) continue;
         steps.push({
             parameterId: controller.id,
-            label: [...chosen]
-                .map((value) => valueLabel(controller, value))
-                .join(" or ")
+            label: toStepLabel(controller, [...chosen])
         });
     }
 
     return steps;
 }
 
-/** One controlling choice as a person would name it. */
-function valueLabel(parameter: ConfigurationParameter, value: string): string {
+/**
+ * What to call one step. An option names itself, so the enum it belongs to is
+ * left out — "Generic", not "Vendor: Generic". A checkbox has no such name, so
+ * it is the parameter that is named and the state that qualifies it.
+ */
+function toStepLabel(
+    parameter: ConfigurationParameter,
+    values: string[]
+): string {
     if (parameter.type === ParameterType.ENUM) {
-        return getOption(parameter.options, value)?.name ?? value;
+        return values
+            .map((value) => getOption(parameter.options, value)?.name ?? value)
+            .join(" or ");
     }
-    // A checkbox is named for what it turns on, so the path reads as the state
-    // rather than as "true".
-    return value === "true" ? parameter.name : `No ${parameter.name}`;
+    const states = values
+        .map((value) => formatValue(parameter, value))
+        .join(" or ");
+    return `${parameter.name}: ${states}`;
 }
 
 function toImplicitDefault(
