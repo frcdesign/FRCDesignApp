@@ -15,6 +15,7 @@ import {
     TEST_LIBRARY_ID,
     resetDb,
     seedGroup,
+    seedLibrary,
     seedUser
 } from "../../../__test_utils__";
 import { getDb } from "../../db/client";
@@ -63,6 +64,7 @@ describe("GET /init", () => {
     // The frontend 404s a tab id it does not know, so a row naming one the app
     // has dropped would strand the caller on every panel open.
     it("sends a user whose stored tab is unknown to the default", async () => {
+        await seedLibrary(db);
         await db
             .insert(users)
             .values({ id: TEST_USER_ID, tabId: "old-frc-lib" as AppTab })
@@ -143,6 +145,7 @@ describe("GET /init", () => {
             null
         ]);
 
+        await seedLibrary(db);
         await db.insert(users).values({ id: TEST_USER_ID });
         expect(await seededTab()).toEqual([
             `/app/tab/${DEFAULT_LIBRARY}`,

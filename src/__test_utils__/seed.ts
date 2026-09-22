@@ -97,12 +97,16 @@ export async function seedLibrary(
     return id;
 }
 
-/** Seeds the tab's library too, so a group seeded in it has one to belong to. */
+/**
+ * Seeds the libraries a user row needs: the tab's, so a group seeded in it has
+ * one to belong to, and the default its dead `library_id` falls back to.
+ */
 export async function seedUser(
     db: Db,
     id: string = TEST_USER_ID,
     tabId: AppTab = DEFAULT_LIBRARY
 ): Promise<string> {
+    await seedLibrary(db, DEFAULT_LIBRARY);
     if (isLibraryTab(tabId)) {
         await seedLibrary(db, tabId);
     }

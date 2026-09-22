@@ -5,7 +5,8 @@ import { users } from "../../db/schema";
 import { z } from "zod";
 import { validate } from "../../lib/validate";
 import { requireSignInMiddleware } from "../auth/guards";
-import { LibraryId } from "../library/library-id";
+import { DEFAULT_LIBRARY, LibraryId } from "../library/library-id";
+import { ensureLibrary } from "../library/db";
 import { UtilityTab } from "./app-tab";
 import { Theme } from "./settings";
 
@@ -29,8 +30,10 @@ settingsRoutes.post(
 
         const db = getDb(c.env.DB);
 
-        // The tab is nullable, so a row can be created without naming one:
-        // a caller who has not chosen has no tab to record.
+        // The row's dead `library_id` still defaults to this one and still
+        // points at `libraries`, so the insert needs it to be there.
+        await ensureLibrary(db, DEFAULT_LIBRARY);
+        // No tab: a caller who has not chosen one has nothing to record.
         await db.insert(users).values({ id: userId }).onConflictDoNothing();
 
         if (Object.keys(body).length > 0) {

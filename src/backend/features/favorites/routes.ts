@@ -192,8 +192,13 @@ favoriteRoutes.post(
         const db = getDb(c.env.DB);
 
         // The favorite's own key requires a user row, which a caller who has
-        // never changed a setting does not have yet.
-        await db.insert(users).values({ id: userId }).onConflictDoNothing();
+        // never changed a setting does not have yet. Named rather than left to
+        // the dead column's default, which points at a library this caller may
+        // have no row for.
+        await db
+            .insert(users)
+            .values({ id: userId, libraryId })
+            .onConflictDoNothing();
 
         // Counted to see whether there is room for one more, and the highest
         // order taken so the new one lands after it. Not the count: deleting

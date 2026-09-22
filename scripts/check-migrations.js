@@ -37,10 +37,22 @@ function steps() {
         .sort();
 }
 
+/**
+ * One transaction per file, with foreign keys left on, which is how D1 applies
+ * a migration: `PRAGMA foreign_keys=OFF` is a no-op inside a transaction here
+ * and unsupported there, so a rebuild that relies on it fails in both.
+ */
 function apply(db, name) {
     const sql = readFileSync(join(MIGRATIONS, name), "utf8");
-    for (const statement of sql.split("--> statement-breakpoint")) {
-        if (statement.trim()) db.exec(statement);
+    db.exec("BEGIN");
+    try {
+        for (const statement of sql.split("--> statement-breakpoint")) {
+            if (statement.trim()) db.exec(statement);
+        }
+        db.exec("COMMIT");
+    } catch (error) {
+        db.exec("ROLLBACK");
+        throw error;
     }
 }
 
@@ -104,6 +116,12 @@ function seed(db, dump) {
                 "'PARTSTUDIO','m1','v1')"
         );
     }
+    // Something pointing at that user, so a migration that rebuilds `users` has
+    // a foreign key to answer for, as it does on a real database.
+    db.exec(
+        "INSERT OR IGNORE INTO favorites (id, user_id, library_id, insertable_id)" +
+            " VALUES ('f1', 'u1', 'frc-design-lib', 'i1')"
+    );
     // Named per migration, since the column it is keyed by is what 0001 renames.
     const key = hasColumn(db, "configurations", "insertable_id")
         ? "insertable_id"
