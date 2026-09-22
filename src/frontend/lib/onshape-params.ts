@@ -2,6 +2,7 @@ import { Theme } from "@backend/features/settings/settings";
 import { updateUiState, useGetUiState } from "./ui-state";
 import {
     type ColorTheme,
+    LAUNCH_KEYS,
     type OnshapeLaunch,
     type TargetElement,
     toTargetElement
@@ -10,9 +11,20 @@ import {
 /**
  * Takes a launch off the url into the store, which the app reads it from for
  * the rest of the tab's life. Called before the url is stripped of it.
+ *
+ * The launch's own fields and no others: callers pass the whole search, which
+ * also carries what the entry redirect seeded off the caller's row, and writing
+ * one of those here posts it straight back. Only the fields the url names, too,
+ * since this runs again on the navigation that strips them.
  */
-export function adoptOnshapeLaunch(launch: OnshapeLaunch): void {
-    updateUiState(launch);
+export function adoptOnshapeLaunch(search: OnshapeLaunch): void {
+    updateUiState(
+        Object.fromEntries(
+            LAUNCH_KEYS.filter((key) => search[key] !== undefined).map(
+                (key) => [key, search[key]]
+            )
+        )
+    );
 }
 
 /** The element the panel can insert into; nothing when there is none. */
