@@ -164,8 +164,9 @@ function LibraryTabs(): ReactNode {
                 }
                 const libraryId = value as LibraryId;
                 // Write-behind: the url displays it, this only decides where
-                // `/init` lands next time.
-                updateUiState({ libraryId });
+                // `/init` lands next time. Picking one here is also an answer
+                // to the welcome, which asks for exactly this choice.
+                updateUiState({ libraryId, libraryChosen: true });
                 void navigate({
                     to: "/app/library/$libraryId",
                     params: { libraryId }

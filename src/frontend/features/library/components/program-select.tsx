@@ -1,8 +1,10 @@
-import { Group, Modal, Stack, Text, UnstyledButton } from "@mantine/core";
-import { ArrowRightIcon } from "@phosphor-icons/react";
+import { Group, Stack, Text, UnstyledButton } from "@mantine/core";
+import { ArrowRightIcon, BookOpenTextIcon } from "@phosphor-icons/react";
 import { useNavigate } from "@tanstack/react-router";
 import { ReactNode } from "react";
 import { LibraryId } from "@backend/features/library/library-id";
+import { AppIcon } from "../../../components/app-icon";
+import { PageNotice } from "../../../components/app-zero-state";
 import {
     BORDER,
     FontWeight,
@@ -25,13 +27,13 @@ interface Program {
 const PROGRAMS: Program[] = [
     {
         libraryId: LibraryId.FRC_DESIGN_LIB,
-        name: "FRC",
-        fullName: "FIRST Robotics Competition"
+        name: "FRC®",
+        fullName: "FIRST® Robotics Competition"
     },
     {
         libraryId: LibraryId.FTC_DESIGN_LIB,
-        name: "FTC",
-        fullName: "FIRST Tech Challenge"
+        name: "FTC®",
+        fullName: "FIRST® Tech Challenge"
     }
 ];
 
@@ -55,7 +57,7 @@ function ProgramCard(props: ProgramCardProps): ReactNode {
             }}
         >
             <Group gap="sm" wrap="nowrap">
-                <Stack gap={2} flex={1} miw={0}>
+                <Stack gap={2} flex={1} miw={0} ta="left">
                     {/* The library's own color, so the two choices read as the
                         two apps they open rather than one list. */}
                     <Text
@@ -65,9 +67,9 @@ function ProgramCard(props: ProgramCardProps): ReactNode {
                     >
                         {name}
                     </Text>
-                    <Text size="sm">{fullName}</Text>
+                    <Text size="sm">{getLibraryName(libraryId)}</Text>
                     <Text size="xs" c={StatusColor.DIMMED}>
-                        {getLibraryName(libraryId)}
+                        {fullName}
                     </Text>
                 </Stack>
                 <ArrowRightIcon size={IconSize.MEDIUM} />
@@ -77,12 +79,12 @@ function ProgramCard(props: ProgramCardProps): ReactNode {
 }
 
 /**
- * The first thing a new user sees: which program they build for, which picks
- * the library the app opens in from then on. The answer is stored like any
- * other synced setting, so it is asked once per account rather than per browser.
+ * What a new user sees in place of a library: which program they build for,
+ * which picks the library the app opens in from then on. The answer is stored
+ * like any other synced setting, so it is asked once per account rather than
+ * once per browser — and the navbar's tabs answer it too, being the same choice.
  */
-export function ProgramSelectModal(): ReactNode {
-    const { libraryChosen } = useGetUiState();
+export function ProgramSelect(): ReactNode {
     const navigate = useNavigate();
 
     const selectProgram = (libraryId: LibraryId) => {
@@ -91,52 +93,28 @@ export function ProgramSelectModal(): ReactNode {
     };
 
     return (
-        <Modal
-            opened={!libraryChosen}
-            // Picking is the only way out, so a close has nothing to do.
-            onClose={() => undefined}
-            withCloseButton={false}
-            closeOnClickOutside={false}
-            closeOnEscape={false}
-            centered
-            size="md"
-            padding="lg"
-            title={
-                <Stack gap={4}>
-                    <Text size="xl" fw={FontWeight.BOLD}>
-                        Choose your program
-                    </Text>
-                    <Text size="sm" c={StatusColor.DIMMED}>
-                        It sets the library the app opens in. You can switch
-                        between libraries at any time.
-                    </Text>
+        <PageNotice
+            icon={<AppIcon icon={BookOpenTextIcon} size={IconSize.PAGE} />}
+            title="Welcome to the FRCDesignApp!"
+            description="To get started, select your library. You can switch between libraries at any time using the top navbar."
+            action={
+                // Stacked and full width: two side by side would each be
+                // narrower than their own name in Onshape's panel.
+                <Stack gap="sm" w="100%" maw={320}>
+                    {PROGRAMS.map((program) => (
+                        <ProgramCard
+                            key={program.libraryId}
+                            program={program}
+                            onSelect={selectProgram}
+                        />
+                    ))}
                 </Stack>
             }
-            styles={{
-                // Drawn like the app's other modals, which the manager frames.
-                content: { border: BORDER },
-                // The title is the modal's own content here, not a bar over it.
-                header: { paddingBottom: 0 },
-                title: { minWidth: 0 }
-            }}
-        >
-            {/* Takes the focus the trap would otherwise land on the first
-                program, which reads as that one being pre-selected. */}
-            <Stack
-                data-autofocus
-                tabIndex={-1}
-                style={{ outline: "none" }}
-                gap="sm"
-                mt="md"
-            >
-                {PROGRAMS.map((program) => (
-                    <ProgramCard
-                        key={program.libraryId}
-                        program={program}
-                        onSelect={selectProgram}
-                    />
-                ))}
-            </Stack>
-        </Modal>
+        />
     );
+}
+
+/** Whether the app still has to ask which library the caller wants. */
+export function useNeedsProgram(): boolean {
+    return !useGetUiState().libraryChosen;
 }

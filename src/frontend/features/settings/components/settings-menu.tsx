@@ -1,5 +1,5 @@
 import { DEFAULT_SETTINGS, Theme } from "@backend/features/settings/settings";
-import { Box, Button, Select, Stack } from "@mantine/core";
+import { Anchor, Box, Button, Select, Stack, Text } from "@mantine/core";
 import { ArrowLeftIcon, SignOutIcon } from "@phosphor-icons/react";
 import { useMatch } from "@tanstack/react-router";
 import { IconSize, StatusColor } from "../../../lib/style-constants";
@@ -27,6 +27,9 @@ import { ReloadGroupsButton } from "../../library/components/reload-groups-butto
 
 /** The FRCDesign Discord, where feedback and support now live. */
 const DISCORD_INVITE_URL = "https://discord.gg/PMgzEUTgB7";
+
+/** FIRST's own site, which their trademark notice has to name. */
+const FIRST_URL = "https://www.firstinspires.org";
 
 /** The usage dashboard, served standalone and needing no sign-in. */
 const DASHBOARD_URL = "/dashboard";
@@ -92,7 +95,26 @@ export function SettingsMenuContent(): ReactNode {
                     </Section>
                 </Box>
             )}
+            <TrademarkDisclaimer />
         </>
+    );
+}
+
+/**
+ * FIRST's required notice, carried here because the app names their programs —
+ * the welcome asks which of the two the caller builds for.
+ */
+function TrademarkDisclaimer(): ReactNode {
+    return (
+        <Text size="xs" c={StatusColor.DIMMED} mt="lg">
+            FIRST&reg;, FIRST&reg; Robotics Competition, and FIRST&reg; Tech
+            Challenge, are registered trademarks of FIRST&reg; (
+            <Anchor href={FIRST_URL} target="_blank" inherit>
+                www.firstinspires.org
+            </Anchor>
+            ) which is not overseeing, involved with, or responsible for this
+            activity, product, or service.
+        </Text>
     );
 }
 
