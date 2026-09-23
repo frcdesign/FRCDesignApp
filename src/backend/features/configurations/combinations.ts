@@ -11,6 +11,7 @@ import {
 } from "./contract";
 import { evaluateCondition, getVisibleOptions } from "./utils";
 import { ElementType } from "../../lib/onshape/element-type";
+import { parameterRole } from "./roles";
 
 /**
  * The most combinations we enumerate for one insertable; beyond it nothing is
@@ -93,57 +94,6 @@ export function countConfigurations(
 }
 
 /**
- * Parameters that change how a part looks or is derived, never what it is, so
- * varying one only multiplies the count with copies of the same part. Matched
- * by name, since Onshape records nothing that says so.
- */
-const NEVER_INDEXED: { reason: string; matches: (name: string) => boolean }[] =
-    [
-        {
-            reason: "A derivation variable",
-            matches: (name) => name.includes("derivation")
-        },
-        {
-            reason: "A color",
-            matches: (name) => /\bcolou?r\b/.test(name)
-        },
-        {
-            reason: "A tessellation setting",
-            matches: (name) => /tess?ell?ation/.test(name)
-        }
-    ];
-
-/** A color's channels, when a part spells one out as three parameters. */
-const COLOR_CHANNELS = [
-    ["r", "g", "b"],
-    ["red", "green", "blue"]
-];
-
-function normalizedName(parameter: ConfigurationParameter): string {
-    return parameter.name.trim().toLowerCase();
-}
-
-/**
- * Why a parameter is never indexed, or undefined when it can be. A lone "R" or
- * "B" could mean anything, so a channel counts only beside its two siblings.
- */
-export function neverIndexedReason(
-    parameter: ConfigurationParameter,
-    parameters: ConfigurationParameter[] = []
-): string | undefined {
-    const name = normalizedName(parameter);
-    const rule = NEVER_INDEXED.find((entry) => entry.matches(name));
-    if (rule) {
-        return rule.reason;
-    }
-    const names = new Set(parameters.map(normalizedName));
-    const channels = COLOR_CHANNELS.find(
-        (set) => set.includes(name) && set.every((entry) => names.has(entry))
-    );
-    return channels ? "A color channel" : undefined;
-}
-
-/**
  * The exclusions that apply. An assembly takes none: Onshape does not let one
  * exclude parameters from its properties either, so there is no call to make.
  */
@@ -155,8 +105,10 @@ export function effectiveExclusions(
 }
 
 /**
- * Whether indexing varies this parameter, and so multiplies the count. Shared
- * with the admin card so it cannot drift from {@link enumerateConfigurations}.
+ * Whether indexing varies this parameter, and so multiplies the count. Never
+ * one with a role: those change how a part is drawn or derived, not which part
+ * it is. Shared with the admin card so it cannot drift from
+ * {@link enumerateConfigurations}.
  */
 export function isIndexedParameter(
     parameter: ConfigurationParameter,
@@ -166,7 +118,7 @@ export function isIndexedParameter(
     return (
         (parameter.type === ParameterType.ENUM ||
             parameter.type === ParameterType.BOOLEAN) &&
-        neverIndexedReason(parameter, parameters) === undefined &&
+        parameterRole(parameter, parameters) === undefined &&
         !excludedParameterIds.includes(parameter.id)
     );
 }

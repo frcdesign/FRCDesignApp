@@ -14,7 +14,7 @@ import { Vendor } from "../features/library/vendors";
 import {
     ConfigurationParameter,
     ConfigurationRecord,
-    Selection,
+    PartialSelection,
     PartMetadata
 } from "../features/configurations/contract";
 import { BuildIssue, knownBuildIssues } from "../features/build-checker/issues";
@@ -215,11 +215,12 @@ export const favorites = sqliteTable(
         insertableId: text("insertable_id")
             .notNull()
             .references(() => insertables.id, { onDelete: "cascade" }),
-        // The selection the favorite opens with, whole and as it was entered.
-        // Null for an insertable with nothing to configure.
+        // The selection the favorite opens with, as it was entered, less the
+        // derivation variables each insert fills afresh. Null for an
+        // insertable with nothing to configure.
         defaultSelection: text("default_selection", {
             mode: "json"
-        }).$type<Selection | null>(),
+        }).$type<PartialSelection | null>(),
         sortOrder: integer("sort_order").notNull().default(0),
         // Null on rows predating the column: backfilling would draw a cliff
         // of favorites on a day nobody favorited anything.

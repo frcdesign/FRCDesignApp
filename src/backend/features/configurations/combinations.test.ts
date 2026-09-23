@@ -7,14 +7,11 @@ import {
     IndexingBand,
     isIndexedParameter,
     isIndexingEnabled,
-    neverIndexedReason,
     MAX_PART_NUMBER_CONFIGURATIONS
 } from "./combinations";
 import {
     OptionVisibilityType,
     ConfigurationParameter,
-    ParameterType,
-    StringParameter,
     VisibilityCondition,
     VisibilityType
 } from "./contract";
@@ -22,17 +19,9 @@ import {
     boolParam,
     enumParam,
     paramsWithConfigs,
-    quantityParam
+    quantityParam,
+    stringParam
 } from "../../../__test_utils__/configuration-fixtures";
-
-function stringParam(id: string): StringParameter {
-    return {
-        id,
-        name: id,
-        default: "",
-        type: ParameterType.STRING
-    };
-}
 
 const equals = (id: string, value: string): VisibilityCondition => ({
     type: VisibilityType.EQUAL,
@@ -255,41 +244,11 @@ describe("isIndexedParameter", () => {
         );
     });
 
-    // They change how a part looks or derives, never which part it is.
-    it.each([
-        "Derivation Variable",
-        "Color",
-        "Part colour",
-        "Tessellation Quality",
-        "Tesselation quality"
-    ])("never varies a parameter named %s", (name) => {
-        const parameter = { ...enumParam("p", ["x", "y"]), name };
-        expect(neverIndexedReason(parameter)).toBeDefined();
-        expect(isIndexedParameter(parameter, [parameter])).toBe(false);
+    // A role says how a part is drawn or derived, never which part it is.
+    it("never varies a parameter with a role", () => {
+        const color = { ...enumParam("p", ["x", "y"]), name: "Color" };
+        expect(isIndexedParameter(color, [color])).toBe(false);
     });
-
-    const named = (name: string) => ({ ...enumParam(name, ["x", "y"]), name });
-
-    it("never varies a color channel beside its two siblings", () => {
-        const channels = ["R", "G", "B"].map(named);
-        for (const channel of channels) {
-            expect(neverIndexedReason(channel, channels)).toBeDefined();
-        }
-    });
-
-    // A lone "B" is as likely a size as a blue.
-    it("indexes a single-letter parameter with no channel siblings", () => {
-        const lone = named("B");
-        expect(neverIndexedReason(lone, [named("A"), lone])).toBeUndefined();
-    });
-
-    it.each(["Length", "Bearing", "Gear Ratio", "Colorway"])(
-        "indexes an ordinary parameter named %s",
-        (name) => {
-            const parameter = { ...enumParam("p", ["x", "y"]), name };
-            expect(neverIndexedReason(parameter)).toBeUndefined();
-        }
-    );
 
     // The card reports indexing off this helper, so it has to describe exactly
     // what enumeration varies.

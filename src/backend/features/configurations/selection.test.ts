@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_CONFIGURATION_KEY, VisibilityType } from "./contract";
+import {
+    type ConfigurationParameter,
+    DEFAULT_CONFIGURATION_KEY,
+    VisibilityType
+} from "./contract";
 import {
     appliedValues,
     canonicalValues,
@@ -8,14 +12,17 @@ import {
     onshapeOverrides,
     toKey,
     toSelection,
-    toShortestConfiguration
+    toShortestConfiguration,
+    toStoredSelection,
+    withDerivationValues
 } from "./selection";
 import { QuantityType, Unit } from "./enums";
 import { decodeConfiguration } from "./utils";
 import {
     boolParam,
     enumParam,
-    quantityParam
+    quantityParam,
+    stringParam
 } from "../../../__test_utils__/configuration-fixtures";
 
 const size = enumParam("size", ["s", "l"]);
@@ -24,7 +31,10 @@ const length = quantityParam("length");
 const parameters = [size, flag, length];
 
 /** What every boundary does: whatever arrived, made whole. */
-function select(values: Record<string, string>, params = parameters) {
+function select(
+    values: Record<string, string>,
+    params: ConfigurationParameter[] = parameters
+) {
     return toSelection(values, params);
 }
 
@@ -213,5 +223,37 @@ describe("formatValue", () => {
     it("leaves everything else as stored", () => {
         expect(formatValue(size, "l")).toBe("l");
         expect(formatValue(flag, "unset")).toBe("unset");
+    });
+});
+
+describe("derivation variables", () => {
+    const derivation = { ...stringParam("dv"), name: "Derivation Variable" };
+    const params: ConfigurationParameter[] = [size, derivation];
+
+    // Unique to each insert by design, so it must not split one render in two.
+    it("leaves them out of the key", () => {
+        expect(toKey(select({ size: "l", dv: "abc" }, params), params)).toBe(
+            "size=l"
+        );
+    });
+
+    it("fills a fresh value for every derive", () => {
+        const selection = select({ size: "l" }, params);
+        const first = withDerivationValues(selection, params);
+        const second = withDerivationValues(first, params);
+        expect(first.dv).not.toBe(derivation.default);
+        expect(second.dv).not.toBe(first.dv);
+    });
+
+    // What the panel does, so the value on screen holds still.
+    it("keeps a value already filled when asked to", () => {
+        const filled = withDerivationValues(select({}, params), params);
+        expect(withDerivationValues(filled, params, true)).toEqual(filled);
+    });
+
+    it("leaves them out of what is stored", () => {
+        expect(toStoredSelection({ size: "l", dv: "abc" }, params)).toEqual({
+            size: "l"
+        });
     });
 });

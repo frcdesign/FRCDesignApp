@@ -10,7 +10,8 @@ import { ElementType } from "../../lib/onshape/element-type";
 import { MAX_FAVORITES } from "./contract";
 import {
     configurationRecord,
-    quantityParam
+    quantityParam,
+    stringParam
 } from "../../../__test_utils__/configuration-fixtures";
 
 const partMetadata = (partNumber: string) =>
@@ -597,6 +598,25 @@ describe("favorites routes", () => {
 
             expect(await post({ "param-id": "value" })).toEqual({
                 boolean: "true"
+            });
+        });
+
+        // Each insert fills its own, so a kept one would only be stale.
+        it("leaves a derivation variable out", async () => {
+            await seedPartStudio(db);
+            await seedConfiguration(db);
+            await db
+                .update(configurations)
+                .set({
+                    parameters: [
+                        quantityParam("length"),
+                        { ...stringParam("dv"), name: "Derivation Variable" }
+                    ]
+                })
+                .where(eq(configurations.insertableId, TEST_PART_STUDIO_ID));
+
+            expect(await post({ length: "2 in", dv: "abc" })).toEqual({
+                length: "2 in"
             });
         });
 

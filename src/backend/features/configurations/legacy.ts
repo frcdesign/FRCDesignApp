@@ -8,7 +8,7 @@ import {
     type ConfigurationParameter,
     type ConfigurationRecord,
     ParameterType,
-    type Selection
+    type PartialSelection
 } from "./contract";
 import { canonicalValue, quantityDefault } from "./selection";
 import { decodeConfiguration } from "./utils";
@@ -53,9 +53,9 @@ export function upgradeParameters(
  * is left as they typed it.
  */
 export function upgradeSelection(
-    selection: Selection,
+    selection: PartialSelection,
     parameters: ConfigurationParameter[]
-): Selection {
+): PartialSelection {
     const upgraded = { ...selection };
     for (const parameter of parameters) {
         const value = upgraded[parameter.id];

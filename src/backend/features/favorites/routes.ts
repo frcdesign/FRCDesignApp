@@ -12,11 +12,17 @@ import {
 import { type Db, getDb } from "../../db/client";
 import { chunkForInArray } from "../../db/chunk";
 import { users, favorites, configurations, insertables } from "../../db/schema";
-import { findRecord, toKey, toSelection } from "../configurations/selection";
+import {
+    findRecord,
+    toKey,
+    toSelection,
+    toStoredSelection
+} from "../configurations/selection";
 import { upgradeSelection } from "../configurations/legacy";
 import { MAX_FAVORITES, type Favorite, type FavoritesData } from "./contract";
 import {
     type ConfigurationParameter,
+    type PartialSelection,
     type SearchRecord
 } from "../configurations/contract";
 import { toRecords } from "../configurations/utils";
@@ -79,7 +85,10 @@ async function getFavorites(
         // parameter existed still has to answer as a selection.
         const defaultSelection = row.defaultSelection
             ? toSelection(
-                  upgradeSelection(row.defaultSelection, parameters),
+                  toStoredSelection(
+                      upgradeSelection(row.defaultSelection, parameters),
+                      parameters
+                  ),
                   parameters
               )
             : undefined;
@@ -103,6 +112,17 @@ async function getFavorites(
         favoriteOrder.push(row.id);
     }
     return { favorites: favoritesOut, favoriteOrder };
+}
+
+/**
+ * What a favorite keeps: the selection whole, but without a derivation
+ * variable, which each insert fills afresh.
+ */
+function toFavoriteSelection(
+    selection: PartialSelection,
+    parameters: ConfigurationParameter[]
+): PartialSelection {
+    return toStoredSelection(toSelection(selection, parameters), parameters);
 }
 
 /** One insertable's parameters, for making a selection whole. */
@@ -243,7 +263,7 @@ favoriteRoutes.post(
                 libraryId,
                 insertableId,
                 defaultSelection: selection
-                    ? toSelection(
+                    ? toFavoriteSelection(
                           selection,
                           await getParametersFor(db, insertableId)
                       )
@@ -323,7 +343,7 @@ favoriteRoutes.post(
         await db
             .update(favorites)
             .set({
-                defaultSelection: toSelection(
+                defaultSelection: toFavoriteSelection(
                     selection,
                     await getParametersFor(db, row.insertableId)
                 )

@@ -4,8 +4,12 @@ import {
     type ComboboxProps,
     Loader,
     Select,
-    TextInput
+    TextInput,
+    Tooltip
 } from "@mantine/core";
+import { InfoIcon } from "@phosphor-icons/react";
+import { AppIcon } from "../../../components/app-icon";
+import { StatusColor } from "../../../lib/style-constants";
 import {
     type Dispatch,
     ReactNode,
@@ -39,8 +43,11 @@ import {
     findRecord,
     onshapeOverrides,
     toKey,
-    toSelection
+    toSelection,
+    toStoredSelection,
+    withDerivationValues
 } from "@backend/features/configurations/selection";
+import { isDerivationVariable } from "@backend/features/configurations/roles";
 import { evaluateExpression } from "@backend/features/configurations/input-parser";
 import { useConfigurationQuery, useUnitInfoQuery } from "../queries";
 import { SectionNotice } from "../../../components/app-zero-state";
@@ -61,8 +68,11 @@ import { seedFrom } from "../quantity-box";
 export interface SelectionReport {
     /** Whole, and settled against the parameters' conditions. */
     selection: Selection;
-    /** Only what differs from the element's defaults, as entered. */
-    overrides: Selection;
+    /**
+     * Only what differs from the element's defaults, as entered, and without
+     * derivation variables: this is what the url keeps.
+     */
+    overrides: PartialSelection;
     /** Names the selection's thumbnail. */
     configurationKey: ConfigurationKey;
     /** The part the selection produces, for the menu's header. */
@@ -94,7 +104,10 @@ function useReportSelection(
         }
         onReport?.({
             selection,
-            overrides: onshapeOverrides(selection, result.parameters),
+            overrides: toStoredSelection(
+                onshapeOverrides(selection, result.parameters),
+                result.parameters
+            ),
             configurationKey: toKey(selection, result.parameters),
             record: findRecord(selection, result.records)
         });
@@ -128,9 +141,13 @@ export function ConfigurationWrapper(
     const whole = useMemo(
         () =>
             parameters
-                ? normalizeSelection(
-                      toSelection(selection ?? {}, parameters),
-                      parameters
+                ? withDerivationValues(
+                      normalizeSelection(
+                          toSelection(selection ?? {}, parameters),
+                          parameters
+                      ),
+                      parameters,
+                      true
                   )
                 : undefined,
         [parameters, selection]
@@ -374,8 +391,35 @@ function BooleanInput(props: ParameterProps<BooleanParameter>): ReactNode {
     );
 }
 
+/**
+ * Why the field is filled in and fixed, beside it where somebody wondering
+ * will look.
+ */
+const DERIVATION_VARIABLE_NOTE =
+    "Onshape does not allow deriving the same part with the same configuration multiple times into a part studio. To avoid this limitation, Derivation Variable has been populated with a unique value.";
+
 function StringInput(props: ParameterProps<StringParameter>): ReactNode {
     const { parameter, value, onValueChange } = props;
+    if (isDerivationVariable(parameter)) {
+        return (
+            <ParameterCells parameter={parameter}>
+                <TextInput
+                    id={parameter.id}
+                    value={value ?? parameter.default}
+                    readOnly
+                    rightSection={
+                        <Tooltip label={DERIVATION_VARIABLE_NOTE}>
+                            <AppIcon
+                                icon={InfoIcon}
+                                color={StatusColor.DIMMED}
+                                label="Why this is filled in"
+                            />
+                        </Tooltip>
+                    }
+                />
+            </ParameterCells>
+        );
+    }
     return (
         <ParameterCells parameter={parameter}>
             <TextInput

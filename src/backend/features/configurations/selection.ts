@@ -15,6 +15,7 @@ import {
     type Selection
 } from "./contract";
 import { getUnitDisplayStr } from "./enums";
+import { isDerivationVariable } from "./roles";
 import {
     DEFAULT_QUANTITY_PRECISION,
     encodeConfiguration,
@@ -103,7 +104,8 @@ export function canonicalValue(
 
 /**
  * The applied values, canonically spelled: what two selections are compared by,
- * and what analytics counts, where "5 in" and "(2 + 3) in" are one value.
+ * and what analytics counts, where "5 in" and "(2 + 3) in" are one value. A
+ * derivation variable is left out, being unique to one insert by design.
  */
 export function canonicalValues(
     selection: Selection,
@@ -113,7 +115,7 @@ export function canonicalValues(
     const values: Selection = {};
     for (const parameter of parameters) {
         const value = applied[parameter.id];
-        if (value !== undefined) {
+        if (value !== undefined && !isDerivationVariable(parameter)) {
             values[parameter.id] = canonicalValue(parameter, value);
         }
     }
@@ -150,7 +152,8 @@ export function onshapeOverrides(
 
 /**
  * A selection's thumbnail identity: what it overrides, canonically spelled.
- * Two selections that render the same part key the same.
+ * Two selections that render the same part key the same, which a derivation
+ * variable, unique to each insert, would stop.
  */
 export function toKey(
     selection: Selection,
@@ -160,11 +163,55 @@ export function toKey(
     const canonical: Selection = {};
     for (const parameter of parameters) {
         const value = overrides[parameter.id];
-        if (value !== undefined) {
+        if (value !== undefined && !isDerivationVariable(parameter)) {
             canonical[parameter.id] = canonicalValue(parameter, value);
         }
     }
     return encodeConfiguration(canonical);
+}
+
+/**
+ * The selection with each derivation variable given a fresh unique value, so
+ * deriving it cannot collide with an earlier derive of the same part. Onshape
+ * refuses a second derive of the same part in the same configuration.
+ *
+ * `keepFilled` leaves a value that is already set, which is what lets the panel
+ * show one value rather than a new one every render.
+ */
+export function withDerivationValues(
+    selection: Selection,
+    parameters: ConfigurationParameter[],
+    keepFilled = false
+): Selection {
+    const next = { ...selection };
+    for (const parameter of parameters) {
+        if (!isDerivationVariable(parameter)) {
+            continue;
+        }
+        const filled = next[parameter.id] !== parameter.default;
+        if (!(keepFilled && filled)) {
+            next[parameter.id] = crypto.randomUUID();
+        }
+    }
+    return next;
+}
+
+/**
+ * The selection without its derivation variables, for anything kept or shared —
+ * a favorite, the url. Each insert fills its own, so a kept one would only be
+ * a stale value to collide with.
+ */
+export function toStoredSelection(
+    selection: PartialSelection,
+    parameters: ConfigurationParameter[]
+): PartialSelection {
+    const stored = { ...selection };
+    for (const parameter of parameters) {
+        if (isDerivationVariable(parameter)) {
+            delete stored[parameter.id];
+        }
+    }
+    return stored;
 }
 
 /**

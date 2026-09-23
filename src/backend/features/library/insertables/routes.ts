@@ -39,7 +39,8 @@ import { PartType } from "../../../lib/onshape/endpoints/documents";
 import {
     onshapeOverrides,
     toShortestConfiguration,
-    toSelection
+    toSelection,
+    withDerivationValues
 } from "../../configurations/selection";
 import { encodeConfiguration } from "../../configurations/utils";
 import { fastenMate } from "../../../lib/onshape/objects/assembly-features";
@@ -314,11 +315,15 @@ insertableRoutes.post(
 
         const sourcePath = toElementPath(row);
 
-        const { selection, parameters } = await readSelection(
+        const { selection: requested, parameters } = await readSelection(
             db,
             insertableId,
             body.selection
         );
+        // Fresh on every derive, whatever the client sent: a restored menu or
+        // a quick insert would otherwise repeat an earlier derive's value.
+        const selection =
+            requested && withDerivationValues(requested, parameters);
 
         const feature = new DerivedFeature(
             row.name,

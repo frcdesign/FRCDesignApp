@@ -11,7 +11,8 @@ import {
 import {
     boolParam,
     enumParam,
-    quantityParam
+    quantityParam,
+    stringParam
 } from "../../../../__test_utils__/configuration-fixtures";
 import {
     createTestQueryClient,
@@ -154,5 +155,22 @@ describe("ConfigurationWrapper", () => {
         await user.click(await screen.findByRole("option", { name: "large" }));
 
         expect(lastReport().record?.partNumber).toBe("PN-LARGE");
+    });
+
+    // Filled in for the person rather than by them, and kept out of the url.
+    it("fills a derivation variable itself and keeps it read-only", async () => {
+        const { lastReport } = renderPanel({
+            parameters: [
+                { ...stringParam("dv"), name: "Derivation Variable" },
+                size
+            ],
+            records: []
+        });
+
+        const input = await screen.findByLabelText("Derivation Variable");
+        expect(input).toHaveProperty("readOnly", true);
+        expect((input as HTMLInputElement).value).toMatch(/^[0-9a-f-]{36}$/);
+        expect(screen.getByLabelText("Why this is filled in")).toBeTruthy();
+        expect(lastReport().overrides).toEqual({});
     });
 });

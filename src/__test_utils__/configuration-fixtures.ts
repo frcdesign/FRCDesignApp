@@ -8,6 +8,7 @@ import {
     type ConfigurationRecord,
     type EnumParameter,
     type QuantityParameter,
+    type StringParameter,
     type UnitInfo
 } from "@backend/features/configurations/contract";
 import { QuantityType, Unit } from "@backend/features/configurations/enums";
@@ -50,6 +51,10 @@ export function boolParam(id: string): BooleanParameter {
         default: "false",
         type: ParameterType.BOOLEAN
     };
+}
+
+export function stringParam(id: string): StringParameter {
+    return { id, name: id, default: "", type: ParameterType.STRING };
 }
 
 /**

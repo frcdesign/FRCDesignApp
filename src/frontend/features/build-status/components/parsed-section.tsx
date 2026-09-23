@@ -8,7 +8,12 @@ import {
     Text,
     Tooltip
 } from "@mantine/core";
-import { CheckIcon, ProhibitIcon, XIcon } from "@phosphor-icons/react";
+import { CheckIcon, XIcon } from "@phosphor-icons/react";
+import { parameterRole } from "@backend/features/configurations/roles";
+import {
+    ParameterRoleLabel,
+    ROLE_ICONS
+} from "../../../components/parameter-role";
 import { ReactNode, useMemo } from "react";
 import { InsertableBuildStatus } from "@backend/features/build-checker/contract";
 import { getVendorName, Vendor } from "@backend/features/library/vendors";
@@ -21,8 +26,7 @@ import {
     countCombinations,
     countConfigurations,
     effectiveExclusions,
-    MAX_COUNTED_CONFIGURATIONS,
-    neverIndexedReason
+    MAX_COUNTED_CONFIGURATIONS
 } from "@backend/features/configurations/combinations";
 import {
     CATEGORY_COLOR,
@@ -179,38 +183,40 @@ function ParameterRow(props: ParameterRowProps): ReactNode {
 }
 
 /**
- * Only enums and booleans are enumerated, so only they have anything to say.
- * A never-indexed one says why; a part studio's can be excluded by hand, which
- * an assembly's cannot.
+ * A parameter with a role is never indexed and says which role. Otherwise only
+ * enums and booleans are enumerated: a part studio's can be excluded by hand,
+ * which an assembly's cannot.
  */
 function IndexedControl(props: ParameterRowProps): ReactNode {
     const { insertableId, status, parameter } = props;
     const mutation = useExcludedParametersMutation(insertableId);
 
-    if (
-        parameter.type !== ParameterType.ENUM &&
-        parameter.type !== ParameterType.BOOLEAN
-    ) {
-        return null;
-    }
-    const reason = neverIndexedReason(
-        parameter,
-        status.configuration?.parameters
-    );
-    if (reason) {
+    const role = parameterRole(parameter, status.configuration?.parameters);
+    if (role) {
         return (
             <Tooltip
-                label={`${reason}, so never indexed.`}
+                label={
+                    <ParameterRoleLabel
+                        role={role}
+                        suffix=", so never indexed"
+                    />
+                }
                 events={{ hover: true, focus: true, touch: true }}
             >
                 <AppIcon
-                    icon={ProhibitIcon}
+                    icon={ROLE_ICONS[role]}
                     size={IconSize.SMALL}
                     color={StatusColor.DIMMED}
                     className={styles.noShrink}
                 />
             </Tooltip>
         );
+    }
+    if (
+        parameter.type !== ParameterType.ENUM &&
+        parameter.type !== ParameterType.BOOLEAN
+    ) {
+        return null;
     }
     if (status.elementType === ElementType.ASSEMBLY) {
         return null;
