@@ -122,13 +122,18 @@ function SectionAccordion(props: SectionAccordionProps): ReactNode {
             // divides from the next one; content closes off an open one.
             classNames={{
                 control: `${classes.control} ${styles.sectionHeader} ${styles.dividerBottom}`,
+                item: classes.item,
                 label: classes.label,
                 content: `${classes.content} ${styles.dividerBottom}`,
                 icon: styles.titleIcon
             }}
         >
-            {sections.map((section) => (
-                <Accordion.Item key={section.value} value={section.value}>
+            {sections.map((section, index) => (
+                <Accordion.Item
+                    key={section.value}
+                    value={section.value}
+                    style={{ "--section-index": index }}
+                >
                     <Accordion.Control
                         icon={section.icon}
                         className="interactive"
