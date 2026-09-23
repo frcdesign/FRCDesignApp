@@ -38,6 +38,7 @@ const CLIENT = {} as OnshapeApi;
 
 afterEach(() => vi.restoreAllMocks());
 
+const NO_SETTINGS = { indexConfigurations: false, excludedParameterIds: [] };
 const MANY = [{ type: BuildIssueType.MANUAL_INDEXING_REQUIRED }];
 const TOO_MANY = [{ type: BuildIssueType.CONFIGURATION_LIMIT_EXCEEDED }];
 
@@ -58,7 +59,7 @@ describe("decideIndexing", () => {
         const { shouldIndex, buildIssues } = decideIndexing(
             ElementType.PART_STUDIO,
             paramsWithConfigs(configs),
-            force
+            { indexConfigurations: force, excludedParameterIds: [] }
         );
         expect({ shouldIndex, buildIssues }).toEqual({
             shouldIndex: index,
@@ -66,12 +67,41 @@ describe("decideIndexing", () => {
         });
     });
 
-    // No assembly configures its part properties, so the default probe is the
-    // whole of it however many combinations the count would have enumerated.
-    it("probes only the default for an assembly", () => {
+    it("indexes an assembly the way it does a part studio", () => {
+        const decision = decideIndexing(
+            ElementType.ASSEMBLY,
+            paramsWithConfigs(3),
+            NO_SETTINGS
+        );
+        expect(decision.shouldIndex).toBe(true);
+        expect(decision.configurations).toHaveLength(3);
+    });
+
+    it("waits on an admin for an assembly past the threshold", () => {
         expect(
-            decideIndexing(ElementType.ASSEMBLY, paramsWithConfigs(600), false)
-        ).toEqual({ shouldIndex: true, buildIssues: [], configurations: [] });
+            decideIndexing(ElementType.ASSEMBLY, paramsWithConfigs(128), {
+                ...NO_SETTINGS,
+                indexConfigurations: true
+            }).shouldIndex
+        ).toBe(true);
+    });
+
+    // A part studio's exclusions trim the count; an assembly cannot exclude
+    // any, so a stray list on one changes nothing.
+    it("applies exclusions to a part studio but not an assembly", () => {
+        const parameters = [
+            enumParam("A", ["a1", "a2"]),
+            enumParam("B", ["b1", "b2"])
+        ];
+        const settings = { ...NO_SETTINGS, excludedParameterIds: ["B"] };
+        expect(
+            decideIndexing(ElementType.PART_STUDIO, parameters, settings)
+                .configurations
+        ).toHaveLength(2);
+        expect(
+            decideIndexing(ElementType.ASSEMBLY, parameters, settings)
+                .configurations
+        ).toHaveLength(4);
     });
 });
 
@@ -198,7 +228,10 @@ function probeSelections(
     parameters: ConfigurationParameter[],
     elementType: ElementType = ElementType.PART_STUDIO
 ): PartialSelection[] {
-    return decideIndexing(elementType, parameters, true).configurations;
+    return decideIndexing(elementType, parameters, {
+        indexConfigurations: true,
+        excludedParameterIds: []
+    }).configurations;
 }
 
 /** Probes an element the way the load does: its own combinations, in full. */

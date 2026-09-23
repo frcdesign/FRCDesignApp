@@ -115,7 +115,6 @@ interface OnshapeQuantityRange {
 interface OnshapeParameterBase {
     parameterId: string;
     parameterName: string;
-    isCosmetic: boolean;
     visibilityCondition: OnshapeVisibilityCondition;
 }
 

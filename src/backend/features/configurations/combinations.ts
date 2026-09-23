@@ -1,6 +1,6 @@
 /**
- * Enumerates an insertable's configuration combinations. Only enum and boolean
- * parameters vary; quantity and string ones ride their Onshape defaults.
+ * Enumerates an insertable's configuration combinations. Only indexed enum and
+ * boolean parameters vary; the rest ride their Onshape defaults.
  */
 import {
     type PartialSelection,
@@ -10,6 +10,7 @@ import {
     ParameterType
 } from "./contract";
 import { evaluateCondition, getVisibleOptions } from "./utils";
+import { ElementType } from "../../lib/onshape/element-type";
 
 /**
  * The most combinations we enumerate for one insertable; beyond it nothing is
@@ -18,8 +19,8 @@ import { evaluateCondition, getVisibleOptions } from "./utils";
 export const MAX_PART_NUMBER_CONFIGURATIONS = 512;
 
 /**
- * At or above this, indexing waits for an admin, who can trim the count back
- * with "exclude from properties"; see the `MANUAL_INDEXING_REQUIRED` build issue.
+ * At or above this, indexing waits for an admin, who can trim the count back by
+ * excluding parameters; see the `MANUAL_INDEXING_REQUIRED` build issue.
  */
 export const AUTO_INDEX_THRESHOLD = 128;
 
@@ -64,9 +65,13 @@ export interface ConfigurationCount {
 
 /** Shared, so the load path and the admin UI agree on which limit applies. */
 export function countConfigurations(
-    parameters: ConfigurationParameter[]
+    parameters: ConfigurationParameter[],
+    excludedParameterIds: readonly string[] = []
 ): ConfigurationCount {
-    const { configurations, capped } = enumerateConfigurations(parameters);
+    const { configurations, capped } = enumerateConfigurations(
+        parameters,
+        excludedParameterIds
+    );
     if (capped) {
         return { count: null, band: IndexingBand.EXCEEDED, configurations: [] };
     }
@@ -88,19 +93,82 @@ export function countConfigurations(
 }
 
 /**
+ * Parameters that change how a part looks or is derived, never what it is, so
+ * varying one only multiplies the count with copies of the same part. Matched
+ * by name, since Onshape records nothing that says so.
+ */
+const NEVER_INDEXED: { reason: string; matches: (name: string) => boolean }[] =
+    [
+        {
+            reason: "A derivation variable",
+            matches: (name) => name.includes("derivation")
+        },
+        {
+            reason: "A color",
+            matches: (name) => /\bcolou?r\b/.test(name)
+        },
+        {
+            reason: "A tessellation setting",
+            matches: (name) => /tess?ell?ation/.test(name)
+        }
+    ];
+
+/** A color's channels, when a part spells one out as three parameters. */
+const COLOR_CHANNELS = [
+    ["r", "g", "b"],
+    ["red", "green", "blue"]
+];
+
+function normalizedName(parameter: ConfigurationParameter): string {
+    return parameter.name.trim().toLowerCase();
+}
+
+/**
+ * Why a parameter is never indexed, or undefined when it can be. A lone "R" or
+ * "B" could mean anything, so a channel counts only beside its two siblings.
+ */
+export function neverIndexedReason(
+    parameter: ConfigurationParameter,
+    parameters: ConfigurationParameter[] = []
+): string | undefined {
+    const name = normalizedName(parameter);
+    const rule = NEVER_INDEXED.find((entry) => entry.matches(name));
+    if (rule) {
+        return rule.reason;
+    }
+    const names = new Set(parameters.map(normalizedName));
+    const channels = COLOR_CHANNELS.find(
+        (set) => set.includes(name) && set.every((entry) => names.has(entry))
+    );
+    return channels ? "A color channel" : undefined;
+}
+
+/**
+ * The exclusions that apply. An assembly takes none: Onshape does not let one
+ * exclude parameters from its properties either, so there is no call to make.
+ */
+export function effectiveExclusions(
+    elementType: ElementType,
+    excludedParameterIds: readonly string[]
+): readonly string[] {
+    return elementType === ElementType.ASSEMBLY ? [] : excludedParameterIds;
+}
+
+/**
  * Whether indexing varies this parameter, and so multiplies the count. Shared
  * with the admin card so it cannot drift from {@link enumerateConfigurations}.
  */
 export function isIndexedParameter(
-    parameter: ConfigurationParameter
+    parameter: ConfigurationParameter,
+    parameters: ConfigurationParameter[],
+    excludedParameterIds: readonly string[] = []
 ): parameter is EnumParameter | BooleanParameter {
-    if (
-        parameter.type !== ParameterType.ENUM &&
-        parameter.type !== ParameterType.BOOLEAN
-    ) {
-        return false;
-    }
-    return !parameter.isCosmetic;
+    return (
+        (parameter.type === ParameterType.ENUM ||
+            parameter.type === ParameterType.BOOLEAN) &&
+        neverIndexedReason(parameter, parameters) === undefined &&
+        !excludedParameterIds.includes(parameter.id)
+    );
 }
 
 /**
@@ -129,10 +197,13 @@ export const MAX_COUNTED_CONFIGURATIONS = 100_000;
 /** The true count, which runs past the index cap so the admin card can show it. */
 export function countCombinations(
     parameters: ConfigurationParameter[],
+    excludedParameterIds: readonly string[] = [],
     cap: number = MAX_COUNTED_CONFIGURATIONS
 ): number | null {
     // Depth-first: only the count is wanted, so one path is held rather than all.
-    const indexed = parameters.filter(isIndexedParameter);
+    const indexed = parameters.filter((parameter) =>
+        isIndexedParameter(parameter, parameters, excludedParameterIds)
+    );
     let count = 0;
     let capped = false;
 
@@ -177,12 +248,13 @@ interface EnumerateResult {
  */
 export function enumerateConfigurations(
     parameters: ConfigurationParameter[],
+    excludedParameterIds: readonly string[] = [],
     cap: number = MAX_PART_NUMBER_CONFIGURATIONS
 ): EnumerateResult {
     let configurations: PartialSelection[] = [{}];
 
     for (const parameter of parameters) {
-        if (!isIndexedParameter(parameter)) {
+        if (!isIndexedParameter(parameter, parameters, excludedParameterIds)) {
             continue;
         }
 

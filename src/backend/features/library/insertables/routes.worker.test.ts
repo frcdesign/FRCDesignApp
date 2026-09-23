@@ -505,6 +505,56 @@ describe("insertable routes", () => {
         expect(await readConfig(TEST_PART_STUDIO_ID)).toBeUndefined();
     });
 
+    // Excluding a parameter re-probes without it, so its options stop
+    // multiplying the records.
+    it("POST /excluded-parameters stores the exclusion and reindexes without it", async () => {
+        await seedPartStudio(db);
+        await db.insert(configurations).values({
+            insertableId: TEST_PART_STUDIO_ID,
+            parameters: [
+                enumParam("size", ["s", "l"]),
+                enumParam("finish", ["matte", "gloss"])
+            ]
+        });
+        const parts = vi
+            .spyOn(PartsEndpoints, "getParts")
+            .mockResolvedValue([{ partId: "p", partNumber: "PN" }]);
+
+        const res = await createTestApp().request(
+            `/api/excluded-parameters/insertable/${TEST_PART_STUDIO_ID}`,
+            jsonRequest("POST", { excludedParameterIds: ["finish"] }),
+            env
+        );
+        expect(res.status).toBe(200);
+
+        expect(
+            (await readInsertable(TEST_PART_STUDIO_ID))?.excludedParameterIds
+        ).toEqual(["finish"]);
+        // The default, then size=l alone: finish rides its default.
+        expect(parts).toHaveBeenCalledTimes(2);
+        expect(
+            (await readConfig(TEST_PART_STUDIO_ID))?.records.map(
+                (record) => record.values
+            )
+        ).toEqual([{ size: "l" }]);
+    });
+
+    // Onshape lets no assembly exclude parameters from its properties, so
+    // neither does the app.
+    it("POST /excluded-parameters refuses an assembly", async () => {
+        await seedAssembly(db);
+
+        const res = await createTestApp().request(
+            `/api/excluded-parameters/insertable/${TEST_ASSEMBLY_ID}`,
+            jsonRequest("POST", { excludedParameterIds: ["size"] }),
+            env
+        );
+        expect(res.status).toBe(400);
+        expect(
+            (await readInsertable(TEST_ASSEMBLY_ID))?.excludedParameterIds
+        ).toEqual([]);
+    });
+
     it("POST /index-configurations leaves the flag off when indexing fails", async () => {
         await seedPartStudio(db);
         vi.spyOn(PartsEndpoints, "getParts").mockRejectedValue(

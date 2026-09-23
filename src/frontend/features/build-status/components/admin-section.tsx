@@ -127,25 +127,23 @@ function IndexingRow(props: IndexingRowProps): ReactNode {
     const mutation = useIndexConfigurationsMutation(insertableId);
 
     let control: ReactNode;
-    if (status.elementType === ElementType.ASSEMBLY) {
-        control = (
-            <IndexingIcon
-                severity={null}
-                tooltip="Metadata is pulled from the top level assembly tab."
-            />
-        );
-    } else if (band === IndexingBand.EXCEEDED) {
+    if (band === IndexingBand.EXCEEDED) {
+        // Only a part studio's parameters can be excluded to bring it under.
+        const remedy =
+            status.elementType === ElementType.ASSEMBLY
+                ? ""
+                : " To resolve, exclude parameters from indexing below.";
         control = (
             <IndexingIcon
                 severity={BuildIssueSeverity.ERROR}
-                tooltip={`Parts with more than ${MAX_PART_NUMBER_CONFIGURATIONS} configurations are not eligible for indexing. To resolve, exclude configurations from affecting part properties in Onshape.`}
+                tooltip={`More than ${MAX_PART_NUMBER_CONFIGURATIONS} configurations cannot be indexed.${remedy}`}
             />
         );
     } else if (band === IndexingBand.AUTOMATIC) {
         control = (
             <IndexingIcon
                 severity={null}
-                tooltip="Metadata is indexed from this part's configurations."
+                tooltip="Metadata is indexed from every configuration."
             />
         );
     } else {

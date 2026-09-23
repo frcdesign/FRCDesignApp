@@ -36,6 +36,13 @@
             "when": 1790186214251,
             "tag": "0004_thumbnail_workspace",
             "breakpoints": true
+        },
+        {
+            "idx": 5,
+            "version": "6",
+            "when": 1790196152689,
+            "tag": "0005_excluded_parameters",
+            "breakpoints": true
         }
     ]
 }

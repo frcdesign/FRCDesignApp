@@ -7,6 +7,7 @@ import {
     IndexingBand,
     isIndexedParameter,
     isIndexingEnabled,
+    neverIndexedReason,
     MAX_PART_NUMBER_CONFIGURATIONS
 } from "./combinations";
 import {
@@ -29,7 +30,6 @@ function stringParam(id: string): StringParameter {
         id,
         name: id,
         default: "",
-        isCosmetic: false,
         type: ParameterType.STRING
     };
 }
@@ -70,14 +70,13 @@ describe("enumerateConfigurations", () => {
         expect(configurations).toEqual([{ A: "a1" }, { A: "a2" }]);
     });
 
-    it("ignores cosmetic parameters", () => {
+    it("leaves an excluded parameter at its default", () => {
         const params: ConfigurationParameter[] = [
             enumParam("A", ["a1", "a2"]),
-            enumParam("C", ["c1", "c2"], { isCosmetic: true }),
+            enumParam("C", ["c1", "c2"]),
             boolParam("B")
         ];
-        const { configurations } = enumerateConfigurations(params);
-        // C ("exclude from properties") rides its default, so only A and B vary.
+        const { configurations } = enumerateConfigurations(params, ["C"]);
         expect(configurations).toHaveLength(4);
         expect(configurations.every((c) => !("C" in c))).toBe(true);
     });
@@ -127,7 +126,11 @@ describe("enumerateConfigurations", () => {
             boolParam("B"),
             boolParam("C")
         ];
-        const { configurations, capped } = enumerateConfigurations(params, 4);
+        const { configurations, capped } = enumerateConfigurations(
+            params,
+            [],
+            4
+        );
         expect(capped).toBe(true);
         expect(configurations).toEqual([]);
     });
@@ -141,11 +144,9 @@ describe("countConfigurations", () => {
         });
     });
 
-    // Cosmetic and quantity parameters ride their defaults rather than
-    // multiplying the count, so they leave nothing to vary either.
-    it("ignores parameters that don't vary the build", () => {
-        const cosmetic = enumParam("A", ["x", "y"], { isCosmetic: true });
-        expect(countConfigurations([cosmetic])).toMatchObject({
+    it("counts an excluded parameter as varying nothing", () => {
+        const excluded = enumParam("A", ["x", "y"]);
+        expect(countConfigurations([excluded], ["A"])).toMatchObject({
             count: 0,
             band: IndexingBand.AUTOMATIC
         });
@@ -182,11 +183,7 @@ describe("countConfigurations", () => {
 describe("countCombinations", () => {
     it("counts an insertable with nothing to vary as having none", () => {
         expect(countCombinations([])).toBe(0);
-        expect(
-            countCombinations([
-                enumParam("A", ["x", "y"], { isCosmetic: true })
-            ])
-        ).toBe(0);
+        expect(countCombinations([enumParam("A", ["x", "y"])], ["A"])).toBe(0);
     });
 
     it("agrees with countConfigurations under the index cap", () => {
@@ -220,7 +217,7 @@ describe("countCombinations", () => {
     });
 
     it("gives up past its own cap rather than counting forever", () => {
-        expect(countCombinations(paramsWithConfigs(64), 32)).toBeNull();
+        expect(countCombinations(paramsWithConfigs(64), [], 32)).toBeNull();
     });
 });
 
@@ -243,20 +240,56 @@ describe("isIndexingEnabled", () => {
 
 describe("isIndexedParameter", () => {
     it("varies enum and boolean parameters", () => {
-        expect(isIndexedParameter(enumParam("a", ["x", "y"]))).toBe(true);
-        expect(isIndexedParameter(boolParam("b"))).toBe(true);
+        expect(isIndexedParameter(enumParam("a", ["x", "y"]), [])).toBe(true);
+        expect(isIndexedParameter(boolParam("b"), [])).toBe(true);
     });
 
     it("never varies quantity or text parameters", () => {
-        expect(isIndexedParameter(quantityParam("q"))).toBe(false);
-        expect(isIndexedParameter(stringParam("s"))).toBe(false);
+        expect(isIndexedParameter(quantityParam("q"), [])).toBe(false);
+        expect(isIndexedParameter(stringParam("s"), [])).toBe(false);
     });
 
-    it("does not vary a parameter excluded from properties", () => {
-        expect(
-            isIndexedParameter(enumParam("a", ["x", "y"], { isCosmetic: true }))
-        ).toBe(false);
+    it("does not vary a parameter an admin excluded", () => {
+        expect(isIndexedParameter(enumParam("a", ["x", "y"]), [], ["a"])).toBe(
+            false
+        );
     });
+
+    // They change how a part looks or derives, never which part it is.
+    it.each([
+        "Derivation Variable",
+        "Color",
+        "Part colour",
+        "Tessellation Quality",
+        "Tesselation quality"
+    ])("never varies a parameter named %s", (name) => {
+        const parameter = { ...enumParam("p", ["x", "y"]), name };
+        expect(neverIndexedReason(parameter)).toBeDefined();
+        expect(isIndexedParameter(parameter, [parameter])).toBe(false);
+    });
+
+    const named = (name: string) => ({ ...enumParam(name, ["x", "y"]), name });
+
+    it("never varies a color channel beside its two siblings", () => {
+        const channels = ["R", "G", "B"].map(named);
+        for (const channel of channels) {
+            expect(neverIndexedReason(channel, channels)).toBeDefined();
+        }
+    });
+
+    // A lone "B" is as likely a size as a blue.
+    it("indexes a single-letter parameter with no channel siblings", () => {
+        const lone = named("B");
+        expect(neverIndexedReason(lone, [named("A"), lone])).toBeUndefined();
+    });
+
+    it.each(["Length", "Bearing", "Gear Ratio", "Colorway"])(
+        "indexes an ordinary parameter named %s",
+        (name) => {
+            const parameter = { ...enumParam("p", ["x", "y"]), name };
+            expect(neverIndexedReason(parameter)).toBeUndefined();
+        }
+    );
 
     // The card reports indexing off this helper, so it has to describe exactly
     // what enumeration varies.
@@ -264,10 +297,15 @@ describe("isIndexedParameter", () => {
         const parameters = [
             enumParam("varied", ["x", "y"]),
             boolParam("flag"),
-            enumParam("cosmetic", ["x", "y"], { isCosmetic: true }),
+            enumParam("excluded", ["x", "y"]),
+            { ...boolParam("color"), name: "Color" },
             quantityParam("length")
         ];
-        const { configurations } = enumerateConfigurations(parameters);
+        const excluded = ["excluded"];
+        const { configurations } = enumerateConfigurations(
+            parameters,
+            excluded
+        );
         const enumeratedKeys = new Set(
             configurations.flatMap((configuration) =>
                 Object.keys(configuration)
@@ -275,7 +313,9 @@ describe("isIndexedParameter", () => {
         );
         expect([...enumeratedKeys].sort()).toEqual(
             parameters
-                .filter(isIndexedParameter)
+                .filter((parameter) =>
+                    isIndexedParameter(parameter, parameters, excluded)
+                )
                 .map((parameter) => parameter.id)
                 .sort()
         );

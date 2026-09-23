@@ -10,7 +10,6 @@ import { seedFrom } from "./quantity-box";
 const SHAFT_LENGTH: QuantityParameter = {
     id: "Length",
     name: "Length",
-    isCosmetic: false,
     type: ParameterType.QUANTITY,
     quantityType: QuantityType.LENGTH,
     default: "47 in",

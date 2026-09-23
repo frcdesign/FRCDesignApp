@@ -30,6 +30,7 @@ import {
     decideIndexing,
     indexRecords,
     type ConfigurationRecordsResult,
+    type IndexingSettings,
     type ProbeTarget
 } from "./parse-configuration-records";
 import {
@@ -56,10 +57,8 @@ export interface ParsedInsertable {
 }
 
 /** The user-owned flags that decide how much of a load runs. */
-interface InsertableFlags {
+interface InsertableFlags extends IndexingSettings {
     supportsFasten: boolean;
-    /** Forces part-number indexing on, overriding the auto heuristic. */
-    indexConfigurations: boolean;
 }
 
 /**
@@ -146,11 +145,7 @@ async function probeInsertable(
     // decides how much of the rest of the load is worth running.
     const hasParts = !hasBuildIssue(parts.buildIssues, BuildIssueType.NO_PARTS);
 
-    const indexing = decideIndexing(
-        target.elementType,
-        parameters,
-        flags.indexConfigurations
-    );
+    const indexing = decideIndexing(target.elementType, parameters, flags);
 
     const recordsResult = indexing.shouldIndex
         ? await loadConfigurationRecords(
@@ -189,12 +184,19 @@ function readFlagsStep(
         const row = await getDb(ctx.env.DB)
             .select({
                 supportsFasten: insertables.supportsFasten,
-                indexConfigurations: insertables.indexConfigurations
+                indexConfigurations: insertables.indexConfigurations,
+                excludedParameterIds: insertables.excludedParameterIds
             })
             .from(insertables)
             .where(eq(insertables.id, insertableId))
             .get();
-        return row ?? { supportsFasten: false, indexConfigurations: false };
+        return (
+            row ?? {
+                supportsFasten: false,
+                indexConfigurations: false,
+                excludedParameterIds: []
+            }
+        );
     });
 }
 

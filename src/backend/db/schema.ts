@@ -135,6 +135,12 @@ export const insertables = sqliteTable("insertables", {
     indexConfigurations: integer("index_configurations", { mode: "boolean" })
         .notNull()
         .default(false),
+    // Parameters an admin left out of indexing. User-owned; preserved across
+    // reloads. Part studios only: an assembly indexes every one it can.
+    excludedParameterIds: text("excluded_parameter_ids", { mode: "json" })
+        .$type<string[]>()
+        .notNull()
+        .default([]),
     versionId: text("version_id").notNull(),
     versionCreatedAt: versionCreatedAt(),
     sortOrder: integer("sort_order").notNull().default(0),

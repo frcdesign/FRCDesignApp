@@ -20,6 +20,7 @@ import {
 } from "../build-checker/issues";
 import {
     countConfigurations,
+    effectiveExclusions,
     IndexingBand,
     isIndexingEnabled
 } from "../configurations/combinations";
@@ -73,19 +74,24 @@ interface IndexingDecision {
     configurations: PartialSelection[];
 }
 
+/** What an admin decided about indexing an insertable. */
+export interface IndexingSettings {
+    /** Index even past the automatic threshold. */
+    indexConfigurations: boolean;
+    excludedParameterIds: string[];
+}
+
 /** Past the hard cap forcing it on cannot help, since enumeration stops there. */
 export function decideIndexing(
     elementType: ElementType,
     parameters: ConfigurationParameter[],
-    indexConfigurations: boolean
+    settings: IndexingSettings
 ): IndexingDecision {
-    // No assembly configures its part properties today, so every combination
-    // would probe back to what the default already says.
-    if (elementType === ElementType.ASSEMBLY) {
-        return { shouldIndex: true, buildIssues: [], configurations: [] };
-    }
-
-    const { band, configurations } = countConfigurations(parameters);
+    const { indexConfigurations } = settings;
+    const { band, configurations } = countConfigurations(
+        parameters,
+        effectiveExclusions(elementType, settings.excludedParameterIds)
+    );
     const shouldIndex = isIndexingEnabled(band, indexConfigurations);
 
     if (band === IndexingBand.EXCEEDED) {

@@ -24,6 +24,8 @@ export interface InsertableBuildStatus {
     isVisible: boolean;
     supportsFasten: boolean;
     indexConfigurations: boolean;
+    /** Parameters an admin left out of indexing; see `effectiveExclusions`. */
+    excludedParameterIds: string[];
     vendors: Vendor[];
     configuration?: ConfigurationBuildStatus;
     /** When Onshape cut the version this insertable is pinned to (epoch ms). */

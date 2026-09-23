@@ -65,8 +65,8 @@ async function fillFavorites(howMany: number) {
         sortOrder: i
     }));
     // D1 binds at most 100 parameters per query, and an insertable row spends
-    // sixteen of them, so these go in small chunks rather than one statement.
-    for (const chunk of inChunks(rows, 6)) {
+    // seventeen of them, so these go in small chunks rather than one statement.
+    for (const chunk of inChunks(rows, 5)) {
         await db.insert(insertables).values(
             chunk.map((row) => ({
                 id: row.insertableId,

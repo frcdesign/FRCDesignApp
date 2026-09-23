@@ -60,7 +60,6 @@ export const TEST_PARAMETERS: ConfigurationParameter[] = [
         type: ParameterType.BOOLEAN,
         id: "boolean",
         name: "Test boolean",
-        isCosmetic: false,
         default: "true"
     }
 ];

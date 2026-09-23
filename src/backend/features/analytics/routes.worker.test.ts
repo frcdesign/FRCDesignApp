@@ -766,7 +766,6 @@ describe("analytics routes", () => {
             type: ParameterType.ENUM,
             id: "stages",
             name: "Stages",
-            isCosmetic: false,
             default: "one",
             options: [
                 { id: "one", name: "1 Stage" },

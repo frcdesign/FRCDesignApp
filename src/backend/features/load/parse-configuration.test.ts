@@ -27,7 +27,6 @@ const RESPONSE: OnshapeConfigurationResponse = {
             btType: OnshapeParameterType.BOOLEAN,
             parameterId: "Show_list",
             parameterName: "Show list",
-            isCosmetic: true,
             defaultValue: true,
             visibilityCondition: NONE
         },
@@ -35,7 +34,6 @@ const RESPONSE: OnshapeConfigurationResponse = {
             btType: OnshapeParameterType.ENUM,
             parameterId: "Vendor",
             parameterName: "Vendor",
-            isCosmetic: false,
             defaultValue: "Default",
             options: [
                 { option: "Default", optionName: "WCP" },
@@ -58,7 +56,6 @@ const RESPONSE: OnshapeConfigurationResponse = {
             btType: OnshapeParameterType.ENUM,
             parameterId: "List",
             parameterName: "List",
-            isCosmetic: false,
             defaultValue: "WCP_1",
             options: [
                 { option: "Default", optionName: "Always shown" },
@@ -99,7 +96,6 @@ const RESPONSE: OnshapeConfigurationResponse = {
             btType: OnshapeParameterType.QUANTITY,
             parameterId: "TTB_Length",
             parameterName: "TTB Length",
-            isCosmetic: false,
             quantityType: QuantityType.LENGTH,
             rangeAndDefault: {
                 defaultValue: 1,
@@ -134,12 +130,11 @@ describe("parseOnshapeConfiguration", () => {
         ]);
     });
 
-    it("parses a BOOLEAN parameter and its cosmetic flag", () => {
+    it("parses a BOOLEAN parameter", () => {
         expect(parameters[0]).toEqual({
             type: ParameterType.BOOLEAN,
             id: "Show_list",
             name: "Show list",
-            isCosmetic: true,
             default: "true",
             condition: undefined
         });
@@ -147,7 +142,6 @@ describe("parseOnshapeConfiguration", () => {
 
     it("parses an ENUM parameter with options and a logical condition", () => {
         const vendor = parameters[1];
-        expect(vendor.isCosmetic).toBe(false);
         if (vendor.type !== ParameterType.ENUM)
             throw new Error("expected ENUM");
         expect(vendor.default).toBe("Default");

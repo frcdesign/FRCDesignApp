@@ -14,7 +14,6 @@ const SIZE: ConfigurationParameter = {
     id: "size",
     name: "Size",
     default: "small",
-    isCosmetic: false,
     type: ParameterType.ENUM,
     options: [
         { id: "small", name: "Small" },
@@ -28,7 +27,6 @@ const REINFORCED: ConfigurationParameter = {
     id: "reinforced",
     name: "Reinforced",
     default: "false",
-    isCosmetic: false,
     type: ParameterType.BOOLEAN,
     condition: { type: VisibilityType.EQUAL, id: "size", value: "large" }
 };
@@ -120,7 +118,6 @@ describe("normalizeSelection", () => {
             id: "material",
             name: "Material",
             default: "alu",
-            isCosmetic: false,
             type: ParameterType.ENUM,
             options: [
                 { id: "alu", name: "Aluminium" },
@@ -159,7 +156,6 @@ describe("normalizeSelection", () => {
             id: "bolts",
             name: "Bolts",
             default: "2",
-            isCosmetic: false,
             type: ParameterType.ENUM,
             options: [
                 { id: "2", name: "Two" },

@@ -17,7 +17,6 @@ describe("buildParameterUsage", () => {
         id: "size",
         name: "Size",
         default: "medium",
-        isCosmetic: false,
         options: [
             { id: "small", name: "Small" },
             { id: "medium", name: "Medium" },
@@ -160,8 +159,7 @@ describe("buildParameterUsage", () => {
                     type: ParameterType.STRING,
                     id: "label",
                     name: "Label",
-                    default: "none",
-                    isCosmetic: false
+                    default: "none"
                 }
             ],
             [{ parameterId: "label", value: "custom", count: 2 }]

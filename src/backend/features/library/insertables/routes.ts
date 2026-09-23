@@ -3,7 +3,8 @@ import { handledError, internalError } from "../../../lib/api-error";
 import { validate } from "../../../lib/validate";
 import { HttpStatus } from "http-status-ts";
 import z from "zod";
-import { getApp } from "../../../lib/context";
+import { type AppContext, getApp } from "../../../lib/context";
+import type { BatchItem } from "drizzle-orm/batch";
 import { getInsertableParam, insertableRoute } from "../../../lib/route-params";
 import { getDb, type Db } from "../../../db/client";
 import {
@@ -22,6 +23,7 @@ import {
     INDEXING_ISSUE_TYPES,
     NO_RECORDS,
     decideIndexing,
+    type IndexingSettings,
     parseConfigurationRecords
 } from "../../load/parse-configuration-records";
 import { ElementType } from "../../../lib/onshape/element-type";
@@ -52,6 +54,10 @@ export const insertableRoutes = getApp();
 const setFastenBody = z.object({ supportsFasten: z.boolean() });
 
 const indexConfigurationsBody = z.object({ indexConfigurations: z.boolean() });
+
+const excludedParametersBody = z.object({
+    excludedParameterIds: z.array(z.string())
+});
 
 insertableRoutes.post(
     "/toggle-insert-and-fasten" + insertableRoute(),
@@ -102,101 +108,119 @@ insertableRoutes.post(
     requireEditorMiddleware,
     validate("json", indexConfigurationsBody),
     async (c) => {
-        const db = getDb(c.env.DB);
-        const insertableId = getInsertableParam(c);
-        const body = c.req.valid("json");
-
-        const row = await db
-            .select({
-                libraryId: insertables.libraryId,
-                documentId: insertables.documentId,
-                versionId: insertables.versionId,
-                elementId: insertables.elementId,
-                elementType: insertables.elementType,
-                vendors: insertables.vendors,
-                isOpenComposite: insertables.isOpenComposite,
-                buildIssues: insertables.buildIssues
-            })
-            .from(insertables)
-            .where(eq(insertables.id, insertableId))
-            .get();
-        if (!row)
-            throw internalError("Insertable not found", HttpStatus.NOT_FOUND);
-
-        const parameters =
-            (
-                await db
-                    .select({ parameters: configurations.parameters })
-                    .from(configurations)
-                    .where(eq(configurations.insertableId, insertableId))
-                    .get()
-            )?.parameters ?? [];
-        const indexing = decideIndexing(
-            row.elementType,
-            parameters,
-            body.indexConfigurations
-        );
-
-        // Index before committing anything: if this throws, nothing is written.
-        // The error reaches the client via the app's onError handler.
-        const indexed = indexing.shouldIndex
-            ? await parseConfigurationRecords(
-                  await c.var.getOnshapeApi(),
-                  {
-                      elementPath: toElementPath(row),
-                      elementType: row.elementType,
-                      isOpenComposite: row.isOpenComposite
-                  },
-                  parameters,
-                  indexing.configurations
-              )
-            : NO_RECORDS;
-
-        // Clear first, so an issue the reindex resolved (or that disabling makes
-        // moot) doesn't stick around.
-        const buildIssues = addBuildIssue(
-            clearBuildIssue(row.buildIssues, ...INDEXING_ISSUE_TYPES),
-            ...indexed.buildIssues,
-            ...indexing.buildIssues
-        );
-
-        // A configurations row exists exactly when the insertable is configurable.
-        const configWrite =
-            parameters.length > 0
-                ? db
-                      .insert(configurations)
-                      .values({
-                          insertableId,
-                          parameters,
-                          records: indexed.records
-                      })
-                      .onConflictDoUpdate({
-                          target: configurations.insertableId,
-                          set: { records: indexed.records }
-                      })
-                : db
-                      .delete(configurations)
-                      .where(eq(configurations.insertableId, insertableId));
-
-        await db.batch([
-            db
-                .update(insertables)
-                .set({
-                    indexConfigurations: body.indexConfigurations,
-                    partMetadata: indexed.partMetadata,
-                    buildIssues
-                })
-                .where(eq(insertables.id, insertableId)),
-            configWrite
-        ]);
-
-        // Records feed the search index; rebuild before the bump makes the
-        // /search-db url immutable, or a stale index gets pinned for a year.
-        await rebuildSearchDb(c.env.BLOB, db, row.libraryId);
-        await bumpLibraryVersion(db, row.libraryId);
+        const { indexConfigurations } = c.req.valid("json");
+        await reindex(c, getInsertableParam(c), { indexConfigurations });
         return c.json({ success: true });
     }
 );
+
+/** POST /api/excluded-parameters/insertable/:insertableId */
+insertableRoutes.post(
+    "/excluded-parameters" + insertableRoute(),
+    requireEditorMiddleware,
+    validate("json", excludedParametersBody),
+    async (c) => {
+        const { excludedParameterIds } = c.req.valid("json");
+        await reindex(c, getInsertableParam(c), { excludedParameterIds });
+        return c.json({ success: true });
+    }
+);
+
+/**
+ * Re-probes an insertable's configurations under changed indexing settings.
+ * Probes before committing anything: if that throws, nothing is written.
+ */
+async function reindex(
+    c: AppContext,
+    insertableId: string,
+    change: Partial<IndexingSettings>
+): Promise<void> {
+    const db = getDb(c.env.DB);
+    const row = await db
+        .select({
+            libraryId: insertables.libraryId,
+            documentId: insertables.documentId,
+            versionId: insertables.versionId,
+            elementId: insertables.elementId,
+            elementType: insertables.elementType,
+            isOpenComposite: insertables.isOpenComposite,
+            buildIssues: insertables.buildIssues,
+            indexConfigurations: insertables.indexConfigurations,
+            excludedParameterIds: insertables.excludedParameterIds,
+            parameters: configurations.parameters
+        })
+        .from(insertables)
+        .leftJoin(
+            configurations,
+            eq(configurations.insertableId, insertables.id)
+        )
+        .where(eq(insertables.id, insertableId))
+        .get();
+    if (!row) {
+        throw internalError("Insertable not found", HttpStatus.NOT_FOUND);
+    }
+    if (
+        change.excludedParameterIds &&
+        row.elementType === ElementType.ASSEMBLY
+    ) {
+        throw handledError(
+            "An assembly indexes every parameter it can; none can be excluded.",
+            HttpStatus.BAD_REQUEST
+        );
+    }
+
+    const parameters = row.parameters ?? [];
+    const settings: IndexingSettings = {
+        indexConfigurations: row.indexConfigurations,
+        excludedParameterIds: row.excludedParameterIds,
+        ...change
+    };
+    const indexing = decideIndexing(row.elementType, parameters, settings);
+    const indexed = indexing.shouldIndex
+        ? await parseConfigurationRecords(
+              await c.var.getOnshapeApi(),
+              {
+                  elementPath: toElementPath(row),
+                  elementType: row.elementType,
+                  isOpenComposite: row.isOpenComposite
+              },
+              parameters,
+              indexing.configurations
+          )
+        : NO_RECORDS;
+
+    // Cleared first, so an issue the reindex resolved doesn't stick around.
+    const buildIssues = addBuildIssue(
+        clearBuildIssue(row.buildIssues, ...INDEXING_ISSUE_TYPES),
+        ...indexed.buildIssues,
+        ...indexing.buildIssues
+    );
+
+    const writes: BatchItem<"sqlite">[] = [
+        db
+            .update(insertables)
+            .set({
+                ...settings,
+                partMetadata: indexed.partMetadata,
+                buildIssues
+            })
+            .where(eq(insertables.id, insertableId))
+    ];
+    if (parameters.length > 0) {
+        writes.push(
+            db
+                .update(configurations)
+                .set({ records: indexed.records })
+                .where(eq(configurations.insertableId, insertableId))
+        );
+    }
+    await db.batch([writes[0], ...writes.slice(1)]);
+
+    // Records feed the search index; rebuild before the bump makes the
+    // /search-db url immutable, or a stale index gets pinned for a year.
+    await rebuildSearchDb(c.env.BLOB, db, row.libraryId);
+    await bumpLibraryVersion(db, row.libraryId);
+}
 
 /**
  * The tab being inserted into, in the body so the whole path arrives as one

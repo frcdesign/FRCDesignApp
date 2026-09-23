@@ -289,9 +289,7 @@ function InsertableHoverMenu(props: InsertableHoverMenuProps): ReactNode {
                 configurationCount={configurationCount}
             />
             <InsertableParsedSection status={status} />
-            <ConfigurationSection
-                parameters={status.configuration?.parameters}
-            />
+            <ConfigurationSection insertableId={insertableId} status={status} />
         </>
     );
 }

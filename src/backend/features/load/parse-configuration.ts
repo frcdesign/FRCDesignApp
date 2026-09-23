@@ -122,7 +122,6 @@ export function parseOnshapeConfiguration(
         const base = {
             id: parameter.parameterId,
             name: parameter.parameterName,
-            isCosmetic: parameter.isCosmetic,
             condition: parseVisibilityCondition(parameter.visibilityCondition)
         };
 

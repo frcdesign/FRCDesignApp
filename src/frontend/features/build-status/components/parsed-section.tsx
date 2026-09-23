@@ -1,5 +1,6 @@
 import {
     Badge,
+    Checkbox,
     Divider,
     Group,
     ScrollArea,
@@ -7,7 +8,7 @@ import {
     Text,
     Tooltip
 } from "@mantine/core";
-import { CheckIcon, FileXIcon, XIcon } from "@phosphor-icons/react";
+import { CheckIcon, ProhibitIcon, XIcon } from "@phosphor-icons/react";
 import { ReactNode, useMemo } from "react";
 import { InsertableBuildStatus } from "@backend/features/build-checker/contract";
 import { getVendorName, Vendor } from "@backend/features/library/vendors";
@@ -19,7 +20,9 @@ import {
     type ConfigurationCount,
     countCombinations,
     countConfigurations,
-    MAX_COUNTED_CONFIGURATIONS
+    effectiveExclusions,
+    MAX_COUNTED_CONFIGURATIONS,
+    neverIndexedReason
 } from "@backend/features/configurations/combinations";
 import {
     CATEGORY_COLOR,
@@ -28,6 +31,8 @@ import {
 } from "../../../lib/style-constants";
 import { AppIcon } from "../../../components/app-icon";
 import { SectionHeader } from "./sections";
+import { useExcludedParametersMutation } from "../queries";
+import { ElementType } from "@backend/lib/onshape/element-type";
 import styles from "../../../lib/styles.module.css";
 
 /** Discriminated so `StateValue` renders each kind its own way. */
@@ -43,16 +48,32 @@ type StateRowValue =
 export function useConfigurationCount(
     status: InsertableBuildStatus
 ): ConfigurationCount {
+    const { elementType, excludedParameterIds } = status;
     const parameters = status.configuration?.parameters;
-    return useMemo(() => countConfigurations(parameters ?? []), [parameters]);
+    return useMemo(
+        () =>
+            countConfigurations(
+                parameters ?? [],
+                effectiveExclusions(elementType, excludedParameterIds)
+            ),
+        [parameters, elementType, excludedParameterIds]
+    );
 }
 
 /** The true total, which runs past the index cap the band is decided by. */
 function useDisplayedConfigurationCount(
     status: InsertableBuildStatus
 ): number | null {
+    const { elementType, excludedParameterIds } = status;
     const parameters = status.configuration?.parameters;
-    return useMemo(() => countCombinations(parameters ?? []), [parameters]);
+    return useMemo(
+        () =>
+            countCombinations(
+                parameters ?? [],
+                effectiveExclusions(elementType, excludedParameterIds)
+            ),
+        [parameters, elementType, excludedParameterIds]
+    );
 }
 
 /** Open-ended only past the counting cap, which nothing real reaches. */
@@ -101,14 +122,16 @@ export function InsertableParsedSection(
 const PARAMETER_LIST_MAX_HEIGHT = 220;
 
 interface ConfigurationSectionProps {
-    parameters?: ConfigurationParameter[];
+    insertableId: string;
+    status: InsertableBuildStatus;
 }
 
 /** Each parameter's name, the type it takes, and whether indexing varies it. */
 export function ConfigurationSection(
     props: ConfigurationSectionProps
 ): ReactNode {
-    const { parameters } = props;
+    const { insertableId, status } = props;
+    const parameters = status.configuration?.parameters;
     if (!parameters || parameters.length === 0) return null;
     return (
         <>
@@ -123,6 +146,8 @@ export function ConfigurationSection(
                         {parameters.map((parameter) => (
                             <ParameterRow
                                 key={parameter.id}
+                                insertableId={insertableId}
+                                status={status}
                                 parameter={parameter}
                             />
                         ))}
@@ -134,48 +159,79 @@ export function ConfigurationSection(
 }
 
 interface ParameterRowProps {
+    insertableId: string;
+    status: InsertableBuildStatus;
     parameter: ConfigurationParameter;
 }
 
-/** One parameter: its name, and what varies or excludes it. */
+/** One parameter: its name, its type, and whether indexing varies it. */
 function ParameterRow(props: ParameterRowProps): ReactNode {
     const { parameter } = props;
     return (
         <Group gap="xl" wrap="nowrap" justify="space-between">
             <Text size="sm">{parameter.name}</Text>
-            <Group gap={4} wrap="nowrap">
-                <ExcludedFromPropertiesIcon parameter={parameter} />
+            <Group gap={6} wrap="nowrap">
                 <ParameterTypeBadge parameter={parameter} />
+                <IndexedControl {...props} />
             </Group>
         </Group>
     );
 }
 
-interface ExcludedFromPropertiesIconProps {
-    parameter: ConfigurationParameter;
-}
-
 /**
- * Onshape's "exclude from affecting configured properties", the lever on the
- * count. Part studios only, which Onshape itself enforces.
+ * Only enums and booleans are enumerated, so only they have anything to say.
+ * A never-indexed one says why; a part studio's can be excluded by hand, which
+ * an assembly's cannot.
  */
-function ExcludedFromPropertiesIcon(
-    props: ExcludedFromPropertiesIconProps
-): ReactNode {
-    const { parameter } = props;
-    if (!parameter.isCosmetic) {
+function IndexedControl(props: ParameterRowProps): ReactNode {
+    const { insertableId, status, parameter } = props;
+    const mutation = useExcludedParametersMutation(insertableId);
+
+    if (
+        parameter.type !== ParameterType.ENUM &&
+        parameter.type !== ParameterType.BOOLEAN
+    ) {
         return null;
     }
+    const reason = neverIndexedReason(
+        parameter,
+        status.configuration?.parameters
+    );
+    if (reason) {
+        return (
+            <Tooltip
+                label={`${reason}, so never indexed.`}
+                events={{ hover: true, focus: true, touch: true }}
+            >
+                <AppIcon
+                    icon={ProhibitIcon}
+                    size={IconSize.SMALL}
+                    color={StatusColor.DIMMED}
+                    className={styles.noShrink}
+                />
+            </Tooltip>
+        );
+    }
+    if (status.elementType === ElementType.ASSEMBLY) {
+        return null;
+    }
+
+    const excluded = status.excludedParameterIds;
+    const isIndexed = !excluded.includes(parameter.id);
     return (
-        <Tooltip
-            label="Excluded from affecting part properties in Onshape"
-            events={{ hover: true, focus: true, touch: true }}
-        >
-            <AppIcon
-                icon={FileXIcon}
-                size={IconSize.SMALL}
-                color={StatusColor.DIMMED}
-                className={styles.noShrink}
+        <Tooltip label={isIndexed ? "Indexed" : "Not indexed"}>
+            <Checkbox
+                size="xs"
+                aria-label={`Index ${parameter.name}`}
+                checked={isIndexed}
+                disabled={mutation.isPending}
+                onChange={() =>
+                    mutation.mutate(
+                        isIndexed
+                            ? [...excluded, parameter.id]
+                            : excluded.filter((id) => id !== parameter.id)
+                    )
+                }
             />
         </Tooltip>
     );

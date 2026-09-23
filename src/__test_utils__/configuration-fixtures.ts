@@ -23,7 +23,6 @@ export function enumParam(
         id,
         name: id,
         default: optionIds[0],
-        isCosmetic: false,
         type: ParameterType.ENUM,
         options: optionIds.map((optionId) => ({
             id: optionId,
@@ -49,7 +48,6 @@ export function boolParam(id: string): BooleanParameter {
         id,
         name: id,
         default: "false",
-        isCosmetic: false,
         type: ParameterType.BOOLEAN
     };
 }
@@ -65,7 +63,6 @@ export function quantityParam(
     const parameter = {
         id,
         name: id,
-        isCosmetic: false,
         type: ParameterType.QUANTITY as const,
         quantityType: QuantityType.LENGTH,
         defaultValue: 1,

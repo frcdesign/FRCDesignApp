@@ -101,8 +101,6 @@ interface ConfigurationParameterBase {
     id: string;
     name: string;
     default: string;
-    /** Parameters excluded from configuration properties. */
-    isCosmetic: boolean;
     condition?: VisibilityCondition;
 }
 export interface BooleanParameter extends ConfigurationParameterBase {

@@ -50,6 +50,7 @@ buildStatusRoutes.get(
                     isVisible: insertables.isVisible,
                     supportsFasten: insertables.supportsFasten,
                     indexConfigurations: insertables.indexConfigurations,
+                    excludedParameterIds: insertables.excludedParameterIds,
                     vendors: insertables.vendors,
                     sortOrder: insertables.sortOrder,
                     versionCreatedAt: insertables.versionCreatedAt
@@ -105,6 +106,7 @@ buildStatusRoutes.get(
                 isVisible: ins.isVisible,
                 supportsFasten: ins.supportsFasten,
                 indexConfigurations: ins.indexConfigurations,
+                excludedParameterIds: ins.excludedParameterIds,
                 vendors: ins.vendors,
                 configuration: configMap.get(ins.id),
                 versionCreatedAt: ins.versionCreatedAt?.getTime() ?? null

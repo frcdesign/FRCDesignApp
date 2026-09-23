@@ -160,7 +160,7 @@ export function useToggleInsertAndFastenMutation(insertableId: string) {
 }
 
 /**
- * Toggles part-number indexing for an insertable. The Onshape call behind it
+ * Toggles indexing for an insertable. The Onshape call behind it
  * runs long, so the toast reports the switch rather than sitting on the response.
  */
 export function useIndexConfigurationsMutation(insertableId: string) {
@@ -176,8 +176,8 @@ export function useIndexConfigurationsMutation(insertableId: string) {
         onMutate: (indexConfigurations) => {
             showInfoToast(
                 indexConfigurations
-                    ? "Enabling part indexing"
-                    : "Disabling part indexing",
+                    ? "Enabling indexing"
+                    : "Disabling indexing",
                 { id: toastId }
             );
             return patchQuery<LibraryBuildStatus>(key, (status) => {
@@ -189,12 +189,44 @@ export function useIndexConfigurationsMutation(insertableId: string) {
         onSuccess: (_result, indexConfigurations) =>
             showSuccessToast(
                 indexConfigurations
-                    ? "Part number indexing enabled."
-                    : "Part number indexing disabled.",
+                    ? "Indexing enabled."
+                    : "Indexing disabled.",
                 toastId
             ),
         onError: getAppErrorHandler(
-            "Unexpectedly failed to update part number indexing.",
+            "Unexpectedly failed to update indexing.",
+            toastId
+        ),
+        onSettled: (_result, error) =>
+            refreshLibrary({ discardPatches: error !== null })
+    });
+}
+
+/**
+ * Sets which of a part studio's parameters indexing leaves out. Re-probes the
+ * part like toggling indexing does, so the toast reports the change first.
+ */
+export function useExcludedParametersMutation(insertableId: string) {
+    const key = useBuildStatusKey();
+    const refreshLibrary = useRefreshLibrary();
+    const toastId = `excluded-parameters-${insertableId}`;
+    return useMutation({
+        mutationKey: ["excluded-parameters", insertableId],
+        mutationFn: (excludedParameterIds: string[]) =>
+            apiPost("/excluded-parameters" + toInsertablePath(insertableId), {
+                body: { excludedParameterIds }
+            }),
+        onMutate: (excludedParameterIds) => {
+            showInfoToast("Reindexing part", { id: toastId });
+            return patchQuery<LibraryBuildStatus>(key, (status) => {
+                const insertable = status.insertables[insertableId];
+                if (insertable)
+                    insertable.excludedParameterIds = excludedParameterIds;
+            });
+        },
+        onSuccess: () => showSuccessToast("Part reindexed.", toastId),
+        onError: getAppErrorHandler(
+            "Unexpectedly failed to update the indexed parameters.",
             toastId
         ),
         onSettled: (_result, error) =>
