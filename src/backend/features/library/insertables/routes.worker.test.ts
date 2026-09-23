@@ -28,7 +28,10 @@ import * as AssemblyEndpoints from "../../../lib/onshape/endpoints/assemblies";
 import * as PartsEndpoints from "../../../lib/onshape/endpoints/parts";
 import { OnshapeRateLimitError } from "../../../lib/onshape/client";
 import { AUTO_INDEX_THRESHOLD } from "../../configurations/combinations";
-import { enumParam } from "../../../../__test_utils__/configuration-fixtures";
+import {
+    enumParam,
+    quantityParam
+} from "../../../../__test_utils__/configuration-fixtures";
 
 const db = getDb(env.DB);
 
@@ -162,6 +165,34 @@ describe("insertable routes", () => {
             parameterId: "boolean",
             value: "true"
         });
+    });
+
+    // The feature dialog shows this expression, so it is the one that was typed
+    // rather than the number it evaluates to, in whatever unit.
+    it("POST /add-to-part-studio derives with the expression that was typed", async () => {
+        await seedPartStudio(db);
+        await seedConfiguration(db);
+        await db
+            .update(configurations)
+            .set({ parameters: [quantityParam("length")] })
+            .where(eq(configurations.insertableId, TEST_PART_STUDIO_ID));
+        const spy = vi
+            .spyOn(PartStudioEndpoints, "addPartStudioFeature")
+            .mockResolvedValue({ feature: { featureId: "feat-1" } });
+
+        const res = await createTestApp().request(
+            `/api/add-to-part-studio/insertable/${TEST_PART_STUDIO_ID}`,
+            jsonRequest("POST", {
+                targetPath,
+                selection: { length: "(2 + 3) in" }
+            }),
+            env
+        );
+        expect(res.status).toBe(200);
+
+        expect(JSON.stringify(spy.mock.calls[0][2])).toContain(
+            '"expression":"(2 + 3) in"'
+        );
     });
 
     // A half-built target used to reach Onshape as a nonsense URL and fail
@@ -344,6 +375,32 @@ describe("insertable routes", () => {
             );
         }
     );
+
+    it("POST /add-to-assembly sends a quantity as the expression typed", async () => {
+        await seedAssembly(db);
+        await seedConfiguration(db, TEST_ASSEMBLY_ID);
+        await db
+            .update(configurations)
+            .set({ parameters: [quantityParam("length")] })
+            .where(eq(configurations.insertableId, TEST_ASSEMBLY_ID));
+        const spy = vi
+            .spyOn(AssemblyEndpoints, "addElementToAssembly")
+            .mockResolvedValue({});
+
+        await createTestApp().request(
+            `/api/add-to-assembly/insertable/${TEST_ASSEMBLY_ID}`,
+            jsonRequest("POST", {
+                targetPath,
+                selection: { length: "(2 + 3) in" },
+                fasten: false
+            }),
+            env
+        );
+
+        expect(spy.mock.calls[0][4].configuration).toBe(
+            "length=(2%20%2B%203)%20in"
+        );
+    });
 
     /** An assembly that supports insert-and-fasten, and a landed insert to fasten. */
     async function seedFastenable() {

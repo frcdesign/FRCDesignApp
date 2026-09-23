@@ -70,23 +70,26 @@ export const TEST_PARAMETERS: ConfigurationParameter[] = [
  * isolated per test *file*, so call this in `beforeEach` to isolate tests.
  */
 export async function resetDb(db: Db): Promise<void> {
-    await db.delete(favorites);
-    await db.delete(configurations);
-    await db.delete(insertables);
-    await db.delete(groups);
-    await db.delete(users);
-    await db.delete(libraries);
-    // Analytics has no foreign keys, so nothing cascades these away.
-    await db.delete(events);
-    await db.delete(dailyMetrics);
-    await db.delete(dailySourceMetrics);
-    await db.delete(dailyTargetMetrics);
-    await db.delete(dailyUserActivity);
-    await db.delete(insertableStats);
-    await db.delete(dailyInsertableMetrics);
-    await db.delete(dailyInsertableUsers);
-    await db.delete(dailyConfigurationMetrics);
-    await db.delete(userStats);
+    // One batch, one round trip: this runs before nearly every test.
+    await db.batch([
+        db.delete(favorites),
+        db.delete(configurations),
+        db.delete(insertables),
+        db.delete(groups),
+        db.delete(users),
+        db.delete(libraries),
+        // Analytics has no foreign keys, so nothing cascades these away.
+        db.delete(events),
+        db.delete(dailyMetrics),
+        db.delete(dailySourceMetrics),
+        db.delete(dailyTargetMetrics),
+        db.delete(dailyUserActivity),
+        db.delete(insertableStats),
+        db.delete(dailyInsertableMetrics),
+        db.delete(dailyInsertableUsers),
+        db.delete(dailyConfigurationMetrics),
+        db.delete(userStats)
+    ]);
 }
 
 export async function seedLibrary(

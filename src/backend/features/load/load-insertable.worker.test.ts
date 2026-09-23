@@ -22,7 +22,8 @@ import * as ConfigurationEndpoints from "../../lib/onshape/endpoints/configurati
 import * as PartsEndpoints from "../../lib/onshape/endpoints/parts";
 import * as ThumbnailStore from "../thumbnails/store";
 import { BuildIssueType } from "../build-checker/issues";
-import { createLimiter, LOAD_CONCURRENCY, type LoadContext } from "./context";
+import { LOAD_CONCURRENCY, type LoadContext } from "./context";
+import { createLimiter } from "../../lib/limiter";
 import * as LoadContextModule from "./context";
 import { loadInsertable, saveInsertable } from "./load-insertable";
 

@@ -24,10 +24,10 @@ import {
 } from "./load-group";
 import {
     LOAD_CONCURRENCY,
-    createLimiter,
     type GroupTarget,
     type LoadContext
 } from "./context";
+import { createLimiter } from "../../lib/limiter";
 import * as LoadCommonModule from "./context";
 import {
     FAKE_STEP,

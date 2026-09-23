@@ -30,8 +30,6 @@ import type {
     OnshapeMetadataObject,
     OnshapePart
 } from "../../lib/onshape/types";
-import { type LoadContext, getOnshapeApiFromContext } from "./context";
-import { ONSHAPE_STEP_RETRIES } from "./steps";
 import { clean } from "../../lib/text";
 
 /** Configurations fetched per workflow step. */
@@ -225,17 +223,18 @@ export interface ProbeTarget {
 }
 
 /**
- * How one Onshape read is run. A request awaits it directly; the workflow wraps
- * each in a durable step, so a rate-limited retry re-fetches only that batch.
+ * How one Onshape read is run. A request awaits it directly; a load wraps each
+ * in a durable step (`loadConfigurationRecords`), so a rate-limited retry
+ * re-fetches only that batch.
  * The client is fetched per read rather than held, since a step that retries
  * hours later needs a token that has not expired.
  */
-type ProbeRunner = (
+export type ProbeRunner = (
     name: string,
     read: () => Promise<ConfigurationRecord[]>
 ) => Promise<ConfigurationRecord[]>;
 
-async function indexRecords(
+export async function indexRecords(
     getClient: () => Promise<OnshapeApi>,
     run: ProbeRunner,
     target: ProbeTarget,
@@ -270,31 +269,6 @@ export function parseConfigurationRecords(
     return indexRecords(
         () => Promise.resolve(client),
         (_name, read) => read(),
-        target,
-        parameters,
-        configurations
-    );
-}
-
-/**
- * One durable step per batch. An exhausted batch throws rather than saving a
- * half-built list.
- */
-export function loadConfigurationRecords(
-    ctx: LoadContext,
-    insertableId: string,
-    target: ProbeTarget,
-    parameters: ConfigurationParameter[],
-    configurations: PartialSelection[]
-): Promise<ConfigurationRecordsResult> {
-    return indexRecords(
-        () => getOnshapeApiFromContext(ctx),
-        (name, read) =>
-            ctx.step.do(
-                `records-${insertableId}-${name}`,
-                { retries: ONSHAPE_STEP_RETRIES },
-                read
-            ),
         target,
         parameters,
         configurations

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createLimiter } from "./context";
+import { createLimiter } from "./limiter";
 
 describe("createLimiter", () => {
     it("never runs more than `max` tasks at once", async () => {

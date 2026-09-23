@@ -3,7 +3,8 @@ import { type Db, getDb } from "../../db/client";
 import {
     type Configuration,
     type PartMetadata,
-    type ConfigurationParameter
+    type ConfigurationParameter,
+    type PartialSelection
 } from "../configurations/contract";
 import {
     addBuildIssue,
@@ -27,7 +28,9 @@ import {
     NO_RECORDS,
     computeOpenComposite,
     decideIndexing,
-    loadConfigurationRecords
+    indexRecords,
+    type ConfigurationRecordsResult,
+    type ProbeTarget
 } from "./parse-configuration-records";
 import {
     type InsertableTarget,
@@ -334,4 +337,29 @@ export async function saveInsertable(
     }
 
     await db.batch([insertableWrite, configurationWrite]);
+}
+
+/**
+ * One durable step per batch. An exhausted batch throws rather than saving a
+ * half-built list.
+ */
+function loadConfigurationRecords(
+    ctx: LoadContext,
+    insertableId: string,
+    target: ProbeTarget,
+    parameters: ConfigurationParameter[],
+    configurations: PartialSelection[]
+): Promise<ConfigurationRecordsResult> {
+    return indexRecords(
+        () => getOnshapeApiFromContext(ctx),
+        (name, read) =>
+            ctx.step.do(
+                `records-${insertableId}-${name}`,
+                { retries: ONSHAPE_STEP_RETRIES },
+                read
+            ),
+        target,
+        parameters,
+        configurations
+    );
 }
