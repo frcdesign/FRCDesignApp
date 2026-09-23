@@ -1,30 +1,26 @@
 import { Box, Group, type MantineSpacing, Modal, Stack } from "@mantine/core";
 import { PropsWithChildren, ReactNode } from "react";
-import { BORDER, FRAME_BACKGROUND } from "../lib/style-constants";
+import styles from "../lib/styles.module.css";
+import classes from "./app-modal.module.css";
 
-const COLUMN = { display: "flex", flexDirection: "column" } as const;
-
-/** Passes the card's capped height down to the body, which is what scrolls. */
-const FILL_COLUMN = { ...COLUMN, flex: 1, minHeight: 0 } as const;
-
-/**
- * The framing both halves of the app's modals draw: a bordered card that clips
- * rather than scrolls, so the body below scrolls and the footer stays put.
- */
-export const APP_MODAL_STYLES = {
-    content: { border: BORDER, overflow: "hidden", ...COLUMN },
-    header: {
-        background: FRAME_BACKGROUND,
-        borderBottom: BORDER,
-        padding: "var(--mantine-spacing-sm)",
-        // Otherwise a Mantine minimum, not the padding, sets the height.
-        minHeight: 0
-    },
-    // Shrinkable, so a long title ellipsizes rather than running under the
-    // close button.
-    title: { minWidth: 0 },
-    body: { padding: 0, ...FILL_COLUMN }
+/** The framing both halves of the app's modals draw. */
+export const APP_MODAL_CLASSES = {
+    content: classes.content,
+    header: `${classes.header} ${styles.frame}`,
+    title: classes.title,
+    body: classes.body
 };
+
+/** What every modal's content sits in, so its body can scroll. */
+export function AppModalContent(props: PropsWithChildren): ReactNode {
+    // `data-autofocus` takes the focus the trap would otherwise land on the
+    // first control, which reads as that one being pre-selected.
+    return (
+        <div data-autofocus tabIndex={-1} className={classes.fill}>
+            {props.children}
+        </div>
+    );
+}
 
 interface AppModalProps extends PropsWithChildren {
     opened: boolean;
@@ -61,17 +57,9 @@ export function AppModal(props: AppModalProps): ReactNode {
             withCloseButton={dismissible}
             closeOnClickOutside={dismissible}
             closeOnEscape={dismissible}
-            styles={APP_MODAL_STYLES}
+            classNames={APP_MODAL_CLASSES}
         >
-            {/* Takes the focus the trap would otherwise land on the first
-                control, which reads as that one being pre-selected. */}
-            <div
-                data-autofocus
-                tabIndex={-1}
-                style={{ outline: "none", ...FILL_COLUMN }}
-            >
-                {children}
-            </div>
+            <AppModalContent>{children}</AppModalContent>
         </Modal>
     );
 }
@@ -94,14 +82,13 @@ interface AppModalBodyProps extends PropsWithChildren {
 }
 
 /**
- * A modal's content, padded away from the header and footer framing it. The one
- * part of a modal that scrolls — `mih` because a flex item otherwise floors at
- * its content height, which pushes the footer off the modal instead.
+ * A modal's content, padded away from the header and footer framing it: the
+ * one part of a modal that scrolls.
  */
 export function AppModalBody(props: AppModalBodyProps): ReactNode {
     const { gap = "sm", children } = props;
     return (
-        <Stack p="sm" gap={gap} flex={1} mih={0} style={{ overflowY: "auto" }}>
+        <Stack p="sm" gap={gap} className={classes.scroll}>
             {children}
         </Stack>
     );
@@ -114,9 +101,8 @@ export function AppModalFooter(props: PropsWithChildren): ReactNode {
             justify="space-between"
             wrap="nowrap"
             p="sm"
-            bg={FRAME_BACKGROUND}
             flex="0 0 auto"
-            style={{ borderTop: BORDER }}
+            className={`${styles.frame} ${styles.dividerTop}`}
         >
             {props.children}
         </Group>

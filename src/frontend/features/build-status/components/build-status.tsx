@@ -18,7 +18,6 @@ import { InsertableBuildStatus } from "@backend/features/build-checker/contract"
 import {
     FontWeight,
     IconSize,
-    NO_SHRINK,
     StatusColor
 } from "../../../lib/style-constants";
 import { AppIcon } from "../../../components/app-icon";
@@ -39,6 +38,7 @@ import {
     useConfigurationCount
 } from "./parsed-section";
 import { GroupAdminSection, InsertableAdminSection } from "./admin-section";
+import styles from "../../../lib/styles.module.css";
 
 /** What the card and the badge both say about a group or an insertable. */
 interface BuildStatusSubject {
@@ -136,14 +136,7 @@ function BuildStatusHoverCard({
 
     return (
         <CloseCardContext value={close}>
-            <HoverCard
-                key={cardKey}
-                withinPortal
-                shadow="md"
-                position="right"
-                withArrow
-                arrowSize={20}
-            >
+            <HoverCard key={cardKey} position="right" arrowSize={20}>
                 <HoverCard.Target>
                     {jobRunning ? (
                         <Loader size={IconSize.SMALL} />
@@ -224,7 +217,7 @@ function VersionAge(props: VersionAgeProps): ReactNode {
     if (jobRunning) {
         return (
             <Tooltip label="The library is being loaded from Onshape in the background">
-                <Loader size="xs" style={NO_SHRINK} />
+                <Loader size="xs" className={styles.noShrink} />
             </Tooltip>
         );
     }
@@ -233,7 +226,8 @@ function VersionAge(props: VersionAgeProps): ReactNode {
             gap={4}
             wrap="nowrap"
             c={StatusColor.DIMMED}
-            style={{ whiteSpace: "nowrap", ...NO_SHRINK }}
+            className={styles.noShrink}
+            style={{ whiteSpace: "nowrap" }}
         >
             <GitBranchIcon size={IconSize.TINY} />
             <Text size="xs">

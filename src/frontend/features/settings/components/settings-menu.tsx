@@ -61,7 +61,6 @@ function SettingSelect<T extends string>(props: SettingSelectProps<T>) {
                 value={value}
                 allowDeselect={false}
                 checkIconPosition="right"
-                comboboxProps={{ withinPortal: true }}
                 onChange={(selected) => {
                     if (selected !== null) {
                         onSelect(selected);

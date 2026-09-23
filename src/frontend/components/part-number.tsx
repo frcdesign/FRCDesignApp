@@ -1,7 +1,8 @@
 import { Anchor, Text } from "@mantine/core";
 import { ArrowSquareOutIcon } from "@phosphor-icons/react";
 import { ReactNode } from "react";
-import { IconSize, NO_SHRINK } from "../lib/style-constants";
+import { IconSize } from "../lib/style-constants";
+import styles from "../lib/styles.module.css";
 
 interface PartNumberLinkProps {
     /** Already-rendered text, so a caller can underline what a query matched. */
@@ -32,11 +33,8 @@ export function PartNumberLink(props: PartNumberLinkProps): ReactNode {
             display="inline-flex"
             miw={0}
             maw="100%"
-            style={{
-                alignItems: "center",
-                gap: 2,
-                ...(noShrink ? NO_SHRINK : {})
-            }}
+            className={noShrink ? styles.noShrink : undefined}
+            style={{ alignItems: "center", gap: 2 }}
         >
             <Text component="span" inherit truncate miw={0}>
                 {children}

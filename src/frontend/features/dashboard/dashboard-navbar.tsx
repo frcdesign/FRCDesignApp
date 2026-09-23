@@ -20,7 +20,7 @@ import {
 import { type ReactNode } from "react";
 import { LibraryId } from "@backend/features/library/library-id";
 import { getLibraryName } from "../../lib/library";
-import { BORDER, IconSize, NAVBAR_ROW_HEIGHT } from "../../lib/style-constants";
+import { IconSize, NAVBAR_ROW_HEIGHT } from "../../lib/style-constants";
 import { NavbarRow, SettingsButton } from "../../components/app-navbar";
 import { RangeControl } from "./range-control";
 import {
@@ -30,6 +30,7 @@ import {
     toDashboardKey,
     type DashboardKey
 } from "./dashboard-nav";
+import styles from "../../lib/styles.module.css";
 
 interface DashboardTabsProps {
     current: DashboardKey;
@@ -61,7 +62,7 @@ export function DashboardNavbar(): ReactNode {
                     h={NAVBAR_ROW_HEIGHT}
                     wrap="nowrap"
                     align="center"
-                    style={{ borderBottom: BORDER }}
+                    className={styles.dividerBottom}
                 >
                     <LibraryMenu dashboard={current} />
                     <Group gap="sm" ml="auto">
@@ -118,7 +119,7 @@ function LibraryMenu({ dashboard }: LibraryMenuProps): ReactNode {
     const target = DASHBOARDS.find((entry) => entry.key === dashboard);
 
     return (
-        <Menu position="bottom-start" withinPortal>
+        <Menu position="bottom-start">
             <Menu.Target>
                 <Button
                     variant="default"
@@ -196,7 +197,7 @@ function RefreshButton(): ReactNode {
     const fetching = useIsFetching({ queryKey: ["analytics"] }) > 0;
 
     return (
-        <Tooltip withArrow label="Refresh">
+        <Tooltip label="Refresh">
             <ActionIcon
                 my="auto"
                 variant="subtle"

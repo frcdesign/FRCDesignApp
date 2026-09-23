@@ -24,7 +24,7 @@ export function ChangeIndicator({
 }: ChangeIndicatorProps): ReactNode {
     if (comparison.changeRatio === undefined) {
         return (
-            <Tooltip withArrow multiline w={260} label={explain(comparison)}>
+            <Tooltip label={explain(comparison)}>
                 <Text size="sm" c="dimmed" w="fit-content" ta="right">
                     {shortReason(comparison)}
                 </Text>
@@ -49,7 +49,6 @@ export function ChangeIndicator({
 
     return (
         <Tooltip
-            withArrow
             label={`${format(comparison.previous)} in ${comparison.baselineLabel}`}
         >
             <Stack gap={0} align="flex-end" w="fit-content">

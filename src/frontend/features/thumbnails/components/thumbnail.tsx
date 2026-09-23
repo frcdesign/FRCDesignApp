@@ -100,12 +100,9 @@ export function CardThumbnail(props: CardThumbnailProps): ReactNode {
 
     return (
         <HoverCard
-            withinPortal
-            shadow="md"
             openDelay={150}
             closeDelay={50}
             position="right"
-            withArrow
             arrowSize={20}
         >
             <HoverCard.Target>
@@ -234,7 +231,7 @@ export function PreviewImageCard(props: PreviewImageProps): ReactNode {
     return (
         // No margin: the modal body it sits in supplies the inset, and the
         // padding stays tight so the preview is not lost inside its frame.
-        <Card withBorder pos="relative" p="xs" bg={RENDER_BACKGROUND}>
+        <Card pos="relative" p="xs" radius="sm" bg={RENDER_BACKGROUND}>
             <Center>
                 <PreviewImage {...props} />
             </Center>

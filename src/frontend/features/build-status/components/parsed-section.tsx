@@ -24,11 +24,11 @@ import {
 import {
     CATEGORY_COLOR,
     IconSize,
-    NO_SHRINK,
     StatusColor
 } from "../../../lib/style-constants";
 import { AppIcon } from "../../../components/app-icon";
 import { SectionHeader } from "./sections";
+import styles from "../../../lib/styles.module.css";
 
 /** Discriminated so `StateValue` renders each kind its own way. */
 type StateRowValue =
@@ -169,16 +169,13 @@ function ExcludedFromPropertiesIcon(
     return (
         <Tooltip
             label="Excluded from affecting part properties in Onshape"
-            multiline
-            maw={260}
-            withArrow
             events={{ hover: true, focus: true, touch: true }}
         >
             <AppIcon
                 icon={FileXIcon}
                 size={IconSize.SMALL}
                 color={StatusColor.DIMMED}
-                style={NO_SHRINK}
+                className={styles.noShrink}
             />
         </Tooltip>
     );
@@ -210,9 +207,6 @@ function ParameterTypeBadge(props: ParameterTypeBadgeProps): ReactNode {
     return (
         <Tooltip
             label={parameter.options.map((option) => option.name).join(", ")}
-            multiline
-            maw={260}
-            withArrow
             events={{ hover: true, focus: true, touch: true }}
         >
             {badge}

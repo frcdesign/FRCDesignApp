@@ -71,7 +71,7 @@ function DashboardOverview(): ReactNode {
             <InsertsByLibraryCard series={series} />
 
             <Section title="How people use the app">
-                <Card withBorder padding="lg" radius="md">
+                <Card>
                     <InsertSourceBreakdown sources={sources} />
                 </Card>
                 <SimpleGrid cols={{ base: 1, sm: 3 }}>

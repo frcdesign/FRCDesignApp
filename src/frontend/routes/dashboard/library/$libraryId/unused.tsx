@@ -32,7 +32,7 @@ function LowUsage(): ReactNode {
 
     return (
         <Stack gap="xl">
-            <Card withBorder padding="lg" radius="md">
+            <Card>
                 <Title order={4} mb="md">
                     Low-usage parts
                 </Title>
@@ -47,7 +47,7 @@ function LowUsage(): ReactNode {
                 )}
             </Card>
 
-            <Card withBorder padding="lg" radius="md">
+            <Card>
                 <Title order={4} mb="md">
                     Low-usage configuration options
                 </Title>

@@ -25,15 +25,10 @@ import {
     GroupBuildStatus,
     InsertableBuildStatus
 } from "@backend/features/build-checker/contract";
-import {
-    IconSize,
-    NO_SHRINK,
-    RADIUS,
-    StatusColor,
-    statusBackground
-} from "../../../lib/style-constants";
+import { IconSize, StatusColor } from "../../../lib/style-constants";
 import { AppIcon, type AppIconProps } from "../../../components/app-icon";
 import { SectionHeader } from "./sections";
+import styles from "../../../lib/styles.module.css";
 
 /**
  * Stored issues plus the live "no unhidden insertables" check, which needs the
@@ -249,9 +244,6 @@ const CALLOUT_LAYOUT = {
     p: "xs"
 } as const;
 
-/** Nudged down so the icon aligns with the first line of text. */
-const CALLOUT_ICON = { ...NO_SHRINK, marginTop: 2 };
-
 interface IssueCalloutProps {
     issue: BuildIssue;
     /** Where the issue opens, when it blames one configuration. */
@@ -266,15 +258,12 @@ interface IssueCalloutProps {
 function IssueCallout(props: IssueCalloutProps): ReactNode {
     const { issue, url } = props;
     const severity = getIssueSeverity(issue);
-    const background = {
-        backgroundColor: severityBackground(severity),
-        borderRadius: RADIUS
-    };
+    const background = severityBackground(severity);
 
     if (!url) {
         return (
-            <Group {...CALLOUT_LAYOUT} style={background}>
-                <IssueIcon severity={severity} style={CALLOUT_ICON} />
+            <Group {...CALLOUT_LAYOUT} bg={background} bdrs="sm">
+                <CalloutIcon severity={severity} />
                 <Text size="sm">{getIssueDescription(issue)}</Text>
             </Group>
         );
@@ -292,12 +281,16 @@ function IssueCallout(props: IssueCalloutProps): ReactNode {
             c="inherit"
             aria-label={`${getIssueDescription(issue)} — open the configuration in Onshape`}
         >
-            <Group {...CALLOUT_LAYOUT} style={background}>
-                <IssueIcon severity={severity} style={CALLOUT_ICON} />
+            <Group {...CALLOUT_LAYOUT} bg={background} bdrs="sm">
+                <CalloutIcon severity={severity} />
                 <Text size="sm" flex={1}>
                     {getIssueDescription(issue)}
                 </Text>
-                <AppIcon icon={ArrowSquareOutIcon} style={CALLOUT_ICON} />
+                <AppIcon
+                    icon={ArrowSquareOutIcon}
+                    className={styles.noShrink}
+                    style={CALLOUT_ICON_NUDGE}
+                />
             </Group>
         </Anchor>
     );
@@ -305,5 +298,22 @@ function IssueCallout(props: IssueCalloutProps): ReactNode {
 
 /** The light background tint for a build-issue callout. */
 function severityBackground(severity: BuildIssueSeverity): string {
-    return statusBackground(severityColor(severity));
+    return `var(--mantine-color-${severityColor(severity)}-light)`;
+}
+
+interface CalloutIconProps {
+    severity: BuildIssueSeverity;
+}
+
+/** Down to the first line of text, which a centred icon sits above. */
+const CALLOUT_ICON_NUDGE = { marginTop: 2 };
+
+function CalloutIcon(props: CalloutIconProps): ReactNode {
+    return (
+        <IssueIcon
+            severity={props.severity}
+            className={styles.noShrink}
+            style={CALLOUT_ICON_NUDGE}
+        />
+    );
 }

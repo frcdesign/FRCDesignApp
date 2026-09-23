@@ -12,12 +12,7 @@ import {
     ArrowUUpLeftIcon,
     WarningIcon
 } from "@phosphor-icons/react";
-import {
-    BORDER,
-    IconSize,
-    SECTION_HEADER_HEIGHT,
-    StatusColor
-} from "../../../../../lib/style-constants";
+import { IconSize, StatusColor } from "../../../../../lib/style-constants";
 import { ReactNode } from "react";
 import { SearchResults } from "../../../../../features/search/components/search-results";
 import { InsertSource } from "@backend/features/analytics/usage";
@@ -41,6 +36,7 @@ import { useLibraryQuery } from "../../../../../features/library/queries";
 import { useLibraryId } from "../../../../../lib/library";
 import { updateUiState, useGetUiState } from "../../../../../lib/ui-state";
 import { AppIcon } from "../../../../../components/app-icon";
+import styles from "../../../../../lib/styles.module.css";
 
 export const Route = createFileRoute("/app/library/$libraryId/groups/$groupId")(
     {
@@ -120,11 +116,9 @@ function GroupList(): ReactNode {
                 its list wants and no more, capped at what the main region has
                 left — which is what `min-height` allows it to shrink to. */}
             <Box
-                style={{
-                    borderBottom: BORDER,
-                    minHeight: 0,
-                    overflowY: "auto"
-                }}
+                className={styles.dividerBottom}
+                mih={0}
+                style={{ overflowY: "auto" }}
             >
                 {content}
                 <Outlet />
@@ -145,7 +139,8 @@ function GroupHeaderRow(props: GroupHeaderRowProps): ReactNode {
 
     const header = (
         <Box
-            className="interactive"
+            // The same header the library's sections draw, divider and all.
+            className={`interactive ${styles.sectionHeader} ${styles.dividerBottom}`}
             onClick={() =>
                 void navigate({
                     to: "/app/library/$libraryId",
@@ -153,14 +148,9 @@ function GroupHeaderRow(props: GroupHeaderRowProps): ReactNode {
                 })
             }
             px="md"
-            h={SECTION_HEADER_HEIGHT}
-            // Owned here, as an accordion control owns its own, so the row and
-            // its divider measure the same as a section header's. It is also
-            // the one part that does not shrink: the list below gives up its
-            // room, never the header naming it.
-            style={{ borderBottom: BORDER, flexShrink: 0 }}
+            display="flex"
         >
-            <Group wrap="nowrap" justify="space-between" h="100%">
+            <Group wrap="nowrap" justify="space-between" flex={1}>
                 <AppTitle
                     icon={<ArrowLeftIcon size={IconSize.MEDIUM} />}
                     title={group.name}

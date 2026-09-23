@@ -46,7 +46,7 @@ export function TrendTile({
         : formatCount(metric.lifetimeValue(totals));
 
     return (
-        <Card withBorder padding="lg" radius="md">
+        <Card>
             <Text size="sm" c="dimmed" tt="uppercase" fw={700}>
                 {metric.label}
             </Text>

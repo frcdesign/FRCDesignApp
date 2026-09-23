@@ -11,14 +11,10 @@ import { CheckIcon, CopyIcon } from "@phosphor-icons/react";
 import { type ReactNode, useEffect } from "react";
 import { modals } from "@mantine/modals";
 import type { SearchRecord } from "@backend/features/configurations/contract";
-import {
-    FontWeight,
-    IconSize,
-    StatusColor,
-    TITLE_ICON_NUDGE
-} from "../lib/style-constants";
+import { FontWeight, IconSize, StatusColor } from "../lib/style-constants";
 import { meaningfulPartNumber } from "@backend/features/configurations/part-number";
 import { PartNumberLink } from "./part-number";
+import styles from "../lib/styles.module.css";
 
 interface AppTitleProps {
     title: ReactNode;
@@ -37,7 +33,7 @@ export function AppTitle(props: AppTitleProps): ReactNode {
         <Group gap="sm" wrap="nowrap" miw={0}>
             {/* Centred, not wrapped in a block, where the icon would go back
                 to sitting on the text baseline several pixels low. */}
-            {icon && <Center style={TITLE_ICON_NUDGE}>{icon}</Center>}
+            {icon && <Center className={styles.titleIcon}>{icon}</Center>}
             <Stack gap={0} miw={0}>
                 <Group gap="xs" wrap="nowrap" miw={0}>
                     <Text fw={FontWeight.SEMI_BOLD} truncate miw={0}>
@@ -126,10 +122,7 @@ function CopyPartNumberButton(props: CopyPartNumberButtonProps): ReactNode {
     return (
         <CopyButton value={partNumber}>
             {({ copied, copy }) => (
-                <Tooltip
-                    label={copied ? "Copied" : "Copy part number"}
-                    withArrow
-                >
+                <Tooltip label={copied ? "Copied" : "Copy part number"}>
                     <ActionIcon
                         variant="subtle"
                         color={copied ? "teal" : "gray"}

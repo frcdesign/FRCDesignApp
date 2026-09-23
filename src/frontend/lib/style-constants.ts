@@ -23,11 +23,6 @@ export enum FontWeight {
     BOLD = 700
 }
 
-export const BORDER = "1px solid var(--mantine-color-default-border)";
-
-/** The corner every box of ours is cut with, matching the theme's default. */
-export const RADIUS = "var(--mantine-radius-sm)";
-
 /**
  * The colors state is spoken in, as Mantine names them. Named here rather than
  * written at each control, so an error looks like an error everywhere.
@@ -68,16 +63,6 @@ export function colorVar(color: string, shade: number): string {
  */
 export const MUTED_MARK = `${StatusColor.NEUTRAL}.5`;
 
-/** The same color as a tint to sit content on, e.g. a callout's background. */
-export function statusBackground(color: StatusColor): string {
-    return `var(--mantine-color-${color}-light)`;
-}
-
-/** A step off the page, for the bars framing it: the navbar's tab row, a
- * modal's header and footer. */
-export const FRAME_BACKGROUND =
-    "light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-8))";
-
 /**
  * A surface for a render to sit on. Onshape renders a part light, on white, so
  * a white card leaves the thumbnail with no edge to it; light mode steps down
@@ -93,15 +78,6 @@ export const RENDER_BACKGROUND =
  * or it takes the body text color and reads darker than its neighbours.
  */
 export const CONTROL_ICON_COLOR = "var(--mantine-color-gray-light-color)";
-
-/**
- * Text reads as centred on its cap height, a pixel above its line box, so an
- * icon centred on that box looks low. `text-box` clips descenders under truncation.
- */
-export const TITLE_ICON_NUDGE = { transform: "translateY(-1px)" };
-
-/** Holds an icon or badge at its own size beside text that can outgrow the row. */
-export const NO_SHRINK = { flexShrink: 0 };
 
 /**
  * Paints an image in the current text color rather than its own. The url needs
@@ -127,17 +103,11 @@ export const INPUT_HEIGHT = "36px";
 export const NAVBAR_ROW_HEIGHT = 48;
 
 /**
- * A rule that has to read against {@link FRAME_BACKGROUND} rather than a white
- * page, so it takes the same step off the frame in either theme.
+ * A rule that has to read against the navbar's frame rather than a white page,
+ * so it takes the same step off the frame in either theme.
  */
 export const NAVBAR_DIVIDER_COLOR =
     "light-dark(var(--mantine-color-gray-4), var(--mantine-color-dark-3))";
-
-/**
- * One height for a section header, set rather than left to the content: an
- * accordion is sized by its label, a group header by its menu button.
- */
-export const SECTION_HEADER_HEIGHT = 48;
 
 /** The app's primary color as a filled background. */
 export enum PrimaryColor {

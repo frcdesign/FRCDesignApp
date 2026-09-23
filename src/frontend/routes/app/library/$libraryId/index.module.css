@@ -1,0 +1,16 @@
+/*
+ * Mantine brightens a control to pure white or black; a section header is a
+ * title like the group page's, so it reads in the same text color.
+ */
+.control {
+    color: var(--mantine-color-text);
+}
+
+/* Its own padding would outgrow the header's height. */
+.label {
+    padding-block: 0;
+}
+
+.content {
+    padding: 0;
+}

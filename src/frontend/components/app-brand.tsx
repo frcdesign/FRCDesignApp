@@ -4,8 +4,7 @@ import {
     FontWeight,
     IconSize,
     maskedImage,
-    PrimaryColor,
-    RADIUS
+    PrimaryColor
 } from "../lib/style-constants";
 
 import frcDesignBook from "/frc-design-book.svg";
@@ -34,7 +33,7 @@ export function AppBrandMark(props: AppBrandMarkProps): ReactNode {
             // White on every library rather than the tile's contrast color,
             // which flips to black on the lighter ones.
             c="white"
-            style={{ borderRadius: RADIUS }}
+            bdrs="sm"
         >
             {/* Masked, not drawn, so the book takes the color above rather
                 than the gray in the file. */}

@@ -1,13 +1,6 @@
 import { modals } from "@mantine/modals";
 import type { ReactNode } from "react";
-import { APP_MODAL_STYLES } from "./app-modal";
-
-const FILL_COLUMN = {
-    display: "flex",
-    flexDirection: "column",
-    flex: 1,
-    minHeight: 0
-} as const;
+import { APP_MODAL_CLASSES, AppModalContent } from "./app-modal";
 
 interface OpenAppModalProps {
     title: ReactNode;
@@ -28,19 +21,9 @@ export function openAppModal(props: OpenAppModalProps): void {
         modalId,
         title,
         size,
-        // Takes the focus the trap would otherwise land on the close button,
-        // which reads as that button being pre-selected.
-        children: (
-            <div
-                data-autofocus
-                tabIndex={-1}
-                style={{ outline: "none", ...FILL_COLUMN }}
-            >
-                {children}
-            </div>
-        ),
+        children: <AppModalContent>{children}</AppModalContent>,
         onClose,
         centered: true,
-        styles: APP_MODAL_STYLES
+        classNames: APP_MODAL_CLASSES
     });
 }

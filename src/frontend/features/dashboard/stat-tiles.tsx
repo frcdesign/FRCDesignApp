@@ -28,7 +28,7 @@ export function StatTile({
     spark
 }: StatTileProps): ReactNode {
     return (
-        <Card withBorder padding="lg" radius="md">
+        <Card>
             <Group justify="space-between" wrap="nowrap" align="flex-start">
                 <div>
                     <Text size="sm" c="dimmed" tt="uppercase" fw={700}>

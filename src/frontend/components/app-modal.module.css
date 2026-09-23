@@ -1,0 +1,47 @@
+/*
+ * A bordered card that clips rather than scrolls, so the body scrolls and the
+ * footer stays put.
+ */
+.content {
+    border: 1px solid var(--mantine-color-default-border);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.header {
+    border-bottom: 1px solid var(--mantine-color-default-border);
+    padding: var(--mantine-spacing-sm);
+    /* Otherwise a Mantine minimum, not the padding, sets the height. */
+    min-height: 0;
+}
+
+/* Shrinkable, so a long title ellipsizes rather than running under the close button. */
+.title {
+    min-width: 0;
+}
+
+/* Passes the card's capped height down to what scrolls. */
+.body,
+.fill {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+
+.body {
+    padding: 0;
+}
+
+/* Takes the focus the trap would otherwise land on a control. */
+.fill {
+    outline: none;
+}
+
+/* A flex item otherwise floors at its content height, pushing the footer off. */
+.scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+}

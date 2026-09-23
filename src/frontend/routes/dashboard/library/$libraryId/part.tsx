@@ -66,7 +66,7 @@ function PartReport(): ReactNode {
             )}
 
             {/* Kept below the report so another part is always one click away. */}
-            <Card withBorder padding="lg" radius="md">
+            <Card>
                 <TextInput
                     w={360}
                     mb="md"
@@ -180,7 +180,7 @@ interface SummaryCardProps {
 
 function SummaryCard({ label, value }: SummaryCardProps): ReactNode {
     return (
-        <Card withBorder padding="md" radius="md">
+        <Card padding="md">
             <Text size="sm" c="dimmed" tt="uppercase" fw={700}>
                 {label}
             </Text>

@@ -78,10 +78,7 @@ function MissedUrl(): ReactNode {
             </Code>
             <CopyButton value={url}>
                 {({ copied, copy }) => (
-                    <Tooltip
-                        label={copied ? "Copied" : "Copy address"}
-                        withArrow
-                    >
+                    <Tooltip label={copied ? "Copied" : "Copy address"}>
                         <ActionIcon
                             variant="subtle"
                             color={copied ? "teal" : "gray"}

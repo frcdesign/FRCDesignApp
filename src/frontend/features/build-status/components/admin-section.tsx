@@ -11,7 +11,6 @@ import {
     IndexingBand,
     MAX_PART_NUMBER_CONFIGURATIONS
 } from "@backend/features/configurations/combinations";
-import { NO_SHRINK } from "../../../lib/style-constants";
 import {
     useSetVisibilityMutation,
     useToggleInsertAndFastenMutation,
@@ -20,6 +19,7 @@ import {
 } from "../queries";
 import { ControlRow, SectionHeader } from "./sections";
 import { IssueIcon } from "./issues";
+import styles from "../../../lib/styles.module.css";
 
 interface SwitchRowProps {
     label: string;
@@ -180,8 +180,8 @@ interface IndexingIconProps {
 function IndexingIcon(props: IndexingIconProps): ReactNode {
     const { severity, tooltip } = props;
     return (
-        <Tooltip label={tooltip} withArrow multiline w={260}>
-            <IssueIcon severity={severity} style={NO_SHRINK} />
+        <Tooltip label={tooltip}>
+            <IssueIcon severity={severity} className={styles.noShrink} />
         </Tooltip>
     );
 }

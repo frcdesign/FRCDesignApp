@@ -1,0 +1,51 @@
+/*
+ * Styles more than one feature draws with. A value one component alone uses
+ * belongs in that component's own module; one handed to a Mantine prop (an
+ * icon size, a status color) stays in `style-constants.ts`.
+ */
+
+/* The rule between the app's bands: a navbar, a section header, a modal's frame. */
+.dividerBottom {
+    border-bottom: 1px solid var(--mantine-color-default-border);
+}
+
+.dividerTop {
+    border-top: 1px solid var(--mantine-color-default-border);
+}
+
+/* A box of ours with its edge drawn, cut like the theme cuts every other. */
+.outlined {
+    border: 1px solid var(--mantine-color-default-border);
+    border-radius: var(--mantine-radius-sm);
+}
+
+/* A step off the page, for the bars framing it: a navbar, a modal's header and footer. */
+.frame {
+    background: light-dark(
+        var(--mantine-color-gray-2),
+        var(--mantine-color-dark-8)
+    );
+}
+
+/*
+ * One height for every section header, set rather than left to the content: an
+ * accordion is sized by its label, a group header by its menu button. It never
+ * shrinks — the list under it gives up its room, not the header naming it.
+ */
+.sectionHeader {
+    min-height: rem(48px);
+    flex-shrink: 0;
+}
+
+/* Holds an icon or badge at its own size beside text that can outgrow the row. */
+.noShrink {
+    flex-shrink: 0;
+}
+
+/*
+ * Text reads as centred on its cap height, a pixel above its line box, so an
+ * icon centred on that box looks low.
+ */
+.titleIcon {
+    transform: translateY(-1px);
+}

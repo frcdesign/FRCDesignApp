@@ -5,9 +5,9 @@ import { AppIcon } from "./app-icon";
 import {
     CONTROL_ICON_COLOR,
     IconSize,
-    NO_SHRINK,
     StatusColor
 } from "../lib/style-constants";
+import styles from "../lib/styles.module.css";
 
 export interface StatusIconProps {
     /** What the status is about: the target tab, a build, a connection. */
@@ -46,7 +46,8 @@ export function StatusIcon(props: StatusIconProps): ReactNode {
             h={SUBJECT_SIZE}
             // Zero line height, or the box takes a text row's height and the
             // badge sits proud of the corner it is meant to hug.
-            style={{ ...NO_SHRINK, lineHeight: 0 }}
+            className={styles.noShrink}
+            lh={0}
         >
             <AppIcon
                 icon={icon}

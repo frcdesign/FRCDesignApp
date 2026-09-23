@@ -58,7 +58,7 @@ function InsertLocationHoverCard(
     const stateColor = found ? StatusColor.SUCCESS : StatusColor.WARNING;
 
     return (
-        <HoverCard shadow="md" position="bottom-end" withArrow>
+        <HoverCard position="bottom-end">
             <HoverCard.Target>
                 {/* Wrapped, because HoverCard.Target attaches a ref to its
                     child and StatusIcon does not take one. */}

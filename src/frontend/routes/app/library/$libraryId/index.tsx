@@ -2,13 +2,7 @@ import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { Accordion, Badge } from "@mantine/core";
 import { AppTitle } from "../../../../components/app-title";
 import { BooksIcon, MagnifyingGlassIcon } from "@phosphor-icons/react";
-import {
-    BORDER,
-    IconSize,
-    PrimaryColor,
-    SECTION_HEADER_HEIGHT,
-    TITLE_ICON_NUDGE
-} from "../../../../lib/style-constants";
+import { IconSize, PrimaryColor } from "../../../../lib/style-constants";
 import { ReactNode, useState } from "react";
 import { GroupCard } from "../../../../features/library/components/group-card";
 import { ItemTable } from "../../../../components/item-row";
@@ -30,6 +24,8 @@ import {
 } from "../../../../lib/library";
 import { useGetUiState, updateUiState } from "../../../../lib/ui-state";
 import { useVendorFilters } from "../../../../features/settings/components/vendor-filters";
+import styles from "../../../../lib/styles.module.css";
+import classes from "./index.module.css";
 
 export const Route = createFileRoute("/app/library/$libraryId/")({
     component: HomeList,
@@ -122,20 +118,13 @@ function SectionAccordion(props: SectionAccordionProps): ReactNode {
                 .filter((section) => section.opened)
                 .map((section) => section.value)}
             onChange={handleChange}
-            styles={{
-                // On the control, so a collapsed section still divides from
-                // the next one; content closes off an open one.
-                control: {
-                    borderBottom: BORDER,
-                    minHeight: SECTION_HEADER_HEIGHT,
-                    // Mantine brightens a control to pure white or black; a section header is a title
-                    // like the group page's, so it reads in the same text color.
-                    color: "var(--mantine-color-text)"
-                },
-                // Its own padding would outgrow that height.
-                label: { paddingBlock: 0 },
-                content: { padding: 0, borderBottom: BORDER },
-                icon: TITLE_ICON_NUDGE
+            // The divider is on the control, so a collapsed section still
+            // divides from the next one; content closes off an open one.
+            classNames={{
+                control: `${classes.control} ${styles.sectionHeader} ${styles.dividerBottom}`,
+                label: classes.label,
+                content: `${classes.content} ${styles.dividerBottom}`,
+                icon: styles.titleIcon
             }}
         >
             {sections.map((section) => (

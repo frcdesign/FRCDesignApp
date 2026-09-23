@@ -12,8 +12,6 @@ import {
 } from "@mantine/core";
 import { GearIcon, MagnifyingGlassIcon } from "@phosphor-icons/react";
 import {
-    BORDER,
-    FRAME_BACKGROUND,
     IconSize,
     NAVBAR_DIVIDER_COLOR,
     NAVBAR_ROW_HEIGHT,
@@ -46,6 +44,7 @@ import { type AppTab } from "@backend/features/settings/app-tab";
 import { queryClient } from "../lib/query-client";
 import { getLibraryVersionQuery } from "../features/library/queries";
 import { InsertLocationStatus } from "../features/insert-location/components/insert-location-status";
+import styles from "../lib/styles.module.css";
 
 /**
  * The bar every page is topped by: the brand, then whatever that page puts
@@ -61,8 +60,7 @@ export function NavbarRow(props: PropsWithChildren): ReactNode {
             h={NAVBAR_ROW_HEIGHT}
             wrap="nowrap"
             align="stretch"
-            bg={FRAME_BACKGROUND}
-            style={{ borderBottom: BORDER }}
+            className={`${styles.frame} ${styles.dividerBottom}`}
         >
             <AppBrand />
             {children && (
@@ -134,10 +132,7 @@ function RunningJobLoader(): ReactNode {
     const jobRunning = useJobStatus();
     if (!jobRunning) return null;
     return (
-        <Tooltip
-            withArrow
-            label="The library is being loaded from Onshape in the background"
-        >
+        <Tooltip label="The library is being loaded from Onshape in the background">
             <Loader size={IconSize.CONTROL} />
         </Tooltip>
     );

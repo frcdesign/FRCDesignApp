@@ -63,7 +63,7 @@ interface ParameterCardProps {
 
 function ParameterCard({ parameter }: ParameterCardProps): ReactNode {
     return (
-        <Card withBorder padding="md" radius="md">
+        <Card padding="md">
             <Group justify="space-between" mb="sm" wrap="wrap">
                 <Group gap="xs">
                     <ParameterPath path={parameter.path}>

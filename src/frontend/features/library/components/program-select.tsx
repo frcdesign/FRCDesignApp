@@ -8,16 +8,15 @@ import { AppModal, AppModalBody } from "../../../components/app-modal";
 import { AppIcon } from "../../../components/app-icon";
 import { ZeroState } from "../../../components/app-zero-state";
 import {
-    BORDER,
     FontWeight,
     IconSize,
-    RADIUS,
     StatusColor
 } from "../../../lib/style-constants";
 import { getLibraryName } from "../../../lib/library";
 import { useNavigateToTab } from "../../../lib/tabs";
 import { getLibraryShade } from "../../../theme";
 import { updateUiState, useGetUiState } from "../../../lib/ui-state";
+import styles from "../../../lib/styles.module.css";
 
 interface Program {
     libraryId: LibraryId;
@@ -52,9 +51,8 @@ function ProgramCard(props: ProgramCardProps): ReactNode {
 
     return (
         <UnstyledButton
-            className="interactive"
+            className={`interactive ${styles.outlined}`}
             p="md"
-            style={{ border: BORDER, borderRadius: RADIUS }}
             onClick={() => {
                 onSelect(libraryId);
             }}

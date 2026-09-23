@@ -5,9 +5,6 @@ import { type ReactNode } from "react";
 const REASON =
     "This option is the default because it is the first visible option and the default option is not present.";
 
-/** Wide enough for the reason to wrap rather than run out as one ribbon. */
-const TOOLTIP_WIDTH = 260;
-
 interface ImplicitDefaultBadgeProps {
     /** Taken from the badges it stands beside, which differ between the
      * breakdown cards and the low-usage table. */
@@ -21,7 +18,7 @@ export function ImplicitDefaultBadge(
     props: ImplicitDefaultBadgeProps
 ): ReactNode {
     return (
-        <Tooltip withArrow multiline w={TOOLTIP_WIDTH} label={REASON}>
+        <Tooltip label={REASON}>
             <Badge {...props}>Implicit default</Badge>
         </Tooltip>
     );

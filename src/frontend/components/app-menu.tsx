@@ -3,6 +3,7 @@ import { FloatingPosition, Menu, ActionIcon } from "@mantine/core";
 import { DotsThreeIcon } from "@phosphor-icons/react";
 import { IconSize, StatusColor } from "../lib/style-constants";
 import { RequireAccessLevel } from "../features/auth/access-level";
+import classes from "./app-menu.module.css";
 
 interface AppContextMenuProps {
     menuItems: ReactNode;
@@ -42,7 +43,6 @@ export function AppContextMenu(props: AppContextMenuProps): ReactNode {
         <Menu
             shadow="md"
             width={wideMenu ? 240 : 220}
-            withinPortal
             clickOutsideEvents={[
                 "mousedown",
                 "touchstart",
@@ -52,24 +52,12 @@ export function AppContextMenu(props: AppContextMenuProps): ReactNode {
             position={position}
             // `size` caps the dropdown to the room Floating UI measures for it,
             // so a long list scrolls itself rather than running off the bottom.
-            // Mantine's default flip/shift are spelled out because this replaces
-            // the whole object rather than merging.
-            middlewares={{ flip: true, shift: true, size: scrollable }}
+            middlewares={{ size: scrollable }}
         >
             {menuChildren}
             <Menu.Dropdown
                 onClick={(event) => event.stopPropagation()}
-                // `contain` keeps a scroll that reaches either end of the
-                // dropdown from chaining to the list behind it, which otherwise
-                // scrolls the app out from under the open menu.
-                style={
-                    scrollable
-                        ? {
-                              overflowY: "auto",
-                              overscrollBehavior: "contain"
-                          }
-                        : undefined
-                }
+                className={scrollable ? classes.scrollable : undefined}
             >
                 {menuItems}
             </Menu.Dropdown>

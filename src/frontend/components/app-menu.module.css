@@ -1,0 +1,9 @@
+/*
+ * `contain` keeps a scroll that reaches either end of the dropdown from chaining
+ * to the list behind it, which otherwise scrolls the app out from under the
+ * open menu.
+ */
+.scrollable {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}

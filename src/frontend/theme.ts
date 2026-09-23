@@ -1,4 +1,10 @@
-import { createTheme, type MantineColorsTuple } from "@mantine/core";
+import {
+    Card,
+    createTheme,
+    HoverCard,
+    type MantineColorsTuple,
+    Tooltip
+} from "@mantine/core";
 import { LibraryId } from "@backend/features/library/library-id";
 import { FILLED_SHADE } from "./lib/style-constants";
 
@@ -52,6 +58,23 @@ export function createAppTheme(libraryId: string) {
         cursorType: "pointer",
         // Drops the class carrying Mantine's 1px press-down translate, which
         // nudged every button and icon button down on click.
-        activeClassName: ""
+        activeClassName: "",
+        // How every one of these is drawn here, so a call site names only
+        // what makes it different.
+        components: {
+            Tooltip: Tooltip.extend({
+                defaultProps: { withArrow: true, multiline: true, maw: 260 }
+            }),
+            HoverCard: HoverCard.extend({
+                defaultProps: {
+                    withinPortal: true,
+                    shadow: "md",
+                    withArrow: true
+                }
+            }),
+            Card: Card.extend({
+                defaultProps: { withBorder: true, padding: "lg", radius: "md" }
+            })
+        }
     });
 }

@@ -1,8 +1,9 @@
 import { notifications } from "@mantine/notifications";
 import type { ReactNode } from "react";
 import { CheckCircleIcon, InfoIcon, XCircleIcon } from "@phosphor-icons/react";
-import { IconSize, NO_SHRINK } from "./style-constants";
+import { IconSize } from "./style-constants";
 import { Box, Group, Button } from "@mantine/core";
+import styles from "./styles.module.css";
 
 export interface NotificationAction {
     text: string;
@@ -30,7 +31,7 @@ export function renderNotification(
                 size="compact-sm"
                 variant="subtle"
                 onClick={action.onClick}
-                style={NO_SHRINK}
+                className={styles.noShrink}
             >
                 {action.text}
             </Button>

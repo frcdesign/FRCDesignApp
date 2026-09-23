@@ -5,11 +5,12 @@
 import { Group, Stack, Table, Text } from "@mantine/core";
 import { PropsWithChildren, ReactNode } from "react";
 import { meaningfulPartNumber } from "@backend/features/configurations/part-number";
-import { NO_SHRINK, StatusColor } from "../lib/style-constants";
+import { StatusColor } from "../lib/style-constants";
 import { AppContextMenu, MenuButton } from "./app-menu";
 import { TruncatedText } from "./truncated-text";
 import { PartNumberLink } from "./part-number";
 import { mergePositions, type Position } from "../lib/highlight";
+import styles from "../lib/styles.module.css";
 
 /**
  * The configuration a row stands for, and where a query matched inside it.
@@ -137,7 +138,13 @@ function CardPartNumber(props: CardPartNumberProps): ReactNode {
     const text = <HighlightedText text={partNumber} positions={positions} />;
     if (!url) {
         return (
-            <Text inherit truncate miw={0} maw="100%" style={NO_SHRINK}>
+            <Text
+                inherit
+                truncate
+                miw={0}
+                maw="100%"
+                className={styles.noShrink}
+            >
                 {text}
             </Text>
         );
