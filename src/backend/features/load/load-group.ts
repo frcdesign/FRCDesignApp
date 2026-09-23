@@ -51,7 +51,7 @@ interface ParsedGroup {
     versionId?: string;
     /** Moves with `versionId`, so the row's date is always that version's. */
     versionCreatedAt?: Date;
-    /** Moves with `versionId` too: it is that version's branch. */
+    /** Moves with `versionId`: it is that version's branch. */
     thumbnailWorkspaceId?: string;
 }
 
@@ -62,7 +62,8 @@ export async function loadGroup(
 ): Promise<GroupLoadResult> {
     const { groupId, versionPath } = group;
 
-    // Only for a group that loads: a skipped one keeps the branch it has.
+    // Here rather than when resolving the group, so a skipped group branches
+    // nothing.
     const thumbnailPath = await ctx.step.do(
         `thumbnail-workspace-${groupId}`,
         { retries: ONSHAPE_STEP_RETRIES },
@@ -124,8 +125,8 @@ export async function loadGroup(
         })
     );
 
-    // Once the row has moved to this version, nothing reads the branches of
-    // older ones. Never fatal: a leftover branch costs nothing but clutter.
+    // Only once the row has moved to this version. Never fatal: a leftover
+    // branch is clutter, not breakage.
     if (failedInsertableIds.length === 0) {
         await ctx.step
             .do(`delete-stale-workspaces-${groupId}`, async () =>

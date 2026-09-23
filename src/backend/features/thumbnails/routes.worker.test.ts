@@ -339,8 +339,6 @@ describe("rendering a configuration's thumbnail", () => {
         expect(thumbnailId).toHaveBeenCalledTimes(1);
     });
 
-    // Where the load read the element's own thumbnail from; a group no load
-    // has branched yet falls back to the version.
     it("renders from the group's thumbnail workspace", async () => {
         await db
             .update(groups)

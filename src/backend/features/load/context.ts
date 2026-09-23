@@ -23,10 +23,9 @@ import type { ElementPath, InstancePath } from "../../lib/onshape/path";
 export const LOAD_CONCURRENCY = 15;
 
 /**
- * How many thumbnails a load waits on at once. Kept apart from probing: a
- * thumbnail in a freshly branched workspace can take minutes to appear, and a
- * step waiting that out would otherwise hold a probe's slot the whole time.
- * Waiting costs no calls, so this bounds only the bursts between waits.
+ * How many thumbnails a load waits on at once. A separate limiter from
+ * probing's, because a thumbnail step holds its slot through minutes of
+ * retries, and on the probing limiter that would stall probes behind it.
  */
 export const THUMBNAIL_CONCURRENCY = 10;
 
@@ -37,7 +36,6 @@ export interface LoadContext {
     step: WorkflowStep;
     /** Bounds concurrent Onshape probing across the whole run. */
     limit: Limiter;
-    /** Bounds concurrent thumbnail reads, apart from probing. */
     thumbnailLimit: Limiter;
 }
 
@@ -73,20 +71,15 @@ export interface GroupTarget {
     thumbnailElementId?: string;
 }
 
-/** A group being loaded, which is when it gets somewhere to read thumbnails. */
+/** Only a group that loads gets a thumbnail workspace; see `loadGroup`. */
 export interface LoadingGroup extends GroupTarget {
-    /**
-     * The workspace branched off the version for reading thumbnails, which
-     * the version form of that endpoint does not reliably return; see
-     * `thumbnails/workspace.ts`.
-     */
+    /** See `thumbnails/workspace.ts`. */
     thumbnailPath: InstancePath;
 }
 
 /** An insertable a load reads, and what the document's tab listing told us. */
 export interface InsertableTarget {
     insertableId: string;
-    /** The same tab in the version's thumbnail workspace. */
     thumbnailPath: ElementPath;
     libraryId: LibraryId;
     groupId: string;

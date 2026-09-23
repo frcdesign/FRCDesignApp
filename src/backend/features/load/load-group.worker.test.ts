@@ -243,8 +243,12 @@ const LOADED_TARGET: GroupTarget = {
     versionCreatedAt: LOADED_VERSION_CREATED_AT
 };
 
-/** What Onshape answers when asked to branch the loaded version. */
-const BRANCH = { id: "w-branch", name: "FRCDesignApp thumbnails v-2" };
+const BRANCH = {
+    id: "w-branch",
+    name: "FRCDesignApp Thumbnails (DO NOT EDIT)",
+    description:
+        "Made by the FRCDesignApp to read version v-2's thumbnails from."
+};
 
 const CTX: LoadContext = {
     env,
@@ -296,7 +300,6 @@ describe("loadGroup", () => {
         ).mockResolvedValue(MOCK_ONSHAPE_API);
         // Every part-studio load probes its parts for the open-composite flag.
         vi.spyOn(PartsEndpoints, "getParts").mockResolvedValue([]);
-        // No branch yet, so the load makes one; nothing stale to delete.
         vi.spyOn(WorkspaceEndpoints, "getWorkspaces").mockResolvedValue([]);
         vi.spyOn(WorkspaceEndpoints, "createWorkspace").mockResolvedValue(
             BRANCH
@@ -332,8 +335,6 @@ describe("loadGroup", () => {
         }
     });
 
-    // Onshape sometimes never renders a thumbnail in a version, and the
-    // document's own workspace drifts from it; a branch of it does neither.
     it("reads every thumbnail from a workspace branched off the version", async () => {
         mockContents([tab("e1"), tab("e2")]);
         vi.spyOn(ConfigurationEndpoints, "getConfiguration").mockResolvedValue(
@@ -354,7 +355,6 @@ describe("loadGroup", () => {
             LOADED_TARGET.versionPath,
             expect.objectContaining({ versionId: "v-2" })
         );
-        // (bucket, api, thumbnailPath, microversionId)
         for (const elementId of ["e1", "e2"]) {
             const call = uploaded.mock.calls.find(
                 (args) => args[2].elementId === elementId
@@ -366,12 +366,9 @@ describe("loadGroup", () => {
                 elementId
             });
         }
-        // Stored beside the version, for renders and reloads to read from.
         expect((await readGroup())?.thumbnailWorkspaceId).toBe(BRANCH.id);
     });
 
-    // A retried step or a forced reload finds the branch by name rather than
-    // making another; the branches of older versions are cleared away.
     it("reuses the version's branch, and deletes older versions' branches", async () => {
         mockContents([tab("e1")]);
         vi.spyOn(ConfigurationEndpoints, "getConfiguration").mockResolvedValue(
@@ -379,7 +376,9 @@ describe("loadGroup", () => {
         );
         vi.spyOn(WorkspaceEndpoints, "getWorkspaces").mockResolvedValue([
             { id: "main", name: "Main" },
-            { id: "w-old", name: "FRCDesignApp thumbnails v-1" },
+            // Another version's branch, and a workspace that only shares its name.
+            { ...BRANCH, id: "w-old", description: "…version v-1's…" },
+            { id: "w-lookalike", name: "FRCDesignApp Thumbnails" },
             BRANCH
         ]);
         const deleted = vi

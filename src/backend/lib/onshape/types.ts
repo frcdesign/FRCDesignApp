@@ -197,6 +197,7 @@ export interface OnshapeDocumentInfo {
 export interface OnshapeWorkspaceInfo {
     id: string;
     name: string;
+    description?: string;
 }
 
 /** A folder (group) node in the document contents tree. */

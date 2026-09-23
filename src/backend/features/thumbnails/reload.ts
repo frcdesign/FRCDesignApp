@@ -26,15 +26,11 @@ import { ensureThumbnailWorkspace } from "./workspace";
 
 /** What one reload needs to ask Onshape and to name what it stores. */
 interface ReloadTarget {
-    /** The element in the version's thumbnail workspace. */
     thumbnailPath: ElementPath;
     microversionId: string;
 }
 
-/**
- * The group's thumbnail workspace, branching one when a load has not: a group
- * last loaded before thumbnails were read from branches has none yet.
- */
+/** Branches one for a group last loaded before loads made them. */
 async function thumbnailWorkspace(
     db: Db,
     onshapeApi: OnshapeApi,
@@ -61,9 +57,8 @@ async function thumbnailWorkspace(
 }
 
 /**
- * Drops what is stored before fetching, since `uploadThumbnails` skips a size
- * the bucket already holds — which is the whole point of asking again. A
- * branch made moments ago has nothing rendered yet, which is worth saying.
+ * Deletes first, since `uploadThumbnails` skips a size the bucket already holds.
+ * A branch made moments ago has nothing rendered yet, so that failure says so.
  */
 async function replaceThumbnails(
     bucket: R2Bucket,

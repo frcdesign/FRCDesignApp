@@ -44,12 +44,12 @@ export async function putThumbnail(
 const BOTH_SIZES = [ThumbnailSize.SMALL, ThumbnailSize.LARGE];
 
 /**
- * Stores both sizes of an element's own thumbnail, skipping either the bucket
- * already holds, and throws while Onshape has not rendered one yet.
+ * Stores both sizes, skipping any the bucket already holds; throws while
+ * Onshape has not rendered one.
  *
- * Read from the version's thumbnail workspace (see `workspace.ts`) and stored
- * under the version's microversion, which the branch shares: it is the same
- * part, and the version is what the library shows.
+ * Keyed by the version's microversion though read from its branch: an unedited
+ * branch should show the same part. That is assumed, not checked against
+ * Onshape.
  */
 export async function uploadThumbnails(
     bucket: R2Bucket,

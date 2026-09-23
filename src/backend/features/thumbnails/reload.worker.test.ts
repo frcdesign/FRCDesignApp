@@ -28,7 +28,6 @@ import { thumbnailKey } from "./keys";
 import { reloadGroupThumbnail, reloadInsertableThumbnail } from "./reload";
 
 const db = getDb(env.DB);
-/** The branch a load made, stored on the group. */
 const STORED_BRANCH = "w-stored";
 
 function mockThumbnails(answer: () => Promise<ArrayBuffer>) {
@@ -93,7 +92,6 @@ describe("reloading a thumbnail", () => {
         expect(row?.buildIssues).toEqual([]);
     });
 
-    // Where a load reads it from, and nowhere else.
     it("reads from the group's thumbnail workspace", async () => {
         const calls = mockThumbnails(rendered);
 
@@ -112,7 +110,6 @@ describe("reloading a thumbnail", () => {
         }
     });
 
-    // A group last loaded before thumbnails were read from branches has none.
     it("branches a workspace for a group that has none, and keeps it", async () => {
         await db
             .update(groups)

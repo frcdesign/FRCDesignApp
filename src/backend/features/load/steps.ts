@@ -69,9 +69,9 @@ export const ONSHAPE_STEP_RETRIES = {
 };
 
 /**
- * Waits out Onshape rendering a thumbnail in a freshly branched workspace,
- * which takes minutes: 30, 60, 90 seconds, then two minutes a try, for about a
- * quarter of an hour in all. A rate limit waits what Onshape says instead.
+ * A freshly branched workspace takes minutes to render its thumbnails. Waits
+ * 30, 60, 90 seconds, then two minutes a try: about 17 minutes in all. A rate
+ * limit waits what Onshape asks instead.
  */
 const THUMBNAIL_RETRIES = {
     limit: 10,
@@ -82,13 +82,11 @@ const THUMBNAIL_RETRIES = {
 };
 
 /**
- * Fetches an element's thumbnails and returns where they are stored, or `null`
- * when Onshape never renders them — which the caller records as a build issue
- * rather than failing the whole load.
+ * `null` when Onshape never renders them, which the caller records as a build
+ * issue rather than failing the load.
  *
- * Bounded by the run's thumbnail limiter rather than the probing one, and slot
- * first, step inside: a step's timeout covers its whole callback, so waiting
- * for a slot inside one would count against it.
+ * Slot first, step inside: a step's timeout covers its whole callback, so
+ * waiting for a slot inside one would count against it.
  */
 export async function uploadThumbnailsStep(
     ctx: LoadContext,

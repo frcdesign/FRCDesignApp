@@ -154,10 +154,9 @@ async function findInstance(
 }
 
 /**
- * Where the element is rendered from: its version's thumbnail workspace (see
- * `workspace.ts`), or the version itself for a group no load has branched one
- * for yet. Read rather than passed in: a request can carry a version it has
- * moved past.
+ * The version's branch (see `workspace.ts`), or the version for a group no
+ * load has branched yet. Read rather than passed in: a request can carry a
+ * version the group has moved past.
  */
 async function elementPathOf(
     c: AppContext,

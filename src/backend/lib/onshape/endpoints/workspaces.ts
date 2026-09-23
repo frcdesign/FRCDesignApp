@@ -3,7 +3,6 @@ import { DocumentPath, toDocumentApiPath } from "../path";
 import { apiPath } from "../api-path";
 import { OnshapeWorkspaceInfo } from "../types";
 
-/** Every workspace in a document, branches included. */
 export function getWorkspaces(
     client: OnshapeApi,
     documentPath: DocumentPath
@@ -15,7 +14,6 @@ export function getWorkspaces(
     );
 }
 
-/** Branches a new workspace off a version. */
 export function createWorkspace(
     client: OnshapeApi,
     documentPath: DocumentPath,
