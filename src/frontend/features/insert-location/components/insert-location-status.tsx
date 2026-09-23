@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
-import { Button, Center, EmptyState, HoverCard } from "@mantine/core";
+import { Button, Center, EmptyState } from "@mantine/core";
 import {
     CheckIcon,
     PlusIcon,
@@ -10,6 +10,7 @@ import { type TargetElement } from "../../../lib/onshape-launch";
 import { IconSize, StatusColor } from "../../../lib/style-constants";
 import { AppIcon } from "../../../components/app-icon";
 import { StatusIcon } from "../../../components/status-icon";
+import { AppHoverCard } from "../../../components/app-hover-card";
 import {
     useAddInsertLocationMutation,
     useInsertLocationQuery,
@@ -58,10 +59,9 @@ function InsertLocationHoverCard(
     const stateColor = found ? StatusColor.SUCCESS : StatusColor.WARNING;
 
     return (
-        <HoverCard position="bottom-end">
-            <HoverCard.Target>
-                {/* Wrapped, because HoverCard.Target attaches a ref to its
-                    child and StatusIcon does not take one. */}
+        <AppHoverCard
+            position="bottom-end"
+            target={
                 <Center my="auto">
                     <StatusIcon
                         icon={TargetIcon}
@@ -69,37 +69,36 @@ function InsertLocationHoverCard(
                         color={stateColor}
                     />
                 </Center>
-            </HoverCard.Target>
-            <HoverCard.Dropdown p="md">
-                <EmptyState
-                    align="left"
-                    size="sm"
-                    icon={
-                        <AppIcon
-                            icon={stateIcon}
-                            size={IconSize.CONTROL}
-                            color={stateColor}
-                        />
-                    }
-                    title={
-                        found
-                            ? "Insert location active"
-                            : "No insert location found"
-                    }
-                    description={
-                        found
-                            ? "New parts will be placed at the insert location."
-                            : "New parts will be placed at the origin."
-                    }
-                >
-                    {!found && (
-                        <EmptyState.Actions>
-                            <AddInsertLocationButton target={target} />
-                        </EmptyState.Actions>
-                    )}
-                </EmptyState>
-            </HoverCard.Dropdown>
-        </HoverCard>
+            }
+        >
+            <EmptyState
+                align="left"
+                size="sm"
+                icon={
+                    <AppIcon
+                        icon={stateIcon}
+                        size={IconSize.CONTROL}
+                        color={stateColor}
+                    />
+                }
+                title={
+                    found
+                        ? "Insert location active"
+                        : "No insert location found"
+                }
+                description={
+                    found
+                        ? "New parts will be placed at the insert location."
+                        : "New parts will be placed at the origin."
+                }
+            >
+                {!found && (
+                    <EmptyState.Actions>
+                        <AddInsertLocationButton target={target} />
+                    </EmptyState.Actions>
+                )}
+            </EmptyState>
+        </AppHoverCard>
     );
 }
 

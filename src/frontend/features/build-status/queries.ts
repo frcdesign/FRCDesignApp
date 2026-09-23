@@ -16,7 +16,7 @@ import { getAppErrorHandler } from "../../lib/errors";
 import { patchQuery } from "../../lib/query-cache";
 import { useRefreshLibrary } from "../../lib/refresh";
 import { toInsertablePath, toLibraryPath } from "../../lib/api-paths";
-import { useCloseBuildCard } from "./components/build-status";
+import { useCloseHoverCard } from "../../components/app-hover-card";
 import { type LibraryBuildStatus } from "@backend/features/build-checker/contract";
 import { LibraryId } from "@backend/features/library/library-id";
 import { useLibraryId } from "../../lib/library";
@@ -59,7 +59,7 @@ export function useSetVisibilityMutation(
     const refreshLibrary = useRefreshLibrary();
     const key = useBuildStatusKey();
 
-    const closeCard = useCloseBuildCard();
+    const closeCard = useCloseHoverCard();
 
     const mutation = useMutation({
         mutationKey: ["set-insertable-visibility", ...insertableIds],

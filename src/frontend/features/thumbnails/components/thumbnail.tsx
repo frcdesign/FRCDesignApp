@@ -12,10 +12,11 @@ import {
     ThumbnailSize
 } from "@backend/features/thumbnails/contract";
 import { ElementPath } from "@backend/lib/onshape/path";
-import { Box, Card, Center, HoverCard, Loader } from "@mantine/core";
+import { Box, Card, Center, Loader } from "@mantine/core";
+import { AppHoverCard } from "../../../components/app-hover-card";
 import { QuestionIcon } from "@phosphor-icons/react";
 
-import { ComponentPropsWithRef, PropsWithChildren, ReactNode } from "react";
+import { PropsWithChildren, ReactNode } from "react";
 import {
     type ConfigurationKey,
     DEFAULT_CONFIGURATION_KEY
@@ -99,13 +100,13 @@ export function CardThumbnail(props: CardThumbnailProps): ReactNode {
     const isRendering = configuredTarget?.renderSource !== undefined;
 
     return (
-        <HoverCard
+        <AppHoverCard
             openDelay={150}
             closeDelay={50}
             position="right"
             arrowSize={20}
-        >
-            <HoverCard.Target>
+            padding="xs"
+            target={
                 <Thumbnail
                     url={urlFor(ThumbnailSize.SMALL, smallThumbnailUrl)}
                     fallbackUrl={fallbackFor(smallThumbnailUrl)}
@@ -113,17 +114,16 @@ export function CardThumbnail(props: CardThumbnailProps): ReactNode {
                     spinnerSize={25}
                     isRendering={isRendering}
                 />
-            </HoverCard.Target>
-            <HoverCard.Dropdown p="xs">
-                <Thumbnail
-                    url={urlFor(ThumbnailSize.LARGE, largeThumbnailUrl)}
-                    fallbackUrl={fallbackFor(largeThumbnailUrl)}
-                    heightAndWidth={getHeightAndWidth(ThumbnailSize.LARGE, 0.6)}
-                    spinnerSize={48}
-                    isRendering={isRendering}
-                />
-            </HoverCard.Dropdown>
-        </HoverCard>
+            }
+        >
+            <Thumbnail
+                url={urlFor(ThumbnailSize.LARGE, largeThumbnailUrl)}
+                fallbackUrl={fallbackFor(largeThumbnailUrl)}
+                heightAndWidth={getHeightAndWidth(ThumbnailSize.LARGE, 0.6)}
+                spinnerSize={48}
+                isRendering={isRendering}
+            />
+        </AppHoverCard>
     );
 }
 
@@ -158,8 +158,7 @@ function isInvalidConfiguration(error: unknown): boolean {
 const retryRender = (failureCount: number, error: Error) =>
     !isInvalidConfiguration(error) && failureCount <= POLL_RETRIES;
 
-// Extend with div props to support being used as a HoverCard Target
-interface ThumbnailProps extends ComponentPropsWithRef<"div"> {
+interface ThumbnailProps {
     url?: string;
     /**
      * The element's own thumbnail, shown until `url` renders — a render takes
@@ -175,14 +174,8 @@ interface ThumbnailProps extends ComponentPropsWithRef<"div"> {
 }
 
 function Thumbnail(props: ThumbnailProps): ReactNode {
-    const {
-        url,
-        fallbackUrl,
-        heightAndWidth,
-        spinnerSize,
-        isRendering,
-        ...centerProps
-    } = props;
+    const { url, fallbackUrl, heightAndWidth, spinnerSize, isRendering } =
+        props;
 
     const imageQuery = useQuery({
         queryKey: storedThumbnailQueryKey(url),
@@ -217,11 +210,7 @@ function Thumbnail(props: ThumbnailProps): ReactNode {
     }
 
     return (
-        <Center
-            {...centerProps}
-            w={heightAndWidth.width}
-            h={heightAndWidth.height}
-        >
+        <Center w={heightAndWidth.width} h={heightAndWidth.height}>
             {content}
         </Center>
     );

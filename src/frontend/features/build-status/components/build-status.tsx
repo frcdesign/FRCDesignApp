@@ -1,14 +1,6 @@
-import {
-    Divider,
-    Group,
-    HoverCard,
-    Loader,
-    Stack,
-    Text,
-    Tooltip
-} from "@mantine/core";
+import { Divider, Group, Loader, Stack, Text, Tooltip } from "@mantine/core";
 import { EyeSlashIcon, GitBranchIcon } from "@phosphor-icons/react";
-import { ReactNode, createContext, use, useCallback, useState } from "react";
+import { ReactNode } from "react";
 import { formatDaysAgo } from "../../../lib/format-time";
 import {
     BuildIssue,
@@ -21,6 +13,7 @@ import {
     StatusColor
 } from "../../../lib/style-constants";
 import { AppIcon } from "../../../components/app-icon";
+import { AppHoverCard } from "../../../components/app-hover-card";
 import { RequireAccessLevel } from "../../auth/access-level";
 import { TruncatedText } from "../../../components/truncated-text";
 import { useBuildStatusQuery } from "../queries";
@@ -93,17 +86,6 @@ interface BuildStatusBadgeProps extends BuildStatusSubject {
 }
 
 /**
- * For controls that open a modal: `HoverCard` closes on mouse-leave, which never
- * fires when an overlay covers the dropdown, stranding it behind.
- */
-const CloseCardContext = createContext<() => void>(() => undefined);
-
-/** Dismisses the build-status hover card a control is rendered inside. */
-export function useCloseBuildCard(): () => void {
-    return use(CloseCardContext);
-}
-
-/**
  * A severity icon whose hover card shows the build-status card wrapping the
  * given admin menu. Gated first, so the card and its admin controls only exist
  * for an editor.
@@ -130,40 +112,35 @@ function BuildStatusHoverCard({
     const maxSeverity = getMaxSeverity(issues);
     const jobRunning = useIsJobRunning();
 
-    // Remounting is the only way to close an uncontrolled HoverCard on demand.
-    const [cardKey, setCardKey] = useState(0);
-    const close = useCallback(() => setCardKey((key) => key + 1), []);
-
     return (
-        <CloseCardContext value={close}>
-            <HoverCard key={cardKey} position="right" arrowSize={20}>
-                <HoverCard.Target>
-                    {jobRunning ? (
-                        <Loader size={IconSize.SMALL} />
-                    ) : isHidden ? (
-                        // Nobody but an editor sees a hidden insertable, so what
-                        // its checks say about it does not matter yet.
-                        <AppIcon
-                            icon={EyeSlashIcon}
-                            color={StatusColor.WARNING}
-                            label="Hidden"
-                        />
-                    ) : (
-                        <IssueIcon severity={maxSeverity} />
-                    )}
-                </HoverCard.Target>
-                <HoverCard.Dropdown p="md" onClick={(e) => e.stopPropagation()}>
-                    <BuildStatusCard
-                        name={name}
-                        issues={issues}
-                        versionCreatedAt={versionCreatedAt}
-                        configurationTarget={configurationTarget}
-                    >
-                        {hoverMenu}
-                    </BuildStatusCard>
-                </HoverCard.Dropdown>
-            </HoverCard>
-        </CloseCardContext>
+        <AppHoverCard
+            position="right"
+            arrowSize={20}
+            target={
+                jobRunning ? (
+                    <Loader size={IconSize.SMALL} />
+                ) : isHidden ? (
+                    // Nobody but an editor sees a hidden insertable, so what
+                    // its checks say about it does not matter yet.
+                    <AppIcon
+                        icon={EyeSlashIcon}
+                        color={StatusColor.WARNING}
+                        label="Hidden"
+                    />
+                ) : (
+                    <IssueIcon severity={maxSeverity} />
+                )
+            }
+        >
+            <BuildStatusCard
+                name={name}
+                issues={issues}
+                versionCreatedAt={versionCreatedAt}
+                configurationTarget={configurationTarget}
+            >
+                {hoverMenu}
+            </BuildStatusCard>
+        </AppHoverCard>
     );
 }
 

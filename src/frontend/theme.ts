@@ -1,7 +1,6 @@
 import {
     Card,
     createTheme,
-    HoverCard,
     type MantineColorsTuple,
     Tooltip
 } from "@mantine/core";
@@ -63,13 +62,13 @@ export function createAppTheme(libraryId: string) {
         // what makes it different.
         components: {
             Tooltip: Tooltip.extend({
-                defaultProps: { withArrow: true, multiline: true, maw: 260 }
-            }),
-            HoverCard: HoverCard.extend({
                 defaultProps: {
-                    withinPortal: true,
-                    shadow: "md",
-                    withArrow: true
+                    withArrow: true,
+                    multiline: true,
+                    maw: 260,
+                    // Off by Mantine's default, which leaves a touchscreen no
+                    // way to read one.
+                    events: { hover: true, focus: true, touch: true }
                 }
             }),
             Card: Card.extend({
