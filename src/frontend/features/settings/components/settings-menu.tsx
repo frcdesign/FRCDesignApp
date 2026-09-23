@@ -24,6 +24,7 @@ import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
 import { SETUP_URL } from "../../../lib/url";
 import { useLibraryId } from "../../../lib/library";
 import { ReloadGroupsButton } from "../../library/components/reload-groups-button";
+import { RegisterWebhooksButton } from "../../webhooks/components/register-webhooks-button";
 
 /** The FRCDesign Discord, where feedback and support now live. */
 const DISCORD_INVITE_URL = "https://discord.gg/PMgzEUTgB7";
@@ -212,6 +213,11 @@ function AdminSettings(): ReactNode {
                     <ReloadGroupsButton reloadAll />
                 </InputRow>
             </RequireAccessLevel>
+            <RequireAccessLevel accessLevel={AccessLevel.OWNER}>
+                <InputRow label="Reload on new Onshape versions">
+                    <RegisterWebhooksButton />
+                </InputRow>
+            </RequireAccessLevel>
         </Stack>
     );
 }
@@ -224,6 +230,7 @@ function AccessLevelSelect(): ReactNode {
             label="Access level"
             value={currentAccessLevel}
             options={[
+                AccessLevel.OWNER,
                 AccessLevel.ADMIN,
                 AccessLevel.EDITOR,
                 AccessLevel.USER

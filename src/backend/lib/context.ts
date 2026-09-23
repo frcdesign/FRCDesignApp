@@ -18,6 +18,8 @@ export interface AppBindings {
     /** One instance per configuration being rendered; see `requestRender`. */
     RENDER_THUMBNAIL_WORKFLOW: Workflow<RenderThumbnailParams>;
     ADMIN_TEAM: string;
+    /** The Onshape user id granted `AccessLevel.OWNER`; unset grants nobody. */
+    OWNER_USER_ID?: string;
     /** Dev-only: the access level granted, bypassing Onshape. */
     VITE_ACCESS_LEVEL_OVERRIDE?: string;
     /** Testing-only: treat requests as signed in with a fake user. Not for production. */

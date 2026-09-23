@@ -11,6 +11,7 @@ import {
 } from "../../lib/onshape/endpoints/users";
 import { type AppContext, type AuthResolver } from "../../lib/context";
 import { AccessLevel } from "./access-level";
+import { rememberOwnerSession } from "./owner";
 import {
     getOauthClient,
     makeAuthTokens,
@@ -151,17 +152,27 @@ export async function isSignedIn(c: AppContext): Promise<boolean> {
     return signedIn;
 }
 
+/** Whether the caller is the Onshape user `OWNER_USER_ID` names. */
+async function isOwner(c: AppContext): Promise<boolean> {
+    const ownerUserId = c.env.OWNER_USER_ID;
+    return !!ownerUserId && (await getCachedUserId(c)) === ownerUserId;
+}
+
 /** Returns the caller's access level, memoized in KV by session. */
 async function getCachedAccessLevel(c: AppContext): Promise<AccessLevel> {
-    const key = accessLevelKey(getSessionId(c));
+    const sessionId = getSessionId(c);
+    const key = accessLevelKey(sessionId);
 
     const cached = await c.env.KV.get(key);
     if (cached) return cached as AccessLevel;
 
-    const level = await getAccessLevel(
-        await getOnshapeApi(c),
-        c.env.ADMIN_TEAM
-    );
+    let level: AccessLevel;
+    if (await isOwner(c)) {
+        level = AccessLevel.OWNER;
+        await rememberOwnerSession(c.env.KV, sessionId);
+    } else {
+        level = await getAccessLevel(await getOnshapeApi(c), c.env.ADMIN_TEAM);
+    }
     await c.env.KV.put(key, level, {
         expirationTtl: ACCESS_LEVEL_TTL_SECONDS
     });

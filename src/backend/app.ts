@@ -14,6 +14,7 @@ import { insertableRoutes } from "./features/library/insertables/routes";
 import { libraryRoutes } from "./features/library/routes";
 import { settingsRoutes } from "./features/settings/routes";
 import { thumbnailRoutes } from "./features/thumbnails/routes";
+import { webhookRoutes } from "./features/webhooks/routes";
 import { logger } from "hono/logger";
 import { cacheMiddleware } from "./lib/cache";
 import { bindAuth, getApp, type AuthResolver } from "./lib/context";
@@ -30,7 +31,8 @@ const apiRoutes = [
     thumbnailRoutes,
     favoriteRoutes,
     buildStatusRoutes,
-    analyticsRoutes
+    analyticsRoutes,
+    webhookRoutes
 ];
 
 export function createApp(resolveAuth: AuthResolver) {

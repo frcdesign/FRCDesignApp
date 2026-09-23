@@ -10,14 +10,11 @@ import { getDocument } from "../../../lib/onshape/endpoints/documents";
 import { requireEditorMiddleware } from "../../auth/guards";
 import { type DocumentPath } from "../../../lib/onshape/path";
 import { groups, insertables, favorites } from "../../../db/schema";
-import { bumpLibraryVersion, ensureLibrary, rebuildSearchDb } from "../db";
+import { bumpLibraryVersion, rebuildSearchDb } from "../db";
 import { HttpStatus } from "http-status-ts";
 import { handledError } from "../../../lib/api-error";
-import {
-    getJobStatus,
-    isReloadRunning,
-    trackJob
-} from "../../load/job-tracker";
+import { getJobStatus, trackJob } from "../../load/job-tracker";
+import { startReload } from "../../load/reload";
 import { z } from "zod";
 import { validate } from "../../../lib/validate";
 
@@ -52,27 +49,14 @@ groupRoutes.post(
     requireEditorMiddleware,
     validate("query", reloadGroupsQuery),
     async (c) => {
-        const libraryId = getLibraryParam(c);
         const { forceReload } = c.req.valid("query");
-        const sessionId = getSessionId(c);
-
-        // Only one reload per library at a time. Racy under a sub-second
-        // double-trigger (KV has no compare-and-swap), which is fine here.
-        if (await isReloadRunning(c.env, libraryId)) {
-            return c.json({ status: "already-running" });
-        }
-
-        const db = getDb(c.env.DB);
-        await ensureLibrary(db, libraryId);
-
         // The workflow owns the per-group version check — unchanged documents
         // are skipped inside it (unless forceReload).
-        const instance = await c.env.LOAD_LIBRARY_WORKFLOW.create({
-            params: { libraryId, sessionId, forceReload }
+        const status = await startReload(c.env, getLibraryParam(c), {
+            sessionId: getSessionId(c),
+            forceReload
         });
-        await trackJob(c.env, libraryId, "reload", instance.id);
-
-        return c.json({ status: "triggered" });
+        return c.json({ status });
     }
 );
 

@@ -5,6 +5,8 @@ import { AccessLevel } from "./access-level";
 import { productionAuth } from "./request-auth";
 import { createApp } from "../../app";
 import { jsonRequest } from "../../../__test_utils__";
+import { saveSession } from "./session";
+import { getOwnerSessionId } from "./owner";
 
 const app = createApp(productionAuth);
 
@@ -41,5 +43,35 @@ describe("the dev access-level override", () => {
 
     it("leaves an unset override to the caller's own session", async () => {
         expect(await getMaxAccessLevel()).toBe(AccessLevel.USER);
+    });
+});
+
+describe("the owner", () => {
+    const OWNER = "owner-user-id";
+
+    /** A signed-in session whose user is already resolved, so Onshape is not asked. */
+    async function accessLevelOf(userId: string): Promise<AccessLevel> {
+        const sessionId = crypto.randomUUID();
+        await saveSession(env.KV, sessionId, {
+            accessToken: "token",
+            refreshToken: "refresh",
+            expiresAt: Date.now() + 60_000,
+            userId
+        });
+        const res = await app.request(
+            "/api/access-data",
+            {
+                method: "GET",
+                headers: { Cookie: `frc-design-app-cookie=${sessionId}` }
+            },
+            { ...env, OWNER_USER_ID: OWNER }
+        );
+        const body: { maxAccessLevel: AccessLevel } = await res.json();
+        return body.maxAccessLevel;
+    }
+
+    it("is the user OWNER_USER_ID names, and their session is kept", async () => {
+        expect(await accessLevelOf(OWNER)).toBe(AccessLevel.OWNER);
+        expect(await getOwnerSessionId(env.KV)).not.toBeNull();
     });
 });

@@ -90,6 +90,10 @@
     "vars": {
         // Onshape team ID used to determine editor/admin access level in production
         "ADMIN_TEAM": "5b620150b2190f0fca90ec10",
+        // The Onshape user id granted the owner access level, whose session
+        // webhook-triggered reloads run under. Unset grants nobody; each
+        // environment below needs it too.
+        // "OWNER_USER_ID": "",
         "NODE_ENV": "development"
     },
     /**

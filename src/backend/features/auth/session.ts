@@ -57,9 +57,24 @@ function sessionKey(sessionId: string): string {
     return `tokens:${sessionId}`;
 }
 
+const ACCESS_LEVEL_PREFIX = "access-level:";
+
 /** Keyed by session, so it is dropped along with one. */
 export function accessLevelKey(sessionId: string): string {
-    return `access-level:${sessionId}`;
+    return ACCESS_LEVEL_PREFIX + sessionId;
+}
+
+/**
+ * Forgets every session's cached access level, so each is asked of Onshape
+ * again on its next request: for when the admin team changes under them.
+ */
+export async function clearAccessLevels(kv: KVNamespace): Promise<void> {
+    let cursor: string | undefined;
+    do {
+        const page = await kv.list({ prefix: ACCESS_LEVEL_PREFIX, cursor });
+        await Promise.all(page.keys.map((key) => kv.delete(key.name)));
+        cursor = page.list_complete ? undefined : page.cursor;
+    } while (cursor);
 }
 
 function loginKey(loginId: string): string {

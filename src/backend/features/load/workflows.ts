@@ -3,7 +3,7 @@ import {
     type WorkflowEvent,
     type WorkflowStep
 } from "cloudflare:workers";
-import { eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import type { AppBindings } from "../../lib/context";
 import { getDb } from "../../db/client";
 import type { LibraryId } from "../library/library-id";
@@ -31,6 +31,7 @@ import {
     getOnshapeApiFromContext
 } from "./context";
 import { untrackJob } from "./job-tracker";
+import { startQueuedReload } from "./reload";
 import { loadGroup } from "./load-group";
 import { ONSHAPE_STEP_RETRIES } from "./steps";
 import { reconcileThumbnails } from "../thumbnails/reconcile";
@@ -39,6 +40,8 @@ export interface LoadLibraryParams {
     libraryId: LibraryId;
     sessionId: string;
     forceReload?: boolean;
+    /** Only the groups loaded from these; every group when absent. */
+    documentIds?: string[];
 }
 
 /** The outcome of loading a single group within a run. */
@@ -64,7 +67,12 @@ export class LoadLibraryWorkflow extends WorkflowEntrypoint<
         event: WorkflowEvent<LoadLibraryParams>,
         step: WorkflowStep
     ): Promise<GroupResult[]> {
-        const { libraryId, sessionId, forceReload = false } = event.payload;
+        const {
+            libraryId,
+            sessionId,
+            forceReload = false,
+            documentIds
+        } = event.payload;
         const ctx = createLoadContext(this.env, sessionId, step);
 
         const storedGroups = await step.do("list-groups", () =>
@@ -76,7 +84,14 @@ export class LoadLibraryWorkflow extends WorkflowEntrypoint<
                     buildIssues: groups.buildIssues
                 })
                 .from(groups)
-                .where(eq(groups.libraryId, libraryId))
+                .where(
+                    and(
+                        eq(groups.libraryId, libraryId),
+                        documentIds
+                            ? inArray(groups.documentId, documentIds)
+                            : undefined
+                    )
+                )
         );
 
         const results = await Promise.all(
@@ -118,6 +133,9 @@ export class LoadLibraryWorkflow extends WorkflowEntrypoint<
         );
         await step.do("untrack-job", () =>
             untrackJob(ctx.env, libraryId, event.instanceId)
+        );
+        await step.do("start-queued-reload", () =>
+            startQueuedReload(ctx.env, libraryId)
         );
 
         return results;

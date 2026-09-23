@@ -1,8 +1,11 @@
-/** The two gates routes mount: signed in to Onshape at all, and on the admin team. */
+/**
+ * The gates routes mount: signed in to Onshape at all, on the admin team, and
+ * the owner.
+ */
 import type { MiddlewareHandler } from "hono";
 import { forbiddenError, signInRequiredError } from "../../lib/api-error";
 import type { AppContext, AppContextEnv } from "../../lib/context";
-import { hasEditorAccess } from "./access-level";
+import { AccessLevel, hasEditorAccess } from "./access-level";
 import { isSignedIn } from "./request-auth";
 
 async function requireSignIn(c: AppContext): Promise<void> {
@@ -34,6 +37,18 @@ export const requireEditorMiddleware: MiddlewareHandler<AppContextEnv> = async (
         throw forbiddenError(
             "You must be on the admin team to use this functionality"
         );
+    }
+    await next();
+};
+
+/** For what acts on the whole Onshape company, which only the owner may. */
+export const requireOwnerMiddleware: MiddlewareHandler<AppContextEnv> = async (
+    c,
+    next
+) => {
+    await requireSignIn(c);
+    if ((await c.var.getAccessLevel()) !== AccessLevel.OWNER) {
+        throw forbiddenError("Only the owner can use this functionality");
     }
     await next();
 };
