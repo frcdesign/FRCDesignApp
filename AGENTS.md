@@ -86,6 +86,13 @@ Raw text lives only inside the input a user is typing into. Don't add a third
 form: if something needs a different view of a selection, it wants a function in
 `selection.ts`, not a new shape.
 
+# Tests
+
+`npm test` runs two Vitest projects. A backend test that needs bindings (D1,
+R2, KV, Workflows) is named `*.worker.test.ts` and runs in the Workers runtime
+against a freshly migrated D1; that setup costs far more than most tests, so
+everything else — pure backend logic and the frontend — runs in Node.
+
 # Running the app
 
 Onshape launches the app at `/init`, which needs a real Onshape session and

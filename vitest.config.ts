@@ -9,21 +9,27 @@ import { alias } from "./vite.config";
 // test Worker would make FORCE_SIGNED_IN rewrite what the auth tests assert.
 process.env.CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV = "false";
 
+/**
+ * Only tests that need bindings pay for a Workers runtime and a migrated D1
+ * per file, which costs far more than the tests themselves; they say so by
+ * their name. Everything else runs in Node.
+ */
+const WORKER_TESTS = "src/backend/**/*.worker.test.ts";
+
 export default defineConfig({
     test: {
         projects: [
             {
                 resolve: { alias },
-                // Frontend logic needs no bindings, so it runs in a fast Node environment.
                 test: {
                     name: "node",
                     environment: "node",
-                    include: ["src/frontend/**/*.test.ts"]
+                    include: ["src/**/*.test.ts"],
+                    exclude: [WORKER_TESTS]
                 }
             },
             {
-                // Backend tests run in the Workers runtime with real, per-test
-                // isolated D1/R2/KV bindings from wrangler.jsonc.
+                // Real, per-test isolated D1/R2/KV bindings from wrangler.jsonc.
                 resolve: { alias },
                 plugins: [
                     cloudflareTest(async () => {
@@ -39,7 +45,7 @@ export default defineConfig({
                 ],
                 test: {
                     name: "backend",
-                    include: ["src/backend/**/*.test.ts"],
+                    include: [WORKER_TESTS],
                     setupFiles: ["./src/__test_utils__/apply-migrations.ts"]
                 }
             }

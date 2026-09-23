@@ -1,6 +1,6 @@
 /**
  * Import directly, not through `__test_utils__/index.ts`: the barrel reaches
- * `cloudflare:workers`, which `src/shared`'s node-project tests cannot resolve.
+ * `cloudflare:workers`, which the node project's tests cannot resolve.
  */
 import {
     ParameterType,
