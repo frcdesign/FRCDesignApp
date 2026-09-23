@@ -29,6 +29,16 @@ export default defineConfig({
                 }
             },
             {
+                // Components, rendered into a DOM the way the app renders them.
+                resolve: { alias },
+                test: {
+                    name: "dom",
+                    environment: "jsdom",
+                    include: ["src/frontend/**/*.test.tsx"],
+                    setupFiles: ["./src/__test_utils__/dom-setup.ts"]
+                }
+            },
+            {
                 // Real, per-test isolated D1/R2/KV bindings from wrangler.jsonc.
                 resolve: { alias },
                 plugins: [

@@ -100,6 +100,12 @@ R2, KV, Workflows) is named `*.worker.test.ts` and runs in the Workers runtime
 against a freshly migrated D1; that setup costs far more than most tests, so
 everything else — pure backend logic and the frontend — runs in Node.
 
+Component tests are `*.test.tsx` and run in jsdom (the `dom` project).
+`renderWithProviders` in `__test_utils__/render.tsx` renders the way the app
+does, with a query cache that never fetches: seed what a component reads with
+`setQueryData`. Test what a person does and sees — type, click, read the
+screen — rather than a component's internals.
+
 # Running the app
 
 Onshape launches the app at `/init`, which needs a real Onshape session and

@@ -564,6 +564,19 @@ function roundToPrecision(num: number, precision: number): string {
     return String(Math.round(num * factor) / factor);
 }
 
+/** What a quantity type measures, and so the only kind a result may be. */
+function expectedType(quantityType: QuantityType): UnitType {
+    switch (quantityType) {
+        case QuantityType.LENGTH:
+            return "length";
+        case QuantityType.ANGLE:
+            return "angle";
+        case QuantityType.INTEGER:
+        case QuantityType.REAL:
+            return "number";
+    }
+}
+
 function formatExpression(
     expr: Expr,
     value: ValueWithUnits,
@@ -583,6 +596,17 @@ function formatExpression(
             expression = `(${expression})`;
         }
         expression = expression + " " + getUnitDisplayStr(displayUnit);
+    }
+
+    // "2 deg" in a length parses, but it is no length; comparing it against
+    // the length bounds below would throw rather than report.
+    const expected = expectedType(quantityType);
+    if (value.type !== expected) {
+        return {
+            hasError: true,
+            expression,
+            errorMessage: `Expected ${expected === "number" ? "a number" : `a ${expected}`}`
+        };
     }
 
     if (tolerantLessThan(value, options.min)) {
@@ -685,7 +709,7 @@ export function evaluateBaseValue(
     ) {
         value = valueWithUnits(value.value, defaultUnit);
     }
-    return value;
+    return value.type === expectedType(quantityType) ? value : undefined;
 }
 
 export function evaluateExpression(

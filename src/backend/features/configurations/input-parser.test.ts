@@ -61,10 +61,16 @@ describe("evaluateExpression", () => {
         ["(5 mm) mm", "a unit is applied to something already dimensioned"],
         ["5 mm * 2 mm", "two units are multiplied"],
         ["5 mm / 2 mm", "two units are divided"],
+        // Once threw out of the range check instead of being reported.
+        ["2 deg", "an angle is no length"],
         ["-100.001 mm", "it falls below the minimum"],
         ["100.001 mm", "it rises above the maximum"]
     ])("rejects %s, since %s", (expression) => {
         expect(evaluateExpression(expression, LENGTH).hasError).toBe(true);
+    });
+
+    it("rejects a length where an angle is wanted", () => {
+        expect(evaluateExpression("2 mm", DEGREES).hasError).toBe(true);
     });
 
     // `expression` is what the input redisplays and the menu stores, so it has
