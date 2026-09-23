@@ -43,6 +43,18 @@
 }
 
 /*
+ * A row whose text alone gives up room, so a long title truncates rather than
+ * squeezing the thumbnail and badge beside it smaller than the next row's.
+ */
+.onlyTextShrinks > * {
+    flex-shrink: 0;
+}
+
+.onlyTextShrinks > .shrinkingText {
+    flex-shrink: 1;
+}
+
+/*
  * Text reads as centred on its cap height, a pixel above its line box, so an
  * icon centred on that box looks low.
  */

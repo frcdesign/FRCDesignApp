@@ -51,11 +51,17 @@ export function CardTitle(props: CardTitleProps): ReactNode {
     } = props;
 
     return (
-        <Group gap="sm" wrap="nowrap" flex={1} miw={0}>
+        <Group
+            gap="sm"
+            wrap="nowrap"
+            flex={1}
+            miw={0}
+            className={styles.onlyTextShrinks}
+        >
             {thumbnail}
             {/* Shrinks to truncate, but never grows: the badge belongs beside
                 the name, not at the row's edge. */}
-            <Stack gap={0} miw={0}>
+            <Stack gap={0} miw={0} className={styles.shrinkingText}>
                 <TruncatedText
                     hoverText={title}
                     size="sm"
@@ -198,7 +204,11 @@ export function ItemRow(props: ItemRowProps): ReactNode {
                 <Table.Td>
                     <Group wrap="nowrap">
                         {left}
-                        <Group gap="4px" justify="flex-end">
+                        <Group
+                            gap="4px"
+                            justify="flex-end"
+                            className={styles.noShrink}
+                        >
                             {moreButton && <MenuButton>{menuItems}</MenuButton>}
                             {rightSection}
                         </Group>
