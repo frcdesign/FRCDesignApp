@@ -2,7 +2,8 @@ import type { JSX } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { OpenUrlButton } from "../../components/open-url-button";
 import { PageNotice } from "../../components/app-zero-state";
-import { APP_STORE_URL } from "../../lib/url";
+import { APP_STORE_PATH } from "../../lib/url";
+import { useOnshapeOrigin } from "../../lib/onshape-params";
 
 /**
  * Where the beta-era app extension still points. Nothing links here anymore,
@@ -14,8 +15,9 @@ export const Route = createFileRoute("/_pages/beta-complete")({
 });
 
 function BetaComplete(): JSX.Element {
+    const origin = useOnshapeOrigin();
     const frcDesignAppButton = (
-        <OpenUrlButton text="FRCDesignApp" url={APP_STORE_URL} />
+        <OpenUrlButton text="FRCDesignApp" url={origin + APP_STORE_PATH} />
     );
 
     return (

@@ -3,7 +3,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { type ReactNode } from "react";
 import { NavbarRow } from "../../components/app-navbar";
 import { OpenUrlButton } from "../../components/open-url-button";
-import { APP_STORE_URL } from "../../lib/url";
+import { APP_STORE_PATH } from "../../lib/url";
+import { useOnshapeOrigin } from "../../lib/onshape-params";
 
 import frcDesignAppIcon from "/frc-design-app-prod.svg";
 
@@ -13,6 +14,7 @@ export const Route = createFileRoute("/_pages/setup")({
 
 /** Where "Instructions" lands: what to do to end up with the app in Onshape. */
 function Setup(): ReactNode {
+    const origin = useOnshapeOrigin();
     return (
         <>
             {/* The brand alone: there is nowhere else to go from here. */}
@@ -40,7 +42,7 @@ function Setup(): ReactNode {
                                 </Text>
                                 <OpenUrlButton
                                     text="Open the App Store"
-                                    url={APP_STORE_URL}
+                                    url={origin + APP_STORE_PATH}
                                 />
                             </Stack>
                         </List.Item>

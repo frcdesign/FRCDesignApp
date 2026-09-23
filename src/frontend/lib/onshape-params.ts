@@ -7,6 +7,7 @@ import {
     type TargetElement,
     toTargetElement
 } from "./onshape-launch";
+import { toOnshapeOrigin } from "./url";
 
 /**
  * Takes a launch off the url into the store, which the app reads it from for
@@ -41,6 +42,11 @@ export function useIsConnectedToOnshape(): boolean {
 
 export function useOnshapeServer(): string | undefined {
     return useGetUiState().server;
+}
+
+/** What links into Onshape are built on, so they open on the caller's company. */
+export function useOnshapeOrigin(): string {
+    return toOnshapeOrigin(useOnshapeServer());
 }
 
 /**

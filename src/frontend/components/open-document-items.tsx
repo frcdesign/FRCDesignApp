@@ -9,6 +9,7 @@ import {
 import { type PartialSelection } from "@backend/features/configurations/contract";
 import { IconSize, StatusColor } from "../lib/style-constants";
 import { copyUrlToClipboard, makeUrl, openUrlInNewTab } from "../lib/url";
+import { useOnshapeOrigin } from "../lib/onshape-params";
 
 interface OpenDocumentItemsProps {
     /** Any Onshape path; a shell group's stops at the document. */
@@ -19,7 +20,8 @@ interface OpenDocumentItemsProps {
 
 /** The menu items for reaching an element's Onshape document. */
 export function OpenDocumentItems(props: OpenDocumentItemsProps): ReactNode {
-    const url = makeUrl(props.path, props.selection);
+    const origin = useOnshapeOrigin();
+    const url = makeUrl(origin, props.path, props.selection);
     return (
         <>
             <Menu.Item

@@ -2,16 +2,20 @@ import type { JSX } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { OpenUrlButton } from "../../components/open-url-button";
 import { PageNotice } from "../../components/app-zero-state";
+import { APPLICATIONS_PATH } from "../../lib/url";
+import { useOnshapeOrigin } from "../../lib/onshape-params";
 
 export const Route = createFileRoute("/_pages/grant-denied")({
     component: GrantDenied
 });
 
-const URL = "https://cad.onshape.com/user/applications";
-
 function GrantDenied(): JSX.Element {
+    const origin = useOnshapeOrigin();
     const applicationAccessButton = (
-        <OpenUrlButton text="Open Onshape Applications page" url={URL} />
+        <OpenUrlButton
+            text="Open Onshape Applications page"
+            url={origin + APPLICATIONS_PATH}
+        />
     );
 
     return (

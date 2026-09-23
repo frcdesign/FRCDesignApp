@@ -28,6 +28,7 @@ import {
 import { IconSize, StatusColor } from "../../../lib/style-constants";
 import { AppIcon, type AppIconProps } from "../../../components/app-icon";
 import { SectionHeader } from "./sections";
+import { useOnshapeOrigin } from "../../../lib/onshape-params";
 import styles from "../../../lib/styles.module.css";
 
 /**
@@ -203,6 +204,7 @@ export interface ConfigurationTarget {
 
 /** The offending configuration in Onshape, for an issue that blames one. */
 function getIssueUrl(
+    origin: string,
     issue: BuildIssue,
     target: ConfigurationTarget | undefined
 ): string | undefined {
@@ -210,7 +212,11 @@ function getIssueUrl(
     if (values === undefined || !target) {
         return undefined;
     }
-    return makeUrl(target.elementPath, toSelection(values, target.parameters));
+    return makeUrl(
+        origin,
+        target.elementPath,
+        toSelection(values, target.parameters)
+    );
 }
 
 interface BuildChecksSectionProps {
@@ -222,6 +228,7 @@ interface BuildChecksSectionProps {
 /** The build checks: one tinted callout per issue. Rendered only when non-empty. */
 export function BuildChecksSection(props: BuildChecksSectionProps): ReactNode {
     const { issues, configurationTarget } = props;
+    const origin = useOnshapeOrigin();
     return (
         <Stack gap={6}>
             <SectionHeader>Build checks</SectionHeader>
@@ -229,7 +236,7 @@ export function BuildChecksSection(props: BuildChecksSectionProps): ReactNode {
                 <IssueCallout
                     key={issue.type}
                     issue={issue}
-                    url={getIssueUrl(issue, configurationTarget)}
+                    url={getIssueUrl(origin, issue, configurationTarget)}
                 />
             ))}
         </Stack>

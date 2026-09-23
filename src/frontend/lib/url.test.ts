@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { makeUrl } from "./url";
+import { DEFAULT_ONSHAPE_ORIGIN, makeUrl, toOnshapeOrigin } from "./url";
 
 describe("makeUrl", () => {
     const element = {
@@ -10,10 +10,10 @@ describe("makeUrl", () => {
     } as const;
 
     it("addresses a document, an instance and an element in turn", () => {
-        expect(makeUrl({ documentId: "doc" })).toBe(
+        expect(makeUrl(DEFAULT_ONSHAPE_ORIGIN, { documentId: "doc" })).toBe(
             "https://cad.onshape.com/documents/doc"
         );
-        expect(makeUrl(element)).toBe(
+        expect(makeUrl(DEFAULT_ONSHAPE_ORIGIN, element)).toBe(
             "https://cad.onshape.com/documents/doc/w/ws/e/el"
         );
     });
@@ -21,7 +21,7 @@ describe("makeUrl", () => {
     // Once, by the url: a quantity that reaches Onshape as `%2520m` is the
     // value `0.381%20m`, which is no quantity.
     it("escapes a configuration once", () => {
-        const url = makeUrl(element, {
+        const url = makeUrl(DEFAULT_ONSHAPE_ORIGIN, element, {
             Effective_Length: "0.381 m",
             List_7A7: "Hex"
         });
@@ -33,5 +33,28 @@ describe("makeUrl", () => {
         expect(decodeURIComponent(url)).toContain(
             "configuration=Effective_Length=0.381 m"
         );
+    });
+});
+
+describe("toOnshapeOrigin", () => {
+    it("keeps a company's own Onshape", () => {
+        expect(toOnshapeOrigin("https://frcdesign.onshape.com")).toBe(
+            "https://frcdesign.onshape.com"
+        );
+        expect(toOnshapeOrigin("https://frcdesign.onshape.com/")).toBe(
+            "https://frcdesign.onshape.com"
+        );
+    });
+
+    // The launch is a url anyone can write, and these links open as Onshape's.
+    it.each([
+        undefined,
+        "",
+        "not a url",
+        "http://frcdesign.onshape.com",
+        "https://onshape.com.example.com",
+        "https://evilonshape.com"
+    ])("falls back to cad for %s", (server) => {
+        expect(toOnshapeOrigin(server)).toBe(DEFAULT_ONSHAPE_ORIGIN);
     });
 });

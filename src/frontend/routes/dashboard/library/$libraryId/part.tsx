@@ -18,6 +18,7 @@ import type { InsertableReportOut } from "@backend/features/analytics/contract";
 import { IconSize } from "../../../../lib/style-constants";
 import { parseSearch } from "../../../../lib/search-params";
 import { makeUrl } from "../../../../lib/url";
+import { useOnshapeOrigin } from "../../../../lib/onshape-params";
 import { ConfigurationBreakdown } from "../../../../features/dashboard/configuration-breakdown";
 import { METRICS } from "../../../../features/dashboard/metrics";
 import { type DayRange } from "@backend/features/analytics/day";
@@ -156,11 +157,12 @@ interface PartTitleProps {
 
 /** The part's name, linked into Onshape like a part number is to its vendor. */
 function PartTitle({ report }: PartTitleProps): ReactNode {
+    const origin = useOnshapeOrigin();
     return (
         <Title order={2}>
             <Anchor
                 inherit
-                href={makeUrl(report.path)}
+                href={makeUrl(origin, report.path)}
                 target="_blank"
                 rel="noreferrer"
                 // Centres the icon on the text rather than on its baseline.

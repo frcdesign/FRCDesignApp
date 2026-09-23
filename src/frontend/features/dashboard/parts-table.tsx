@@ -11,6 +11,7 @@ import { type PartUsageOut } from "@backend/features/analytics/contract";
 import { MONTH_DAYS } from "@backend/features/analytics/measures";
 import { LibraryId } from "@backend/features/library/library-id";
 import { makeUrl } from "../../lib/url";
+import { useOnshapeOrigin } from "../../lib/onshape-params";
 import { IconSize, StatusColor } from "../../lib/style-constants";
 import { formatCount } from "./format";
 import {
@@ -188,6 +189,7 @@ interface PartRowProps {
 
 function PartRow({ libraryId, part }: PartRowProps): ReactNode {
     const navigate = useNavigate();
+    const origin = useOnshapeOrigin();
 
     return (
         <Table.Tr
@@ -221,7 +223,7 @@ function PartRow({ libraryId, part }: PartRowProps): ReactNode {
             {/* Stops the row's own navigation: this link leaves the app. */}
             <Table.Td ta="center" onClick={(event) => event.stopPropagation()}>
                 <Anchor
-                    href={makeUrl(part.path)}
+                    href={makeUrl(origin, part.path)}
                     target="_blank"
                     rel="noreferrer"
                     aria-label={`Open ${part.name} in Onshape`}
