@@ -58,9 +58,8 @@ interface ThumbnailTarget {
     /** Empty means the element default. */
     configurationKey: ConfigurationKey;
     /**
-     * Set where a miss should queue a render: surfaces the user picked the
-     * configuration on. A search would otherwise queue a render per row, and
-     * Onshape does one at a time.
+     * Set where a miss should start a render: surfaces the user picked the
+     * configuration on. A search would otherwise start one per row.
      */
     renderSource?: RenderSource;
     /** Only needed to render: what the render resolves the element from. */
@@ -78,8 +77,8 @@ interface CardThumbnailProps {
 export function CardThumbnail(props: CardThumbnailProps): ReactNode {
     const { smallThumbnailUrl, largeThumbnailUrl, target } = props;
 
-    // Asked for by key whether or not this row may queue one: the route serves
-    // what is already stored either way, so a row that cannot queue still shows
+    // Asked for by key whether or not this row may start one: the route serves
+    // what is already stored either way, so a row that cannot start one still shows
     // a configuration something else rendered. It costs that row a 404 when
     // nothing has, and it falls back to the element's own.
     const configuredTarget =
@@ -95,7 +94,7 @@ export function CardThumbnail(props: CardThumbnailProps): ReactNode {
     const fallbackFor = (stored?: string) =>
         configuredTarget ? stored : undefined;
 
-    // Only a row that queued the render has one coming; anything else takes the
+    // Only a row that started the render has one coming; anything else takes the
     // miss for the answer rather than polling for a render nobody started.
     const isRendering = configuredTarget?.renderSource !== undefined;
 
@@ -132,12 +131,10 @@ export function CardThumbnail(props: CardThumbnailProps): ReactNode {
 }
 
 /**
- * How long any surface waits out a render before calling it failed. The
- * renderer can spend far longer than this on one, and a thumbnail that lands
- * afterwards is still stored for the next person to ask — but nobody watches a
- * spinner for minutes, and an insert never needed the render in the first place.
+ * How long any surface waits out a render before calling it failed: as long as
+ * `RenderThumbnailWorkflow` does, after which nothing more is coming.
  */
-const RENDER_TIMEOUT_MS = 30_000;
+const RENDER_TIMEOUT_MS = 60_000;
 
 /** A poll is a worker reading R2, not an Onshape call, so it can be this tight. */
 const POLL_INTERVAL_MS = 2_000;
@@ -264,9 +261,9 @@ const PREVIEW_SIZE = ThumbnailSize.LARGE;
 const PREVIEW_SPINNER_SIZE = 36;
 
 /**
- * Polls for the render the renderer produces. Until it lands the route answers
- * 404, so a miss is a rejected query and the retry is the poll; queueing is
- * idempotent, so every poll can carry it without disturbing what is running.
+ * Polls for a configuration's render. Until it lands the route answers 404, so
+ * a miss is a rejected query and the retry is the poll; starting a render is
+ * idempotent, so every poll can ask without starting another.
  */
 function usePreviewThumbnail(props: PreviewImageProps, enabled: boolean) {
     const { path, insertableId, microversionId, configurationKey } = props;
@@ -275,8 +272,6 @@ function usePreviewThumbnail(props: PreviewImageProps, enabled: boolean) {
         microversionId,
         size: PREVIEW_SIZE,
         configurationKey,
-        // The one surface that may take the render thread off whatever else is
-        // using it: somebody picked this configuration and is watching it load.
         renderSource: RenderSource.INSERT_MENU,
         insertableId
     });

@@ -7,7 +7,7 @@ export {
     AddGroupWorkflow,
     LoadLibraryWorkflow
 } from "./features/load/workflows";
-export { ThumbnailRenderer } from "./features/thumbnails/renderer";
+export { RenderThumbnailWorkflow } from "./features/thumbnails/render-workflow";
 import { createApp } from "./app";
 import { productionAuth } from "./features/auth/request-auth";
 

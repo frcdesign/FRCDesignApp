@@ -43,10 +43,10 @@ KV serves as a cheap, lightweight way to persist user data across multiple Cloud
 
 R2 is Cloudflare's blob storage, optimized for unstructured data like images and PDFs. One bucket holds everything the app stores as a blob, kept apart by key prefix:
 
-| Prefix          | What it holds                                     | Lifetime                         |
-| --------------- | ------------------------------------------------- | -------------------------------- |
-| `thumbnails/`   | Rendered thumbnails, by element and configuration | Kept until reconciled; see below |
-| `search-index/` | Each library's serialized MiniSearch index        | Rewritten on every index rebuild |
+| Prefix          | What it holds                                                             | Lifetime                                          |
+| --------------- | ------------------------------------------------------------------------- | ------------------------------------------------- |
+| `thumbnails/`   | Rendered thumbnails, by element and configuration                         | Kept until reconciled; see below                  |
+| `search-index/` | Each library's serialized MiniSearch index, under a version for its shape | Rewritten on every index rebuild; built on a miss |
 
 Onshape can generate preview thumbnails for parts and assemblies, but fetching them from Onshape on every page load would be slow and eat into API rate limits — a single render can require polling and take minutes. Instead, every thumbnail we ever fetch from Onshape lands in R2 and is served from there afterwards.
 
@@ -68,24 +68,25 @@ Nothing expires on a timer: there is no R2 lifecycle rule, and renders are meant
 - An empty live set deletes nothing: a library really can have no elements, but so can a read that failed.
 - A run scans at most 50 pages of 1,000. A bucket larger than that is finished by the next reload.
 
-Thumbnails are served via `/api/thumbnail/:size/:elementId?v={microversionId}&configurationKey=&renderThumbnail=&insertableId=`:
+Thumbnails are served via `/api/thumbnail/:size/:elementId?v={microversionId}&configurationKey=&renderSource=&insertableId=`:
 
 - **Hit** — streamed from R2 as immutable, cacheable for a year.
-- **Miss** — the element's default is served instead as `no-store`, with an `X-Thumbnail-Fallback` header so the client knows to keep checking. A cacheable fallback would pin the wrong image after the real one landed.
-- **Miss with `renderThumbnail=true`** — the miss also starts a `ThumbnailWorkflow` to render the configuration, resolving the element from `insertableId`. Surfaces where the user picked the configuration (the insert menu, favorites) ask for this; search rows do not, so one cold search cannot start a render per row.
-- **Neither exists** — 404, and the client renders a placeholder.
-
-All rendering happens inside the workflow, which keeps Onshape's thumbnail id server-side. There is no HTTP path that proxies an Onshape thumbnail directly.
+- **Miss** — 404, uncached, so a render landing later is not shadowed. A configuration miss is never answered with the element's default: that would show a part the caller did not ask for. The client shows the default itself while it waits.
+- **Miss with `renderSource` and `insertableId`** — the route also starts a `RenderThumbnailWorkflow` for the configuration (`features/thumbnails/render.ts`). The insert menu and favorite rows ask for this; search rows do not, so one cold search cannot start a render per row.
+    - The instance id is a hash of the element, microversion and key, so every poll for one render finds the same instance and starts nothing new.
+    - Only when there is no instance does the route spend an Onshape call, resolving the thumbnail id once. Onshape having no insertable for the configuration answers 422 at once, which the client shows as a configuration that failed to regenerate.
+    - The workflow is handed that id and both R2 keys, the size the asking surface shows first leading, and asks Onshape for the bytes until they land (404 means still rendering), for about a minute.
+    - A finished instance found on a miss left no bytes behind, so it is restarted.
 
 ### Workflows — Background Jobs
 
-Cloudflare Workflows let you run a long-running background job that survives beyond a single HTTP request's time limit. They are the only async primitive here — there are no Queues, Durable Objects, or cron triggers. The two load workflows live in `src/backend/features/load/workflows.ts`; the thumbnail one lives with the feature it serves, in `src/backend/features/thumbnails/workflow.ts`:
+Cloudflare Workflows let you run a long-running background job that survives beyond a single HTTP request's time limit. They are the only async primitive here — there are no Queues, Durable Objects, or cron triggers. The two load workflows live in `src/backend/features/load/workflows.ts`; the thumbnail one lives with the feature it serves, in `src/backend/features/thumbnails/render-workflow.ts`:
 
-| Binding                 | Class                 | What it does                                                                         |
-| ----------------------- | --------------------- | ------------------------------------------------------------------------------------ |
-| `LOAD_LIBRARY_WORKFLOW` | `LoadLibraryWorkflow` | Reloads every group whose document has a new version, then rebuilds the search index |
-| `ADD_GROUP_WORKFLOW`    | `AddGroupWorkflow`    | Adds an Onshape document to a library and loads it                                   |
-| `THUMBNAIL_WORKFLOW`    | `ThumbnailWorkflow`   | Renders one configuration's thumbnails and stores them in R2                         |
+| Binding                     | Class                     | What it does                                                                         |
+| --------------------------- | ------------------------- | ------------------------------------------------------------------------------------ |
+| `LOAD_LIBRARY_WORKFLOW`     | `LoadLibraryWorkflow`     | Reloads every group whose document has a new version, then rebuilds the search index |
+| `ADD_GROUP_WORKFLOW`        | `AddGroupWorkflow`        | Adds an Onshape document to a library and loads it                                   |
+| `RENDER_THUMBNAIL_WORKFLOW` | `RenderThumbnailWorkflow` | Waits out one configuration's render and stores both sizes in R2                     |
 
 Loading a group means walking the document structure, downloading metadata for every part and assembly, probing each indexed configuration, generating thumbnails, and writing it all to D1 — far too long for a single HTTP request. The request kicks the workflow off and returns immediately.
 

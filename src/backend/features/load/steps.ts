@@ -34,7 +34,7 @@ const RATE_LIMIT_JITTER_SECONDS = 20;
  * longer an `OnshapeRateLimitError`, so an `instanceof` here answered false for
  * every real 429 and quietly handed back the curve below instead.
  */
-function rateLimitDelay(error: Error): `${number} seconds` | null {
+export function rateLimitDelay(error: Error): `${number} seconds` | null {
     const retryAfterSeconds = readRetryAfterSeconds(error);
     if (retryAfterSeconds === null) {
         return null;

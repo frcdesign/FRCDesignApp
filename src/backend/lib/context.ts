@@ -3,7 +3,7 @@ import type {
     AddGroupParams,
     LoadLibraryParams
 } from "../features/load/workflows";
-import type { ThumbnailRenderer } from "../features/thumbnails/renderer";
+import type { RenderThumbnailParams } from "../features/thumbnails/render-workflow";
 import { type AccessLevel } from "../features/auth/access-level";
 import { type OAuthApi } from "./onshape/client";
 
@@ -15,8 +15,8 @@ export interface AppBindings {
     BLOB: R2Bucket;
     LOAD_LIBRARY_WORKFLOW: Workflow<LoadLibraryParams>;
     ADD_GROUP_WORKFLOW: Workflow<AddGroupParams>;
-    /** One per Onshape user; every thumbnail Onshape renders queues here. */
-    THUMBNAIL_RENDERER: DurableObjectNamespace<ThumbnailRenderer>;
+    /** One instance per configuration being rendered; see `requestRender`. */
+    RENDER_THUMBNAIL_WORKFLOW: Workflow<RenderThumbnailParams>;
     ADMIN_TEAM: string;
     /** Dev-only: the access level granted, bypassing Onshape. */
     VITE_ACCESS_LEVEL_OVERRIDE?: string;

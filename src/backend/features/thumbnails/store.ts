@@ -1,6 +1,5 @@
 /**
- * Where thumbnails live in R2, and how a caller reads one back. Only
- * `ThumbnailRenderer` asks Onshape for one; this is the storage either side.
+ * Where thumbnails live in R2, and how a caller reads one back.
  */
 
 import { CachePolicy, immutableCacheControl } from "../../lib/cache";
@@ -69,8 +68,8 @@ async function fetchThumbnail(
  * neither instance will give one up.
  *
  * Onshape renders these when a document is saved, so reading one starts no work
- * and races nothing — unlike a configuration, which `ThumbnailRenderer` has to
- * serialize. A load fetches them directly, several elements at a time.
+ * and races nothing — unlike a configuration, which `RenderThumbnailWorkflow`
+ * waits out. A load fetches them directly, several elements at a time.
  */
 export async function uploadThumbnails(
     bucket: R2Bucket,

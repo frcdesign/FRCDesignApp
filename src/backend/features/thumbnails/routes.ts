@@ -3,18 +3,12 @@ import { HttpStatus } from "http-status-ts";
 import { handledError } from "../../lib/api-error";
 import { validate } from "../../lib/validate";
 import { CachePolicy, setCache } from "../../lib/cache";
-import { getApp, type AppContext } from "../../lib/context";
+import { getApp } from "../../lib/context";
 
 import { RenderSource, ThumbnailSize } from "./contract";
 import { thumbnailKey } from "./keys";
 import { DEFAULT_CONFIGURATION_KEY } from "../configurations/contract";
-
-import {
-    type EnqueueOutcome,
-    requestThumbnails,
-    type ThumbnailRequest
-} from "./renderer";
-import { getSessionId } from "../auth/session";
+import { requestRender } from "./render";
 import { requireEditorMiddleware } from "../auth/guards";
 import { getDb } from "../../db/client";
 import { reloadGroupThumbnail, reloadInsertableThumbnail } from "./reload";
@@ -29,11 +23,7 @@ const storedThumbnailParams = z.object({
 /** Absent means the element default, which is what `""` encodes. */
 const configurationKeyQuery = z.string().default(DEFAULT_CONFIGURATION_KEY);
 
-/**
- * Only the two sources a client can legitimately be. The insert menu may take
- * the render thread from whatever holds it, so this is not free-form.
- */
-const renderSourceQuery = z.enum([RenderSource.INSERT_MENU, RenderSource.ROW]);
+const renderSourceQuery = z.enum(RenderSource);
 
 const storedThumbnailQuery = z.object({
     /** The microversion, part of the key — which is what makes a hit immutable. */
@@ -82,7 +72,7 @@ thumbnailRoutes.get(
             renderSource &&
             insertableId
         ) {
-            const outcome = await queueConfigurationRender(
+            const outcome = await requestRender(
                 c,
                 {
                     insertableId,
@@ -91,7 +81,11 @@ thumbnailRoutes.get(
                     microversionId
                 },
                 renderSource
-            );
+            ).catch(() => {
+                // Never fatal — no session to render under, most often; the
+                // caller just keeps missing.
+                return undefined;
+            });
             if (outcome === "no-such-configuration") {
                 return noSuchConfiguration();
             }
@@ -125,33 +119,6 @@ function thumbnailResponse(object: R2ObjectBody): Response {
     const headers = new Headers();
     object.writeHttpMetadata(headers);
     return new Response(object.body, { headers });
-}
-
-/**
- * Queues the render and returns; the client polls this route until the bytes
- * land. Polling is free — the queue names a job by the key it will write, so
- * asking twice is asking once and never disturbs a render already running.
- */
-async function queueConfigurationRender(
-    c: AppContext,
-    request: ThumbnailRequest,
-    source: RenderSource
-): Promise<EnqueueOutcome | undefined> {
-    try {
-        // Read first, so a caller with no session queues nothing: the render
-        // runs later, under this caller's Onshape tokens.
-        const sessionId = getSessionId(c);
-        const userId = await c.var.getUserId();
-        return await requestThumbnails(
-            c.env,
-            { userId, sessionId },
-            request,
-            source
-        );
-    } catch {
-        // Never fatal: the caller just gets a miss until the render lands.
-        return undefined;
-    }
 }
 
 const reloadThumbnailBody = z.object({

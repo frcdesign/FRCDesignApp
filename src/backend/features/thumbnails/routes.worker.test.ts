@@ -1,7 +1,15 @@
 import { env } from "cloudflare:workers";
-import { runDurableObjectAlarm } from "cloudflare:test";
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { createTestApp, jsonRequest } from "../../../__test_utils__";
+import { introspectWorkflow } from "cloudflare:test";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+    TEST_PART_STUDIO_ID,
+    createTestApp,
+    jsonRequest,
+    resetDb,
+    seedPartStudio
+} from "../../../__test_utils__";
+import * as ThumbnailEndpoints from "../../lib/onshape/endpoints/thumbnails";
+import { getDb } from "../../db/client";
 import { RenderSource, ThumbnailSize } from "./contract";
 import {
     parseThumbnailKey,
@@ -18,6 +26,8 @@ const CANONICAL_CONFIGURATION = "size=l";
 
 const SESSION_ID = "test-session";
 const INSERTABLE_ID = "test-insertable";
+
+const db = getDb(env.DB);
 
 function get(url: string, sessionId?: string) {
     const init = jsonRequest("GET");
@@ -248,9 +258,8 @@ describe("thumbnail serving", () => {
     });
 });
 
-describe("queueing a configuration's thumbnail", () => {
-    /** The queue the route enqueues on; `createTestApp` signs in as this user. */
-    const queue = () => env.THUMBNAIL_RENDERER.getByName("test-user");
+describe("rendering a configuration's thumbnail", () => {
+    afterEach(() => vi.restoreAllMocks());
 
     /** Seeds only the default, so a configuration request always misses. */
     async function seedDefaultOnly(elementId: string) {
@@ -260,46 +269,43 @@ describe("queueing a configuration's thumbnail", () => {
         );
     }
 
-    function renderUrl(renderSource: RenderSource, elementId: string) {
+    function renderUrl(elementId: string, renderSource = RenderSource.ROW) {
         return thumbnailUrl({
             elementId,
             microversionId: MICROVERSION,
             size: SIZE,
             configurationKey: CANONICAL_CONFIGURATION,
             renderSource,
-            insertableId: INSERTABLE_ID
+            insertableId: TEST_PART_STUDIO_ID
         });
     }
 
-    async function getRender(
-        elementId: string,
-        renderSource = RenderSource.ROW
-    ) {
-        return get(renderUrl(renderSource, elementId), SESSION_ID);
+    /** Onshape resolving the configuration to a render id. */
+    function mockThumbnailId() {
+        return vi
+            .spyOn(ThumbnailEndpoints, "getThumbnailId")
+            .mockResolvedValue("thumbnail-id");
     }
 
-    /** What the queue holds for one element, whatever else is in it. */
-    async function queuedFor(elementId: string) {
-        const jobs = await queue().queued();
-        return jobs.filter((job) => job.key.includes(elementId));
-    }
-
-    it("passes the source the validator accepts", () => {
-        const url = thumbnailUrl({
-            elementId: "any",
-            microversionId: MICROVERSION,
-            size: SIZE,
-            configurationKey: CANONICAL_CONFIGURATION,
-            renderSource: RenderSource.INSERT_MENU,
-            insertableId: INSERTABLE_ID
-        });
-        expect(new URL(url, "http://x").searchParams.get("renderSource")).toBe(
-            "insert"
+    /** Workflows started while `run` is called, with their steps stubbed out. */
+    async function startedDuring(run: () => Promise<unknown>) {
+        await using workflows = await introspectWorkflow(
+            env.RENDER_THUMBNAIL_WORKFLOW
         );
+        await workflows.modifyAll(async (m) => {
+            for (const size of Object.values(ThumbnailSize)) {
+                await m.mockStepResult({ name: `store-${size}` }, null);
+            }
+        });
+        await run();
+        return (await workflows.get()).length;
+    }
+
+    beforeEach(async () => {
+        await resetDb(db);
+        await seedPartStudio(db);
     });
 
-    // Without one there is nothing to resolve the element from, so the render
-    // is simply not requested.
     it("omits the source when no insertable is named", () => {
         const url = thumbnailUrl({
             elementId: "any",
@@ -313,120 +319,69 @@ describe("queueing a configuration's thumbnail", () => {
         ).toBeNull();
     });
 
-    // Both, so the row and the hover card it opens never disagree.
-    it("queues both sizes on a miss", async () => {
+    // Polling is how the client waits, so asking twice has to be asking once
+    // — and cost Onshape one call, not one per poll.
+    it("starts one render on a miss, however often it is asked", async () => {
         await seedDefaultOnly("warm-element");
+        const thumbnailId = mockThumbnailId();
 
-        const res = await getRender("warm-element");
+        const started = await startedDuring(async () => {
+            expect(
+                (await get(renderUrl("warm-element"), SESSION_ID)).status
+            ).toBe(404);
+            await get(renderUrl("warm-element"), SESSION_ID);
+        });
 
-        expect(res.status).toBe(404);
-        expect((await queuedFor("warm-element")).map((job) => job.key)).toEqual(
-            expect.arrayContaining([
-                thumbnailKey(
-                    "warm-element",
-                    MICROVERSION,
-                    ThumbnailSize.SMALL,
-                    CANONICAL_CONFIGURATION
-                ),
-                thumbnailKey(
-                    "warm-element",
-                    MICROVERSION,
-                    ThumbnailSize.LARGE,
-                    CANONICAL_CONFIGURATION
-                )
-            ])
-        );
+        expect(started).toBe(1);
+        expect(thumbnailId).toHaveBeenCalledTimes(1);
     });
-
-    // Polling is how the client waits, so asking twice has to be asking once.
-    it("queues nothing new when the same render is asked for again", async () => {
-        await seedDefaultOnly("repeat-element");
-
-        await getRender("repeat-element");
-        await getRender("repeat-element");
-
-        expect(await queuedFor("repeat-element")).toHaveLength(2);
-    });
-
-    it("records which surface asked, since that is what orders the queue", async () => {
-        await seedDefaultOnly("sourced-element");
-
-        await getRender("sourced-element", RenderSource.INSERT_MENU);
-
-        const jobs = await queuedFor("sourced-element");
-        expect(
-            jobs.every((job) => job.source === RenderSource.INSERT_MENU)
-        ).toBe(true);
-    });
-
-    /** What the renderer resolves its Onshape tokens from. */
-    async function seedRendererSession() {
-        await env.KV.put(
-            `tokens:${SESSION_ID}`,
-            JSON.stringify({
-                accessToken: "token",
-                refreshToken: "refresh",
-                expiresAt: Date.now() + 3_600_000,
-                userId: "test-user"
-            })
-        );
-    }
-
-    /** The route's answer once the queue has had the chance to fail the job. */
-    async function statusAfterDraining(elementId: string): Promise<number> {
-        for (let pass = 0; pass < 20; pass++) {
-            await runDurableObjectAlarm(queue());
-            const { status } = await getRender(elementId);
-            if (status !== 404) return status;
-        }
-        return 404;
-    }
 
     // A miss is a render still coming; this is one that never will be, and the
     // client shows different wording for each.
-    it("answers a render that cannot resolve its element with its own status", async () => {
-        await seedDefaultOnly("invalid-element");
-        await seedRendererSession();
-
-        // Nothing stores a row for INSERTABLE_ID, so the render has no element
-        // path to resolve — the terminal failure a bad configuration also takes.
-        expect((await getRender("invalid-element")).status).toBe(404);
-
-        expect(await statusAfterDraining("invalid-element")).toBe(422);
-    });
-
-    it("queues no render when there is no session to run it under", async () => {
-        await seedDefaultOnly("sessionless-element");
-
-        const res = await get(
-            renderUrl(RenderSource.ROW, "sessionless-element")
+    it("answers a configuration Onshape cannot resolve with its own status", async () => {
+        vi.spyOn(ThumbnailEndpoints, "getThumbnailId").mockRejectedValue(
+            new ThumbnailEndpoints.NoSuchConfigurationError("none")
         );
 
-        expect(res.status).toBe(404);
-        expect(await queuedFor("sessionless-element")).toEqual([]);
+        const started = await startedDuring(async () => {
+            expect(
+                (await get(renderUrl("invalid-element"), SESSION_ID)).status
+            ).toBe(422);
+        });
+        expect(started).toBe(0);
+    });
+
+    it("starts nothing when there is no session to render under", async () => {
+        const thumbnailId = mockThumbnailId();
+
+        const started = await startedDuring(async () => {
+            expect((await get(renderUrl("sessionless-element"))).status).toBe(
+                404
+            );
+        });
+
+        expect(started).toBe(0);
+        expect(thumbnailId).not.toHaveBeenCalled();
     });
 
     // Search results show many configurations at once; one cold search must not
-    // queue a render per row against a thread that runs one at a time.
-    it("queues nothing when no source is named", async () => {
-        await seedDefaultOnly("cold-element");
-
-        const res = await get(
-            thumbnailUrl({
-                elementId: "cold-element",
-                microversionId: MICROVERSION,
-                size: SIZE,
-                configurationKey: CANONICAL_CONFIGURATION
-            }),
-            SESSION_ID
-        );
-
-        expect(res.status).toBe(404);
-        expect(await queuedFor("cold-element")).toEqual([]);
+    // start a render per row.
+    it("starts nothing when no source is named", async () => {
+        const started = await startedDuring(async () => {
+            const res = await get(
+                thumbnailUrl({
+                    elementId: "cold-element",
+                    microversionId: MICROVERSION,
+                    size: SIZE,
+                    configurationKey: CANONICAL_CONFIGURATION
+                }),
+                SESSION_ID
+            );
+            expect(res.status).toBe(404);
+        });
+        expect(started).toBe(0);
     });
 
-    // A client must not be able to label itself a library load, nor invent a
-    // surface that outranks the insert menu.
     it("rejects a source that is not one a client may claim", async () => {
         const res = await get(
             `/api/thumbnail/${SIZE}/any?v=${MICROVERSION}&configurationKey=x&renderSource=load`
