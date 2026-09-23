@@ -128,12 +128,8 @@ function SectionAccordion(props: SectionAccordionProps): ReactNode {
                 icon: styles.titleIcon
             }}
         >
-            {sections.map((section, index) => (
-                <Accordion.Item
-                    key={section.value}
-                    value={section.value}
-                    style={{ "--section-index": index }}
-                >
+            {sections.map((section) => (
+                <Accordion.Item key={section.value} value={section.value}>
                     <Accordion.Control
                         icon={section.icon}
                         className="interactive"

@@ -2,15 +2,23 @@
  * Mantine brightens a control to pure white or black; a section header is a
  * title like the group page's, so it reads in the same text color.
  *
- * Stuck below the headers already stuck, each `sectionHeader`'s height. The
- * scroll container's padding already clears the navbar it runs underneath.
+ * Stuck while its own section is on screen, until the next header pushes it
+ * off. Top 0 is below the navbar: the scroll container's padding clears it.
  */
 .control {
     color: var(--mantine-color-text);
     position: sticky;
-    top: calc(var(--section-index) * rem(48px));
+    top: 0;
     z-index: 1;
     background: var(--mantine-color-body);
+}
+
+/*
+ * A zero state is one short block with nothing to scroll through, so a header
+ * stuck over it only half-covers it on the way out.
+ */
+.item:has([data-zero-state]) .control {
+    position: static;
 }
 
 /* Its own padding would outgrow the header's height. */
@@ -20,12 +28,4 @@
 
 .content {
     padding: 0;
-}
-
-/*
- * Lets every header stick against the accordion as a whole rather than its own
- * section, so a header stays in reach below the ones above it.
- */
-.item {
-    display: contents;
 }

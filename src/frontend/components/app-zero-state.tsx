@@ -33,6 +33,8 @@ export function ZeroState(props: ZeroStateProps): ReactNode {
             className={className}
             pt={24}
             pb={24}
+            // What a sticky section header checks for, to not stick over one.
+            data-zero-state
         >
             <EmptyState.Actions>{action}</EmptyState.Actions>
         </EmptyState>
