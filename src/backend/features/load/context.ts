@@ -27,7 +27,7 @@ export const LOAD_CONCURRENCY = 15;
  * probing's, because a thumbnail step holds its slot through minutes of
  * retries, and on the probing limiter that would stall probes behind it.
  */
-export const THUMBNAIL_CONCURRENCY = 10;
+const THUMBNAIL_CONCURRENCY = 10;
 
 /** The runtime plumbing a load runs against. */
 export interface LoadContext {

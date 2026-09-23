@@ -12,7 +12,7 @@ import {
  * The assembly as the insert location needs it. A sketch is not a solid, so
  * without `includeNonSolids` the marker is not in the response at all.
  */
-export function getAssemblyWithMarkers(
+function getAssemblyWithMarkers(
     onshapeApi: OnshapeApi,
     assemblyPath: ElementPath
 ): Promise<OnshapeAssemblyDefinition> {
@@ -43,7 +43,7 @@ function isFromSourceTab(reference: {
  * places the tab can be named are accepted: the instance itself, and the
  * `partStudioFeatures` entry its `featureId` points at.
  */
-export function findInsertLocationInstance(
+function findInsertLocationInstance(
     assembly: OnshapeAssemblyDefinition
 ): OnshapeAssemblyInstance | undefined {
     const markerFeatureIds = new Set(
@@ -67,7 +67,7 @@ export function findInsertLocationInstance(
  * Undefined when the instance is gone, which is what a marker deleted since the
  * app opened looks like — the insert then lands at the origin.
  */
-export function getInstanceTransform(
+function getInstanceTransform(
     assembly: OnshapeAssemblyDefinition,
     instanceId: string
 ): number[] | undefined {
@@ -77,7 +77,7 @@ export function getInstanceTransform(
     )?.transform;
 }
 
-/** {@link findInsertLocationInstance} against the assembly as it is now. */
+/** The marker's instance id in the assembly as it is now. */
 export async function findInsertLocation(
     onshapeApi: OnshapeApi,
     assemblyPath: ElementPath

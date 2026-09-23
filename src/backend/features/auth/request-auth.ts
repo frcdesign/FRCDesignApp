@@ -78,7 +78,7 @@ export async function getOnshapeApi(c: AppContext): Promise<OAuthApi> {
  * session id rather than request because work started by one outlives it — a
  * render queued under the user who asked for it, which the renderer is keyed by.
  */
-export async function getUserIdFromSessionId(
+async function getUserIdFromSessionId(
     kv: KVNamespace,
     sessionId: string
 ): Promise<string> {

@@ -235,7 +235,7 @@ export interface ProbeTarget {
  * The client is fetched per read rather than held, since a step that retries
  * hours later needs a token that has not expired.
  */
-export type ProbeRunner = (
+type ProbeRunner = (
     name: string,
     read: () => Promise<ConfigurationRecord[]>
 ) => Promise<ConfigurationRecord[]>;

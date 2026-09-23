@@ -40,7 +40,7 @@ export const INSERTABLE_FIELDS = [NAME_FIELD, GROUP_NAME_FIELD];
  * surface can leave them out: they describe every configuration at once, which
  * a list showing one specific configuration has no way to represent.
  */
-export const CONFIGURATION_FIELDS = [PART_NUMBER_FIELD, PART_NAME_FIELD];
+const CONFIGURATION_FIELDS = [PART_NUMBER_FIELD, PART_NAME_FIELD];
 
 export const SEARCH_OPTIONS: Options<SearchDocument> = {
     fields: [...INSERTABLE_FIELDS, ...CONFIGURATION_FIELDS],

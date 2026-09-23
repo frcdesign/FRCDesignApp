@@ -431,7 +431,7 @@ export function findRemovedInsertables(
 }
 
 /** A stored insertable's new position in the document's tab order. */
-export interface InsertableOrder {
+interface InsertableOrder {
     insertableId: string;
     sortOrder: number;
 }

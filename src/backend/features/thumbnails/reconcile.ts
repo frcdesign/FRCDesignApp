@@ -35,7 +35,7 @@ const MAX_PAGES = 50;
  */
 const MIN_AGE_MS = 24 * 60 * 60 * 1000;
 
-export interface ReconcileResult {
+interface ReconcileResult {
     /** Objects under the thumbnail prefix this run looked at. */
     scanned: number;
     deleted: number;

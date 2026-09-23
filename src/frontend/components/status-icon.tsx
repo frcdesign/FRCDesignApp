@@ -9,7 +9,7 @@ import {
 } from "../lib/style-constants";
 import styles from "../lib/styles.module.css";
 
-export interface StatusIconProps {
+interface StatusIconProps {
     /** What the status is about: the target tab, a build, a connection. */
     icon: Icon;
     /** The state itself, badged on the corner — a tick or a warning. */

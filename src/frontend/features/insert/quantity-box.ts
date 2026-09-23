@@ -7,7 +7,7 @@ import {
 } from "@backend/features/configurations/input-parser";
 
 /** Everything the quantity box shows: the expression, its display, and any error. */
-export interface QuantityBox {
+interface QuantityBox {
     /** Shown while the input has focus: what was typed, or what to edit. */
     expression: string;
     /** The evaluated value, shown while it does not. */

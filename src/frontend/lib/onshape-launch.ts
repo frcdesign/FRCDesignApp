@@ -11,7 +11,7 @@ import { ElementType } from "@backend/lib/onshape/element-type";
 import { INSTANCE_TYPES, type ElementPath } from "@backend/lib/onshape/path";
 
 /** A resolved color scheme, as Onshape provides it; Theme adds "system" on top. */
-export const ColorThemeType = z.enum(["light", "dark"]);
+const ColorThemeType = z.enum(["light", "dark"]);
 
 export type ColorTheme = z.infer<typeof ColorThemeType>;
 

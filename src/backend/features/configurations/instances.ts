@@ -24,7 +24,7 @@ const MAX_COMBINATIONS = 256;
 const MAX_INSTANCES = 16;
 
 /** One controlling choice on the way to an instance. */
-export interface InstanceStep {
+interface InstanceStep {
     parameterId: string;
     /** The choices leading here, e.g. "Generic"; several when they lead to the
      * same list, joined as "Generic or WCP". */
@@ -32,7 +32,7 @@ export interface InstanceStep {
 }
 
 /** One parameter as it is shown under one set of controlling choices. */
-export interface ParameterInstance {
+interface ParameterInstance {
     parameter: ConfigurationParameter;
     /** The choices it is shown under, outermost first; empty when nothing
      * conditions it. */

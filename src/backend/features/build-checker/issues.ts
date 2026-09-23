@@ -54,7 +54,7 @@ interface ConfigurationBuildIssueOf<
 }
 
 /** The issue types a configuration raises, rather than the element itself. */
-export type ConfigurationIssueType =
+type ConfigurationIssueType =
     | BuildIssueType.CONFIGURATION_MULTIPLE_PARTS
     | BuildIssueType.UNSTABLE_COMPOSITE;
 

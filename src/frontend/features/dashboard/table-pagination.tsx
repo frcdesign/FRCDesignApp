@@ -2,7 +2,7 @@ import { Group, Pagination } from "@mantine/core";
 import { useState, type ReactNode } from "react";
 
 /** Short enough that a page of a dashboard table reads at a glance. */
-export const ROWS_PER_PAGE = 10;
+const ROWS_PER_PAGE = 10;
 
 interface Paged<T> {
     rows: T[];

@@ -19,7 +19,7 @@ import { PREFERRED_SIZE, RenderSource, ThumbnailSize } from "./contract";
 import { thumbnailKey } from "./keys";
 import type { RenderTarget } from "./render-workflow";
 
-export interface RenderRequest {
+interface RenderRequest {
     /** What the element path is resolved from, since the caller has only this. */
     insertableId: string;
     elementId: string;
@@ -31,7 +31,7 @@ export interface RenderRequest {
  * What asking did: a render is coming, or it cannot — Onshape has no
  * insertable for the configuration, so the caller can say so at once.
  */
-export type RenderOutcome = "rendering" | "no-such-configuration";
+type RenderOutcome = "rendering" | "no-such-configuration";
 
 /** Statuses of an instance still working towards its bytes. */
 const ACTIVE = new Set<InstanceStatus["status"]>([

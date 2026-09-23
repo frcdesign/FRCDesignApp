@@ -73,7 +73,7 @@ export const METRICS: Record<MetricKey, MetricDefinition> = {
 };
 
 /** The raw numerator and denominator behind a range value. */
-export interface MetricTerms {
+interface MetricTerms {
     numerator: number;
     denominator: number;
 }

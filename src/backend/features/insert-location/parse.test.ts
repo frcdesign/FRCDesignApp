@@ -1,6 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { INSERT_LOCATION_SKETCH_ID, INSERT_LOCATION_SOURCE } from "./contract";
-import { findInsertLocationInstance, getInstanceTransform } from "./parse";
+import { findInsertLocation, getInsertLocationTransform } from "./parse";
+import { MockOnshapeApi } from "../../../__test_utils__/mock-onshape-api";
+import { type ElementPath } from "../../lib/onshape/path";
 import {
     type OnshapeAssemblyDefinition,
     type OnshapeAssemblyInstance
@@ -27,50 +29,66 @@ function toAssembly(
     };
 }
 
-describe("findInsertLocationInstance", () => {
-    it("finds the sketch the app inserts, among other instances", () => {
+const ASSEMBLY_PATH: ElementPath = {
+    documentId: "doc",
+    instanceType: "w",
+    instanceId: "ws",
+    elementId: "asm"
+};
+
+/** A client whose every request is answered with `assembly`. */
+function answering(assembly: OnshapeAssemblyDefinition): MockOnshapeApi {
+    const api = new MockOnshapeApi();
+    vi.spyOn(api, "get").mockResolvedValue(assembly);
+    return api;
+}
+
+const findIn = (assembly: OnshapeAssemblyDefinition) =>
+    findInsertLocation(answering(assembly), ASSEMBLY_PATH);
+
+const transformIn = (assembly: OnshapeAssemblyDefinition, instanceId: string) =>
+    getInsertLocationTransform(answering(assembly), ASSEMBLY_PATH, instanceId);
+
+describe("findInsertLocation", () => {
+    it("finds the sketch the app inserts, among other instances", async () => {
         const assembly = toAssembly([
             { id: "part", type: "Part" },
             MARKER,
             { id: "sub", type: "Assembly" }
         ]);
-        expect(findInsertLocationInstance(assembly)?.id).toBe("marker");
+        expect(await findIn(assembly)).toBe("marker");
     });
 
     // An assembly can hold a marker inserted before the sketch was revised.
-    it("matches whatever version the marker was inserted from", () => {
+    it("matches whatever version the marker was inserted from", async () => {
         const assembly = toAssembly([
             { ...MARKER, documentVersion: "older" } as OnshapeAssemblyInstance
         ]);
-        expect(findInsertLocationInstance(assembly)?.id).toBe("marker");
+        expect(await findIn(assembly)).toBe("marker");
     });
 
-    it("ignores a suppressed marker, which nothing can insert at", () => {
+    it("ignores a suppressed marker, which nothing can insert at", async () => {
         expect(
-            findInsertLocationInstance(
-                toAssembly([{ ...MARKER, suppressed: true }])
-            )
+            await findIn(toAssembly([{ ...MARKER, suppressed: true }]))
         ).toBeUndefined();
     });
 
-    it("ignores a sketch inserted from some other tab", () => {
+    it("ignores a sketch inserted from some other tab", async () => {
         expect(
-            findInsertLocationInstance(
-                toAssembly([{ ...MARKER, elementId: "elsewhere" }])
-            )
+            await findIn(toAssembly([{ ...MARKER, elementId: "elsewhere" }]))
         ).toBeUndefined();
     });
 
     // The marker inserted from a version of the tab we no longer name, so the
     // sketch's own id is no longer what it was when the constant was written.
-    it("matches a sketch id the constant does not name", () => {
+    it("matches a sketch id the constant does not name", async () => {
         const assembly = toAssembly([{ ...MARKER, featureId: "redrawn" }]);
-        expect(findInsertLocationInstance(assembly)?.id).toBe("marker");
+        expect(await findIn(assembly)).toBe("marker");
     });
 
     // Onshape naming the tab only on the partStudioFeatures entry, which is the
     // shape the instance list alone cannot be matched against.
-    it("finds a marker whose instance names only its feature", () => {
+    it("finds a marker whose instance names only its feature", async () => {
         const assembly = toAssembly(
             [{ id: "marker", type: "Feature", featureId: "sketch" }],
             undefined,
@@ -82,10 +100,10 @@ describe("findInsertLocationInstance", () => {
                 }
             ]
         );
-        expect(findInsertLocationInstance(assembly)?.id).toBe("marker");
+        expect(await findIn(assembly)).toBe("marker");
     });
 
-    it("ignores a feature inserted from some other tab's sketch", () => {
+    it("ignores a feature inserted from some other tab's sketch", async () => {
         const assembly = toAssembly(
             [{ id: "other", type: "Feature", featureId: "sketch" }],
             undefined,
@@ -97,23 +115,23 @@ describe("findInsertLocationInstance", () => {
                 }
             ]
         );
-        expect(findInsertLocationInstance(assembly)).toBeUndefined();
+        expect(await findIn(assembly)).toBeUndefined();
     });
 
     // An instance naming no feature at all, against a tab whose entry names no
     // feature either: nothing lines up, so nothing matches.
-    it("does not pair an instance and an entry by what both leave out", () => {
+    it("does not pair an instance and an entry by what both leave out", async () => {
         const assembly = toAssembly([{ id: "part", type: "Part" }], undefined, [
             {
                 documentId: INSERT_LOCATION_SOURCE.documentId,
                 elementId: INSERT_LOCATION_SOURCE.elementId
             }
         ]);
-        expect(findInsertLocationInstance(assembly)).toBeUndefined();
+        expect(await findIn(assembly)).toBeUndefined();
     });
 });
 
-describe("getInstanceTransform", () => {
+describe("getInsertLocationTransform", () => {
     // prettier-ignore
     const transform = [
         1, 0, 0, -0.139,
@@ -122,27 +140,25 @@ describe("getInstanceTransform", () => {
         0, 0, 0, 1
     ];
 
-    it("reads where a top-level instance has been dragged to", () => {
+    it("reads where a top-level instance has been dragged to", async () => {
         const assembly = toAssembly(
             [MARKER],
             [{ path: ["marker"], transform }]
         );
-        expect(getInstanceTransform(assembly, "marker")).toEqual(transform);
+        expect(await transformIn(assembly, "marker")).toEqual(transform);
     });
 
     // A deeper path is the same instance inside a subassembly, which is a
     // different thing in a different place.
-    it("ignores an occurrence nested under another instance", () => {
+    it("ignores an occurrence nested under another instance", async () => {
         const assembly = toAssembly(
             [MARKER],
             [{ path: ["sub", "marker"], transform }]
         );
-        expect(getInstanceTransform(assembly, "marker")).toBeUndefined();
+        expect(await transformIn(assembly, "marker")).toBeUndefined();
     });
 
-    it("has no transform for an instance that is no longer there", () => {
-        expect(
-            getInstanceTransform(toAssembly([], []), "marker")
-        ).toBeUndefined();
+    it("has no transform for an instance that is no longer there", async () => {
+        expect(await transformIn(toAssembly([], []), "marker")).toBeUndefined();
     });
 });

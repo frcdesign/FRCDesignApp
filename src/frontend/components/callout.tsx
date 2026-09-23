@@ -3,7 +3,7 @@ import { InfoIcon } from "@phosphor-icons/react";
 import { ReactNode } from "react";
 import { IconSize, StatusColor } from "../lib/style-constants";
 
-export interface CalloutAction {
+interface CalloutAction {
     /** A verb or a destination, e.g. "Instructions". */
     text: string;
     icon: ReactNode;
