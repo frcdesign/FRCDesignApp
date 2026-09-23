@@ -1,0 +1,1 @@
+ALTER TABLE `groups` ADD `thumbnail_workspace_id` text;

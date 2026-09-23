@@ -44,41 +44,20 @@ export async function putThumbnail(
 const BOTH_SIZES = [ThumbnailSize.SMALL, ThumbnailSize.LARGE];
 
 /**
- * One size, the version first and the workspace when it will not answer.
+ * Stores both sizes of an element's own thumbnail, skipping either the bucket
+ * already holds, and throws while Onshape has not rendered one yet.
  *
- * Any failure pivots, not just a 404: the version form of this endpoint has
- * been unreliable for element thumbnails and the workspace form has not, but
- * the version is what the library shows, so it is still asked first.
- */
-async function fetchThumbnail(
-    onshapeApi: OnshapeApi,
-    elementPath: ElementPath,
-    elementWorkspacePath: ElementPath,
-    size: ThumbnailSize
-): Promise<ArrayBuffer> {
-    try {
-        return await getElementThumbnail(onshapeApi, elementPath, size);
-    } catch {
-        return getElementThumbnail(onshapeApi, elementWorkspacePath, size);
-    }
-}
-
-/**
- * Stores both sizes, skipping either the bucket already holds, and throws when
- * neither instance will give one up.
- *
- * Onshape renders these when a document is saved, so reading one starts no work
- * and races nothing — unlike a configuration, which `RenderThumbnailWorkflow`
- * waits out. A load fetches them directly, several elements at a time.
+ * Read from the version's thumbnail workspace (see `workspace.ts`) and stored
+ * under the version's microversion, which the branch shares: it is the same
+ * part, and the version is what the library shows.
  */
 export async function uploadThumbnails(
     bucket: R2Bucket,
     onshapeApi: OnshapeApi,
-    elementPath: ElementPath,
-    elementWorkspacePath: ElementPath,
+    thumbnailPath: ElementPath,
     microversionId: string
 ): Promise<ThumbnailUrls> {
-    const { elementId } = elementPath;
+    const { elementId } = thumbnailPath;
 
     // One size at a time: an attempt that fails should cost one call rather
     // than two, and what runs in parallel is elements, not their sizes.
@@ -87,10 +66,9 @@ export async function uploadThumbnails(
         if (await bucket.head(key)) {
             continue;
         }
-        const thumbnail = await fetchThumbnail(
+        const thumbnail = await getElementThumbnail(
             onshapeApi,
-            elementPath,
-            elementWorkspacePath,
+            thumbnailPath,
             size
         );
         await putThumbnail(bucket, key, thumbnail, {

@@ -24,8 +24,13 @@ import {
     type GroupTarget,
     type InsertableTarget,
     type LoadContext,
+    type LoadingGroup,
     getOnshapeApiFromContext
 } from "./context";
+import {
+    deleteStaleThumbnailWorkspaces,
+    ensureThumbnailWorkspace
+} from "../thumbnails/workspace";
 import { ONSHAPE_STEP_RETRIES, uploadThumbnailsStep } from "./steps";
 
 interface GroupLoadResult {
@@ -46,14 +51,28 @@ interface ParsedGroup {
     versionId?: string;
     /** Moves with `versionId`, so the row's date is always that version's. */
     versionCreatedAt?: Date;
+    /** Moves with `versionId` too: it is that version's branch. */
+    thumbnailWorkspaceId?: string;
 }
 
 export async function loadGroup(
     ctx: LoadContext,
-    target: GroupTarget,
+    group: GroupTarget,
     forceReload: boolean
 ): Promise<GroupLoadResult> {
-    const { groupId, versionPath } = target;
+    const { groupId, versionPath } = group;
+
+    // Only for a group that loads: a skipped one keeps the branch it has.
+    const thumbnailPath = await ctx.step.do(
+        `thumbnail-workspace-${groupId}`,
+        { retries: ONSHAPE_STEP_RETRIES },
+        async () =>
+            ensureThumbnailWorkspace(
+                await getOnshapeApiFromContext(ctx),
+                versionPath
+            )
+    );
+    const target: LoadingGroup = { ...group, thumbnailPath };
 
     // Read once and derive from it: the loadable tabs, and the element the
     // group's own thumbnail comes from, which is often not one of them.
@@ -105,6 +124,25 @@ export async function loadGroup(
         })
     );
 
+    // Once the row has moved to this version, nothing reads the branches of
+    // older ones. Never fatal: a leftover branch costs nothing but clutter.
+    if (failedInsertableIds.length === 0) {
+        await ctx.step
+            .do(`delete-stale-workspaces-${groupId}`, async () =>
+                deleteStaleThumbnailWorkspaces(
+                    await getOnshapeApiFromContext(ctx),
+                    versionPath,
+                    thumbnailPath.instanceId
+                )
+            )
+            .catch((error: unknown) => {
+                console.error(
+                    `Failed to delete stale thumbnail workspaces of ${groupId}`,
+                    error
+                );
+            });
+    }
+
     return {
         loadedElements: insertablesToLoad.length - failedInsertableIds.length,
         deletedElements: removedInsertableIds.length,
@@ -146,10 +184,10 @@ async function loadInsertables(
  */
 async function loadDocumentThumbnail(
     ctx: LoadContext,
-    target: GroupTarget,
+    target: LoadingGroup,
     contents: OnshapeDocumentContents
 ): Promise<ThumbnailUrls | null> {
-    const { groupId, versionPath, workspacePath } = target;
+    const { groupId, thumbnailPath } = target;
 
     // Never fatal: `checkGroup` already flags a missing thumbnail, and failing
     // the load over a cosmetic one would lose the group's insertables.
@@ -165,8 +203,7 @@ async function loadDocumentThumbnail(
             uploadThumbnails(
                 ctx.env.BLOB,
                 await getOnshapeApiFromContext(ctx),
-                { ...versionPath, elementId: element.id },
-                { ...workspacePath, elementId: element.id },
+                { ...thumbnailPath, elementId: element.id },
                 element.microversionId
             )
     );
@@ -204,7 +241,7 @@ interface SaveGroupInput {
  */
 async function saveGroup(
     db: Db,
-    target: GroupTarget,
+    target: LoadingGroup,
     input: SaveGroupInput
 ): Promise<void> {
     const { thumbnailUrls, removedInsertableIds } = input;
@@ -227,6 +264,7 @@ async function saveGroup(
     if (!hasFailedInsertables) {
         parsed.versionId = target.versionPath.instanceId;
         parsed.versionCreatedAt = target.versionCreatedAt;
+        parsed.thumbnailWorkspaceId = target.thumbnailPath.instanceId;
     }
 
     const writes: BatchItem<"sqlite">[] = [
@@ -339,7 +377,7 @@ async function fetchStoredInsertables(
  * transient Onshape failure flagged until someone forced a reload.
  */
 export function selectInsertablesToLoad(
-    target: GroupTarget,
+    target: LoadingGroup,
     insertableTabs: OnshapeElement[],
     stored: StoredInsertable[],
     forceReload: boolean
@@ -366,10 +404,7 @@ export function selectInsertablesToLoad(
             groupId: target.groupId,
             elementPath: { ...target.versionPath, elementId: tab.id },
             versionCreatedAt: target.versionCreatedAt,
-            elementWorkspacePath: {
-                ...target.workspacePath,
-                elementId: tab.id
-            },
+            thumbnailPath: { ...target.thumbnailPath, elementId: tab.id },
             // OnshapeElementType and the app ElementType share these values.
             elementType: tab.elementType as unknown as ElementType,
             name: tab.name,

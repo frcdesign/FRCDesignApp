@@ -222,22 +222,11 @@ async function resolveGroupTarget(
         instanceId: version.id,
         instanceType: "v"
     };
-    // Thrown rather than defaulted: every thumbnail in the group is read from
-    // this workspace, so guessing one would quietly load the wrong document.
-    if (!document.defaultWorkspace) {
-        throw new Error(`Document ${documentId} reports no default workspace`);
-    }
-    const workspacePath: InstancePath = {
-        documentId,
-        instanceId: document.defaultWorkspace.id,
-        instanceType: "w"
-    };
     return {
         libraryId: ids.libraryId,
         groupId: ids.groupId,
         versionPath,
         versionCreatedAt: new Date(version.createdAt),
-        workspacePath,
         name: document.name,
         thumbnailElementId: document.documentThumbnailElementId
     };

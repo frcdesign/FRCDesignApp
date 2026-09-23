@@ -173,7 +173,8 @@ const ctx = (): LoadContext => ({
     env,
     sessionId: "test-session",
     step: FAKE_STEP,
-    limit: createLimiter(LOAD_CONCURRENCY)
+    limit: createLimiter(LOAD_CONCURRENCY),
+    thumbnailLimit: createLimiter(LOAD_CONCURRENCY)
 });
 
 describe("loadInsertable", () => {

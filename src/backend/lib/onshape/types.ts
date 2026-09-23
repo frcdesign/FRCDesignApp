@@ -193,6 +193,12 @@ export interface OnshapeDocumentInfo {
     defaultWorkspace?: { id: string };
 }
 
+/** A workspace, as much of Onshape's `BTWorkspaceInfo` as anything reads. */
+export interface OnshapeWorkspaceInfo {
+    id: string;
+    name: string;
+}
+
 /** A folder (group) node in the document contents tree. */
 export interface OnshapeElementGroup {
     btType: OnshapeFolderEntryType.GROUP;

@@ -22,6 +22,14 @@ import type { ElementPath, InstancePath } from "../../lib/onshape/path";
  */
 export const LOAD_CONCURRENCY = 15;
 
+/**
+ * How many thumbnails a load waits on at once. Kept apart from probing: a
+ * thumbnail in a freshly branched workspace can take minutes to appear, and a
+ * step waiting that out would otherwise hold a probe's slot the whole time.
+ * Waiting costs no calls, so this bounds only the bursts between waits.
+ */
+export const THUMBNAIL_CONCURRENCY = 10;
+
 /** The runtime plumbing a load runs against. */
 export interface LoadContext {
     env: AppBindings;
@@ -29,6 +37,8 @@ export interface LoadContext {
     step: WorkflowStep;
     /** Bounds concurrent Onshape probing across the whole run. */
     limit: Limiter;
+    /** Bounds concurrent thumbnail reads, apart from probing. */
+    thumbnailLimit: Limiter;
 }
 
 export function createLoadContext(
@@ -40,7 +50,8 @@ export function createLoadContext(
         env,
         sessionId,
         step,
-        limit: createLimiter(LOAD_CONCURRENCY)
+        limit: createLimiter(LOAD_CONCURRENCY),
+        thumbnailLimit: createLimiter(THUMBNAIL_CONCURRENCY)
     };
 }
 
@@ -57,25 +68,26 @@ export interface GroupTarget {
     versionPath: InstancePath;
     /** When Onshape cut `versionPath`'s version. */
     versionCreatedAt: Date;
-    /**
-     * The document's default workspace. Everything the library shows is pinned
-     * to the version; this is only where thumbnails are read from, because the
-     * version form of that endpoint does not reliably return them.
-     */
-    workspacePath: InstancePath;
     name: string;
     /** The tab the document renders its thumbnail from, when one is set. */
     thumbnailElementId?: string;
 }
 
+/** A group being loaded, which is when it gets somewhere to read thumbnails. */
+export interface LoadingGroup extends GroupTarget {
+    /**
+     * The workspace branched off the version for reading thumbnails, which
+     * the version form of that endpoint does not reliably return; see
+     * `thumbnails/workspace.ts`.
+     */
+    thumbnailPath: InstancePath;
+}
+
 /** An insertable a load reads, and what the document's tab listing told us. */
 export interface InsertableTarget {
     insertableId: string;
-    /**
-     * The same tab in the document's workspace, which its thumbnail falls back
-     * to when the version will not answer.
-     */
-    elementWorkspacePath: ElementPath;
+    /** The same tab in the version's thumbnail workspace. */
+    thumbnailPath: ElementPath;
     libraryId: LibraryId;
     groupId: string;
     elementPath: ElementPath;

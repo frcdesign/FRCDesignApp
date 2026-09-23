@@ -2,6 +2,7 @@ import { env } from "cloudflare:workers";
 import { introspectWorkflow } from "cloudflare:test";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+    TEST_GROUP_ID,
     TEST_PART_STUDIO_ID,
     createTestApp,
     jsonRequest,
@@ -10,6 +11,8 @@ import {
 } from "../../../__test_utils__";
 import * as ThumbnailEndpoints from "../../lib/onshape/endpoints/thumbnails";
 import { getDb } from "../../db/client";
+import { groups } from "../../db/schema";
+import { eq } from "drizzle-orm";
 import { RenderSource, ThumbnailSize } from "./contract";
 import {
     parseThumbnailKey,
@@ -334,6 +337,25 @@ describe("rendering a configuration's thumbnail", () => {
 
         expect(started).toBe(1);
         expect(thumbnailId).toHaveBeenCalledTimes(1);
+    });
+
+    // Where the load read the element's own thumbnail from; a group no load
+    // has branched yet falls back to the version.
+    it("renders from the group's thumbnail workspace", async () => {
+        await db
+            .update(groups)
+            .set({ thumbnailWorkspaceId: "w-branch" })
+            .where(eq(groups.id, TEST_GROUP_ID));
+        const thumbnailId = mockThumbnailId();
+
+        await startedDuring(async () => {
+            await get(renderUrl("branched-element"), SESSION_ID);
+        });
+
+        expect(thumbnailId.mock.calls[0][1]).toMatchObject({
+            instanceId: "w-branch",
+            instanceType: "w"
+        });
     });
 
     // A miss is a render still coming; this is one that never will be, and the

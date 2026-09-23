@@ -1,9 +1,6 @@
 /**
- * Re-fetching one stored thumbnail on demand.
- *
- * A load queues nothing and waits for nothing, so a thumbnail neither instance
- * would give up at the time is simply missing until the next load. This is the
- * way to ask again for one, without reloading the document it belongs to.
+ * Re-fetching one stored thumbnail on demand: a thumbnail a load gave up on is
+ * missing until the next load, and this asks again for just the one.
  */
 import { eq } from "drizzle-orm";
 import { type Db } from "../../db/client";
@@ -25,59 +22,73 @@ import { ThumbnailSize, type ThumbnailUrls } from "./contract";
 import { thumbnailKey } from "./keys";
 import { uploadThumbnails } from "./store";
 import { bumpLibraryVersion } from "../library/db";
-import type { OnshapeDocumentInfo } from "../../lib/onshape/types";
+import { ensureThumbnailWorkspace } from "./workspace";
 
 /** What one reload needs to ask Onshape and to name what it stores. */
 interface ReloadTarget {
-    elementPath: ElementPath;
-    elementWorkspacePath: ElementPath;
+    /** The element in the version's thumbnail workspace. */
+    thumbnailPath: ElementPath;
     microversionId: string;
 }
 
 /**
- * The document's workspace, which is where a thumbnail falls back to. Stored
- * rows are pinned to a version and carry no workspace, so reading the document
- * is the one thing a reload has to do before it can ask for the picture.
+ * The group's thumbnail workspace, branching one when a load has not: a group
+ * last loaded before thumbnails were read from branches has none yet.
  */
-function workspacePath(
-    document: OnshapeDocumentInfo,
-    documentId: string
-): InstancePath {
-    if (!document.defaultWorkspace) {
-        throw handledError(
-            "Onshape reports no default workspace for this document.",
-            HttpStatus.BAD_GATEWAY
-        );
+async function thumbnailWorkspace(
+    db: Db,
+    onshapeApi: OnshapeApi,
+    group: { id: string; documentId: string; versionId: string },
+    stored: string | null
+): Promise<InstancePath> {
+    if (stored) {
+        return {
+            documentId: group.documentId,
+            instanceId: stored,
+            instanceType: "w"
+        };
     }
-    return {
-        documentId,
-        instanceId: document.defaultWorkspace.id,
-        instanceType: "w"
-    };
+    const workspace = await ensureThumbnailWorkspace(onshapeApi, {
+        documentId: group.documentId,
+        instanceId: group.versionId,
+        instanceType: "v"
+    });
+    await db
+        .update(groups)
+        .set({ thumbnailWorkspaceId: workspace.instanceId })
+        .where(eq(groups.id, group.id));
+    return workspace;
 }
 
 /**
  * Drops what is stored before fetching, since `uploadThumbnails` skips a size
- * the bucket already holds — which is the whole point of asking again.
+ * the bucket already holds — which is the whole point of asking again. A
+ * branch made moments ago has nothing rendered yet, which is worth saying.
  */
 async function replaceThumbnails(
     bucket: R2Bucket,
     onshapeApi: OnshapeApi,
     target: ReloadTarget
 ): Promise<ThumbnailUrls> {
-    const { elementPath, microversionId } = target;
+    const { thumbnailPath, microversionId } = target;
     await bucket.delete(
         [ThumbnailSize.SMALL, ThumbnailSize.LARGE].map((size) =>
-            thumbnailKey(elementPath.elementId, microversionId, size)
+            thumbnailKey(thumbnailPath.elementId, microversionId, size)
         )
     );
-    return uploadThumbnails(
-        bucket,
-        onshapeApi,
-        elementPath,
-        target.elementWorkspacePath,
-        microversionId
-    );
+    try {
+        return await uploadThumbnails(
+            bucket,
+            onshapeApi,
+            thumbnailPath,
+            microversionId
+        );
+    } catch {
+        throw handledError(
+            "Onshape has not rendered this thumbnail yet. Try again in a few minutes.",
+            HttpStatus.SERVICE_UNAVAILABLE
+        );
+    }
 }
 
 /** The row's new urls, and the issue that said it had none. */
@@ -102,31 +113,30 @@ export async function reloadInsertableThumbnail(
     const row = await db
         .select({
             libraryId: insertables.libraryId,
+            groupId: insertables.groupId,
             documentId: insertables.documentId,
             versionId: insertables.versionId,
             elementId: insertables.elementId,
             microversionId: insertables.microversionId,
-            buildIssues: insertables.buildIssues
+            buildIssues: insertables.buildIssues,
+            thumbnailWorkspaceId: groups.thumbnailWorkspaceId
         })
         .from(insertables)
+        .innerJoin(groups, eq(groups.id, insertables.groupId))
         .where(eq(insertables.id, insertableId))
         .get();
     if (!row) {
         throw handledError("No such element.", HttpStatus.NOT_FOUND);
     }
 
-    const document = await getDocument(onshapeApi, {
-        documentId: row.documentId
-    });
-    const workspace = workspacePath(document, row.documentId);
+    const workspace = await thumbnailWorkspace(
+        db,
+        onshapeApi,
+        { ...row, id: row.groupId },
+        row.thumbnailWorkspaceId
+    );
     const urls = await replaceThumbnails(bucket, onshapeApi, {
-        elementPath: {
-            documentId: row.documentId,
-            instanceId: row.versionId,
-            instanceType: "v",
-            elementId: row.elementId
-        },
-        elementWorkspacePath: { ...workspace, elementId: row.elementId },
+        thumbnailPath: { ...workspace, elementId: row.elementId },
         microversionId: row.microversionId
     });
 
@@ -155,7 +165,8 @@ export async function reloadGroupThumbnail(
             libraryId: groups.libraryId,
             documentId: groups.documentId,
             versionId: groups.versionId,
-            buildIssues: groups.buildIssues
+            buildIssues: groups.buildIssues,
+            thumbnailWorkspaceId: groups.thumbnailWorkspaceId
         })
         .from(groups)
         .where(eq(groups.id, groupId))
@@ -173,7 +184,12 @@ export async function reloadGroupThumbnail(
         getDocument(onshapeApi, { documentId: row.documentId }),
         getContents(onshapeApi, versionPath)
     ]);
-    const workspace = workspacePath(document, row.documentId);
+    const workspace = await thumbnailWorkspace(
+        db,
+        onshapeApi,
+        { ...row, id: groupId },
+        row.thumbnailWorkspaceId
+    );
 
     const designated = document.documentThumbnailElementId;
     const element = designated
@@ -187,8 +203,7 @@ export async function reloadGroupThumbnail(
     }
 
     const urls = await replaceThumbnails(bucket, onshapeApi, {
-        elementPath: { ...versionPath, elementId: element.id },
-        elementWorkspacePath: { ...workspace, elementId: element.id },
+        thumbnailPath: { ...workspace, elementId: element.id },
         microversionId: element.microversionId
     });
 

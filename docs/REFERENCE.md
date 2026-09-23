@@ -50,6 +50,8 @@ R2 is Cloudflare's blob storage, optimized for unstructured data like images and
 
 Onshape can generate preview thumbnails for parts and assemblies, but fetching them from Onshape on every page load would be slow and eat into API rate limits — a single render can require polling and take minutes. Instead, every thumbnail we ever fetch from Onshape lands in R2 and is served from there afterwards.
 
+Every thumbnail is read from a **workspace branched off the version** the library shows, not from the version itself — Onshape sometimes never renders an element's thumbnail in a version — and not from the document's own workspace, which moves on from that version. A load finds or creates the branch by name (`FRCDesignApp thumbnails <versionId>`, in `features/thumbnails/workspace.ts`), stores its id on the group row beside the version, and deletes the branches of older versions once the group has moved on. A fresh branch has no thumbnails for a few minutes, so a load's thumbnail steps retry for about a quarter of an hour, under a limiter of their own so the wait never holds up probing.
+
 Thumbnails are keyed by whether they are the element's default or a specific configuration:
 
 ```

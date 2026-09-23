@@ -82,16 +82,12 @@ export async function loadInsertable(
     ctx: LoadContext,
     target: InsertableTarget
 ): Promise<void> {
-    const { insertableId, elementPath } = target;
+    const { insertableId } = target;
 
     // Bounded, because this is where an insertable's Onshape calls are: an
     // indexed element probes once per configuration.
     const probed = await ctx.limit(() => probeInsertable(ctx, target));
 
-    // Fetched here rather than queued: an element's own thumbnail is one
-    // Onshape already rendered when the document was saved, so reading it
-    // starts nothing and races nothing. Only a configuration has to queue.
-    //
     // Nothing is asked for an empty studio, which renders to nothing at all.
     const thumbnailUrls = probed.hasParts
         ? await uploadThumbnailsStep(
@@ -101,8 +97,7 @@ export async function loadInsertable(
                   uploadThumbnails(
                       ctx.env.BLOB,
                       await getOnshapeApiFromContext(ctx),
-                      elementPath,
-                      target.elementWorkspacePath,
+                      target.thumbnailPath,
                       target.microversionId
                   )
           )

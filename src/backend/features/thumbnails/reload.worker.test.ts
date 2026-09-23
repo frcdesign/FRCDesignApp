@@ -2,7 +2,7 @@ import { env } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getDb } from "../../db/client";
-import { insertables } from "../../db/schema";
+import { groups, insertables } from "../../db/schema";
 import {
     MOCK_ONSHAPE_API,
     resetDb,
@@ -21,21 +21,20 @@ import {
     OnshapeFolderEntryType
 } from "../../lib/onshape/types";
 import * as ThumbnailEndpoints from "../../lib/onshape/endpoints/thumbnails";
+import * as WorkspaceEndpoints from "../../lib/onshape/endpoints/workspaces";
 import { OnshapeApiError } from "../../lib/onshape/client";
 import { ThumbnailSize } from "./contract";
 import { thumbnailKey } from "./keys";
 import { reloadGroupThumbnail, reloadInsertableThumbnail } from "./reload";
 
 const db = getDb(env.DB);
-const WORKSPACE_ID = "w-1";
+/** The branch a load made, stored on the group. */
+const STORED_BRANCH = "w-stored";
 
-/** Onshape's answer per instance type, so the fallback is observable. */
-function mockThumbnails(
-    answer: (instanceType: string) => Promise<ArrayBuffer>
-) {
+function mockThumbnails(answer: () => Promise<ArrayBuffer>) {
     return vi
         .spyOn(ThumbnailEndpoints, "getElementThumbnail")
-        .mockImplementation((_client, path) => answer(path.instanceType));
+        .mockImplementation(answer);
 }
 
 const rendered = () => Promise.resolve(new ArrayBuffer(4));
@@ -60,10 +59,13 @@ describe("reloading a thumbnail", () => {
             })
             .where(eq(insertables.id, target.insertableId));
 
+        await db
+            .update(groups)
+            .set({ thumbnailWorkspaceId: STORED_BRANCH })
+            .where(eq(groups.id, TEST_GROUP_ID));
         vi.spyOn(DocumentEndpoints, "getDocument").mockResolvedValue({
             id: "doc",
-            name: "Doc",
-            defaultWorkspace: { id: WORKSPACE_ID }
+            name: "Doc"
         });
     });
 
@@ -91,12 +93,9 @@ describe("reloading a thumbnail", () => {
         expect(row?.buildIssues).toEqual([]);
     });
 
-    // The same fallback a load uses: the version is asked first, and the
-    // workspace is what actually answers.
-    it("falls back to the workspace", async () => {
-        const calls = mockThumbnails((instanceType) =>
-            instanceType === "v" ? missing() : rendered()
-        );
+    // Where a load reads it from, and nowhere else.
+    it("reads from the group's thumbnail workspace", async () => {
+        const calls = mockThumbnails(rendered);
 
         await reloadInsertableThumbnail(
             db,
@@ -105,10 +104,40 @@ describe("reloading a thumbnail", () => {
             target.insertableId
         );
 
-        expect(
-            calls.mock.calls.some((call) => call[1].instanceType === "w")
-        ).toBe(true);
-        expect((await readRow())?.buildIssues).toEqual([]);
+        for (const call of calls.mock.calls) {
+            expect(call[1]).toMatchObject({
+                instanceType: "w",
+                instanceId: STORED_BRANCH
+            });
+        }
+    });
+
+    // A group last loaded before thumbnails were read from branches has none.
+    it("branches a workspace for a group that has none, and keeps it", async () => {
+        await db
+            .update(groups)
+            .set({ thumbnailWorkspaceId: null })
+            .where(eq(groups.id, TEST_GROUP_ID));
+        vi.spyOn(WorkspaceEndpoints, "getWorkspaces").mockResolvedValue([]);
+        vi.spyOn(WorkspaceEndpoints, "createWorkspace").mockResolvedValue({
+            id: "w-new",
+            name: "FRCDesignApp thumbnails"
+        });
+        mockThumbnails(rendered);
+
+        await reloadInsertableThumbnail(
+            db,
+            env.BLOB,
+            MOCK_ONSHAPE_API,
+            target.insertableId
+        );
+
+        const group = await db
+            .select()
+            .from(groups)
+            .where(eq(groups.id, TEST_GROUP_ID))
+            .get();
+        expect(group?.thumbnailWorkspaceId).toBe("w-new");
     });
 
     // `uploadThumbnails` skips a size the bucket already holds, which would
@@ -132,7 +161,7 @@ describe("reloading a thumbnail", () => {
         expect(await (await env.BLOB.get(key))?.text()).not.toBe("stale-bytes");
     });
 
-    it("leaves the row alone when neither instance has one", async () => {
+    it("leaves the row alone while Onshape has not rendered one", async () => {
         mockThumbnails(missing);
 
         await expect(

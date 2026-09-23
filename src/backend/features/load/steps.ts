@@ -69,23 +69,26 @@ export const ONSHAPE_STEP_RETRIES = {
 };
 
 /**
- * Three tries about ten seconds apart, honouring a rate limit when Onshape
- * asks for one. The workspace either has the thumbnail or does not; this only
- * covers Onshape still writing one out just after a save.
+ * Waits out Onshape rendering a thumbnail in a freshly branched workspace,
+ * which takes minutes: 30, 60, 90 seconds, then two minutes a try, for about a
+ * quarter of an hour in all. A rate limit waits what Onshape says instead.
  */
 const THUMBNAIL_RETRIES = {
-    limit: 3,
-    delay: onshapeRetryDelay,
+    limit: 10,
+    delay: (input: RetryDelayInput): `${number} seconds` =>
+        rateLimitDelay(input.error) ??
+        `${Math.min(30 * input.ctx.attempt, 120)} seconds`,
     backoff: CONSTANT_BACKOFF
 };
 
 /**
  * Fetches an element's thumbnails and returns where they are stored, or `null`
- * when neither the version nor the workspace would give one up — which the
- * caller records as a build issue rather than failing the whole load.
+ * when Onshape never renders them — which the caller records as a build issue
+ * rather than failing the whole load.
  *
- * Bounded by the run's limiter: these are ordinary Onshape reads that start no
- * render, so what caps them is the rate limit rather than anything else.
+ * Bounded by the run's thumbnail limiter rather than the probing one, and slot
+ * first, step inside: a step's timeout covers its whole callback, so waiting
+ * for a slot inside one would count against it.
  */
 export async function uploadThumbnailsStep(
     ctx: LoadContext,
@@ -93,12 +96,7 @@ export async function uploadThumbnailsStep(
     upload: () => Promise<ThumbnailUrls>
 ): Promise<ThumbnailUrls | null> {
     try {
-        // Slot first, step inside — the order `loadInsertable` already takes. A
-        // step's timeout covers its whole callback, so acquiring within one
-        // counted the wait for a slot against it: under a rate limit these spent
-        // all ten minutes queued behind probes that were themselves backing off,
-        // and timed out having asked Onshape for nothing.
-        return await ctx.limit(() =>
+        return await ctx.thumbnailLimit(() =>
             ctx.step.do(name, { retries: THUMBNAIL_RETRIES }, upload)
         );
     } catch {

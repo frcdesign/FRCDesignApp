@@ -25,8 +25,10 @@ import {
 import {
     LOAD_CONCURRENCY,
     type GroupTarget,
-    type LoadContext
+    type LoadContext,
+    type LoadingGroup
 } from "./context";
+import * as WorkspaceEndpoints from "../../lib/onshape/endpoints/workspaces";
 import { createLimiter } from "../../lib/limiter";
 import * as LoadCommonModule from "./context";
 import {
@@ -40,7 +42,7 @@ import {
     TEST_VERSION_CREATED_AT
 } from "../../../__test_utils__";
 
-const GROUP: GroupTarget = {
+const GROUP: LoadingGroup = {
     libraryId: TEST_LIBRARY_ID,
     groupId: "group-1",
     name: "Group",
@@ -50,7 +52,7 @@ const GROUP: GroupTarget = {
         instanceType: "v"
     },
     versionCreatedAt: TEST_VERSION_CREATED_AT,
-    workspacePath: {
+    thumbnailPath: {
         documentId: "doc-1",
         instanceId: "w-1",
         instanceType: "w"
@@ -238,19 +240,18 @@ const LOADED_TARGET: GroupTarget = {
         instanceId: "v-2",
         instanceType: "v"
     },
-    versionCreatedAt: LOADED_VERSION_CREATED_AT,
-    workspacePath: {
-        documentId: `doc-${TEST_GROUP_ID}`,
-        instanceId: "w-2",
-        instanceType: "w"
-    }
+    versionCreatedAt: LOADED_VERSION_CREATED_AT
 };
+
+/** What Onshape answers when asked to branch the loaded version. */
+const BRANCH = { id: "w-branch", name: "FRCDesignApp thumbnails v-2" };
 
 const CTX: LoadContext = {
     env,
     sessionId: "test-session",
     step: FAKE_STEP,
-    limit: createLimiter(LOAD_CONCURRENCY)
+    limit: createLimiter(LOAD_CONCURRENCY),
+    thumbnailLimit: createLimiter(LOAD_CONCURRENCY)
 };
 
 /** Serves the given tabs as the document's contents, all in one folder. */
@@ -295,6 +296,11 @@ describe("loadGroup", () => {
         ).mockResolvedValue(MOCK_ONSHAPE_API);
         // Every part-studio load probes its parts for the open-composite flag.
         vi.spyOn(PartsEndpoints, "getParts").mockResolvedValue([]);
+        // No branch yet, so the load makes one; nothing stale to delete.
+        vi.spyOn(WorkspaceEndpoints, "getWorkspaces").mockResolvedValue([]);
+        vi.spyOn(WorkspaceEndpoints, "createWorkspace").mockResolvedValue(
+            BRANCH
+        );
     });
 
     afterEach(() => vi.restoreAllMocks());
@@ -326,9 +332,9 @@ describe("loadGroup", () => {
         }
     });
 
-    // Every thumbnail gets both: the version is asked first because that is
-    // what the library shows, and the workspace is where it falls back to.
-    it("gives every tab's thumbnail a workspace to fall back to", async () => {
+    // Onshape sometimes never renders a thumbnail in a version, and the
+    // document's own workspace drifts from it; a branch of it does neither.
+    it("reads every thumbnail from a workspace branched off the version", async () => {
         mockContents([tab("e1"), tab("e2")]);
         vi.spyOn(ConfigurationEndpoints, "getConfiguration").mockResolvedValue(
             NO_CONFIGURATION
@@ -343,14 +349,47 @@ describe("loadGroup", () => {
 
         await loadGroup(CTX, LOADED_TARGET, false);
 
-        // (bucket, api, elementPath, elementWorkspacePath, microversionId)
+        expect(WorkspaceEndpoints.createWorkspace).toHaveBeenCalledWith(
+            MOCK_ONSHAPE_API,
+            LOADED_TARGET.versionPath,
+            expect.objectContaining({ versionId: "v-2" })
+        );
+        // (bucket, api, thumbnailPath, microversionId)
         for (const elementId of ["e1", "e2"]) {
             const call = uploaded.mock.calls.find(
                 (args) => args[2].elementId === elementId
             );
-            expect(call?.[2]).toMatchObject({ instanceType: "v", elementId });
-            expect(call?.[3]).toMatchObject({ instanceType: "w", elementId });
+            expect(call?.[2]).toEqual({
+                documentId: `doc-${TEST_GROUP_ID}`,
+                instanceId: BRANCH.id,
+                instanceType: "w",
+                elementId
+            });
         }
+        // Stored beside the version, for renders and reloads to read from.
+        expect((await readGroup())?.thumbnailWorkspaceId).toBe(BRANCH.id);
+    });
+
+    // A retried step or a forced reload finds the branch by name rather than
+    // making another; the branches of older versions are cleared away.
+    it("reuses the version's branch, and deletes older versions' branches", async () => {
+        mockContents([tab("e1")]);
+        vi.spyOn(ConfigurationEndpoints, "getConfiguration").mockResolvedValue(
+            NO_CONFIGURATION
+        );
+        vi.spyOn(WorkspaceEndpoints, "getWorkspaces").mockResolvedValue([
+            { id: "main", name: "Main" },
+            { id: "w-old", name: "FRCDesignApp thumbnails v-1" },
+            BRANCH
+        ]);
+        const deleted = vi
+            .spyOn(WorkspaceEndpoints, "deleteWorkspace")
+            .mockResolvedValue();
+
+        await loadGroup(CTX, LOADED_TARGET, false);
+
+        expect(WorkspaceEndpoints.createWorkspace).not.toHaveBeenCalled();
+        expect(deleted.mock.calls.map((call) => call[2])).toEqual(["w-old"]);
     });
 
     // The element a group's thumbnail comes from is often not a loadable tab,
@@ -375,11 +414,7 @@ describe("loadGroup", () => {
         const groupCall = uploaded.mock.calls.find(
             (args) => args[2].elementId === "cover"
         );
-        expect(groupCall?.[2]).toMatchObject({ instanceType: "v" });
-        expect(groupCall?.[3]).toMatchObject({
-            instanceType: "w",
-            elementId: "cover"
-        });
+        expect(groupCall?.[2]).toMatchObject({ instanceId: BRANCH.id });
         expect(document).not.toHaveBeenCalled();
     });
 

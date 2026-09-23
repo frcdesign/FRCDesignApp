@@ -6,8 +6,8 @@
 import { eq } from "drizzle-orm";
 import type { AppContext } from "../../lib/context";
 import { getDb } from "../../db/client";
-import { insertables } from "../../db/schema";
-import { toElementPath } from "../../lib/onshape/path";
+import { groups, insertables } from "../../db/schema";
+import { type ElementPath, toElementPath } from "../../lib/onshape/path";
 import {
     getThumbnailId,
     NoSuchConfigurationError
@@ -153,19 +153,37 @@ async function findInstance(
     }
 }
 
-/** Read rather than passed in: a request can carry a version it has moved past. */
-async function elementPathOf(c: AppContext, insertableId: string) {
+/**
+ * Where the element is rendered from: its version's thumbnail workspace (see
+ * `workspace.ts`), or the version itself for a group no load has branched one
+ * for yet. Read rather than passed in: a request can carry a version it has
+ * moved past.
+ */
+async function elementPathOf(
+    c: AppContext,
+    insertableId: string
+): Promise<ElementPath> {
     const row = await getDb(c.env.DB)
         .select({
             documentId: insertables.documentId,
             versionId: insertables.versionId,
-            elementId: insertables.elementId
+            elementId: insertables.elementId,
+            thumbnailWorkspaceId: groups.thumbnailWorkspaceId
         })
         .from(insertables)
+        .innerJoin(groups, eq(groups.id, insertables.groupId))
         .where(eq(insertables.id, insertableId))
         .get();
     if (!row) {
         throw new NoSuchConfigurationError(`No insertable ${insertableId}`);
     }
-    return toElementPath(row);
+    if (!row.thumbnailWorkspaceId) {
+        return toElementPath(row);
+    }
+    return {
+        documentId: row.documentId,
+        instanceId: row.thumbnailWorkspaceId,
+        instanceType: "w",
+        elementId: row.elementId
+    };
 }
