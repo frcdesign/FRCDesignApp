@@ -15,6 +15,7 @@ import { libraryRoutes } from "./features/library/routes";
 import { settingsRoutes } from "./features/settings/routes";
 import { thumbnailRoutes } from "./features/thumbnails/routes";
 import { webhookRoutes } from "./features/webhooks/routes";
+import { liveRoutes } from "./features/live/routes";
 import { logger } from "hono/logger";
 import { cacheMiddleware } from "./lib/cache";
 import { bindAuth, getApp, type AuthResolver } from "./lib/context";
@@ -32,7 +33,8 @@ const apiRoutes = [
     favoriteRoutes,
     buildStatusRoutes,
     analyticsRoutes,
-    webhookRoutes
+    webhookRoutes,
+    liveRoutes
 ];
 
 export function createApp(resolveAuth: AuthResolver) {

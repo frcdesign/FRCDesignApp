@@ -85,6 +85,7 @@ export async function requestRender(
             params: {
                 thumbnailId,
                 targets: renderTargets(request, source),
+                elementId: request.elementId,
                 microversionId: request.microversionId,
                 configurationKey: request.configurationKey,
                 sessionId

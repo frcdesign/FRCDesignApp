@@ -37,6 +37,7 @@ it("stores both sizes once Onshape has rendered them", async () => {
                 { size: ThumbnailSize.LARGE, key: key(ThumbnailSize.LARGE) },
                 { size: ThumbnailSize.SMALL, key: key(ThumbnailSize.SMALL) }
             ],
+            elementId: "e1",
             microversionId: "mv1",
             configurationKey: "a=1",
             sessionId: "session"

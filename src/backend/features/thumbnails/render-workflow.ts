@@ -18,6 +18,7 @@ import { rateLimitDelay } from "../load/steps";
 import { type ConfigurationKey } from "../configurations/contract";
 import { ThumbnailSize } from "./contract";
 import { putThumbnail } from "./store";
+import { pushThumbnailRendered } from "../live/notify";
 
 /** One stored size: where it goes, and what to ask Onshape for. */
 export interface RenderTarget {
@@ -31,6 +32,8 @@ export interface RenderThumbnailParams {
     thumbnailId: string;
     /** Both sizes, the one the asking surface shows first leading. */
     targets: RenderTarget[];
+    /** What is told to clients waiting on the render once each size lands. */
+    elementId: string;
     /** Tagged onto each stored object, for telling later what it depicts. */
     microversionId: string;
     configurationKey: ConfigurationKey;
@@ -91,6 +94,11 @@ async function storeRender(
         target.size
     );
     await putThumbnail(env.BLOB, target.key, thumbnail, {
+        microversionId: params.microversionId,
+        configurationKey: params.configurationKey
+    });
+    await pushThumbnailRendered(env, {
+        elementId: params.elementId,
         microversionId: params.microversionId,
         configurationKey: params.configurationKey
     });

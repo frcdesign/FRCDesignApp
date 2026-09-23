@@ -1,6 +1,7 @@
 import type { AppBindings } from "../../lib/context";
 import type { LibraryId } from "../library/library-id";
 import type { JobStatus } from "./contract";
+import { pushJobStatus } from "../live/notify";
 
 /**
  * Backstop for a job that crashes before untracking itself; must outlast the
@@ -82,7 +83,10 @@ export async function getJobStatus(
     env: AppBindings,
     libraryId: LibraryId
 ): Promise<JobStatus> {
-    const jobs = await activeJobs(env, libraryId);
+    return statusOf(await activeJobs(env, libraryId));
+}
+
+function statusOf(jobs: TrackedJob[]): JobStatus {
     if (jobs.length === 0) {
         return { running: false };
     }
@@ -102,6 +106,7 @@ export async function trackJob(
     await env.KV.put(jobsKey(libraryId), JSON.stringify(jobs), {
         expirationTtl: JOB_TTL_SECONDS
     });
+    await pushJobStatus(env, libraryId, statusOf(jobs));
 }
 
 /**
@@ -123,4 +128,5 @@ export async function untrackJob(
             expirationTtl: JOB_TTL_SECONDS
         });
     }
+    await pushJobStatus(env, libraryId, await getJobStatus(env, libraryId));
 }

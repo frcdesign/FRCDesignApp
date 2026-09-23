@@ -22,6 +22,7 @@ import {
 import { requireOwnerMiddleware } from "../auth/guards";
 import { clearAccessLevels } from "../auth/session";
 import { queueReload } from "../load/reload";
+import { pushAccessChanged } from "../live/notify";
 
 export const webhookRoutes = getApp();
 
@@ -101,6 +102,7 @@ webhookRoutes.post("/webhooks/onshape", async (c) => {
         case WebhookEvent.TEAM_REMOVE_MEMBER:
             if (notification.teamId === c.env.ADMIN_TEAM) {
                 await clearAccessLevels(c.env.KV);
+                await pushAccessChanged(c.env);
             }
             break;
         // webhook.register and webhook.ping only want a 200, which registration

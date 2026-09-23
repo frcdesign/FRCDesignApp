@@ -32,6 +32,7 @@ import {
 } from "./context";
 import { untrackJob } from "./job-tracker";
 import { startQueuedReload } from "./reload";
+import { pushLibraryChanged } from "../live/notify";
 import { loadGroup } from "./load-group";
 import { ONSHAPE_STEP_RETRIES } from "./steps";
 import { reconcileThumbnails } from "../thumbnails/reconcile";
@@ -282,6 +283,7 @@ export async function createShellGroup(
     // to go with it, since buildSearchDb indexes insertables and the shell has
     // none — the index the old version served is still right for the new one.
     await bumpLibraryVersion(db, params.libraryId);
+    await pushLibraryChanged(env, params.libraryId);
 }
 
 /**
@@ -319,4 +321,5 @@ async function finalizeLibrary(
     const db = getDb(env.DB);
     await rebuildSearchDb(env.BLOB, db, libraryId);
     await bumpLibraryVersion(db, libraryId);
+    await pushLibraryChanged(env, libraryId);
 }

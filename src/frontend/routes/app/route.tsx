@@ -29,6 +29,7 @@ import { AppNavbar } from "../../components/app-navbar";
 import { ProgramSelect } from "../../features/library/components/program-select";
 import { SectionLoading } from "../../components/app-zero-state";
 import { useMessageListener } from "../../lib/messages";
+import { useLiveSync } from "../../lib/live-sync";
 import { updateUiState } from "../../lib/ui-state";
 import { RootAppError } from "../../components/root-error";
 
@@ -108,6 +109,7 @@ function App() {
     const { ref: headerRef, height: headerHeight } = useElementSize();
 
     useMessageListener();
+    useLiveSync();
 
     return (
         <AppShell header={{ height: headerHeight || 56 }}>

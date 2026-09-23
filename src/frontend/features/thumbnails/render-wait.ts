@@ -1,0 +1,131 @@
+/**
+ * Waiting out a configuration's render. Until it lands the route answers 404;
+ * the server pushes when it has, so a miss waits for that push rather than
+ * asking again on a timer — unless the push connection is down, when it asks
+ * every couple of seconds as it always used to.
+ */
+import { HttpStatus } from "http-status-ts";
+import { DEFAULT_CONFIGURATION_KEY } from "@backend/features/configurations/contract";
+import {
+    type LiveMessage,
+    LiveMessageType
+} from "@backend/features/live/contract";
+import { parseThumbnailUrl } from "@backend/features/thumbnails/keys";
+import { loadImage } from "../../lib/api-client";
+import { ImageLoadError } from "../../lib/errors";
+import {
+    isLiveConnected,
+    subscribeLiveConnection,
+    subscribeLiveMessages
+} from "../../lib/live-updates";
+
+/**
+ * How long any surface waits out a render before calling it failed: as long as
+ * `RenderThumbnailWorkflow` does, after which nothing more is coming.
+ */
+const RENDER_TIMEOUT_MS = 60_000;
+
+/** A poll is a worker reading R2, not an Onshape call, so it can be this tight. */
+const POLL_INTERVAL_MS = 2_000;
+
+/**
+ * Onshape has no insertable for the configuration, which the route answers with
+ * its own status: the part did not regenerate, so no render is coming and
+ * waiting for one only delays saying so.
+ */
+export function isInvalidConfiguration(error: unknown): boolean {
+    return (
+        error instanceof ImageLoadError &&
+        error.status === HttpStatus.UNPROCESSABLE_ENTITY
+    );
+}
+
+/** Whether a push says the render `url` serves has landed. */
+export function isRenderOf(url: string, message: LiveMessage): boolean {
+    if (message.type !== LiveMessageType.THUMBNAIL) {
+        return false;
+    }
+    const subject = parseThumbnailUrl(url);
+    const configurationKey =
+        URL.parse(url, window.location.origin)?.searchParams.get(
+            "configurationKey"
+        ) ?? DEFAULT_CONFIGURATION_KEY;
+    return (
+        subject?.elementId === message.elementId &&
+        subject.microversionId === message.microversionId &&
+        configurationKey === message.configurationKey
+    );
+}
+
+/** Resolves after `ms`, or sooner on `wake`; rejects when `signal` aborts. */
+function sleep(
+    ms: number,
+    signal: AbortSignal | undefined,
+    onWake: (wake: () => void) => void
+): Promise<void> {
+    return new Promise((resolve, reject) => {
+        const done = () => {
+            window.clearTimeout(timer);
+            signal?.removeEventListener("abort", abort);
+            resolve();
+        };
+        const abort = () => {
+            window.clearTimeout(timer);
+            reject(signal?.reason as Error);
+        };
+        const timer = window.setTimeout(done, ms);
+        signal?.addEventListener("abort", abort, { once: true });
+        onWake(done);
+    });
+}
+
+/**
+ * The render `url` serves, once there is one. Throws once no render is coming:
+ * the configuration is invalid, or the window has passed.
+ */
+export async function loadRenderedImage(
+    url: string,
+    signal?: AbortSignal
+): Promise<string> {
+    const deadline = Date.now() + RENDER_TIMEOUT_MS;
+    // Watched from before the first ask, so a push landing while one is in
+    // flight is not missed and waited out to the deadline.
+    const waiting = {
+        pushed: false,
+        wake: undefined as (() => void) | undefined
+    };
+    const stopMessages = subscribeLiveMessages((message) => {
+        if (isRenderOf(url, message)) {
+            waiting.pushed = true;
+            waiting.wake?.();
+        }
+    });
+    // A dropped connection has to fall back to polling, not wait on a push
+    // that will not arrive.
+    const stopConnection = subscribeLiveConnection(() => waiting.wake?.());
+    try {
+        for (;;) {
+            waiting.pushed = false;
+            try {
+                return await loadImage(url, signal);
+            } catch (error) {
+                if (isInvalidConfiguration(error) || Date.now() >= deadline) {
+                    throw error;
+                }
+            }
+            if (!waiting.pushed) {
+                const remaining = deadline - Date.now();
+                await sleep(
+                    isLiveConnected()
+                        ? remaining
+                        : Math.min(POLL_INTERVAL_MS, remaining),
+                    signal,
+                    (next) => (waiting.wake = next)
+                );
+            }
+        }
+    } finally {
+        stopMessages();
+        stopConnection();
+    }
+}

@@ -27,6 +27,7 @@ import {
     showSuccessToast
 } from "../../lib/notifications";
 import { getAppErrorHandler, appError } from "../../lib/errors";
+import { useIsLiveConnected } from "../../lib/live-updates";
 import { modals } from "@mantine/modals";
 import { parseOnshapeDocumentId } from "../../lib/url";
 import { useRefreshLibrary } from "../../lib/refresh";
@@ -74,7 +75,10 @@ export function useCacheVersion(): number {
     return versionQuery.data ?? 0;
 }
 
-/** Poll a fresh job often, then back off: a full reload runs for hours. */
+/**
+ * Without pushes, poll a fresh job often, then back off: a full reload runs
+ * for hours.
+ */
 const FASTEST_POLL_MS = 3_000;
 const POLL_STEPS = [
     { untilMs: 15_000, intervalMs: FASTEST_POLL_MS },
@@ -88,20 +92,25 @@ function jobPollInterval(runningForMs: number): number {
 }
 
 /**
- * Checked once on load, then polled while something runs and left alone when a
- * check comes back idle. `canPoll` is the caller's gate: the route is editor-only.
+ * Checked once on load, then kept current by the server's pushes. `canAsk` is
+ * the caller's gate: the route is editor-only. `live` is whether pushes are
+ * arriving; while they are not, a running job is polled for as it used to be.
  */
-function getJobStatusQuery(libraryId: LibraryId, canPoll: boolean) {
+function getJobStatusQuery(
+    libraryId: LibraryId,
+    canAsk: boolean,
+    live: boolean
+) {
     return queryOptions<JobStatus>({
         queryKey: jobStatusQueryKey(libraryId),
         queryFn: () => apiGet("/job-status/library/" + libraryId),
-        enabled: canPoll,
+        enabled: canAsk,
         // Every status badge observes this, so rows mounting as the user scrolls
-        // would each trigger a fetch. Only the poll should set the pace.
-        staleTime: FASTEST_POLL_MS,
+        // would each trigger a fetch. Only a push or the poll should.
+        staleTime: live ? Infinity : FASTEST_POLL_MS,
         refetchInterval: (query) => {
             const status = query.state.data;
-            if (!status?.running) {
+            if (live || !status?.running) {
                 return false;
             }
             return jobPollInterval(status.runningForMs);
@@ -122,10 +131,12 @@ export function useIsJobRunning(): boolean {
 function useJobStatusQuery() {
     const libraryId = useLibraryId();
     const { signedIn, currentAccessLevel } = useAccessData();
+    const live = useIsLiveConnected();
     return useQuery(
         getJobStatusQuery(
             libraryId,
-            signedIn && hasEditorAccess(currentAccessLevel)
+            signedIn && hasEditorAccess(currentAccessLevel),
+            live
         )
     );
 }
@@ -178,8 +189,8 @@ export function useSetGroupOrderMutation() {
 }
 
 /**
- * Shows the spinner without waiting for a round trip, and starts the job poll,
- * which stays idle until something is known to be running.
+ * Shows the spinner without waiting for the push, and starts the job poll when
+ * pushes are not arriving, which stays idle until something is known to run.
  */
 function markJobStarted(libraryId: LibraryId): void {
     const justStarted: JobStatus = { running: true, runningForMs: 0 };

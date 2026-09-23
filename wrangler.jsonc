@@ -71,6 +71,9 @@
     ],
     // Inherited by every environment. v2 deletes the thumbnail render queue,
     // replaced by RenderThumbnailWorkflow; the object's stored queue goes with it.
+    "durable_objects": {
+        "bindings": [{ "name": "LIVE_UPDATES", "class_name": "LiveUpdates" }]
+    },
     "migrations": [
         {
             "tag": "v1",
@@ -79,6 +82,10 @@
         {
             "tag": "v2",
             "deleted_classes": ["ThumbnailRenderer"]
+        },
+        {
+            "tag": "v3",
+            "new_sqlite_classes": ["LiveUpdates"]
         }
     ],
     /**
@@ -146,6 +153,11 @@
                     "class_name": "RenderThumbnailWorkflow"
                 }
             ],
+            "durable_objects": {
+                "bindings": [
+                    { "name": "LIVE_UPDATES", "class_name": "LiveUpdates" }
+                ]
+            },
             "vars": {
                 "ADMIN_TEAM": "6a62e6efcc21741bea57362c",
                 // Production, not because cert is production, but because
@@ -198,6 +210,11 @@
                     "class_name": "RenderThumbnailWorkflow"
                 }
             ],
+            "durable_objects": {
+                "bindings": [
+                    { "name": "LIVE_UPDATES", "class_name": "LiveUpdates" }
+                ]
+            },
             "vars": {
                 "ADMIN_TEAM": "5b620150b2190f0fca90ec10",
                 "NODE_ENV": "production"

@@ -4,6 +4,7 @@ import type {
     LoadLibraryParams
 } from "../features/load/workflows";
 import type { RenderThumbnailParams } from "../features/thumbnails/render-workflow";
+import type { LiveUpdates } from "../features/live/live-updates";
 import { type AccessLevel } from "../features/auth/access-level";
 import { type OAuthApi } from "./onshape/client";
 
@@ -17,6 +18,8 @@ export interface AppBindings {
     ADD_GROUP_WORKFLOW: Workflow<AddGroupParams>;
     /** One instance per configuration being rendered; see `requestRender`. */
     RENDER_THUMBNAIL_WORKFLOW: Workflow<RenderThumbnailParams>;
+    /** Relays pushes to open clients; see `features/live`. */
+    LIVE_UPDATES: DurableObjectNamespace<LiveUpdates>;
     ADMIN_TEAM: string;
     /** The Onshape user id granted `AccessLevel.OWNER`; unset grants nobody. */
     OWNER_USER_ID?: string;

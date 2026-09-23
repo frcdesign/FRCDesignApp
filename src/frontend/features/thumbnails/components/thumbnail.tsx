@@ -1,7 +1,6 @@
 import { skipToken, useQuery } from "@tanstack/react-query";
-import { HttpStatus } from "http-status-ts";
 import { loadImage } from "../../../lib/api-client";
-import { ImageLoadError } from "../../../lib/errors";
+import { isInvalidConfiguration, loadRenderedImage } from "../render-wait";
 import {
     renderQueryKey,
     storedThumbnailQueryKey
@@ -96,7 +95,7 @@ export function CardThumbnail(props: CardThumbnailProps): ReactNode {
         configuredTarget ? stored : undefined;
 
     // Only a row that started the render has one coming; anything else takes the
-    // miss for the answer rather than polling for a render nobody started.
+    // miss for the answer rather than waiting on a render nobody started.
     const isRendering = configuredTarget?.renderSource !== undefined;
 
     return (
@@ -127,36 +126,8 @@ export function CardThumbnail(props: CardThumbnailProps): ReactNode {
     );
 }
 
-/**
- * How long any surface waits out a render before calling it failed: as long as
- * `RenderThumbnailWorkflow` does, after which nothing more is coming.
- */
-const RENDER_TIMEOUT_MS = 60_000;
-
-/** A poll is a worker reading R2, not an Onshape call, so it can be this tight. */
-const POLL_INTERVAL_MS = 2_000;
-
-/** Retries inside the window; the first ask is not one of them. */
-const POLL_RETRIES = RENDER_TIMEOUT_MS / POLL_INTERVAL_MS;
-
 /** Nothing is rendering it, so a miss is worth one more try and no more. */
 const STORED_RETRIES = 1;
-
-/**
- * Onshape has no insertable for the configuration, which the route answers with
- * its own status: the part did not regenerate, so no render is coming and
- * polling for one only delays saying so.
- */
-function isInvalidConfiguration(error: unknown): boolean {
-    return (
-        error instanceof ImageLoadError &&
-        error.status === HttpStatus.UNPROCESSABLE_ENTITY
-    );
-}
-
-/** Polls out a render, and gives up at once on one that cannot happen. */
-const retryRender = (failureCount: number, error: Error) =>
-    !isInvalidConfiguration(error) && failureCount <= POLL_RETRIES;
 
 interface ThumbnailProps {
     url?: string;
@@ -169,7 +140,7 @@ interface ThumbnailProps {
     fallbackUrl?: string;
     spinnerSize: number;
     heightAndWidth: HeightAndWidth;
-    /** Whether a miss is a render still running, and so worth polling out. */
+    /** Whether a miss is a render still running, and so worth waiting out. */
     isRendering?: boolean;
 }
 
@@ -181,9 +152,15 @@ function Thumbnail(props: ThumbnailProps): ReactNode {
         queryKey: storedThumbnailQueryKey(url),
         // Narrowed here rather than guarded inside: `enabled` is what keeps it
         // from running, and the query function should not restate that.
-        queryFn: url ? ({ signal }) => loadImage(url, signal) : skipToken,
-        retry: isRendering ? retryRender : STORED_RETRIES,
-        retryDelay: isRendering ? POLL_INTERVAL_MS : undefined
+        queryFn: url
+            ? ({ signal }) =>
+                  isRendering
+                      ? loadRenderedImage(url, signal)
+                      : loadImage(url, signal)
+            : skipToken,
+        // A render waits itself out; asking again after it gives up would
+        // only start the wait over.
+        retry: isRendering ? false : STORED_RETRIES
     });
     const fallbackQuery = useQuery({
         queryKey: storedThumbnailQueryKey(fallbackUrl),
@@ -247,9 +224,9 @@ const PREVIEW_SIZE = ThumbnailSize.LARGE;
 const PREVIEW_SPINNER_SIZE = 36;
 
 /**
- * Polls for a configuration's render. Until it lands the route answers 404, so
- * a miss is a rejected query and the retry is the poll; starting a render is
- * idempotent, so every poll can ask without starting another.
+ * Waits out a configuration's render. The first ask starts it, and asking
+ * again while it runs starts nothing more, so a wait can ask as often as it
+ * needs to.
  */
 function usePreviewThumbnail(props: PreviewImageProps, enabled: boolean) {
     const { path, insertableId, microversionId, configurationKey } = props;
@@ -264,12 +241,11 @@ function usePreviewThumbnail(props: PreviewImageProps, enabled: boolean) {
 
     return useQuery({
         queryKey: renderQueryKey(url),
-        queryFn: ({ signal }) => loadImage(url, signal),
+        queryFn: ({ signal }) => loadRenderedImage(url, signal),
         // The previous configuration's render, so the box does not blank out
         // while this one is still being waited on.
         placeholderData: (previousData) => previousData,
-        retry: retryRender,
-        retryDelay: POLL_INTERVAL_MS,
+        retry: false,
         enabled
     });
 }
