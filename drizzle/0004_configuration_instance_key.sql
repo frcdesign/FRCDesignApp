@@ -7,7 +7,7 @@
 -- The literal '' below is what those rows mean: recorded before the branch an
 -- insert was in was tracked. A parameter nothing conditions is reported whole
 -- and counts every key, so those rows keep reading correctly; an instanced one
--- needs `POST /api/analytics/rebuild-configuration-metrics` to attribute them.
+-- needs `scripts/rebuild-configuration-metrics.ts` run once to attribute them.
 --
 -- The generated pragmas are dropped rather than kept: no foreign key points at
 -- this table, and D1 ignores `PRAGMA foreign_keys` inside a migration anyway.

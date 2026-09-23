@@ -4,7 +4,6 @@ import { internalError } from "../../lib/api-error";
 import { CachePolicy, cacheMiddleware } from "../../lib/cache";
 import { getApp } from "../../lib/context";
 import { getLibraryParam, libraryRoute } from "../../lib/route-params";
-import { requireEditorMiddleware } from "../auth/guards";
 import { validate } from "../../lib/validate";
 import { getDb } from "../../db/client";
 import { configurations, insertables } from "../../db/schema";
@@ -22,7 +21,6 @@ import { toElementPath } from "../../lib/onshape/path";
 import { toReportingDay } from "./day";
 import { getHealthCounts } from "./health";
 import { buildParameterUsage } from "./parameter-usage";
-import { rebuildConfigurationMetrics } from "./rebuild";
 import {
     countPartFavorites,
     countPartUsers,
@@ -47,7 +45,6 @@ import {
 import {
     clampRange,
     getTrackingSince,
-    optionalRangeQuery,
     rangeQuery,
     thresholdQuery
 } from "./range";
@@ -258,28 +255,6 @@ analyticsRoutes.get(
                 a.partName.localeCompare(b.partName)
         );
         return c.json(out);
-    }
-);
-
-/**
- * POST /api/analytics/rebuild-configuration-metrics/library/:libraryId
- *
- * Run once after the branch key was added, which no existing row carries. Also
- * the way back from a rollup that drifted: it is derived from the log, and this
- * is what derives it. Admin-only, being the one route here that writes.
- */
-analyticsRoutes.post(
-    "/analytics/rebuild-configuration-metrics" + libraryRoute(),
-    requireEditorMiddleware,
-    validate("query", optionalRangeQuery),
-    async (c) => {
-        const libraryId = getLibraryParam(c);
-        const db = getDb(c.env.DB);
-        const { from, to } = c.req.valid("query");
-        // Both or neither: half a range names no slice.
-        const range = from && to ? { from, to } : undefined;
-
-        return c.json(await rebuildConfigurationMetrics(db, libraryId, range));
     }
 );
 
