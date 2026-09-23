@@ -11,7 +11,7 @@ import {
     type UnitInfo
 } from "@backend/features/configurations/contract";
 import { QuantityType, Unit } from "@backend/features/configurations/enums";
-import { canonicalizeValue } from "@backend/features/configurations/selection";
+import { quantityDefault } from "@backend/features/configurations/selection";
 
 /** Builds an enum parameter whose options are named after their ids. */
 export function enumParam(
@@ -55,19 +55,18 @@ export function boolParam(id: string): BooleanParameter {
 }
 
 /**
- * A length quantity parameter defaulting to 1 inch, canonically spelled — the
- * form `parseOnshapeConfiguration` stores, so tests compare like for like.
+ * A length quantity parameter defaulting to 1 inch, its default spelled the way
+ * `parseOnshapeConfiguration` stores one: from `defaultValue` and `unit`.
  */
 export function quantityParam(
     id: string,
-    extra: Partial<QuantityParameter> = {}
+    extra: Omit<Partial<QuantityParameter>, "default"> = {}
 ): QuantityParameter {
-    const parameter: QuantityParameter = {
+    const parameter = {
         id,
         name: id,
-        default: "1 in",
         isCosmetic: false,
-        type: ParameterType.QUANTITY,
+        type: ParameterType.QUANTITY as const,
         quantityType: QuantityType.LENGTH,
         defaultValue: 1,
         min: 0,
@@ -75,10 +74,7 @@ export function quantityParam(
         unit: Unit.INCH,
         ...extra
     };
-    return {
-        ...parameter,
-        default: canonicalizeValue(parameter, parameter.default)
-    };
+    return { ...parameter, default: quantityDefault(parameter) };
 }
 
 /** Document units: inches to 4 decimals, degrees to 3. */
@@ -95,7 +91,7 @@ export function configurationRecord(
     overrides: Partial<ConfigurationRecord> = {}
 ): ConfigurationRecord {
     return {
-        configurationKey: "",
+        values: {},
         hasMultipleParts: false,
         isOpenComposite: false,
         ...overrides

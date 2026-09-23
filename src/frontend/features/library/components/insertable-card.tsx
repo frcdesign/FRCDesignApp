@@ -1,11 +1,10 @@
-import { decodeConfiguration } from "@backend/features/configurations/utils";
 import { PropsWithChildren, ReactNode } from "react";
 import { Favorite } from "@backend/features/favorites/contract";
 import { InsertableOut } from "@backend/features/library/contract";
 import {
     type ConfigurationKey,
     DEFAULT_CONFIGURATION_KEY,
-    Selection
+    type PartialSelection
 } from "@backend/features/configurations/contract";
 import {
     FavoriteButton,
@@ -36,7 +35,9 @@ import { InsertSource } from "@backend/features/analytics/usage";
  * own `SearchHit`, which a card has no other reason to know about.
  */
 interface InsertableMatch extends RowMatch {
-    /** The key of the selection it names, for the thumbnail and the menu. */
+    /** The values of the configuration it names, for the menu. */
+    values?: PartialSelection;
+    /** Their key, for the thumbnail. */
     configurationKey?: ConfigurationKey;
 }
 
@@ -67,11 +68,8 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
         return null;
     }
 
-    // What the hit names, for inserting and for prefilling the menu; its key
-    // is what names the thumbnail.
-    const hitSelection = match?.configurationKey
-        ? decodeConfiguration(match.configurationKey)
-        : undefined;
+    // What the hit names, for inserting and for prefilling the menu.
+    const hitSelection = match?.values;
 
     const openMenu = () => {
         props.onClick?.();
@@ -148,8 +146,8 @@ interface InsertableMenuItemsProps {
     insertable: InsertableOut;
     inInsertMenu?: boolean;
     /** What quick insert inserts and "Open document" opens: a search hit's
-     * selection on a card, the selected one inside the insert menu. */
-    selection?: Selection;
+     * values on a card, the selected configuration inside the insert menu. */
+    selection?: PartialSelection;
     /** That selection's key, so favoriting can name its thumbnail. */
     configurationKey?: ConfigurationKey;
     source: InsertSource;
@@ -191,7 +189,10 @@ export function InsertableMenuItems(
                 </MenuSection>
             </RequireSignIn>
             <MenuSection label="Document">
-                <OpenDocumentItems path={{ ...insertable.path, selection }} />
+                <OpenDocumentItems
+                    path={insertable.path}
+                    selection={selection}
+                />
             </MenuSection>
             <AdminMenuSection>
                 <ReloadThumbnailMenuItem

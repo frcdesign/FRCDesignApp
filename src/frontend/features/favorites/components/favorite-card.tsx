@@ -177,7 +177,10 @@ function FavoriteMenuItems(props: FavoriteMenuItemsProps): ReactNode {
                 />
             </MenuSection>
             <MenuSection label="Document">
-                <OpenDocumentItems path={insertable.path} />
+                <OpenDocumentItems
+                    path={insertable.path}
+                    selection={favorite.defaultSelection}
+                />
             </MenuSection>
         </>
     );

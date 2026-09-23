@@ -16,12 +16,8 @@ export interface QuantityBox {
 }
 
 /**
- * What the box shows for a value, and the error if it does not evaluate.
- *
- * A seeded value was never typed here, so the display spelling is what it opens
- * for editing: a selection is canonically in base units, and nobody wants to
- * edit a 47 inch shaft as "1.1938 m". Only a submitted expression is kept as
- * typed, and only for as long as that input lives.
+ * What the box shows for a value, and the error if it does not evaluate: the
+ * expression to edit while focused, and what it evaluates to otherwise.
  */
 export function seedFrom(
     value: string | undefined,
@@ -46,7 +42,7 @@ export function seedFrom(
               errorMessage: result.errorMessage
           }
         : {
-              expression: result.displayExpression,
+              expression: result.expression,
               display: result.displayExpression
           };
 }

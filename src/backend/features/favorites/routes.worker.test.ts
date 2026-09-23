@@ -8,6 +8,13 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { configurations, favorites, insertables } from "../../db/schema";
 import { ElementType } from "../../lib/onshape/element-type";
 import { MAX_FAVORITES } from "./contract";
+import {
+    configurationRecord,
+    quantityParam
+} from "../../../__test_utils__/configuration-fixtures";
+
+const partMetadata = (partNumber: string) =>
+    configurationRecord({ partNumber });
 import { ApiErrorKind } from "../../lib/api-error";
 import {
     TEST_ASSEMBLY_ID,
@@ -186,14 +193,14 @@ describe("favorites routes", () => {
                     // first would answer with the default instead.
                     records: [
                         {
-                            configurationKey: "",
+                            values: { boolean: "true" },
                             partNumber: "WCP-2222",
                             name: "Default",
                             hasMultipleParts: false,
                             isOpenComposite: false
                         },
                         {
-                            configurationKey: "boolean=false",
+                            values: { boolean: "false" },
                             partNumber: "WCP-1111",
                             name: "Plain",
                             hasMultipleParts: false,
@@ -220,23 +227,22 @@ describe("favorites routes", () => {
         });
 
         // A favorite saved with no selection of its own opens on the element's
-        // defaults, so that is the record it has to name.
-        it("resolves the default record for a favorite with no selection", async () => {
+        // defaults, whose part data lives on the insertable rather than among
+        // the configurations' records.
+        it("resolves the element's own record for a favorite with no selection", async () => {
             await seedPartStudio(db);
             await seedConfiguration(db);
+            await db
+                .update(insertables)
+                .set({ partMetadata: partMetadata("WCP-2222") })
+                .where(eq(insertables.id, TEST_PART_STUDIO_ID));
             await db
                 .update(configurations)
                 .set({
                     records: [
                         {
-                            configurationKey: "boolean=false",
+                            values: { boolean: "false" },
                             partNumber: "WCP-1111",
-                            hasMultipleParts: false,
-                            isOpenComposite: false
-                        },
-                        {
-                            configurationKey: "",
-                            partNumber: "WCP-2222",
                             hasMultipleParts: false,
                             isOpenComposite: false
                         }
@@ -256,9 +262,13 @@ describe("favorites routes", () => {
         });
 
         // An insertable with nothing to configure has no configurations row at
-        // all; the join has to answer that as no record rather than throwing.
-        it("has no record for an insertable with no configuration", async () => {
+        // all, but still has part data of its own to show.
+        it("resolves the record of an insertable with no configuration", async () => {
             await seedPartStudio(db);
+            await db
+                .update(insertables)
+                .set({ partMetadata: partMetadata("WCP-3333") })
+                .where(eq(insertables.id, TEST_PART_STUDIO_ID));
             await seedFavorite(db, TEST_PART_STUDIO_ID);
 
             const res = await createTestApp().request(
@@ -267,7 +277,33 @@ describe("favorites routes", () => {
                 env
             );
             expect(res.status).toBe(200);
-            expect(soleFavorite(await res.json()).record).toBeUndefined();
+            expect(soleFavorite(await res.json()).record?.partNumber).toBe(
+                "WCP-3333"
+            );
+        });
+
+        // Saved before selections kept what was entered, in base units.
+        it("reads a legacy base-unit quantity back in its parameter's unit", async () => {
+            await seedPartStudio(db);
+            await seedConfiguration(db);
+            await db
+                .update(configurations)
+                .set({ parameters: [quantityParam("length")] })
+                .where(eq(configurations.insertableId, TEST_PART_STUDIO_ID));
+            const favoriteId = await seedFavorite(db, TEST_PART_STUDIO_ID);
+            await db
+                .update(favorites)
+                .set({ defaultSelection: { length: "0.0508 m" } })
+                .where(eq(favorites.id, favoriteId));
+
+            const res = await createTestApp().request(
+                favoritesUrl,
+                jsonRequest("GET"),
+                env
+            );
+            expect(soleFavorite(await res.json()).defaultSelection).toEqual({
+                length: "2 in"
+            });
         });
 
         it("only returns the current user's favorites", async () => {
@@ -561,6 +597,20 @@ describe("favorites routes", () => {
 
             expect(await post({ "param-id": "value" })).toEqual({
                 boolean: "true"
+            });
+        });
+
+        // What the favorite opens with is what was typed, not what it evaluates to.
+        it("keeps a quantity as the expression it was entered as", async () => {
+            await seedPartStudio(db);
+            await seedConfiguration(db);
+            await db
+                .update(configurations)
+                .set({ parameters: [quantityParam("length")] })
+                .where(eq(configurations.insertableId, TEST_PART_STUDIO_ID));
+
+            expect(await post({ length: "(2 + 3) in" })).toEqual({
+                length: "(2 + 3) in"
             });
         });
     });

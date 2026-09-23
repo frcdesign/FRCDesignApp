@@ -2,7 +2,7 @@ import { Vendor, parseVendor } from "../library/vendors";
 import {
     ParameterType,
     type ConfigurationParameter,
-    type Selection
+    type PartialSelection
 } from "../configurations/contract";
 
 /** A vendor named by one of a text's words, as its code or as its whole name. */
@@ -44,7 +44,7 @@ export function parseVendors(
  */
 export function parseRecordVendor(
     partName: string | undefined,
-    selection: Selection,
+    selection: PartialSelection,
     parameters: ConfigurationParameter[]
 ): Vendor | undefined {
     for (const param of parameters) {

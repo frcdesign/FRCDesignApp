@@ -18,6 +18,19 @@ import {
     PartMetadata
 } from "../features/configurations/contract";
 import { BuildIssue, knownBuildIssues } from "../features/build-checker/issues";
+import {
+    upgradeParameters,
+    upgradeRecords
+} from "../features/configurations/legacy";
+
+/** A JSON column whose stored rows may predate its current shape. */
+function upgradedJson<T>(upgrade: (stored: T) => T) {
+    return customType<{ data: T; driverData: string }>({
+        dataType: () => "text",
+        toDriver: (value) => JSON.stringify(value),
+        fromDriver: (value) => upgrade(JSON.parse(value) as T)
+    });
+}
 
 /**
  * Build-time issues flagged by the build checker, recomputed on reload. Declared
@@ -27,17 +40,10 @@ import { BuildIssue, knownBuildIssues } from "../features/build-checker/issues";
  * deploy last loaded the row, so it can still name a check that has since been
  * removed. The next write of the row drops it for good.
  */
-const buildIssuesColumn = customType<{
-    data: BuildIssue[];
-    driverData: string;
-}>({
-    dataType: () => "text",
-    toDriver: (issues) => JSON.stringify(issues),
-    fromDriver: (value) => knownBuildIssues(JSON.parse(value) as BuildIssue[])
-});
-
 const buildIssues = () =>
-    buildIssuesColumn("build_issues").notNull().default([]);
+    upgradedJson<BuildIssue[]>(knownBuildIssues)("build_issues")
+        .notNull()
+        .default([]);
 
 /** The pair Onshape renders for a group or an insertable; null until rendered. */
 const thumbnailUrls = () => ({
@@ -154,14 +160,14 @@ export const configurations = sqliteTable("configurations", {
     insertableId: text("insertable_id")
         .primaryKey()
         .references(() => insertables.id, { onDelete: "cascade" }),
-    parameters: text("parameters", { mode: "json" })
-        .$type<ConfigurationParameter[]>()
+    parameters: upgradedJson<ConfigurationParameter[]>(upgradeParameters)(
+        "parameters"
+    )
         .notNull()
         .default([]),
     // One record per indexed configuration. Empty unless the insertable is
     // indexed; the element's own metadata lives on `insertables.partMetadata`.
-    records: text("records", { mode: "json" })
-        .$type<ConfigurationRecord[]>()
+    records: upgradedJson<ConfigurationRecord[]>(upgradeRecords)("records")
         .notNull()
         .default([])
 });
@@ -200,8 +206,8 @@ export const favorites = sqliteTable(
         insertableId: text("insertable_id")
             .notNull()
             .references(() => insertables.id, { onDelete: "cascade" }),
-        // The selection the favorite opens with, whole and canonical like
-        // every stored one. Null for an insertable with nothing to configure.
+        // The selection the favorite opens with, whole and as it was entered.
+        // Null for an insertable with nothing to configure.
         defaultSelection: text("default_selection", {
             mode: "json"
         }).$type<Selection | null>(),

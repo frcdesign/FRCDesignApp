@@ -16,6 +16,7 @@ import {
     useState
 } from "react";
 import {
+    type PartialSelection,
     Selection,
     type ConfigurationKey,
     ConfigurationResult,
@@ -31,12 +32,12 @@ import {
 } from "@backend/features/configurations/contract";
 import {
     evaluateCondition,
-    findRecordForConfiguration,
     getEvaluateOptions,
     getVisibleOptions
 } from "@backend/features/configurations/utils";
 import {
-    canonicalizeValue,
+    findRecord,
+    onshapeOverrides,
     toKey,
     toSelection
 } from "@backend/features/configurations/selection";
@@ -53,18 +54,28 @@ import {
 } from "../parameter-value";
 import { seedFrom } from "../quantity-box";
 
+/**
+ * What the panel settled a selection into, reported because only the panel
+ * has the parameters each of these is measured against.
+ */
+export interface SelectionReport {
+    /** Whole, and settled against the parameters' conditions. */
+    selection: Selection;
+    /** Only what differs from the element's defaults, as entered. */
+    overrides: Selection;
+    /** Names the selection's thumbnail. */
+    configurationKey: ConfigurationKey;
+    /** The part the selection produces, for the menu's header. */
+    record: SearchRecord | undefined;
+}
+
 interface ConfigurationWrapperProps {
     insertableId: string;
     microversionId: string;
-    selection?: Selection;
+    /** Partial until the parameters load: a search hit names only its own. */
+    selection?: PartialSelection;
     setSelection: Dispatch<Selection>;
-    /**
-     * Reported here because only this component has the parameters the key is
-     * measured against.
-     */
-    onConfigurationKey?: (configurationKey: ConfigurationKey) => void;
-    /** Reports the record the selection produces, for the menu's header. */
-    onRecord?: (record: SearchRecord | undefined) => void;
+    onReport?: (report: SelectionReport) => void;
     /**
      * A row was moved, as against the panel settling the selection on load.
      * Any interaction counts, including picking what was already picked.
@@ -72,24 +83,22 @@ interface ConfigurationWrapperProps {
     onEdit?: () => void;
 }
 
-/** Reports the selection's key, and the record it resolves to. */
 function useReportSelection(
-    parameters: ConfigurationParameter[] | undefined,
-    records: SearchRecord[] | undefined,
+    result: ConfigurationResult | undefined,
     selection: Selection | undefined,
-    onConfigurationKey?: (configurationKey: ConfigurationKey) => void,
-    onRecord?: (record: SearchRecord | undefined) => void
+    onReport?: (report: SelectionReport) => void
 ) {
     useEffect(() => {
-        if (!parameters || !selection) {
+        if (!result || !selection) {
             return;
         }
-        const configurationKey = toKey(selection, parameters);
-        onConfigurationKey?.(configurationKey);
-        if (records) {
-            onRecord?.(findRecordForConfiguration(configurationKey, records));
-        }
-    }, [parameters, records, selection, onConfigurationKey, onRecord]);
+        onReport?.({
+            selection,
+            overrides: onshapeOverrides(selection, result.parameters),
+            configurationKey: toKey(selection, result.parameters),
+            record: findRecord(selection, result.records)
+        });
+    }, [result, selection, onReport]);
 }
 
 export function ConfigurationWrapper(
@@ -100,8 +109,7 @@ export function ConfigurationWrapper(
         microversionId,
         selection,
         setSelection,
-        onConfigurationKey,
-        onRecord,
+        onReport,
         onEdit
     } = props;
 
@@ -138,13 +146,7 @@ export function ConfigurationWrapper(
         }
     }, [whole, selection, setSelection]);
 
-    useReportSelection(
-        parameters,
-        query.data?.records,
-        whole,
-        onConfigurationKey,
-        onRecord
-    );
+    useReportSelection(query.data, whole, onReport);
 
     // The rows' own writes, as against the settle above: same selection, but
     // only this one is somebody configuring the part.
@@ -394,11 +396,10 @@ function QuantityInput(props: ParameterProps<QuantityParameter>): ReactNode {
             expression: result.expression,
             display: result.displayExpression
         });
-        // Canonical, so the menu holds a selection like everywhere else;
-        // `expression` keeps what was typed for as long as this input lives.
-        const canonical = canonicalizeValue(parameter, result.expression);
-        setEmitted(canonical);
-        onValueChange(canonical);
+        // The expression, not its value: it is what Onshape is sent, so a
+        // typed "(2 + 3) in" reaches the derived feature as that.
+        setEmitted(result.expression);
+        onValueChange(result.expression);
     };
 
     return (

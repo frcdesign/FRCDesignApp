@@ -3,10 +3,9 @@ import {
     InstancePath,
     ElementPath,
     isInstancePath,
-    isElementPath,
-    ConfigurablePath,
-    isConfigurablePath
+    isElementPath
 } from "@backend/lib/onshape/path";
+import { type PartialSelection } from "@backend/features/configurations/contract";
 import { encodeQueryConfiguration } from "@backend/features/configurations/utils";
 import { notifications } from "@mantine/notifications";
 import { LinkIcon } from "@phosphor-icons/react";
@@ -22,11 +21,14 @@ export const APP_STORE_URL =
  */
 export const SETUP_URL = "/setup";
 
-export function makeUrl(path: ConfigurablePath): string;
-export function makeUrl(path: ElementPath): string;
-export function makeUrl(path: InstancePath): string;
-export function makeUrl(path: DocumentPath): string;
-export function makeUrl(path: DocumentPath): string {
+/**
+ * The Onshape url for a path. A configuration applies only to an element, and
+ * only what it names changes: Onshape fills in the rest from the defaults.
+ */
+export function makeUrl(
+    path: DocumentPath | InstancePath | ElementPath,
+    configuration?: PartialSelection
+): string {
     let url = `https://cad.onshape.com/documents/${path.documentId}`;
     if (isInstancePath(path)) {
         url += `/${path.instanceType}/${path.instanceId}`;
@@ -34,12 +36,11 @@ export function makeUrl(path: DocumentPath): string {
     if (isElementPath(path)) {
         url += `/e/${path.elementId}`;
     }
-    if (isConfigurablePath(path)) {
+    const encoded = encodeQueryConfiguration(configuration);
+    if (isElementPath(path) && encoded) {
         // Onshape's own parameter, so it keeps Onshape's name. The query form,
         // this escape being the one layer Onshape unwraps.
-        url +=
-            "?configuration=" +
-            encodeURIComponent(encodeQueryConfiguration(path.selection));
+        url += "?configuration=" + encodeURIComponent(encoded);
     }
     return url;
 }

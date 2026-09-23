@@ -39,8 +39,8 @@ function readInsertable() {
 const partMetadata = (partNumber?: string): PartMetadata =>
     configurationRecord({ partNumber });
 
-const record = (partNumber?: string, configurationKey = "") =>
-    configurationRecord({ partNumber, configurationKey });
+const record = (partNumber?: string, values = {}) =>
+    configurationRecord({ partNumber, values });
 
 describe("saveInsertable", () => {
     beforeEach(async () => {
@@ -108,7 +108,10 @@ describe("saveInsertable", () => {
     });
 
     it("writes the computed configuration records", async () => {
-        const records = [record("PN-1", "p=v1"), record("PN-2", "p=v2")];
+        const records = [
+            record("PN-1", { p: "v1" }),
+            record("PN-2", { p: "v2" })
+        ];
         await saveInsertable(
             db,
             insertableTarget(),

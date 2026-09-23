@@ -3,8 +3,7 @@ import { type Db, getDb } from "../../db/client";
 import {
     type Configuration,
     type PartMetadata,
-    type ConfigurationParameter,
-    DEFAULT_CONFIGURATION_KEY
+    type ConfigurationParameter
 } from "../configurations/contract";
 import {
     addBuildIssue,
@@ -243,7 +242,7 @@ function readPartsStep(
             const parts = await getParts(
                 await getOnshapeApiFromContext(ctx),
                 elementPath,
-                DEFAULT_CONFIGURATION_KEY
+                {}
             );
             return {
                 isOpenComposite: computeOpenComposite(parts),

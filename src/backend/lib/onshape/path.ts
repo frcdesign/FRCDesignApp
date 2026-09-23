@@ -1,5 +1,3 @@
-import { Selection } from "../../features/configurations/contract";
-
 /** The instance kinds an Onshape path can address, as one definition: the type
  * and the runtime list validators check against both derive from it. */
 export const INSTANCE_TYPES = ["w", "v", "m"] as const;
@@ -19,8 +17,6 @@ export interface ElementPath extends InstancePath {
     elementId: string;
 }
 
-/** Represents a part inside a Part Studio. */
-
 /** The version-pinned tab a stored insertable row addresses. */
 export function toElementPath(row: {
     documentId: string;
@@ -33,10 +29,6 @@ export function toElementPath(row: {
         instanceType: "v",
         elementId: row.elementId
     };
-}
-
-export interface ConfigurablePath extends ElementPath {
-    selection: Selection;
 }
 
 function isDocumentPath(path: unknown): path is DocumentPath {
@@ -61,15 +53,6 @@ export function isElementPath(path: unknown): path is ElementPath {
     return (
         isInstancePath(path) &&
         typeof (path as ElementPath).elementId === "string"
-    );
-}
-
-export function isConfigurablePath(
-    path: DocumentPath
-): path is ConfigurablePath {
-    return (
-        isElementPath(path) &&
-        (path as ConfigurablePath).selection !== undefined
     );
 }
 
@@ -102,9 +85,7 @@ function toInstanceTypeKey(instanceType: InstanceType): InstanceTypeKey {
  * Returns the named-ID object that Onshape API bodies/query params expect,
  * e.g. `{ documentId, workspaceId }` rather than the `/d/.../w/...` path form.
  */
-function toInstanceApiObject(
-    path: InstancePath
-): Record<string, string> {
+function toInstanceApiObject(path: InstancePath): Record<string, string> {
     return {
         documentId: path.documentId,
         [toInstanceTypeKey(path.instanceType)]: path.instanceId

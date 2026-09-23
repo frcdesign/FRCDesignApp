@@ -1,10 +1,8 @@
 import {
-    type ConfigurationKey,
     type ConfigurationRecord,
     type PartMetadata,
     type PartialSelection,
     Selection,
-    DEFAULT_CONFIGURATION_KEY,
     EnumOption,
     EnumParameter,
     OptionVisibilityCondition,
@@ -12,7 +10,6 @@ import {
     ConfigurationParameter,
     ParameterType,
     QuantityParameter,
-    SearchRecord,
     UnitInfo,
     VisibilityCondition,
     VisibilityType
@@ -25,28 +22,6 @@ import {
 } from "../library/vendors";
 import { LogicalOp, QuantityType, Unit } from "./enums";
 import { type EvaluateOptions, valueWithUnits } from "./input-parser";
-
-/**
- * The record a selection produces. Several can match, since records name only
- * enumerated parameters, so the most specific wins.
- */
-export function findRecordForConfiguration(
-    configurationKey: ConfigurationKey,
-    records: SearchRecord[]
-): SearchRecord | undefined {
-    const selected = new Set(splitConfiguration(configurationKey));
-    let best: SearchRecord | undefined;
-    let bestNamed = -1;
-    for (const record of records) {
-        const named = splitConfiguration(record.configurationKey);
-        const matches = named.every((assignment) => selected.has(assignment));
-        if (matches && named.length > bestNamed) {
-            best = record;
-            bestNamed = named.length;
-        }
-    }
-    return best;
-}
 
 /**
  * Whether a parameter is shown. Takes a partial selection: visibility is what
@@ -130,17 +105,20 @@ export function getPartUrl(
  * assignment. {@link decodeConfiguration} is the other half, and `utils.test.ts`
  * pins the round trip.
  *
- * This is the form a key is stored and addressed by, and the form a request body
- * carries, where nothing escapes it a second time. A query parameter is escaped
- * again in transport, so it takes {@link encodeQueryConfiguration} instead.
+ * This is the form a key takes, and the form a request body carries, where
+ * nothing escapes it a second time. A query parameter is escaped again in
+ * transport, so it takes {@link encodeQueryConfiguration} instead.
  */
-export function encodeConfiguration(configuration?: Selection): string {
-    if (!configuration) {
-        return "";
-    }
-    return Object.entries(configuration)
+export function encodeConfiguration(configuration?: PartialSelection): string {
+    return assignments(configuration)
         .map(([id, value]) => `${id}=${encodeURIComponent(value)}`)
         .join(";");
+}
+
+function assignments(configuration?: PartialSelection): [string, string][] {
+    return Object.entries(configuration ?? {}).filter(
+        (entry): entry is [string, string] => entry[1] !== undefined
+    );
 }
 
 /** The characters the text form is structured by, which a value must not spell. */
@@ -164,18 +142,12 @@ function escapeForQuery(value: string): string {
  * which is no quantity. The structural three still keep a typed `;` from ending
  * an assignment, and `decodeConfiguration` reads this form back too.
  */
-export function encodeQueryConfiguration(configuration?: Selection): string {
-    if (!configuration) {
-        return "";
-    }
-    return Object.entries(configuration)
+export function encodeQueryConfiguration(
+    configuration?: PartialSelection
+): string {
+    return assignments(configuration)
         .map(([id, value]) => `${id}=${escapeForQuery(value)}`)
         .join(";");
-}
-
-/** The same, for a configuration already encoded as a key. */
-export function toQueryConfiguration(configurationKey: string): string {
-    return encodeQueryConfiguration(decodeConfiguration(configurationKey));
 }
 
 /** The assignments a configuration text names, each still `id=value`. */
@@ -183,10 +155,7 @@ function splitConfiguration(configuration: string): string[] {
     return configuration.split(";").filter((assignment) => assignment !== "");
 }
 
-/**
- * The values a configuration text names. A key names only what it overrides, so
- * what it omits is the parameter's own default — `fromKey` fills those in.
- */
+/** The values a configuration text names, in either encoding. */
 export function decodeConfiguration(configuration: string): Selection {
     const values: Selection = {};
     for (const assignment of splitConfiguration(configuration)) {
@@ -207,10 +176,6 @@ export function getOption(
     return options.find((option) => option.id === optionId);
 }
 
-/**
- * The enum options the selection leaves visible, by the parameter's own option
- * conditions. Partial for the same reason {@link evaluateCondition} is.
- */
 /** The options one condition controls, listed or spanned. */
 function getControlledOptionIds(
     optionCondition: OptionVisibilityCondition,
@@ -328,8 +293,5 @@ export function toRecords(
     records: ConfigurationRecord[]
 ): ConfigurationRecord[] {
     if (!partMetadata) return records;
-    return [
-        { ...partMetadata, configurationKey: DEFAULT_CONFIGURATION_KEY },
-        ...records
-    ];
+    return [{ ...partMetadata, values: {} }, ...records];
 }

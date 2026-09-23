@@ -46,8 +46,9 @@ const LocalStateSchema = z.object({
     /** The insertable whose insert menu is open, and what it is configured to.
      * Written as the menu opens and closes, so a relaunch can reopen it. */
     openInsertableId: z.string().optional(),
-    /** Absent for the element's own defaults, which is the empty key. */
-    openConfigurationKey: z.string().optional(),
+    /** What its configuration changes from the element's defaults, encoded
+     * as `id=value;id=value`; absent for the defaults themselves. */
+    openConfiguration: z.string().optional(),
     /** Set when the menu was opened from a favorite rather than a row. */
     openFavoriteId: z.string().optional()
 });

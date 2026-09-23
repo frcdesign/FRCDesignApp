@@ -2,10 +2,13 @@ import { describe, expect, it } from "vitest";
 import { DEFAULT_CONFIGURATION_KEY, VisibilityType } from "./contract";
 import {
     appliedValues,
+    canonicalValues,
+    findRecord,
     formatValue,
-    fromKey,
+    onshapeOverrides,
     toKey,
-    toSelection
+    toSelection,
+    toShortestConfiguration
 } from "./selection";
 import { QuantityType, Unit } from "./enums";
 import { decodeConfiguration } from "./utils";
@@ -20,28 +23,31 @@ const flag = boolParam("flag");
 const length = quantityParam("length");
 const parameters = [size, flag, length];
 
-/** What every boundary does: whatever arrived, made whole and canonical. */
+/** What every boundary does: whatever arrived, made whole. */
 function select(values: Record<string, string>, params = parameters) {
     return toSelection(values, params);
 }
 
 describe("toSelection", () => {
-    it("names every parameter, whatever it was given", () => {
+    it("names every parameter, defaults in their own unit", () => {
         expect(select({ size: "l" })).toEqual({
             size: "l",
             flag: "false",
-            length: "0.0254 m"
+            length: "1 in"
         });
     });
 
-    it("spells equivalent values the same way", () => {
-        for (const value of ["2in", "2 in", "50.8 mm", "(1 + 1) in"]) {
-            expect(select({ length: value }).length).toBe("0.0508 m");
-        }
+    it("keeps an expression as it was entered", () => {
+        expect(select({ length: "(2 + 3) in" }).length).toBe("(2 + 3) in");
+        expect(select({ length: "  50.8 mm " }).length).toBe("50.8 mm");
     });
 
-    it("keeps an unparseable value as typed", () => {
-        expect(select({ length: "#value" }).length).toBe("#value");
+    it("spells a checkbox the one way Onshape does", () => {
+        expect(select({ flag: "TRUE" }).flag).toBe("true");
+    });
+
+    it("drops what the parameters do not declare", () => {
+        expect(select({ gone: "x" })).not.toHaveProperty("gone");
     });
 
     it("is unchanged by a second pass", () => {
@@ -61,23 +67,11 @@ describe("toKey", () => {
         );
     });
 
-    it("names parameters in declaration order, not object order", () => {
-        const key = toKey(select({ flag: "true", size: "l" }), parameters);
-        expect(key).toBe("size=l;flag=true");
-        expect(toKey(select({ size: "l", flag: "true" }), parameters)).toBe(
-            key
+    it("keys every spelling of one value alike", () => {
+        const keys = ["2in", "2 in", "50.8 mm", "(1 + 1) in"].map((value) =>
+            toKey(select({ length: value }), parameters)
         );
-    });
-
-    it("drops a parameter the selection hides", () => {
-        const hidden = enumParam("hidden", ["x", "y"], {
-            condition: { type: VisibilityType.EQUAL, id: "size", value: "s" }
-        });
-        const params = [size, hidden];
-        // size=l hides `hidden`, so its value cannot affect the render.
-        expect(toKey(select({ size: "l", hidden: "y" }, params), params)).toBe(
-            "size=l"
-        );
+        expect(new Set(keys).size).toBe(1);
     });
 
     it("keys a value equal to the default in another unit as no override", () => {
@@ -90,19 +84,31 @@ describe("toKey", () => {
     it("ignores a difference below the parser's tolerance", () => {
         expect(
             toKey(select({ length: "0.02540000000001 m" }), parameters)
-        ).toBe(toKey(select({ length: "1 in" }), parameters));
+        ).toBe(DEFAULT_CONFIGURATION_KEY);
+    });
+
+    it("names parameters in declaration order, not object order", () => {
+        const key = toKey(select({ flag: "true", size: "l" }), parameters);
+        expect(key).toBe("size=l;flag=true");
+    });
+
+    it("drops a parameter the selection hides", () => {
+        const hidden = enumParam("hidden", ["x", "y"], {
+            condition: { type: VisibilityType.EQUAL, id: "size", value: "s" }
+        });
+        const params = [size, hidden];
+        expect(toKey(select({ size: "l", hidden: "y" }, params), params)).toBe(
+            "size=l"
+        );
     });
 
     it("spells an angle in radians", () => {
         const angle = quantityParam("angle", {
             quantityType: QuantityType.ANGLE,
             unit: Unit.DEGREE,
-            default: "0 deg",
             defaultValue: 0,
             max: 360
         });
-        // Read back out of the key rather than sliced off it, so this stays
-        // about the spelling and not about how a key encodes one.
         const key = toKey(select({ angle: "180 deg" }, [angle]), [angle]);
         const spelled = decodeConfiguration(key).angle;
         expect(spelled).toMatch(/ rad$/);
@@ -110,30 +116,33 @@ describe("toKey", () => {
     });
 });
 
-describe("fromKey", () => {
-    it("round-trips every key toKey produces", () => {
-        const cases: Record<string, string>[] = [
-            { size: "l" },
-            { size: "l", flag: "true", length: "2 in" },
-            { size: "s" }
-        ];
-        for (const values of cases) {
-            const key = toKey(select(values), parameters);
-            expect(toKey(fromKey(key, parameters), parameters)).toBe(key);
-        }
+describe("onshapeOverrides", () => {
+    it("sends a quantity as it was entered, not as its value", () => {
+        expect(
+            onshapeOverrides(select({ length: "(2 + 3) in" }), parameters)
+        ).toEqual({ length: "(2 + 3) in" });
     });
 
-    it("fills what the key leaves unnamed", () => {
-        expect(fromKey("size=l", parameters)).toEqual(select({ size: "l" }));
+    it("leaves out a value that is the default however it is spelled", () => {
+        expect(
+            onshapeOverrides(select({ length: "25.4 mm" }), parameters)
+        ).toEqual({});
+    });
+});
+
+describe("toShortestConfiguration", () => {
+    it("names the first applied parameter at its value", () => {
+        expect(toShortestConfiguration(select({}), parameters)).toEqual({
+            size: "s"
+        });
     });
 });
 
 describe("appliedValues", () => {
-    const hidden = boolParam("reinforced");
     const params = [
         size,
         {
-            ...hidden,
+            ...boolParam("reinforced"),
             condition: {
                 type: VisibilityType.EQUAL as const,
                 id: "size",
@@ -156,8 +165,43 @@ describe("appliedValues", () => {
     });
 });
 
+describe("canonicalValues", () => {
+    // Analytics counts these, where one value typed two ways is one value.
+    it("spells two expressions of one value alike", () => {
+        expect(canonicalValues(select({ length: "5 in" }), parameters)).toEqual(
+            canonicalValues(select({ length: "(2 + 3) in" }), parameters)
+        );
+    });
+});
+
+describe("findRecord", () => {
+    const own = { values: {} };
+    const large = { values: { size: "l" } };
+    const largeFlagged = { values: { size: "l", flag: "true" } };
+    const records = [own, large, largeFlagged];
+
+    it("picks the record naming the most of the selection", () => {
+        expect(findRecord(select({ size: "l", flag: "true" }), records)).toBe(
+            largeFlagged
+        );
+        expect(findRecord(select({ size: "l" }), records)).toBe(large);
+    });
+
+    // A record omits what its enumeration hid, so the selection's value for
+    // that parameter says nothing either way.
+    it("matches a record that omits a parameter it hid", () => {
+        const b = { values: { size: "l" } };
+        expect(findRecord({ size: "l", hidden: "x" }, [own, b])).toBe(b);
+    });
+
+    it("falls back to the element's own record", () => {
+        expect(findRecord(select({}), records)).toBe(own);
+    });
+});
+
 describe("formatValue", () => {
-    it("reads a quantity back in the unit its parameter declares", () => {
+    it("reads a quantity evaluated, in the unit its parameter declares", () => {
+        expect(formatValue(length, "(1 + 1) in")).toBe("2 in");
         expect(formatValue(length, "0.0508 m")).toBe("2 in");
     });
 
@@ -168,45 +212,6 @@ describe("formatValue", () => {
 
     it("leaves everything else as stored", () => {
         expect(formatValue(size, "l")).toBe("l");
-        // An option id needs the options to be named, which this does not have.
         expect(formatValue(flag, "unset")).toBe("unset");
-    });
-});
-
-// An indexed record varies enumerated parameters only, while the insert menu
-// holds the whole selection. One key is what makes the two agree on a render.
-describe("the surfaces agree", () => {
-    const finish = enumParam("finish", ["matte", "gloss"], {
-        isCosmetic: true
-    });
-    const all = [size, flag, finish, length];
-
-    it("spells an enumerated record and the equivalent selection alike", () => {
-        expect(toKey(select({ size: "l", flag: "false" }, all), all)).toBe(
-            toKey(
-                select(
-                    {
-                        size: "l",
-                        flag: "false",
-                        finish: "matte",
-                        length: "1 in"
-                    },
-                    all
-                ),
-                all
-            )
-        );
-    });
-
-    it("spells a non-default cosmetic or quantity value differently", () => {
-        // Enumeration never varies these, but they do change what renders.
-        const record = toKey(select({ size: "l" }, all), all);
-        const cases: Record<string, string>[] = [
-            { size: "l", finish: "gloss" },
-            { size: "l", length: "2 in" }
-        ];
-        for (const values of cases) {
-            expect(toKey(select(values, all), all)).not.toBe(record);
-        }
     });
 });

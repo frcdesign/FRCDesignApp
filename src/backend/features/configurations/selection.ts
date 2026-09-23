@@ -1,52 +1,47 @@
 /**
  * The two forms a configuration takes, and the only place either is built.
- * Canonicalizing is lossy: "2 + 3 in" survives only in the input it was typed into.
+ *
+ * A selection is what someone picked, spelled as they picked it, and it is what
+ * Onshape is sent and what gets stored. A key is derived from one only to name
+ * its thumbnail: it canonicalizes, which loses the expression that was typed.
  */
 import {
     type ConfigurationKey,
     type ConfigurationParameter,
+    type ConfigurationRecord,
     ParameterType,
     type PartialSelection,
     type QuantityParameter,
     type Selection
 } from "./contract";
+import { getUnitDisplayStr } from "./enums";
 import {
     DEFAULT_QUANTITY_PRECISION,
-    decodeConfiguration,
     encodeConfiguration,
     evaluateCondition
 } from "./utils";
 import {
     evaluateBaseValue,
     formatBaseValue,
-    formatValueInUnit,
     formatValueWithUnits
 } from "./input-parser";
 
-/** Normalizes one parameter's raw value to its canonical spelling. */
-export function canonicalizeValue(
-    parameter: ConfigurationParameter,
-    value: string
+/**
+ * A quantity's default as Onshape declares it, in the parameter's own unit:
+ * "1 in". What a quantity's `default` is spelled as.
+ */
+export function quantityDefault(
+    parameter: Pick<QuantityParameter, "defaultValue" | "unit">
 ): string {
-    if (parameter.type === ParameterType.QUANTITY) {
-        // "1in", "1 in" and "25.4 mm" are one configuration: the parser reads
-        // them to one base value. Unparseable values ride as typed.
-        const base = evaluateBaseValue(
-            value,
-            parameter.quantityType,
-            parameter.unit
-        );
-        return base === undefined ? value.trim() : formatBaseValue(base);
-    }
-    if (parameter.type === ParameterType.BOOLEAN) {
-        return value.trim().toLowerCase();
-    }
-    return value.trim();
+    const abbreviation = getUnitDisplayStr(parameter.unit);
+    const value = String(parameter.defaultValue);
+    return abbreviation ? `${value} ${abbreviation}` : value;
 }
 
 /**
- * Every declared parameter, canonically spelled and in parameter order. Filled
- * from the defaults, so a partial map — a search hit's overrides — comes whole.
+ * Every declared parameter, and nothing else. What arrived is kept as it was
+ * entered, except that a checkbox is spelled the one way Onshape spells it and
+ * a quantity loses surrounding whitespace; what is missing takes its default.
  */
 export function toSelection(
     values: PartialSelection,
@@ -54,10 +49,14 @@ export function toSelection(
 ): Selection {
     const selection: Selection = {};
     for (const parameter of parameters) {
-        selection[parameter.id] = canonicalizeValue(
-            parameter,
-            values[parameter.id] ?? parameter.default
-        );
+        const value = values[parameter.id] ?? parameter.default;
+        if (parameter.type === ParameterType.BOOLEAN) {
+            selection[parameter.id] = value.trim().toLowerCase();
+        } else if (parameter.type === ParameterType.QUANTITY) {
+            selection[parameter.id] = value.trim();
+        } else {
+            selection[parameter.id] = value;
+        }
     }
     return selection;
 }
@@ -83,8 +82,58 @@ export function appliedValues(
     return values;
 }
 
-/** What a selection changes from the element's own defaults, and nothing else. */
-function overriddenValues(
+/**
+ * One spelling per value: a quantity in base units, so "1in", "1 in" and
+ * "25.4 mm" agree. An unparseable quantity keeps its own spelling.
+ */
+export function canonicalValue(
+    parameter: ConfigurationParameter,
+    value: string
+): string {
+    if (parameter.type !== ParameterType.QUANTITY) {
+        return value;
+    }
+    const base = evaluateBaseValue(
+        value,
+        parameter.quantityType,
+        parameter.unit
+    );
+    return base === undefined ? value : formatBaseValue(base);
+}
+
+/**
+ * The applied values, canonically spelled: what two selections are compared by,
+ * and what analytics counts, where "5 in" and "(2 + 3) in" are one value.
+ */
+export function canonicalValues(
+    selection: Selection,
+    parameters: ConfigurationParameter[]
+): Selection {
+    const applied = appliedValues(selection, parameters);
+    const values: Selection = {};
+    for (const parameter of parameters) {
+        const value = applied[parameter.id];
+        if (value !== undefined) {
+            values[parameter.id] = canonicalValue(parameter, value);
+        }
+    }
+    return values;
+}
+
+/** Whether a value is the parameter's default, however either is spelled. */
+function isDefault(parameter: ConfigurationParameter, value: string): boolean {
+    return (
+        canonicalValue(parameter, value) ===
+        canonicalValue(parameter, parameter.default)
+    );
+}
+
+/**
+ * What Onshape is told: only what the selection changes from the element's
+ * defaults, each value as it was entered, so a typed "(2 + 3) in" reaches
+ * Onshape as that. Empty for the element's defaults.
+ */
+export function onshapeOverrides(
     selection: Selection,
     parameters: ConfigurationParameter[]
 ): Selection {
@@ -92,7 +141,7 @@ function overriddenValues(
     const overrides: Selection = {};
     for (const parameter of parameters) {
         const value = values[parameter.id];
-        if (value !== undefined && value !== parameter.default) {
+        if (value !== undefined && !isDefault(parameter, value)) {
             overrides[parameter.id] = value;
         }
     }
@@ -100,90 +149,76 @@ function overriddenValues(
 }
 
 /**
- * A selection's identity: what it overrides, encoded. Two selections that
- * render the same thing key the same, and so share a cache entry.
+ * A selection's thumbnail identity: what it overrides, canonically spelled.
+ * Two selections that render the same part key the same.
  */
 export function toKey(
     selection: Selection,
     parameters: ConfigurationParameter[]
 ): ConfigurationKey {
-    return encodeConfiguration(overriddenValues(selection, parameters));
-}
-
-/**
- * Values encoded the way Onshape is told them, quantities in their own unit.
- * Never a key and never stored as one: a key is an identity, so it stays in
- * base units where two equal values spell alike, while this is only ever read
- * by Onshape, which would rather be told "1.5 in".
- */
-function encodeForOnshape(
-    values: Selection,
-    parameters: ConfigurationParameter[]
-): string {
-    const spelled: Selection = {};
+    const overrides = onshapeOverrides(selection, parameters);
+    const canonical: Selection = {};
     for (const parameter of parameters) {
-        const value = values[parameter.id];
-        if (value === undefined) {
-            continue;
+        const value = overrides[parameter.id];
+        if (value !== undefined) {
+            canonical[parameter.id] = canonicalValue(parameter, value);
         }
-        spelled[parameter.id] =
-            parameter.type === ParameterType.QUANTITY
-                ? toExpression(parameter, value)
-                : value;
     }
-    return encodeConfiguration(spelled);
-}
-
-/** The overrides an insert hands Onshape: the short form, empty for defaults. */
-export function toOnshapeConfiguration(
-    selection: Selection,
-    parameters: ConfigurationParameter[]
-): string {
-    return encodeForOnshape(
-        overriddenValues(selection, parameters),
-        parameters
-    );
+    return encodeConfiguration(canonical);
 }
 
 /**
  * The shortest configuration that is not empty: the first parameter the
  * selection applies, at the value it applies. Onshape fills the rest in from the
- * element's own defaults, so it names the same render "" does — for a caller
- * that must hand Onshape a configuration but cannot hand it "".
+ * element's own defaults, so it names the same part no overrides do — for a
+ * caller that must hand Onshape a configuration but cannot hand it an empty one.
  *
  * Itself empty only when a condition hides every parameter the element has.
  */
 export function toShortestConfiguration(
     selection: Selection,
     parameters: ConfigurationParameter[]
-): string {
+): Selection {
     const values = appliedValues(selection, parameters);
     const first = parameters.find(
         (parameter) => values[parameter.id] !== undefined
     );
-    return first === undefined ? "" : encodeForOnshape(values, [first]);
-}
-
-/** The selection a key names: its overrides, over the parameters' defaults. */
-export function fromKey(
-    key: ConfigurationKey,
-    parameters: ConfigurationParameter[]
-): Selection {
-    return toSelection(decodeConfiguration(key), parameters);
+    return first === undefined ? {} : { [first.id]: values[first.id] };
 }
 
 /**
- * A value as a person reads it: a quantity in the unit its parameter declares
- * rather than the base unit it is stored in, and a checkbox as its state. An
- * enum's value is its option id, which only its own options can name, so the
- * caller holding them spells that one.
+ * The record a selection produces. Records name only what enumeration varied,
+ * so several can match — the element's own, naming nothing, always does — and
+ * the one naming the most wins.
+ */
+export function findRecord<T extends Pick<ConfigurationRecord, "values">>(
+    selection: Selection,
+    records: T[]
+): T | undefined {
+    let best: T | undefined;
+    let bestNamed = -1;
+    for (const record of records) {
+        const named = Object.entries(record.values);
+        const matches = named.every(([id, value]) => selection[id] === value);
+        if (matches && named.length > bestNamed) {
+            best = record;
+            bestNamed = named.length;
+        }
+    }
+    return best;
+}
+
+/**
+ * A value as a person reads it: a quantity evaluated, in the unit its parameter
+ * declares, and a checkbox as its state. An enum's value is its option id,
+ * which only its own options can name, so the caller holding them spells that.
  */
 export function formatValue(
     parameter: ConfigurationParameter,
     value: string
 ): string {
     if (parameter.type === ParameterType.BOOLEAN) {
-        // Anything else was not written by `canonicalizeValue`, so it rides as
+        // Anything else was not written by `toSelection`, so it rides as
         // stored rather than being read as a "No".
         if (value === "true") return "Yes";
         if (value === "false") return "No";
@@ -204,25 +239,4 @@ export function formatValue(
               parameter.unit,
               DEFAULT_QUANTITY_PRECISION
           );
-}
-
-/**
- * What Onshape is handed for a quantity: the parameter's own unit, so a derived
- * feature reads "1.5 in" rather than the "0.0381 meter" a selection stores.
- * Both name the same value — this is the one a person recognizes as theirs.
- *
- * Not the expression that was typed: that lives in the input and nowhere else,
- * so "2 + 3 in" arrives here as "5 in". Unlike {@link formatValue} it keeps
- * every decimal, being the value Onshape builds from rather than a label.
- */
-export function toExpression(
-    parameter: QuantityParameter,
-    value: string
-): string {
-    const base = evaluateBaseValue(
-        value,
-        parameter.quantityType,
-        parameter.unit
-    );
-    return base === undefined ? value : formatValueInUnit(base, parameter.unit);
 }

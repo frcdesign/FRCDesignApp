@@ -10,9 +10,8 @@ import {
 } from "../../db/schema";
 import { LibraryId } from "./library-id";
 import { InsertableOut, LibraryOut, Insertables, Groups } from "./contract";
-import { ConfigurationRecord } from "../configurations/contract";
 import { toRecords } from "../configurations/utils";
-import { buildSearchDb } from "../search/build";
+import { buildSearchDb, type IndexedConfiguration } from "../search/build";
 
 /**
  * Assembles the full `LibraryOut` (groups + insertables, in sort order) for a
@@ -182,9 +181,13 @@ export async function bumpLibraryVersion(
         });
 }
 
-/** The R2 object key holding a library's serialized MiniSearch index. */
+/**
+ * The R2 object key holding a library's serialized MiniSearch index. Versioned
+ * by the shape of what it stores: an index written in an older shape is left
+ * behind rather than read, and the route rebuilds a missing one.
+ */
 export function searchIndexKey(libraryId: LibraryId): string {
-    return `search-index/${libraryId}.json`;
+    return `search-index/v2/${libraryId}.json`;
 }
 
 /** Rebuilds a library's search index into R2; bump `cacheVersion` alongside. */
@@ -193,11 +196,11 @@ export async function rebuildSearchDb(
     db: Db,
     libraryId: LibraryId
 ): Promise<string> {
-    const [libraryData, recordsMap] = await Promise.all([
+    const [libraryData, indexed] = await Promise.all([
         getLibraryOut(db, libraryId),
-        getRecordsMap(db, libraryId)
+        getIndexedConfigurations(db, libraryId)
     ]);
-    const searchDb = JSON.stringify(buildSearchDb(libraryData, recordsMap));
+    const searchDb = JSON.stringify(buildSearchDb(libraryData, indexed));
     // Uncompressed: encoding here would leave the runtime compressing an
     // already-compressed body.
     await bucket.put(searchIndexKey(libraryId), searchDb, {
@@ -207,17 +210,19 @@ export async function rebuildSearchDb(
 }
 
 /**
- * The records `buildSearchDb` dedupes: an element's own part data plus one per
- * indexed configuration. Left joined — an unconfigurable element has no row.
+ * What `buildSearchDb` indexes: an element's own part data plus one record per
+ * indexed configuration, and the parameters those are read against. Left
+ * joined — an unconfigurable element has no row.
  */
-async function getRecordsMap(
+async function getIndexedConfigurations(
     db: Db,
     libraryId: LibraryId
-): Promise<Record<string, ConfigurationRecord[]>> {
+): Promise<Record<string, IndexedConfiguration>> {
     const rows = await db
         .select({
             id: insertables.id,
             partMetadata: insertables.partMetadata,
+            parameters: configurations.parameters,
             records: configurations.records
         })
         .from(insertables)
@@ -228,12 +233,12 @@ async function getRecordsMap(
         .where(eq(insertables.libraryId, libraryId))
         .all();
 
-    const recordsMap: Record<string, ConfigurationRecord[]> = {};
+    const indexed: Record<string, IndexedConfiguration> = {};
     for (const row of rows) {
         const records = toRecords(row.partMetadata, row.records ?? []);
         if (records.length > 0) {
-            recordsMap[row.id] = records;
+            indexed[row.id] = { parameters: row.parameters ?? [], records };
         }
     }
-    return recordsMap;
+    return indexed;
 }

@@ -1,20 +1,22 @@
 import { OnshapeApi } from "../client";
 import { ElementPath, toElementApiPath } from "../path";
 import { apiPath } from "../api-path";
-import { type ConfigurationKey } from "../../../features/configurations/contract";
-import { toQueryConfiguration } from "../../../features/configurations/utils";
+import { type Selection } from "../../../features/configurations/contract";
+import { encodeQueryConfiguration } from "../../../features/configurations/utils";
 import type { OnshapePart } from "../types";
 
-/** Returns the parts of a part studio for a given configuration. */
+/**
+ * Returns the parts of a part studio, configured by what `configuration`
+ * changes from the element's defaults.
+ */
 export function getParts(
     client: OnshapeApi,
     elementPath: ElementPath,
-    configurationKey: ConfigurationKey
+    configuration: Selection
 ): Promise<OnshapePart[]> {
+    // The query form: this is escaped again on its way out.
+    const encoded = encodeQueryConfiguration(configuration);
     return client.get(apiPath("parts", elementPath, toElementApiPath), {
-        // The query form, not the key: this is escaped again on its way out.
-        query: configurationKey
-            ? { configuration: toQueryConfiguration(configurationKey) }
-            : {}
+        query: encoded ? { configuration: encoded } : {}
     });
 }

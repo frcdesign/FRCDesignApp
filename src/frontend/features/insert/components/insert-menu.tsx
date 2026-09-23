@@ -22,7 +22,7 @@ import { FavoriteButton } from "../../favorites/components/favorite-button";
 import { MenuButton } from "../../../components/app-menu";
 import { GetAppCallout } from "../../../components/get-app";
 import { InsertableMenuItems } from "../../library/components/insertable-card";
-import { ConfigurationWrapper } from "./configurations";
+import { ConfigurationWrapper, type SelectionReport } from "./configurations";
 import {
     useConfigurationQuery,
     useInsertMutation,
@@ -31,9 +31,10 @@ import {
 import {
     type ConfigurationKey,
     DEFAULT_CONFIGURATION_KEY,
-    Selection,
-    SearchRecord
+    type PartialSelection,
+    Selection
 } from "@backend/features/configurations/contract";
+import { encodeConfiguration } from "@backend/features/configurations/utils";
 import { useFavorite } from "../../favorites/queries";
 import { useGetUiState, updateUiState } from "../../../lib/ui-state";
 import { RequireSignIn } from "../../auth/access-level";
@@ -45,31 +46,35 @@ interface InsertMenuContentProps {
     insertable: InsertableOut;
     /** The modal this renders in, so the header can track the selection. */
     modalId: string;
-    initialSelection?: Selection;
-    /** That selection's key, so the preview and the url have it before the
-     * parameters load and the panel reports its own. */
+    initialSelection?: PartialSelection;
+    /** That selection's key, so the preview has it before the parameters load
+     * and the panel reports its own. */
     initialConfigurationKey?: ConfigurationKey;
+    /** Every selection the menu settles on, the last being what it closed on. */
+    onSelectionChange?: (selection: Selection) => void;
     onInsert: () => void;
     source: InsertSource;
 }
 
 export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
-    const { insertable, modalId, onInsert, source } = props;
+    const { insertable, modalId, onSelectionChange, onInsert, source } = props;
     const favorite = useFavorite(insertable.id);
     useThumbnailWaitTip();
 
-    const [selection, setSelection] = useState(props.initialSelection);
-    // Reported by ConfigurationWrapper, which has the parameters the key is
-    // measured against. Empty means the element's own defaults.
-    const [configurationKey, setConfigurationKey] = useState(
-        props.initialConfigurationKey ?? DEFAULT_CONFIGURATION_KEY
-    );
+    const [selection, setSelection] = useState<
+        PartialSelection | Selection | undefined
+    >(props.initialSelection);
+    // Undefined until the panel settles the selection against its parameters.
+    const [report, setReport] = useState<SelectionReport>();
+    const configurationKey =
+        report?.configurationKey ??
+        props.initialConfigurationKey ??
+        DEFAULT_CONFIGURATION_KEY;
     // What the preview stops following for a signed-out caller.
     const [isEdited, setIsEdited] = useState(false);
     // Whether an insert would be one a right-click could have done: cleared
     // by an edit below, and by the menu having been up long enough to read.
     const [canShowQuickInsertTip, setCanShowQuickInsertTip] = useState(true);
-    const [record, setRecord] = useState<SearchRecord | undefined>(undefined);
     // A part with no parameters has one record — the element's own part data —
     // which no ConfigurationWrapper is mounted to report, but the title wants.
     const soleRecord = useConfigurationQuery(
@@ -80,7 +85,7 @@ export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
 
     useMenuTitle(modalId, {
         name: insertable.name,
-        record: record ?? soleRecord
+        record: report?.record ?? soleRecord
     });
     useSignInPreviewTip(isEdited);
 
@@ -92,8 +97,14 @@ export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
     // What the url carries, so a relaunch reopens the configuration on screen
     // rather than the one the menu was opened with.
     useEffect(() => {
-        updateUiState({ openConfigurationKey: configurationKey || undefined });
-    }, [configurationKey]);
+        if (report) {
+            updateUiState({
+                openConfiguration:
+                    encodeConfiguration(report.overrides) || undefined
+            });
+            onSelectionChange?.(report.selection);
+        }
+    }, [report, onSelectionChange]);
 
     useEffect(() => {
         const timer = setTimeout(
@@ -111,8 +122,7 @@ export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
                 microversionId={insertable.microversionId}
                 selection={selection}
                 setSelection={setSelection}
-                onConfigurationKey={setConfigurationKey}
-                onRecord={setRecord}
+                onReport={setReport}
                 onEdit={onEdit}
             />
         );
@@ -149,7 +159,7 @@ export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
 interface InsertMenuFooterProps {
     insertable: InsertableOut;
     favorite: Favorite | undefined;
-    selection?: Selection;
+    selection?: PartialSelection;
     configurationKey: ConfigurationKey;
     /** Whether an insert now is worth pointing out a right-click for. */
     canShowQuickInsertTip: boolean;
@@ -208,7 +218,7 @@ interface InsertButtonsProps {
     /** Whether an insert now is worth pointing out a right-click for. */
     canShowQuickInsertTip: boolean;
     insertable: InsertableOut;
-    selection?: Selection;
+    selection?: PartialSelection;
     isFavorite: boolean;
     onInsert: () => void;
     source: InsertSource;

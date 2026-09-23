@@ -21,9 +21,9 @@ describe("makeUrl", () => {
     // Once, by the url: a quantity that reaches Onshape as `%2520m` is the
     // value `0.381%20m`, which is no quantity.
     it("escapes a configuration once", () => {
-        const url = makeUrl({
-            ...element,
-            selection: { Effective_Length: "0.381 m", List_7A7: "Hex" }
+        const url = makeUrl(element, {
+            Effective_Length: "0.381 m",
+            List_7A7: "Hex"
         });
 
         expect(url).toBe(

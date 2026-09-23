@@ -4,9 +4,18 @@
  */
 import MiniSearch from "minisearch";
 import { LibraryOut } from "../library/contract";
-import { ConfigurationRecord, SearchRecord } from "../configurations/contract";
+import {
+    type ConfigurationParameter,
+    type ConfigurationRecord
+} from "../configurations/contract";
 import { SEARCH_OPTIONS, type SearchDocument } from "./contract";
-import { toSearchRecords } from "./records";
+import { distinctRecords, toSearchRecords } from "./records";
+
+/** What indexing one insertable's configurations needs. */
+export interface IndexedConfiguration {
+    parameters: ConfigurationParameter[];
+    records: ConfigurationRecord[];
+}
 
 /** Joins the distinct non-null values with spaces (a searchable field's form). */
 function uniqueJoin(values: (string | undefined)[]): string {
@@ -17,7 +26,7 @@ function uniqueJoin(values: (string | undefined)[]): string {
 
 export function buildSearchDb(
     libraryData: LibraryOut,
-    recordsMap: Record<string, ConfigurationRecord[]> = {}
+    configurations: Record<string, IndexedConfiguration> = {}
 ): MiniSearch<SearchDocument> {
     const searchDb = new MiniSearch<SearchDocument>(SEARCH_OPTIONS);
 
@@ -27,9 +36,13 @@ export function buildSearchDb(
         .filter((element) => !!element)
         .map((element) => {
             const parentGroup = libraryData.groups[element.groupId];
-            const records = toSearchRecords(
-                recordsMap[element.id] ?? [],
-                element.vendors
+            const configuration = configurations[element.id];
+            const records = distinctRecords(
+                toSearchRecords(
+                    configuration?.records ?? [],
+                    configuration?.parameters ?? [],
+                    element.vendors
+                )
             );
             return {
                 id: element.id,
@@ -39,11 +52,9 @@ export function buildSearchDb(
                 name: element.name,
                 groupName: parentGroup.name,
                 partNumbers: uniqueJoin(
-                    records.map((record: SearchRecord) => record.partNumber)
+                    records.map((record) => record.partNumber)
                 ),
-                partNames: uniqueJoin(
-                    records.map((record: SearchRecord) => record.name)
-                ),
+                partNames: uniqueJoin(records.map((record) => record.name)),
                 records
             };
         });

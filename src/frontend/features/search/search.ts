@@ -6,7 +6,10 @@ import {
     SearchDocument
 } from "@backend/features/search/contract";
 import { matchedRecord } from "@backend/features/search/records";
-import { type ConfigurationKey } from "@backend/features/configurations/contract";
+import {
+    type ConfigurationKey,
+    type PartialSelection
+} from "@backend/features/configurations/contract";
 
 /** As many results as a list is worth scrolling. */
 const MAX_HITS = 50;
@@ -22,8 +25,10 @@ export interface SearchHit {
     positions: Position[];
     /**
      * The best-matching record for this hit, used to pre-fill the insert menu —
-     * its part number, name, and the key of the selection producing it.
+     * its part number, name, and the values producing it.
      */
+    values?: PartialSelection;
+    /** Those values' key, for the row's thumbnail. */
     configurationKey?: ConfigurationKey;
     partNumber?: string;
     partName?: string;
@@ -156,6 +161,7 @@ export function doSearch(args: SearchArgs): SearchResult {
                     document.name,
                     "name"
                 ),
+                values: record?.values,
                 configurationKey: record?.configurationKey,
                 partNumber,
                 partName,

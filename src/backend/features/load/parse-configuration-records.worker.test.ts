@@ -8,11 +8,10 @@ import type {
 } from "../../lib/onshape/types";
 import { ElementPath } from "../../lib/onshape/path";
 import {
-    DEFAULT_CONFIGURATION_KEY,
-    Selection,
-    ConfigurationParameter
+    type ConfigurationParameter,
+    type PartialSelection,
+    type Selection
 } from "../configurations/contract";
-import { decodeConfiguration } from "../configurations/utils";
 import {
     enumParam,
     paramsWithConfigs
@@ -94,7 +93,7 @@ describe("parsePartStudioRecord", () => {
                 false
             )
         ).toEqual({
-            selection: { size: "L" },
+            values: { size: "L" },
             partNumber: "217-2600",
             name: "Bracket",
             description: "A bracket",
@@ -140,7 +139,7 @@ describe("parsePartStudioRecord", () => {
                 true
             )
         ).toEqual({
-            selection: { size: "S" },
+            values: { size: "S" },
             hasMultipleParts: false,
             // The composite it was expected to resolve to is gone.
             isOpenComposite: false
@@ -149,7 +148,7 @@ describe("parsePartStudioRecord", () => {
 
     it("returns an all-null record for an empty response", () => {
         expect(parsePartStudioRecord([], { A: "a1" }, false)).toEqual({
-            selection: { A: "a1" },
+            values: { A: "a1" },
             hasMultipleParts: false,
             isOpenComposite: false
         });
@@ -170,7 +169,7 @@ describe("parseAssemblyRecord", () => {
             ]
         };
         expect(parseAssemblyRecord(metadata, { q: "1" })).toEqual({
-            selection: { q: "1" },
+            values: { q: "1" },
             partNumber: "AM-1234",
             name: "Gearbox",
             description: "A gearbox",
@@ -184,24 +183,21 @@ describe("parseAssemblyRecord", () => {
 
 /**
  * Mocks the parts endpoint, deriving a studio's parts from what the probe
- * overrode — a key names that alone, the defaults being left out of it.
+ * overrode — only that is sent, Onshape filling in the defaults.
  */
 function mockParts(partsFor: (overrides: Selection) => OnshapePart[]) {
     return vi
         .spyOn(PartsEndpoints, "getParts")
-        .mockImplementation((_client, _path, configurationKey) =>
-            Promise.resolve(partsFor(decodeConfiguration(configurationKey)))
+        .mockImplementation((_client, _path, configuration) =>
+            Promise.resolve(partsFor(configuration))
         );
 }
 
-/**
- * The combinations the load would probe: whole selections, which is what
- * `decideIndexing` makes of what enumeration names.
- */
+/** The combinations the load would probe, as enumeration names them. */
 function probeSelections(
     parameters: ConfigurationParameter[],
     elementType: ElementType = ElementType.PART_STUDIO
-): Selection[] {
+): PartialSelection[] {
     return decideIndexing(elementType, parameters, true).configurations;
 }
 
@@ -238,18 +234,14 @@ describe("parseConfigurationRecords", () => {
         expect(result.records.map((r) => r.partNumber)).toEqual(["PN-a2"]);
     });
 
-    // A stored record is addressed by its key; carrying the selection it was
-    // probed with would put a second copy of that in every row.
-    it("stores the key alone, not the selection behind it", async () => {
+    it("stores the values each record was probed with", async () => {
         mockParts(() => [{ partId: "p", partNumber: "PN" }]);
 
         const result = await probeRecords([enumParam("A", ["a1", "a2"])]);
 
-        expect(result.records).not.toHaveLength(0);
-        for (const record of result.records) {
-            expect(record).not.toHaveProperty("selection");
-            expect(record.configurationKey).toBe("A=a2");
-        }
+        expect(result.records.map((record) => record.values)).toEqual([
+            { A: "a2" }
+        ]);
     });
 
     it("fills the vendor Onshape leaves unset, per configuration", async () => {
@@ -305,7 +297,7 @@ describe("parseConfigurationRecords", () => {
         expect(result.buildIssues).toEqual([
             {
                 type: BuildIssueType.CONFIGURATION_MULTIPLE_PARTS,
-                configurationKey: "A=a2",
+                values: { A: "a2" },
                 configurationCount: 2
             }
         ]);
@@ -347,7 +339,7 @@ describe("parseConfigurationRecords", () => {
         expect(result.buildIssues).toEqual([
             {
                 type: BuildIssueType.UNSTABLE_COMPOSITE,
-                configurationKey: "A=a2",
+                values: { A: "a2" },
                 configurationCount: 1
             }
         ]);
@@ -385,10 +377,6 @@ describe("parseConfigurationRecords", () => {
             hasMultipleParts: false,
             isOpenComposite: false
         });
-        expect(spy).toHaveBeenCalledWith(
-            CLIENT,
-            PATH,
-            DEFAULT_CONFIGURATION_KEY
-        );
+        expect(spy).toHaveBeenCalledWith(CLIENT, PATH, {});
     });
 });

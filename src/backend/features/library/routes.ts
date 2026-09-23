@@ -4,7 +4,7 @@ import { getApp } from "../../lib/context";
 import { getLibraryParam, libraryRoute } from "../../lib/route-params";
 import { getDb } from "../../db/client";
 import { libraries } from "../../db/schema";
-import { getLibraryOut, searchIndexKey } from "./db";
+import { getLibraryOut, rebuildSearchDb, searchIndexKey } from "./db";
 
 export const libraryRoutes = getApp();
 
@@ -47,7 +47,16 @@ libraryRoutes.get(
 
         const object = await c.env.BLOB.get(searchIndexKey(libraryId));
         if (!object) {
-            return c.notFound();
+            // Never built in the shape this deploy reads; build it now rather
+            // than waiting on the next load.
+            const searchDb = await rebuildSearchDb(
+                c.env.BLOB,
+                getDb(c.env.DB),
+                libraryId
+            );
+            return new Response(searchDb, {
+                headers: { "Content-Type": "application/json" }
+            });
         }
 
         const headers = new Headers();

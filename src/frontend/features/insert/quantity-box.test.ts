@@ -5,7 +5,6 @@ import {
 } from "@backend/features/configurations/contract";
 import { QuantityType, Unit } from "@backend/features/configurations/enums";
 import { getEvaluateOptions } from "@backend/features/configurations/utils";
-import { canonicalizeValue } from "@backend/features/configurations/selection";
 import { seedFrom } from "./quantity-box";
 
 const SHAFT_LENGTH: QuantityParameter = {
@@ -25,25 +24,21 @@ const SHAFT_LENGTH: QuantityParameter = {
 const STANDALONE = getEvaluateOptions(SHAFT_LENGTH, {});
 
 describe("seedFrom", () => {
-    // A selection is canonically in base units, which is not a spelling anyone
-    // wants handed to them in the box when they click into it.
-    it("opens a canonical value for editing in the parameter's own unit", () => {
-        const canonical = canonicalizeValue(SHAFT_LENGTH, SHAFT_LENGTH.default);
-        expect(canonical).toBe("1.1938 m");
-
-        expect(seedFrom(canonical, SHAFT_LENGTH, STANDALONE)).toEqual({
-            expression: "47 in",
+    // The box edits what was typed and shows what it evaluates to.
+    it("opens an expression for editing as it was entered", () => {
+        expect(seedFrom("(40 + 7) in", SHAFT_LENGTH, STANDALONE)).toEqual({
+            expression: "(40 + 7) in",
             display: "47 in"
         });
     });
 
-    it("renders in the document's unit when there is one", () => {
+    it("shows the value in the document's unit when there is one", () => {
         const metric = getEvaluateOptions(SHAFT_LENGTH, {
             lengthUnit: Unit.MILLIMETER,
             lengthPrecision: 1
         });
-        expect(seedFrom("1.1938 m", SHAFT_LENGTH, metric)).toEqual({
-            expression: "1193.8 mm",
+        expect(seedFrom("47 in", SHAFT_LENGTH, metric)).toEqual({
+            expression: "47 in",
             display: "1193.8 mm"
         });
     });

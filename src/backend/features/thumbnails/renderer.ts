@@ -35,6 +35,7 @@ import {
     NoSuchConfigurationError
 } from "../../lib/onshape/endpoints/thumbnails";
 import { type ConfigurationKey } from "../configurations/contract";
+import { decodeConfiguration } from "../configurations/utils";
 import { PREFERRED_SIZE, RenderSource, ThumbnailSize } from "./contract";
 import { thumbnailKey } from "./keys";
 import { putThumbnail } from "./store";
@@ -382,7 +383,7 @@ export class ThumbnailRenderer extends DurableObject<AppBindings> {
         const thumbnailId = await getThumbnailId(
             onshapeApi,
             elementPath,
-            request.configurationKey
+            decodeConfiguration(request.configurationKey)
         );
         this.ctx.storage.sql.exec(
             "UPDATE jobs SET thumbnailId = ? WHERE request = ?",

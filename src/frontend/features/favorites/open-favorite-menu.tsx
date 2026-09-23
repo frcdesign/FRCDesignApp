@@ -1,5 +1,5 @@
 import { openAppModal } from "../../components/open-app-modal";
-import { type Selection } from "@backend/features/configurations/contract";
+import { type PartialSelection } from "@backend/features/configurations/contract";
 import { FavoriteMenuContent } from "./components/favorite-menu";
 import { MenuTitle } from "../../components/app-title";
 import { FavoriteIcon } from "./components/favorite-button";
@@ -9,7 +9,7 @@ interface OpenFavoriteMenuProps {
     favoriteId: string;
     insertableName: string;
     /** What the favorite opens with today. */
-    selection?: Selection;
+    selection?: PartialSelection;
 }
 
 export function openFavoriteMenu(props: OpenFavoriteMenuProps) {

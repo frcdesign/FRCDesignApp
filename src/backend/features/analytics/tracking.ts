@@ -12,7 +12,7 @@ import {
     type ConfigurationParameter,
     type Selection
 } from "../configurations/contract";
-import { appliedValues } from "../configurations/selection";
+import { canonicalValues } from "../configurations/selection";
 import { toDayKey } from "./day";
 
 export interface InsertEvent {
@@ -96,15 +96,16 @@ export async function trackAppOpen(
 }
 
 /**
- * What Onshape applied for a selection: the values no condition hid. Null when
- * the insertable has nothing to configure, which is what the log records.
+ * What Onshape applied for a selection: the values no condition hid, spelled
+ * canonically so "5 in" and "(2 + 3) in" count as one value. Null when the
+ * insertable has nothing to configure, which is what the log records.
  */
 function appliedSelection(
     selection: Selection | undefined,
     parameters: ConfigurationParameter[]
 ): Selection | null {
     if (!selection || parameters.length === 0) return null;
-    return appliedValues(selection, parameters);
+    return canonicalValues(selection, parameters);
 }
 
 /** What every logged event carries; its kind fills in the rest. */

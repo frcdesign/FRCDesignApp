@@ -7,7 +7,7 @@ import {
     type ConfigurationParameter
 } from "../configurations/contract";
 import { toParameterInstances } from "../configurations/instances";
-import { formatValue } from "../configurations/selection";
+import { canonicalValue, formatValue } from "../configurations/selection";
 import type {
     ConfigurationParameterUsage,
     ConfigurationValueUsage
@@ -55,7 +55,12 @@ export function buildParameterUsage(
                       isImplicitDefault: true
                   })
               }))
-            : toFreeFormValues(counts, parameter, parameter.default);
+            : // Counted canonically, so the default is looked up that way too.
+              toFreeFormValues(
+                  counts,
+                  parameter,
+                  canonicalValue(parameter, parameter.default)
+              );
 
         return {
             parameterId: parameter.id,

@@ -12,13 +12,13 @@ import {
     BuildIssue,
     BuildIssueSeverity,
     BuildIssueType,
-    getIssueConfigurationKey,
+    getIssueConfiguration,
     getIssueDescription,
     getIssueSeverity,
     hasBuildIssue
 } from "@backend/features/build-checker/issues";
 import { ConfigurationParameter } from "@backend/features/configurations/contract";
-import { fromKey } from "@backend/features/configurations/selection";
+import { toSelection } from "@backend/features/configurations/selection";
 import { ElementPath } from "@backend/lib/onshape/path";
 import { makeUrl } from "../../../lib/url";
 import {
@@ -199,7 +199,7 @@ function countSeverities(issues: BuildIssue[]): SeverityCounts {
 
 /**
  * What a configuration issue opens: the tab it belongs to, and the parameters
- * its key is spelled against. An element with no configurations has none.
+ * its values are made whole against. An element with no configurations has none.
  */
 export interface ConfigurationTarget {
     elementPath: ElementPath;
@@ -211,14 +211,11 @@ function getIssueUrl(
     issue: BuildIssue,
     target: ConfigurationTarget | undefined
 ): string | undefined {
-    const key = getIssueConfigurationKey(issue);
-    if (key === undefined || !target) {
+    const values = getIssueConfiguration(issue);
+    if (values === undefined || !target) {
         return undefined;
     }
-    return makeUrl({
-        ...target.elementPath,
-        selection: fromKey(key, target.parameters)
-    });
+    return makeUrl(target.elementPath, toSelection(values, target.parameters));
 }
 
 interface BuildChecksSectionProps {

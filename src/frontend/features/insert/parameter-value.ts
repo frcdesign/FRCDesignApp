@@ -2,6 +2,7 @@ import {
     type ConfigurationParameter,
     type EnumOption,
     ParameterType,
+    type PartialSelection,
     type Selection
 } from "@backend/features/configurations/contract";
 import {
@@ -72,7 +73,10 @@ function normalizeOnce(
     return next;
 }
 
-export function sameSelection(a: Selection | undefined, b: Selection): boolean {
+export function sameSelection(
+    a: PartialSelection | undefined,
+    b: Selection
+): boolean {
     if (!a) return false;
     const keys = Object.keys(b);
     return (

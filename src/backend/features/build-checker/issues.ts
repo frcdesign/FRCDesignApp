@@ -6,7 +6,8 @@ import {
     AUTO_INDEX_THRESHOLD,
     MAX_PART_NUMBER_CONFIGURATIONS
 } from "../configurations/combinations";
-import type { ConfigurationKey } from "../configurations/contract";
+import type { PartialSelection } from "../configurations/contract";
+import { decodeConfiguration } from "../configurations/utils";
 
 export enum BuildIssueSeverity {
     /** A potential issue that is usually fine, e.g. no vendors parsed. */
@@ -47,8 +48,8 @@ interface BuildIssueOf<T extends BuildIssueType> {
 interface ConfigurationBuildIssueOf<
     T extends ConfigurationIssueType
 > extends BuildIssueOf<T> {
-    /** The first offender, which the build card links out to. */
-    configurationKey: ConfigurationKey;
+    /** The first offender's values, which the build card links out to. */
+    values: PartialSelection;
     /** How many configurations raise it, that first one included. */
     configurationCount: number;
 }
@@ -78,11 +79,11 @@ export type BuildIssue =
  */
 export function toConfigurationIssue(
     type: ConfigurationIssueType,
-    offenders: { configurationKey: ConfigurationKey }[]
+    offenders: { values: PartialSelection }[]
 ): BuildIssue {
     return {
         type,
-        configurationKey: offenders[0].configurationKey,
+        values: offenders[0].values,
         configurationCount: offenders.length
     };
 }
@@ -91,10 +92,10 @@ export function toConfigurationIssue(
  * The configuration an issue blames, or undefined where the element itself is
  * at fault and there is nothing narrower to open.
  */
-export function getIssueConfigurationKey(
+export function getIssueConfiguration(
     issue: BuildIssue
-): ConfigurationKey | undefined {
-    return "configurationKey" in issue ? issue.configurationKey : undefined;
+): PartialSelection | undefined {
+    return "values" in issue ? issue.values : undefined;
 }
 
 const BUILD_ISSUE_TYPES = new Set<string>(Object.values(BuildIssueType));
@@ -102,10 +103,27 @@ const BUILD_ISSUE_TYPES = new Set<string>(Object.values(BuildIssueType));
 /**
  * Drops issues this deploy has no check for. A stored array was written by
  * whichever deploy last loaded the row, so it can name a type since removed from
- * `BuildIssueType`, which has no severity or description to render.
+ * `BuildIssueType`, which has no severity or description to render — or blame a
+ * configuration by its key, as issues did before they carried its values.
  */
 export function knownBuildIssues(issues: BuildIssue[]): BuildIssue[] {
-    return issues.filter((issue) => BUILD_ISSUE_TYPES.has(issue.type));
+    return issues
+        .filter((issue) => BUILD_ISSUE_TYPES.has(issue.type))
+        .map(upgradeIssue);
+}
+
+/** An issue written when a blamed configuration was named by its key. */
+function upgradeIssue(issue: BuildIssue): BuildIssue {
+    if (!("configurationKey" in issue)) {
+        return issue;
+    }
+    const { configurationKey, ...rest } = issue as BuildIssue & {
+        configurationKey: string;
+    };
+    return {
+        ...rest,
+        values: decodeConfiguration(configurationKey)
+    } as BuildIssue;
 }
 
 /** A human-readable description of a build issue, shown to editors. */

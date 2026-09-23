@@ -19,7 +19,7 @@ let restored = false;
  * turns the stored id back into a part.
  */
 export function useRestoreInsertMenu(): void {
-    const { openInsertableId, openConfigurationKey, openFavoriteId } =
+    const { openInsertableId, openConfiguration, openFavoriteId } =
         useGetUiState();
     const libraryQuery = useLibraryQuery();
     const favoritesQuery = useFavoritesQuery();
@@ -54,7 +54,7 @@ export function useRestoreInsertMenu(): void {
             // or a link from a library this caller is not in.
             updateUiState({
                 openInsertableId: undefined,
-                openConfigurationKey: undefined,
+                openConfiguration: undefined,
                 openFavoriteId: undefined
             });
             return;
@@ -66,19 +66,22 @@ export function useRestoreInsertMenu(): void {
             ? favoritesQuery.data?.favorites[openFavoriteId]
             : undefined;
 
+        // What the url names wins over the favorite's own: it is what was on
+        // screen, which an edit can have moved off the favorite's selection.
         openInsertMenu({
             insertable,
-            initialSelection: openConfigurationKey
-                ? decodeConfiguration(openConfigurationKey)
-                : favorite?.defaultSelection,
-            configurationKey:
-                openConfigurationKey ?? favorite?.configurationKey,
+            ...(openConfiguration
+                ? { initialSelection: decodeConfiguration(openConfiguration) }
+                : {
+                      initialSelection: favorite?.defaultSelection,
+                      configurationKey: favorite?.configurationKey
+                  }),
             favoriteId: favorite?.id,
             source: favorite ? InsertSource.FAVORITES : InsertSource.BROWSE
         });
     }, [
         openInsertableId,
-        openConfigurationKey,
+        openConfiguration,
         openFavoriteId,
         libraryQuery.isSuccess,
         libraryQuery.data,

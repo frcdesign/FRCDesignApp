@@ -4,58 +4,18 @@ import {
     encodeConfiguration,
     encodeQueryConfiguration,
     evaluateCondition,
-    findRecordForConfiguration,
     getPartUrl,
-    getVisibleOptions,
-    toQueryConfiguration
+    getVisibleOptions
 } from "./utils";
 import {
     OptionVisibilityType,
     PartMetadata,
-    SearchRecord,
     VisibilityType,
     type ConfigurationParameter
 } from "./contract";
 import { LogicalOp } from "./enums";
 import { Vendor } from "../library/vendors";
 import { enumParam } from "../../../__test_utils__/configuration-fixtures";
-
-function rec(configurationKey: string, partNumber = "PN"): SearchRecord {
-    return { partNumber, configurationKey };
-}
-
-describe("findRecordForConfiguration", () => {
-    it("returns the record whose enumerated values match the selection", () => {
-        const records = [rec("size=s", "PN-S"), rec("size=l", "PN-L")];
-        // The selection also carries a non-enumerated (quantity) param, ignored.
-        expect(
-            findRecordForConfiguration("size=l;qty=3", records)?.partNumber
-        ).toBe("PN-L");
-    });
-
-    it("prefers the most specific match when several apply", () => {
-        const records = [rec("", "default"), rec("size=l", "PN-L")];
-        expect(findRecordForConfiguration("size=l", records)?.partNumber).toBe(
-            "PN-L"
-        );
-    });
-
-    it("falls back to a less specific record when a parameter is hidden", () => {
-        const records = [
-            rec("mode=a;detail=x", "A-X"),
-            // `detail` is hidden when mode=b, so this record omits it.
-            rec("mode=b", "B")
-        ];
-        expect(
-            findRecordForConfiguration("mode=b;detail=x", records)?.partNumber
-        ).toBe("B");
-    });
-
-    it("returns undefined when nothing matches", () => {
-        const records = [rec("size=s", "PN-S")];
-        expect(findRecordForConfiguration("size=l", records)).toBeUndefined();
-    });
-});
 
 describe("configuration text", () => {
     it("encodes the empty configuration as the empty string", () => {
@@ -134,13 +94,6 @@ describe("encodeQueryConfiguration", () => {
         expect(
             decodeConfiguration(encodeQueryConfiguration(configuration))
         ).toEqual(configuration);
-    });
-
-    it("rewrites a key into the query form", () => {
-        expect(toQueryConfiguration("length=0.0508%20m;size=l")).toBe(
-            "length=0.0508 m;size=l"
-        );
-        expect(toQueryConfiguration("")).toBe("");
     });
 });
 

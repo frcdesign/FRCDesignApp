@@ -205,9 +205,8 @@ describe("parseOnshapeConfiguration", () => {
         const length = parameters[3];
         if (length.type !== ParameterType.QUANTITY)
             throw new Error("expected QUANTITY");
-        // Canonical, like every value it will be compared against; the
-        // numeric form below is what the input seeds its display from.
-        expect(length.default).toBe("0.0254 m");
+        // In its own unit, as Onshape declares it and a person would type it.
+        expect(length.default).toBe("1 in");
         expect(length.defaultValue).toBe(1);
         expect(length.min).toBe(0);
         expect(length.max).toBe(100000);

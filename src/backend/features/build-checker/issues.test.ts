@@ -6,7 +6,7 @@ import {
     BuildIssueSeverity,
     BuildIssueType,
     clearBuildIssue,
-    getIssueConfigurationKey,
+    getIssueConfiguration,
     getIssueDescription,
     getMaxSeverity,
     knownBuildIssues
@@ -23,20 +23,20 @@ const issue = (severity: BuildIssueSeverity): BuildIssue => ({
     type: TYPE_BY_SEVERITY[severity]
 });
 
-describe("getIssueConfigurationKey", () => {
+describe("getIssueConfiguration", () => {
     it("names the configuration an issue blames", () => {
         expect(
-            getIssueConfigurationKey({
+            getIssueConfiguration({
                 type: BuildIssueType.UNSTABLE_COMPOSITE,
-                configurationKey: "size=large",
+                values: { size: "large" },
                 configurationCount: 1
             })
-        ).toBe("size=large");
+        ).toEqual({ size: "large" });
     });
 
     it("names none where the element itself is at fault", () => {
         expect(
-            getIssueConfigurationKey({ type: BuildIssueType.MULTIPLE_PARTS })
+            getIssueConfiguration({ type: BuildIssueType.MULTIPLE_PARTS })
         ).toBeUndefined();
     });
 });
@@ -50,7 +50,7 @@ describe("getIssueDescription", () => {
         expect(
             getIssueDescription({
                 type: BuildIssueType.CONFIGURATION_MULTIPLE_PARTS,
-                configurationKey: "size=large",
+                values: { size: "large" },
                 configurationCount: count
             })
         ).toBe(expected);
@@ -65,6 +65,21 @@ describe("knownBuildIssues", () => {
         expect(
             knownBuildIssues([retired, { type: BuildIssueType.LOAD_FAILED }])
         ).toEqual([{ type: BuildIssueType.LOAD_FAILED }]);
+    });
+
+    it("reads a configuration blamed by its key as its values", () => {
+        const stored = {
+            type: BuildIssueType.UNSTABLE_COMPOSITE,
+            configurationKey: "size=large",
+            configurationCount: 2
+        } as unknown as BuildIssue;
+        expect(knownBuildIssues([stored])).toEqual([
+            {
+                type: BuildIssueType.UNSTABLE_COMPOSITE,
+                values: { size: "large" },
+                configurationCount: 2
+            }
+        ]);
     });
 
     it("keeps every type it knows", () => {

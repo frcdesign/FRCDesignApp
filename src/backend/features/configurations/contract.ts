@@ -70,13 +70,14 @@ interface AlwaysShownVisibilityCondition {
 
 export interface ConfigurationResult {
     parameters: ConfigurationParameter[];
-    /** The insertable's search records, so the insert menu can show the part
-     * number + name of the selected configuration. Empty when not indexed. */
+    /** Every record probed, so the insert menu can show the part number and
+     * name of the selected configuration. Empty when not indexed. */
     records: SearchRecord[];
 }
 
 /**
- * The slice of a {@link ConfigurationRecord} search needs. MiniSearch-free, so
+ * A {@link ConfigurationRecord} as a client reads it: what the part is called,
+ * where to buy it, and the configuration that produces it. MiniSearch-free, so
  * the index and the `/configuration` route can share it.
  */
 export interface SearchRecord {
@@ -84,10 +85,9 @@ export interface SearchRecord {
     name?: string;
     /** The vendor's page for this part, when one can be resolved. */
     url?: string;
-    /**
-     * The key of the selection producing it, so it names the same render the
-     * insert menu asks for; empty for the element's own defaults.
-     */
+    /** The enumerated values producing it; empty for the element's defaults. */
+    values: PartialSelection;
+    /** Those values' key, which is only for naming its thumbnail. */
     configurationKey: ConfigurationKey;
 }
 
@@ -134,20 +134,23 @@ export interface QuantityParameter extends ConfigurationParameterBase {
 }
 
 /**
- * One selection, keyed by parameter id: always complete, always canonical.
- * `toSelection` is what makes one; nothing else may claim to.
+ * What someone picked, keyed by parameter id: every declared parameter, each
+ * value as it was entered — a quantity is the expression typed, "(2 + 3) in",
+ * never the number it evaluates to. `toSelection` is what makes one.
  */
 export type Selection = Record<string, string>;
 
 /**
  * A selection still being built: enumeration names only what it varies, and a
- * search hit only what it overrides. `toSelection` is what makes one whole.
+ * search hit only what it records. `toSelection` is what makes one whole.
  */
 export type PartialSelection = Partial<Selection>;
 
 /**
- * A selection's identity: what it overrides, which is what addresses a render.
- * {@link DEFAULT_CONFIGURATION_KEY} — empty — overrides nothing, and so is the default.
+ * A selection's identity, for addressing its thumbnail and nothing else: what
+ * it overrides, canonically spelled, so two selections rendering the same part
+ * share one render. Never stored in place of the selection it came from.
+ * {@link DEFAULT_CONFIGURATION_KEY} — empty — overrides nothing.
  */
 export type ConfigurationKey = string;
 
@@ -175,19 +178,13 @@ export interface PartMetadata {
     isOpenComposite: boolean;
 }
 
-/**
- * {@link PartMetadata} for one selection, as it came back from Onshape — keyed
- * by the selection as written rather than as it is stored.
- */
-export interface ProbedRecord extends PartMetadata {
-    /** The selection probed, before it is keyed for storage. */
-    selection: Selection;
-}
-
-/** A probe as it is stored. Kept only for an indexed insertable. */
+/** What one probe came back with, and the enumerated values it probed. */
 export interface ConfigurationRecord extends PartMetadata {
-    /** The key of the selection that produces it. */
-    configurationKey: ConfigurationKey;
+    /**
+     * The enum and boolean values enumeration chose; every other parameter was
+     * at its default. Empty for the element's own defaults.
+     */
+    values: PartialSelection;
 }
 
 /**

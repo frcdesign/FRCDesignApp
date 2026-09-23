@@ -4,8 +4,9 @@ import { openAppModal } from "../../components/open-app-modal";
 import type { InsertableOut } from "@backend/features/library/contract";
 import {
     type ConfigurationKey,
-    type Selection
+    type PartialSelection
 } from "@backend/features/configurations/contract";
+import { encodeConfiguration } from "@backend/features/configurations/utils";
 import { updateUiState } from "../../lib/ui-state";
 
 import {
@@ -19,9 +20,10 @@ import { InsertSource } from "@backend/features/analytics/usage";
 
 interface OpenInsertMenuProps {
     insertable: InsertableOut;
-    initialSelection?: Selection;
-    /** That selection's key, when the caller knows it; the menu reports its
-     * own once the parameters load, which is what keeps the url current. */
+    /** Partial for a search hit or a link, which name only some parameters. */
+    initialSelection?: PartialSelection;
+    /** That selection's key, when the caller knows it, so the preview need not
+     * wait on the parameters loading. */
     configurationKey?: ConfigurationKey;
     /** The favorite this was opened from, so a relaunch can reopen it as one. */
     favoriteId?: string;
@@ -31,7 +33,7 @@ interface OpenInsertMenuProps {
 /** Nothing is open, which is what closing the menu leaves behind. */
 const NO_OPEN_MENU = {
     openInsertableId: undefined,
-    openConfigurationKey: undefined,
+    openConfiguration: undefined,
     openFavoriteId: undefined
 };
 
@@ -44,11 +46,16 @@ export function openInsertMenu(props: OpenInsertMenuProps) {
         source
     } = props;
     let didInsert = false;
+    // What the menu shows when it closes, for the restore toast to reopen.
+    let lastSelection = initialSelection;
     // Recorded rather than merely rendered: the url mirrors this, and a
     // relaunch — an Onshape tab switch among them — reopens what it names.
+    // The menu narrows it to its overrides once the parameters load.
     updateUiState({
         openInsertableId: insertable.id,
-        openConfigurationKey: configurationKey,
+        openConfiguration: initialSelection
+            ? encodeConfiguration(initialSelection) || undefined
+            : undefined,
         openFavoriteId: favoriteId
     });
     // Minted here so the content can address the modal it lives in, which is
@@ -61,7 +68,7 @@ export function openInsertMenu(props: OpenInsertMenuProps) {
         onClose: () => {
             updateUiState(NO_OPEN_MENU);
             if (!didInsert) {
-                showRestoreToast(insertable, source, initialSelection);
+                showRestoreToast(insertable, source, lastSelection);
             }
         },
         children: (
@@ -70,6 +77,9 @@ export function openInsertMenu(props: OpenInsertMenuProps) {
                 modalId={id}
                 initialSelection={initialSelection}
                 initialConfigurationKey={configurationKey}
+                onSelectionChange={(selection) => {
+                    lastSelection = selection;
+                }}
                 source={source}
                 onInsert={() => {
                     didInsert = true;
@@ -80,15 +90,11 @@ export function openInsertMenu(props: OpenInsertMenuProps) {
     });
 }
 
-/**
- * Both are shown: the element name is how the part was found, the part number
- * and name are what gets inserted.
- */
-
+/** Offers the menu back, configured the way it was closed. */
 function showRestoreToast(
     insertable: InsertableOut,
     source: InsertSource,
-    selection?: Selection
+    selection?: PartialSelection
 ) {
     const restoreButton: NotificationAction = {
         text: "Restore",

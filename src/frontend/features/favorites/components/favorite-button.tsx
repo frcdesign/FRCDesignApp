@@ -1,6 +1,6 @@
 import {
     type ConfigurationKey,
-    type Selection
+    type PartialSelection
 } from "@backend/features/configurations/contract";
 import { ActionIcon, Menu } from "@mantine/core";
 import { HeartIcon, HeartBreakIcon } from "@phosphor-icons/react";
@@ -33,7 +33,7 @@ interface UpdateFavoritesArgs {
     insertable: InsertableOut;
     favoriteId: string;
     /** The selection to store; absent means the element's own default. */
-    selection?: Selection;
+    selection?: PartialSelection;
     /** That selection's key, so the new row's thumbnail is right before the
      * refetch answers. */
     configurationKey?: ConfigurationKey;
@@ -44,14 +44,14 @@ function updateFavorites(
     args: UpdateFavoritesArgs,
     libraryId: LibraryId
 ): FavoritesData | undefined {
-    const { favoriteId, selection, configurationKey } = args;
+    const { favoriteId, configurationKey } = args;
     const insertableId = args.insertable.id;
     if (args.operation === Operation.ADD) {
         const fav: Favorite = {
             id: favoriteId,
             insertableId,
             libraryId,
-            defaultSelection: selection,
+            // Left to the refetch, which answers with it made whole.
             configurationKey
         };
         data.favorites[favoriteId] = fav;
@@ -122,7 +122,7 @@ interface FavoriteButtonProps {
      * The selection the new favorite opens with: what the caller is showing,
      * rather than the element's own default.
      */
-    selection?: Selection;
+    selection?: PartialSelection;
     /** That selection's key, when the caller knows it. */
     configurationKey?: ConfigurationKey;
     /**
@@ -182,7 +182,7 @@ interface FavoriteInsertableItemProps {
     favorite: Favorite | undefined;
     insertable: InsertableOut;
     /** The selection the new favorite opens with. */
-    selection?: Selection;
+    selection?: PartialSelection;
     /** That selection's key, when the caller knows it. */
     configurationKey?: ConfigurationKey;
 }

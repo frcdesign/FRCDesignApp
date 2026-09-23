@@ -7,12 +7,10 @@ import { parseRecordVendor } from "./parse-vendors";
 import { ElementPath } from "../../lib/onshape/path";
 import { ElementType } from "../../lib/onshape/element-type";
 import {
-    Selection,
-    ConfigurationParameter,
-    DEFAULT_CONFIGURATION_KEY,
-    PartMetadata,
-    ConfigurationRecord,
-    ProbedRecord
+    type ConfigurationParameter,
+    type ConfigurationRecord,
+    type PartialSelection,
+    type PartMetadata
 } from "../configurations/contract";
 import {
     addBuildIssue,
@@ -25,7 +23,7 @@ import {
     IndexingBand,
     isIndexingEnabled
 } from "../configurations/combinations";
-import { toKey, toSelection } from "../configurations/selection";
+import { onshapeOverrides, toSelection } from "../configurations/selection";
 import { getParts } from "../../lib/onshape/endpoints/parts";
 import { getElementMetadata } from "../../lib/onshape/endpoints/metadata";
 import type {
@@ -74,7 +72,7 @@ interface IndexingDecision {
     /** The limit issues this decision raises, if any. */
     buildIssues: BuildIssue[];
     /** The combinations to probe, already enumerated by the count. */
-    configurations: Selection[];
+    configurations: PartialSelection[];
 }
 
 /** Past the hard cap forcing it on cannot help, since enumeration stops there. */
@@ -89,13 +87,7 @@ export function decideIndexing(
         return { shouldIndex: true, buildIssues: [], configurations: [] };
     }
 
-    const counted = countConfigurations(parameters);
-    const band = counted.band;
-    // Enumeration names only what varies; every probe past here is a whole
-    // selection, so nothing downstream has to wonder which it holds.
-    const configurations = counted.configurations.map((partial) =>
-        toSelection(partial, parameters)
-    );
+    const { band, configurations } = countConfigurations(parameters);
     const shouldIndex = isIndexingEnabled(band, indexConfigurations);
 
     if (band === IndexingBand.EXCEEDED) {
@@ -158,22 +150,22 @@ export function computeOpenComposite(parts: OnshapePart[]): boolean {
  */
 export function parsePartStudioRecord(
     parts: OnshapePart[],
-    selection: Selection,
+    values: PartialSelection,
     isOpenComposite: boolean
-): ProbedRecord {
+): ConfigurationRecord {
     const evaluation = evaluateParts(parts);
     // An element that is an open composite everywhere else has no part to read
     // in a configuration that loses it; toResult raises the build issue.
     if (isOpenComposite && !evaluation.isOpenComposite) {
         return {
-            selection,
+            values,
             hasMultipleParts: false,
             isOpenComposite: false
         };
     }
     const part = evaluation.partToUse;
     return {
-        selection,
+        values,
         partNumber: clean(part?.partNumber),
         name: clean(part?.name),
         description: clean(part?.description),
@@ -207,11 +199,11 @@ function readMetadataValue(value: unknown): string | undefined {
 /** Builds a record from an assembly's element metadata for one configuration. */
 export function parseAssemblyRecord(
     metadata: OnshapeMetadataObject,
-    selection: Selection
-): ProbedRecord {
+    values: PartialSelection
+): ConfigurationRecord {
     // An assembly is never a composite, so it reads nothing about one.
-    const record: ProbedRecord = {
-        selection,
+    const record: ConfigurationRecord = {
+        values,
         hasMultipleParts: false,
         isOpenComposite: false
     };
@@ -240,15 +232,15 @@ export interface ProbeTarget {
  */
 type ProbeRunner = (
     name: string,
-    read: () => Promise<ProbedRecord[]>
-) => Promise<ProbedRecord[]>;
+    read: () => Promise<ConfigurationRecord[]>
+) => Promise<ConfigurationRecord[]>;
 
 async function indexRecords(
     getClient: () => Promise<OnshapeApi>,
     run: ProbeRunner,
     target: ProbeTarget,
     parameters: ConfigurationParameter[],
-    configurations: Selection[]
+    configurations: PartialSelection[]
 ): Promise<ConfigurationRecordsResult> {
     // The element's own defaults, probed as a batch of one so every read the
     // runner sees has the same shape.
@@ -257,7 +249,7 @@ async function indexRecords(
     );
     const batches = planBatches(configurations, parameters);
 
-    const batchRecords: ProbedRecord[][] = [];
+    const batchRecords: ConfigurationRecord[][] = [];
     for (const [index, batch] of batches.entries()) {
         batchRecords.push(
             await run(`batch-${index}`, async () =>
@@ -273,7 +265,7 @@ export function parseConfigurationRecords(
     client: OnshapeApi,
     target: ProbeTarget,
     parameters: ConfigurationParameter[],
-    configurations: Selection[]
+    configurations: PartialSelection[]
 ): Promise<ConfigurationRecordsResult> {
     return indexRecords(
         () => Promise.resolve(client),
@@ -293,7 +285,7 @@ export function loadConfigurationRecords(
     insertableId: string,
     target: ProbeTarget,
     parameters: ConfigurationParameter[],
-    configurations: Selection[]
+    configurations: PartialSelection[]
 ): Promise<ConfigurationRecordsResult> {
     return indexRecords(
         () => getOnshapeApiFromContext(ctx),
@@ -314,45 +306,48 @@ export function loadConfigurationRecords(
  * default probe already covers.
  */
 function planBatches(
-    configurations: Selection[],
+    configurations: PartialSelection[],
     parameters: ConfigurationParameter[]
-): Selection[][] {
-    // Canonicalizing to the default means landing on the default probe's record,
-    // so drop every all-defaults combination, not just the empty one.
+): PartialSelection[][] {
+    // A combination overriding nothing is the default probe again, so drop
+    // every all-defaults one, not just the empty one.
     const toFetch = configurations.filter(
-        (selection) =>
-            toKey(selection, parameters) !== DEFAULT_CONFIGURATION_KEY
+        (values) => Object.keys(overridesOf(values, parameters)).length > 0
     );
 
-    const batches: Selection[][] = [];
+    const batches: PartialSelection[][] = [];
     for (let i = 0; i < toFetch.length; i += BATCH_SIZE) {
         batches.push(toFetch.slice(i, i + BATCH_SIZE));
     }
     return batches;
 }
 
-/**
- * Reads the record Onshape reports for an element in a given configuration.
- * Asks by key rather than by whole selection, so the probe and the record it is
- * stored under name the same thing, and neither carries what it never overrode.
- */
+/** What enumerated values change from the element's defaults. */
+function overridesOf(
+    values: PartialSelection,
+    parameters: ConfigurationParameter[]
+) {
+    return onshapeOverrides(toSelection(values, parameters), parameters);
+}
+
+/** Reads the record Onshape reports for an element in one configuration. */
 async function probeConfiguration(
     client: OnshapeApi,
     target: ProbeTarget,
     parameters: ConfigurationParameter[],
-    selection: Selection
-): Promise<ProbedRecord> {
+    values: PartialSelection
+): Promise<ConfigurationRecord> {
     const { elementPath, elementType, isOpenComposite } = target;
-    const configurationKey = toKey(selection, parameters);
+    const configuration = overridesOf(values, parameters);
     if (elementType === ElementType.ASSEMBLY) {
         return parseAssemblyRecord(
-            await getElementMetadata(client, elementPath, configurationKey),
-            selection
+            await getElementMetadata(client, elementPath, configuration),
+            values
         );
     }
     return parsePartStudioRecord(
-        await getParts(client, elementPath, configurationKey),
-        selection,
+        await getParts(client, elementPath, configuration),
+        values,
         isOpenComposite
     );
 }
@@ -362,12 +357,12 @@ async function fetchBatch(
     client: OnshapeApi,
     target: ProbeTarget,
     parameters: ConfigurationParameter[],
-    batch: Selection[]
-): Promise<ProbedRecord[]> {
-    const records: ProbedRecord[] = [];
-    for (const selection of batch) {
+    batch: PartialSelection[]
+): Promise<ConfigurationRecord[]> {
+    const records: ConfigurationRecord[] = [];
+    for (const values of batch) {
         records.push(
-            await probeConfiguration(client, target, parameters, selection)
+            await probeConfiguration(client, target, parameters, values)
         );
     }
     return records;
@@ -375,23 +370,23 @@ async function fetchBatch(
 
 /** Onshape's vendor when a part carries one, otherwise the parsed one. */
 function resolveVendor(
-    record: ProbedRecord,
+    record: ConfigurationRecord,
     parameters: ConfigurationParameter[]
 ): string | undefined {
     return (
         record.vendor ??
-        parseRecordVendor(record.name, record.selection, parameters)
+        parseRecordVendor(record.name, record.values, parameters)
     );
 }
 
 /** Folds the default probe and every batch together, the default first. */
 function toResult(
-    defaultRecord: ProbedRecord,
-    batches: ProbedRecord[][],
+    defaultRecord: ConfigurationRecord,
+    batches: ConfigurationRecord[][],
     parameters: ConfigurationParameter[]
 ): ConfigurationRecordsResult {
     // The element's own probe describes the element, not a configuration of it,
-    // so it sheds the (empty) configuration that produced it.
+    // so it sheds the (empty) values that produced it.
     const partMetadata: PartMetadata = {
         partNumber: defaultRecord.partNumber,
         name: defaultRecord.name,
@@ -402,18 +397,10 @@ function toResult(
         isOpenComposite: defaultRecord.isOpenComposite
     };
 
-    // Canonical, so a record addresses the thumbnail the insert menu does. The
-    // selection is dropped rather than stored: the key already says what it held.
-    const records: ConfigurationRecord[] = batches.flat().map((probe) => {
-        const { selection, ...record } = probe;
-        return {
-            ...record,
-            // Read before keying, which names only overrides — and so drops a
-            // default vendor option.
-            vendor: resolveVendor(probe, parameters),
-            configurationKey: toKey(selection, parameters)
-        };
-    });
+    const records: ConfigurationRecord[] = batches.flat().map((record) => ({
+        ...record,
+        vendor: resolveVendor(record, parameters)
+    }));
 
     // A capped insertable never reaches here: decideIndexing turns indexing off
     // past the cap, and raises CONFIGURATION_LIMIT_EXCEEDED itself.

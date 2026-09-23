@@ -10,12 +10,15 @@ import { FloppyDiskIcon } from "@phosphor-icons/react";
 import { IconSize } from "../../../lib/style-constants";
 import { ReactNode, useState } from "react";
 import { PreviewImageCard } from "../../thumbnails/components/thumbnail";
-import { ConfigurationWrapper } from "../../insert/components/configurations";
+import {
+    ConfigurationWrapper,
+    type SelectionReport
+} from "../../insert/components/configurations";
 import { FavoriteIcon } from "./favorite-button";
 import {
     DEFAULT_CONFIGURATION_KEY,
-    Selection,
-    SearchRecord
+    type PartialSelection,
+    Selection
 } from "@backend/features/configurations/contract";
 import {
     useFavoritesQuery,
@@ -29,7 +32,7 @@ interface FavoriteMenuContentProps {
     /** The modal this renders in, so the header can track the selection. */
     modalId: string;
     /** What the favorite opens with today. */
-    initialSelection?: Selection;
+    initialSelection?: PartialSelection;
 }
 
 export function FavoriteMenuContent(
@@ -42,13 +45,12 @@ export function FavoriteMenuContent(
     const insertables = libraryQuery.data?.insertables;
     const favoritesData = favoritesQuery.data;
 
-    const [selection, setSelection] = useState<Selection | undefined>(
-        initialSelection
-    );
-    // Reported by ConfigurationWrapper; names this selection's thumbnail.
-    // Undefined until it reports, which is what gates saving.
-    const [configurationKey, setConfigurationKey] = useState<string>();
-    const [record, setRecord] = useState<SearchRecord | undefined>(undefined);
+    const [selection, setSelection] = useState<
+        PartialSelection | Selection | undefined
+    >(initialSelection);
+    // Undefined until the panel settles the selection, which gates saving:
+    // saving before then would store nothing, wiping the favorite's selection.
+    const [report, setReport] = useState<SelectionReport>();
 
     const favorite = favoritesData?.favorites[favoriteId];
     const insertable =
@@ -58,15 +60,12 @@ export function FavoriteMenuContent(
 
     useMenuTitle(modalId, {
         name: insertable?.name,
-        record,
+        record: report?.record,
         icon: <FavoriteIcon size={IconSize.MEDIUM} />
     });
 
-    const setDefaultConfigurationMutation = useSetDefaultConfigurationMutation(
-        favoriteId,
-        selection,
-        configurationKey
-    );
+    const setDefaultConfigurationMutation =
+        useSetDefaultConfigurationMutation(favoriteId);
 
     if (!insertable) {
         return null;
@@ -89,14 +88,13 @@ export function FavoriteMenuContent(
                     microversionId={insertable.microversionId}
                     largeThumbnailUrl={insertable.largeThumbnailUrl}
                     configurationKey={
-                        configurationKey ?? DEFAULT_CONFIGURATION_KEY
+                        report?.configurationKey ?? DEFAULT_CONFIGURATION_KEY
                     }
                 />
             </AppModalTop>
             <AppModalBody>
                 <ConfigurationWrapper
-                    onConfigurationKey={setConfigurationKey}
-                    onRecord={setRecord}
+                    onReport={setReport}
                     selection={selection}
                     setSelection={setSelection}
                     insertableId={insertable.id}
@@ -108,11 +106,11 @@ export function FavoriteMenuContent(
                     variant="light"
                     ml="auto"
                     leftSection={<FloppyDiskIcon size={IconSize.SMALL} />}
-                    // Saving before the wrapper reports would store nothing,
-                    // wiping the favorite's selection.
-                    disabled={configurationKey === undefined}
+                    disabled={report === undefined}
                     onClick={() => {
-                        setDefaultConfigurationMutation.mutate();
+                        if (report) {
+                            setDefaultConfigurationMutation.mutate(report);
+                        }
                         modals.closeAll();
                     }}
                 >

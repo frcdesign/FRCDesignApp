@@ -7,6 +7,13 @@ import {
 import { fromApiErrorBody, ImageLoadError } from "./errors";
 import { HttpStatus } from "http-status-ts";
 
+/**
+ * Bumped when the shape of an immutably cached response changes. Those are
+ * cached for a year against their `v`, so without this a browser would keep
+ * reading the old shape until the content itself next changed.
+ */
+const RESPONSE_SHAPE = 2;
+
 function getUrl(
     path: string,
     query?: URLSearchParamsInit,
@@ -14,7 +21,7 @@ function getUrl(
 ): string {
     const searchParams = createSearchParams(query);
     if (cacheId !== undefined) {
-        searchParams.append("v", cacheId.toString());
+        searchParams.append("v", `${cacheId}.${RESPONSE_SHAPE}`);
     }
     return "/api" + path + `?${searchParams}`;
 }

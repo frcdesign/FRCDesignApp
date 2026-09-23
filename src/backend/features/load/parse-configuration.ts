@@ -7,8 +7,7 @@ import {
     type VisibilityCondition,
     VisibilityType
 } from "../configurations/contract";
-import { getUnitDisplayStr } from "../configurations/enums";
-import { canonicalizeValue } from "../configurations/selection";
+import { quantityDefault } from "../configurations/selection";
 import {
     type OnshapeConfigurationResponse,
     type OnshapeEnumOptionVisibilityConditionList,
@@ -155,29 +154,21 @@ export function parseOnshapeConfiguration(
             });
         } else if (parameter.btType === OnshapeParameterType.QUANTITY) {
             const range = parameter.rangeAndDefault;
-            const unit = range.units;
-            const val = range.defaultValue;
-
-            const abbr = getUnitDisplayStr(unit);
-            const defaultStr = abbr ? `${val} ${abbr}` : String(val);
-
-            parameters.push({
+            const quantity = {
                 ...base,
-                type: ParameterType.QUANTITY,
+                type: ParameterType.QUANTITY as const,
                 quantityType: parameter.quantityType,
-                default: defaultStr,
-                defaultValue: val,
+                defaultValue: range.defaultValue,
                 min: range.minValue,
                 max: range.maxValue,
-                unit
+                unit: range.units
+            };
+            parameters.push({
+                ...quantity,
+                default: quantityDefault(quantity)
             });
         }
     }
 
-    // Canonical from here on, so a default is spelled the way a chosen value
-    // is and nothing downstream has to canonicalize one to compare them.
-    return parameters.map((parameter) => ({
-        ...parameter,
-        default: canonicalizeValue(parameter, parameter.default)
-    }));
+    return parameters;
 }

@@ -59,27 +59,24 @@ export function useFavorite(insertableId: string): Favorite | undefined {
         : undefined;
 }
 
-/**
- * Saves what the favorite opens with. Takes its key too, so the
- * cached row names the right thumbnail before the refetch answers.
- */
-export function useSetDefaultConfigurationMutation(
-    favoriteId: string,
-    selection: Selection | undefined,
-    configurationKey: ConfigurationKey | undefined
-) {
+/** What a favorite is saved to open with, and the thumbnail that names. */
+interface DefaultConfiguration {
+    selection: Selection;
+    /** So the cached row names the right thumbnail before the refetch. */
+    configurationKey: ConfigurationKey;
+}
+
+/** Saves what the favorite opens with. */
+export function useSetDefaultConfigurationMutation(favoriteId: string) {
     const libraryId = useLibraryId();
     const refreshFavorites = useRefreshFavorites();
     return useMutation({
         mutationKey: ["set-default-selection"],
-        mutationFn: async () => {
-            // The whole selection, not its key: the key names only what the
-            // selection overrides, and the favorite opens on all of it.
-            return apiPost("/default-selection" + toFavoritePath(favoriteId), {
-                body: { selection: selection }
-            });
-        },
-        onMutate: async () => {
+        mutationFn: async ({ selection }: DefaultConfiguration) =>
+            apiPost("/default-selection" + toFavoritePath(favoriteId), {
+                body: { selection }
+            }),
+        onMutate: async ({ selection, configurationKey }) => {
             const queryKey = favoritesQueryKey(libraryId);
             await queryClient.cancelQueries({ queryKey });
             queryClient.setQueryData(

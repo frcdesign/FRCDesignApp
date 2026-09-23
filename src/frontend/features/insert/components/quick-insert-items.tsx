@@ -2,7 +2,7 @@ import { Menu } from "@mantine/core";
 import { PlusIcon } from "@phosphor-icons/react";
 import { ReactNode, useCallback } from "react";
 import { InsertableOut } from "@backend/features/library/contract";
-import { Selection } from "@backend/features/configurations/contract";
+import { type PartialSelection } from "@backend/features/configurations/contract";
 import { ElementType } from "@backend/lib/onshape/element-type";
 import { InsertSource } from "@backend/features/analytics/usage";
 import { IconSize, StatusColor } from "../../../lib/style-constants";
@@ -15,7 +15,7 @@ import { useInsertMutation } from "../queries";
 
 interface QuickInsertItemsProps {
     insertable: InsertableOut;
-    selection?: Selection;
+    selection?: PartialSelection;
     isFavorite: boolean;
     source: InsertSource;
 }

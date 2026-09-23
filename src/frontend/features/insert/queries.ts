@@ -7,7 +7,7 @@ import {
 import { apiGet, apiPost } from "../../lib/api-client";
 import {
     type ConfigurationResult,
-    Selection,
+    type PartialSelection,
     type UnitInfo
 } from "@backend/features/configurations/contract";
 import { type ElementPath, InstancePath } from "@backend/lib/onshape/path";
@@ -93,7 +93,8 @@ export function useIsFetchingConfiguration(
 
 export function useInsertMutation(
     insertable: InsertableOut,
-    selection: Selection | undefined,
+    /** Partial is fine: the server makes it whole. */
+    selection: PartialSelection | undefined,
     insertArgs: InsertArgs
 ) {
     const target = useTargetElement();

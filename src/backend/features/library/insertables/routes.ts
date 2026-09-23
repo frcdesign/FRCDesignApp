@@ -35,10 +35,11 @@ import {
 } from "../../../lib/onshape/endpoints/assemblies";
 import { PartType } from "../../../lib/onshape/endpoints/documents";
 import {
+    onshapeOverrides,
     toShortestConfiguration,
-    toOnshapeConfiguration,
     toSelection
 } from "../../configurations/selection";
+import { encodeConfiguration } from "../../configurations/utils";
 import { fastenMate } from "../../../lib/onshape/objects/assembly-features";
 import { parseFastenInfo } from "../../load/parse-fasten";
 import { getFastenQuery } from "./fasten-query";
@@ -382,7 +383,7 @@ insertableRoutes.post(
         // default to every parameter left out, so this inserts the same thing —
         // and a whole selection can outrun the configuration Onshape accepts.
         let configuration = selection
-            ? toOnshapeConfiguration(selection, parameters)
+            ? encodeConfiguration(onshapeOverrides(selection, parameters))
             : undefined;
 
         // Except a part studio at its defaults, which Onshape refuses to insert
@@ -395,7 +396,9 @@ insertableRoutes.post(
             configuration === "" &&
             row.elementType === ElementType.PART_STUDIO
         ) {
-            configuration = toShortestConfiguration(selection, parameters);
+            configuration = encodeConfiguration(
+                toShortestConfiguration(selection, parameters)
+            );
         }
 
         // Resolved here rather than sent by the client: the marker moves

@@ -102,8 +102,10 @@ describe("library routes", () => {
         expect(parsed.documentCount).toBeGreaterThan(0);
     });
 
-    it("GET /search-db 404s when the library has no index", async () => {
-        await seedLibrary(db);
+    // An index written in an older shape sits under an older key, so a miss
+    // is what every library looks like the first time a deploy reads it.
+    it("GET /search-db builds the index when there is none", async () => {
+        await seedTestData(db);
         const app = createTestApp();
 
         const res = await app.request(
@@ -111,7 +113,10 @@ describe("library routes", () => {
             jsonRequest("GET"),
             env
         );
-        expect(res.status).toBe(404);
+        expect(res.status).toBe(200);
+        expect(
+            await env.BLOB.head(searchIndexKey(TEST_LIBRARY_ID))
+        ).not.toBeNull();
     });
 
     it("GET /library-version returns the library's version", async () => {

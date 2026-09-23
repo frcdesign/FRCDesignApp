@@ -17,7 +17,7 @@ export const AppParamsType = z.object({
     q: z.string().optional().catch(undefined),
     /** The insertable whose insert menu is open. */
     part: z.string().optional().catch(undefined),
-    /** Its configuration; absent for the element's own defaults. */
+    /** What its configuration overrides; absent for the element's defaults. */
     config: z.string().optional().catch(undefined),
     /** The favorite the menu was opened from, when it was opened from one. */
     favorite: z.string().optional().catch(undefined)
@@ -47,7 +47,7 @@ export function adoptAppParams(params: AppParams): void {
         // with it — including when they are absent, which is a plain part.
         ...(params.part !== undefined && {
             openInsertableId: params.part,
-            openConfigurationKey: params.config,
+            openConfiguration: params.config,
             openFavoriteId: params.favorite
         })
     });
@@ -56,12 +56,8 @@ export function adoptAppParams(params: AppParams): void {
 /** Writes the stored state back to the url, whenever it changes. */
 export function useAppParamMirror(): void {
     const navigate = useNavigate();
-    const {
-        searchQuery,
-        openInsertableId,
-        openConfigurationKey,
-        openFavoriteId
-    } = useGetUiState();
+    const { searchQuery, openInsertableId, openConfiguration, openFavoriteId } =
+        useGetUiState();
 
     useEffect(() => {
         void navigate({
@@ -75,7 +71,7 @@ export function useAppParamMirror(): void {
                 // noise in a url somebody is about to copy.
                 q: searchQuery || undefined,
                 part: openInsertableId,
-                config: openConfigurationKey || undefined,
+                config: openConfiguration || undefined,
                 favorite: openFavoriteId
             })
         });
@@ -83,7 +79,7 @@ export function useAppParamMirror(): void {
         navigate,
         searchQuery,
         openInsertableId,
-        openConfigurationKey,
+        openConfiguration,
         openFavoriteId
     ]);
 }

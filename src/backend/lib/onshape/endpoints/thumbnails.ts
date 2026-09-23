@@ -1,5 +1,5 @@
-import { type ConfigurationKey } from "../../../features/configurations/contract";
-import { toQueryConfiguration } from "../../../features/configurations/utils";
+import { type Selection } from "../../../features/configurations/contract";
+import { encodeQueryConfiguration } from "../../../features/configurations/utils";
 import { OnshapeApi } from "../client";
 import { assertInstanceType } from "../assertions";
 import { ElementPath, toElementApiPath, toInstanceApiPath } from "../path";
@@ -21,10 +21,14 @@ export function getElementThumbnail(
 /** The configuration matches no insertable, so retrying can only fail again. */
 export class NoSuchConfigurationError extends Error {}
 
+/**
+ * The id Onshape renders a configured element's thumbnail under: fixed for an
+ * element and configuration, and asking for its bytes is what starts a render.
+ */
 export async function getThumbnailId(
     client: OnshapeApi,
     elementPath: ElementPath,
-    configurationKey?: ConfigurationKey
+    configuration: Selection
 ): Promise<string> {
     const query = new URLSearchParams({
         includeParts: "true",
@@ -32,9 +36,10 @@ export async function getThumbnailId(
         includeCompositeParts: "true",
         elementId: elementPath.elementId
     });
-    // The query form, not the key: this is escaped again on its way out.
-    if (configurationKey) {
-        query.set("configuration", toQueryConfiguration(configurationKey));
+    // The query form: this is escaped again on its way out.
+    const encoded = encodeQueryConfiguration(configuration);
+    if (encoded) {
+        query.set("configuration", encoded);
     }
 
     const insertables = await client.get(

@@ -54,10 +54,12 @@ configurationRoutes.get(
             );
         }
 
+        const parameters = config.parameters ?? [];
         const result: ConfigurationResult = {
-            parameters: config.parameters ?? [],
+            parameters,
             records: toSearchRecords(
                 toRecords(config.partMetadata, config.records ?? []),
+                parameters,
                 config.vendors
             )
         };

@@ -4,10 +4,11 @@
  * scoring can answer for anything holding records.
  */
 import {
+    type ConfigurationParameter,
     type ConfigurationRecord,
-    DEFAULT_CONFIGURATION_KEY,
-    SearchRecord
+    type SearchRecord
 } from "../configurations/contract";
+import { toKey, toSelection } from "../configurations/selection";
 import { getPartUrl } from "../configurations/utils";
 import { meaningfulPartNumber } from "../configurations/part-number";
 import { Vendor } from "../library/vendors";
@@ -20,8 +21,7 @@ import {
 import { PART_NAME_FIELD, PART_NUMBER_FIELD } from "./fields";
 
 /**
- * The element's own defaults first. `toKey` leaves out whatever a selection does
- * not override, so that record is the one keyed by the empty string.
+ * The element's own defaults first: the record naming no values.
  *
  * Records arrive in the order `enumerateConfigurations` produced them, which is
  * option declaration order — the default lands wherever Onshape happens to
@@ -29,7 +29,7 @@ import { PART_NAME_FIELD, PART_NUMBER_FIELD } from "./fields";
  */
 function defaultFirst(records: SearchRecord[]): SearchRecord[] {
     const index = records.findIndex(
-        (record) => record.configurationKey === DEFAULT_CONFIGURATION_KEY
+        (record) => Object.keys(record.values).length === 0
     );
     if (index <= 0) {
         return records;
@@ -180,32 +180,48 @@ function findBestRecord(
 }
 
 /**
- * First of each distinct (part number, name) in enumeration order, which keeps
- * the latest revision. One identifying nothing is dropped before the index sees it.
+ * Records as a client reads them, one per probe. One identifying nothing is
+ * dropped, having nothing to show.
  */
 export function toSearchRecords(
     records: ConfigurationRecord[],
+    parameters: ConfigurationParameter[],
     vendors: Vendor[] = []
 ): SearchRecord[] {
-    const seen = new Set<string>();
     const searchRecords: SearchRecord[] = [];
-    for (const raw of records) {
-        const partNumber = meaningfulPartNumber(raw.partNumber, raw.name);
-        const name = clean(raw.name);
+    for (const record of records) {
+        const partNumber = meaningfulPartNumber(record.partNumber, record.name);
+        const name = clean(record.name);
         if (!partNumber && !name) {
             continue;
         }
-        const key = JSON.stringify([partNumber, name]);
-        if (seen.has(key)) {
-            continue;
-        }
-        seen.add(key);
         searchRecords.push({
             partNumber,
             name,
-            url: getPartUrl({ ...raw, partNumber }, vendors),
-            configurationKey: raw.configurationKey
+            url: getPartUrl({ ...record, partNumber }, vendors),
+            values: record.values,
+            configurationKey: toKey(
+                toSelection(record.values, parameters),
+                parameters
+            )
         });
     }
     return searchRecords;
+}
+
+/**
+ * First of each distinct (part number, name) in enumeration order, which keeps
+ * the latest revision. What the index stores, which only picks a hit's record;
+ * something showing the record of a particular selection wants them all.
+ */
+export function distinctRecords(records: SearchRecord[]): SearchRecord[] {
+    const seen = new Set<string>();
+    return records.filter((record) => {
+        const key = JSON.stringify([record.partNumber, record.name]);
+        if (seen.has(key)) {
+            return false;
+        }
+        seen.add(key);
+        return true;
+    });
 }

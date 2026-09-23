@@ -12,14 +12,14 @@ import {
 import { type Db, getDb } from "../../db/client";
 import { chunkForInArray } from "../../db/chunk";
 import { users, favorites, configurations, insertables } from "../../db/schema";
-import { toKey, toSelection } from "../configurations/selection";
+import { findRecord, toKey, toSelection } from "../configurations/selection";
+import { upgradeSelection } from "../configurations/legacy";
 import { MAX_FAVORITES, type Favorite, type FavoritesData } from "./contract";
 import {
-    DEFAULT_CONFIGURATION_KEY,
     type ConfigurationParameter,
     type SearchRecord
 } from "../configurations/contract";
-import { findRecordForConfiguration } from "../configurations/utils";
+import { toRecords } from "../configurations/utils";
 import { toSearchRecords } from "../search/records";
 import type { LibraryId } from "../library/library-id";
 import { z } from "zod";
@@ -63,8 +63,8 @@ async function getFavorites(
         .orderBy(asc(favorites.sortOrder))
         .all();
 
-    // Keyed here rather than stored: the parameters a selection is canonical
-    // against move with the library, and only the row is ours to keep.
+    // Keyed here rather than stored: a reload can move the defaults a key is
+    // measured against, and only the selection is the favorite's own.
     const configurationsById = await getConfigurations(
         db,
         rows.map((row) => row.insertableId)
@@ -75,27 +75,29 @@ async function getFavorites(
     for (const row of rows) {
         const { parameters = [], records = [] } =
             configurationsById.get(row.insertableId) ?? {};
-        const stored = row.defaultSelection ?? undefined;
         // Made whole on the way out as well as in: a row written before a
         // parameter existed still has to answer as a selection.
-        const defaultSelection = stored
-            ? toSelection(stored, parameters)
+        const defaultSelection = row.defaultSelection
+            ? toSelection(
+                  upgradeSelection(row.defaultSelection, parameters),
+                  parameters
+              )
             : undefined;
-        // A favorite storing no selection opens on the element's own defaults,
-        // which is what the empty key names — so it resolves the right record
-        // while the field itself stays absent, as the contract has it.
-        const configurationKey = defaultSelection
-            ? toKey(defaultSelection, parameters)
-            : DEFAULT_CONFIGURATION_KEY;
         const fav: Favorite = {
             id: row.id,
             insertableId: row.insertableId,
             libraryId,
             defaultSelection,
-            configurationKey: defaultSelection ? configurationKey : undefined,
+            configurationKey: defaultSelection
+                ? toKey(defaultSelection, parameters)
+                : undefined,
             // The record this favorite's own selection produces, so a row can
-            // never show a part number belonging to another configuration.
-            record: findRecordForConfiguration(configurationKey, records)
+            // never show a part number belonging to another configuration. No
+            // selection is the element's defaults, which match its own record.
+            record: findRecord(
+                defaultSelection ?? toSelection({}, parameters),
+                records
+            )
         };
         favoritesOut[row.id] = fav;
         favoriteOrder.push(row.id);
@@ -114,12 +116,12 @@ async function getParametersFor(
     );
 }
 
-/** The parameters of each insertable named, for keying against. */
 /** What a favorite's insertable contributes to the response. */
 interface InsertableConfiguration {
-    /** What a stored selection is made whole and canonical against. */
+    /** What a stored selection is made whole against. */
     parameters: ConfigurationParameter[];
-    /** What each configuration is called, for the one this favorite names. */
+    /** What each configuration is called — the element's own among them —
+     * for the one this favorite names. */
     records: SearchRecord[];
 }
 
@@ -141,6 +143,7 @@ async function getConfigurations(
                 .select({
                     insertableId: insertables.id,
                     vendors: insertables.vendors,
+                    partMetadata: insertables.partMetadata,
                     parameters: configurations.parameters,
                     records: configurations.records
                 })
@@ -154,13 +157,17 @@ async function getConfigurations(
         )
     );
     return new Map(
-        reads.flat().map((row) => [
-            row.insertableId,
-            {
-                parameters: row.parameters ?? [],
-                records: toSearchRecords(row.records ?? [], row.vendors)
-            }
-        ])
+        reads.flat().map((row) => {
+            const parameters = row.parameters ?? [];
+            const records = toRecords(row.partMetadata, row.records ?? []);
+            return [
+                row.insertableId,
+                {
+                    parameters,
+                    records: toSearchRecords(records, parameters, row.vendors)
+                }
+            ];
+        })
     );
 }
 

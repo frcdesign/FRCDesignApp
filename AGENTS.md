@@ -70,21 +70,28 @@ file, so a new one has to be added there or its tables generate no migration.
 A configuration takes exactly two forms, and `features/configurations/selection.ts`
 is the only place either is built:
 
-- A **selection** (`Selection`) is what someone picked: every parameter
-  the insertable declares, each value canonically spelled (base units, trimmed,
-  lowercase booleans). `toSelection` makes one out of whatever arrived — a partial map
-  from a search hit, a stored favorite, a request body — and every boundary
-  calls it. Parameter defaults are canonical too, from `parse-configuration`, so
-  nothing has to canonicalize one to compare against it.
-- A **`ConfigurationKey`** is that selection's identity: what it overrides,
-  encoded as `id=value;id=value`, with hidden parameters left out. It addresses
-  a render — R2 keys, thumbnail urls, stored records, Onshape itself — and
-  `ELEMENT_DEFAULT_KEY` (the empty string) is a selection that overrides
-  nothing.
+- A **selection** (`Selection`) is what someone picked: every parameter the
+  insertable declares, each value **as it was entered**. A quantity is the
+  expression that was typed — `(2 + 3) in`, not `0.127 m` — and a quantity's
+  default is spelled in its own unit (`1 in`). `toSelection` makes one out of
+  whatever arrived — a search hit's values, a stored favorite, a request body,
+  the url — and every boundary calls it. The selection is what is stored, what
+  the url carries, and what Onshape is sent (`onshapeOverrides`), so a derived
+  feature shows the expression that was typed.
+- A **`ConfigurationKey`** is derived from a selection for one purpose: naming
+  its thumbnail. It holds what the selection overrides, canonically spelled
+  (base units, hidden parameters left out), so selections rendering the same
+  part share a render. `DEFAULT_CONFIGURATION_KEY` (the empty string) overrides
+  nothing. Never store a key in place of the selection it came from, and never
+  send one to Onshape as a configuration outside thumbnails.
 
-Raw text lives only inside the input a user is typing into. Don't add a third
-form: if something needs a different view of a selection, it wants a function in
-`selection.ts`, not a new shape.
+Anything that needs values compared or counted — analytics, "is this the
+default" — goes through `canonicalValue`/`canonicalValues`, never through a key.
+Don't add a third form: if something needs a different view of a selection, it
+wants a function in `selection.ts`, not a new shape.
+
+Rows written before selections kept expressions are upgraded on read by
+`configurations/legacy.ts`; a reload rewrites them in the current shape.
 
 # Tests
 
