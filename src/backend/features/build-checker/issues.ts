@@ -7,7 +7,6 @@ import {
     MAX_PART_NUMBER_CONFIGURATIONS
 } from "../configurations/combinations";
 import type { PartialSelection } from "../configurations/contract";
-import { decodeConfiguration } from "../configurations/utils";
 
 export enum BuildIssueSeverity {
     /** A potential issue that is usually fine, e.g. no vendors parsed. */
@@ -90,7 +89,8 @@ export function toConfigurationIssue(
 
 /**
  * The configuration an issue blames, or undefined where the element itself is
- * at fault and there is nothing narrower to open.
+ * at fault. Also undefined for an issue stored before issues carried values,
+ * until the next load rewrites it.
  */
 export function getIssueConfiguration(
     issue: BuildIssue
@@ -103,27 +103,10 @@ const BUILD_ISSUE_TYPES = new Set<string>(Object.values(BuildIssueType));
 /**
  * Drops issues this deploy has no check for. A stored array was written by
  * whichever deploy last loaded the row, so it can name a type since removed from
- * `BuildIssueType`, which has no severity or description to render — or blame a
- * configuration by its key, as issues did before they carried its values.
+ * `BuildIssueType`, which has no severity or description to render.
  */
 export function knownBuildIssues(issues: BuildIssue[]): BuildIssue[] {
-    return issues
-        .filter((issue) => BUILD_ISSUE_TYPES.has(issue.type))
-        .map(upgradeIssue);
-}
-
-/** An issue written when a blamed configuration was named by its key. */
-function upgradeIssue(issue: BuildIssue): BuildIssue {
-    if (!("configurationKey" in issue)) {
-        return issue;
-    }
-    const { configurationKey, ...rest } = issue as BuildIssue & {
-        configurationKey: string;
-    };
-    return {
-        ...rest,
-        values: decodeConfiguration(configurationKey)
-    } as BuildIssue;
+    return issues.filter((issue) => BUILD_ISSUE_TYPES.has(issue.type));
 }
 
 /** A human-readable description of a build issue, shown to editors. */

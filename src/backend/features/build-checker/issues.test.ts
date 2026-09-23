@@ -67,19 +67,15 @@ describe("knownBuildIssues", () => {
         ).toEqual([{ type: BuildIssueType.LOAD_FAILED }]);
     });
 
-    it("reads a configuration blamed by its key as its values", () => {
+    it("keeps an issue stored before issues carried values, unlinked", () => {
         const stored = {
             type: BuildIssueType.UNSTABLE_COMPOSITE,
             configurationKey: "size=large",
             configurationCount: 2
         } as unknown as BuildIssue;
-        expect(knownBuildIssues([stored])).toEqual([
-            {
-                type: BuildIssueType.UNSTABLE_COMPOSITE,
-                values: { size: "large" },
-                configurationCount: 2
-            }
-        ]);
+        const [kept] = knownBuildIssues([stored]);
+        expect(kept.type).toBe(BuildIssueType.UNSTABLE_COMPOSITE);
+        expect(getIssueConfiguration(kept)).toBeUndefined();
     });
 
     it("keeps every type it knows", () => {
