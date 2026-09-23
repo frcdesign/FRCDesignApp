@@ -9,7 +9,8 @@ export enum ParameterRole {
     /**
      * A text parameter a document adds so one part can be derived into a part
      * studio more than once: Onshape refuses a second derive of the same
-     * configuration, and a unique value here makes each one different.
+     * configuration, and a unique value here makes each one different. Only a
+     * text one: the app fills it with a unique value, which is text.
      */
     DERIVATION_VARIABLE = "derivation-variable",
     COLOR = "color",
@@ -38,7 +39,10 @@ export function parameterRole(
     parameters: ConfigurationParameter[] = []
 ): ParameterRole | undefined {
     const name = normalizedName(parameter);
-    if (name.includes("derivation")) {
+    if (
+        parameter.type === ParameterType.STRING &&
+        name.includes("derivation")
+    ) {
         return ParameterRole.DERIVATION_VARIABLE;
     }
     if (/\bcolou?r\b/.test(name)) {
@@ -54,15 +58,8 @@ export function parameterRole(
     return isChannel ? ParameterRole.COLOR_CHANNEL : undefined;
 }
 
-/**
- * A derivation variable the app fills in itself. Only a text one: a unique
- * value is text, and nothing here knows what one of another type is for.
- */
 export function isDerivationVariable(
     parameter: ConfigurationParameter
 ): boolean {
-    return (
-        parameter.type === ParameterType.STRING &&
-        parameterRole(parameter) === ParameterRole.DERIVATION_VARIABLE
-    );
+    return parameterRole(parameter) === ParameterRole.DERIVATION_VARIABLE;
 }

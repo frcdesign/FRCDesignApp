@@ -9,7 +9,6 @@ const named = (name: string) => ({ ...enumParam("p", ["x", "y"]), name });
 
 describe("parameterRole", () => {
     it.each([
-        ["Derivation Variable", ParameterRole.DERIVATION_VARIABLE],
         ["Color", ParameterRole.COLOR],
         ["Part colour", ParameterRole.COLOR],
         ["Tessellation Quality", ParameterRole.TESSELLATION],
@@ -41,15 +40,20 @@ describe("parameterRole", () => {
     });
 });
 
-describe("isDerivationVariable", () => {
-    // Only a text one takes the unique value the app fills in.
-    it("is a text parameter named for derivation", () => {
-        expect(
-            isDerivationVariable({
-                ...stringParam("d"),
-                name: "Derivation Variable"
-            })
-        ).toBe(true);
-        expect(isDerivationVariable(named("Derivation Variable"))).toBe(false);
+describe("derivation variables", () => {
+    it("recognizes a text parameter named for derivation", () => {
+        const parameter = { ...stringParam("d"), name: "Derivation Variable" };
+        expect(parameterRole(parameter)).toBe(
+            ParameterRole.DERIVATION_VARIABLE
+        );
+        expect(isDerivationVariable(parameter)).toBe(true);
+    });
+
+    // Only a text one can take the unique value the app fills in, so one of
+    // another type is an ordinary parameter: indexed and editable as usual.
+    it("gives one of another type no role", () => {
+        const parameter = named("Derivation Variable");
+        expect(parameterRole(parameter)).toBeUndefined();
+        expect(isDerivationVariable(parameter)).toBe(false);
     });
 });
