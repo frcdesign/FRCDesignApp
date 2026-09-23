@@ -1,6 +1,5 @@
 import { OnshapeApi } from "../client";
 import { DocumentPath, toDocumentApiPath } from "../path";
-import { apiPath } from "../api-path";
 import { OnshapeWorkspaceInfo } from "../types";
 
 export function getWorkspaces(
@@ -8,9 +7,7 @@ export function getWorkspaces(
     documentPath: DocumentPath
 ): Promise<OnshapeWorkspaceInfo[]> {
     return client.get(
-        apiPath("documents", documentPath, toDocumentApiPath, {
-            endRoute: "workspaces"
-        })
+        `/documents${toDocumentApiPath(documentPath)}/workspaces`
     );
 }
 
@@ -20,9 +17,7 @@ export function createWorkspace(
     branch: { name: string; description: string; versionId: string }
 ): Promise<OnshapeWorkspaceInfo> {
     return client.post(
-        apiPath("documents", documentPath, toDocumentApiPath, {
-            endRoute: "workspaces"
-        }),
+        `/documents${toDocumentApiPath(documentPath)}/workspaces`,
         { body: branch }
     );
 }
@@ -33,9 +28,6 @@ export function deleteWorkspace(
     workspaceId: string
 ): Promise<void> {
     return client.deleteNone(
-        apiPath("documents", documentPath, toDocumentApiPath, {
-            endRoute: "workspaces",
-            endId: workspaceId
-        })
+        `/documents${toDocumentApiPath(documentPath)}/workspaces/${encodeURIComponent(workspaceId)}`
     );
 }

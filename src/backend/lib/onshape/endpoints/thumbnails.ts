@@ -3,7 +3,6 @@ import { encodeQueryConfiguration } from "../../../features/configurations/utils
 import { OnshapeApi } from "../client";
 import { assertInstanceType } from "../assertions";
 import { ElementPath, toElementApiPath, toInstanceApiPath } from "../path";
-import { apiPath } from "../api-path";
 import { ThumbnailSize } from "../../../features/thumbnails/contract";
 
 /** Returns the thumbnail for a given element in a workspace or version. */
@@ -13,8 +12,7 @@ export function getElementThumbnail(
     size = ThumbnailSize.LARGE
 ): Promise<ArrayBuffer> {
     assertInstanceType(elementPath, "w", "v");
-    const path =
-        apiPath("thumbnails", elementPath, toElementApiPath) + "/s/" + size;
+    const path = `/thumbnails${toElementApiPath(elementPath)}/s/${size}`;
     return client.getImage(path);
 }
 
@@ -43,9 +41,7 @@ export async function getThumbnailId(
     }
 
     const insertables = await client.get(
-        apiPath("documents", elementPath, toInstanceApiPath, {
-            endRoute: "insertables"
-        }),
+        `/documents${toInstanceApiPath(elementPath)}/insertables`,
         { query }
     );
     // A configuration matching nothing comes back with no items at all.
@@ -64,9 +60,6 @@ export function getThumbnailFromId(
     thumbnailId: string,
     size = ThumbnailSize.LARGE
 ): Promise<ArrayBuffer> {
-    const path =
-        apiPath("thumbnails", undefined, undefined, { endId: thumbnailId }) +
-        "/s/" +
-        size;
+    const path = `/thumbnails/${encodeURIComponent(thumbnailId)}/s/${size}`;
     return client.getImage(path);
 }

@@ -1,6 +1,5 @@
 import { OnshapeApi } from "../client";
 import { ElementPath, toElementApiPath } from "../path";
-import { apiPath } from "../api-path";
 import { type Selection } from "../../../features/configurations/contract";
 import { encodeQueryConfiguration } from "../../../features/configurations/utils";
 import type { OnshapeMetadataObject } from "../types";
@@ -21,7 +20,7 @@ export function getElementMetadata(
     if (encoded) {
         query.configuration = encoded;
     }
-    return client.get(apiPath("metadata", elementPath, toElementApiPath), {
+    return client.get(`/metadata${toElementApiPath(elementPath)}`, {
         query
     });
 }

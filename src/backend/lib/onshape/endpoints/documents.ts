@@ -1,11 +1,5 @@
 import { OnshapeApi } from "../client";
-import {
-    DocumentPath,
-    InstancePath,
-    toDocumentApiPath,
-    toInstanceApiPath
-} from "../path";
-import { apiPath } from "../api-path";
+import { DocumentPath, InstancePath, toInstanceApiPath } from "../path";
 import { OnshapeDocumentContents, OnshapeDocumentInfo } from "../types";
 
 /** Describes possible part types. */
@@ -19,11 +13,7 @@ export function getDocument(
     client: OnshapeApi,
     documentPath: DocumentPath
 ): Promise<OnshapeDocumentInfo> {
-    return client.get(
-        apiPath("documents", documentPath, toDocumentApiPath, {
-            skipDocumentD: true
-        })
-    );
+    return client.get(`/documents/${documentPath.documentId}`);
 }
 
 export function getContents(
@@ -31,12 +21,9 @@ export function getContents(
     instancePath: InstancePath,
     includeThumbnails = false
 ): Promise<OnshapeDocumentContents> {
-    return client.get(
-        apiPath("documents", instancePath, toInstanceApiPath, {
-            endRoute: "contents"
-        }),
-        { query: { withThumbnails: includeThumbnails } }
-    );
+    return client.get(`/documents${toInstanceApiPath(instancePath)}/contents`, {
+        query: { withThumbnails: includeThumbnails }
+    });
 }
 
 /** The document's units, as much of the response as anything here reads. */
@@ -52,8 +39,6 @@ export function getUnitInfo(
     instancePath: InstancePath
 ): Promise<OnshapeUnitInfo> {
     return onshapeApi.get(
-        apiPath("documents", instancePath, toInstanceApiPath, {
-            endRoute: "unitinfo"
-        })
+        `/documents${toInstanceApiPath(instancePath)}/unitinfo`
     );
 }

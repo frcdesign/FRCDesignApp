@@ -1,6 +1,5 @@
 import { OnshapeApi } from "../client";
 import { ElementPath, toElementApiPath } from "../path";
-import { apiPath } from "../api-path";
 import { type Selection } from "../../../features/configurations/contract";
 import { encodeQueryConfiguration } from "../../../features/configurations/utils";
 import type { OnshapePart } from "../types";
@@ -16,7 +15,7 @@ export function getParts(
 ): Promise<OnshapePart[]> {
     // The query form: this is escaped again on its way out.
     const encoded = encodeQueryConfiguration(configuration);
-    return client.get(apiPath("parts", elementPath, toElementApiPath), {
+    return client.get(`/parts${toElementApiPath(elementPath)}`, {
         query: encoded ? { configuration: encoded } : {}
     });
 }

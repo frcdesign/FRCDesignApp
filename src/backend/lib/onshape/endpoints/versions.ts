@@ -1,6 +1,5 @@
 import { OnshapeApi } from "../client";
 import { DocumentPath, toDocumentApiPath } from "../path";
-import { apiPath } from "../api-path";
 import { OnshapeVersionInfo } from "../types";
 
 /**
@@ -12,11 +11,7 @@ function getVersions(
     client: OnshapeApi,
     documentPath: DocumentPath
 ): Promise<OnshapeVersionInfo[]> {
-    return client.get(
-        apiPath("documents", documentPath, toDocumentApiPath, {
-            endRoute: "versions"
-        })
-    );
+    return client.get(`/documents${toDocumentApiPath(documentPath)}/versions`);
 }
 
 /** The most recently created version of a document, with when it was cut. */

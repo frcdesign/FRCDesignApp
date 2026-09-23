@@ -1,5 +1,4 @@
 import { OAuthApi, OnshapeApi } from "../client";
-import { apiPath } from "../api-path";
 import { AccessLevel } from "../../../features/auth/access-level";
 
 interface SessionInfo {
@@ -9,9 +8,7 @@ interface SessionInfo {
 }
 
 export function getSessionInfo(client: OAuthApi): Promise<SessionInfo> {
-    return client.get(
-        apiPath("users", undefined, undefined, { endRoute: "sessioninfo" })
-    );
+    return client.get("/users/sessioninfo");
 }
 
 /** Returns the user ID associated with the current session. */
@@ -26,7 +23,7 @@ export async function getAccessLevel(
 ): Promise<AccessLevel> {
     try {
         const teamInfo = await client.get(
-            apiPath("teams", undefined, undefined, { endId: teamId })
+            `/teams/${encodeURIComponent(teamId)}`
         );
         if (teamInfo.admin) return AccessLevel.ADMIN;
         if (teamInfo.member) return AccessLevel.EDITOR;
