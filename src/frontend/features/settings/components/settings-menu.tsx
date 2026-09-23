@@ -50,7 +50,7 @@ function SettingSelect<T extends string>(props: SettingSelectProps<T>) {
     const id = useId();
 
     return (
-        <InputRow label={label} htmlFor={id} spread>
+        <InputRow label={label} htmlFor={id}>
             <Select
                 id={id}
                 w={SETTING_CONTROL_WIDTH}
@@ -107,7 +107,7 @@ function UserSettings(): ReactNode {
             {/* Only worth offering from inside Onshape's panel, which is what
                 the standalone app is roomier than. */}
             {isConnected && (
-                <InputRow spread label="Open outside Onshape">
+                <InputRow label="Open outside Onshape">
                     <OpenUrlButton
                         text="Open app"
                         url={standaloneUrl(libraryId)}
@@ -116,21 +116,21 @@ function UserSettings(): ReactNode {
             )}
             {/* The dashboard is where the app is the thing worth offering. */}
             {isDashboard ? (
-                <InputRow spread label="Main app">
+                <InputRow label="Main app">
                     <OpenAppButton tabId={libraryId} />
                 </InputRow>
             ) : (
-                <InputRow spread label="Usage dashboard">
+                <InputRow label="Usage dashboard">
                     <OpenUrlButton text="Open dashboard" url={DASHBOARD_URL} />
                 </InputRow>
             )}
-            <InputRow spread label="Discord">
+            <InputRow label="Discord">
                 <OpenUrlButton text="Join discord" url={DISCORD_INVITE_URL} />
             </InputRow>
             {/* Only worth offering to somebody who is not already running the
                 app, which inside Onshape's panel they are. */}
             {!isConnected && (
-                <InputRow spread label="Get the FRCDesignApp">
+                <InputRow label="Get the FRCDesignApp">
                     <OpenUrlButton text="Instructions" url={SETUP_URL} />
                 </InputRow>
             )}
@@ -138,7 +138,7 @@ function UserSettings(): ReactNode {
                 only the standalone app's to offer. */}
             {!isConnected && (
                 <RequireSignIn>
-                    <InputRow spread label="Onshape account">
+                    <InputRow label="Onshape account">
                         <Button
                             leftSection={<SignOutIcon size={IconSize.SMALL} />}
                             variant="light"
@@ -206,10 +206,10 @@ function AdminSettings(): ReactNode {
             {/* Always show the access level select so admins can change access level if needed */}
             <AccessLevelSelect />
             <RequireAccessLevel>
-                <InputRow spread label="Reload outdated documents">
+                <InputRow label="Reload outdated documents">
                     <ReloadGroupsButton />
                 </InputRow>
-                <InputRow spread label="Reload all documents">
+                <InputRow label="Reload all documents">
                     <ReloadGroupsButton reloadAll />
                 </InputRow>
             </RequireAccessLevel>

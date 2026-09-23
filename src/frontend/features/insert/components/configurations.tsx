@@ -1,9 +1,9 @@
 import {
     Center,
     Checkbox,
+    type ComboboxProps,
     Loader,
     Select,
-    Stack,
     TextInput
 } from "@mantine/core";
 import {
@@ -44,7 +44,7 @@ import {
 import { evaluateExpression } from "@backend/features/configurations/input-parser";
 import { useConfigurationQuery, useUnitInfoQuery } from "../queries";
 import { SectionNotice } from "../../../components/app-zero-state";
-import { InputRow } from "../../../components/input-row";
+import classes from "./configurations.module.css";
 import { useTargetElement } from "../../../lib/onshape-params";
 import {
     normalizeSelection,
@@ -195,10 +195,8 @@ function ConfigurationParameters(
 ): ReactNode {
     const { configurationResult, selection, setSelection, unitInfo } = props;
 
-    // Spaced by the stack, not by a margin on each row, which the first row
-    // would add to the gap the body already leaves above it.
     return (
-        <Stack gap="sm">
+        <div className={classes.grid}>
             {configurationResult.parameters.map((parameter) => (
                 <ParameterRow
                     key={parameter.id}
@@ -209,9 +207,49 @@ function ConfigurationParameters(
                     unitInfo={unitInfo}
                 />
             ))}
-        </Stack>
+        </div>
     );
 }
+
+interface ParameterCellsProps {
+    parameter: ConfigurationParameter;
+    children: ReactNode;
+}
+
+/** A row of the grid: the parameter's name, then its control. */
+function ParameterCells(props: ParameterCellsProps): ReactNode {
+    const { parameter, children } = props;
+    return (
+        <>
+            <label className={classes.label} htmlFor={parameter.id}>
+                {parameter.name}
+            </label>
+            {children}
+        </>
+    );
+}
+
+/**
+ * At least as wide as the input and at most as wide as the screen, so a long
+ * option reads on one line where there is room and wraps where there is not,
+ * rather than wrapping inside a dropdown as narrow as a squeezed input.
+ */
+const DROPDOWN_PROPS: ComboboxProps = {
+    width: "max-content",
+    position: "bottom-end",
+    middlewares: {
+        shift: { padding: 8 },
+        size: {
+            padding: 8,
+            apply: ({ rects, availableWidth, elements }) => {
+                Object.assign(elements.floating.style, {
+                    minWidth: `${rects.reference.width}px`,
+                    maxWidth: `${availableWidth}px`
+                });
+            }
+        }
+    }
+};
 
 interface ParameterRowProps {
     parameter: ConfigurationParameter;
@@ -296,7 +334,7 @@ function EnumInput(props: ParameterProps<EnumParameter>): ReactNode {
     }
 
     return (
-        <InputRow label={parameter.name} htmlFor={parameter.id}>
+        <ParameterCells parameter={parameter}>
             <Select
                 id={parameter.id}
                 data={visibleOptions.map((option) => ({
@@ -304,54 +342,48 @@ function EnumInput(props: ParameterProps<EnumParameter>): ReactNode {
                     label: option.name
                 }))}
                 value={currentOption.id}
-                flex={1}
                 allowDeselect={false}
                 checkIconPosition="right"
                 maxDropdownHeight={250}
-                comboboxProps={{ withinPortal: true }}
+                comboboxProps={DROPDOWN_PROPS}
                 onChange={(newValue) => {
                     if (newValue !== null) {
                         onValueChange(newValue);
                     }
                 }}
             />
-        </InputRow>
+        </ParameterCells>
     );
 }
 
 function BooleanInput(props: ParameterProps<BooleanParameter>): ReactNode {
     const { parameter, value, onValueChange } = props;
     return (
-        <InputRow label={parameter.name} htmlFor={parameter.id} controlFirst>
+        <ParameterCells parameter={parameter}>
             <Checkbox
                 id={parameter.id}
+                className={classes.checkbox}
                 checked={(value ?? parameter.default) === "true"}
-                // The checkbox is shorter than an input, so center it against the label
-                style={{ alignSelf: "center" }}
-                styles={{
-                    input: { cursor: "pointer" }
-                }}
                 onChange={(event) =>
                     onValueChange(
                         event.currentTarget.checked ? "true" : "false"
                     )
                 }
             />
-        </InputRow>
+        </ParameterCells>
     );
 }
 
 function StringInput(props: ParameterProps<StringParameter>): ReactNode {
     const { parameter, value, onValueChange } = props;
     return (
-        <InputRow label={parameter.name} htmlFor={parameter.id}>
+        <ParameterCells parameter={parameter}>
             <TextInput
                 id={parameter.id}
                 value={value ?? parameter.default}
-                flex={1}
                 onChange={(event) => onValueChange(event.currentTarget.value)}
             />
-        </InputRow>
+        </ParameterCells>
     );
 }
 
@@ -367,6 +399,10 @@ function QuantityInput(props: ParameterProps<QuantityParameter>): ReactNode {
 
     const inputRef = useRef<HTMLInputElement>(null);
     const [focused, setFocused] = useState(false);
+    // Set when a click is what focuses the box. That click's mouseup would
+    // otherwise drop the selection focusing made — some browsers do, some do
+    // not — so a click in reads the same everywhere: the whole expression.
+    const selectOnMouseUp = useRef(false);
 
     const [box, setBox] = useState(() =>
         seedFrom(value, parameter, evaluateOptions)
@@ -403,13 +439,22 @@ function QuantityInput(props: ParameterProps<QuantityParameter>): ReactNode {
     };
 
     return (
-        <InputRow label={parameter.name} htmlFor={parameter.id}>
+        <ParameterCells parameter={parameter}>
             <TextInput
                 id={parameter.id}
                 ref={inputRef}
                 value={focused ? box.expression : box.display}
                 error={box.errorMessage}
-                flex={1}
+                onMouseDown={(event) => {
+                    selectOnMouseUp.current =
+                        document.activeElement !== event.currentTarget;
+                }}
+                onMouseUp={(event) => {
+                    if (selectOnMouseUp.current) {
+                        selectOnMouseUp.current = false;
+                        event.preventDefault();
+                    }
+                }}
                 onFocus={(event) => {
                     setFocused(true);
                     event.currentTarget.select();
@@ -428,6 +473,6 @@ function QuantityInput(props: ParameterProps<QuantityParameter>): ReactNode {
                     setBox((current) => ({ ...current, expression }));
                 }}
             />
-        </InputRow>
+        </ParameterCells>
     );
 }

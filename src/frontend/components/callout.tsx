@@ -1,7 +1,7 @@
 import { Alert, Button, Group, Text } from "@mantine/core";
 import { InfoIcon } from "@phosphor-icons/react";
 import { ReactNode } from "react";
-import { IconSize, NO_SHRINK, StatusColor } from "../lib/style-constants";
+import { IconSize, StatusColor } from "../lib/style-constants";
 
 export interface CalloutAction {
     /** A verb or a destination, e.g. "Instructions". */
@@ -36,18 +36,19 @@ export function Callout(props: CalloutProps): ReactNode {
                 wrapper: { alignItems: "center" }
             }}
         >
-            <Group justify="space-between" wrap="nowrap" gap="sm">
-                <Text size="sm">{text}</Text>
+            {/* Wraps rather than squeezing: on a narrow panel the button drops
+                under the text instead of running off the edge. */}
+            <Group justify="space-between" gap="xs">
+                <Text size="sm" flex="1 1 12rem">
+                    {text}
+                </Text>
                 {action && (
-                    // Outlined rather than filled, which would shout on a
-                    // note; held at its own width, since the text is what
-                    // gives on a narrow row.
+                    // Outlined rather than filled, which would shout on a note.
                     <Button
                         variant="outline"
                         color={StatusColor.INFO}
                         size="compact-sm"
                         leftSection={action.icon}
-                        style={NO_SHRINK}
                         onClick={action.onClick}
                     >
                         {action.text}

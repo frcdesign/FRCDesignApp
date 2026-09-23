@@ -1,0 +1,25 @@
+/*
+ * Labels share a column, so every control starts at one edge whatever its label
+ * says. The column is capped, so a long label wraps rather than squeezing its
+ * control down to nothing on a narrow panel.
+ */
+.grid {
+    display: grid;
+    grid-template-columns: fit-content(40%) minmax(0, 1fr);
+    gap: var(--mantine-spacing-sm);
+    align-items: start;
+}
+
+/* As tall as the input beside it, so the two stay level when it shows an error. */
+.label,
+.checkbox {
+    display: flex;
+    align-items: center;
+    min-height: var(--input-height-sm, rem(36px));
+}
+
+.label {
+    font-size: var(--mantine-font-size-sm);
+    overflow-wrap: anywhere;
+    cursor: pointer;
+}
