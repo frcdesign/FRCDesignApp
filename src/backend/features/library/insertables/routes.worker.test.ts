@@ -397,7 +397,7 @@ describe("insertable routes", () => {
             env
         );
 
-        expect(spy.mock.calls[0][4].configuration).toBe(
+        expect(spy.mock.calls[0][4]?.configuration).toBe(
             "length=(2%20%2B%203)%20in"
         );
     });
