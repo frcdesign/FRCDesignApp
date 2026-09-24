@@ -3,7 +3,8 @@ import {
     text,
     integer,
     unique,
-    customType
+    customType,
+    primaryKey
 } from "drizzle-orm/sqlite-core";
 import { ElementType } from "../lib/onshape/element-type";
 import { FastenInfo } from "../features/library/insertables/fasten";
@@ -68,11 +69,32 @@ const versionCreatedAt = () =>
     integer("version_created_at", { mode: "timestamp_ms" });
 
 export const libraries = sqliteTable("libraries", {
-    id: text("id").primaryKey(),
-    cacheVersion: integer("cache_version").notNull().default(0)
-    // The serialized MiniSearch index now lives in R2 (see rebuildSearchDb),
+    id: text("id").$type<LibraryId>().primaryKey(),
+    // The serialized MiniSearch index lives in R2 (see rebuildSearchDb),
     // keyed by library id, rather than in a D1 column.
+    cacheVersion: integer("cache_version").notNull().default(0),
+    // The Onshape team whose members may edit the library, set by the owner.
+    // Null until set, when nobody but the owner can.
+    adminTeamId: text("admin_team_id")
 });
+
+/**
+ * The library's admin team as Onshape last reported it, so access is a lookup
+ * rather than a question for Onshape. Replaced whole on every sync; see
+ * `features/access/admin-team.ts`.
+ */
+export const adminTeamMembers = sqliteTable(
+    "admin_team_members",
+    {
+        libraryId: libraryId().references(() => libraries.id, {
+            onDelete: "cascade"
+        }),
+        userId: text("user_id").notNull(),
+        // An admin of the team rather than only a member of it.
+        isTeamAdmin: integer("is_team_admin", { mode: "boolean" }).notNull()
+    },
+    (t) => [primaryKey({ columns: [t.libraryId, t.userId] })]
+);
 
 /**
  * The `versionId` a group carries before a load pins a real one, so a group
@@ -228,3 +250,50 @@ export const favorites = sqliteTable(
     },
     (t) => [unique().on(t.userId, t.libraryId, t.insertableId)]
 );
+
+/**
+ * What an Onshape webhook is registered for: new versions of one document, or
+ * an admin team's membership.
+ */
+export enum WebhookSubject {
+    DOCUMENT = "document",
+    TEAM = "team"
+}
+
+/**
+ * The webhooks this deployment registered, one per subject, and the token
+ * each one's deliveries carry. The token is stored before Onshape answers the
+ * create, since it checks the url before then; `webhookId` follows.
+ */
+export const onshapeWebhooks = sqliteTable(
+    "onshape_webhooks",
+    {
+        subject: text("subject").$type<WebhookSubject>().notNull(),
+        // A document id or a team id, by subject.
+        subjectId: text("subject_id").notNull(),
+        webhookId: text("webhook_id"),
+        token: text("token").notNull().unique()
+    },
+    (t) => [primaryKey({ columns: [t.subject, t.subjectId] })]
+);
+
+/**
+ * The load running for each group, one at most: another asked for meanwhile
+ * sets `rerun`, and the running one starts it as it finishes. Rows rather than
+ * a KV list, since loads start and finish concurrently and a list in KV loses
+ * writes that race.
+ */
+export const loadJobs = sqliteTable("load_jobs", {
+    groupId: text("group_id")
+        .primaryKey()
+        .references(() => groups.id, { onDelete: "cascade" }),
+    libraryId: libraryId().references(() => libraries.id),
+    // Null for the moment between claiming the row and the instance existing.
+    instanceId: text("instance_id"),
+    startedAt: integer("started_at", { mode: "timestamp_ms" }).notNull(),
+    rerun: integer("rerun", { mode: "boolean" }).notNull().default(false),
+    // Whether the rerun reloads unchanged insertables too.
+    rerunForce: integer("rerun_force", { mode: "boolean" })
+        .notNull()
+        .default(false)
+});

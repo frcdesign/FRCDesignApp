@@ -54,7 +54,3 @@ export function pushThumbnailRendered(
 ): Promise<void> {
     return broadcast(env, { type: LiveMessageType.THUMBNAIL, ...subject });
 }
-
-export function pushAccessChanged(env: AppBindings): Promise<void> {
-    return broadcast(env, { type: LiveMessageType.ACCESS });
-}

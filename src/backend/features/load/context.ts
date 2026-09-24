@@ -2,7 +2,7 @@ import type { WorkflowStep } from "cloudflare:workers";
 import { createLimiter, type Limiter } from "../../lib/limiter";
 import type { AppBindings } from "../../lib/context";
 import { getOnshapeApiFromSessionId } from "../auth/request-auth";
-import type { OnshapeApi } from "../../lib/onshape/client";
+import type { OAuthApi } from "../../lib/onshape/client";
 import type { ElementType } from "../../lib/onshape/element-type";
 import type { LibraryId } from "../library/library-id";
 import type { ElementPath, InstancePath } from "../../lib/onshape/path";
@@ -53,9 +53,7 @@ export function createLoadContext(
     };
 }
 
-export function getOnshapeApiFromContext(
-    ctx: LoadContext
-): Promise<OnshapeApi> {
+export function getOnshapeApiFromContext(ctx: LoadContext): Promise<OAuthApi> {
     return getOnshapeApiFromSessionId(ctx.env.KV, ctx.sessionId);
 }
 

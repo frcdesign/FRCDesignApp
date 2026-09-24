@@ -18,7 +18,7 @@ describe("api error responses", () => {
         const app = createTestApp({ signedIn: false });
 
         const res = await app.request(
-            `/api/reload-groups/library/${LibraryId.FRC_DESIGN_LIB}`,
+            `/api/group-order/library/${LibraryId.FRC_DESIGN_LIB}`,
             jsonRequest("POST"),
             env
         );
@@ -34,7 +34,7 @@ describe("api error responses", () => {
         const app = createTestApp({ accessLevel: AccessLevel.USER });
 
         const res = await app.request(
-            `/api/reload-groups/library/${LibraryId.FRC_DESIGN_LIB}`,
+            `/api/group-order/library/${LibraryId.FRC_DESIGN_LIB}`,
             jsonRequest("POST"),
             env
         );

@@ -7,12 +7,13 @@ import { type AppContext, getApp } from "../../../lib/context";
 import type { BatchItem } from "drizzle-orm/batch";
 import { getInsertableParam, insertableRoute } from "../../../lib/route-params";
 import { getDb, type Db } from "../../../db/client";
-import {
-    requireEditorMiddleware,
-    requireSignInMiddleware
-} from "../../auth/guards";
+import { requireEditor, requireSignInMiddleware } from "../../auth/guards";
 import { insertables, configurations } from "../../../db/schema";
-import { bumpLibraryVersion, rebuildSearchDb } from "../db";
+import {
+    bumpLibraryVersion,
+    libraryOfInsertable,
+    rebuildSearchDb
+} from "../db";
 import { type InsertOut } from "../contract";
 import { toElementPath, INSTANCE_TYPES } from "../../../lib/onshape/path";
 import {
@@ -51,6 +52,11 @@ import { addBuildIssue, clearBuildIssue } from "../../build-checker/issues";
 
 export const insertableRoutes = getApp();
 
+/** An editor of the library the insertable in the path is in. */
+const requireInsertableEditor = requireEditor((c) =>
+    libraryOfInsertable(getDb(c.env.DB), getInsertableParam(c))
+);
+
 /** POST /api/toggle-insert-and-fasten/insertable/:insertableId */
 const setFastenBody = z.object({ supportsFasten: z.boolean() });
 
@@ -62,7 +68,7 @@ const excludedParametersBody = z.object({
 
 insertableRoutes.post(
     "/toggle-insert-and-fasten" + insertableRoute(),
-    requireEditorMiddleware,
+    requireInsertableEditor,
     validate("json", setFastenBody),
     async (c) => {
         const db = getDb(c.env.DB);
@@ -106,7 +112,7 @@ insertableRoutes.post(
 /** POST /api/index-configurations/insertable/:insertableId */
 insertableRoutes.post(
     "/index-configurations" + insertableRoute(),
-    requireEditorMiddleware,
+    requireInsertableEditor,
     validate("json", indexConfigurationsBody),
     async (c) => {
         const { indexConfigurations } = c.req.valid("json");
@@ -118,7 +124,7 @@ insertableRoutes.post(
 /** POST /api/excluded-parameters/insertable/:insertableId */
 insertableRoutes.post(
     "/excluded-parameters" + insertableRoute(),
-    requireEditorMiddleware,
+    requireInsertableEditor,
     validate("json", excludedParametersBody),
     async (c) => {
         const { excludedParameterIds } = c.req.valid("json");

@@ -1,22 +1,28 @@
 import { env } from "cloudflare:workers";
 import { env as processEnv } from "process";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { AccessLevel } from "./access-level";
 import { productionAuth } from "./request-auth";
 import { createApp } from "../../app";
-import { jsonRequest } from "../../../__test_utils__";
+import { jsonRequest, resetDb, seedLibrary } from "../../../__test_utils__";
+import { getDb } from "../../db/client";
+import { adminTeamMembers } from "../../db/schema";
+import { LibraryId } from "../library/library-id";
 import { saveSession } from "./session";
 import { getOwnerSessionId } from "./owner";
-import * as Registration from "../webhooks/registration";
 
 const app = createApp(productionAuth);
 
 /** What the real caller resolves for a request carrying no Onshape session. */
 async function getMaxAccessLevel(override?: AccessLevel): Promise<AccessLevel> {
-    const res = await app.request("/api/access-data", jsonRequest("GET"), {
-        ...env,
-        VITE_ACCESS_LEVEL_OVERRIDE: override
-    });
+    const res = await app.request(
+        "/api/access-data/library/frc-design-lib",
+        jsonRequest("GET"),
+        {
+            ...env,
+            VITE_ACCESS_LEVEL_OVERRIDE: override
+        }
+    );
     const body: { maxAccessLevel: AccessLevel } = await res.json();
     return body.maxAccessLevel;
 }
@@ -47,11 +53,33 @@ describe("the dev access-level override", () => {
     });
 });
 
-describe("the owner", () => {
+describe("access from a library's admin team", () => {
     const OWNER = "owner-user-id";
 
+    beforeEach(async () => {
+        const db = getDb(env.DB);
+        await resetDb(db);
+        await seedLibrary(db, LibraryId.FRC_DESIGN_LIB);
+        await seedLibrary(db, LibraryId.FTC_DESIGN_LIB);
+        await db.insert(adminTeamMembers).values([
+            {
+                libraryId: LibraryId.FRC_DESIGN_LIB,
+                userId: "member",
+                isTeamAdmin: false
+            },
+            {
+                libraryId: LibraryId.FRC_DESIGN_LIB,
+                userId: "team-admin",
+                isTeamAdmin: true
+            }
+        ]);
+    });
+
     /** A signed-in session whose user is already resolved, so Onshape is not asked. */
-    async function accessLevelOf(userId: string): Promise<AccessLevel> {
+    async function accessLevelOf(
+        userId: string,
+        libraryId: LibraryId = LibraryId.FRC_DESIGN_LIB
+    ): Promise<AccessLevel> {
         const sessionId = crypto.randomUUID();
         await saveSession(env.KV, sessionId, {
             accessToken: "token",
@@ -60,7 +88,7 @@ describe("the owner", () => {
             userId
         });
         const res = await app.request(
-            "/api/access-data",
+            `/api/access-data/library/${libraryId}`,
             {
                 method: "GET",
                 headers: { Cookie: `frc-design-app-cookie=${sessionId}` }
@@ -72,12 +100,26 @@ describe("the owner", () => {
     }
 
     it("is the user OWNER_USER_ID names, and their session is kept", async () => {
-        const ensure = vi
-            .spyOn(Registration, "ensureWebhook")
-            .mockResolvedValue();
         expect(await accessLevelOf(OWNER)).toBe(AccessLevel.OWNER);
         expect(await getOwnerSessionId(env.KV)).not.toBeNull();
-        // And the webhooks are kept registered on their behalf.
-        expect(ensure).toHaveBeenCalledOnce();
+    });
+
+    it("makes a member an editor, and a team admin an admin", async () => {
+        expect(await accessLevelOf("member")).toBe(AccessLevel.EDITOR);
+        expect(await accessLevelOf("team-admin")).toBe(AccessLevel.ADMIN);
+        expect(await accessLevelOf("stranger")).toBe(AccessLevel.USER);
+    });
+
+    // Access is per library now: one library's team edits that library alone.
+    it("grants nothing in a library whose team the user is not on", async () => {
+        expect(
+            await accessLevelOf("team-admin", LibraryId.FTC_DESIGN_LIB)
+        ).toBe(AccessLevel.USER);
+    });
+
+    it("gives the owner every library", async () => {
+        expect(await accessLevelOf(OWNER, LibraryId.FTC_DESIGN_LIB)).toBe(
+            AccessLevel.OWNER
+        );
     });
 });

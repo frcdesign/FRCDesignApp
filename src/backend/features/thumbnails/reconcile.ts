@@ -29,9 +29,8 @@ const MAX_PAGES = 50;
  * stored before the row naming it is written — a group load uploads as it goes
  * and commits its rows at the end, and a configuration render is started by a
  * user opening the insert menu, outside any job this could wait on. Either one
- * would look orphaned while it is in flight. Matched to the job TTL, since that
- * is the longest a load is expected to take; anything genuinely orphaned is
- * simply collected by a later reload instead.
+ * would look orphaned while it is in flight. A day, the longest a load is
+ * expected to take; anything genuinely orphaned is collected by a later run.
  */
 const MIN_AGE_MS = 24 * 60 * 60 * 1000;
 

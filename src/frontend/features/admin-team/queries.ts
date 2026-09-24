@@ -1,0 +1,42 @@
+import { useMutation, useQuery } from "@tanstack/react-query";
+import type { AdminTeamOut } from "@backend/features/admin-team/contract";
+import { apiGet, apiPost } from "../../lib/api-client";
+import { toLibraryPath } from "../../lib/api-paths";
+import { getAppErrorHandler } from "../../lib/errors";
+import { useLibraryId } from "../../lib/library";
+import { showSuccessToast } from "../../lib/notifications";
+import { queryClient } from "../../lib/query-client";
+import { adminTeamQueryKey } from "../../lib/query-keys";
+
+export function useAdminTeamQuery() {
+    const libraryId = useLibraryId();
+    return useQuery({
+        queryKey: adminTeamQueryKey(libraryId),
+        queryFn: () =>
+            apiGet<AdminTeamOut>("/admin-team" + toLibraryPath(libraryId))
+    });
+}
+
+/**
+ * Sets the library's admin team, which the server pulls the members of. The
+ * change reaches everyone's access through the library version it bumps.
+ */
+export function useSetAdminTeamMutation() {
+    const libraryId = useLibraryId();
+    return useMutation({
+        mutationKey: ["admin-team", libraryId],
+        mutationFn: (teamId: string | null) =>
+            apiPost<AdminTeamOut>("/admin-team" + toLibraryPath(libraryId), {
+                body: { teamId }
+            }),
+        onError: getAppErrorHandler("Failed to set the admin team!"),
+        onSuccess: (team) => {
+            queryClient.setQueryData(adminTeamQueryKey(libraryId), team);
+            showSuccessToast(
+                team.teamId
+                    ? `Admin team set: ${team.memberCount} members.`
+                    : "Admin team removed."
+            );
+        }
+    });
+}

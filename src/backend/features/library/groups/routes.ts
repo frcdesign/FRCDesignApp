@@ -9,20 +9,22 @@ import { getSessionId } from "../../auth/session";
 import { getDocument } from "../../../lib/onshape/endpoints/documents";
 import { requireEditorMiddleware } from "../../auth/guards";
 import { type DocumentPath } from "../../../lib/onshape/path";
-import { groups, insertables, favorites } from "../../../db/schema";
+import {
+    groups,
+    insertables,
+    favorites,
+    WebhookSubject
+} from "../../../db/schema";
 import { bumpLibraryVersion, rebuildSearchDb } from "../db";
 import { HttpStatus } from "http-status-ts";
 import { handledError } from "../../../lib/api-error";
-import { getJobStatus, trackJob } from "../../load/job-tracker";
-import { startReload } from "../../load/reload";
+import { getJobStatus, requestLoads } from "../../load/jobs";
+import { createShellGroup } from "../../load/workflows";
+import { removeWebhook } from "../../webhooks/registration";
 import { z } from "zod";
 import { validate } from "../../../lib/validate";
 
 export const groupRoutes = getApp();
-
-const reloadGroupsQuery = z.object({
-    forceReload: z.stringbool().default(false)
-});
 
 const setVisibilityBody = z.object({
     insertableIds: z.array(z.string()),
@@ -43,24 +45,7 @@ const addGroupBody = z.object({
 
 const deleteGroupQuery = z.object({ groupId: z.string().min(1) });
 
-/** POST /api/reload-groups/library/:libraryId?forceReload=true */
-groupRoutes.post(
-    "/reload-groups" + libraryRoute(),
-    requireEditorMiddleware,
-    validate("query", reloadGroupsQuery),
-    async (c) => {
-        const { forceReload } = c.req.valid("query");
-        // The workflow owns the per-group version check — unchanged documents
-        // are skipped inside it (unless forceReload).
-        const status = await startReload(c.env, getLibraryParam(c), {
-            sessionId: getSessionId(c),
-            forceReload
-        });
-        return c.json({ status });
-    }
-);
-
-/** GET /api/job-status/library/:libraryId — checked on load, then polled. */
+/** GET /api/job-status/library/:libraryId — checked on load, then pushed. */
 groupRoutes.get(
     "/job-status" + libraryRoute(),
     requireEditorMiddleware,
@@ -218,18 +203,22 @@ groupRoutes.post(
         }
 
         const groupId = crypto.randomUUID();
-
-        const instance = await c.env.ADD_GROUP_WORKFLOW.create({
-            params: {
-                groupId,
-                documentId: body.newDocumentId,
-                documentName,
-                libraryId,
-                sessionId,
-                selectedGroupId: body.selectedGroupId
-            }
+        await createShellGroup(c.env, {
+            groupId,
+            documentId: body.newDocumentId,
+            documentName,
+            libraryId,
+            selectedGroupId: body.selectedGroupId
         });
-        await trackJob(c.env, libraryId, "add-group", instance.id);
+        await requestLoads(c.env, [
+            {
+                libraryId,
+                groupId,
+                sessionId,
+                forceReload: false,
+                origin: new URL(c.req.url).origin
+            }
+        ]);
 
         return c.json({ name: documentName });
     }
@@ -247,11 +236,34 @@ groupRoutes.delete(
         const db = getDb(c.env.DB);
 
         // Cascade deletes insertables → favorites, and configurations automatically
-        await db
+        const [deleted] = await db
             .delete(groups)
-            .where(
-                and(eq(groups.id, groupId), eq(groups.libraryId, libraryId))
-            );
+            .where(and(eq(groups.id, groupId), eq(groups.libraryId, libraryId)))
+            .returning({ documentId: groups.documentId });
+
+        // The document's webhook goes with the last group loaded from it.
+        if (deleted) {
+            const stillUsed = await db
+                .select({ id: groups.id })
+                .from(groups)
+                .where(eq(groups.documentId, deleted.documentId))
+                .get();
+            if (!stillUsed) {
+                // Logged rather than failing a delete that has happened: a
+                // webhook left behind reloads nothing, since no group matches.
+                await removeWebhook(
+                    c.env,
+                    await c.var.getOnshapeApi(),
+                    WebhookSubject.DOCUMENT,
+                    deleted.documentId
+                ).catch((error: unknown) => {
+                    console.error(
+                        `Failed to remove the webhook for ${deleted.documentId}`,
+                        error
+                    );
+                });
+            }
+        }
 
         await rebuildSearchDb(c.env.BLOB, db, libraryId);
         await bumpLibraryVersion(db, libraryId);

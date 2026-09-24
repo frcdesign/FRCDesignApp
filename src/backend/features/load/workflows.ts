@@ -3,20 +3,23 @@ import {
     type WorkflowEvent,
     type WorkflowStep
 } from "cloudflare:workers";
-import { and, eq, inArray } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import type { AppBindings } from "../../lib/context";
 import { getDb } from "../../db/client";
 import type { LibraryId } from "../library/library-id";
 import {
     bumpLibraryVersion,
     ensureLibrary,
-    placeNewGroup,
-    rebuildSearchDb
+    placeNewGroup
 } from "../library/db";
 import { getDocument } from "../../lib/onshape/endpoints/documents";
 import { getLatestVersion } from "../../lib/onshape/endpoints/versions";
 import type { InstancePath } from "../../lib/onshape/path";
-import { groups, PLACEHOLDER_VERSION_ID } from "../../db/schema";
+import {
+    groups,
+    PLACEHOLDER_VERSION_ID,
+    WebhookSubject
+} from "../../db/schema";
 import {
     addBuildIssue,
     type BuildIssue,
@@ -30,171 +33,120 @@ import {
     createLoadContext,
     getOnshapeApiFromContext
 } from "./context";
-import { untrackJob } from "./job-tracker";
-import { startQueuedReload } from "./reload";
+import { finishLoad, type LoadDocumentParams } from "./jobs";
 import { pushLibraryChanged } from "../live/notify";
 import { loadGroup } from "./load-group";
 import { ONSHAPE_STEP_RETRIES } from "./steps";
-import { reconcileThumbnails } from "../thumbnails/reconcile";
+import { ensureWebhook } from "../webhooks/registration";
 
-export interface LoadLibraryParams {
-    libraryId: LibraryId;
-    sessionId: string;
-    forceReload?: boolean;
-    /** Only the groups loaded from these; every group when absent. */
-    documentIds?: string[];
-}
-
-/** The outcome of loading a single group within a run. */
-type GroupResult =
-    | { groupId: string; status: "skipped" | "failed" }
+/** What a load did with its group. */
+export type LoadResult =
+    | { status: "skipped" | "failed" | "gone" }
     | {
-          groupId: string;
-          status: "created" | "reloaded";
+          status: "loaded";
           loadedElements: number;
           deletedElements: number;
           failedElements: number;
       };
 
 /**
- * Reloads every group in a library whose document has a new version (or all of
- * them, on forceReload), then rebuilds the search index once at the end.
+ * Loads one group's document: when its version has moved on, or always on a
+ * forced reload. New versions, added documents and forced reloads all come
+ * through here, one instance per group at a time; see `jobs.ts`.
  */
-export class LoadLibraryWorkflow extends WorkflowEntrypoint<
+export class LoadDocumentWorkflow extends WorkflowEntrypoint<
     AppBindings,
-    LoadLibraryParams
+    LoadDocumentParams
 > {
     async run(
-        event: WorkflowEvent<LoadLibraryParams>,
+        event: WorkflowEvent<LoadDocumentParams>,
         step: WorkflowStep
-    ): Promise<GroupResult[]> {
-        const {
-            libraryId,
-            sessionId,
-            forceReload = false,
-            documentIds
-        } = event.payload;
-        const ctx = createLoadContext(this.env, sessionId, step);
-
-        const storedGroups = await step.do("list-groups", () =>
-            getDb(ctx.env.DB)
-                .select({
-                    groupId: groups.id,
-                    documentId: groups.documentId,
-                    versionId: groups.versionId,
-                    buildIssues: groups.buildIssues
-                })
-                .from(groups)
-                .where(
-                    and(
-                        eq(groups.libraryId, libraryId),
-                        documentIds
-                            ? inArray(groups.documentId, documentIds)
-                            : undefined
-                    )
-                )
-        );
-
-        const results = await Promise.all(
-            storedGroups.map(async (storedGroup): Promise<GroupResult> => {
-                const { groupId, documentId } = storedGroup;
-                try {
-                    const target = await resolveGroupTarget(
-                        ctx,
-                        { libraryId, groupId, documentId },
-                        `-${groupId}`
-                    );
-                    if (
-                        storedGroup.versionId ===
-                            target.versionPath.instanceId &&
-                        !forceReload &&
-                        !hasFailedLoad(storedGroup.buildIssues)
-                    ) {
-                        return { groupId, status: "skipped" };
-                    }
-                    const loaded = await loadGroup(ctx, target, forceReload);
-                    return { groupId, status: "reloaded", ...loaded };
-                } catch (error) {
-                    // The only record of why: the group row stores that it
-                    // failed, never what failed.
-                    console.error(`Failed to load group ${groupId}`, error);
-                    await ctx.step.do(`flag-failed-${groupId}`, () =>
-                        flagFailedGroup(ctx.env, groupId)
-                    );
-                    return { groupId, status: "failed" };
-                }
-            })
-        );
-
-        await step.do("finalize", () => finalizeLibrary(ctx.env, libraryId));
-        // Last, so every group that was going to write rows has. A group that
-        // failed kept its old rows, so its thumbnails still read as live.
-        await step.do("reconcile-thumbnails", () =>
-            reconcileThumbnails(ctx.env.BLOB, getDb(ctx.env.DB))
-        );
-        await step.do("untrack-job", () =>
-            untrackJob(ctx.env, libraryId, event.instanceId)
-        );
-        await step.do("start-queued-reload", () =>
-            startQueuedReload(ctx.env, libraryId)
-        );
-
-        return results;
-    }
-}
-
-export interface AddGroupParams {
-    /** The new group's id, minted by the route. */
-    groupId: string;
-    documentId: string;
-    /** The document's name, already fetched by the route. */
-    documentName: string;
-    libraryId: LibraryId;
-    sessionId: string;
-    /** An existing group to place the new group after. */
-    selectedGroupId?: string;
-}
-
-/**
- * Adds an Onshape document to a library by inserting and then loading it.
- */
-export class AddGroupWorkflow extends WorkflowEntrypoint<
-    AppBindings,
-    AddGroupParams
-> {
-    async run(
-        event: WorkflowEvent<AddGroupParams>,
-        step: WorkflowStep
-    ): Promise<GroupResult> {
+    ): Promise<LoadResult> {
         const params = event.payload;
         const ctx = createLoadContext(this.env, params.sessionId, step);
-
-        // Written before anything can fail, so an add that dies partway leaves a
-        // group the library still shows and an editor can retry or delete.
-        await step.do("create-shell-group", () =>
-            createShellGroup(ctx.env, params)
-        );
-
-        let result: GroupResult;
         try {
-            const target = await resolveGroupTarget(ctx, params, "");
-            const loaded = await loadGroup(ctx, target, false);
-            result = { groupId: params.groupId, status: "created", ...loaded };
-        } catch {
-            await step.do("flag-failed-group", () =>
-                flagFailedGroup(ctx.env, params.groupId)
-            );
-            result = { groupId: params.groupId, status: "failed" };
+            return await loadDocument(ctx, params);
+        } finally {
+            // Whatever happened, so the group is let go and whatever queued
+            // behind this load starts.
+            await step.do("finish", () => finishLoad(this.env, params));
         }
-
-        await step.do("finalize", () =>
-            finalizeLibrary(ctx.env, params.libraryId)
-        );
-        await step.do("untrack-job", () =>
-            untrackJob(ctx.env, params.libraryId, event.instanceId)
-        );
-        return result;
     }
+}
+
+async function loadDocument(
+    ctx: LoadContext,
+    params: LoadDocumentParams
+): Promise<LoadResult> {
+    const { groupId, libraryId, forceReload } = params;
+    const stored = await ctx.step.do("read-group", () =>
+        getDb(ctx.env.DB)
+            .select({
+                documentId: groups.documentId,
+                versionId: groups.versionId,
+                buildIssues: groups.buildIssues
+            })
+            .from(groups)
+            .where(eq(groups.id, groupId))
+            .get()
+    );
+    // Deleted since the load was asked for.
+    if (!stored) {
+        return { status: "gone" };
+    }
+
+    let result: LoadResult;
+    try {
+        const target = await resolveGroupTarget(ctx, {
+            libraryId,
+            groupId,
+            documentId: stored.documentId
+        });
+        if (
+            stored.versionId === target.versionPath.instanceId &&
+            !forceReload &&
+            !hasFailedLoad(stored.buildIssues)
+        ) {
+            result = { status: "skipped" };
+        } else {
+            result = {
+                status: "loaded",
+                ...(await loadGroup(ctx, target, forceReload))
+            };
+        }
+    } catch (error) {
+        // The only record of why: the group row stores that it failed, never
+        // what failed.
+        console.error(`Failed to load group ${groupId}`, error);
+        await ctx.step.do("flag-failed", () =>
+            flagFailedGroup(ctx.env, groupId)
+        );
+        result = { status: "failed" };
+    }
+
+    // After the load rather than before, so a document that cannot be read
+    // does not get a webhook. Its failure is logged rather than failing the
+    // load: the document is loaded either way, and the next load tries again.
+    try {
+        await ctx.step.do(
+            "register-webhook",
+            { retries: ONSHAPE_STEP_RETRIES },
+            async () =>
+                ensureWebhook(
+                    ctx.env,
+                    await getOnshapeApiFromContext(ctx),
+                    WebhookSubject.DOCUMENT,
+                    stored.documentId,
+                    params.origin
+                )
+        );
+    } catch (error) {
+        console.error(
+            `Failed to register a webhook for ${stored.documentId}`,
+            error
+        );
+    }
+    return result;
 }
 
 /**
@@ -215,12 +167,11 @@ function hasFailedLoad(buildIssues: BuildIssue[]): boolean {
 /** Reads the document and its latest version, pinning the group to that version. */
 async function resolveGroupTarget(
     ctx: LoadContext,
-    ids: { libraryId: LibraryId; groupId: string; documentId: string },
-    stepSuffix: string
+    ids: { libraryId: LibraryId; groupId: string; documentId: string }
 ): Promise<GroupTarget> {
     const { documentId } = ids;
     const document = await ctx.step.do(
-        `document${stepSuffix}`,
+        "document",
         { retries: ONSHAPE_STEP_RETRIES },
         async () =>
             getDocument(await getOnshapeApiFromContext(ctx), { documentId })
@@ -228,7 +179,7 @@ async function resolveGroupTarget(
     // The step hands back what Onshape sent, `createdAt` still an ISO string:
     // a step's result is persisted for replay, which a Date does not survive.
     const version = await ctx.step.do(
-        `version${stepSuffix}`,
+        "version",
         { retries: ONSHAPE_STEP_RETRIES },
         async () =>
             getLatestVersion(await getOnshapeApiFromContext(ctx), {
@@ -251,13 +202,24 @@ async function resolveGroupTarget(
     };
 }
 
+export interface ShellGroup {
+    groupId: string;
+    documentId: string;
+    /** The document's name, already fetched by the route. */
+    documentName: string;
+    libraryId: LibraryId;
+    /** An existing group to place the new group after. */
+    selectedGroupId?: string;
+}
+
 /**
- * Writes the group row the load then fills in, creating the library if this is
- * its first groups. Exported for its tests.
+ * Writes the group row a load then fills in, creating the library if this is
+ * its first group. Written before the load is asked for, so an add whose load
+ * fails still leaves a group an editor can see, retry or delete.
  */
 export async function createShellGroup(
     env: AppBindings,
-    params: AddGroupParams
+    params: ShellGroup
 ): Promise<void> {
     const db = getDb(env.DB);
     await ensureLibrary(db, params.libraryId);
@@ -311,15 +273,4 @@ async function flagFailedGroup(
             })
         })
         .where(eq(groups.id, groupId));
-}
-
-/** Rebuild the library's search index and bump its cache version. */
-async function finalizeLibrary(
-    env: AppBindings,
-    libraryId: LibraryId
-): Promise<void> {
-    const db = getDb(env.DB);
-    await rebuildSearchDb(env.BLOB, db, libraryId);
-    await bumpLibraryVersion(db, libraryId);
-    await pushLibraryChanged(env, libraryId);
 }

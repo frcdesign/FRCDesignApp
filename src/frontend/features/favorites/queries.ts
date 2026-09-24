@@ -30,8 +30,9 @@ function getFavoritesQuery(libraryId: LibraryId) {
 
 /** Awaits access rather than blocking the loader on it: signed out has none. */
 export async function prefetchFavorites(libraryId: LibraryId): Promise<void> {
-    const { signedIn } =
-        await queryClient.ensureQueryData(getAccessDataQuery());
+    const { signedIn } = await queryClient.ensureQueryData(
+        getAccessDataQuery(libraryId)
+    );
     if (signedIn) {
         await queryClient.prefetchQuery(getFavoritesQuery(libraryId));
     }

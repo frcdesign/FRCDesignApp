@@ -9,16 +9,15 @@ import {
     resetDb,
     seedGroup
 } from "../../../__test_utils__";
-import { createShellGroup, type AddGroupParams } from "./workflows";
+import { createShellGroup, type ShellGroup } from "./workflows";
 
 const db = getDb(env.DB);
 
-const PARAMS: AddGroupParams = {
+const PARAMS: ShellGroup = {
     groupId: "new-group",
     documentId: "doc-new",
     documentName: "New Doc",
-    libraryId: TEST_LIBRARY_ID,
-    sessionId: "test-session"
+    libraryId: TEST_LIBRARY_ID
 };
 
 function readVersion(): Promise<number | undefined> {

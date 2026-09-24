@@ -242,3 +242,29 @@ async function getIndexedConfigurations(
     }
     return indexed;
 }
+
+/** The library an insertable is in, for a route that names only the insertable. */
+export async function libraryOfInsertable(
+    db: Db,
+    insertableId: string
+): Promise<LibraryId | undefined> {
+    const row = await db
+        .select({ libraryId: insertables.libraryId })
+        .from(insertables)
+        .where(eq(insertables.id, insertableId))
+        .get();
+    return row?.libraryId;
+}
+
+/** The library a group is in, for a route that names only the group. */
+export async function libraryOfGroup(
+    db: Db,
+    groupId: string
+): Promise<LibraryId | undefined> {
+    const row = await db
+        .select({ libraryId: groups.libraryId })
+        .from(groups)
+        .where(eq(groups.id, groupId))
+        .get();
+    return row?.libraryId;
+}

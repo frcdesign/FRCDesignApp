@@ -15,7 +15,7 @@ describe("GET /access-data", () => {
         const app = createTestApp({ accessLevel: AccessLevel.EDITOR });
 
         const res = await app.request(
-            "/api/access-data",
+            "/api/access-data/library/frc-design-lib",
             jsonRequest("GET"),
             env
         );
@@ -34,7 +34,7 @@ describe("GET /access-data", () => {
         });
 
         const res = await app.request(
-            "/api/access-data",
+            "/api/access-data/library/frc-design-lib",
             jsonRequest("GET"),
             env
         );

@@ -2,6 +2,7 @@ import { HttpStatus } from "http-status-ts";
 import { internalError } from "../../lib/api-error";
 import { getApp } from "../../lib/context";
 import { cacheMiddleware } from "../../lib/cache";
+import { getLibraryParam, libraryRoute } from "../../lib/route-params";
 import { type AccessData } from "./access-level";
 import { isSignedIn } from "./request-auth";
 import { doCallback, doSignIn } from "./onshape-oauth";
@@ -13,13 +14,17 @@ export const authRoutes = getApp();
 /** What the app needs to know about the caller, mounted at /api. */
 export const accessRoutes = getApp();
 
-/** GET /api/access-data */
-accessRoutes.get("/access-data", cacheMiddleware(), async (c) => {
-    return c.json({
-        maxAccessLevel: await c.var.getAccessLevel(),
-        signedIn: await isSignedIn(c)
-    } satisfies AccessData);
-});
+/** GET /api/access-data/library/:libraryId */
+accessRoutes.get(
+    "/access-data" + libraryRoute(),
+    cacheMiddleware(),
+    async (c) => {
+        return c.json({
+            maxAccessLevel: await c.var.getAccessLevel(getLibraryParam(c)),
+            signedIn: await isSignedIn(c)
+        } satisfies AccessData);
+    }
+);
 
 /** The app's own entry, which re-runs the gate and opens wherever it lands. */
 const ENTRY_PATH = "/init";

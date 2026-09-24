@@ -10,12 +10,13 @@ import type { ConfigurationKey } from "../configurations/contract";
 export enum LiveMessageType {
     /** A library's load jobs started or finished. */
     JOBS = "jobs",
-    /** A library's contents changed under a new cache version. */
+    /**
+     * A library changed under a new cache version: its contents, or who is on
+     * its admin team.
+     */
     LIBRARY = "library",
     /** A configuration's thumbnail finished rendering. */
-    THUMBNAIL = "thumbnail",
-    /** Who is on the admin team changed, so access may have. */
-    ACCESS = "access"
+    THUMBNAIL = "thumbnail"
 }
 
 export type LiveMessage =
@@ -26,8 +27,7 @@ export type LiveMessage =
           elementId: string;
           microversionId: string;
           configurationKey: ConfigurationKey;
-      }
-    | { type: LiveMessageType.ACCESS };
+      };
 
 /** Where a client connects, naming the library it is showing. */
 export const LIVE_PATH = "/api/live";

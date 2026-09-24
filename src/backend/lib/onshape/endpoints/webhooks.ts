@@ -8,7 +8,9 @@ export interface OnshapeWebhookInfo {
 
 export interface CreateWebhookParams {
     /** The company whose events it hears; the caller has to administer it. */
-    companyId: string;
+    companyId?: string;
+    /** The document whose events it hears, for a document's events. */
+    documentId?: string;
     events: string[];
     url: string;
     name: string;

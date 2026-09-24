@@ -7,6 +7,9 @@ import {
     hasEditorAccess
 } from "@backend/features/auth/access-level";
 import { accessDataQueryKey } from "../../lib/query-keys";
+import { toLibraryPath } from "../../lib/api-paths";
+import { useLibraryId } from "../../lib/library";
+import type { LibraryId } from "@backend/features/library/library-id";
 import { apiGet } from "../../lib/api-client";
 import { useGetUiState } from "../../lib/ui-state";
 
@@ -24,10 +27,11 @@ const DEFAULT_ACCESS_DATA: AccessData = {
     signedIn: false
 };
 
-export function getAccessDataQuery() {
+/** Access to one library: its admin team is what grants more than a user's. */
+export function getAccessDataQuery(libraryId: LibraryId) {
     return queryOptions<AccessData>({
-        queryKey: accessDataQueryKey(),
-        queryFn: () => apiGet("/access-data")
+        queryKey: accessDataQueryKey(libraryId),
+        queryFn: () => apiGet("/access-data" + toLibraryPath(libraryId))
     });
 }
 
@@ -46,7 +50,8 @@ interface ResolvedAccessData extends AccessData {
  * drop below the granted max), so it survives the query refetching on navigation.
  */
 export function useAccessData(): ResolvedAccessData {
-    const { data, isPending } = useQuery(getAccessDataQuery());
+    const libraryId = useLibraryId();
+    const { data, isPending } = useQuery(getAccessDataQuery(libraryId));
     const serverData = data ?? DEFAULT_ACCESS_DATA;
     const uiState = useGetUiState();
     const chosenLevel = uiState.accessLevel;

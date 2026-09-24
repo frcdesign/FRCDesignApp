@@ -1,18 +1,18 @@
 /**
- * Keeps this deployment's Onshape webhook registered, on the owner's behalf:
- * Onshape creates webhooks with a user's token, and events for the whole
- * company want one of its admins, which the owner is taken to be. Checked
- * whenever the owner's access is resolved, so it needs no one to set it up and
- * comes back by itself if Onshape drops it.
+ * The Onshape webhooks this deployment registers: one per library document,
+ * for its new versions, and one per admin team, for its members. Each is
+ * registered with `isTransient: false`, which Onshape documents as exempting
+ * it from cleanup, so once one is on record it is taken to stand.
  */
+import { and, eq } from "drizzle-orm";
 import type { AppBindings } from "../../lib/context";
+import { getDb } from "../../db/client";
+import { onshapeWebhooks, WebhookSubject } from "../../db/schema";
 import { type OAuthApi, OnshapeApiError } from "../../lib/onshape/client";
 import { getSessionInfo } from "../../lib/onshape/endpoints/users";
 import {
     createWebhook,
-    deleteWebhook,
-    getCompanyWebhooks,
-    getWebhook
+    deleteWebhook
 } from "../../lib/onshape/endpoints/webhooks";
 
 export const RECEIVE_PATH = "/api/webhooks/onshape";
@@ -20,102 +20,139 @@ export const RECEIVE_PATH = "/api/webhooks/onshape";
 export enum WebhookEvent {
     CREATE_VERSION = "onshape.model.lifecycle.createversion",
     TEAM_ADD_MEMBER = "onshape.team.addmember",
-    TEAM_REMOVE_MEMBER = "onshape.team.removemember"
+    TEAM_REMOVE_MEMBER = "onshape.team.removemember",
+    UNREGISTER = "webhook.unregister"
 }
 
-/** What was registered, and the token its deliveries carry. */
-export interface WebhookRegistration {
-    token: string;
-    /** Absent between storing the token and Onshape answering the create. */
-    webhookId?: string;
-}
+export type RegisteredWebhook = typeof onshapeWebhooks.$inferSelect;
 
-const REGISTRATION_KEY = "webhook-registration";
-
-export async function getRegistration(
-    env: AppBindings
-): Promise<WebhookRegistration | null> {
-    return env.KV.get<WebhookRegistration>(REGISTRATION_KEY, "json");
-}
-
-/** For when Onshape says it dropped the webhook: the next check registers anew. */
-export async function forgetRegistration(env: AppBindings): Promise<void> {
-    await env.KV.delete(REGISTRATION_KEY);
-}
-
-/** Whether the recorded webhook is still Onshape's, at this deployment's url. */
-async function isStillRegistered(
-    onshapeApi: OAuthApi,
-    registration: WebhookRegistration | null,
-    receiveUrl: URL
-): Promise<boolean> {
-    if (!registration?.webhookId) {
-        return false;
-    }
-    try {
-        const webhook = await getWebhook(onshapeApi, registration.webhookId);
-        return webhook.url.startsWith(receiveUrl.href);
-    } catch (error) {
-        if (error instanceof OnshapeApiError && error.status === 404) {
-            return false;
-        }
-        throw error;
-    }
+function whereSubject(subject: WebhookSubject, subjectId: string) {
+    return and(
+        eq(onshapeWebhooks.subject, subject),
+        eq(onshapeWebhooks.subjectId, subjectId)
+    );
 }
 
 /**
- * Registers the webhook unless the one on record still stands. `origin` is
- * this deployment's, which the webhook is delivered to.
+ * What to ask Onshape for. A document's names the document, from which Onshape
+ * infers the company. A team's events are company-wide and name no team, so
+ * the company is the registering user's, and the receiver picks out the team.
  */
+async function subjectParams(
+    onshapeApi: OAuthApi,
+    subject: WebhookSubject,
+    subjectId: string
+) {
+    if (subject === WebhookSubject.DOCUMENT) {
+        return {
+            documentId: subjectId,
+            events: [WebhookEvent.CREATE_VERSION]
+        };
+    }
+    const companyId = (await getSessionInfo(onshapeApi)).company?.id;
+    if (!companyId) {
+        throw new Error(
+            "A team's webhook needs a company; open the app from your company's Onshape."
+        );
+    }
+    return {
+        companyId,
+        events: [WebhookEvent.TEAM_ADD_MEMBER, WebhookEvent.TEAM_REMOVE_MEMBER]
+    };
+}
+
+/** Registers a webhook for the subject unless one is already on record. */
 export async function ensureWebhook(
     env: AppBindings,
     onshapeApi: OAuthApi,
+    subject: WebhookSubject,
+    subjectId: string,
     origin: string
 ): Promise<void> {
-    const receiveUrl = new URL(RECEIVE_PATH, origin);
-    if (
-        await isStillRegistered(
-            onshapeApi,
-            await getRegistration(env),
-            receiveUrl
-        )
-    ) {
+    const db = getDb(env.DB);
+    const existing = await db
+        .select({ webhookId: onshapeWebhooks.webhookId })
+        .from(onshapeWebhooks)
+        .where(whereSubject(subject, subjectId))
+        .get();
+    if (existing?.webhookId) {
         return;
     }
 
-    const companyId = (await getSessionInfo(onshapeApi)).company?.id;
-    if (!companyId) {
-        console.warn(
-            "Not registering Onshape webhooks: the owner opened the app outside their company."
-        );
-        return;
-    }
-
-    // Matched on this deployment's url alone, so dev, cert and production
-    // registering under one company leave each other's in place.
-    for (const webhook of await getCompanyWebhooks(onshapeApi, companyId)) {
-        if (webhook.url.startsWith(receiveUrl.href)) {
-            await deleteWebhook(onshapeApi, webhook.id);
-        }
-    }
-
-    // Stored first: Onshape posts webhook.register before create returns.
+    // Stored first: Onshape posts webhook.register to the url before create
+    // returns, and the token is how the receiver recognizes it.
     const token = crypto.randomUUID();
-    await env.KV.put(REGISTRATION_KEY, JSON.stringify({ token }));
-    receiveUrl.searchParams.set("token", token);
+    await db
+        .insert(onshapeWebhooks)
+        .values({ subject, subjectId, token })
+        .onConflictDoUpdate({
+            target: [onshapeWebhooks.subject, onshapeWebhooks.subjectId],
+            set: { token, webhookId: null }
+        });
+    const url = new URL(RECEIVE_PATH, origin);
+    url.searchParams.set("token", token);
 
     const webhook = await createWebhook(onshapeApi, {
-        companyId,
-        events: Object.values(WebhookEvent),
-        url: receiveUrl.href,
+        ...(await subjectParams(onshapeApi, subject, subjectId)),
+        url: url.href,
         name: "FRCDesignApp",
-        description:
-            "Reloads library documents on a new version, and access on admin team changes.",
+        description: `Keeps the FRCDesignApp in step with this ${subject}.`,
         options: { collapseEvents: false },
         isTransient: false
     });
-    await env.KV.put(
-        REGISTRATION_KEY,
-        JSON.stringify({ token, webhookId: webhook.id })
-    );
+    await db
+        .update(onshapeWebhooks)
+        .set({ webhookId: webhook.id })
+        .where(whereSubject(subject, subjectId));
+}
+
+/** Unregisters the subject's webhook, when nothing needs it any more. */
+export async function removeWebhook(
+    env: AppBindings,
+    onshapeApi: OAuthApi,
+    subject: WebhookSubject,
+    subjectId: string
+): Promise<void> {
+    const db = getDb(env.DB);
+    const existing = await db
+        .select({ webhookId: onshapeWebhooks.webhookId })
+        .from(onshapeWebhooks)
+        .where(whereSubject(subject, subjectId))
+        .get();
+    if (existing?.webhookId) {
+        try {
+            await deleteWebhook(onshapeApi, existing.webhookId);
+        } catch (error) {
+            // Already gone is what was wanted.
+            if (!(error instanceof OnshapeApiError && error.status === 404)) {
+                throw error;
+            }
+        }
+    }
+    await db.delete(onshapeWebhooks).where(whereSubject(subject, subjectId));
+}
+
+/** The webhook a delivery's token belongs to, or undefined for a stranger. */
+export function findWebhookByToken(
+    env: AppBindings,
+    token: string
+): Promise<RegisteredWebhook | undefined> {
+    return getDb(env.DB)
+        .select()
+        .from(onshapeWebhooks)
+        .where(eq(onshapeWebhooks.token, token))
+        .get();
+}
+
+/**
+ * Drops the record of a webhook Onshape unregistered, so the next load of its
+ * document, or setting of its team, registers another.
+ */
+export async function forgetWebhook(
+    env: AppBindings,
+    webhook: RegisteredWebhook
+): Promise<void> {
+    await getDb(env.DB)
+        .delete(onshapeWebhooks)
+        .where(whereSubject(webhook.subject, webhook.subjectId));
 }

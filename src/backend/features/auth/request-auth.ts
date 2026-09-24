@@ -1,34 +1,29 @@
 /**
- * Answers a request's auth questions from its session, memoized in KV. `createApp`
+ * Answers a request's auth questions from its session. `createApp`
  * binds `productionAuth` onto every request; guards and routes ask through `c.var`.
  */
 import { env as processEnv } from "process";
 import { OAuthApi } from "../../lib/onshape/client";
-import {
-    getAccessLevel,
-    getSessionInfo,
-    getUserId
-} from "../../lib/onshape/endpoints/users";
+import { getSessionInfo, getUserId } from "../../lib/onshape/endpoints/users";
 import { type AppContext, type AuthResolver } from "../../lib/context";
+import { and, eq } from "drizzle-orm";
+import { getDb } from "../../db/client";
+import { adminTeamMembers } from "../../db/schema";
+import type { LibraryId } from "../library/library-id";
 import { AccessLevel } from "./access-level";
 import { rememberOwnerSession } from "./owner";
-import { ensureWebhook } from "../webhooks/registration";
 import {
     getOauthClient,
     makeAuthTokens,
     TOKEN_ENDPOINT
 } from "./onshape-oauth";
 import {
-    accessLevelKey,
     getSession,
     getSessionCompanyId,
     getSessionId,
     PERSONAL_COMPANY_ID,
     saveSession
 } from "./session";
-
-/** How long a resolved access level is cached in KV. */
-const ACCESS_LEVEL_TTL_SECONDS = 60 * 60;
 
 /** Stable fake user id used for FORCE_SIGNED_IN testing sessions. */
 const FORCE_SIGNED_IN_USER_ID = "force-signed-in-user";
@@ -153,51 +148,34 @@ export async function isSignedIn(c: AppContext): Promise<boolean> {
     return signedIn;
 }
 
-/** Whether the caller is the Onshape user `OWNER_USER_ID` names. */
-async function isOwner(c: AppContext): Promise<boolean> {
-    const ownerUserId = c.env.OWNER_USER_ID;
-    return !!ownerUserId && (await getCachedUserId(c)) === ownerUserId;
-}
-
 /**
- * In the background where the runtime allows it: nothing the owner asked for
- * waits on Onshape for this, and a failure only means the next check retries.
+ * The caller's access to `libraryId`: the owner's anywhere, and otherwise what
+ * the library's admin team says, as last synced from Onshape. A lookup rather
+ * than a question for Onshape, so it needs no caching.
  */
-function keepWebhookRegistered(c: AppContext): void {
-    const work = getOnshapeApi(c)
-        .then((onshapeApi) =>
-            ensureWebhook(c.env, onshapeApi, new URL(c.req.url).origin)
+async function getLibraryAccessLevel(
+    c: AppContext,
+    libraryId: LibraryId
+): Promise<AccessLevel> {
+    const userId = await getCachedUserId(c);
+    if (c.env.OWNER_USER_ID && userId === c.env.OWNER_USER_ID) {
+        await rememberOwnerSession(c.env.KV, getSessionId(c));
+        return AccessLevel.OWNER;
+    }
+    const member = await getDb(c.env.DB)
+        .select({ isTeamAdmin: adminTeamMembers.isTeamAdmin })
+        .from(adminTeamMembers)
+        .where(
+            and(
+                eq(adminTeamMembers.libraryId, libraryId),
+                eq(adminTeamMembers.userId, userId)
+            )
         )
-        .catch((error: unknown) => {
-            console.error("Failed to register Onshape webhooks", error);
-        });
-    try {
-        c.executionCtx.waitUntil(work);
-    } catch {
-        // No execution context, as under test; the promise runs regardless.
+        .get();
+    if (!member) {
+        return AccessLevel.USER;
     }
-}
-
-/** Returns the caller's access level, memoized in KV by session. */
-async function getCachedAccessLevel(c: AppContext): Promise<AccessLevel> {
-    const sessionId = getSessionId(c);
-    const key = accessLevelKey(sessionId);
-
-    const cached = await c.env.KV.get(key);
-    if (cached) return cached as AccessLevel;
-
-    let level: AccessLevel;
-    if (await isOwner(c)) {
-        level = AccessLevel.OWNER;
-        await rememberOwnerSession(c.env.KV, sessionId);
-        keepWebhookRegistered(c);
-    } else {
-        level = await getAccessLevel(await getOnshapeApi(c), c.env.ADMIN_TEAM);
-    }
-    await c.env.KV.put(key, level, {
-        expirationTtl: ACCESS_LEVEL_TTL_SECONDS
-    });
-    return level;
+    return member.isTeamAdmin ? AccessLevel.ADMIN : AccessLevel.EDITOR;
 }
 
 /**
@@ -213,13 +191,13 @@ export const productionAuth: AuthResolver = (c) => ({
         }
         return getCachedUserId(c);
     },
-    getAccessLevel: async () => {
+    getAccessLevel: async (libraryId) => {
         const override = getAccessLevelOverride(c);
         if (override) return override;
-        // getCachedAccessLevel needs a real Onshape session, so only call it
-        // for a genuinely signed-in caller (not FORCE_SIGNED_IN).
+        // Needs a real Onshape session to know who is asking, so only for a
+        // genuinely signed-in caller (not FORCE_SIGNED_IN).
         if (!isForceSignedIn(c) && (await isSignedIn(c))) {
-            return getCachedAccessLevel(c);
+            return getLibraryAccessLevel(c, libraryId);
         }
         return AccessLevel.USER;
     },

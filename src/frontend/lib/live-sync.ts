@@ -18,7 +18,7 @@ import {
     subscribeLiveMessages
 } from "./live-updates";
 import { queryClient } from "./query-client";
-import { accessDataQueryKey, jobStatusQueryKey } from "./query-keys";
+import { jobStatusQueryKey } from "./query-keys";
 import { useRefreshLibrary } from "./refresh";
 
 export function useLiveSync(): void {
@@ -62,11 +62,6 @@ export function useLiveSync(): void {
                                 isRenderOf(url, message)
                             );
                         }
-                    });
-                    break;
-                case LiveMessageType.ACCESS:
-                    void queryClient.invalidateQueries({
-                        queryKey: accessDataQueryKey()
                     });
                     break;
             }

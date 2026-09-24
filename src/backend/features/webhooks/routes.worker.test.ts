@@ -1,4 +1,5 @@
 import { env } from "cloudflare:workers";
+import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
     TEST_GROUP_ID,
@@ -9,121 +10,121 @@ import {
     seedGroup
 } from "../../../__test_utils__";
 import { getDb } from "../../db/client";
-import { AccessLevel } from "../auth/access-level";
-import { accessLevelKey } from "../auth/session";
+import { libraries, onshapeWebhooks, WebhookSubject } from "../../db/schema";
 import { rememberOwnerSession } from "../auth/owner";
-import * as JobTracker from "../load/job-tracker";
+import * as Owner from "../auth/owner";
+import * as Sync from "../admin-team/sync";
+import * as Jobs from "../load/jobs";
+import { MockOnshapeApi } from "../../../__test_utils__/mock-onshape-api";
 import { WebhookEvent } from "./registration";
 
 const db = getDb(env.DB);
-const TOKEN = "the-token";
+const DOCUMENT = `doc-${TEST_GROUP_ID}`;
 
 /** Delivers a notification the way Onshape would, with `token` on the url. */
-function deliver(body: object, token = TOKEN) {
+function deliver(body: object, token: string) {
     return createTestApp().request(
-        `/api/webhooks/onshape?token=${token}`,
+        `http://localhost/api/webhooks/onshape?token=${token}`,
         jsonRequest("POST", body),
         env
     );
 }
 
+async function registered(subject: WebhookSubject, subjectId: string) {
+    const token = `${subject}-token`;
+    await db
+        .insert(onshapeWebhooks)
+        .values({ subject, subjectId, token, webhookId: `${subject}-webhook` });
+    return token;
+}
+
 describe("receiving a webhook", () => {
     beforeEach(async () => {
         await resetDb(db);
-        await env.KV.put(
-            "webhook-registration",
-            JSON.stringify({ token: TOKEN, webhookId: "ours" })
-        );
+        await seedGroup(db, TEST_GROUP_ID);
+        await rememberOwnerSession(env.KV, "owner-session");
     });
     afterEach(() => vi.restoreAllMocks());
 
-    it("turns away a delivery without the registered token", async () => {
+    it("turns away a delivery without a registered token", async () => {
+        await registered(WebhookSubject.DOCUMENT, DOCUMENT);
         const res = await deliver({ event: "webhook.ping" }, "guess");
         expect(res.status).toBe(403);
     });
 
     // Registration fails unless Onshape's own check is answered.
     it("answers Onshape's registration check", async () => {
-        const res = await deliver({ event: "webhook.register" });
+        const token = await registered(WebhookSubject.DOCUMENT, DOCUMENT);
+        const res = await deliver({ event: "webhook.register" }, token);
         expect(res.status).toBe(200);
     });
 
-    // So the owner's next visit registers a new one.
-    it("forgets a registration Onshape dropped", async () => {
-        await deliver({ event: "webhook.unregister", webhookId: "ours" });
-        expect(await env.KV.get("webhook-registration")).toBeNull();
-    });
+    it("loads the document's groups on a new version, as the owner", async () => {
+        const token = await registered(WebhookSubject.DOCUMENT, DOCUMENT);
+        const load = vi.spyOn(Jobs, "requestLoads").mockResolvedValue();
 
-    describe("a new version", () => {
-        beforeEach(async () => {
-            await seedGroup(db, TEST_GROUP_ID);
-            await rememberOwnerSession(env.KV, "owner-session");
-            vi.spyOn(JobTracker, "trackJob").mockResolvedValue();
-        });
+        await deliver(
+            // What the payload names is not trusted; the token's subject is.
+            { event: WebhookEvent.CREATE_VERSION, documentId: "elsewhere" },
+            token
+        );
 
-        it("reloads the groups loaded from that document, as the owner", async () => {
-            vi.spyOn(JobTracker, "isReloadRunning").mockResolvedValue(false);
-            const create = vi
-                .spyOn(env.LOAD_LIBRARY_WORKFLOW, "create")
-                .mockResolvedValue({ id: "wf" } as never);
-
-            await deliver({
-                event: WebhookEvent.CREATE_VERSION,
-                documentId: `doc-${TEST_GROUP_ID}`
-            });
-
-            expect(create.mock.calls[0][0]?.params).toEqual({
+        expect(load).toHaveBeenCalledWith(expect.anything(), [
+            {
                 libraryId: TEST_LIBRARY_ID,
+                groupId: TEST_GROUP_ID,
                 sessionId: "owner-session",
-                documentIds: [`doc-${TEST_GROUP_ID}`]
-            });
-        });
-
-        it("ignores a document no library holds", async () => {
-            const create = vi.spyOn(env.LOAD_LIBRARY_WORKFLOW, "create");
-            await deliver({
-                event: WebhookEvent.CREATE_VERSION,
-                documentId: "somebody-elses"
-            });
-            expect(create).not.toHaveBeenCalled();
-        });
-
-        // The running reload may have checked it before the version landed.
-        it("queues the document behind a reload already running", async () => {
-            vi.spyOn(JobTracker, "isReloadRunning").mockResolvedValue(true);
-            const create = vi.spyOn(env.LOAD_LIBRARY_WORKFLOW, "create");
-
-            await deliver({
-                event: WebhookEvent.CREATE_VERSION,
-                documentId: `doc-${TEST_GROUP_ID}`
-            });
-
-            expect(create).not.toHaveBeenCalled();
-            expect(
-                await env.KV.get(`queued-reload:${TEST_LIBRARY_ID}`, "json")
-            ).toEqual([`doc-${TEST_GROUP_ID}`]);
-        });
+                forceReload: false,
+                origin: "http://localhost"
+            }
+        ]);
     });
 
     describe("an admin team change", () => {
-        it("re-asks everyone's access level", async () => {
-            await env.KV.put(accessLevelKey("someone"), AccessLevel.EDITOR);
-            await deliver({
-                event: WebhookEvent.TEAM_REMOVE_MEMBER,
-                teamId: env.ADMIN_TEAM
-            });
-            expect(await env.KV.get(accessLevelKey("someone"))).toBeNull();
-        });
-
-        it("leaves access alone for any other team", async () => {
-            await env.KV.put(accessLevelKey("someone"), AccessLevel.EDITOR);
-            await deliver({
-                event: WebhookEvent.TEAM_ADD_MEMBER,
-                teamId: "another-team"
-            });
-            expect(await env.KV.get(accessLevelKey("someone"))).toBe(
-                AccessLevel.EDITOR
+        beforeEach(async () => {
+            await db
+                .update(libraries)
+                .set({ adminTeamId: "team" })
+                .where(eq(libraries.id, TEST_LIBRARY_ID));
+            vi.spyOn(Owner, "getOwnerOnshapeApi").mockResolvedValue(
+                new MockOnshapeApi()
             );
         });
+
+        it("pulls the team again for each library it administers", async () => {
+            const token = await registered(WebhookSubject.TEAM, "team");
+            const sync = vi.spyOn(Sync, "syncAdminTeam").mockResolvedValue();
+
+            await deliver(
+                { event: WebhookEvent.TEAM_ADD_MEMBER, teamId: "team" },
+                token
+            );
+
+            expect(sync).toHaveBeenCalledWith(
+                expect.anything(),
+                expect.anything(),
+                TEST_LIBRARY_ID
+            );
+        });
+
+        // A team's webhook hears every team in the company.
+        it("ignores another team's change", async () => {
+            const token = await registered(WebhookSubject.TEAM, "team");
+            const sync = vi.spyOn(Sync, "syncAdminTeam").mockResolvedValue();
+
+            await deliver(
+                { event: WebhookEvent.TEAM_REMOVE_MEMBER, teamId: "other" },
+                token
+            );
+
+            expect(sync).not.toHaveBeenCalled();
+        });
+    });
+
+    // So the next load of the document registers a new one.
+    it("forgets a webhook Onshape dropped", async () => {
+        const token = await registered(WebhookSubject.DOCUMENT, DOCUMENT);
+        await deliver({ event: WebhookEvent.UNREGISTER }, token);
+        expect(await db.select().from(onshapeWebhooks).all()).toEqual([]);
     });
 });

@@ -56,11 +56,17 @@ describe("live updates", () => {
         const frc = await connect(LibraryId.FRC_DESIGN_LIB);
         const ftc = await connect(LibraryId.FTC_DESIGN_LIB);
 
-        await stub().broadcast({ type: LiveMessageType.ACCESS });
+        const message: LiveMessage = {
+            type: LiveMessageType.THUMBNAIL,
+            elementId: "e1",
+            microversionId: "mv1",
+            configurationKey: ""
+        };
+        await stub().broadcast(message);
         await settle();
 
-        expect(frc.received).toEqual([{ type: LiveMessageType.ACCESS }]);
-        expect(ftc.received).toEqual([{ type: LiveMessageType.ACCESS }]);
+        expect(frc.received).toEqual([message]);
+        expect(ftc.received).toEqual([message]);
         frc.socket.close();
         ftc.socket.close();
     });

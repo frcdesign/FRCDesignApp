@@ -8,12 +8,17 @@ import { getOnshapeApiFromSessionId } from "./request-auth";
 
 const OWNER_SESSION_KEY = "owner-session";
 
-/** Called as the owner's access level is resolved, which a new sign-in does. */
+/**
+ * Called whenever the owner's access is resolved; written only when their
+ * session has changed, which a sign-in does.
+ */
 export async function rememberOwnerSession(
     kv: KVNamespace,
     sessionId: string
 ): Promise<void> {
-    await kv.put(OWNER_SESSION_KEY, sessionId);
+    if ((await kv.get(OWNER_SESSION_KEY)) !== sessionId) {
+        await kv.put(OWNER_SESSION_KEY, sessionId);
+    }
 }
 
 /**

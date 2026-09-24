@@ -1,11 +1,9 @@
 import { type Context, type MiddlewareHandler, Hono } from "hono";
-import type {
-    AddGroupParams,
-    LoadLibraryParams
-} from "../features/load/workflows";
+import type { LoadDocumentParams } from "../features/load/jobs";
 import type { RenderThumbnailParams } from "../features/thumbnails/render-workflow";
 import type { LiveUpdates } from "../features/live/live-updates";
 import { type AccessLevel } from "../features/auth/access-level";
+import type { LibraryId } from "../features/library/library-id";
 import { type OAuthApi } from "./onshape/client";
 
 export interface AppBindings {
@@ -14,13 +12,12 @@ export interface AppBindings {
     ASSETS: Fetcher;
     /** Thumbnails and search indexes; prefixes keep them apart. */
     BLOB: R2Bucket;
-    LOAD_LIBRARY_WORKFLOW: Workflow<LoadLibraryParams>;
-    ADD_GROUP_WORKFLOW: Workflow<AddGroupParams>;
+    /** One instance per group being loaded at a time; see `load/jobs.ts`. */
+    LOAD_DOCUMENT_WORKFLOW: Workflow<LoadDocumentParams>;
     /** One instance per configuration being rendered; see `requestRender`. */
     RENDER_THUMBNAIL_WORKFLOW: Workflow<RenderThumbnailParams>;
     /** Relays pushes to open clients; see `features/live`. */
     LIVE_UPDATES: DurableObjectNamespace<LiveUpdates>;
-    ADMIN_TEAM: string;
     /** The Onshape user id granted `AccessLevel.OWNER`; unset grants nobody. */
     OWNER_USER_ID?: string;
     /** Dev-only: the access level granted, bypassing Onshape. */
@@ -37,7 +34,7 @@ interface AppVariables {
     /** Injected by {@link bindAuth}; see {@link RequestAuth}. */
     getOnshapeApi: () => Promise<OAuthApi>;
     getUserId: () => Promise<string>;
-    getAccessLevel: () => Promise<AccessLevel>;
+    getAccessLevel: (libraryId: LibraryId) => Promise<AccessLevel>;
     isAuthenticated: () => Promise<boolean>;
 }
 
@@ -55,7 +52,8 @@ export type AppContext = Context<AppContextEnv>;
 interface RequestAuth {
     getOnshapeApi: () => Promise<OAuthApi>;
     getUserId: () => Promise<string>;
-    getAccessLevel: () => Promise<AccessLevel>;
+    /** The caller's access to one library; the owner's is the same in all. */
+    getAccessLevel: (libraryId: LibraryId) => Promise<AccessLevel>;
     isAuthenticated: () => Promise<boolean>;
 }
 

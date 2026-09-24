@@ -61,14 +61,14 @@ thumbnails/config/{elementId}/{microversionId}/{configKey}/{size}
 
 `{configKey}` is the url-encoded `ConfigurationKey` — the canonical configuration with hidden and default-valued parameters dropped and quantities in meters and radians — so two equivalent selections resolve to one cached image. Encoding it keeps its `;` and `=` inside a single path segment. Including `{microversionId}` makes every object immutable, so an updated document lands on new keys rather than overwriting in place.
 
-Nothing expires on a timer: there is no R2 lifecycle rule, and renders are meant to last. What that costs is orphans — a tab edited into a new microversion leaves its old pair behind, and a deleted group or tab leaves everything it had. The **`reconcile-thumbnails` step** at the end of `LoadLibraryWorkflow` collects them, in `features/thumbnails/reconcile.ts`:
+Nothing expires on a timer: there is no R2 lifecycle rule, and renders are meant to last. What that costs is orphans — a tab edited into a new microversion leaves its old pair behind, and a deleted group or tab leaves everything it had. A **daily cron** (the `scheduled` handler in `src/backend/index.ts`) collects them, in `features/thumbnails/reconcile.ts`:
 
 - The live set is every `(elementId, microversionId)` still named by an insertable row, plus the ones a group's two stored thumbnail urls point at — a group's document thumbnail is often not one of its own insertables, and those urls are the only record of which element it is.
-- It spans **every library**, because a thumbnail key names no library. A set built from the library being reloaded would read every other library's thumbnails as orphaned.
+- It spans **every library**, because a thumbnail key names no library. A set built from one library would read every other library's thumbnails as orphaned.
 - Both prefixes are reconciled the same way: a configuration render is addressed by the same element and microversion, so it lives and dies with the element's default.
 - An object younger than 24 hours is kept whatever the live set says. A group load stores thumbnails as it goes and commits its rows at the end, and a configuration render is started by a user opening the insert menu rather than by any job — so something in flight is indistinguishable from something orphaned, and only age tells them apart.
 - An empty live set deletes nothing: a library really can have no elements, but so can a read that failed.
-- A run scans at most 50 pages of 1,000. A bucket larger than that is finished by the next reload.
+- A run scans at most 50 pages of 1,000. A bucket larger than that is finished by the next run.
 
 Thumbnails are served via `/api/thumbnail/:size/:elementId?v={microversionId}&configurationKey=&renderSource=&insertableId=`:
 
@@ -82,17 +82,27 @@ Thumbnails are served via `/api/thumbnail/:size/:elementId?v={microversionId}&co
 
 ### Workflows — Background Jobs
 
-Cloudflare Workflows let you run a long-running background job that survives beyond a single HTTP request's time limit. They are the only async primitive here — there are no Queues, Durable Objects, or cron triggers. The two load workflows live in `src/backend/features/load/workflows.ts`; the thumbnail one lives with the feature it serves, in `src/backend/features/thumbnails/render-workflow.ts`:
+Cloudflare Workflows let you run a long-running background job that survives beyond a single HTTP request's time limit. The load workflow lives in `src/backend/features/load/workflows.ts`; the thumbnail one lives with the feature it serves, in `src/backend/features/thumbnails/render-workflow.ts`:
 
-| Binding                     | Class                     | What it does                                                                         |
-| --------------------------- | ------------------------- | ------------------------------------------------------------------------------------ |
-| `LOAD_LIBRARY_WORKFLOW`     | `LoadLibraryWorkflow`     | Reloads every group whose document has a new version, then rebuilds the search index |
-| `ADD_GROUP_WORKFLOW`        | `AddGroupWorkflow`        | Adds an Onshape document to a library and loads it                                   |
-| `RENDER_THUMBNAIL_WORKFLOW` | `RenderThumbnailWorkflow` | Waits out one configuration's render and stores both sizes in R2                     |
+| Binding                     | Class                     | What it does                                                                  |
+| --------------------------- | ------------------------- | ----------------------------------------------------------------------------- |
+| `LOAD_DOCUMENT_WORKFLOW`    | `LoadDocumentWorkflow`    | Loads one group's document when its version moved on (or always, when forced) |
+| `RENDER_THUMBNAIL_WORKFLOW` | `RenderThumbnailWorkflow` | Waits out one configuration's render and stores both sizes in R2              |
 
 Loading a group means walking the document structure, downloading metadata for every part and assembly, probing each indexed configuration, generating thumbnails, and writing it all to D1 — far too long for a single HTTP request. The request kicks the workflow off and returns immediately.
 
-Each workflow carries the requesting user's `sessionId`, since it calls Onshape under their tokens after the request has ended.
+Every load is one document: adding a document, a new version of one (see Webhooks below), and the owner's "reload everything", which starts one per group. `features/load/jobs.ts` keeps at most one load per group running, in the `load_jobs` table: a load asked for while one runs is marked on that row, and the running load starts it as it finishes. The last load to finish in a library rebuilds its search index, once rather than per document.
+
+Each workflow carries a `sessionId` whose tokens it calls Onshape under after the request has ended: the requesting user's, or the owner's for a webhook.
+
+### Webhooks and live updates
+
+Onshape pushes two things, registered with `isTransient: false` and recorded in the `onshape_webhooks` table, each with its own token in the delivery url (`features/webhooks`):
+
+- **A new version of a library document.** Registered by the document's load; removed with the last group loaded from it. Reloads that document's groups.
+- **A change to an admin team's members.** Registered when the owner sets a library's admin team. Pulls the team's members again.
+
+The server pushes to open clients over a WebSocket held by the `LiveUpdates` Durable Object (`features/live`): jobs starting and finishing, a library's new version, and a configuration's render landing. Clients poll only while that connection is down.
 
 ### Assets — Static File Serving (`c.env.ASSETS`)
 
@@ -187,8 +197,8 @@ Other top-level files:
 
 ## Access Levels
 
-The app has three access levels, checked on every protected API call: **ADMIN**, **EDITOR**, and **USER**. Admin and editor access currently grant the same permissions (adding, removing, and renaming groups, toggling insertable visibility), but they are kept separate so permissions can be tightened in the future if needed. USER access allows anyone who logs in via OAuth to browse the library, insert parts, and manage their own favorites.
+The app has four access levels, checked on every protected API call: **OWNER**, **ADMIN**, **EDITOR**, and **USER**. Access is per library. Admin and editor access currently grant the same permissions in their library (adding, removing, and renaming groups, toggling insertable visibility), but they are kept separate so permissions can be tightened in the future if needed. USER access allows anyone who logs in via OAuth to browse the library, insert parts, and manage their own favorites.
 
-The Worker determines a user's access level in `src/backend/features/auth/caller.ts` by calling the Onshape API to check team membership against the `ADMIN_TEAM` binding. Backend routes that require elevated access are wrapped with `requireEditorMiddleware` or `requireAdminMiddleware` from `src/backend/features/auth/guards.ts`.
+The **owner** is the one Onshape user named by `OWNER_USER_ID`, with every library. The owner sets each library's admin team; its members are stored in `admin_team_members` (team admins as ADMIN, members as EDITOR) and kept current by the team's webhook, so a user's access is a database lookup in `src/backend/features/auth/request-auth.ts`. Routes that require elevated access are wrapped with `requireEditor` or `requireOwnerMiddleware` from `src/backend/features/auth/guards.ts`; one naming an insertable rather than a library looks the library up from it. The owner's latest session is also what webhook-triggered loads run under.
 
 During local development, you can bypass the team membership check by setting `ACCESS_LEVEL_OVERRIDE=admin` (or `editor`/`user`) in your `.env` file.

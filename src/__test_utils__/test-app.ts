@@ -1,12 +1,16 @@
 import { createApp } from "@backend/app";
 import { AccessLevel } from "@backend/features/auth/access-level";
+import type { LibraryId } from "@backend/features/library/library-id";
 import { MOCK_ONSHAPE_API, MockOnshapeApi } from "./mock-onshape-api";
 
 export interface TestAppOptions {
     /** Current user id, returned by `c.var.getUserId()` (default `"test-user"`). */
     userId?: string;
-    /** Access level returned by `c.var.getAccessLevel()` (default `ADMIN`). */
-    accessLevel?: AccessLevel;
+    /**
+     * Access level returned by `c.var.getAccessLevel()` (default `ADMIN`): one
+     * for every library, or one per library.
+     */
+    accessLevel?: AccessLevel | ((libraryId: LibraryId) => AccessLevel);
     /** Onshape mock returned by `c.var.getOnshapeApi()` (default a fresh mock). */
     onshapeApi?: MockOnshapeApi;
     /**
@@ -30,8 +34,12 @@ export function createTestApp(options: TestAppOptions = {}) {
                 ? Promise.resolve(options.onshapeApi ?? MOCK_ONSHAPE_API)
                 : Promise.reject(new Error("Not signed in")),
         getUserId: () => Promise.resolve(options.userId ?? "test-user"),
-        getAccessLevel: () =>
-            Promise.resolve(options.accessLevel ?? AccessLevel.ADMIN),
+        getAccessLevel: (libraryId) => {
+            const level = options.accessLevel ?? AccessLevel.ADMIN;
+            return Promise.resolve(
+                typeof level === "function" ? level(libraryId) : level
+            );
+        },
         isAuthenticated: () => Promise.resolve(options.isAuthenticated ?? true)
     }));
 }

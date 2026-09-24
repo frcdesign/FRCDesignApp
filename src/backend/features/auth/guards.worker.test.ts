@@ -7,6 +7,8 @@ import {
     createTestApp,
     jsonRequest,
     resetDb,
+    seedGroup,
+    seedInsertable,
     seedLibrary
 } from "../../../__test_utils__";
 import { getDb } from "../../db/client";
@@ -63,7 +65,7 @@ describe("requireEditorMiddleware", () => {
         });
 
         const res = await app.request(
-            `/api/reload-groups/library/${LibraryId.FRC_DESIGN_LIB}`,
+            `/api/group-order/library/${LibraryId.FRC_DESIGN_LIB}`,
             jsonRequest("POST"),
             env
         );
@@ -77,8 +79,36 @@ describe("requireEditorMiddleware", () => {
         });
 
         const res = await app.request(
-            `/api/reload-groups/library/${LibraryId.FRC_DESIGN_LIB}`,
+            `/api/group-order/library/${LibraryId.FRC_DESIGN_LIB}`,
             jsonRequest("POST"),
+            env
+        );
+        expect(res.status).toBe(403);
+    });
+});
+
+describe("editing something inside a library", () => {
+    beforeEach(() => resetDb(db));
+
+    // The library comes from the insertable, not from anything the caller
+    // sends, so an editor of one library cannot reach into another.
+    it("takes the access of the library the insertable is in", async () => {
+        await seedGroup(db, "ftc-group", LibraryId.FTC_DESIGN_LIB);
+        await seedInsertable(db, {
+            id: "ftc-part",
+            groupId: "ftc-group",
+            libraryId: LibraryId.FTC_DESIGN_LIB
+        });
+        const app = createTestApp({
+            accessLevel: (libraryId) =>
+                libraryId === LibraryId.FRC_DESIGN_LIB
+                    ? AccessLevel.ADMIN
+                    : AccessLevel.USER
+        });
+
+        const res = await app.request(
+            "/api/index-configurations/insertable/ftc-part",
+            jsonRequest("POST", { indexConfigurations: true }),
             env
         );
         expect(res.status).toBe(403);

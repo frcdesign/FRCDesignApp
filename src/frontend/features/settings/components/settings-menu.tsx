@@ -23,7 +23,8 @@ import { useGetUiState, updateUiState } from "../../../lib/ui-state";
 import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
 import { SETUP_URL } from "../../../lib/url";
 import { useLibraryId } from "../../../lib/library";
-import { ReloadGroupsButton } from "../../library/components/reload-groups-button";
+import { ReloadAllButton } from "../../library/components/reload-all-button";
+import { AdminTeamSetting } from "../../admin-team/components/admin-team-setting";
 
 /** The FRCDesign Discord, where feedback and support now live. */
 const DISCORD_INVITE_URL = "https://discord.gg/PMgzEUTgB7";
@@ -204,12 +205,10 @@ function AdminSettings(): ReactNode {
         <Stack gap="sm">
             {/* Always show the access level select so admins can change access level if needed */}
             <AccessLevelSelect />
-            <RequireAccessLevel>
-                <InputRow label="Reload outdated documents">
-                    <ReloadGroupsButton />
-                </InputRow>
-                <InputRow label="Reload all documents">
-                    <ReloadGroupsButton reloadAll />
+            <RequireAccessLevel accessLevel={AccessLevel.OWNER}>
+                <AdminTeamSetting />
+                <InputRow label="Reload every library">
+                    <ReloadAllButton />
                 </InputRow>
             </RequireAccessLevel>
         </Stack>

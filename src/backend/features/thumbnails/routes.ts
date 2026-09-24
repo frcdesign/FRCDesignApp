@@ -9,7 +9,8 @@ import { RenderSource, ThumbnailSize } from "./contract";
 import { thumbnailKey } from "./keys";
 import { DEFAULT_CONFIGURATION_KEY } from "../configurations/contract";
 import { requestRender } from "./render";
-import { requireEditorMiddleware } from "../auth/guards";
+import { requireEditor } from "../auth/guards";
+import { libraryOfGroup, libraryOfInsertable } from "../library/db";
 import { getDb } from "../../db/client";
 import { reloadGroupThumbnail, reloadInsertableThumbnail } from "./reload";
 
@@ -127,6 +128,16 @@ const reloadThumbnailBody = z.object({
     insertableId: z.string().min(1).optional()
 });
 
+/** An editor of the library whose group or insertable the body names. */
+const requireThumbnailEditor = requireEditor(async (c) => {
+    const body = await c.req.json<z.infer<typeof reloadThumbnailBody>>();
+    const db = getDb(c.env.DB);
+    if (body.insertableId) {
+        return libraryOfInsertable(db, body.insertableId);
+    }
+    return body.groupId ? libraryOfGroup(db, body.groupId) : undefined;
+});
+
 /**
  * POST /api/reload-thumbnail
  *
@@ -137,7 +148,7 @@ const reloadThumbnailBody = z.object({
  */
 thumbnailRoutes.post(
     "/reload-thumbnail",
-    requireEditorMiddleware,
+    requireThumbnailEditor,
     validate("json", reloadThumbnailBody),
     async (c) => {
         const { groupId, insertableId } = c.req.valid("json");

@@ -5,8 +5,13 @@
 import { LibraryId } from "@backend/features/library/library-id";
 import { ElementPath, InstancePath } from "@backend/lib/onshape/path";
 
-export function accessDataQueryKey() {
-    return ["access-data"];
+/** Access is per library; without one, the prefix every library's shares. */
+export function accessDataQueryKey(libraryId?: LibraryId) {
+    return libraryId ? ["access-data", libraryId] : ["access-data"];
+}
+
+export function adminTeamQueryKey(libraryId: LibraryId) {
+    return ["admin-team", libraryId];
 }
 
 export function configurationQueryKey(

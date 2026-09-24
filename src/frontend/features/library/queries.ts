@@ -200,23 +200,17 @@ function markJobStarted(libraryId: LibraryId): void {
     );
 }
 
-/** Reloads documents whose version moved on, or all of them. */
-export function useReloadGroupsMutation(reloadAll: boolean) {
+/** Force reloads every document in every library; the owner's alone. */
+export function useReloadAllMutation() {
     const libraryId = useLibraryId();
     return useMutation({
-        mutationKey: ["reload-groups", libraryId],
-        mutationFn: (): Promise<{ status: string }> =>
-            apiPost("/reload-groups" + toLibraryPath(libraryId), {
-                query: { forceReload: reloadAll }
-            }),
+        mutationKey: ["reload-all"],
+        mutationFn: (): Promise<{ documents: number }> =>
+            apiPost("/reload-all"),
         onError: getAppErrorHandler("Failed to reload documents!"),
         onSuccess: (data) => {
             markJobStarted(libraryId);
-            showInfoToast(
-                data.status === "already-running"
-                    ? "A reload is already running."
-                    : "Reloading documents..."
-            );
+            showInfoToast(`Reloading ${data.documents} documents...`);
         }
     });
 }

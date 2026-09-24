@@ -12,7 +12,8 @@ import {
 } from "@mantine/core";
 import { CheckIcon, CopyIcon, HouseIcon } from "@phosphor-icons/react";
 import { IconSize } from "../lib/style-constants";
-import { ReloadGroupsButton } from "../features/library/components/reload-groups-button";
+import { ReloadAllButton } from "../features/library/components/reload-all-button";
+import { AccessLevel } from "@backend/features/auth/access-level";
 import { DEFAULT_LIBRARY } from "@backend/features/library/library-id";
 
 /**
@@ -23,8 +24,11 @@ export function RootAppError(): ReactNode {
         <PageNotice
             title="The app has crashed due to an unexpected error."
             action={
-                <RequireAccessLevel useMaxAccessLevel>
-                    <ReloadGroupsButton reloadAll />
+                <RequireAccessLevel
+                    accessLevel={AccessLevel.OWNER}
+                    useMaxAccessLevel
+                >
+                    <ReloadAllButton />
                 </RequireAccessLevel>
             }
         />
