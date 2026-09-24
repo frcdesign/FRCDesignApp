@@ -6,7 +6,8 @@ import { productionAuth } from "./request-auth";
 import { createApp } from "../../app";
 import { jsonRequest, resetDb, seedLibrary } from "../../../__test_utils__";
 import { getDb } from "../../db/client";
-import { adminTeamMembers } from "../../db/schema";
+import { libraries } from "../../db/schema";
+import { eq } from "drizzle-orm";
 import { LibraryId } from "../library/library-id";
 import { saveSession } from "./session";
 
@@ -58,18 +59,15 @@ describe("access from a library's admin team", () => {
         await resetDb(db);
         await seedLibrary(db, LibraryId.FRC_DESIGN_LIB);
         await seedLibrary(db, LibraryId.FTC_DESIGN_LIB);
-        await db.insert(adminTeamMembers).values([
-            {
-                libraryId: LibraryId.FRC_DESIGN_LIB,
-                userId: "member",
-                isTeamAdmin: false
-            },
-            {
-                libraryId: LibraryId.FRC_DESIGN_LIB,
-                userId: "team-admin",
-                isTeamAdmin: true
-            }
-        ]);
+        await db
+            .update(libraries)
+            .set({
+                adminTeam: [
+                    { userId: "member", isTeamAdmin: false },
+                    { userId: "team-admin", isTeamAdmin: true }
+                ]
+            })
+            .where(eq(libraries.id, LibraryId.FRC_DESIGN_LIB));
     });
 
     /** A signed-in session whose user is already resolved, so Onshape is not asked. */

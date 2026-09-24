@@ -4,3 +4,9 @@ export interface AdminTeamOut {
     teamId?: string;
     memberCount: number;
 }
+
+export interface AdminTeamMember {
+    userId: string;
+    /** An admin of the Onshape team, which makes them an admin of the library. */
+    isTeamAdmin: boolean;
+}

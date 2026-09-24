@@ -3,7 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TEST_LIBRARY_ID, resetDb, seedLibrary } from "../../../__test_utils__";
 import { MockOnshapeApi } from "../../../__test_utils__/mock-onshape-api";
 import { getDb } from "../../db/client";
-import { adminTeamMembers } from "../../db/schema";
+import { libraries } from "../../db/schema";
+import { eq } from "drizzle-orm";
 import { getAdminOnshapeApi, rememberAdminSession } from "./admin-sessions";
 import * as RequestAuth from "./request-auth";
 
@@ -32,14 +33,15 @@ describe("finding an admin's session", () => {
         await resetDb(db);
         await seedLibrary(db);
         await env.KV.delete(`admin-session:${OWNER}`);
-        await db.insert(adminTeamMembers).values([
-            {
-                libraryId: TEST_LIBRARY_ID,
-                userId: "member",
-                isTeamAdmin: false
-            },
-            { libraryId: TEST_LIBRARY_ID, userId: "admin", isTeamAdmin: true }
-        ]);
+        await db
+            .update(libraries)
+            .set({
+                adminTeam: [
+                    { userId: "member", isTeamAdmin: false },
+                    { userId: "admin", isTeamAdmin: true }
+                ]
+            })
+            .where(eq(libraries.id, TEST_LIBRARY_ID));
         await rememberAdminSession(env.KV, "member", "member-session");
         await rememberAdminSession(env.KV, "admin", "admin-session");
     });

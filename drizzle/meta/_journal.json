@@ -50,6 +50,13 @@
             "when": 1790215505598,
             "tag": "0006_admin_teams_webhooks_jobs",
             "breakpoints": true
+        },
+        {
+            "idx": 7,
+            "version": "6",
+            "when": 1790270424041,
+            "tag": "0007_admin_team_column",
+            "breakpoints": true
         }
     ]
 }

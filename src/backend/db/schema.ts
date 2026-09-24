@@ -11,6 +11,7 @@ import { FastenInfo } from "../features/library/insertables/fasten";
 import { DEFAULT_LIBRARY, LibraryId } from "../features/library/library-id";
 import { AppTab } from "../features/settings/app-tab";
 import { DEFAULT_THEME, Theme } from "../features/settings/settings";
+import type { AdminTeamMember } from "../features/admin-team/contract";
 import { Vendor } from "../features/library/vendors";
 import {
     ConfigurationParameter,
@@ -58,21 +59,13 @@ export const libraries = sqliteTable("libraries", {
     // The search index is in R2, keyed by library id; see rebuildSearchDb.
     cacheVersion: integer("cache_version").notNull().default(0),
     // Null until the owner sets one; until then only the owner can edit.
-    adminTeamId: text("admin_team_id")
+    adminTeamId: text("admin_team_id"),
+    // As of the last sync, replaced whole each time.
+    adminTeam: text("admin_team", { mode: "json" })
+        .$type<AdminTeamMember[]>()
+        .notNull()
+        .default([])
 });
-
-/** The admin team's members as of the last sync, replaced whole each time. */
-export const adminTeamMembers = sqliteTable(
-    "admin_team_members",
-    {
-        libraryId: libraryId().references(() => libraries.id, {
-            onDelete: "cascade"
-        }),
-        userId: text("user_id").notNull(),
-        isTeamAdmin: integer("is_team_admin", { mode: "boolean" }).notNull()
-    },
-    (t) => [primaryKey({ columns: [t.libraryId, t.userId] })]
-);
 
 /** Before a load pins a real version, so a failed group can still be retried. */
 export const PLACEHOLDER_VERSION_ID = "placeholder";

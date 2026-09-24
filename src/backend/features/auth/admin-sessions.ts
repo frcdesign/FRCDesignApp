@@ -7,8 +7,8 @@ import { type OAuthApi } from "../../lib/onshape/client";
 import { getSessionInfo } from "../../lib/onshape/endpoints/users";
 import type { AppBindings } from "../../lib/context";
 import { getDb } from "../../db/client";
-import { adminTeamMembers } from "../../db/schema";
-import { and, eq, inArray } from "drizzle-orm";
+import { libraries } from "../../db/schema";
+import { inArray } from "drizzle-orm";
 import type { LibraryId } from "../library/library-id";
 import { getOnshapeApiFromSessionId } from "./request-auth";
 
@@ -57,16 +57,18 @@ export async function getAdminOnshapeApi(
     if (owner || libraryIds.length === 0) {
         return owner;
     }
-    const admins = await getDb(env.DB)
-        .selectDistinct({ userId: adminTeamMembers.userId })
-        .from(adminTeamMembers)
-        .where(
-            and(
-                inArray(adminTeamMembers.libraryId, libraryIds),
-                eq(adminTeamMembers.isTeamAdmin, true)
-            )
-        );
-    for (const { userId } of admins) {
+    const rows = await getDb(env.DB)
+        .select({ adminTeam: libraries.adminTeam })
+        .from(libraries)
+        .where(inArray(libraries.id, libraryIds));
+    const admins = new Set(
+        rows.flatMap((row) =>
+            row.adminTeam
+                .filter((member) => member.isTeamAdmin)
+                .map((member) => member.userId)
+        )
+    );
+    for (const userId of admins) {
         const api = await getLiveApi(env.KV, userId);
         if (api) {
             return api;

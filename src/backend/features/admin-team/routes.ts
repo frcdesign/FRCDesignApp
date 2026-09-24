@@ -1,4 +1,4 @@
-import { count, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { HttpStatus } from "http-status-ts";
 import { z } from "zod";
 import { getApp } from "../../lib/context";
@@ -6,7 +6,7 @@ import { handledError } from "../../lib/api-error";
 import { getLibraryParam, libraryRoute } from "../../lib/route-params";
 import { validate } from "../../lib/validate";
 import { type Db, getDb } from "../../db/client";
-import { adminTeamMembers, libraries } from "../../db/schema";
+import { libraries } from "../../db/schema";
 import { requireAdminMiddleware, requireOwnerMiddleware } from "../auth/guards";
 import { ensureLibrary } from "../library/db";
 import type { LibraryId } from "../library/library-id";
@@ -24,21 +24,17 @@ async function getAdminTeam(
     db: Db,
     libraryId: LibraryId
 ): Promise<AdminTeamOut> {
-    const [library, members] = await Promise.all([
-        db
-            .select({ teamId: libraries.adminTeamId })
-            .from(libraries)
-            .where(eq(libraries.id, libraryId))
-            .get(),
-        db
-            .select({ count: count() })
-            .from(adminTeamMembers)
-            .where(eq(adminTeamMembers.libraryId, libraryId))
-            .get()
-    ]);
+    const library = await db
+        .select({
+            teamId: libraries.adminTeamId,
+            members: libraries.adminTeam
+        })
+        .from(libraries)
+        .where(eq(libraries.id, libraryId))
+        .get();
     return {
         teamId: library?.teamId ?? undefined,
-        memberCount: members?.count ?? 0
+        memberCount: library?.members.length ?? 0
     };
 }
 

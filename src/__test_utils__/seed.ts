@@ -7,7 +7,6 @@ import {
     insertables,
     libraries,
     users,
-    adminTeamMembers,
     loadJobs,
     onshapeWebhooks
 } from "@backend/db/schema";
@@ -77,7 +76,6 @@ export async function resetDb(db: Db): Promise<void> {
         db.delete(insertables),
         db.delete(groups),
         db.delete(users),
-        db.delete(adminTeamMembers),
         db.delete(libraries),
         db.delete(onshapeWebhooks),
         // Analytics has no foreign keys, so nothing cascades these away.

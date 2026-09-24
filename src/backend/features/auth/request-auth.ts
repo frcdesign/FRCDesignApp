@@ -3,9 +3,9 @@ import { env as processEnv } from "process";
 import { OAuthApi } from "../../lib/onshape/client";
 import { getSessionInfo, getUserId } from "../../lib/onshape/endpoints/users";
 import { type AppContext, type AuthResolver } from "../../lib/context";
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { getDb } from "../../db/client";
-import { adminTeamMembers } from "../../db/schema";
+import { libraries } from "../../db/schema";
 import type { LibraryId } from "../library/library-id";
 import { AccessLevel, isWithinAccessLevel } from "./access-level";
 import { rememberAdminSession } from "./admin-sessions";
@@ -151,16 +151,12 @@ async function lookUpAccessLevel(
     if (c.env.OWNER_USER_ID && userId === c.env.OWNER_USER_ID) {
         return AccessLevel.OWNER;
     }
-    const member = await getDb(c.env.DB)
-        .select({ isTeamAdmin: adminTeamMembers.isTeamAdmin })
-        .from(adminTeamMembers)
-        .where(
-            and(
-                eq(adminTeamMembers.libraryId, libraryId),
-                eq(adminTeamMembers.userId, userId)
-            )
-        )
+    const library = await getDb(c.env.DB)
+        .select({ adminTeam: libraries.adminTeam })
+        .from(libraries)
+        .where(eq(libraries.id, libraryId))
         .get();
+    const member = library?.adminTeam.find((entry) => entry.userId === userId);
     if (!member) {
         return AccessLevel.USER;
     }

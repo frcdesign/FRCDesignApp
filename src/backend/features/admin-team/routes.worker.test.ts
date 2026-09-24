@@ -10,7 +10,7 @@ import {
 } from "../../../__test_utils__";
 import { MockOnshapeApi } from "../../../__test_utils__/mock-onshape-api";
 import { getDb } from "../../db/client";
-import { adminTeamMembers, libraries } from "../../db/schema";
+import { libraries } from "../../db/schema";
 import { OnshapeApiError } from "../../lib/onshape/client";
 import { AccessLevel } from "../auth/access-level";
 
@@ -64,15 +64,12 @@ describe("setting a library's admin team", () => {
         const res = await setTeam("team", onshapeApi);
 
         expect(await res.json()).toEqual({ teamId: "team", memberCount: 2 });
-        expect(
-            await db
-                .select({
-                    userId: adminTeamMembers.userId,
-                    isTeamAdmin: adminTeamMembers.isTeamAdmin
-                })
-                .from(adminTeamMembers)
-                .all()
-        ).toEqual([
+        const library = await db
+            .select({ adminTeam: libraries.adminTeam })
+            .from(libraries)
+            .where(eq(libraries.id, TEST_LIBRARY_ID))
+            .get();
+        expect(library?.adminTeam).toEqual([
             { userId: "member", isTeamAdmin: false },
             { userId: "team-admin", isTeamAdmin: true }
         ]);
