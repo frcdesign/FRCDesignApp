@@ -14,6 +14,8 @@ import {
     RECEIVE_PATH,
     WebhookEvent
 } from "./registration";
+import { readUnitsDelivery, UNITS_RECEIVE_PATH } from "./transient";
+import { forgetUnitInfo } from "../configurations/units";
 
 export const webhookRoutes = getApp();
 
@@ -45,6 +47,20 @@ webhookRoutes.post(RECEIVE_PATH.replace(/^\/api/, ""), async (c) => {
             await forgetWebhook(c.env, webhook);
             break;
         // Registration fails without a 200.
+    }
+    return c.json({});
+});
+
+/** POST /api/webhooks/units?documentId=&workspaceId=&signature= */
+webhookRoutes.post(UNITS_RECEIVE_PATH.replace(/^\/api/, ""), async (c) => {
+    const workspace = await readUnitsDelivery(c.env, c.req.query());
+    if (!workspace) {
+        throw forbiddenError("Unrecognized webhook");
+    }
+    // Registration and pings only want a 200; any other event is the change.
+    const { event } = await c.req.json<WebhookNotification>();
+    if (!event.startsWith("webhook.")) {
+        await forgetUnitInfo(c.env.KV, workspace);
     }
     return c.json({});
 });

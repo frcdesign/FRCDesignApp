@@ -3,6 +3,7 @@ import { HttpStatus } from "http-status-ts";
 import { internalError } from "../../lib/api-error";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { type AppContext } from "../../lib/context";
+import { kvStore } from "../../lib/kv-store";
 
 const SESSION_COOKIE = "frc-design-app-cookie";
 /** Held only for the OAuth round trip, so an abandoned one costs the session nothing. */
@@ -49,17 +50,11 @@ interface Session extends AuthTokens {
 }
 
 /** Still `tokens:`, so sessions signed in before this held a userId survive. */
-function sessionKey(sessionId: string): string {
-    return `tokens:${sessionId}`;
-}
-
-function loginKey(loginId: string): string {
-    return `login-session:${loginId}`;
-}
+const sessions = kvStore<Session>("tokens", { ttlSeconds: SESSION_TTL });
 
 /** The cookie is the caller's to clear. */
-async function dropSession(kv: KVNamespace, sessionId: string): Promise<void> {
-    await kv.delete(sessionKey(sessionId));
+function dropSession(kv: KVNamespace, sessionId: string): Promise<void> {
+    return sessions.delete(kv, sessionId);
 }
 
 export async function endSession(c: AppContext): Promise<void> {
@@ -93,23 +88,21 @@ export async function saveSession(
     sessionId: string,
     session: Session
 ) {
-    await kv.put(sessionKey(sessionId), JSON.stringify(session), {
-        expirationTtl: SESSION_TTL
-    });
+    await sessions.put(kv, sessionId, session);
 }
 
 export async function getSession(
     kv: KVNamespace,
     sessionId: string
 ): Promise<Session> {
-    const raw = await kv.get(sessionKey(sessionId));
-    if (!raw) {
+    const session = await sessions.get(kv, sessionId);
+    if (!session) {
         throw internalError(
             "Failed to find valid auth tokens to use",
             HttpStatus.UNAUTHORIZED
         );
     }
-    return JSON.parse(raw) as Session;
+    return session;
 }
 
 /** What the callback needs to finish a sign-in it did not start. */
@@ -118,19 +111,21 @@ interface LoginSession {
     redirectUrl: string;
 }
 
+const loginSessions = kvStore<LoginSession>("login-session", {
+    ttlSeconds: LOGIN_TTL
+});
+
 /** Single-use: reading it also clears it, so a state cannot be replayed. */
 export async function takeLoginSession(
     c: AppContext
 ): Promise<LoginSession | undefined> {
     const loginId = getCookie(c, LOGIN_COOKIE);
     if (!loginId) return undefined;
-    const raw = await c.env.KV.get(loginKey(loginId));
-    if (!raw) return undefined;
-
-    const session = JSON.parse(raw) as LoginSession;
+    const session = await loginSessions.get(c.env.KV, loginId);
+    if (!session) return undefined;
 
     deleteCookie(c, LOGIN_COOKIE, COOKIE_OPTIONS);
-    void c.env.KV.delete(loginKey(loginId));
+    void loginSessions.delete(c.env.KV, loginId);
     return session;
 }
 
@@ -148,7 +143,5 @@ export async function startLoginSession(
         maxAge: LOGIN_TTL
     });
 
-    await c.env.KV.put(loginKey(loginId), JSON.stringify(data), {
-        expirationTtl: LOGIN_TTL
-    });
+    await loginSessions.put(c.env.KV, loginId, data);
 }

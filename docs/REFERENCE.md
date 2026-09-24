@@ -30,14 +30,14 @@ D1 is Cloudflare's managed SQLite database. It is the app's primary persistent s
 
 Queries go through **Drizzle ORM** so you write TypeScript instead of raw SQL. The schema is defined in `src/backend/db/schema.ts`. SQL migration files live in `drizzle/` and are applied automatically on deploy.
 
-### KV — Session & Token Storage (`c.env.KV`)
+### KV — Sessions and Caches (`c.env.KV`)
 
-KV is a key-value store (like a global dictionary). The app uses it exclusively for **authentication**:
+KV holds what may expire or be lost. Every key belongs to a `kvStore` (`src/backend/lib/kv-store.ts`) with its own prefix, value type and lifetime:
 
-- During the OAuth login flow, it briefly stores the OAuth `state` and the URL to redirect back to after login.
-- After login succeeds, it stores the user's access token and refresh token, keyed to their session cookie.
-
-KV serves as a cheap, lightweight way to persist user data across multiple Cloudflare Workers (which Cloudflare automatically scales and provisions based on the app's current traffic). Because Workers are stateless — there is no in-memory session that persists between requests — KV is the right place to stash tokens between requests.
+- `login-session:` — the OAuth `state` and where to return, for the ten minutes of a sign-in.
+- `tokens:` — a signed-in session's access and refresh tokens, keyed by its cookie, for 30 days.
+- `admin-session:` — the owner's and team admins' latest session ids, so a load nobody is signed in behind can run as one of them.
+- `unit-info:` — a workspace's units, for a week. On a miss the route asks Onshape and registers a transient `updateworkspaceunits` webhook, whose delivery drops the entry. Transient webhooks are cleaned up by Onshape after a while without events, so nothing records or removes them; their url carries the workspace, signed with `SESSION_SECRET`, and the expiry covers one Onshape drops quietly (`features/webhooks/transient.ts`).
 
 ### R2 — Blob Storage (`c.env.BLOB`)
 

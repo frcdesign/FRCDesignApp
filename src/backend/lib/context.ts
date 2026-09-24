@@ -24,6 +24,8 @@ export interface AppBindings {
     VITE_ACCESS_LEVEL_OVERRIDE?: string;
     /** Testing-only: treat requests as signed in with a fake user. Not for production. */
     FORCE_SIGNED_IN?: string;
+    /** Signs the urls transient webhooks deliver to; unset registers none. */
+    SESSION_SECRET?: string;
 }
 
 interface AppVariables {

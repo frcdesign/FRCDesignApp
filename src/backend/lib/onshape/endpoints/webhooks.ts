@@ -11,6 +11,8 @@ export interface CreateWebhookParams {
     companyId?: string;
     /** The document whose events it hears, for a document's events. */
     documentId?: string;
+    /** Narrows a document's events to one workspace's. */
+    workspaceId?: string;
     events: string[];
     url: string;
     name: string;

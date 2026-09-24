@@ -88,6 +88,11 @@ D1 tables live in `db/schema.ts`, except a feature's own: tracking's are in
 they hold no foreign key into the rest. `drizzle.config.ts` lists every schema
 file, so a new one has to be added there or its tables generate no migration.
 
+KV is for what may expire or be lost: sessions, and caches that save Onshape
+calls. Every key belongs to a `kvStore` (`lib/kv-store.ts`) declared beside the
+code that owns it, with its prefix, value type and lifetime; don't read or
+write `KV` directly. Anything that must last goes in D1.
+
 ## Configurations
 
 A configuration takes exactly two forms, and `features/configurations/selection.ts`

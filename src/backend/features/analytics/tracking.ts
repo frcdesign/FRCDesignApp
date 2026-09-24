@@ -1,4 +1,5 @@
 import type { BatchItem } from "drizzle-orm/batch";
+import { runInBackground } from "../../lib/background";
 import { type AppContext } from "../../lib/context";
 import { getDb, type Db } from "../../db/client";
 import { events, type LoggedEvent } from "./schema";
@@ -40,19 +41,11 @@ interface AppOpenEvent {
 }
 
 /** Tracking never fails an insert, so errors are logged. Awaits without an execution context. */
-export async function trackInBackground(
+export function trackInBackground(
     c: AppContext,
     work: () => Promise<void>
 ): Promise<void> {
-    const guarded = work().catch((error) => {
-        console.error("Failed to record usage event", error);
-    });
-
-    try {
-        c.executionCtx.waitUntil(guarded);
-    } catch {
-        await guarded;
-    }
+    return runInBackground(c, "record usage event", work);
 }
 
 export async function trackInsert(

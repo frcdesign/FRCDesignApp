@@ -11,10 +11,10 @@ import { libraries } from "../../db/schema";
 import { inArray } from "drizzle-orm";
 import type { LibraryId } from "../library/library-id";
 import { getOnshapeApiFromSessionId } from "./request-auth";
+import { kvStore } from "../../lib/kv-store";
 
-function adminSessionKey(userId: string): string {
-    return `admin-session:${userId}`;
-}
+/** Each admin's latest session id, by user id. */
+const adminSessions = kvStore<string>("admin-session");
 
 /** Only writes when the session changed. */
 export async function rememberAdminSession(
@@ -22,9 +22,8 @@ export async function rememberAdminSession(
     userId: string,
     sessionId: string
 ): Promise<void> {
-    const key = adminSessionKey(userId);
-    if ((await kv.get(key)) !== sessionId) {
-        await kv.put(key, sessionId);
+    if ((await adminSessions.get(kv, userId)) !== sessionId) {
+        await adminSessions.put(kv, userId, sessionId);
     }
 }
 
@@ -32,7 +31,7 @@ async function getLiveApi(
     kv: KVNamespace,
     userId: string
 ): Promise<OAuthApi | undefined> {
-    const sessionId = await kv.get(adminSessionKey(userId));
+    const sessionId = await adminSessions.get(kv, userId);
     if (!sessionId) {
         return undefined;
     }
