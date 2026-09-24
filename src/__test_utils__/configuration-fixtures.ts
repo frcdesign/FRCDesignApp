@@ -9,7 +9,8 @@ import {
     type EnumParameter,
     type QuantityParameter,
     type StringParameter,
-    type UnitInfo
+    type UnitInfo,
+    ParameterRole
 } from "@backend/features/configurations/contract";
 import { QuantityType, Unit } from "@backend/features/configurations/enums";
 import { quantityDefault } from "@backend/features/configurations/selection";
@@ -55,6 +56,15 @@ export function boolParam(id: string): BooleanParameter {
 
 export function stringParam(id: string): StringParameter {
     return { id, name: id, default: "", type: ParameterType.STRING };
+}
+
+/** A text parameter recognized, as a load would, as a derivation variable. */
+export function derivationParam(id: string): StringParameter {
+    return {
+        ...stringParam(id),
+        name: "Derivation Variable",
+        role: ParameterRole.DERIVATION_VARIABLE
+    };
 }
 
 /**

@@ -1,5 +1,4 @@
 import {
-    type ConfigurationRecord,
     type PartMetadata,
     type PartialSelection,
     Selection,
@@ -239,6 +238,18 @@ export function getVisibleOptions(
 export const DEFAULT_QUANTITY_PRECISION = 3;
 
 /**
+ * The units shown outside a document, which has none to take: Onshape's own
+ * for a new document, in the units the library's parts are drawn in.
+ */
+export const PLACEHOLDER_UNIT_INFO: UnitInfo = {
+    lengthUnit: Unit.INCH,
+    angleUnit: Unit.DEGREE,
+    lengthPrecision: DEFAULT_QUANTITY_PRECISION,
+    anglePrecision: DEFAULT_QUANTITY_PRECISION,
+    realPrecision: DEFAULT_QUANTITY_PRECISION
+};
+
+/**
  * The evaluation settings for a quantity parameter: its own bounds, plus the
  * document's display unit and precision, falling back to the parameter's own.
  */
@@ -254,24 +265,21 @@ export function getEvaluateOptions(
     if (quantityType === QuantityType.LENGTH) {
         return {
             quantityType,
-            displayPrecision:
-                unitInfo.lengthPrecision ?? DEFAULT_QUANTITY_PRECISION,
-            displayUnit: unitInfo.lengthUnit ?? parameter.unit,
+            displayPrecision: unitInfo.lengthPrecision,
+            displayUnit: unitInfo.lengthUnit,
             ...minAndMax
         };
     } else if (quantityType === QuantityType.ANGLE) {
         return {
             quantityType,
-            displayPrecision:
-                unitInfo.anglePrecision ?? DEFAULT_QUANTITY_PRECISION,
-            displayUnit: unitInfo.angleUnit ?? parameter.unit,
+            displayPrecision: unitInfo.anglePrecision,
+            displayUnit: unitInfo.angleUnit,
             ...minAndMax
         };
     } else if (quantityType === QuantityType.REAL) {
         return {
             quantityType,
-            displayPrecision:
-                unitInfo.realPrecision ?? DEFAULT_QUANTITY_PRECISION,
+            displayPrecision: unitInfo.realPrecision,
             displayUnit: Unit.UNITLESS,
             ...minAndMax
         };
@@ -282,16 +290,4 @@ export function getEvaluateOptions(
         displayUnit: Unit.UNITLESS,
         ...minAndMax
     };
-}
-
-/**
- * An insertable's full record list: its own part data first — the record an
- * unset configuration falls back to — then one per indexed configuration.
- */
-export function toRecords(
-    partMetadata: PartMetadata | null,
-    records: ConfigurationRecord[]
-): ConfigurationRecord[] {
-    if (!partMetadata) return records;
-    return [{ ...partMetadata, values: {} }, ...records];
 }

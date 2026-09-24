@@ -1,59 +1,65 @@
 import { describe, expect, it } from "vitest";
-import { isDerivationVariable, parameterRole, ParameterRole } from "./roles";
+import { isDerivationVariable, withRoles } from "./roles";
+import { type ConfigurationParameter, ParameterRole } from "./contract";
 import {
     enumParam,
     stringParam
 } from "../../../__test_utils__/configuration-fixtures";
 
-const named = (name: string) => ({ ...enumParam("p", ["x", "y"]), name });
+const named = (name: string): ConfigurationParameter => ({
+    ...enumParam(name, ["x", "y"]),
+    name
+});
 
-describe("parameterRole", () => {
+/** The role each of `parameters` is recognized in, alongside the rest. */
+const rolesOf = (...parameters: ConfigurationParameter[]) =>
+    withRoles(parameters).map((parameter) => parameter.role);
+
+describe("recognizing roles", () => {
     it.each([
         ["Color", ParameterRole.COLOR],
         ["Part colour", ParameterRole.COLOR],
         ["Tessellation Quality", ParameterRole.TESSELLATION],
         ["Tesselation quality", ParameterRole.TESSELLATION]
     ])("recognizes %s", (name, role) => {
-        expect(parameterRole(named(name))).toBe(role);
+        expect(rolesOf(named(name))).toEqual([role]);
     });
 
     it.each(["Length", "Bearing", "Gear Ratio", "Colorway"])(
         "gives an ordinary parameter named %s no role",
         (name) => {
-            expect(parameterRole(named(name))).toBeUndefined();
+            expect(rolesOf(named(name))).toEqual([undefined]);
         }
     );
 
     it("recognizes a color channel beside its two siblings", () => {
-        const channels = ["R", "G", "B"].map(named);
-        for (const channel of channels) {
-            expect(parameterRole(channel, channels)).toBe(
-                ParameterRole.COLOR_CHANNEL
-            );
-        }
+        expect(rolesOf(named("R"), named("G"), named("B"))).toEqual([
+            ParameterRole.COLOR_CHANNEL,
+            ParameterRole.COLOR_CHANNEL,
+            ParameterRole.COLOR_CHANNEL
+        ]);
     });
 
     // A lone "B" is as likely a size as a blue.
     it("gives a single letter with no channel siblings no role", () => {
-        const lone = named("B");
-        expect(parameterRole(lone, [named("A"), lone])).toBeUndefined();
+        expect(rolesOf(named("A"), named("B"))).toEqual([undefined, undefined]);
     });
 });
 
 describe("derivation variables", () => {
     it("recognizes a text parameter named for derivation", () => {
-        const parameter = { ...stringParam("d"), name: "Derivation Variable" };
-        expect(parameterRole(parameter)).toBe(
-            ParameterRole.DERIVATION_VARIABLE
-        );
+        const [parameter] = withRoles([
+            { ...stringParam("d"), name: "Derivation Variable" }
+        ]);
+        expect(parameter.role).toBe(ParameterRole.DERIVATION_VARIABLE);
         expect(isDerivationVariable(parameter)).toBe(true);
     });
 
     // Only a text one can take the unique value the app fills in, so one of
     // another type is an ordinary parameter: indexed and editable as usual.
     it("gives one of another type no role", () => {
-        const parameter = named("Derivation Variable");
-        expect(parameterRole(parameter)).toBeUndefined();
+        const [parameter] = withRoles([named("Derivation Variable")]);
+        expect(parameter.role).toBeUndefined();
         expect(isDerivationVariable(parameter)).toBe(false);
     });
 });

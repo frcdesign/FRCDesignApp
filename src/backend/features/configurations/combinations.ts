@@ -11,7 +11,6 @@ import {
 } from "./contract";
 import { evaluateCondition, getVisibleOptions } from "./utils";
 import { ElementType } from "../../lib/onshape/element-type";
-import { parameterRole } from "./roles";
 
 /**
  * The most combinations we enumerate for one insertable; beyond it nothing is
@@ -112,13 +111,12 @@ export function effectiveExclusions(
  */
 export function isIndexedParameter(
     parameter: ConfigurationParameter,
-    parameters: ConfigurationParameter[],
     excludedParameterIds: readonly string[] = []
 ): parameter is EnumParameter | BooleanParameter {
     return (
         (parameter.type === ParameterType.ENUM ||
             parameter.type === ParameterType.BOOLEAN) &&
-        parameterRole(parameter, parameters) === undefined &&
+        parameter.role === undefined &&
         !excludedParameterIds.includes(parameter.id)
     );
 }
@@ -154,7 +152,7 @@ export function countCombinations(
 ): number | null {
     // Depth-first: only the count is wanted, so one path is held rather than all.
     const indexed = parameters.filter((parameter) =>
-        isIndexedParameter(parameter, parameters, excludedParameterIds)
+        isIndexedParameter(parameter, excludedParameterIds)
     );
     let count = 0;
     let capped = false;
@@ -206,7 +204,7 @@ export function enumerateConfigurations(
     let configurations: PartialSelection[] = [{}];
 
     for (const parameter of parameters) {
-        if (!isIndexedParameter(parameter, parameters, excludedParameterIds)) {
+        if (!isIndexedParameter(parameter, excludedParameterIds)) {
             continue;
         }
 

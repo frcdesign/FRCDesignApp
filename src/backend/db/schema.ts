@@ -19,10 +19,6 @@ import {
     PartMetadata
 } from "../features/configurations/contract";
 import { BuildIssue, knownBuildIssues } from "../features/build-checker/issues";
-import {
-    upgradeParameters,
-    upgradeRecords
-} from "../features/configurations/legacy";
 
 /** A JSON column whose stored rows may predate its current shape. */
 function upgradedJson<T>(upgrade: (stored: T) => T) {
@@ -191,14 +187,14 @@ export const configurations = sqliteTable("configurations", {
     insertableId: text("insertable_id")
         .primaryKey()
         .references(() => insertables.id, { onDelete: "cascade" }),
-    parameters: upgradedJson<ConfigurationParameter[]>(upgradeParameters)(
-        "parameters"
-    )
+    parameters: text("parameters", { mode: "json" })
+        .$type<ConfigurationParameter[]>()
         .notNull()
         .default([]),
     // One record per indexed configuration. Empty unless the insertable is
     // indexed; the element's own metadata lives on `insertables.partMetadata`.
-    records: upgradedJson<ConfigurationRecord[]>(upgradeRecords)("records")
+    records: text("records", { mode: "json" })
+        .$type<ConfigurationRecord[]>()
         .notNull()
         .default([])
 });

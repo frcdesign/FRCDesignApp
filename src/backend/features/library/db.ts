@@ -10,8 +10,9 @@ import {
 } from "../../db/schema";
 import { LibraryId } from "./library-id";
 import { InsertableOut, LibraryOut, Insertables, Groups } from "./contract";
-import { toRecords } from "../configurations/utils";
-import { buildSearchDb, type IndexedConfiguration } from "../search/build";
+import { type SearchRecord } from "../configurations/contract";
+import { buildSearchDb } from "../search/build";
+import { searchRecordsOf } from "../search/records";
 
 /**
  * Assembles the full `LibraryOut` (groups + insertables, in sort order) for a
@@ -198,7 +199,7 @@ export async function rebuildSearchDb(
 ): Promise<string> {
     const [libraryData, indexed] = await Promise.all([
         getLibraryOut(db, libraryId),
-        getIndexedConfigurations(db, libraryId)
+        getSearchRecords(db, libraryId)
     ]);
     const searchDb = JSON.stringify(buildSearchDb(libraryData, indexed));
     // Uncompressed: encoding here would leave the runtime compressing an
@@ -210,18 +211,18 @@ export async function rebuildSearchDb(
 }
 
 /**
- * What `buildSearchDb` indexes: an element's own part data plus one record per
- * indexed configuration, and the parameters those are read against. Left
- * joined — an unconfigurable element has no row.
+ * What `buildSearchDb` indexes: each insertable's records. Left joined — an
+ * unconfigurable element has no configuration row.
  */
-async function getIndexedConfigurations(
+async function getSearchRecords(
     db: Db,
     libraryId: LibraryId
-): Promise<Record<string, IndexedConfiguration>> {
+): Promise<Record<string, SearchRecord[]>> {
     const rows = await db
         .select({
             id: insertables.id,
             partMetadata: insertables.partMetadata,
+            vendors: insertables.vendors,
             parameters: configurations.parameters,
             records: configurations.records
         })
@@ -233,14 +234,9 @@ async function getIndexedConfigurations(
         .where(eq(insertables.libraryId, libraryId))
         .all();
 
-    const indexed: Record<string, IndexedConfiguration> = {};
-    for (const row of rows) {
-        const records = toRecords(row.partMetadata, row.records ?? []);
-        if (records.length > 0) {
-            indexed[row.id] = { parameters: row.parameters ?? [], records };
-        }
-    }
-    return indexed;
+    return Object.fromEntries(
+        rows.map((row) => [row.id, searchRecordsOf(row)])
+    );
 }
 
 /** The library an insertable is in, for a route that names only the insertable. */

@@ -31,7 +31,6 @@ import {
     StringParameter,
     QuantityParameter,
     UnitInfo,
-    EMPTY_UNIT_INFO,
     SearchRecord
 } from "@backend/features/configurations/contract";
 import {
@@ -49,10 +48,9 @@ import {
 } from "@backend/features/configurations/selection";
 import { isDerivationVariable } from "@backend/features/configurations/roles";
 import { evaluateExpression } from "@backend/features/configurations/input-parser";
-import { useConfigurationQuery, useUnitInfoQuery } from "../queries";
+import { useConfigurationQuery, useUnitInfo } from "../queries";
 import { SectionNotice } from "../../../components/app-zero-state";
 import classes from "./configurations.module.css";
-import { useTargetElement } from "../../../lib/onshape-params";
 import {
     normalizeSelection,
     resolveSelectedOption,
@@ -128,11 +126,7 @@ export function ConfigurationWrapper(
 
     const query = useConfigurationQuery(insertableId, microversionId);
 
-    // Units come from the current document; empty when not connected to one, in
-    // which case each quantity renders in its own unit (see getEvaluateOptions).
-    const target = useTargetElement();
-    const unitInfoQuery = useUnitInfoQuery(target);
-    const unitInfo = unitInfoQuery.data ?? EMPTY_UNIT_INFO;
+    const unitInfo = useUnitInfo();
 
     const parameters = query.data?.parameters;
     // Whole the moment the parameters are known, since a search hit names only
@@ -180,9 +174,7 @@ export function ConfigurationWrapper(
     if (query.isError) {
         return <SectionNotice title="Failed to load selection." />;
     }
-    // isLoading, not isPending: the units query sits disabled (and so forever
-    // pending) when there is no document to ask.
-    if (query.isPending || unitInfoQuery.isLoading || !whole) {
+    if (query.isPending || !unitInfo || !whole) {
         return (
             <Center my="md">
                 <Loader />

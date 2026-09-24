@@ -151,15 +151,7 @@ describe("buildSearchDb", () => {
 
     it("keeps a placeholder part number out of the index and the records", () => {
         const db = buildSearchDb(library("Spacer"), {
-            i1: {
-                parameters: [],
-                records: [
-                    record({
-                        partNumber: "N/A",
-                        name: "Spacer"
-                    })
-                ]
-            }
+            i1: unconfigured([record({ partNumber: "N/A", name: "Spacer" })])
         });
         expect(db.search("n/a")).toEqual([]);
         expect(stored(db).records).toEqual([
@@ -170,16 +162,16 @@ describe("buildSearchDb", () => {
     // The vendor is a resolution fallback, not something to match against.
     it("never searches the vendor", () => {
         const db = buildSearchDb(library("Spacer", [Vendor.WCP]), {
-            i1: {
-                parameters: [],
-                records: [
+            i1: unconfigured(
+                [
                     record({
                         partNumber: "WCP-1025",
                         name: "Spacer",
                         vendor: "WestCoast Products"
                     })
-                ]
-            }
+                ],
+                [Vendor.WCP]
+            )
         });
         expect(db.search("westcoast")).toEqual([]);
         expect(stored(db).records).toEqual([

@@ -7,7 +7,7 @@ import {
     SwatchesIcon
 } from "@phosphor-icons/react";
 import { ReactNode } from "react";
-import { ParameterRole } from "@backend/features/configurations/roles";
+import { ParameterRole } from "@backend/features/configurations/contract";
 import { IconSize } from "../lib/style-constants";
 
 const ROLE_LABELS: Record<ParameterRole, string> = {

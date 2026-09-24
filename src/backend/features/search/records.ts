@@ -6,6 +6,7 @@
 import {
     type ConfigurationParameter,
     type ConfigurationRecord,
+    type PartMetadata,
     type SearchRecord
 } from "../configurations/contract";
 import { toKey, toSelection } from "../configurations/selection";
@@ -224,4 +225,30 @@ export function distinctRecords(records: SearchRecord[]): SearchRecord[] {
         seen.add(key);
         return true;
     });
+}
+
+/** An insertable's stored configuration data, as the joined rows read it. */
+export interface StoredConfiguration {
+    /** The element's own part data; null when it has none to show. */
+    partMetadata: PartMetadata | null;
+    /** Null for an element with nothing to configure, which has no row. */
+    parameters: ConfigurationParameter[] | null;
+    records: ConfigurationRecord[] | null;
+    vendors: Vendor[];
+}
+
+/**
+ * Every record an insertable can be shown or found as: its own part data
+ * first — the record an unset configuration falls back to — then one per
+ * indexed configuration.
+ */
+export function searchRecordsOf(stored: StoredConfiguration): SearchRecord[] {
+    const own: ConfigurationRecord[] = stored.partMetadata
+        ? [{ ...stored.partMetadata, values: {} }]
+        : [];
+    return toSearchRecords(
+        [...own, ...(stored.records ?? [])],
+        stored.parameters ?? [],
+        stored.vendors
+    );
 }

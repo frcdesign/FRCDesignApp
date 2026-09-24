@@ -22,7 +22,7 @@ import {
     boolParam,
     enumParam,
     quantityParam,
-    stringParam
+    derivationParam
 } from "../../../__test_utils__/configuration-fixtures";
 
 const size = enumParam("size", ["s", "l"]);
@@ -227,7 +227,7 @@ describe("formatValue", () => {
 });
 
 describe("derivation variables", () => {
-    const derivation = { ...stringParam("dv"), name: "Derivation Variable" };
+    const derivation = derivationParam("dv");
     const params: ConfigurationParameter[] = [size, derivation];
 
     // Unique to each insert by design, so it must not split one render in two.

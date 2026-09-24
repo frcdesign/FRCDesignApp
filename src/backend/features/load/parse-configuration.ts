@@ -1,3 +1,4 @@
+import { withRoles } from "../configurations/roles";
 import {
     type EnumOption,
     type OptionVisibilityCondition,
@@ -169,5 +170,5 @@ export function parseOnshapeConfiguration(
         }
     }
 
-    return parameters;
+    return withRoles(parameters);
 }

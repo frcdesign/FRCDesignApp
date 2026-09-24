@@ -9,7 +9,6 @@ import {
     Tooltip
 } from "@mantine/core";
 import { CheckIcon, XIcon } from "@phosphor-icons/react";
-import { parameterRole } from "@backend/features/configurations/roles";
 import {
     ParameterRoleLabel,
     ROLE_ICONS
@@ -191,7 +190,7 @@ function IndexedControl(props: ParameterRowProps): ReactNode {
     const { insertableId, status, parameter } = props;
     const mutation = useExcludedParametersMutation(insertableId);
 
-    const role = parameterRole(parameter, status.configuration?.parameters);
+    const role = parameter.role;
     if (role) {
         return (
             <Tooltip

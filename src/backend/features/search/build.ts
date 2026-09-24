@@ -4,18 +4,9 @@
  */
 import MiniSearch from "minisearch";
 import { LibraryOut } from "../library/contract";
-import {
-    type ConfigurationParameter,
-    type ConfigurationRecord
-} from "../configurations/contract";
+import { type SearchRecord } from "../configurations/contract";
 import { SEARCH_OPTIONS, type SearchDocument } from "./contract";
-import { distinctRecords, toSearchRecords } from "./records";
-
-/** What indexing one insertable's configurations needs. */
-export interface IndexedConfiguration {
-    parameters: ConfigurationParameter[];
-    records: ConfigurationRecord[];
-}
+import { distinctRecords } from "./records";
 
 /** Joins the distinct non-null values with spaces (a searchable field's form). */
 function uniqueJoin(values: (string | undefined)[]): string {
@@ -26,7 +17,8 @@ function uniqueJoin(values: (string | undefined)[]): string {
 
 export function buildSearchDb(
     libraryData: LibraryOut,
-    configurations: Record<string, IndexedConfiguration> = {}
+    /** Each insertable's records, by id; see `searchRecordsOf`. */
+    searchRecords: Record<string, SearchRecord[]> = {}
 ): MiniSearch<SearchDocument> {
     const searchDb = new MiniSearch<SearchDocument>(SEARCH_OPTIONS);
 
@@ -36,14 +28,7 @@ export function buildSearchDb(
         .filter((element) => !!element)
         .map((element) => {
             const parentGroup = libraryData.groups[element.groupId];
-            const configuration = configurations[element.id];
-            const records = distinctRecords(
-                toSearchRecords(
-                    configuration?.records ?? [],
-                    configuration?.parameters ?? [],
-                    element.vendors
-                )
-            );
+            const records = distinctRecords(searchRecords[element.id] ?? []);
             return {
                 id: element.id,
                 groupId: element.groupId,

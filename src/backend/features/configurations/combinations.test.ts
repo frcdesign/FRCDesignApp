@@ -12,6 +12,7 @@ import {
 import {
     OptionVisibilityType,
     ConfigurationParameter,
+    ParameterRole,
     VisibilityCondition,
     VisibilityType
 } from "./contract";
@@ -229,25 +230,28 @@ describe("isIndexingEnabled", () => {
 
 describe("isIndexedParameter", () => {
     it("varies enum and boolean parameters", () => {
-        expect(isIndexedParameter(enumParam("a", ["x", "y"]), [])).toBe(true);
-        expect(isIndexedParameter(boolParam("b"), [])).toBe(true);
+        expect(isIndexedParameter(enumParam("a", ["x", "y"]))).toBe(true);
+        expect(isIndexedParameter(boolParam("b"))).toBe(true);
     });
 
     it("never varies quantity or text parameters", () => {
-        expect(isIndexedParameter(quantityParam("q"), [])).toBe(false);
-        expect(isIndexedParameter(stringParam("s"), [])).toBe(false);
+        expect(isIndexedParameter(quantityParam("q"))).toBe(false);
+        expect(isIndexedParameter(stringParam("s"))).toBe(false);
     });
 
     it("does not vary a parameter an admin excluded", () => {
-        expect(isIndexedParameter(enumParam("a", ["x", "y"]), [], ["a"])).toBe(
+        expect(isIndexedParameter(enumParam("a", ["x", "y"]), ["a"])).toBe(
             false
         );
     });
 
     // A role says how a part is drawn or derived, never which part it is.
     it("never varies a parameter with a role", () => {
-        const color = { ...enumParam("p", ["x", "y"]), name: "Color" };
-        expect(isIndexedParameter(color, [color])).toBe(false);
+        const color = {
+            ...enumParam("p", ["x", "y"]),
+            role: ParameterRole.COLOR
+        };
+        expect(isIndexedParameter(color)).toBe(false);
     });
 
     // The card reports indexing off this helper, so it has to describe exactly
@@ -257,7 +261,7 @@ describe("isIndexedParameter", () => {
             enumParam("varied", ["x", "y"]),
             boolParam("flag"),
             enumParam("excluded", ["x", "y"]),
-            { ...boolParam("color"), name: "Color" },
+            { ...boolParam("color"), role: ParameterRole.COLOR },
             quantityParam("length")
         ];
         const excluded = ["excluded"];
@@ -272,9 +276,7 @@ describe("isIndexedParameter", () => {
         );
         expect([...enumeratedKeys].sort()).toEqual(
             parameters
-                .filter((parameter) =>
-                    isIndexedParameter(parameter, parameters, excluded)
-                )
+                .filter((parameter) => isIndexedParameter(parameter, excluded))
                 .map((parameter) => parameter.id)
                 .sort()
         );

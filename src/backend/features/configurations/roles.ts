@@ -1,23 +1,13 @@
 /**
- * Parameters that are about how a part is derived or drawn rather than which
- * part it is. Onshape records nothing that says so, so they are recognized by
- * name; see `parameterRole`.
+ * Recognizing the parameters that play a role. Onshape records nothing that
+ * says so, so they are recognized by name, once, as a document is loaded; what
+ * is found is stored on the parameter as `role`.
  */
-import { type ConfigurationParameter, ParameterType } from "./contract";
-
-export enum ParameterRole {
-    /**
-     * A text parameter a document adds so one part can be derived into a part
-     * studio more than once: Onshape refuses a second derive of the same
-     * configuration, and a unique value here makes each one different. Only a
-     * text one: the app fills it with a unique value, which is text.
-     */
-    DERIVATION_VARIABLE = "derivation-variable",
-    COLOR = "color",
-    /** One of a color's R, G and B, when a part spells a color out as three. */
-    COLOR_CHANNEL = "color-channel",
-    TESSELLATION = "tessellation"
-}
+import {
+    type ConfigurationParameter,
+    ParameterRole,
+    ParameterType
+} from "./contract";
 
 /** A color's channels, when a part spells one out as three parameters. */
 const COLOR_CHANNELS = [
@@ -31,12 +21,12 @@ function normalizedName(parameter: ConfigurationParameter): string {
 
 /**
  * The role a parameter plays, if any. A lone "R" or "B" could mean anything,
- * so a channel counts only beside its two siblings, which is what `parameters`
- * is for.
+ * so a channel counts only beside its two siblings. A derivation variable is
+ * only a text one: the app fills it with a unique value, which is text.
  */
-export function parameterRole(
+function identifyRole(
     parameter: ConfigurationParameter,
-    parameters: ConfigurationParameter[] = []
+    names: Set<string>
 ): ParameterRole | undefined {
     const name = normalizedName(parameter);
     if (
@@ -51,15 +41,25 @@ export function parameterRole(
     if (/tess?ell?ation/.test(name)) {
         return ParameterRole.TESSELLATION;
     }
-    const names = new Set(parameters.map(normalizedName));
     const isChannel = COLOR_CHANNELS.some(
         (set) => set.includes(name) && set.every((entry) => names.has(entry))
     );
     return isChannel ? ParameterRole.COLOR_CHANNEL : undefined;
 }
 
+/** An insertable's parameters, each carrying the role it was recognized in. */
+export function withRoles(
+    parameters: ConfigurationParameter[]
+): ConfigurationParameter[] {
+    const names = new Set(parameters.map(normalizedName));
+    return parameters.map((parameter) => {
+        const role = identifyRole(parameter, names);
+        return role ? { ...parameter, role } : parameter;
+    });
+}
+
 export function isDerivationVariable(
     parameter: ConfigurationParameter
 ): boolean {
-    return parameterRole(parameter) === ParameterRole.DERIVATION_VARIABLE;
+    return parameter.role === ParameterRole.DERIVATION_VARIABLE;
 }

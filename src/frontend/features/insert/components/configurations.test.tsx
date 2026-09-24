@@ -12,7 +12,7 @@ import {
     boolParam,
     enumParam,
     quantityParam,
-    stringParam
+    derivationParam
 } from "../../../../__test_utils__/configuration-fixtures";
 import {
     createTestQueryClient,
@@ -160,10 +160,7 @@ describe("ConfigurationWrapper", () => {
     // Filled in for the person rather than by them, and kept out of the url.
     it("fills a derivation variable itself and keeps it read-only", async () => {
         const { lastReport } = renderPanel({
-            parameters: [
-                { ...stringParam("dv"), name: "Derivation Variable" },
-                size
-            ],
+            parameters: [derivationParam("dv"), size],
             records: []
         });
 

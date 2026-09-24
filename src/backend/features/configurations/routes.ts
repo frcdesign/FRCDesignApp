@@ -8,8 +8,8 @@ import { getDb } from "../../db/client";
 import { getUnitInfo } from "../../lib/onshape/endpoints/documents";
 import { configurations, insertables } from "../../db/schema";
 import { type ConfigurationResult, type UnitInfo } from "./contract";
-import { toSearchRecords } from "../search/records";
-import { DEFAULT_QUANTITY_PRECISION, toRecords } from "./utils";
+import { searchRecordsOf } from "../search/records";
+import { DEFAULT_QUANTITY_PRECISION } from "./utils";
 import { QuantityType, type Unit } from "./enums";
 import { INSTANCE_TYPES } from "../../lib/onshape/path";
 import { internalError } from "../../lib/api-error";
@@ -54,14 +54,9 @@ configurationRoutes.get(
             );
         }
 
-        const parameters = config.parameters ?? [];
         const result: ConfigurationResult = {
-            parameters,
-            records: toSearchRecords(
-                toRecords(config.partMetadata, config.records ?? []),
-                parameters,
-                config.vendors
-            )
+            parameters: config.parameters ?? [],
+            records: searchRecordsOf(config)
         };
         return c.json(result);
     }

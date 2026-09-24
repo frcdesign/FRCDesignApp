@@ -10,7 +10,7 @@ import {
     type PartialSelection,
     type UnitInfo
 } from "@backend/features/configurations/contract";
-import { type ElementPath, InstancePath } from "@backend/lib/onshape/path";
+import { type ElementPath } from "@backend/lib/onshape/path";
 import {
     InsertableOut,
     type InsertOut
@@ -29,6 +29,7 @@ import {
 } from "../../lib/query-keys";
 import { toInsertablePath } from "../../lib/api-paths";
 import { useInsertLocationId } from "../insert-location/queries";
+import { PLACEHOLDER_UNIT_INFO } from "@backend/features/configurations/utils";
 
 interface InsertArgs {
     /** Whether the part is favorited — see `source` for where the insert began. */
@@ -38,25 +39,31 @@ interface InsertArgs {
 }
 
 /**
- * The current document's units. There are none to ask for when the app is not
- * in a document, and each quantity then falls back to its own unit.
+ * The units the configuration panel shows quantities in: the document's, or
+ * a placeholder outside one, or should the document's fail to load. Undefined
+ * only while they are loading.
  */
-export function useUnitInfoQuery(instancePath: InstancePath | undefined) {
-    return useQuery<UnitInfo>({
-        queryKey: unitInfoQueryKey(instancePath),
+export function useUnitInfo(): UnitInfo | undefined {
+    const target = useTargetElement();
+    const query = useQuery<UnitInfo>({
+        queryKey: unitInfoQueryKey(target),
         // Narrowed here rather than guarded inside, as the thumbnail queries
         // are: the query function should not restate what stops it running.
-        queryFn: instancePath
+        queryFn: target
             ? () =>
                   apiGet("/unit-info", {
                       query: {
-                          documentId: instancePath.documentId,
-                          instanceId: instancePath.instanceId,
-                          instanceType: instancePath.instanceType
+                          documentId: target.documentId,
+                          instanceId: target.instanceId,
+                          instanceType: target.instanceType
                       }
                   })
             : skipToken
     });
+    if (!target || query.isError) {
+        return PLACEHOLDER_UNIT_INFO;
+    }
+    return query.data;
 }
 
 /**

@@ -18,15 +18,13 @@ import {
     toSelection,
     toStoredSelection
 } from "../configurations/selection";
-import { upgradeSelection } from "../configurations/legacy";
 import { MAX_FAVORITES, type Favorite, type FavoritesData } from "./contract";
 import {
     type ConfigurationParameter,
     type PartialSelection,
     type SearchRecord
 } from "../configurations/contract";
-import { toRecords } from "../configurations/utils";
-import { toSearchRecords } from "../search/records";
+import { searchRecordsOf } from "../search/records";
 import type { LibraryId } from "../library/library-id";
 import { z } from "zod";
 import { validate } from "../../lib/validate";
@@ -85,10 +83,7 @@ async function getFavorites(
         // parameter existed still has to answer as a selection.
         const defaultSelection = row.defaultSelection
             ? toSelection(
-                  toStoredSelection(
-                      upgradeSelection(row.defaultSelection, parameters),
-                      parameters
-                  ),
+                  toStoredSelection(row.defaultSelection, parameters),
                   parameters
               )
             : undefined;
@@ -178,13 +173,11 @@ async function getConfigurations(
     );
     return new Map(
         reads.flat().map((row) => {
-            const parameters = row.parameters ?? [];
-            const records = toRecords(row.partMetadata, row.records ?? []);
             return [
                 row.insertableId,
                 {
-                    parameters,
-                    records: toSearchRecords(records, parameters, row.vendors)
+                    parameters: row.parameters ?? [],
+                    records: searchRecordsOf(row)
                 }
             ];
         })

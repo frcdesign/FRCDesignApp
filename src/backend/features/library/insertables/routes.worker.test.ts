@@ -31,7 +31,7 @@ import { AUTO_INDEX_THRESHOLD } from "../../configurations/combinations";
 import {
     enumParam,
     quantityParam,
-    stringParam
+    derivationParam
 } from "../../../../__test_utils__/configuration-fixtures";
 
 const db = getDb(env.DB);
@@ -204,9 +204,7 @@ describe("insertable routes", () => {
         await db
             .update(configurations)
             .set({
-                parameters: [
-                    { ...stringParam("dv"), name: "Derivation Variable" }
-                ]
+                parameters: [derivationParam("dv")]
             })
             .where(eq(configurations.insertableId, TEST_PART_STUDIO_ID));
         const spy = vi

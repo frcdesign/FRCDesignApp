@@ -90,9 +90,6 @@ default" — goes through `canonicalValue`/`canonicalValues`, never through a ke
 Don't add a third form: if something needs a different view of a selection, it
 wants a function in `selection.ts`, not a new shape.
 
-Rows written before selections kept expressions are upgraded on read by
-`configurations/legacy.ts`; a reload rewrites them in the current shape.
-
 # Tests
 
 `npm test` runs two Vitest projects. A backend test that needs bindings (D1,

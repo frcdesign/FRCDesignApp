@@ -97,11 +97,30 @@ export type ConfigurationParameter =
     | BooleanParameter
     | StringParameter;
 
+/**
+ * Parameters that are about how a part is derived or drawn rather than which
+ * part it is, identified as a document is loaded; see `roles.ts`.
+ */
+export enum ParameterRole {
+    /**
+     * A text parameter a document adds so one part can be derived into a part
+     * studio more than once: Onshape refuses a second derive of the same
+     * configuration, and a unique value here makes each one different.
+     */
+    DERIVATION_VARIABLE = "derivation-variable",
+    COLOR = "color",
+    /** One of a color's R, G and B, when a part spells a color out as three. */
+    COLOR_CHANNEL = "color-channel",
+    TESSELLATION = "tessellation"
+}
+
 interface ConfigurationParameterBase {
     id: string;
     name: string;
     default: string;
     condition?: VisibilityCondition;
+    /** Absent for an ordinary parameter, which is most of them. */
+    role?: ParameterRole;
 }
 export interface BooleanParameter extends ConfigurationParameterBase {
     type: ParameterType.BOOLEAN;
@@ -198,13 +217,11 @@ export interface Configuration {
  * The current document's units. Every field is optional: an absent one leaves
  * the quantity on its own default unit.
  */
+/** A document's units, which quantities are shown in. */
 export interface UnitInfo {
-    angleUnit?: Unit;
-    lengthUnit?: Unit;
-    lengthPrecision?: number;
-    anglePrecision?: number;
-    realPrecision?: number;
+    angleUnit: Unit;
+    lengthUnit: Unit;
+    lengthPrecision: number;
+    anglePrecision: number;
+    realPrecision: number;
 }
-
-/** No document units available; each quantity falls back to its own unit. */
-export const EMPTY_UNIT_INFO: UnitInfo = {};

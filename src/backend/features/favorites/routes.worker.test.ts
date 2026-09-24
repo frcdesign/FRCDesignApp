@@ -11,7 +11,7 @@ import { MAX_FAVORITES } from "./contract";
 import {
     configurationRecord,
     quantityParam,
-    stringParam
+    derivationParam
 } from "../../../__test_utils__/configuration-fixtures";
 
 const partMetadata = (partNumber: string) =>
@@ -281,30 +281,6 @@ describe("favorites routes", () => {
             expect(soleFavorite(await res.json()).record?.partNumber).toBe(
                 "WCP-3333"
             );
-        });
-
-        // Saved before selections kept what was entered, in base units.
-        it("reads a legacy base-unit quantity back in its parameter's unit", async () => {
-            await seedPartStudio(db);
-            await seedConfiguration(db);
-            await db
-                .update(configurations)
-                .set({ parameters: [quantityParam("length")] })
-                .where(eq(configurations.insertableId, TEST_PART_STUDIO_ID));
-            const favoriteId = await seedFavorite(db, TEST_PART_STUDIO_ID);
-            await db
-                .update(favorites)
-                .set({ defaultSelection: { length: "0.0508 m" } })
-                .where(eq(favorites.id, favoriteId));
-
-            const res = await createTestApp().request(
-                favoritesUrl,
-                jsonRequest("GET"),
-                env
-            );
-            expect(soleFavorite(await res.json()).defaultSelection).toEqual({
-                length: "2 in"
-            });
         });
 
         it("only returns the current user's favorites", async () => {
@@ -608,10 +584,7 @@ describe("favorites routes", () => {
             await db
                 .update(configurations)
                 .set({
-                    parameters: [
-                        quantityParam("length"),
-                        { ...stringParam("dv"), name: "Derivation Variable" }
-                    ]
+                    parameters: [quantityParam("length"), derivationParam("dv")]
                 })
                 .where(eq(configurations.insertableId, TEST_PART_STUDIO_ID));
 

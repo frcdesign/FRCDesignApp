@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import MiniSearch from "minisearch";
 import { buildSearchDb as buildIndex } from "@backend/features/search/build";
+import { toSearchRecords } from "@backend/features/search/records";
 import { type SearchDocument } from "@backend/features/search/contract";
 import { doSearch } from "./search";
 import { type Position } from "../../lib/highlight";
@@ -28,7 +29,7 @@ const buildSearchDb = (
         Object.fromEntries(
             Object.entries(records).map(([id, list]) => [
                 id,
-                { parameters: [], records: list }
+                toSearchRecords(list, [])
             ])
         )
     );
