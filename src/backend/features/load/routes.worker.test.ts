@@ -12,11 +12,12 @@ import { LibraryId } from "../library/library-id";
 import * as Jobs from "./jobs";
 
 const db = getDb(env.DB);
+const PATH = `/api/reload/library/${LibraryId.FRC_DESIGN_LIB}`;
 
-function reload(path: string, accessLevel: AccessLevel, force: boolean) {
+function reload(accessLevel: AccessLevel, force: boolean) {
     const init = jsonRequest("POST", { force });
     return createTestApp({ accessLevel }).request(
-        path,
+        PATH,
         {
             ...init,
             headers: { ...init.headers, Cookie: "frc-design-app-cookie=s" }
@@ -25,13 +26,7 @@ function reload(path: string, accessLevel: AccessLevel, force: boolean) {
     );
 }
 
-const requested = (load: ReturnType<typeof vi.spyOn>) =>
-    (load.mock.calls[0]?.[1] as Jobs.LoadDocumentParams[]).map((request) => [
-        request.groupId,
-        request.forceReload
-    ]);
-
-describe("reloading", () => {
+describe("reloading a library", () => {
     beforeEach(async () => {
         await resetDb(db);
         await seedGroup(db, "frc", LibraryId.FRC_DESIGN_LIB);
@@ -39,38 +34,36 @@ describe("reloading", () => {
     });
     afterEach(() => vi.restoreAllMocks());
 
-    const LIBRARY_PATH = `/api/reload/library/${LibraryId.FRC_DESIGN_LIB}`;
-
-    it.each([false, true])(
-        "reloads one library's documents for its admin (force=%s)",
-        async (force) => {
-            const load = vi.spyOn(Jobs, "requestLoads").mockResolvedValue();
-
-            const res = await reload(LIBRARY_PATH, AccessLevel.ADMIN, force);
-
-            expect(await res.json()).toEqual({ documents: 1 });
-            expect(requested(load)).toEqual([["frc", force]]);
-        }
-    );
-
-    it("turns away an editor", async () => {
-        const res = await reload(LIBRARY_PATH, AccessLevel.EDITOR, false);
-        expect(res.status).toBe(403);
-    });
-
-    it("reloads every library for the owner", async () => {
+    it("reloads the library's outdated documents for an admin", async () => {
         const load = vi.spyOn(Jobs, "requestLoads").mockResolvedValue();
 
-        await reload("/api/reload-all", AccessLevel.OWNER, false);
+        const res = await reload(AccessLevel.ADMIN, false);
 
-        expect(requested(load).sort()).toEqual([
-            ["frc", false],
-            ["ftc", false]
+        expect(await res.json()).toEqual({ documents: 1 });
+        expect(load.mock.calls[0][1]).toEqual([
+            expect.objectContaining({
+                groupId: "frc",
+                sessionId: "s",
+                forceReload: false
+            })
         ]);
     });
 
-    it("keeps reloading every library to the owner", async () => {
-        const res = await reload("/api/reload-all", AccessLevel.ADMIN, true);
-        expect(res.status).toBe(403);
+    it("reloads every document for the owner", async () => {
+        const load = vi.spyOn(Jobs, "requestLoads").mockResolvedValue();
+
+        await reload(AccessLevel.OWNER, true);
+
+        expect(load.mock.calls[0][1]).toEqual([
+            expect.objectContaining({ groupId: "frc", forceReload: true })
+        ]);
+    });
+
+    it("keeps reloading every document to the owner", async () => {
+        expect((await reload(AccessLevel.ADMIN, true)).status).toBe(403);
+    });
+
+    it("turns away an editor", async () => {
+        expect((await reload(AccessLevel.EDITOR, false)).status).toBe(403);
     });
 });

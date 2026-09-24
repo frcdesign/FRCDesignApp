@@ -7,8 +7,8 @@ import { and, eq } from "drizzle-orm";
 import { getDb } from "../../db/client";
 import { adminTeamMembers } from "../../db/schema";
 import type { LibraryId } from "../library/library-id";
-import { AccessLevel } from "./access-level";
-import { rememberUserSession } from "./user-sessions";
+import { AccessLevel, isWithinAccessLevel } from "./access-level";
+import { rememberAdminSession } from "./admin-sessions";
 import {
     getOauthClient,
     makeAuthTokens,
@@ -136,7 +136,18 @@ async function getLibraryAccessLevel(
     libraryId: LibraryId
 ): Promise<AccessLevel> {
     const userId = await getCachedUserId(c);
-    await rememberUserSession(c.env.KV, userId, getSessionId(c));
+    const level = await lookUpAccessLevel(c, libraryId, userId);
+    if (isWithinAccessLevel(AccessLevel.ADMIN, level)) {
+        await rememberAdminSession(c.env.KV, userId, getSessionId(c));
+    }
+    return level;
+}
+
+async function lookUpAccessLevel(
+    c: AppContext,
+    libraryId: LibraryId,
+    userId: string
+): Promise<AccessLevel> {
     if (c.env.OWNER_USER_ID && userId === c.env.OWNER_USER_ID) {
         return AccessLevel.OWNER;
     }

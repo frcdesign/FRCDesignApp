@@ -2,6 +2,7 @@ import type { WorkflowStep } from "cloudflare:workers";
 import { createLimiter, type Limiter } from "../../lib/limiter";
 import type { AppBindings } from "../../lib/context";
 import { getOnshapeApiFromSessionId } from "../auth/request-auth";
+import { getAdminOnshapeApi } from "../auth/admin-sessions";
 import type { OAuthApi } from "../../lib/onshape/client";
 import type { ElementType } from "../../lib/onshape/element-type";
 import type { LibraryId } from "../library/library-id";
@@ -19,20 +20,26 @@ const THUMBNAIL_CONCURRENCY = 10;
 /** The runtime plumbing a load runs against. */
 export interface LoadContext {
     env: AppBindings;
-    sessionId: string;
+    libraryId: LibraryId;
+    /** Whoever asked for the load; absent for a webhook's. */
+    sessionId?: string;
     step: WorkflowStep;
     /** Bounds concurrent Onshape probing across the whole run. */
     limit: Limiter;
     thumbnailLimit: Limiter;
+    /** Resolved once a run needs it; see {@link getOnshapeApiFromContext}. */
+    adminApi?: Promise<OAuthApi>;
 }
 
 export function createLoadContext(
     env: AppBindings,
-    sessionId: string,
+    libraryId: LibraryId,
+    sessionId: string | undefined,
     step: WorkflowStep
 ): LoadContext {
     return {
         env,
+        libraryId,
         sessionId,
         step,
         limit: createLimiter(LOAD_CONCURRENCY),
@@ -40,8 +47,30 @@ export function createLoadContext(
     };
 }
 
-export function getOnshapeApiFromContext(ctx: LoadContext): Promise<OAuthApi> {
-    return getOnshapeApiFromSessionId(ctx.env.KV, ctx.sessionId);
+/** The requester's session while it works, else an admin's. */
+export async function getOnshapeApiFromContext(
+    ctx: LoadContext
+): Promise<OAuthApi> {
+    if (ctx.sessionId) {
+        try {
+            return await getOnshapeApiFromSessionId(ctx.env.KV, ctx.sessionId);
+        } catch {
+            // Signed out or expired since asking; an admin carries on.
+        }
+    }
+    ctx.adminApi ??= getAdminOnshapeApi(ctx.env, [ctx.libraryId]).then(
+        (api) => {
+            if (!api) {
+                throw new Error("No owner or admin session to load with");
+            }
+            return api;
+        }
+    );
+    // A failure is retried by the step, so it must not be memoized.
+    return ctx.adminApi.catch((error: unknown) => {
+        ctx.adminApi = undefined;
+        throw error;
+    });
 }
 
 /** A group a load reads, and what the document told us about it. */

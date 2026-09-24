@@ -100,10 +100,12 @@ describe("access from a library's admin team", () => {
         expect(await accessLevelOf(OWNER)).toBe(AccessLevel.OWNER);
     });
 
-    // So work the server starts can run as them.
-    it("keeps each user's latest session", async () => {
+    // So a load nobody is signed in behind can run as them.
+    it("keeps an admin's session, and nobody else's", async () => {
+        await accessLevelOf("team-admin");
         await accessLevelOf("member");
-        expect(await env.KV.get("user-session:member")).toBeTruthy();
+        expect(await env.KV.get("admin-session:team-admin")).toBeTruthy();
+        expect(await env.KV.get("admin-session:member")).toBeNull();
     });
 
     it("makes a member an editor, and a team admin an admin", async () => {

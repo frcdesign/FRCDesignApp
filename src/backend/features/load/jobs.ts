@@ -13,14 +13,13 @@ import { bumpLibraryVersion, rebuildSearchDb } from "../library/db";
 import type { LibraryId } from "../library/library-id";
 import { pushJobStatus, pushLibraryChanged } from "../live/notify";
 import type { JobStatus } from "./contract";
-import { flagGroups, publishLibraries } from "./flag";
-import { BuildIssueType } from "../build-checker/issues";
+import { flagFailedLoads, publishLibraries } from "./flag";
 
 export interface LoadDocumentParams {
     libraryId: LibraryId;
     groupId: string;
-    /** Whose Onshape session the load calls Onshape with. */
-    sessionId: string;
+    /** Who asked for the load, whose session it tries first; see `getOnshapeApiFromContext`. */
+    sessionId?: string;
     /** Reloads insertables whose version has not changed, too. */
     forceReload: boolean;
     /** This deployment's, which the document's webhook is delivered to. */
@@ -72,10 +71,9 @@ async function clearDead(
     }
     if (dead.length > 0) {
         // It crashed before it could record its own failure.
-        await flagGroups(
+        await flagFailedLoads(
             env,
-            dead.map((job) => job.groupId),
-            BuildIssueType.LOAD_FAILED
+            dead.map((job) => job.groupId)
         );
         await publishLibraries(
             env,

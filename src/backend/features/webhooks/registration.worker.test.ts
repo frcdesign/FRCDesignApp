@@ -54,25 +54,6 @@ describe("registering webhooks", () => {
         });
     });
 
-    it("registers a team's for the company's membership changes", async () => {
-        const { onshapeApi, post } = mockOnshape();
-
-        await ensureWebhook(
-            env,
-            onshapeApi,
-            WebhookSubject.TEAM,
-            "team",
-            ORIGIN
-        );
-
-        expect(post).toHaveBeenCalledWith("/webhooks", {
-            body: expect.objectContaining({
-                companyId: "company",
-                events: ["onshape.team.addmember", "onshape.team.removemember"]
-            }) as unknown
-        });
-    });
-
     // Registered as never transient, so one on record is taken to stand.
     it("registers nothing for a subject already registered", async () => {
         const { onshapeApi, post } = mockOnshape();

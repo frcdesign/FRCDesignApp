@@ -210,8 +210,7 @@ export const favorites = sqliteTable(
 );
 
 export enum WebhookSubject {
-    DOCUMENT = "document",
-    TEAM = "team"
+    DOCUMENT = "document"
 }
 
 /**
@@ -222,7 +221,7 @@ export const onshapeWebhooks = sqliteTable(
     "onshape_webhooks",
     {
         subject: text("subject").$type<WebhookSubject>().notNull(),
-        // A document id or a team id, by subject.
+        // The document id.
         subjectId: text("subject_id").notNull(),
         webhookId: text("webhook_id"),
         token: text("token").notNull().unique()

@@ -51,15 +51,3 @@ export async function syncAdminTeam(
     await bumpLibraryVersion(db, libraryId);
     await pushLibraryChanged(env, libraryId);
 }
-
-/** Every library a team administers, for when that team changes. */
-export async function librariesOfTeam(
-    env: AppBindings,
-    teamId: string
-): Promise<LibraryId[]> {
-    const rows = await getDb(env.DB)
-        .select({ id: libraries.id })
-        .from(libraries)
-        .where(eq(libraries.adminTeamId, teamId));
-    return rows.map((row) => row.id);
-}

@@ -7,6 +7,7 @@ import type { PartMetadata } from "../configurations/contract";
 import { configurationRecord } from "../../../__test_utils__/configuration-fixtures";
 import {
     FAKE_STEP,
+    TEST_LIBRARY_ID,
     MOCK_ONSHAPE_API,
     TEST_PARAMETERS,
     TEST_PART_STUDIO_ID,
@@ -168,6 +169,7 @@ describe("saveInsertable", () => {
 
 const ctx = (): LoadContext => ({
     env,
+    libraryId: TEST_LIBRARY_ID,
     sessionId: "test-session",
     step: FAKE_STEP,
     limit: createLimiter(LOAD_CONCURRENCY),

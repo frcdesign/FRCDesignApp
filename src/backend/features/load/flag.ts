@@ -7,17 +7,12 @@ import type { LibraryId } from "../library/library-id";
 import { pushLibraryChanged } from "../live/notify";
 import { addBuildIssue, BuildIssueType } from "../build-checker/issues";
 
-/** A load that did not happen, which an admin has to rerun by reloading. */
-export type LoadFailure =
-    | BuildIssueType.LOAD_FAILED
-    | BuildIssueType.VERSION_NOT_LOADED;
-
-/** Adds the issue to each group; publishing the change is the caller's. */
-export async function flagGroups(
+/** Marks each group for an admin to reload; publishing the change is the caller's. */
+export async function flagFailedLoads(
     env: AppBindings,
-    groupIds: string[],
-    type: LoadFailure
+    groupIds: string[]
 ): Promise<void> {
+    const type = BuildIssueType.LOAD_FAILED;
     const db = getDb(env.DB);
     for (const groupId of groupIds) {
         const row = await db

@@ -91,21 +91,19 @@ Cloudflare Workflows let you run a long-running background job that survives bey
 
 Loading a group means walking the document structure, downloading metadata for every part and assembly, probing each indexed configuration, generating thumbnails, and writing it all to D1 — far too long for a single HTTP request. The request kicks the workflow off and returns immediately.
 
-Every load is one document: adding a document, a new version of one (see Webhooks below), and the owner's "reload everything", which starts one per group. `features/load/jobs.ts` keeps at most one load per group running, in the `load_jobs` table: a load asked for while one runs is marked on that row, and the running load starts it as it finishes. Each load that wrote to its group rebuilds its library's search index and bumps its version, so every load stands alone and "reload everything" simply starts them all at once.
+Every load is one document: adding a document, a new version of one (see Webhooks below), and a library admin's reload of the library's outdated documents (or the owner's reload of all of them), which starts one per group. `features/load/jobs.ts` keeps at most one load per group running, in the `load_jobs` table: a load asked for while one runs is marked on that row, and the running load starts it as it finishes. Each load that wrote to its group rebuilds its library's search index and bumps its version, so every load stands alone and a reload simply starts them all at once.
 
-Each workflow carries a `sessionId` whose tokens it calls Onshape under after the request has ended: the requesting user's, or for a webhook, the session chosen as described below.
+A load calls Onshape as whoever asked for it, while their session works. A webhook's load has nobody, and a requester's session can expire mid-load, so the load then finds a session itself: the owner's, or else a team admin's of the library (`getOnshapeApiFromContext`). Only the owner's and team admins' latest sessions are kept by user id, in KV under `admin-session:<userId>`, written as their access is checked (`features/auth/admin-sessions.ts`).
 
 ### Webhooks and live updates
 
-Onshape pushes two things, registered with `isTransient: false` and recorded in the `onshape_webhooks` table, each with its own token in the delivery url (`features/webhooks`):
+Onshape pushes one thing, registered with `isTransient: false` and recorded in the `onshape_webhooks` table with its own token in the delivery url (`features/webhooks`):
 
-- **A new version of a library document.** Registered by the document's load; removed with the last group loaded from it. Reloads that document's groups, as whoever made the version if their latest session still works, else as the owner. Reading the version to learn its creator takes a working session too: the owner's, or failing that, an admin's of a library holding the document. With none, the groups are flagged `VERSION_NOT_LOADED` for an admin to reload.
+- **A new version of a library document.** Registered by the document's load; removed with the last group loaded from it. Reloads that document's groups.
 
-Every user's latest session is kept in KV under `user-session:<userId>`, written as their access is checked (`features/auth/user-sessions.ts`).
+Onshape's team webhooks need a company id, which a personal account lacks, so an admin team's membership is pulled again only when the owner sets the team or an admin presses **Refresh members** in the settings menu.
 
-A load that fails is flagged `LOAD_FAILED`, including one whose workflow crashed before it could say so; the next look at the library's jobs notices. Both flags ask for a reload, which a library's admins can start from the settings menu (the owner can for every library), with or without forcing it.
-
-- **A change to an admin team's members.** Registered when the owner sets a library's admin team. Pulls the team's members again.
+A load that fails is flagged `LOAD_FAILED`, including one whose workflow crashed before it could say so; the next look at the library's jobs notices. Reloading the library's outdated documents reruns it.
 
 The server pushes to open clients over a WebSocket held by the `LiveUpdates` Durable Object (`features/live`): jobs starting and finishing, a library's new version, and a configuration's render landing. Nothing polls: a client that reconnects asks again for what it may have missed.
 
@@ -191,6 +189,6 @@ Other top-level files:
 
 The app has four access levels, checked on every protected API call: **OWNER**, **ADMIN**, **EDITOR**, and **USER**. Access is per library. Admin and editor access currently grant the same permissions in their library (adding, removing, and renaming groups, toggling insertable visibility), but they are kept separate so permissions can be tightened in the future if needed. USER access allows anyone who logs in via OAuth to browse the library, insert parts, and manage their own favorites.
 
-The **owner** is the one Onshape user named by `OWNER_USER_ID`, with every library. The owner sets each library's admin team; its members are stored in `admin_team_members` (team admins as ADMIN, members as EDITOR) and kept current by the team's webhook, so a user's access is a database lookup in `src/backend/features/auth/request-auth.ts`. Routes that require elevated access are wrapped with `requireEditor`, `requireAdminMiddleware` or `requireOwnerMiddleware` from `src/backend/features/auth/guards.ts`; one naming an insertable rather than a library looks the library up from it.
+The **owner** is the one Onshape user named by `OWNER_USER_ID`, with every library. The owner sets each library's admin team; its members are stored in `admin_team_members` (team admins as ADMIN, members as EDITOR) and pulled again on demand, so a user's access is a database lookup in `src/backend/features/auth/request-auth.ts`. Routes that require elevated access are wrapped with `requireEditor`, `requireAdminMiddleware` or `requireOwnerMiddleware` from `src/backend/features/auth/guards.ts`; one naming an insertable rather than a library looks the library up from it.
 
 During local development, you can bypass the team membership check by setting `ACCESS_LEVEL_OVERRIDE=admin` (or `editor`/`user`) in your `.env` file.

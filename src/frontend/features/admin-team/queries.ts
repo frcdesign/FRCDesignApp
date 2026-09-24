@@ -37,3 +37,24 @@ export function useSetAdminTeamMutation() {
         }
     });
 }
+
+/** Pulls the team's members again, for a change made in Onshape. */
+export function useRefreshAdminTeamMutation() {
+    const libraryId = useLibraryId();
+    return useMutation({
+        mutationKey: ["refresh-admin-team", libraryId],
+        mutationFn: () =>
+            apiPost<AdminTeamOut>(
+                "/admin-team/refresh" + toLibraryPath(libraryId)
+            ),
+        onError: getAppErrorHandler("Failed to refresh the admin team!"),
+        onSuccess: (team) => {
+            queryClient.setQueryData(adminTeamQueryKey(libraryId), team);
+            showSuccessToast(
+                team.teamId
+                    ? `Admin team refreshed: ${team.memberCount} members.`
+                    : "This library has no admin team."
+            );
+        }
+    });
+}

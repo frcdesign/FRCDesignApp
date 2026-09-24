@@ -12,8 +12,7 @@ import {
 } from "@mantine/core";
 import { CheckIcon, CopyIcon, HouseIcon } from "@phosphor-icons/react";
 import { IconSize } from "../lib/style-constants";
-import { ReloadButtons } from "../features/library/components/reload-buttons";
-import { ReloadScope } from "../features/library/queries";
+import { ReloadButton } from "../features/library/components/reload-button";
 import { AccessLevel } from "@backend/features/auth/access-level";
 import { DEFAULT_LIBRARY } from "@backend/features/library/library-id";
 
@@ -26,7 +25,7 @@ export function RootAppError(): ReactNode {
                     accessLevel={AccessLevel.OWNER}
                     useMaxAccessLevel
                 >
-                    <ReloadButtons scope={ReloadScope.ALL} />
+                    <ReloadButton all />
                 </RequireAccessLevel>
             }
         />

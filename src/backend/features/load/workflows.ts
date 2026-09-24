@@ -34,7 +34,7 @@ import {
 } from "./context";
 import { finishLoad, type LoadDocumentParams } from "./jobs";
 import { pushLibraryChanged } from "../live/notify";
-import { flagGroups } from "./flag";
+import { flagFailedLoads } from "./flag";
 import { loadGroup } from "./load-group";
 import { ONSHAPE_STEP_RETRIES } from "./steps";
 import { ensureWebhook } from "../webhooks/registration";
@@ -59,7 +59,12 @@ export class LoadDocumentWorkflow extends WorkflowEntrypoint<
         step: WorkflowStep
     ): Promise<LoadResult> {
         const params = event.payload;
-        const ctx = createLoadContext(this.env, params.sessionId, step);
+        const ctx = createLoadContext(
+            this.env,
+            params.libraryId,
+            params.sessionId,
+            step
+        );
         // Anything but a skip wrote to the group: a failure flags it.
         let result: LoadResult = { status: "failed" };
         try {
@@ -131,7 +136,7 @@ async function loadDocument(
         // The row records only that it failed, so this is the only record of why.
         console.error(`Failed to load group ${groupId}`, error);
         await ctx.step.do("flag-failed", () =>
-            flagGroups(ctx.env, [groupId], BuildIssueType.LOAD_FAILED)
+            flagFailedLoads(ctx.env, [groupId])
         );
         result = { status: "failed" };
     }
@@ -168,8 +173,7 @@ function hasFailedLoad(buildIssues: BuildIssue[]): boolean {
     return hasBuildIssue(
         buildIssues,
         BuildIssueType.LOAD_FAILED,
-        BuildIssueType.INSERTABLES_FAILED,
-        BuildIssueType.VERSION_NOT_LOADED
+        BuildIssueType.INSERTABLES_FAILED
     );
 }
 

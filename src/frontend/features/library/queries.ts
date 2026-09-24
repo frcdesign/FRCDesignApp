@@ -157,28 +157,20 @@ export function useSetGroupOrderMutation() {
     });
 }
 
-/** One library's documents for its admins, or every library's for the owner. */
-export function useReloadMutation(scope: ReloadScope) {
+/** Reloads the library's documents with a new version or a failed load, or every one. */
+export function useReloadMutation(all: boolean) {
     const libraryId = useLibraryId();
     return useMutation({
-        mutationKey: ["reload", scope, libraryId],
-        mutationFn: (force: boolean): Promise<ReloadOut> =>
-            apiPost(
-                scope === ReloadScope.ALL
-                    ? "/reload-all"
-                    : "/reload" + toLibraryPath(libraryId),
-                { body: { force } }
-            ),
+        mutationKey: ["reload", libraryId],
+        mutationFn: (): Promise<ReloadOut> =>
+            apiPost("/reload" + toLibraryPath(libraryId), {
+                body: { force: all }
+            }),
         onError: getAppErrorHandler("Failed to reload documents!"),
         onSuccess: (data) => {
             showInfoToast(`Reloading ${data.documents} documents...`);
         }
     });
-}
-
-export enum ReloadScope {
-    LIBRARY = "library",
-    ALL = "all"
 }
 
 /** Adds an Onshape document to the library, by its url. */

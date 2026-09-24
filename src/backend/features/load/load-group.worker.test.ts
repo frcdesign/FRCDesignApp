@@ -248,6 +248,7 @@ const WORKSPACE = {
 
 const CTX: LoadContext = {
     env,
+    libraryId: TEST_LIBRARY_ID,
     sessionId: "test-session",
     step: FAKE_STEP,
     limit: createLimiter(LOAD_CONCURRENCY),

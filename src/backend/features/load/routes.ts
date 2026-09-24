@@ -1,13 +1,14 @@
 import { eq } from "drizzle-orm";
 import * as z from "zod";
-import { type AppContext, getApp } from "../../lib/context";
+import { getApp } from "../../lib/context";
+import { forbiddenError } from "../../lib/api-error";
 import { getDb } from "../../db/client";
 import { groups } from "../../db/schema";
 import { getLibraryParam, libraryRoute } from "../../lib/route-params";
 import { validate } from "../../lib/validate";
-import { requireAdminMiddleware, requireOwnerMiddleware } from "../auth/guards";
+import { AccessLevel } from "../auth/access-level";
+import { requireAdminMiddleware } from "../auth/guards";
 import { getSessionId } from "../auth/session";
-import type { LibraryId } from "../library/library-id";
 import { requestLoads } from "./jobs";
 import type { ReloadOut } from "./contract";
 
@@ -18,44 +19,39 @@ const reloadBody = z.object({
     force: z.boolean()
 });
 
-async function reloadGroups(
-    c: AppContext,
-    force: boolean,
-    libraryId?: LibraryId
-): Promise<ReloadOut> {
-    const selected = getDb(c.env.DB)
-        .select({ groupId: groups.id, libraryId: groups.libraryId })
-        .from(groups);
-    const rows = await (libraryId
-        ? selected.where(eq(groups.libraryId, libraryId))
-        : selected);
-    const sessionId = getSessionId(c);
-    const origin = new URL(c.req.url).origin;
-    await requestLoads(
-        c.env,
-        rows.map((row) => ({ ...row, sessionId, forceReload: force, origin }))
-    );
-    return { documents: rows.length };
-}
-
-/** POST /api/reload/library/:libraryId: every document in one library. */
+/**
+ * POST /api/reload/library/:libraryId: the documents with a new version or a
+ * failed load, or every one when forced. Forcing spends a lot of the Onshape
+ * allocation, so it is the owner's alone.
+ */
 loadRoutes.post(
     "/reload" + libraryRoute(),
     requireAdminMiddleware,
     validate("json", reloadBody),
     async (c) => {
+        const libraryId = getLibraryParam(c);
         const { force } = c.req.valid("json");
-        return c.json(await reloadGroups(c, force, getLibraryParam(c)));
-    }
-);
-
-/** POST /api/reload-all: every document in every library. */
-loadRoutes.post(
-    "/reload-all",
-    requireOwnerMiddleware,
-    validate("json", reloadBody),
-    async (c) => {
-        const { force } = c.req.valid("json");
-        return c.json(await reloadGroups(c, force));
+        if (
+            force &&
+            (await c.var.getAccessLevel(libraryId)) !== AccessLevel.OWNER
+        ) {
+            throw forbiddenError("Only the owner can reload all documents");
+        }
+        const rows = await getDb(c.env.DB)
+            .select({ groupId: groups.id, libraryId: groups.libraryId })
+            .from(groups)
+            .where(eq(groups.libraryId, libraryId));
+        const sessionId = getSessionId(c);
+        const origin = new URL(c.req.url).origin;
+        await requestLoads(
+            c.env,
+            rows.map((row) => ({
+                ...row,
+                sessionId,
+                forceReload: force,
+                origin
+            }))
+        );
+        return c.json({ documents: rows.length } satisfies ReloadOut);
     }
 );

@@ -1,0 +1,76 @@
+/**
+ * Work nobody is signed in behind, like a webhook's load, still calls Onshape
+ * as someone: the owner or one of the library's team admins, whoever still has
+ * a session Onshape takes. Only their sessions are kept by user id.
+ */
+import { type OAuthApi } from "../../lib/onshape/client";
+import { getSessionInfo } from "../../lib/onshape/endpoints/users";
+import type { AppBindings } from "../../lib/context";
+import { getDb } from "../../db/client";
+import { adminTeamMembers } from "../../db/schema";
+import { and, eq, inArray } from "drizzle-orm";
+import type { LibraryId } from "../library/library-id";
+import { getOnshapeApiFromSessionId } from "./request-auth";
+
+function adminSessionKey(userId: string): string {
+    return `admin-session:${userId}`;
+}
+
+/** Only writes when the session changed. */
+export async function rememberAdminSession(
+    kv: KVNamespace,
+    userId: string,
+    sessionId: string
+): Promise<void> {
+    const key = adminSessionKey(userId);
+    if ((await kv.get(key)) !== sessionId) {
+        await kv.put(key, sessionId);
+    }
+}
+
+async function getLiveApi(
+    kv: KVNamespace,
+    userId: string
+): Promise<OAuthApi | undefined> {
+    const sessionId = await kv.get(adminSessionKey(userId));
+    if (!sessionId) {
+        return undefined;
+    }
+    try {
+        const onshapeApi = await getOnshapeApiFromSessionId(kv, sessionId);
+        // Refreshing proves the refresh token; this proves the access token.
+        await getSessionInfo(onshapeApi);
+        return onshapeApi;
+    } catch {
+        return undefined;
+    }
+}
+
+/** The owner's session, else the first working one of the libraries' team admins. */
+export async function getAdminOnshapeApi(
+    env: AppBindings,
+    libraryIds: LibraryId[]
+): Promise<OAuthApi | undefined> {
+    const owner = env.OWNER_USER_ID
+        ? await getLiveApi(env.KV, env.OWNER_USER_ID)
+        : undefined;
+    if (owner || libraryIds.length === 0) {
+        return owner;
+    }
+    const admins = await getDb(env.DB)
+        .selectDistinct({ userId: adminTeamMembers.userId })
+        .from(adminTeamMembers)
+        .where(
+            and(
+                inArray(adminTeamMembers.libraryId, libraryIds),
+                eq(adminTeamMembers.isTeamAdmin, true)
+            )
+        );
+    for (const { userId } of admins) {
+        const api = await getLiveApi(env.KV, userId);
+        if (api) {
+            return api;
+        }
+    }
+    return undefined;
+}

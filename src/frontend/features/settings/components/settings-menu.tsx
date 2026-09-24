@@ -23,8 +23,8 @@ import { useGetUiState, updateUiState } from "../../../lib/ui-state";
 import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
 import { SETUP_URL } from "../../../lib/url";
 import { useLibraryId } from "../../../lib/library";
-import { ReloadButtons } from "../../library/components/reload-buttons";
-import { ReloadScope } from "../../library/queries";
+import { ReloadButton } from "../../library/components/reload-button";
+import { RefreshAdminTeamButton } from "../../admin-team/components/refresh-admin-team-button";
 import { AdminTeamSetting } from "../../admin-team/components/admin-team-setting";
 
 /** The FRCDesign Discord, where feedback and support now live. */
@@ -201,14 +201,19 @@ function AdminSettings(): ReactNode {
             {/* Always show the access level select so admins can change access level if needed */}
             <AccessLevelSelect />
             <RequireAccessLevel accessLevel={AccessLevel.ADMIN}>
-                <InputRow label="This library">
-                    <ReloadButtons scope={ReloadScope.LIBRARY} />
+                <InputRow label="Reload outdated documents">
+                    <ReloadButton />
                 </InputRow>
             </RequireAccessLevel>
             <RequireAccessLevel accessLevel={AccessLevel.OWNER}>
+                <InputRow label="Reload all documents">
+                    <ReloadButton all />
+                </InputRow>
                 <AdminTeamSetting />
-                <InputRow label="Every library">
-                    <ReloadButtons scope={ReloadScope.ALL} />
+            </RequireAccessLevel>
+            <RequireAccessLevel accessLevel={AccessLevel.ADMIN}>
+                <InputRow label="Admin team">
+                    <RefreshAdminTeamButton />
                 </InputRow>
             </RequireAccessLevel>
         </Stack>

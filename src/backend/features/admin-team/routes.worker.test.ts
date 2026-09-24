@@ -10,12 +10,7 @@ import {
 } from "../../../__test_utils__";
 import { MockOnshapeApi } from "../../../__test_utils__/mock-onshape-api";
 import { getDb } from "../../db/client";
-import {
-    adminTeamMembers,
-    libraries,
-    onshapeWebhooks,
-    WebhookSubject
-} from "../../db/schema";
+import { adminTeamMembers, libraries } from "../../db/schema";
 import { OnshapeApiError } from "../../lib/onshape/client";
 import { AccessLevel } from "../auth/access-level";
 
@@ -39,10 +34,7 @@ function mockOnshape() {
         }
         return Promise.reject(new OnshapeApiError("no such team", 404));
     });
-    const post = vi
-        .spyOn(onshapeApi, "post")
-        .mockResolvedValue({ id: "team-webhook" });
-    return { onshapeApi, post };
+    return { onshapeApi };
 }
 
 function setTeam(teamId: string | null, onshapeApi: MockOnshapeApi) {
@@ -66,8 +58,8 @@ describe("setting a library's admin team", () => {
         expect(res.status).toBe(403);
     });
 
-    it("stores the team's members and registers its webhook", async () => {
-        const { onshapeApi, post } = mockOnshape();
+    it("stores the team's members", async () => {
+        const { onshapeApi } = mockOnshape();
 
         const res = await setTeam("team", onshapeApi);
 
@@ -84,13 +76,6 @@ describe("setting a library's admin team", () => {
             { userId: "member", isTeamAdmin: false },
             { userId: "team-admin", isTeamAdmin: true }
         ]);
-        expect(post).toHaveBeenCalledOnce();
-        expect(
-            await db
-                .select({ subject: onshapeWebhooks.subject })
-                .from(onshapeWebhooks)
-                .all()
-        ).toEqual([{ subject: WebhookSubject.TEAM }]);
     });
 
     // A mistyped id should not lock everyone but the owner out.
@@ -109,16 +94,42 @@ describe("setting a library's admin team", () => {
         expect(library?.adminTeamId).toBe("team");
     });
 
-    it("takes the team away, and its webhook with it", async () => {
+    it("takes the team away", async () => {
         const { onshapeApi } = mockOnshape();
-        const remove = vi
-            .spyOn(onshapeApi, "deleteNone")
-            .mockResolvedValue(undefined);
         await setTeam("team", onshapeApi);
 
         const res = await setTeam(null, onshapeApi);
 
         expect(await res.json()).toEqual({ memberCount: 0 });
-        expect(remove).toHaveBeenCalledWith("/webhooks/team-webhook");
+    });
+});
+
+describe("refreshing a library's admin team", () => {
+    const REFRESH_PATH = `/api/admin-team/refresh/library/${TEST_LIBRARY_ID}`;
+
+    beforeEach(async () => {
+        await resetDb(db);
+        await seedLibrary(db);
+        await db
+            .update(libraries)
+            .set({ adminTeamId: "team" })
+            .where(eq(libraries.id, TEST_LIBRARY_ID));
+    });
+    afterEach(() => vi.restoreAllMocks());
+
+    const refresh = (accessLevel: AccessLevel) =>
+        createTestApp({
+            accessLevel,
+            onshapeApi: mockOnshape().onshapeApi
+        }).request(REFRESH_PATH, jsonRequest("POST"), env);
+
+    it("pulls the members again for an admin", async () => {
+        const res = await refresh(AccessLevel.ADMIN);
+
+        expect(await res.json()).toEqual({ teamId: "team", memberCount: 2 });
+    });
+
+    it("turns away an editor", async () => {
+        expect((await refresh(AccessLevel.EDITOR)).status).toBe(403);
     });
 });

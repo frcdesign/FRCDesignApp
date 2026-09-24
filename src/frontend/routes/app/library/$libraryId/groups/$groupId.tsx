@@ -184,7 +184,7 @@ function GroupListContent(props: GroupListCardsProps): ReactNode {
         ) : (
             <SectionNotice
                 title="This group failed to load."
-                description="Reload the library to try again, or delete the group."
+                description="Reload outdated documents to try again, or delete the group."
             />
         );
     }

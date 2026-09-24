@@ -6,13 +6,12 @@ import { handledError } from "../../lib/api-error";
 import { getLibraryParam, libraryRoute } from "../../lib/route-params";
 import { validate } from "../../lib/validate";
 import { type Db, getDb } from "../../db/client";
-import { adminTeamMembers, libraries, WebhookSubject } from "../../db/schema";
-import { requireOwnerMiddleware } from "../auth/guards";
+import { adminTeamMembers, libraries } from "../../db/schema";
+import { requireAdminMiddleware, requireOwnerMiddleware } from "../auth/guards";
 import { ensureLibrary } from "../library/db";
 import type { LibraryId } from "../library/library-id";
-import { ensureWebhook, removeWebhook } from "../webhooks/registration";
 import type { AdminTeamOut } from "./contract";
-import { librariesOfTeam, syncAdminTeam } from "./sync";
+import { syncAdminTeam } from "./sync";
 
 export const adminTeamRoutes = getApp();
 
@@ -50,7 +49,7 @@ adminTeamRoutes.get(
     async (c) => c.json(await getAdminTeam(getDb(c.env.DB), getLibraryParam(c)))
 );
 
-/** POST /api/admin-team/library/:libraryId: sets the team, pulls its members, registers its webhook. */
+/** POST /api/admin-team/library/:libraryId: sets the team and pulls its members. */
 adminTeamRoutes.post(
     "/admin-team" + libraryRoute(),
     requireOwnerMiddleware,
@@ -83,28 +82,21 @@ adminTeamRoutes.post(
             );
         }
 
-        const origin = new URL(c.req.url).origin;
-        if (teamId) {
-            await ensureWebhook(
-                c.env,
-                onshapeApi,
-                WebhookSubject.TEAM,
-                teamId,
-                origin
-            );
-        }
-        if (
-            previous &&
-            previous !== teamId &&
-            (await librariesOfTeam(c.env, previous)).length === 0
-        ) {
-            await removeWebhook(
-                c.env,
-                onshapeApi,
-                WebhookSubject.TEAM,
-                previous
-            );
-        }
         return c.json(await getAdminTeam(db, libraryId));
+    }
+);
+
+/**
+ * POST /api/admin-team/refresh/library/:libraryId: pulls the team's members
+ * again. Onshape's team webhooks need a company, which a personal account
+ * lacks, so a change in Onshape waits for this.
+ */
+adminTeamRoutes.post(
+    "/admin-team/refresh" + libraryRoute(),
+    requireAdminMiddleware,
+    async (c) => {
+        const libraryId = getLibraryParam(c);
+        await syncAdminTeam(c.env, await c.var.getOnshapeApi(), libraryId);
+        return c.json(await getAdminTeam(getDb(c.env.DB), libraryId));
     }
 );

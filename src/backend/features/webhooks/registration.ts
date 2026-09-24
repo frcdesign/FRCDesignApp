@@ -1,13 +1,12 @@
 /**
- * One per library document, for new versions, and one per admin team. Each is
- * registered with `isTransient: false`, which exempts it from Onshape's cleanup.
+ * One per library document, for its new versions, registered with
+ * `isTransient: false`, which exempts it from Onshape's cleanup.
  */
 import { and, eq } from "drizzle-orm";
 import type { AppBindings } from "../../lib/context";
 import { getDb } from "../../db/client";
 import { onshapeWebhooks, WebhookSubject } from "../../db/schema";
 import { type OAuthApi, OnshapeApiError } from "../../lib/onshape/client";
-import { getSessionInfo } from "../../lib/onshape/endpoints/users";
 import {
     createWebhook,
     deleteWebhook
@@ -17,8 +16,6 @@ export const RECEIVE_PATH = "/api/webhooks/onshape";
 
 export enum WebhookEvent {
     CREATE_VERSION = "onshape.model.lifecycle.createversion",
-    TEAM_ADD_MEMBER = "onshape.team.addmember",
-    TEAM_REMOVE_MEMBER = "onshape.team.removemember",
     UNREGISTER = "webhook.unregister"
 }
 
@@ -31,28 +28,14 @@ function whereSubject(subject: WebhookSubject, subjectId: string) {
     );
 }
 
-/** Team events are company-wide, so a team's webhook names the company and the receiver filters. */
-async function subjectParams(
-    onshapeApi: OAuthApi,
-    subject: WebhookSubject,
-    subjectId: string
-) {
-    if (subject === WebhookSubject.DOCUMENT) {
-        return {
-            documentId: subjectId,
-            events: [WebhookEvent.CREATE_VERSION]
-        };
+function subjectParams(subject: WebhookSubject, subjectId: string) {
+    switch (subject) {
+        case WebhookSubject.DOCUMENT:
+            return {
+                documentId: subjectId,
+                events: [WebhookEvent.CREATE_VERSION]
+            };
     }
-    const companyId = (await getSessionInfo(onshapeApi)).company?.id;
-    if (!companyId) {
-        throw new Error(
-            "A team's webhook needs a company; open the app from your company's Onshape."
-        );
-    }
-    return {
-        companyId,
-        events: [WebhookEvent.TEAM_ADD_MEMBER, WebhookEvent.TEAM_REMOVE_MEMBER]
-    };
 }
 
 /** Registers a webhook for the subject unless one is already on record. */
@@ -86,7 +69,7 @@ export async function ensureWebhook(
     url.searchParams.set("token", token);
 
     const webhook = await createWebhook(onshapeApi, {
-        ...(await subjectParams(onshapeApi, subject, subjectId)),
+        ...subjectParams(subject, subjectId),
         url: url.href,
         name: "FRCDesignApp",
         description: `Keeps the FRCDesignApp in step with this ${subject}.`,
