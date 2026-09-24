@@ -14,10 +14,10 @@
 }
 
 /*
- * A zero state is one short block with nothing to scroll through, so a header
+ * A notice is one short block with nothing to scroll through, so a header
  * stuck over it only half-covers it on the way out.
  */
-.item:has([data-zero-state]) .control {
+.item:has([data-notice]) .control {
     position: static;
 }
 

@@ -1,9 +1,6 @@
-import { Anchor, Badge, Group, Table, Text } from "@mantine/core";
-import {
-    ArrowSquareOutIcon,
-    CaretDownIcon,
-    CaretUpIcon
-} from "@phosphor-icons/react";
+import { ExternalLink } from "../../components/external-link";
+import { Badge, Group, Table, Text } from "@mantine/core";
+import { CaretDownIcon, CaretUpIcon } from "@phosphor-icons/react";
 import { useMemo, useState, type ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { AppSparkline } from "./sparkline";
@@ -217,16 +214,11 @@ function PartRow({ libraryId, part }: PartRowProps): ReactNode {
             <Table.Td>
                 <AppSparkline data={part.recent} {...ROW_SPARKLINE} />
             </Table.Td>
-            {/* Stops the row's own navigation: this link leaves the app. */}
-            <Table.Td ta="center" onClick={(event) => event.stopPropagation()}>
-                <Anchor
+            <Table.Td ta="center">
+                <ExternalLink
                     href={makeUrl(origin, part.path)}
-                    target="_blank"
-                    rel="noreferrer"
-                    aria-label={`Open ${part.name} in Onshape`}
-                >
-                    <ArrowSquareOutIcon size={IconSize.SMALL} />
-                </Anchor>
+                    iconSize={IconSize.SMALL}
+                />
             </Table.Td>
         </Table.Tr>
     );

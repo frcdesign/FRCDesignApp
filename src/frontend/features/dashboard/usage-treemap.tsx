@@ -1,4 +1,4 @@
-import { Anchor, Text } from "@mantine/core";
+import { Text } from "@mantine/core";
 import { useNavigate } from "@tanstack/react-router";
 import { useMemo, useState, type ReactNode } from "react";
 import { getLibraryName } from "../../lib/library";
@@ -90,24 +90,16 @@ function TreemapTrail({ root, path, onSelect }: TreemapTrailProps): ReactNode {
         return null;
     }
 
+    const current = steps[steps.length - 1];
     return (
         // Spaced off the chart below, which otherwise sits on the trail.
-        <AppBreadcrumbs mb="sm">
-            {steps.map((step, index) =>
-                index === steps.length - 1 ? (
-                    <Text key={step.label} size="sm">
-                        {step.label}
-                    </Text>
-                ) : (
-                    <Anchor
-                        key={step.label}
-                        size="sm"
-                        onClick={() => onSelect(step.to)}
-                    >
-                        {step.label}
-                    </Anchor>
-                )
-            )}
-        </AppBreadcrumbs>
+        <AppBreadcrumbs
+            mb="sm"
+            crumbs={steps.slice(0, -1).map((step) => ({
+                label: step.label,
+                onClick: () => onSelect(step.to)
+            }))}
+            current={current.label}
+        />
     );
 }

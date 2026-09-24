@@ -9,7 +9,7 @@ import { LibraryId } from "@backend/features/library/library-id";
 import { StatusColor } from "../../lib/style-constants";
 import { formatCount, formatFraction } from "./format";
 import { ImplicitDefaultBadge } from "./implicit-default";
-import { ParameterPath } from "./parameter-path";
+import { AppBreadcrumbs } from "../../components/breadcrumbs";
 import { TablePagination, usePagedRows } from "./table-pagination";
 
 /** Below this the part and parameter names wrap into each other. */
@@ -104,9 +104,10 @@ function OptionRow({ libraryId, option }: OptionRowProps): ReactNode {
         >
             <Table.Td>{option.partName}</Table.Td>
             <Table.Td>
-                <ParameterPath path={option.parameterPath}>
-                    <span>{option.parameterName}</span>
-                </ParameterPath>
+                <AppBreadcrumbs
+                    crumbs={option.parameterPath.map((label) => ({ label }))}
+                    current={<span>{option.parameterName}</span>}
+                />
             </Table.Td>
             <Table.Td>
                 <OptionLabel value={option.value} />

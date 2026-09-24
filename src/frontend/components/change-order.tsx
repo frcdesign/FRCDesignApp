@@ -17,76 +17,19 @@ interface ChangeOrderMenuProps {
 /** The move items a list's order allows. */
 export function ChangeOrderItems(props: ChangeOrderMenuProps): ReactNode {
     const { id, order, onOrderChange } = props;
-
     const operations = getValidOperations(id, order);
-
-    if (operations.length === 0) {
-        return null;
-    }
-
-    return (
-        <>
-            {operations.includes(MoveOperation.MOVE_UP) && (
-                <Menu.Item
-                    leftSection={<CaretUpIcon size={IconSize.SMALL} />}
-                    onClick={() => {
-                        onOrderChange(
-                            applyMoveOperation(id, order, MoveOperation.MOVE_UP)
-                        );
-                    }}
-                >
-                    Move up
-                </Menu.Item>
-            )}
-            {operations.includes(MoveOperation.MOVE_DOWN) && (
-                <Menu.Item
-                    leftSection={<CaretDownIcon size={IconSize.SMALL} />}
-                    onClick={() => {
-                        onOrderChange(
-                            applyMoveOperation(
-                                id,
-                                order,
-                                MoveOperation.MOVE_DOWN
-                            )
-                        );
-                    }}
-                >
-                    Move down
-                </Menu.Item>
-            )}
-            {operations.includes(MoveOperation.MOVE_TO_TOP) && (
-                <Menu.Item
-                    leftSection={<CaretDoubleUpIcon size={IconSize.SMALL} />}
-                    onClick={() => {
-                        onOrderChange(
-                            applyMoveOperation(
-                                id,
-                                order,
-                                MoveOperation.MOVE_TO_TOP
-                            )
-                        );
-                    }}
-                >
-                    Move to top
-                </Menu.Item>
-            )}
-            {operations.includes(MoveOperation.MOVE_TO_BOTTOM) && (
-                <Menu.Item
-                    leftSection={<CaretDoubleDownIcon size={IconSize.SMALL} />}
-                    onClick={() => {
-                        onOrderChange(
-                            applyMoveOperation(
-                                id,
-                                order,
-                                MoveOperation.MOVE_TO_BOTTOM
-                            )
-                        );
-                    }}
-                >
-                    Move to bottom
-                </Menu.Item>
-            )}
-        </>
+    return MOVE_ITEMS.filter((item) => operations.includes(item.operation)).map(
+        (item) => (
+            <Menu.Item
+                key={item.label}
+                leftSection={<item.icon size={IconSize.SMALL} />}
+                onClick={() =>
+                    onOrderChange(applyMoveOperation(id, order, item.operation))
+                }
+            >
+                {item.label}
+            </Menu.Item>
+        )
     );
 }
 
@@ -97,13 +40,32 @@ enum MoveOperation {
     MOVE_TO_BOTTOM
 }
 
+const MOVE_ITEMS = [
+    { operation: MoveOperation.MOVE_UP, label: "Move up", icon: CaretUpIcon },
+    {
+        operation: MoveOperation.MOVE_DOWN,
+        label: "Move down",
+        icon: CaretDownIcon
+    },
+    {
+        operation: MoveOperation.MOVE_TO_TOP,
+        label: "Move to top",
+        icon: CaretDoubleUpIcon
+    },
+    {
+        operation: MoveOperation.MOVE_TO_BOTTOM,
+        label: "Move to bottom",
+        icon: CaretDoubleDownIcon
+    }
+];
+
 function applyMoveOperation(
     target: string,
     order: string[],
     operation: MoveOperation
 ): string[] {
     const index = order.indexOf(target);
-    if (index === -1) return order; // target not found, return unchanged
+    if (index === -1) return order;
 
     const result = [...order];
 
@@ -151,7 +113,8 @@ function getValidOperations(target: string, order: string[]): MoveOperation[] {
 
     if (index > 0) {
         if (index === 1) {
-            operations.push(MoveOperation.MOVE_UP); // only "up" since it goes straight to top
+            // Up is already the top.
+            operations.push(MoveOperation.MOVE_UP);
         } else {
             operations.push(MoveOperation.MOVE_UP, MoveOperation.MOVE_TO_TOP);
         }
@@ -159,7 +122,8 @@ function getValidOperations(target: string, order: string[]): MoveOperation[] {
 
     if (index < lastIndex) {
         if (index === lastIndex - 1) {
-            operations.push(MoveOperation.MOVE_DOWN); // only "down" since it goes straight to bottom
+            // Down is already the bottom.
+            operations.push(MoveOperation.MOVE_DOWN);
         } else {
             operations.push(
                 MoveOperation.MOVE_DOWN,

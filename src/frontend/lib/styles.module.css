@@ -61,3 +61,11 @@
 .titleIcon {
     transform: translateY(-1px);
 }
+
+/* Centres an external link's arrow on its text rather than its baseline. */
+.externalLink {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25em;
+    min-width: 0;
+}

@@ -3,18 +3,11 @@ import { InfoIcon } from "@phosphor-icons/react";
 import { ReactNode } from "react";
 import { IconSize, StatusColor } from "../lib/style-constants";
 
-interface CalloutAction {
-    /** A verb or a destination, e.g. "Instructions". */
-    text: string;
-    icon: ReactNode;
-    onClick: () => void;
-}
-
 interface CalloutProps {
     /** A whole sentence, ending in a period. */
     text: string;
-    /** Omitted for a note that only reports something. */
-    action?: CalloutAction;
+    /** A `CalloutButton`; omitted for a note that only reports something. */
+    action?: ReactNode;
 }
 
 /** Blue, so it reads as a remark rather than library content. */
@@ -38,18 +31,30 @@ export function Callout(props: CalloutProps): ReactNode {
                 <Text size="sm" flex="1 1 12rem">
                     {text}
                 </Text>
-                {action && (
-                    <Button
-                        variant="outline"
-                        color={StatusColor.INFO}
-                        size="compact-sm"
-                        leftSection={action.icon}
-                        onClick={action.onClick}
-                    >
-                        {action.text}
-                    </Button>
-                )}
+                {action}
             </Group>
         </Alert>
+    );
+}
+
+interface CalloutButtonProps {
+    /** A verb or a destination, e.g. "Instructions". */
+    children: string;
+    icon: ReactNode;
+    onClick: () => void;
+}
+
+export function CalloutButton(props: CalloutButtonProps): ReactNode {
+    const { children, icon, onClick } = props;
+    return (
+        <Button
+            variant="outline"
+            color={StatusColor.INFO}
+            size="compact-sm"
+            leftSection={icon}
+            onClick={onClick}
+        >
+            {children}
+        </Button>
     );
 }

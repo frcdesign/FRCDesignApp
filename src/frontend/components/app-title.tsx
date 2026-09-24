@@ -13,7 +13,7 @@ import { modals } from "@mantine/modals";
 import type { SearchRecord } from "@backend/features/configurations/contract";
 import { FontWeight, IconSize, StatusColor } from "../lib/style-constants";
 import { meaningfulPartNumber } from "@backend/features/configurations/part-number";
-import { PartNumberLink } from "./part-number";
+import { PartNumber } from "./part-number";
 import styles from "../lib/styles.module.css";
 
 interface AppTitleProps {
@@ -76,7 +76,7 @@ export function MenuTitle(props: MenuTitleProps): ReactNode {
             title={name}
             subtitle={
                 partNumber && (
-                    <PartNumber partNumber={partNumber} url={record?.url} />
+                    <PartNumberLine partNumber={partNumber} url={record?.url} />
                 )
             }
         />
@@ -121,7 +121,6 @@ function CopyPartNumberButton(props: CopyPartNumberButtonProps): ReactNode {
                         color={copied ? "teal" : "gray"}
                         // Any taller and the row grows, shifting the title.
                         size={COPY_BUTTON_SIZE}
-                        aria-label="Copy part number"
                         onClick={copy}
                     >
                         {copied ? (
@@ -136,24 +135,18 @@ function CopyPartNumberButton(props: CopyPartNumberButtonProps): ReactNode {
     );
 }
 
-interface PartNumberProps {
+interface PartNumberLineProps {
     partNumber: string;
     url?: string;
 }
 
-/** The part number, linked to the vendor's page for it when there is one. */
-function PartNumber(props: PartNumberProps): ReactNode {
+function PartNumberLine(props: PartNumberLineProps): ReactNode {
     const { partNumber, url } = props;
-    if (url) {
-        return <PartNumberLink url={url}>{partNumber}</PartNumberLink>;
-    }
-    // Nowhere to send them, so offer the number itself to search with.
     return (
         <>
-            <Text inherit truncate miw={0}>
-                {partNumber}
-            </Text>
-            <CopyPartNumberButton partNumber={partNumber} />
+            <PartNumber url={url}>{partNumber}</PartNumber>
+            {/* Nowhere to send them, so offer the number to search with. */}
+            {!url && <CopyPartNumberButton partNumber={partNumber} />}
         </>
     );
 }

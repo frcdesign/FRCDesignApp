@@ -1,7 +1,7 @@
 import type { JSX } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { OpenUrlButton } from "../../components/open-url-button";
-import { PageNotice } from "../../components/app-zero-state";
+import { PageNotice } from "../../components/app-notice";
 import { APPLICATIONS_PATH } from "../../lib/url";
 import { useOnshapeOrigin } from "../../lib/onshape-params";
 

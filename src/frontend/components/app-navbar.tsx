@@ -168,7 +168,7 @@ function AppTabs(): ReactNode {
                 }
             }}
         >
-            <Tabs.List aria-label="Tabs">
+            <Tabs.List>
                 {APP_TABS.map((tabId) => (
                     <Tabs.Tab key={tabId} value={tabId}>
                         {getTabName(tabId)}
@@ -227,7 +227,6 @@ function SearchBar() {
 
     const clearButton = query ? (
         <Input.ClearButton
-            aria-label="Clear input"
             onClick={() => {
                 setQuery("");
                 // Nothing to wait out: the list should empty on the click.

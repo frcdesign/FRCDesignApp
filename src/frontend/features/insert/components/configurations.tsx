@@ -48,7 +48,7 @@ import {
 import { isDerivationVariable } from "@backend/features/configurations/roles";
 import { evaluateExpression } from "@backend/features/configurations/input-parser";
 import { useConfigurationQuery, useUnitInfo } from "../queries";
-import { SectionNotice } from "../../../components/app-zero-state";
+import { SectionError } from "../../../components/app-notice";
 import classes from "./configurations.module.css";
 import {
     normalizeSelection,
@@ -154,7 +154,7 @@ export function ConfigurationWrapper(
 
     // A failed fetch also leaves `whole` undefined, so check this first.
     if (query.isError) {
-        return <SectionNotice title="Failed to load selection." />;
+        return <SectionError title="Failed to load selection." />;
     }
     if (query.isPending || !whole) {
         return (
@@ -366,7 +366,6 @@ function StringInput(props: ParameterProps<StringParameter>): ReactNode {
                             <AppIcon
                                 icon={InfoIcon}
                                 color={StatusColor.DIMMED}
-                                label="Why this is filled in"
                             />
                         </Tooltip>
                     }

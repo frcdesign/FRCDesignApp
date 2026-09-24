@@ -1,4 +1,5 @@
-import { Anchor, Group, Stack, Text, UnstyledButton } from "@mantine/core";
+import { ExternalLink } from "../../../components/external-link";
+import { Group, Stack, Text, UnstyledButton } from "@mantine/core";
 import { ArrowRightIcon, BooksIcon } from "@phosphor-icons/react";
 import { ReactNode } from "react";
 import { LibraryId } from "@backend/features/library/library-id";
@@ -6,7 +7,7 @@ import { type AppTab } from "@backend/features/settings/app-tab";
 import { AppBrandMark } from "../../../components/app-brand";
 import { AppModal, AppModalBody } from "../../../components/app-modal";
 import { AppIcon } from "../../../components/app-icon";
-import { ZeroState } from "../../../components/app-zero-state";
+import { SectionNotice } from "../../../components/app-notice";
 import {
     FontWeight,
     IconSize,
@@ -89,9 +90,9 @@ function TrademarkDisclaimer(): ReactNode {
                 FIRST
             </Text>
             <RegisteredMark /> (
-            <Anchor href={FIRST_URL} target="_blank" inherit>
+            <ExternalLink href={FIRST_URL} inherit>
                 www.firstinspires.org
-            </Anchor>
+            </ExternalLink>
             ) which is not overseeing, involved with, or responsible for this
             activity, product, or service.
         </Text>
@@ -111,7 +112,7 @@ export function ProgramSelect(): ReactNode {
     return (
         <AppModal opened={tabId === null} dismissible={false} size="lg">
             <AppModalBody>
-                <ZeroState
+                <SectionNotice
                     icon={<AppBrandMark size={IconSize.PAGE} />}
                     title="Welcome to the FRCDesignApp!"
                     description="To get started, select your library. You can switch between libraries at any time using the top navbar."

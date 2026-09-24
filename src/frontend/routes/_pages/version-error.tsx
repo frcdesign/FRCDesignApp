@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { type ReactNode } from "react";
-import { PageNotice } from "../../components/app-zero-state";
+import { PageNotice } from "../../components/app-notice";
 
 /** A version can't be changed, so there's nothing to insert into. */
 export const Route = createFileRoute("/_pages/version-error")({

@@ -92,7 +92,7 @@ function DashboardTabs({ current }: DashboardTabsProps): ReactNode {
             }}
             styles={TAB_STYLES}
         >
-            <Tabs.List aria-label="Dashboards">
+            <Tabs.List>
                 {DASHBOARDS.map((entry) => (
                     <Tabs.Tab key={entry.key} value={entry.key}>
                         {entry.label}
@@ -167,7 +167,6 @@ function ThresholdControl(): ReactNode {
                 </Text>
             }
             leftSectionWidth={THRESHOLD_LABEL_WIDTH}
-            aria-label="Low-usage threshold"
             value={threshold ?? DEFAULT_THRESHOLD}
             onChange={(value) =>
                 void navigate({
@@ -198,7 +197,6 @@ function RefreshButton(): ReactNode {
                 my="auto"
                 variant="subtle"
                 color="gray"
-                aria-label="Refresh"
                 loading={fetching}
                 onClick={() =>
                     void queryClient.invalidateQueries({

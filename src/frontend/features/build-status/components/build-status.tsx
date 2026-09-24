@@ -123,11 +123,7 @@ function BuildStatusHoverCard({
                     <Loader size={IconSize.SMALL} />
                 ) : isHidden ? (
                     // Only editors see hidden insertables, so its checks don't matter yet.
-                    <AppIcon
-                        icon={EyeSlashIcon}
-                        color={StatusColor.WARNING}
-                        label="Hidden"
-                    />
+                    <AppIcon icon={EyeSlashIcon} color={StatusColor.WARNING} />
                 ) : (
                     <IssueIcon severity={maxSeverity} />
                 )

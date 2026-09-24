@@ -220,7 +220,6 @@ function IndexedControl(props: ParameterRowProps): ReactNode {
         <Tooltip label={isIndexed ? "Indexed" : "Not indexed"}>
             <Checkbox
                 size="xs"
-                aria-label={`Index ${parameter.name}`}
                 checked={isIndexed}
                 disabled={mutation.isPending}
                 onChange={() =>

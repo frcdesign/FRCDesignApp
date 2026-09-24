@@ -13,8 +13,6 @@ export interface AppIconProps
     color?: StatusColor | string;
     /** @default "regular" */
     weight?: IconWeight;
-    /** What a screen reader calls an icon that carries meaning on its own. */
-    label?: string;
 }
 
 /** Sized through `fz`, since Box's own `style` would drop the icon's. */
@@ -23,17 +21,9 @@ export function AppIcon({
     size = IconSize.SMALL,
     color,
     weight,
-    label,
     ...others
 }: AppIconProps): ReactNode {
     return (
-        <Box
-            component={icon}
-            fz={size}
-            c={color}
-            weight={weight}
-            aria-label={label}
-            {...others}
-        />
+        <Box component={icon} fz={size} c={color} weight={weight} {...others} />
     );
 }

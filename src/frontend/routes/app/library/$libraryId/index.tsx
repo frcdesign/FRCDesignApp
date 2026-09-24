@@ -11,8 +11,9 @@ import { SearchResults } from "../../../../features/search/components/search-res
 import { InsertSource } from "@backend/features/analytics/usage";
 import {
     SectionNotice,
-    SectionLoading
-} from "../../../../components/app-zero-state";
+    SectionLoading,
+    SectionError
+} from "../../../../components/app-notice";
 import { RequireAccessLevel } from "../../../../features/auth/access-level";
 import { AddGroupButton } from "../../../../features/library/components/add-group-menu";
 import { FavoritesList } from "../../../../features/favorites/components/favorites-list";
@@ -179,7 +180,7 @@ function LibraryList() {
     if (libraryQuery.isPending) {
         return <SectionLoading title="Loading groups..." />;
     } else if (libraryQuery.isError) {
-        return <SectionNotice title="Failed to load groups." />;
+        return <SectionError title="Failed to load groups." />;
     }
 
     const groups = libraryQuery.data.groups;
@@ -189,7 +190,6 @@ function LibraryList() {
         return (
             <SectionNotice
                 title="No groups found"
-                description={null}
                 action={
                     <RequireAccessLevel>
                         <AddGroupButton />

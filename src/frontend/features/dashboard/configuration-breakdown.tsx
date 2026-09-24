@@ -21,7 +21,7 @@ import {
 } from "../../lib/style-constants";
 import { formatCount, formatPercent } from "./format";
 import { ImplicitDefaultBadge } from "./implicit-default";
-import { ParameterPath } from "./parameter-path";
+import { AppBreadcrumbs } from "../../components/breadcrumbs";
 
 interface ConfigurationBreakdownProps {
     parameters: ConfigurationParameterUsage[];
@@ -60,9 +60,10 @@ function ParameterCard({ parameter }: ParameterCardProps): ReactNode {
         <Card padding="md">
             <Group justify="space-between" mb="sm" wrap="wrap">
                 <Group gap="xs">
-                    <ParameterPath path={parameter.path}>
-                        <Title order={5}>{parameter.name}</Title>
-                    </ParameterPath>
+                    <AppBreadcrumbs
+                        crumbs={parameter.path.map((label) => ({ label }))}
+                        current={<Title order={5}>{parameter.name}</Title>}
+                    />
                     <Badge variant="light" color={CATEGORY_COLOR} size="sm">
                         {parameter.type}
                     </Badge>

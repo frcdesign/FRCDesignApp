@@ -25,7 +25,7 @@ import {
     useSetDefaultConfigurationMutation
 } from "../queries";
 import { useLibraryQuery } from "../../library/queries";
-import { PageNotice } from "../../../components/app-zero-state";
+import { PageNotice } from "../../../components/app-notice";
 
 interface FavoriteMenuContentProps {
     favoriteId: string;
@@ -70,12 +70,7 @@ export function FavoriteMenuContent(
         return null;
     }
     if (!insertable.isConfigurable) {
-        return (
-            <PageNotice
-                title="Cannot edit unconfigurable favorite"
-                description={null}
-            />
-        );
+        return <PageNotice title="Cannot edit unconfigurable favorite" />;
     }
 
     return (

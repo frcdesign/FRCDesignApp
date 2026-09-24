@@ -4,7 +4,8 @@ import { meaningfulPartNumber } from "@backend/features/configurations/part-numb
 import { StatusColor } from "../lib/style-constants";
 import { AppContextMenu, MenuButton } from "./app-menu";
 import { TruncatedText } from "./truncated-text";
-import { PartNumberLink } from "./part-number";
+import { PartNumber } from "./part-number";
+import { equalsIgnoreCase } from "@backend/lib/text";
 import { mergePositions, type Position } from "../lib/highlight";
 import styles from "../lib/styles.module.css";
 
@@ -65,7 +66,7 @@ export function CardTitle(props: CardTitleProps): ReactNode {
                 </TruncatedText>
                 {/* The line under the title, so it sits beside it in the stack
                     rather than inside the paragraph the title renders as. */}
-                <PartNameAndNumber title={title} match={match} />
+                {match && <PartNameAndNumber title={title} match={match} />}
             </Stack>
             {buildStatusBadge}
         </Group>
@@ -75,24 +76,20 @@ export function CardTitle(props: CardTitleProps): ReactNode {
 interface PartNameAndNumberProps {
     /** The row's own title, which neither line repeats. */
     title: string;
-    match?: RowMatch;
+    match: RowMatch;
 }
 
 /** The matched selection's name and part number, beneath the title. */
 function PartNameAndNumber(props: PartNameAndNumberProps): ReactNode {
     const { title, match } = props;
-
-    // The match's best selection, minus a value repeating the title.
-    const partName =
-        match?.partName?.toLowerCase() !== title.toLowerCase()
-            ? match?.partName
-            : undefined;
-    const partNumber = meaningfulPartNumber(match?.partNumber, title);
+    const partName = equalsIgnoreCase(match.partName, title)
+        ? undefined
+        : match.partName;
+    const partNumber = meaningfulPartNumber(match.partNumber, title);
 
     if (!partName && !partNumber) {
         return null;
     }
-
     return (
         <Group
             gap={4}
@@ -106,50 +103,20 @@ function PartNameAndNumber(props: PartNameAndNumberProps): ReactNode {
                 <TruncatedText hoverText={partName} inherit miw={0}>
                     <HighlightedText
                         text={partName}
-                        positions={match?.partNamePositions}
+                        positions={match.partNamePositions}
                     />
                 </TruncatedText>
             )}
             {partName && partNumber && <Text inherit>·</Text>}
             {partNumber && (
-                <CardPartNumber
-                    partNumber={partNumber}
-                    positions={match?.partNumberPositions}
-                    url={match?.url}
-                />
+                <PartNumber url={match.url}>
+                    <HighlightedText
+                        text={partNumber}
+                        positions={match.partNumberPositions}
+                    />
+                </PartNumber>
             )}
         </Group>
-    );
-}
-
-interface CardPartNumberProps {
-    partNumber: string;
-    /** Where the query matched inside it, for underlining. */
-    positions?: Position[];
-    url?: string;
-}
-
-/** The part number, linked to the vendor's page for it when there is one. */
-function CardPartNumber(props: CardPartNumberProps): ReactNode {
-    const { partNumber, positions, url } = props;
-    const text = <HighlightedText text={partNumber} positions={positions} />;
-    if (!url) {
-        return (
-            <Text
-                inherit
-                truncate
-                miw={0}
-                maw="100%"
-                className={styles.noShrink}
-            >
-                {text}
-            </Text>
-        );
-    }
-    return (
-        <PartNumberLink url={url} noShrink>
-            {text}
-        </PartNumberLink>
     );
 }
 

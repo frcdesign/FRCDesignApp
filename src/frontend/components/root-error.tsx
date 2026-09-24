@@ -1,5 +1,5 @@
 import { RequireAccessLevel } from "../features/auth/access-level";
-import { PageNotice } from "./app-zero-state";
+import { PageNotice, PageError } from "./app-notice";
 import { ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import {
@@ -18,7 +18,7 @@ import { DEFAULT_LIBRARY } from "@backend/features/library/library-id";
 
 export function RootAppError(): ReactNode {
     return (
-        <PageNotice
+        <PageError
             title="The app has crashed due to an unexpected error."
             action={
                 <RequireAccessLevel
@@ -74,7 +74,6 @@ function MissedUrl(): ReactNode {
                             variant="subtle"
                             color={copied ? "teal" : "gray"}
                             size={IconSize.SMALL}
-                            aria-label="Copy address"
                             onClick={copy}
                         >
                             {copied ? (

@@ -165,7 +165,6 @@ describe("ConfigurationWrapper", () => {
         const input = await screen.findByLabelText("Derivation Variable");
         expect(input).toHaveProperty("readOnly", true);
         expect((input as HTMLInputElement).value).toMatch(/^[0-9a-f-]{36}$/);
-        expect(screen.getByLabelText("Why this is filled in")).toBeTruthy();
         expect(lastReport().overrides).toEqual({});
     });
 });

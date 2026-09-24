@@ -24,10 +24,11 @@ import { ItemTable } from "../../../../../components/item-row";
 import { AppContextMenu, MenuButton } from "../../../../../components/app-menu";
 import { SearchCallout } from "../../../../../features/search/components/search-errors";
 import {
-    PageNotice,
     SectionNotice,
-    SectionLoading
-} from "../../../../../components/app-zero-state";
+    SectionLoading,
+    SectionError,
+    PageNotice
+} from "../../../../../components/app-notice";
 import {
     ClearFiltersButton,
     useVendorFilters
@@ -61,7 +62,7 @@ function GroupList(): ReactNode {
     if (libraryQuery.isPending) {
         return <SectionLoading title="Loading group..." />;
     } else if (libraryQuery.isError) {
-        return <SectionNotice title="Failed to load group." />;
+        return <SectionError title="Failed to load group." />;
     }
     const groups = libraryQuery.data.groups;
     const insertables = libraryQuery.data.insertables;
@@ -72,7 +73,6 @@ function GroupList(): ReactNode {
         return (
             <PageNotice
                 title="Group not found"
-                description={null}
                 justifyUp
                 action={
                     <Button
@@ -180,10 +180,7 @@ function GroupListContent(props: GroupListCardsProps): ReactNode {
 
     if (groupInsertables.length === 0) {
         return group.isLoaded ? (
-            <SectionNotice
-                title="This group has no visible elements"
-                description={null}
-            />
+            <SectionNotice title="This group has no visible elements" />
         ) : (
             <SectionNotice
                 title="This group failed to load."

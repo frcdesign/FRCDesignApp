@@ -15,9 +15,10 @@ import {
 import type { Insertables } from "@backend/features/library/contract";
 import { useGetUiState } from "../../../lib/ui-state";
 import {
+    SectionNotice,
     SectionLoading,
-    SectionNotice
-} from "../../../components/app-zero-state";
+    SectionError
+} from "../../../components/app-notice";
 import {
     NoSearchResultError,
     SearchCallout
@@ -52,7 +53,7 @@ export function FavoritesList(): ReactNode {
         return <SectionLoading title="Loading favorites..." />;
     } else if (libraryQuery.isError || favoritesQuery.isError) {
         return (
-            <SectionNotice
+            <SectionError
                 title="Failed to load favorites."
                 icon={
                     <AppIcon
@@ -127,9 +128,9 @@ function FavoriteSearchResults(props: FavoriteSearchResultsProps): ReactNode {
     if (searchDbQuery.isLoading) {
         return <SectionLoading title="Searching..." />;
     } else if (searchDbQuery.isError) {
-        return <SectionNotice title="Failed to load search database." />;
+        return <SectionError title="Failed to load search database." />;
     } else if (!searchDbQuery.data) {
-        return <SectionNotice title="The search database is empty." />;
+        return <SectionError title="The search database is empty." />;
     }
 
     const result = searchInsertables({

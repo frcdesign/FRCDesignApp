@@ -1,4 +1,5 @@
-import { Anchor, Badge, Group, Stack, Text } from "@mantine/core";
+import { ExternalLink } from "../../../components/external-link";
+import { Badge, Group, Stack, Text } from "@mantine/core";
 import {
     ArrowSquareOutIcon,
     CheckIcon,
@@ -266,15 +267,7 @@ function IssueCallout(props: IssueCalloutProps): ReactNode {
     }
 
     return (
-        <Anchor
-            href={url}
-            target="_blank"
-            rel="noreferrer"
-            display="block"
-            underline="never"
-            c="inherit"
-            aria-label={`${getIssueDescription(issue)} — open the configuration in Onshape`}
-        >
+        <ExternalLink href={url} display="block" underline="never" c="inherit">
             <Group {...CALLOUT_LAYOUT} bg={background} bdrs="sm">
                 <CalloutIcon severity={severity} />
                 <Text size="sm" flex={1}>
@@ -286,7 +279,7 @@ function IssueCallout(props: IssueCalloutProps): ReactNode {
                     style={CALLOUT_ICON_NUDGE}
                 />
             </Group>
-        </Anchor>
+        </ExternalLink>
     );
 }
 

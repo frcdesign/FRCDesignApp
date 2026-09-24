@@ -18,7 +18,7 @@ import {
     DEFAULT_CONFIGURATION_KEY
 } from "@backend/features/configurations/contract";
 import { thumbnailUrl } from "@backend/features/thumbnails/keys";
-import { SectionNotice } from "../../../components/app-zero-state";
+import { SectionNotice } from "../../../components/app-notice";
 import { RENDER_BACKGROUND } from "../../../lib/style-constants";
 import { useTargetElementType } from "../../insert/insert-hooks";
 import { useIsFetchingConfiguration } from "../../insert/queries";
@@ -287,9 +287,10 @@ function PreviewImage(props: PreviewImageProps): ReactNode {
             <PreviewBox heightAndWidth={heightAndWidth}>
                 <SectionNotice
                     title="The thumbnail could not be loaded."
-                    // Null suppresses the generic "contact the developers".
                     description={
-                        isConnected ? `You can still ${action} the part.` : null
+                        isConnected
+                            ? `You can still ${action} the part.`
+                            : undefined
                     }
                 />
             </PreviewBox>

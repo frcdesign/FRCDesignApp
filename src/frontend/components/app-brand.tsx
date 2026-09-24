@@ -48,12 +48,7 @@ export function AppBrandMark(props: AppBrandMarkProps): ReactNode {
 export function AppBrand(): ReactNode {
     return (
         <Group gap="xs" wrap="nowrap" h="100%">
-            <Center
-                component="a"
-                href={FRC_DESIGN_URL}
-                target="_blank"
-                aria-label="FRCDesign.org"
-            >
+            <Center component="a" href={FRC_DESIGN_URL} target="_blank">
                 <AppBrandMark />
             </Center>
             <Text

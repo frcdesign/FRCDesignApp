@@ -1,36 +1,40 @@
-import { Anchor, Text } from "@mantine/core";
-import { ArrowSquareOutIcon } from "@phosphor-icons/react";
+import { Text } from "@mantine/core";
 import { ReactNode } from "react";
 import { IconSize } from "../lib/style-constants";
 import styles from "../lib/styles.module.css";
+import { ExternalLink } from "./external-link";
 
-interface PartNumberLinkProps {
-    /** Already-rendered text, so a caller can underline what a query matched. */
+interface PartNumberProps {
+    /** Already rendered, so a caller can underline what a query matched. */
     children: ReactNode;
-    url: string;
-    /** For a list row; a header lets a long part number ellipsize instead. */
-    noShrink?: boolean;
+    /** The vendor's page for it. */
+    url?: string;
 }
 
-export function PartNumberLink(props: PartNumberLinkProps): ReactNode {
-    const { children, url, noShrink = false } = props;
-    return (
-        <Anchor
-            href={url}
-            target="_blank"
-            inherit
-            // The row inserts on click, which is not what the link is for.
-            onClick={(event) => event.stopPropagation()}
-            display="inline-flex"
-            miw={0}
-            maw="100%"
-            className={noShrink ? styles.noShrink : undefined}
-            style={{ alignItems: "center", gap: 2 }}
-        >
-            <Text component="span" inherit truncate miw={0}>
+/** Keeps its width beside anything that can shrink, but still ellipsizes past its row's. */
+export function PartNumber(props: PartNumberProps): ReactNode {
+    const { children, url } = props;
+    const text = (
+        <Text component="span" inherit truncate miw={0}>
+            {children}
+        </Text>
+    );
+    if (!url) {
+        return (
+            <Text inherit truncate maw="100%" className={styles.noShrink}>
                 {children}
             </Text>
-            <ArrowSquareOutIcon size={IconSize.TINY} />
-        </Anchor>
+        );
+    }
+    return (
+        <ExternalLink
+            href={url}
+            inherit
+            maw="100%"
+            className={styles.noShrink}
+            iconSize={IconSize.TINY}
+        >
+            {text}
+        </ExternalLink>
     );
 }

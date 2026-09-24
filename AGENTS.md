@@ -60,6 +60,11 @@ function useIsDashboard(): boolean {
 }
 ```
 
+## Accessibility
+
+Not a goal. Don't add `aria-*` attributes, screen-reader labels or keyboard
+handling for their own sake; the app runs in Onshape's mouse-driven panel.
+
 ## Layout
 
 `src/` has two sides, `backend/` (the Worker) and `frontend/` (the SPA). There

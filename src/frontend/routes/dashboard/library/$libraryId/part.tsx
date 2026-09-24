@@ -1,13 +1,6 @@
-import {
-    Anchor,
-    Card,
-    SimpleGrid,
-    Stack,
-    Text,
-    TextInput,
-    Title
-} from "@mantine/core";
-import { ArrowSquareOutIcon, MagnifyingGlassIcon } from "@phosphor-icons/react";
+import { ExternalLink } from "../../../../components/external-link";
+import { Card, SimpleGrid, Stack, Text, TextInput, Title } from "@mantine/core";
+import { MagnifyingGlassIcon } from "@phosphor-icons/react";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, retainSearchParams } from "@tanstack/react-router";
 import { useState, type ReactNode } from "react";
@@ -160,17 +153,13 @@ function PartTitle({ report }: PartTitleProps): ReactNode {
     const origin = useOnshapeOrigin();
     return (
         <Title order={2}>
-            <Anchor
+            <ExternalLink
                 inherit
                 href={makeUrl(origin, report.path)}
-                target="_blank"
-                rel="noreferrer"
-                // Centres the icon on the text rather than on its baseline.
-                style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
+                iconSize={IconSize.MEDIUM}
             >
                 {report.name}
-                <ArrowSquareOutIcon size={IconSize.MEDIUM} />
-            </Anchor>
+            </ExternalLink>
         </Title>
     );
 }
