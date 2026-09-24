@@ -10,6 +10,7 @@ import {
     AppModalTop
 } from "../../../components/app-modal";
 import { useMenuTitle } from "../../../components/app-title";
+import { useAppModal } from "../../../components/open-app-modal";
 import {
     QUICK_INSERT_WINDOW_MS,
     showQuickInsertTip,
@@ -44,21 +45,20 @@ import { InsertLocationStatus } from "../../insert-location/components/insert-lo
 
 interface InsertMenuContentProps {
     insertable: InsertableOut;
-    /** The modal this renders in, so the header can track the selection. */
-    modalId: string;
     initialSelection?: PartialSelection;
     /** So the preview has it before the parameters load. */
     initialConfigurationKey?: ConfigurationKey;
     /** Every selection the menu settles on, the last being what it closed on. */
     onSelectionChange?: (selection: Selection) => void;
+    /** Before the menu closes itself. */
     onInsert: () => void;
     source: InsertSource;
 }
 
 export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
-    const { insertable, modalId, onSelectionChange, onInsert, source } = props;
+    const { insertable, onSelectionChange, onInsert, source } = props;
     const favorite = useFavorite(insertable.id);
-    useThumbnailWaitTip();
+    const modal = useAppModal();
 
     const [selection, setSelection] = useState<
         PartialSelection | Selection | undefined
@@ -69,6 +69,7 @@ export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
         report?.configurationKey ??
         props.initialConfigurationKey ??
         DEFAULT_CONFIGURATION_KEY;
+    useThumbnailWaitTip(configurationKey);
     // What the preview stops following for a signed-out caller.
     const [isEdited, setIsEdited] = useState(false);
     // Cleared by an edit, or once the menu has been up long enough.
@@ -80,7 +81,7 @@ export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
         !insertable.isConfigurable
     ).data?.records[0];
 
-    useMenuTitle(modalId, {
+    useMenuTitle({
         name: insertable.name,
         record: report?.record ?? soleRecord
     });
@@ -148,7 +149,10 @@ export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
                 configurationKey={configurationKey}
                 canShowQuickInsertTip={canShowQuickInsertTip}
                 source={source}
-                onInsert={onInsert}
+                onInsert={() => {
+                    onInsert();
+                    modal.close();
+                }}
             />
         </>
     );

@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
     type ConfigurationParameter,
     DEFAULT_CONFIGURATION_KEY,
+    OptionVisibilityType,
+    ParameterType,
     VisibilityType
 } from "./contract";
 import {
@@ -9,6 +11,7 @@ import {
     canonicalValues,
     findRecord,
     formatValue,
+    normalizeSelection,
     onshapeOverrides,
     toKey,
     toSelection,
@@ -253,5 +256,122 @@ describe("derivation variables", () => {
         expect(toStoredSelection({ size: "l", dv: "abc" }, params)).toEqual({
             size: "l"
         });
+    });
+});
+
+const NORMALIZE_SIZE: ConfigurationParameter = {
+    id: "size",
+    name: "Size",
+    default: "small",
+    type: ParameterType.ENUM,
+    options: [
+        { id: "small", name: "Small" },
+        { id: "large", name: "Large" }
+    ],
+    optionConditions: []
+};
+
+/** Only shown for the large size, so it is hidden by default. */
+const NORMALIZE_REINFORCED: ConfigurationParameter = {
+    id: "reinforced",
+    name: "Reinforced",
+    default: "false",
+    type: ParameterType.BOOLEAN,
+    condition: { type: VisibilityType.EQUAL, id: "size", value: "large" }
+};
+
+const NORMALIZE_PARAMS = [NORMALIZE_SIZE, NORMALIZE_REINFORCED];
+
+describe("normalizeSelection", () => {
+    it("settles a hidden parameter on its default", () => {
+        const selection = toSelection(
+            { size: "small", reinforced: "true" },
+            NORMALIZE_PARAMS
+        );
+        expect(normalizeSelection(selection, NORMALIZE_PARAMS).reinforced).toBe(
+            "false"
+        );
+    });
+
+    it("leaves a shown parameter's value alone", () => {
+        const selection = toSelection(
+            { size: "large", reinforced: "true" },
+            NORMALIZE_PARAMS
+        );
+        expect(normalizeSelection(selection, NORMALIZE_PARAMS).reinforced).toBe(
+            "true"
+        );
+    });
+
+    it("is idempotent, which is what lets the panel stop", () => {
+        const once = normalizeSelection(
+            toSelection({}, NORMALIZE_PARAMS),
+            NORMALIZE_PARAMS
+        );
+        // Identity: the second pass finds nothing to change.
+        expect(normalizeSelection(once, NORMALIZE_PARAMS)).toBe(once);
+    });
+
+    it("falls back to a visible option when the selected one is hidden", () => {
+        const material: ConfigurationParameter = {
+            id: "material",
+            name: "Material",
+            default: "alu",
+            type: ParameterType.ENUM,
+            options: [
+                { id: "alu", name: "Aluminium" },
+                { id: "steel", name: "Steel" }
+            ],
+            // Steel is only offered on the large size.
+            optionConditions: [
+                {
+                    type: OptionVisibilityType.LIST,
+                    controlledOptions: ["steel"],
+                    condition: {
+                        type: VisibilityType.EQUAL,
+                        id: "size",
+                        value: "large"
+                    }
+                },
+                {
+                    type: OptionVisibilityType.LIST,
+                    controlledOptions: ["alu"],
+                    condition: { type: VisibilityType.ALWAYS_SHOWN }
+                }
+            ]
+        };
+        const params = [NORMALIZE_SIZE, material];
+        const selection = toSelection(
+            { size: "small", material: "steel" },
+            params
+        );
+        expect(normalizeSelection(selection, params).material).toBe("alu");
+    });
+
+    it("settles a chain where one parameter decides the next", () => {
+        const bolts: ConfigurationParameter = {
+            id: "bolts",
+            name: "Bolts",
+            default: "2",
+            type: ParameterType.ENUM,
+            options: [
+                { id: "2", name: "Two" },
+                { id: "4", name: "Four" }
+            ],
+            optionConditions: [],
+            condition: {
+                type: VisibilityType.EQUAL,
+                id: "reinforced",
+                value: "true"
+            }
+        };
+        const params = [NORMALIZE_SIZE, NORMALIZE_REINFORCED, bolts];
+        const selection = toSelection(
+            { size: "small", reinforced: "true", bolts: "4" },
+            params
+        );
+        const settled = normalizeSelection(selection, params);
+        expect(settled.reinforced).toBe("false");
+        expect(settled.bolts).toBe("2");
     });
 });

@@ -9,7 +9,7 @@ import {
 } from "@mantine/core";
 import { CheckIcon, CopyIcon } from "@phosphor-icons/react";
 import { type ReactNode, useEffect } from "react";
-import { modals } from "@mantine/modals";
+import { useAppModal } from "./open-app-modal";
 import type { SearchRecord } from "@backend/features/configurations/contract";
 import { FontWeight, IconSize, StatusColor } from "../lib/style-constants";
 import { meaningfulPartNumber } from "@backend/features/configurations/part-number";
@@ -94,17 +94,14 @@ interface UseMenuTitleProps extends Omit<MenuTitleProps, "name"> {
 }
 
 /** Updates the modal's header, which belongs to the modal rather than the content. */
-export function useMenuTitle(modalId: string, props: UseMenuTitleProps): void {
+export function useMenuTitle(props: UseMenuTitleProps): void {
     const { name, record, icon } = props;
+    const { setTitle } = useAppModal();
     useEffect(() => {
-        if (name === undefined) {
-            return;
+        if (name !== undefined) {
+            setTitle(<MenuTitle name={name} record={record} icon={icon} />);
         }
-        modals.updateModal({
-            modalId,
-            title: <MenuTitle name={name} record={record} icon={icon} />
-        });
-    }, [modalId, name, record, icon]);
+    }, [setTitle, name, record, icon]);
 }
 
 /** The xs line box the subtitle row is otherwise sized by, floored. */

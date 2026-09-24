@@ -1,4 +1,3 @@
-import { modals } from "@mantine/modals";
 import { openAppModal } from "../../components/open-app-modal";
 
 import type { InsertableOut } from "@backend/features/library/contract";
@@ -44,8 +43,9 @@ export function openInsertMenu(props: OpenInsertMenuProps) {
         favoriteId,
         source
     } = props;
+    // Plain variables, not state: they belong to this one opening, which is outside React.
     let didInsert = false;
-    // What the menu shows when it closes, for the restore toast to reopen.
+    // For the restore toast to reopen.
     let lastSelection = initialSelection;
     // Recorded so the url mirrors it and a relaunch reopens it.
     updateUiState({
@@ -55,10 +55,7 @@ export function openInsertMenu(props: OpenInsertMenuProps) {
             : undefined,
         openFavoriteId: favoriteId
     });
-    // So the content can address its modal, and the header follow the selection.
-    const id = crypto.randomUUID();
     openAppModal({
-        modalId: id,
         title: <MenuTitle name={insertable.name} />,
         size: 500,
         onClose: () => {
@@ -70,7 +67,6 @@ export function openInsertMenu(props: OpenInsertMenuProps) {
         children: (
             <InsertMenuContent
                 insertable={insertable}
-                modalId={id}
                 initialSelection={initialSelection}
                 initialConfigurationKey={configurationKey}
                 onSelectionChange={(selection) => {
@@ -79,7 +75,6 @@ export function openInsertMenu(props: OpenInsertMenuProps) {
                 source={source}
                 onInsert={() => {
                     didInsert = true;
-                    modals.close(id);
                 }}
             />
         )

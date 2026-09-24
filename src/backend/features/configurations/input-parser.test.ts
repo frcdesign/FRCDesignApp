@@ -3,7 +3,6 @@ import { QuantityType, Unit } from "./enums";
 import {
     evaluateExpression,
     EvaluateOptions,
-    Result,
     valueWithUnits
 } from "./input-parser";
 
@@ -36,11 +35,12 @@ describe("evaluateExpression", () => {
         ["90 deg", DEGREES, "90 deg"],
         // The display unit fills in for an expression that names none.
         ["5", LENGTH, "5 mm"],
+        ["1 in", LENGTH, "25.4 mm"],
         ["   7   mm   +   3 mm ", LENGTH, "10 mm"]
     ])("evaluates %s", (expression, options, display) => {
         const result = evaluateExpression(expression, options);
-        expect(result.hasError).toBe(false);
-        expect((result as Result).displayExpression).toBe(display);
+        expect(result.errorMessage).toBeUndefined();
+        expect(result.display).toBe(display);
     });
 
     it("evaluates an angle in radians", () => {
@@ -48,8 +48,8 @@ describe("evaluateExpression", () => {
             "3.14159265359 rad",
             defaultOptions(QuantityType.ANGLE, Unit.RADIAN)
         );
-        expect(result.hasError).toBe(false);
-        expect((result as Result).displayExpression).toContain("rad");
+        expect(result.errorMessage).toBeUndefined();
+        expect(result.display).toContain("rad");
     });
 
     it.each([
@@ -66,11 +66,13 @@ describe("evaluateExpression", () => {
         ["-100.001 mm", "it falls below the minimum"],
         ["100.001 mm", "it rises above the maximum"]
     ])("rejects %s, since %s", (expression) => {
-        expect(evaluateExpression(expression, LENGTH).hasError).toBe(true);
+        expect(
+            evaluateExpression(expression, LENGTH).errorMessage
+        ).toBeDefined();
     });
 
     it("rejects a length where an angle is wanted", () => {
-        expect(evaluateExpression("2 mm", DEGREES).hasError).toBe(true);
+        expect(evaluateExpression("2 mm", DEGREES).errorMessage).toBeDefined();
     });
 
     // The stored expression has to re-parse.
@@ -82,11 +84,8 @@ describe("evaluateExpression", () => {
         ["-(2 + 3) mm"]
     ])("re-parses its own output for %s", (input) => {
         const first = evaluateExpression(input, LENGTH);
-        expect(first.hasError).toBe(false);
+        expect(first.errorMessage).toBeUndefined();
         const second = evaluateExpression(first.expression, LENGTH);
-        expect(second.hasError).toBe(false);
-        expect((second as Result).displayExpression).toBe(
-            (first as Result).displayExpression
-        );
+        expect(second).toEqual(first);
     });
 });

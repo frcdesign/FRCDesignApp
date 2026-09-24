@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { type ConfigurationKey } from "@backend/features/configurations/contract";
 import { renderNotification, showInfoToast } from "../../lib/notifications";
 import { useIsThumbnailRendering } from "../thumbnails/queries";
 import { useIsConnectedToOnshape } from "../../lib/onshape-params";
@@ -24,9 +25,9 @@ export function showQuickInsertTip(): void {
 
 /**
  * Tells someone waiting that inserting doesn't need the render. On a timer,
- * since by the time they insert the wait is spent; it restarts with each render.
+ * since by the time they insert the wait is spent; it restarts with each configuration.
  */
-export function useThumbnailWaitTip(): void {
+export function useThumbnailWaitTip(configurationKey: ConfigurationKey): void {
     const isRendering = useIsThumbnailRendering();
     // Standalone has no insert button for the tip to point at.
     const isConnected = useIsConnectedToOnshape();
@@ -42,7 +43,7 @@ export function useThumbnailWaitTip(): void {
             );
         }, THUMBNAIL_WAIT_MS);
         return () => clearTimeout(timer);
-    }, [isRendering, isConnected]);
+    }, [isRendering, isConnected, configurationKey]);
 }
 
 /**

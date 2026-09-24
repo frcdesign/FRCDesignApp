@@ -4,7 +4,7 @@ import { type ReactNode } from "react";
 import type { Favorite } from "@backend/features/favorites/contract";
 import type { ConfigurationKey } from "@backend/features/configurations/contract";
 import { IconSize } from "../../../lib/style-constants";
-import { sameSelection } from "../../insert/parameter-value";
+import { sameSelection } from "@backend/features/configurations/selection";
 import type { SelectionReport } from "../../insert/components/configurations";
 import { useSetDefaultConfigurationMutation } from "../queries";
 
@@ -31,8 +31,8 @@ export function SaveFavoriteConfigurationButton(
         <Tooltip
             label={
                 isSaved
-                    ? "The favorite opens with this configuration"
-                    : "Open the favorite with this configuration"
+                    ? "This is the favorite default configuration"
+                    : "Update favorite default configuration"
             }
         >
             <ActionIcon

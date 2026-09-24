@@ -211,6 +211,24 @@ export function getVisibleOptions(
     );
 }
 
+/** The selected option if still visible, else the default, else the first. */
+export function resolveSelectedOption(
+    visibleOptions: EnumOption[],
+    currentOptionId: string | undefined,
+    defaultOptionId: string
+): EnumOption | undefined {
+    if (visibleOptions.length === 0) {
+        return undefined;
+    }
+    return (
+        (currentOptionId
+            ? getOption(visibleOptions, currentOptionId)
+            : undefined) ??
+        getOption(visibleOptions, defaultOptionId) ??
+        visibleOptions[0]
+    );
+}
+
 /** Display precision used when the document's units aren't available. */
 export const DEFAULT_QUANTITY_PRECISION = 3;
 

@@ -35,11 +35,14 @@ import {
 import {
     evaluateCondition,
     getEvaluateOptions,
-    getVisibleOptions
+    getVisibleOptions,
+    resolveSelectedOption
 } from "@backend/features/configurations/utils";
 import {
     findRecord,
+    normalizeSelection,
     onshapeOverrides,
+    sameSelection,
     toKey,
     toSelection,
     toStoredSelection,
@@ -50,13 +53,7 @@ import { evaluateExpression } from "@backend/features/configurations/input-parse
 import { useConfigurationQuery, useUnitInfo } from "../queries";
 import { SectionError } from "../../../components/app-notice";
 import classes from "./configurations.module.css";
-import {
-    normalizeSelection,
-    resolveSelectedOption,
-    sameSelection,
-    withParameterValue
-} from "../parameter-value";
-import { seedFrom } from "../quantity-box";
+import { withParameterValue } from "../parameter-value";
 
 /** Reported by the panel, since only it has the parameters. */
 export interface SelectionReport {
@@ -404,32 +401,24 @@ function QuantityInput(props: ParameterProps<QuantityParameter>): ReactNode {
     const selectOnMouseUp = useRef(false);
 
     const [box, setBox] = useState(() =>
-        seedFrom(value, parameter, evaluateOptions)
+        evaluateExpression(value ?? parameter.default, evaluateOptions)
     );
 
     // A value this box didn't submit came from elsewhere, such as a favorite.
     const [emitted, setEmitted] = useState(value);
     if (value !== emitted) {
         setEmitted(value);
-        setBox(seedFrom(value, parameter, evaluateOptions));
+        setBox(evaluateExpression(value ?? parameter.default, evaluateOptions));
     }
 
     const handleSubmit = () => {
         setFocused(false);
         const result = evaluateExpression(box.expression, evaluateOptions);
-        if (result.hasError) {
-            // Don't change the value so the thumbnail is still okay
-            setBox({
-                expression: result.expression,
-                display: result.expression,
-                errorMessage: result.errorMessage
-            });
+        setBox(result);
+        // An error keeps the last good value, so the thumbnail still matches it.
+        if (result.errorMessage) {
             return;
         }
-        setBox({
-            expression: result.expression,
-            display: result.displayExpression
-        });
         // The expression, so the derived feature shows what was typed.
         setEmitted(result.expression);
         onValueChange(result.expression);

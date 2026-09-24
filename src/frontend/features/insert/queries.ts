@@ -10,7 +10,6 @@ import {
     type PartialSelection,
     type UnitInfo
 } from "@backend/features/configurations/contract";
-import { type ElementPath } from "@backend/lib/onshape/path";
 import {
     InsertableOut,
     type InsertOut
@@ -99,50 +98,38 @@ export function useInsertMutation(
 
     const toastId = "insert-" + insertable.id;
 
+    const toRequest = (fasten: boolean) => {
+        // Insert buttons don't render without a target.
+        if (!target) {
+            throw new Error("Nothing to insert into.");
+        }
+        const { elementType, ...targetPath } = target;
+        const common = {
+            targetPath,
+            selection,
+            isFavorite: insertArgs.isFavorite,
+            isQuickInsert: insertArgs.isQuickInsert ?? false,
+            source: insertArgs.source
+        };
+        return elementType === ElementType.ASSEMBLY
+            ? {
+                  endpoint: "/add-to-assembly",
+                  body: { ...common, fasten, insertLocationId }
+              }
+            : {
+                  endpoint: "/add-to-part-studio",
+                  body: {
+                      ...common,
+                      useMateConnector: insertable.supportsFasten
+                  }
+              };
+    };
+
     return useMutation({
         mutationKey: ["insert", insertable.id],
         mutationFn: async (fasten: boolean) => {
-            let endpoint: string;
-            let body: Record<string, unknown>;
-
-            // Insert buttons don't render without a target.
-            if (!target) {
-                throw new Error("Nothing to insert into.");
-            }
-            const targetPath: ElementPath = {
-                documentId: target.documentId,
-                instanceId: target.instanceId,
-                instanceType: target.instanceType,
-                elementId: target.elementId
-            };
-
-            if (target.elementType == ElementType.ASSEMBLY) {
-                endpoint = "/add-to-assembly";
-                body = {
-                    targetPath,
-                    selection,
-                    isFavorite: insertArgs.isFavorite,
-                    isQuickInsert: insertArgs.isQuickInsert ?? false,
-                    source: insertArgs.source,
-                    fasten,
-                    insertLocationId,
-                    elementType: insertable.elementType
-                };
-            } else {
-                endpoint = "/add-to-part-studio";
-                body = {
-                    targetPath,
-                    selection,
-                    isFavorite: insertArgs.isFavorite,
-                    isQuickInsert: insertArgs.isQuickInsert ?? false,
-                    source: insertArgs.source,
-                    useMateConnector: insertable.supportsFasten
-                };
-            }
-            await queryClient.cancelQueries({
-                queryKey: renderQueryPrefix()
-            });
-
+            const { endpoint, body } = toRequest(fasten);
+            await queryClient.cancelQueries({ queryKey: renderQueryPrefix() });
             showLoadingToast(`Inserting ${insertable.name}...`, toastId);
             return apiPost<InsertOut>(
                 endpoint + toInsertablePath(insertable.id),

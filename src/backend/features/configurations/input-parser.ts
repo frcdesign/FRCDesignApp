@@ -564,82 +564,38 @@ function expectedType(quantityType: QuantityType): UnitType {
     }
 }
 
-function formatExpression(
-    expr: Expr,
+/** Why a value the parser accepted can't go in this box, if it can't. */
+function checkValue(
     value: ValueWithUnits,
     options: EvaluateOptions
-): Result | ErrorResult {
-    const { quantityType, displayUnit, displayPrecision } = options;
-
-    let expression = stringify(expr);
-    if (
-        (quantityType === QuantityType.LENGTH ||
-            quantityType === QuantityType.ANGLE) &&
-        value.type === "number"
-    ) {
-        value = valueWithUnits(value.value, displayUnit);
-
-        if (expr.kind === "binary") {
-            expression = `(${expression})`;
-        }
-        expression = expression + " " + getUnitDisplayStr(displayUnit);
-    }
-
-    // "2 deg" parses in a length box; the bounds check below would throw on it.
-    const expected = expectedType(quantityType);
+): string | undefined {
+    const expected = expectedType(options.quantityType);
+    // "2 deg" parses in a length box, and the bounds check would throw on it.
     if (value.type !== expected) {
-        return {
-            hasError: true,
-            expression,
-            errorMessage: `Expected ${expected === "number" ? "a number" : `a ${expected}`}`
-        };
+        return `Expected ${expected === "number" ? "a number" : `a ${expected}`}`;
     }
-
+    const format = (bound: ValueWithUnits) =>
+        formatValueWithUnits(
+            bound,
+            options.displayUnit,
+            options.displayPrecision
+        );
     if (tolerantLessThan(value, options.min)) {
-        return {
-            hasError: true,
-            expression,
-            errorMessage: `Value must be greater than or equal to ${formatValueWithUnits(
-                options.min,
-                options.displayUnit,
-                options.displayPrecision
-            )}`
-        };
-    } else if (tolerantGreaterThan(value, options.max)) {
-        return {
-            hasError: true,
-            expression,
-            errorMessage: `Value must be less than or equal to ${formatValueWithUnits(
-                options.max,
-                options.displayUnit,
-                options.displayPrecision
-            )}`
-        };
+        return `Value must be greater than or equal to ${format(options.min)}`;
     }
-
-    return {
-        hasError: false,
-        displayExpression: formatValueWithUnits(
-            value,
-            displayUnit,
-            displayPrecision
-        ),
-        expression
-    };
+    if (tolerantGreaterThan(value, options.max)) {
+        return `Value must be less than or equal to ${format(options.max)}`;
+    }
+    return undefined;
 }
 
-export interface Result {
-    hasError: false;
-    /** Rounded to display precision, in the display unit: `12.00 in`. */
-    displayExpression: string;
+/** What a quantity box shows for an input. */
+export interface EvaluatedExpression {
     /** The input with clean spacing, and the display unit if it had none: "(3.5 + 8.5) in". */
     expression: string;
-}
-
-interface ErrorResult {
-    hasError: true;
-    expression: string;
-    errorMessage: string;
+    /** Rounded to display precision, in the display unit: `12.00 in`; the expression when it has an error. */
+    display: string;
+    errorMessage?: string;
 }
 
 export interface EvaluateOptions {
@@ -677,35 +633,49 @@ export function evaluateBaseValue(
 export function evaluateExpression(
     input: string,
     options: EvaluateOptions
-): Result | ErrorResult {
-    const quantityType = options.quantityType;
+): EvaluatedExpression {
+    const { quantityType, displayUnit, displayPrecision } = options;
+    const failed = (expression: string, errorMessage: string) => ({
+        expression,
+        display: expression,
+        errorMessage
+    });
 
     if (input.trim().length === 0) {
-        return {
-            hasError: true,
-            expression: input,
-            errorMessage: "Enter an expression"
-        };
+        return failed(input, "Enter an expression");
     }
 
-    let expr;
-    let value;
+    let expr: Expr;
+    let value: ValueWithUnits;
     try {
         expr = parseExpression(input);
         value = evaluateExpressionValue(expr, quantityType);
     } catch (error) {
-        let errorMessage;
-        if (error instanceof ParseError) {
-            errorMessage = error.message;
-        } else {
-            errorMessage = "Invalid expression";
-        }
-        return {
-            hasError: true,
-            expression: input,
-            errorMessage
-        };
+        return failed(
+            input,
+            error instanceof ParseError ? error.message : "Invalid expression"
+        );
     }
 
-    return formatExpression(expr, value, options);
+    let expression = stringify(expr);
+    if (
+        (quantityType === QuantityType.LENGTH ||
+            quantityType === QuantityType.ANGLE) &&
+        value.type === "number"
+    ) {
+        value = valueWithUnits(value.value, displayUnit);
+        if (expr.kind === "binary") {
+            expression = `(${expression})`;
+        }
+        expression += " " + getUnitDisplayStr(displayUnit);
+    }
+
+    const errorMessage = checkValue(value, options);
+    if (errorMessage) {
+        return failed(expression, errorMessage);
+    }
+    return {
+        expression,
+        display: formatValueWithUnits(value, displayUnit, displayPrecision)
+    };
 }

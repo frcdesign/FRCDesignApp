@@ -12,7 +12,12 @@ import {
 } from "./contract";
 import { parameterValues } from "./combinations";
 import { formatValue } from "./selection";
-import { evaluateCondition, getOption, getVisibleOptions } from "./utils";
+import {
+    evaluateCondition,
+    getOption,
+    getVisibleOptions,
+    resolveSelectedOption
+} from "./utils";
 
 // Past either cap a parameter is reported whole: too many instances is
 // unreadable.
@@ -267,11 +272,13 @@ function toImplicitDefault(
     parameter: ConfigurationParameter,
     options: EnumOption[]
 ): string | undefined {
-    if (parameter.type !== ParameterType.ENUM || options.length === 0) {
+    if (parameter.type !== ParameterType.ENUM) {
         return undefined;
     }
-    if (options.some((option) => option.id === parameter.default)) {
-        return undefined;
-    }
-    return options[0].id;
+    const settled = resolveSelectedOption(
+        options,
+        undefined,
+        parameter.default
+    );
+    return settled?.id === parameter.default ? undefined : settled?.id;
 }

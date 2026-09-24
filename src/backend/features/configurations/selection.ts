@@ -16,7 +16,9 @@ import { isDerivationVariable } from "./roles";
 import {
     DEFAULT_QUANTITY_PRECISION,
     encodeConfiguration,
-    evaluateCondition
+    evaluateCondition,
+    getVisibleOptions,
+    resolveSelectedOption
 } from "./utils";
 import {
     evaluateBaseValue,
@@ -253,4 +255,61 @@ export function formatValue(
               parameter.unit,
               DEFAULT_QUANTITY_PRECISION
           );
+}
+
+/** One pass: hidden parameters take their default, enums the option they land on. */
+function normalizeOnce(
+    selection: Selection,
+    parameters: ConfigurationParameter[]
+): Selection {
+    const next = { ...selection };
+    for (const parameter of parameters) {
+        if (!evaluateCondition(parameter.condition, next, parameters)) {
+            next[parameter.id] = parameter.default;
+            continue;
+        }
+        if (parameter.type !== ParameterType.ENUM) {
+            continue;
+        }
+        const visible = getVisibleOptions(parameter, next, parameters);
+        next[parameter.id] =
+            resolveSelectedOption(
+                visible,
+                next[parameter.id],
+                parameter.default
+            )?.id ?? parameter.default;
+    }
+    return next;
+}
+
+export function sameSelection(
+    a: PartialSelection | undefined,
+    b: Selection
+): boolean {
+    if (!a) return false;
+    const keys = Object.keys(b);
+    return (
+        keys.length === Object.keys(a).length &&
+        keys.every((key) => a[key] === b[key])
+    );
+}
+
+/**
+ * Repeated because settling one parameter can change another's options. The
+ * pass cap stops parameters whose conditions name each other, so the result
+ * isn't always a fixed point.
+ */
+export function normalizeSelection(
+    selection: Selection,
+    parameters: ConfigurationParameter[]
+): Selection {
+    let current = selection;
+    for (let pass = 0; pass <= parameters.length; pass++) {
+        const next = normalizeOnce(current, parameters);
+        if (sameSelection(current, next)) {
+            return current;
+        }
+        current = next;
+    }
+    return current;
 }
