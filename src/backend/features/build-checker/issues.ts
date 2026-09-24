@@ -27,7 +27,8 @@ export enum BuildIssueType {
     CONFIGURATION_MULTIPLE_PARTS = "configuration-multiple-parts",
     UNSTABLE_COMPOSITE = "unstable-composite",
     INSERTABLES_FAILED = "insertables-failed",
-    LOAD_FAILED = "load-failed"
+    LOAD_FAILED = "load-failed",
+    VERSION_NOT_LOADED = "version-not-loaded"
 }
 
 interface BuildIssueOf<T extends BuildIssueType> {
@@ -60,7 +61,8 @@ export type BuildIssue =
     | ConfigurationBuildIssueOf<BuildIssueType.CONFIGURATION_MULTIPLE_PARTS>
     | ConfigurationBuildIssueOf<BuildIssueType.UNSTABLE_COMPOSITE>
     | BuildIssueOf<BuildIssueType.INSERTABLES_FAILED>
-    | BuildIssueOf<BuildIssueType.LOAD_FAILED>;
+    | BuildIssueOf<BuildIssueType.LOAD_FAILED>
+    | BuildIssueOf<BuildIssueType.VERSION_NOT_LOADED>;
 
 /** The card links to the first; the rest are counted. */
 export function toConfigurationIssue(
@@ -118,7 +120,9 @@ export function getIssueDescription(issue: BuildIssue): string {
         case BuildIssueType.INSERTABLES_FAILED:
             return "Some child insertables failed to load";
         case BuildIssueType.LOAD_FAILED:
-            return "Failed to load from Onshape";
+            return "Failed to load from Onshape. Reload the library to try again";
+        case BuildIssueType.VERSION_NOT_LOADED:
+            return "A new version could not be loaded automatically. Reload the library to load it";
     }
 }
 
@@ -133,6 +137,7 @@ export function getIssueSeverity(issue: BuildIssue): BuildIssueSeverity {
         case BuildIssueType.UNSTABLE_COMPOSITE:
         case BuildIssueType.INSERTABLES_FAILED:
         case BuildIssueType.LOAD_FAILED:
+        case BuildIssueType.VERSION_NOT_LOADED:
             return BuildIssueSeverity.ERROR;
         case BuildIssueType.NO_THUMBNAIL_TAB:
         case BuildIssueType.CONFIGURATION_LIMIT_EXCEEDED:

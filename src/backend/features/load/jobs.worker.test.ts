@@ -2,7 +2,9 @@ import { env } from "cloudflare:workers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TEST_LIBRARY_ID, resetDb, seedGroup } from "../../../__test_utils__";
 import { getDb } from "../../db/client";
-import { loadJobs } from "../../db/schema";
+import { groups, loadJobs } from "../../db/schema";
+import { eq } from "drizzle-orm";
+import { BuildIssueType } from "../build-checker/issues";
 import * as LibraryDb from "../library/db";
 import {
     finishLoad,
@@ -80,7 +82,7 @@ describe("document loads", () => {
         expect(await job("a")).toMatchObject({ rerun: true, rerunForce: true });
     });
 
-    it("replaces the row of a load that crashed", async () => {
+    it("replaces the row of a load that crashed, and flags its group", async () => {
         const create = vi
             .spyOn(env.LOAD_DOCUMENT_WORKFLOW, "createBatch")
             .mockResolvedValue([]);
@@ -90,6 +92,14 @@ describe("document loads", () => {
         await requestLoads(env, [params("a")]);
 
         expect(create).toHaveBeenCalledTimes(2);
+        const group = await db
+            .select({ buildIssues: groups.buildIssues })
+            .from(groups)
+            .where(eq(groups.id, "a"))
+            .get();
+        expect(group?.buildIssues).toContainEqual({
+            type: BuildIssueType.LOAD_FAILED
+        });
     });
 
     describe("finishing", () => {

@@ -10,9 +10,16 @@ import {
     seedGroup
 } from "../../../__test_utils__";
 import { getDb } from "../../db/client";
-import { libraries, onshapeWebhooks, WebhookSubject } from "../../db/schema";
-import { rememberOwnerSession } from "../auth/owner";
-import * as Owner from "../auth/owner";
+import {
+    adminTeamMembers,
+    groups,
+    libraries,
+    onshapeWebhooks,
+    WebhookSubject
+} from "../../db/schema";
+import * as UserSessions from "../auth/user-sessions";
+import * as Versions from "../../lib/onshape/endpoints/versions";
+import { BuildIssueType } from "../build-checker/issues";
 import * as Sync from "../admin-team/sync";
 import * as Jobs from "../load/jobs";
 import { MockOnshapeApi } from "../../../__test_utils__/mock-onshape-api";
@@ -42,7 +49,6 @@ describe("receiving a webhook", () => {
     beforeEach(async () => {
         await resetDb(db);
         await seedGroup(db, TEST_GROUP_ID);
-        await rememberOwnerSession(env.KV, "owner-session");
     });
     afterEach(() => vi.restoreAllMocks());
 
@@ -59,25 +65,112 @@ describe("receiving a webhook", () => {
         expect(res.status).toBe(200);
     });
 
-    it("loads the document's groups on a new version, as the owner", async () => {
-        const token = await registered(WebhookSubject.DOCUMENT, DOCUMENT);
-        const load = vi.spyOn(Jobs, "requestLoads").mockResolvedValue();
+    describe("a new version", () => {
+        const session = (sessionId: string) => ({
+            sessionId,
+            onshapeApi: new MockOnshapeApi()
+        });
+        const loadedAs = (load: ReturnType<typeof mockLoads>) =>
+            load.mock.calls[0]?.[1].map((request) => request.sessionId);
+        const mockLoads = () =>
+            vi.spyOn(Jobs, "requestLoads").mockResolvedValue();
+        const liveSessions = (byUser: Record<string, string>) =>
+            vi
+                .spyOn(UserSessions, "getLiveSession")
+                .mockImplementation((_kv, userId) =>
+                    Promise.resolve(
+                        byUser[userId] ? session(byUser[userId]) : undefined
+                    )
+                );
+        const createdBy = (creatorId: string) =>
+            vi.spyOn(Versions, "getVersion").mockResolvedValue({
+                id: "v-1",
+                name: "V1",
+                createdAt: "",
+                creator: { id: creatorId }
+            });
+        const deliverVersion = async () =>
+            deliver(
+                // What the payload names is not trusted; the token's subject is.
+                {
+                    event: WebhookEvent.CREATE_VERSION,
+                    documentId: "elsewhere",
+                    versionId: "v-1"
+                },
+                await registered(WebhookSubject.DOCUMENT, DOCUMENT)
+            );
 
-        await deliver(
-            // What the payload names is not trusted; the token's subject is.
-            { event: WebhookEvent.CREATE_VERSION, documentId: "elsewhere" },
-            token
-        );
+        it("loads the document's groups as whoever made the version", async () => {
+            vi.spyOn(UserSessions, "getOwnerSession").mockResolvedValue(
+                session("owner-session")
+            );
+            createdBy("maker");
+            liveSessions({ maker: "maker-session" });
+            const load = mockLoads();
 
-        expect(load).toHaveBeenCalledWith(expect.anything(), [
-            {
+            await deliverVersion();
+
+            expect(load).toHaveBeenCalledWith(expect.anything(), [
+                {
+                    libraryId: TEST_LIBRARY_ID,
+                    groupId: TEST_GROUP_ID,
+                    sessionId: "maker-session",
+                    forceReload: false,
+                    origin: "http://localhost"
+                }
+            ]);
+        });
+
+        it("falls back to the owner when the creator's session is gone", async () => {
+            vi.spyOn(UserSessions, "getOwnerSession").mockResolvedValue(
+                session("owner-session")
+            );
+            createdBy("maker");
+            liveSessions({});
+            const load = mockLoads();
+
+            await deliverVersion();
+
+            expect(loadedAs(load)).toEqual(["owner-session"]);
+        });
+
+        // Someone has to be able to read the version to learn who made it.
+        it("reads the version as an admin when the owner's session is gone", async () => {
+            vi.spyOn(UserSessions, "getOwnerSession").mockResolvedValue(
+                undefined
+            );
+            await db.insert(adminTeamMembers).values({
                 libraryId: TEST_LIBRARY_ID,
-                groupId: TEST_GROUP_ID,
-                sessionId: "owner-session",
-                forceReload: false,
-                origin: "http://localhost"
-            }
-        ]);
+                userId: "admin",
+                isTeamAdmin: true
+            });
+            createdBy("maker");
+            liveSessions({ admin: "admin-session" });
+            const load = mockLoads();
+
+            await deliverVersion();
+
+            expect(loadedAs(load)).toEqual(["admin-session"]);
+        });
+
+        it("flags the groups for a reload when no session works", async () => {
+            vi.spyOn(UserSessions, "getOwnerSession").mockResolvedValue(
+                undefined
+            );
+            const load = mockLoads();
+
+            await deliverVersion();
+
+            expect(load).not.toHaveBeenCalled();
+            const group = await db
+                .select({ buildIssues: groups.buildIssues })
+                .from(groups)
+                .where(eq(groups.id, TEST_GROUP_ID))
+                .get();
+            expect(group?.buildIssues).toContainEqual({
+                type: BuildIssueType.VERSION_NOT_LOADED
+            });
+        });
     });
 
     describe("an admin team change", () => {
@@ -86,9 +179,10 @@ describe("receiving a webhook", () => {
                 .update(libraries)
                 .set({ adminTeamId: "team" })
                 .where(eq(libraries.id, TEST_LIBRARY_ID));
-            vi.spyOn(Owner, "getOwnerOnshapeApi").mockResolvedValue(
-                new MockOnshapeApi()
-            );
+            vi.spyOn(UserSessions, "getOwnerSession").mockResolvedValue({
+                sessionId: "owner-session",
+                onshapeApi: new MockOnshapeApi()
+            });
         });
 
         it("pulls the team again for each library it administers", async () => {

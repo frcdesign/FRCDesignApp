@@ -7,7 +7,7 @@ import {
 import type { AppContext, AppContextEnv } from "../../lib/context";
 import { getLibraryParam } from "../../lib/route-params";
 import { DEFAULT_LIBRARY, type LibraryId } from "../library/library-id";
-import { AccessLevel, hasEditorAccess } from "./access-level";
+import { AccessLevel, isWithinAccessLevel } from "./access-level";
 import { isSignedIn } from "./request-auth";
 import { HttpStatus } from "http-status-ts";
 
@@ -37,8 +37,9 @@ const libraryParam: LibraryOf = (c) => Promise.resolve(getLibraryParam(c));
  * trusting the caller. Requires a session, or a dev override would let a
  * signed-out caller through.
  */
-export function requireEditor(
-    libraryOf: LibraryOf = libraryParam
+function requireLibraryAccess(
+    level: AccessLevel.EDITOR | AccessLevel.ADMIN,
+    libraryOf: LibraryOf
 ): MiddlewareHandler<AppContextEnv> {
     return async (c, next) => {
         await requireSignIn(c);
@@ -46,17 +47,33 @@ export function requireEditor(
         if (!libraryId) {
             throw handledError("Not found", HttpStatus.NOT_FOUND);
         }
-        if (!hasEditorAccess(await c.var.getAccessLevel(libraryId))) {
+        if (
+            !isWithinAccessLevel(level, await c.var.getAccessLevel(libraryId))
+        ) {
             throw forbiddenError(
-                "You must be on the library's admin team to use this functionality"
+                level === AccessLevel.ADMIN
+                    ? "You must be an admin of the library's admin team to use this functionality"
+                    : "You must be on the library's admin team to use this functionality"
             );
         }
         await next();
     };
 }
 
+export function requireEditor(
+    libraryOf: LibraryOf = libraryParam
+): MiddlewareHandler<AppContextEnv> {
+    return requireLibraryAccess(AccessLevel.EDITOR, libraryOf);
+}
+
 /** For a route under `libraryRoute()`. */
 export const requireEditorMiddleware = requireEditor();
+
+/** For a route under `libraryRoute()`. */
+export const requireAdminMiddleware = requireLibraryAccess(
+    AccessLevel.ADMIN,
+    libraryParam
+);
 
 /** The owner's access is the same everywhere, so any library answers. */
 export const requireOwnerMiddleware: MiddlewareHandler<AppContextEnv> = async (

@@ -9,7 +9,6 @@ import { getDb } from "../../db/client";
 import { adminTeamMembers } from "../../db/schema";
 import { LibraryId } from "../library/library-id";
 import { saveSession } from "./session";
-import { getOwnerSessionId } from "./owner";
 
 const app = createApp(productionAuth);
 
@@ -97,9 +96,14 @@ describe("access from a library's admin team", () => {
         return body.maxAccessLevel;
     }
 
-    it("is the user OWNER_USER_ID names, and their session is kept", async () => {
+    it("is the user OWNER_USER_ID names", async () => {
         expect(await accessLevelOf(OWNER)).toBe(AccessLevel.OWNER);
-        expect(await getOwnerSessionId(env.KV)).not.toBeNull();
+    });
+
+    // So work the server starts can run as them.
+    it("keeps each user's latest session", async () => {
+        await accessLevelOf("member");
+        expect(await env.KV.get("user-session:member")).toBeTruthy();
     });
 
     it("makes a member an editor, and a team admin an admin", async () => {

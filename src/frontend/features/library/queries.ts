@@ -7,7 +7,10 @@ import {
 } from "@tanstack/react-query";
 import { apiDelete, apiGet, apiPost } from "../../lib/api-client";
 import { type LibraryOut } from "@backend/features/library/contract";
-import { type JobStatus } from "@backend/features/load/contract";
+import {
+    type JobStatus,
+    type ReloadOut
+} from "@backend/features/load/contract";
 import { hasEditorAccess } from "@backend/features/auth/access-level";
 import { LibraryId } from "@backend/features/library/library-id";
 import { useAccessData } from "../auth/access-level";
@@ -154,17 +157,28 @@ export function useSetGroupOrderMutation() {
     });
 }
 
-/** Force reloads every document in every library; the owner's alone. */
-export function useReloadAllMutation() {
+/** One library's documents for its admins, or every library's for the owner. */
+export function useReloadMutation(scope: ReloadScope) {
+    const libraryId = useLibraryId();
     return useMutation({
-        mutationKey: ["reload-all"],
-        mutationFn: (): Promise<{ documents: number }> =>
-            apiPost("/reload-all"),
+        mutationKey: ["reload", scope, libraryId],
+        mutationFn: (force: boolean): Promise<ReloadOut> =>
+            apiPost(
+                scope === ReloadScope.ALL
+                    ? "/reload-all"
+                    : "/reload" + toLibraryPath(libraryId),
+                { body: { force } }
+            ),
         onError: getAppErrorHandler("Failed to reload documents!"),
         onSuccess: (data) => {
             showInfoToast(`Reloading ${data.documents} documents...`);
         }
     });
+}
+
+export enum ReloadScope {
+    LIBRARY = "library",
+    ALL = "all"
 }
 
 /** Adds an Onshape document to the library, by its url. */

@@ -21,7 +21,6 @@ import {
     WebhookSubject
 } from "../../db/schema";
 import {
-    addBuildIssue,
     type BuildIssue,
     BuildIssueType,
     hasBuildIssue
@@ -35,6 +34,7 @@ import {
 } from "./context";
 import { finishLoad, type LoadDocumentParams } from "./jobs";
 import { pushLibraryChanged } from "../live/notify";
+import { flagGroups } from "./flag";
 import { loadGroup } from "./load-group";
 import { ONSHAPE_STEP_RETRIES } from "./steps";
 import { ensureWebhook } from "../webhooks/registration";
@@ -131,7 +131,7 @@ async function loadDocument(
         // The row records only that it failed, so this is the only record of why.
         console.error(`Failed to load group ${groupId}`, error);
         await ctx.step.do("flag-failed", () =>
-            flagFailedGroup(ctx.env, groupId)
+            flagGroups(ctx.env, [groupId], BuildIssueType.LOAD_FAILED)
         );
         result = { status: "failed" };
     }
@@ -168,7 +168,8 @@ function hasFailedLoad(buildIssues: BuildIssue[]): boolean {
     return hasBuildIssue(
         buildIssues,
         BuildIssueType.LOAD_FAILED,
-        BuildIssueType.INSERTABLES_FAILED
+        BuildIssueType.INSERTABLES_FAILED,
+        BuildIssueType.VERSION_NOT_LOADED
     );
 }
 
@@ -247,28 +248,4 @@ export async function createShellGroup(
     // it bumps. The search index is unaffected: the shell has no insertables.
     await bumpLibraryVersion(db, params.libraryId);
     await pushLibraryChanged(env, params.libraryId);
-}
-
-/** So the library flags the group rather than showing it empty. */
-async function flagFailedGroup(
-    env: AppBindings,
-    groupId: string
-): Promise<void> {
-    const db = getDb(env.DB);
-    const row = await db
-        .select({ buildIssues: groups.buildIssues })
-        .from(groups)
-        .where(eq(groups.id, groupId))
-        .get();
-    if (!row) {
-        return;
-    }
-    await db
-        .update(groups)
-        .set({
-            buildIssues: addBuildIssue(row.buildIssues, {
-                type: BuildIssueType.LOAD_FAILED
-            })
-        })
-        .where(eq(groups.id, groupId));
 }

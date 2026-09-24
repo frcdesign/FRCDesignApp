@@ -13,6 +13,8 @@ import { bumpLibraryVersion, rebuildSearchDb } from "../library/db";
 import type { LibraryId } from "../library/library-id";
 import { pushJobStatus, pushLibraryChanged } from "../live/notify";
 import type { JobStatus } from "./contract";
+import { flagGroups, publishLibraries } from "./flag";
+import { BuildIssueType } from "../build-checker/issues";
 
 export interface LoadDocumentParams {
     libraryId: LibraryId;
@@ -63,10 +65,22 @@ async function clearDead(
     jobs: LoadJob[]
 ): Promise<LoadJob[]> {
     const alive = await Promise.all(jobs.map((job) => isAlive(env, job)));
-    const dead = jobs.filter((_, i) => !alive[i]).map((job) => job.groupId);
+    const dead = jobs.filter((_, i) => !alive[i]);
     const db = getDb(env.DB);
-    for (const groupIds of chunkForInArray(dead)) {
-        await db.delete(loadJobs).where(inArray(loadJobs.groupId, groupIds));
+    for (const chunk of chunkForInArray(dead.map((job) => job.groupId))) {
+        await db.delete(loadJobs).where(inArray(loadJobs.groupId, chunk));
+    }
+    if (dead.length > 0) {
+        // It crashed before it could record its own failure.
+        await flagGroups(
+            env,
+            dead.map((job) => job.groupId),
+            BuildIssueType.LOAD_FAILED
+        );
+        await publishLibraries(
+            env,
+            dead.map((job) => job.libraryId)
+        );
     }
     return jobs.filter((_, i) => alive[i]);
 }

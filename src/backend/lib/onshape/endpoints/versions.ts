@@ -19,3 +19,13 @@ export function getLatestVersion(
         (versions) => versions[versions.length - 1]
     );
 }
+
+export function getVersion(
+    client: OnshapeApi,
+    documentPath: DocumentPath,
+    versionId: string
+): Promise<OnshapeVersionInfo> {
+    return client.get(
+        `/documents${toDocumentApiPath(documentPath)}/versions/${encodeURIComponent(versionId)}`
+    );
+}

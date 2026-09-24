@@ -8,7 +8,7 @@ import { getDb } from "../../db/client";
 import { adminTeamMembers } from "../../db/schema";
 import type { LibraryId } from "../library/library-id";
 import { AccessLevel } from "./access-level";
-import { rememberOwnerSession } from "./owner";
+import { rememberUserSession } from "./user-sessions";
 import {
     getOauthClient,
     makeAuthTokens,
@@ -136,8 +136,8 @@ async function getLibraryAccessLevel(
     libraryId: LibraryId
 ): Promise<AccessLevel> {
     const userId = await getCachedUserId(c);
+    await rememberUserSession(c.env.KV, userId, getSessionId(c));
     if (c.env.OWNER_USER_ID && userId === c.env.OWNER_USER_ID) {
-        await rememberOwnerSession(c.env.KV, getSessionId(c));
         return AccessLevel.OWNER;
     }
     const member = await getDb(c.env.DB)

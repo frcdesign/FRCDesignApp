@@ -23,7 +23,8 @@ import { useGetUiState, updateUiState } from "../../../lib/ui-state";
 import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
 import { SETUP_URL } from "../../../lib/url";
 import { useLibraryId } from "../../../lib/library";
-import { ReloadAllButton } from "../../library/components/reload-all-button";
+import { ReloadButtons } from "../../library/components/reload-buttons";
+import { ReloadScope } from "../../library/queries";
 import { AdminTeamSetting } from "../../admin-team/components/admin-team-setting";
 
 /** The FRCDesign Discord, where feedback and support now live. */
@@ -199,10 +200,15 @@ function AdminSettings(): ReactNode {
         <Stack gap="sm">
             {/* Always show the access level select so admins can change access level if needed */}
             <AccessLevelSelect />
+            <RequireAccessLevel accessLevel={AccessLevel.ADMIN}>
+                <InputRow label="This library">
+                    <ReloadButtons scope={ReloadScope.LIBRARY} />
+                </InputRow>
+            </RequireAccessLevel>
             <RequireAccessLevel accessLevel={AccessLevel.OWNER}>
                 <AdminTeamSetting />
-                <InputRow label="Reload every library">
-                    <ReloadAllButton />
+                <InputRow label="Every library">
+                    <ReloadButtons scope={ReloadScope.ALL} />
                 </InputRow>
             </RequireAccessLevel>
         </Stack>

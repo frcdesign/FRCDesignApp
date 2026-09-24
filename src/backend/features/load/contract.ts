@@ -2,3 +2,8 @@
 export interface JobStatus {
     loadingGroupIds: string[];
 }
+
+export interface ReloadOut {
+    /** How many documents were asked to reload. */
+    documents: number;
+}
