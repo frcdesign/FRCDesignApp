@@ -64,12 +64,19 @@ export class LoadDocumentWorkflow extends WorkflowEntrypoint<
     ): Promise<LoadResult> {
         const params = event.payload;
         const ctx = createLoadContext(this.env, params.sessionId, step);
+        // Anything but a skip wrote to the group: a failure flags it.
+        let result: LoadResult = { status: "failed" };
         try {
-            return await loadDocument(ctx, params);
+            result = await loadDocument(ctx, params);
+            return result;
         } finally {
             // Whatever happened, so the group is let go and whatever queued
             // behind this load starts.
-            await step.do("finish", () => finishLoad(this.env, params));
+            const changed =
+                result.status === "loaded" || result.status === "failed";
+            await step.do("finish", () =>
+                finishLoad(this.env, params, changed)
+            );
         }
     }
 }

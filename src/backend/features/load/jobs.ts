@@ -142,11 +142,15 @@ export async function requestLoads(
         );
     }
 
+    // Started together: each load stands alone, down to its library's search
+    // index, so nothing waits on any other.
+    const batches: (typeof toStart)[] = [];
     for (let i = 0; i < toStart.length; i += CREATE_BATCH) {
-        await env.LOAD_DOCUMENT_WORKFLOW.createBatch(
-            toStart.slice(i, i + CREATE_BATCH)
-        );
+        batches.push(toStart.slice(i, i + CREATE_BATCH));
     }
+    await Promise.all(
+        batches.map((batch) => env.LOAD_DOCUMENT_WORKFLOW.createBatch(batch))
+    );
 
     const libraryIds = new Set(requests.map((request) => request.libraryId));
     for (const libraryId of libraryIds) {
@@ -162,15 +166,24 @@ export async function requestLoads(
 type FinishOutcome = "done" | "rerun";
 
 /**
- * Called by a load as it finishes, whether it failed or not. Starts the load
- * queued behind it; otherwise lets the group go, and the last load in the
- * library rebuilds its search index, once rather than per document.
+ * Called by a load as it finishes, whether it failed or not. Publishes what it
+ * wrote, when it wrote anything, and starts the load queued behind it or lets
+ * the group go.
  */
 export async function finishLoad(
     env: AppBindings,
-    params: LoadDocumentParams
+    params: LoadDocumentParams,
+    changed: boolean
 ): Promise<FinishOutcome> {
     const db = getDb(env.DB);
+    // Rebuilt before the bump: the new version makes /search-db immutable, so
+    // a client fetching in between would pin the stale index for a year.
+    if (changed) {
+        await rebuildSearchDb(env.BLOB, db, params.libraryId);
+        await bumpLibraryVersion(db, params.libraryId);
+        await pushLibraryChanged(env, params.libraryId);
+    }
+
     const job = await db
         .select()
         .from(loadJobs)
@@ -198,18 +211,11 @@ export async function finishLoad(
         await db.delete(loadJobs).where(eq(loadJobs.groupId, params.groupId));
     }
 
-    const status = await runningStatus(env, params.libraryId);
-    // Rebuilt before the bump: the new version makes /search-db immutable, so
-    // a client fetching in between would pin the stale index for a year. A
-    // load that is not the last only bumps, so the library shows its document
-    // meanwhile, and whatever search that version pins is corrected by the
-    // last load's.
-    if (!status.running) {
-        await rebuildSearchDb(env.BLOB, db, params.libraryId);
-    }
-    await bumpLibraryVersion(db, params.libraryId);
-    await pushLibraryChanged(env, params.libraryId);
-    await pushJobStatus(env, params.libraryId, status);
+    await pushJobStatus(
+        env,
+        params.libraryId,
+        await runningStatus(env, params.libraryId)
+    );
     return outcome;
 }
 

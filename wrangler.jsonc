@@ -95,10 +95,9 @@
      * https://developers.cloudflare.com/workers/configuration/secrets/
      */
     "vars": {
-        // The Onshape user id granted the owner access level, whose session
-        // webhook-triggered reloads run under. Unset grants nobody; each
-        // environment below needs it too.
-        // "OWNER_USER_ID": "",
+        // The Onshape user granted the owner access level, whose session
+        // webhook-triggered loads run under.
+        "OWNER_USER_ID": "5eace32713a966103efd2aa0",
         "NODE_ENV": "development"
     },
     /**
@@ -152,6 +151,7 @@
                 ]
             },
             "vars": {
+                "OWNER_USER_ID": "5eace32713a966103efd2aa0",
                 // Production, not because cert is production, but because
                 // FORCE_SIGNED_IN and VITE_ACCESS_LEVEL_OVERRIDE are gated on
                 // this alone: anything but "production" leaves them armed.
@@ -203,6 +203,7 @@
                 ]
             },
             "vars": {
+                "OWNER_USER_ID": "5eace32713a966103efd2aa0",
                 "NODE_ENV": "production"
             },
             "limits": {

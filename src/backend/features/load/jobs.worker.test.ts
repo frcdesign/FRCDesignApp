@@ -108,7 +108,7 @@ describe("document loads", () => {
                 .spyOn(env.LOAD_DOCUMENT_WORKFLOW, "create")
                 .mockResolvedValue({ id: "next" } as never);
 
-            expect(await finishLoad(env, params("a"))).toBe("rerun");
+            expect(await finishLoad(env, params("a"), true)).toBe("rerun");
 
             expect(create.mock.calls[0][0]?.params).toMatchObject({
                 groupId: "a",
@@ -117,17 +117,17 @@ describe("document loads", () => {
             expect(await job("a")).toMatchObject({ rerun: false });
         });
 
-        // Once per library rather than once per document.
-        it("rebuilds search only as the library's last load finishes", async () => {
+        // Each load publishes what it wrote, standing alone.
+        it("rebuilds search for a load that changed its group", async () => {
             const rebuild = vi
                 .spyOn(LibraryDb, "rebuildSearchDb")
                 .mockResolvedValue("");
             await requestLoads(env, [params("a"), params("b")]);
 
-            await finishLoad(env, params("a"));
-            expect(rebuild).not.toHaveBeenCalled();
+            await finishLoad(env, params("a"), true);
+            expect(rebuild).toHaveBeenCalledOnce();
 
-            await finishLoad(env, params("b"));
+            await finishLoad(env, params("b"), false);
             expect(rebuild).toHaveBeenCalledOnce();
             expect(await getJobStatus(env, TEST_LIBRARY_ID)).toEqual({
                 running: false

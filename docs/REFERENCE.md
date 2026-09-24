@@ -91,7 +91,7 @@ Cloudflare Workflows let you run a long-running background job that survives bey
 
 Loading a group means walking the document structure, downloading metadata for every part and assembly, probing each indexed configuration, generating thumbnails, and writing it all to D1 — far too long for a single HTTP request. The request kicks the workflow off and returns immediately.
 
-Every load is one document: adding a document, a new version of one (see Webhooks below), and the owner's "reload everything", which starts one per group. `features/load/jobs.ts` keeps at most one load per group running, in the `load_jobs` table: a load asked for while one runs is marked on that row, and the running load starts it as it finishes. The last load to finish in a library rebuilds its search index, once rather than per document.
+Every load is one document: adding a document, a new version of one (see Webhooks below), and the owner's "reload everything", which starts one per group. `features/load/jobs.ts` keeps at most one load per group running, in the `load_jobs` table: a load asked for while one runs is marked on that row, and the running load starts it as it finishes. Each load that wrote to its group rebuilds its library's search index and bumps its version, so every load stands alone and "reload everything" simply starts them all at once.
 
 Each workflow carries a `sessionId` whose tokens it calls Onshape under after the request has ended: the requesting user's, or the owner's for a webhook.
 
