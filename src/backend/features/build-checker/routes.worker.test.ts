@@ -88,7 +88,7 @@ describe("GET /build-status", () => {
         expect(res.status).toBe(200);
 
         const body: LibraryBuildStatus = await res.json();
-        expect(body.groups[TEST_GROUP_ID].versionCreatedAt).toBeNull();
+        expect(body.groups[TEST_GROUP_ID].versionCreatedAt).toBeUndefined();
     });
 
     // D1 takes at most 100 bound parameters in a statement and an `inArray`

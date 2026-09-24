@@ -19,22 +19,23 @@ export function HealthTiles({ counts }: HealthTilesProps): ReactNode {
         {
             label: "Parts",
             value: formatCount(counts.insertableCount),
-            severity: undefined
+            icon: undefined
         },
         {
             label: "Healthy",
             value: formatFraction(counts.healthyItems, total),
-            severity: null
+            // Every check passing is drawn as the absence of a severity.
+            icon: <IssueIcon />
         },
         {
             label: "Errors",
             value: formatCount(counts.errorCount),
-            severity: BuildIssueSeverity.ERROR
+            icon: <IssueIcon severity={BuildIssueSeverity.ERROR} />
         },
         {
             label: "Warnings",
             value: formatCount(counts.warningCount),
-            severity: BuildIssueSeverity.WARNING
+            icon: <IssueIcon severity={BuildIssueSeverity.WARNING} />
         }
     ];
 
@@ -43,9 +44,7 @@ export function HealthTiles({ counts }: HealthTilesProps): ReactNode {
             {tiles.map((tile) => (
                 <Card key={tile.label} withBorder padding="lg" radius="md">
                     <Group gap="xs">
-                        {tile.severity !== undefined && (
-                            <IssueIcon severity={tile.severity} />
-                        )}
+                        {tile.icon}
                         <Text size="sm" c="dimmed" tt="uppercase" fw={700}>
                             {tile.label}
                         </Text>

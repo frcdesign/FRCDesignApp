@@ -93,7 +93,7 @@ buildStatusRoutes.get(
                 buildIssues: group.buildIssues,
                 sortAlphabetically: group.sortAlphabetically,
                 insertableOrder: groupInsertables.map((ins) => ins.id),
-                versionCreatedAt: group.versionCreatedAt?.getTime() ?? null
+                versionCreatedAt: group.versionCreatedAt?.getTime()
             };
         }
 
@@ -109,7 +109,7 @@ buildStatusRoutes.get(
                 excludedParameterIds: ins.excludedParameterIds,
                 vendors: ins.vendors,
                 configuration: configMap.get(ins.id),
-                versionCreatedAt: ins.versionCreatedAt?.getTime() ?? null
+                versionCreatedAt: ins.versionCreatedAt?.getTime()
             };
         }
 

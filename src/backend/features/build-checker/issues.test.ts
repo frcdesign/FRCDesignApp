@@ -90,7 +90,7 @@ describe("knownBuildIssues", () => {
 
 describe("getMaxSeverity", () => {
     it("returns null when there are no issues", () => {
-        expect(getMaxSeverity([])).toBeNull();
+        expect(getMaxSeverity([])).toBeUndefined();
     });
 
     const { INFO, WARNING, ERROR } = BuildIssueSeverity;

@@ -5,7 +5,8 @@ import { validate } from "../../lib/validate";
 import { CachePolicy, setCache } from "../../lib/cache";
 import { getApp } from "../../lib/context";
 
-import { RenderSource, ThumbnailSize } from "./contract";
+import { ThumbnailSize } from "./contract";
+import { isSignedIn } from "../auth/request-auth";
 import { thumbnailKey } from "./keys";
 import { DEFAULT_CONFIGURATION_KEY } from "../configurations/contract";
 import { requestRender } from "./render";
@@ -24,20 +25,16 @@ const storedThumbnailParams = z.object({
 /** Absent means the element default, which is what `""` encodes. */
 const configurationKeyQuery = z.string().default(DEFAULT_CONFIGURATION_KEY);
 
-const renderSourceQuery = z.enum(RenderSource);
-
 const storedThumbnailQuery = z.object({
     /** The microversion, part of the key — which is what makes a hit immutable. */
     v: z.string().min(1),
     configurationKey: configurationKeyQuery,
-    /** Absent means serve what is stored and queue nothing. */
-    renderSource: renderSourceQuery.optional(),
-    /** The insertable to render from; only sent with `renderSource`. */
+    /** The insertable to render a miss from; absent serves what is stored. */
     insertableId: z.string().optional()
 });
 
 /**
- * GET /api/thumbnail/:size/:elementId?v=&configurationKey=&renderSource=
+ * GET /api/thumbnail/:size/:elementId?v=&configurationKey=&insertableId=
  * Each answer caches itself: stored bytes are pinned by the url, a miss is not.
  */
 thumbnailRoutes.get(
@@ -49,7 +46,6 @@ thumbnailRoutes.get(
         const {
             v: microversionId,
             configurationKey,
-            renderSource,
             insertableId
         } = c.req.valid("query");
         const object = await c.env.BLOB.get(
@@ -68,28 +64,19 @@ thumbnailRoutes.get(
         // own thumbnail: standing that in shows a part the caller did not ask
         // for, and a favorite pinned to a configuration would show the wrong
         // one. A caller that wants the element default asks for it by key.
+        // Signed out, there is no session to render under, so the caller just
+        // keeps missing.
         if (
             configurationKey !== DEFAULT_CONFIGURATION_KEY &&
-            renderSource &&
-            insertableId
+            insertableId &&
+            (await isSignedIn(c))
         ) {
-            const outcome = await requestRender(
-                c,
-                {
-                    insertableId,
-                    elementId,
-                    configurationKey,
-                    microversionId
-                },
-                renderSource
-            ).catch(() => {
-                // Never fatal — no session to render under, most often; the
-                // caller just keeps missing.
-                return undefined;
+            await requestRender(c, {
+                insertableId,
+                elementId,
+                configurationKey,
+                microversionId
             });
-            if (outcome === "no-such-configuration") {
-                return noSuchConfiguration();
-            }
         }
         return notRenderedYet();
     }
@@ -99,19 +86,6 @@ thumbnailRoutes.get(
 function notRenderedYet(): Response {
     return setCache(
         new Response(null, { status: HttpStatus.NOT_FOUND }),
-        CachePolicy.NO_CACHE
-    );
-}
-
-/**
- * Onshape has no insertable for this configuration, so no render is coming.
- * Told apart from a miss by its status, which is what lets a client stop
- * polling and say the configuration is what is wrong; the answer is not cached,
- * since a reload of the document can make it wrong.
- */
-function noSuchConfiguration(): Response {
-    return setCache(
-        new Response(null, { status: HttpStatus.UNPROCESSABLE_ENTITY }),
         CachePolicy.NO_CACHE
     );
 }

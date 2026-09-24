@@ -13,7 +13,7 @@ import * as ThumbnailEndpoints from "../../lib/onshape/endpoints/thumbnails";
 import { getDb } from "../../db/client";
 import { groups } from "../../db/schema";
 import { eq } from "drizzle-orm";
-import { RenderSource, ThumbnailSize } from "./contract";
+import { ThumbnailSize } from "./contract";
 import {
     parseThumbnailKey,
     parseThumbnailUrl,
@@ -40,7 +40,8 @@ function get(url: string, sessionId?: string) {
             Cookie: `frc-design-app-cookie=${sessionId}`
         };
     }
-    return createTestApp().request(url, init, env);
+    // Signed in only with a session, as a real caller is.
+    return createTestApp({ signedIn: !!sessionId }).request(url, init, env);
 }
 
 describe("thumbnailKey", () => {
@@ -121,7 +122,6 @@ describe("reading a thumbnail address back", () => {
             ...SUBJECT,
             size: SIZE,
             configurationKey: "a=1;b=2",
-            renderSource: RenderSource.ROW,
             insertableId: INSERTABLE_ID
         });
         expect(parseThumbnailUrl(url)).toEqual(SUBJECT);
@@ -272,13 +272,12 @@ describe("rendering a configuration's thumbnail", () => {
         );
     }
 
-    function renderUrl(elementId: string, renderSource = RenderSource.ROW) {
+    function renderUrl(elementId: string) {
         return thumbnailUrl({
             elementId,
             microversionId: MICROVERSION,
             size: SIZE,
             configurationKey: CANONICAL_CONFIGURATION,
-            renderSource,
             insertableId: TEST_PART_STUDIO_ID
         });
     }
@@ -309,21 +308,8 @@ describe("rendering a configuration's thumbnail", () => {
         await seedPartStudio(db);
     });
 
-    it("omits the source when no insertable is named", () => {
-        const url = thumbnailUrl({
-            elementId: "any",
-            microversionId: MICROVERSION,
-            size: SIZE,
-            configurationKey: CANONICAL_CONFIGURATION,
-            renderSource: RenderSource.ROW
-        });
-        expect(
-            new URL(url, "http://x").searchParams.get("renderSource")
-        ).toBeNull();
-    });
-
-    // Polling is how the client waits, so asking twice has to be asking once
-    // — and cost Onshape one call, not one per poll.
+    // A waiting client can ask again — at its deadline, or on a push it
+    // missed — and that has to start nothing more.
     it("starts one render on a miss, however often it is asked", async () => {
         await seedDefaultOnly("warm-element");
         const thumbnailId = mockThumbnailId();
@@ -336,7 +322,7 @@ describe("rendering a configuration's thumbnail", () => {
         });
 
         expect(started).toBe(1);
-        expect(thumbnailId).toHaveBeenCalledTimes(1);
+        expect(thumbnailId).toHaveBeenCalledTimes(2);
     });
 
     it("renders from the group's thumbnail workspace", async () => {
@@ -359,8 +345,8 @@ describe("rendering a configuration's thumbnail", () => {
     // A miss is a render still coming; this is one that never will be, and the
     // client shows different wording for each.
     it("answers a configuration Onshape cannot resolve with its own status", async () => {
-        vi.spyOn(ThumbnailEndpoints, "getThumbnailId").mockRejectedValue(
-            new ThumbnailEndpoints.NoSuchConfigurationError("none")
+        vi.spyOn(ThumbnailEndpoints, "getThumbnailId").mockResolvedValue(
+            undefined
         );
 
         const started = await startedDuring(async () => {
@@ -386,7 +372,7 @@ describe("rendering a configuration's thumbnail", () => {
 
     // Search results show many configurations at once; one cold search must not
     // start a render per row.
-    it("starts nothing when no source is named", async () => {
+    it("starts nothing when no insertable is named", async () => {
         const started = await startedDuring(async () => {
             const res = await get(
                 thumbnailUrl({
@@ -400,12 +386,5 @@ describe("rendering a configuration's thumbnail", () => {
             expect(res.status).toBe(404);
         });
         expect(started).toBe(0);
-    });
-
-    it("rejects a source that is not one a client may claim", async () => {
-        const res = await get(
-            `/api/thumbnail/${SIZE}/any?v=${MICROVERSION}&configurationKey=x&renderSource=load`
-        );
-        expect(res.status).toBe(400);
     });
 });

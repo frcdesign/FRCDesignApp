@@ -207,16 +207,16 @@ const SEVERITY_ORDER: BuildIssueSeverity[] = [
 ];
 
 /**
- * Returns the worst severity present in `issues`, or `null` when there are no issues.
+ * Returns the worst severity present in `issues`, or undefined when there are none.
  */
 export function getMaxSeverity(
     issues: BuildIssue[]
-): BuildIssueSeverity | null {
-    let max: BuildIssueSeverity | null = null;
+): BuildIssueSeverity | undefined {
+    let max: BuildIssueSeverity | undefined;
     for (const issue of issues) {
         const severity = getIssueSeverity(issue);
         if (
-            max === null ||
+            max === undefined ||
             SEVERITY_ORDER.indexOf(severity) > SEVERITY_ORDER.indexOf(max)
         ) {
             max = severity;

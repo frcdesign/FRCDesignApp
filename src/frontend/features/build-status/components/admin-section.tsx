@@ -141,10 +141,7 @@ function IndexingRow(props: IndexingRowProps): ReactNode {
         );
     } else if (band === IndexingBand.AUTOMATIC) {
         control = (
-            <IndexingIcon
-                severity={null}
-                tooltip="Metadata is indexed from every configuration."
-            />
+            <IndexingIcon tooltip="Metadata is indexed from every configuration." />
         );
     } else {
         control = (
@@ -167,7 +164,7 @@ function IndexingRow(props: IndexingRowProps): ReactNode {
 }
 
 interface IndexingIconProps {
-    severity: BuildIssueSeverity | null;
+    severity?: BuildIssueSeverity;
     tooltip: string;
 }
 

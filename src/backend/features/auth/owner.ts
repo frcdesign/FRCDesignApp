@@ -22,12 +22,14 @@ export async function rememberOwnerSession(
 }
 
 /**
- * The owner's last session, or null when they have never used the app. It can
+ * The owner's last session, or undefined when they have never used the app. It can
  * have ended since — signed out, or unused past its lifetime — in which case
  * calling Onshape with it fails until they next open the app.
  */
-export function getOwnerSessionId(kv: KVNamespace): Promise<string | null> {
-    return kv.get(OWNER_SESSION_KEY);
+export async function getOwnerSessionId(
+    kv: KVNamespace
+): Promise<string | undefined> {
+    return (await kv.get(OWNER_SESSION_KEY)) ?? undefined;
 }
 
 export async function getOwnerOnshapeApi(

@@ -41,7 +41,7 @@ interface BuildStatusSubject {
     groupId: string;
     issues: BuildIssue[];
     /** When Onshape cut the version it is pinned to (epoch ms); null if none. */
-    versionCreatedAt: number | null;
+    versionCreatedAt?: number;
     /** Set for an insertable, so an issue can open the configuration it blames. */
     configurationTarget?: ConfigurationTarget;
     /** Draws the badge as hidden-from-users instead of as its worst severity. */
@@ -159,7 +159,7 @@ interface CardHeaderProps {
     name: string;
     groupId: string;
     issues: BuildIssue[];
-    versionCreatedAt: number | null;
+    versionCreatedAt?: number;
 }
 
 /** The card header: name + severity summary on the left, the version's age on the right. */
@@ -194,7 +194,7 @@ function CardHeader(props: CardHeaderProps): ReactNode {
 
 interface VersionAgeProps {
     groupId: string;
-    versionCreatedAt: number | null;
+    versionCreatedAt?: number;
 }
 
 /**

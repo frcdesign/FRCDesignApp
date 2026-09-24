@@ -27,17 +27,17 @@ interface RetryDelayInput {
 const RATE_LIMIT_JITTER_SECONDS = 20;
 
 /**
- * How long Onshape asked us to wait plus jitter, or `null` when the error
+ * How long Onshape asked us to wait plus jitter, or undefined when the error
  * wasn't a rate limit.
  *
  * Read off the message: this runs on an error Workflows rebuilt, which is no
  * longer an `OnshapeRateLimitError`, so an `instanceof` here answered false for
  * every real 429 and quietly handed back the curve below instead.
  */
-export function rateLimitDelay(error: Error): `${number} seconds` | null {
+export function rateLimitDelay(error: Error): `${number} seconds` | undefined {
     const retryAfterSeconds = readRetryAfterSeconds(error);
-    if (retryAfterSeconds === null) {
-        return null;
+    if (retryAfterSeconds === undefined) {
+        return undefined;
     }
     // Rounded: Workflows documents whole units, not fractional ones.
     const jitter = Math.round(Math.random() * RATE_LIMIT_JITTER_SECONDS);

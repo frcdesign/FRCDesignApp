@@ -1,23 +1,21 @@
 /**
- * Starts a configuration's render, once. The route calls this on every miss —
- * a client polls it until the bytes land — so asking again while a render is
- * under way has to cost nothing.
+ * Starts a configuration's render, once. A client waiting on one may ask again
+ * — at its deadline, or on a push it missed — so asking while a render is under
+ * way has to start nothing more.
  */
 import { eq } from "drizzle-orm";
+import { HttpStatus } from "http-status-ts";
 import type { AppContext } from "../../lib/context";
+import { handledError } from "../../lib/api-error";
 import { getDb } from "../../db/client";
 import { groups, insertables } from "../../db/schema";
 import { type ElementPath, toElementPath } from "../../lib/onshape/path";
-import {
-    getThumbnailId,
-    NoSuchConfigurationError
-} from "../../lib/onshape/endpoints/thumbnails";
+import { getThumbnailId } from "../../lib/onshape/endpoints/thumbnails";
 import { getSessionId } from "../auth/session";
 import { type ConfigurationKey } from "../configurations/contract";
 import { decodeConfiguration } from "../configurations/utils";
-import { PREFERRED_SIZE, RenderSource, ThumbnailSize } from "./contract";
+import { ThumbnailSize } from "./contract";
 import { thumbnailKey } from "./keys";
-import type { RenderTarget } from "./render-workflow";
 
 interface RenderRequest {
     /** What the element path is resolved from, since the caller has only this. */
@@ -26,12 +24,6 @@ interface RenderRequest {
     microversionId: string;
     configurationKey: ConfigurationKey;
 }
-
-/**
- * What asking did: a render is coming, or it cannot — Onshape has no
- * insertable for the configuration, so the caller can say so at once.
- */
-type RenderOutcome = "rendering" | "no-such-configuration";
 
 /** Statuses of an instance still working towards its bytes. */
 const ACTIVE = new Set<InstanceStatus["status"]>([
@@ -42,16 +34,30 @@ const ACTIVE = new Set<InstanceStatus["status"]>([
     "waitingForPause"
 ]);
 
+/**
+ * Starts the render unless one is under way. Throws a handled 422 when Onshape
+ * has no insertable for the configuration, which the client shows as a part
+ * that failed to regenerate.
+ */
 export async function requestRender(
     c: AppContext,
-    request: RenderRequest,
-    source: RenderSource
-): Promise<RenderOutcome> {
-    // First, so a caller with no session to render under spends nothing.
+    request: RenderRequest
+): Promise<void> {
     const sessionId = getSessionId(c);
-    const workflow = c.env.RENDER_THUMBNAIL_WORKFLOW;
-    const id = await instanceId(request);
+    const thumbnailId = await getThumbnailId(
+        await c.var.getOnshapeApi(),
+        await elementPathOf(c, request.insertableId),
+        decodeConfiguration(request.configurationKey)
+    );
+    if (!thumbnailId) {
+        throw handledError(
+            "Onshape has no part for this configuration.",
+            HttpStatus.UNPROCESSABLE_ENTITY
+        );
+    }
 
+    const workflow = c.env.RENDER_THUMBNAIL_WORKFLOW;
+    const id = renderInstanceId(thumbnailId);
     const existing = await findInstance(workflow, id);
     if (existing) {
         const { status } = await existing.status();
@@ -60,23 +66,7 @@ export async function requestRender(
         if (!ACTIVE.has(status)) {
             await existing.restart();
         }
-        return "rendering";
-    }
-
-    // Resolved here rather than in the workflow: it is one quick call, and a
-    // configuration Onshape cannot resolve is worth saying so about now.
-    let thumbnailId: string;
-    try {
-        thumbnailId = await getThumbnailId(
-            await c.var.getOnshapeApi(),
-            await elementPathOf(c, request.insertableId),
-            decodeConfiguration(request.configurationKey)
-        );
-    } catch (error) {
-        if (error instanceof NoSuchConfigurationError) {
-            return "no-such-configuration";
-        }
-        throw error;
+        return;
     }
 
     try {
@@ -84,7 +74,15 @@ export async function requestRender(
             id,
             params: {
                 thumbnailId,
-                targets: renderTargets(request, source),
+                targets: Object.values(ThumbnailSize).map((size) => ({
+                    size,
+                    key: thumbnailKey(
+                        request.elementId,
+                        request.microversionId,
+                        size,
+                        request.configurationKey
+                    )
+                })),
                 elementId: request.elementId,
                 microversionId: request.microversionId,
                 configurationKey: request.configurationKey,
@@ -92,54 +90,21 @@ export async function requestRender(
             }
         });
     } catch (error) {
-        // Two polls racing to start the same render; the other one won.
+        // Two requests racing to start the same render; the other one won.
         if (!(await findInstance(workflow, id))) {
             throw error;
         }
     }
-    return "rendering";
-}
-
-/** Both sizes, the one the asking surface shows first leading. */
-function renderTargets(
-    request: RenderRequest,
-    source: RenderSource
-): RenderTarget[] {
-    const preferred = PREFERRED_SIZE[source];
-    return Object.values(ThumbnailSize)
-        .sort((a, b) => Number(b === preferred) - Number(a === preferred))
-        .map((size) => ({
-            size,
-            key: thumbnailKey(
-                request.elementId,
-                request.microversionId,
-                size,
-                request.configurationKey
-            )
-        }));
 }
 
 /**
- * Named by what it renders, so every poll for one render finds the same
- * instance. Hashed: a configuration can run past the 100 characters an id
- * allows, and spells characters an id may not contain.
+ * Named by Onshape's own id for the render, so every request for it finds the
+ * same instance. Onshape serves the bytes by that id alone, so as far as we
+ * can tell it already pins the element, version and configuration. Its format
+ * is undocumented, so anything an instance id may not hold is replaced.
  */
-async function instanceId(request: RenderRequest): Promise<string> {
-    const subject = [
-        request.elementId,
-        request.microversionId,
-        request.configurationKey
-    ].join("\n");
-    const digest = await crypto.subtle.digest(
-        "SHA-256",
-        new TextEncoder().encode(subject)
-    );
-    return (
-        "render-" +
-        [...new Uint8Array(digest)]
-            .map((byte) => byte.toString(16).padStart(2, "0"))
-            .join("")
-    );
+function renderInstanceId(thumbnailId: string): string {
+    return `render-${thumbnailId.replace(/[^\w-]/g, "_")}`.slice(0, 100);
 }
 
 /** Undefined for an id no instance holds, which `get` answers by throwing. */
@@ -175,7 +140,7 @@ async function elementPathOf(
         .where(eq(insertables.id, insertableId))
         .get();
     if (!row) {
-        throw new NoSuchConfigurationError(`No insertable ${insertableId}`);
+        throw handledError("No such part.", HttpStatus.NOT_FOUND);
     }
     if (!row.thumbnailWorkspaceId) {
         return toElementPath(row);

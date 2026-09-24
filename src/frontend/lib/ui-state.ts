@@ -4,7 +4,7 @@ import { AccessLevel } from "@backend/features/auth/access-level";
 import { LibraryId } from "@backend/features/library/library-id";
 import { UtilityTab } from "@backend/features/settings/app-tab";
 import { Vendor } from "@backend/features/library/vendors";
-import { DEFAULT_SETTINGS, Theme } from "@backend/features/settings/settings";
+import { DEFAULT_THEME, Theme } from "@backend/features/settings/settings";
 import { OnshapeLaunchType } from "./onshape-launch";
 
 /** Bumped when a change to the schema makes stored state unusable. */
@@ -22,12 +22,12 @@ const AppTabType = z.union([LibraryIdType, z.enum(Object.values(UtilityTab))]);
  * reads: the row is the copy, and the entry redirect is what seeds it back.
  */
 const SyncedStateSchema = z.object({
-    theme: ThemeType.default(DEFAULT_SETTINGS.theme),
+    theme: ThemeType.default(DEFAULT_THEME),
     /** The tab last opened; null until one is picked, which the welcome asks
      * for. */
-    tabId: AppTabType.nullable().default(DEFAULT_SETTINGS.tabId),
+    tabId: AppTabType.nullable().default(null),
     /** The group last opened in that tab; null for the tab itself. */
-    groupId: z.string().nullable().default(DEFAULT_SETTINGS.groupId)
+    groupId: z.string().nullable().default(null)
 });
 
 /** Kept until the browser's storage is cleared: preferences, and where to resume. */
@@ -118,7 +118,7 @@ type Subscriber = () => void;
 const subscribers = new Set<Subscriber>();
 
 /** The state this session is working from; the stores are written behind it. */
-let currentState: UiState | null = null;
+let currentState: UiState | undefined;
 
 /** Blocked or partitioned storage must not break the app, only its memory. */
 function readStorage(area: StateArea): string | null {

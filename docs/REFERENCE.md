@@ -70,14 +70,14 @@ Nothing expires on a timer: there is no R2 lifecycle rule, and renders are meant
 - An empty live set deletes nothing: a library really can have no elements, but so can a read that failed.
 - A run scans at most 50 pages of 1,000. A bucket larger than that is finished by the next run.
 
-Thumbnails are served via `/api/thumbnail/:size/:elementId?v={microversionId}&configurationKey=&renderSource=&insertableId=`:
+Thumbnails are served via `/api/thumbnail/:size/:elementId?v={microversionId}&configurationKey=&insertableId=`:
 
 - **Hit** — streamed from R2 as immutable, cacheable for a year.
 - **Miss** — 404, uncached, so a render landing later is not shadowed. A configuration miss is never answered with the element's default: that would show a part the caller did not ask for. The client shows the default itself while it waits.
-- **Miss with `renderSource` and `insertableId`** — the route also starts a `RenderThumbnailWorkflow` for the configuration (`features/thumbnails/render.ts`). The insert menu and favorite rows ask for this; search rows do not, so one cold search cannot start a render per row.
-    - The instance id is a hash of the element, microversion and key, so every poll for one render finds the same instance and starts nothing new.
-    - Only when there is no instance does the route spend an Onshape call, resolving the thumbnail id once. Onshape having no insertable for the configuration answers 422 at once, which the client shows as a configuration that failed to regenerate.
-    - The workflow is handed that id and both R2 keys, the size the asking surface shows first leading, and asks Onshape for the bytes until they land (404 means still rendering), for about a minute.
+- **Miss with `insertableId`**, from a signed-in caller — the route also starts a `RenderThumbnailWorkflow` for the configuration (`features/thumbnails/render.ts`). The insert menu and favorite rows ask for this; search rows do not, so one cold search cannot start a render per row.
+    - The route resolves Onshape's thumbnail id for the configuration, one Onshape call per miss. Onshape having no part for the configuration answers 422 at once, which the client shows as a configuration that failed to regenerate.
+    - The instance id is built from that thumbnail id, so every miss for one render finds the same instance and starts nothing new.
+    - The workflow is handed that id and both R2 keys, and asks Onshape for both sizes at once until they land (404 means still rendering), for about a minute.
     - A finished instance found on a miss left no bytes behind, so it is restarted.
 
 ### Workflows — Background Jobs
@@ -102,7 +102,7 @@ Onshape pushes two things, registered with `isTransient: false` and recorded in 
 - **A new version of a library document.** Registered by the document's load; removed with the last group loaded from it. Reloads that document's groups.
 - **A change to an admin team's members.** Registered when the owner sets a library's admin team. Pulls the team's members again.
 
-The server pushes to open clients over a WebSocket held by the `LiveUpdates` Durable Object (`features/live`): jobs starting and finishing, a library's new version, and a configuration's render landing. Clients poll only while that connection is down.
+The server pushes to open clients over a WebSocket held by the `LiveUpdates` Durable Object (`features/live`): jobs starting and finishing, a library's new version, and a configuration's render landing. Nothing polls: a client that reconnects asks again for what it may have missed.
 
 ### Assets — Static File Serving (`c.env.ASSETS`)
 

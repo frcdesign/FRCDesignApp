@@ -59,8 +59,8 @@ export function useGroupBuildIssues(
 }
 
 interface IssueIconProps extends Omit<AppIconProps, "icon" | "color"> {
-    /** The severity to render, or null if all checks pass. */
-    severity: BuildIssueSeverity | null;
+    /** The severity to render; absent when every check passes. */
+    severity?: BuildIssueSeverity;
 }
 
 /** The icon each severity is drawn as; `ok` is a build with nothing to say. */
@@ -71,8 +71,8 @@ const SEVERITY_ICONS = {
     ok: CheckIcon
 };
 
-/** The color a severity is spoken in; null is a build with nothing to say. */
-function severityColor(severity: BuildIssueSeverity | null): StatusColor {
+/** The color a severity is spoken in; none is a build with nothing to say. */
+function severityColor(severity?: BuildIssueSeverity): StatusColor {
     switch (severity) {
         case BuildIssueSeverity.ERROR:
             return StatusColor.ERROR;
@@ -80,7 +80,7 @@ function severityColor(severity: BuildIssueSeverity | null): StatusColor {
             return StatusColor.WARNING;
         case BuildIssueSeverity.INFO:
             return StatusColor.INFO;
-        case null:
+        case undefined:
             return StatusColor.SUCCESS;
     }
 }

@@ -162,11 +162,11 @@ describe("countConfigurations", () => {
     );
 
     it("reports no count past the cap, where enumeration stops", () => {
-        expect(
-            countConfigurations(
-                paramsWithConfigs(MAX_PART_NUMBER_CONFIGURATIONS + 1)
-            )
-        ).toMatchObject({ count: null, band: IndexingBand.EXCEEDED });
+        const counted = countConfigurations(
+            paramsWithConfigs(MAX_PART_NUMBER_CONFIGURATIONS + 1)
+        );
+        expect(counted.count).toBeUndefined();
+        expect(counted.band).toBe(IndexingBand.EXCEEDED);
     });
 });
 
@@ -187,7 +187,7 @@ describe("countCombinations", () => {
 
     it("counts on past the index cap, which countConfigurations stops at", () => {
         const params = paramsWithConfigs(MAX_PART_NUMBER_CONFIGURATIONS * 4);
-        expect(countConfigurations(params).count).toBeNull();
+        expect(countConfigurations(params).count).toBeUndefined();
         expect(countCombinations(params)).toBe(
             MAX_PART_NUMBER_CONFIGURATIONS * 4
         );
@@ -207,7 +207,9 @@ describe("countCombinations", () => {
     });
 
     it("gives up past its own cap rather than counting forever", () => {
-        expect(countCombinations(paramsWithConfigs(64), [], 32)).toBeNull();
+        expect(
+            countCombinations(paramsWithConfigs(64), [], 32)
+        ).toBeUndefined();
     });
 });
 

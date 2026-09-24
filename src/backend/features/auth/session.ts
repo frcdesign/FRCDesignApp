@@ -156,11 +156,11 @@ interface LoginSession {
 /** Single-use: reading it also clears it, so a state cannot be replayed. */
 export async function takeLoginSession(
     c: AppContext
-): Promise<LoginSession | null> {
+): Promise<LoginSession | undefined> {
     const loginId = getCookie(c, LOGIN_COOKIE);
-    if (!loginId) return null;
+    if (!loginId) return undefined;
     const raw = await c.env.KV.get(loginKey(loginId));
-    if (!raw) return null;
+    if (!raw) return undefined;
 
     const session = JSON.parse(raw) as LoginSession;
 

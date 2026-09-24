@@ -6,10 +6,7 @@ import {
     storedThumbnailQueryKey
 } from "../../../lib/query-keys";
 import { ElementType } from "@backend/lib/onshape/element-type";
-import {
-    RenderSource,
-    ThumbnailSize
-} from "@backend/features/thumbnails/contract";
+import { ThumbnailSize } from "@backend/features/thumbnails/contract";
 import { ElementPath } from "@backend/lib/onshape/path";
 import { Box, Card, Center, Loader } from "@mantine/core";
 import { AppHoverCard } from "../../../components/app-hover-card";
@@ -58,11 +55,9 @@ interface ThumbnailTarget {
     /** Empty means the element default. */
     configurationKey: ConfigurationKey;
     /**
-     * Set where a miss should start a render: surfaces the user picked the
-     * configuration on. A search would otherwise start one per row.
+     * The insertable to render a miss from, set where the user picked the
+     * configuration. A search would otherwise start a render per row.
      */
-    renderSource?: RenderSource;
-    /** Only needed to render: what the render resolves the element from. */
     insertableId?: string;
 }
 
@@ -96,7 +91,7 @@ export function CardThumbnail(props: CardThumbnailProps): ReactNode {
 
     // Only a row that started the render has one coming; anything else takes the
     // miss for the answer rather than waiting on a render nobody started.
-    const isRendering = configuredTarget?.renderSource !== undefined;
+    const isRendering = configuredTarget?.insertableId !== undefined;
 
     return (
         <AppHoverCard
@@ -235,7 +230,6 @@ function usePreviewThumbnail(props: PreviewImageProps, enabled: boolean) {
         microversionId,
         size: PREVIEW_SIZE,
         configurationKey,
-        renderSource: RenderSource.INSERT_MENU,
         insertableId
     });
 

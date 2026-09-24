@@ -38,7 +38,7 @@ async function getAdminTeam(
             .get()
     ]);
     return {
-        teamId: library?.teamId ?? null,
+        teamId: library?.teamId ?? undefined,
         memberCount: members?.count ?? 0
     };
 }
@@ -66,13 +66,14 @@ adminTeamRoutes.post(
 
         await ensureLibrary(db, libraryId);
         const previous = (await getAdminTeam(db, libraryId)).teamId;
-        const setTeam = (adminTeamId: string | null) =>
+        const setTeam = (adminTeamId: string | undefined) =>
             db
                 .update(libraries)
-                .set({ adminTeamId })
+                // Drizzle skips an undefined field, so clearing takes null.
+                .set({ adminTeamId: adminTeamId ?? null })
                 .where(eq(libraries.id, libraryId));
 
-        await setTeam(teamId);
+        await setTeam(teamId ?? undefined);
         try {
             await syncAdminTeam(c.env, onshapeApi, libraryId);
         } catch (error) {

@@ -47,14 +47,14 @@ export type LoggedInsert = LoggedEvent & {
 };
 
 /**
- * Null for another kind, and for an insert whose columns disagree with its type —
+ * Undefined for another kind, and for an insert whose columns disagree with its type —
  * a row from a version that did not set them, worth reading past not crashing on.
  */
-export function asInsert(event: LoggedEvent): LoggedInsert | null {
+export function asInsert(event: LoggedEvent): LoggedInsert | undefined {
     const isInsert =
         event.type === EventType.INSERT &&
         event.elementId !== null &&
         event.targetElementType !== null &&
         event.source !== null;
-    return isInsert ? (event as LoggedInsert) : null;
+    return isInsert ? (event as LoggedInsert) : undefined;
 }

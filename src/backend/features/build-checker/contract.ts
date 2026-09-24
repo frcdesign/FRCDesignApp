@@ -13,7 +13,7 @@ export interface GroupBuildStatus {
     sortAlphabetically: boolean;
     insertableOrder: string[];
     /** When Onshape cut the version this group is pinned to (epoch ms). */
-    versionCreatedAt: number | null;
+    versionCreatedAt?: number;
 }
 
 export interface InsertableBuildStatus {
@@ -29,7 +29,7 @@ export interface InsertableBuildStatus {
     vendors: Vendor[];
     configuration?: ConfigurationBuildStatus;
     /** When Onshape cut the version this insertable is pinned to (epoch ms). */
-    versionCreatedAt: number | null;
+    versionCreatedAt?: number;
 }
 
 export interface LibraryBuildStatus {

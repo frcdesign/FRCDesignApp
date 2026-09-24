@@ -54,10 +54,11 @@ export function isIndexingEnabled(
 
 export interface ConfigurationCount {
     /**
-     * The number of combinations, `0` when there is nothing to vary, or `null`
-     * past the cap — enumeration stops there, so the true total is unknown.
+     * The number of combinations, `0` when there is nothing to vary, or
+     * undefined past the cap — enumeration stops there, so the true total is
+     * unknown.
      */
-    count: number | null;
+    count?: number;
     band: IndexingBand;
     /** The combinations counted, so the load path need not enumerate again. */
     configurations: PartialSelection[];
@@ -73,7 +74,7 @@ export function countConfigurations(
         excludedParameterIds
     );
     if (capped) {
-        return { count: null, band: IndexingBand.EXCEEDED, configurations: [] };
+        return { band: IndexingBand.EXCEEDED, configurations: [] };
     }
     // The lone default that nothing-to-vary enumerates to is not a configuration
     // of its own: a non-configurable insertable has none.
@@ -149,7 +150,7 @@ export function countCombinations(
     parameters: ConfigurationParameter[],
     excludedParameterIds: readonly string[] = [],
     cap: number = MAX_COUNTED_CONFIGURATIONS
-): number | null {
+): number | undefined {
     // Depth-first: only the count is wanted, so one path is held rather than all.
     const indexed = parameters.filter((parameter) =>
         isIndexedParameter(parameter, excludedParameterIds)
@@ -181,7 +182,7 @@ export function countCombinations(
     };
 
     walk(0, {});
-    return capped ? null : count;
+    return capped ? undefined : count;
 }
 
 interface EnumerateResult {

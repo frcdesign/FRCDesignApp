@@ -9,7 +9,7 @@ import { cacheMiddleware } from "../../lib/cache";
 import { getApp, type AppContext } from "../../lib/context";
 import { isSignedIn } from "../auth/request-auth";
 import { getSessionCompanyId, PERSONAL_COMPANY_ID } from "../auth/session";
-import { DEFAULT_SETTINGS } from "../settings/settings";
+import { DEFAULT_THEME } from "../settings/settings";
 import { DEFAULT_LIBRARY } from "../library/library-id";
 import {
     type AppTab,
@@ -102,7 +102,7 @@ async function getAppEntry(c: AppContext): Promise<AppEntry> {
     if (systemTheme !== null) {
         search.set("systemTheme", systemTheme);
     }
-    search.set("theme", user?.theme ?? DEFAULT_SETTINGS.theme);
+    search.set("theme", user?.theme ?? DEFAULT_THEME);
 
     // Checked rather than trusted, as the stored group above is: the frontend
     // 404s an id it does not know, and this url is the only thing between a

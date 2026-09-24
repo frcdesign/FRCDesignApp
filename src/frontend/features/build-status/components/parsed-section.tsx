@@ -66,7 +66,7 @@ export function useConfigurationCount(
 /** The true total, which runs past the index cap the band is decided by. */
 function useDisplayedConfigurationCount(
     status: InsertableBuildStatus
-): number | null {
+): number | undefined {
     const { elementType, excludedParameterIds } = status;
     const parameters = status.configuration?.parameters;
     return useMemo(
@@ -80,8 +80,8 @@ function useDisplayedConfigurationCount(
 }
 
 /** Open-ended only past the counting cap, which nothing real reaches. */
-function configurationCountValue(count: number | null): StateRowValue {
-    if (count === null) {
+function configurationCountValue(count: number | undefined): StateRowValue {
+    if (count === undefined) {
         return {
             kind: "text",
             text: `Over ${MAX_COUNTED_CONFIGURATIONS.toLocaleString()}`

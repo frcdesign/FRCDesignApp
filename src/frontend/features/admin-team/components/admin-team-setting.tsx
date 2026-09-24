@@ -10,8 +10,8 @@ export function AdminTeamSetting(): ReactNode {
     const query = useAdminTeamQuery();
     const mutation = useSetAdminTeamMutation();
     const inputId = useId();
-    // Null until edited, so the stored team shows once it has loaded.
-    const [draft, setDraft] = useState<string | null>(null);
+    // Unset until edited, so the stored team shows once it has loaded.
+    const [draft, setDraft] = useState<string>();
 
     const stored = query.data?.teamId ?? "";
     const value = draft ?? stored;
@@ -19,7 +19,7 @@ export function AdminTeamSetting(): ReactNode {
 
     const save = () => {
         mutation.mutate(trimmed || null, {
-            onSuccess: () => setDraft(null)
+            onSuccess: () => setDraft(undefined)
         });
     };
 

@@ -16,18 +16,16 @@ export function getElementThumbnail(
     return client.getImage(path);
 }
 
-/** The configuration matches no insertable, so retrying can only fail again. */
-export class NoSuchConfigurationError extends Error {}
-
 /**
  * The id Onshape renders a configured element's thumbnail under: fixed for an
  * element and configuration, and asking for its bytes is what starts a render.
+ * Undefined when the configuration matches no insertable.
  */
 export async function getThumbnailId(
     client: OnshapeApi,
     elementPath: ElementPath,
     configuration: Selection
-): Promise<string> {
+): Promise<string | undefined> {
     const query = new URLSearchParams({
         includeParts: "true",
         includeAssemblies: "true",
@@ -40,18 +38,14 @@ export async function getThumbnailId(
         query.set("configuration", encoded);
     }
 
-    const insertables = await client.get(
+    const insertables: {
+        items?: { predictableThumbnailId?: string }[];
+    } = await client.get(
         `/documents${toInstanceApiPath(elementPath)}/insertables`,
         { query }
     );
     // A configuration matching nothing comes back with no items at all.
-    const thumbnailId = insertables.items?.[0]?.predictableThumbnailId;
-    if (!thumbnailId) {
-        throw new NoSuchConfigurationError(
-            "Onshape returned no insertable for the configuration"
-        );
-    }
-    return thumbnailId;
+    return insertables.items?.[0]?.predictableThumbnailId;
 }
 
 /** Fails repeatedly while Onshape renders the thumbnail in the background. */

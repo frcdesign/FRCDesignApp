@@ -61,13 +61,13 @@ export class OnshapeRateLimitError extends OnshapeApiError {
 const RETRY_AFTER_PATTERN = /Onshape API error 429 \(retry after (\d+)s\)/;
 
 /**
- * The seconds a 429 asked us to wait, or null when the error is not one. Reads
+ * The seconds a 429 asked us to wait, or undefined when the error is not one. Reads
  * the message rather than the instance, so it answers the same for an error
  * Workflows rebuilt as for the one that was thrown.
  */
-export function readRetryAfterSeconds(error: Error): number | null {
+export function readRetryAfterSeconds(error: Error): number | undefined {
     const match = RETRY_AFTER_PATTERN.exec(error.message);
-    return match ? Number.parseInt(match[1], 10) : null;
+    return match ? Number.parseInt(match[1], 10) : undefined;
 }
 
 export abstract class OnshapeApi {

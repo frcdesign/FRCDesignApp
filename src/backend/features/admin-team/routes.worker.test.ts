@@ -118,7 +118,7 @@ describe("setting a library's admin team", () => {
 
         const res = await setTeam(null, onshapeApi);
 
-        expect(await res.json()).toEqual({ teamId: null, memberCount: 0 });
+        expect(await res.json()).toEqual({ memberCount: 0 });
         expect(remove).toHaveBeenCalledWith("/webhooks/team-webhook");
     });
 });

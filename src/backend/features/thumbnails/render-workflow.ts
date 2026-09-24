@@ -30,7 +30,7 @@ export interface RenderTarget {
 export interface RenderThumbnailParams {
     /** Resolved once by the route; fixed for an element and configuration. */
     thumbnailId: string;
-    /** Both sizes, the one the asking surface shows first leading. */
+    /** Both sizes, stored as each lands. */
     targets: RenderTarget[];
     /** What is told to clients waiting on the render once each size lands. */
     elementId: string;
@@ -62,16 +62,15 @@ export class RenderThumbnailWorkflow extends WorkflowEntrypoint<
         event: WorkflowEvent<RenderThumbnailParams>,
         step: WorkflowStep
     ): Promise<void> {
-        const { targets } = event.payload;
-        // One at a time: the second size is the same render, so it lands as
-        // soon as the first has.
-        for (const target of targets) {
-            await step.do(
-                `store-${target.size}`,
-                { retries: RENDER_RETRIES },
-                () => storeRender(this.env, event.payload, target)
-            );
-        }
+        await Promise.all(
+            event.payload.targets.map((target) =>
+                step.do(
+                    `store-${target.size}`,
+                    { retries: RENDER_RETRIES },
+                    () => storeRender(this.env, event.payload, target)
+                )
+            )
+        );
     }
 }
 

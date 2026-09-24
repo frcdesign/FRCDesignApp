@@ -10,7 +10,7 @@ import { ElementType } from "../lib/onshape/element-type";
 import { FastenInfo } from "../features/library/insertables/fasten";
 import { DEFAULT_LIBRARY, LibraryId } from "../features/library/library-id";
 import { AppTab } from "../features/settings/app-tab";
-import { DEFAULT_SETTINGS, Theme } from "../features/settings/settings";
+import { DEFAULT_THEME, Theme } from "../features/settings/settings";
 import { Vendor } from "../features/library/vendors";
 import {
     ConfigurationParameter,
@@ -201,10 +201,7 @@ export const configurations = sqliteTable("configurations", {
 
 export const users = sqliteTable("users", {
     id: text("id").primaryKey(),
-    theme: text("theme")
-        .$type<Theme>()
-        .notNull()
-        .default(DEFAULT_SETTINGS.theme),
+    theme: text("theme").$type<Theme>().notNull().default(DEFAULT_THEME),
     // Dead, and not droppable: SQLite cannot drop a column named in a foreign
     // key, and rebuilding the table means dropping it, which D1 refuses while
     // favorites point at these rows. Its default is why a user row still needs

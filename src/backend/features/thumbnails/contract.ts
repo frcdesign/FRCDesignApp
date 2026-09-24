@@ -12,19 +12,3 @@ export interface ThumbnailUrls {
     small: string;
     large: string;
 }
-
-/** Which surface asked for a render, which decides the size stored first. */
-export enum RenderSource {
-    INSERT_MENU = "insert",
-    /** A row in a list — favorites, search results. */
-    ROW = "row"
-}
-
-/**
- * The size each surface shows first. Both are always stored, so a row and the
- * hover card it opens cannot disagree, but the one on screen goes first.
- */
-export const PREFERRED_SIZE: Record<RenderSource, ThumbnailSize> = {
-    [RenderSource.INSERT_MENU]: ThumbnailSize.LARGE,
-    [RenderSource.ROW]: ThumbnailSize.SMALL
-};

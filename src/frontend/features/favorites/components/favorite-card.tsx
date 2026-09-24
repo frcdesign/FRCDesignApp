@@ -1,5 +1,4 @@
 import { DEFAULT_CONFIGURATION_KEY } from "@backend/features/configurations/contract";
-import { RenderSource } from "@backend/features/thumbnails/contract";
 import { ReactNode } from "react";
 import { Favorite } from "@backend/features/favorites/contract";
 import { InsertableOut } from "@backend/features/library/contract";
@@ -95,7 +94,6 @@ export function FavoriteCard(props: FavoriteCardProps): ReactNode {
                                 configurationKey:
                                     favorite.configurationKey ??
                                     DEFAULT_CONFIGURATION_KEY,
-                                renderSource: RenderSource.ROW,
                                 insertableId: insertable.id
                             }}
                         />

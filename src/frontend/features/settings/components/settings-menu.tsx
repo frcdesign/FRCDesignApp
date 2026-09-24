@@ -1,4 +1,4 @@
-import { DEFAULT_SETTINGS, Theme } from "@backend/features/settings/settings";
+import { DEFAULT_THEME, Theme } from "@backend/features/settings/settings";
 import { Box, Button, Select, Stack } from "@mantine/core";
 import { ArrowLeftIcon, SignOutIcon } from "@phosphor-icons/react";
 import { useMatch } from "@tanstack/react-router";
@@ -193,7 +193,7 @@ function ThemeSelect(): ReactNode {
     return (
         <SettingSelect
             label="Theme"
-            value={theme ?? DEFAULT_SETTINGS.theme}
+            value={theme ?? DEFAULT_THEME}
             options={[Theme.SYSTEM, Theme.DARK, Theme.LIGHT]}
             onSelect={(theme) => updateUiState({ theme })}
         />

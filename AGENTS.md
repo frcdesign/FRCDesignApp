@@ -22,6 +22,22 @@ Update the comment in the same change as the code it describes, and delete it
 when it stops being true. A stale comment outranks the code in a reader's head,
 which is what makes it worse than none.
 
+## Absent values
+
+Prefer `undefined` to `null` for a value that is not there: an optional field
+(`name?: string`), a function that finds nothing, an unset state. Where a
+boundary hands us `null` — a D1 column, KV's `get`, a DOM API, an Onshape
+response — convert it where it enters (`?? undefined`) rather than carrying it
+inward.
+
+`null` stays only where it has to:
+
+- the boundary's own shape: a Drizzle column type, a row straight from a query;
+- where `undefined` cannot go: a TanStack Query result, a Workflow step's
+  result, a JSON field that must be sent to say "clear this";
+- where it means something `undefined` cannot, next to it: `null` for "none at
+  all" beside `undefined` for "the default".
+
 ## Components
 
 A component's props are a named `interface <Component>Props` declared just above

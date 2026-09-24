@@ -16,10 +16,7 @@ export interface Settings {
     groupId: string | null;
 }
 
+/** Absent leaves a setting as it is; null clears the tab or group. */
 export type SettingsUpdate = Partial<Settings>;
 
-export const DEFAULT_SETTINGS: Settings = {
-    theme: Theme.SYSTEM,
-    tabId: null,
-    groupId: null
-};
+export const DEFAULT_THEME = Theme.SYSTEM;

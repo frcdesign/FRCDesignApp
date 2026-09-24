@@ -66,7 +66,7 @@ export function summarizeHealth(
     };
 
     const record = (issues: BuildIssue[]) => {
-        if (getMaxSeverity(issues) === null) {
+        if (getMaxSeverity(issues) === undefined) {
             counts.healthyItems++;
             return;
         }
