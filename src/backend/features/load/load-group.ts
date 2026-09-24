@@ -29,7 +29,8 @@ import {
 } from "./context";
 import {
     deleteStaleThumbnailWorkspaces,
-    ensureThumbnailWorkspace
+    type StoredThumbnailWorkspace,
+    syncThumbnailWorkspace
 } from "../thumbnails/workspace";
 import { ONSHAPE_STEP_RETRIES, uploadThumbnailsStep } from "./steps";
 
@@ -51,25 +52,27 @@ interface ParsedGroup {
     versionId?: string;
     /** Moves with `versionId`, so the row's date is always that version's. */
     versionCreatedAt?: Date;
-    /** Moves with `versionId`: it is that version's branch. */
+    /** Moves with `versionId`, which it holds. */
     thumbnailWorkspaceId?: string;
 }
 
 export async function loadGroup(
     ctx: LoadContext,
     group: GroupTarget,
-    forceReload: boolean
+    forceReload: boolean,
+    storedWorkspace?: StoredThumbnailWorkspace
 ): Promise<GroupLoadResult> {
     const { groupId, versionPath } = group;
 
-    // Here rather than when resolving, so a skipped group branches nothing.
+    // Here rather than when resolving, so a skipped group restores nothing.
     const thumbnailPath = await ctx.step.do(
         `thumbnail-workspace-${groupId}`,
         { retries: ONSHAPE_STEP_RETRIES },
         async () =>
-            ensureThumbnailWorkspace(
+            syncThumbnailWorkspace(
                 await getOnshapeApiFromContext(ctx),
-                versionPath
+                versionPath,
+                storedWorkspace
             )
     );
     const target: LoadingGroup = { ...group, thumbnailPath };
@@ -122,7 +125,8 @@ export async function loadGroup(
         })
     );
 
-    // A leftover branch is clutter, not breakage, so this is never fatal.
+    // Only once the row names the kept workspace. A leftover is clutter, not
+    // breakage, so this is never fatal.
     if (failedInsertableIds.length === 0) {
         await ctx.step
             .do(`delete-stale-workspaces-${groupId}`, async () =>

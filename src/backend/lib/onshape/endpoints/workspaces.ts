@@ -1,5 +1,5 @@
 import { OnshapeApi } from "../client";
-import { DocumentPath, toDocumentApiPath } from "../path";
+import { DocumentPath, InstancePath, toDocumentApiPath } from "../path";
 import { OnshapeWorkspaceInfo } from "../types";
 
 export function getWorkspaces(
@@ -29,5 +29,17 @@ export function deleteWorkspace(
 ): Promise<void> {
     return client.deleteNone(
         `/documents${toDocumentApiPath(documentPath)}/workspaces/${encodeURIComponent(workspaceId)}`
+    );
+}
+
+/** Replaces the workspace's contents with a version's, as a new microversion. */
+export function restoreVersion(
+    client: OnshapeApi,
+    workspacePath: InstancePath,
+    versionId: string
+): Promise<void> {
+    return client.postNone(
+        `/documents/${workspacePath.documentId}/w/${encodeURIComponent(workspacePath.instanceId)}/restore/v/${encodeURIComponent(versionId)}`,
+        { body: {} }
     );
 }

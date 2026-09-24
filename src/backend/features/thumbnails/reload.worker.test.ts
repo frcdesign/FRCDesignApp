@@ -62,6 +62,10 @@ describe("reloading a thumbnail", () => {
             .update(groups)
             .set({ thumbnailWorkspaceId: STORED_BRANCH })
             .where(eq(groups.id, TEST_GROUP_ID));
+        vi.spyOn(WorkspaceEndpoints, "getWorkspaces").mockResolvedValue([
+            { id: STORED_BRANCH, name: "FRCDesignApp Thumbnails (DO NOT EDIT)" }
+        ]);
+        vi.spyOn(WorkspaceEndpoints, "restoreVersion").mockResolvedValue();
         vi.spyOn(DocumentEndpoints, "getDocument").mockResolvedValue({
             id: "doc",
             name: "Doc"
@@ -92,7 +96,7 @@ describe("reloading a thumbnail", () => {
         expect(row?.buildIssues).toEqual([]);
     });
 
-    it("reads from the group's thumbnail workspace", async () => {
+    it("reads from the group's thumbnail workspace, restoring nothing", async () => {
         const calls = mockThumbnails(rendered);
 
         await reloadInsertableThumbnail(
@@ -108,9 +112,10 @@ describe("reloading a thumbnail", () => {
                 instanceId: STORED_BRANCH
             });
         }
+        expect(WorkspaceEndpoints.restoreVersion).not.toHaveBeenCalled();
     });
 
-    it("branches a workspace for a group that has none, and keeps it", async () => {
+    it("makes a workspace for a document that has none, and keeps it", async () => {
         await db
             .update(groups)
             .set({ thumbnailWorkspaceId: null })

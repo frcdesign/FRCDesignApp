@@ -18,7 +18,7 @@ import { ThumbnailSize, type ThumbnailUrls } from "./contract";
 import { thumbnailKey } from "./keys";
 import { uploadThumbnails } from "./store";
 import { bumpLibraryVersion } from "../library/db";
-import { ensureThumbnailWorkspace } from "./workspace";
+import { syncThumbnailWorkspace } from "./workspace";
 
 /** What one reload needs to ask Onshape and to name what it stores. */
 interface ReloadTarget {
@@ -26,29 +26,28 @@ interface ReloadTarget {
     microversionId: string;
 }
 
-/** Branches one for a group last loaded before loads made them. */
+/** Syncs the document's workspace to the group's version, and records it. */
 async function thumbnailWorkspace(
     db: Db,
     onshapeApi: OnshapeApi,
     group: { id: string; documentId: string; versionId: string },
     stored: string | null
 ): Promise<InstancePath> {
-    if (stored) {
-        return {
+    const workspace = await syncThumbnailWorkspace(
+        onshapeApi,
+        {
             documentId: group.documentId,
-            instanceId: stored,
-            instanceType: "w"
-        };
+            instanceId: group.versionId,
+            instanceType: "v"
+        },
+        stored ? { workspaceId: stored, versionId: group.versionId } : undefined
+    );
+    if (workspace.instanceId !== stored) {
+        await db
+            .update(groups)
+            .set({ thumbnailWorkspaceId: workspace.instanceId })
+            .where(eq(groups.id, group.id));
     }
-    const workspace = await ensureThumbnailWorkspace(onshapeApi, {
-        documentId: group.documentId,
-        instanceId: group.versionId,
-        instanceType: "v"
-    });
-    await db
-        .update(groups)
-        .set({ thumbnailWorkspaceId: workspace.instanceId })
-        .where(eq(groups.id, group.id));
     return workspace;
 }
 

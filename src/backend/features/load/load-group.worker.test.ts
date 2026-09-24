@@ -241,11 +241,9 @@ const LOADED_TARGET: GroupTarget = {
     versionCreatedAt: LOADED_VERSION_CREATED_AT
 };
 
-const BRANCH = {
-    id: "w-branch",
-    name: "FRCDesignApp Thumbnails (DO NOT EDIT)",
-    description:
-        "Made by the FRCDesignApp to read version v-2's thumbnails from."
+const WORKSPACE = {
+    id: "w-thumbnails",
+    name: "FRCDesignApp Thumbnails (DO NOT EDIT)"
 };
 
 const CTX: LoadContext = {
@@ -299,8 +297,9 @@ describe("loadGroup", () => {
         vi.spyOn(PartsEndpoints, "getParts").mockResolvedValue([]);
         vi.spyOn(WorkspaceEndpoints, "getWorkspaces").mockResolvedValue([]);
         vi.spyOn(WorkspaceEndpoints, "createWorkspace").mockResolvedValue(
-            BRANCH
+            WORKSPACE
         );
+        vi.spyOn(WorkspaceEndpoints, "restoreVersion").mockResolvedValue();
     });
 
     afterEach(() => vi.restoreAllMocks());
@@ -331,7 +330,7 @@ describe("loadGroup", () => {
         }
     });
 
-    it("reads every thumbnail from a workspace branched off the version", async () => {
+    it("reads every thumbnail from a workspace made off the version", async () => {
         mockContents([tab("e1"), tab("e2")]);
         vi.spyOn(ConfigurationEndpoints, "getConfiguration").mockResolvedValue(
             NO_CONFIGURATION
@@ -357,34 +356,61 @@ describe("loadGroup", () => {
             );
             expect(call?.[2]).toEqual({
                 documentId: `doc-${TEST_GROUP_ID}`,
-                instanceId: BRANCH.id,
+                instanceId: WORKSPACE.id,
                 instanceType: "w",
                 elementId
             });
         }
-        expect((await readGroup())?.thumbnailWorkspaceId).toBe(BRANCH.id);
+        expect((await readGroup())?.thumbnailWorkspaceId).toBe(WORKSPACE.id);
     });
 
-    it("reuses the version's branch, and deletes older versions' branches", async () => {
+    it("restores a new version into the workspace, and deletes our others", async () => {
         mockContents([tab("e1")]);
         vi.spyOn(ConfigurationEndpoints, "getConfiguration").mockResolvedValue(
             NO_CONFIGURATION
         );
         vi.spyOn(WorkspaceEndpoints, "getWorkspaces").mockResolvedValue([
             { id: "main", name: "Main" },
-            // Another version's branch, and a workspace that only shares its name.
-            { ...BRANCH, id: "w-old", description: "…version v-1's…" },
+            { ...WORKSPACE, id: "w-z-old" },
+            // Only shares part of the name.
             { id: "w-lookalike", name: "FRCDesignApp Thumbnails" },
-            BRANCH
+            WORKSPACE
         ]);
         const deleted = vi
             .spyOn(WorkspaceEndpoints, "deleteWorkspace")
             .mockResolvedValue();
 
-        await loadGroup(CTX, LOADED_TARGET, false);
+        await loadGroup(CTX, LOADED_TARGET, false, {
+            workspaceId: WORKSPACE.id,
+            versionId: "v-1"
+        });
 
         expect(WorkspaceEndpoints.createWorkspace).not.toHaveBeenCalled();
-        expect(deleted.mock.calls.map((call) => call[2])).toEqual(["w-old"]);
+        expect(WorkspaceEndpoints.restoreVersion).toHaveBeenCalledWith(
+            MOCK_ONSHAPE_API,
+            expect.objectContaining({ instanceId: WORKSPACE.id }),
+            "v-2"
+        );
+        expect(deleted.mock.calls.map((call) => call[2])).toEqual(["w-z-old"]);
+        expect((await readGroup())?.thumbnailWorkspaceId).toBe(WORKSPACE.id);
+    });
+
+    // A forced reload of the same version would otherwise re-render everything.
+    it("skips the restore when the workspace already holds the version", async () => {
+        mockContents([tab("e1")]);
+        vi.spyOn(ConfigurationEndpoints, "getConfiguration").mockResolvedValue(
+            NO_CONFIGURATION
+        );
+        vi.spyOn(WorkspaceEndpoints, "getWorkspaces").mockResolvedValue([
+            WORKSPACE
+        ]);
+
+        await loadGroup(CTX, LOADED_TARGET, true, {
+            workspaceId: WORKSPACE.id,
+            versionId: "v-2"
+        });
+
+        expect(WorkspaceEndpoints.restoreVersion).not.toHaveBeenCalled();
     });
 
     it("takes the group thumbnail from the designated element without re-reading the document", async () => {
@@ -406,7 +432,7 @@ describe("loadGroup", () => {
         const groupCall = uploaded.mock.calls.find(
             (args) => args[2].elementId === "cover"
         );
-        expect(groupCall?.[2]).toMatchObject({ instanceId: BRANCH.id });
+        expect(groupCall?.[2]).toMatchObject({ instanceId: WORKSPACE.id });
         expect(document).not.toHaveBeenCalled();
     });
 

@@ -86,6 +86,7 @@ async function loadDocument(
             .select({
                 documentId: groups.documentId,
                 versionId: groups.versionId,
+                thumbnailWorkspaceId: groups.thumbnailWorkspaceId,
                 buildIssues: groups.buildIssues
             })
             .from(groups)
@@ -113,7 +114,17 @@ async function loadDocument(
         } else {
             result = {
                 status: "loaded",
-                ...(await loadGroup(ctx, target, forceReload))
+                ...(await loadGroup(
+                    ctx,
+                    target,
+                    forceReload,
+                    stored.thumbnailWorkspaceId
+                        ? {
+                              workspaceId: stored.thumbnailWorkspaceId,
+                              versionId: stored.versionId
+                          }
+                        : undefined
+                ))
             };
         }
     } catch (error) {

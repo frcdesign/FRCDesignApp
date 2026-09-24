@@ -37,8 +37,8 @@ const BOTH_SIZES = [ThumbnailSize.SMALL, ThumbnailSize.LARGE];
 
 /**
  * Skips sizes already stored; throws while Onshape hasn't rendered. Keyed by
- * the version's microversion though read from its branch, assuming an unedited
- * branch renders the same.
+ * the version's microversion though read from the thumbnail workspace,
+ * assuming the restored content renders the same.
  */
 export async function uploadThumbnails(
     bucket: R2Bucket,

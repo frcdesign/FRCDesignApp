@@ -1,54 +1,78 @@
 /**
- * Each loaded version gets a branched workspace to read thumbnails from:
- * Onshape sometimes never renders them in a version, and the document's own
- * workspace drifts. A fresh branch takes minutes to render.
+ * Each document gets one workspace to read thumbnails from: Onshape sometimes
+ * never renders them in a version, and the document's own workspace drifts.
+ * A new version is restored into it rather than branched, so the document's
+ * history gains a microversion, not a branch. Restored content takes minutes
+ * to render.
  */
 import { type OnshapeApi } from "../../lib/onshape/client";
 import { type DocumentPath, type InstancePath } from "../../lib/onshape/path";
 import {
     createWorkspace,
     deleteWorkspace,
-    getWorkspaces
+    getWorkspaces,
+    restoreVersion
 } from "../../lib/onshape/endpoints/workspaces";
 import { type OnshapeWorkspaceInfo } from "../../lib/onshape/types";
 
-/** Shared by every branch; cleanup deletes nothing without it. */
+/** Cleanup deletes nothing without it. */
 const WORKSPACE_NAME = "FRCDesignApp Thumbnails (DO NOT EDIT)";
-
-/** Records which version the branch came from; the name is the same for all. */
-function workspaceDescription(versionId: string): string {
-    return `Made by the FRCDesignApp to read version ${versionId}'s thumbnails from.`;
-}
+const WORKSPACE_DESCRIPTION =
+    "Made by the FRCDesignApp to read the latest version's thumbnails from.";
 
 function isOurs(workspace: OnshapeWorkspaceInfo): boolean {
     return workspace.name === WORKSPACE_NAME;
 }
 
-/** Reuses an existing branch, so a retry doesn't make another. */
-export async function ensureThumbnailWorkspace(
+/** What the group row says its workspace holds. */
+export interface StoredThumbnailWorkspace {
+    workspaceId: string;
+    versionId: string;
+}
+
+/**
+ * The document's thumbnail workspace, holding `versionPath`'s content. Skips
+ * the restore when the row says it already holds this version.
+ */
+export async function syncThumbnailWorkspace(
     client: OnshapeApi,
-    versionPath: InstancePath
+    versionPath: InstancePath,
+    stored?: StoredThumbnailWorkspace
 ): Promise<InstancePath> {
-    const description = workspaceDescription(versionPath.instanceId);
-    const existing = (await getWorkspaces(client, versionPath)).find(
-        (workspace) =>
-            isOurs(workspace) && workspace.description === description
-    );
-    const workspace =
-        existing ??
-        (await createWorkspace(client, versionPath, {
+    // The lowest id, so every group of a document settles on the same one.
+    const existing = (await getWorkspaces(client, versionPath))
+        .filter(isOurs)
+        .sort((a, b) => a.id.localeCompare(b.id))[0];
+    if (!existing) {
+        const created = await createWorkspace(client, versionPath, {
             name: WORKSPACE_NAME,
-            description,
+            description: WORKSPACE_DESCRIPTION,
             versionId: versionPath.instanceId
-        }));
+        });
+        return toWorkspacePath(versionPath, created.id);
+    }
+    const workspacePath = toWorkspacePath(versionPath, existing.id);
+    const holdsVersion =
+        existing.id === stored?.workspaceId &&
+        versionPath.instanceId === stored.versionId;
+    if (!holdsVersion) {
+        await restoreVersion(client, workspacePath, versionPath.instanceId);
+    }
+    return workspacePath;
+}
+
+function toWorkspacePath(
+    document: DocumentPath,
+    workspaceId: string
+): InstancePath {
     return {
-        documentId: versionPath.documentId,
-        instanceId: workspace.id,
+        documentId: document.documentId,
+        instanceId: workspaceId,
         instanceType: "w"
     };
 }
 
-/** Only safe once the group row has moved to `keepWorkspaceId`'s version. */
+/** Every other workspace of ours, which no load reads from any more. */
 export async function deleteStaleThumbnailWorkspaces(
     client: OnshapeApi,
     documentPath: DocumentPath,
