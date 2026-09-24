@@ -37,7 +37,7 @@ KV holds what may expire or be lost. Every key belongs to a `kvStore` (`src/back
 - `login-session:` — the OAuth `state` and where to return, for the ten minutes of a sign-in.
 - `tokens:` — a signed-in session's access and refresh tokens, keyed by its cookie, for 30 days.
 - `admin-session:` — the owner's and team admins' latest session ids, so a load nobody is signed in behind can run as one of them.
-- `unit-info:` — a workspace's units, for a week. On a miss the route asks Onshape and registers a transient `updateworkspaceunits` webhook, whose delivery drops the entry. Transient webhooks are cleaned up by Onshape after a while without events, so nothing records or removes them; their url carries the workspace, signed with `SESSION_SECRET`, and the expiry covers one Onshape drops quietly (`features/webhooks/transient.ts`).
+- `unit-info:` — a workspace's units, for a week. On a miss the route asks Onshape and registers a transient `updateworkspaceunits` webhook, whose delivery drops the entry. Onshape cleans transient webhooks up after a while without events, so nothing records or removes them, and the expiry covers one it drops quietly. Onshape doesn't sign webhooks registered through the API, so the url names the workspace plainly: a forged delivery only costs a refetch (`features/webhooks/transient.ts`).
 
 ### R2 — Blob Storage (`c.env.BLOB`)
 
@@ -101,7 +101,7 @@ Onshape pushes one thing, registered with `isTransient: false` and recorded in t
 
 - **A new version of a library document.** Registered by the document's load; removed with the last group loaded from it. Reloads that document's groups.
 
-Onshape's team webhooks need a company id, which a personal account lacks, so an admin team's membership is pulled again only when the owner sets the team or an admin presses **Refresh members** in the settings menu.
+Onshape's team webhooks need a company id, which a personal account lacks, so an admin team's membership is pulled again only when the owner sets the team or an admin presses **Refresh** beside "Admin team members" in the settings menu.
 
 A load that fails is flagged `LOAD_FAILED`, including one whose workflow crashed before it could say so; the next look at the library's jobs notices. Reloading the library's outdated documents reruns it.
 

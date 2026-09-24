@@ -1,4 +1,5 @@
 import { Text } from "@mantine/core";
+import type { PartUsageOut } from "@backend/features/analytics/contract";
 import { useNavigate } from "@tanstack/react-router";
 import { useMemo, useState, type ReactNode } from "react";
 import { getLibraryName } from "../../lib/library";
@@ -9,12 +10,11 @@ import {
     toNodes,
     TreemapKind,
     type TreemapNode,
-    type TreemapPath,
-    type UsagePart
+    type TreemapPath
 } from "./treemap-data";
 
 interface UsageTreemapProps {
-    parts: UsagePart[];
+    parts: PartUsageOut[];
     /** The level this instance starts at and will not go above. */
     root?: TreemapPath;
 }

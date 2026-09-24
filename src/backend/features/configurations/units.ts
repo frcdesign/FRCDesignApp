@@ -76,7 +76,6 @@ export async function getUnitInfoCached(
     if (path.instanceType === "w") {
         await runInBackground(c, "watch workspace units", async () =>
             watchWorkspaceUnits(
-                c.env,
                 await c.var.getOnshapeApi(),
                 path,
                 new URL(c.req.url).origin

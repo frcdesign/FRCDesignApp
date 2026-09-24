@@ -7,7 +7,11 @@ import { getLibraryParam, libraryRoute } from "../../lib/route-params";
 import { validate } from "../../lib/validate";
 import { type Db, getDb } from "../../db/client";
 import { libraries } from "../../db/schema";
-import { requireAdminMiddleware, requireOwnerMiddleware } from "../auth/guards";
+import {
+    requireAdminMiddleware,
+    requireEditorMiddleware,
+    requireOwnerMiddleware
+} from "../auth/guards";
 import { ensureLibrary } from "../library/db";
 import type { LibraryId } from "../library/library-id";
 import type { AdminTeamOut } from "./contract";
@@ -41,7 +45,7 @@ async function getAdminTeam(
 /** GET /api/admin-team/library/:libraryId */
 adminTeamRoutes.get(
     "/admin-team" + libraryRoute(),
-    requireOwnerMiddleware,
+    requireEditorMiddleware,
     async (c) => c.json(await getAdminTeam(getDb(c.env.DB), getLibraryParam(c)))
 );
 

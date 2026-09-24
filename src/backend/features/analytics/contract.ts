@@ -132,6 +132,7 @@ export interface AnalyticsOverviewOut {
 
 /** A row of the parts table. Only parts still in the library are listed. */
 export interface PartUsageOut {
+    libraryId: LibraryId;
     /** The version-pinned tab, which is both the analytics key and the link. */
     path: ElementPath;
     name: string;

@@ -13,8 +13,6 @@ import * as DocumentEndpoints from "../../lib/onshape/endpoints/documents";
 import * as WebhookEndpoints from "../../lib/onshape/endpoints/webhooks";
 import { QuantityType, Unit } from "./enums";
 
-const TEST_ENV = { ...env, SESSION_SECRET: "test-secret" };
-
 function mockUnits() {
     return vi.spyOn(DocumentEndpoints, "getUnitInfo").mockResolvedValue({
         defaultUnits: {
@@ -31,11 +29,11 @@ const unitInfo = (instanceType: "w" | "v", documentId = "doc") =>
     createTestApp().request(
         `http://localhost/api/unit-info?documentId=${documentId}&instanceId=ws&instanceType=${instanceType}`,
         jsonRequest("GET"),
-        TEST_ENV
+        env
     );
 
 const deliver = (url: string, event: string) =>
-    createTestApp().request(url, jsonRequest("POST", { event }), TEST_ENV);
+    createTestApp().request(url, jsonRequest("POST", { event }), env);
 
 describe("a workspace's units", () => {
     let watch: MockInstance<typeof WebhookEndpoints.createWebhook>;
@@ -99,13 +97,5 @@ describe("a workspace's units", () => {
         await unitInfo("w", "doc-register");
 
         expect(fetch).toHaveBeenCalledOnce();
-    });
-
-    it("turns away a delivery for a workspace it did not sign", async () => {
-        const res = await deliver(
-            "http://localhost/api/webhooks/units?documentId=doc&workspaceId=ws&signature=00",
-            "onshape.model.lifecycle.updateworkspaceunits"
-        );
-        expect(res.status).toBe(403);
     });
 });

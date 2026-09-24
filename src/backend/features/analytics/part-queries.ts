@@ -20,6 +20,7 @@ import { toElementPath } from "../../lib/onshape/path";
 import { type ConfigurationParameter } from "../configurations/contract";
 
 export interface PartRow {
+    libraryId: LibraryId;
     elementId: string;
     name: string;
     groupName: string;
@@ -42,6 +43,7 @@ export function getPartRows(
     return (
         db
             .select({
+                libraryId: insertables.libraryId,
                 elementId: insertables.elementId,
                 name: insertables.name,
                 groupName: groups.name,
@@ -78,6 +80,7 @@ export function toWindowedPart(
     const firstUsed = Math.max(row.firstInsertedAt?.getTime() ?? from, from);
 
     return {
+        libraryId: row.libraryId,
         path: toElementPath(row),
         name: row.name,
         groupName: row.groupName,

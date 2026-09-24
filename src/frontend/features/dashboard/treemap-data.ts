@@ -5,10 +5,6 @@ import { getLibraryColor } from "../../theme";
 import { colorVar, FILLED_SHADE } from "../../lib/style-constants";
 
 /** A part tagged with the library it came from, so one list spans them all. */
-export interface UsagePart extends PartUsageOut {
-    libraryId: LibraryId;
-}
-
 /** Parts are leaves: clicking one leaves the chart. */
 export interface TreemapPath {
     libraryId?: LibraryId;
@@ -46,7 +42,7 @@ function shade(color: string, rank: number): string {
 }
 
 /** Drops unused parts: a zero-area tile still catches clicks. */
-function within(parts: UsagePart[], path: TreemapPath): UsagePart[] {
+function within(parts: PartUsageOut[], path: TreemapPath): PartUsageOut[] {
     return parts.filter(
         (part) =>
             part.insertCount > 0 &&
@@ -58,8 +54,8 @@ function within(parts: UsagePart[], path: TreemapPath): UsagePart[] {
 
 /** Insertions summed by a key, largest first — so an index is a shade rank. */
 function totalsBy<K extends string>(
-    parts: UsagePart[],
-    keyOf: (part: UsagePart) => K
+    parts: PartUsageOut[],
+    keyOf: (part: PartUsageOut) => K
 ): { key: K; value: number }[] {
     const totals = new Map<K, number>();
     for (const part of parts) {
@@ -72,7 +68,10 @@ function totalsBy<K extends string>(
 }
 
 /** Inside a library, tiles shade off its chart color. */
-export function toNodes(parts: UsagePart[], path: TreemapPath): TreemapNode[] {
+export function toNodes(
+    parts: PartUsageOut[],
+    path: TreemapPath
+): TreemapNode[] {
     const shown = within(parts, path);
 
     if (path.libraryId === undefined) {

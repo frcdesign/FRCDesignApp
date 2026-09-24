@@ -3,7 +3,6 @@ import { useQueries, useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { type ReactNode } from "react";
 import { LibraryId } from "@backend/features/library/library-id";
-import type { PartUsageOut } from "@backend/features/analytics/contract";
 import { type DayRange } from "@backend/features/analytics/day";
 import {
     getOverviewQuery,
@@ -18,7 +17,6 @@ import { LifetimeTiles } from "../../features/dashboard/lifetime-tiles";
 import { METRICS } from "../../features/dashboard/metrics";
 import { Section } from "../../components/section";
 import { UsageTreemap } from "../../features/dashboard/usage-treemap";
-import { type UsagePart } from "../../features/dashboard/treemap-data";
 import { TrendTile } from "../../features/dashboard/trend-tile";
 
 export const Route = createFileRoute("/dashboard/")({
@@ -32,15 +30,6 @@ function useAllParts(range: DayRange) {
             getPartsQuery(libraryId, range)
         )
     });
-}
-
-/** Tags a library's parts with which library they came from. */
-function taggedParts(
-    query: { data?: PartUsageOut[] },
-    index: number
-): UsagePart[] {
-    const libraryId = Object.values(LibraryId)[index];
-    return (query.data ?? []).map((part) => ({ ...part, libraryId }));
 }
 
 function DashboardOverview(): ReactNode {
@@ -93,7 +82,9 @@ function DashboardOverview(): ReactNode {
             </Section>
 
             {allParts.every((query) => query.data) ? (
-                <UsageTreemap parts={allParts.flatMap(taggedParts)} />
+                <UsageTreemap
+                    parts={allParts.flatMap((query) => query.data ?? [])}
+                />
             ) : (
                 <DashboardState query={allParts[0]} />
             )}

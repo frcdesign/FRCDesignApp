@@ -11,7 +11,7 @@ export function RefreshAdminTeamButton(): ReactNode {
             onClick={() => mutation.mutate()}
             loading={mutation.isPending}
         >
-            Refresh members
+            Refresh
         </Button>
     );
 }

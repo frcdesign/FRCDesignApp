@@ -1,50 +1,43 @@
-import { Button, Group, Stack, Text, TextInput } from "@mantine/core";
-import { type ReactNode, useId, useState } from "react";
+import { TextInput } from "@mantine/core";
+import { type FocusEvent, type ReactNode, useId } from "react";
+import { AccessLevel } from "@backend/features/auth/access-level";
+import { InputRow } from "../../../components/input-row";
+import { SETTING_CONTROL_WIDTH } from "../../../lib/style-constants";
+import { useAccessData } from "../../auth/access-level";
 import { useAdminTeamQuery, useSetAdminTeamMutation } from "../queries";
 
-/** The team's members get editor access. */
+/** The Onshape team whose members edit this library; only the owner sets it. */
 export function AdminTeamSetting(): ReactNode {
+    const { currentAccessLevel } = useAccessData();
     const query = useAdminTeamQuery();
     const mutation = useSetAdminTeamMutation();
-    const inputId = useId();
-    // Unset until edited, so the stored team shows once it has loaded.
-    const [draft, setDraft] = useState<string>();
-
+    const id = useId();
+    const isOwner = currentAccessLevel === AccessLevel.OWNER;
     const stored = query.data?.teamId ?? "";
-    const value = draft ?? stored;
-    const trimmed = value.trim();
 
-    const save = () => {
-        mutation.mutate(trimmed || null, {
-            onSuccess: () => setDraft(undefined)
-        });
+    const save = (event: FocusEvent<HTMLInputElement>) => {
+        const teamId = event.currentTarget.value.trim();
+        if (teamId !== stored) {
+            mutation.mutate(teamId || null);
+        }
     };
 
     return (
-        <Stack gap={4}>
-            <Group gap="sm" align="flex-end">
-                <TextInput
-                    id={inputId}
-                    label="Admin team id"
-                    placeholder="None: only you can edit"
-                    value={value}
-                    onChange={(event) => setDraft(event.currentTarget.value)}
-                    disabled={query.isPending}
-                    flex={1}
-                />
-                <Button
-                    onClick={save}
-                    loading={mutation.isPending}
-                    disabled={trimmed === stored}
-                >
-                    Save
-                </Button>
-            </Group>
-            {query.data?.teamId && (
-                <Text size="xs" c="dimmed">
-                    {query.data.memberCount} members can edit this library.
-                </Text>
-            )}
-        </Stack>
+        <InputRow label="Admin team id" htmlFor={id}>
+            <TextInput
+                // Keyed so a saved or refetched team replaces what was typed.
+                key={stored}
+                id={id}
+                w={SETTING_CONTROL_WIDTH}
+                defaultValue={stored}
+                placeholder="None"
+                readOnly={!isOwner}
+                disabled={query.isPending || mutation.isPending}
+                onBlur={isOwner ? save : undefined}
+                onKeyDown={(event) => {
+                    if (event.key === "Enter") event.currentTarget.blur();
+                }}
+            />
+        </InputRow>
     );
 }

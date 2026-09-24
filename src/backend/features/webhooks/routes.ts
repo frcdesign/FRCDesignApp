@@ -51,9 +51,9 @@ webhookRoutes.post(RECEIVE_PATH.replace(/^\/api/, ""), async (c) => {
     return c.json({});
 });
 
-/** POST /api/webhooks/units?documentId=&workspaceId=&signature= */
+/** POST /api/webhooks/units?documentId=&workspaceId= */
 webhookRoutes.post(UNITS_RECEIVE_PATH.replace(/^\/api/, ""), async (c) => {
-    const workspace = await readUnitsDelivery(c.env, c.req.query());
+    const workspace = readUnitsDelivery(c.req.query());
     if (!workspace) {
         throw forbiddenError("Unrecognized webhook");
     }

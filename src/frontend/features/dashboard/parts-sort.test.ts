@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { PartUsageOut } from "@backend/features/analytics/contract";
+import { LibraryId } from "@backend/features/library/library-id";
 import {
     DEFAULT_SORT,
     filterAndSort,
@@ -9,6 +10,7 @@ import {
 
 function part(overrides: Partial<PartUsageOut> = {}): PartUsageOut {
     return {
+        libraryId: LibraryId.FRC_DESIGN_LIB,
         path: {
             documentId: "doc-1",
             instanceId: "v-1",

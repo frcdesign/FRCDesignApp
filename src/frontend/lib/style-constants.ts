@@ -78,3 +78,6 @@ export enum PrimaryColor {
     /** What reads on top of it, typically white. */
     CONTRAST = "var(--mantine-primary-color-contrast)"
 }
+
+/** Wide enough for "Open dashboard", so every settings control ends on one line. */
+export const SETTING_CONTROL_WIDTH = 170;

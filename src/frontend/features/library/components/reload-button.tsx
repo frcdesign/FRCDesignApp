@@ -56,7 +56,7 @@ export function ReloadButton(props: ReloadButtonProps): ReactNode {
             onClick={handleClick}
             loading={mutation.isPending}
         >
-            Reload documents
+            Reload
         </Button>
     );
 }

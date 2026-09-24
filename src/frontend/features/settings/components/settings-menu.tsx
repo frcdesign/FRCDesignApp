@@ -2,7 +2,10 @@ import { DEFAULT_THEME, Theme } from "@backend/features/settings/settings";
 import { Box, Button, Select, Stack } from "@mantine/core";
 import { ArrowLeftIcon, SignOutIcon } from "@phosphor-icons/react";
 import { useMatch } from "@tanstack/react-router";
-import { StatusColor } from "../../../lib/style-constants";
+import {
+    SETTING_CONTROL_WIDTH,
+    StatusColor
+} from "../../../lib/style-constants";
 import { ReactNode, useId } from "react";
 import {
     AccessLevel,
@@ -72,9 +75,6 @@ function SettingSelect<T extends string>(props: SettingSelectProps<T>) {
         </InputRow>
     );
 }
-
-/** Wide enough for "Open dashboard", so every control ends on one line. */
-const SETTING_CONTROL_WIDTH = 170;
 
 export function SettingsMenuContent(): ReactNode {
     const { maxAccessLevel } = useAccessData();
@@ -201,18 +201,18 @@ function AdminSettings(): ReactNode {
             {/* Always show the access level select so admins can change access level if needed */}
             <AccessLevelSelect />
             <RequireAccessLevel accessLevel={AccessLevel.ADMIN}>
-                <InputRow label="Reload outdated documents">
+                <InputRow label="Outdated documents">
                     <ReloadButton />
                 </InputRow>
             </RequireAccessLevel>
             <RequireAccessLevel accessLevel={AccessLevel.OWNER}>
-                <InputRow label="Reload all documents">
+                <InputRow label="All documents">
                     <ReloadButton all />
                 </InputRow>
-                <AdminTeamSetting />
             </RequireAccessLevel>
+            <AdminTeamSetting />
             <RequireAccessLevel accessLevel={AccessLevel.ADMIN}>
-                <InputRow label="Admin team">
+                <InputRow label="Admin team members">
                     <RefreshAdminTeamButton />
                 </InputRow>
             </RequireAccessLevel>
