@@ -30,13 +30,14 @@ interface AppTitleProps {
 export function AppTitle(props: AppTitleProps): ReactNode {
     const { title, icon, subtitle, rightSection } = props;
     return (
-        <Group gap="sm" wrap="nowrap" miw={0}>
+        <Group gap="sm" miw={0}>
             {/* Centred, not wrapped in a block, where the icon would go back
                 to sitting on the text baseline several pixels low. */}
             {icon && <Center className={styles.titleIcon}>{icon}</Center>}
             <Stack gap={0} miw={0}>
-                <Group gap="xs" wrap="nowrap" miw={0}>
+                <Group gap="xs" miw={0}>
                     <Text
+                        size="md"
                         fw={FontWeight.SEMI_BOLD}
                         truncate
                         title={title}
@@ -50,7 +51,6 @@ export function AppTitle(props: AppTitleProps): ReactNode {
                     // Inheriting the title's line height of 1 reads low.
                     <Group
                         gap={4}
-                        wrap="nowrap"
                         // So a long part number ellipsizes.
                         miw={0}
                         fz="xs"
@@ -122,7 +122,6 @@ function CopyPartNumberButton(props: CopyPartNumberButtonProps): ReactNode {
             {({ copied, copy }) => (
                 <Tooltip label={copied ? "Copied" : "Copy part number"}>
                     <ActionIcon
-                        variant="subtle"
                         color={copied ? "teal" : "gray"}
                         // Any taller and the row grows, shifting the title.
                         size={COPY_BUTTON_SIZE}

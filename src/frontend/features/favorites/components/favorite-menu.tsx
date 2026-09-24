@@ -97,9 +97,8 @@ export function FavoriteMenuContent(
             </AppModalBody>
             <AppModalFooter>
                 <Button
-                    variant="light"
                     ml="auto"
-                    leftSection={<FloppyDiskIcon size={IconSize.SMALL} />}
+                    leftSection={<FloppyDiskIcon />}
                     disabled={report === undefined}
                     onClick={() => {
                         if (report) {

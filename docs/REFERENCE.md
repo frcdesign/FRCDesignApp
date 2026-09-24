@@ -112,36 +112,23 @@ The asset binding is configured with `single-page-application` mode, which means
 
 ## How Users Get Into the App
 
-This app runs inside an Onshape iframe, which adds some authentication complexity. Here is the complete flow from first page load to seeing the part library.
+The server decides where a caller lands before the app loads. The client has one redirect of its own: `/` resumes the last tab and group from `localStorage`.
 
-### Normal flow (already logged in)
+### From Onshape (`/init`)
 
-1. Onshape loads the app's iframe by navigating to `/init?documentId=...&workspaceId=...&elementId=...` with the current document's identifiers in the URL.
-2. The Worker checks if the request has a valid session cookie (`frc-design-app-cookie`) and whether the stored tokens are still valid.
-3. If everything checks out, the Worker serves the React app (`index.html`), which then loads and navigates to `/app/groups`.
-4. The React app calls `/api/context-data` to get user info and access level, then prefetches the library data, search index, and favorites.
-5. The UI renders.
+Onshape opens the panel at `/init?documentId=…&instanceType=…&elementId=…&elementType=…&server=…&sessionCompanyId=…` (`features/entry/routes.ts`).
 
-### First-time flow (OAuth)
+1. A version or microversion is sent to `/version-error`: there is nothing to insert into.
+2. If Onshape won't take the caller's session, `/init` sends them through sign-in and back to itself, marked with `signInAttempted` so it never bounces twice.
+3. Otherwise it redirects into the app: to the tab and group the caller's row last recorded, with Onshape's parameters kept and their saved `theme` and `tabId` added.
 
-1. Same as above — Onshape loads `/init`.
-2. The Worker finds no valid session cookie. It redirects to `/auth/sign-in?redirectUrl=<the /init URL>`.
-3. The sign-in handler generates a random `state` string (a security measure), stores `{ state, redirectUrl }` in KV under a random session ID, sets the session cookie, and redirects the user to Onshape's OAuth login page.
-4. The user sees the Onshape "Authorize App" screen and clicks approve.
-5. Onshape redirects back to `/auth/callback?code=...&state=...`. The sign-in names that callback as the `redirect_uri`, taken from the origin the request came in on, so Onshape returns the user to the host they signed in on rather than to whichever redirect URL it would otherwise pick — which is what lets two hosts share one OAuth app during a cutover. Every origin the app answers on has to be one of the redirect URLs registered on the OAuth app, spelled exactly.
-6. The callback handler reads the session from KV, verifies the `state` matches (preventing CSRF attacks), and exchanges the `code` for real access and refresh tokens using the [Arctic](https://arcticjs.dev/) OAuth library. The exchange repeats the same `redirect_uri`, as OAuth requires.
-7. The tokens are saved to KV under the session ID. The temporary login-session entry is deleted.
-8. The user is redirected back to the original `/init` URL, which now succeeds because the session cookie and tokens are in place.
+The `/app` route reads all of that off the url once per page load, into `ui-state` (`routes/app/route.tsx`). From then on the store is what the app reads, and in-app navigation keeps only the app's own parameters (`q`, `part`, `config`, `favorite`) in the url.
 
-### What happens on the client after auth
+### Signing in
 
-Once the backend confirms authentication and serves the React app, the frontend takes over:
+`/auth/sign-in?redirectUrl=<local path>&sessionCompanyId=…` stores `{ state, redirectUrl }` under a login cookie and sends the caller to Onshape's authorize page. An absent or offsite `redirectUrl` becomes `/`. Onshape returns to the OAuth app's registered callback, `/auth/callback`, which checks `state`, exchanges the code for tokens (via [Arctic](https://arcticjs.dev/)), starts a session, and redirects to the stored path.
 
-1. The `/init` route normalizes the Onshape URL parameters (document ID, workspace ID, element ID, theme, etc.) and stores them in the URL query string. TanStack Router carries these parameters forward automatically via `retainSearchParams`, so child routes can always read them.
-2. `/init`'s `beforeLoad` immediately redirects to `/app/groups` (or to the last-opened group if one is saved in `localStorage`).
-3. The `/app` route's `beforeLoad` calls `getContextDataQuery()` — a blocking fetch that retrieves user settings (including the `libraryId` and `cacheVersion`) and access level before any child route renders.
-4. The `/app` route's `loader` uses the `cacheVersion` to kick off three prefetches in parallel: the full library data, the search index, and the user's favorites.
-5. With all data already in the React Query cache, the groups page renders immediately with no loading spinners.
+`/init` passes itself as the path. The app's own sign-in button passes the page it is on, so a caller comes back where they were.
 
 ## Storage at a Glance
 

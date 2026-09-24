@@ -65,7 +65,7 @@ function PartReport(): ReactNode {
                     w={360}
                     mb="md"
                     placeholder="Search parts…"
-                    leftSection={<MagnifyingGlassIcon size={IconSize.SMALL} />}
+                    leftSection={<MagnifyingGlassIcon />}
                     value={search}
                     onChange={(event) => setSearch(event.currentTarget.value)}
                 />
@@ -172,7 +172,7 @@ interface SummaryCardProps {
 function SummaryCard({ label, value }: SummaryCardProps): ReactNode {
     return (
         <Card padding="md">
-            <Text size="sm" c="dimmed" tt="uppercase" fw={700}>
+            <Text c="dimmed" tt="uppercase" fw={700}>
                 {label}
             </Text>
             <Title order={3}>{value}</Title>

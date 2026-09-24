@@ -25,9 +25,9 @@ interface ControlRowProps {
 /** Usually a Switch; an icon when the setting isn't the admin's to make. */
 export function ControlRow(props: ControlRowProps): ReactNode {
     return (
-        <Group justify="space-between" wrap="nowrap" gap="md" align="center">
+        <Group justify="space-between" gap="md" align="center">
             <Box miw={0}>
-                <Text size="sm">{props.label}</Text>
+                <Text>{props.label}</Text>
                 <Text size="xs" c={StatusColor.DIMMED}>
                     {props.description}
                 </Text>

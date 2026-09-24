@@ -148,7 +148,7 @@ function SearchAllButton(): ReactNode {
     const searchAllDocuments = useSearchAllDocuments();
     return (
         <Button
-            leftSection={<MagnifyingGlassIcon size={IconSize.SMALL} />}
+            leftSection={<MagnifyingGlassIcon />}
             onClick={searchAllDocuments}
         >
             Search all documents

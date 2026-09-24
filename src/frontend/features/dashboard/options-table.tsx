@@ -44,7 +44,7 @@ export function OptionsTable({
     return (
         <>
             <Table.ScrollContainer minWidth={MIN_TABLE_WIDTH}>
-                <Table striped highlightOnHover>
+                <Table striped>
                     <Table.Thead>
                         <Table.Tr>
                             {COLUMNS.map((column, index) => (
@@ -130,9 +130,7 @@ function OptionLabel({ value }: OptionLabelProps): ReactNode {
         <Group gap="xs">
             {value.label}
             {value.count === 0 && (
-                <Badge color={StatusColor.INFO} size="sm">
-                    Never used
-                </Badge>
+                <Badge color={StatusColor.INFO}>Never used</Badge>
             )}
             {/* A default nobody picks is the strongest signal the parameter
                 is wrong. An implicit one is stronger still: it is what this
@@ -141,9 +139,7 @@ function OptionLabel({ value }: OptionLabelProps): ReactNode {
                 <ImplicitDefaultBadge color={StatusColor.WARNING} size="sm" />
             )}
             {value.isDefault && (
-                <Badge color={StatusColor.WARNING} size="sm">
-                    Default
-                </Badge>
+                <Badge color={StatusColor.WARNING}>Default</Badge>
             )}
         </Group>
     );

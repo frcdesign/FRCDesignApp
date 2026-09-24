@@ -44,7 +44,7 @@ export function DashboardNavbar(): ReactNode {
         <Stack gap={0}>
             <NavbarRow>
                 <DashboardTabs current={current} />
-                <Group gap="xs" wrap="nowrap" ml="auto">
+                <Group gap="xs" ml="auto">
                     <RefreshButton />
                     <SettingsButton />
                 </Group>
@@ -57,7 +57,6 @@ export function DashboardNavbar(): ReactNode {
                     gap="sm"
                     px="sm"
                     h={NAVBAR_ROW_HEIGHT}
-                    wrap="nowrap"
                     align="center"
                     className={styles.dividerBottom}
                 >
@@ -121,7 +120,7 @@ function LibraryMenu({ dashboard }: LibraryMenuProps): ReactNode {
                 <Button
                     variant="default"
                     size="compact-sm"
-                    rightSection={<CaretDownIcon size={IconSize.SMALL} />}
+                    rightSection={<CaretDownIcon />}
                 >
                     {getLibraryName(current)}
                 </Button>
@@ -195,8 +194,6 @@ function RefreshButton(): ReactNode {
         <Tooltip label="Refresh">
             <ActionIcon
                 my="auto"
-                variant="subtle"
-                color="gray"
                 loading={fetching}
                 onClick={() =>
                     void queryClient.invalidateQueries({

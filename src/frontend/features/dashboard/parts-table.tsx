@@ -97,7 +97,7 @@ export function PartsTable({
     return (
         <>
             <Table.ScrollContainer minWidth={900}>
-                <Table striped highlightOnHover>
+                <Table striped>
                     <Table.Thead>
                         <Table.Tr>
                             {SORTABLE_COLUMNS.map((heading) => (
@@ -159,11 +159,7 @@ function SortableTh({
             onClick={() => onToggle(column)}
             style={{ cursor: "pointer", userSelect: "none" }}
         >
-            <Group
-                gap={4}
-                wrap="nowrap"
-                justify={align === "right" ? "flex-end" : undefined}
-            >
+            <Group gap={4} justify={align === "right" ? "flex-end" : undefined}>
                 {label}
                 {/* Reserved even when inactive, so the header never reflows. */}
                 <Caret
@@ -200,9 +196,7 @@ function PartRow({ libraryId, part }: PartRowProps): ReactNode {
                 <Group gap="xs">
                     {part.name}
                     {!part.isVisible && (
-                        <Badge color={StatusColor.INFO} size="sm">
-                            Hidden
-                        </Badge>
+                        <Badge color={StatusColor.INFO}>Hidden</Badge>
                     )}
                 </Group>
             </Table.Td>

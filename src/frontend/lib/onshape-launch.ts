@@ -22,12 +22,14 @@ export const OnshapeLaunchType = z.object({
     /** Onshape's own origin, which a client message has to be addressed to. */
     server: z.string().optional().catch(undefined),
     /** Onshape's color scheme, which "system" resolves to inside the panel. */
-    systemTheme: ColorThemeType.optional().catch(undefined)
+    systemTheme: ColorThemeType.optional().catch(undefined),
+    /** The company the session is scoped to, which sign-in asks Onshape for. */
+    sessionCompanyId: z.string().optional().catch(undefined)
 });
 
 export type OnshapeLaunch = z.infer<typeof OnshapeLaunchType>;
 
-/** The url keys a launch occupies, which the app strips once it has them. */
+/** The url keys a launch occupies. */
 export const LAUNCH_KEYS = Object.keys(
     OnshapeLaunchType.shape
 ) as (keyof OnshapeLaunch)[];
@@ -52,9 +54,4 @@ export function toTargetElement(
         return undefined;
     }
     return { documentId, instanceId, instanceType, elementId, elementType };
-}
-
-/** Whether a launch names a document the app cannot be used in. */
-export function isReadOnlyInstance(launch: OnshapeLaunch): boolean {
-    return launch.instanceType === "v" || launch.instanceType === "m";
 }

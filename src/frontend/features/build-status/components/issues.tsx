@@ -103,8 +103,6 @@ export function SeverityBadges(props: SeverityBadgesProps): ReactNode {
     if (issues.length === 0) {
         return (
             <Badge
-                size="sm"
-                variant="light"
                 color={StatusColor.SUCCESS}
                 leftSection={<CheckIcon size={IconSize.TINY} />}
             >
@@ -158,11 +156,7 @@ function CountBadge(props: CountBadgeProps): ReactNode {
     const { color, noun } = SEVERITY_BADGE[severity];
     // Don't pluralize info, e.g. "2 infos" reads wrong.
     const plural = severity !== BuildIssueSeverity.INFO && count > 1 ? "s" : "";
-    return (
-        <Badge size="sm" variant="light" color={color}>
-            {`${count} ${noun}${plural}`}
-        </Badge>
-    );
+    return <Badge color={color}>{`${count} ${noun}${plural}`}</Badge>;
 }
 
 /** How many issues of each severity a build carries. */
@@ -261,7 +255,7 @@ function IssueCallout(props: IssueCalloutProps): ReactNode {
         return (
             <Group {...CALLOUT_LAYOUT} bg={background} bdrs="sm">
                 <CalloutIcon severity={severity} />
-                <Text size="sm">{getIssueDescription(issue)}</Text>
+                <Text>{getIssueDescription(issue)}</Text>
             </Group>
         );
     }
@@ -270,9 +264,7 @@ function IssueCallout(props: IssueCalloutProps): ReactNode {
         <ExternalLink href={url} display="block" underline="never" c="inherit">
             <Group {...CALLOUT_LAYOUT} bg={background} bdrs="sm">
                 <CalloutIcon severity={severity} />
-                <Text size="sm" flex={1}>
-                    {getIssueDescription(issue)}
-                </Text>
+                <Text flex={1}>{getIssueDescription(issue)}</Text>
                 <AppIcon
                     icon={ArrowSquareOutIcon}
                     className={styles.noShrink}

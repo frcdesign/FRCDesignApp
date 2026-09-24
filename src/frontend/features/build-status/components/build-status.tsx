@@ -153,17 +153,11 @@ function CardHeader(props: CardHeaderProps): ReactNode {
     const { name, groupId, issues, versionCreatedAt } = props;
     return (
         <Stack gap={6}>
-            <Group
-                justify="space-between"
-                align="center"
-                wrap="nowrap"
-                gap="sm"
-            >
+            <Group justify="space-between" align="center" gap="sm">
                 <Text
                     truncate
                     title={name}
                     fw={FontWeight.SEMI_BOLD}
-                    size="sm"
                     flex={1}
                     miw={0}
                 >
@@ -198,7 +192,6 @@ function VersionAge(props: VersionAgeProps): ReactNode {
     return (
         <Group
             gap={4}
-            wrap="nowrap"
             c={StatusColor.DIMMED}
             className={styles.noShrink}
             style={{ whiteSpace: "nowrap" }}

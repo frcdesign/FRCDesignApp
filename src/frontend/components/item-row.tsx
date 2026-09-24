@@ -42,13 +42,7 @@ export function CardTitle(props: CardTitleProps): ReactNode {
     } = props;
 
     return (
-        <Group
-            gap="sm"
-            wrap="nowrap"
-            flex={1}
-            miw={0}
-            className={styles.onlyTextShrinks}
-        >
+        <Group gap="sm" flex={1} miw={0} className={styles.onlyTextShrinks}>
             {thumbnail}
             {/* Shrinks to truncate, but never grows: the badge belongs beside
                 the name, not at the row's edge. */}
@@ -56,7 +50,6 @@ export function CardTitle(props: CardTitleProps): ReactNode {
                 <Text
                     truncate
                     title={title}
-                    size="sm"
                     c={disabled ? "dimmed" : undefined}
                 >
                     <HighlightedText
@@ -91,14 +84,7 @@ function PartNameAndNumber(props: PartNameAndNumberProps): ReactNode {
         return null;
     }
     return (
-        <Group
-            gap={4}
-            wrap="nowrap"
-            miw={0}
-            fz="xs"
-            lh="xs"
-            c={StatusColor.DIMMED}
-        >
+        <Group gap={4} miw={0} fz="xs" lh="xs" c={StatusColor.DIMMED}>
             {partName && (
                 <Text truncate title={partName} inherit miw={0}>
                     <HighlightedText
@@ -124,7 +110,6 @@ function PartNameAndNumber(props: PartNameAndNumberProps): ReactNode {
 export function ItemTable(props: PropsWithChildren): ReactNode {
     return (
         <Table
-            highlightOnHover
             verticalSpacing="xs"
             layout="fixed"
             style={{ cursor: "pointer" }}
@@ -154,7 +139,7 @@ export function ItemRow(props: ItemRowProps): ReactNode {
         <AppContextMenu menuItems={menuItems}>
             <Table.Tr onClick={onClick}>
                 <Table.Td>
-                    <Group wrap="nowrap">
+                    <Group>
                         {left}
                         <Group
                             gap="4px"

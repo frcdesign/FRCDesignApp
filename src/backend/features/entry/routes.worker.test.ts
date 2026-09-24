@@ -290,6 +290,18 @@ describe("GET /init", () => {
         expect(await db.select().from(events).get()).toBeUndefined();
     });
 
+    it.each(["v", "m"])(
+        "sends a launch in a %s instance to the version error",
+        async (instanceType) => {
+            const res = await createTestApp().request(
+                `/init?documentId=doc&instanceType=${instanceType}`,
+                jsonRequest("GET"),
+                env
+            );
+            expect(res.headers.get("Location")).toBe("/version-error");
+        }
+    );
+
     it("never caches the gate's verdict", async () => {
         const res = await createTestApp().request(
             "/init",

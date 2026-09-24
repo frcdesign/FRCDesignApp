@@ -1,7 +1,6 @@
 import { Menu } from "@mantine/core";
 import { ImageIcon } from "@phosphor-icons/react";
 import { ReactNode } from "react";
-import { IconSize } from "../../../lib/style-constants";
 import { useReloadThumbnailMutation } from "../queries";
 
 interface ReloadThumbnailMenuItemProps {
@@ -16,7 +15,7 @@ export function ReloadThumbnailMenuItem(
     const mutation = useReloadThumbnailMutation(props.target);
     return (
         <Menu.Item
-            leftSection={<ImageIcon size={IconSize.SMALL} />}
+            leftSection={<ImageIcon />}
             onClick={() => mutation.mutate()}
         >
             Reload thumbnail

@@ -144,7 +144,7 @@ function ShowAllElementsMenuItem(props: AllElementsVisibilityProps): ReactNode {
     return (
         <Menu.Item
             color={StatusColor.INFO}
-            leftSection={<EyeIcon size={IconSize.SMALL} />}
+            leftSection={<EyeIcon />}
             onClick={() => mutation.mutate()}
         >
             Show all elements
@@ -157,7 +157,7 @@ function HideAllElementsMenuItem(props: AllElementsVisibilityProps): ReactNode {
     return (
         <Menu.Item
             color={StatusColor.ERROR}
-            leftSection={<EyeSlashIcon size={IconSize.SMALL} />}
+            leftSection={<EyeSlashIcon />}
             onClick={() => mutation.mutate()}
         >
             Hide all elements
@@ -189,7 +189,7 @@ function DeleteGroupMenuItem(props: DeleteGroupMenuItemProps): ReactNode {
                 />
             ),
             children: (
-                <Text size="sm">
+                <Text>
                     {`Are you sure you want to delete ${name}? Its elements are deleted with it, and permanently removed from every user's favorites.`}
                 </Text>
             ),
@@ -202,7 +202,7 @@ function DeleteGroupMenuItem(props: DeleteGroupMenuItemProps): ReactNode {
 
     return (
         <Menu.Item
-            leftSection={<TrashIcon size={IconSize.SMALL} />}
+            leftSection={<TrashIcon />}
             color={StatusColor.ERROR}
             onClick={confirmDelete}
         >

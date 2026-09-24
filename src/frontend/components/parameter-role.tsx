@@ -35,11 +35,9 @@ export function ParameterRoleLabel(props: ParameterRoleLabelProps): ReactNode {
     const { role, suffix = "" } = props;
     const RoleIcon = ROLE_ICONS[role];
     return (
-        <Group gap={6} wrap="nowrap">
+        <Group gap={6}>
             <RoleIcon size={IconSize.SMALL} />
-            <Text size="sm" inherit>
-                {ROLE_LABELS[role] + suffix}
-            </Text>
+            <Text inherit>{ROLE_LABELS[role] + suffix}</Text>
         </Group>
     );
 }

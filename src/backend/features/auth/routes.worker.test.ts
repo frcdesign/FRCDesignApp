@@ -176,63 +176,21 @@ describe("GET /auth/sign-in redirect target", () => {
         return (JSON.parse(raw!) as { redirectUrl: string }).redirectUrl;
     }
 
-    it("returns the caller to the launch /init named", async () => {
+    it("returns the caller to the path it was given", async () => {
         expect(
             await storedRedirect("redirectUrl=%2Finit%3FdocumentId%3Ddoc-1")
         ).toBe("/init?documentId=doc-1");
     });
 
-    // Onshape's own value names Onshape, and an enterprise is a subdomain.
-    it("takes an Onshape url from Onshape", async () => {
-        expect(
-            await storedRedirect(
-                "redirectOnshapeUri=https%3A%2F%2Fcompany.onshape.com%2Fdocuments%2Fdoc-1"
-            )
-        ).toBe("https://company.onshape.com/documents/doc-1");
-    });
-
-    // Ours carries the element the panel was opened on; Onshape's does not.
-    it("prefers the launch over Onshape's own value", async () => {
-        expect(
-            await storedRedirect(
-                "redirectUrl=%2Finit%3FdocumentId%3Ddoc-1&redirectOnshapeUri=https%3A%2F%2Fcad.onshape.com%2Fdocuments"
-            )
-        ).toBe("/init?documentId=doc-1");
-    });
-
-    // Resolved against this app it has no route, stranding the caller.
-    it("refuses a bare path, which would resolve against this app", async () => {
-        expect(
-            await storedRedirect(
-                "redirectOnshapeUri=%2Fdocuments%2Fdoc-1%2Fw%2Fws-1%2Fe%2Fel-1"
-            )
-        ).toBe("/init");
-    });
-
-    it("refuses an origin that is not Onshape", async () => {
-        expect(
-            await storedRedirect(
-                "redirectOnshapeUri=https%3A%2F%2Fevil.com%2Fx"
-            )
-        ).toBe("/init");
-        // A host that merely ends in the zone's spelling is not in it.
-        expect(
-            await storedRedirect(
-                "redirectOnshapeUri=https%3A%2F%2Fnotonshape.com%2Fx"
-            )
-        ).toBe("/init");
-    });
-
-    // Opening the app beats blocking sign-in if this reading is too narrow.
-    it("opens the app rather than refusing a value it cannot place", async () => {
-        expect(await storedRedirect("redirectOnshapeUri=not-a-url")).toBe(
-            "/init"
-        );
-    });
-
-    it("refuses a protocol-relative url, which names another host", async () => {
-        expect(
-            await storedRedirect("redirectUrl=%2F%2Fevil.com")
-        ).toBeUndefined();
+    it.each([
+        ["nothing", ""],
+        ["an absolute url", "redirectUrl=https%3A%2F%2Fevil.com%2Fx"],
+        ["a protocol-relative url", "redirectUrl=%2F%2Fevil.com"],
+        [
+            "Onshape's own redirect",
+            "redirectOnshapeUri=https%3A%2F%2Fcad.onshape.com%2Fdocuments"
+        ]
+    ])("sends the caller home given %s", async (_, query) => {
+        expect(await storedRedirect(query)).toBe("/");
     });
 });

@@ -150,7 +150,7 @@ function GroupHeaderRow(props: GroupHeaderRowProps): ReactNode {
             px="md"
             display="flex"
         >
-            <Group wrap="nowrap" justify="space-between" flex={1}>
+            <Group justify="space-between" flex={1}>
                 <AppTitle
                     icon={<ArrowLeftIcon size={IconSize.MEDIUM} />}
                     title={group.name}

@@ -4,7 +4,6 @@ import { InsertableOut } from "@backend/features/library/contract";
 import { ElementType } from "@backend/lib/onshape/element-type";
 import { Button, Checkbox, Group, Stack } from "@mantine/core";
 import { PlusIcon } from "@phosphor-icons/react";
-import { IconSize } from "../../../lib/style-constants";
 import {
     AppModalBody,
     AppModalFooter,
@@ -274,8 +273,9 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
                 />
             )}
             <Button
-                // Filled: light would put green on pale green.
-                leftSection={<PlusIcon size={IconSize.SMALL} />}
+                // Light would put green on pale green.
+                variant="filled"
+                leftSection={<PlusIcon />}
                 loading={isLoadingConfiguration || insertMutation.isPending}
                 onClick={handleClick}
             >

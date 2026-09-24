@@ -147,8 +147,6 @@ export function FavoriteButton(props: FavoriteButtonProps): ReactNode {
 
     return (
         <ActionIcon
-            variant="subtle"
-            color={StatusColor.NEUTRAL}
             size={large ? "input-sm" : undefined}
             onClick={(event) => {
                 event.stopPropagation();

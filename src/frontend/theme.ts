@@ -1,11 +1,23 @@
 import {
+    ActionIcon,
+    Badge,
+    Button,
     Card,
     createTheme,
+    Group,
+    HoverCard,
+    Input,
     type MantineColorsTuple,
+    Menu,
+    Modal,
+    Popover,
+    rem,
+    Table,
+    Text,
     Tooltip
 } from "@mantine/core";
 import { LibraryId } from "@backend/features/library/library-id";
-import { FILLED_SHADE } from "./lib/style-constants";
+import { FILLED_SHADE, IconSize, StatusColor } from "./lib/style-constants";
 
 /** Index 6 is the brand color; https://mantine.dev/colors-generator to tune. */
 const frcGreen: MantineColorsTuple = [
@@ -37,6 +49,16 @@ export function getLibraryShade(libraryId: string): string {
     return `${getLibraryColor(libraryId)}.${FILLED_SHADE}`;
 }
 
+// Phosphor icons default to 1em, so an icon in a section takes this size unless it sets its own.
+const ICON_SECTION = { fontSize: rem(IconSize.SMALL) };
+
+const FLOATING = {
+    shadow: "md",
+    withArrow: true,
+    // So a card beside a row on a phone is pushed on screen, not cut off.
+    middlewares: { flip: true, shift: { crossAxis: true, padding: 8 } }
+};
+
 /** The frame stays neutral; a library's color is an accent on its controls. */
 export function createAppTheme(libraryId: string) {
     return createTheme({
@@ -60,7 +82,28 @@ export function createAppTheme(libraryId: string) {
             }),
             Card: Card.extend({
                 defaultProps: { withBorder: true, padding: "lg", radius: "md" }
-            })
+            }),
+            Text: Text.extend({ defaultProps: { size: "sm" } }),
+            Group: Group.extend({ defaultProps: { wrap: "nowrap" } }),
+            Button: Button.extend({
+                defaultProps: { variant: "light" },
+                styles: { section: ICON_SECTION }
+            }),
+            ActionIcon: ActionIcon.extend({
+                defaultProps: { variant: "subtle", color: StatusColor.NEUTRAL }
+            }),
+            Badge: Badge.extend({
+                defaultProps: { variant: "light", size: "sm" }
+            }),
+            Menu: Menu.extend({
+                defaultProps: { shadow: "md" },
+                styles: { itemSection: ICON_SECTION }
+            }),
+            Popover: Popover.extend({ defaultProps: FLOATING }),
+            HoverCard: HoverCard.extend({ defaultProps: FLOATING }),
+            Input: Input.extend({ styles: { section: ICON_SECTION } }),
+            Modal: Modal.extend({ defaultProps: { centered: true } }),
+            Table: Table.extend({ defaultProps: { highlightOnHover: true } })
         }
     });
 }

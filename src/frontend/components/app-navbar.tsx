@@ -14,8 +14,7 @@ import { GearIcon, MagnifyingGlassIcon } from "@phosphor-icons/react";
 import {
     IconSize,
     NAVBAR_DIVIDER_COLOR,
-    NAVBAR_ROW_HEIGHT,
-    StatusColor
+    NAVBAR_ROW_HEIGHT
 } from "../lib/style-constants";
 import {
     PropsWithChildren,
@@ -56,7 +55,6 @@ export function NavbarRow(props: PropsWithChildren): ReactNode {
             gap="sm"
             px="sm"
             h={NAVBAR_ROW_HEIGHT}
-            wrap="nowrap"
             align="stretch"
             className={`${styles.frame} ${styles.dividerBottom}`}
         >
@@ -79,14 +77,14 @@ export function AppNavbar(): ReactNode {
         <Stack gap={0}>
             <NavbarRow>
                 <AppTabs />
-                <Group gap="xs" wrap="nowrap" ml="auto">
+                <Group gap="xs" ml="auto">
                     <InsertLocationStatus />
                     <JobIndicator />
                     <SignInButton />
                     <SettingsButton />
                 </Group>
             </NavbarRow>
-            <Group gap="xs" px="sm" h={NAVBAR_ROW_HEIGHT} wrap="nowrap">
+            <Group gap="xs" px="sm" h={NAVBAR_ROW_HEIGHT}>
                 <SearchBar />
                 <VendorMenu />
             </Group>
@@ -182,8 +180,6 @@ function AppTabs(): ReactNode {
 export function SettingsButton() {
     return (
         <ActionIcon
-            variant="subtle"
-            color={StatusColor.NEUTRAL}
             title="Settings"
             my="auto"
             // Matches the filter button.
@@ -242,7 +238,7 @@ function SearchBar() {
             // The panel opens to a library the caller is here to search.
             autoFocus
             flex={1}
-            leftSection={<MagnifyingGlassIcon size={IconSize.SMALL} />}
+            leftSection={<MagnifyingGlassIcon />}
             placeholder={`Search ${getLibraryName(libraryId)}...`}
             ref={ref}
             value={query}

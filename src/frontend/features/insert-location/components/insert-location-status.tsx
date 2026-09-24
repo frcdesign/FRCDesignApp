@@ -106,8 +106,7 @@ function AddInsertLocationButton(
     return (
         <Button
             size="compact-sm"
-            variant="light"
-            leftSection={<PlusIcon size={IconSize.SMALL} />}
+            leftSection={<PlusIcon />}
             loading={addMutation.isPending}
             onClick={() => addMutation.mutate()}
         >

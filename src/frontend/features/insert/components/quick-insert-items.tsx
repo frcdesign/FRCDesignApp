@@ -5,7 +5,7 @@ import { InsertableOut } from "@backend/features/library/contract";
 import { type PartialSelection } from "@backend/features/configurations/contract";
 import { ElementType } from "@backend/lib/onshape/element-type";
 import { InsertSource } from "@backend/features/analytics/usage";
-import { IconSize, StatusColor } from "../../../lib/style-constants";
+import { StatusColor } from "../../../lib/style-constants";
 import { openCannotDeriveAssemblyAlert } from "../../../components/alerts";
 import {
     useIsAssemblyInPartStudio,
@@ -53,7 +53,7 @@ export function QuickInsertItems(props: QuickInsertItemsProps): ReactNode {
             {supportsFasten && (
                 <Menu.Item
                     color={StatusColor.INFO}
-                    leftSection={<PlusIcon size={IconSize.SMALL} />}
+                    leftSection={<PlusIcon />}
                     onClick={() => handleClick(true)}
                 >
                     Quick insert and fasten
@@ -61,7 +61,7 @@ export function QuickInsertItems(props: QuickInsertItemsProps): ReactNode {
             )}
             <Menu.Item
                 color={StatusColor.INFO}
-                leftSection={<PlusIcon size={IconSize.SMALL} />}
+                leftSection={<PlusIcon />}
                 onClick={() => handleClick(false)}
             >
                 Quick insert

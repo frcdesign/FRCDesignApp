@@ -34,14 +34,6 @@ export function AppHoverCard(props: AppHoverCardProps): ReactNode {
         getInitialValueInEffect: false
     });
 
-    const shared = {
-        ...popoverProps,
-        // So a card beside a row on a phone is pushed on screen, not cut off.
-        middlewares: { flip: true, shift: { crossAxis: true, padding: 8 } },
-        withinPortal: true,
-        shadow: "md",
-        withArrow: true
-    };
     const targetBox = (
         <Box component="span" display="inline-flex" onClick={stopPropagation}>
             {target}
@@ -56,7 +48,7 @@ export function AppHoverCard(props: AppHoverCardProps): ReactNode {
     if (canHover) {
         return (
             <HoverCard
-                {...shared}
+                {...popoverProps}
                 openDelay={openDelay}
                 closeDelay={closeDelay}
             >
@@ -69,7 +61,7 @@ export function AppHoverCard(props: AppHoverCardProps): ReactNode {
     }
     return (
         <Popover
-            {...shared}
+            {...popoverProps}
             // Takes the dismissing tap, so the row underneath doesn't get it too.
             withOverlay
             overlayProps={{ backgroundOpacity: 0, onClick: stopPropagation }}

@@ -22,7 +22,7 @@ export function ChangeIndicator({
     if (comparison.changeRatio === undefined) {
         return (
             <Tooltip label={explain(comparison)}>
-                <Text size="sm" c="dimmed" w="fit-content" ta="right">
+                <Text c="dimmed" w="fit-content" ta="right">
                     {shortReason(comparison)}
                 </Text>
             </Tooltip>
@@ -36,11 +36,9 @@ export function ChangeIndicator({
     const color = flat ? "dimmed" : rising ? "green" : "red";
 
     const change = (
-        <Group gap={4} wrap="nowrap">
+        <Group gap={4}>
             <Arrow size={IconSize.TINY} weight="bold" color={color} />
-            <Text size="sm" c={color}>
-                {formatPercentChange(comparison.changeRatio)}
-            </Text>
+            <Text c={color}>{formatPercentChange(comparison.changeRatio)}</Text>
         </Group>
     );
 

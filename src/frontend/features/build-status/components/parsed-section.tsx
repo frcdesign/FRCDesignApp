@@ -168,9 +168,9 @@ interface ParameterRowProps {
 function ParameterRow(props: ParameterRowProps): ReactNode {
     const { parameter } = props;
     return (
-        <Group gap="xl" wrap="nowrap" justify="space-between">
-            <Text size="sm">{parameter.name}</Text>
-            <Group gap={6} wrap="nowrap">
+        <Group gap="xl" justify="space-between">
+            <Text>{parameter.name}</Text>
+            <Group gap={6}>
                 <ParameterTypeBadge parameter={parameter} />
                 <IndexedControl {...props} />
             </Group>
@@ -247,7 +247,7 @@ function ParameterTypeBadge(props: ParameterTypeBadgeProps): ReactNode {
         : getParameterTypeLabel(parameter.type);
 
     const badge = (
-        <Badge size="xs" variant="light" color={CATEGORY_COLOR}>
+        <Badge size="xs" color={CATEGORY_COLOR}>
             {label}
         </Badge>
     );
@@ -287,8 +287,8 @@ interface ParsedRowProps {
 function ParsedRow(props: ParsedRowProps): ReactNode {
     const { label, value } = props;
     return (
-        <Group gap="xl" wrap="nowrap" justify="space-between">
-            <Text size="sm">{label}</Text>
+        <Group gap="xl" justify="space-between">
+            <Text>{label}</Text>
             <StateValue value={value} />
         </Group>
     );
@@ -319,26 +319,18 @@ function StateValue(props: StateValueProps): ReactNode {
 
     if (value.kind === "text") {
         return (
-            <Text size="sm" c={value.dimmed ? "dimmed" : undefined}>
-                {value.text}
-            </Text>
+            <Text c={value.dimmed ? "dimmed" : undefined}>{value.text}</Text>
         );
     }
 
     if (value.vendors.length === 0) {
-        return (
-            <Text size="sm" c={StatusColor.DIMMED}>
-                None
-            </Text>
-        );
+        return <Text c={StatusColor.DIMMED}>None</Text>;
     }
     return (
         <Group gap={4} wrap="wrap" justify="flex-end">
             {value.vendors.map((vendor) => (
                 <Badge
                     key={vendor}
-                    size="sm"
-                    variant="light"
                     color={StatusColor.INFO}
                     title={getVendorName(vendor)}
                 >

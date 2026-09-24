@@ -41,10 +41,10 @@ export function HealthTiles({ counts }: HealthTilesProps): ReactNode {
     return (
         <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }}>
             {tiles.map((tile) => (
-                <Card key={tile.label} withBorder padding="lg" radius="md">
+                <Card key={tile.label}>
                     <Group gap="xs">
                         {tile.icon}
-                        <Text size="sm" c="dimmed" tt="uppercase" fw={700}>
+                        <Text c="dimmed" tt="uppercase" fw={700}>
                             {tile.label}
                         </Text>
                     </Group>

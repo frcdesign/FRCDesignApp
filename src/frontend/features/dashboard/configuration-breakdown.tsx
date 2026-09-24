@@ -59,18 +59,14 @@ function ParameterCard({ parameter }: ParameterCardProps): ReactNode {
     return (
         <Card padding="md">
             <Group justify="space-between" mb="sm" wrap="wrap">
-                <Group gap="xs">
+                <Group gap="xs" wrap="wrap">
                     <AppBreadcrumbs
                         crumbs={parameter.path.map((label) => ({ label }))}
                         current={<Title order={5}>{parameter.name}</Title>}
                     />
-                    <Badge variant="light" color={CATEGORY_COLOR} size="sm">
-                        {parameter.type}
-                    </Badge>
+                    <Badge color={CATEGORY_COLOR}>{parameter.type}</Badge>
                 </Group>
-                <Text size="sm" c="dimmed">
-                    {formatCount(parameter.total)} recorded
-                </Text>
+                <Text c="dimmed">{formatCount(parameter.total)} recorded</Text>
             </Group>
 
             {/* A quantity takes any number the user types, so the list of
@@ -111,7 +107,6 @@ function ValueRow({ value, total }: ValueRowProps): ReactNode {
             <Group justify="space-between" gap="xs" mb={4}>
                 <Group gap="xs">
                     <Text
-                        size="sm"
                         c={value.count === 0 ? "dimmed" : undefined}
                         fw={lands ? FontWeight.SEMI_BOLD : undefined}
                     >
@@ -119,7 +114,7 @@ function ValueRow({ value, total }: ValueRowProps): ReactNode {
                     </Text>
                     <DefaultBadge value={value} />
                 </Group>
-                <Text size="sm" c="dimmed">
+                <Text c="dimmed">
                     {formatCount(value.count)} ({formatPercent(percent)})
                 </Text>
             </Group>
@@ -147,11 +142,7 @@ function DefaultBadge({ value }: DefaultBadgeProps): ReactNode {
         );
     }
     if (value.isDefault) {
-        return (
-            <Badge size="xs" variant="light">
-                Default
-            </Badge>
-        );
+        return <Badge size="xs">Default</Badge>;
     }
     return null;
 }

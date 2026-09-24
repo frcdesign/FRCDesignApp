@@ -27,12 +27,7 @@ function openWarningAlert(props: OpenWarningAlertProps): void {
         children: (
             // Takes focus from Close, which would look pre-selected. No outline, which
             // would make the text look editable.
-            <Text
-                data-autofocus
-                tabIndex={-1}
-                size="sm"
-                style={{ outline: "none" }}
-            >
+            <Text data-autofocus tabIndex={-1} style={{ outline: "none" }}>
                 {props.text}
             </Text>
         ),

@@ -60,7 +60,7 @@ export function ClearFiltersButton(props: ClearFiltersButtonProps): ReactNode {
         <Button
             disabled={areAllTagsActive}
             variant="default"
-            leftSection={<FunnelXIcon size={IconSize.SMALL} />}
+            leftSection={<FunnelXIcon />}
             onClick={clearVendorFilters}
         >
             {text}
@@ -92,7 +92,7 @@ export function VendorMenu(): ReactNode {
             </Menu.CheckboxGroup>
             <Menu.Divider />
             <Menu.Item
-                leftSection={<FunnelXIcon size={IconSize.SMALL} />}
+                leftSection={<FunnelXIcon />}
                 disabled={!hasFilters}
                 onClick={() => setVendorFilters(libraryId, [])}
             >

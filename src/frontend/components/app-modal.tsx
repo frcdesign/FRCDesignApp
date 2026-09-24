@@ -48,7 +48,6 @@ export function AppModal(props: AppModalProps): ReactNode {
             onClose={onClose ?? (() => undefined)}
             title={title}
             size={size}
-            centered
             withCloseButton={dismissible}
             closeOnClickOutside={dismissible}
             closeOnEscape={dismissible}
@@ -88,7 +87,6 @@ export function AppModalFooter(props: PropsWithChildren): ReactNode {
     return (
         <Group
             justify="space-between"
-            wrap="nowrap"
             p="sm"
             flex="0 0 auto"
             className={`${styles.frame} ${styles.dividerTop}`}

@@ -47,7 +47,7 @@ export function AppBrandMark(props: AppBrandMarkProps): ReactNode {
 /** The book and the app's name, in every navbar, linking out to FRCDesign.org. */
 export function AppBrand(): ReactNode {
     return (
-        <Group gap="xs" wrap="nowrap" h="100%">
+        <Group gap="xs" h="100%">
             <Center component="a" href={FRC_DESIGN_URL} target="_blank">
                 <AppBrandMark />
             </Center>
@@ -56,7 +56,6 @@ export function AppBrand(): ReactNode {
                 href={FRC_DESIGN_URL}
                 target="_blank"
                 fw={FontWeight.BOLD}
-                size="sm"
                 c="inherit"
                 td="none"
             >

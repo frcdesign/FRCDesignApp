@@ -7,7 +7,7 @@ import {
     InstancePath
 } from "@backend/lib/onshape/path";
 import { type PartialSelection } from "@backend/features/configurations/contract";
-import { IconSize, StatusColor } from "../lib/style-constants";
+import { StatusColor } from "../lib/style-constants";
 import { copyUrlToClipboard, makeUrl, openUrlInNewTab } from "../lib/url";
 import { useOnshapeOrigin } from "../lib/onshape-params";
 
@@ -26,14 +26,14 @@ export function OpenDocumentItems(props: OpenDocumentItemsProps): ReactNode {
         <>
             <Menu.Item
                 color={StatusColor.INFO}
-                leftSection={<ArrowSquareOutIcon size={IconSize.SMALL} />}
+                leftSection={<ArrowSquareOutIcon />}
                 onClick={() => openUrlInNewTab(url)}
             >
                 Open document
             </Menu.Item>
             <Menu.Item
                 color={StatusColor.INFO}
-                leftSection={<LinkIcon size={IconSize.SMALL} />}
+                leftSection={<LinkIcon />}
                 onClick={() => {
                     void copyUrlToClipboard(url);
                 }}

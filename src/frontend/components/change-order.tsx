@@ -5,7 +5,6 @@ import {
     CaretDownIcon,
     CaretUpIcon
 } from "@phosphor-icons/react";
-import { IconSize } from "../lib/style-constants";
 import { type ReactNode } from "react";
 
 interface ChangeOrderMenuProps {
@@ -22,7 +21,7 @@ export function ChangeOrderItems(props: ChangeOrderMenuProps): ReactNode {
         (item) => (
             <Menu.Item
                 key={item.label}
-                leftSection={<item.icon size={IconSize.SMALL} />}
+                leftSection={<item.icon />}
                 onClick={() =>
                     onOrderChange(applyMoveOperation(id, order, item.operation))
                 }

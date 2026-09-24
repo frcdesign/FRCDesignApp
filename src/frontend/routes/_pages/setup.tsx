@@ -25,7 +25,7 @@ function Setup(): ReactNode {
                 <Stack gap="lg">
                     <Stack gap="xs">
                         <Title order={2}>Get the FRCDesignApp</Title>
-                        <Text c="dimmed">
+                        <Text size="md" c="dimmed">
                             The FRCDesignApp runs directly in Onshape, making it
                             easy to add parts directly to your CAD.
                         </Text>
@@ -36,7 +36,7 @@ function Setup(): ReactNode {
                     <List type="ordered" spacing="lg">
                         <List.Item>
                             <Stack gap="xs" align="flex-start">
-                                <Text>
+                                <Text size="md">
                                     Subscribe to the FRCDesignApp in the Onshape
                                     App Store.
                                 </Text>

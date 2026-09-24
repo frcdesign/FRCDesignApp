@@ -24,15 +24,8 @@ export type AppParams = z.infer<typeof AppParamsType>;
 /** Kept across in-app navigation, like the parameters Onshape launched with. */
 export const APP_PARAM_KEYS = ["q", "part", "config", "favorite"] as const;
 
-/** Once per load, not per navigation, or the url would become the source of truth. */
-let adopted = false;
-
 /** Takes what the url names into the stored state, leaving the rest alone. */
 export function adoptAppParams(params: AppParams): void {
-    if (adopted) {
-        return;
-    }
-    adopted = true;
     updateUiState({
         ...(params.q !== undefined && { searchQuery: params.q }),
         // A part names the whole menu, so absent fields mean a plain part.

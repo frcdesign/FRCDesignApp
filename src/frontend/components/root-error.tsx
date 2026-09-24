@@ -57,7 +57,7 @@ function MissedUrl(): ReactNode {
     const url = window.location.href;
 
     return (
-        <Group gap={4} wrap="nowrap" align="center" mt="xs" maw="100%">
+        <Group gap={4} align="center" mt="xs" maw="100%">
             <Code
                 style={{
                     overflowWrap: "anywhere",
@@ -71,7 +71,6 @@ function MissedUrl(): ReactNode {
                 {({ copied, copy }) => (
                     <Tooltip label={copied ? "Copied" : "Copy address"}>
                         <ActionIcon
-                            variant="subtle"
                             color={copied ? "teal" : "gray"}
                             size={IconSize.SMALL}
                             onClick={copy}

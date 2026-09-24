@@ -43,7 +43,7 @@ export function TrendTile({
 
     return (
         <Card>
-            <Text size="sm" c="dimmed" tt="uppercase" fw={700}>
+            <Text c="dimmed" tt="uppercase" fw={700}>
                 {metric.label}
             </Text>
             <Title order={2}>{value}</Title>

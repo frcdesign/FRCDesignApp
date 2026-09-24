@@ -4,7 +4,6 @@ import { Favorite } from "@backend/features/favorites/contract";
 import { InsertableOut } from "@backend/features/library/contract";
 import { Menu } from "@mantine/core";
 import { PencilIcon } from "@phosphor-icons/react";
-import { IconSize } from "../../../lib/style-constants";
 import { openInsertMenu } from "../../insert/open-insert-menu";
 import { openFavoriteMenu } from "../open-favorite-menu";
 import { FavoriteButton, FavoriteInsertableItem } from "./favorite-button";
@@ -136,7 +135,7 @@ function FavoriteMenuItems(props: FavoriteMenuItemsProps): ReactNode {
             )}
             <MenuSection label="Favorites">
                 <Menu.Item
-                    leftSection={<PencilIcon size={IconSize.SMALL} />}
+                    leftSection={<PencilIcon />}
                     onClick={() => {
                         if (!insertable.isConfigurable) {
                             openCannotEditDefaultConfigurationAlert();

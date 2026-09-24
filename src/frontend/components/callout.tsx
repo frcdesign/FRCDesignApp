@@ -27,10 +27,8 @@ export function Callout(props: CalloutProps): ReactNode {
         >
             {/* Wraps rather than squeezing: on a narrow panel the button drops
                 under the text instead of running off the edge. */}
-            <Group justify="space-between" gap="xs">
-                <Text size="sm" flex="1 1 12rem">
-                    {text}
-                </Text>
+            <Group justify="space-between" gap="xs" wrap="wrap">
+                <Text flex="1 1 12rem">{text}</Text>
                 {action}
             </Group>
         </Alert>

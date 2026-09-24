@@ -18,7 +18,7 @@ export function renderNotification(
         return message;
     }
     return (
-        <Group justify="space-between" wrap="nowrap" gap="sm">
+        <Group justify="space-between" gap="sm">
             {/* Only reachable on a window too narrow for the row: the message
                 is what gives, and the button keeps its label intact. */}
             <Box component="span" miw={0}>

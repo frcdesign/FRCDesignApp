@@ -1,7 +1,6 @@
 import {
     createFileRoute,
     Outlet,
-    redirect,
     retainSearchParams,
     type SearchSchemaInput
 } from "@tanstack/react-router";
@@ -13,11 +12,7 @@ import * as z from "zod";
 import { Theme } from "@backend/features/settings/settings";
 import { AppTabType } from "../../lib/tabs";
 import { adoptOnshapeLaunch } from "../../lib/onshape-params";
-import {
-    isReadOnlyInstance,
-    LAUNCH_KEYS,
-    OnshapeLaunchType
-} from "../../lib/onshape-launch";
+import { OnshapeLaunchType } from "../../lib/onshape-launch";
 import {
     adoptAppParams,
     APP_PARAM_KEYS,
@@ -30,7 +25,8 @@ import { ProgramSelect } from "../../features/library/components/program-select"
 import { SectionLoading } from "../../components/app-notice";
 import { useMessageListener } from "../../lib/messages";
 import { useLiveSync } from "../../lib/live-sync";
-import { updateUiState } from "../../lib/ui-state";
+import { getUiState, updateUiState } from "../../lib/ui-state";
+import { showSuccessToast } from "../../lib/notifications";
 import { RootAppError } from "../../components/root-error";
 
 /** What the entry redirect carries and the app takes off the url. */
@@ -41,9 +37,6 @@ const LaunchSearchType = OnshapeLaunchType.extend({
     tabId: AppTabType.optional().catch(undefined)
 });
 
-/** What the entry redirect seeds off the caller's row, beside the launch. */
-const ENTRY_KEYS = ["theme", "tabId"] as const;
-
 type LaunchSearch = z.infer<typeof LaunchSearchType>;
 
 export const Route = createFileRoute("/app")({
@@ -53,48 +46,35 @@ export const Route = createFileRoute("/app")({
         ...parseSearch(AppParamsType, search)
     }),
     search: {
-        // The launch is stripped below, so navigation never carries the caller's document.
         middlewares: [retainSearchParams([...APP_PARAM_KEYS])]
     },
-    beforeLoad: ({ search, location }) => {
-        adoptAppParams(search);
-        adoptOnshapeLaunch(search);
-        // Moved into ui-state, so the url doesn't hold a second answer.
-        if (search.theme) {
-            updateUiState({ theme: search.theme }, { sync: false });
-        }
-        // Only when the row names one, so a tab picked signed out isn't cleared.
-        if (search.tabId) {
-            updateUiState({ tabId: search.tabId }, { sync: false });
-        }
-        // Nothing to insert into, so the app cannot do its one job here.
-        if (isReadOnlyInstance(search)) {
-            throw redirect({ to: "/version-error", replace: true });
-        }
-        if (isLaunch(search)) {
-            throw redirect({
-                to: location.pathname,
-                search: strippedOfLaunch(search),
-                replace: true
-            });
-        }
-    },
+    beforeLoad: ({ search }) => adoptUrl(search),
     errorComponent: RootAppError
 });
 
-function isLaunch(search: LaunchSearch): boolean {
-    return (
-        ENTRY_KEYS.some((key) => search[key] !== undefined) ||
-        LAUNCH_KEYS.some((key) => search[key] !== undefined)
-    );
-}
+// Once per load: after that the store is the source of truth, and in-app
+// navigation drops everything but the app's own params from the url.
+let adopted = false;
 
-/** Undefined, not absent: `retainSearchParams` restores missing keys. */
-function strippedOfLaunch(search: LaunchSearch & AppParams): AppParams {
-    const cleared = Object.fromEntries(
-        [...LAUNCH_KEYS, ...ENTRY_KEYS].map((key) => [key, undefined])
-    );
-    return { ...search, ...cleared };
+function adoptUrl(search: LaunchSearch & AppParams): void {
+    if (adopted) {
+        return;
+    }
+    adopted = true;
+    adoptAppParams(search);
+    adoptOnshapeLaunch(search);
+    // Seeded by the entry from the caller's row, which already has them.
+    if (search.theme) {
+        updateUiState({ theme: search.theme }, { sync: false });
+    }
+    if (search.tabId) {
+        updateUiState({ tabId: search.tabId }, { sync: false });
+    }
+    if (getUiState().justSignedIn) {
+        updateUiState({ justSignedIn: false });
+        // Onshape only returns here on success.
+        showSuccessToast("Signed in to Onshape.");
+    }
 }
 
 function App() {

@@ -13,9 +13,8 @@ interface InputRowProps {
 export function InputRow(props: InputRowProps): ReactNode {
     const { label, htmlFor, children } = props;
     return (
-        <Group gap="sm" wrap="nowrap" justify="space-between">
+        <Group gap="sm" justify="space-between">
             <Text
-                size="sm"
                 component="label"
                 htmlFor={htmlFor}
                 display="flex"

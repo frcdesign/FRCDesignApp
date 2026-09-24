@@ -58,7 +58,7 @@ function ProgramCard(props: ProgramCardProps): ReactNode {
                 onSelect(libraryId);
             }}
         >
-            <Group gap="md" wrap="nowrap">
+            <Group gap="md">
                 {/* In the library's own color, so the two choices read as the
                     two libraries they open. */}
                 <AppIcon
@@ -71,7 +71,7 @@ function ProgramCard(props: ProgramCardProps): ReactNode {
                         {name}
                         <RegisteredMark />
                     </Text>
-                    <Text size="sm">{getLibraryName(libraryId)}</Text>
+                    <Text>{getLibraryName(libraryId)}</Text>
                 </Stack>
                 <ArrowRightIcon size={IconSize.MEDIUM} />
             </Group>

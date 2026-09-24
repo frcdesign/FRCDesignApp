@@ -26,7 +26,7 @@ export function ReloadAllButton(): ReactNode {
                 />
             ),
             children: (
-                <Text size="sm">
+                <Text>
                     Are you sure you want to reload every document in every
                     library? This is an expensive operation. New versions of
                     documents are already reloaded on their own.
@@ -41,9 +41,8 @@ export function ReloadAllButton(): ReactNode {
 
     return (
         <Button
-            variant="light"
             color={StatusColor.ERROR}
-            leftSection={<ArrowsClockwiseIcon size={IconSize.SMALL} />}
+            leftSection={<ArrowsClockwiseIcon />}
             onClick={handleClick}
             loading={mutation.isPending}
         >

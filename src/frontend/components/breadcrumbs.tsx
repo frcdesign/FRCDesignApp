@@ -19,12 +19,7 @@ interface AppBreadcrumbsProps {
 /** With no crumbs, just `current`. */
 export function AppBreadcrumbs(props: AppBreadcrumbsProps): ReactNode {
     const { crumbs, current, mb } = props;
-    const end =
-        typeof current === "string" ? (
-            <Text size="sm">{current}</Text>
-        ) : (
-            current
-        );
+    const end = typeof current === "string" ? <Text>{current}</Text> : current;
     if (crumbs.length === 0) {
         return end;
     }
@@ -36,7 +31,7 @@ export function AppBreadcrumbs(props: AppBreadcrumbsProps): ReactNode {
                         {crumb.label}
                     </Anchor>
                 ) : (
-                    <Text key={crumb.label} size="sm" c={StatusColor.DIMMED}>
+                    <Text key={crumb.label} c={StatusColor.DIMMED}>
                         {crumb.label}
                     </Text>
                 )

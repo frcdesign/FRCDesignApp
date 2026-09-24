@@ -27,9 +27,9 @@ export function StatTile({
 }: StatTileProps): ReactNode {
     return (
         <Card>
-            <Group justify="space-between" wrap="nowrap" align="flex-start">
+            <Group justify="space-between" align="flex-start">
                 <div>
-                    <Text size="sm" c="dimmed" tt="uppercase" fw={700}>
+                    <Text c="dimmed" tt="uppercase" fw={700}>
                         {label}
                     </Text>
                     <Title order={2}>{format(value)}</Title>

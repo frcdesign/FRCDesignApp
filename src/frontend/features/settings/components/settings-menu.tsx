@@ -2,7 +2,7 @@ import { DEFAULT_THEME, Theme } from "@backend/features/settings/settings";
 import { Box, Button, Select, Stack } from "@mantine/core";
 import { ArrowLeftIcon, SignOutIcon } from "@phosphor-icons/react";
 import { useMatch } from "@tanstack/react-router";
-import { IconSize, StatusColor } from "../../../lib/style-constants";
+import { StatusColor } from "../../../lib/style-constants";
 import { ReactNode, useId } from "react";
 import {
     AccessLevel,
@@ -140,8 +140,7 @@ function UserSettings(): ReactNode {
                 <RequireSignIn>
                     <InputRow label="Onshape account">
                         <Button
-                            leftSection={<SignOutIcon size={IconSize.SMALL} />}
-                            variant="light"
+                            leftSection={<SignOutIcon />}
                             color={StatusColor.ERROR}
                             onClick={startSignOut}
                         >
@@ -171,8 +170,7 @@ interface OpenAppButtonProps {
 function OpenAppButton(props: OpenAppButtonProps): ReactNode {
     return (
         <Button
-            leftSection={<ArrowLeftIcon size={IconSize.SMALL} />}
-            variant="light"
+            leftSection={<ArrowLeftIcon />}
             onClick={() => {
                 window.location.href = standaloneUrl(props.tabId);
             }}

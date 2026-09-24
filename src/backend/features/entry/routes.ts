@@ -105,6 +105,11 @@ export const entryRoutes = getApp();
 
 /** GET /init */
 entryRoutes.get("/init", cacheMiddleware(), async (c) => {
+    // A version can't be changed, so there is nothing to insert into.
+    const instanceType = c.req.query("instanceType");
+    if (instanceType === "v" || instanceType === "m") {
+        return c.redirect("/version-error");
+    }
     if (await needsSignIn(c)) {
         return c.redirect(getSignInUrl(c));
     }

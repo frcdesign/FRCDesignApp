@@ -3,7 +3,6 @@ import { Button, Menu, TextInput } from "@mantine/core";
 import { openAppModal } from "../../../components/open-app-modal";
 import { AppModalBody, AppModalFooter } from "../../../components/app-modal";
 import { PlusIcon } from "@phosphor-icons/react";
-import { IconSize } from "../../../lib/style-constants";
 import { ReactNode, useState } from "react";
 
 function openAddGroupMenu(selectedGroupId?: string) {
@@ -35,9 +34,8 @@ function AddGroupMenuContent(props: AddGroupMenuContentProps): ReactNode {
             </AppModalBody>
             <AppModalFooter>
                 <Button
-                    variant="light"
                     ml="auto"
-                    leftSection={<PlusIcon size={IconSize.SMALL} />}
+                    leftSection={<PlusIcon />}
                     onClick={() => mutation.mutate(url)}
                     loading={mutation.isPending}
                 >
@@ -50,11 +48,7 @@ function AddGroupMenuContent(props: AddGroupMenuContentProps): ReactNode {
 
 export function AddGroupButton(): ReactNode {
     return (
-        <Button
-            variant="light"
-            leftSection={<PlusIcon size={IconSize.SMALL} />}
-            onClick={() => openAddGroupMenu()}
-        >
+        <Button leftSection={<PlusIcon />} onClick={() => openAddGroupMenu()}>
             Add group
         </Button>
     );
@@ -67,7 +61,7 @@ interface AddGroupItemProps {
 export function AddGroupItem(props: AddGroupItemProps): ReactNode {
     return (
         <Menu.Item
-            leftSection={<PlusIcon size={IconSize.SMALL} />}
+            leftSection={<PlusIcon />}
             onClick={() => openAddGroupMenu(props.selectedGroupId)}
         >
             Add group

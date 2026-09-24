@@ -34,7 +34,6 @@ export function AppContextMenu(props: AppContextMenuProps): ReactNode {
 
     return (
         <Menu
-            shadow="md"
             width={wideMenu ? 240 : 220}
             clickOutsideEvents={[
                 "mousedown",
@@ -67,8 +66,6 @@ export function MenuButton(props: MenuButtonProps): ReactNode {
     return (
         <AppContextMenu controlledByButton menuItems={children}>
             <ActionIcon
-                variant="subtle"
-                color={StatusColor.NEUTRAL}
                 size={large ? "input-sm" : undefined}
                 title="View options"
                 onClick={(e) => e.stopPropagation()}

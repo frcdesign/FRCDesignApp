@@ -22,7 +22,7 @@ export function AdminTeamSetting(): ReactNode {
 
     return (
         <Stack gap={4}>
-            <Group gap="sm" wrap="nowrap" align="flex-end">
+            <Group gap="sm" align="flex-end">
                 <TextInput
                     id={inputId}
                     label="Admin team id"
@@ -33,7 +33,6 @@ export function AdminTeamSetting(): ReactNode {
                     flex={1}
                 />
                 <Button
-                    variant="light"
                     onClick={save}
                     loading={mutation.isPending}
                     disabled={trimmed === stored}
