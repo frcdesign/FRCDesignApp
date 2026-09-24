@@ -64,6 +64,8 @@ export interface SelectionReport {
     selection: Selection;
     /** What the url keeps. */
     overrides: PartialSelection;
+    /** What a favorite keeps: the whole selection, less its derivation variables. */
+    stored: PartialSelection;
     /** Names the selection's thumbnail. */
     configurationKey: ConfigurationKey;
     /** The part the selection produces, for the menu's header. */
@@ -96,6 +98,7 @@ function useReportSelection(
                 onshapeOverrides(selection, result.parameters),
                 result.parameters
             ),
+            stored: toStoredSelection(selection, result.parameters),
             configurationKey: toKey(selection, result.parameters),
             record: findRecord(selection, result.records)
         });

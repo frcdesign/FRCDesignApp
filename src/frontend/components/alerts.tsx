@@ -51,10 +51,3 @@ export function openCannotReorderAlert(): void {
         text: "To prevent confusion, favorites cannot be reordered while filters are active."
     });
 }
-
-export function openCannotEditDefaultConfigurationAlert(): void {
-    openWarningAlert({
-        title: "Cannot edit configuration",
-        text: "This element is not configurable, so its default configuration cannot be changed."
-    });
-}

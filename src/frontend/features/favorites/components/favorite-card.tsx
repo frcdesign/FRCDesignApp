@@ -2,10 +2,7 @@ import { DEFAULT_CONFIGURATION_KEY } from "@backend/features/configurations/cont
 import { ReactNode } from "react";
 import { Favorite } from "@backend/features/favorites/contract";
 import { InsertableOut } from "@backend/features/library/contract";
-import { Menu } from "@mantine/core";
-import { PencilIcon } from "@phosphor-icons/react";
 import { openInsertMenu } from "../../insert/open-insert-menu";
-import { openFavoriteMenu } from "../open-favorite-menu";
 import { FavoriteButton, FavoriteInsertableItem } from "./favorite-button";
 import {
     CardTitle,
@@ -22,7 +19,6 @@ import { MenuSection } from "../../../components/app-menu";
 import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
 import {
     openCannotDeriveAssemblyAlert,
-    openCannotEditDefaultConfigurationAlert,
     openCannotReorderAlert
 } from "../../../components/alerts";
 import { useFavoritesQuery, useSetFavoriteOrderMutation } from "../queries";
@@ -134,22 +130,6 @@ function FavoriteMenuItems(props: FavoriteMenuItemsProps): ReactNode {
                 </MenuSection>
             )}
             <MenuSection label="Favorites">
-                <Menu.Item
-                    leftSection={<PencilIcon />}
-                    onClick={() => {
-                        if (!insertable.isConfigurable) {
-                            openCannotEditDefaultConfigurationAlert();
-                            return;
-                        }
-                        openFavoriteMenu({
-                            favoriteId: favorite.id,
-                            insertableName: insertable.name,
-                            selection: favorite.defaultSelection
-                        });
-                    }}
-                >
-                    Edit default configuration
-                </Menu.Item>
                 <ChangeOrderItems
                     id={favorite.id}
                     order={favoriteOrder}

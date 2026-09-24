@@ -18,6 +18,7 @@ import {
 } from "../insert-tips";
 import { PreviewImageCard } from "../../thumbnails/components/thumbnail";
 import { FavoriteButton } from "../../favorites/components/favorite-button";
+import { SaveFavoriteConfigurationButton } from "../../favorites/components/save-favorite-configuration-button";
 import { MenuButton } from "../../../components/app-menu";
 import { GetAppCallout } from "../../../components/get-app";
 import { InsertableMenuItems } from "../../library/components/insertable-card";
@@ -142,6 +143,8 @@ export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
                 insertable={insertable}
                 favorite={favorite}
                 selection={selection}
+                report={report}
+                onResetSelection={setSelection}
                 configurationKey={configurationKey}
                 canShowQuickInsertTip={canShowQuickInsertTip}
                 source={source}
@@ -155,6 +158,9 @@ interface InsertMenuFooterProps {
     insertable: InsertableOut;
     favorite: Favorite | undefined;
     selection?: PartialSelection;
+    /** Undefined until the panel settles, or for a part with nothing to configure. */
+    report: SelectionReport | undefined;
+    onResetSelection: (selection: PartialSelection) => void;
     configurationKey: ConfigurationKey;
     /** Whether an insert now is worth pointing out a right-click for. */
     canShowQuickInsertTip: boolean;
@@ -169,6 +175,8 @@ function InsertMenuFooter(props: InsertMenuFooterProps): ReactNode {
         insertable,
         favorite,
         selection,
+        report,
+        onResetSelection,
         configurationKey,
         canShowQuickInsertTip,
         source,
@@ -185,12 +193,20 @@ function InsertMenuFooter(props: InsertMenuFooterProps): ReactNode {
                         configurationKey={configurationKey}
                         large
                     />
+                    {favorite && report && (
+                        <SaveFavoriteConfigurationButton
+                            favorite={favorite}
+                            report={report}
+                            configurationKey={configurationKey}
+                        />
+                    )}
                 </RequireSignIn>
                 <MenuButton large>
                     <InsertableMenuItems
                         favorite={favorite}
                         insertable={insertable}
                         inInsertMenu
+                        onResetSelection={onResetSelection}
                         selection={selection}
                         configurationKey={configurationKey}
                         source={source}

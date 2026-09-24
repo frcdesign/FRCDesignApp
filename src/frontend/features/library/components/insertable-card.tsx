@@ -1,4 +1,5 @@
 import { PropsWithChildren, ReactNode } from "react";
+import { ResetConfigurationItems } from "../../insert/components/reset-configuration-items";
 import { Favorite } from "@backend/features/favorites/contract";
 import { InsertableOut } from "@backend/features/library/contract";
 import {
@@ -143,6 +144,8 @@ interface InsertableMenuItemsProps {
     /** That selection's key, so favoriting can name its thumbnail. */
     configurationKey?: ConfigurationKey;
     source: InsertSource;
+    /** Inside the insert menu: puts the panel back on another configuration. */
+    onResetSelection?: (selection: PartialSelection) => void;
 }
 
 export function InsertableMenuItems(
@@ -154,7 +157,8 @@ export function InsertableMenuItems(
         inInsertMenu,
         selection,
         configurationKey,
-        source
+        source,
+        onResetSelection
     } = props;
     const isConnected = useIsConnectedToOnshape();
 
@@ -169,6 +173,12 @@ export function InsertableMenuItems(
                         source={source}
                     />
                 </MenuSection>
+            )}
+            {onResetSelection && insertable.isConfigurable && (
+                <ResetConfigurationItems
+                    favorite={favorite}
+                    onReset={onResetSelection}
+                />
             )}
             <RequireSignIn>
                 <MenuSection label="Favorites">
