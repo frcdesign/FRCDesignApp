@@ -20,7 +20,7 @@ import {
 } from "../../../components/item-row";
 import { OpenDocumentItems } from "../../../components/open-document-items";
 import { AdminMenuSection, MenuSection } from "../../../components/app-menu";
-import { ReloadThumbnailMenuItem } from "../../../components/reload-thumbnail-item";
+import { ReloadThumbnailMenuItem } from "./reload-thumbnail-item";
 import { QuickInsertItems } from "../../insert/components/quick-insert-items";
 import { openCannotDeriveAssemblyAlert } from "../../../components/alerts";
 import { useIsAssemblyInPartStudio } from "../../insert/insert-hooks";

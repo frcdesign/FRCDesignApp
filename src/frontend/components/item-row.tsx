@@ -3,7 +3,6 @@ import { PropsWithChildren, ReactNode } from "react";
 import { meaningfulPartNumber } from "@backend/features/configurations/part-number";
 import { StatusColor } from "../lib/style-constants";
 import { AppContextMenu, MenuButton } from "./app-menu";
-import { TruncatedText } from "./truncated-text";
 import { PartNumber } from "./part-number";
 import { equalsIgnoreCase } from "@backend/lib/text";
 import { mergePositions, type Position } from "../lib/highlight";
@@ -54,8 +53,9 @@ export function CardTitle(props: CardTitleProps): ReactNode {
             {/* Shrinks to truncate, but never grows: the badge belongs beside
                 the name, not at the row's edge. */}
             <Stack gap={0} miw={0} className={styles.shrinkingText}>
-                <TruncatedText
-                    hoverText={title}
+                <Text
+                    truncate
+                    title={title}
                     size="sm"
                     c={disabled ? "dimmed" : undefined}
                 >
@@ -63,7 +63,7 @@ export function CardTitle(props: CardTitleProps): ReactNode {
                         text={title}
                         positions={match?.positions}
                     />
-                </TruncatedText>
+                </Text>
                 {/* The line under the title, so it sits beside it in the stack
                     rather than inside the paragraph the title renders as. */}
                 {match && <PartNameAndNumber title={title} match={match} />}
@@ -100,16 +100,16 @@ function PartNameAndNumber(props: PartNameAndNumberProps): ReactNode {
             c={StatusColor.DIMMED}
         >
             {partName && (
-                <TruncatedText hoverText={partName} inherit miw={0}>
+                <Text truncate title={partName} inherit miw={0}>
                     <HighlightedText
                         text={partName}
                         positions={match.partNamePositions}
                     />
-                </TruncatedText>
+                </Text>
             )}
             {partName && partNumber && <Text inherit>·</Text>}
             {partNumber && (
-                <PartNumber url={match.url}>
+                <PartNumber partNumber={partNumber} url={match.url}>
                     <HighlightedText
                         text={partNumber}
                         positions={match.partNumberPositions}

@@ -1,8 +1,8 @@
 import { Menu } from "@mantine/core";
 import { ImageIcon } from "@phosphor-icons/react";
 import { ReactNode } from "react";
-import { IconSize } from "../lib/style-constants";
-import { useReloadThumbnailMutation } from "../features/library/queries";
+import { IconSize } from "../../../lib/style-constants";
+import { useReloadThumbnailMutation } from "../queries";
 
 interface ReloadThumbnailMenuItemProps {
     /** Whose thumbnail: a group's own, or one element's. */

@@ -17,7 +17,7 @@ import { PartNumber } from "./part-number";
 import styles from "../lib/styles.module.css";
 
 interface AppTitleProps {
-    title: ReactNode;
+    title: string;
     /** Leading icon, at `IconSize.MEDIUM` to match the title's size. */
     icon?: ReactNode;
     /** A quieter second line, laid out as a row so it can hold controls. */
@@ -36,7 +36,12 @@ export function AppTitle(props: AppTitleProps): ReactNode {
             {icon && <Center className={styles.titleIcon}>{icon}</Center>}
             <Stack gap={0} miw={0}>
                 <Group gap="xs" wrap="nowrap" miw={0}>
-                    <Text fw={FontWeight.SEMI_BOLD} truncate miw={0}>
+                    <Text
+                        fw={FontWeight.SEMI_BOLD}
+                        truncate
+                        title={title}
+                        miw={0}
+                    >
                         {title}
                     </Text>
                     {rightSection}
@@ -144,7 +149,7 @@ function PartNumberLine(props: PartNumberLineProps): ReactNode {
     const { partNumber, url } = props;
     return (
         <>
-            <PartNumber url={url}>{partNumber}</PartNumber>
+            <PartNumber partNumber={partNumber} url={url} />
             {/* Nowhere to send them, so offer the number to search with. */}
             {!url && <CopyPartNumberButton partNumber={partNumber} />}
         </>

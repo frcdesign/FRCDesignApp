@@ -111,7 +111,7 @@ export function NotFoundError(): ReactNode {
             title="Failed to find page."
             description={
                 <>
-                    Click this button to fix the issue. If it doesn&apos;t,
+                    Click this button to fix the issue. If that does not work,
                     contact the FRCDesignApp developers with the address below.
                     <MissedUrl />
                 </>

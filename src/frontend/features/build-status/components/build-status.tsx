@@ -15,7 +15,6 @@ import {
 import { AppIcon } from "../../../components/app-icon";
 import { AppHoverCard } from "../../../components/app-hover-card";
 import { RequireAccessLevel } from "../../auth/access-level";
-import { TruncatedText } from "../../../components/truncated-text";
 import { useBuildStatusQuery } from "../queries";
 import { useIsGroupLoading } from "../../library/queries";
 import {
@@ -160,15 +159,16 @@ function CardHeader(props: CardHeaderProps): ReactNode {
                 wrap="nowrap"
                 gap="sm"
             >
-                <TruncatedText
-                    hoverText={name}
+                <Text
+                    truncate
+                    title={name}
                     fw={FontWeight.SEMI_BOLD}
                     size="sm"
                     flex={1}
                     miw={0}
                 >
                     {name}
-                </TruncatedText>
+                </Text>
                 <VersionAge
                     groupId={groupId}
                     versionCreatedAt={versionCreatedAt}

@@ -15,7 +15,7 @@ import { PropsWithChildren, ReactNode } from "react";
 import { GroupOut } from "@backend/features/library/contract";
 import { ChangeOrderItems } from "../../../components/change-order";
 import { AdminMenuSection, MenuSection } from "../../../components/app-menu";
-import { ReloadThumbnailMenuItem } from "../../../components/reload-thumbnail-item";
+import { ReloadThumbnailMenuItem } from "./reload-thumbnail-item";
 import { CardTitle, ItemRow } from "../../../components/item-row";
 import { OpenDocumentItems } from "../../../components/open-document-items";
 import { AddGroupItem } from "./add-group-menu";
