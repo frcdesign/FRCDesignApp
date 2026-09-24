@@ -38,8 +38,6 @@ describe("buildParameterUsage", () => {
         const small = usage.values.find((value) => value.value === "small");
         expect(small).toMatchObject({ count: 0, label: "Small" });
 
-        // The default is flagged even though it isn't the popular choice —
-        // which is the whole point of the report.
         const medium = usage.values.find((value) => value.value === "medium");
         expect(medium?.isDefault).toBe(true);
         expect(usage.values[0].value).toBe("large");

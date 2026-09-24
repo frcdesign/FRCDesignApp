@@ -1,6 +1,3 @@
-/**
- * Extracts the insertable tabs from a document's contents listing.
- */
 import { ElementType } from "../../lib/onshape/element-type";
 import {
     type OnshapeDocumentContents,
@@ -14,10 +11,7 @@ const VALID_ELEMENT_TYPES = new Set<string>([
     ElementType.PART_STUDIO
 ]);
 
-/**
- * Tabs in tab-bar order: `elements` is unordered, so the folder tree defines it.
- * Onshape sometimes omits a tab from the tree, so leftovers are appended.
- */
+/** In tab-bar order, from the folder tree; tabs Onshape omits from the tree are appended. */
 export function parseInsertableTabs(
     contents: OnshapeDocumentContents
 ): OnshapeElement[] {

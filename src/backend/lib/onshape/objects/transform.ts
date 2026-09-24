@@ -1,9 +1,6 @@
 /** The 4×4 transforms Onshape places an assembly instance with. */
 
-/**
- * Row-major, with the translation in the last column: Onshape's own example of a
- * 1.3 m shift along x is `[1,0,0,1.3, 0,1,0,0, 0,0,1,0, 0,0,0,1]`.
- */
+/** Row-major, translation in the last column. */
 // prettier-ignore
 export const IDENTITY_TRANSFORM = [
     1, 0, 0, 0,

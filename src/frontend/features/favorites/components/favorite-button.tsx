@@ -34,8 +34,7 @@ interface UpdateFavoritesArgs {
     favoriteId: string;
     /** The selection to store; absent means the element's own default. */
     selection?: PartialSelection;
-    /** That selection's key, so the new row's thumbnail is right before the
-     * refetch answers. */
+    /** So the new row's thumbnail is right before the refetch. */
     configurationKey?: ConfigurationKey;
 }
 
@@ -100,8 +99,7 @@ function useUpdateFavoritesMutation() {
                     updateFavorites(data, args, libraryId)
                 )
             );
-            // No router.invalidate(): the route loader prefetches favorites,
-            // and that fetch would race the mutation and undo this update.
+            // No router.invalidate(): the loader's prefetch would race this and undo it.
         },
         onError: (error, args) => {
             const action =
@@ -118,17 +116,11 @@ function useUpdateFavoritesMutation() {
 interface FavoriteButtonProps {
     favorite: Favorite | undefined;
     insertable: InsertableOut;
-    /**
-     * The selection the new favorite opens with: what the caller is showing,
-     * rather than the element's own default.
-     */
+    /** Defaults to the element's own. */
     selection?: PartialSelection;
     /** That selection's key, when the caller knows it. */
     configurationKey?: ConfigurationKey;
-    /**
-     * Sizes the button to sit beside a full-height button rather than in a card row.
-     * @default false
-     */
+    /** @default false */
     large?: boolean;
 }
 
@@ -220,20 +212,15 @@ export function FavoriteInsertableItem(props: FavoriteInsertableItemProps) {
 }
 
 interface FavoriteIconProps {
-    /**
-     * @default true
-     */
+    /** @default true */
     full?: boolean;
-    /**
-     * @default IconSize.SMALL
-     */
+    /** @default IconSize.SMALL */
     size?: IconSize;
 }
 
 export function FavoriteIcon(props: FavoriteIconProps): ReactNode {
     const { full = true, size = IconSize.SMALL } = props;
-    // fz, not size: Box builds its own `style`, dropping the font-size that
-    // Phosphor's `size` sets, which shrank the icon to 1em.
+    // fz, not size: Box drops the font-size Phosphor's `size` sets.
     return full ? (
         <AppIcon
             icon={HeartIcon}
@@ -247,9 +234,7 @@ export function FavoriteIcon(props: FavoriteIconProps): ReactNode {
 }
 
 interface UnfavoriteIconProps {
-    /**
-     * @default IconSize.SMALL
-     */
+    /** @default IconSize.SMALL */
     size?: IconSize;
 }
 

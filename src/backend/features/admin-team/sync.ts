@@ -1,9 +1,4 @@
-/**
- * Keeps a library's stored admin team in step with Onshape's. Access is read
- * from what is stored, so a sync is what changes anyone's access; it is
- * announced as a new library version, which already has every open client
- * refresh what it shows, access included.
- */
+/** Access is read from the stored team, and a sync bumps the library version so clients refresh. */
 import { eq } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 import type { AppBindings } from "../../lib/context";

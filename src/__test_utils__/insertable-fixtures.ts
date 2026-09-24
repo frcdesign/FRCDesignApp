@@ -1,7 +1,4 @@
-/**
- * Factories for the load pipeline's insertable shapes. Import directly: the
- * barrel re-exports Workers-only helpers these tests cannot resolve.
- */
+// Import directly: the barrel re-exports Workers-only helpers.
 import type { InsertableTarget } from "@backend/features/load/context";
 import type { ParsedInsertable } from "@backend/features/load/load-insertable";
 import { ElementType } from "@backend/lib/onshape/element-type";

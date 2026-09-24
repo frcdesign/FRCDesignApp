@@ -38,9 +38,7 @@ export function getLibraryQuery(libraryId: LibraryId, cacheVersion: number) {
             apiGet("/library-data/library/" + libraryId, {
                 cacheId: cacheVersion
             }),
-        // An admin change bumps cacheVersion (and thus this key); keep the old
-        // snapshot on screen while the new one loads, so an edit reads as a
-        // merge rather than dropping the whole list back to a spinner.
+        // Keeps the old list up while an edit's new version loads.
         placeholderData: keepPreviousData,
         staleTime: Infinity,
         gcTime: Infinity
@@ -74,27 +72,20 @@ export function useCacheVersion(): number {
     return versionQuery.data ?? 0;
 }
 
-/**
- * Checked once on load, then kept current by the server's pushes. `canAsk` is
- * the caller's gate: the route is editor-only.
- */
+/** Kept current by pushes after the first fetch. The route is editor-only. */
 function getJobStatusQuery(libraryId: LibraryId, canAsk: boolean) {
     return queryOptions<JobStatus>({
         queryKey: jobStatusQueryKey(libraryId),
         queryFn: () => apiGet("/job-status/library/" + libraryId),
         enabled: canAsk,
-        // Every status badge observes this, so rows mounting as the user
-        // scrolls would each trigger a fetch. Only a push should change it.
+        // Every status badge observes this; only a push should change it.
         staleTime: Infinity
     });
 }
 
 const NOTHING_LOADING: string[] = [];
 
-/**
- * The groups loading in the library on screen. The endpoint is editor-only and
- * needs an Onshape session, so callers who have neither see none.
- */
+/** Empty for callers who aren't editors with an Onshape session. */
 function useLoadingGroupIds(): string[] {
     const libraryId = useLibraryId();
     const { signedIn, currentAccessLevel } = useAccessData();
@@ -157,8 +148,7 @@ export function useSetGroupOrderMutation() {
         onError: () => {
             showErrorToast("Unexpectedly failed to reorder group.");
         },
-        // The bump reconciles it; a failure bumps nothing, so the patch has to
-        // be dropped explicitly.
+        // A failure bumps nothing, so the patch has to be dropped explicitly.
         onSettled: (_result, error) =>
             refreshLibrary({ discardPatches: error !== null })
     });
@@ -203,11 +193,7 @@ export function useAddGroupMutation(selectedGroupId?: string) {
     });
 }
 
-/**
- * Asks Onshape for one thumbnail again. A load does not wait for thumbnails,
- * so one that was not there at the time stays missing until the whole document
- * is reloaded; this is how to ask for just the one.
- */
+/** A load doesn't wait for thumbnails, so this refetches one that was missing. */
 export function useReloadThumbnailMutation(
     target: { groupId: string } | { insertableId: string }
 ) {

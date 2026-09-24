@@ -1,8 +1,6 @@
 /**
- * Deletes stored thumbnails nothing in the library still points at. Renders are
- * kept indefinitely by design — the element default is what every unrendered
- * configuration falls back to — so nothing expires them, and an element edited
- * or removed would otherwise leave its thumbnails behind for good.
+ * Deletes stored thumbnails nothing points at. Nothing else expires them, so an
+ * edited or removed element would leave its thumbnails behind for good.
  */
 import { isNotNull, or } from "drizzle-orm";
 import { type Db } from "../../db/client";
@@ -18,19 +16,12 @@ import {
 /** R2 returns at most this many per call, and takes at most this many to delete. */
 const R2_BATCH = 1000;
 
-/**
- * A bucket large enough to need more than this is reconciled over several runs.
- * Bounds one step's work rather than the total, which repeated reloads reach.
- */
+/** Bounds one run; a bigger bucket is finished by later runs. */
 const MAX_PAGES = 50;
 
 /**
- * How long a thumbnail is left alone regardless of the live set. A render is
- * stored before the row naming it is written — a group load uploads as it goes
- * and commits its rows at the end, and a configuration render is started by a
- * user opening the insert menu, outside any job this could wait on. Either one
- * would look orphaned while it is in flight. A day, the longest a load is
- * expected to take; anything genuinely orphaned is collected by a later run.
+ * Renders are stored before the row naming them is written, so anything newer
+ * than a load could take is left alone.
  */
 const MIN_AGE_MS = 24 * 60 * 60 * 1000;
 
@@ -48,11 +39,7 @@ interface ReconcileResult {
     skipped: boolean;
 }
 
-/**
- * Every element and microversion the library still shows. Spans every library:
- * a thumbnail key names no library, so a set built from one would read every
- * other library's thumbnails as orphaned.
- */
+/** Across every library, since a thumbnail key names none. */
 async function liveSubjects(db: Db): Promise<Set<string>> {
     const [insertableRows, groupRows] = await Promise.all([
         db
@@ -61,8 +48,7 @@ async function liveSubjects(db: Db): Promise<Set<string>> {
                 microversionId: insertables.microversionId
             })
             .from(insertables),
-        // A group's document thumbnail is recorded only as the urls serving it,
-        // and its element is often not one of the group's own insertables.
+        // A group's thumbnail element is often not one of its insertables.
         db
             .select({
                 smallThumbnailUrl: groups.smallThumbnailUrl,
@@ -95,10 +81,8 @@ function isLive(live: Set<string>, subject: ThumbnailSubject): boolean {
 }
 
 /**
- * Idempotent, so a retried workflow step only re-deletes what is already gone.
- * Deletes nothing when the live set is empty: a library really can have no
- * elements, but so can a read that failed, and only one of those is worth
- * emptying the bucket over.
+ * Idempotent. An empty live set deletes nothing: it could equally be a failed
+ * read.
  */
 export async function reconcileThumbnails(
     bucket: R2Bucket,

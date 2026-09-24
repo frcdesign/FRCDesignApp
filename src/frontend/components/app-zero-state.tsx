@@ -16,11 +16,7 @@ interface ZeroStateProps {
     className?: string;
 }
 
-/**
- * The centered block every empty, loading and error state is built from, and
- * what anything else standing in for content should use rather than laying one
- * out again.
- */
+/** Every empty, loading and error state is built from this. */
 export function ZeroState(props: ZeroStateProps): ReactNode {
     const { icon, title, description, action, className } = props;
 
@@ -70,10 +66,7 @@ function resolveDescription(
     return description;
 }
 
-/**
- * Whatever a section shows in place of its content: a failure by default, and an
- * empty result or a prompt when given an `icon` and `description` of its own.
- */
+/** A failure by default; pass `icon` and `description` for an empty result or a prompt. */
 export function SectionNotice(props: NoticeProps): ReactNode {
     const { title, action, className, icon = DEFAULT_ERROR_ICON } = props;
     return (
@@ -92,7 +85,7 @@ interface PageNoticeProps extends NoticeProps {
     justifyUp?: boolean;
 }
 
-/** The same, standing in for a whole page rather than one section of one. */
+/** For a whole page. */
 export function PageNotice(props: PageNoticeProps): ReactNode {
     const {
         title,

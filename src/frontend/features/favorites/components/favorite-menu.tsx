@@ -48,8 +48,7 @@ export function FavoriteMenuContent(
     const [selection, setSelection] = useState<
         PartialSelection | Selection | undefined
     >(initialSelection);
-    // Undefined until the panel settles the selection, which gates saving:
-    // saving before then would store nothing, wiping the favorite's selection.
+    // Saving before the panel settles would wipe the favorite's selection.
     const [report, setReport] = useState<SelectionReport>();
 
     const favorite = favoritesData?.favorites[favoriteId];

@@ -1,7 +1,4 @@
-/**
- * Probes an insertable's configurations for the metadata we store. Every probe
- * is kept: search dedupes itself, and build checks read the ones it drops.
- */
+/** Every probe is kept: search dedupes, and build checks read the duplicates. */
 import { OnshapeApi } from "../../lib/onshape/client";
 import { parseRecordVendor } from "./parse-vendors";
 import { ElementPath } from "../../lib/onshape/path";
@@ -52,10 +49,7 @@ export const NO_RECORDS: ConfigurationRecordsResult = {
     buildIssues: []
 };
 
-/**
- * The issue types indexing owns. A caller merging a fresh result into stored
- * issues clears these first, so a resolved issue doesn't stick around.
- */
+/** Cleared before merging a fresh result, so a resolved issue doesn't stick. */
 export const INDEXING_ISSUE_TYPES = [
     BuildIssueType.CONFIGURATION_LIMIT_EXCEEDED,
     BuildIssueType.MANUAL_INDEXING_REQUIRED,
@@ -123,10 +117,7 @@ interface PartsEvaluation {
     partToUse: OnshapePart | undefined;
 }
 
-/**
- * The one place that reads meaning out of a `/parts` response. A studio holds
- * one part; an open composite is the exception, and its constituents are ignored.
- */
+/** A studio holds one part; an open composite's constituents are ignored. */
 function evaluateParts(parts: OnshapePart[]): PartsEvaluation {
     const composites = parts.filter((part) => part.bodyType === "composite");
     if (parts.length > 1 && composites.length > 0) {
@@ -148,18 +139,13 @@ export function computeOpenComposite(parts: OnshapePart[]): boolean {
     return evaluateParts(parts).isOpenComposite;
 }
 
-/**
- * Reads the studio's single part, or its composite when open. A configuration
- * that loses the composite its default has stores no part at all.
- */
 export function parsePartStudioRecord(
     parts: OnshapePart[],
     values: PartialSelection,
     isOpenComposite: boolean
 ): ConfigurationRecord {
     const evaluation = evaluateParts(parts);
-    // An element that is an open composite everywhere else has no part to read
-    // in a configuration that loses it; toResult raises the build issue.
+    // A configuration that loses the default's composite has no part; toResult flags it.
     if (isOpenComposite && !evaluation.isOpenComposite) {
         return {
             values,
@@ -221,7 +207,6 @@ export function parseAssemblyRecord(
     return record;
 }
 
-/** The element a probe reads, carried together rather than threaded apart. */
 export interface ProbeTarget {
     elementPath: ElementPath;
     elementType: ElementType;
@@ -229,11 +214,9 @@ export interface ProbeTarget {
 }
 
 /**
- * How one Onshape read is run. A request awaits it directly; a load wraps each
- * in a durable step (`loadConfigurationRecords`), so a rate-limited retry
- * re-fetches only that batch.
- * The client is fetched per read rather than held, since a step that retries
- * hours later needs a token that has not expired.
+ * A load wraps each read in a durable step, so a rate-limited retry refetches
+ * one batch. The client is fetched per read since a retry hours later needs a
+ * fresh token.
  */
 type ProbeRunner = (
     name: string,
@@ -247,8 +230,7 @@ export async function indexRecords(
     parameters: ConfigurationParameter[],
     configurations: PartialSelection[]
 ): Promise<ConfigurationRecordsResult> {
-    // The element's own defaults, probed as a batch of one so every read the
-    // runner sees has the same shape.
+    // A batch of one, so every read has the same shape.
     const [defaultRecord] = await run("default", async () =>
         fetchBatch(await getClient(), target, parameters, [{}])
     );
@@ -281,16 +263,11 @@ export function parseConfigurationRecords(
     );
 }
 
-/**
- * Splits the combinations to fetch into batches, minus anything the separate
- * default probe already covers.
- */
 function planBatches(
     configurations: PartialSelection[],
     parameters: ConfigurationParameter[]
 ): PartialSelection[][] {
-    // A combination overriding nothing is the default probe again, so drop
-    // every all-defaults one, not just the empty one.
+    // Any all-defaults combination repeats the default probe.
     const toFetch = configurations.filter(
         (values) => Object.keys(overridesOf(values, parameters)).length > 0
     );
@@ -365,8 +342,6 @@ function toResult(
     batches: ConfigurationRecord[][],
     parameters: ConfigurationParameter[]
 ): ConfigurationRecordsResult {
-    // The element's own probe describes the element, not a configuration of it,
-    // so it sheds the (empty) values that produced it.
     const partMetadata: PartMetadata = {
         partNumber: defaultRecord.partNumber,
         name: defaultRecord.name,
@@ -382,14 +357,11 @@ function toResult(
         vendor: resolveVendor(record, parameters)
     }));
 
-    // A capped insertable never reaches here: decideIndexing turns indexing off
-    // past the cap, and raises CONFIGURATION_LIMIT_EXCEEDED itself.
+    // Capped insertables never get here; decideIndexing flags those.
     let buildIssues: BuildIssue[] = [];
 
-    // Which probe fails decides whose problem it is. The element's own defaults
-    // failing is the part being wrong, and every configuration inherits it, so
-    // there is nothing narrower to report; a configuration failing where the
-    // defaults hold is that configuration's problem, and can be opened.
+    // If the defaults fail, every configuration does, so report the part. If only
+    // a configuration fails, report that configuration.
     if (partMetadata.hasMultipleParts) {
         buildIssues = addBuildIssue(buildIssues, {
             type: BuildIssueType.MULTIPLE_PARTS
@@ -407,8 +379,6 @@ function toResult(
         }
     }
 
-    // The element's own probe sets the expectation; losing the composite in any
-    // configuration is what makes it unstable.
     if (partMetadata.isOpenComposite) {
         const offenders = records.filter((record) => !record.isOpenComposite);
         if (offenders.length > 0) {

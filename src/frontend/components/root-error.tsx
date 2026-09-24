@@ -16,9 +16,6 @@ import { ReloadAllButton } from "../features/library/components/reload-all-butto
 import { AccessLevel } from "@backend/features/auth/access-level";
 import { DEFAULT_LIBRARY } from "@backend/features/library/library-id";
 
-/**
- * Catch-all error state for when a route below the root fails to load.
- */
 export function RootAppError(): ReactNode {
     return (
         <PageNotice
@@ -35,9 +32,7 @@ export function RootAppError(): ReactNode {
     );
 }
 
-/**
- * Last-resort fallback for the ROOT route's errorComponent.
- */
+/** The root route's errorComponent. */
 export function RootCrash(): ReactNode {
     return (
         <div
@@ -57,21 +52,13 @@ export function RootCrash(): ReactNode {
     );
 }
 
-/**
- * The address that missed, to hand to a developer. Onshape's panel has no
- * address bar, so this page is the only place the caller can read it — and
- * which url reached it is the whole diagnosis.
- */
+/** Onshape's panel has no address bar, so show the url for a bug report. */
 function MissedUrl(): ReactNode {
-    // Read at render: reaching this page is the end of a navigation, and
-    // leaving it unmounts rather than updates.
     const url = window.location.href;
 
     return (
         <Group gap={4} wrap="nowrap" align="center" mt="xs" maw="100%">
             <Code
-                // Long, and the panel is narrow, so it breaks anywhere rather
-                // than widening the page past its gutters.
                 style={{
                     overflowWrap: "anywhere",
                     textAlign: "left",

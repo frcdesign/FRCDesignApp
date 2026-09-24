@@ -15,10 +15,7 @@ interface QuantityBox {
     errorMessage?: string;
 }
 
-/**
- * What the box shows for a value, and the error if it does not evaluate: the
- * expression to edit while focused, and what it evaluates to otherwise.
- */
+/** The expression while focused, its value otherwise. */
 export function seedFrom(
     value: string | undefined,
     parameter: QuantityParameter,
@@ -33,8 +30,7 @@ export function seedFrom(
         return { expression: display, display };
     }
     const result = evaluateExpression(value, options);
-    // Reported in the field rather than as a toast: the field is where the
-    // value is, and seeding happens during render.
+    // In the field, since this runs during render.
     return result.hasError
         ? {
               expression: result.expression,

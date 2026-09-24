@@ -27,11 +27,7 @@ interface ConfigurationBreakdownProps {
     parameters: ConfigurationParameterUsage[];
 }
 
-/**
- * Per-parameter value counts, which is how a wrong default shows itself: the
- * default sitting below another value, or options nobody ever picks. One card
- * per instance, so a list another choice filters is read one branch at a time.
- */
+/** Shows a wrong default: one below another value, or options nobody picks. One card per instance. */
 export function ConfigurationBreakdown({
     parameters
 }: ConfigurationBreakdownProps): ReactNode {
@@ -46,8 +42,6 @@ export function ConfigurationBreakdown({
     return (
         <Stack>
             {parameters.map((parameter) => (
-                /* The path is what tells two instances of one parameter
-                   apart, and what the card is titled with. */
                 <ParameterCard
                     key={`${parameter.parameterId}-${parameter.path.join(">")}`}
                     parameter={parameter}
@@ -99,7 +93,6 @@ function ParameterCard({ parameter }: ParameterCardProps): ReactNode {
     );
 }
 
-/** Six rows or so, past which the card scrolls rather than the page. */
 const VALUES_HEIGHT = 260;
 
 interface ValueRowProps {
@@ -109,8 +102,7 @@ interface ValueRowProps {
 
 function ValueRow({ value, total }: ValueRowProps): ReactNode {
     const percent = total === 0 ? 0 : (value.count / total) * 100;
-    // Both are what an insert lands on with nothing picked, so both read as
-    // the value the rest of the list is measured against.
+    // Either is what an insert lands on untouched.
     const lands = value.isDefault || value.isImplicitDefault;
 
     return (
@@ -143,10 +135,6 @@ interface DefaultBadgeProps {
     value: ConfigurationValueUsage;
 }
 
-/**
- * Which kind of default this is, if either: the one the parameter declares, or
- * the one the app falls to because the declared one is not offered here.
- */
 function DefaultBadge({ value }: DefaultBadgeProps): ReactNode {
     if (value.isImplicitDefault) {
         return (

@@ -18,18 +18,14 @@ import { toDayKey } from "./day";
 export interface InsertEvent {
     libraryId: LibraryId;
     userId: string;
-    /** The version-pinned tab inserted from, logged whole: the rollups key on
-     * its element id, and the rest says which version was used. */
+    /** The rollups key on the element id; the rest records the version. */
     path: ElementPath;
     insertableId: string;
     /** The type of tab the user inserted into. */
     targetElementType: ElementType;
     /** The whole selection the insert applied; undefined when it has none. */
     selection: Selection | undefined;
-    /**
-     * The parameters that selection was made whole against, carried rather than
-     * read back: applying the insert already had to load them.
-     */
+    /** Passed in, since the insert already loaded them. */
     parameters: ConfigurationParameter[];
     /** Whether the part was favorited, not where the insert came from. */
     isFavorite: boolean;
@@ -43,10 +39,7 @@ interface AppOpenEvent {
     userId: string;
 }
 
-/**
- * Usage data is never worth failing a user's insert over, so errors are logged
- * and dropped. Awaits when no execution context is available.
- */
+/** Tracking never fails an insert, so errors are logged. Awaits without an execution context. */
 export async function trackInBackground(
     c: AppContext,
     work: () => Promise<void>
@@ -95,11 +88,7 @@ export async function trackAppOpen(
     });
 }
 
-/**
- * What Onshape applied for a selection: the values no condition hid, spelled
- * canonically so "5 in" and "(2 + 3) in" count as one value. Null when the
- * insertable has nothing to configure, which is what the log records.
- */
+/** Canonical, so "5 in" and "(2 + 3) in" count as one. Null when there's nothing to configure. */
 function appliedSelection(
     selection: Selection | undefined,
     parameters: ConfigurationParameter[]
@@ -125,10 +114,7 @@ function core(
     };
 }
 
-/**
- * The two halves of a write, batched so neither lands without the other. Kept
- * apart so the counting can move to a batch job without touching the recording.
- */
+/** Batched so neither half lands without the other. */
 async function record(db: Db, event: LoggedEvent): Promise<void> {
     const writes: BatchItem<"sqlite">[] = [
         db.insert(events).values(event),

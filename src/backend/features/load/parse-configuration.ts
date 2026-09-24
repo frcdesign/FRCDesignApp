@@ -33,8 +33,7 @@ function parseVisibilityCondition(
                 (condition): condition is VisibilityCondition => !!condition
             );
 
-        // Nothing left that says when to show the parameter, so it is not a
-        // condition: stored as one, an OR of nothing would read as never.
+        // Stored, an OR of nothing would read as never.
         if (children.length === 0) {
             return undefined;
         }

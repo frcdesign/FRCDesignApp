@@ -8,10 +8,7 @@ import {
     type OnshapeAssemblyInstance
 } from "../../lib/onshape/types";
 
-/**
- * The assembly as the insert location needs it. A sketch is not a solid, so
- * without `includeNonSolids` the marker is not in the response at all.
- */
+/** Sketches aren't solids, so the marker needs `includeNonSolids`. */
 function getAssemblyWithMarkers(
     onshapeApi: OnshapeApi,
     assemblyPath: ElementPath
@@ -31,17 +28,10 @@ function isFromSourceTab(reference: {
 }
 
 /**
- * The marker's instance, matched on the tab it came from rather than on its
- * name, which anybody can rename. The version is left out of the match: an
- * assembly can hold a marker inserted from an older one. So is the sketch's own
- * feature id — the tab holds nothing but that sketch, so anything an assembly
- * holds from it is a marker, and an id that has to be right is an id that can
- * go stale.
- *
- * Which fields Onshape fills in on a sketch instance is not something it
- * documents, and a marker that inserted fine was not found again, so both
- * places the tab can be named are accepted: the instance itself, and the
- * `partStudioFeatures` entry its `featureId` points at.
+ * Matched on the source tab, not the name (renameable), version (an older
+ * marker still counts) or feature id (could go stale). Onshape doesn't document
+ * which fields a sketch instance fills in, so both the instance and its
+ * `partStudioFeatures` entry are checked.
  */
 function findInsertLocationInstance(
     assembly: OnshapeAssemblyDefinition
@@ -62,11 +52,7 @@ function findInsertLocationInstance(
     );
 }
 
-/**
- * Where a top-level instance sits, as a transform an insert can be placed by.
- * Undefined when the instance is gone, which is what a marker deleted since the
- * app opened looks like — the insert then lands at the origin.
- */
+/** Undefined when the marker was deleted, so the insert lands at the origin. */
 function getInstanceTransform(
     assembly: OnshapeAssemblyDefinition,
     instanceId: string
@@ -86,10 +72,7 @@ export async function findInsertLocation(
     return findInsertLocationInstance(assembly)?.id;
 }
 
-/**
- * Where the insert location is now, which only Onshape knows: the caller has
- * the marker's instance id, and it moves whenever somebody drags it.
- */
+/** Asked of Onshape, since the marker moves whenever someone drags it. */
 export async function getInsertLocationTransform(
     onshapeApi: OnshapeApi,
     assemblyPath: ElementPath,

@@ -15,11 +15,7 @@ import {
 const AUTH_ENDPOINT = "https://oauth.onshape.com/oauth/authorize";
 export const TOKEN_ENDPOINT = "https://oauth.onshape.com/oauth/token";
 
-/**
- * No redirect uri, so neither the authorization request nor the code exchange
- * names one and Onshape returns the caller to whichever its OAuth app
- * registers — so a host wants an app registering its own callback.
- */
+/** No redirect uri, so Onshape uses the OAuth app's registered callback. */
 export function getOauthClient(): OAuth2Client {
     return new OAuth2Client(env.OAUTH_CLIENT_ID, env.OAUTH_CLIENT_SECRET, null);
 }
@@ -32,11 +28,7 @@ export function makeAuthTokens(tokens: OAuth2Tokens): AuthTokens {
     };
 }
 
-/**
- * Stores the redirectUrl and state.
- *
- * Returns the URL the user should be redirected to.
- */
+/** Stores the redirect url and state; returns the url to send the user to. */
 export async function doSignIn(
     c: AppContext,
     redirectUrl: string,
@@ -54,10 +46,7 @@ export async function doSignIn(
         state,
         []
     );
-    // company_id scopes the sign-in to an enterprise, and Onshape only accepts
-    // a real one: sign-in worked in an enterprise and failed for plain
-    // cad.onshape.com users, whose id is PERSONAL_COMPANY_ID. So that id is
-    // left off, as a standalone sign-in's missing company already is.
+    // Onshape only accepts a real enterprise's company_id.
     if (companyId && companyId !== PERSONAL_COMPANY_ID) {
         authorizationUrl.searchParams.set("company_id", companyId);
     }
@@ -74,7 +63,7 @@ export async function doCallback(c: AppContext): Promise<Response> {
 
     const session = await takeLoginSession(c);
 
-    // There was a problem with the cookie used to store redirect information
+    // The redirect cookie was missing.
     if (!session) {
         if (isSafari(c.req.raw)) {
             return c.redirect("/safari-error");

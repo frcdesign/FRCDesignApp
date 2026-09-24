@@ -47,10 +47,7 @@ function canonicalPrecision(type: UnitType): number {
     return Math.round(-Math.log10(TOLERANCE[type]));
 }
 
-/**
- * The one spelling of a value: its base unit, to the decimals its tolerance
- * distinguishes. Two values read as equal spell the same, which is why it keys.
- */
+/** Base unit, to the precision its tolerance distinguishes: equal values spell the same. */
 export function formatBaseValue(value: ValueWithUnits): string {
     return formatValueWithUnits(
         value,
@@ -59,10 +56,7 @@ export function formatBaseValue(value: ValueWithUnits): string {
     );
 }
 
-/**
- * The same value in another unit, still to full precision — every unit here is
- * larger than its base, so the decimals a base spelling keeps are never fewer.
- */
+/** Full precision, since every unit here is larger than its base. */
 export function formatValueInUnit(value: ValueWithUnits, unit: Unit): string {
     return formatValueWithUnits(value, unit, canonicalPrecision(value.type));
 }
@@ -129,10 +123,7 @@ interface ValueWithUnits {
 
 interface ValueLiteral {
     value: number;
-    /**
-     * The raw string value.
-     * Used to maintain decimal accuracy.
-     */
+    /** Kept as a string to preserve decimal accuracy. */
     rawValue: string;
     type: UnitType;
     unit: Unit;
@@ -277,8 +268,7 @@ function classifyUnit(identifier: string): Unit {
 }
 
 /*
- * The grammar below, which the recursive-descent parser implements but does not
- * state. Precedence tightest first: unary sign, `*` and `/`, unit, `+` and `-`.
+ * Precedence, tightest first: unary sign, `*` and `/`, unit, `+` and `-`.
  *
  *   EXP     ::= POSTFIX { ("+" | "-") POSTFIX }
  *   POSTFIX ::= TERM [ Identifier ]           // the unit applies to the TERM
@@ -306,8 +296,7 @@ PRIMARY.setPattern(
             };
             return { kind: "value", value: valueLiteral };
         }),
-        // Kept as a node rather than unwrapped to the inner expression, so
-        // `stringify` writes the parens back and its output re-parses.
+        // Kept as a node so `stringify` writes the parens back.
         apply(
             kmid(tok(TokenKind.LParen), EXP, tok(TokenKind.RParen)),
             (expr): Expr => ({ kind: "paren", expr })
@@ -396,8 +385,8 @@ function getOpName(op: Operator): string {
 }
 
 /**
- * Matching Onshape, a type is only assumed for the final result — so unitless +
- * unit is always invalid, as are units on a unitless quantityType.
+ * Like Onshape, a type is only assumed for the final result, so unitless + unit
+ * is invalid, as are units on a unitless quantity type.
  */
 function evaluateExpressionValue(
     expr: Expr,
@@ -491,8 +480,6 @@ function evaluateExpressionValue(
                     );
 
                 case "/":
-                    // unit / number -> unit
-                    // number / number -> number
                     if (right.type === "number") {
                         if (tolerantEqualsZero(right)) {
                             throw new ParseError(`Cannot divide by 0`);
@@ -598,8 +585,7 @@ function formatExpression(
         expression = expression + " " + getUnitDisplayStr(displayUnit);
     }
 
-    // "2 deg" in a length parses, but it is no length; comparing it against
-    // the length bounds below would throw rather than report.
+    // "2 deg" parses in a length box; the bounds check below would throw on it.
     const expected = expectedType(quantityType);
     if (value.type !== expected) {
         return {
@@ -644,53 +630,29 @@ function formatExpression(
 
 export interface Result {
     hasError: false;
-    /**
-     * The formatted result. Includes the value rounded to the correct display precision and the display unit.
-     * @example `12.00 in`
-     */
+    /** Rounded to display precision, in the display unit: `12.00 in`. */
     displayExpression: string;
-    /**
-     * The formatted expression. Essentially the raw input with clean spacing and possibly the display unit applied.
-     * @example "(3.5 + 8.5) in"
-     */
+    /** The input with clean spacing, and the display unit if it had none: "(3.5 + 8.5) in". */
     expression: string;
 }
 
 interface ErrorResult {
     hasError: true;
-    /**
-     * The original, unformatted expression.
-     */
     expression: string;
-    /**
-     * An error message to display to the user.
-     */
     errorMessage: string;
 }
 
 export interface EvaluateOptions {
-    /**
-     * The type of the expression.
-     */
     quantityType: QuantityType;
-    /**
-     * Number of decimals to round to.
-     * Should be 0 for real and integer expressions.
-     */
+    /** 0 for real and integer expressions. */
     displayPrecision: number;
-    /**
-     * Unit to use in the displayExpression.
-     * Should be unitless for real and integer expressions.
-     */
+    /** Unitless for real and integer expressions. */
     displayUnit: Unit;
     max: ValueWithUnits;
     min: ValueWithUnits;
 }
 
-/**
- * The value in base units: meters, radians, or unitless. A bare number takes
- * `defaultUnit`, as in the input; undefined when it does not parse.
- */
+/** In meters, radians or unitless; a bare number takes `defaultUnit`. */
 export function evaluateBaseValue(
     input: string,
     quantityType: QuantityType,

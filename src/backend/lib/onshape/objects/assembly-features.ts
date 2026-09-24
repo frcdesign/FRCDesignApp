@@ -46,10 +46,7 @@ function mateTypeParameter(value: string): object {
     };
 }
 
-/**
- * Takes up to two queries. With neither instance constrained, Onshape tends to
- * preserve the second one's location.
- */
+/** With neither instance constrained, Onshape tends to keep the second in place. */
 export function fastenMate(name: string, queries: Iterable<object>): object {
     return {
         btType: "BTMMate-64",

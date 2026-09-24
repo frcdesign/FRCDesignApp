@@ -18,10 +18,7 @@ const DEFAULT_ACCESS_LEVEL =
     (import.meta.env.VITE_ACCESS_LEVEL_OVERRIDE as AccessLevel | undefined) ??
     AccessLevel.USER;
 
-/**
- * What the app assumes until the server answers. Granted as well as viewed, or
- * the clamp below would drop a dev override while the query is pending.
- */
+/** Granted as well as viewed, or the clamp would drop a dev override while pending. */
 const DEFAULT_ACCESS_DATA: AccessData = {
     maxAccessLevel: DEFAULT_ACCESS_LEVEL,
     signedIn: false
@@ -38,17 +35,11 @@ export function getAccessDataQuery(libraryId: LibraryId) {
 /** Server access plus the level the app is currently viewed as. */
 interface ResolvedAccessData extends AccessData {
     currentAccessLevel: AccessLevel;
-    /**
-     * While set, the rest are the placeholder — so anything rendered for a
-     * *signed-out* caller must wait or it flashes. Positive gates need not.
-     */
+    /** While set, the rest are placeholders, so signed-out UI must wait or it flashes. */
     isPending: boolean;
 }
 
-/**
- * The caller's access. The viewed level is a local choice (the settings menu can
- * drop below the granted max), so it survives the query refetching on navigation.
- */
+/** The viewed level is a local choice, so it survives refetches. */
 export function useAccessData(): ResolvedAccessData {
     const libraryId = useLibraryId();
     const { data, isPending } = useQuery(getAccessDataQuery(libraryId));
@@ -66,10 +57,7 @@ export function useAccessData(): ResolvedAccessData {
     }, [serverData, chosenLevel, isPending]);
 }
 
-/**
- * Whether the caller is signed in to Onshape. Reads signed out while access-data
- * is pending, so a signed-out render wants useAccessData().isPending as well.
- */
+/** Reads signed out while pending; see `isPending`. */
 export function useIsSignedIn(): boolean {
     const accessData = useAccessData();
     return accessData.signedIn;
@@ -103,11 +91,6 @@ export function RequireSignIn(props: PropsWithChildren) {
     return useIsSignedIn() ? props.children : null;
 }
 
-/**
- * Whether the caller is shown what is hidden. The rule was spelled out at each
- * of its call sites, half of them negated, so changing who counts as privileged
- * meant finding four of them and getting the negation right at each.
- */
 export function useShowHidden(): boolean {
     const accessData = useAccessData();
     return hasEditorAccess(accessData.currentAccessLevel);

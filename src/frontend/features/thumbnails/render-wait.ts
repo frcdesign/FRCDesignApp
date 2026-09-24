@@ -1,8 +1,4 @@
-/**
- * Waiting out a configuration's render. Until it lands the route answers 404;
- * the server pushes when it has, so a miss waits for that push rather than
- * asking again on a timer.
- */
+/** The server pushes when a render lands, so a miss waits for that rather than polling. */
 import { HttpStatus } from "http-status-ts";
 import { DEFAULT_CONFIGURATION_KEY } from "@backend/features/configurations/contract";
 import {
@@ -14,17 +10,10 @@ import { loadImage } from "../../lib/api-client";
 import { ImageLoadError } from "../../lib/errors";
 import { subscribeLiveMessages } from "../../lib/live-updates";
 
-/**
- * How long any surface waits out a render before calling it failed: as long as
- * `RenderThumbnailWorkflow` does, after which nothing more is coming.
- */
+/** As long as `RenderThumbnailWorkflow` tries. */
 const RENDER_TIMEOUT_MS = 60_000;
 
-/**
- * Onshape has no insertable for the configuration, which the route answers with
- * its own status: the part did not regenerate, so no render is coming and
- * waiting for one only delays saying so.
- */
+/** The part didn't regenerate, so no render is coming. */
 export function isInvalidConfiguration(error: unknown): boolean {
     return (
         error instanceof ImageLoadError &&
@@ -71,17 +60,13 @@ function sleep(
     });
 }
 
-/**
- * The render `url` serves, once there is one. Throws once no render is coming:
- * the configuration is invalid, or the window has passed.
- */
+/** Throws once no render is coming. */
 export async function loadRenderedImage(
     url: string,
     signal?: AbortSignal
 ): Promise<string> {
     const deadline = Date.now() + RENDER_TIMEOUT_MS;
-    // Watched from before the first ask, so a push landing while one is in
-    // flight is not missed and waited out to the deadline.
+    // Subscribed before the first ask, so a push during it isn't missed.
     const waiting = {
         pushed: false,
         wake: undefined as (() => void) | undefined

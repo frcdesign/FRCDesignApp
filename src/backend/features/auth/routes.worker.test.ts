@@ -59,7 +59,6 @@ async function seedSession(sessionId: string) {
             expiresAt: Date.now() + 10000
         })
     );
-    await env.KV.put(`access-level:${sessionId}`, AccessLevel.ADMIN);
 }
 
 describe("GET /auth/sign-out", () => {
@@ -77,7 +76,7 @@ describe("GET /auth/sign-out", () => {
         );
     }
 
-    it("drops the session and everything keyed to it", async () => {
+    it("drops the session", async () => {
         await seedSession("session-1");
 
         const res = await signOut("/app/library/frc-design-lib", "session-1");
@@ -85,7 +84,6 @@ describe("GET /auth/sign-out", () => {
         expect(res.status).toBe(302);
         expect(res.headers.get("Location")).toBe("/app/library/frc-design-lib");
         expect(await env.KV.get("tokens:session-1")).toBeNull();
-        expect(await env.KV.get("access-level:session-1")).toBeNull();
         expect(res.headers.get("Set-Cookie")).toContain(`${SESSION_COOKIE}=;`);
     });
 
@@ -125,9 +123,7 @@ describe("GET /auth/sign-in", () => {
         return new URL(res.headers.get("Location")!);
     }
 
-    // Named by neither half of the flow, so Onshape returns the caller to
-    // whichever redirect url its OAuth app registers — which is why a host
-    // wants an app of its own.
+    // Onshape uses the OAuth app's registered redirect url.
     it("names no callback, leaving it to the OAuth app", async () => {
         const url = await authorizationUrl("");
         expect(url.searchParams.get("redirect_uri")).toBeNull();
@@ -138,8 +134,7 @@ describe("GET /auth/sign-in", () => {
         expect(url.searchParams.get("company_id")).toBe("company-1");
     });
 
-    // Onshape rejects "cad" as a company, which is what a non-enterprise user
-    // arrives with.
+    // Onshape rejects "cad", which a non-enterprise user arrives with.
     it("names no company for a personal account", async () => {
         const url = await authorizationUrl("sessionCompanyId=cad");
         expect(url.searchParams.has("company_id")).toBe(false);
@@ -150,9 +145,7 @@ describe("GET /auth/sign-in", () => {
         expect(url.searchParams.has("company_id")).toBe(false);
     });
 
-    // The gate sends a caller here whenever Onshape will not take their
-    // session, so a sign-in they never finish must not sign them out of the one
-    // they arrived with.
+    // An unfinished sign-in mustn't end the session the caller had.
     it("leaves the session the caller arrived with alone", async () => {
         await seedSession("session-1");
 
@@ -166,10 +159,6 @@ describe("GET /auth/sign-in", () => {
 
 const LOGIN_COOKIE = "frc-design-app-login";
 
-/**
- * Where the callback would send the caller: what the sign-in stored, which
- * `doCallback` redirects to unread.
- */
 describe("GET /auth/sign-in redirect target", () => {
     async function storedRedirect(query: string): Promise<string | undefined> {
         const res = await createTestApp().request(
@@ -211,9 +200,7 @@ describe("GET /auth/sign-in redirect target", () => {
         ).toBe("/init?documentId=doc-1");
     });
 
-    // The reported bug: resolved against this origin it is a url with no route,
-    // and the caller lands on the app's not-found page with no way back into
-    // the document they came from.
+    // Resolved against this app it has no route, stranding the caller.
     it("refuses a bare path, which would resolve against this app", async () => {
         expect(
             await storedRedirect(
@@ -236,8 +223,7 @@ describe("GET /auth/sign-in redirect target", () => {
         ).toBe("/init");
     });
 
-    // Refusing outright would leave a caller unable to sign in at all if this
-    // reading of what Onshape sends turns out to be too narrow.
+    // Opening the app beats blocking sign-in if this reading is too narrow.
     it("opens the app rather than refusing a value it cannot place", async () => {
         expect(await storedRedirect("redirectOnshapeUri=not-a-url")).toBe(
             "/init"

@@ -49,11 +49,7 @@ export type LoadResult =
           failedElements: number;
       };
 
-/**
- * Loads one group's document: when its version has moved on, or always on a
- * forced reload. New versions, added documents and forced reloads all come
- * through here, one instance per group at a time; see `jobs.ts`.
- */
+/** Loads one group's document when its version moved, or on a forced reload. One per group at a time; see `jobs.ts`. */
 export class LoadDocumentWorkflow extends WorkflowEntrypoint<
     AppBindings,
     LoadDocumentParams
@@ -70,8 +66,7 @@ export class LoadDocumentWorkflow extends WorkflowEntrypoint<
             result = await loadDocument(ctx, params);
             return result;
         } finally {
-            // Whatever happened, so the group is let go and whatever queued
-            // behind this load starts.
+            // Always, so whatever queued behind this load starts.
             const changed =
                 result.status === "loaded" || result.status === "failed";
             await step.do("finish", () =>
@@ -122,8 +117,7 @@ async function loadDocument(
             };
         }
     } catch (error) {
-        // The only record of why: the group row stores that it failed, never
-        // what failed.
+        // The row records only that it failed, so this is the only record of why.
         console.error(`Failed to load group ${groupId}`, error);
         await ctx.step.do("flag-failed", () =>
             flagFailedGroup(ctx.env, groupId)
@@ -131,9 +125,8 @@ async function loadDocument(
         result = { status: "failed" };
     }
 
-    // After the load rather than before, so a document that cannot be read
-    // does not get a webhook. Its failure is logged rather than failing the
-    // load: the document is loaded either way, and the next load tries again.
+    // After the load, so an unreadable document gets no webhook. Not fatal: the
+    // next load retries.
     try {
         await ctx.step.do(
             "register-webhook",
@@ -157,11 +150,8 @@ async function loadDocument(
 }
 
 /**
- * Whether the group's stored issues record a load that did not finish. The
- * version alone cannot decide a skip: a failure leaves the row's version where
- * it was, so a group that failed while already on the latest version — a forced
- * reload, or a blip in the version probe below, which runs even for a group that
- * is about to be skipped — would keep its flag until someone forced another.
+ * A failure leaves the version where it was, so a group that failed on the
+ * latest version would otherwise be skipped until a forced reload.
  */
 function hasFailedLoad(buildIssues: BuildIssue[]): boolean {
     return hasBuildIssue(
@@ -183,8 +173,7 @@ async function resolveGroupTarget(
         async () =>
             getDocument(await getOnshapeApiFromContext(ctx), { documentId })
     );
-    // The step hands back what Onshape sent, `createdAt` still an ISO string:
-    // a step's result is persisted for replay, which a Date does not survive.
+    // `createdAt` stays a string: step results are persisted, and a Date isn't.
     const version = await ctx.step.do(
         "version",
         { retries: ONSHAPE_STEP_RETRIES },
@@ -219,11 +208,7 @@ export interface ShellGroup {
     selectedGroupId?: string;
 }
 
-/**
- * Writes the group row a load then fills in, creating the library if this is
- * its first group. Written before the load is asked for, so an add whose load
- * fails still leaves a group an editor can see, retry or delete.
- */
+/** Written before the load, so a failed add still leaves a group to retry or delete. */
 export async function createShellGroup(
     env: AppBindings,
     params: ShellGroup
@@ -247,18 +232,13 @@ export async function createShellGroup(
             sortOrder
         })
         .onConflictDoNothing();
-    // Without this the row is unreachable until the load finishes: every
-    // library response is pinned to the version, immutably. No search rebuild
-    // to go with it, since buildSearchDb indexes insertables and the shell has
-    // none — the index the old version served is still right for the new one.
+    // Library responses are pinned to the version, so the row is unreachable until
+    // it bumps. The search index is unaffected: the shell has no insertables.
     await bumpLibraryVersion(db, params.libraryId);
     await pushLibraryChanged(env, params.libraryId);
 }
 
-/**
- * Records the failure on the group row, so the library flags it rather than
- * showing an empty group. A later successful load recomputes the issues afresh.
- */
+/** So the library flags the group rather than showing it empty. */
 async function flagFailedGroup(
     env: AppBindings,
     groupId: string

@@ -8,10 +8,7 @@ interface DashboardStateProps {
     query: UseQueryResult<unknown>;
 }
 
-/**
- * Renders the loading/error state of a dashboard query. Views call this when
- * `data` is absent, so each one doesn't repeat the same two branches.
- */
+/** For when a dashboard query has no `data`. */
 export function DashboardState({ query }: DashboardStateProps): ReactNode {
     if (query.isError) {
         return (

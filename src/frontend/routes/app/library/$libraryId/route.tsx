@@ -19,13 +19,8 @@ export const Route = createFileRoute("/app/library/$libraryId")({
         stringify: ({ libraryId }) => ({ libraryId })
     },
     /**
-     * A library is a tab, and the url selects it, so the store follows the url
-     * here as it does the group. Written by the tabs alone it drifted — a
-     * resume lands elsewhere, and a panel whose storage Onshape partitioned
-     * away reads as the default — and switching back to the tab it still named
-     * then posted nothing, leaving the row where it was.
-     *
-     * Not while the tab is null: being shown the default is not choosing it.
+     * The url selects the library, so the store follows it. Skipped while the tab
+     * is null: being shown the default isn't choosing it.
      */
     onEnter: (match) => {
         if (getUiState().tabId) {
@@ -48,11 +43,6 @@ export const Route = createFileRoute("/app/library/$libraryId")({
     }
 });
 
-/**
- * The library's pages, plus the two things that follow the library rather than
- * any one of them: the url the app keeps current, and the insert menu it was
- * left with.
- */
 function Library(): ReactNode {
     useAppParamMirror();
     useRestoreInsertMenu();

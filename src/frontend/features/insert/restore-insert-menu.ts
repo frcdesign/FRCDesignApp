@@ -7,17 +7,10 @@ import { useLibraryQuery } from "../library/queries";
 import { useFavoritesQuery } from "../favorites/queries";
 import { openInsertMenu } from "./open-insert-menu";
 
-/**
- * Once per load rather than per mount: the menu is reopened because the app
- * started with one recorded, and a caller who then closes it has closed it.
- */
+/** Once per load: a caller who closes the restored menu has closed it. */
 let restored = false;
 
-/**
- * Reopens the insert menu the app was left with — after an Onshape tab switch,
- * a relaunch, or a link somebody shared. Waits for the library, which is what
- * turns the stored id back into a part.
- */
+/** Reopens the menu after an Onshape tab switch, a relaunch, or a shared link. */
 export function useRestoreInsertMenu(): void {
     const { openInsertableId, openConfiguration, openFavoriteId } =
         useGetUiState();
@@ -29,10 +22,7 @@ export function useRestoreInsertMenu(): void {
         if (restored) {
             return;
         }
-        // Nothing was recorded, so there is nothing to wait for. Staying armed
-        // instead would have the first menu the caller opens themselves —
-        // which writes this same field — reopened on top of itself, leaving a
-        // second copy behind when they close the one they can see.
+        // Staying armed would reopen the first menu the caller opens, on top of itself.
         if (!openInsertableId) {
             restored = true;
             return;
@@ -40,9 +30,7 @@ export function useRestoreInsertMenu(): void {
         if (!libraryQuery.isSuccess) {
             return;
         }
-        // A favorite is worth waiting for, being what decides how the menu
-        // opens; signed out there is nothing coming, and the query stays
-        // pending forever.
+        // Signed out, the favorites query stays pending forever.
         if (openFavoriteId && isSignedIn && favoritesQuery.isPending) {
             return;
         }
@@ -50,8 +38,7 @@ export function useRestoreInsertMenu(): void {
 
         const insertable = libraryQuery.data.insertables[openInsertableId];
         if (!insertable) {
-            // The library no longer has it: a part that was hidden or removed,
-            // or a link from a library this caller is not in.
+            // Hidden, removed, or from another library.
             updateUiState({
                 openInsertableId: undefined,
                 openConfiguration: undefined,
@@ -60,14 +47,12 @@ export function useRestoreInsertMenu(): void {
             return;
         }
 
-        // Somebody else's favorite resolves to nothing, which leaves the part
-        // and its configuration — the plain insert menu, on the same part.
+        // Someone else's favorite resolves to nothing, leaving the plain menu.
         const favorite = openFavoriteId
             ? favoritesQuery.data?.favorites[openFavoriteId]
             : undefined;
 
-        // What the url names wins over the favorite's own: it is what was on
-        // screen, which an edit can have moved off the favorite's selection.
+        // The url wins: it's what was on screen.
         openInsertMenu({
             insertable,
             ...(openConfiguration

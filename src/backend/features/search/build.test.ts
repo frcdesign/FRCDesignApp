@@ -57,8 +57,6 @@ describe("toSearchRecords", () => {
         expect(unconfigured([record({})])).toHaveLength(0);
     });
 
-    // The placeholder an admin writes in identifies nothing, so it is dropped
-    // here rather than indexed and shown.
     it("drops a placeholder part number", () => {
         const [result] = unconfigured([
             record({ partNumber: "N/A", name: "Spacer" })

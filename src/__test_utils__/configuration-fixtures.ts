@@ -1,7 +1,4 @@
-/**
- * Import directly, not through `__test_utils__/index.ts`: the barrel reaches
- * `cloudflare:workers`, which the node project's tests cannot resolve.
- */
+// Import directly: the barrel reaches `cloudflare:workers`, which node tests can't resolve.
 import {
     ParameterType,
     type BooleanParameter,
@@ -67,10 +64,7 @@ export function derivationParam(id: string): StringParameter {
     };
 }
 
-/**
- * A length quantity parameter defaulting to 1 inch, its default spelled the way
- * `parseOnshapeConfiguration` stores one: from `defaultValue` and `unit`.
- */
+/** Defaults to 1 inch, spelled as `parseOnshapeConfiguration` stores it. */
 export function quantityParam(
     id: string,
     extra: Omit<Partial<QuantityParameter>, "default"> = {}

@@ -22,8 +22,7 @@ interface OpenInsertMenuProps {
     insertable: InsertableOut;
     /** Partial for a search hit or a link, which name only some parameters. */
     initialSelection?: PartialSelection;
-    /** That selection's key, when the caller knows it, so the preview need not
-     * wait on the parameters loading. */
+    /** So the preview needn't wait for the parameters. */
     configurationKey?: ConfigurationKey;
     /** The favorite this was opened from, so a relaunch can reopen it as one. */
     favoriteId?: string;
@@ -48,9 +47,7 @@ export function openInsertMenu(props: OpenInsertMenuProps) {
     let didInsert = false;
     // What the menu shows when it closes, for the restore toast to reopen.
     let lastSelection = initialSelection;
-    // Recorded rather than merely rendered: the url mirrors this, and a
-    // relaunch — an Onshape tab switch among them — reopens what it names.
-    // The menu narrows it to its overrides once the parameters load.
+    // Recorded so the url mirrors it and a relaunch reopens it.
     updateUiState({
         openInsertableId: insertable.id,
         openConfiguration: initialSelection
@@ -58,8 +55,7 @@ export function openInsertMenu(props: OpenInsertMenuProps) {
             : undefined,
         openFavoriteId: favoriteId
     });
-    // Minted here so the content can address the modal it lives in, which is
-    // what lets the header follow the selected configuration.
+    // So the content can address its modal, and the header follow the selection.
     const id = crypto.randomUUID();
     openAppModal({
         modalId: id,
@@ -106,8 +102,7 @@ function showRestoreToast(
             })
     };
 
-    // Keyed on the insertable, so opening and cancelling the same one repeatedly
-    // refreshes one toast rather than stacking up a column of them.
+    // Keyed on the insertable, so repeats refresh one toast.
     showInfoToast(
         renderNotification(`Cancelled ${insertable.name}.`, restoreButton),
         { id: "restore-" + insertable.id, autoClose: 3000 }

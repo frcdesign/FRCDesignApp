@@ -79,15 +79,12 @@ describe("findInsertLocation", () => {
         ).toBeUndefined();
     });
 
-    // The marker inserted from a version of the tab we no longer name, so the
-    // sketch's own id is no longer what it was when the constant was written.
+    // A marker from an older version of the tab has a different sketch id.
     it("matches a sketch id the constant does not name", async () => {
         const assembly = toAssembly([{ ...MARKER, featureId: "redrawn" }]);
         expect(await findIn(assembly)).toBe("marker");
     });
 
-    // Onshape naming the tab only on the partStudioFeatures entry, which is the
-    // shape the instance list alone cannot be matched against.
     it("finds a marker whose instance names only its feature", async () => {
         const assembly = toAssembly(
             [{ id: "marker", type: "Feature", featureId: "sketch" }],
@@ -118,8 +115,6 @@ describe("findInsertLocation", () => {
         expect(await findIn(assembly)).toBeUndefined();
     });
 
-    // An instance naming no feature at all, against a tab whose entry names no
-    // feature either: nothing lines up, so nothing matches.
     it("does not pair an instance and an entry by what both leave out", async () => {
         const assembly = toAssembly([{ id: "part", type: "Part" }], undefined, [
             {
@@ -148,8 +143,7 @@ describe("getInsertLocationTransform", () => {
         expect(await transformIn(assembly, "marker")).toEqual(transform);
     });
 
-    // A deeper path is the same instance inside a subassembly, which is a
-    // different thing in a different place.
+    // A nested one is inside a subassembly.
     it("ignores an occurrence nested under another instance", async () => {
         const assembly = toAssembly(
             [MARKER],

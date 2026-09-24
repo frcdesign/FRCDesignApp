@@ -28,7 +28,7 @@ function getFavoritesQuery(libraryId: LibraryId) {
     });
 }
 
-/** Awaits access rather than blocking the loader on it: signed out has none. */
+/** Signed out has none, so this doesn't block the loader. */
 export async function prefetchFavorites(libraryId: LibraryId): Promise<void> {
     const { signedIn } = await queryClient.ensureQueryData(
         getAccessDataQuery(libraryId)
@@ -38,10 +38,7 @@ export async function prefetchFavorites(libraryId: LibraryId): Promise<void> {
     }
 }
 
-/**
- * Disabled until access says signed in, the endpoint 401ing otherwise — so it
- * stays pending while signed out, and callers check sign-in rather than wait.
- */
+/** Stays pending while signed out, so callers check sign-in rather than wait. */
 export function useFavoritesQuery() {
     const libraryId = useLibraryId();
     const isSignedIn = useIsSignedIn();
@@ -91,8 +88,7 @@ export function useSetDefaultConfigurationMutation(favoriteId: string) {
                     return data;
                 })
             );
-            // No router.invalidate(): the route loader prefetches favorites,
-            // and that fetch would race the mutation and undo this update.
+            // No router.invalidate(): the loader's prefetch would race this and undo it.
         },
         onError: () => {
             showErrorToast(
@@ -130,8 +126,7 @@ export function useSetFavoriteOrderMutation() {
                     return data;
                 })
             );
-            // No router.invalidate(): the route loader prefetches favorites,
-            // and that fetch would race the mutation and undo this update.
+            // No router.invalidate(): the loader's prefetch would race this and undo it.
         },
         onError: getAppErrorHandler(
             "Unexpectedly failed to reorder favorites."

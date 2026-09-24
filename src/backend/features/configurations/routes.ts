@@ -30,8 +30,7 @@ configurationRoutes.get(
     async (c) => {
         const insertableId = getInsertableParam(c);
         const db = getDb(c.env.DB);
-        // Left join: the element's own part data is the fallback record, and it
-        // lives on the insertable whether or not it is configurable.
+        // The element's own part data is the fallback record, on the insertable.
         const config = await db
             .select({
                 partMetadata: insertables.partMetadata,
@@ -68,10 +67,7 @@ interface OnshapeUnit {
     value: Unit;
 }
 
-/**
- * The document's unit for a quantity type. Onshape names one for every type, so a
- * missing entry is a response we do not understand, not an absent preference.
- */
+/** Onshape names a unit for every type, so a missing one is a response we don't understand. */
 function getDefaultUnit(
     units: OnshapeUnit[],
     quantityType: QuantityType
@@ -96,8 +92,6 @@ configurationRoutes.get(
         const instancePath = c.req.valid("query");
 
         const rawUnitInfo = await getUnitInfo(onshapeApi, instancePath);
-        // Onshape answers with strings; this is where the app decides they are
-        // the quantity types and units it knows.
         const units = rawUnitInfo.defaultUnits.units as OnshapeUnit[];
 
         const angleUnit = getDefaultUnit(units, QuantityType.ANGLE);

@@ -17,11 +17,7 @@ interface CalloutProps {
     action?: CalloutAction;
 }
 
-/**
- * A note above a list or a preview, saying something about what is under it. It
- * builds its own button, so no caller can style one of its own. Blue rather
- * than the library accent, so it reads as a remark beside the content.
- */
+/** Blue, so it reads as a remark rather than library content. */
 export function Callout(props: CalloutProps): ReactNode {
     const { text, action } = props;
 
@@ -43,7 +39,6 @@ export function Callout(props: CalloutProps): ReactNode {
                     {text}
                 </Text>
                 {action && (
-                    // Outlined rather than filled, which would shout on a note.
                     <Button
                         variant="outline"
                         color={StatusColor.INFO}

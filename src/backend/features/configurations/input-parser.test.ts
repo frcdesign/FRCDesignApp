@@ -73,8 +73,7 @@ describe("evaluateExpression", () => {
         expect(evaluateExpression("2 mm", DEGREES).hasError).toBe(true);
     });
 
-    // `expression` is what the input redisplays and the menu stores, so it has
-    // to be something this same parser still reads.
+    // The stored expression has to re-parse.
     it.each([
         ["(1 + 2) * 3 mm"],
         ["(2 + 3) mm"],

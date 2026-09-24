@@ -37,16 +37,11 @@ interface InsertArgs {
     isQuickInsert?: boolean;
 }
 
-/**
- * The current document's units, or undefined outside a document — and while
- * they load, or should they fail to — when each quantity shows its own.
- */
+/** Undefined outside a document, or until they load; quantities show their own unit meanwhile. */
 export function useUnitInfo(): UnitInfo | undefined {
     const target = useTargetElement();
     const query = useQuery<UnitInfo>({
         queryKey: unitInfoQueryKey(target),
-        // Narrowed here rather than guarded inside, as the thumbnail queries
-        // are: the query function should not restate what stops it running.
         queryFn: target
             ? () =>
                   apiGet("/unit-info", {
@@ -63,10 +58,7 @@ export function useUnitInfo(): UnitInfo | undefined {
     return query.data;
 }
 
-/**
- * An insertable's parameters and the records probed for them. Pinned to the
- * microversion, so it is never refetched under a user mid-configuration.
- */
+/** Pinned to the microversion, so it never refetches mid-configuration. */
 export function useConfigurationQuery(
     insertableId: string,
     microversionId: string,
@@ -102,8 +94,7 @@ export function useInsertMutation(
     insertArgs: InsertArgs
 ) {
     const target = useTargetElement();
-    // Named, not resolved: the backend asks Onshape where the connector is now,
-    // since it moves whenever somebody drags it.
+    // The backend resolves where it is now, since it moves when dragged.
     const insertLocationId = useInsertLocationId();
 
     const toastId = "insert-" + insertable.id;
@@ -114,13 +105,10 @@ export function useInsertMutation(
             let endpoint: string;
             let body: Record<string, unknown>;
 
-            // Only reachable from a panel that has one: the buttons that
-            // start an insert do not render without a target.
+            // Insert buttons don't render without a target.
             if (!target) {
                 throw new Error("Nothing to insert into.");
             }
-            // The tab being inserted into, sent whole so the instance type
-            // travels with its id rather than being reassembled.
             const targetPath: ElementPath = {
                 documentId: target.documentId,
                 instanceId: target.instanceId,
@@ -165,22 +153,18 @@ export function useInsertMutation(
             `Unexpectedly failed to insert ${insertable.name}.`,
             toastId
         ),
-        // On the mate that was built, not the one that was asked for: only the
-        // assembly path builds one, and it answers with null when it did not.
         onSuccess: (result) => {
-            if (result.featureId === null) {
-                showSuccessToast(
-                    `Successfully inserted ${insertable.name}.`,
-                    toastId
-                );
-                return;
-            }
-            // Always set: the insert that built the mate had one.
-            if (target) {
+            if (target && result.featureId !== undefined) {
                 sendOpenFeatureMessage(target, result.featureId);
             }
+            // In an assembly, the only feature an insert builds is the mate.
+            const fastened =
+                result.featureId !== undefined &&
+                target?.elementType === ElementType.ASSEMBLY;
             showSuccessToast(
-                `Successfully inserted ${insertable.name} and created a Fasten mate.`,
+                fastened
+                    ? `Successfully inserted ${insertable.name} and created a Fasten mate.`
+                    : `Successfully inserted ${insertable.name}.`,
                 toastId
             );
         }

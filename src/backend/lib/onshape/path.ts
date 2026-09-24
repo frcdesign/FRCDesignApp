@@ -1,5 +1,4 @@
-/** The instance kinds an Onshape path can address, as one definition: the type
- * and the runtime list validators check against both derive from it. */
+/** Both the type and the runtime list derive from this. */
 export const INSTANCE_TYPES = ["w", "v", "m"] as const;
 
 export type InstanceType = (typeof INSTANCE_TYPES)[number];
@@ -43,8 +42,7 @@ export function isInstancePath(path: unknown): path is InstancePath {
     return (
         isDocumentPath(path) &&
         typeof (path as InstancePath).instanceId === "string" &&
-        // Checked against the literals: an unrecognized instance type builds a
-        // path Onshape rejects, which is worth catching at the boundary.
+        // An unrecognized type builds a path Onshape rejects.
         INSTANCE_TYPES.includes((path as InstancePath).instanceType)
     );
 }
@@ -81,10 +79,7 @@ function toInstanceTypeKey(instanceType: InstanceType): InstanceTypeKey {
     }
 }
 
-/**
- * Returns the named-ID object that Onshape API bodies/query params expect,
- * e.g. `{ documentId, workspaceId }` rather than the `/d/.../w/...` path form.
- */
+/** `{ documentId, workspaceId }`, as API bodies and query params expect. */
 function toInstanceApiObject(path: InstancePath): Record<string, string> {
     return {
         documentId: path.documentId,

@@ -39,8 +39,6 @@ describe("configuration routes", () => {
         expect(body).toEqual({ parameters: TEST_PARAMETERS, records: [] });
     });
 
-    // The element's own part data is the record an unset configuration falls
-    // back to, and it lives on the insertable, not in a configurations row.
     it("GET /configuration/insertable/:insertableId serves the element's own part data as a record", async () => {
         await seedPartStudio(db, {
             partMetadata: {

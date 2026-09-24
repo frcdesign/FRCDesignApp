@@ -1,7 +1,4 @@
-/**
- * Enumerates an insertable's configuration combinations. Only indexed enum and
- * boolean parameters vary; the rest ride their Onshape defaults.
- */
+/** Only indexed enum and boolean parameters vary; the rest keep their defaults. */
 import {
     type PartialSelection,
     BooleanParameter,
@@ -12,16 +9,10 @@ import {
 import { evaluateCondition, getVisibleOptions } from "./utils";
 import { ElementType } from "../../lib/onshape/element-type";
 
-/**
- * The most combinations we enumerate for one insertable; beyond it nothing is
- * indexed, which is what bounds load time and Onshape usage.
- */
+/** Past this nothing is indexed, which bounds load time and Onshape usage. */
 export const MAX_PART_NUMBER_CONFIGURATIONS = 512;
 
-/**
- * At or above this, indexing waits for an admin, who can trim the count back by
- * excluding parameters; see the `MANUAL_INDEXING_REQUIRED` build issue.
- */
+/** At or above this, an admin decides whether to index; see `MANUAL_INDEXING_REQUIRED`. */
 export const AUTO_INDEX_THRESHOLD = 128;
 
 /** Where a configuration count sits relative to the two indexing limits. */
@@ -34,10 +25,7 @@ export enum IndexingBand {
     EXCEEDED = "exceeded"
 }
 
-/**
- * Shared with the admin card so the two cannot disagree. The count is the only
- * gate: past the cap nothing enumerates, past the threshold an admin decides.
- */
+/** Shared with the admin card so the two can't disagree. */
 export function isIndexingEnabled(
     band: IndexingBand,
     indexConfigurations: boolean
@@ -53,11 +41,7 @@ export function isIndexingEnabled(
 }
 
 export interface ConfigurationCount {
-    /**
-     * The number of combinations, `0` when there is nothing to vary, or
-     * undefined past the cap — enumeration stops there, so the true total is
-     * unknown.
-     */
+    /** Undefined past the cap, where enumeration stops. */
     count?: number;
     band: IndexingBand;
     /** The combinations counted, so the load path need not enumerate again. */
@@ -76,8 +60,7 @@ export function countConfigurations(
     if (capped) {
         return { band: IndexingBand.EXCEEDED, configurations: [] };
     }
-    // The lone default that nothing-to-vary enumerates to is not a configuration
-    // of its own: a non-configurable insertable has none.
+    // The lone default isn't a configuration of its own.
     const count = configurations.some(
         (selection) => Object.keys(selection).length > 0
     )
@@ -93,10 +76,7 @@ export function countConfigurations(
     };
 }
 
-/**
- * The exclusions that apply. An assembly takes none: Onshape does not let one
- * exclude parameters from its properties either, so there is no call to make.
- */
+/** An assembly takes none: Onshape can't exclude parameters from one either. */
 export function effectiveExclusions(
     elementType: ElementType,
     excludedParameterIds: readonly string[]
@@ -105,10 +85,8 @@ export function effectiveExclusions(
 }
 
 /**
- * Whether indexing varies this parameter, and so multiplies the count. Never
- * one with a role: those change how a part is drawn or derived, not which part
- * it is. Shared with the admin card so it cannot drift from
- * {@link enumerateConfigurations}.
+ * Never one with a role, which changes how a part is drawn, not which part it
+ * is. Shared with the admin card.
  */
 export function isIndexedParameter(
     parameter: ConfigurationParameter,
@@ -122,10 +100,7 @@ export function isIndexedParameter(
     );
 }
 
-/**
- * What enumeration varies this parameter over, given what is fixed so far. None
- * when visibility leaves it no option, which leaves it for Onshape to default.
- */
+/** Empty when visibility leaves no option, so Onshape defaults it. */
 export function parameterValues(
     parameter: EnumParameter | BooleanParameter,
     selection: PartialSelection,
@@ -151,7 +126,7 @@ export function countCombinations(
     excludedParameterIds: readonly string[] = [],
     cap: number = MAX_COUNTED_CONFIGURATIONS
 ): number | undefined {
-    // Depth-first: only the count is wanted, so one path is held rather than all.
+    // Depth-first, holding one path, since only the count is wanted.
     const indexed = parameters.filter((parameter) =>
         isIndexedParameter(parameter, excludedParameterIds)
     );
@@ -186,16 +161,15 @@ export function countCombinations(
 }
 
 interface EnumerateResult {
-    /** What each combination varies — enums and booleans — which is why these
-     * are partial; the only caller runs `toSelection` over them. */
+    /** Only the enums and booleans each combination varies. */
     configurations: PartialSelection[];
     /** True when enumeration was stopped for exceeding the cap. */
     capped: boolean;
 }
 
 /**
- * The cartesian product of enum and boolean values, minus what visibility hides.
- * Declaration order is load-bearing: search dedupes first-wins.
+ * The product of enum and boolean values, minus what visibility hides. Order
+ * matters: search dedupes first-wins.
  */
 export function enumerateConfigurations(
     parameters: ConfigurationParameter[],
@@ -212,8 +186,7 @@ export function enumerateConfigurations(
         const next: PartialSelection[] = [];
         for (const selection of configurations) {
             const values = parameterValues(parameter, selection, parameters);
-            // Nothing to vary here, so the parameter is left unset;
-            // `toSelection` fills it from the default Onshape would apply.
+            // Left unset, so `toSelection` fills in the default.
             if (values.length === 0) {
                 next.push(selection);
                 continue;

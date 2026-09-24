@@ -13,8 +13,7 @@ export const APP_MODAL_CLASSES = {
 
 /** What every modal's content sits in, so its body can scroll. */
 export function AppModalContent(props: PropsWithChildren): ReactNode {
-    // `data-autofocus` takes the focus the trap would otherwise land on the
-    // first control, which reads as that one being pre-selected.
+    // Otherwise the focus trap lands on the first control, which looks pre-selected.
     return (
         <div data-autofocus tabIndex={-1} className={classes.fill}>
             {props.children}
@@ -32,11 +31,7 @@ interface AppModalProps extends PropsWithChildren {
     dismissible?: boolean;
 }
 
-/**
- * A modal held open by state rather than by the manager, framed like the rest
- * of the app; `openAppModal` is the imperative half. Its body belongs in an
- * `AppModalBody`, and its actions, when it has any, in an `AppModalFooter`.
- */
+/** Held open by state; `openAppModal` is the imperative version. */
 export function AppModal(props: AppModalProps): ReactNode {
     const {
         opened,
@@ -64,10 +59,7 @@ export function AppModal(props: AppModalProps): ReactNode {
     );
 }
 
-/**
- * Content pinned between the header and the scrolling body, like a preview
- * image. The body below supplies the space under it.
- */
+/** Pinned above the scrolling body, like a preview image. */
 export function AppModalTop(props: PropsWithChildren): ReactNode {
     return (
         <Box p="sm" pb={0} flex="0 0 auto">
@@ -81,10 +73,7 @@ interface AppModalBodyProps extends PropsWithChildren {
     gap?: MantineSpacing;
 }
 
-/**
- * A modal's content, padded away from the header and footer framing it: the
- * one part of a modal that scrolls.
- */
+/** The part that scrolls. */
 export function AppModalBody(props: AppModalBodyProps): ReactNode {
     const { gap = "sm", children } = props;
     return (

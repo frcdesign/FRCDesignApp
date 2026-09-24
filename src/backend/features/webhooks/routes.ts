@@ -1,11 +1,6 @@
 /**
- * Where Onshape delivers; `registration.ts` registers what it delivers for.
- * A new version of a library document reloads its groups, and a change to an
- * admin team's members pulls that team again.
- *
- * A delivery is recognized by the token in its url, and acted on for the
- * subject that token was registered for, never for what the payload names: the
- * url is all that keeps anyone else from making the server do this work.
+ * Acts on the subject the url's token was registered for, never on what the
+ * payload names: the token is all that keeps others from triggering this.
  */
 import { eq } from "drizzle-orm";
 import { type AppBindings, getApp } from "../../lib/context";
@@ -59,16 +54,12 @@ webhookRoutes.post(RECEIVE_PATH.replace(/^\/api/, ""), async (c) => {
         case WebhookEvent.UNREGISTER:
             await forgetWebhook(c.env, webhook);
             break;
-        // webhook.register and webhook.ping only want a 200, which registration
-        // fails without.
+        // Registration fails without a 200.
     }
     return c.json({});
 });
 
-/**
- * Loads the document's groups, in every library holding it, under the owner's
- * session: nobody is signed in behind a webhook.
- */
+/** Under the owner's session, since nobody is signed in behind a webhook. */
 async function reloadDocument(
     env: AppBindings,
     documentId: string,

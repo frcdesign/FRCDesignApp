@@ -58,7 +58,6 @@ describe("getIssueDescription", () => {
 });
 
 describe("knownBuildIssues", () => {
-    /** A type an older deploy stored, cast because this build no longer has it. */
     const retired = { type: "thumbnail-pending" } as unknown as BuildIssue;
 
     it("drops a type this build has no check for", () => {
@@ -79,8 +78,6 @@ describe("knownBuildIssues", () => {
     });
 
     it("keeps every type it knows", () => {
-        // Only the type is read, so the ones carrying a configuration stand up
-        // bare here rather than being built twice.
         const issues = Object.values(BuildIssueType).map(
             (type) => ({ type }) as BuildIssue
         );
@@ -119,8 +116,7 @@ describe("addBuildIssue", () => {
         expect(result).toEqual(existing);
     });
 
-    // Callers hold onto the array they passed in, so it must never be the one
-    // that comes back, even when there was nothing to add.
+    // Callers keep the array they passed in.
     it("returns a new array even when nothing is added", () => {
         const existing: BuildIssue[] = [{ type: BuildIssueType.NO_VENDORS }];
         expect(

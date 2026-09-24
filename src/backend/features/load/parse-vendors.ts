@@ -38,10 +38,7 @@ export function parseVendors(
     return [...vendors];
 }
 
-/**
- * The vendor one configuration resolves to. Its selected options name it more
- * precisely than the part does, so they are read before the part's own name.
- */
+/** The selected options name it more precisely than the part name, so they're read first. */
 export function parseRecordVendor(
     partName: string | undefined,
     selection: PartialSelection,
@@ -49,8 +46,7 @@ export function parseRecordVendor(
 ): Vendor | undefined {
     for (const param of parameters) {
         if (param.type !== ParameterType.ENUM) continue;
-        // An absent value is the parameter's default, which is what the
-        // element's own probe — configured with nothing — resolves to.
+        // Absent means the default, which the element's own probe resolves to.
         const selected = selection[param.id] ?? param.default;
         const option = param.options.find((o) => o.id === selected);
         const vendor = option && parseOptionVendor(option.name);

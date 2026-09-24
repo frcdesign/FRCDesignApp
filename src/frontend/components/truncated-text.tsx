@@ -8,10 +8,7 @@ interface TruncatedTextProps extends TextProps {
     children: ReactNode;
 }
 
-/**
- * Names itself on hover when there is more of it than fits. Measured as the
- * pointer arrives, so a list pays nothing for a question only one row asks.
- */
+/** Measured on hover, so a list pays only for the row being hovered. */
 export function TruncatedText(props: TruncatedTextProps): ReactNode {
     const { hoverText, children, ...others } = props;
     const ref = useRef<HTMLParagraphElement>(null);

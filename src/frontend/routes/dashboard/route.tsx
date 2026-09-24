@@ -10,8 +10,7 @@ import { DashboardNavbar } from "../../features/dashboard/dashboard-navbar";
 import { RangePreset } from "../../features/dashboard/range";
 import { parseSearch } from "../../lib/search-params";
 
-// Every field is caught rather than required: a hand-edited url should drop the
-// bad param, not fail the whole route.
+// Caught, so a hand-edited url drops the bad param instead of failing.
 const DashboardSearchType = z.object({
     /** Preset window for the range chart; kept in the URL so views are shareable. */
     range: z.enum(RangePreset).optional().catch(undefined),
@@ -30,10 +29,7 @@ export const Route = createFileRoute("/dashboard")({
     }
 });
 
-/**
- * The dashboard is a sibling of `/app`, so it inherits none of the Onshape
- * panel's shell or authed loaders — it is a full-screen public page.
- */
+/** A sibling of `/app`, so it's a public full-screen page without the panel's shell. */
 function DashboardLayout(): ReactNode {
     return (
         <>

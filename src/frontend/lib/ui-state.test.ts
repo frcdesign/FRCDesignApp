@@ -73,8 +73,6 @@ describe("ui state", () => {
         });
     });
 
-    // The split moved a field out of the local blob and added three more, which
-    // the stored shape tolerates: nobody's theme or filters reset over it.
     it("keeps what a store written before the split holds", async () => {
         local.setItem(
             "uiState",
@@ -132,8 +130,6 @@ describe("synced fields", () => {
         expect(stored(local, "uiState").theme).toBe("dark");
     });
 
-    // The entry redirect writes the group the caller resumed in, which is the
-    // one their row already holds.
     it("sends nothing for a field that did not move", async () => {
         const { setSettingsSync, updateUiState } = await loadUiState();
         updateUiState({ groupId: "group-1" });

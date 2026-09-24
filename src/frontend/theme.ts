@@ -7,10 +7,7 @@ import {
 import { LibraryId } from "@backend/features/library/library-id";
 import { FILLED_SHADE } from "./lib/style-constants";
 
-/**
- * FRCDesign brand green ramp (index 6 = #4cae4f, the brand color).
- * Generate replacements with https://mantine.dev/colors-generator if tuning.
- */
+/** Index 6 is the brand color; https://mantine.dev/colors-generator to tune. */
 const frcGreen: MantineColorsTuple = [
     "#eef9ee",
     "#dcf1dc",
@@ -24,11 +21,7 @@ const frcGreen: MantineColorsTuple = [
     "#236b28"
 ];
 
-/**
- * Falls back rather than throwing: the root themes the app even when the url
- * names a library that does not exist — which the route 404s separately — or
- * a tab that is not a library, which has no library color of its own.
- */
+/** Falls back for unknown libraries and non-library tabs. */
 export function getLibraryColor(libraryId: string): string {
     switch (libraryId) {
         case LibraryId.FTC_DESIGN_LIB:
@@ -40,8 +33,6 @@ export function getLibraryColor(libraryId: string): string {
     }
 }
 
-/** A library's color as Mantine's `color.shade`, for a chart series, a tile,
- * or text that should read as the library. */
 export function getLibraryShade(libraryId: string): string {
     return `${getLibraryColor(libraryId)}.${FILLED_SHADE}`;
 }
@@ -55,19 +46,15 @@ export function createAppTheme(libraryId: string) {
         // Mantine's "md" default reads soft for a dense CAD panel.
         defaultRadius: "sm",
         cursorType: "pointer",
-        // Drops the class carrying Mantine's 1px press-down translate, which
-        // nudged every button and icon button down on click.
+        // Drops Mantine's 1px press-down nudge.
         activeClassName: "",
-        // How every one of these is drawn here, so a call site names only
-        // what makes it different.
         components: {
             Tooltip: Tooltip.extend({
                 defaultProps: {
                     withArrow: true,
                     multiline: true,
                     maw: 260,
-                    // Off by Mantine's default, which leaves a touchscreen no
-                    // way to read one.
+                    // Touch is off by default, leaving touchscreens no way to read one.
                     events: { hover: true, focus: true, touch: true }
                 }
             }),

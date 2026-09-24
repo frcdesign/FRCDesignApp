@@ -16,8 +16,7 @@ const FRC_DESIGN_URL = "https://frcdesign.org";
 const BOOK_SCALE = 2 / 3;
 
 interface AppBrandMarkProps {
-    /** The tile's side; the book is drawn to two thirds of it.
-     * @default IconSize.CONTROL */
+    /** @default IconSize.CONTROL */
     size?: IconSize;
 }
 
@@ -30,8 +29,7 @@ export function AppBrandMark(props: AppBrandMarkProps): ReactNode {
             w={size}
             h={size}
             bg={PrimaryColor.FILLED}
-            // White on every library rather than the tile's contrast color,
-            // which flips to black on the lighter ones.
+            // The contrast color flips to black on lighter libraries.
             c="white"
             bdrs="sm"
         >
@@ -64,7 +62,6 @@ export function AppBrand(): ReactNode {
                 target="_blank"
                 fw={FontWeight.BOLD}
                 size="sm"
-                // The navbar's own text color, rather than a link's blue.
                 c="inherit"
                 td="none"
             >

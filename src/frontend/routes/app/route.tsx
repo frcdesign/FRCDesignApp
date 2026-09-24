@@ -53,20 +53,17 @@ export const Route = createFileRoute("/app")({
         ...parseSearch(AppParamsType, search)
     }),
     search: {
-        // Only the app's own: a launch is taken into the store below and struck
-        // off, so navigating never carries the caller's document around.
+        // The launch is stripped below, so navigation never carries the caller's document.
         middlewares: [retainSearchParams([...APP_PARAM_KEYS])]
     },
     beforeLoad: ({ search, location }) => {
         adoptAppParams(search);
         adoptOnshapeLaunch(search);
-        // The entry redirect seeds the account's saved theme; ui-state is what
-        // the app reads, so take it rather than leave a second answer in the url.
+        // Moved into ui-state, so the url doesn't hold a second answer.
         if (search.theme) {
             updateUiState({ theme: search.theme }, { sync: false });
         }
-        // Seeded only when the row names one, so a tab chosen here while
-        // signed out is not cleared.
+        // Only when the row names one, so a tab picked signed out isn't cleared.
         if (search.tabId) {
             updateUiState({ tabId: search.tabId }, { sync: false });
         }
@@ -92,10 +89,7 @@ function isLaunch(search: LaunchSearch): boolean {
     );
 }
 
-/**
- * The url with the launch taken out. Undefined rather than absent:
- * `retainSearchParams` reads a missing key as one it should put back.
- */
+/** Undefined, not absent: `retainSearchParams` restores missing keys. */
 function strippedOfLaunch(search: LaunchSearch & AppParams): AppParams {
     const cleared = Object.fromEntries(
         [...LAUNCH_KEYS, ...ENTRY_KEYS].map((key) => [key, undefined])
@@ -104,8 +98,6 @@ function strippedOfLaunch(search: LaunchSearch & AppParams): AppParams {
 }
 
 function App() {
-    // The navbar (control row + always-open filters) is self-sizing, so measure
-    // it and feed its height to AppShell rather than hardcoding one.
     const { ref: headerRef, height: headerHeight } = useElementSize();
 
     useMessageListener();

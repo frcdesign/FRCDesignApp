@@ -48,11 +48,7 @@ import {
 import { InsertLocationStatus } from "../features/insert-location/components/insert-location-status";
 import styles from "../lib/styles.module.css";
 
-/**
- * The bar every page is topped by: the brand, then whatever that page puts
- * beside it. Stretched so a full-height child lands its underline on the row's
- * own border.
- */
+/** Stretched so a full-height child's underline lands on the row's border. */
 export function NavbarRow(props: PropsWithChildren): ReactNode {
     const { children } = props;
     return (
@@ -66,8 +62,7 @@ export function NavbarRow(props: PropsWithChildren): ReactNode {
         >
             <AppBrand />
             {children && (
-                // Closes the brand off, so the name reads as the app rather
-                // than the first tab. Mantine's own all but vanishes on gray.
+                // Mantine's own divider all but vanishes on gray.
                 <Divider
                     orientation="vertical"
                     my="sm"
@@ -79,10 +74,6 @@ export function NavbarRow(props: PropsWithChildren): ReactNode {
     );
 }
 
-/**
- * Provides top-level navigation for the app: a row of library tabs with the
- * brand and settings alongside, over a row holding search and its filters.
- */
 export function AppNavbar(): ReactNode {
     return (
         <Stack gap={0}>
@@ -103,14 +94,9 @@ export function AppNavbar(): ReactNode {
     );
 }
 
-/**
- * Shown only when not signed in; starts the Onshape OAuth flow and returns to
- * the current location, after which access-data reports the caller signed in.
- */
 function SignInButton(): ReactNode {
     const { signedIn, isPending } = useAccessData();
-    // Waiting rather than assuming signed out: the placeholder would flash the
-    // button on every load for a caller who is already signed in.
+    // Otherwise the button flashes on every load for someone signed in.
     if (isPending || signedIn) return null;
 
     return (
@@ -160,27 +146,22 @@ function AppTabs(): ReactNode {
                     return;
                 }
                 const tabId = value as AppTab;
-                // Write-behind: the url displays it, this only decides where
-                // `/init` lands next time.
+                // Only decides where `/init` lands next time; the url is the source of truth.
                 updateUiState({ tabId });
                 navigateToTab(tabId);
             }}
             styles={{
-                // Hides the line under the tab list alone; the row owns one
-                // that spans it. The active indicator is colored separately.
+                // The row draws the line under the tabs.
                 root: { "--tab-border-color": "transparent", minWidth: 0 },
-                // Three full names outgrow a narrow panel; scrolling beats
-                // reflowing the navbar into two rows.
+                // Scroll rather than wrap onto a second row in a narrow panel.
                 list: {
-                    // Full height, so the underline lands on the row's border
-                    // rather than partway up a taller bar.
+                    // So the underline lands on the row's border.
                     height: "100%",
                     flexWrap: "nowrap",
                     overflowX: "auto",
                     scrollbarWidth: "none"
                 },
-                // Pulled onto that divider, so the active tab's indicator
-                // replaces it rather than stacking a line above it.
+                // Overlaps the row's border, so the active indicator replaces it.
                 tab: {
                     marginBottom: -1,
                     paddingInline: "var(--mantine-spacing-sm)"
@@ -205,8 +186,7 @@ export function SettingsButton() {
             color={StatusColor.NEUTRAL}
             title="Settings"
             my="auto"
-            // The filter button's size and icon, so the navbar's two rows read
-            // as one set of controls.
+            // Matches the filter button.
             size="input-sm"
             onClick={() => openSettingsMenu()}
         >
@@ -224,19 +204,13 @@ function selectAllInputText(ref: RefObject<HTMLInputElement | null>) {
     input.setSelectionRange(0, length);
 }
 
-/**
- * How long typing pauses before the search runs. Each query re-searches the
- * index and rebuilds the list, which is enough work to be felt between
- * keystrokes.
- */
 const SEARCH_DEBOUNCE_MS = 200;
 
 function SearchBar() {
     const ref = useRef<HTMLInputElement>(null);
     const wasFocused = useRef(false);
     const libraryId = useLibraryId();
-    // The box owns what is typed and the stored query follows a pause later, so
-    // a keystroke re-renders this input rather than every list reading the query.
+    // Local state, so a keystroke re-renders only the input.
     const [query, setQuery] = useState(() => getUiState().searchQuery ?? "");
     const runSearch = useDebouncedCallback(
         (value: string) => {
@@ -246,8 +220,7 @@ function SearchBar() {
         { delay: SEARCH_DEBOUNCE_MS, flushOnUnmount: true }
     );
 
-    // `autoFocus` fires before the ref attaches, so onFocus has nothing to select
-    // through on the first open and last time's query keeps the caret after it.
+    // `autoFocus` fires before the ref attaches, so onFocus can't select.
     useEffect(() => {
         selectAllInputText(ref);
     }, []);
@@ -277,12 +250,8 @@ function SearchBar() {
             onFocus={() => {
                 selectAllInputText(ref);
             }}
-            // A click on an unfocused input focuses it — selecting everything
-            // above — and then places the caret on mouseup, which collapses
-            // that selection again. Preventing the default only on the click
-            // that did the focusing keeps the select-all while leaving a click
-            // inside an already-focused field to put the caret where it was
-            // aimed.
+            // The mouseup of the click that focuses the input would collapse the
+            // select-all; later clicks place the caret normally.
             onMouseDown={() => {
                 wasFocused.current = document.activeElement === ref.current;
             }}

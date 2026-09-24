@@ -84,7 +84,6 @@ describe("saveInsertable", () => {
             })
             .where(eq(insertables.id, TEST_PART_STUDIO_ID));
 
-        // A reload finds it renamed and no longer a composite.
         await saveInsertable(
             db,
             insertableTarget({
@@ -129,8 +128,7 @@ describe("saveInsertable", () => {
         expect(config?.records).toEqual(records);
     });
 
-    // The element's own part number is not a configuration of it, so probing an
-    // unconfigurable element must not manufacture a configurations row.
+    // Unconfigurable elements get no configurations row.
     it("stores part data on the insertable without a configuration row", async () => {
         await saveInsertable(
             db,
@@ -150,8 +148,7 @@ describe("saveInsertable", () => {
         expect(await db.select().from(configurations).all()).toHaveLength(0);
     });
 
-    // features/library/db.ts treats the row's existence as "configurable", so an
-    // insertable that stops being configurable must lose the row, not blank it.
+    // `library/db.ts` reads the row's existence as "configurable".
     it("drops the configuration row when there are no parameters", async () => {
         await saveInsertable(
             db,
@@ -197,11 +194,7 @@ describe("loadInsertable", () => {
 
     afterEach(() => vi.restoreAllMocks());
 
-    // A render can take half an hour to land. Holding a limiter slot while
-    // waiting on one stalls every insertable queued behind it, which is most of
-    // what a slow load spends its time on.
-    // A thumbnail neither instance will give up is a build issue, not a
-    // failed insertable: the row is still worth having without a picture.
+    // A missing thumbnail is a build issue; the row is still worth having.
     it("records a failed thumbnail rather than failing the insertable", async () => {
         vi.spyOn(ThumbnailStore, "uploadThumbnails").mockRejectedValue(
             new Error("no thumbnail anywhere")

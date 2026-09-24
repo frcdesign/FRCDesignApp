@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithProviders } from "../../__test_utils__/render";
@@ -15,8 +15,7 @@ function renderInRow() {
     return openRow;
 }
 
-describe("AppHoverCard", () => {
-    // A tap on a phone used to open the card and the row it sits in at once.
+describe("AppHoverCard on a touchscreen", () => {
     it("opens on a click without the row seeing it", async () => {
         const user = userEvent.setup();
         const openRow = renderInRow();
@@ -37,8 +36,6 @@ describe("AppHoverCard", () => {
         expect(openRow).not.toHaveBeenCalled();
     });
 
-    // That the dismissing click lands on the overlay rather than a row is
-    // layout, which jsdom does not do; it was checked in a touch browser.
     it("closes on a click outside", async () => {
         const user = userEvent.setup();
         renderInRow();
@@ -49,5 +46,42 @@ describe("AppHoverCard", () => {
         await waitFor(() => {
             expect(screen.queryByText("card")).toBeNull();
         });
+    });
+});
+
+describe("AppHoverCard with a mouse", () => {
+    beforeEach(() => {
+        vi.spyOn(window, "matchMedia").mockImplementation(
+            (query) =>
+                ({
+                    matches: query === "(hover: hover)",
+                    media: query,
+                    addEventListener: () => undefined,
+                    removeEventListener: () => undefined
+                }) as unknown as MediaQueryList
+        );
+    });
+    afterEach(() => vi.restoreAllMocks());
+
+    it("opens on hover and closes when the pointer leaves", async () => {
+        const user = userEvent.setup();
+        renderInRow();
+
+        await user.hover(screen.getByText("badge"));
+        expect(await screen.findByText("card")).not.toBeNull();
+
+        await user.unhover(screen.getByText("badge"));
+        await waitFor(() => {
+            expect(screen.queryByText("card")).toBeNull();
+        });
+    });
+
+    it("keeps a click on the target from the row", async () => {
+        const user = userEvent.setup();
+        const openRow = renderInRow();
+
+        await user.click(screen.getByText("badge"));
+
+        expect(openRow).not.toHaveBeenCalled();
     });
 });

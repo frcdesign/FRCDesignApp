@@ -53,10 +53,6 @@ interface BuildStatusCardProps extends BuildStatusSubject {
     children: ReactNode;
 }
 
-/**
- * The hover-card content: a header (name, severity summary, last-loaded time),
- * the build checks (when any), and the wrapped group/insertable admin menu.
- */
 function BuildStatusCard(props: BuildStatusCardProps): ReactNode {
     const {
         name,
@@ -94,11 +90,7 @@ interface BuildStatusBadgeProps extends BuildStatusSubject {
     hoverMenu: ReactNode;
 }
 
-/**
- * A severity icon whose hover card shows the build-status card wrapping the
- * given admin menu. Gated first, so the card and its admin controls only exist
- * for an editor.
- */
+/** Gated first, so the card and its admin controls only exist for an editor. */
 function BuildStatusBadge(props: BuildStatusBadgeProps): ReactNode {
     return (
         <RequireAccessLevel>
@@ -130,8 +122,7 @@ function BuildStatusHoverCard({
                 loading ? (
                     <Loader size={IconSize.SMALL} />
                 ) : isHidden ? (
-                    // Nobody but an editor sees a hidden insertable, so what
-                    // its checks say about it does not matter yet.
+                    // Only editors see hidden insertables, so its checks don't matter yet.
                     <AppIcon
                         icon={EyeSlashIcon}
                         color={StatusColor.WARNING}
@@ -197,11 +188,7 @@ interface VersionAgeProps {
     versionCreatedAt?: number;
 }
 
-/**
- * How old the pinned Onshape version is — when the version was cut, not when we
- * last synced it. A spinner (with a tooltip) stands in while its group loads;
- * otherwise the version icon and a day count say it without a label.
- */
+/** When the pinned version was cut, not when it was synced. */
 function VersionAge(props: VersionAgeProps): ReactNode {
     const { groupId, versionCreatedAt } = props;
     const loading = useIsGroupLoading(groupId);

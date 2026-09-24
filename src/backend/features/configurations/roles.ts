@@ -1,8 +1,4 @@
-/**
- * Recognizing the parameters that play a role. Onshape records nothing that
- * says so, so they are recognized by name, once, as a document is loaded; what
- * is found is stored on the parameter as `role`.
- */
+/** Onshape doesn't mark roles, so they're recognized by name at load and stored as `role`. */
 import {
     type ConfigurationParameter,
     ParameterRole,
@@ -19,11 +15,7 @@ function normalizedName(parameter: ConfigurationParameter): string {
     return parameter.name.trim().toLowerCase();
 }
 
-/**
- * The role a parameter plays, if any. A lone "R" or "B" could mean anything,
- * so a channel counts only beside its two siblings. A derivation variable is
- * only a text one: the app fills it with a unique value, which is text.
- */
+/** A channel counts only beside its two siblings. A derivation variable must be text, since the app fills it with a UUID. */
 function identifyRole(
     parameter: ConfigurationParameter,
     names: Set<string>

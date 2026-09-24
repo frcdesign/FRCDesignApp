@@ -17,10 +17,7 @@ export function useAdminTeamQuery() {
     });
 }
 
-/**
- * Sets the library's admin team, which the server pulls the members of. The
- * change reaches everyone's access through the library version it bumps.
- */
+/** The version bump it causes refreshes everyone's access. */
 export function useSetAdminTeamMutation() {
     const libraryId = useLibraryId();
     return useMutation({

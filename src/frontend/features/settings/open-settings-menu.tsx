@@ -2,10 +2,7 @@ import { openAppModal } from "../../components/open-app-modal";
 import { AppModalBody } from "../../components/app-modal";
 import { SettingsMenuContent } from "./components/settings-menu";
 
-/**
- * Kept out of the component file so that file exports only components, which
- * is what lets React Refresh swap it in place instead of reloading its callers.
- */
+/** Separate so the component file exports only components, which React Refresh needs. */
 export function openSettingsMenu() {
     openAppModal({
         title: "Settings",

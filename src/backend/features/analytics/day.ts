@@ -1,17 +1,9 @@
-/**
- * The day key every rollup is keyed on, and the window a read covers.
- *
- * Imported by both sides, so it stays free of anything Worker-only.
- */
+/** Imported by both sides, so nothing Worker-only. */
 
-/**
- * US teams work evenings, and a UTC midnight cuts that session in half: 8pm
- * Eastern is already tomorrow. Fixed, so an insert lands on one day for everyone.
- */
+/** US teams work evenings, which UTC midnight would split. */
 const REPORTING_TIME_ZONE = "America/New_York";
 
-// en-CA formats as YYYY-MM-DD, which is the shape day keys are compared as.
-// Built once: constructing a formatter per call is the expensive part.
+// en-CA gives YYYY-MM-DD. Built once, since construction is the expensive part.
 const dayFormat = new Intl.DateTimeFormat("en-CA", {
     timeZone: REPORTING_TIME_ZONE,
     year: "numeric",
@@ -24,20 +16,13 @@ export function toDayKey(timestamp: number): string {
     return dayFormat.format(timestamp);
 }
 
-/**
- * Steps a day key by whole days. A key is a calendar date, not an instant, so
- * parsing at UTC midnight keeps every step 24 hours — a DST zone would not.
- */
+/** Parsed at UTC midnight so every step is 24 hours. */
 export function addDays(day: string, count: number): string {
     const at = Date.parse(`${day}T00:00:00Z`) + count * 24 * 3600 * 1000;
     return new Date(at).toISOString().slice(0, 10);
 }
 
-/**
- * The last day a report covers: yesterday, since today is still filling. Ending
- * a series on a part-finished day puts a dip at the right of every chart that
- * recovers by the next morning.
- */
+/** Yesterday: today is still filling, and would dip every chart. */
 export function toReportingDay(timestamp: number): string {
     return addDays(toDayKey(timestamp), -1);
 }

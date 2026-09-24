@@ -36,9 +36,6 @@ interface DashboardTabsProps {
     current: DashboardKey;
 }
 
-/**
- * Two tiers, like the panel's navbar: the dashboard over the library it reads.
- */
 export function DashboardNavbar(): ReactNode {
     const pathname = useRouterState({ select: (s) => s.location.pathname });
     const current = toDashboardKey(pathname);
@@ -140,8 +137,7 @@ function LibraryMenu({ dashboard }: LibraryMenuProps): ReactNode {
                                     target?.to ??
                                     "/dashboard/library/$libraryId",
                                 params: { libraryId },
-                                // Dropped, not retained: the part being
-                                // reported on belongs to the old library.
+                                // The part belongs to the old library.
                                 search: { element: undefined }
                             })
                         }
@@ -219,8 +215,7 @@ function RefreshButton(): ReactNode {
 const TAB_STYLES = {
     // Hides the line under the tab list alone; the row owns one that spans it.
     root: { "--tab-border-color": "transparent", minWidth: 0 },
-    // Full height, so the underline lands on the row's border rather than
-    // partway up a taller bar.
+    // So the underline lands on the row's border.
     list: {
         height: "100%",
         flexWrap: "nowrap",

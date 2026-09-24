@@ -1,7 +1,4 @@
-/**
- * The log's rows, read as the events they are. `events` is one wide table, so
- * this is the one place that knows which columns a given kind sets.
- */
+/** The one place that knows which columns each kind of event sets. */
 import { type ElementType } from "../../lib/onshape/element-type";
 import { EventType, type InsertSource } from "./usage";
 import { type LoggedEvent } from "./schema";
@@ -21,10 +18,7 @@ export type EventCore = Pick<
 /** The rest, which only an insert fills in. */
 type InsertColumns = Omit<LoggedEvent, keyof EventCore>;
 
-/**
- * Spelled out rather than defaulted: a column added to the log stops compiling
- * here until someone says what a non-insert records for it.
- */
+/** Spelled out, so a new column fails to compile until someone decides its value here. */
 export const NOT_AN_INSERT: InsertColumns = {
     elementId: null,
     documentId: null,
@@ -46,10 +40,7 @@ export type LoggedInsert = LoggedEvent & {
     source: InsertSource;
 };
 
-/**
- * Undefined for another kind, and for an insert whose columns disagree with its type —
- * a row from a version that did not set them, worth reading past not crashing on.
- */
+/** Undefined for another kind, or an insert from a version that didn't set these columns. */
 export function asInsert(event: LoggedEvent): LoggedInsert | undefined {
     const isInsert =
         event.type === EventType.INSERT &&

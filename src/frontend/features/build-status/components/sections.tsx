@@ -22,10 +22,7 @@ interface ControlRowProps {
     control: ReactNode;
 }
 
-/**
- * A label (+ description) and a right-aligned control. Usually a Switch, but a
- * setting that isn't the admin's to make shows an icon saying why instead.
- */
+/** Usually a Switch; an icon when the setting isn't the admin's to make. */
 export function ControlRow(props: ControlRowProps): ReactNode {
     return (
         <Group justify="space-between" wrap="nowrap" gap="md" align="center">

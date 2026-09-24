@@ -10,10 +10,7 @@ import {
 } from "@backend/features/settings/app-tab";
 import { getLibraryName } from "./library";
 
-/**
- * The tabs the app can open, in the order the navbar offers them. A utility
- * joins this once it has a page; `AppTab` already lets one be stored.
- */
+/** In navbar order. A utility joins once it has a page. */
 export const APP_TABS: AppTab[] = Object.values(LibraryId);
 
 /** A tab id as the entry redirect spells it into the url. */
@@ -22,11 +19,7 @@ export const AppTabType = z.enum([
     ...Object.values(UtilityTab)
 ]);
 
-/**
- * Navigates to a tab. A library is one route with a parameter, so it is named;
- * a utility is a route of its own, which `href` reaches without this route tree
- * having to know it yet — a relative one still navigates in place.
- */
+/** A utility is reached by `href`, so this route tree needn't know it yet. */
 export function useNavigateToTab(): (tabId: AppTab) => void {
     const navigate = useNavigate();
 

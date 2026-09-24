@@ -1,7 +1,4 @@
-/**
- * `/init` is where Onshape lands. It gates on auth, then resumes the caller in
- * the tab and theme they last used.
- */
+/** Where Onshape lands: gates on auth, then resumes the last tab and theme. */
 import { and, eq } from "drizzle-orm";
 import { getDb, type Db } from "../../db/client";
 import { groups, users } from "../../db/schema";
@@ -23,20 +20,10 @@ import { trackAppOpen, trackInBackground } from "../analytics/tracking";
 const SIGN_IN_ATTEMPTED = "signInAttempted";
 
 /**
- * Whether to send the caller through Onshape's sign-in before opening the app.
- *
- * The gate is `isAuthenticated`: a session Onshape takes, scoped to the company
- * whose document the panel was opened in. What a sign-in cannot always do is
- * produce one. Onshape's authorize endpoint takes a `company_id` to scope a
- * token to an enterprise and documents no value standing for a personal
- * account, so for a caller holding an enterprise session who opens a plain
- * cad.onshape.com document there is nothing to ask for on their behalf — and
- * the reported redirect loop is what came of asking anyway.
- *
- * So a caller with no session at all is always worth signing in, and one whose
- * session is merely scoped elsewhere only when there is a company to name.
- * `SIGN_IN_ATTEMPTED` backstops both: whatever came back, the app opens on the
- * second pass rather than bouncing a third time.
+ * Onshape's authorize endpoint has no `company_id` for a personal account, so
+ * a caller with an enterprise session opening a personal document can't get a
+ * session for it; asking anyway loops. So only sign in when there's no session
+ * or a company to name, and `SIGN_IN_ATTEMPTED` stops a second bounce.
  */
 async function needsSignIn(c: AppContext): Promise<boolean> {
     if (await c.var.isAuthenticated()) return false;
@@ -68,8 +55,7 @@ interface AppEntry {
 
 /** Where the caller left off, as their row records it. */
 function getUserEntry(db: Db, userId: string) {
-    // The join is the check on the stored group: one deleted, or left behind by
-    // a tab switch, comes back null and lands the caller in the tab itself.
+    // A deleted or stale group joins to null, landing in the tab itself.
     return db
         .select({
             tabId: users.tabId,
@@ -85,10 +71,7 @@ function getUserEntry(db: Db, userId: string) {
         .get();
 }
 
-/**
- * The url the caller resumes at, seeded with what they last used. Returns who
- * they are too, so `/init` records the open without a second lookup.
- */
+/** Also returns the user id, so `/init` records the open without another lookup. */
 async function getAppEntry(c: AppContext): Promise<AppEntry> {
     const userId = (await isSignedIn(c)) ? await c.var.getUserId() : undefined;
     const user = userId
@@ -104,21 +87,16 @@ async function getAppEntry(c: AppContext): Promise<AppEntry> {
     }
     search.set("theme", user?.theme ?? DEFAULT_THEME);
 
-    // Checked rather than trusted, as the stored group above is: the frontend
-    // 404s an id it does not know, and this url is the only thing between a
-    // stale row and the caller's panel.
+    // Validated: the frontend 404s an unknown id.
     const chosenTab = user?.tabId
         ? toAppTab(user.tabId, DEFAULT_LIBRARY)
         : undefined;
-    // A caller with no tab lands in the default library, where the welcome
-    // asks for one; the seed is how the app tells the two apart.
+    // Without a tab the welcome asks for one.
     if (chosenTab) {
         search.set("tabId", chosenTab);
     }
     const tabId = chosenTab ?? DEFAULT_LIBRARY;
     const path = getTabPath(tabId);
-    // Only a library has groups to resume in; the join above already returns
-    // none for a tab that is not one.
     const groupPath = user?.groupId ? `${path}/groups/${user.groupId}` : path;
     return { url: `${groupPath}?${search.toString()}`, userId, tabId };
 }
@@ -131,9 +109,7 @@ entryRoutes.get("/init", cacheMiddleware(), async (c) => {
         return c.redirect(getSignInUrl(c));
     }
     const { url, userId, tabId } = await getAppEntry(c);
-    // Reaching here is exactly "the panel was opened", and it is the only entry
-    // Onshape uses. Best-effort, so the redirect never waits on it. Only a
-    // library open is logged, the log being library-scoped.
+    // Only library opens are logged, since the log is per library.
     if (userId && isLibraryTab(tabId)) {
         await trackInBackground(c, () =>
             trackAppOpen(c, { libraryId: tabId, userId })

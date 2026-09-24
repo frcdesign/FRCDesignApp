@@ -1,11 +1,7 @@
 /**
- * Holds every open client's WebSocket and relays what the server pushes. One
- * instance for the whole app: the pushes are few and small, and one place to
- * send them keeps a sender from having to know who is listening where.
- *
- * Sockets are accepted for hibernation, so an idle instance costs nothing
- * while its clients stay connected; each is tagged with the library its client
- * shows, which is what a library's messages are sent to.
+ * Holds every client's WebSocket and relays pushes. One instance for the app,
+ * since pushes are few and small. Sockets hibernate, so idle clients cost
+ * nothing, and are tagged with the library they show.
  */
 import { DurableObject } from "cloudflare:workers";
 import type { AppBindings } from "../../lib/context";

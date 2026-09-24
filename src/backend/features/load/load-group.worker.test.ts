@@ -214,8 +214,6 @@ describe("findMovedInsertables", () => {
         expect(moved).toEqual([]);
     });
 
-    // A new tab is inserted with its position, and a removed one is about to be
-    // deleted, so neither belongs in the reorder.
     it("names only stored rows the document still has a tab for", () => {
         const moved = findMovedInsertables(
             [tab("new"), tab("e1")],
@@ -292,8 +290,7 @@ describe("loadGroup", () => {
     beforeEach(async () => {
         await resetDb(db);
         await seedGroup(db);
-        // The real one reads OAuth tokens out of KV; every Onshape call these
-        // tests reach is mocked at the endpoint wrapper instead.
+        // Onshape calls are mocked at the endpoint wrappers instead.
         vi.spyOn(
             LoadCommonModule,
             "getOnshapeApiFromContext"
@@ -319,8 +316,7 @@ describe("loadGroup", () => {
         expect(result).toMatchObject({ loadedElements: 2, failedElements: 0 });
         const groupRow = await readGroup();
         expect(groupRow?.versionId).toBe("v-2");
-        // The version's date moves with the version, not with the sync: the
-        // card dates the version, and reloading an old one does not freshen it.
+        // Dates the version, not the sync.
         expect(groupRow?.versionCreatedAt).toEqual(LOADED_VERSION_CREATED_AT);
         expect(groupRow?.name).toBe("Reloaded Group");
         expect(groupRow?.lastLoadedAt).toEqual(expect.any(Date));
@@ -391,9 +387,6 @@ describe("loadGroup", () => {
         expect(deleted.mock.calls.map((call) => call[2])).toEqual(["w-old"]);
     });
 
-    // The element a group's thumbnail comes from is often not a loadable tab,
-    // and which one it is already came back with the document, so resolving it
-    // should cost nothing.
     it("takes the group thumbnail from the designated element without re-reading the document", async () => {
         mockContents([tab("e1"), drawing("cover")]);
         vi.spyOn(ConfigurationEndpoints, "getConfiguration").mockResolvedValue(
@@ -417,8 +410,7 @@ describe("loadGroup", () => {
         expect(document).not.toHaveBeenCalled();
     });
 
-    // A skipped tab never reaches saveInsertable, but its version still has to
-    // move: that id is what insertion and every document link are built from.
+    // Its id is what inserts and document links are built from.
     it("advances a skipped insertable's version along with the group's", async () => {
         mockContents([tab("e1")]);
         // Same microversion as the tab, so the load skips it entirely.
@@ -439,7 +431,6 @@ describe("loadGroup", () => {
         expect(result).toMatchObject({ loadedElements: 0 });
         // Nothing was reloaded...
         expect(configurationSpy).not.toHaveBeenCalled();
-        // ...but it no longer points at the version the group just left.
         const row = await db
             .select()
             .from(insertables)
@@ -449,8 +440,7 @@ describe("loadGroup", () => {
         expect((await readGroup())?.versionId).toBe("v-2");
     });
 
-    // The reason the order has to be written from the tab list: moving a tab
-    // changes no microversion, so every row that moved is one the load skips.
+    // Moving a tab changes no microversion, so the load skips these rows.
     it("applies the document's tab order to insertables it did not reload", async () => {
         mockContents([tab("e2"), tab("e1")]);
         await seedInsertable(db, {
@@ -484,8 +474,6 @@ describe("loadGroup", () => {
         expect(rows.map((row) => row.elementId)).toEqual(["e2", "e1"]);
     });
 
-    // A new tab is inserted at its own position, which moves everything below
-    // it: the rows that shift are saved by the group, not by their own load.
     it("makes room in the tab order for a newly added tab", async () => {
         mockContents([tab("new"), tab("e1")]);
         await seedInsertable(db, {
@@ -510,8 +498,7 @@ describe("loadGroup", () => {
         expect(rows.map((row) => row.sortOrder)).toEqual([0, 1]);
     });
 
-    // The version is what makes a failure self-healing: leaving it stale is what
-    // brings the next reload back to retry only the insertable that failed.
+    // The stale version brings the next reload back to retry it.
     it("holds the version back and flags the insertable that failed", async () => {
         mockContents([tab("e1"), tab("e2")]);
         vi.spyOn(ConfigurationEndpoints, "getConfiguration").mockImplementation(

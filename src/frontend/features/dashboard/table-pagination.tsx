@@ -11,11 +11,7 @@ interface Paged<T> {
     setPage: (page: number) => void;
 }
 
-/**
- * One page of a list. The page is clamped rather than reset, so a filter that
- * shortens the list lands on its last page instead of an empty one — there is
- * no effect to run, and so no render showing rows that are gone.
- */
+/** Clamped rather than reset, so a shorter list lands on its last page without an effect. */
 export function usePagedRows<T>(rows: T[]): Paged<T> {
     const [requestedPage, setRequestedPage] = useState(1);
 

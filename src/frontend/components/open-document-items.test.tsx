@@ -39,7 +39,6 @@ describe("OpenDocumentItems", () => {
         updateUiState({ server: undefined });
     });
 
-    // A favorite's link used to open the part at its defaults.
     it("links to the configuration it is given, as it was typed", async () => {
         expect(await copiedLink({ size: "large", length: "(2 + 3) in" })).toBe(
             "https://cad.onshape.com/documents/doc/v/ver/e/el" +

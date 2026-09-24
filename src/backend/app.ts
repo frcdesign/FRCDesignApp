@@ -1,7 +1,3 @@
-/**
- * Composition root: binds the request's auth onto every request and mounts each
- * feature's routes. Everything it wires lives in a feature or in lib.
- */
 import { analyticsRoutes } from "./features/analytics/routes";
 import { accessRoutes, authRoutes } from "./features/auth/routes";
 import { buildStatusRoutes } from "./features/build-checker/routes";
@@ -44,8 +40,7 @@ const apiRoutes = [
 export function createApp(resolveAuth: AuthResolver) {
     const app = getApp();
 
-    // Reaches Workers Logs, which wrangler.jsonc enables. Only /init, /api/*
-    // and /auth/* run the Worker, so static assets are not logged.
+    // To Workers Logs. Static assets don't run the Worker, so they aren't logged.
     app.use("*", logger());
 
     app.use("*", bindAuth(resolveAuth));

@@ -58,17 +58,11 @@ import {
 } from "../parameter-value";
 import { seedFrom } from "../quantity-box";
 
-/**
- * What the panel settled a selection into, reported because only the panel
- * has the parameters each of these is measured against.
- */
+/** Reported by the panel, since only it has the parameters. */
 export interface SelectionReport {
     /** Whole, and settled against the parameters' conditions. */
     selection: Selection;
-    /**
-     * Only what differs from the element's defaults, as entered, and without
-     * derivation variables: this is what the url keeps.
-     */
+    /** What the url keeps. */
     overrides: PartialSelection;
     /** Names the selection's thumbnail. */
     configurationKey: ConfigurationKey;
@@ -83,10 +77,7 @@ interface ConfigurationWrapperProps {
     selection?: PartialSelection;
     setSelection: Dispatch<Selection>;
     onReport?: (report: SelectionReport) => void;
-    /**
-     * A row was moved, as against the panel settling the selection on load.
-     * Any interaction counts, including picking what was already picked.
-     */
+    /** A person changed a row, as opposed to the panel settling on load. */
     onEdit?: () => void;
 }
 
@@ -126,9 +117,8 @@ export function ConfigurationWrapper(
     const query = useConfigurationQuery(insertableId, microversionId);
 
     const parameters = query.data?.parameters;
-    // Whole the moment the parameters are known, since a search hit names only
-    // its overrides, and settled against the conditions so a row never has to
-    // write its own value back through an effect.
+    // A search hit names only its overrides, so fill in the rest and apply the
+    // conditions here, rather than each row writing back its own value.
     const whole = useMemo(
         () =>
             parameters
@@ -144,10 +134,8 @@ export function ConfigurationWrapper(
         [parameters, selection]
     );
 
-    // The one place the panel writes back: the menu inserts the selection it
-    // holds, so settling has to reach it. `sameSelection` is what stops the
-    // loop, and it stops after one write only while normalizeSelection reaches
-    // a fixed point — see the cap it can bail out at.
+    // The menu inserts the selection it holds, so settling has to reach it.
+    // `sameSelection` stops the loop once normalizeSelection reaches a fixed point.
     useEffect(() => {
         if (whole && !sameSelection(selection, whole)) {
             setSelection(whole);
@@ -156,8 +144,6 @@ export function ConfigurationWrapper(
 
     useReportSelection(query.data, whole, onReport);
 
-    // The rows' own writes, as against the settle above: same selection, but
-    // only this one is somebody configuring the part.
     const editSelection = useCallback(
         (newSelection: Selection) => {
             onEdit?.();
@@ -166,8 +152,7 @@ export function ConfigurationWrapper(
         [onEdit, setSelection]
     );
 
-    // Before the spinner: a failed fetch leaves `whole` undefined too, so
-    // testing that first would spin forever instead of reporting the failure.
+    // A failed fetch also leaves `whole` undefined, so check this first.
     if (query.isError) {
         return <SectionNotice title="Failed to load selection." />;
     }
@@ -232,11 +217,7 @@ function ParameterCells(props: ParameterCellsProps): ReactNode {
     );
 }
 
-/**
- * At least as wide as the input and at most as wide as the screen, so a long
- * option reads on one line where there is room and wraps where there is not,
- * rather than wrapping inside a dropdown as narrow as a squeezed input.
- */
+// Lets a long option sit on one line where there is room.
 const DROPDOWN_PROPS: ComboboxProps = {
     width: "max-content",
     position: "bottom-end",
@@ -261,17 +242,12 @@ interface ParameterRowProps {
     parameters: ConfigurationParameter[];
 }
 
-/**
- * One row, given its own component so its handler is a stable value. Built inside
- * the `.map` it replaces, it changed identity every render — and effects name it.
- */
+/** Its own component so its handler keeps a stable identity. */
 function ParameterRow(props: ParameterRowProps): ReactNode {
     const { parameter, selection, setSelection, parameters } = props;
 
     const handleValueChange = useCallback(
         (newValue: string | undefined) => {
-            // Hands back the same selection when nothing moves, which React
-            // treats as no change at all.
             setSelection(withParameterValue(selection, parameter, newValue));
         },
         [parameter, selection, setSelection]
@@ -306,7 +282,6 @@ function ParameterInput(
         return null;
     }
 
-    // Narrowed on `parameter` rather than `props`, which carries the union.
     switch (parameter.type) {
         case ParameterType.ENUM:
             return <EnumInput {...props} parameter={parameter} />;
@@ -374,10 +349,6 @@ function BooleanInput(props: ParameterProps<BooleanParameter>): ReactNode {
     );
 }
 
-/**
- * Why the field is filled in and fixed, beside it where somebody wondering
- * will look.
- */
 const DERIVATION_VARIABLE_NOTE =
     "Onshape does not allow deriving the same part with the same configuration multiple times into a part studio. To avoid this limitation, Derivation Variable has been populated with a unique value.";
 
@@ -415,12 +386,9 @@ function StringInput(props: ParameterProps<StringParameter>): ReactNode {
 }
 
 function QuantityInput(props: ParameterProps<QuantityParameter>): ReactNode {
-    // Alone among the inputs in holding its own state: the box keeps what was
-    // typed, and `value` re-seeds it only when it changes somewhere else.
+    // Keeps what was typed; `value` re-seeds it only when it changes elsewhere.
     const { parameter, value, onValueChange } = props;
-    // Its own query per box: they all share the one cached answer, and a box
-    // shows its own unit until the document's arrive rather than holding the
-    // panel up for them.
+    // Doesn't hold up the panel: the box shows its own unit until these arrive.
     const unitInfo = useUnitInfo();
 
     const evaluateOptions = useMemo(
@@ -430,17 +398,14 @@ function QuantityInput(props: ParameterProps<QuantityParameter>): ReactNode {
 
     const inputRef = useRef<HTMLInputElement>(null);
     const [focused, setFocused] = useState(false);
-    // Set when a click is what focuses the box. That click's mouseup would
-    // otherwise drop the selection focusing made — some browsers do, some do
-    // not — so a click in reads the same everywhere: the whole expression.
+    // Some browsers drop the focus selection on the click's mouseup, so reselect.
     const selectOnMouseUp = useRef(false);
 
     const [box, setBox] = useState(() =>
         seedFrom(value, parameter, evaluateOptions)
     );
 
-    // A value this box did not submit came from elsewhere — a favorite, a
-    // search hit — so the typed expression it replaces is no longer the value.
+    // A value this box didn't submit came from elsewhere, such as a favorite.
     const [emitted, setEmitted] = useState(value);
     if (value !== emitted) {
         setEmitted(value);
@@ -463,8 +428,7 @@ function QuantityInput(props: ParameterProps<QuantityParameter>): ReactNode {
             expression: result.expression,
             display: result.displayExpression
         });
-        // The expression, not its value: it is what Onshape is sent, so a
-        // typed "(2 + 3) in" reaches the derived feature as that.
+        // The expression, so the derived feature shows what was typed.
         setEmitted(result.expression);
         onValueChange(result.expression);
     };
@@ -498,8 +462,7 @@ function QuantityInput(props: ParameterProps<QuantityParameter>): ReactNode {
                     }
                 }}
                 onChange={(event) => {
-                    // Read before the updater runs: React nulls `currentTarget`
-                    // once the handler returns, and an updater runs after that.
+                    // React clears `currentTarget` before the updater runs.
                     const expression = event.currentTarget.value;
                     setBox((current) => ({ ...current, expression }));
                 }}

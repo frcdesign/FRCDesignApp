@@ -1,6 +1,4 @@
-/**
- * Value enums Onshape emits unchanged.
- */
+/** As Onshape sends them. */
 
 export enum QuantityType {
     LENGTH = "LENGTH",

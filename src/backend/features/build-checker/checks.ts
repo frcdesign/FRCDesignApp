@@ -11,10 +11,7 @@ interface GroupCheckInput {
     hasFailedInsertables: boolean;
 }
 
-/**
- * Computes build-time issues for a group. Pure: takes already-resolved signals
- * from the load-document workflow rather than fetching anything itself.
- */
+/** Pure: the load resolves the signals. */
 export function checkGroup(input: GroupCheckInput): BuildIssue[] {
     let issues: BuildIssue[] = [];
 
@@ -43,10 +40,7 @@ interface InsertableCheckInput {
     thumbnailUrls: ThumbnailUrls | null;
 }
 
-/**
- * Computes build-time issues for an insertable. Pure: takes already-resolved
- * signals from the load-document workflow rather than fetching anything itself.
- */
+/** Pure: the load resolves the signals. */
 export function checkInsertable(input: InsertableCheckInput): BuildIssue[] {
     let issues: BuildIssue[] = [];
 

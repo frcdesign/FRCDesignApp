@@ -51,8 +51,7 @@ describe("thumbnailKey", () => {
         );
     });
 
-    // A configuration's separators would otherwise open path segments of their
-    // own, so two different selections could name one key.
+    // Otherwise two selections could name one key.
     it("encodes a configuration into a single segment", () => {
         const key = thumbnailKey("e1", MICROVERSION, SIZE, "a=1;b=2/3");
         expect(key).toBe(
@@ -68,8 +67,7 @@ describe("thumbnailKey", () => {
     });
 });
 
-// Reconciliation reads keys and urls back to decide what to delete, so the
-// readers have to keep pace with the builders above them.
+// Reconciliation deletes by what these read back.
 describe("reading a thumbnail address back", () => {
     const SUBJECT = { elementId: "e1", microversionId: MICROVERSION };
 
@@ -171,8 +169,7 @@ describe("thumbnail serving", () => {
         expect(res.status).toBe(400);
     });
 
-    // Standing the element in would show a part nobody asked for: a favorite
-    // pinned to a configuration would render as the default one.
+    // The element's default would show a part nobody asked for.
     it("misses rather than standing the element default in", async () => {
         const elementId = "unrendered-configuration";
         await env.BLOB.put(
@@ -308,8 +305,6 @@ describe("rendering a configuration's thumbnail", () => {
         await seedPartStudio(db);
     });
 
-    // A waiting client can ask again — at its deadline, or on a push it
-    // missed — and that has to start nothing more.
     it("starts one render on a miss, however often it is asked", async () => {
         await seedDefaultOnly("warm-element");
         const thumbnailId = mockThumbnailId();
@@ -342,8 +337,7 @@ describe("rendering a configuration's thumbnail", () => {
         });
     });
 
-    // A miss is a render still coming; this is one that never will be, and the
-    // client shows different wording for each.
+    // The client words "still rendering" and "never will" differently.
     it("answers a configuration Onshape cannot resolve with its own status", async () => {
         vi.spyOn(ThumbnailEndpoints, "getThumbnailId").mockResolvedValue(
             undefined
@@ -370,8 +364,7 @@ describe("rendering a configuration's thumbnail", () => {
         expect(thumbnailId).not.toHaveBeenCalled();
     });
 
-    // Search results show many configurations at once; one cold search must not
-    // start a render per row.
+    // One cold search mustn't start a render per row.
     it("starts nothing when no insertable is named", async () => {
         const started = await startedDuring(async () => {
             const res = await get(

@@ -56,9 +56,8 @@ describe("createShellGroup", () => {
         expect(shell.lastLoadedAt).toBeNull();
     });
 
-    // The row lands before the load runs, but every library response is pinned
-    // to the cache version, so without a bump nothing can fetch the group until
-    // the load finishes — hours, for a large document.
+    // Library responses are pinned to the version, so without a bump the group
+    // is unreachable until the load finishes.
     it("bumps the library version, so the group is reachable", async () => {
         await seedGroup(db);
         const startVersion = await readVersion();

@@ -141,9 +141,6 @@ function applyMoveOperation(
     return result;
 }
 
-/**
- * Given a target and an order, returns a list of currently valid operations.
- */
 function getValidOperations(target: string, order: string[]): MoveOperation[] {
     const index = order.indexOf(target);
     if (index === -1) {

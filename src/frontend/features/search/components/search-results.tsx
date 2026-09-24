@@ -16,16 +16,10 @@ import { InsertSource } from "@backend/features/analytics/usage";
 interface SearchResultsProps {
     query: string;
     filters: SearchFilters;
-    /**
-     * Which search this is. Required rather than defaulted: the whole point of
-     * telling them apart is that neither is the obvious one.
-     */
+    /** Required: neither is the obvious default. */
     source: InsertSource.SEARCH | InsertSource.GROUP_SEARCH;
 }
 
-/**
- * Given a valid search query and filters, returns the list of current elements.
- */
 export function SearchResults(props: SearchResultsProps): ReactNode {
     const { query, filters, source } = props;
 

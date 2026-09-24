@@ -44,10 +44,7 @@ type StateRowValue =
     | { kind: "text"; text: string; dimmed?: boolean }
     | { kind: "vendors"; vendors: Vendor[] };
 
-/**
- * Enumerated rather than stored: the same shared routine the load path uses,
- * and it only runs when a hover card opens.
- */
+/** Enumerated on demand, with the load path's routine, when a hover card opens. */
 export function useConfigurationCount(
     status: InsertableBuildStatus
 ): ConfigurationCount {
@@ -181,11 +178,7 @@ function ParameterRow(props: ParameterRowProps): ReactNode {
     );
 }
 
-/**
- * A parameter with a role is never indexed and says which role. Otherwise only
- * enums and booleans are enumerated: a part studio's can be excluded by hand,
- * which an assembly's cannot.
- */
+/** Only enums and booleans are enumerated, and only a part studio's can be excluded. */
 function IndexedControl(props: ParameterRowProps): ReactNode {
     const { insertableId, status, parameter } = props;
     const mutation = useExcludedParametersMutation(insertableId);
@@ -246,10 +239,7 @@ interface ParameterTypeBadgeProps {
     parameter: ConfigurationParameter;
 }
 
-/**
- * The parameter's type. An enum also carries its option count, and lists the
- * options on hover — the values that drive its share of the configuration count.
- */
+/** An enum lists its options on hover. */
 function ParameterTypeBadge(props: ParameterTypeBadgeProps): ReactNode {
     const { parameter } = props;
     const isEnum = parameter.type === ParameterType.ENUM;

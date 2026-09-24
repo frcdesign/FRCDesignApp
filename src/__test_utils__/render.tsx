@@ -1,8 +1,4 @@
-/**
- * Renders a component the way the app does — themed, with a query cache —
- * for the dom project's tests. The cache never refetches on its own, so a test
- * seeds what a component reads rather than serving it over a network.
- */
+/** Themed, with a query cache that never fetches: seed what a component reads. */
 import { MantineProvider } from "@mantine/core";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render } from "@testing-library/react";

@@ -34,10 +34,7 @@ export function getAssembly(
     });
 }
 
-/**
- * Adds the contents of an element tab to an assembly. For a part studio,
- * `options.partTypes` defaults to PARTS and COMPOSITE_PARTS.
- */
+/** For a part studio, `options.partTypes` defaults to PARTS and COMPOSITE_PARTS. */
 export function addElementToAssembly(
     client: OnshapeApi,
     assemblyPath: ElementPath,
@@ -59,9 +56,7 @@ export function addElementToAssembly(
         ...toElementApiObject(elementPath)
     };
 
-    // An empty configuration is left off rather than sent as "", which Onshape
-    // treats the same way. A caller Onshape does need told something — a part
-    // studio insert is one — passes a non-empty configuration instead.
+    // Onshape treats an empty configuration as absent.
     if (configuration) {
         instance.configuration = configuration;
     }
@@ -79,10 +74,7 @@ export function addElementToAssembly(
     return insertInstance(client, assemblyPath, instance, transform);
 }
 
-/**
- * What the assembly's geometry spans, in metres. Sketches are left out, so a
- * marker already in the assembly does not widen it.
- */
+/** In metres. Excludes sketches, so a marker doesn't widen it. */
 export function getAssemblyBoundingBox(
     client: OnshapeApi,
     assemblyPath: ElementPath
@@ -93,11 +85,7 @@ export function getAssemblyBoundingBox(
     );
 }
 
-/**
- * Inserts one part studio feature — a sketch — as an instance of its own.
- * Onshape takes the same instance definition as a part insert, naming the
- * feature in place of the part types to include.
- */
+/** Inserts a single part studio feature, such as a sketch. */
 export function addFeatureToAssembly(
     client: OnshapeApi,
     assemblyPath: ElementPath,

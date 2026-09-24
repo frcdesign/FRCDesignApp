@@ -118,10 +118,7 @@ interface IndexingRowProps {
     band: IndexingBand;
 }
 
-/**
- * A switch only where enabling indexing is the admin's call, an icon saying why
- * not otherwise — past the cap it can't run, under the threshold it already has.
- */
+/** A switch only where enabling is the admin's call; otherwise an icon says why. */
 function IndexingRow(props: IndexingRowProps): ReactNode {
     const { insertableId, status, band } = props;
     const mutation = useIndexConfigurationsMutation(insertableId);
@@ -168,10 +165,7 @@ interface IndexingIconProps {
     tooltip: string;
 }
 
-/**
- * Stands in for the switch where there is nothing to toggle, reusing the
- * build-check icons so the state reads the same as the callouts above it.
- */
+/** Reuses the build-check icons so it reads like the callouts. */
 function IndexingIcon(props: IndexingIconProps): ReactNode {
     const { severity, tooltip } = props;
     return (

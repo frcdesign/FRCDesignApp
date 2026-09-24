@@ -66,8 +66,7 @@ groupRoutes.post(
 
         const db = getDb(c.env.DB);
 
-        // "Hide all elements" names every insertable in a group, which is more
-        // ids than one statement can bind.
+        // "Hide all" can name more ids than one statement binds.
         const writes: BatchItem<"sqlite">[] = [];
         for (const insertableIds of chunkForInArray(body.insertableIds)) {
             if (!body.isVisible) {
@@ -100,8 +99,7 @@ groupRoutes.post(
             );
         }
 
-        // Rebuild before bumping: the new version makes /search-db immutable,
-        // so a client fetching in between would pin the stale index for a year.
+        // Before the bump, which makes /search-db immutable for a year.
         await rebuildSearchDb(c.env.BLOB, db, libraryId);
         await bumpLibraryVersion(db, libraryId);
         return c.json({ success: true });
@@ -249,8 +247,7 @@ groupRoutes.delete(
                 .where(eq(groups.documentId, deleted.documentId))
                 .get();
             if (!stillUsed) {
-                // Logged rather than failing a delete that has happened: a
-                // webhook left behind reloads nothing, since no group matches.
+                // Logged: a leftover webhook matches no group, so it reloads nothing.
                 await removeWebhook(
                     c.env,
                     await c.var.getOnshapeApi(),

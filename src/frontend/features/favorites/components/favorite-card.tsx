@@ -37,10 +37,6 @@ interface FavoriteCardProps {
     searchHit?: SearchHit;
 }
 
-/**
- * A card for displaying a favorited insertable directly to the user.
- * Very similar in nature to an InsertableCard but with a few tweaks.
- */
 export function FavoriteCard(props: FavoriteCardProps): ReactNode {
     const { insertable, favorite, searchHit } = props;
 
@@ -53,11 +49,8 @@ export function FavoriteCard(props: FavoriteCardProps): ReactNode {
         return null;
     }
 
-    // The part number and name come from the favorite's own configuration, not
-    // from whatever the query matched — the two must never disagree with the
-    // thumbnail beside them, which is that same configuration's. Only the title
-    // underlining is the search's, and favorites do not search the part-number
-    // or part-name fields, so nothing in those ever matched to underline.
+    // From the favorite's own configuration, so it matches the thumbnail. Only
+    // title underlining comes from the search.
     const rowMatch: RowMatch = {
         positions: searchHit?.positions ?? [],
         partNumber: favorite.record?.partNumber,

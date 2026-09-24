@@ -45,10 +45,7 @@ export interface AppContextEnv {
 
 export type AppContext = Context<AppContextEnv>;
 
-/**
- * Who is making the request and what they may do. Resolved lazily, so a route that
- * asks nothing calls Onshape not at all, and per request, so a test can answer.
- */
+/** Lazy, so a route that asks nothing never calls Onshape; per request, so tests can stub it. */
 interface RequestAuth {
     getOnshapeApi: () => Promise<OAuthApi>;
     getUserId: () => Promise<string>;

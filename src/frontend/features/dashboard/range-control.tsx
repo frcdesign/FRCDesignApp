@@ -23,8 +23,7 @@ export function RangeControl(): ReactNode {
             size="xs"
             value={preset}
             onChange={(value) => {
-                // Mantine hands back a bare string; the presets are the only
-                // values it can be, but the router wants the narrower type.
+                // Narrows Mantine's string for the router.
                 if (!isRangePreset(value)) return;
                 void navigate({ to: ".", search: { range: value } });
             }}

@@ -55,8 +55,6 @@ describe("derivation variables", () => {
         expect(isDerivationVariable(parameter)).toBe(true);
     });
 
-    // Only a text one can take the unique value the app fills in, so one of
-    // another type is an ordinary parameter: indexed and editable as usual.
     it("gives one of another type no role", () => {
         const [parameter] = withRoles([named("Derivation Variable")]);
         expect(parameter.role).toBeUndefined();

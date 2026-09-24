@@ -56,8 +56,7 @@ describe("requireEditorMiddleware", () => {
         await resetDb(db);
     });
 
-    // Access level alone would admit a signed-out caller wherever it is
-    // granted without a session, e.g. behind a dev access-level override.
+    // A dev access-level override grants the level without a session.
     it("401s an editor-level caller who is not signed in", async () => {
         const app = createTestApp({
             signedIn: false,
@@ -90,8 +89,7 @@ describe("requireEditorMiddleware", () => {
 describe("editing something inside a library", () => {
     beforeEach(() => resetDb(db));
 
-    // The library comes from the insertable, not from anything the caller
-    // sends, so an editor of one library cannot reach into another.
+    // So an editor of one library can't reach into another.
     it("takes the access of the library the insertable is in", async () => {
         await seedGroup(db, "ftc-group", LibraryId.FTC_DESIGN_LIB);
         await seedInsertable(db, {

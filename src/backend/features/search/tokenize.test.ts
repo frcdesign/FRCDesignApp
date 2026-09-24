@@ -8,8 +8,7 @@ import {
     tokenizeQuery
 } from "./tokenize";
 
-// A part number identifies the part; splitting or folding it makes it name a
-// different one, so it is indexed as typed alongside its segments.
+// Indexed as typed, plus segments: splitting it would name a different part.
 describe("tokenizePartNumber", () => {
     it("keeps the number whole, and adds its segments", () => {
         expect(tokenizePartNumber("WCP-1025")).toEqual([
@@ -66,8 +65,6 @@ describe("tokenizeName", () => {
         ]);
     });
 
-    // The standards write the same measurement both ways, so one decimal form
-    // is what lets either spelling find the other.
     it("canonicalizes fractions and decimals to a 2-dp decimal", () => {
         expect(tokenizeName("1/2")).toEqual(["0.5"]);
         expect(tokenizeName(".5")).toEqual(["0.5"]);
@@ -102,8 +99,7 @@ describe("tokenizeName", () => {
         ]);
     });
 
-    // One vendor writes .196 as .2 and the next writes .19, so the part is
-    // stored as both and either spelling finds it.
+    // Vendors write .196 as both .2 and .19.
     it("spells a measurement as what it rounds to and what it starts", () => {
         expect(tokenizeName(".196 ID Hub")).toEqual([
             "0.2",
@@ -114,7 +110,6 @@ describe("tokenizeName", () => {
         expect(tokenizeName('2.140" L')).toEqual(['2.14"', "L"]);
     });
 
-    // The mark is what makes `1"` a size rather than a prefix of 1.5 and 16T.
     it("keeps an inch mark on the number it measures", () => {
         expect(tokenizeName('1" Hex Shaft')).toEqual(['1"', "Hex", "Shaft"]);
         expect(tokenizeName('1/2" Hex')).toEqual(['0.5"', "Hex"]);
@@ -145,8 +140,6 @@ describe("processTerm", () => {
         expect(processTerm(term)).toEqual(expect.arrayContaining(words));
     });
 
-    // Its segments are already separate tokens; splitting the code again would
-    // only invent words inside it.
     it("leaves a part number whole", () => {
         expect(processTerm("WCP-1025", "partNumbers")).toEqual(["wcp-1025"]);
     });
@@ -164,8 +157,7 @@ describe("tokenize", () => {
     });
 });
 
-// A query has no field, so it has to offer both readings: the caller may have
-// typed a size or a part number.
+// A query could be a size or a part number, so it's read both ways.
 describe("tokenizeQuery", () => {
     it("offers the part number as typed, and as a name would read it", () => {
         expect(
@@ -173,8 +165,7 @@ describe("tokenizeQuery", () => {
         ).toEqual(expect.arrayContaining(["ttb", "16", "0016", "ttb-0016"]));
     });
 
-    // `1` prefix-matches every number in the library, so a size is not split
-    // into the segments a part number would be.
+    // A bare `1` would prefix-match every number.
     it("does not split a bare size into its digits", () => {
         expect(tokenizeQuery("1/2")).toEqual(["0.5", "1/2"]);
     });
@@ -183,8 +174,7 @@ describe("tokenizeQuery", () => {
         expect(tokenizeQuery("bearing")).toEqual(["bearing"]);
     });
 
-    // Nothing carries the placeholder, and splitting it leaves `n` and `a` —
-    // a one-letter prefix, which matches most of the library.
+    // Splitting it leaves one-letter prefixes that match most of the library.
     it.each(["n/a", "N/A"])("has nothing to search for in %s", (query) => {
         expect(tokenizeQuery(query)).toEqual([]);
     });
@@ -193,8 +183,7 @@ describe("tokenizeQuery", () => {
         expect(tokenizeQuery("n/a bearing")).toEqual(["bearing"]);
     });
 
-    // Answering as the caller types is the point, and the first keystroke is
-    // one character.
+    // Search answers from the first keystroke.
     it.each(["l", "L", "1"])("still searches for a typed %s", (query) => {
         expect(tokenizeQuery(query)).toEqual([query]);
     });

@@ -16,7 +16,6 @@ import { getAppErrorHandler } from "../../lib/errors";
 import { patchQuery } from "../../lib/query-cache";
 import { useRefreshLibrary } from "../../lib/refresh";
 import { toInsertablePath, toLibraryPath } from "../../lib/api-paths";
-import { useCloseHoverCard } from "../../components/app-hover-card";
 import { type LibraryBuildStatus } from "@backend/features/build-checker/contract";
 import { LibraryId } from "@backend/features/library/library-id";
 import { useLibraryId } from "../../lib/library";
@@ -30,8 +29,7 @@ function getBuildStatusQuery(libraryId: LibraryId, cacheVersion: number) {
             apiGet("/build-status/library/" + libraryId, {
                 cacheId: cacheVersion
             }),
-        // A toggle bumps cacheVersion (and thus this key); keep the old data on
-        // screen while the new version refetches so the hover card doesn't close.
+        // So the hover card doesn't close while the new version loads.
         placeholderData: keepPreviousData,
         staleTime: Infinity,
         gcTime: Infinity
@@ -58,8 +56,6 @@ export function useSetVisibilityMutation(
     const libraryId = useLibraryId();
     const refreshLibrary = useRefreshLibrary();
     const key = useBuildStatusKey();
-
-    const closeCard = useCloseHoverCard();
 
     const mutation = useMutation({
         mutationKey: ["set-insertable-visibility", ...insertableIds],
@@ -105,7 +101,6 @@ export function useSetVisibilityMutation(
             mutation.mutate();
             return;
         }
-        closeCard();
         modals.openConfirmModal({
             title: "Hide elements",
             children:
@@ -114,7 +109,7 @@ export function useSetVisibilityMutation(
             confirmProps: { color: "red" },
             onConfirm: () => mutation.mutate()
         });
-    }, [isVisible, closeCard, mutation]);
+    }, [isVisible, mutation]);
 
     return { mutate, isPending: mutation.isPending };
 }
@@ -159,10 +154,7 @@ export function useToggleInsertAndFastenMutation(insertableId: string) {
     });
 }
 
-/**
- * Toggles indexing for an insertable. The Onshape call behind it
- * runs long, so the toast reports the switch rather than sitting on the response.
- */
+/** The Onshape call runs long, so the toast reports the switch without waiting. */
 export function useIndexConfigurationsMutation(insertableId: string) {
     const key = useBuildStatusKey();
     const refreshLibrary = useRefreshLibrary();
@@ -202,10 +194,7 @@ export function useIndexConfigurationsMutation(insertableId: string) {
     });
 }
 
-/**
- * Sets which of a part studio's parameters indexing leaves out. Re-probes the
- * part like toggling indexing does, so the toast reports the change first.
- */
+/** Re-probes the part, so the toast reports the change first. */
 export function useExcludedParametersMutation(insertableId: string) {
     const key = useBuildStatusKey();
     const refreshLibrary = useRefreshLibrary();

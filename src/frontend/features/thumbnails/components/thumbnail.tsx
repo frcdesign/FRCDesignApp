@@ -25,7 +25,6 @@ import { useIsFetchingConfiguration } from "../../insert/queries";
 import { useAccessData } from "../../auth/access-level";
 import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
 
-/** Letterbox rather than stretch, in case the render is not the size we asked for. */
 const FIT_INSIDE_BOX = {
     objectFit: "contain",
     maxWidth: "100%",
@@ -54,17 +53,14 @@ interface ThumbnailTarget {
     microversionId: string;
     /** Empty means the element default. */
     configurationKey: ConfigurationKey;
-    /**
-     * The insertable to render a miss from, set where the user picked the
-     * configuration. A search would otherwise start a render per row.
-     */
+    /** Starts a render on a miss. Only set where the user picked the configuration, so a search doesn't start one per row. */
     insertableId?: string;
 }
 
 interface CardThumbnailProps {
     smallThumbnailUrl?: string;
     largeThumbnailUrl?: string;
-    /** Set to show a specific configuration rather than the element default. */
+    /** Omit for the element's default. */
     target?: ThumbnailTarget;
 }
 
@@ -72,10 +68,8 @@ interface CardThumbnailProps {
 export function CardThumbnail(props: CardThumbnailProps): ReactNode {
     const { smallThumbnailUrl, largeThumbnailUrl, target } = props;
 
-    // Asked for by key whether or not this row may start one: the route serves
-    // what is already stored either way, so a row that cannot start one still shows
-    // a configuration something else rendered. It costs that row a 404 when
-    // nothing has, and it falls back to the element's own.
+    // Always asked for by key, so a row that can't start a render still shows one
+    // that something else started.
     const configuredTarget =
         target && target.configurationKey !== DEFAULT_CONFIGURATION_KEY
             ? target
@@ -84,13 +78,10 @@ export function CardThumbnail(props: CardThumbnailProps): ReactNode {
     const urlFor = (size: ThumbnailSize, stored?: string) =>
         configuredTarget ? thumbnailUrl({ ...configuredTarget, size }) : stored;
 
-    // Only while a configuration is rendering: without a target the stored url
-    // is what `urlFor` already returns, and falling back to it means nothing.
     const fallbackFor = (stored?: string) =>
         configuredTarget ? stored : undefined;
 
-    // Only a row that started the render has one coming; anything else takes the
-    // miss for the answer rather than waiting on a render nobody started.
+    // Only a row that started the render waits for one.
     const isRendering = configuredTarget?.insertableId !== undefined;
 
     return (
@@ -126,12 +117,7 @@ const STORED_RETRIES = 1;
 
 interface ThumbnailProps {
     url?: string;
-    /**
-     * The element's own thumbnail, shown until `url` renders — a render takes
-     * minutes, and the unconfigured part is closer to the row than a spinner.
-     * Loaded through a query of its own so a url whose bytes are gone shows the
-     * same placeholder as anything else, rather than a broken image.
-     */
+    /** Shown until `url` renders, which can take minutes. */
     fallbackUrl?: string;
     spinnerSize: number;
     heightAndWidth: HeightAndWidth;
@@ -145,16 +131,13 @@ function Thumbnail(props: ThumbnailProps): ReactNode {
 
     const imageQuery = useQuery({
         queryKey: storedThumbnailQueryKey(url),
-        // Narrowed here rather than guarded inside: `enabled` is what keeps it
-        // from running, and the query function should not restate that.
         queryFn: url
             ? ({ signal }) =>
                   isRendering
                       ? loadRenderedImage(url, signal)
                       : loadImage(url, signal)
             : skipToken,
-        // A render waits itself out; asking again after it gives up would
-        // only start the wait over.
+        // A render waits itself out; retrying would restart the wait.
         retry: isRendering ? false : STORED_RETRIES
     });
     const fallbackQuery = useQuery({
@@ -166,8 +149,6 @@ function Thumbnail(props: ThumbnailProps): ReactNode {
         enabled: !imageQuery.isSuccess
     });
 
-    // The configuration's own render once it lands, and nothing after that:
-    // the fallback stands in for it, it does not replace it.
     const shownUrl = imageQuery.data ?? fallbackQuery.data;
 
     let content;
@@ -190,8 +171,6 @@ function Thumbnail(props: ThumbnailProps): ReactNode {
 
 export function PreviewImageCard(props: PreviewImageProps): ReactNode {
     return (
-        // No margin: the modal body it sits in supplies the inset, and the
-        // padding stays tight so the preview is not lost inside its frame.
         <Card pos="relative" p="xs" radius="sm" bg={RENDER_BACKGROUND}>
             <Center>
                 <PreviewImage {...props} />
@@ -215,14 +194,9 @@ interface PreviewImageProps {
 /** A stored size, so the bytes a preview fetch returns are worth caching. */
 const PREVIEW_SIZE = ThumbnailSize.LARGE;
 
-/** Sized to the preview's footprint rather than to a row's. */
 const PREVIEW_SPINNER_SIZE = 36;
 
-/**
- * Waits out a configuration's render. The first ask starts it, and asking
- * again while it runs starts nothing more, so a wait can ask as often as it
- * needs to.
- */
+/** The first ask starts the render; later asks start nothing more. */
 function usePreviewThumbnail(props: PreviewImageProps, enabled: boolean) {
     const { path, insertableId, microversionId, configurationKey } = props;
     const url = thumbnailUrl({
@@ -236,8 +210,7 @@ function usePreviewThumbnail(props: PreviewImageProps, enabled: boolean) {
     return useQuery({
         queryKey: renderQueryKey(url),
         queryFn: ({ signal }) => loadRenderedImage(url, signal),
-        // The previous configuration's render, so the box does not blank out
-        // while this one is still being waited on.
+        // Keeps the previous render up while this one is waited on.
         placeholderData: (previousData) => previousData,
         retry: false,
         enabled
@@ -279,14 +252,12 @@ function PreviewImage(props: PreviewImageProps): ReactNode {
         </PreviewBox>
     );
 
-    // Not known yet: the stored thumbnail would be swapped for the live preview
-    // a moment later.
+    // Otherwise the stored thumbnail flashes before the live preview.
     if (isPending) {
         return spinner;
     }
 
-    // Not signed in: no live Onshape preview, so show the stored thumbnail
-    // (Thumbnail falls back to a placeholder when there's none).
+    // Live previews need an Onshape session.
     if (!signedIn) {
         return (
             <Thumbnail
@@ -298,9 +269,7 @@ function PreviewImage(props: PreviewImageProps): ReactNode {
     }
 
     if (query.isError) {
-        // Onshape had no insertable for the selection, which is as far as a
-        // render gets: the part itself is what did not come out, so say that
-        // rather than blaming the thumbnail.
+        // The part itself failed to regenerate, not the thumbnail.
         if (isInvalidConfiguration(query.error)) {
             return (
                 <PreviewBox heightAndWidth={heightAndWidth}>
@@ -318,8 +287,7 @@ function PreviewImage(props: PreviewImageProps): ReactNode {
             <PreviewBox heightAndWidth={heightAndWidth}>
                 <SectionNotice
                     title="The thumbnail could not be loaded."
-                    // Standalone has no insert button to fall back on, and
-                    // null suppresses the generic "contact the developers".
+                    // Null suppresses the generic "contact the developers".
                     description={
                         isConnected ? `You can still ${action} the part.` : null
                     }

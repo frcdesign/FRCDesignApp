@@ -6,6 +6,7 @@ import { dailyConfigurationMetrics, events } from "../../analytics/schema";
 import { InsertSource } from "../../analytics/usage";
 import { ElementType } from "../../../lib/onshape/element-type";
 import { Vendor } from "../vendors";
+import type { InsertOut } from "../contract";
 import { MateLocation } from "./fasten";
 import { BuildIssueType } from "../../build-checker/issues";
 import {
@@ -112,8 +113,6 @@ describe("insertable routes", () => {
         );
     });
 
-    // The client names which of the two searches it was; the route takes it
-    // whole rather than deriving anything from the request.
     it("POST /add-to-part-studio records the source it was sent", async () => {
         await seedPartStudio(db);
         vi.spyOn(PartStudioEndpoints, "addPartStudioFeature").mockResolvedValue(
@@ -138,8 +137,6 @@ describe("insertable routes", () => {
         expect(event?.source).toBe(InsertSource.GROUP_SEARCH);
     });
 
-    // The one place a request's configuration is made whole, so an insert that
-    // names nothing still applies — and records — every parameter.
     it("POST /add-to-part-studio fills the selection it was not given", async () => {
         await seedPartStudio(db);
         await seedConfiguration(db);
@@ -168,8 +165,7 @@ describe("insertable routes", () => {
         });
     });
 
-    // The feature dialog shows this expression, so it is the one that was typed
-    // rather than the number it evaluates to, in whatever unit.
+    // The feature dialog shows the typed expression, not its value.
     it("POST /add-to-part-studio derives with the expression that was typed", async () => {
         await seedPartStudio(db);
         await seedConfiguration(db);
@@ -196,8 +192,7 @@ describe("insertable routes", () => {
         );
     });
 
-    // Onshape refuses a second derive of the same configuration, so each derive
-    // gets its own value, whatever the client sent.
+    // Onshape refuses a second derive of the same configuration.
     it("POST /add-to-part-studio fills a derivation variable afresh each time", async () => {
         await seedPartStudio(db);
         await seedConfiguration(db);
@@ -231,8 +226,6 @@ describe("insertable routes", () => {
         expect(values[1]).not.toBe(values[0]);
     });
 
-    // A half-built target used to reach Onshape as a nonsense URL and fail
-    // opaquely; the boundary rejects it instead.
     it.each([
         ["a missing instance id", { documentId: "d", elementId: "e" }],
         [
@@ -281,8 +274,8 @@ describe("insertable routes", () => {
         );
         expect(res.status).toBe(200);
 
-        const body: { featureId: string | null } = await res.json();
-        expect(body.featureId).toBeNull();
+        const body: InsertOut = await res.json();
+        expect(body.featureId).toBeUndefined();
 
         expect(spy).toHaveBeenCalledWith(
             MOCK_ONSHAPE_API,
@@ -347,8 +340,7 @@ describe("insertable routes", () => {
         );
     });
 
-    // A marker can be deleted between the app opening and an insert, and an
-    // insert at the origin beats refusing to insert at all.
+    // The marker can be deleted after the app opens.
     it("POST /add-to-assembly inserts at the origin when the location is gone", async () => {
         await seedAssembly(db);
         vi.spyOn(AssemblyEndpoints, "getAssembly").mockResolvedValue({
@@ -380,9 +372,7 @@ describe("insertable routes", () => {
         );
     });
 
-    // Onshape applies the element's own default to whatever the configuration
-    // leaves out, so naming every parameter says the same thing at far greater
-    // length — and long enough is a configuration Onshape refuses to insert.
+    // Onshape defaults what's left out, and a long enough configuration is refused.
     it.each([
         ["nothing when the selection is all defaults", { boolean: "true" }, ""],
         ["the override alone", { boolean: "false" }, "boolean=false"]
@@ -493,8 +483,7 @@ describe("insertable routes", () => {
         expect(await loggedInsert()).toMatchObject({ fasten: true });
     });
 
-    // The part is in the assembly either way, so the insert is still recorded —
-    // as the unfastened insert it turned out to be.
+    // The part is in the assembly either way.
     it("keeps the insert but drops the fasten when the mate fails", async () => {
         await seedFastenable();
         vi.spyOn(AssemblyEndpoints, "addAssemblyFeature").mockRejectedValue(
@@ -531,8 +520,6 @@ describe("insertable routes", () => {
         const row = await readInsertable(TEST_PART_STUDIO_ID);
         expect(row?.indexConfigurations).toBe(true);
 
-        // Nothing to configure, so the part data lands on the insertable and
-        // no configurations row is manufactured to hold it.
         expect(row?.partMetadata).toEqual({
             partNumber: "PN-123",
             hasMultipleParts: false,
@@ -541,8 +528,6 @@ describe("insertable routes", () => {
         expect(await readConfig(TEST_PART_STUDIO_ID)).toBeUndefined();
     });
 
-    // Excluding a parameter re-probes without it, so its options stop
-    // multiplying the records.
     it("POST /excluded-parameters stores the exclusion and reindexes without it", async () => {
         await seedPartStudio(db);
         await db.insert(configurations).values({
@@ -575,8 +560,7 @@ describe("insertable routes", () => {
         ).toEqual([{ size: "l" }]);
     });
 
-    // Onshape lets no assembly exclude parameters from its properties, so
-    // neither does the app.
+    // Onshape can't exclude parameters from an assembly either.
     it("POST /excluded-parameters refuses an assembly", async () => {
         await seedAssembly(db);
 
@@ -602,8 +586,6 @@ describe("insertable routes", () => {
             jsonRequest("POST", { indexConfigurations: true }),
             env
         );
-        // Surfaced to the client rather than silently enabling. How long to
-        // wait is the loader's business; the caller is told to try again.
         expect(res.status).toBe(429);
         const body: { message: string } = await res.json();
         expect(body.message).toContain("rate limit");
@@ -614,8 +596,6 @@ describe("insertable routes", () => {
         expect(await readConfig(TEST_PART_STUDIO_ID)).toBeUndefined();
     });
 
-    // Over the auto-index threshold nothing indexes unless an admin asks, so
-    // turning force off there drops the records and the configuration row.
     it("POST /index-configurations clears the data when forcing off", async () => {
         await seedGroup(db);
         await seedInsertable(db);
@@ -656,8 +636,6 @@ describe("insertable routes", () => {
         expect((await readConfig(TEST_PART_STUDIO_ID))?.records).toEqual([]);
     });
 
-    // Nothing gates on vendors any more, so a part below the threshold indexes
-    // whether or not anyone sells it.
     it("POST /index-configurations keeps indexing a custom part", async () => {
         await seedGroup(db);
         await seedInsertable(db, {
@@ -681,8 +659,7 @@ describe("insertable routes", () => {
         expect(row?.buildIssues).toEqual([]);
     });
 
-    // The route merges into the row's stored issues, so it has to clear the ones
-    // indexing owns first, or a resolved issue would stick around forever.
+    // Indexing's own issues are cleared before merging, or a resolved one sticks.
     it("POST /index-configurations replaces stale part-number issues", async () => {
         await seedPartStudio(db);
         await db
@@ -706,7 +683,6 @@ describe("insertable routes", () => {
         expect(res.status).toBe(200);
 
         const row = await readInsertable(TEST_PART_STUDIO_ID);
-        // The cap no longer applies, and the unrelated issue survives.
         expect(row?.buildIssues).toEqual([{ type: BuildIssueType.NO_VENDORS }]);
     });
 });

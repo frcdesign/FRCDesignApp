@@ -5,16 +5,14 @@ import { getUiState, updateUiState } from "../lib/ui-state";
 import { showSuccessToast } from "../lib/notifications";
 import { RootAppError } from "../components/root-error";
 
-// Direct entry from outside Onshape, and where signing in returns to; Onshape's
-// own launch is served before this route.
+// Entry from outside Onshape, and where sign-in returns.
 export const Route = createFileRoute("/")({
     beforeLoad: ({ search }) => {
         const { tabId, groupId, justSignedIn } = getUiState();
         const tab = tabId ?? DEFAULT_LIBRARY;
         if (justSignedIn) {
             updateUiState({ justSignedIn: false });
-            // Onshape only sends the caller back here on success, so arriving
-            // with the flag set is the confirmation.
+            // Onshape only returns here on success.
             showSuccessToast("Signed in to Onshape.");
         }
         // Whatever Onshape launched with rides along; only the path is ours.

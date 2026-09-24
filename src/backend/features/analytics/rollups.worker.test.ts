@@ -88,7 +88,6 @@ describe("rollupWrites", () => {
     });
 
     it("rebuilds every rollup from the log alone", async () => {
-        // Two days, so the day keys have to come from the rows rather than now.
         const day = 24 * 3600 * 1000;
         const start = Date.parse("2026-03-01T09:00:00Z");
         const clock = vi.spyOn(Date, "now");
@@ -125,8 +124,7 @@ describe("rollupWrites", () => {
         const live = await readRollups();
         expect(live.every((rows) => rows.length > 0)).toBe(true);
 
-        // What a batch job would do: drop the rollups and derive them from the log.
-        // Newest first, since nothing promises a job reads rows in the order written.
+        // Newest first, since a job needn't read rows in order.
         for (const table of ROLLUPS) {
             await db.delete(table);
         }

@@ -1,10 +1,7 @@
 /** Where a new insert location marker goes. */
 import { type OnshapeBoundingBox } from "../../lib/onshape/types";
 
-/**
- * How far past the face the marker sits, in metres. Enough to be grabbable
- * rather than flush against the geometry it is clearing.
- */
+/** In metres; enough to grab the marker. */
 const CLEARANCE = 0.01;
 
 export type Point = [number, number, number];
@@ -12,12 +9,9 @@ export type Point = [number, number, number];
 const ORIGIN: Point = [0, 0, 0];
 
 /**
- * The closest point to the origin that is clear of the assembly's geometry: the
- * origin itself when nothing is over it, and otherwise just past whichever of
- * the six faces the origin is nearest. A marker buried inside the robot cannot
- * be grabbed, and one flung to a corner cannot be found.
- *
- * No box — an empty assembly, or a call that failed — leaves it at the origin.
+ * The origin if nothing covers it, else just past the nearest face: buried
+ * markers can't be grabbed and far-flung ones can't be found. No box leaves it
+ * at the origin.
  */
 export function toMarkerPoint(box: OnshapeBoundingBox | undefined): Point {
     if (!box) {
@@ -35,8 +29,7 @@ export function toMarkerPoint(box: OnshapeBoundingBox | undefined): Point {
         return ORIGIN;
     }
 
-    // Inside: leave by the nearest face. `low` is at or below zero here and
-    // `high` at or above it, so each distance is the face's own magnitude.
+    // `low` <= 0 <= `high` here, so each distance is the face's magnitude.
     const exits = axes.flatMap(([low, high], axis) => [
         { axis, to: low - CLEARANCE, distance: -low },
         { axis, to: high + CLEARANCE, distance: high }

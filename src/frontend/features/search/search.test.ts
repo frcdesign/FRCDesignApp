@@ -92,9 +92,7 @@ describe("doSearch part-number matching", () => {
         expect(hits[0].values).toEqual({ length: "long" });
     });
 
-    // "Bracket 217" matches the part-number field on "217", but no single record
-    // matches the whole query — the row must still show a part number. This
-    // insertable has no default record, so the fallback is the first listed.
+    // No single record matches the whole query, and there is no default record.
     it("falls back to the first record when no one record matches the query", () => {
         const searchDb = buildSearchDb(library(), recordsMap);
         const { hits } = search(searchDb, "Bracket 217");
@@ -102,8 +100,6 @@ describe("doSearch part-number matching", () => {
         expect(hits[0].partNumber).toBe("217-2600");
     });
 
-    // Neither record is the element's own defaults — every configuration here
-    // overrides `length` — so the first listed is all there is to show.
     it("attaches the first record for a title match", () => {
         const searchDb = buildSearchDb(library(), recordsMap);
         const { hits } = search(searchDb, "Bracket");
@@ -112,8 +108,7 @@ describe("doSearch part-number matching", () => {
         expect(hits[0].partNumber).toBe("217-2600");
     });
 
-    // Older revisions share a part number with the latest, which enumerates
-    // first. First-wins folding must keep that latest configuration.
+    // The latest revision enumerates first and shares its part number.
     it("resolves a shared part number to the latest (first-listed) configuration", () => {
         const searchDb = buildSearchDb(library(), {
             i1: [
@@ -127,9 +122,7 @@ describe("doSearch part-number matching", () => {
     });
 });
 
-// Records arrive in option declaration order, which puts the element's own
-// defaults wherever Onshape declared them — here, last. Nothing may depend on
-// the default leading the list.
+// The default is declared last here, so nothing may assume it leads.
 describe("doSearch configuration matching", () => {
     const searchDb = buildSearchDb(library("MAXSpline Gear"), {
         i1: [
@@ -150,16 +143,12 @@ describe("doSearch configuration matching", () => {
         expect(hits[0].values).toEqual({ teeth: "36" });
     });
 
-    // Every record's name carries the whole query, so they tie — and the tie
-    // has to go to the configuration the insert menu opens with.
     it("keeps the default when no term distinguishes a configuration", () => {
         const { hits } = search(searchDb, "maxspline gear");
         expect(hits[0].values).toEqual({});
         expect(hits[0].partNumber).toBe("WCP-1234");
     });
 
-    // The title matched and nothing else did, so there is no best record to
-    // pick — the row falls back, and the default is what it must fall back to.
     it("falls back to the default on a title-only match", () => {
         const { hits } = search(searchDb, "maxspline");
         expect(hits[0].values).toEqual({});
@@ -172,8 +161,7 @@ describe("doSearch configuration matching", () => {
     });
 });
 
-// A bare `1` prefix-matches every 1.5", 10-32 and 16T in the library; typing
-// the inch mark is how a user says they mean one inch exactly.
+// The inch mark says "exactly one inch"; a bare 1 prefixes 1.5", 10-32 and 16T.
 describe("doSearch inch sizes", () => {
     const names = [
         '1" Hex Shaft',
@@ -210,8 +198,6 @@ describe("doSearch inch sizes", () => {
         expect(namesFor('.5"')).toEqual(['1/2" Hex Shaft']);
     });
 
-    // Without the mark there is nothing to say 1 is a size, so it stays a
-    // prefix — of 1.5, 10 and 16 alike, but not of the 1/2 stored as 0.5.
     it("leaves a bare number matching every number it starts", () => {
         expect(namesFor("1").sort()).toEqual(
             ['1" Hex Shaft', '1.5" Spacer', "10-32 Screw", "16T Pulley"].sort()
@@ -219,8 +205,7 @@ describe("doSearch inch sizes", () => {
     });
 });
 
-// A part number carries digits of its own, so `1` prefix-matches a segment of
-// every one of them; the size in the name is what the query actually named.
+// Every part number has a segment starting with 1; the name's size decides.
 describe("doSearch size matching", () => {
     const searchDb = buildSearchDb(library("Hex Standoff"), {
         i1: [
@@ -251,8 +236,7 @@ describe("doSearch size matching", () => {
     });
 });
 
-// The same measurement is written .196, .2 and .19 across the library, so a
-// part is stored as both spellings and either one finds it.
+// The library writes one size as .196, .2 and .19.
 describe("doSearch measurements", () => {
     const searchDb = buildSearchDb(library("MotionX Hub"), {
         i1: [record("WCP-1", {}, ".196 ID x SplineXL OD")]
@@ -274,8 +258,6 @@ describe("doSearch single letters", () => {
     });
 });
 
-// A part number is a code: it retrieves its part whole, by either half, and
-// with the zeros and separators it was written with.
 describe("doSearch part numbers", () => {
     const searchDb = buildSearchDb(library("Hex Standoff"), {
         i1: [
@@ -307,8 +289,6 @@ describe("doSearch part numbers", () => {
         );
     });
 
-    // The placeholder never reaches the index, so it matches nothing rather
-    // than every part an admin left it on.
     it("returns nothing for the placeholder", () => {
         const withPlaceholders = buildSearchDb(library("Spacer"), {
             i1: [record("N/A", {}, "Spacer")]
@@ -360,8 +340,6 @@ describe("doSearch highlighting", () => {
         expect(highlightFor("1.5 x 125 Spacer", "1.5")).toBe("1.5");
     });
 
-    // The row shows the matched configuration's part number and name beneath
-    // the title, so the query has to be underlined there too.
     describe("of the matched record", () => {
         const recordsMap: Record<string, ConfigurationRecord[]> = {
             i1: [record("217-2600", { length: "short" }, "Long Bearing")]
@@ -383,8 +361,6 @@ describe("doSearch highlighting", () => {
             ).toBe("217");
         });
 
-        // A part number is indexed as typed, so the whole of what was typed
-        // is there in the text to underline, dash and zeros included.
         it("underlines a leading-zero segment of the part number", () => {
             const { hits } = search(
                 buildSearchDb(library(), {
@@ -447,9 +423,8 @@ describe("doSearch name matching", () => {
     });
 });
 
-// A favorite names one configuration, but `partNumbers` and `partNames` cover
-// every configuration the insertable has. Matching on them pulls a favorite up
-// for a query describing a configuration its owner never saved.
+// A favorite names one configuration, so other configurations' part numbers
+// mustn't pull it up.
 describe("doSearch without configuration matching", () => {
     const searchDb = buildSearchDb(library("MAXSpline Gear"), {
         i1: [
@@ -482,8 +457,6 @@ describe("doSearch without configuration matching", () => {
         expect(titleOnly("24t").hits).toHaveLength(0);
     });
 
-    // The row still needs a part number to show, and the default is the one
-    // that agrees with what inserting it would produce.
     it("still shows the default record on a name match", () => {
         const { hits } = titleOnly("maxspline");
         expect(hits[0].values).toEqual({});

@@ -4,11 +4,8 @@ import { type ThumbnailUrls } from "../thumbnails/contract";
 import type { LoadContext } from "./context";
 
 /**
- * Pinned because the platform's curve compounds with the callbacks below:
- * `backoff` defaults to exponential and multiplies what `delay` returned, which
- * turned the thumbnail poll's capped 120 seconds into 120 × 2^7 — a run waiting
- * 4h16m between attempts. Cloudflare documents the two settings separately and,
- * as far as I saw, not how they combine, so that is read off a run.
+ * Workflows multiplies what `delay` returns by the backoff curve, which is
+ * undocumented; exponential turned a 120s delay into hours.
  */
 const CONSTANT_BACKOFF: WorkflowBackoff = "constant";
 
@@ -19,20 +16,14 @@ interface RetryDelayInput {
 }
 
 /**
- * Spread added on top of Onshape's `Retry-After`. Every step caught in one
- * burst is handed the same number to wait, so without this they all wake at the
- * same instant and re-send together — the burst that earned the 429. Twenty
- * seconds trickles a full set of probe slots back in at a few per second.
+ * Every step in a 429 burst gets the same `Retry-After`; without jitter they
+ * all retry at once and trip it again.
  */
 const RATE_LIMIT_JITTER_SECONDS = 20;
 
 /**
- * How long Onshape asked us to wait plus jitter, or undefined when the error
- * wasn't a rate limit.
- *
- * Read off the message: this runs on an error Workflows rebuilt, which is no
- * longer an `OnshapeRateLimitError`, so an `instanceof` here answered false for
- * every real 429 and quietly handed back the curve below instead.
+ * Undefined when the error wasn't a rate limit. Reads the message because
+ * Workflows rebuilds the error, so `instanceof` fails.
  */
 export function rateLimitDelay(error: Error): `${number} seconds` | undefined {
     const retryAfterSeconds = readRetryAfterSeconds(error);
@@ -44,10 +35,7 @@ export function rateLimitDelay(error: Error): `${number} seconds` | undefined {
     return `${retryAfterSeconds + jitter} seconds`;
 }
 
-/**
- * Retry delay honoring Onshape's `Retry-After` on a 429, with an
- * exponential-ish fallback for other transient errors.
- */
+/** Honors `Retry-After` on a 429; exponential otherwise. */
 function onshapeRetryDelay(input: RetryDelayInput): `${number} seconds` {
     const rateLimited = rateLimitDelay(input.error);
     if (rateLimited) {
@@ -57,22 +45,14 @@ function onshapeRetryDelay(input: RetryDelayInput): `${number} seconds` {
     return `${seconds} seconds`;
 }
 
-/**
- * Every step that calls Onshape takes this. The platform default would retry
- * too, but on its own curve — a 429 carries a `Retry-After` and this is what
- * honors it. Five attempts, matching that default rather than shortening it.
- */
+/** For every step that calls Onshape, so a 429's `Retry-After` is honored. */
 export const ONSHAPE_STEP_RETRIES = {
     limit: 5,
     delay: onshapeRetryDelay,
     backoff: CONSTANT_BACKOFF
 };
 
-/**
- * A freshly branched workspace takes minutes to render its thumbnails. Waits
- * 30, 60, 90 seconds, then two minutes a try: about 17 minutes in all. A rate
- * limit waits what Onshape asks instead.
- */
+/** A freshly branched workspace takes minutes to render: about 17 minutes in all. */
 const THUMBNAIL_RETRIES = {
     limit: 10,
     delay: (input: RetryDelayInput): `${number} seconds` =>
@@ -82,11 +62,8 @@ const THUMBNAIL_RETRIES = {
 };
 
 /**
- * `null` when Onshape never renders them, which the caller records as a build
- * issue rather than failing the load.
- *
- * Slot first, step inside: a step's timeout covers its whole callback, so
- * waiting for a slot inside one would count against it.
+ * `null` when Onshape never renders them, which becomes a build issue. The slot
+ * is taken outside the step so waiting for it doesn't count against its timeout.
  */
 export async function uploadThumbnailsStep(
     ctx: LoadContext,

@@ -1,8 +1,4 @@
-/**
- * The app's one WebSocket to the server's pushes (`features/live` on the
- * backend). Reconnects on its own, backing off; what was pushed while it was
- * down is asked for again on reconnecting (see `live-sync.ts`).
- */
+/** The app's one WebSocket to the server's pushes. Reconnects with backoff; `live-sync.ts` catches up after. */
 import {
     LIVE_LIBRARY_PARAM,
     LIVE_PATH,

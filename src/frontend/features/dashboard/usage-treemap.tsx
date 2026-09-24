@@ -22,10 +22,7 @@ interface UsageTreemapProps {
 /** Tall enough that the smaller slices still get a readable tile. */
 const CHART_HEIGHT = 360;
 
-/**
- * Insertions as area, drilled by clicking. `root` is the level the breadcrumb
- * cannot climb above: every library, or one of them.
- */
+/** `root` is the highest level the breadcrumb can climb to. */
 export function UsageTreemap({
     parts,
     root = {}

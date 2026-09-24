@@ -1,8 +1,4 @@
-/**
- * What the server pushes to open clients, so they need not poll for it. None
- * of it is private: it says that something changed, and a client that cares
- * asks the usual routes for what, under its own access.
- */
+/** Nothing private: a push says what changed, and the client refetches under its own access. */
 import type { LibraryId } from "../library/library-id";
 import type { JobStatus } from "../load/contract";
 import type { ConfigurationKey } from "../configurations/contract";
@@ -10,10 +6,7 @@ import type { ConfigurationKey } from "../configurations/contract";
 export enum LiveMessageType {
     /** A library's load jobs started or finished. */
     JOBS = "jobs",
-    /**
-     * A library changed under a new cache version: its contents, or who is on
-     * its admin team.
-     */
+    /** Its contents or its admin team changed. */
     LIBRARY = "library",
     /** A configuration's thumbnail finished rendering. */
     THUMBNAIL = "thumbnail"

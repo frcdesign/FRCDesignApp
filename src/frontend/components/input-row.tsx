@@ -9,11 +9,7 @@ interface InputRowProps {
     children: ReactNode;
 }
 
-/**
- * A label at one end of a row and its control at the other, as a menu of
- * differently shaped controls wants. Given an input's height so the row stays
- * level whatever the control is.
- */
+/** Given an input's height so rows stay level whatever the control. */
 export function InputRow(props: InputRowProps): ReactNode {
     const { label, htmlFor, children } = props;
     return (

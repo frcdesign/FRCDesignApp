@@ -197,8 +197,6 @@ describe("findRecord", () => {
         expect(findRecord(select({ size: "l" }), records)).toBe(large);
     });
 
-    // A record omits what its enumeration hid, so the selection's value for
-    // that parameter says nothing either way.
     it("matches a record that omits a parameter it hid", () => {
         const b = { values: { size: "l" } };
         expect(findRecord({ size: "l", hidden: "x" }, [own, b])).toBe(b);

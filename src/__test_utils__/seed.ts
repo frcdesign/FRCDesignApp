@@ -67,10 +67,7 @@ export const TEST_PARAMETERS: ConfigurationParameter[] = [
     }
 ];
 
-/**
- * Truncates every table these helpers touch, in FK-safe order. D1 storage is
- * isolated per test *file*, so call this in `beforeEach` to isolate tests.
- */
+/** D1 storage is only isolated per file, so call in `beforeEach`. */
 export async function resetDb(db: Db): Promise<void> {
     // One batch, one round trip: this runs before nearly every test.
     await db.batch([
@@ -105,10 +102,7 @@ export async function seedLibrary(
     return id;
 }
 
-/**
- * Seeds the libraries a user row needs: the tab's, so a group seeded in it has
- * one to belong to, and the default its dead `library_id` falls back to.
- */
+/** Also seeds the default library its dead `library_id` column falls back to. */
 export async function seedUser(
     db: Db,
     id: string = TEST_USER_ID,
@@ -146,10 +140,7 @@ export async function seedGroup(
     return id;
 }
 
-/**
- * Inserts an insertable row, defaulting to the standard part studio. Pass
- * overrides to seed a row with the specific columns a test wants to manipulate.
- */
+/** Defaults to the standard part studio. */
 export async function seedInsertable(
     db: Db,
     overrides: Partial<typeof insertables.$inferInsert> = {}
@@ -211,10 +202,7 @@ export async function seedFavorite(
     return id;
 }
 
-/**
- * Seeds a configuration for a given insertable.
- * Note configurations are always 1:1 with insertables so the configuration id is also the insertable id.
- */
+/** Configurations are 1:1 with insertables and share their id. */
 export async function seedConfiguration(
     db: Db,
     insertableId: string = TEST_PART_STUDIO_ID
@@ -228,10 +216,7 @@ export async function seedConfiguration(
         .onConflictDoNothing();
 }
 
-/**
- * Seeds the canonical dataset: a library, a user, a groups, a part studio, an
- * assembly, and two favorites (the user's, on the part studio and the assembly).
- */
+/** A library, a user, a group, a part studio, an assembly, and a favorite on each. */
 export async function seedTestData(db: Db): Promise<void> {
     await seedLibrary(db);
     await seedGroup(db);

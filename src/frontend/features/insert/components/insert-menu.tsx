@@ -47,8 +47,7 @@ interface InsertMenuContentProps {
     /** The modal this renders in, so the header can track the selection. */
     modalId: string;
     initialSelection?: PartialSelection;
-    /** That selection's key, so the preview has it before the parameters load
-     * and the panel reports its own. */
+    /** So the preview has it before the parameters load. */
     initialConfigurationKey?: ConfigurationKey;
     /** Every selection the menu settles on, the last being what it closed on. */
     onSelectionChange?: (selection: Selection) => void;
@@ -72,11 +71,9 @@ export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
         DEFAULT_CONFIGURATION_KEY;
     // What the preview stops following for a signed-out caller.
     const [isEdited, setIsEdited] = useState(false);
-    // Whether an insert would be one a right-click could have done: cleared
-    // by an edit below, and by the menu having been up long enough to read.
+    // Cleared by an edit, or once the menu has been up long enough.
     const [canShowQuickInsertTip, setCanShowQuickInsertTip] = useState(true);
-    // A part with no parameters has one record — the element's own part data —
-    // which no ConfigurationWrapper is mounted to report, but the title wants.
+    // No ConfigurationWrapper reports a part with no parameters, but the title needs its record.
     const soleRecord = useConfigurationQuery(
         insertable.id,
         insertable.microversionId,
@@ -94,8 +91,7 @@ export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
         setCanShowQuickInsertTip(false);
     }, []);
 
-    // What the url carries, so a relaunch reopens the configuration on screen
-    // rather than the one the menu was opened with.
+    // So a relaunch reopens the configuration on screen.
     useEffect(() => {
         if (report) {
             updateUiState({
@@ -224,9 +220,6 @@ interface InsertButtonsProps {
     source: InsertSource;
 }
 
-/**
- * The derive/insert button plus the insert and fasten checkbox.
- */
 function InsertButtons(props: InsertButtonsProps): ReactNode {
     const {
         insertable,
@@ -237,8 +230,6 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
         onInsert
     } = props;
 
-    // Inserting targets the current Onshape document; there's nothing to insert
-    // into when the app is open standalone.
     const targetElementType = useTargetElementType();
     const insertMutation = useInsertMutation(insertable, selection, {
         isFavorite,
@@ -283,10 +274,7 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
                 />
             )}
             <Button
-                // Filled rather than light: this is the menu's one action, and
-                // light paints the color's own shade on a tint of itself, which
-                // leaves green on pale green. `autoContrast` picks the label
-                // against a filled background, so it lands readable either way.
+                // Filled: light would put green on pale green.
                 leftSection={<PlusIcon size={IconSize.SMALL} />}
                 loading={isLoadingConfiguration || insertMutation.isPending}
                 onClick={handleClick}

@@ -60,8 +60,7 @@ describe("GET /init", () => {
         expect(await db.select().from(events).get()).toBeUndefined();
     });
 
-    // The frontend 404s a tab id it does not know, so a row naming one the app
-    // has dropped would strand the caller on every panel open.
+    // The frontend 404s an unknown tab id.
     it("sends a user whose stored tab is unknown to the default", async () => {
         await seedLibrary(db);
         await db
@@ -123,8 +122,6 @@ describe("GET /init", () => {
         expect(location.searchParams.get("theme")).toBe(Theme.SYSTEM);
     });
 
-    // The seed is what tells the app a tab was chosen; without one the caller
-    // lands in the default library for the welcome to ask over.
     it("seeds the tab a row names, and none for a user who has not chosen", async () => {
         const seededTab = async () => {
             const res = await createTestApp().request(
@@ -188,8 +185,6 @@ describe("GET /init", () => {
         );
     });
 
-    // The group is gone, so the caller lands in the library rather than on a
-    // "group not found" page.
     it("falls back to the library when the group has been deleted", async () => {
         await seedResume(TEST_LIBRARY_ID, "deleted-group");
 
@@ -242,9 +237,7 @@ describe("GET /init", () => {
         );
     });
 
-    // Onshape decides which company a token is scoped to, and there is no
-    // personal company to ask it for, so a caller carrying an enterprise
-    // session into a plain document fails the gate every time it is tried.
+    // There's no personal company to ask Onshape for, so this would loop.
     it("opens the app rather than signing a caller in twice", async () => {
         const location = await signInRedirect("/init");
         const res = await createTestApp({
@@ -263,8 +256,6 @@ describe("GET /init", () => {
         expect(entry.searchParams.has("signInAttempted")).toBe(false);
     });
 
-    // The enterprise the caller needs is a company Onshape's authorize endpoint
-    // takes, so a session scoped elsewhere is worth trying to replace.
     it("signs in a caller whose session is scoped to another company", async () => {
         const res = await createTestApp({ isAuthenticated: false }).request(
             "/init?sessionCompanyId=company-1",
@@ -276,8 +267,6 @@ describe("GET /init", () => {
         expect(location.pathname).toBe("/auth/sign-in");
     });
 
-    // There is no personal company to ask Onshape for, so the round trip comes
-    // back with the same session it started with.
     it("opens the app for a session it cannot ask Onshape to rescope", async () => {
         const res = await createTestApp({ isAuthenticated: false }).request(
             "/init",

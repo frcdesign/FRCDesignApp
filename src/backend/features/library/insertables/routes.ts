@@ -133,10 +133,7 @@ insertableRoutes.post(
     }
 );
 
-/**
- * Re-probes an insertable's configurations under changed indexing settings.
- * Probes before committing anything: if that throws, nothing is written.
- */
+/** Probes before writing anything, so a failure writes nothing. */
 async function reindex(
     c: AppContext,
     insertableId: string,
@@ -223,16 +220,12 @@ async function reindex(
     }
     await db.batch([writes[0], ...writes.slice(1)]);
 
-    // Records feed the search index; rebuild before the bump makes the
-    // /search-db url immutable, or a stale index gets pinned for a year.
+    // Before the bump, which makes /search-db immutable for a year.
     await rebuildSearchDb(c.env.BLOB, db, row.libraryId);
     await bumpLibraryVersion(db, row.libraryId);
 }
 
-/**
- * The tab being inserted into, in the body so the whole path arrives as one
- * object. A half-built one is rejected here, not as a nonsense Onshape URL.
- */
+/** Rejected here if half-built, rather than reaching Onshape as a bad url. */
 const targetPathSchema = z.object({
     documentId: z.string().min(1),
     instanceId: z.string().min(1),
@@ -242,10 +235,7 @@ const targetPathSchema = z.object({
 
 const selectionSchema = z.record(z.string(), z.string()).optional();
 
-/**
- * What an insert applies, made whole against the insertable's parameters. Every
- * request crosses here, so nothing past it holds a partial or as-typed map.
- */
+/** Every request goes through here, so nothing past it holds a partial selection. */
 async function readSelection(
     db: Db,
     insertableId: string,
@@ -275,8 +265,7 @@ const insertBody = z.object({
     selection: selectionSchema,
     isFavorite: z.boolean().default(false),
     isQuickInsert: z.boolean().default(false),
-    // Where the insert began, which `isFavorite` does not answer. Defaulted so
-    // an older client cannot drop the whole tracking batch on a NOT NULL.
+    // Defaulted so an older client can't fail the tracking batch on NOT NULL.
     source: z.enum(InsertSource).default(InsertSource.BROWSE)
 });
 
@@ -326,8 +315,7 @@ insertableRoutes.post(
             insertableId,
             body.selection
         );
-        // Fresh on every derive, whatever the client sent: a restored menu or
-        // a quick insert would otherwise repeat an earlier derive's value.
+        // Always fresh: a restored menu or quick insert would repeat an earlier value.
         const selection =
             requested && withDerivationValues(requested, parameters);
 
@@ -364,7 +352,7 @@ insertableRoutes.post(
         );
 
         return c.json({
-            featureId: result.feature?.featureId ?? null
+            featureId: result.feature?.featureId
         } satisfies InsertOut);
     }
 );
@@ -414,18 +402,13 @@ insertableRoutes.post(
             body.selection
         );
 
-        // Only what the selection overrides. Onshape applies the element's own
-        // default to every parameter left out, so this inserts the same thing —
-        // and a whole selection can outrun the configuration Onshape accepts.
+        // Only the overrides: a whole selection can exceed what Onshape accepts.
         let configuration = selection
             ? encodeConfiguration(onshapeOverrides(selection, parameters))
             : undefined;
 
-        // Except a part studio at its defaults, which Onshape refuses to insert
-        // from an empty configuration and from no configuration alike, though an
-        // assembly inserts from either. Naming one parameter, at the default it
-        // already holds, is enough: what Onshape wants turns out to be a
-        // configuration that is there, not one that is complete.
+        // Onshape won't insert a part studio from an empty configuration (an assembly
+        // is fine), so name one parameter at its default.
         if (
             selection &&
             configuration === "" &&
@@ -436,8 +419,7 @@ insertableRoutes.post(
             );
         }
 
-        // Resolved here rather than sent by the client: the marker moves
-        // whenever somebody drags it, so only Onshape knows where it is now.
+        // Resolved here, since the marker moves whenever someone drags it.
         const transform = body.insertLocationId
             ? await getInsertLocationTransform(
                   onshapeApi,
@@ -458,8 +440,7 @@ insertableRoutes.post(
             }
         );
 
-        // The insert has landed, and every path below records it exactly once — so a
-        // fasten that never happened leaves none unrecorded, and `fasten` says what was.
+        // Every path below records the insert exactly once.
         const track = (fasten: boolean) =>
             trackInBackground(c, async () =>
                 trackInsert(c, {
@@ -479,7 +460,7 @@ insertableRoutes.post(
 
         if (!body.fasten) {
             await track(false);
-            return c.json({ featureId: null } satisfies InsertOut);
+            return c.json({} satisfies InsertOut);
         }
 
         const fastenInfo = row.fastenInfo;

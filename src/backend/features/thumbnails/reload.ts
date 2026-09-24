@@ -1,7 +1,3 @@
-/**
- * Re-fetching one stored thumbnail on demand: a thumbnail a load gave up on is
- * missing until the next load, and this asks again for just the one.
- */
 import { eq } from "drizzle-orm";
 import { type Db } from "../../db/client";
 import { groups, insertables } from "../../db/schema";
@@ -56,10 +52,7 @@ async function thumbnailWorkspace(
     return workspace;
 }
 
-/**
- * Deletes first, since `uploadThumbnails` skips a size the bucket already holds.
- * A branch made moments ago has nothing rendered yet, so that failure says so.
- */
+/** Deletes first, since `uploadThumbnails` skips stored sizes. */
 async function replaceThumbnails(
     bucket: R2Bucket,
     onshapeApi: OnshapeApi,
@@ -139,16 +132,11 @@ export async function reloadInsertableThumbnail(
         .update(insertables)
         .set(reloaded(urls, row.buildIssues))
         .where(eq(insertables.id, insertableId));
-    // The urls are unchanged — they are built from the element and its
-    // microversion — so this is for the build issue the row no longer has.
+    // The urls don't change; this clears the build issue.
     await bumpLibraryVersion(db, row.libraryId);
 }
 
-/**
- * Re-fetches a group's own thumbnail. Which element it comes from is the
- * document's to say, so unlike an insertable's this has to read the contents
- * to find it and the microversion its key is built on.
- */
+/** Reads the document's contents to find the element and microversion. */
 export async function reloadGroupThumbnail(
     db: Db,
     bucket: R2Bucket,

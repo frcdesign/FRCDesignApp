@@ -1,9 +1,6 @@
 /**
- * The two forms a configuration takes, and the only place either is built.
- *
- * A selection is what someone picked, spelled as they picked it, and it is what
- * Onshape is sent and what gets stored. A key is derived from one only to name
- * its thumbnail: it canonicalizes, which loses the expression that was typed.
+ * Builds the two forms of a configuration: a selection, as entered, and the
+ * key derived from it to name a thumbnail. See AGENTS.md.
  */
 import {
     type ConfigurationKey,
@@ -27,10 +24,7 @@ import {
     formatValueWithUnits
 } from "./input-parser";
 
-/**
- * A quantity's default as Onshape declares it, in the parameter's own unit:
- * "1 in". What a quantity's `default` is spelled as.
- */
+/** A quantity's default in the parameter's own unit, e.g. "1 in". */
 export function quantityDefault(
     parameter: Pick<QuantityParameter, "defaultValue" | "unit">
 ): string {
@@ -40,9 +34,8 @@ export function quantityDefault(
 }
 
 /**
- * Every declared parameter, and nothing else. What arrived is kept as it was
- * entered, except that a checkbox is spelled the one way Onshape spells it and
- * a quantity loses surrounding whitespace; what is missing takes its default.
+ * Every declared parameter, as entered, with missing ones defaulted. Checkboxes
+ * are normalized to Onshape's spelling and quantities trimmed.
  */
 export function toSelection(
     values: PartialSelection,
@@ -62,10 +55,7 @@ export function toSelection(
     return selection;
 }
 
-/**
- * What a selection actually applies: Onshape never applies a parameter its
- * condition hides, so a hidden one is left off.
- */
+/** Drops parameters hidden by a condition, which Onshape never applies. */
 export function appliedValues(
     selection: Selection,
     parameters: ConfigurationParameter[]
@@ -83,10 +73,7 @@ export function appliedValues(
     return values;
 }
 
-/**
- * One spelling per value: a quantity in base units, so "1in", "1 in" and
- * "25.4 mm" agree. An unparseable quantity keeps its own spelling.
- */
+/** Quantities in base units, so "1in", "1 in" and "25.4 mm" agree. */
 export function canonicalValue(
     parameter: ConfigurationParameter,
     value: string
@@ -103,9 +90,8 @@ export function canonicalValue(
 }
 
 /**
- * The applied values, canonically spelled: what two selections are compared by,
- * and what analytics counts, where "5 in" and "(2 + 3) in" are one value. A
- * derivation variable is left out, being unique to one insert by design.
+ * Applied values, canonically spelled, for comparing and counting. Derivation
+ * variables are left out since each insert's is unique.
  */
 export function canonicalValues(
     selection: Selection,
@@ -130,11 +116,7 @@ function isDefault(parameter: ConfigurationParameter, value: string): boolean {
     );
 }
 
-/**
- * What Onshape is told: only what the selection changes from the element's
- * defaults, each value as it was entered, so a typed "(2 + 3) in" reaches
- * Onshape as that. Empty for the element's defaults.
- */
+/** The values that differ from the element's defaults, as entered. */
 export function onshapeOverrides(
     selection: Selection,
     parameters: ConfigurationParameter[]
@@ -151,9 +133,8 @@ export function onshapeOverrides(
 }
 
 /**
- * A selection's thumbnail identity: what it overrides, canonically spelled.
- * Two selections that render the same part key the same, which a derivation
- * variable, unique to each insert, would stop.
+ * Selections that render the same part get the same key, so derivation
+ * variables are left out.
  */
 export function toKey(
     selection: Selection,
@@ -171,12 +152,9 @@ export function toKey(
 }
 
 /**
- * The selection with each derivation variable given a fresh unique value, so
- * deriving it cannot collide with an earlier derive of the same part. Onshape
- * refuses a second derive of the same part in the same configuration.
- *
- * `keepFilled` leaves a value that is already set, which is what lets the panel
- * show one value rather than a new one every render.
+ * Gives each derivation variable a fresh value: Onshape refuses a second derive
+ * of the same part in the same configuration. `keepFilled` keeps existing ones
+ * so the panel doesn't show a new value every render.
  */
 export function withDerivationValues(
     selection: Selection,
@@ -196,11 +174,7 @@ export function withDerivationValues(
     return next;
 }
 
-/**
- * The selection without its derivation variables, for anything kept or shared —
- * a favorite, the url. Each insert fills its own, so a kept one would only be
- * a stale value to collide with.
- */
+/** Strips derivation variables before a selection is stored or shared. */
 export function toStoredSelection(
     selection: PartialSelection,
     parameters: ConfigurationParameter[]
@@ -215,12 +189,9 @@ export function toStoredSelection(
 }
 
 /**
- * The shortest configuration that is not empty: the first parameter the
- * selection applies, at the value it applies. Onshape fills the rest in from the
- * element's own defaults, so it names the same part no overrides do — for a
- * caller that must hand Onshape a configuration but cannot hand it an empty one.
- *
- * Itself empty only when a condition hides every parameter the element has.
+ * The first applied parameter alone. Onshape fills in the rest from defaults,
+ * so this names the default part for callers that can't send an empty
+ * configuration. Empty only when every parameter is hidden.
  */
 export function toShortestConfiguration(
     selection: Selection,
@@ -234,9 +205,8 @@ export function toShortestConfiguration(
 }
 
 /**
- * The record a selection produces. Records name only what enumeration varied,
- * so several can match — the element's own, naming nothing, always does — and
- * the one naming the most wins.
+ * Records name only what enumeration varied, so several can match; the most
+ * specific wins.
  */
 export function findRecord<T extends Pick<ConfigurationRecord, "values">>(
     selection: Selection,
@@ -256,17 +226,14 @@ export function findRecord<T extends Pick<ConfigurationRecord, "values">>(
 }
 
 /**
- * A value as a person reads it: a quantity evaluated, in the unit its parameter
- * declares, and a checkbox as its state. An enum's value is its option id,
- * which only its own options can name, so the caller holding them spells that.
+ * Enums are left as their option id, which the caller spells from the options
+ * it holds.
  */
 export function formatValue(
     parameter: ConfigurationParameter,
     value: string
 ): string {
     if (parameter.type === ParameterType.BOOLEAN) {
-        // Anything else was not written by `toSelection`, so it rides as
-        // stored rather than being read as a "No".
         if (value === "true") return "Yes";
         if (value === "false") return "No";
         return value;

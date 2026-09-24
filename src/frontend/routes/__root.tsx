@@ -16,8 +16,7 @@ export const Route = createRootRoute({
     component: RootComponent,
     // notFoundComponent renders inside the root Outlet, so it has the provider.
     notFoundComponent: NotFoundError,
-    // errorComponent replaces the root component (no provider), so it must not use
-    // Mantine. It only fires if the always-on root component itself throws.
+    // Replaces the root component, provider included, so no Mantine here.
     errorComponent: RootCrash
 });
 
@@ -31,8 +30,7 @@ function RootComponent(): ReactNode {
         [params.libraryId, tabId]
     );
 
-    // Onshape's own scheme, taken off the launch; standalone there is none,
-    // and the OS is what "system" means.
+    // Standalone there's no Onshape scheme, so "system" means the OS.
     const osColorScheme = useColorScheme();
     const colorTheme = getColorTheme(savedTheme, systemTheme ?? osColorScheme);
 
@@ -46,8 +44,7 @@ function RootComponent(): ReactNode {
                         position="bottom-center"
                         limit={3}
                         autoClose={4000}
-                        // Otherwise pinned at 440px, wrapping a message with
-                        // an action button. Still clamped to a narrow viewport.
+                        // Otherwise pinned at 440px.
                         containerWidth="max-content"
                     />
                     <Outlet />

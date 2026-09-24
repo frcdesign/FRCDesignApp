@@ -154,15 +154,11 @@ function UserSettings(): ReactNode {
     );
 }
 
-/**
- * The app's own url for the tab, free of Onshape's launch params, which are
- * what would keep it embedded. Settings follow on their own, being this browser's.
- */
+/** Without Onshape's launch params, which keep the app embedded. */
 function standaloneUrl(tabId: AppTab): string {
     return new URL(getTabPath(tabId), window.location.origin).href;
 }
 
-/** Whether the dashboard is showing, rather than the app itself. */
 function useIsDashboard(): boolean {
     return useMatch({ from: "/dashboard", shouldThrow: false }) !== undefined;
 }
@@ -171,7 +167,7 @@ interface OpenAppButtonProps {
     tabId: AppTab;
 }
 
-/** Leaves the dashboard for the app, in place rather than in a second tab. */
+/** In place, not in a new tab. */
 function OpenAppButton(props: OpenAppButtonProps): ReactNode {
     return (
         <Button

@@ -16,10 +16,7 @@ import {
     type LoggedEvent
 } from "./schema";
 
-/**
- * Every counter one event feeds, derived from the row alone — which is what lets
- * a replay rebuild the rollups exactly, or move them to a batch job.
- */
+/** Derived from the row alone, so a replay rebuilds the rollups exactly. */
 export function rollupWrites(
     db: Db,
     event: LoggedEvent
@@ -78,10 +75,7 @@ function countDay(db: Db, event: LoggedEvent) {
         });
 }
 
-/**
- * Records that this user was active that day. Idempotent, so the row is written
- * once per user per library per day no matter how much they do.
- */
+/** Idempotent: one row per user per library per day. */
 function markUserActive(db: Db, event: LoggedEvent) {
     return db
         .insert(dailyUserActivity)
@@ -168,7 +162,7 @@ function countTarget(db: Db, event: LoggedInsert) {
         });
 }
 
-/** As {@link countTarget}, but for one part rather than the library. */
+/** {@link countTarget} for one part. */
 function countPartDay(db: Db, event: LoggedInsert) {
     return db
         .insert(dailyInsertableMetrics)
@@ -190,7 +184,7 @@ function countPartDay(db: Db, event: LoggedInsert) {
         });
 }
 
-/** As {@link markUserActive}, but for one part rather than the library. */
+/** {@link markUserActive} for one part. */
 function markPartUser(db: Db, event: LoggedInsert) {
     return db
         .insert(dailyInsertableUsers)

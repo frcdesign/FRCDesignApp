@@ -1,7 +1,4 @@
-/**
- * Data-quality issues for groups and insertables. Most are stored at load time;
- * a few are computed live where they depend on per-user state.
- */
+/** Mostly stored at load time; a few are computed live from per-user state. */
 import {
     AUTO_INDEX_THRESHOLD,
     MAX_PART_NUMBER_CONFIGURATIONS
@@ -33,17 +30,11 @@ export enum BuildIssueType {
     LOAD_FAILED = "load-failed"
 }
 
-/**
- * Base shape for a build issue, discriminated on type.
- */
 interface BuildIssueOf<T extends BuildIssueType> {
     type: T;
 }
 
-/**
- * An issue particular configurations raise, which the element's own defaults do
- * not — a problem with those configurations rather than with the part itself.
- */
+/** Raised by some configurations but not the defaults. */
 interface ConfigurationBuildIssueOf<
     T extends ConfigurationIssueType
 > extends BuildIssueOf<T> {
@@ -53,7 +44,6 @@ interface ConfigurationBuildIssueOf<
     configurationCount: number;
 }
 
-/** The issue types a configuration raises, rather than the element itself. */
 type ConfigurationIssueType =
     | BuildIssueType.CONFIGURATION_MULTIPLE_PARTS
     | BuildIssueType.UNSTABLE_COMPOSITE;
@@ -72,10 +62,7 @@ export type BuildIssue =
     | BuildIssueOf<BuildIssueType.INSERTABLES_FAILED>
     | BuildIssueOf<BuildIssueType.LOAD_FAILED>;
 
-/**
- * Builds the issue a set of offending configurations raises. The first is the
- * one the card links out to; the rest are only counted.
- */
+/** The card links to the first; the rest are counted. */
 export function toConfigurationIssue(
     type: ConfigurationIssueType,
     offenders: { values: PartialSelection }[]
@@ -87,11 +74,7 @@ export function toConfigurationIssue(
     };
 }
 
-/**
- * The configuration an issue blames, or undefined where the element itself is
- * at fault. Also undefined for an issue stored before issues carried values,
- * until the next load rewrites it.
- */
+/** Undefined when the element itself is at fault. */
 export function getIssueConfiguration(
     issue: BuildIssue
 ): PartialSelection | undefined {
@@ -100,11 +83,7 @@ export function getIssueConfiguration(
 
 const BUILD_ISSUE_TYPES = new Set<string>(Object.values(BuildIssueType));
 
-/**
- * Drops issues this deploy has no check for. A stored array was written by
- * whichever deploy last loaded the row, so it can name a type since removed from
- * `BuildIssueType`, which has no severity or description to render.
- */
+/** Drops types a later deploy removed. */
 export function knownBuildIssues(issues: BuildIssue[]): BuildIssue[] {
     return issues.filter((issue) => BUILD_ISSUE_TYPES.has(issue.type));
 }
@@ -164,10 +143,7 @@ export function getIssueSeverity(issue: BuildIssue): BuildIssueSeverity {
     }
 }
 
-/**
- * Adds each of `newIssues` to `issues`, skipping any whose type is already
- * present, and returning a new array only when something was added.
- */
+/** Skips types already present; returns the same array if nothing was added. */
 export function addBuildIssue(
     issues: BuildIssue[],
     ...newIssues: BuildIssue[]
@@ -189,9 +165,6 @@ export function hasBuildIssue(
     return issues.some((issue) => types.includes(issue.type));
 }
 
-/**
- * Removes any issue whose type is one of `types`.
- */
 export function clearBuildIssue(
     issues: BuildIssue[],
     ...types: BuildIssueType[]
@@ -206,9 +179,6 @@ const SEVERITY_ORDER: BuildIssueSeverity[] = [
     BuildIssueSeverity.ERROR
 ];
 
-/**
- * Returns the worst severity present in `issues`, or undefined when there are none.
- */
 export function getMaxSeverity(
     issues: BuildIssue[]
 ): BuildIssueSeverity | undefined {

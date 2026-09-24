@@ -1,7 +1,4 @@
-/**
- * Answers a request's auth questions from its session. `createApp`
- * binds `productionAuth` onto every request; guards and routes ask through `c.var`.
- */
+/** `createApp` binds `productionAuth` onto every request; routes ask through `c.var`. */
 import { env as processEnv } from "process";
 import { OAuthApi } from "../../lib/onshape/client";
 import { getSessionInfo, getUserId } from "../../lib/onshape/endpoints/users";
@@ -40,9 +37,7 @@ export async function getOnshapeApiFromSessionId(
             .refreshAccessToken(TOKEN_ENDPOINT, session.refreshToken, [])
             .then((refreshed) => makeAuthTokens(refreshed));
 
-        // Awaited, not floated: a cancelled write leaves the old token in KV
-        // and every later request refreshes again. Spread, so the refresh keeps
-        // the userId the session already resolved.
+        // Awaited: a cancelled write leaves the old token, so every request refreshes.
         await saveSession(kv, sessionId, { ...session, ...newTokens });
 
         return newTokens.accessToken;
@@ -57,11 +52,7 @@ export async function getOnshapeApiFromSessionId(
     return new OAuthApi(accessToken, refreshCallback);
 }
 
-/**
- * Creates/caches an Onshape API instance from the AppContext.
- *
- * Note this function should not be called directly, as it is bound to the context directly.
- */
+/** Cached on the context; call it through `c.var`. */
 export async function getOnshapeApi(c: AppContext): Promise<OAuthApi> {
     const cached = c.get("onshapeApi");
     if (cached) return cached;
@@ -70,11 +61,7 @@ export async function getOnshapeApi(c: AppContext): Promise<OAuthApi> {
     return api;
 }
 
-/**
- * The Onshape user a session belongs to, resolved once and kept on it. Taken by
- * session id rather than request because work started by one outlives it — a
- * render queued under the user who asked for it, which the renderer is keyed by.
- */
+/** Takes a session id, since work a request starts can outlive it. */
 async function getUserIdFromSessionId(
     kv: KVNamespace,
     sessionId: string
@@ -98,9 +85,7 @@ export async function isAuthenticated(c: AppContext): Promise<boolean> {
     try {
         const onshapeApi = await c.var.getOnshapeApi();
         const sessionInfo = await getSessionInfo(onshapeApi);
-        // Onshape reports no company for a session outside an enterprise;
-        // PERSONAL_COMPANY_ID is the id it uses for those, and what we store
-        // for them.
+        // Onshape reports no company outside an enterprise.
         const tokenCompanyId = sessionInfo.company?.id ?? PERSONAL_COMPANY_ID;
         return getSessionCompanyId(c) === tokenCompanyId;
     } catch {
@@ -135,10 +120,7 @@ async function hasOnshapeSession(c: AppContext): Promise<boolean> {
     }
 }
 
-/**
- * Whether the caller has a valid Onshape session, memoized on the request.
- * `FORCE_SIGNED_IN` stands in for the session it cannot have in development.
- */
+/** Memoized on the request. */
 export async function isSignedIn(c: AppContext): Promise<boolean> {
     const cached = c.get("signedIn");
     if (cached !== undefined) return cached;
@@ -148,11 +130,7 @@ export async function isSignedIn(c: AppContext): Promise<boolean> {
     return signedIn;
 }
 
-/**
- * The caller's access to `libraryId`: the owner's anywhere, and otherwise what
- * the library's admin team says, as last synced from Onshape. A lookup rather
- * than a question for Onshape, so it needs no caching.
- */
+/** The owner's anywhere; otherwise the library's admin team as last synced. */
 async function getLibraryAccessLevel(
     c: AppContext,
     libraryId: LibraryId
@@ -178,10 +156,7 @@ async function getLibraryAccessLevel(
     return member.isTeamAdmin ? AccessLevel.ADMIN : AccessLevel.EDITOR;
 }
 
-/**
- * The real answers. getUserId only runs behind requireSignInMiddleware;
- * getAccessLevel falls back to USER for anyone without a real Onshape session.
- */
+/** getAccessLevel falls back to USER without a real session. */
 export const productionAuth: AuthResolver = (c) => ({
     getOnshapeApi: () => getOnshapeApi(c),
     getUserId: () => {
@@ -194,8 +169,7 @@ export const productionAuth: AuthResolver = (c) => ({
     getAccessLevel: async (libraryId) => {
         const override = getAccessLevelOverride(c);
         if (override) return override;
-        // Needs a real Onshape session to know who is asking, so only for a
-        // genuinely signed-in caller (not FORCE_SIGNED_IN).
+        // FORCE_SIGNED_IN has no real session to identify the caller.
         if (!isForceSignedIn(c) && (await isSignedIn(c))) {
             return getLibraryAccessLevel(c, libraryId);
         }

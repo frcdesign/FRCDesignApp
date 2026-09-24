@@ -2,11 +2,7 @@ import { OnshapeApi } from "../client";
 import { DocumentPath, toDocumentApiPath } from "../path";
 import { OnshapeVersionInfo } from "../types";
 
-/**
- * Fetches a list of versions of a document.
- *
- * Versions are returned in chronological order, with the oldest version ("Start") first.
- */
+/** Oldest ("Start") first. */
 function getVersions(
     client: OnshapeApi,
     documentPath: DocumentPath

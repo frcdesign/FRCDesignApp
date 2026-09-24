@@ -17,10 +17,6 @@ type MetricKey =
     | "quickFraction"
     | "assemblyFraction";
 
-/**
- * How one number is derived, formatted and trended, so a metric reads the same
- * way wherever it appears.
- */
 export interface MetricDefinition {
     key: MetricKey;
     label: string;
@@ -92,10 +88,7 @@ export function rangeTerms(
     return { numerator, denominator };
 }
 
-/**
- * Folded from the same points the sparkline plots, so a tile can never disagree
- * with the chart behind it.
- */
+/** From the sparkline's points, so a tile can't disagree with its chart. */
 function metricValue(
     { numerator, denominator }: MetricTerms,
     metric: MetricDefinition
@@ -113,7 +106,6 @@ export function rangeValue(
     return metricValue(rangeTerms(points, metric), metric);
 }
 
-/** True when the metric reads as a percentage rather than a count. */
 export function isPercentage(metric: MetricDefinition): boolean {
     return metric.denominator !== undefined;
 }
@@ -122,10 +114,7 @@ export interface TrendPoint extends BucketPoint {
     value: number;
 }
 
-/**
- * The value per bucket. Shares are ratioed after bucketing, or an average of
- * daily percentages would over-weight quiet days.
- */
+/** Shares are computed after bucketing, or quiet days would be over-weighted. */
 export function toTrend(
     points: DailyMetricPoint[],
     metric: MetricDefinition,

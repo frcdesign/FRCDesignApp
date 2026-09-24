@@ -1,11 +1,7 @@
 /**
- * Onshape sometimes never renders an element's thumbnail in a version, and the
- * document's own workspace drifts from the version the library shows. So each
- * loaded version gets a workspace branched off it, which nobody edits, and its
- * thumbnails are read from there.
- *
- * A fresh branch has no thumbnails for a few minutes, which is why a load
- * reading them retries for a long while.
+ * Each loaded version gets a branched workspace to read thumbnails from:
+ * Onshape sometimes never renders them in a version, and the document's own
+ * workspace drifts. A fresh branch takes minutes to render.
  */
 import { type OnshapeApi } from "../../lib/onshape/client";
 import { type DocumentPath, type InstancePath } from "../../lib/onshape/path";
@@ -19,10 +15,7 @@ import { type OnshapeWorkspaceInfo } from "../../lib/onshape/types";
 /** Shared by every branch; cleanup deletes nothing without it. */
 const WORKSPACE_NAME = "FRCDesignApp Thumbnails (DO NOT EDIT)";
 
-/**
- * The name is the same for every version, so the description is what records
- * which one a branch came from.
- */
+/** Records which version the branch came from; the name is the same for all. */
 function workspaceDescription(versionId: string): string {
     return `Made by the FRCDesignApp to read version ${versionId}'s thumbnails from.`;
 }
@@ -31,10 +24,7 @@ function isOurs(workspace: OnshapeWorkspaceInfo): boolean {
     return workspace.name === WORKSPACE_NAME;
 }
 
-/**
- * Found before it is created, so a retried step or a forced reload reuses the
- * branch rather than making another.
- */
+/** Reuses an existing branch, so a retry doesn't make another. */
 export async function ensureThumbnailWorkspace(
     client: OnshapeApi,
     versionPath: InstancePath
@@ -58,10 +48,7 @@ export async function ensureThumbnailWorkspace(
     };
 }
 
-/**
- * Deletes our branches of other versions. Only safe once the group row has
- * moved to `keepWorkspaceId`'s version, since renders read the stored branch.
- */
+/** Only safe once the group row has moved to `keepWorkspaceId`'s version. */
 export async function deleteStaleThumbnailWorkspaces(
     client: OnshapeApi,
     documentPath: DocumentPath,

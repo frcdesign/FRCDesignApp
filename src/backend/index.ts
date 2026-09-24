@@ -1,8 +1,4 @@
-/**
- * Re-exported because the runtime looks them up here: a Durable Object or
- * Workflow class has to be an export of the Worker's entrypoint for the
- * `class_name`s in wrangler.jsonc to resolve.
- */
+/** Workflow and Durable Object classes must be exported here for wrangler.jsonc's `class_name`s to resolve. */
 export { LoadDocumentWorkflow } from "./features/load/workflows";
 export { RenderThumbnailWorkflow } from "./features/thumbnails/render-workflow";
 export { LiveUpdates } from "./features/live/live-updates";
@@ -16,10 +12,7 @@ const app = createApp(productionAuth);
 
 export default {
     fetch: app.fetch,
-    /**
-     * The daily cron in wrangler.jsonc. Thumbnails outlive what shows them, and
-     * no load sees the whole library any more to clear them as it finishes.
-     */
+    /** The daily cron in wrangler.jsonc. */
     scheduled(_controller, env, ctx) {
         ctx.waitUntil(
             reconcileThumbnails(env.BLOB, getDb(env.DB)).then((result) => {

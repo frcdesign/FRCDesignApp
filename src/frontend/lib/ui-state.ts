@@ -16,15 +16,10 @@ const ThemeType = z.enum(Object.values(Theme));
 const LibraryIdType = z.enum(Object.values(LibraryId));
 const AppTabType = z.union([LibraryIdType, z.enum(Object.values(UtilityTab))]);
 
-/**
- * Kept locally and pushed to the caller's row, so a browser that has never run
- * the app starts where their last one left off. The store is still what the app
- * reads: the row is the copy, and the entry redirect is what seeds it back.
- */
+/** Also saved to the user's row, so a new browser starts where they left off. */
 const SyncedStateSchema = z.object({
     theme: ThemeType.default(DEFAULT_THEME),
-    /** The tab last opened; null until one is picked, which the welcome asks
-     * for. */
+    /** Null until one is picked, which the welcome asks for. */
     tabId: AppTabType.nullable().default(null),
     /** The group last opened in that tab; null for the tab itself. */
     groupId: z.string().nullable().default(null)
@@ -34,8 +29,7 @@ const SyncedStateSchema = z.object({
 const LocalStateSchema = z.object({
     isFavoritesOpen: z.boolean().default(false),
     isLibraryOpen: z.boolean().default(true),
-    /** Vendor filters per library, so switching libraries keeps each one's;
-     * a library with no entry has every vendor active. */
+    /** Per library; a library with no entry has every vendor active. */
     vendorFilters: z
         .partialRecord(LibraryIdType, z.array(VendorType))
         .default({}),
@@ -43,23 +37,18 @@ const LocalStateSchema = z.object({
     fasten: z.boolean().default(true),
     /** The access level to view the app as; absent means the granted default. */
     accessLevel: AccessLevelType.optional(),
-    /** The insertable whose insert menu is open, and what it is configured to.
-     * Written as the menu opens and closes, so a relaunch can reopen it. */
+    /** So a relaunch can reopen the insert menu. */
     openInsertableId: z.string().optional(),
-    /** What its configuration changes from the element's defaults, encoded
-     * as `id=value;id=value`; absent for the defaults themselves. */
+    /** Overrides as `id=value;id=value`; absent for the defaults. */
     openConfiguration: z.string().optional(),
-    /** Set when the menu was opened from a favorite rather than a row. */
     openFavoriteId: z.string().optional()
 });
 
-/** Kept for this tab only, being about this visit rather than this browser. */
+/** This tab only. */
 const SessionStateSchema = z.object({
-    /** Set on leaving for Onshape, so the app can confirm the sign-in on
-     * return — and only in the tab that left, which a second one did not. */
+    /** Set on leaving for Onshape, so the returning tab can confirm the sign-in. */
     justSignedIn: z.boolean().default(false),
-    // What Onshape launched this panel with: a tab switch replaces it, and
-    // another browser tab is another document, with a store of its own.
+    // Per tab: each browser tab is a different document.
     ...OnshapeLaunchType.shape
 });
 
@@ -68,10 +57,6 @@ type SessionState = z.infer<typeof SessionStateSchema>;
 type SyncedState = z.infer<typeof SyncedStateSchema>;
 type UiState = LocalState & SessionState & SyncedState;
 
-/**
- * One store's half of the state: which fields it owns, and how long they last.
- * Held apart so a field's scope is declared once, beside the field.
- */
 interface StateArea {
     storageKey: string;
     schema: z.ZodObject;
@@ -81,9 +66,8 @@ interface StateArea {
 
 const LOCAL_AREA: StateArea = {
     storageKey: "uiState",
-    // Synced fields are local too, and in the same blob: their scope is about
-    // where else they go, not where they are kept — and moving them to a blob
-    // of their own would reset the preferences already stored in this one.
+    // Synced fields share the local blob; splitting them out would reset
+    // preferences already stored.
     schema: z.object({
         ...LocalStateSchema.shape,
         ...SyncedStateSchema.shape
@@ -105,10 +89,7 @@ type SettingsSync = (settings: Partial<SyncedState>) => void;
 
 let settingsSync: SettingsSync | undefined;
 
-/**
- * Installed at startup by the feature that owns the caller's row, which keeps
- * the endpoint — and the sign-in it needs — out of here.
- */
+/** Installed at startup, keeping the endpoint and its sign-in out of here. */
 export function setSettingsSync(sync: SettingsSync): void {
     settingsSync = sync;
 }
@@ -137,12 +118,7 @@ function writeStorage(area: StateArea, value: string): void {
     }
 }
 
-/**
- * What one area stored, or its defaults when that cannot be used — older,
- * hand-edited, or naming something dropped. Losing a preference beats failing
- * to start. The version is read off the raw blob rather than the schema, being
- * about the stored shape rather than anything the app reads.
- */
+/** Falls back to defaults for anything old or malformed: losing a preference beats failing to start. */
 function readArea(area: StateArea): Record<string, unknown> {
     const defaults = () => area.schema.parse({});
     const raw = readStorage(area);
@@ -193,8 +169,7 @@ function changedKeys(
 ): string[] {
     return Object.keys(partialState).filter((key) => {
         const typedKey = key as keyof UiState;
-        // Compared by value for the one object-valued field, which is rebuilt
-        // rather than mutated; the rest are primitives.
+        // The one object-valued field.
         return typedKey === "vendorFilters"
             ? JSON.stringify(current[typedKey]) !==
                   JSON.stringify(partialState[typedKey])
@@ -204,8 +179,7 @@ function changedKeys(
 
 interface UpdateOptions {
     /**
-     * False for a value the caller's row already holds — the entry redirect
-     * seeding the theme — which would otherwise be posted straight back.
+     * False for a value the row already holds, like the theme entry seeds.
      * @default true
      */
     sync?: boolean;
@@ -228,8 +202,6 @@ export function updateUiState(
             writeArea(area, newState);
         }
     }
-    // Only what moved: the row is written for a field the caller changed, not
-    // for every field that happened to ride along with it.
     const syncedChanges = changed.filter((key) => SYNCED_KEYS.includes(key));
     if ((options.sync ?? true) && syncedChanges.length > 0) {
         settingsSync?.(

@@ -23,10 +23,7 @@ import * as Jobs from "../../load/jobs";
 
 const db = getDb(env.DB);
 
-/**
- * `jsonRequest` plus a session cookie, for routes calling `getSessionId` — which
- * reads the request directly rather than going through the mocked services.
- */
+/** `getSessionId` reads the cookie directly, bypassing the mocks. */
 function sessionRequest(method: string, body?: unknown): RequestInit {
     const init = jsonRequest(method, body);
     return {
@@ -71,8 +68,7 @@ describe("group admin routes", () => {
         expect(remaining).toHaveLength(0);
     });
 
-    // Search reads isVisible out of the index, not the row, so leaving it stale
-    // drops the insertable from every result until the next full load.
+    // Search reads isVisible from the index.
     it.each([false, true])(
         "POST /set-insertable-visibility rebuilds the search index (isVisible=%s)",
         async (isVisible) => {
@@ -97,8 +93,7 @@ describe("group admin routes", () => {
         }
     );
 
-    // "Hide all elements" sends a whole group's ids, and D1 takes at most 100
-    // bound parameters in a statement.
+    // "Hide all" sends a whole group; D1 binds at most 100 parameters.
     it("POST /set-insertable-visibility handles more ids than a statement can bind", async () => {
         const count = 120;
         await seedGroup(db);

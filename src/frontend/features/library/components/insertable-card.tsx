@@ -30,10 +30,6 @@ import { RequireSignIn } from "../../auth/access-level";
 import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
 import { InsertSource } from "@backend/features/analytics/usage";
 
-/**
- * What a search found in this row. Structural rather than the search feature's
- * own `SearchHit`, which a card has no other reason to know about.
- */
 interface InsertableMatch extends RowMatch {
     /** The values of the configuration it names, for the menu. */
     values?: PartialSelection;
@@ -50,9 +46,6 @@ interface InsertableCardProps extends PropsWithChildren {
     source?: InsertSource;
 }
 
-/**
- * A card representing a part studio or assembly.
- */
 export function InsertableCard(props: InsertableCardProps): ReactNode {
     const { insertable, match, source = InsertSource.BROWSE } = props;
 
@@ -94,8 +87,7 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
                 microversionId: insertable.microversionId,
                 configurationKey:
                     match?.configurationKey ?? DEFAULT_CONFIGURATION_KEY
-                // No renderSource: a cold search would otherwise start a render
-                // per row.
+                // No insertableId: a cold search would otherwise start a render per row.
             }}
         />
     );
@@ -146,8 +138,7 @@ interface InsertableMenuItemsProps {
     favorite: Favorite | undefined;
     insertable: InsertableOut;
     inInsertMenu?: boolean;
-    /** What quick insert inserts and "Open document" opens: a search hit's
-     * values on a card, the selected configuration inside the insert menu. */
+    /** A search hit's values on a card; the selected configuration inside the menu. */
     selection?: PartialSelection;
     /** That selection's key, so favoriting can name its thumbnail. */
     configurationKey?: ConfigurationKey;

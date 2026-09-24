@@ -84,8 +84,7 @@ const RESPONSE: OnshapeConfigurationResponse = {
                     }
                 ]
             },
-            // A logical wrapper whose only child is the no-op condition, which the
-            // parser drops — exercising the empty-children path.
+            // Its only child is a no-op the parser drops.
             visibilityCondition: {
                 btType: OnshapeVisibilityConditionType.LOGICAL,
                 operation: LogicalOp.AND,
@@ -189,8 +188,6 @@ describe("parseOnshapeConfiguration", () => {
         ]);
     });
 
-    // A logical left with no children says nothing about when to show the
-    // parameter, so it is dropped rather than stored as a condition of its own.
     it("drops a logical condition whose children were all no-ops", () => {
         expect(parameters[2].condition).toBeUndefined();
     });

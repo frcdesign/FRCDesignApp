@@ -90,10 +90,7 @@ const SIZE_PARAMETERS: ConfigurationParameter[] = [
     }
 ];
 
-/**
- * An insert of a configured part, whole against its parameters — which is what
- * the insert routes hand tracking.
- */
+/** Whole, as the insert routes hand it over. */
 function configuredEvent(
     values: Record<string, string>,
     overrides: Partial<InsertEvent> = {}
@@ -130,8 +127,6 @@ describe("tracking", () => {
                 libraryId: TEST_LIBRARY_ID,
                 userId: TEST_USER_ID,
                 schemaVersion: EVENT_SCHEMA_VERSION,
-                // The whole path, so the version used is still known after a
-                // reload moves the library on.
                 ...TEST_PART_STUDIO_PATH,
                 selection: { size: "large" }
             });
@@ -170,8 +165,6 @@ describe("tracking", () => {
             expect(daily).toHaveLength(1);
             expect(daily[0].count).toBe(3);
 
-            // The user is unique, so still one row — this is what makes the
-            // unique-user count a cheap COUNT.
             const users = await db.select().from(userStats).all();
             expect(users).toHaveLength(1);
             expect(users[0].insertCount).toBe(3);
@@ -270,8 +263,7 @@ describe("tracking", () => {
 
         it("leaves out a parameter the selection hides", async () => {
             await seedSizeConfiguration();
-            // "reinforced" is only shown for the large size, and Onshape
-            // applies nothing it does not show.
+            // "reinforced" is hidden for small, so it isn't applied.
             await trackInsert(
                 fakeContext(),
                 configuredEvent({ size: "small", reinforced: "true" })
@@ -310,8 +302,7 @@ describe("tracking", () => {
             ]);
         });
 
-        // A quick insert chooses nothing, and the route hands over the whole
-        // selection anyway — every parameter at its default.
+        // A quick insert chooses nothing, but every parameter's default applies.
         it("counts the defaults of a selection nobody touched", async () => {
             await seedSizeConfiguration();
 
@@ -325,8 +316,6 @@ describe("tracking", () => {
                 Object.fromEntries(
                     values.map((row) => [row.parameterId, row.value])
                 )
-                // No "reinforced": the small default hides it, so it applied
-                // nothing.
             ).toEqual({ size: "small", length: "0.0254 m" });
         });
 
@@ -367,8 +356,7 @@ describe("tracking", () => {
                     targetElementType: ElementType.ASSEMBLY
                 })
             );
-            // A part-studio insert is never fasten-eligible, so it must not
-            // dilute the denominator.
+            // Part-studio inserts can't fasten, so they mustn't dilute the denominator.
             await trackInsert(
                 fakeContext(),
                 insertEvent({
@@ -420,8 +408,6 @@ describe("tracking", () => {
             });
         });
 
-        // The point of the two: a search filtered to one group is a different
-        // search from one across the library, and reads as one.
         it("counts a search inside a group apart from one across the library", async () => {
             await trackInsert(
                 fakeContext(),
@@ -446,8 +432,7 @@ describe("tracking", () => {
         });
 
         it("keeps a favorited part inserted from search attributed to search", async () => {
-            // isFavorite is a property of the part; source is where the insert
-            // began. Conflating them would misreport the favorites list.
+            // isFavorite is about the part; source is where the insert began.
             await trackInsert(
                 fakeContext(),
                 insertEvent({

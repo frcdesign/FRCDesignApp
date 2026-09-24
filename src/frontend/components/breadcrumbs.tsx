@@ -2,8 +2,7 @@ import { Breadcrumbs, type MantineSpacing } from "@mantine/core";
 import { type ReactNode } from "react";
 
 interface AppBreadcrumbsProps {
-    /** The trail in order, separated where they meet. Bare text is wrapped for
-     * you; an element keeps its own typography. */
+    /** Bare text is wrapped; elements keep their own typography. */
     children: ReactNode;
     /** Spacing off whatever the trail sits above. */
     mb?: MantineSpacing;

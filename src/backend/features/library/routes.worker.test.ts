@@ -73,8 +73,7 @@ describe("library routes", () => {
         );
         const body = await res.text();
 
-        // The seeded parameter's name is distinctive; the payload stays in D1
-        // and is fetched from /api/configuration/:insertableId when needed.
+        // Parameters are fetched per insertable, not sent with the library.
         expect(body).not.toContain(TEST_PARAMETERS[0].name);
         expect(body).not.toContain("parameters");
         expect(body).not.toContain("records");
@@ -92,8 +91,7 @@ describe("library routes", () => {
             env
         );
         expect(res.status).toBe(200);
-        // A hand-set Content-Encoding gets compressed again by the runtime,
-        // leaving the client a gzip stream after one inflate.
+        // The runtime would compress it again.
         expect(res.headers.get("Content-Encoding")).toBeNull();
         expect(res.headers.get("Content-Type")).toBe("application/json");
 
@@ -102,8 +100,7 @@ describe("library routes", () => {
         expect(parsed.documentCount).toBeGreaterThan(0);
     });
 
-    // An index written in an older shape sits under an older key, so a miss
-    // is what every library looks like the first time a deploy reads it.
+    // Every library misses the first time a deploy with a new index shape reads it.
     it("GET /search-db builds the index when there is none", async () => {
         await seedTestData(db);
         const app = createTestApp();

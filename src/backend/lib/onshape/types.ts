@@ -1,7 +1,4 @@
-/**
- * Hand-authored subsets of the Onshape responses we use. To find a field's real
- * shape, regenerate `onshape-api-reference/` — see `openapi-ts.config.ts`.
- */
+/** Hand-written subsets. For a field's real shape, regenerate `onshape-api-reference/`; see `openapi-ts.config.ts`. */
 import {
     LogicalOp,
     QuantityType,
@@ -185,10 +182,7 @@ export interface OnshapeDocumentInfo {
     id: string;
     name: string;
     documentThumbnailElementId?: string;
-    /**
-     * Optional because nothing here has confirmed Onshape always sends it; the
-     * load throws rather than guessing when it is absent.
-     */
+    /** Not confirmed to always be sent; the load throws when it's absent. */
     defaultWorkspace?: { id: string };
 }
 
@@ -269,10 +263,7 @@ interface OnshapeSubAssembly {
     features: OnshapeAssemblyFeature[];
 }
 
-/**
- * A part studio feature an instance was inserted from, in the assembly's
- * flattened `partStudioFeatures` list — what `parts` is for part instances.
- */
+/** What `parts` is for part instances. */
 interface OnshapeAssemblyPsFeature {
     documentId?: string;
     elementId?: string;

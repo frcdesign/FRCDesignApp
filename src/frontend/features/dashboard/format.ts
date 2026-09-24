@@ -14,10 +14,7 @@ export function formatPercent(value: number): string {
     return `${value.toFixed(1)}%`;
 }
 
-/**
- * One number as a fraction of another. A total that is absent and one that is
- * zero read the same: there is nothing to take a fraction of either way.
- */
+/** An absent total reads the same as zero. */
 export function formatFraction(
     part: number,
     total: number | undefined

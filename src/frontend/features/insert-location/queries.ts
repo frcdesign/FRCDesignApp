@@ -10,23 +10,15 @@ import { queryClient } from "../../lib/query-client";
 import { insertLocationQueryKey } from "../../lib/query-keys";
 import { showSuccessToast } from "../../lib/notifications";
 
-/**
- * The assembly the insert location belongs to. Only an assembly has one: a
- * derive into a part studio places itself, and there is nothing to mate to.
- */
+/** Only an assembly has one; a derive places itself. */
 export function useInsertLocationTarget(): TargetElement | undefined {
     const target = useTargetElement();
     return target?.elementType === ElementType.ASSEMBLY ? target : undefined;
 }
 
-/**
- * Whether the open assembly has an insert location, asked once when the app
- * opens. It changes only when somebody adds or deletes the connector, and the
- * add below is the answer we have for the first of those.
- */
+/** Asked once when the app opens; the add mutation updates it. */
 export function useInsertLocationQuery(target: TargetElement | undefined) {
-    // Reading the assembly is Onshape's, so the endpoint needs a session; while
-    // signed out the query stays idle rather than answering 401.
+    // Idle while signed out rather than answering 401.
     const isSignedIn = useIsSignedIn();
     return useQuery<InsertLocationOut>({
         queryKey: insertLocationQueryKey(target),

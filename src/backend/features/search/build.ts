@@ -1,7 +1,4 @@
-/**
- * Builds the index a library is served as. Worker-side: it reads the whole
- * library, which the client never holds.
- */
+/** Server-side, since it reads the whole library. */
 import MiniSearch from "minisearch";
 import { LibraryOut } from "../library/contract";
 import { type SearchRecord } from "../configurations/contract";

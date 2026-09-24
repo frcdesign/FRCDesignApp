@@ -35,10 +35,7 @@ libraryRoutes.get(
     }
 );
 
-/**
- * GET /api/search-db/library/:libraryId?v=:cacheVersion. Never set
- * `Content-Encoding` here: the runtime would compress it a second time.
- */
+/** GET /api/search-db/library/:libraryId?v=:cacheVersion. No `Content-Encoding`: the runtime compresses. */
 libraryRoutes.get(
     "/search-db" + libraryRoute(),
     cacheMiddleware(CachePolicy.PUBLIC_CACHE),
@@ -47,8 +44,7 @@ libraryRoutes.get(
 
         const object = await c.env.BLOB.get(searchIndexKey(libraryId));
         if (!object) {
-            // Never built in the shape this deploy reads; build it now rather
-            // than waiting on the next load.
+            // Not built in this deploy's shape yet.
             const searchDb = await rebuildSearchDb(
                 c.env.BLOB,
                 getDb(c.env.DB),

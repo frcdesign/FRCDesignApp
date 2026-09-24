@@ -92,8 +92,7 @@ function useHomeSections(): Section[] {
         setOpened: (opened) => updateUiState({ isLibraryOpen: opened })
     };
 
-    // One slot below favorites, showing search results while a query is active
-    // and the library otherwise. The differing `value` remounts it on the swap.
+    // The differing `value` remounts the slot when search starts or ends.
     return [favorites, uiState.searchQuery ? search : library];
 }
 
@@ -118,8 +117,7 @@ function SectionAccordion(props: SectionAccordionProps): ReactNode {
                 .filter((section) => section.opened)
                 .map((section) => section.value)}
             onChange={handleChange}
-            // The divider is on the control, so a collapsed section still
-            // divides from the next one; content closes off an open one.
+            // On the control, so a collapsed section still has a divider.
             classNames={{
                 control: `${classes.control} ${styles.sectionHeader} ${styles.dividerBottom}`,
                 item: classes.item,

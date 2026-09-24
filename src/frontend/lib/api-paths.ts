@@ -1,7 +1,4 @@
-/**
- * The `/api` path segments a resource is addressed by, matching the routes the
- * worker mounts in `lib/route-params.ts`.
- */
+/** Matches `lib/route-params.ts` on the backend. */
 import { LibraryId } from "@backend/features/library/library-id";
 
 export function toLibraryPath(libraryId: LibraryId): string {

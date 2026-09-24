@@ -1,7 +1,3 @@
-/**
- * The library's build health, counted rather than listed: which items carry an
- * issue, and how severe the worst one is.
- */
 import { and, eq } from "drizzle-orm";
 import { type Db } from "../../db/client";
 import { groups, insertables } from "../../db/schema";
@@ -14,10 +10,7 @@ import {
     type BuildIssue
 } from "../build-checker/issues";
 
-/**
- * Hidden insertables are exempt from the build checks, so the health report
- * leaves them out entirely rather than counting them as healthy.
- */
+/** Hidden insertables skip the build checks, so they aren't counted at all. */
 function visibleIn(libraryId: LibraryId) {
     return and(
         eq(insertables.libraryId, libraryId),
@@ -49,10 +42,7 @@ export async function getHealthCounts(
     return summarizeHealth(allGroups, allInsertables);
 }
 
-/**
- * Hidden insertables are filtered upstream: exempt from the checks, so never
- * healthy.
- */
+/** Expects hidden insertables already filtered out. */
 export function summarizeHealth(
     groups: { buildIssues: BuildIssue[] }[],
     insertables: { buildIssues: BuildIssue[] }[]
@@ -78,8 +68,7 @@ export function summarizeHealth(
                 case BuildIssueSeverity.WARNING:
                     counts.warningCount++;
                     break;
-                // Info issues are counted by neither tile, so they only have
-                // to leave the item healthy-or-not, which `record` already did.
+                // Counted by neither tile.
                 case BuildIssueSeverity.INFO:
                     break;
             }

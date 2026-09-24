@@ -16,11 +16,7 @@ export function getElementThumbnail(
     return client.getImage(path);
 }
 
-/**
- * The id Onshape renders a configured element's thumbnail under: fixed for an
- * element and configuration, and asking for its bytes is what starts a render.
- * Undefined when the configuration matches no insertable.
- */
+/** Asking for its bytes starts the render. Undefined when no part matches the configuration. */
 export async function getThumbnailId(
     client: OnshapeApi,
     elementPath: ElementPath,

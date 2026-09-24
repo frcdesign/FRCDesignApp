@@ -51,10 +51,7 @@ interface FavoritesBody {
     favoriteOrder: string[];
 }
 
-/**
- * Rows straight in, since the route under test is the one being filled up. One
- * insertable apiece: a favorite is unique per user, library and insertable.
- */
+/** Inserted directly, since the route under test is what's being filled. */
 async function fillFavorites(howMany: number) {
     const db = getDb(env.DB);
     await seedGroup(db);
@@ -65,8 +62,7 @@ async function fillFavorites(howMany: number) {
         insertableId: `filler-insertable-${i}`,
         sortOrder: i
     }));
-    // D1 binds at most 100 parameters per query, and an insertable row spends
-    // seventeen of them, so these go in small chunks rather than one statement.
+    // D1 binds at most 100 parameters, and an insertable row takes seventeen.
     for (const chunk of inChunks(rows, 5)) {
         await db.insert(insertables).values(
             chunk.map((row) => ({
@@ -138,8 +134,7 @@ describe("favorites routes", () => {
             expect(res.headers.get("Cache-Control")).toBe("private, no-store");
         });
 
-        // Derived per response rather than stored, so it cannot go stale when a
-        // reload changes what the parameters default to.
+        // Derived per response, so a reload that changes defaults can't stale it.
         it("derives each favorite's key from the selection it stores", async () => {
             await seedPartStudio(db);
             await seedConfiguration(db);
@@ -159,8 +154,6 @@ describe("favorites routes", () => {
             );
         });
 
-        // The selection is what the favorite opens with, so it keeps a value
-        // the key drops for matching the parameter's default.
         it("answers with a whole selection, not only its overrides", async () => {
             await seedPartStudio(db);
             await seedConfiguration(db);
@@ -182,16 +175,14 @@ describe("favorites routes", () => {
             expect(favorite.configurationKey).toBe("");
         });
 
-        // The row's thumbnail is this configuration's, so its part number has
-        // to be too — resolving it from anything else shows two parts at once.
+        // The thumbnail is this configuration's, so the part number must be too.
         it("resolves the record its own selection produces", async () => {
             await seedPartStudio(db);
             await seedConfiguration(db);
             await db
                 .update(configurations)
                 .set({
-                    // The favorite's own record listed second, so picking the
-                    // first would answer with the default instead.
+                    // Listed second, so taking the first would give the default.
                     records: [
                         {
                             values: { boolean: "true" },
@@ -227,9 +218,7 @@ describe("favorites routes", () => {
             expect(favorite.record?.name).toBe("Plain");
         });
 
-        // A favorite saved with no selection of its own opens on the element's
-        // defaults, whose part data lives on the insertable rather than among
-        // the configurations' records.
+        // The defaults' part data is on the insertable, not in the records.
         it("resolves the element's own record for a favorite with no selection", async () => {
             await seedPartStudio(db);
             await seedConfiguration(db);
@@ -262,8 +251,6 @@ describe("favorites routes", () => {
             expect(favorite.record?.partNumber).toBe("WCP-2222");
         });
 
-        // An insertable with nothing to configure has no configurations row at
-        // all, but still has part data of its own to show.
         it("resolves the record of an insertable with no configuration", async () => {
             await seedPartStudio(db);
             await db
@@ -322,8 +309,6 @@ describe("favorites routes", () => {
             expect(row?.sortOrder).toBe(1);
         });
 
-        // Counting instead would reuse an order a live favorite still holds,
-        // and the two would then sort against each other arbitrarily.
         it("does not reuse an order after one is deleted from the middle", async () => {
             await fillFavorites(3);
             await seedPartStudio(db);
@@ -357,7 +342,6 @@ describe("favorites routes", () => {
             );
 
             expect(res.status).toBe(409);
-            // Handled, so the client shows this rather than its own wording.
             expect(await res.json<unknown>()).toMatchObject({
                 kind: ApiErrorKind.HANDLED,
                 message: expect.stringContaining(String(MAX_FAVORITES))
@@ -384,8 +368,7 @@ describe("favorites routes", () => {
         it("stamps createdAt, leaving rows that predate the column null", async () => {
             await seedPartStudio(db);
             await seedAssembly(db);
-            // Seeded without a timestamp, as every row predating the column
-            // looks.
+            // As rows predating the column look.
             const old = await seedFavorite(db, TEST_PART_STUDIO_ID);
 
             const app = createTestApp();
@@ -566,8 +549,6 @@ describe("favorites routes", () => {
             });
         });
 
-        // Stored as a selection, so what is written is what the insertable
-        // declares — not whatever the request happened to name.
         it("drops a value for a parameter the insertable does not have", async () => {
             await seedPartStudio(db);
             await seedConfiguration(db);

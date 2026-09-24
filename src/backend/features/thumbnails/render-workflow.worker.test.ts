@@ -11,8 +11,6 @@ afterEach(() => vi.restoreAllMocks());
 
 const key = (size: ThumbnailSize) => thumbnailKey("e1", "mv1", size, "a=1");
 
-// Onshape answers 404 until the render lands, so that is waited out rather
-// than treated as a failure.
 it("stores both sizes once Onshape has rendered them", async () => {
     vi.spyOn(RequestAuth, "getOnshapeApiFromSessionId").mockResolvedValue(
         {} as OAuthApi

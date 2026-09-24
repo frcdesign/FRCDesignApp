@@ -1,10 +1,7 @@
 /**
- * Renders a configuration's thumbnails. Onshape renders one when its bytes are
- * first asked for, answering 404 until they are ready, so the workflow asks
- * until they land and stores them; the route that started it serves them.
- *
- * An element's own thumbnail never comes through here: Onshape renders those
- * when a document is saved, and a load fetches them directly.
+ * Onshape renders a configuration's thumbnail when first asked, answering 404
+ * until it's ready, so this asks until the bytes land and stores them. Element
+ * defaults render on save and never come through here.
  */
 import {
     WorkflowEntrypoint,
@@ -41,12 +38,7 @@ export interface RenderThumbnailParams {
     sessionId: string;
 }
 
-/**
- * How long a render is waited on: a minute, at a steady five seconds a try —
- * renders normally land well inside that, and one that does not is abandoned
- * rather than left spending the account's allocation. A rate limit waits out
- * whatever Onshape says instead.
- */
+/** About a minute; a render that takes longer is abandoned rather than spend the allocation. */
 const RENDER_RETRIES = {
     limit: 12,
     delay: (input: { error: Error }) =>

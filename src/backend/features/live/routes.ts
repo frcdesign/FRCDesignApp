@@ -5,10 +5,7 @@ import { LIVE_PATH } from "./contract";
 
 export const liveRoutes = getApp();
 
-/**
- * GET /api/live?library= — a WebSocket of what the server pushes. Open to
- * anyone, since nothing sent over it is private (see `contract.ts`).
- */
+/** GET /api/live?library=: open to anyone, since nothing pushed is private. */
 liveRoutes.get(LIVE_PATH.replace(/^\/api/, ""), (c) => {
     if (c.req.header("Upgrade") !== "websocket") {
         throw handledError(

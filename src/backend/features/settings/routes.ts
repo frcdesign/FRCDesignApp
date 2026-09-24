@@ -30,8 +30,7 @@ settingsRoutes.post(
 
         const db = getDb(c.env.DB);
 
-        // The row's dead `library_id` still defaults to this one and still
-        // points at `libraries`, so the insert needs it to be there.
+        // The dead `library_id` column still references the default library.
         await ensureLibrary(db, DEFAULT_LIBRARY);
         // No tab: a caller who has not chosen one has nothing to record.
         await db.insert(users).values({ id: userId }).onConflictDoNothing();

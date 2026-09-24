@@ -13,8 +13,7 @@ interface HealthTilesProps {
 export function HealthTiles({ counts }: HealthTilesProps): ReactNode {
     const total = counts.groupCount + counts.insertableCount;
 
-    // Info issues are counted in the breakdown below rather than given a tile:
-    // a number nobody acts on does not deserve a quarter of the row.
+    // Info issues get no tile: nobody acts on them.
     const tiles = [
         {
             label: "Parts",

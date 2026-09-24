@@ -1,7 +1,4 @@
-/**
- * Applies the server's pushes to what the app has cached, for the library on
- * screen. Mounted once, by the app shell.
- */
+/** Applies the server's pushes to the cache. Mounted once, by the app shell. */
 import { useEffect, useRef } from "react";
 import {
     type LiveMessage,
@@ -25,8 +22,7 @@ export function useLiveSync(): void {
     const libraryId = useLibraryId();
     const refreshLibrary = useRefreshLibrary();
     const { signedIn, currentAccessLevel } = useAccessData();
-    // Only an editor's job status is asked for at all; anyone else seeing
-    // one pushed would show a spinner for work they cannot see.
+    // Non-editors would otherwise show spinners for work they can't see.
     const showsJobs = signedIn && hasEditorAccess(currentAccessLevel);
     const hasConnected = useRef(false);
 
@@ -49,9 +45,7 @@ export function useLiveSync(): void {
                     }
                     break;
                 case LiveMessageType.THUMBNAIL:
-                    // A row that took a miss for its answer, now that there
-                    // is something to show. Anything waiting on the render
-                    // hears the push itself; see `loadRenderedImage`.
+                    // Rows that took a miss; anything waiting on the render hears the push itself.
                     void queryClient.refetchQueries({
                         predicate: (query) => {
                             const [kind, url] = query.queryKey;
@@ -69,8 +63,7 @@ export function useLiveSync(): void {
         return subscribeLiveMessages(apply);
     }, [libraryId, refreshLibrary, showsJobs]);
 
-    // Pushes sent while the connection was down are gone, so a reconnect asks
-    // for what they would have said. The first connection has nothing missed.
+    // Pushes during the outage are lost, so a reconnect refetches.
     useEffect(
         () =>
             subscribeLiveConnection(() => {

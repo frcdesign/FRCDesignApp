@@ -51,8 +51,7 @@ describe("withParameterValue", () => {
 
     it("hands back the same selection when the value already stands", () => {
         const selection = toSelection({ size: "large" }, PARAMS);
-        // Identity, not equality: it is what React compares to decide there is
-        // nothing to re-render.
+        // Identity is what React compares.
         expect(withParameterValue(selection, SIZE, "large")).toBe(selection);
         expect(withParameterValue(selection, REINFORCED, undefined)).toBe(
             selection
@@ -60,10 +59,7 @@ describe("withParameterValue", () => {
     });
 });
 
-/**
- * The panel's cycle, run with the app's own functions: an effect clears a hidden
- * parameter and `toSelection` puts it back. Comparing presence never settled.
- */
+/** Runs the panel's settle loop with the app's own functions. */
 function passesToSettle(limit = 50): number | null {
     let stored: PartialSelection | undefined = undefined;
     for (let pass = 1; pass <= limit; pass++) {
@@ -150,8 +146,6 @@ describe("normalizeSelection", () => {
     });
 
     it("settles a chain where one parameter decides the next", () => {
-        // `reinforced` is hidden unless size is large, and `bolts` unless
-        // reinforced — so clearing size has to reach bolts too.
         const bolts: ConfigurationParameter = {
             id: "bolts",
             name: "Bolts",

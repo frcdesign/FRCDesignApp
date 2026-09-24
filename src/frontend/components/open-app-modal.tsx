@@ -11,10 +11,7 @@ interface OpenAppModalProps {
     onClose?: () => void;
 }
 
-/**
- * Opens a modal framed like the rest of the app. Its body is unpadded, so content
- * belongs in an `AppModalBody` and actions in an `AppModalFooter`.
- */
+/** The body is unpadded: put content in `AppModalBody` and actions in `AppModalFooter`. */
 export function openAppModal(props: OpenAppModalProps): void {
     const { title, children, modalId, size, onClose } = props;
     modals.open({

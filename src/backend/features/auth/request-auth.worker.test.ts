@@ -39,8 +39,6 @@ describe("the dev access-level override", () => {
         );
     });
 
-    // It is the one thing standing between a stray env var and admin, so it
-    // must not survive a production build.
     it("is ignored in production", async () => {
         processEnv.NODE_ENV = "production";
         expect(await getMaxAccessLevel(AccessLevel.ADMIN)).toBe(

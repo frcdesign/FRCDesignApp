@@ -1,8 +1,4 @@
-/**
- * The indexed field names, named once. `tokenize` splits by field, `contract`
- * groups them, and `records` reads which ones a hit matched — so a bare string
- * in any of the three has to agree with the other two.
- */
+/** Named once, since `tokenize`, `contract` and `records` must agree. */
 
 /** The insertable's own title. */
 export const NAME_FIELD = "name";

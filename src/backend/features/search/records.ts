@@ -1,8 +1,4 @@
-/**
- * Which configuration a hit names. Kept beside the tokenizers it scores with,
- * and MiniSearch-free: the caller says which fields matched, so the same
- * scoring can answer for anything holding records.
- */
+/** Picks which configuration a hit names. MiniSearch-free, so any caller holding records can use it. */
 import {
     type ConfigurationParameter,
     type ConfigurationRecord,
@@ -22,11 +18,8 @@ import {
 import { PART_NAME_FIELD, PART_NUMBER_FIELD } from "./fields";
 
 /**
- * The element's own defaults first: the record naming no values.
- *
- * Records arrive in the order `enumerateConfigurations` produced them, which is
- * option declaration order — the default lands wherever Onshape happens to
- * declare it, and for a boolean parameter defaulting to false it is never first.
+ * Moves the record naming no values to the front. Records come in Onshape's
+ * declaration order, where the default can land anywhere.
  */
 function defaultFirst(records: SearchRecord[]): SearchRecord[] {
     const index = records.findIndex(
@@ -42,17 +35,13 @@ function defaultFirst(records: SearchRecord[]): SearchRecord[] {
     ];
 }
 
-/**
- * The best record by part number or name, whichever the query describes better,
- * else the default — so a row shows one even when only the title matched.
- */
+/** Falls back to the default, so a row shows one even when only the title matched. */
 export function matchedRecord(
     query: string,
     documentRecords: SearchRecord[],
     matchedFields: string[]
 ): SearchRecord | undefined {
-    // Reordered once, so the tie-break inside findBestRecord and the fallback
-    // below both land on the configuration the insert menu opens with.
+    // So ties and the fallback land on what the insert menu opens with.
     const records = defaultFirst(documentRecords);
     const byNumber = matchedFields.includes(PART_NUMBER_FIELD)
         ? findBestRecord(query, records, (r) => r.partNumber, LITERAL)
@@ -73,10 +62,6 @@ interface RecordMatch {
     score: number;
 }
 
-/**
- * How a field's text is read for scoring: a part number is compared as typed,
- * a name around the decimals its sizes are indexed as.
- */
 interface FieldReader {
     normalize: (text: string) => string;
     terms: (text: string) => string[];
@@ -94,10 +79,7 @@ const DESCRIPTIVE: FieldReader = {
     terms: (text) => tokenizeName(text).map((term) => term.toLowerCase())
 };
 
-/**
- * A term matched whole beats one matched as a prefix, which every longer number
- * satisfies too: `1` names the size `1"`, but only starts `16`.
- */
+/** A whole match beats a prefix: `1` names `1"` but only starts `16`. */
 function termScore(valueTerms: string[], queryTerm: string): number {
     // A unit is not part of the number's spelling, so `1` still names `1"`.
     if (
@@ -124,10 +106,7 @@ function coveredTerms(
     );
 }
 
-/**
- * How well a value answers the query: a whole-query match ranks above any
- * number of loose terms, so a part number typed out in full still wins.
- */
+/** A whole-query match beats any number of loose terms. */
 function matchScore(
     value: string,
     normalizedQuery: string,
@@ -149,19 +128,13 @@ function matchScore(
     );
 }
 
-/**
- * Scored by term rather than by the whole query, which "maxspline 24t" matches
- * no record as. Ties go to whichever came first in `records`, which
- * {@link defaultFirst} has already put the element's defaults at the front of.
- */
+/** Scored per term, since a query like "maxspline 24t" matches no record whole. Ties go to the earliest. */
 function findBestRecord(
     query: string,
     records: SearchRecord[],
     selector: (record: SearchRecord) => string | undefined,
     field: FieldReader
 ): RecordMatch | undefined {
-    // Read the query the way the field was indexed, so a `.5` query lines up
-    // with a stored "1/2 Bearing" and a typed part number with itself.
     const normalizedQuery = field.normalize(query.trim());
     if (records.length === 0 || normalizedQuery === "") {
         return undefined;
@@ -180,10 +153,7 @@ function findBestRecord(
     return best;
 }
 
-/**
- * Records as a client reads them, one per probe. One identifying nothing is
- * dropped, having nothing to show.
- */
+/** Drops records that identify nothing. */
 export function toSearchRecords(
     records: ConfigurationRecord[],
     parameters: ConfigurationParameter[],
@@ -211,9 +181,8 @@ export function toSearchRecords(
 }
 
 /**
- * First of each distinct (part number, name) in enumeration order, which keeps
- * the latest revision. What the index stores, which only picks a hit's record;
- * something showing the record of a particular selection wants them all.
+ * First of each distinct (part number, name), which keeps the latest revision.
+ * Enough for the index, which only picks a hit's record.
  */
 export function distinctRecords(records: SearchRecord[]): SearchRecord[] {
     const seen = new Set<string>();
@@ -237,11 +206,7 @@ export interface StoredConfiguration {
     vendors: Vendor[];
 }
 
-/**
- * Every record an insertable can be shown or found as: its own part data
- * first — the record an unset configuration falls back to — then one per
- * indexed configuration.
- */
+/** The element's own part data first, then one per indexed configuration. */
 export function searchRecordsOf(stored: StoredConfiguration): SearchRecord[] {
     const own: ConfigurationRecord[] = stored.partMetadata
         ? [{ ...stored.partMetadata, values: {} }]

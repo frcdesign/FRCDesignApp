@@ -2,10 +2,7 @@ import { Button, Group, Stack, Text, TextInput } from "@mantine/core";
 import { type ReactNode, useId, useState } from "react";
 import { useAdminTeamQuery, useSetAdminTeamMutation } from "../queries";
 
-/**
- * The owner's choice of the Onshape team that may edit this library. Its
- * members, and changes to them, are what give anyone else editor access.
- */
+/** The team's members get editor access. */
 export function AdminTeamSetting(): ReactNode {
     const query = useAdminTeamQuery();
     const mutation = useSetAdminTeamMutation();

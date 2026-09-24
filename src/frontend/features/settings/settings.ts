@@ -8,9 +8,7 @@ import { setSettingsSync } from "../../lib/ui-state";
 
 /** Writes the caller's row, which the entry redirect starts their next browser from. */
 async function postSettings(newSettings: SettingsUpdate): Promise<void> {
-    // Resolved here rather than read off a render: a placeholder that says
-    // signed out would skip the save for a user who has a server-side row.
-    // Any library answers, being signed in or not the same in all of them.
+    // Resolved rather than read from a render, whose placeholder says signed out.
     const { signedIn } = await queryClient.ensureQueryData(
         getAccessDataQuery(DEFAULT_LIBRARY)
     );
@@ -20,11 +18,7 @@ async function postSettings(newSettings: SettingsUpdate): Promise<void> {
     await apiPost("/settings", { body: newSettings });
 }
 
-/**
- * Hands the store somewhere to put a synced field, so writing one is an
- * ordinary `updateUiState` from wherever it is set — a menu, or a route that
- * cannot hold a hook.
- */
+/** Lets any `updateUiState` call sync a field, including from routes that can't use hooks. */
 export function installSettingsSync(): void {
     setSettingsSync((settings) => {
         void postSettings(settings).catch(() => {

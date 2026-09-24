@@ -15,10 +15,7 @@ import { getLibraryOut, placeNewGroup, rebuildSearchDb } from "./db";
 
 const db = getDb(env.DB);
 
-/**
- * Inserts a minimal group row at the given sort order — mirrors what the load-group
- * workflow writes once `placeNewGroup` has told it where the new group belongs.
- */
+/** Mirrors what the load writes once `placeNewGroup` has made room. */
 async function insertGroupAt(id: string, sortOrder: number): Promise<void> {
     await db.insert(groups).values({
         id,
@@ -58,8 +55,6 @@ describe("placeNewGroup", () => {
         const sortOrder = await placeNewGroup(db, TEST_LIBRARY_ID, "g1");
         expect(sortOrder).toBe(1);
 
-        // g1.5 itself is never inserted by placeNewGroup — only the existing
-        // siblings get renumbered to make room for it.
         const rows = await db
             .select()
             .from(groups)
@@ -75,8 +70,6 @@ describe("rebuildSearchDb", () => {
         await resetDb(db);
     });
 
-    // An unconfigurable insertable has no configurations row, so its part
-    // number reaches search only through the insertable's own part data.
     it("indexes an unconfigurable insertable's part number", async () => {
         await seedGroup(db);
         await seedInsertable(db, {

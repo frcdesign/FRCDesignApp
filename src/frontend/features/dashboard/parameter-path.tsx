@@ -6,15 +6,11 @@ import { StatusColor } from "../../lib/style-constants";
 interface ParameterPathProps {
     /** The controlling choices, outermost first. */
     path: string[];
-    /** The parameter's own name, which ends the trail. The caller supplies it
-     * so a card can title it and a table cell can leave it as text. */
+    /** Supplied by the caller, so a card can title it. */
     children: ReactNode;
 }
 
-/**
- * A parameter under the choices it is shown beneath — "Generic › Tube size".
- * The choices are dimmed so the parameter's own name is what the eye lands on.
- */
+/** "Generic › Tube size", with the choices dimmed. */
 export function ParameterPath({
     path,
     children

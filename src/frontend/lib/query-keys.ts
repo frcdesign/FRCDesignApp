@@ -1,7 +1,4 @@
-/**
- * Every query key in one place. Everything scoped to a library hangs off
- * {@link libraryQueryKey}, so the refresh flows invalidate that one prefix.
- */
+/** Library-scoped keys hang off {@link libraryQueryKey}, so a refresh invalidates one prefix. */
 import { LibraryId } from "@backend/features/library/library-id";
 import { ElementPath, InstancePath } from "@backend/lib/onshape/path";
 
@@ -34,11 +31,7 @@ export function libraryQueryKey(libraryId: LibraryId) {
     return ["library", libraryId];
 }
 
-/**
- * The library-scoped queries pinned to a cache version. Their urls are
- * immutable, so one answers for its own version and no other — which is what
- * {@link isVersionedLibraryQuery} exists to keep a refresh from forgetting.
- */
+/** Immutable urls; see {@link isVersionedLibraryQuery}. */
 const LIBRARY_DATA = "library-data";
 const SEARCH_DB = "search-db";
 const BUILD_STATUS = "build-status";
@@ -81,11 +74,7 @@ export function jobStatusQueryKey(libraryId: LibraryId) {
     return [...libraryQueryKey(libraryId), "job-status"];
 }
 
-/**
- * A render the insert preview is waiting on. Everything hangs off the prefix:
- * an insert cancels the lot, and the insert buttons ask it whether one is
- * still running.
- */
+/** Inserting cancels everything under this prefix. */
 const RENDER = "thumbnail";
 
 export function renderQueryPrefix() {

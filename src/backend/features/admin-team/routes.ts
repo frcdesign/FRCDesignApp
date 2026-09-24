@@ -50,10 +50,7 @@ adminTeamRoutes.get(
     async (c) => c.json(await getAdminTeam(getDb(c.env.DB), getLibraryParam(c)))
 );
 
-/**
- * POST /api/admin-team/library/:libraryId — sets the team, pulls its members,
- * and registers the webhook that keeps them current.
- */
+/** POST /api/admin-team/library/:libraryId: sets the team, pulls its members, registers its webhook. */
 adminTeamRoutes.post(
     "/admin-team" + libraryRoute(),
     requireOwnerMiddleware,
@@ -77,8 +74,7 @@ adminTeamRoutes.post(
         try {
             await syncAdminTeam(c.env, onshapeApi, libraryId);
         } catch (error) {
-            // A team the owner cannot read is a typo more often than not;
-            // keep the one that was working.
+            // Usually a typo, so keep the team that worked.
             await setTeam(previous);
             console.error(`Failed to read team ${teamId}`, error);
             throw handledError(

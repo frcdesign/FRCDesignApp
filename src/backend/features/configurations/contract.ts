@@ -70,16 +70,11 @@ interface AlwaysShownVisibilityCondition {
 
 export interface ConfigurationResult {
     parameters: ConfigurationParameter[];
-    /** Every record probed, so the insert menu can show the part number and
-     * name of the selected configuration. Empty when not indexed. */
+    /** Empty when not indexed. */
     records: SearchRecord[];
 }
 
-/**
- * A {@link ConfigurationRecord} as a client reads it: what the part is called,
- * where to buy it, and the configuration that produces it. MiniSearch-free, so
- * the index and the `/configuration` route can share it.
- */
+/** MiniSearch-free, so the index and `/configuration` share it. */
 export interface SearchRecord {
     partNumber?: string;
     name?: string;
@@ -97,16 +92,9 @@ export type ConfigurationParameter =
     | BooleanParameter
     | StringParameter;
 
-/**
- * Parameters that are about how a part is derived or drawn rather than which
- * part it is, identified as a document is loaded; see `roles.ts`.
- */
+/** Parameters about how a part is derived or drawn, not which part it is; see `roles.ts`. */
 export enum ParameterRole {
-    /**
-     * A text parameter a document adds so one part can be derived into a part
-     * studio more than once: Onshape refuses a second derive of the same
-     * configuration, and a unique value here makes each one different.
-     */
+    /** Onshape refuses a second derive of the same configuration, so this gets a unique value. */
     DERIVATION_VARIABLE = "derivation-variable",
     COLOR = "color",
     /** One of a color's R, G and B, when a part spells a color out as three. */
@@ -150,37 +138,19 @@ export interface QuantityParameter extends ConfigurationParameterBase {
     unit: Unit; // Always UNITLESS for QuantityType.INTEGER and QuantityType.REAL
 }
 
-/**
- * What someone picked, keyed by parameter id: every declared parameter, each
- * value as it was entered — a quantity is the expression typed, "(2 + 3) in",
- * never the number it evaluates to. `toSelection` is what makes one.
- */
+/** Every declared parameter, as entered; see AGENTS.md. */
 export type Selection = Record<string, string>;
 
-/**
- * A selection still being built: enumeration names only what it varies, and a
- * search hit only what it records. `toSelection` is what makes one whole.
- */
+/** `toSelection` makes one whole. */
 export type PartialSelection = Partial<Selection>;
 
-/**
- * A selection's identity, for addressing its thumbnail and nothing else: what
- * it overrides, canonically spelled, so two selections rendering the same part
- * share one render. Never stored in place of the selection it came from.
- * {@link DEFAULT_CONFIGURATION_KEY} — empty — overrides nothing.
- */
+/** Names a selection's thumbnail and nothing else; see AGENTS.md. */
 export type ConfigurationKey = string;
 
-/**
- * The key of a selection that overrides nothing: the element's own defaults. Here
- * rather than in `selection.ts`, which `utils.ts` would have to import back from.
- */
+// Here rather than in `selection.ts` to avoid an import cycle with `utils.ts`.
 export const DEFAULT_CONFIGURATION_KEY: ConfigurationKey = "";
 
-/**
- * The part one probe resolved to: the element itself from its own defaults, a
- * {@link ConfigurationRecord} from any other selection.
- */
+/** The part one probe resolved to. */
 export interface PartMetadata {
     partNumber?: string;
     name?: string;
@@ -197,26 +167,16 @@ export interface PartMetadata {
 
 /** What one probe came back with, and the enumerated values it probed. */
 export interface ConfigurationRecord extends PartMetadata {
-    /**
-     * The enum and boolean values enumeration chose; every other parameter was
-     * at its default. Empty for the element's own defaults.
-     */
+    /** The enum and boolean values enumeration chose; empty for the defaults. */
     values: PartialSelection;
 }
 
-/**
- * An insertable's configuration: the parameters it exposes and a record for each
- * configuration we probed. Mirrors the `configurations` row.
- */
+/** Mirrors the `configurations` row. */
 export interface Configuration {
     parameters: ConfigurationParameter[];
     records: ConfigurationRecord[];
 }
 
-/**
- * The current document's units. Every field is optional: an absent one leaves
- * the quantity on its own default unit.
- */
 /** A document's units, which quantities are shown in. */
 export interface UnitInfo {
     angleUnit: Unit;

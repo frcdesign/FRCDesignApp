@@ -1,7 +1,4 @@
-/**
- * Tracking's own tables, kept out of `db/schema.ts` because nothing here points
- * at the app's data: no foreign key crosses between the two sides.
- */
+/** Kept out of `db/schema.ts`: no foreign key crosses between the two. */
 
 import {
     sqliteTable,
@@ -17,8 +14,8 @@ import { Selection } from "../configurations/contract";
 import { EventType, InsertSource } from "./usage";
 
 /**
- * Append-only usage log, keyed on the Onshape `elementId` and free of foreign
- * keys: a re-added tab gets a fresh app id, and a reload must not drop history.
+ * Append-only. Keyed on Onshape's `elementId` with no foreign keys, so a reload
+ * or re-added tab keeps history.
  */
 export const events = sqliteTable(
     "events",
@@ -32,13 +29,9 @@ export const events = sqliteTable(
         day: text("day").notNull(),
         libraryId: text("library_id").$type<LibraryId>().notNull(),
         userId: text("user_id").notNull(),
-        /**
-         * What the columns meant when the row was written. 1 is the backfill
-         * for rows predating the column, which is what they were.
-         */
+        /** Rows predating the column were version 1. */
         schemaVersion: integer("schema_version").notNull().default(1),
-        // The whole path inserted from, version included: what the part was
-        // when it was used, which the library row no longer says after a reload.
+        // The versioned path, since the library row moves on after a reload.
         elementId: text("element_id"),
         documentId: text("document_id"),
         instanceId: text("instance_id"),
@@ -51,26 +44,21 @@ export const events = sqliteTable(
         selection: text("selection", {
             mode: "json"
         }).$type<Selection | null>(),
-        // Whether the part was favorited at insert time — not where the insert
-        // came from; `source` carries that.
+        // Favorited at insert time; `source` says where the insert came from.
         isFavorite: integer("is_favorite", { mode: "boolean" }),
         isQuickInsert: integer("is_quick_insert", { mode: "boolean" }),
         source: text("source").$type<InsertSource>(),
         // Insert-and-fasten, which Onshape only offers for assembly targets.
         fasten: integer("fasten", { mode: "boolean" })
     },
-    // Indexed by day alone: nothing reads the log to report a metric, so this
-    // exists to rebuild the rollups below, which is a walk through time.
+    // Only used to rebuild the rollups, which walk by day.
     (t) => [index("events_day_idx").on(t.day)]
 );
 
 /** One row of the log: everything the rollups are derived from. */
 export type LoggedEvent = typeof events.$inferSelect;
 
-/**
- * Per-day counts, each flag counter a subset of `count`. Fasten's denominator is
- * the assembly row of {@link dailyTargetMetrics}, Onshape offering it only there.
- */
+/** Each flag counter is a subset of `count`. */
 export const dailyMetrics = sqliteTable(
     "daily_metrics",
     {
@@ -85,10 +73,7 @@ export const dailyMetrics = sqliteTable(
     (t) => [primaryKey({ columns: [t.day, t.libraryId, t.type] })]
 );
 
-/**
- * Per-day inserts split by the kind of tab they landed in. A dimension rather
- * than a counter per type, so a new kind of target needs no column.
- */
+/** A row per type, so a new target type needs no column. */
 export const dailyTargetMetrics = sqliteTable(
     "daily_target_metrics",
     {
@@ -135,10 +120,7 @@ export const insertableStats = sqliteTable(
     ]
 );
 
-/**
- * Per-day counts for one part, split by target as {@link dailyTargetMetrics} is.
- * Keyed part-first for one part's history, indexed by day for a whole library's.
- */
+/** Keyed part-first for one part's history; indexed by day for a library's. */
 export const dailyInsertableMetrics = sqliteTable(
     "daily_insertable_metrics",
     {
@@ -158,10 +140,7 @@ export const dailyInsertableMetrics = sqliteTable(
     ]
 );
 
-/**
- * {@link dailyUserActivity} narrowed to one part: a distinct-user count is the
- * one measure a counter cannot accumulate, so the identities are kept per day.
- */
+/** Distinct users can't be summed, so identities are kept per day. */
 export const dailyInsertableUsers = sqliteTable(
     "daily_insertable_users",
     {
@@ -177,10 +156,6 @@ export const dailyInsertableUsers = sqliteTable(
     ]
 );
 
-/**
- * How often each configuration value was chosen, per day, so a default that
- * nobody wants (or an option nobody picks) is visible over any window.
- */
 export const dailyConfigurationMetrics = sqliteTable(
     "daily_configuration_metrics",
     {
@@ -199,10 +174,7 @@ export const dailyConfigurationMetrics = sqliteTable(
     ]
 );
 
-/**
- * One row per user per library per day, so a distinct-user count is a DISTINCT
- * over users x days rather than over every insert ever made.
- */
+/** So distinct users is a count over days, not over every insert. */
 export const dailyUserActivity = sqliteTable(
     "daily_user_activity",
     {

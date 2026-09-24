@@ -7,11 +7,7 @@ import { AppTitle } from "../../../components/app-title";
 import { IconSize, StatusColor } from "../../../lib/style-constants";
 import { ReactNode } from "react";
 
-/**
- * Force reloads every document in every library. New versions reload
- * themselves, so this is for a change in how documents are read. Spoken in
- * red: it spends a great deal of the account's Onshape allocation.
- */
+/** Red: it spends a lot of the account's Onshape allocation. */
 export function ReloadAllButton(): ReactNode {
     const mutation = useReloadAllMutation();
 

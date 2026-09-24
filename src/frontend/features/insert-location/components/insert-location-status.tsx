@@ -17,18 +17,12 @@ import {
     useInsertLocationTarget
 } from "../queries";
 
-/**
- * Whether the assembly has somewhere to insert to, as a badged icon saying
- * which. Renders nowhere but an assembly the caller is signed in to: a derive
- * has no insert location, and the query needs a session.
- */
+/** Only for an assembly the caller is signed in to. */
 export function InsertLocationStatus(): ReactNode {
     const target = useInsertLocationTarget();
     const { data, isPending, isError } = useInsertLocationQuery(target);
 
-    // Waiting rather than assuming: a badge that flips from a warning to a tick
-    // on every open would read as the assembly having changed. A failed read
-    // has not established there is none, so it says nothing at all.
+    // Say nothing until known: a badge that flips on every open looks like a change.
     if (!target || isPending || isError) {
         return null;
     }
@@ -53,8 +47,6 @@ function InsertLocationHoverCard(
     const { target, instanceId } = props;
     const found = instanceId !== undefined;
 
-    // The bubble shows the state alone: unlike the bar, it is already about
-    // one thing, and its title says which.
     const stateIcon = found ? CheckIcon : WarningIcon;
     const stateColor = found ? StatusColor.SUCCESS : StatusColor.WARNING;
 

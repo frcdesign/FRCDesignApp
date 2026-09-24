@@ -41,8 +41,7 @@ const names = (parts: PartUsageOut[]) => parts.map((p) => p.name);
 
 describe("filterAndSort", () => {
     it("puts the highest rate first by default, not the highest total", () => {
-        // Tube has the most insertions but the lowest rate, so it drops below
-        // the two parts earning three a month.
+        // Tube has the most inserts but the lowest rate.
         expect(names(filterAndSort(PARTS, "", DEFAULT_SORT))).toEqual([
             "Bearing",
             "Spacer",

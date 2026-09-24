@@ -14,10 +14,7 @@ interface ChangeIndicatorProps {
     format?: (value: number) => string;
 }
 
-/**
- * How a measure changed, always beside the number and never without naming the
- * baseline: these tiles mix windows, so a bare "+82%" would be unreadable.
- */
+/** Always names the baseline, since the tiles mix windows. */
 export function ChangeIndicator({
     comparison,
     format = formatCount

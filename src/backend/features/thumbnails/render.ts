@@ -1,8 +1,4 @@
-/**
- * Starts a configuration's render, once. A client waiting on one may ask again
- * — at its deadline, or on a push it missed — so asking while a render is under
- * way has to start nothing more.
- */
+/** Starts a configuration's render once; asking again while it runs starts nothing. */
 import { eq } from "drizzle-orm";
 import { HttpStatus } from "http-status-ts";
 import type { AppContext } from "../../lib/context";
@@ -34,11 +30,7 @@ const ACTIVE = new Set<InstanceStatus["status"]>([
     "waitingForPause"
 ]);
 
-/**
- * Starts the render unless one is under way. Throws a handled 422 when Onshape
- * has no insertable for the configuration, which the client shows as a part
- * that failed to regenerate.
- */
+/** Throws a handled 422 when Onshape has no part for the configuration. */
 export async function requestRender(
     c: AppContext,
     request: RenderRequest
@@ -61,8 +53,7 @@ export async function requestRender(
     const existing = await findInstance(workflow, id);
     if (existing) {
         const { status } = await existing.status();
-        // Only a miss asks, so a finished instance left no bytes behind: its
-        // render never came, or what it stored has since been deleted.
+        // Only a miss gets here, so a finished instance left no bytes behind.
         if (!ACTIVE.has(status)) {
             await existing.restart();
         }
@@ -98,10 +89,8 @@ export async function requestRender(
 }
 
 /**
- * Named by Onshape's own id for the render, so every request for it finds the
- * same instance. Onshape serves the bytes by that id alone, so as far as we
- * can tell it already pins the element, version and configuration. Its format
- * is undocumented, so anything an instance id may not hold is replaced.
+ * Onshape serves the bytes by this id alone, so it pins element, version and
+ * configuration. Its format is undocumented, so disallowed characters are replaced.
  */
 function renderInstanceId(thumbnailId: string): string {
     return `render-${thumbnailId.replace(/[^\w-]/g, "_")}`.slice(0, 100);
@@ -119,11 +108,7 @@ async function findInstance(
     }
 }
 
-/**
- * The version's branch (see `workspace.ts`), or the version for a group no
- * load has branched yet. Read rather than passed in: a request can carry a
- * version the group has moved past.
- */
+/** Read rather than passed in, since a request can carry a version the group has moved past. */
 async function elementPathOf(
     c: AppContext,
     insertableId: string

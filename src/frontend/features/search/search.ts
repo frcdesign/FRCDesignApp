@@ -23,10 +23,7 @@ export interface SearchFilters {
 export interface SearchHit {
     id: string;
     positions: Position[];
-    /**
-     * The best-matching record for this hit, used to pre-fill the insert menu —
-     * its part number, name, and the values producing it.
-     */
+    /** The best-matching record's values, which pre-fill the insert menu. */
     values?: PartialSelection;
     /** Those values' key, for the row's thumbnail. */
     configurationKey?: ConfigurationKey;
@@ -40,14 +37,8 @@ export interface SearchHit {
 }
 
 export interface FilterResult {
-    /**
-     * The number of items filtered out by vendor filters.
-     */
     byVendor: number;
-    /**
-     * The number of items filtered out by being in a different group.
-     * Does not include results that would have been filtered out by vendors.
-     */
+    /** Excludes results already filtered out by vendor. */
     byGroup: number;
 }
 
@@ -65,10 +56,8 @@ export interface SearchArgs {
     /** @default false */
     showHidden?: boolean;
     /**
-     * Whether a configuration's own part number or name can match. Favorites
-     * turn it off: a favorite names one configuration, but the fields cover
-     * every configuration the insertable has, so a query describing one the
-     * user never favorited would still pull their favorite up.
+     * Off for favorites, which name one configuration: other configurations'
+     * fields would pull them up.
      * @default true
      */
     searchConfigurations?: boolean;
@@ -92,8 +81,7 @@ export function doSearch(args: SearchArgs): SearchResult {
     const miniSearchResults: MiniSearchResult[] = searchDb.search(query, {
         fields: searchConfigurations ? undefined : INSERTABLE_FIELDS,
         filter: (result) => {
-            // MiniSearch types a hit's stored fields as `any`; they are the
-            // document that was indexed.
+            // MiniSearch types stored fields as `any`.
             const searchResult = result as unknown as Omit<
                 MiniSearchResult,
                 "id"
@@ -140,8 +128,7 @@ export function doSearch(args: SearchArgs): SearchResult {
     });
 
     const hits: SearchHit[] = miniSearchResults
-        // Sliced before mapping: the rest are never shown, and each one costs a
-        // record match and a highlight pass per field.
+        // Before mapping, since each hit costs a record match and highlighting.
         .slice(0, MAX_HITS)
         .map((miniSearchResult) => {
             const document = searchDb.getStoredFields(
@@ -191,10 +178,7 @@ function escapeRegExp(text: string): string {
     return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-/**
- * Underlines the longest query term the match starts with, so a prefix search
- * underlines only what was typed. Falls back to the whole term.
- */
+/** The longest query term the match starts with, so a prefix search underlines only what was typed. */
 function matchedPrefixLength(term: string, queryTerms: string[]): number {
     let length = 0;
     for (const queryTerm of queryTerms) {
@@ -205,10 +189,7 @@ function matchedPrefixLength(term: string, queryTerms: string[]): number {
     return length || term.length;
 }
 
-/**
- * `match` is keyed by matched document terms and `queryTerms` by what was typed.
- * Based on https://github.com/lucaong/minisearch/issues/37
- */
+/** Based on https://github.com/lucaong/minisearch/issues/37 */
 function generateHighlightPositions(
     result: MiniSearchResult,
     text: string,

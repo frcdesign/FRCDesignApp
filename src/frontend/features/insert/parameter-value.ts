@@ -11,10 +11,7 @@ import {
     getVisibleOptions
 } from "@backend/features/configurations/utils";
 
-/**
- * The selection a row's change produces, or the same one when nothing moves,
- * which is what lets React stop. Compares the value: presence never settles.
- */
+/** Returns the same selection when nothing changes, so React can bail out. */
 export function withParameterValue(
     selection: Selection,
     parameter: ConfigurationParameter,
@@ -27,10 +24,7 @@ export function withParameterValue(
     return { ...selection, [parameter.id]: wanted };
 }
 
-/**
- * The option an enum lands on: the one selected when visibility still allows it,
- * then the parameter's default, then whatever is left to pick.
- */
+/** The selected option if still visible, else the default, else the first. */
 export function resolveSelectedOption(
     visibleOptions: EnumOption[],
     currentOptionId: string | undefined,
@@ -86,15 +80,9 @@ export function sameSelection(
 }
 
 /**
- * What the panel actually shows, with each parameter settled against the others.
- * Repeated because resolving one can change what conditions on it allow.
- *
- * The pass cap is what bounds it, not convergence: two parameters whose
- * conditions name each other could alternate forever, and no configuration
- * Onshape has handed us does, but nothing here rules it out. Bailing out that
- * way returns a selection that is not a fixed point, which is why the caller
- * writing this back has to guard against re-running rather than assume one
- * write settles it.
+ * Repeated because settling one parameter can change another's options. The
+ * pass cap stops parameters whose conditions name each other, so the result
+ * isn't always a fixed point.
  */
 export function normalizeSelection(
     selection: Selection,

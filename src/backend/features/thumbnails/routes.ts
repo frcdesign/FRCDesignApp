@@ -33,10 +33,7 @@ const storedThumbnailQuery = z.object({
     insertableId: z.string().optional()
 });
 
-/**
- * GET /api/thumbnail/:size/:elementId?v=&configurationKey=&insertableId=
- * Each answer caches itself: stored bytes are pinned by the url, a miss is not.
- */
+/** GET /api/thumbnail/:size/:elementId?v=&configurationKey=&insertableId= */
 thumbnailRoutes.get(
     "/thumbnail/:size/:elementId",
     validate("param", storedThumbnailParams),
@@ -52,20 +49,15 @@ thumbnailRoutes.get(
             thumbnailKey(elementId, microversionId, size, configurationKey)
         );
         if (object) {
-            // The microversion and the configuration are both in the url, so
-            // these bytes are the only ones it will ever mean.
+            // The url pins microversion and configuration.
             return setCache(
                 thumbnailResponse(object),
                 CachePolicy.PUBLIC_CACHE
             );
         }
 
-        // A configuration this has not rendered is a miss, not the element's
-        // own thumbnail: standing that in shows a part the caller did not ask
-        // for, and a favorite pinned to a configuration would show the wrong
-        // one. A caller that wants the element default asks for it by key.
-        // Signed out, there is no session to render under, so the caller just
-        // keeps missing.
+        // Never answer with the element's default, which would show the wrong part.
+        // Signed out there is no session to render under.
         if (
             configurationKey !== DEFAULT_CONFIGURATION_KEY &&
             insertableId &&
@@ -112,14 +104,7 @@ const requireThumbnailEditor = requireEditor(async (c) => {
     return body.groupId ? libraryOfGroup(db, body.groupId) : undefined;
 });
 
-/**
- * POST /api/reload-thumbnail
- *
- * Asks Onshape for a thumbnail again and replaces what is stored. A load does
- * not wait for one, so a thumbnail that was not there at the time stays missing
- * until the next reload of the whole document — this is the way to ask for just
- * the one.
- */
+/** POST /api/reload-thumbnail: refetches one thumbnail, since loads don't wait for them. */
 thumbnailRoutes.post(
     "/reload-thumbnail",
     requireThumbnailEditor,

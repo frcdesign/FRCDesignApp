@@ -19,10 +19,6 @@ interface LifetimeTilesProps {
     withOpens?: boolean;
 }
 
-/**
- * The page's headline: an all-time value with a season-over-season change, the
- * two windows a maintainer actually asks about.
- */
 export function LifetimeTiles({
     totals,
     growth,

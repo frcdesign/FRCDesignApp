@@ -137,8 +137,6 @@ describe("reloading a thumbnail", () => {
         expect(group?.thumbnailWorkspaceId).toBe("w-new");
     });
 
-    // `uploadThumbnails` skips a size the bucket already holds, which would
-    // make asking again do nothing at all.
     it("replaces what is already stored", async () => {
         const key = thumbnailKey(
             target.elementPath.elementId,

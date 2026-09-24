@@ -14,10 +14,7 @@ import { IconSize } from "./style-constants";
 /** Onshape for anyone outside a company, and for a caller who never launched. */
 export const DEFAULT_ONSHAPE_ORIGIN = "https://cad.onshape.com";
 
-/**
- * The app's listing in the Onshape App Store, where it is subscribed to. A
- * path, so it opens on the caller's own Onshape; see `useOnshapeOrigin`.
- */
+/** A path, so it opens on the caller's own Onshape; see `useOnshapeOrigin`. */
 export const APP_STORE_PATH =
     "/appstore/apps/Manufacturers%20Models/6004ec5e83c40b107c183347";
 
@@ -25,10 +22,8 @@ export const APP_STORE_PATH =
 export const APPLICATIONS_PATH = "/user/applications";
 
 /**
- * The origin of the Onshape a launch came from — a company's own domain, such
- * as frcdesign.onshape.com, for a company session — or cad's without one. Only
- * an https onshape.com origin: the launch is a url anyone can write, and links
- * built on this are opened as Onshape's.
+ * The company's domain for a company session, else cad's. Only https
+ * onshape.com origins: anyone can write a launch url.
  */
 export function toOnshapeOrigin(server: string | undefined): string {
     const url = server ? URL.parse(server) : null;
@@ -39,16 +34,10 @@ export function toOnshapeOrigin(server: string | undefined): string {
     return isOnshape ? url.origin : DEFAULT_ONSHAPE_ORIGIN;
 }
 
-/**
- * The setup instructions. Opened in a window of their own: a navigation would
- * take the insert menu they are offered from with it.
- */
+/** Opened in a new window so the insert menu stays. */
 export const SETUP_URL = "/setup";
 
-/**
- * The Onshape url for a path. A configuration applies only to an element, and
- * only what it names changes: Onshape fills in the rest from the defaults.
- */
+/** Onshape fills in whatever the configuration leaves out. */
 export function makeUrl(
     origin: string,
     path: DocumentPath | InstancePath | ElementPath,
@@ -63,18 +52,13 @@ export function makeUrl(
     }
     const encoded = encodeQueryConfiguration(configuration);
     if (isElementPath(path) && encoded) {
-        // Onshape's own parameter, so it keeps Onshape's name. The query form,
-        // this escape being the one layer Onshape unwraps.
+        // Onshape unwraps exactly this one layer of escaping.
         url += "?configuration=" + encodeURIComponent(encoded);
     }
     return url;
 }
 
-/**
- * The document a pasted Onshape url names, or undefined when it names none.
- * Only the document id: a url pointing at a workspace or a tab carries more,
- * but a link to the document itself does not, and both are worth accepting.
- */
+/** Accepts a document link as well as one to a workspace or tab. */
 export function parseOnshapeDocumentId(urlString: string): string | undefined {
     // Example pathname: /documents/{documentId}/w/{workspaceId}/e/{elementId}
     const url = URL.parse(urlString);
@@ -85,9 +69,6 @@ export function parseOnshapeDocumentId(urlString: string): string | undefined {
     return documents === "documents" && documentId ? documentId : undefined;
 }
 
-/**
- * Opens the given URL in a new tab.
- */
 export function openUrlInNewTab(url: string) {
     window.open(url, "_blank");
 }

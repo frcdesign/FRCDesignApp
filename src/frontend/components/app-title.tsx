@@ -42,13 +42,11 @@ export function AppTitle(props: AppTitleProps): ReactNode {
                     {rightSection}
                 </Group>
                 {subtitle && (
-                    // lh, because inheriting the title's 1 leaves no leading
-                    // under the last line, reading low in an evenly padded header.
+                    // Inheriting the title's line height of 1 reads low.
                     <Group
                         gap={4}
                         wrap="nowrap"
-                        // Shrinkable, so a part number long enough to overrun
-                        // the header ellipsizes instead.
+                        // So a long part number ellipsizes.
                         miw={0}
                         fz="xs"
                         lh="xs"
@@ -69,8 +67,6 @@ interface MenuTitleProps {
     icon?: ReactNode;
 }
 
-/** A menu's header: the element name is how the part was found, the part
- * number is what identifies what gets inserted. */
 export function MenuTitle(props: MenuTitleProps): ReactNode {
     const { name, record, icon } = props;
     const partNumber = meaningfulPartNumber(record?.partNumber, name);
@@ -92,10 +88,7 @@ interface UseMenuTitleProps extends Omit<MenuTitleProps, "name"> {
     name: string | undefined;
 }
 
-/**
- * Keeps a modal's header on the selection in view. The header is updated rather
- * than rendered, being the modal's rather than the content's.
- */
+/** Updates the modal's header, which belongs to the modal rather than the content. */
 export function useMenuTitle(modalId: string, props: UseMenuTitleProps): void {
     const { name, record, icon } = props;
     useEffect(() => {
@@ -126,8 +119,7 @@ function CopyPartNumberButton(props: CopyPartNumberButtonProps): ReactNode {
                     <ActionIcon
                         variant="subtle"
                         color={copied ? "teal" : "gray"}
-                        // Sized to the text line: taller, and the row grows,
-                        // shifting the title above it.
+                        // Any taller and the row grows, shifting the title.
                         size={COPY_BUTTON_SIZE}
                         aria-label="Copy part number"
                         onClick={copy}

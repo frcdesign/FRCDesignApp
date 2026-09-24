@@ -50,10 +50,7 @@ import { BuildIssueType } from "../build-checker/issues";
 const db = getDb(env.DB);
 const elementId = TEST_PART_STUDIO_PATH.elementId;
 
-/**
- * The real app with services that throw, as they do without a session: an
- * endpoint that touched one would fail here, which keeps the dashboard public.
- */
+/** Services throw, as without a session, which keeps the dashboard public. */
 function anonymousGet(path: string) {
     const app = createApp(() => ({
         getOnshapeApi: () => Promise.reject(new Error("no session")),
@@ -87,10 +84,7 @@ interface SeedInsertOptions {
     target?: ElementType;
 }
 
-/**
- * The rollups `count` inserts of one part on one day would leave behind, which
- * is all any endpoint reads.
- */
+/** The rollups these inserts would leave, which is all any endpoint reads. */
 async function seedInserts(
     count: number,
     options: SeedInsertOptions = {}
@@ -271,7 +265,6 @@ describe("analytics routes", () => {
                 favoriteInserts: 4,
                 fastenInserts: 3,
                 quickInserts: 6,
-                // The fasten denominator, so the UI reads 3/5 rather than 3/10.
                 targets: {
                     [ElementType.ASSEMBLY]: 5,
                     [ElementType.PART_STUDIO]: 5
@@ -295,8 +288,7 @@ describe("analytics routes", () => {
         it("scopes rangeTotals to the range while totals stay lifetime", async () => {
             await seedMetric("2026-01-01", 5);
             await seedMetric("2026-06-15", 3);
-            // user_stats holds one all-time row per user, so a range reads
-            // the per-day activity rollup instead.
+            // user_stats is all-time, so a range reads the daily rollup.
             await db.insert(dailyUserActivity).values([
                 {
                     day: "2026-01-01",
@@ -324,8 +316,7 @@ describe("analytics routes", () => {
             expect(body.totals.inserts).toBe(8);
         });
 
-        // The rollup holds one row per user *per library* per day, so counting
-        // rows would report one person active in two libraries as two.
+        // The rollup is per library, so counting rows would count this user twice.
         it("counts a user active in two libraries once in the day series", async () => {
             await seedMetric("2026-06-15", 4);
             await db.insert(dailyUserActivity).values([
@@ -349,14 +340,11 @@ describe("analytics routes", () => {
             const day = body.metricSeries.find(
                 (point) => point.day === "2026-06-15"
             );
-            // One, not two — which is also how getTotals counts a windowed
-            // read of this table, so the tile and the series agree.
             expect(day?.activeUsers).toBe(1);
         });
 
         it("fills quiet days in, so an average is per calendar day", async () => {
-            // Two active days in a wider window: left sparse, a mean over the
-            // points would report the two-day average as the month's.
+            // Sparse points would make a mean report the two-day average as the month's.
             await seedMetric("2026-06-15", 2);
             await seedMetric("2026-06-18", 4);
 
@@ -365,8 +353,7 @@ describe("analytics routes", () => {
             );
             const body: AnalyticsOverviewOut = await res.json();
 
-            // Clamped to the first recorded day, not back to the requested
-            // one: "all time" reaches to 2000 and would fill two decades.
+            // "All time" reaches to 2000, so it clamps to the first recorded day.
             expect(body.metricSeries.map((point) => point.day)).toEqual([
                 "2026-06-15",
                 "2026-06-16",
@@ -421,8 +408,7 @@ describe("analytics routes", () => {
                 count: 5,
                 quickInsertCount: 5
             });
-            // Present as a zero rather than missing, so the UI shows every
-            // source — a new one included, from the day it is added.
+            // So the UI shows every source, including a new one.
             expect(bySource[InsertSource.BROWSE]).toMatchObject({ count: 0 });
             expect(bySource[InsertSource.GROUP_SEARCH]).toMatchObject({
                 count: 0
@@ -468,8 +454,6 @@ describe("analytics routes", () => {
             );
             const body: AnalyticsOverviewOut = await res.json();
 
-            // Every day in the window is present, but only the one inside it
-            // carries a count — days outside are excluded, not zeroed.
             expect(body.series).toHaveLength(62);
             expect(body.series[0].day).toBe("2026-05-01");
             expect(body.series.at(-1)?.day).toBe("2026-07-01");
@@ -528,8 +512,7 @@ describe("analytics routes", () => {
         });
 
         it("still lists a part that went unused in the window", async () => {
-            // Zero here means "not used lately", which is the interesting
-            // reading — dropping the row would hide it.
+            // Zero means "not used lately", which is worth showing.
             await seedPartStudio(db);
             await seedInserts(4, { day: "2025-03-01" });
 
@@ -544,8 +527,6 @@ describe("analytics routes", () => {
         });
 
         it("keeps history for a part that is no longer visible", async () => {
-            // A hidden part is still in the library, so it stays listed with
-            // whatever usage it accumulated while it was insertable.
             await seedPartStudio(db);
             await seedInserts(9);
 
@@ -572,8 +553,7 @@ describe("analytics routes", () => {
         it("leaves out a part that is no longer in the library", async () => {
             await seedPartStudio(db);
             await seedInserts(9);
-            // Usage with no insertable behind it: the tab was deleted. It would
-            // otherwise top the table with a part nobody can open.
+            // The tab was deleted, so nobody could open it.
             await seedInserts(30, { element: "e-gone" });
 
             const res = await anonymousGet(partsUrl());
@@ -593,8 +573,7 @@ describe("analytics routes", () => {
             await seedPartStudio(db);
             await seedAssembly(db);
             await db.update(insertables).set({ isVisible: true });
-            // The part studio earned 60 over two years; the assembly earned 20
-            // in the last two months and is the one in active use.
+            // The assembly is the one in active use.
             await db.insert(insertableStats).values([
                 {
                     libraryId: TEST_LIBRARY_ID,
@@ -627,8 +606,7 @@ describe("analytics routes", () => {
         });
 
         it("rates a part over its own days, not the whole window", async () => {
-            // Both parts were used 10 times, but one only existed for the last
-            // stretch of the window and must not be marked down for it.
+            // One part only existed for the last stretch and mustn't be marked down for it.
             const day = 24 * 3600 * 1000;
             const ago = (days: number) => toDayKey(Date.now() - days * day);
             await seedPartStudio(db);
@@ -686,8 +664,7 @@ describe("analytics routes", () => {
         });
 
         it("adds up a day's targets in the sparkline and the count", async () => {
-            // One row per target, so a part used both ways in a day would
-            // otherwise plot whichever row came back last.
+            // One row per target, so both must be summed.
             const last = toReportingDay(Date.now());
             await seedPartStudio(db);
             await seedInserts(2, {
@@ -709,8 +686,6 @@ describe("analytics routes", () => {
         });
 
         it("keeps the sparkline at 30 days whatever the range", async () => {
-            // It is a shape, not a window: two years of points in a sparkline
-            // is a smear.
             await seedPartStudio(db);
             await seedInserts(2);
 
@@ -836,8 +811,7 @@ describe("analytics routes", () => {
         });
 
         it("ignores a parameter with no declared options", async () => {
-            // A boolean or quantity has no option list, so "never used" is not
-            // a question that can be asked of it.
+            // Only an enum has an option list to go unused.
             await seedPartStudio(db);
             await db.update(insertables).set({ isVisible: true });
             await seedConfiguration(db);

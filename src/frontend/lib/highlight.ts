@@ -6,11 +6,7 @@ export interface Position {
     length: number;
 }
 
-/**
- * Overlapping runs merged into the fewest that cover the same characters, in
- * ascending order — walking an index map is what makes both true, and callers
- * render off the pair.
- */
+/** Merges overlapping runs; the result is ascending and disjoint. */
 export function mergePositions(positions: Position[]): Position[] {
     // Mapping where indexMap[i] = true means i is in a range.
     const indexMap: boolean[] = [];

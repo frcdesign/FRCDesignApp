@@ -1,7 +1,3 @@
-/**
- * The gates routes mount: signed in to Onshape at all, on a library's admin
- * team, and the owner.
- */
 import type { MiddlewareHandler } from "hono";
 import {
     forbiddenError,
@@ -37,11 +33,9 @@ type LibraryOf = (c: AppContext) => Promise<LibraryId | undefined>;
 const libraryParam: LibraryOf = (c) => Promise.resolve(getLibraryParam(c));
 
 /**
- * Editing a library takes a place on its admin team. `libraryOf` is for a route
- * naming something inside a library rather than the library: the library is
- * looked up from it, not taken from the caller, whose word it would otherwise
- * be. Editing implies a session: access level alone would admit a signed-out
- * caller under a dev access-level override, and answer 403 rather than 401.
+ * `libraryOf` looks the library up from what the route names, rather than
+ * trusting the caller. Requires a session, or a dev override would let a
+ * signed-out caller through.
  */
 export function requireEditor(
     libraryOf: LibraryOf = libraryParam
@@ -64,10 +58,7 @@ export function requireEditor(
 /** For a route under `libraryRoute()`. */
 export const requireEditorMiddleware = requireEditor();
 
-/**
- * For what reaches past any one library. The owner's access is the same in
- * every library, so any library answers.
- */
+/** The owner's access is the same everywhere, so any library answers. */
 export const requireOwnerMiddleware: MiddlewareHandler<AppContextEnv> = async (
     c,
     next

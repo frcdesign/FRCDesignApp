@@ -1,17 +1,13 @@
 /**
- * The owner's session, kept for work the server starts on its own. A webhook
- * has nobody signed in behind it, but loading a document calls Onshape as
- * someone, so it borrows the session the owner last used the app with.
+ * Work the server starts on its own, like a webhook load, still calls Onshape
+ * as someone, so it borrows the owner's last session.
  */
 import { type OAuthApi } from "../../lib/onshape/client";
 import { getOnshapeApiFromSessionId } from "./request-auth";
 
 const OWNER_SESSION_KEY = "owner-session";
 
-/**
- * Called whenever the owner's access is resolved; written only when their
- * session has changed, which a sign-in does.
- */
+/** Only writes when the session changed. */
 export async function rememberOwnerSession(
     kv: KVNamespace,
     sessionId: string
@@ -21,11 +17,7 @@ export async function rememberOwnerSession(
     }
 }
 
-/**
- * The owner's last session, or undefined when they have never used the app. It can
- * have ended since — signed out, or unused past its lifetime — in which case
- * calling Onshape with it fails until they next open the app.
- */
+/** Can have expired, in which case Onshape calls fail until the owner next opens the app. */
 export async function getOwnerSessionId(
     kv: KVNamespace
 ): Promise<string | undefined> {

@@ -6,8 +6,7 @@ const REASON =
     "This option is the default because it is the first visible option and the default option is not present.";
 
 interface ImplicitDefaultBadgeProps {
-    /** Taken from the badges it stands beside, which differ between the
-     * breakdown cards and the low-usage table. */
+    /** Matches the badges beside it. */
     color?: BadgeProps["color"];
     size?: BadgeProps["size"];
     variant?: BadgeProps["variant"];

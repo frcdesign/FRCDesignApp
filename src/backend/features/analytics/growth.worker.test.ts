@@ -10,10 +10,7 @@ import { getGrowth, recentWindows, toComparison } from "./growth";
 
 const db = getDb(env.DB);
 
-/**
- * The last complete day, which is what the routes report through. Late August:
- * outside both seasons, so season comparisons use whole ones.
- */
+/** Late August, outside both seasons. */
 const THROUGH = "2026-08-26";
 
 async function seedInserts(
@@ -64,8 +61,7 @@ describe("toComparison", () => {
     });
 
     it("withholds a change when the baseline predates tracking", () => {
-        // The whole prior window is before anything was recorded, so its zero
-        // means "not measured", not "nothing happened".
+        // The prior window predates tracking, so its zero means "not measured".
         const out = toComparison(120, 0, WINDOWS, LABELS, "2026-08-01");
         expect(out.changeRatio).toBeUndefined();
         expect(out.unavailable).toBe(ChangeUnavailable.NO_PRIOR_DATA);
@@ -124,8 +120,6 @@ describe("getGrowth", () => {
     });
 
     it("compares whole seasons when the window falls between them", async () => {
-        // August is off-season, and app-wide seasons run Sept-Apr so both
-        // competitions are covered by one window.
         await seedInserts("2026-03-01", 100);
         await seedInserts("2025-03-01", 50);
 
@@ -141,8 +135,7 @@ describe("getGrowth", () => {
     });
 
     it("counts an FTC-only autumn the app-wide season would miss on FRC", async () => {
-        // October is inside Sept-Apr but outside FRC's Jan-Apr, so measuring
-        // the app on FRC's span would drop this entirely.
+        // October is outside FRC's Jan–Apr, so measuring on FRC's span would drop it.
         await seedInserts("2025-10-15", 40);
 
         const growth = await getGrowth(db, THROUGH, "2024-09-01");
@@ -168,8 +161,7 @@ describe("getGrowth", () => {
     });
 
     it("clips an in-season baseline to the same elapsed stretch", async () => {
-        // 1 Feb is 154 days into a Sept-Apr season. Last season ran on past
-        // that point, and only the part inside it may be compared against.
+        // Only the part of last season up to the same point may be compared.
         await seedInserts("2027-01-15", 25);
         await seedInserts("2026-01-15", 40);
         await seedInserts("2026-03-15", 20);

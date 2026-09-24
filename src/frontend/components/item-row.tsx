@@ -1,7 +1,3 @@
-/**
- * The anatomy of a list row, shared by the library, favorites and search: the
- * table that holds rows, a row itself, and the title block inside it.
- */
 import { Group, Stack, Table, Text } from "@mantine/core";
 import { PropsWithChildren, ReactNode } from "react";
 import { meaningfulPartNumber } from "@backend/features/configurations/part-number";
@@ -12,12 +8,7 @@ import { PartNumberLink } from "./part-number";
 import { mergePositions, type Position } from "../lib/highlight";
 import styles from "../lib/styles.module.css";
 
-/**
- * The configuration a row stands for, and where a query matched inside it.
- * Structural rather than the search feature's own `SearchHit`: a row displays a
- * match, it does not search — and a favorites row fills this from the favorite
- * rather than from any query, with no positions at all.
- */
+/** Not `SearchHit`: a favorites row fills this without a query. */
 export interface RowMatch {
     /** Where the query matched inside the row's title; empty when none ran. */
     positions: Position[];
@@ -162,10 +153,7 @@ function CardPartNumber(props: CardPartNumberProps): ReactNode {
     );
 }
 
-/**
- * Groups `ItemRow`s into a single dense, hoverable table. Loading/empty/error
- * states should be rendered outside of this.
- */
+/** Render loading, empty and error states outside it. */
 export function ItemTable(props: PropsWithChildren): ReactNode {
     return (
         <Table
@@ -191,10 +179,7 @@ interface ItemRowProps {
     moreButton?: boolean;
 }
 
-/**
- * A clickable table row with a hover state and a right-click context menu.
- * Used for documents, insertables, and favorites. Render inside an `ItemTable`.
- */
+/** Render inside an `ItemTable`. */
 export function ItemRow(props: ItemRowProps): ReactNode {
     const { left, menuItems, onClick, rightSection, moreButton = true } = props;
 
@@ -231,8 +216,7 @@ function HighlightedText(props: HighlightedTextProps): ReactNode {
     const result: ReactNode[] = [];
     let currentIndex = 0;
 
-    // `mergePositions` walks an index map upward, so its runs come out
-    // ascending and disjoint; this reads the string in one pass on that.
+    // `mergePositions` returns ascending, disjoint runs.
     for (const { start, length } of mergePositions(positions)) {
         const end = start + length;
         if (currentIndex < start) {

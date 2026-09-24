@@ -84,8 +84,6 @@ function LibraryBody({
 
             <SectionCard title="Most used parts">
                 {parts.data ? (
-                    // Sorted most used first, so the head of the distribution
-                    // is the first page and the zeroes are pages away.
                     <PartsTable
                         libraryId={libraryId}
                         parts={parts.data}
@@ -103,8 +101,7 @@ function LibraryBody({
             )}
 
             {parts.data ? (
-                /* Keyed so switching library drops a zoom into a group that
-                   the next library does not have. */
+                /* Keyed so a zoom into a group doesn't carry to a library without it. */
                 <UsageTreemap
                     key={libraryId}
                     root={{ libraryId }}

@@ -215,8 +215,6 @@ describe("countCombinations", () => {
 
 describe("isIndexingEnabled", () => {
     it.each([
-        // Under the threshold everything indexes, custom included: a part with
-        // no part number is a normal record, not a reason to skip it.
         { band: IndexingBand.AUTOMATIC, force: false, on: true },
         { band: IndexingBand.AUTOMATIC, force: true, on: true },
         // Past the threshold it waits to be enabled.
@@ -256,8 +254,7 @@ describe("isIndexedParameter", () => {
         expect(isIndexedParameter(color)).toBe(false);
     });
 
-    // The card reports indexing off this helper, so it has to describe exactly
-    // what enumeration varies.
+    // The admin card reports indexing from this.
     it("matches the keys enumeration actually varies", () => {
         const parameters = [
             enumParam("varied", ["x", "y"]),

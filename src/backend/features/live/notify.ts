@@ -1,8 +1,4 @@
-/**
- * Pushes to open clients. A push is a courtesy on top of work already done, so
- * one that fails is logged and dropped rather than failing that work: a client
- * that missed it resyncs when it reconnects.
- */
+/** A failed push is logged, not thrown: a client that missed it resyncs on reconnect. */
 import type { AppBindings } from "../../lib/context";
 import type { LibraryId } from "../library/library-id";
 import type { JobStatus } from "../load/contract";

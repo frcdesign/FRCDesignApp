@@ -25,9 +25,8 @@ function openWarningAlert(props: OpenWarningAlertProps): void {
             />
         ),
         children: (
-            // Takes the focus the trap would otherwise land on Close, which
-            // reads as that button being pre-selected. No outline: a focus ring
-            // around a paragraph reads as a text box the reader can type in.
+            // Takes focus from Close, which would look pre-selected. No outline, which
+            // would make the text look editable.
             <Text
                 data-autofocus
                 tabIndex={-1}

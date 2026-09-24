@@ -8,25 +8,12 @@ import type { LibraryId } from "../library/library-id";
 import type { ElementPath, InstancePath } from "../../lib/onshape/path";
 
 /**
- * How many insertables a load probes Onshape for at once — see
- * `probeInsertable`, which is the part of a load that asks Onshape anything
- * beyond a thumbnail. What bounds this is Onshape's rate limit rather than
- * anything here: past it the extra calls come back 429 and wait out their
- * `Retry-After` (see `ONSHAPE_STEP_RETRIES`), and a step whose five attempts run
- * out fails its insertable.
- *
- * Back to 15 after 40 drove a load into a rate limit it never climbed out of:
- * six attempts on one step, all 429, across five minutes. Still not measured
- * against where Onshape actually starts pushing back, so this is the number that
- * was working before rather than a considered one.
+ * Bounded by Onshape's rate limit: at 40 a load hit 429s it never recovered
+ * from. 15 is what worked before, not a measured limit.
  */
 export const LOAD_CONCURRENCY = 15;
 
-/**
- * How many thumbnails a load waits on at once. A separate limiter from
- * probing's, because a thumbnail step holds its slot through minutes of
- * retries, and on the probing limiter that would stall probes behind it.
- */
+/** Separate from probing, since a thumbnail step holds its slot through minutes of retries. */
 const THUMBNAIL_CONCURRENCY = 10;
 
 /** The runtime plumbing a load runs against. */

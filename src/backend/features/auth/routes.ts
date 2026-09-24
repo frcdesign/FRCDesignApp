@@ -39,24 +39,10 @@ function isOnshapeUrl(url: URL): boolean {
 }
 
 /**
- * Where a finished sign-in may land the caller.
- *
- * `redirectUrl` is ours: `/init` builds it from the launch it was called with,
- * so it is the only target that returns the caller to the element they opened
- * the panel on. It wins wherever there is one.
- *
- * `redirectOnshapeUri` is Onshape's, set when Onshape sends a caller here
- * itself, and the callback hands whatever was stored to `c.redirect` unread. So
- * it is only taken as an absolute url on Onshape. Onshape does not document
- * whether it can be a bare path, and one would be the more damaging case: it
- * resolves against this origin instead, landing the caller on a url the app has
- * no route for, with none of the launch parameters the panel needs.
- *
- * Anything else falls back to the entry rather than refusing the sign-in. What
- * Onshape actually sends here is not something we can see from the outside, so
- * a value this does not recognize is as likely to be our own reading being too
- * narrow as it is to be hostile, and opening the app without the caller's
- * element beats leaving them unable to sign in at all.
+ * `redirectUrl` is ours, built by `/init`, and wins. `redirectOnshapeUri` is
+ * Onshape's and is only taken as an absolute Onshape url, since the callback
+ * redirects to it unread. Anything else falls back to the entry: Onshape
+ * doesn't document what it sends, and opening the app beats failing sign-in.
  */
 function getSignInRedirect(query: Record<string, string>): string | undefined {
     const { redirectUrl, redirectOnshapeUri } = query;
@@ -87,17 +73,13 @@ authRoutes.get("/sign-in", async (c) => {
         );
     }
 
-    // Standalone sign-in omits sessionCompanyId; leave companyId undefined so the
-    // user can pick their account on Onshape.
+    // Absent standalone, so the user can pick their account on Onshape.
     const companyId = query.sessionCompanyId;
     const authorizationUrl = await doSignIn(c, redirectUrl, companyId);
     return c.redirect(authorizationUrl);
 });
 
-/**
- * Standalone only: inside Onshape the panel's session is Onshape's to end.
- * Where the caller lands is theirs to say, as long as it is this app.
- */
+/** Standalone only: inside Onshape, the session is Onshape's to end. */
 authRoutes.get("/sign-out", async (c) => {
     await endSession(c);
     return c.redirect(getLocalRedirect(c.req.query("redirectUrl")));

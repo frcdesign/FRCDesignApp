@@ -46,8 +46,6 @@ describe("api error responses", () => {
         });
     });
 
-    // A malformed request is our bug, so the client falls back to its own
-    // wording rather than showing a validator's message.
     it("marks a rejected request as internal", async () => {
         const app = createTestApp({ accessLevel: AccessLevel.ADMIN });
 

@@ -26,10 +26,7 @@ import { TablePagination, usePagedRows } from "./table-pagination";
 /** Small enough to sit in a row without stretching it. */
 const ROW_SPARKLINE = { h: 24, w: 80 };
 
-/**
- * Widths for every column but the first, which takes what is left: unset, the
- * text columns take all the slack and strand the numbers from the sparkline.
- */
+/** The first column takes the rest; unset, text columns would take the slack. */
 const COLUMN_WIDTH = {
     group: 180,
     // Wide enough that the two longest headings stay on one line.

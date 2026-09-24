@@ -1,7 +1,3 @@
-/**
- * Reads of the library-wide rollups: totals, the day series behind the charts,
- * and where inserts started from.
- */
 import {
     and,
     asc,
@@ -67,10 +63,6 @@ export async function getTotals(
     };
 }
 
-/**
- * The scope every rollup read takes: one library or all of them, one window or
- * all of time. The tables differ only in which columns carry the two.
- */
 function scopeFilters(
     columns: { day: SQLiteColumn; libraryId: SQLiteColumn },
     libraryId?: LibraryId,
@@ -129,10 +121,7 @@ export function toTargets(
     return targets;
 }
 
-/**
- * `user_stats` holds one row per user for all time and so cannot be windowed;
- * a range counts the per-day activity rollup instead.
- */
+/** `user_stats` is all-time, so a range counts the daily rollup. */
 function countUsers(db: Db, libraryId?: LibraryId, range?: DayRange) {
     if (range) {
         return db
@@ -214,11 +203,7 @@ function countTargetsByDay(db: Db, range: DayRange, libraryId?: LibraryId) {
         .all();
 }
 
-/**
- * DISTINCT, not COUNT: the table holds one row per user *per library* per day,
- * so an unscoped read counts someone active in two libraries twice — and would
- * then disagree with getTotals, which counts distinct.
- */
+/** DISTINCT: rows are per library, so COUNT would count a user in two libraries twice. */
 function countUsersByDay(db: Db, range: DayRange, libraryId?: LibraryId) {
     return db
         .select({
@@ -231,10 +216,7 @@ function countUsersByDay(db: Db, range: DayRange, libraryId?: LibraryId) {
         .all();
 }
 
-/**
- * Every metric's daily values as one series, read from rollups: the event log
- * grows with every insert rather than with the range.
- */
+/** From rollups, since the event log grows with every insert. */
 export async function getMetricSeries(
     db: Db,
     range: DayRange,
@@ -284,8 +266,7 @@ export async function getMetricSeries(
         pointFor(row.day).activeUsers = row.activeUsers;
     }
 
-    // A quiet day is a zero, not a missing point: anything dividing by the
-    // number of points would average over active days instead of calendar ones.
+    // A quiet day is a zero, so averages are over calendar days.
     for (const day of eachDay(range)) pointFor(day);
 
     return [...byDay.values()].sort((a, b) => a.day.localeCompare(b.day));
@@ -365,8 +346,7 @@ export async function getSeries(
         point.counts[row.libraryId] = row.count;
         byDay.set(row.day, point);
     }
-    // Same reason as the metric series: a missing day is a zero, and a line
-    // that jumps across it reads as activity that never happened.
+    // A missing day is a zero, or the line jumps across it.
     for (const day of eachDay(range)) {
         if (!byDay.has(day)) byDay.set(day, { day, counts: {} });
     }

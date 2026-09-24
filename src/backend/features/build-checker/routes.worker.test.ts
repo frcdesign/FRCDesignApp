@@ -25,8 +25,7 @@ describe("GET /build-status", () => {
     beforeEach(() => resetDb(db));
     afterEach(() => vi.restoreAllMocks());
 
-    // The date the card shows is the version's, not the sync's: a library
-    // reloaded today off a year-old version is a year-old version.
+    // The version's date, not the sync's.
     it("returns each group's and insertable's version date", async () => {
         await seedPartStudio(db);
         await db
@@ -91,9 +90,7 @@ describe("GET /build-status", () => {
         expect(body.groups[TEST_GROUP_ID].versionCreatedAt).toBeUndefined();
     });
 
-    // D1 takes at most 100 bound parameters in a statement and an `inArray`
-    // binds one per value, so listing every insertable id failed 500 here on
-    // any library past that — every real one.
+    // D1 binds at most 100 parameters, and `inArray` binds one per value.
     it("serves a library with more insertables than a statement can bind", async () => {
         const count = 120;
         await seedGroup(db);
@@ -122,8 +119,7 @@ describe("GET /build-status", () => {
         );
     });
 
-    // A removed check has no severity or description, so left in it renders as a
-    // blank callout and steals the row's status color.
+    // A removed check would render as a blank callout.
     it("drops a stored issue whose type this build no longer has", async () => {
         await seedPartStudio(db);
         // Written as raw JSON, the way the deploy that still had the check did.

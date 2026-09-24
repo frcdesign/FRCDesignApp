@@ -10,23 +10,13 @@ import {
 import { useLibraryId } from "./library";
 
 interface RefreshLibraryOptions {
-    /**
-     * Refetch the version-keyed queries too, dropping whatever an optimistic
-     * patch left on them. For a mutation that failed: it bumped nothing, so the
-     * version on screen is still the one the server can answer for.
-     */
+    /** For a failed mutation: refetches versioned queries to drop optimistic patches. */
     discardPatches?: boolean;
 }
 
 /**
- * Refreshes the current library and the caller's access.
- *
- * The version-keyed queries are left alone, because a versioned url answers for
- * its own version and keeps answering for it — immutably, out of the browser's
- * cache. Refetching the version a bump is replacing therefore reinstates the
- * state that version had, which is what put an optimistic patch back to its old
- * value for one round trip before the new version landed. Moving the pointer is
- * enough: the new version is a new key, and it fetches.
+ * Leaves versioned queries alone: their urls are immutable, so refetching the
+ * old version restores its old state. The bump moves to a new key, which fetches.
  */
 export function useRefreshLibrary(): (
     options?: RefreshLibraryOptions

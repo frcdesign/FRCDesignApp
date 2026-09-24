@@ -1,7 +1,3 @@
-/**
- * Where thumbnails live in R2, and how a caller reads one back.
- */
-
 import { CachePolicy, immutableCacheControl } from "../../lib/cache";
 
 import { getElementThumbnail } from "../../lib/onshape/endpoints/thumbnails";
@@ -15,10 +11,6 @@ import {
 } from "../configurations/contract";
 import { OnshapeApi } from "../../lib/onshape/client";
 
-/**
- * What produced a stored thumbnail, tagged onto the R2 object. The key already
- * addresses it; this is for reading an object back and telling what it is.
- */
 interface ThumbnailMetadata extends Record<string, string> {
     microversionId: string;
     /** Empty for an element's own thumbnail, as everywhere else. */
@@ -44,12 +36,9 @@ export async function putThumbnail(
 const BOTH_SIZES = [ThumbnailSize.SMALL, ThumbnailSize.LARGE];
 
 /**
- * Stores both sizes, skipping any the bucket already holds; throws while
- * Onshape has not rendered one.
- *
- * Keyed by the version's microversion though read from its branch: an unedited
- * branch should show the same part. That is assumed, not checked against
- * Onshape.
+ * Skips sizes already stored; throws while Onshape hasn't rendered. Keyed by
+ * the version's microversion though read from its branch, assuming an unedited
+ * branch renders the same.
  */
 export async function uploadThumbnails(
     bucket: R2Bucket,
@@ -59,8 +48,7 @@ export async function uploadThumbnails(
 ): Promise<ThumbnailUrls> {
     const { elementId } = thumbnailPath;
 
-    // One size at a time: an attempt that fails should cost one call rather
-    // than two, and what runs in parallel is elements, not their sizes.
+    // Sequential, so a failed attempt costs one call.
     for (const size of BOTH_SIZES) {
         const key = thumbnailKey(elementId, microversionId, size);
         if (await bucket.head(key)) {

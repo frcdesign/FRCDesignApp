@@ -8,19 +8,10 @@ interface PartNumberLinkProps {
     /** Already-rendered text, so a caller can underline what a query matched. */
     children: ReactNode;
     url: string;
-    /**
-     * Holds the link at its own width beside text that can outgrow the row,
-     * which a list row wants. A header wants the opposite: it lets a long part
-     * number shrink and ellipsize rather than push the title around.
-     */
+    /** For a list row; a header lets a long part number ellipsize instead. */
     noShrink?: boolean;
 }
 
-/**
- * A part number pointing at the vendor's page for it. `inline-flex` so the icon
- * centres on the text rather than sitting on its baseline, and takes the link's
- * colour by being inside it.
- */
 export function PartNumberLink(props: PartNumberLinkProps): ReactNode {
     const { children, url, noShrink = false } = props;
     return (

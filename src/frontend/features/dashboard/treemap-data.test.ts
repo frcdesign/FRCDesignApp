@@ -88,8 +88,6 @@ describe("toNodes at the group level", () => {
     });
 
     it("never darkens as the tiles get smaller", () => {
-        // Color has to reinforce area, not fight it: a lighter tile always
-        // means a smaller one.
         const many = Array.from({ length: 10 }, (_, index) =>
             part({ groupName: `g-${index}`, insertCount: 10 - index })
         );

@@ -1,12 +1,7 @@
 /**
- * Document loads, one per group at a time. A load asked for while one runs is
- * marked on the running one's row instead, and that load starts it as it
- * finishes: two loads writing one group's rows at once would interleave, and
- * the second may well be the one with the newer version to load.
- *
- * Rows in D1 rather than a list in KV, since loads start and finish
- * concurrently — a full reload starts one per document — and KV loses writes
- * that race.
+ * One load per group at a time: two writing the same rows would interleave.
+ * A load requested meanwhile is marked on the running row and started when it
+ * finishes. In D1 since concurrent KV writes lose updates.
  */
 import { eq, inArray } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
@@ -39,10 +34,7 @@ const ACTIVE_STATUSES = new Set<InstanceStatus["status"]>([
     "waitingForPause"
 ]);
 
-/**
- * How long a claimed row may go without an instance before it is taken for
- * one whose start failed partway.
- */
+/** After this, a claimed row with no instance is treated as a failed start. */
 const CLAIM_GRACE_MS = 60_000;
 
 /** Workflows create at most this many instances a call. */
@@ -66,7 +58,6 @@ async function isAlive(env: AppBindings, job: LoadJob): Promise<boolean> {
     }
 }
 
-/** Clears the rows of loads that are no longer running. */
 async function clearDead(
     env: AppBindings,
     jobs: LoadJob[]
@@ -142,8 +133,7 @@ export async function requestLoads(
         );
     }
 
-    // Started together: each load stands alone, down to its library's search
-    // index, so nothing waits on any other.
+    // Each load stands alone, so they all start at once.
     const batches: (typeof toStart)[] = [];
     for (let i = 0; i < toStart.length; i += CREATE_BATCH) {
         batches.push(toStart.slice(i, i + CREATE_BATCH));
@@ -165,19 +155,14 @@ export async function requestLoads(
 /** What a finished load does next: nothing, or its group's queued load. */
 type FinishOutcome = "done" | "rerun";
 
-/**
- * Called by a load as it finishes, whether it failed or not. Publishes what it
- * wrote, when it wrote anything, and starts the load queued behind it or lets
- * the group go.
- */
+/** Whether it failed or not. Publishes what it wrote, then starts the queued load or releases the group. */
 export async function finishLoad(
     env: AppBindings,
     params: LoadDocumentParams,
     changed: boolean
 ): Promise<FinishOutcome> {
     const db = getDb(env.DB);
-    // Rebuilt before the bump: the new version makes /search-db immutable, so
-    // a client fetching in between would pin the stale index for a year.
+    // Before the bump, which makes /search-db immutable for a year.
     if (changed) {
         await rebuildSearchDb(env.BLOB, db, params.libraryId);
         await bumpLibraryVersion(db, params.libraryId);
@@ -231,10 +216,7 @@ async function runningStatus(
     return { loadingGroupIds: rows.map((row) => row.groupId) };
 }
 
-/**
- * The groups loading, clearing any left behind by a load that crashed first.
- * For the client's first look; pushes keep it current after that.
- */
+/** Also clears rows left by crashed loads. Pushes keep the client current after this. */
 export async function getJobStatus(
     env: AppBindings,
     libraryId: LibraryId

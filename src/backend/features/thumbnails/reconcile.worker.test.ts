@@ -66,8 +66,6 @@ describe("reconcileThumbnails", () => {
         );
     });
 
-    // A configuration render is addressed by the same element and microversion,
-    // so it has to follow the element rather than outlive it.
     it("deletes a configuration render whose microversion moved on", async () => {
         await seedPartStudio(db, {
             elementId: LIVE_ELEMENT,
@@ -93,8 +91,7 @@ describe("reconcileThumbnails", () => {
         expect(await storedKeys()).toEqual([liveConfig]);
     });
 
-    // A group's document thumbnail is usually not one of its own insertables,
-    // and the urls on the row are the only record of which element it is.
+    // The row's urls are the only record of which element it is.
     it("keeps the document thumbnail a group's urls still point at", async () => {
         const subject = {
             elementId: "doc-thumbnail-element",
@@ -154,8 +151,6 @@ describe("reconcileThumbnails", () => {
         );
     });
 
-    // An empty read and an empty library look identical, and only one of them
-    // is worth emptying the bucket over.
     it("deletes nothing when the live set is empty", async () => {
         await store(...defaultKeys(LIVE_ELEMENT, LIVE_MICROVERSION));
 
@@ -181,9 +176,7 @@ describe("reconcileThumbnails", () => {
         expect(second.scanned).toBe(0);
     });
 
-    // A group load stores thumbnails as it goes and writes its rows at the
-    // end, and a configuration render is started by a user rather than a job —
-    // so something in flight is indistinguishable from something orphaned.
+    // Renders are stored before their rows are written, so a new one could be in flight.
     it("keeps an orphan too new to tell apart from a render in flight", async () => {
         await seedPartStudio(db, {
             elementId: LIVE_ELEMENT,
@@ -212,8 +205,6 @@ describe("reconcileThumbnails", () => {
         expect(result.deleted).toBe(2);
     });
 
-    // The key names no library, so a set built from one library would read
-    // every other library's thumbnails as orphaned.
     it("keeps a thumbnail belonging to another library", async () => {
         await seedPartStudio(db, {
             elementId: LIVE_ELEMENT,

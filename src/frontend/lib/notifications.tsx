@@ -10,9 +10,6 @@ export interface NotificationAction {
     onClick: () => void;
 }
 
-/**
- * Renders a Notification with an added Action button.
- */
 export function renderNotification(
     message: ReactNode,
     action: NotificationAction | undefined
@@ -49,7 +46,6 @@ interface ToastConfig {
     withCloseButton?: boolean;
 }
 
-/** Ids currently on screen, so a repeat updates rather than replaces. */
 const liveToasts = new Set<string>();
 
 /** Shows a toast, updating any existing toast with the same id. */
@@ -64,8 +60,7 @@ function showToast(config: ToastConfig): string {
         withCloseButton: config.withCloseButton
     };
 
-    // Updating keeps the toast in place, so a loading toast becoming a success
-    // one reads as the same toast rather than one leaving and another arriving.
+    // Updated in place, so a loading toast turning into a success reads as one toast.
     if (config.id && liveToasts.has(config.id)) {
         notifications.update(props);
         return config.id;
@@ -80,7 +75,7 @@ function showToast(config: ToastConfig): string {
 }
 
 interface InfoToastOptions {
-    /** Repeats with the same id update the toast rather than stacking one up. */
+    /** A repeat with the same id updates the toast. */
     id?: string;
     autoClose?: number | false;
 }

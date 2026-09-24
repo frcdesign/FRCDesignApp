@@ -1,10 +1,6 @@
 /**
- * What Onshape launches the panel with. Kept for the tab rather than left in the
- * url: the document is the caller's own, so a url carrying it is one nobody can
- * usefully share.
- *
- * A leaf, so the store can declare these fields without reaching the hooks that
- * read them back — those are in `onshape-params`.
+ * Kept per tab rather than in the url, since a url carrying the caller's
+ * document isn't shareable. A leaf, so the store can declare these fields.
  */
 import * as z from "zod";
 import { ElementType } from "@backend/lib/onshape/element-type";
@@ -15,10 +11,7 @@ const ColorThemeType = z.enum(["light", "dark"]);
 
 export type ColorTheme = z.infer<typeof ColorThemeType>;
 
-/**
- * Every field optional: the app is opened standalone as well, and a launch we
- * cannot read in full is one to treat as no launch rather than half of one.
- */
+/** All optional, since the app also opens standalone. */
 export const OnshapeLaunchType = z.object({
     documentId: z.string().optional().catch(undefined),
     instanceId: z.string().optional().catch(undefined),
@@ -43,10 +36,7 @@ export interface TargetElement extends ElementPath {
     elementType: ElementType;
 }
 
-/**
- * The element the panel can insert into: a workspace and nothing else, since a
- * version and a microversion are snapshots with nothing to put a part in.
- */
+/** Only a workspace; a version can't be inserted into. */
 export function toTargetElement(
     launch: OnshapeLaunch
 ): TargetElement | undefined {

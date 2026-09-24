@@ -1,7 +1,6 @@
 /**
- * The ways one parameter can be shown. A list whose options another choice
- * filters is not one list but several, and anything reporting on it as one
- * merges choices that were never offered together.
+ * A list whose options another choice filters is really several lists, one per
+ * way it is shown; reporting on it as one merges choices never offered together.
  */
 import {
     type ConfigurationParameter,
@@ -15,43 +14,30 @@ import { parameterValues } from "./combinations";
 import { formatValue } from "./selection";
 import { evaluateCondition, getOption, getVisibleOptions } from "./utils";
 
-/**
- * The combinations of controlling choices one parameter is walked over, and the
- * instances that may come out of it. Past either the parameter is reported
- * whole: an instanced report nobody can read is worse than an aggregated one.
- */
+// Past either cap a parameter is reported whole: too many instances is
+// unreadable.
 const MAX_COMBINATIONS = 256;
 const MAX_INSTANCES = 16;
 
 /** One controlling choice on the way to an instance. */
 interface InstanceStep {
     parameterId: string;
-    /** The choices leading here, e.g. "Generic"; several when they lead to the
-     * same list, joined as "Generic or WCP". */
+    /** e.g. "Generic", or "Generic or WCP" when both lead to the same list. */
     label: string;
 }
 
 /** One parameter as it is shown under one set of controlling choices. */
 interface ParameterInstance {
     parameter: ConfigurationParameter;
-    /** The choices it is shown under, outermost first; empty when nothing
-     * conditions it. */
+    /** Outermost first; empty when nothing conditions it. */
     path: InstanceStep[];
-    /** What it offers here, in declaration order; empty for anything that is
-     * not an enum, which declares no options to filter. */
+    /** In declaration order; empty for anything but an enum. */
     options: EnumOption[];
-    /**
-     * The option the app lands on here because the declared default is not
-     * offered; see `resolveSelectedOption`, which falls through to the first.
-     */
+    /** Set when the declared default isn't offered; see `resolveSelectedOption`. */
     implicitDefaultId?: string;
 }
 
-/**
- * Every parameter, once per way it is shown. Parameter order is kept, and a
- * parameter nothing conditions yields exactly one instance with an empty path —
- * which is what an un-instanced report already was.
- */
+/** One per way each parameter is shown; an unconditioned one gets a single instance with an empty path. */
 export function toParameterInstances(
     parameters: ConfigurationParameter[]
 ): ParameterInstance[] {
@@ -59,9 +45,7 @@ export function toParameterInstances(
         try {
             return instancesOf(parameter, parameters);
         } catch {
-            // `evaluateCondition` throws on a condition naming a parameter that
-            // is not an enum any more. One part's conditions going stale must
-            // not take down a whole library's report, so it reports whole.
+            // A stale condition shouldn't take down the library's whole report.
             return [wholeInstance(parameter)];
         }
     });
@@ -81,8 +65,7 @@ function instancesOf(
         return [wholeInstance(parameter)];
     }
 
-    // Keyed by what the parameter offers, so two vendors that filter the list
-    // the same way are one instance rather than two identical ones.
+    // Keyed by the options, so vendors that filter alike share an instance.
     const groups = new Map<
         string,
         { combinations: PartialSelection[]; options: EnumOption[] }
@@ -105,9 +88,8 @@ function instancesOf(
         }
     }
 
-    // No combination shows it, which means the conditions cannot be satisfied
-    // the way they were read. The values recorded against it say otherwise, so
-    // it is reported whole rather than dropped.
+    // Nothing shows it, yet values were recorded against it, so report it whole
+    // rather than drop it.
     if (groups.size === 0 || groups.size > MAX_INSTANCES) {
         return [wholeInstance(parameter)];
     }
@@ -160,10 +142,8 @@ function conditionsOf(
 }
 
 /**
- * The parameters whose choices decide how `parameter` is shown, in declaration
- * order. Transitive: a list filtered by a vendor whose own options a series
- * filters is shown once per pair, and enumerating the vendor needs the series
- * fixed first.
+ * Transitive: a list filtered by a vendor whose options a series filters is
+ * shown once per pair.
  */
 function controllingParameters(
     parameter: ConfigurationParameter,
@@ -185,8 +165,7 @@ function controllingParameters(
         }
     }
 
-    // Only an enum or a boolean can be walked over: a quantity takes any number
-    // the user types, which is no set of instances.
+    // A quantity takes any number, so it can't be enumerated.
     return parameters.filter(
         (entry) =>
             found.has(entry.id) &&
@@ -195,11 +174,7 @@ function controllingParameters(
     );
 }
 
-/**
- * Every combination of controlling choices, in declaration order so each is
- * enumerated against what is already fixed. Undefined past the cap, where the
- * paths would outnumber the options they lead to.
- */
+/** In declaration order, so each is enumerated against what is fixed. Undefined past the cap. */
 function enumerateControls(
     controllers: ConfigurationParameter[],
     parameters: ConfigurationParameter[]
@@ -216,8 +191,7 @@ function enumerateControls(
         const next: PartialSelection[] = [];
         for (const combination of combinations) {
             const values = parameterValues(controller, combination, parameters);
-            // Nothing to vary here — it is hidden under what is already fixed —
-            // so it stays unset, and the conditions reading it do not hold.
+            // Hidden under what is fixed, so it stays unset.
             if (values.length === 0) {
                 next.push(combination);
                 continue;
@@ -248,10 +222,7 @@ function valuesOf(
     return values;
 }
 
-/**
- * The steps naming this instance. A controller whose every value leads here
- * says nothing about it, so it is left out.
- */
+/** Leaves out a controller whose every value leads here. */
 function toPath(
     group: PartialSelection[],
     combinations: PartialSelection[],
@@ -274,9 +245,8 @@ function toPath(
 }
 
 /**
- * What to call one step. An option names itself, so the enum it belongs to is
- * left out — "Generic", not "Vendor: Generic". A checkbox has no such name, so
- * it is the parameter that is named and the state that qualifies it.
+ * An option names itself ("Generic", not "Vendor: Generic"); a checkbox names
+ * its parameter and state.
  */
 function toStepLabel(
     parameter: ConfigurationParameter,

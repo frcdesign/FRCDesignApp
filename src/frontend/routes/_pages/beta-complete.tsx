@@ -5,11 +5,7 @@ import { PageNotice } from "../../components/app-zero-state";
 import { APP_STORE_PATH } from "../../lib/url";
 import { useOnshapeOrigin } from "../../lib/onshape-params";
 
-/**
- * Where the beta-era app extension still points. Nothing links here anymore,
- * but an install old enough to predate the cutover launches straight at it, and
- * without this route those callers land on the not-found page instead.
- */
+/** Old installs of the beta extension still launch here. */
 export const Route = createFileRoute("/_pages/beta-complete")({
     component: BetaComplete
 });

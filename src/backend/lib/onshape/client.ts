@@ -5,8 +5,6 @@ import {
     type PostOptions
 } from "../query-params";
 
-// Constant across all environments (dev/cert/production), so hardcoded here
-// rather than duplicated as a per-environment var in wrangler.jsonc.
 const ONSHAPE_API_BASE_PATH = "https://cad.onshape.com";
 const ONSHAPE_API_VERSION = 16;
 
@@ -27,22 +25,12 @@ export class OnshapeApiError extends Error {
 /** Fallback wait when a 429 response omits (or malforms) the Retry-After header. */
 const DEFAULT_RETRY_AFTER_SECONDS = 60;
 
-/**
- * Ceiling on a single Onshape call, so a socket that never answers surfaces as a
- * retryable failure instead of being left to whatever is waiting on it. Well
- * above any call we make — a rate limit answers in milliseconds — and well under
- * the ten minutes a workflow step gets, so the step still has room to retry.
- */
+/** Well under a workflow step's ten minutes, so the step can still retry. */
 const REQUEST_TIMEOUT_MS = 60_000;
 
 /**
- * Thrown on a 429, carrying Onshape's `Retry-After` seconds so callers can wait
- * it out. Extends {@link OnshapeApiError}, so `status` handling still works.
- *
- * The wait is also spelled into the message, because the message is all that
- * survives a Workflows retry: the `delay` callback is handed an error rebuilt
- * across the RPC layer, which keeps `name` and `message` but neither the
- * prototype nor any own property. {@link readRetryAfterSeconds} reads it back.
+ * The wait is also in the message, since that's all that survives Workflows
+ * rebuilding the error; {@link readRetryAfterSeconds} reads it back.
  */
 export class OnshapeRateLimitError extends OnshapeApiError {
     constructor(
@@ -60,11 +48,7 @@ export class OnshapeRateLimitError extends OnshapeApiError {
 /** Matches what {@link OnshapeRateLimitError} spells into its message. */
 const RETRY_AFTER_PATTERN = /Onshape API error 429 \(retry after (\d+)s\)/;
 
-/**
- * The seconds a 429 asked us to wait, or undefined when the error is not one. Reads
- * the message rather than the instance, so it answers the same for an error
- * Workflows rebuilt as for the one that was thrown.
- */
+/** Reads the message, so it works on an error Workflows rebuilt. */
 export function readRetryAfterSeconds(error: Error): number | undefined {
     const match = RETRY_AFTER_PATTERN.exec(error.message);
     return match ? Number.parseInt(match[1], 10) : undefined;
@@ -88,13 +72,8 @@ export abstract class OnshapeApi {
         return this._call("GET", path, options);
     }
 
-    // Accepts any media type rather than `image/*`, matching the Python
-    // implementation this was ported from, which set no Accept header at all.
-    // Onshape answers a thumbnail it has not rendered yet with a JSON error,
-    // which it cannot send under `image/*` — so it replies 406 rather than the
-    // 404 that means "still rendering", and a caller reading status codes takes
-    // a slow render for a dead one. That is my best explanation for the
-    // intermittent 406s this code recorded and could not account for.
+    // Any media type: under `image/*`, a thumbnail still rendering seems to come
+    // back 406 instead of 404, since its JSON error can't be sent as an image.
     async getImage(path: string, options?: QueryOptions): Promise<ArrayBuffer> {
         const res = await this._call("GET", path, {
             ...options,
@@ -205,12 +184,8 @@ export class OAuthApi extends OnshapeApi {
 }
 
 /**
- * Signs with an API key pair instead of a user's session, for the callers that
- * have no session to borrow: scripts, and reproducing a request the app made.
- *
- * Onshape verifies an HMAC over the request line rather than a bearer token, so
- * every header the signature covers has to be the one actually sent — which is
- * why these are built together rather than merged in afterwards.
+ * Signs with an API key pair, for scripts. Onshape verifies an HMAC over the
+ * request, so the signed headers have to be the ones sent.
  */
 export class ApiKeyApi extends OnshapeApi {
     constructor(
@@ -242,10 +217,7 @@ export class ApiKeyApi extends OnshapeApi {
         const contentType = "application/json";
         const { pathname, search } = new URL(url);
 
-        // Lowercased because Onshape signs the folded form on both ends, so the
-        // request keeps its own casing. The trailing newline after the query is
-        // in Onshape's sample clients but not in its docs, and the keys in .env
-        // are dead, so this half is unverified against a live pair.
+        // Lowercased, as Onshape signs the folded form. Untested against a live key.
         const signature = await sign(
             this._secretKey,
             [

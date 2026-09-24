@@ -8,10 +8,8 @@ import { requestLoads } from "./jobs";
 export const loadRoutes = getApp();
 
 /**
- * POST /api/reload-all — force reloads every document in every library: starts
- * one load per group, all at once, and returns without waiting on any. New versions reload themselves through their webhooks, so
- * this is for what they cannot catch: a change in how the app reads documents,
- * or a document that has never been loaded with a webhook to register.
+ * POST /api/reload-all: starts a forced load per group and returns. For what
+ * webhooks can't catch, like a change in how the app reads documents.
  */
 loadRoutes.post("/reload-all", requireOwnerMiddleware, async (c) => {
     const sessionId = getSessionId(c);

@@ -1,7 +1,3 @@
-/**
- * What a part's recorded configuration values say, merged with the parameters
- * it declares today — once per way each parameter is shown.
- */
 import {
     ParameterType,
     type ConfigurationParameter
@@ -17,14 +13,8 @@ import type {
 const MAX_FREE_FORM_VALUES = 20;
 
 /**
- * Merged with the parameters declared today, so an unused option still surfaces
- * and a retired one is dropped: nobody can pick it any more.
- *
- * One entry per instance rather than per parameter — a list another choice
- * filters is a different list under each. The rollup counts a value without
- * recording what else was chosen alongside it, so an option two branches both
- * offer is counted in both; an option only one branch offers, which is what
- * conditioning options is usually for, is counted exactly once.
+ * Against today's parameters, so unused options show and retired ones drop.
+ * One entry per instance; an option two branches offer is counted in both.
  */
 export function buildParameterUsage(
     parameters: ConfigurationParameter[],
@@ -34,8 +24,6 @@ export function buildParameterUsage(
 
     return toParameterInstances(parameters).map((instance) => {
         const parameter = instance.parameter;
-        // `new Map(undefined)` is empty, which is what a parameter nobody has
-        // configured should read as.
         const counts = new Map(
             rowsByParameter
                 .get(parameter.id)
@@ -68,18 +56,14 @@ export function buildParameterUsage(
             type: parameter.type,
             defaultValue: parameter.default,
             path: instance.path.map((step) => step.label),
-            // An instance's own options, so its percentages add to a hundred;
-            // a free-form list is truncated, so its total stays the true one.
+            // An enum's percentages add to 100; a free-form list is truncated, so it keeps the true total.
             total: isEnum ? sumValues(values) : sumCounts(counts),
             values: values.sort((a, b) => b.count - a.count)
         };
     });
 }
 
-/**
- * Unbounded distinct values, so only the most-used are returned, plus the
- * default. Labelled in the parameter's unit; nobody reads a tube length in metres.
- */
+/** The most-used values plus the default, in the parameter's unit. */
 function toFreeFormValues(
     counts: Map<string, number>,
     parameter: ConfigurationParameter,

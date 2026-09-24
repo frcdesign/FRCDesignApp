@@ -9,11 +9,7 @@ interface ReloadThumbnailMenuItemProps {
     target: { groupId: string } | { insertableId: string };
 }
 
-/**
- * Asks Onshape for a thumbnail again. A load does not wait for one, so a
- * thumbnail Onshape had not written out yet stays missing until the whole
- * document is reloaded — which is a lot to do for one picture.
- */
+/** A load doesn't wait for thumbnails, so this refetches one without reloading the document. */
 export function ReloadThumbnailMenuItem(
     props: ReloadThumbnailMenuItemProps
 ): ReactNode {

@@ -29,11 +29,7 @@ export function getSessionId(c: AppContext): string {
     return sessionId;
 }
 
-/**
- * Onshape's company id for a session outside an enterprise. It is what
- * `/init` carries for a plain cad.onshape.com user, and it is not a company
- * OAuth will accept.
- */
+/** What `/init` carries outside an enterprise. OAuth won't accept it as a company. */
 export const PERSONAL_COMPANY_ID = "cad";
 
 export function getSessionCompanyId(c: AppContext) {
@@ -57,42 +53,15 @@ function sessionKey(sessionId: string): string {
     return `tokens:${sessionId}`;
 }
 
-const ACCESS_LEVEL_PREFIX = "access-level:";
-
-/** Keyed by session, so it is dropped along with one. */
-export function accessLevelKey(sessionId: string): string {
-    return ACCESS_LEVEL_PREFIX + sessionId;
-}
-
-/**
- * Forgets every session's cached access level, so each is asked of Onshape
- * again on its next request: for when the admin team changes under them.
- */
-export async function clearAccessLevels(kv: KVNamespace): Promise<void> {
-    let cursor: string | undefined;
-    do {
-        const page = await kv.list({ prefix: ACCESS_LEVEL_PREFIX, cursor });
-        await Promise.all(page.keys.map((key) => kv.delete(key.name)));
-        cursor = page.list_complete ? undefined : page.cursor;
-    } while (cursor);
-}
-
 function loginKey(loginId: string): string {
     return `login-session:${loginId}`;
 }
 
-/** Drops what a session id keys; the cookie is the caller's to clear. */
+/** The cookie is the caller's to clear. */
 async function dropSession(kv: KVNamespace, sessionId: string): Promise<void> {
-    await Promise.all([
-        kv.delete(sessionKey(sessionId)),
-        kv.delete(accessLevelKey(sessionId))
-    ]);
+    await kv.delete(sessionKey(sessionId));
 }
 
-/**
- * Signs the caller out: the tokens and what was resolved from them go, and the
- * cookie with them, so the next request is simply a stranger's.
- */
 export async function endSession(c: AppContext): Promise<void> {
     const sessionId = getCookie(c, SESSION_COOKIE);
     if (sessionId) {
@@ -102,11 +71,7 @@ export async function endSession(c: AppContext): Promise<void> {
     deleteCookie(c, SESSION_COOKIE, COOKIE_OPTIONS);
 }
 
-/**
- * Puts the caller in a newly signed-in session, and drops the one they came
- * with. The id is minted here rather than at sign-in, so it is only ever
- * replaced by a sign-in that finished, and never carries over one that did not.
- */
+/** Minted here, so a session is only replaced by a sign-in that finished. */
 export async function beginSession(
     c: AppContext,
     tokens: AuthTokens
@@ -170,10 +135,8 @@ export async function takeLoginSession(
 }
 
 /**
- * Starts an OAuth round trip. It rides its own cookie: `/init` sends a caller
- * here whenever Onshape will not take their session, and one who never comes
- * back through the callback — the sign-in failed, or they closed the panel —
- * keeps the session they arrived with.
+ * On its own cookie, so a caller who never returns through the callback keeps
+ * the session they had.
  */
 export async function startLoginSession(
     c: AppContext,

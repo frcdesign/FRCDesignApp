@@ -67,8 +67,7 @@ describe("configuration text", () => {
 });
 
 describe("encodeQueryConfiguration", () => {
-    // Escaped once more by whatever puts it in a query, so a space has to
-    // still be a space here; Onshape's own examples read `dia1=1+m`.
+    // The query adds a layer; Onshape's examples read `dia1=1+m`.
     it("leaves a quantity's space for the query layer to escape", () => {
         expect(encodeQueryConfiguration({ length: "0.0508 m" })).toBe(
             "length=0.0508 m"
@@ -146,8 +145,6 @@ describe("getPartUrl", () => {
         ).toBeUndefined();
     });
 
-    // A part configurable across vendors carries a generic vendor, but each
-    // configuration's number still says who sells that one.
     it("reads the vendor out of the part number over a generic tagging", () => {
         const url = getPartUrl(metadata({ partNumber: "TTB-0016" }), [
             Vendor.WCP,
@@ -168,8 +165,6 @@ describe("getPartUrl", () => {
 });
 
 describe("getVisibleOptions", () => {
-    // Only the last three sizes are restricted, to the heavy style; nothing is
-    // said about s1 and s2.
     const style = enumParam("style", ["light", "heavy"]);
     const size = enumParam("size", ["s1", "s2", "s3", "s4", "s5"], {
         optionConditions: [
@@ -192,8 +187,7 @@ describe("getVisibleOptions", () => {
         expect(getVisibleOptions(plain, {}, [plain])).toHaveLength(2);
     });
 
-    // The panel drops an enum with no options left, so reading the conditions
-    // as a list of what may be shown took the whole parameter off the screen.
+    // The panel drops an enum with no options left.
     it("keeps the options no condition names", () => {
         const visible = getVisibleOptions(size, { style: "light" }, params);
         expect(visible.map((option) => option.id)).toEqual(["s1", "s2"]);
@@ -245,8 +239,7 @@ describe("getVisibleOptions", () => {
 });
 
 describe("evaluateCondition", () => {
-    // The parser drops children it cannot represent, so a logical can arrive
-    // holding none — and an OR of nothing reads as never.
+    // The parser drops children it can't represent.
     it.each([LogicalOp.AND, LogicalOp.OR])(
         "shows a parameter whose %s condition holds no children",
         (operation) => {

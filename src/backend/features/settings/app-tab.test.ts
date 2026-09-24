@@ -3,8 +3,6 @@ import { LibraryId } from "../library/library-id";
 import { getTabPath, isLibraryTab, toAppTab, UtilityTab } from "./app-tab";
 
 describe("app tabs", () => {
-    // The two kinds are addressed differently: libraries share one route and
-    // are named by id, a utility has a route of its own.
     it("gives each kind of tab its own path", () => {
         expect(getTabPath(LibraryId.FTC_DESIGN_LIB)).toBe(
             "/app/library/ftc-design-lib"

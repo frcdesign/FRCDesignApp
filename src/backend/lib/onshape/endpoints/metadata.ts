@@ -10,8 +10,7 @@ export function getElementMetadata(
     elementPath: ElementPath,
     configuration: Selection
 ): Promise<OnshapeMetadataObject> {
-    // Computed properties are expensive and unused, and indexing probes this
-    // once per configuration.
+    // Computed properties are slow, and indexing probes once per configuration.
     const query: Record<string, string> = {
         includeComputedProperties: "false"
     };

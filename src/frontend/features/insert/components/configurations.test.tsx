@@ -71,8 +71,7 @@ function renderPanel(
 }
 
 describe("ConfigurationWrapper", () => {
-    // What was typed is what Onshape is sent, so that is what the panel keeps;
-    // the key it reports is canonical, for the thumbnail alone.
+    // Onshape is sent what was typed; the key is canonical, for the thumbnail.
     it("keeps a typed expression, and shows what it evaluates to", async () => {
         const user = userEvent.setup();
         const { lastReport } = renderPanel({
@@ -157,7 +156,6 @@ describe("ConfigurationWrapper", () => {
         expect(lastReport().record?.partNumber).toBe("PN-LARGE");
     });
 
-    // Filled in for the person rather than by them, and kept out of the url.
     it("fills a derivation variable itself and keeps it read-only", async () => {
         const { lastReport } = renderPanel({
             parameters: [derivationParam("dv"), size],

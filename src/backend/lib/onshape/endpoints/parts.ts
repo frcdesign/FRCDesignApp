@@ -4,10 +4,6 @@ import { type Selection } from "../../../features/configurations/contract";
 import { encodeQueryConfiguration } from "../../../features/configurations/utils";
 import type { OnshapePart } from "../types";
 
-/**
- * Returns the parts of a part studio, configured by what `configuration`
- * changes from the element's defaults.
- */
 export function getParts(
     client: OnshapeApi,
     elementPath: ElementPath,

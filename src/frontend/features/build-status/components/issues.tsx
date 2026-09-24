@@ -31,10 +31,7 @@ import { SectionHeader } from "./sections";
 import { useOnshapeOrigin } from "../../../lib/onshape-params";
 import styles from "../../../lib/styles.module.css";
 
-/**
- * Stored issues plus the live "no unhidden insertables" check, which needs the
- * per-insertable visibility in the same response.
- */
+/** Adds the live "no unhidden insertables" check, which needs visibility. */
 export function useGroupBuildIssues(
     groupStatus: GroupBuildStatus | undefined,
     insertableStatuses: Record<string, InsertableBuildStatus> | undefined
@@ -44,8 +41,7 @@ export function useGroupBuildIssues(
         const hasUnhidden = groupStatus.insertableOrder.some(
             (id) => insertableStatuses?.[id]?.isVisible
         );
-        // A group that never loaded has no insertables to unhide, so the failure
-        // is the whole story.
+        // A group that never loaded has nothing to unhide.
         if (
             hasUnhidden ||
             hasBuildIssue(groupStatus.buildIssues, BuildIssueType.LOAD_FAILED)
@@ -193,10 +189,7 @@ function countSeverities(issues: BuildIssue[]): SeverityCounts {
     return counts;
 }
 
-/**
- * What a configuration issue opens: the tab it belongs to, and the parameters
- * its values are made whole against. An element with no configurations has none.
- */
+/** Undefined for an element with no configurations. */
 export interface ConfigurationTarget {
     elementPath: ElementPath;
     parameters: ConfigurationParameter[];
@@ -257,11 +250,7 @@ interface IssueCalloutProps {
     url?: string;
 }
 
-/**
- * A single build issue rendered as a tinted callout box in its severity color.
- * An issue that names a configuration is the link to it, whole box included —
- * there is nothing else in the callout to click.
- */
+/** When the issue names a configuration, the whole box links to it. */
 function IssueCallout(props: IssueCalloutProps): ReactNode {
     const { issue, url } = props;
     const severity = getIssueSeverity(issue);
@@ -277,8 +266,6 @@ function IssueCallout(props: IssueCalloutProps): ReactNode {
     }
 
     return (
-        // The box is the link, so the anchor drops its own color and rule and
-        // lets the callout keep the severity's.
         <Anchor
             href={url}
             target="_blank"

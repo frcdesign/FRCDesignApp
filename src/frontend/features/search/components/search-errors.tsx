@@ -47,9 +47,6 @@ interface FilterCalloutProps {
     filtered: FilterResult;
 }
 
-/**
- * A callout which renders whenever there are items hidden by filters.
- */
 export function SearchCallout(props: FilterCalloutProps): ReactNode {
     const { filtered, objectLabel } = props;
     const searchAllDocuments = useSearchAllDocuments();

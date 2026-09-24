@@ -6,26 +6,17 @@ import { MOCK_ONSHAPE_API, MockOnshapeApi } from "./mock-onshape-api";
 export interface TestAppOptions {
     /** Current user id, returned by `c.var.getUserId()` (default `"test-user"`). */
     userId?: string;
-    /**
-     * Access level returned by `c.var.getAccessLevel()` (default `ADMIN`): one
-     * for every library, or one per library.
-     */
+    /** Default `ADMIN`; a function sets it per library. */
     accessLevel?: AccessLevel | ((libraryId: LibraryId) => AccessLevel);
     /** Onshape mock returned by `c.var.getOnshapeApi()` (default a fresh mock). */
     onshapeApi?: MockOnshapeApi;
-    /**
-     * When false, `getOnshapeApi` rejects so `isSignedIn()` is false (simulating
-     * a not-signed-in caller). Default true.
-     */
+    /** When false, `getOnshapeApi` rejects, so `isSignedIn()` is false. Default true. */
     signedIn?: boolean;
     /** Whether the caller passes the auth gate (default true). */
     isAuthenticated?: boolean;
 }
 
-/**
- * The real app from `createApp`, answering its auth questions from `options`
- * instead of `productionAuth`. Drive it with `app.request(path, init, env)`.
- */
+/** The real app, with auth from `options` instead of `productionAuth`. */
 export function createTestApp(options: TestAppOptions = {}) {
     const signedIn = options.signedIn ?? true;
     return createApp(() => ({
@@ -44,10 +35,6 @@ export function createTestApp(options: TestAppOptions = {}) {
     }));
 }
 
-/**
- * Builds a `RequestInit` for a JSON request, serializing `body` and setting the
- * content-type header. Use with `app.request(path, jsonRequest(...), env)`.
- */
 export function jsonRequest(method: string, body?: unknown): RequestInit {
     if (body === undefined) return { method };
     return {

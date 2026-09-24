@@ -1,8 +1,6 @@
 /**
- * The Onshape webhooks this deployment registers: one per library document,
- * for its new versions, and one per admin team, for its members. Each is
- * registered with `isTransient: false`, which Onshape documents as exempting
- * it from cleanup, so once one is on record it is taken to stand.
+ * One per library document, for new versions, and one per admin team. Each is
+ * registered with `isTransient: false`, which exempts it from Onshape's cleanup.
  */
 import { and, eq } from "drizzle-orm";
 import type { AppBindings } from "../../lib/context";
@@ -33,11 +31,7 @@ function whereSubject(subject: WebhookSubject, subjectId: string) {
     );
 }
 
-/**
- * What to ask Onshape for. A document's names the document, from which Onshape
- * infers the company. A team's events are company-wide and name no team, so
- * the company is the registering user's, and the receiver picks out the team.
- */
+/** Team events are company-wide, so a team's webhook names the company and the receiver filters. */
 async function subjectParams(
     onshapeApi: OAuthApi,
     subject: WebhookSubject,
@@ -79,8 +73,7 @@ export async function ensureWebhook(
         return;
     }
 
-    // Stored first: Onshape posts webhook.register to the url before create
-    // returns, and the token is how the receiver recognizes it.
+    // Stored first: Onshape posts webhook.register before create returns.
     const token = crypto.randomUUID();
     await db
         .insert(onshapeWebhooks)
@@ -144,10 +137,7 @@ export function findWebhookByToken(
         .get();
 }
 
-/**
- * Drops the record of a webhook Onshape unregistered, so the next load of its
- * document, or setting of its team, registers another.
- */
+/** So the next load or team change registers another. */
 export async function forgetWebhook(
     env: AppBindings,
     webhook: RegisteredWebhook

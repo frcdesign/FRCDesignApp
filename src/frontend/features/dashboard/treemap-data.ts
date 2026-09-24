@@ -9,10 +9,7 @@ export interface UsagePart extends PartUsageOut {
     libraryId: LibraryId;
 }
 
-/**
- * How far in the treemap is looking: every library, one library's groups, or
- * one group's parts. Parts are leaves — clicking one leaves the chart.
- */
+/** Parts are leaves: clicking one leaves the chart. */
 export interface TreemapPath {
     libraryId?: LibraryId;
     groupName?: string;
@@ -32,10 +29,6 @@ interface TileBase {
     color: string;
 }
 
-/**
- * One tile. Discriminated rather than a bag of optional ids, so a click reads
- * the level it is on instead of guessing from which keys are set.
- */
 export type TreemapNode =
     | (TileBase & { kind: TreemapKind.LIBRARY; libraryId: LibraryId })
     | (TileBase & { kind: TreemapKind.GROUP; groupName: string })
@@ -45,20 +38,14 @@ export type TreemapNode =
           elementId: string;
       });
 
-/**
- * Shades by rank off one hue, darkest first: monotone rather than cycling, so a
- * lighter tile always means a smaller one.
- */
+/** Darkest first, so a lighter tile is always a smaller one. */
 const SHADES = [9, 8, 7, 6, 5, 4, 3];
 
 function shade(color: string, rank: number): string {
     return colorVar(color, SHADES[Math.min(rank, SHADES.length - 1)]);
 }
 
-/**
- * A part with no uses in the window is dropped rather than drawn: a zero-value
- * tile has no area but still sits in the DOM catching clicks.
- */
+/** Drops unused parts: a zero-area tile still catches clicks. */
 function within(parts: UsagePart[], path: TreemapPath): UsagePart[] {
     return parts.filter(
         (part) =>
@@ -84,10 +71,7 @@ function totalsBy<K extends string>(
         .map(([key, value]) => ({ key, value }));
 }
 
-/**
- * The tiles at `path`. Libraries keep the colors the charts give them, and
- * everything inside one shades off that library's hue.
- */
+/** Inside a library, tiles shade off its chart color. */
 export function toNodes(parts: UsagePart[], path: TreemapPath): TreemapNode[] {
     const shown = within(parts, path);
 

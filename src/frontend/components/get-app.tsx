@@ -5,11 +5,7 @@ import { IconSize } from "../lib/style-constants";
 import { openUrlInNewTab, SETUP_URL } from "../lib/url";
 import { Callout } from "./callout";
 
-/**
- * Offers the app over the insert menu's preview, where a part somebody cannot
- * insert is in front of them. Inside Onshape's panel they are already running
- * it, so nothing renders there.
- */
+/** Offers the app where someone sees a part they can't insert. Hidden inside Onshape. */
 export function GetAppCallout(): ReactNode {
     const isConnected = useIsConnectedToOnshape();
 

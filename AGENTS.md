@@ -2,25 +2,27 @@
 
 ## Comments
 
-Explain _why_, not _what_: the what is in the code. Don't restate a signature
-(write "returns the access level, respecting the cache", not a paragraph
-re-deriving the caching), and delete comments that narrate obvious steps.
+Default to none. A good name and type say what a thing is; a comment is for the
+_why_ a reader cannot get from the code: a workaround, a constraint from
+Onshape or Cloudflare, a choice that looks wrong but isn't.
 
-One or two lines is the usual size. Go longer only for something genuinely
-hard — a protocol Onshape does not document, a fix whose reason is not visible
-from the code — and then say the hard thing plainly rather than compressing it
-into dense prose. **No comment is better than a long one, and a long one is
-better than a short one that is wrong.** Brevity is not worth an inaccuracy.
+Keep it to one line, two at most. If it needs more, the code probably wants
+restructuring or the detail belongs in the commit message. The exception is a
+genuinely obscure protocol, and even then aim for a short paragraph.
 
-A comment is a claim, and a reader will believe it without checking. So:
+Write it plainly and with confidence:
 
-- **Hedge where you are actually unsure.** "as far as I can tell" and "Onshape
-  does not document this" are useful; they tell the next person where to look.
-  Confident phrasing on a guess is worse than no comment.
+- **Say what is true now.** No history ("used to", "no longer", "was moved
+  here"), and no alternatives you didn't take ("rather than X"). Those go in
+  the commit message.
+- **Don't hedge.** If you are unsure, check — read the docs, run it, write a
+  test — then state the result. Leave uncertainty in only where it cannot be
+  checked, such as undocumented Onshape behavior, and say so in a few words.
+- **Don't restate the code.** No narrating steps, re-deriving a signature, or
+  listing every caller.
 
-Update the comment in the same change as the code it describes, and delete it
-when it stops being true. A stale comment outranks the code in a reader's head,
-which is what makes it worse than none.
+Update or delete a comment in the same change as the code it describes: a
+stale comment is worse than none.
 
 ## Absent values
 

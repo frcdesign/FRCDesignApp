@@ -1,7 +1,4 @@
-/**
- * The Onshape Client Messaging API, for a right-panel extension (not a tab one).
- * https://onshape-public.github.io/docs/app-dev/clientmessaging/
- */
+/** Onshape's Client Messaging API: https://onshape-public.github.io/docs/app-dev/clientmessaging/ */
 
 import { type ElementPath } from "@backend/lib/onshape/path";
 import { useEffect } from "react";
@@ -51,22 +48,15 @@ export function sendOpenFeatureMessage(
 }
 
 /*
- * Selecting and highlighting are not here. Lighting the insert location up in
- * the viewport was tried and set aside: `requestSelectionHighlight` answered
- * every payload we sent it `statusCode: "SUCCESS"` and painted nothing, and we
- * never established whether it paints anything at all in an assembly. What was
- * learned along the way, none of which Onshape documents:
+ * Highlighting the insert location was tried and dropped:
+ * `requestSelectionHighlight` answered SUCCESS and painted nothing. Undocumented
+ * findings from that:
  *
- * - A `requestSelection` filter is one specifier per level, not the single
- *   `entityTypeSpecifier` the docs describe. A mate connector is
- *   `selectionTypeSpecifier: ["BODY"]` with
- *   `bodyTypeSpecifier: ["MATE_CONNECTOR"]`, and `geometryTypeSpecifier` sits
- *   under a `GEOMETRY` one.
- * - A highlight cancels whatever selection request is outstanding rather than
- *   sitting alongside it.
- * - An inbound SELECTION reports an assembly instance as a `selectionType` of
- *   `OCCURRENCE`, carrying an `occurrencePath`. Do not send that back: Onshape
- *   takes it and the instance list falls over.
+ * - A `requestSelection` filter takes one specifier per level. A mate connector
+ *   is `selectionTypeSpecifier: ["BODY"]` with `bodyTypeSpecifier: ["MATE_CONNECTOR"]`.
+ * - A highlight cancels any outstanding selection request.
+ * - Don't send back the `OCCURRENCE` selection Onshape reports for an assembly
+ *   instance; the instance list breaks.
  */
 
 enum MessageType {

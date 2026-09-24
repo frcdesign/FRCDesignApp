@@ -98,11 +98,7 @@ function TrademarkDisclaimer(): ReactNode {
     );
 }
 
-/**
- * What a new user is met with: which program they build for, which becomes the
- * tab the app opens in. Stored like any other synced setting, so it is asked
- * once per account rather than once per browser.
- */
+/** Asks a new user's program, which becomes their tab. Synced, so asked once per account. */
 export function ProgramSelect(): ReactNode {
     const { tabId } = useGetUiState();
     const navigateToTab = useNavigateToTab();
@@ -120,8 +116,7 @@ export function ProgramSelect(): ReactNode {
                     title="Welcome to the FRCDesignApp!"
                     description="To get started, select your library. You can switch between libraries at any time using the top navbar."
                     action={
-                        // Stacked and full width: two side by side would each
-                        // be narrower than their own name in Onshape's panel.
+                        // Side by side, each would be narrower than its name in Onshape's panel.
                         <Stack gap="sm" w="100%" maw={320}>
                             {PROGRAMS.map((program) => (
                                 <ProgramCard

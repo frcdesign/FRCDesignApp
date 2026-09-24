@@ -22,10 +22,6 @@ interface TrendTileProps {
     series: DailyMetricPoint[];
 }
 
-/**
- * One number and its trend. Leads with the range so it agrees with the
- * sparkline beneath it.
- */
 export function TrendTile({
     metric,
     totals,
