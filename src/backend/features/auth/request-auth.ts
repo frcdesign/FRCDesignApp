@@ -12,6 +12,7 @@ import {
 import { type AppContext, type AuthResolver } from "../../lib/context";
 import { AccessLevel } from "./access-level";
 import { rememberOwnerSession } from "./owner";
+import { ensureWebhook } from "../webhooks/registration";
 import {
     getOauthClient,
     makeAuthTokens,
@@ -158,6 +159,25 @@ async function isOwner(c: AppContext): Promise<boolean> {
     return !!ownerUserId && (await getCachedUserId(c)) === ownerUserId;
 }
 
+/**
+ * In the background where the runtime allows it: nothing the owner asked for
+ * waits on Onshape for this, and a failure only means the next check retries.
+ */
+function keepWebhookRegistered(c: AppContext): void {
+    const work = getOnshapeApi(c)
+        .then((onshapeApi) =>
+            ensureWebhook(c.env, onshapeApi, new URL(c.req.url).origin)
+        )
+        .catch((error: unknown) => {
+            console.error("Failed to register Onshape webhooks", error);
+        });
+    try {
+        c.executionCtx.waitUntil(work);
+    } catch {
+        // No execution context, as under test; the promise runs regardless.
+    }
+}
+
 /** Returns the caller's access level, memoized in KV by session. */
 async function getCachedAccessLevel(c: AppContext): Promise<AccessLevel> {
     const sessionId = getSessionId(c);
@@ -170,6 +190,7 @@ async function getCachedAccessLevel(c: AppContext): Promise<AccessLevel> {
     if (await isOwner(c)) {
         level = AccessLevel.OWNER;
         await rememberOwnerSession(c.env.KV, sessionId);
+        keepWebhookRegistered(c);
     } else {
         level = await getAccessLevel(await getOnshapeApi(c), c.env.ADMIN_TEAM);
     }

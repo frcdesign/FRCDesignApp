@@ -29,6 +29,13 @@ export async function getCompanyWebhooks(
     return response.items;
 }
 
+export function getWebhook(
+    client: OnshapeApi,
+    webhookId: string
+): Promise<OnshapeWebhookInfo> {
+    return client.get(`/webhooks/${encodeURIComponent(webhookId)}`);
+}
+
 export function createWebhook(
     client: OnshapeApi,
     params: CreateWebhookParams

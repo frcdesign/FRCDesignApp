@@ -8,13 +8,12 @@ import {
     resetDb,
     seedGroup
 } from "../../../__test_utils__";
-import { MockOnshapeApi } from "../../../__test_utils__/mock-onshape-api";
 import { getDb } from "../../db/client";
 import { AccessLevel } from "../auth/access-level";
 import { accessLevelKey } from "../auth/session";
 import { rememberOwnerSession } from "../auth/owner";
 import * as JobTracker from "../load/job-tracker";
-import { WebhookEvent } from "./routes";
+import { WebhookEvent } from "./registration";
 
 const db = getDb(env.DB);
 const TOKEN = "the-token";
@@ -31,7 +30,10 @@ function deliver(body: object, token = TOKEN) {
 describe("receiving a webhook", () => {
     beforeEach(async () => {
         await resetDb(db);
-        await env.KV.put("webhook-token", TOKEN);
+        await env.KV.put(
+            "webhook-registration",
+            JSON.stringify({ token: TOKEN, webhookId: "ours" })
+        );
     });
     afterEach(() => vi.restoreAllMocks());
 
@@ -44,6 +46,12 @@ describe("receiving a webhook", () => {
     it("answers Onshape's registration check", async () => {
         const res = await deliver({ event: "webhook.register" });
         expect(res.status).toBe(200);
+    });
+
+    // So the owner's next visit registers a new one.
+    it("forgets a registration Onshape dropped", async () => {
+        await deliver({ event: "webhook.unregister", webhookId: "ours" });
+        expect(await env.KV.get("webhook-registration")).toBeNull();
     });
 
     describe("a new version", () => {
@@ -117,71 +125,5 @@ describe("receiving a webhook", () => {
                 AccessLevel.EDITOR
             );
         });
-    });
-});
-
-describe("registering webhooks", () => {
-    afterEach(() => vi.restoreAllMocks());
-
-    /** Onshape, holding one webhook of this deployment's and one of another's. */
-    function mockOnshape() {
-        const onshapeApi = new MockOnshapeApi();
-        vi.spyOn(onshapeApi, "get").mockImplementation((path: string) =>
-            Promise.resolve(
-                path === "/users/sessioninfo"
-                    ? { id: "owner", company: { id: "company" } }
-                    : {
-                          items: [
-                              {
-                                  id: "ours",
-                                  url: "http://localhost/api/webhooks/onshape?token=old"
-                              },
-                              {
-                                  id: "theirs",
-                                  url: "https://cert.example.com/api/webhooks/onshape?token=x"
-                              }
-                          ]
-                      }
-            )
-        );
-        const post = vi.spyOn(onshapeApi, "post").mockResolvedValue({});
-        const remove = vi
-            .spyOn(onshapeApi, "deleteNone")
-            .mockResolvedValue(undefined);
-        return { onshapeApi, post, remove };
-    }
-
-    it("is the owner's alone", async () => {
-        const res = await createTestApp({
-            accessLevel: AccessLevel.ADMIN
-        }).request("/api/webhooks/register", jsonRequest("POST"), env);
-        expect(res.status).toBe(403);
-    });
-
-    it("replaces this deployment's webhook and no one else's", async () => {
-        const { onshapeApi, post, remove } = mockOnshape();
-
-        const res = await createTestApp({
-            accessLevel: AccessLevel.OWNER,
-            onshapeApi
-        }).request(
-            "http://localhost/api/webhooks/register",
-            jsonRequest("POST"),
-            env
-        );
-
-        expect(res.status).toBe(200);
-        expect(remove).toHaveBeenCalledExactlyOnceWith("/webhooks/ours");
-        const token = await env.KV.get("webhook-token");
-        expect(post).toHaveBeenCalledWith(
-            "/webhooks",
-            expect.objectContaining({
-                body: expect.objectContaining({
-                    companyId: "company",
-                    url: `http://localhost/api/webhooks/onshape?token=${token}`,
-                    isTransient: false
-                })
-            })
-        );
     });
 });

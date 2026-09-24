@@ -1,12 +1,13 @@
 import { env } from "cloudflare:workers";
 import { env as processEnv } from "process";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { AccessLevel } from "./access-level";
 import { productionAuth } from "./request-auth";
 import { createApp } from "../../app";
 import { jsonRequest } from "../../../__test_utils__";
 import { saveSession } from "./session";
 import { getOwnerSessionId } from "./owner";
+import * as Registration from "../webhooks/registration";
 
 const app = createApp(productionAuth);
 
@@ -71,7 +72,12 @@ describe("the owner", () => {
     }
 
     it("is the user OWNER_USER_ID names, and their session is kept", async () => {
+        const ensure = vi
+            .spyOn(Registration, "ensureWebhook")
+            .mockResolvedValue();
         expect(await accessLevelOf(OWNER)).toBe(AccessLevel.OWNER);
         expect(await getOwnerSessionId(env.KV)).not.toBeNull();
+        // And the webhooks are kept registered on their behalf.
+        expect(ensure).toHaveBeenCalledOnce();
     });
 });
