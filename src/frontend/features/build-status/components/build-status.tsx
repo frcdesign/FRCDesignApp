@@ -17,7 +17,7 @@ import { AppHoverCard } from "../../../components/app-hover-card";
 import { RequireAccessLevel } from "../../auth/access-level";
 import { TruncatedText } from "../../../components/truncated-text";
 import { useBuildStatusQuery } from "../queries";
-import { useIsJobRunning } from "../../library/queries";
+import { useIsGroupLoading } from "../../library/queries";
 import {
     BuildChecksSection,
     type ConfigurationTarget,
@@ -37,6 +37,8 @@ import styles from "../../../lib/styles.module.css";
 interface BuildStatusSubject {
     /** The group/insertable name shown in the header. */
     name: string;
+    /** The group it is, or is in: a load of that group is what spins. */
+    groupId: string;
     issues: BuildIssue[];
     /** When Onshape cut the version it is pinned to (epoch ms); null if none. */
     versionCreatedAt: number | null;
@@ -56,12 +58,19 @@ interface BuildStatusCardProps extends BuildStatusSubject {
  * the build checks (when any), and the wrapped group/insertable admin menu.
  */
 function BuildStatusCard(props: BuildStatusCardProps): ReactNode {
-    const { name, issues, versionCreatedAt, configurationTarget, children } =
-        props;
+    const {
+        name,
+        groupId,
+        issues,
+        versionCreatedAt,
+        configurationTarget,
+        children
+    } = props;
     return (
         <Stack gap="sm" w={300}>
             <CardHeader
                 name={name}
+                groupId={groupId}
                 issues={issues}
                 versionCreatedAt={versionCreatedAt}
             />
@@ -103,6 +112,7 @@ type BuildStatusHoverCardProps = BuildStatusBadgeProps;
 
 function BuildStatusHoverCard({
     name,
+    groupId,
     issues,
     versionCreatedAt,
     configurationTarget,
@@ -110,14 +120,14 @@ function BuildStatusHoverCard({
     hoverMenu
 }: BuildStatusHoverCardProps): ReactNode {
     const maxSeverity = getMaxSeverity(issues);
-    const jobRunning = useIsJobRunning();
+    const loading = useIsGroupLoading(groupId);
 
     return (
         <AppHoverCard
             position="right"
             arrowSize={20}
             target={
-                jobRunning ? (
+                loading ? (
                     <Loader size={IconSize.SMALL} />
                 ) : isHidden ? (
                     // Nobody but an editor sees a hidden insertable, so what
@@ -134,6 +144,7 @@ function BuildStatusHoverCard({
         >
             <BuildStatusCard
                 name={name}
+                groupId={groupId}
                 issues={issues}
                 versionCreatedAt={versionCreatedAt}
                 configurationTarget={configurationTarget}
@@ -146,13 +157,14 @@ function BuildStatusHoverCard({
 
 interface CardHeaderProps {
     name: string;
+    groupId: string;
     issues: BuildIssue[];
     versionCreatedAt: number | null;
 }
 
 /** The card header: name + severity summary on the left, the version's age on the right. */
 function CardHeader(props: CardHeaderProps): ReactNode {
-    const { name, issues, versionCreatedAt } = props;
+    const { name, groupId, issues, versionCreatedAt } = props;
     return (
         <Stack gap={6}>
             <Group
@@ -170,7 +182,10 @@ function CardHeader(props: CardHeaderProps): ReactNode {
                 >
                     {name}
                 </TruncatedText>
-                <VersionAge versionCreatedAt={versionCreatedAt} />
+                <VersionAge
+                    groupId={groupId}
+                    versionCreatedAt={versionCreatedAt}
+                />
             </Group>
             <SeverityBadges issues={issues} />
         </Stack>
@@ -178,22 +193,21 @@ function CardHeader(props: CardHeaderProps): ReactNode {
 }
 
 interface VersionAgeProps {
+    groupId: string;
     versionCreatedAt: number | null;
 }
 
 /**
  * How old the pinned Onshape version is — when the version was cut, not when we
- * last synced it. A spinner (with a tooltip) stands in while a job is running;
+ * last synced it. A spinner (with a tooltip) stands in while its group loads;
  * otherwise the version icon and a day count say it without a label.
  */
 function VersionAge(props: VersionAgeProps): ReactNode {
-    const { versionCreatedAt } = props;
-    // Asked for again rather than threaded through three components; React
-    // Query serves both readers from one cache entry.
-    const jobRunning = useIsJobRunning();
-    if (jobRunning) {
+    const { groupId, versionCreatedAt } = props;
+    const loading = useIsGroupLoading(groupId);
+    if (loading) {
         return (
-            <Tooltip label="The library is being loaded from Onshape in the background">
+            <Tooltip label="Being loaded from Onshape in the background">
                 <Loader size="xs" className={styles.noShrink} />
             </Tooltip>
         );
@@ -216,6 +230,7 @@ function VersionAge(props: VersionAgeProps): ReactNode {
 
 interface InsertableStatusBadgeProps {
     insertableId: string;
+    groupId: string;
     name: string;
 }
 
@@ -223,13 +238,14 @@ interface InsertableStatusBadgeProps {
 export function InsertableStatusBadge(
     props: InsertableStatusBadgeProps
 ): ReactNode {
-    const { insertableId, name } = props;
+    const { insertableId, groupId, name } = props;
     const { data } = useBuildStatusQuery();
     const insertable = data?.insertables[insertableId];
     if (!insertable) return null;
     return (
         <BuildStatusBadge
             name={name}
+            groupId={groupId}
             issues={insertable.buildIssues}
             versionCreatedAt={insertable.versionCreatedAt}
             isHidden={!insertable.isVisible}
@@ -286,6 +302,7 @@ export function GroupStatusBadge(props: GroupStatusBadgeProps): ReactNode {
     return (
         <BuildStatusBadge
             name={name}
+            groupId={groupId}
             issues={issues}
             versionCreatedAt={groupStatus.versionCreatedAt}
             hoverMenu={

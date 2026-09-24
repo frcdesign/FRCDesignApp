@@ -4,10 +4,7 @@ import {
     type QuantityParameter
 } from "@backend/features/configurations/contract";
 import { QuantityType, Unit } from "@backend/features/configurations/enums";
-import {
-    getEvaluateOptions,
-    PLACEHOLDER_UNIT_INFO
-} from "@backend/features/configurations/utils";
+import { getEvaluateOptions } from "@backend/features/configurations/utils";
 import { seedFrom } from "./quantity-box";
 
 const SHAFT_LENGTH: QuantityParameter = {
@@ -22,8 +19,8 @@ const SHAFT_LENGTH: QuantityParameter = {
     unit: Unit.INCH
 };
 
-/** Standalone has no document to ask, so quantities show in the placeholder's units. */
-const STANDALONE = getEvaluateOptions(SHAFT_LENGTH, PLACEHOLDER_UNIT_INFO);
+/** Standalone has no document to ask, so each quantity shows its own unit. */
+const STANDALONE = getEvaluateOptions(SHAFT_LENGTH, undefined);
 
 describe("seedFrom", () => {
     // The box edits what was typed and shows what it evaluates to.
@@ -36,9 +33,11 @@ describe("seedFrom", () => {
 
     it("shows the value in the document's unit when there is one", () => {
         const metric = getEvaluateOptions(SHAFT_LENGTH, {
-            ...PLACEHOLDER_UNIT_INFO,
             lengthUnit: Unit.MILLIMETER,
-            lengthPrecision: 1
+            angleUnit: Unit.DEGREE,
+            lengthPrecision: 1,
+            anglePrecision: 3,
+            realPrecision: 3
         });
         expect(seedFrom("47 in", SHAFT_LENGTH, metric)).toEqual({
             expression: "47 in",

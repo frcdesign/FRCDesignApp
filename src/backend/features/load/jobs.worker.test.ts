@@ -60,8 +60,8 @@ describe("document loads", () => {
         ]);
         expect((await job("a"))?.instanceId).toBe(started[0].id);
         instancesAre("running");
-        expect(await getJobStatus(env, TEST_LIBRARY_ID)).toMatchObject({
-            running: true
+        expect(await getJobStatus(env, TEST_LIBRARY_ID)).toEqual({
+            loadingGroupIds: ["a", "b"]
         });
     });
 
@@ -130,7 +130,7 @@ describe("document loads", () => {
             await finishLoad(env, params("b"), false);
             expect(rebuild).toHaveBeenCalledOnce();
             expect(await getJobStatus(env, TEST_LIBRARY_ID)).toEqual({
-                running: false
+                loadingGroupIds: []
             });
         });
     });

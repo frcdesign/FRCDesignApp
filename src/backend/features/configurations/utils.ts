@@ -238,24 +238,13 @@ export function getVisibleOptions(
 export const DEFAULT_QUANTITY_PRECISION = 3;
 
 /**
- * The units shown outside a document, which has none to take: Onshape's own
- * for a new document, in the units the library's parts are drawn in.
- */
-export const PLACEHOLDER_UNIT_INFO: UnitInfo = {
-    lengthUnit: Unit.INCH,
-    angleUnit: Unit.DEGREE,
-    lengthPrecision: DEFAULT_QUANTITY_PRECISION,
-    anglePrecision: DEFAULT_QUANTITY_PRECISION,
-    realPrecision: DEFAULT_QUANTITY_PRECISION
-};
-
-/**
  * The evaluation settings for a quantity parameter: its own bounds, plus the
  * document's display unit and precision, falling back to the parameter's own.
  */
 export function getEvaluateOptions(
     parameter: QuantityParameter,
-    unitInfo: UnitInfo
+    /** The document's; without one, each quantity shows in its own unit. */
+    unitInfo: UnitInfo | undefined
 ): EvaluateOptions {
     const quantityType = parameter.quantityType;
     const minAndMax = {
@@ -265,21 +254,24 @@ export function getEvaluateOptions(
     if (quantityType === QuantityType.LENGTH) {
         return {
             quantityType,
-            displayPrecision: unitInfo.lengthPrecision,
-            displayUnit: unitInfo.lengthUnit,
+            displayPrecision:
+                unitInfo?.lengthPrecision ?? DEFAULT_QUANTITY_PRECISION,
+            displayUnit: unitInfo?.lengthUnit ?? parameter.unit,
             ...minAndMax
         };
     } else if (quantityType === QuantityType.ANGLE) {
         return {
             quantityType,
-            displayPrecision: unitInfo.anglePrecision,
-            displayUnit: unitInfo.angleUnit,
+            displayPrecision:
+                unitInfo?.anglePrecision ?? DEFAULT_QUANTITY_PRECISION,
+            displayUnit: unitInfo?.angleUnit ?? parameter.unit,
             ...minAndMax
         };
     } else if (quantityType === QuantityType.REAL) {
         return {
             quantityType,
-            displayPrecision: unitInfo.realPrecision,
+            displayPrecision:
+                unitInfo?.realPrecision ?? DEFAULT_QUANTITY_PRECISION,
             displayUnit: Unit.UNITLESS,
             ...minAndMax
         };

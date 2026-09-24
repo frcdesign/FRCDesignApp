@@ -1,7 +1,4 @@
-/**
- * Whether a library-load job is running, and how long it has been going.
- * Milliseconds since the oldest running job started paces the client's polling.
- */
-export type JobStatus =
-    | { running: false }
-    | { running: true; runningForMs: number };
+/** Which of a library's groups are loading, so each can show that it is. */
+export interface JobStatus {
+    loadingGroupIds: string[];
+}

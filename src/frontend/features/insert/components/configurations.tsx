@@ -30,7 +30,6 @@ import {
     BooleanParameter,
     StringParameter,
     QuantityParameter,
-    UnitInfo,
     SearchRecord
 } from "@backend/features/configurations/contract";
 import {
@@ -126,8 +125,6 @@ export function ConfigurationWrapper(
 
     const query = useConfigurationQuery(insertableId, microversionId);
 
-    const unitInfo = useUnitInfo();
-
     const parameters = query.data?.parameters;
     // Whole the moment the parameters are known, since a search hit names only
     // its overrides, and settled against the conditions so a row never has to
@@ -174,7 +171,7 @@ export function ConfigurationWrapper(
     if (query.isError) {
         return <SectionNotice title="Failed to load selection." />;
     }
-    if (query.isPending || !unitInfo || !whole) {
+    if (query.isPending || !whole) {
         return (
             <Center my="md">
                 <Loader />
@@ -187,7 +184,6 @@ export function ConfigurationWrapper(
             configurationResult={query.data}
             selection={whole}
             setSelection={editSelection}
-            unitInfo={unitInfo}
         />
     );
 }
@@ -196,13 +192,12 @@ interface ConfigurationParametersProps {
     configurationResult: ConfigurationResult;
     selection: Selection;
     setSelection: Dispatch<Selection>;
-    unitInfo: UnitInfo;
 }
 
 function ConfigurationParameters(
     props: ConfigurationParametersProps
 ): ReactNode {
-    const { configurationResult, selection, setSelection, unitInfo } = props;
+    const { configurationResult, selection, setSelection } = props;
 
     return (
         <div className={classes.grid}>
@@ -213,7 +208,6 @@ function ConfigurationParameters(
                     selection={selection}
                     setSelection={setSelection}
                     parameters={configurationResult.parameters}
-                    unitInfo={unitInfo}
                 />
             ))}
         </div>
@@ -265,7 +259,6 @@ interface ParameterRowProps {
     selection: Selection;
     setSelection: Dispatch<Selection>;
     parameters: ConfigurationParameter[];
-    unitInfo: UnitInfo;
 }
 
 /**
@@ -273,7 +266,7 @@ interface ParameterRowProps {
  * the `.map` it replaces, it changed identity every render — and effects name it.
  */
 function ParameterRow(props: ParameterRowProps): ReactNode {
-    const { parameter, selection, setSelection, parameters, unitInfo } = props;
+    const { parameter, selection, setSelection, parameters } = props;
 
     const handleValueChange = useCallback(
         (newValue: string | undefined) => {
@@ -291,7 +284,6 @@ function ParameterRow(props: ParameterRowProps): ReactNode {
             selection={selection}
             parameters={parameters}
             onValueChange={handleValueChange}
-            unitInfo={unitInfo}
         />
     );
 }
@@ -303,7 +295,6 @@ interface ParameterProps<T extends ConfigurationParameter> {
     onValueChange: (newValue: string | undefined) => void;
     selection: Selection;
     parameters: ConfigurationParameter[];
-    unitInfo: UnitInfo;
 }
 
 function ParameterInput(
@@ -426,7 +417,11 @@ function StringInput(props: ParameterProps<StringParameter>): ReactNode {
 function QuantityInput(props: ParameterProps<QuantityParameter>): ReactNode {
     // Alone among the inputs in holding its own state: the box keeps what was
     // typed, and `value` re-seeds it only when it changes somewhere else.
-    const { parameter, value, onValueChange, unitInfo } = props;
+    const { parameter, value, onValueChange } = props;
+    // Its own query per box: they all share the one cached answer, and a box
+    // shows its own unit until the document's arrive rather than holding the
+    // panel up for them.
+    const unitInfo = useUnitInfo();
 
     const evaluateOptions = useMemo(
         () => getEvaluateOptions(parameter, unitInfo),

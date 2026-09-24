@@ -7,17 +7,14 @@ import { thumbnailUrl } from "@backend/features/thumbnails/keys";
 import { ThumbnailSize } from "@backend/features/thumbnails/contract";
 
 const live = vi.hoisted(() => ({
-    connected: true,
     listeners: new Set<(message: LiveMessage) => void>()
 }));
 
 vi.mock("../../lib/live-updates", () => ({
-    isLiveConnected: () => live.connected,
     subscribeLiveMessages: (listener: (message: LiveMessage) => void) => {
         live.listeners.add(listener);
         return () => live.listeners.delete(listener);
-    },
-    subscribeLiveConnection: () => () => undefined
+    }
 }));
 
 const { loadRenderedImage } = await import("./render-wait");
@@ -55,7 +52,6 @@ function mockRoute() {
 describe("waiting out a render", () => {
     beforeEach(() => {
         vi.useFakeTimers();
-        live.connected = true;
     });
     afterEach(() => {
         vi.useRealTimers();
@@ -86,13 +82,15 @@ describe("waiting out a render", () => {
         expect(fetch).toHaveBeenCalledTimes(1);
     });
 
-    it("polls while the push connection is down", async () => {
-        live.connected = false;
-        const { fetch } = mockRoute();
-        void loadRenderedImage(URL_WAITED_ON).catch(() => undefined);
+    // A push can be lost, so the deadline asks once more before giving up.
+    it("asks once more at the deadline without a push", async () => {
+        const { route, fetch } = mockRoute();
+        const loaded = loadRenderedImage(URL_WAITED_ON);
+        route.landed = true;
 
-        await vi.advanceTimersByTimeAsync(6_500);
+        await vi.advanceTimersByTimeAsync(60_000);
 
-        expect(fetch).toHaveBeenCalledTimes(4);
+        await expect(loaded).resolves.toBe(URL_WAITED_ON);
+        expect(fetch).toHaveBeenCalledTimes(2);
     });
 });

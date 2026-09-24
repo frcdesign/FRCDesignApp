@@ -8,7 +8,7 @@
  * concurrently — a full reload starts one per document — and KV loses writes
  * that race.
  */
-import { and, count, eq, inArray, min } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 import type { AppBindings } from "../../lib/context";
 import { getDb } from "../../db/client";
@@ -219,28 +219,21 @@ export async function finishLoad(
     return outcome;
 }
 
-/** Whether loads are running, from the rows alone, trusting each to be live. */
+/** The groups loading, from the rows alone, trusting each to be live. */
 async function runningStatus(
     env: AppBindings,
     libraryId: LibraryId
 ): Promise<JobStatus> {
-    const row = await getDb(env.DB)
-        .select({ running: count(), startedAt: min(loadJobs.startedAt) })
+    const rows = await getDb(env.DB)
+        .select({ groupId: loadJobs.groupId })
         .from(loadJobs)
-        .where(eq(loadJobs.libraryId, libraryId))
-        .get();
-    if (!row?.running || !row.startedAt) {
-        return { running: false };
-    }
-    return {
-        running: true,
-        runningForMs: Date.now() - row.startedAt.getTime()
-    };
+        .where(eq(loadJobs.libraryId, libraryId));
+    return { loadingGroupIds: rows.map((row) => row.groupId) };
 }
 
 /**
- * Whether loads are running, clearing any left behind by a load that crashed
- * first. For the client's first look; pushes keep it current after that.
+ * The groups loading, clearing any left behind by a load that crashed first.
+ * For the client's first look; pushes keep it current after that.
  */
 export async function getJobStatus(
     env: AppBindings,
@@ -249,7 +242,7 @@ export async function getJobStatus(
     const jobs = await getDb(env.DB)
         .select()
         .from(loadJobs)
-        .where(and(eq(loadJobs.libraryId, libraryId)));
+        .where(eq(loadJobs.libraryId, libraryId));
     await clearDead(env, jobs);
     return runningStatus(env, libraryId);
 }

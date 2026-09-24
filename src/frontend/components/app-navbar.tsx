@@ -38,11 +38,13 @@ import {
     useAccessData
 } from "../features/auth/access-level";
 import { startSignIn } from "../features/auth/sign-in";
-import { useJobStatus } from "../lib/refresh";
 import { LibraryId } from "@backend/features/library/library-id";
 import { type AppTab } from "@backend/features/settings/app-tab";
 import { queryClient } from "../lib/query-client";
-import { getLibraryVersionQuery } from "../features/library/queries";
+import {
+    getLibraryVersionQuery,
+    useIsJobRunning
+} from "../features/library/queries";
 import { InsertLocationStatus } from "../features/insert-location/components/insert-location-status";
 import styles from "../lib/styles.module.css";
 
@@ -128,8 +130,7 @@ function JobIndicator(): ReactNode {
 }
 
 function RunningJobLoader(): ReactNode {
-    // Single editor-gated job-status consumer, so it owns refresh-on-finish.
-    const jobRunning = useJobStatus();
+    const jobRunning = useIsJobRunning();
     if (!jobRunning) return null;
     return (
         <Tooltip label="The library is being loaded from Onshape in the background">

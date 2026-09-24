@@ -27,7 +27,6 @@ import {
     showSuccessToast
 } from "../../lib/notifications";
 import { getAppErrorHandler, appError } from "../../lib/errors";
-import { useIsLiveConnected } from "../../lib/live-updates";
 import { modals } from "@mantine/modals";
 import { parseOnshapeDocumentId } from "../../lib/url";
 import { useRefreshLibrary } from "../../lib/refresh";
@@ -76,69 +75,46 @@ export function useCacheVersion(): number {
 }
 
 /**
- * Without pushes, poll a fresh job often, then back off: a full reload runs
- * for hours.
- */
-const FASTEST_POLL_MS = 3_000;
-const POLL_STEPS = [
-    { untilMs: 15_000, intervalMs: FASTEST_POLL_MS },
-    { untilMs: 75_000, intervalMs: 5_000 }
-];
-const SLOWEST_POLL_MS = 10_000;
-
-function jobPollInterval(runningForMs: number): number {
-    const step = POLL_STEPS.find(({ untilMs }) => runningForMs < untilMs);
-    return step?.intervalMs ?? SLOWEST_POLL_MS;
-}
-
-/**
  * Checked once on load, then kept current by the server's pushes. `canAsk` is
- * the caller's gate: the route is editor-only. `live` is whether pushes are
- * arriving; while they are not, a running job is polled for as it used to be.
+ * the caller's gate: the route is editor-only.
  */
-function getJobStatusQuery(
-    libraryId: LibraryId,
-    canAsk: boolean,
-    live: boolean
-) {
+function getJobStatusQuery(libraryId: LibraryId, canAsk: boolean) {
     return queryOptions<JobStatus>({
         queryKey: jobStatusQueryKey(libraryId),
         queryFn: () => apiGet("/job-status/library/" + libraryId),
         enabled: canAsk,
-        // Every status badge observes this, so rows mounting as the user scrolls
-        // would each trigger a fetch. Only a push or the poll should.
-        staleTime: live ? Infinity : FASTEST_POLL_MS,
-        refetchInterval: (query) => {
-            const status = query.state.data;
-            if (live || !status?.running) {
-                return false;
-            }
-            return jobPollInterval(status.runningForMs);
-        }
+        // Every status badge observes this, so rows mounting as the user
+        // scrolls would each trigger a fetch. Only a push should change it.
+        staleTime: Infinity
     });
 }
 
-/**
- * Whether a library load is running, which several places show a spinner for.
- * The endpoint is editor-only and needs an Onshape session, so callers who have
- * neither don't poll it at all.
- */
-export function useIsJobRunning(): boolean {
-    const jobStatusQuery = useJobStatusQuery();
-    return jobStatusQuery.data?.running ?? false;
-}
+const NOTHING_LOADING: string[] = [];
 
-function useJobStatusQuery() {
+/**
+ * The groups loading in the library on screen. The endpoint is editor-only and
+ * needs an Onshape session, so callers who have neither see none.
+ */
+function useLoadingGroupIds(): string[] {
     const libraryId = useLibraryId();
     const { signedIn, currentAccessLevel } = useAccessData();
-    const live = useIsLiveConnected();
-    return useQuery(
+    const query = useQuery(
         getJobStatusQuery(
             libraryId,
-            signedIn && hasEditorAccess(currentAccessLevel),
-            live
+            signedIn && hasEditorAccess(currentAccessLevel)
         )
     );
+    return query.data?.loadingGroupIds ?? NOTHING_LOADING;
+}
+
+/** Whether anything in the library is loading. */
+export function useIsJobRunning(): boolean {
+    return useLoadingGroupIds().length > 0;
+}
+
+/** Whether this group is loading, which its row and its parts show. */
+export function useIsGroupLoading(groupId: string): boolean {
+    return useLoadingGroupIds().includes(groupId);
 }
 
 /** Deleting cascades to insertables and their favorites. */
@@ -188,28 +164,14 @@ export function useSetGroupOrderMutation() {
     });
 }
 
-/**
- * Shows the spinner without waiting for the push, and starts the job poll when
- * pushes are not arriving, which stays idle until something is known to run.
- */
-function markJobStarted(libraryId: LibraryId): void {
-    const justStarted: JobStatus = { running: true, runningForMs: 0 };
-    queryClient.setQueryData<JobStatus>(
-        jobStatusQueryKey(libraryId),
-        justStarted
-    );
-}
-
 /** Force reloads every document in every library; the owner's alone. */
 export function useReloadAllMutation() {
-    const libraryId = useLibraryId();
     return useMutation({
         mutationKey: ["reload-all"],
         mutationFn: (): Promise<{ documents: number }> =>
             apiPost("/reload-all"),
         onError: getAppErrorHandler("Failed to reload documents!"),
         onSuccess: (data) => {
-            markJobStarted(libraryId);
             showInfoToast(`Reloading ${data.documents} documents...`);
         }
     });
@@ -237,7 +199,6 @@ export function useAddGroupMutation(selectedGroupId?: string) {
         ),
         onSuccess: () => {
             showInfoToast("Adding document...", { id: "add-group" });
-            markJobStarted(libraryId);
         }
     });
 }

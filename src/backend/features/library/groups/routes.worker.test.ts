@@ -187,9 +187,9 @@ describe("GET /job-status", () => {
     afterEach(() => vi.restoreAllMocks());
 
     it.each<JobStatus>([
-        { running: true, runningForMs: 4_000 },
-        { running: false }
-    ])("reports $running", async (status) => {
+        { loadingGroupIds: [TEST_GROUP_ID] },
+        { loadingGroupIds: [] }
+    ])("reports $loadingGroupIds loading", async (status) => {
         vi.spyOn(Jobs, "getJobStatus").mockResolvedValue(status);
 
         const res = await createTestApp().request(

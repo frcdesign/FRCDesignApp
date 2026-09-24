@@ -29,7 +29,6 @@ import {
 } from "../../lib/query-keys";
 import { toInsertablePath } from "../../lib/api-paths";
 import { useInsertLocationId } from "../insert-location/queries";
-import { PLACEHOLDER_UNIT_INFO } from "@backend/features/configurations/utils";
 
 interface InsertArgs {
     /** Whether the part is favorited — see `source` for where the insert began. */
@@ -39,9 +38,8 @@ interface InsertArgs {
 }
 
 /**
- * The units the configuration panel shows quantities in: the document's, or
- * a placeholder outside one, or should the document's fail to load. Undefined
- * only while they are loading.
+ * The current document's units, or undefined outside a document — and while
+ * they load, or should they fail to — when each quantity shows its own.
  */
 export function useUnitInfo(): UnitInfo | undefined {
     const target = useTargetElement();
@@ -58,11 +56,10 @@ export function useUnitInfo(): UnitInfo | undefined {
                           instanceType: target.instanceType
                       }
                   })
-            : skipToken
+            : skipToken,
+        // A document's units do not change while it is open.
+        staleTime: Infinity
     });
-    if (!target || query.isError) {
-        return PLACEHOLDER_UNIT_INFO;
-    }
     return query.data;
 }
 

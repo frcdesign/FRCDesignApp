@@ -1,8 +1,7 @@
 /**
  * Waiting out a configuration's render. Until it lands the route answers 404;
  * the server pushes when it has, so a miss waits for that push rather than
- * asking again on a timer — unless the push connection is down, when it asks
- * every couple of seconds as it always used to.
+ * asking again on a timer.
  */
 import { HttpStatus } from "http-status-ts";
 import { DEFAULT_CONFIGURATION_KEY } from "@backend/features/configurations/contract";
@@ -13,20 +12,13 @@ import {
 import { parseThumbnailUrl } from "@backend/features/thumbnails/keys";
 import { loadImage } from "../../lib/api-client";
 import { ImageLoadError } from "../../lib/errors";
-import {
-    isLiveConnected,
-    subscribeLiveConnection,
-    subscribeLiveMessages
-} from "../../lib/live-updates";
+import { subscribeLiveMessages } from "../../lib/live-updates";
 
 /**
  * How long any surface waits out a render before calling it failed: as long as
  * `RenderThumbnailWorkflow` does, after which nothing more is coming.
  */
 const RENDER_TIMEOUT_MS = 60_000;
-
-/** A poll is a worker reading R2, not an Onshape call, so it can be this tight. */
-const POLL_INTERVAL_MS = 2_000;
 
 /**
  * Onshape has no insertable for the configuration, which the route answers with
@@ -100,9 +92,6 @@ export async function loadRenderedImage(
             waiting.wake?.();
         }
     });
-    // A dropped connection has to fall back to polling, not wait on a push
-    // that will not arrive.
-    const stopConnection = subscribeLiveConnection(() => waiting.wake?.());
     try {
         for (;;) {
             waiting.pushed = false;
@@ -113,12 +102,10 @@ export async function loadRenderedImage(
                     throw error;
                 }
             }
+            // Once more at the deadline, for a push that never reached us.
             if (!waiting.pushed) {
-                const remaining = deadline - Date.now();
                 await sleep(
-                    isLiveConnected()
-                        ? remaining
-                        : Math.min(POLL_INTERVAL_MS, remaining),
+                    deadline - Date.now(),
                     signal,
                     (next) => (waiting.wake = next)
                 );
@@ -126,6 +113,5 @@ export async function loadRenderedImage(
         }
     } finally {
         stopMessages();
-        stopConnection();
     }
 }

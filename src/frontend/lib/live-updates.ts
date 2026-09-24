@@ -1,10 +1,8 @@
 /**
  * The app's one WebSocket to the server's pushes (`features/live` on the
- * backend). Reconnects on its own, backing off; while it is down, what would
- * have been pushed is polled for instead, so callers ask `isLiveConnected`
- * before deciding how to wait.
+ * backend). Reconnects on its own, backing off; what was pushed while it was
+ * down is asked for again on reconnecting (see `live-sync.ts`).
  */
-import { useSyncExternalStore } from "react";
 import {
     LIVE_LIBRARY_PARAM,
     LIVE_PATH,
@@ -87,11 +85,6 @@ export function subscribeLiveConnection(
     return () => connectionListeners.delete(listener);
 }
 
-/** For deciding how to wait at the moment of waiting, outside of rendering. */
 export function isLiveConnected(): boolean {
     return connected;
-}
-
-export function useIsLiveConnected(): boolean {
-    return useSyncExternalStore(subscribeLiveConnection, isLiveConnected);
 }
