@@ -1,14 +1,11 @@
 /** The server pushes when a render lands, so a miss waits for that rather than polling. */
 import { HttpStatus } from "http-status-ts";
 import { DEFAULT_CONFIGURATION_KEY } from "@backend/features/configurations/contract";
-import {
-    type LiveMessage,
-    LiveMessageType
-} from "@backend/features/live/contract";
+import { type PushMessage, PushType } from "@backend/features/push/contract";
 import { parseThumbnailUrl } from "@backend/features/thumbnails/keys";
 import { loadImage } from "../../lib/api-client";
 import { ImageLoadError } from "../../lib/errors";
-import { subscribeLiveMessages } from "../../lib/live-updates";
+import { subscribePushes } from "../../lib/push-socket";
 
 /** As long as `RenderThumbnailWorkflow` tries. */
 const RENDER_TIMEOUT_MS = 60_000;
@@ -22,8 +19,8 @@ export function isInvalidConfiguration(error: unknown): boolean {
 }
 
 /** Whether a push says the render `url` serves has landed. */
-export function isRenderOf(url: string, message: LiveMessage): boolean {
-    if (message.type !== LiveMessageType.THUMBNAIL) {
+export function isRenderOf(url: string, message: PushMessage): boolean {
+    if (message.type !== PushType.THUMBNAIL) {
         return false;
     }
     const subject = parseThumbnailUrl(url);
@@ -67,11 +64,8 @@ export async function loadRenderedImage(
 ): Promise<string> {
     const deadline = Date.now() + RENDER_TIMEOUT_MS;
     // Subscribed before the first ask, so a push during it isn't missed.
-    const waiting = {
-        pushed: false,
-        wake: undefined as (() => void) | undefined
-    };
-    const stopMessages = subscribeLiveMessages((message) => {
+    const waiting: { pushed: boolean; wake?: () => void } = { pushed: false };
+    const stopMessages = subscribePushes((message) => {
         if (isRenderOf(url, message)) {
             waiting.pushed = true;
             waiting.wake?.();

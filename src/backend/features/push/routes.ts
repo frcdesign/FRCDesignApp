@@ -1,17 +1,18 @@
 import { HttpStatus } from "http-status-ts";
 import { getApp } from "../../lib/context";
 import { handledError } from "../../lib/api-error";
-import { LIVE_PATH } from "./contract";
+import { PUSH_ROUTE } from "./contract";
+import { getPushHub } from "./push-hub";
 
-export const liveRoutes = getApp();
+export const pushRoutes = getApp();
 
-/** GET /api/live?library=: open to anyone, since nothing pushed is private. */
-liveRoutes.get(LIVE_PATH.replace(/^\/api/, ""), (c) => {
+/** GET /api/push?library=: open to anyone, since nothing pushed is private. */
+pushRoutes.get(PUSH_ROUTE, (c) => {
     if (c.req.header("Upgrade") !== "websocket") {
         throw handledError(
             "Expected a WebSocket upgrade",
             HttpStatus.UPGRADE_REQUIRED
         );
     }
-    return c.env.LIVE_UPDATES.getByName("all").fetch(c.req.raw);
+    return getPushHub(c.env).fetch(c.req.raw);
 });

@@ -2,15 +2,15 @@
 import type { AppBindings } from "../../lib/context";
 import type { LibraryId } from "../library/library-id";
 import type { JobStatus } from "../load/contract";
-import { type LiveMessage, LiveMessageType } from "./contract";
+import { type PushMessage, PushType, type ThumbnailPush } from "./contract";
+import { getPushHub } from "./push-hub";
 
 async function broadcast(
     env: AppBindings,
-    message: LiveMessage,
-    libraryId?: LibraryId
+    message: PushMessage
 ): Promise<void> {
     try {
-        await env.LIVE_UPDATES.getByName("all").broadcast(message, libraryId);
+        await getPushHub(env).broadcast(message);
     } catch (error) {
         console.error(`Failed to push ${message.type}`, error);
     }
@@ -22,11 +22,7 @@ export function pushJobStatus(
     libraryId: LibraryId,
     status: JobStatus
 ): Promise<void> {
-    return broadcast(
-        env,
-        { type: LiveMessageType.JOBS, libraryId, status },
-        libraryId
-    );
+    return broadcast(env, { type: PushType.JOBS, libraryId, status });
 }
 
 /** Tells a library's viewers to move to its new cache version. */
@@ -34,19 +30,12 @@ export function pushLibraryChanged(
     env: AppBindings,
     libraryId: LibraryId
 ): Promise<void> {
-    return broadcast(
-        env,
-        { type: LiveMessageType.LIBRARY, libraryId },
-        libraryId
-    );
+    return broadcast(env, { type: PushType.LIBRARY, libraryId });
 }
 
 export function pushThumbnailRendered(
     env: AppBindings,
-    subject: Omit<
-        Extract<LiveMessage, { type: LiveMessageType.THUMBNAIL }>,
-        "type"
-    >
+    thumbnail: Omit<ThumbnailPush, "type">
 ): Promise<void> {
-    return broadcast(env, { type: LiveMessageType.THUMBNAIL, ...subject });
+    return broadcast(env, { type: PushType.THUMBNAIL, ...thumbnail });
 }

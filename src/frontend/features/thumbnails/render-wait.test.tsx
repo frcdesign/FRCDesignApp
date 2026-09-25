@@ -1,19 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import {
-    type LiveMessage,
-    LiveMessageType
-} from "@backend/features/live/contract";
+import { type PushMessage, PushType } from "@backend/features/push/contract";
 import { thumbnailUrl } from "@backend/features/thumbnails/keys";
 import { ThumbnailSize } from "@backend/features/thumbnails/contract";
 
-const live = vi.hoisted(() => ({
-    listeners: new Set<(message: LiveMessage) => void>()
+const pushes = vi.hoisted(() => ({
+    listeners: new Set<(message: PushMessage) => void>()
 }));
 
-vi.mock("../../lib/live-updates", () => ({
-    subscribeLiveMessages: (listener: (message: LiveMessage) => void) => {
-        live.listeners.add(listener);
-        return () => live.listeners.delete(listener);
+vi.mock("../../lib/push-socket", () => ({
+    subscribePushes: (listener: (message: PushMessage) => void) => {
+        pushes.listeners.add(listener);
+        return () => pushes.listeners.delete(listener);
     }
 }));
 
@@ -27,9 +24,9 @@ const URL_WAITED_ON = thumbnailUrl({
 });
 
 const push = (configurationKey: string) =>
-    live.listeners.forEach((listener) =>
+    pushes.listeners.forEach((listener) =>
         listener({
-            type: LiveMessageType.THUMBNAIL,
+            type: PushType.THUMBNAIL,
             elementId: "e1",
             microversionId: "mv1",
             configurationKey

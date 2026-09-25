@@ -67,7 +67,7 @@
     // Inherited by every environment. v2 deletes the thumbnail render queue,
     // replaced by RenderThumbnailWorkflow; the object's stored queue goes with it.
     "durable_objects": {
-        "bindings": [{ "name": "LIVE_UPDATES", "class_name": "LiveUpdates" }]
+        "bindings": [{ "name": "PUSH_HUB", "class_name": "PushHub" }]
     },
     // Daily, clearing thumbnails nothing shows any more; see the scheduled
     // handler in src/backend/index.ts. Inherited by every environment.
@@ -86,6 +86,10 @@
         {
             "tag": "v3",
             "new_sqlite_classes": ["LiveUpdates"]
+        },
+        {
+            "tag": "v4",
+            "renamed_classes": [{ "from": "LiveUpdates", "to": "PushHub" }]
         }
     ],
     /**
@@ -147,7 +151,7 @@
             ],
             "durable_objects": {
                 "bindings": [
-                    { "name": "LIVE_UPDATES", "class_name": "LiveUpdates" }
+                    { "name": "PUSH_HUB", "class_name": "PushHub" }
                 ]
             },
             "vars": {
@@ -199,7 +203,7 @@
             ],
             "durable_objects": {
                 "bindings": [
-                    { "name": "LIVE_UPDATES", "class_name": "LiveUpdates" }
+                    { "name": "PUSH_HUB", "class_name": "PushHub" }
                 ]
             },
             "vars": {

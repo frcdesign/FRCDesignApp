@@ -15,7 +15,7 @@ import { rateLimitDelay } from "../load/steps";
 import { type ConfigurationKey } from "../configurations/contract";
 import { ThumbnailSize } from "./contract";
 import { putThumbnail } from "./store";
-import { pushThumbnailRendered } from "../live/notify";
+import { pushThumbnailRendered } from "../push/notify";
 
 /** One stored size: where it goes, and what to ask Onshape for. */
 export interface RenderTarget {

@@ -1,7 +1,7 @@
 import { type Context, type MiddlewareHandler, Hono } from "hono";
 import type { LoadDocumentParams } from "../features/load/jobs";
 import type { RenderThumbnailParams } from "../features/thumbnails/render-workflow";
-import type { LiveUpdates } from "../features/live/live-updates";
+import type { PushHub } from "../features/push/push-hub";
 import { type AccessLevel } from "../features/auth/access-level";
 import type { LibraryId } from "../features/library/library-id";
 import { type OAuthApi } from "./onshape/client";
@@ -16,8 +16,8 @@ export interface AppBindings {
     LOAD_DOCUMENT_WORKFLOW: Workflow<LoadDocumentParams>;
     /** One instance per configuration being rendered; see `requestRender`. */
     RENDER_THUMBNAIL_WORKFLOW: Workflow<RenderThumbnailParams>;
-    /** Relays pushes to open clients; see `features/live`. */
-    LIVE_UPDATES: DurableObjectNamespace<LiveUpdates>;
+    /** Relays pushes to open clients; see `features/push`. */
+    PUSH_HUB: DurableObjectNamespace<PushHub>;
     /** The Onshape user id granted `AccessLevel.OWNER`; unset grants nobody. */
     OWNER_USER_ID?: string;
     /** Dev-only: the access level granted, bypassing Onshape. */

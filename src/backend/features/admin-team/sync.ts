@@ -7,7 +7,7 @@ import type { OnshapeApi } from "../../lib/onshape/client";
 import { getTeamMembers } from "../../lib/onshape/endpoints/teams";
 import { bumpLibraryVersion } from "../library/db";
 import type { LibraryId } from "../library/library-id";
-import { pushLibraryChanged } from "../live/notify";
+import { pushLibraryChanged } from "../push/notify";
 
 export async function syncAdminTeam(
     env: AppBindings,

@@ -1,13 +1,13 @@
-/** The app's one WebSocket to the server's pushes. Reconnects with backoff; `live-sync.ts` catches up after. */
+/** The app's one WebSocket to the server's pushes. Reconnects with backoff; `push-sync.ts` catches up after. */
 import {
-    LIVE_LIBRARY_PARAM,
-    LIVE_PATH,
-    type LiveMessage
-} from "@backend/features/live/contract";
+    PUSH_LIBRARY_PARAM,
+    PUSH_ROUTE,
+    type PushMessage
+} from "@backend/features/push/contract";
 import type { LibraryId } from "@backend/features/library/library-id";
 
-type MessageListener = (message: LiveMessage) => void;
-type ConnectionListener = () => void;
+type MessageListener = (message: PushMessage) => void;
+type ConnectionListener = (connected: boolean) => void;
 
 const FIRST_RETRY_MS = 1_000;
 const LAST_RETRY_MS = 30_000;
@@ -25,24 +25,26 @@ function setConnected(next: boolean): void {
         return;
     }
     connected = next;
-    connectionListeners.forEach((listener) => listener());
+    connectionListeners.forEach((listener) => listener(next));
 }
 
-function liveUrl(libraryId: LibraryId): string {
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const query = new URLSearchParams({ [LIVE_LIBRARY_PARAM]: libraryId });
-    return `${protocol}//${window.location.host}${LIVE_PATH}?${query.toString()}`;
+function pushUrl(libraryId: LibraryId): string {
+    const url = new URL("/api" + PUSH_ROUTE, window.location.href);
+    url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
+    url.searchParams.set(PUSH_LIBRARY_PARAM, libraryId);
+    return url.href;
 }
 
 function open(libraryId: LibraryId): void {
-    const current = new WebSocket(liveUrl(libraryId));
+    const current = new WebSocket(pushUrl(libraryId));
     socket = current;
     current.onopen = () => {
         retryMs = FIRST_RETRY_MS;
         setConnected(true);
     };
     current.onmessage = (event: MessageEvent<string>) => {
-        const message = JSON.parse(event.data) as LiveMessage;
+        // Sent by our own server, in the contract's shape.
+        const message = JSON.parse(event.data) as PushMessage;
         messageListeners.forEach((listener) => listener(message));
     };
     current.onclose = () => {
@@ -58,7 +60,7 @@ function open(libraryId: LibraryId): void {
 }
 
 /** Connects for `libraryId`, dropping any connection for another; returns a disconnect. */
-export function connectLiveUpdates(libraryId: LibraryId): () => void {
+export function connectPushes(libraryId: LibraryId): () => void {
     open(libraryId);
     return () => {
         window.clearTimeout(retryTimer);
@@ -69,18 +71,14 @@ export function connectLiveUpdates(libraryId: LibraryId): () => void {
     };
 }
 
-export function subscribeLiveMessages(listener: MessageListener): () => void {
+export function subscribePushes(listener: MessageListener): () => void {
     messageListeners.add(listener);
     return () => messageListeners.delete(listener);
 }
 
-export function subscribeLiveConnection(
+export function subscribePushConnection(
     listener: ConnectionListener
 ): () => void {
     connectionListeners.add(listener);
     return () => connectionListeners.delete(listener);
-}
-
-export function isLiveConnected(): boolean {
-    return connected;
 }

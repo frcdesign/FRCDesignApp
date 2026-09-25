@@ -39,7 +39,7 @@ import {
     setAwaitingApproval,
     type LoadDocumentParams
 } from "./jobs";
-import { pushLibraryChanged } from "../live/notify";
+import { pushLibraryChanged } from "../push/notify";
 import { flagFailedLoads } from "./flag";
 import { loadGroup } from "./load-group";
 import { ONSHAPE_STEP_RETRIES } from "./steps";

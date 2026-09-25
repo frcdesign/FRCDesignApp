@@ -14,14 +14,14 @@ interface __BaseEnv_Env {
 	OAUTH_CLIENT_SECRET: string;
 	SESSION_SECRET: string;
 	VITE_ACCESS_LEVEL_OVERRIDE: string;
-	LIVE_UPDATES: DurableObjectNamespace<import("./src/backend/index").LiveUpdates>;
+	PUSH_HUB: DurableObjectNamespace<import("./src/backend/index").PushHub>;
 	LOAD_DOCUMENT_WORKFLOW: Workflow<Parameters<import("./src/backend/index").LoadDocumentWorkflow['run']>[0]['payload']>;
 	RENDER_THUMBNAIL_WORKFLOW: Workflow<Parameters<import("./src/backend/index").RenderThumbnailWorkflow['run']>[0]['payload']>;
 }
 declare namespace Cloudflare {
 	interface GlobalProps {
 		mainModule: typeof import("./src/backend/index");
-		durableNamespaces: "LiveUpdates";
+		durableNamespaces: "PushHub";
 	}
 	interface CertEnv {
 		KV: KVNamespace;
@@ -36,7 +36,7 @@ declare namespace Cloudflare {
 		OAUTH_CLIENT_SECRET: string;
 		SESSION_SECRET: string;
 		VITE_ACCESS_LEVEL_OVERRIDE: string;
-		LIVE_UPDATES: DurableObjectNamespace<import("./src/backend/index").LiveUpdates>;
+		PUSH_HUB: DurableObjectNamespace<import("./src/backend/index").PushHub>;
 		LOAD_DOCUMENT_WORKFLOW: Workflow<Parameters<import("./src/backend/index").LoadDocumentWorkflow['run']>[0]['payload']>;
 		RENDER_THUMBNAIL_WORKFLOW: Workflow<Parameters<import("./src/backend/index").RenderThumbnailWorkflow['run']>[0]['payload']>;
 	}
@@ -53,7 +53,7 @@ declare namespace Cloudflare {
 		OAUTH_CLIENT_SECRET: string;
 		SESSION_SECRET: string;
 		VITE_ACCESS_LEVEL_OVERRIDE: string;
-		LIVE_UPDATES: DurableObjectNamespace<import("./src/backend/index").LiveUpdates>;
+		PUSH_HUB: DurableObjectNamespace<import("./src/backend/index").PushHub>;
 		LOAD_DOCUMENT_WORKFLOW: Workflow<Parameters<import("./src/backend/index").LoadDocumentWorkflow['run']>[0]['payload']>;
 		RENDER_THUMBNAIL_WORKFLOW: Workflow<Parameters<import("./src/backend/index").RenderThumbnailWorkflow['run']>[0]['payload']>;
 	}

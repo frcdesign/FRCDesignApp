@@ -11,7 +11,7 @@ import { libraryRoutes } from "./features/library/routes";
 import { settingsRoutes } from "./features/settings/routes";
 import { thumbnailRoutes } from "./features/thumbnails/routes";
 import { webhookRoutes } from "./features/webhooks/routes";
-import { liveRoutes } from "./features/live/routes";
+import { pushRoutes } from "./features/push/routes";
 import { adminTeamRoutes } from "./features/admin-team/routes";
 import { loadRoutes } from "./features/load/routes";
 import { logger } from "hono/logger";
@@ -32,7 +32,7 @@ const apiRoutes = [
     buildStatusRoutes,
     analyticsRoutes,
     webhookRoutes,
-    liveRoutes,
+    pushRoutes,
     adminTeamRoutes,
     loadRoutes
 ];

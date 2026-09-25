@@ -95,7 +95,7 @@ Every load is one document: adding a document, a new version of one (see Webhook
 
 A load calls Onshape as whoever asked for it, while their session works. A webhook's load has nobody, and a requester's session can expire mid-load, so the load then finds a session itself: the owner's, or else a team admin's of the library (`getOnshapeApiFromContext`). Only the owner's and team admins' latest sessions are kept by user id, in KV under `admin-session:<userId>`, written as their access is checked (`features/auth/admin-sessions.ts`).
 
-### Webhooks and live updates
+### Webhooks and pushes
 
 Onshape pushes one thing, registered with `isTransient: false` and recorded in the `onshape_webhooks` table with its own token in the delivery url (`features/webhooks`):
 
@@ -107,7 +107,7 @@ Onshape's team webhooks need a company id, which a personal account lacks, so an
 
 A load that fails is flagged `LOAD_FAILED`, including one whose workflow crashed before it could say so; the next look at the library's jobs notices. Reloading the library's outdated documents reruns it.
 
-The server pushes to open clients over a WebSocket held by the `LiveUpdates` Durable Object (`features/live`): jobs starting and finishing, a library's new version, and a configuration's render landing. Nothing polls: a client that reconnects asks again for what it may have missed.
+The server pushes to open clients over a WebSocket held by the `PushHub` Durable Object (`features/push`): jobs starting and finishing, a library's new version, and a configuration's render landing. Nothing polls: a client that reconnects asks again for what it may have missed.
 
 ### Assets — Static File Serving (`c.env.ASSETS`)
 

@@ -11,7 +11,7 @@ import { chunkForInArray } from "../../db/chunk";
 import { loadJobs } from "../../db/schema";
 import { bumpLibraryVersion, rebuildSearchDb } from "../library/db";
 import type { LibraryId } from "../library/library-id";
-import { pushJobStatus, pushLibraryChanged } from "../live/notify";
+import { pushJobStatus, pushLibraryChanged } from "../push/notify";
 import type { JobStatus } from "./contract";
 import { flagFailedLoads, publishLibraries } from "./flag";
 

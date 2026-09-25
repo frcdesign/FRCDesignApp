@@ -4,7 +4,7 @@ import { getDb } from "../../db/client";
 import { groups } from "../../db/schema";
 import { bumpLibraryVersion } from "../library/db";
 import type { LibraryId } from "../library/library-id";
-import { pushLibraryChanged } from "../live/notify";
+import { pushLibraryChanged } from "../push/notify";
 import { addBuildIssue, BuildIssueType } from "../build-checker/issues";
 
 /** Marks each group for an admin to reload; publishing the change is the caller's. */
