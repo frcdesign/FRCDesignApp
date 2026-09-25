@@ -10,7 +10,12 @@ import {
     TextInput,
     Tooltip
 } from "@mantine/core";
-import { GearIcon, MagnifyingGlassIcon } from "@phosphor-icons/react";
+import {
+    GearIcon,
+    MagnifyingGlassIcon,
+    MoonIcon,
+    SunIcon
+} from "@phosphor-icons/react";
 import {
     IconSize,
     NAVBAR_DIVIDER_COLOR,
@@ -29,7 +34,7 @@ import { useDebouncedCallback } from "@mantine/hooks";
 import { AppBrand } from "./app-brand";
 import { openSettingsMenu } from "../features/settings/open-settings-menu";
 import { VendorMenu } from "../features/settings/components/vendor-filters";
-import { getUiState, updateUiState } from "../lib/ui-state";
+import { getUiState, Theme, updateUiState, useUiState } from "../lib/ui-state";
 import { getLibraryName, useLibraryId } from "../lib/library";
 import { APP_TABS, getTabName, useNavigateToTab } from "../lib/tabs";
 import {
@@ -38,7 +43,7 @@ import {
 } from "../features/auth/access-level";
 import { startSignIn } from "../features/auth/sign-in";
 import { LibraryId } from "@backend/features/library/library-id";
-import { type AppTab } from "@backend/features/settings/app-tab";
+import { type AppTab } from "../lib/app-tab";
 import { queryClient } from "../lib/query-client";
 import {
     getLibraryVersionQuery,
@@ -81,6 +86,7 @@ export function AppNavbar(): ReactNode {
                     <InsertLocationStatus />
                     <JobIndicator />
                     <SignInButton />
+                    <ThemeToggle />
                     <SettingsButton />
                 </Group>
             </NavbarRow>
@@ -144,7 +150,7 @@ function AppTabs(): ReactNode {
                     return;
                 }
                 const tabId = value as AppTab;
-                // Only decides where `/init` lands next time; the url is the source of truth.
+                // Only decides where `/` resumes next time; the url is the source of truth.
                 updateUiState({ tabId });
                 navigateToTab(tabId);
             }}
@@ -174,6 +180,27 @@ function AppTabs(): ReactNode {
                 ))}
             </Tabs.List>
         </Tabs>
+    );
+}
+
+export function ThemeToggle(): ReactNode {
+    const theme = useUiState((state) => state.theme);
+    const isDark = theme === Theme.DARK;
+    return (
+        <ActionIcon
+            title={isDark ? "Light mode" : "Dark mode"}
+            my="auto"
+            size="input-sm"
+            onClick={() =>
+                updateUiState({ theme: isDark ? Theme.LIGHT : Theme.DARK })
+            }
+        >
+            {isDark ? (
+                <SunIcon size={IconSize.CONTROL} />
+            ) : (
+                <MoonIcon size={IconSize.CONTROL} />
+            )}
+        </ActionIcon>
     );
 }
 

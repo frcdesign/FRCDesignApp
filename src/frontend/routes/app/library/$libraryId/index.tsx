@@ -23,7 +23,8 @@ import {
     getLibraryStatus,
     useLibraryId
 } from "../../../../lib/library";
-import { useGetUiState, updateUiState } from "../../../../lib/ui-state";
+import { useShallow } from "zustand/react/shallow";
+import { updateUiState, useUiState } from "../../../../lib/ui-state";
 import { useVendorFilters } from "../../../../features/settings/components/vendor-filters";
 import styles from "../../../../lib/styles.module.css";
 import classes from "./index.module.css";
@@ -32,7 +33,7 @@ export const Route = createFileRoute("/app/library/$libraryId/")({
     component: HomeList,
     // Back in the library itself, which is where entry should resume.
     onEnter: () => {
-        updateUiState({ groupId: null });
+        updateUiState({ groupId: undefined });
     }
 });
 
@@ -48,7 +49,13 @@ interface Section {
 
 /** The sections the home list shows, in the order they are stacked. */
 function useHomeSections(): Section[] {
-    const uiState = useGetUiState();
+    const { isFavoritesOpen, isLibraryOpen, searchQuery } = useUiState(
+        useShallow((state) => ({
+            isFavoritesOpen: state.isFavoritesOpen,
+            isLibraryOpen: state.isLibraryOpen,
+            searchQuery: state.searchQuery
+        }))
+    );
     // Not persisted: search results open on every visit, unlike the library.
     const [isSearchOpen, setIsSearchOpen] = useState(true);
     const libraryId = useLibraryId();
@@ -60,7 +67,7 @@ function useHomeSections(): Section[] {
         icon: <FavoriteIcon size={IconSize.MEDIUM} />,
         title: <AppTitle title="Favorites" />,
         panel: <FavoritesList />,
-        opened: uiState.isFavoritesOpen,
+        opened: isFavoritesOpen,
         setOpened: (opened) => updateUiState({ isFavoritesOpen: opened })
     };
 
@@ -75,7 +82,7 @@ function useHomeSections(): Section[] {
         title: <AppTitle title="Search Results" />,
         panel: (
             <SearchResults
-                query={uiState.searchQuery ?? ""}
+                query={searchQuery}
                 filters={{ vendors: vendorFilters }}
                 source={InsertSource.SEARCH}
             />
@@ -89,12 +96,12 @@ function useHomeSections(): Section[] {
         icon: <BooksIcon size={IconSize.MEDIUM} color={PrimaryColor.FILLED} />,
         title: <LibraryTitle libraryId={libraryId} />,
         panel: <LibraryList />,
-        opened: uiState.isLibraryOpen,
+        opened: isLibraryOpen,
         setOpened: (opened) => updateUiState({ isLibraryOpen: opened })
     };
 
     // The differing `value` remounts the slot when search starts or ends.
-    return [favorites, uiState.searchQuery ? search : library];
+    return [favorites, searchQuery ? search : library];
 }
 
 interface SectionAccordionProps {

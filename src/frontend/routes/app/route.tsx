@@ -8,11 +8,11 @@ import { AppShell } from "@mantine/core";
 import { useElementSize } from "@mantine/hooks";
 import { Suspense } from "react";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
-import * as z from "zod";
-import { Theme } from "@backend/features/settings/settings";
-import { AppTabType } from "../../lib/tabs";
 import { adoptOnshapeLaunch } from "../../lib/onshape-params";
-import { OnshapeLaunchType } from "../../lib/onshape-launch";
+import {
+    type OnshapeLaunch,
+    OnshapeLaunchType
+} from "../../lib/onshape-launch";
 import {
     adoptAppParams,
     APP_PARAM_KEYS,
@@ -29,20 +29,10 @@ import { getUiState, updateUiState } from "../../lib/ui-state";
 import { showSuccessToast } from "../../lib/notifications";
 import { RootAppError } from "../../components/root-error";
 
-/** What the entry redirect carries and the app takes off the url. */
-const LaunchSearchType = OnshapeLaunchType.extend({
-    /** The caller's saved theme, from their row. */
-    theme: z.enum(Theme).optional().catch(undefined),
-    /** The tab their row names, when it names one. */
-    tabId: AppTabType.optional().catch(undefined)
-});
-
-type LaunchSearch = z.infer<typeof LaunchSearchType>;
-
 export const Route = createFileRoute("/app")({
     component: App,
     validateSearch: (search: Record<string, unknown> & SearchSchemaInput) => ({
-        ...parseSearch(LaunchSearchType, search),
+        ...parseSearch(OnshapeLaunchType, search),
         ...parseSearch(AppParamsType, search)
     }),
     search: {
@@ -56,20 +46,13 @@ export const Route = createFileRoute("/app")({
 // navigation drops everything but the app's own params from the url.
 let adopted = false;
 
-function adoptUrl(search: LaunchSearch & AppParams): void {
+function adoptUrl(search: OnshapeLaunch & AppParams): void {
     if (adopted) {
         return;
     }
     adopted = true;
     adoptAppParams(search);
     adoptOnshapeLaunch(search);
-    // Seeded by the entry from the caller's row, which already has them.
-    if (search.theme) {
-        updateUiState({ theme: search.theme }, { sync: false });
-    }
-    if (search.tabId) {
-        updateUiState({ tabId: search.tabId }, { sync: false });
-    }
     if (getUiState().justSignedIn) {
         updateUiState({ justSignedIn: false });
         // Onshape only returns here on success.

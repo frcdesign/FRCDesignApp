@@ -1,4 +1,3 @@
-import { DEFAULT_THEME, Theme } from "@backend/features/settings/settings";
 import { Box, Button, Select, Stack } from "@mantine/core";
 import { ArrowLeftIcon, SignOutIcon } from "@phosphor-icons/react";
 import { useMatch } from "@tanstack/react-router";
@@ -12,7 +11,7 @@ import {
     hasEditorAccess,
     isWithinAccessLevel
 } from "@backend/features/auth/access-level";
-import { type AppTab, getTabPath } from "@backend/features/settings/app-tab";
+import { type AppTab, getTabPath } from "../../../lib/app-tab";
 import { InputRow } from "../../../components/input-row";
 import { OpenUrlButton } from "../../../components/open-url-button";
 import { Section } from "../../../components/section";
@@ -22,7 +21,7 @@ import {
     useAccessData
 } from "../../auth/access-level";
 import { startSignOut } from "../../auth/sign-out";
-import { useGetUiState, updateUiState } from "../../../lib/ui-state";
+import { updateUiState } from "../../../lib/ui-state";
 import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
 import { SETUP_URL } from "../../../lib/url";
 import { useLibraryId } from "../../../lib/library";
@@ -108,7 +107,6 @@ function UserSettings(): ReactNode {
 
     return (
         <Stack gap="sm">
-            <ThemeSelect />
             {/* Only worth offering from inside Onshape's panel, which is what
                 the standalone app is roomier than. */}
             {isConnected && (
@@ -182,20 +180,6 @@ function OpenAppButton(props: OpenAppButtonProps): ReactNode {
         >
             Open app
         </Button>
-    );
-}
-
-function ThemeSelect(): ReactNode {
-    const uiState = useGetUiState();
-    const theme = uiState.theme;
-
-    return (
-        <SettingSelect
-            label="Theme"
-            value={theme ?? DEFAULT_THEME}
-            options={[Theme.SYSTEM, Theme.DARK, Theme.LIGHT]}
-            onSelect={(theme) => updateUiState({ theme })}
-        />
     );
 }
 

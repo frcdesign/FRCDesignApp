@@ -3,7 +3,6 @@ import { createRoot } from "react-dom/client";
 // Router
 import { RouterProvider } from "@tanstack/react-router";
 import { router } from "./router";
-import { installSettingsSync } from "./features/settings/settings";
 
 // Used to make static assets work in dev
 import "vite/modulepreload-polyfill";
@@ -14,8 +13,6 @@ import "@mantine/notifications/styles.layer.css";
 
 // Custom css
 import "./main.scss";
-
-installSettingsSync();
 
 const rootElement: HTMLElement = document.getElementById("root")!;
 

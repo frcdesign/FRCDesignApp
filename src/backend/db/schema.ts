@@ -9,8 +9,6 @@ import {
 import { ElementType } from "../lib/onshape/element-type";
 import { FastenInfo } from "../features/library/insertables/fasten";
 import { DEFAULT_LIBRARY, LibraryId } from "../features/library/library-id";
-import { AppTab } from "../features/settings/app-tab";
-import { DEFAULT_THEME, Theme } from "../features/settings/settings";
 import type { AdminTeamMember } from "../features/admin-team/contract";
 import { Vendor } from "../features/library/vendors";
 import {
@@ -170,16 +168,11 @@ export const configurations = sqliteTable("configurations", {
 
 export const users = sqliteTable("users", {
     id: text("id").primaryKey(),
-    theme: text("theme").$type<Theme>().notNull().default(DEFAULT_THEME),
     // Unused, but SQLite can't drop a column in a foreign key, and D1 won't
     // rebuild the table while favorites reference it.
     libraryId: libraryId()
         .default(DEFAULT_LIBRARY)
-        .references(() => libraries.id),
-    // Null until one is picked. No foreign key: not every tab is a library.
-    tabId: text("tab_id").$type<AppTab>(),
-    // Null for the tab itself. A stale id resolves to that, so it isn't cleaned.
-    groupId: text("group_id")
+        .references(() => libraries.id)
 });
 
 export const favorites = sqliteTable(

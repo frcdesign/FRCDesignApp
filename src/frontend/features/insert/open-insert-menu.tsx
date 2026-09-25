@@ -5,7 +5,6 @@ import {
     type ConfigurationKey,
     type PartialSelection
 } from "@backend/features/configurations/contract";
-import { encodeConfiguration } from "@backend/features/configurations/utils";
 import { updateUiState } from "../../lib/ui-state";
 
 import {
@@ -31,7 +30,7 @@ interface OpenInsertMenuProps {
 /** Nothing is open, which is what closing the menu leaves behind. */
 const NO_OPEN_MENU = {
     openInsertableId: undefined,
-    openConfiguration: undefined,
+    openSelection: undefined,
     openFavoriteId: undefined
 };
 
@@ -50,9 +49,7 @@ export function openInsertMenu(props: OpenInsertMenuProps) {
     // Recorded so the url mirrors it and a relaunch reopens it.
     updateUiState({
         openInsertableId: insertable.id,
-        openConfiguration: initialSelection
-            ? encodeConfiguration(initialSelection) || undefined
-            : undefined,
+        openSelection: initialSelection,
         openFavoriteId: favoriteId
     });
     openAppModal({

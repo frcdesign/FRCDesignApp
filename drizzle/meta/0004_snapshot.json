@@ -1,7 +1,7 @@
 {
     "version": "6",
     "dialect": "sqlite",
-    "id": "6e982faa-641c-47ec-9d82-683289f15f2f",
+    "id": "d12f3484-8212-4351-baf2-4f6d425b9bd6",
     "prevId": "d8945a24-5643-4675-bf1f-b32cff1dbea2",
     "tables": {
         "configurations": {
@@ -639,14 +639,6 @@
                     "notNull": true,
                     "autoincrement": false
                 },
-                "theme": {
-                    "name": "theme",
-                    "type": "text",
-                    "primaryKey": false,
-                    "notNull": true,
-                    "autoincrement": false,
-                    "default": "'system'"
-                },
                 "library_id": {
                     "name": "library_id",
                     "type": "text",
@@ -654,20 +646,6 @@
                     "notNull": true,
                     "autoincrement": false,
                     "default": "'frc-design-lib'"
-                },
-                "tab_id": {
-                    "name": "tab_id",
-                    "type": "text",
-                    "primaryKey": false,
-                    "notNull": false,
-                    "autoincrement": false
-                },
-                "group_id": {
-                    "name": "group_id",
-                    "type": "text",
-                    "primaryKey": false,
-                    "notNull": false,
-                    "autoincrement": false
                 }
             },
             "indexes": {},

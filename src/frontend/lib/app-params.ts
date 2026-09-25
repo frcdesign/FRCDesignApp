@@ -5,16 +5,17 @@
  */
 import { useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
+import { useShallow } from "zustand/react/shallow";
 import * as z from "zod";
-import { updateUiState, useGetUiState } from "./ui-state";
+import { updateUiState, useUiState } from "./ui-state";
 
 export const AppParamsType = z.object({
     /** The search box's query. */
     q: z.string().optional().catch(undefined),
     /** The insertable whose insert menu is open. */
     part: z.string().optional().catch(undefined),
-    /** What its configuration overrides; absent for the element's defaults. */
-    config: z.string().optional().catch(undefined),
+    /** Its selection, as entered. */
+    config: z.partialRecord(z.string(), z.string()).optional().catch(undefined),
     /** The favorite the menu was opened from, when it was opened from one. */
     favorite: z.string().optional().catch(undefined)
 });
@@ -31,7 +32,7 @@ export function adoptAppParams(params: AppParams): void {
         // A part names the whole menu, so absent fields mean a plain part.
         ...(params.part !== undefined && {
             openInsertableId: params.part,
-            openConfiguration: params.config,
+            openSelection: params.config,
             openFavoriteId: params.favorite
         })
     });
@@ -40,8 +41,15 @@ export function adoptAppParams(params: AppParams): void {
 /** Writes the stored state back to the url, whenever it changes. */
 export function useAppParamMirror(): void {
     const navigate = useNavigate();
-    const { searchQuery, openInsertableId, openConfiguration, openFavoriteId } =
-        useGetUiState();
+    const { searchQuery, openInsertableId, openSelection, openFavoriteId } =
+        useUiState(
+            useShallow((state) => ({
+                searchQuery: state.searchQuery,
+                openInsertableId: state.openInsertableId,
+                openSelection: state.openSelection,
+                openFavoriteId: state.openFavoriteId
+            }))
+        );
 
     useEffect(() => {
         void navigate({
@@ -52,7 +60,7 @@ export function useAppParamMirror(): void {
                 ...previous,
                 q: searchQuery || undefined,
                 part: openInsertableId,
-                config: openConfiguration || undefined,
+                config: openSelection,
                 favorite: openFavoriteId
             })
         });
@@ -60,7 +68,7 @@ export function useAppParamMirror(): void {
         navigate,
         searchQuery,
         openInsertableId,
-        openConfiguration,
+        openSelection,
         openFavoriteId
     ]);
 }

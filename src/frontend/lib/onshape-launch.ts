@@ -6,11 +6,6 @@ import * as z from "zod";
 import { ElementType } from "@backend/lib/onshape/element-type";
 import { INSTANCE_TYPES, type ElementPath } from "@backend/lib/onshape/path";
 
-/** A resolved color scheme, as Onshape provides it; Theme adds "system" on top. */
-const ColorThemeType = z.enum(["light", "dark"]);
-
-export type ColorTheme = z.infer<typeof ColorThemeType>;
-
 /** All optional, since the app also opens standalone. */
 export const OnshapeLaunchType = z.object({
     documentId: z.string().optional().catch(undefined),
@@ -21,8 +16,6 @@ export const OnshapeLaunchType = z.object({
     elementType: z.enum(ElementType).optional().catch(undefined),
     /** Onshape's own origin, which a client message has to be addressed to. */
     server: z.string().optional().catch(undefined),
-    /** Onshape's color scheme, which "system" resolves to inside the panel. */
-    systemTheme: ColorThemeType.optional().catch(undefined),
     /** The company the session is scoped to, which sign-in asks Onshape for. */
     sessionCompanyId: z.string().optional().catch(undefined)
 });

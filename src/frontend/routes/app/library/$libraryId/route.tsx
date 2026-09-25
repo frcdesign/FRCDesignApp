@@ -19,12 +19,12 @@ export const Route = createFileRoute("/app/library/$libraryId")({
         stringify: ({ libraryId }) => ({ libraryId })
     },
     /**
-     * The url selects the library, so the store follows it. Skipped while the tab
-     * is null: being shown the default isn't choosing it.
+     * The url selects the library, so the store follows it. Skipped until a tab
+     * is chosen: being shown the default isn't choosing it.
      */
     onEnter: (match) => {
         if (getUiState().tabId) {
-            updateUiState({ tabId: match.params.libraryId }, { sync: false });
+            updateUiState({ tabId: match.params.libraryId });
         }
     },
     loader: async ({ params }) => {

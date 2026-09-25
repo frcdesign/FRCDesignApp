@@ -1,19 +1,10 @@
-/** Where Onshape lands: gates on auth, then resumes the last tab and theme. */
-import { and, eq } from "drizzle-orm";
-import { getDb, type Db } from "../../db/client";
-import { groups, users } from "../../db/schema";
+/** Where Onshape lands: gates on auth, then hands the launch to the app. */
 import { cacheMiddleware } from "../../lib/cache";
 import { getApp, type AppContext } from "../../lib/context";
+import { getLibraryParam, libraryRoute } from "../../lib/route-params";
 import { isSignedIn } from "../auth/request-auth";
+import { requireSignInMiddleware } from "../auth/guards";
 import { getSessionCompanyId, PERSONAL_COMPANY_ID } from "../auth/session";
-import { DEFAULT_THEME } from "../settings/settings";
-import { DEFAULT_LIBRARY } from "../library/library-id";
-import {
-    type AppTab,
-    getTabPath,
-    isLibraryTab,
-    toAppTab
-} from "../settings/app-tab";
 import { trackAppOpen, trackInBackground } from "../analytics/tracking";
 
 /** Marks the `/init` a sign-in returns to; see {@link needsSignIn}. */
@@ -45,65 +36,9 @@ function getSignInUrl(c: AppContext): string {
     return `/auth/sign-in?${query.toString()}`;
 }
 
-interface AppEntry {
-    url: string;
-    /** Absent when nobody is signed in, so there is no one to look up. */
-    userId?: string;
-    /** Where the caller lands: the default until they have chosen. */
-    tabId: AppTab;
-}
-
-/** Where the caller left off, as their row records it. */
-function getUserEntry(db: Db, userId: string) {
-    // A deleted or stale group joins to null, landing in the tab itself.
-    return db
-        .select({
-            tabId: users.tabId,
-            theme: users.theme,
-            groupId: groups.id
-        })
-        .from(users)
-        .leftJoin(
-            groups,
-            and(eq(groups.id, users.groupId), eq(groups.libraryId, users.tabId))
-        )
-        .where(eq(users.id, userId))
-        .get();
-}
-
-/** Also returns the user id, so `/init` records the open without another lookup. */
-async function getAppEntry(c: AppContext): Promise<AppEntry> {
-    const userId = (await isSignedIn(c)) ? await c.var.getUserId() : undefined;
-    const user = userId
-        ? await getUserEntry(getDb(c.env.DB), userId)
-        : undefined;
-
-    const search = new URL(c.req.url).searchParams;
-    // Ours, and spent: the app is being opened, however that turned out.
-    search.delete(SIGN_IN_ATTEMPTED);
-    const systemTheme = search.get("theme");
-    if (systemTheme !== null) {
-        search.set("systemTheme", systemTheme);
-    }
-    search.set("theme", user?.theme ?? DEFAULT_THEME);
-
-    // Validated: the frontend 404s an unknown id.
-    const chosenTab = user?.tabId
-        ? toAppTab(user.tabId, DEFAULT_LIBRARY)
-        : undefined;
-    // Without a tab the welcome asks for one.
-    if (chosenTab) {
-        search.set("tabId", chosenTab);
-    }
-    const tabId = chosenTab ?? DEFAULT_LIBRARY;
-    const path = getTabPath(tabId);
-    const groupPath = user?.groupId ? `${path}/groups/${user.groupId}` : path;
-    return { url: `${groupPath}?${search.toString()}`, userId, tabId };
-}
-
 export const entryRoutes = getApp();
 
-/** GET /init */
+/** GET /init: the app resumes the caller's last tab itself, from the browser's storage. */
 entryRoutes.get("/init", cacheMiddleware(), async (c) => {
     // A version can't be changed, so there is nothing to insert into.
     const instanceType = c.req.query("instanceType");
@@ -113,12 +48,24 @@ entryRoutes.get("/init", cacheMiddleware(), async (c) => {
     if (await needsSignIn(c)) {
         return c.redirect(getSignInUrl(c));
     }
-    const { url, userId, tabId } = await getAppEntry(c);
-    // Only library opens are logged, since the log is per library.
-    if (userId && isLibraryTab(tabId)) {
-        await trackInBackground(c, () =>
-            trackAppOpen(c, { libraryId: tabId, userId })
-        );
-    }
-    return c.redirect(url);
+    const search = new URL(c.req.url).searchParams;
+    // Ours, and spent: the app is being opened, however that turned out.
+    search.delete(SIGN_IN_ATTEMPTED);
+    return c.redirect(`/?${search.toString()}`);
 });
+
+export const appOpenRoutes = getApp();
+
+/** POST /api/app-open/library/:libraryId: sent by the app on a launch from Onshape. */
+appOpenRoutes.post(
+    "/app-open" + libraryRoute(),
+    requireSignInMiddleware,
+    async (c) => {
+        const libraryId = getLibraryParam(c);
+        const userId = await c.var.getUserId();
+        await trackInBackground(c, () =>
+            trackAppOpen(c, { libraryId, userId })
+        );
+        return c.json({});
+    }
+);

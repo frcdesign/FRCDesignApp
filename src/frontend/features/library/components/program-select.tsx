@@ -3,7 +3,7 @@ import { Group, Stack, Text, UnstyledButton } from "@mantine/core";
 import { ArrowRightIcon, BooksIcon } from "@phosphor-icons/react";
 import { ReactNode } from "react";
 import { LibraryId } from "@backend/features/library/library-id";
-import { type AppTab } from "@backend/features/settings/app-tab";
+import { type AppTab } from "../../../lib/app-tab";
 import { AppBrandMark } from "../../../components/app-brand";
 import { AppModal, AppModalBody } from "../../../components/app-modal";
 import { AppIcon } from "../../../components/app-icon";
@@ -16,7 +16,7 @@ import {
 import { getLibraryName } from "../../../lib/library";
 import { useNavigateToTab } from "../../../lib/tabs";
 import { getLibraryShade } from "../../../theme";
-import { updateUiState, useGetUiState } from "../../../lib/ui-state";
+import { updateUiState, useUiState } from "../../../lib/ui-state";
 import styles from "../../../lib/styles.module.css";
 
 interface Program {
@@ -99,9 +99,9 @@ function TrademarkDisclaimer(): ReactNode {
     );
 }
 
-/** Asks a new user's program, which becomes their tab. Synced, so asked once per account. */
+/** Asks a new user's program, which becomes their tab. Asked once per browser. */
 export function ProgramSelect(): ReactNode {
-    const { tabId } = useGetUiState();
+    const tabId = useUiState((state) => state.tabId);
     const navigateToTab = useNavigateToTab();
 
     const selectTab = (tabId: AppTab) => {
@@ -110,7 +110,7 @@ export function ProgramSelect(): ReactNode {
     };
 
     return (
-        <AppModal opened={tabId === null} dismissible={false} size="lg">
+        <AppModal opened={tabId === undefined} dismissible={false} size="lg">
             <AppModalBody>
                 <SectionNotice
                     icon={<AppBrandMark size={IconSize.PAGE} />}

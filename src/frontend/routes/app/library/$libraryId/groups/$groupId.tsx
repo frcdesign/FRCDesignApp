@@ -35,7 +35,7 @@ import {
 } from "../../../../../features/settings/components/vendor-filters";
 import { useLibraryQuery } from "../../../../../features/library/queries";
 import { useLibraryId } from "../../../../../lib/library";
-import { updateUiState, useGetUiState } from "../../../../../lib/ui-state";
+import { updateUiState, useUiState } from "../../../../../lib/ui-state";
 import { AppIcon } from "../../../../../components/app-icon";
 import styles from "../../../../../lib/styles.module.css";
 
@@ -56,7 +56,7 @@ function GroupList(): ReactNode {
         from: "/app/library/$libraryId/groups/$groupId"
     });
 
-    const uiState = useGetUiState();
+    const searchQuery = useUiState((state) => state.searchQuery);
     const vendorFilters = useVendorFilters();
 
     if (libraryQuery.isPending) {
@@ -93,10 +93,10 @@ function GroupList(): ReactNode {
     }
 
     let content: ReactNode;
-    if (uiState.searchQuery) {
+    if (searchQuery) {
         content = (
             <SearchResults
-                query={uiState.searchQuery}
+                query={searchQuery}
                 filters={{
                     vendors: vendorFilters,
                     groupId: group.id

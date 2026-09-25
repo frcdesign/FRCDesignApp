@@ -22,4 +22,7 @@ ALTER TABLE `groups` ADD `thumbnail_workspace_id` text;--> statement-breakpoint
 ALTER TABLE `insertables` ADD `excluded_parameter_ids` text DEFAULT '[]' NOT NULL;--> statement-breakpoint
 ALTER TABLE `libraries` ADD `admin_team_id` text;--> statement-breakpoint
 ALTER TABLE `libraries` ADD `admin_team` text DEFAULT '[]' NOT NULL;--> statement-breakpoint
-ALTER TABLE `libraries` ADD `approve_versions` integer DEFAULT false NOT NULL;
+ALTER TABLE `libraries` ADD `approve_versions` integer DEFAULT false NOT NULL;--> statement-breakpoint
+ALTER TABLE `users` DROP COLUMN `theme`;--> statement-breakpoint
+ALTER TABLE `users` DROP COLUMN `tab_id`;--> statement-breakpoint
+ALTER TABLE `users` DROP COLUMN `group_id`;

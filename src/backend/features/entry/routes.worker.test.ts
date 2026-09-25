@@ -1,21 +1,13 @@
 import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it } from "vitest";
-import { eq } from "drizzle-orm";
-import { users } from "../../db/schema";
 import { events } from "../analytics/schema";
 import { EVENT_SCHEMA_VERSION, EventType } from "../analytics/usage";
-import { DEFAULT_LIBRARY, LibraryId } from "../library/library-id";
-import { type AppTab, UtilityTab } from "../settings/app-tab";
-import { Theme } from "../settings/settings";
+import { LibraryId } from "../library/library-id";
 import {
-    TEST_GROUP_ID,
     TEST_USER_ID,
     createTestApp,
     jsonRequest,
-    TEST_LIBRARY_ID,
     resetDb,
-    seedGroup,
-    seedLibrary,
     seedUser
 } from "../../../__test_utils__";
 import { getDb } from "../../db/client";
@@ -27,9 +19,8 @@ describe("GET /init", () => {
         await resetDb(db);
     });
 
-    it("sends a user to the library they last used", async () => {
-        await seedUser(db, TEST_USER_ID, LibraryId.MKCAD);
-
+    // The app resumes the caller's tab from the browser's own storage.
+    it("hands Onshape's launch to the app", async () => {
         const res = await createTestApp().request(
             "/init?documentId=doc&workspaceId=ws",
             jsonRequest("GET"),
@@ -38,175 +29,9 @@ describe("GET /init", () => {
 
         expect(res.status).toBe(302);
         const location = new URL(res.headers.get("Location")!, "http://x");
-        expect(location.pathname).toBe(`/app/library/${LibraryId.MKCAD}`);
-        // The Onshape params have to survive the redirect.
+        expect(location.pathname).toBe("/");
         expect(location.searchParams.get("documentId")).toBe("doc");
         expect(location.searchParams.get("workspaceId")).toBe("ws");
-    });
-
-    // A utility tab resumes the same way, and has no library to count under.
-    it("resumes in a utility tab, and logs no library open", async () => {
-        await seedUser(db, TEST_USER_ID, UtilityTab.VERSION_MANAGER);
-
-        const res = await createTestApp().request(
-            "/init",
-            jsonRequest("GET"),
-            env
-        );
-
-        const location = new URL(res.headers.get("Location")!, "http://x");
-        // A utility is a page of its own, not one of the libraries.
-        expect(location.pathname).toBe(`/app/${UtilityTab.VERSION_MANAGER}`);
-        expect(await db.select().from(events).get()).toBeUndefined();
-    });
-
-    // The frontend 404s an unknown tab id.
-    it("sends a user whose stored tab is unknown to the default", async () => {
-        await seedLibrary(db);
-        await db
-            .insert(users)
-            .values({ id: TEST_USER_ID, tabId: "old-frc-lib" as AppTab })
-            .onConflictDoNothing();
-
-        const res = await createTestApp().request(
-            "/init?documentId=doc",
-            jsonRequest("GET"),
-            env
-        );
-
-        const location = new URL(res.headers.get("Location")!, "http://x");
-        expect(location.pathname).toBe(`/app/library/${DEFAULT_LIBRARY}`);
-        expect(location.searchParams.get("documentId")).toBe("doc");
-    });
-
-    it("sends a user with no row to the default library", async () => {
-        const res = await createTestApp().request(
-            "/init",
-            jsonRequest("GET"),
-            env
-        );
-
-        expect(res.status).toBe(302);
-        expect(res.headers.get("Location")).toContain(
-            `/app/library/${LibraryId.FRC_DESIGN_LIB}`
-        );
-    });
-
-    it("seeds the saved theme and forwards Onshape's color scheme", async () => {
-        await seedUser(db);
-        await db
-            .update(users)
-            .set({ theme: Theme.DARK })
-            .where(eq(users.id, TEST_USER_ID));
-
-        const res = await createTestApp().request(
-            "/init?theme=light",
-            jsonRequest("GET"),
-            env
-        );
-
-        const location = new URL(res.headers.get("Location")!, "http://x");
-        // Onshape's scheme becomes systemTheme; theme carries the user's choice.
-        expect(location.searchParams.get("systemTheme")).toBe("light");
-        expect(location.searchParams.get("theme")).toBe(Theme.DARK);
-    });
-
-    it("seeds the default theme for a user with no row", async () => {
-        const res = await createTestApp().request(
-            "/init",
-            jsonRequest("GET"),
-            env
-        );
-
-        const location = new URL(res.headers.get("Location")!, "http://x");
-        expect(location.searchParams.get("theme")).toBe(Theme.SYSTEM);
-    });
-
-    it("seeds the tab a row names, and none for a user who has not chosen", async () => {
-        const seededTab = async () => {
-            const res = await createTestApp().request(
-                "/init",
-                jsonRequest("GET"),
-                env
-            );
-            const location = new URL(res.headers.get("Location")!, "http://x");
-            return [
-                location.pathname,
-                location.searchParams.get("tabId")
-            ] as const;
-        };
-
-        expect(await seededTab()).toEqual([
-            `/app/library/${DEFAULT_LIBRARY}`,
-            null
-        ]);
-
-        await seedLibrary(db);
-        await db.insert(users).values({ id: TEST_USER_ID });
-        expect(await seededTab()).toEqual([
-            `/app/library/${DEFAULT_LIBRARY}`,
-            null
-        ]);
-
-        await db
-            .update(users)
-            .set({ tabId: LibraryId.FTC_DESIGN_LIB })
-            .where(eq(users.id, TEST_USER_ID));
-        expect(await seededTab()).toEqual([
-            `/app/library/${LibraryId.FTC_DESIGN_LIB}`,
-            LibraryId.FTC_DESIGN_LIB
-        ]);
-    });
-
-    /** The tab and group a user left off in, as their row records them. */
-    async function seedResume(tabId: AppTab, groupId: string | null) {
-        await seedUser(db, TEST_USER_ID, tabId);
-        await db
-            .update(users)
-            .set({ groupId })
-            .where(eq(users.id, TEST_USER_ID));
-    }
-
-    async function entryPath(): Promise<string> {
-        const res = await createTestApp().request(
-            "/init",
-            jsonRequest("GET"),
-            env
-        );
-        return new URL(res.headers.get("Location")!, "http://x").pathname;
-    }
-
-    it("resumes in the group they last opened", async () => {
-        await seedGroup(db);
-        await seedResume(TEST_LIBRARY_ID, TEST_GROUP_ID);
-
-        expect(await entryPath()).toBe(
-            `/app/library/${TEST_LIBRARY_ID}/groups/${TEST_GROUP_ID}`
-        );
-    });
-
-    it("falls back to the library when the group has been deleted", async () => {
-        await seedResume(TEST_LIBRARY_ID, "deleted-group");
-
-        expect(await entryPath()).toBe(`/app/library/${TEST_LIBRARY_ID}`);
-    });
-
-    // Whichever library they switched to, they have not opened a group in it.
-    it("ignores a group belonging to another library", async () => {
-        await seedGroup(db);
-        await seedResume(LibraryId.MKCAD, TEST_GROUP_ID);
-
-        expect(await entryPath()).toBe(`/app/library/${LibraryId.MKCAD}`);
-    });
-
-    it("versions the open it records", async () => {
-        await createTestApp().request("/init", jsonRequest("GET"), env);
-
-        const event = await db.select().from(events).get();
-        expect(event).toMatchObject({
-            type: EventType.APP_OPEN,
-            schemaVersion: EVENT_SCHEMA_VERSION
-        });
     });
 
     /** Where the gate sends a caller Onshape will not take. */
@@ -251,7 +76,7 @@ describe("GET /init", () => {
 
         expect(res.status).toBe(302);
         const entry = new URL(res.headers.get("Location")!, "http://x");
-        expect(entry.pathname).toBe(`/app/library/${LibraryId.FRC_DESIGN_LIB}`);
+        expect(entry.pathname).toBe("/");
         // Spent, so it never reaches the app or a later sign-in.
         expect(entry.searchParams.has("signInAttempted")).toBe(false);
     });
@@ -275,19 +100,7 @@ describe("GET /init", () => {
         );
 
         const location = new URL(res.headers.get("Location")!, "http://x");
-        expect(location.pathname).toBe(
-            `/app/library/${LibraryId.FRC_DESIGN_LIB}`
-        );
-    });
-
-    // Nobody is signed in, so there is no row to read and no open to record.
-    it("records no open for a caller it opens signed out", async () => {
-        await createTestApp({
-            isAuthenticated: false,
-            signedIn: false
-        }).request("/init?signInAttempted=1", jsonRequest("GET"), env);
-
-        expect(await db.select().from(events).get()).toBeUndefined();
+        expect(location.pathname).toBe("/");
     });
 
     it.each(["v", "m"])(
@@ -309,5 +122,42 @@ describe("GET /init", () => {
             env
         );
         expect(res.headers.get("Cache-Control")).toBe("private, no-store");
+    });
+});
+
+describe("POST /app-open", () => {
+    beforeEach(async () => {
+        await resetDb(db);
+        await seedUser(db);
+    });
+
+    it("records a versioned open in the library", async () => {
+        const res = await createTestApp().request(
+            `/api/app-open/library/${LibraryId.FTC_DESIGN_LIB}`,
+            jsonRequest("POST"),
+            env
+        );
+
+        expect(res.status).toBe(200);
+        expect(await db.select().from(events).get()).toMatchObject({
+            type: EventType.APP_OPEN,
+            libraryId: LibraryId.FTC_DESIGN_LIB,
+            userId: TEST_USER_ID,
+            schemaVersion: EVENT_SCHEMA_VERSION
+        });
+    });
+
+    it("records nothing for a caller who isn't signed in", async () => {
+        const res = await createTestApp({
+            isAuthenticated: false,
+            signedIn: false
+        }).request(
+            `/api/app-open/library/${LibraryId.FTC_DESIGN_LIB}`,
+            jsonRequest("POST"),
+            env
+        );
+
+        expect(res.status).not.toBe(200);
+        expect(await db.select().from(events).get()).toBeUndefined();
     });
 });

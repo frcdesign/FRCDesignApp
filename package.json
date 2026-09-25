@@ -41,7 +41,8 @@
         "react-dom": "^19.2.7",
         "recharts": "^3.10.1",
         "typescript-parsec": "^0.3.4",
-        "zod": "^4.4.3"
+        "zod": "^4.4.3",
+        "zustand": "^5.0.15"
     },
     "devDependencies": {
         "@cloudflare/vite-plugin": "^1.45.1",

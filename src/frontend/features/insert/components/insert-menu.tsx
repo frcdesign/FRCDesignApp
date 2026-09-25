@@ -35,9 +35,8 @@ import {
     type PartialSelection,
     Selection
 } from "@backend/features/configurations/contract";
-import { encodeConfiguration } from "@backend/features/configurations/utils";
 import { useFavorite } from "../../favorites/queries";
-import { useGetUiState, updateUiState } from "../../../lib/ui-state";
+import { updateUiState, useUiState } from "../../../lib/ui-state";
 import { RequireSignIn } from "../../auth/access-level";
 import { useTargetElementType } from "../insert-hooks";
 import { InsertSource } from "@backend/features/analytics/usage";
@@ -95,10 +94,7 @@ export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
     // So a relaunch reopens the configuration on screen.
     useEffect(() => {
         if (report) {
-            updateUiState({
-                openConfiguration:
-                    encodeConfiguration(report.overrides) || undefined
-            });
+            updateUiState({ openSelection: report.selection });
             onSelectionChange?.(report.selection);
         }
     }, [report, onSelectionChange]);
@@ -254,7 +250,7 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
         isFavorite,
         source
     });
-    const uiState = useGetUiState();
+    const fasten = useUiState((state) => state.fasten);
 
     const isLoadingConfiguration = useIsFetchingConfiguration(
         insertable.id,
@@ -265,18 +261,12 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
         insertable.supportsFasten && targetElementType === ElementType.ASSEMBLY;
 
     const handleClick = useCallback(() => {
-        insertMutation.mutate(canFasten && uiState.fasten);
+        insertMutation.mutate(canFasten && fasten);
         if (canShowQuickInsertTip) {
             showQuickInsertTip();
         }
         onInsert();
-    }, [
-        insertMutation,
-        onInsert,
-        canFasten,
-        uiState.fasten,
-        canShowQuickInsertTip
-    ]);
+    }, [insertMutation, onInsert, canFasten, fasten, canShowQuickInsertTip]);
 
     if (!targetElementType) {
         return null;
@@ -288,8 +278,8 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
             {canFasten && (
                 <Checkbox
                     label="Fasten"
-                    checked={uiState.fasten}
-                    onChange={() => updateUiState({ fasten: !uiState.fasten })}
+                    checked={fasten}
+                    onChange={() => updateUiState({ fasten: !fasten })}
                 />
             )}
             <Button

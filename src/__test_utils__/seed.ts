@@ -1,4 +1,3 @@
-import { type AppTab, isLibraryTab } from "@backend/features/settings/app-tab";
 import { type Db } from "@backend/db/client";
 import {
     configurations,
@@ -103,14 +102,10 @@ export async function seedLibrary(
 /** Also seeds the default library its dead `library_id` column falls back to. */
 export async function seedUser(
     db: Db,
-    id: string = TEST_USER_ID,
-    tabId: AppTab = DEFAULT_LIBRARY
+    id: string = TEST_USER_ID
 ): Promise<string> {
     await seedLibrary(db, DEFAULT_LIBRARY);
-    if (isLibraryTab(tabId)) {
-        await seedLibrary(db, tabId);
-    }
-    await db.insert(users).values({ id, tabId }).onConflictDoNothing();
+    await db.insert(users).values({ id }).onConflictDoNothing();
     return id;
 }
 

@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { Theme } from "@backend/features/settings/settings";
 
 /** A Storage the tests can read back, and break on demand. */
 function fakeStorage() {
@@ -42,14 +41,13 @@ beforeEach(() => {
 });
 
 describe("ui state", () => {
-    it("writes a field to the store its scope names", async () => {
+    it("writes a field to the storage its scope names", async () => {
         const { updateUiState } = await loadUiState();
 
         updateUiState({ searchQuery: "gear", justSignedIn: true });
 
         expect(stored(local, "uiState").searchQuery).toBe("gear");
         expect(stored(session, "uiSessionState").justSignedIn).toBe(true);
-        // Neither store holds the other's fields, whatever it was written with.
         expect(stored(local, "uiState")).not.toHaveProperty("justSignedIn");
         expect(stored(session, "uiSessionState")).not.toHaveProperty(
             "searchQuery"
@@ -57,13 +55,10 @@ describe("ui state", () => {
     });
 
     it("reads both stores back as one state", async () => {
-        local.setItem(
-            "uiState",
-            JSON.stringify({ version: 4, searchQuery: "gear" })
-        );
+        local.setItem("uiState", JSON.stringify({ searchQuery: "gear" }));
         session.setItem(
             "uiSessionState",
-            JSON.stringify({ version: 4, justSignedIn: true })
+            JSON.stringify({ justSignedIn: true })
         );
         const { getUiState } = await loadUiState();
 
@@ -73,31 +68,30 @@ describe("ui state", () => {
         });
     });
 
-    it("keeps what a store written before the split holds", async () => {
+    // The "system" theme is gone; the tab someone picked shouldn't go with it.
+    it("defaults a field it can't use without losing the rest", async () => {
         local.setItem(
             "uiState",
             JSON.stringify({
                 version: 4,
-                theme: "dark",
-                searchQuery: "bearing",
-                justSignedIn: true
+                theme: "system",
+                tabId: "ftc-design-lib"
             })
         );
-        const { getUiState } = await loadUiState();
+        const { getUiState, Theme } = await loadUiState();
 
         expect(getUiState()).toMatchObject({
-            theme: "dark",
-            searchQuery: "bearing"
+            theme: Theme.DARK,
+            tabId: "ftc-design-lib"
         });
-        // Session fields are the session store's, wherever they were found.
-        expect(getUiState().justSignedIn).toBe(false);
     });
 
-    it("falls back to the defaults for a store it cannot use", async () => {
+    it("falls back to the defaults for a store it cannot read", async () => {
         local.setItem("uiState", "{ not json");
         const { getUiState } = await loadUiState();
 
         expect(getUiState().searchQuery).toBe("");
+        expect(getUiState().tabId).toBeUndefined();
     });
 
     it("leaves a store alone when the update names none of its fields", async () => {
@@ -115,51 +109,5 @@ describe("ui state", () => {
 
         expect(() => updateUiState({ searchQuery: "gear" })).not.toThrow();
         expect(getUiState().searchQuery).toBe("gear");
-    });
-});
-
-describe("synced fields", () => {
-    it("sends a changed field to the caller's row, and stores it too", async () => {
-        const { setSettingsSync, updateUiState } = await loadUiState();
-        const sent: unknown[] = [];
-        setSettingsSync((settings) => sent.push(settings));
-
-        updateUiState({ theme: Theme.DARK });
-
-        expect(sent).toEqual([{ theme: "dark" }]);
-        expect(stored(local, "uiState").theme).toBe("dark");
-    });
-
-    it("sends nothing for a field that did not move", async () => {
-        const { setSettingsSync, updateUiState } = await loadUiState();
-        updateUiState({ groupId: "group-1" });
-        const sent: unknown[] = [];
-        setSettingsSync((settings) => sent.push(settings));
-
-        updateUiState({ groupId: "group-1" });
-
-        expect(sent).toEqual([]);
-    });
-
-    it("sends only the synced fields the update moved", async () => {
-        const { setSettingsSync, updateUiState } = await loadUiState();
-        const sent: unknown[] = [];
-        setSettingsSync((settings) => sent.push(settings));
-
-        updateUiState({ theme: Theme.DARK, searchQuery: "gear" });
-
-        expect(sent).toEqual([{ theme: "dark" }]);
-    });
-
-    it("sends nothing back for a value the row is what seeded", async () => {
-        const { setSettingsSync, updateUiState } = await loadUiState();
-        const sent: unknown[] = [];
-        setSettingsSync((settings) => sent.push(settings));
-
-        updateUiState({ theme: Theme.DARK }, { sync: false });
-
-        expect(sent).toEqual([]);
-        // Stored all the same: the store is still what the app reads.
-        expect(stored(local, "uiState").theme).toBe("dark");
     });
 });

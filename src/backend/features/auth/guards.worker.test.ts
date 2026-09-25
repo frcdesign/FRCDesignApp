@@ -2,7 +2,6 @@ import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it } from "vitest";
 import { AccessLevel } from "./access-level";
 import { LibraryId } from "../library/library-id";
-import { Theme } from "../settings/settings";
 import {
     createTestApp,
     jsonRequest,
@@ -30,12 +29,12 @@ describe("requireSignInMiddleware", () => {
         );
         expect(favorites.status).toBe(401);
 
-        const userData = await app.request(
-            "/api/settings",
-            jsonRequest("POST", { theme: Theme.DARK }),
+        const appOpen = await app.request(
+            "/api/app-open/library/" + LibraryId.FRC_DESIGN_LIB,
+            jsonRequest("POST"),
             env
         );
-        expect(userData.status).toBe(401);
+        expect(appOpen.status).toBe(401);
     });
 
     it("allows sign-in-only routes when signed in", async () => {

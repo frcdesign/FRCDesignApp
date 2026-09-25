@@ -1,7 +1,7 @@
 import { useEffect } from "react";
-import { decodeConfiguration } from "@backend/features/configurations/utils";
+import { useShallow } from "zustand/react/shallow";
 import { InsertSource } from "@backend/features/analytics/usage";
-import { updateUiState, useGetUiState } from "../../lib/ui-state";
+import { updateUiState, useUiState } from "../../lib/ui-state";
 import { useIsSignedIn } from "../auth/access-level";
 import { useLibraryQuery } from "../library/queries";
 import { useFavoritesQuery } from "../favorites/queries";
@@ -12,8 +12,13 @@ let restored = false;
 
 /** Reopens the menu after an Onshape tab switch, a relaunch, or a shared link. */
 export function useRestoreInsertMenu(): void {
-    const { openInsertableId, openConfiguration, openFavoriteId } =
-        useGetUiState();
+    const { openInsertableId, openSelection, openFavoriteId } = useUiState(
+        useShallow((state) => ({
+            openInsertableId: state.openInsertableId,
+            openSelection: state.openSelection,
+            openFavoriteId: state.openFavoriteId
+        }))
+    );
     const libraryQuery = useLibraryQuery();
     const favoritesQuery = useFavoritesQuery();
     const isSignedIn = useIsSignedIn();
@@ -41,7 +46,7 @@ export function useRestoreInsertMenu(): void {
             // Hidden, removed, or from another library.
             updateUiState({
                 openInsertableId: undefined,
-                openConfiguration: undefined,
+                openSelection: undefined,
                 openFavoriteId: undefined
             });
             return;
@@ -55,8 +60,8 @@ export function useRestoreInsertMenu(): void {
         // The url wins: it's what was on screen.
         openInsertMenu({
             insertable,
-            ...(openConfiguration
-                ? { initialSelection: decodeConfiguration(openConfiguration) }
+            ...(openSelection
+                ? { initialSelection: openSelection }
                 : {
                       initialSelection: favorite?.defaultSelection,
                       configurationKey: favorite?.configurationKey
@@ -66,7 +71,7 @@ export function useRestoreInsertMenu(): void {
         });
     }, [
         openInsertableId,
-        openConfiguration,
+        openSelection,
         openFavoriteId,
         libraryQuery.isSuccess,
         libraryQuery.data,

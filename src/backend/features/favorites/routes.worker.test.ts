@@ -55,7 +55,7 @@ interface FavoritesBody {
 async function fillFavorites(howMany: number) {
     const db = getDb(env.DB);
     await seedGroup(db);
-    await seedUser(db, "test-user", TEST_LIBRARY_ID);
+    await seedUser(db, "test-user");
 
     const rows = Array.from({ length: howMany }, (_, i) => ({
         id: `filler-${i}`,

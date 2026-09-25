@@ -21,7 +21,11 @@ import { type ReactNode } from "react";
 import { LibraryId } from "@backend/features/library/library-id";
 import { getLibraryName } from "../../lib/library";
 import { IconSize, NAVBAR_ROW_HEIGHT } from "../../lib/style-constants";
-import { NavbarRow, SettingsButton } from "../../components/app-navbar";
+import {
+    NavbarRow,
+    SettingsButton,
+    ThemeToggle
+} from "../../components/app-navbar";
 import { RangeControl } from "./range-control";
 import {
     DASHBOARDS,
@@ -46,6 +50,7 @@ export function DashboardNavbar(): ReactNode {
                 <DashboardTabs current={current} />
                 <Group gap="xs" ml="auto">
                     <RefreshButton />
+                    <ThemeToggle />
                     <SettingsButton />
                 </Group>
             </NavbarRow>

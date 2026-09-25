@@ -11,7 +11,7 @@ import { toLibraryPath } from "../../lib/api-paths";
 import { useLibraryId } from "../../lib/library";
 import type { LibraryId } from "@backend/features/library/library-id";
 import { apiGet } from "../../lib/api-client";
-import { useGetUiState } from "../../lib/ui-state";
+import { useUiState } from "../../lib/ui-state";
 
 /** The level the app is viewed as by default; the dev override grants it too. */
 const DEFAULT_ACCESS_LEVEL =
@@ -44,8 +44,7 @@ export function useAccessData(): ResolvedAccessData {
     const libraryId = useLibraryId();
     const { data, isPending } = useQuery(getAccessDataQuery(libraryId));
     const serverData = data ?? DEFAULT_ACCESS_DATA;
-    const uiState = useGetUiState();
-    const chosenLevel = uiState.accessLevel;
+    const chosenLevel = useUiState((state) => state.accessLevel);
     return useMemo(() => {
         const desired = chosenLevel ?? DEFAULT_ACCESS_LEVEL;
         let currentAccessLevel = desired;

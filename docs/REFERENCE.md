@@ -115,7 +115,7 @@ The asset binding is configured with `single-page-application` mode, which means
 
 ## How Users Get Into the App
 
-The server decides where a caller lands before the app loads. The client has one redirect of its own: `/` resumes the last tab and group from `localStorage`.
+The server only gates on sign-in. Where a caller lands is the client's: `/` resumes the last tab and group from `localStorage`, so a new browser starts on the welcome.
 
 ### From Onshape (`/init`)
 
@@ -123,9 +123,9 @@ Onshape opens the panel at `/init?documentId=…&instanceType=…&elementId=…&
 
 1. A version or microversion is sent to `/version-error`: there is nothing to insert into.
 2. If Onshape won't take the caller's session, `/init` sends them through sign-in and back to itself, marked with `signInAttempted` so it never bounces twice.
-3. Otherwise it redirects into the app: to the tab and group the caller's row last recorded, with Onshape's parameters kept and their saved `theme` and `tabId` added.
+3. Otherwise it redirects to `/` with Onshape's parameters kept. `/` counts a launch from Onshape as an open of the library it resumes, through `POST /api/app-open/library/:libraryId`.
 
-The `/app` route reads all of that off the url once per page load, into `ui-state` (`routes/app/route.tsx`). From then on the store is what the app reads, and in-app navigation keeps only the app's own parameters (`q`, `part`, `config`, `favorite`) in the url.
+The `/app` route reads Onshape's parameters off the url once per page load, into `ui-state` (`routes/app/route.tsx`). From then on the store is what the app reads, and in-app navigation keeps only the app's own parameters (`q`, `part`, `config`, `favorite`) in the url.
 
 ### Signing in
 
@@ -135,13 +135,13 @@ The `/app` route reads all of that off the url once per page load, into `ui-stat
 
 ## Storage at a Glance
 
-| Store              | What it holds                                                                          | Lifetime                                                          | Who reads/writes it                                                                           |
-| ------------------ | -------------------------------------------------------------------------------------- | ----------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| **D1**             | Library data, groups, parts (insertables), configurations, user preferences, favorites | Permanent (until explicitly changed)                              | Backend Worker on every API request                                                           |
-| **KV**             | OAuth session state (during login) and auth tokens (after login)                       | Login state: 10 minutes. Tokens: 30 days.                         | Backend Worker in `src/backend/features/auth/session.ts`                                      |
-| **R2**             | Thumbnail images and per-library search indexes                                        | Defaults and indexes permanent; configuration thumbnails ~90 days | Backend Worker in `src/backend/features/thumbnails/` and `src/backend/features/library/db.ts` |
-| **localStorage**   | UI state: open/closed panels, active search query, vendor filters, last-opened group   | Persists across browser sessions                                  | Frontend only, via `src/frontend/lib/ui-state.ts`                                             |
-| **sessionStorage** | Not used                                                                               | —                                                                 | —                                                                                             |
+| Store              | What it holds                                                                         | Lifetime                                                          | Who reads/writes it                                                                           |
+| ------------------ | ------------------------------------------------------------------------------------- | ----------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| **D1**             | Library data, groups, parts (insertables), configurations, users, favorites           | Permanent (until explicitly changed)                              | Backend Worker on every API request                                                           |
+| **KV**             | OAuth session state (during login) and auth tokens (after login)                      | Login state: 10 minutes. Tokens: 30 days.                         | Backend Worker in `src/backend/features/auth/session.ts`                                      |
+| **R2**             | Thumbnail images and per-library search indexes                                       | Defaults and indexes permanent; configuration thumbnails ~90 days | Backend Worker in `src/backend/features/thumbnails/` and `src/backend/features/library/db.ts` |
+| **localStorage**   | UI state: theme, last tab and group, open/closed panels, search query, vendor filters | Persists across browser sessions                                  | Frontend only, via `src/frontend/lib/ui-state.ts`                                             |
+| **sessionStorage** | Not used                                                                              | —                                                                 | —                                                                                             |
 
 ## Codebase Map
 
@@ -161,7 +161,7 @@ owns, `lib/` for cross-cutting plumbing, and a small set of files at the root.
 - `lib/onshape/` — everything that talks to Onshape's REST API: `client.ts` (the client class), `api-path.ts`, `path.ts` (`ElementPath`/`InstancePath` and their serializers), `endpoints/` (per-category wrappers), `objects/` (feature and query builders)
 - `features/` — one directory per feature, each holding its own `routes.ts` plus whatever it owns:
     - `auth/` — split by role: `session.ts` stores the session cookie and its KV records, `onshape-oauth.ts` runs the handshake, `caller.ts` resolves who is calling (and exports `productionCaller`, the wiring `createApp` binds), `guards.ts` holds both gates, and `routes.ts` serves the OAuth redirects plus `/access-data`
-    - `entry/` — `/init`, where Onshape lands: gates on auth, then resumes the caller in the library and theme they last used
+    - `entry/` — `/init`, where Onshape lands: gates on auth, then hands the launch to the app
     - `settings/` — the caller's stored preferences and the `Settings` model
     - `library/` — the library response (`db.ts`), its DTOs, and the groups and insertables endpoints
     - `load/` — everything that turns Onshape into what we store: the `parse-*` modules (document contents, configurations, configuration records, vendors, fasten info), the per-group and per-insertable loaders, the Workflows that drive them, their retry policies, and the job tracker
@@ -176,7 +176,7 @@ owns, `lib/` for cross-cutting plumbing, and a small set of files at the root.
 
 - `main.tsx` — React root; wraps the app in `QueryClientProvider` and `MantineProvider`
 - `routes/` — file-based TanStack Router routes
-- `lib/` — cross-cutting helpers: `api-client.ts` (fetch wrappers), `query-keys.ts` (every query key in one place), `query-client.ts`, `ui-state.ts` (localStorage state), `refresh.ts`, `notifications.tsx`
+- `lib/` — cross-cutting helpers: `api-client.ts` (fetch wrappers), `query-keys.ts` (every query key in one place), `query-client.ts`, `ui-state.ts` (the Zustand store, kept in localStorage and sessionStorage), `refresh.ts`, `notifications.tsx`
 - `components/` — UI used by more than one feature, plus the app shell (`app-navbar.tsx`, `alerts.tsx`, `root-error.tsx`)
 - `features/` — `library/`, `favorites/`, `insert/`, `search/`, `settings/`, `thumbnails/`, `build-status/`, `auth/`, each with a `queries.ts` and a `components/` directory
 

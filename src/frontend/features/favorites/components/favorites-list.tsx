@@ -13,7 +13,7 @@ import {
     type FavoritesData
 } from "@backend/features/favorites/contract";
 import type { Insertables } from "@backend/features/library/contract";
-import { useGetUiState } from "../../../lib/ui-state";
+import { useUiState } from "../../../lib/ui-state";
 import {
     SectionNotice,
     SectionLoading,
@@ -35,7 +35,7 @@ import { useVendorFilters } from "../../settings/components/vendor-filters";
 
 /** Unlike DocumentList, this list can be searched directly. */
 export function FavoritesList(): ReactNode {
-    const { searchQuery } = useGetUiState();
+    const searchQuery = useUiState((state) => state.searchQuery);
     const vendorFilters = useVendorFilters();
 
     const { signedIn, isPending } = useAccessData();

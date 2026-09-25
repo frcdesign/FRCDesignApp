@@ -7,20 +7,15 @@ import {
     getVendorName,
     Vendor
 } from "@backend/features/library/vendors";
-import {
-    getUiState,
-    updateUiState,
-    useGetUiState
-} from "../../../lib/ui-state";
+import { getUiState, updateUiState, useUiState } from "../../../lib/ui-state";
 import { AppContextMenu } from "../../../components/app-menu";
 import { useLibraryId } from "../../../lib/library";
 import type { LibraryId } from "@backend/features/library/library-id";
 
 /** The current library's active filters; `undefined` means every vendor. */
 export function useVendorFilters(): Vendor[] | undefined {
-    const uiState = useGetUiState();
     const libraryId = useLibraryId();
-    return uiState.vendorFilters[libraryId];
+    return useUiState((state) => state.vendorFilters[libraryId]);
 }
 
 /** An empty list is no filter, so it's stored as absent. */
