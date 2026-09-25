@@ -14,7 +14,7 @@ import {
     RECEIVE_PATH,
     WebhookEvent
 } from "./registration";
-import { readUnitsDelivery, UNITS_RECEIVE_PATH } from "./transient";
+import { readUnitsDelivery, UNITS_WEBHOOK_ROUTE } from "./transient";
 import { forgetUnitInfo } from "../configurations/units";
 
 export const webhookRoutes = getApp();
@@ -52,7 +52,7 @@ webhookRoutes.post(RECEIVE_PATH.replace(/^\/api/, ""), async (c) => {
 });
 
 /** POST /api/webhooks/units?documentId=&workspaceId= */
-webhookRoutes.post(UNITS_RECEIVE_PATH.replace(/^\/api/, ""), async (c) => {
+webhookRoutes.post(UNITS_WEBHOOK_ROUTE, async (c) => {
     const workspace = readUnitsDelivery(c.req.query());
     if (!workspace) {
         throw forbiddenError("Unrecognized webhook");

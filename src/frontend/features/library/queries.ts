@@ -183,7 +183,7 @@ export function useReloadMutation(all: boolean) {
         mutationKey: ["reload", libraryId],
         mutationFn: (): Promise<ReloadOut> =>
             apiPost("/reload" + toLibraryPath(libraryId), {
-                body: { force: all }
+                body: { forceReload: all }
             }),
         onError: getAppErrorHandler("Failed to reload documents!"),
         onSuccess: (data) => {

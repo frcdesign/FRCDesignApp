@@ -76,10 +76,7 @@ export const requireAdminMiddleware = requireLibraryAccess(
 );
 
 /** The owner's access is the same everywhere, so any library answers. */
-export const requireOwnerMiddleware: MiddlewareHandler<AppContextEnv> = async (
-    c,
-    next
-) => {
+export async function requireOwner(c: AppContext): Promise<void> {
     await requireSignIn(c);
     const level = await c.var.getAccessLevel(
         c.req.param("libraryId") ? getLibraryParam(c) : DEFAULT_LIBRARY
@@ -87,5 +84,12 @@ export const requireOwnerMiddleware: MiddlewareHandler<AppContextEnv> = async (
     if (level !== AccessLevel.OWNER) {
         throw forbiddenError("Only the owner can use this functionality");
     }
+}
+
+export const requireOwnerMiddleware: MiddlewareHandler<AppContextEnv> = async (
+    c,
+    next
+) => {
+    await requireOwner(c);
     await next();
 };

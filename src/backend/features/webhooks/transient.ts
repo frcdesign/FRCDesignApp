@@ -8,7 +8,8 @@ import type { OnshapeApi } from "../../lib/onshape/client";
 import { createWebhook } from "../../lib/onshape/endpoints/webhooks";
 import type { InstancePath } from "../../lib/onshape/path";
 
-export const UNITS_RECEIVE_PATH = "/api/webhooks/units";
+/** Under `/api`. */
+export const UNITS_WEBHOOK_ROUTE = "/webhooks/units";
 
 const UPDATE_WORKSPACE_UNITS = "onshape.model.lifecycle.updateworkspaceunits";
 
@@ -18,7 +19,7 @@ export async function watchWorkspaceUnits(
     workspace: InstancePath,
     origin: string
 ): Promise<void> {
-    const url = new URL(UNITS_RECEIVE_PATH, origin);
+    const url = new URL("/api" + UNITS_WEBHOOK_ROUTE, origin);
     url.searchParams.set("documentId", workspace.documentId);
     url.searchParams.set("workspaceId", workspace.instanceId);
     await createWebhook(onshapeApi, {

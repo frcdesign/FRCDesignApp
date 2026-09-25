@@ -45,16 +45,6 @@ import { loadGroup } from "./load-group";
 import { ONSHAPE_STEP_RETRIES } from "./steps";
 import { ensureWebhook } from "../webhooks/registration";
 
-/** What a load did with its group. */
-export type LoadResult =
-    | { status: "skipped" | "failed" | "gone" }
-    | {
-          status: "loaded";
-          loadedElements: number;
-          deletedElements: number;
-          failedElements: number;
-      };
-
 /** Loads one group's document when its version moved, or on a forced reload. One per group at a time; see `jobs.ts`. */
 export class LoadDocumentWorkflow extends WorkflowEntrypoint<
     AppBindings,
@@ -63,7 +53,7 @@ export class LoadDocumentWorkflow extends WorkflowEntrypoint<
     async run(
         event: WorkflowEvent<LoadDocumentParams>,
         step: WorkflowStep
-    ): Promise<LoadResult> {
+    ): Promise<void> {
         const params = event.payload;
         const ctx = createLoadContext(
             this.env,
@@ -71,15 +61,12 @@ export class LoadDocumentWorkflow extends WorkflowEntrypoint<
             params.sessionId,
             step
         );
-        // Anything but a skip wrote to the group: a failure flags it.
-        let result: LoadResult = { status: "failed" };
+        // A throw past loadDocument's own handling may have written too.
+        let changed = true;
         try {
-            result = await loadDocument(ctx, params);
-            return result;
+            changed = await loadDocument(ctx, params);
         } finally {
             // Always, so whatever queued behind this load starts.
-            const changed =
-                result.status === "loaded" || result.status === "failed";
             await step.do("finish", () =>
                 finishLoad(this.env, params, changed)
             );
@@ -87,10 +74,11 @@ export class LoadDocumentWorkflow extends WorkflowEntrypoint<
     }
 }
 
+/** Whether it wrote to the group, which a failure does by flagging it. */
 async function loadDocument(
     ctx: LoadContext,
     params: LoadDocumentParams
-): Promise<LoadResult> {
+): Promise<boolean> {
     const { groupId, libraryId, forceReload } = params;
     const stored = await ctx.step.do("read-group", () =>
         getDb(ctx.env.DB)
@@ -106,10 +94,10 @@ async function loadDocument(
     );
     // Deleted since the load was asked for.
     if (!stored) {
-        return { status: "gone" };
+        return false;
     }
 
-    let result: LoadResult;
+    let changed = true;
     try {
         const target = await resolveGroupTarget(ctx, {
             libraryId,
@@ -122,25 +110,22 @@ async function loadDocument(
             !forceReload &&
             !hasFailedLoad(stored.buildIssues)
         ) {
-            result = { status: "skipped" };
+            changed = false;
         } else {
             if (isNewVersion && params.awaitApproval && !forceReload) {
                 await waitForApproval(ctx, params);
             }
-            result = {
-                status: "loaded",
-                ...(await loadGroup(
-                    ctx,
-                    target,
-                    forceReload,
-                    stored.thumbnailWorkspaceId
-                        ? {
-                              workspaceId: stored.thumbnailWorkspaceId,
-                              versionId: stored.versionId
-                          }
-                        : undefined
-                ))
-            };
+            await loadGroup(
+                ctx,
+                target,
+                forceReload,
+                stored.thumbnailWorkspaceId
+                    ? {
+                          workspaceId: stored.thumbnailWorkspaceId,
+                          versionId: stored.versionId
+                      }
+                    : undefined
+            );
         }
     } catch (error) {
         // The row records only that it failed, so this is the only record of why.
@@ -148,7 +133,6 @@ async function loadDocument(
         await ctx.step.do("flag-failed", () =>
             flagFailedLoads(ctx.env, [groupId])
         );
-        result = { status: "failed" };
     }
 
     // After the load, so an unreadable document gets no webhook. Not fatal: the
@@ -172,7 +156,7 @@ async function loadDocument(
             error
         );
     }
-    return result;
+    return changed;
 }
 
 /** Loads anyway once nobody has approved it for `APPROVAL_TIMEOUT`. */

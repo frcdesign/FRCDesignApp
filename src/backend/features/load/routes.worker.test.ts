@@ -14,8 +14,8 @@ import * as Jobs from "./jobs";
 const db = getDb(env.DB);
 const PATH = `/api/reload/library/${LibraryId.FRC_DESIGN_LIB}`;
 
-function reload(accessLevel: AccessLevel, force: boolean) {
-    const init = jsonRequest("POST", { force });
+function reload(accessLevel: AccessLevel, forceReload: boolean) {
+    const init = jsonRequest("POST", { forceReload });
     return createTestApp({ accessLevel }).request(
         PATH,
         {

@@ -1,13 +1,11 @@
 import { eq } from "drizzle-orm";
 import * as z from "zod";
 import { getApp } from "../../lib/context";
-import { forbiddenError } from "../../lib/api-error";
 import { getDb } from "../../db/client";
 import { groups, libraries } from "../../db/schema";
 import { getLibraryParam, libraryRoute } from "../../lib/route-params";
 import { validate } from "../../lib/validate";
-import { AccessLevel } from "../auth/access-level";
-import { requireAdminMiddleware } from "../auth/guards";
+import { requireAdminMiddleware, requireOwner } from "../auth/guards";
 import { getSessionId } from "../auth/session";
 import { approveHeldLoads, requestLoads } from "./jobs";
 import type {
@@ -21,7 +19,7 @@ export const loadRoutes = getApp();
 
 const reloadBody = z.object({
     /** Reloads documents whose version has not changed, too. */
-    force: z.boolean()
+    forceReload: z.boolean()
 });
 
 /**
@@ -35,12 +33,9 @@ loadRoutes.post(
     validate("json", reloadBody),
     async (c) => {
         const libraryId = getLibraryParam(c);
-        const { force } = c.req.valid("json");
-        if (
-            force &&
-            (await c.var.getAccessLevel(libraryId)) !== AccessLevel.OWNER
-        ) {
-            throw forbiddenError("Only the owner can reload all documents");
+        const { forceReload } = c.req.valid("json");
+        if (forceReload) {
+            await requireOwner(c);
         }
         const rows = await getDb(c.env.DB)
             .select({ groupId: groups.id, libraryId: groups.libraryId })
@@ -53,7 +48,7 @@ loadRoutes.post(
             rows.map((row) => ({
                 ...row,
                 sessionId,
-                forceReload: force,
+                forceReload,
                 origin
             }))
         );
