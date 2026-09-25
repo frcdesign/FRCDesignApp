@@ -1,7 +1,7 @@
 {
     "version": "6",
     "dialect": "sqlite",
-    "id": "69111642-5d7d-4bf2-9c1b-12aa7afd32be",
+    "id": "6e982faa-641c-47ec-9d82-683289f15f2f",
     "prevId": "d8945a24-5643-4675-bf1f-b32cff1dbea2",
     "tables": {
         "configurations": {
@@ -538,16 +538,8 @@
                     "notNull": true,
                     "autoincrement": false
                 },
-                "rerun": {
-                    "name": "rerun",
-                    "type": "integer",
-                    "primaryKey": false,
-                    "notNull": true,
-                    "autoincrement": false,
-                    "default": false
-                },
-                "rerun_force_reload": {
-                    "name": "rerun_force_reload",
+                "force_reload": {
+                    "name": "force_reload",
                     "type": "integer",
                     "primaryKey": false,
                     "notNull": true,

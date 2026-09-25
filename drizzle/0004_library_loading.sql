@@ -3,8 +3,7 @@ CREATE TABLE `load_jobs` (
 	`library_id` text NOT NULL,
 	`instance_id` text,
 	`started_at` integer NOT NULL,
-	`rerun` integer DEFAULT false NOT NULL,
-	`rerun_force_reload` integer DEFAULT false NOT NULL,
+	`force_reload` integer DEFAULT false NOT NULL,
 	`awaiting_approval` integer DEFAULT false NOT NULL,
 	FOREIGN KEY (`group_id`) REFERENCES `groups`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`library_id`) REFERENCES `libraries`(`id`) ON UPDATE no action ON DELETE no action

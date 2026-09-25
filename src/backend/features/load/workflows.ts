@@ -68,7 +68,7 @@ export class LoadDocumentWorkflow extends WorkflowEntrypoint<
         } finally {
             // Always, so whatever queued behind this load starts.
             await step.do("finish", () =>
-                finishLoad(this.env, params, changed)
+                finishLoad(this.env, params, event.instanceId, changed)
             );
         }
     }

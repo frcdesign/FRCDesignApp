@@ -1,7 +1,7 @@
 /**
  * One load per group at a time: two writing the same rows would interleave.
- * A load requested meanwhile is marked on the running row and started when it
- * finishes. In D1 since concurrent KV writes lose updates.
+ * A load requested meanwhile replaces the running one. In D1 since concurrent
+ * KV writes lose updates.
  */
 import { and, eq, inArray } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
@@ -91,16 +91,16 @@ async function clearDead(
     return jobs.filter((_, i) => alive[i]);
 }
 
-/** Starts a load of each group, or marks it to run again after its current one. */
+/**
+ * Starts a load of each group. One already running is terminated and replaced,
+ * since the new load reads the latest version itself.
+ */
 export async function requestLoads(
     env: AppBindings,
     requests: LoadDocumentParams[]
 ): Promise<void> {
     const db = getDb(env.DB);
-    const byGroup = new Map(
-        requests.map((request) => [request.groupId, request])
-    );
-    const groupIds = [...byGroup.keys()];
+    const groupIds = requests.map((request) => request.groupId);
 
     const existing: LoadJob[] = [];
     for (const chunk of chunkForInArray(groupIds)) {
@@ -111,43 +111,49 @@ export async function requestLoads(
                 .where(inArray(loadJobs.groupId, chunk)))
         );
     }
-    const live = await clearDead(env, existing);
-    const running = new Set(live.map((job) => job.groupId));
-
-    // Asking for a load outright approves the version one is holding.
-    const overridden = live.filter(
-        (job) =>
-            job.awaitingApproval && !byGroup.get(job.groupId)?.awaitApproval
+    const running = new Map(
+        (await clearDead(env, existing)).map((job) => [job.groupId, job])
     );
-    await releaseHeldLoads(env, overridden);
+    await terminateLoads(env, [...running.values()]);
 
-    // Running already: its load starts this one as it finishes.
-    const queued = requests.filter((request) => running.has(request.groupId));
-    const writes: BatchItem<"sqlite">[] = queued.map((request) =>
+    const starts = requests.map((request) => ({
+        id: crypto.randomUUID(),
+        params: {
+            ...request,
+            // A forced reload isn't undone by a plain load replacing it.
+            forceReload:
+                request.forceReload ||
+                (running.get(request.groupId)?.forceReload ?? false)
+        }
+    }));
+    const startedAt = new Date();
+    const replacing = starts.filter((start) =>
+        running.has(start.params.groupId)
+    );
+    const fresh = starts.filter((start) => !running.has(start.params.groupId));
+
+    const writes: BatchItem<"sqlite">[] = replacing.map((start) =>
         db
             .update(loadJobs)
             .set({
-                rerun: true,
-                // Once asked for, a forced reload is not downgraded.
-                ...(request.forceReload ? { rerunForceReload: true } : {})
+                instanceId: start.id,
+                startedAt,
+                forceReload: start.params.forceReload,
+                awaitingApproval: false
             })
-            .where(eq(loadJobs.groupId, request.groupId))
+            .where(eq(loadJobs.groupId, start.params.groupId))
     );
-
-    const toStart = requests
-        .filter((request) => !running.has(request.groupId))
-        .map((params) => ({ id: crypto.randomUUID(), params }));
-    const startedAt = new Date();
-    for (let i = 0; i < toStart.length; i += ROWS_PER_INSERT) {
+    for (let i = 0; i < fresh.length; i += ROWS_PER_INSERT) {
         writes.push(
             db
                 .insert(loadJobs)
                 .values(
-                    toStart.slice(i, i + ROWS_PER_INSERT).map((start) => ({
+                    fresh.slice(i, i + ROWS_PER_INSERT).map((start) => ({
                         groupId: start.params.groupId,
                         libraryId: start.params.libraryId,
                         instanceId: start.id,
-                        startedAt
+                        startedAt,
+                        forceReload: start.params.forceReload
                     }))
                 )
                 .onConflictDoNothing()
@@ -160,9 +166,9 @@ export async function requestLoads(
     }
 
     // Each load stands alone, so they all start at once.
-    const batches: (typeof toStart)[] = [];
-    for (let i = 0; i < toStart.length; i += CREATE_BATCH) {
-        batches.push(toStart.slice(i, i + CREATE_BATCH));
+    const batches: (typeof starts)[] = [];
+    for (let i = 0; i < starts.length; i += CREATE_BATCH) {
+        batches.push(starts.slice(i, i + CREATE_BATCH));
     }
     await Promise.all(
         batches.map((batch) => env.LOAD_DOCUMENT_WORKFLOW.createBatch(batch))
@@ -178,15 +184,39 @@ export async function requestLoads(
     }
 }
 
-/** What a finished load does next: nothing, or its group's queued load. */
-type FinishOutcome = "done" | "rerun";
+/** Stops loads about to be replaced. One that has just finished can't be, which is fine. */
+async function terminateLoads(
+    env: AppBindings,
+    jobs: LoadJob[]
+): Promise<void> {
+    await Promise.all(
+        jobs.map(async (job) => {
+            if (!job.instanceId) return;
+            try {
+                const instance = await env.LOAD_DOCUMENT_WORKFLOW.get(
+                    job.instanceId
+                );
+                await instance.terminate();
+            } catch (error) {
+                console.warn(
+                    `Failed to stop the load of ${job.groupId}`,
+                    error
+                );
+            }
+        })
+    );
+}
 
-/** Whether it failed or not. Publishes what it wrote, then starts the queued load or releases the group. */
+/**
+ * Whether it failed or not. Publishes what it wrote, then releases the group,
+ * unless a newer load has replaced this one.
+ */
 export async function finishLoad(
     env: AppBindings,
     params: LoadDocumentParams,
+    instanceId: string,
     changed: boolean
-): Promise<FinishOutcome> {
+): Promise<void> {
     const db = getDb(env.DB);
     // Before the bump, which makes /search-db immutable for a year.
     if (changed) {
@@ -194,41 +224,19 @@ export async function finishLoad(
         await bumpLibraryVersion(db, params.libraryId);
         await pushLibraryChanged(env, params.libraryId);
     }
-
-    const job = await db
-        .select()
-        .from(loadJobs)
-        .where(eq(loadJobs.groupId, params.groupId))
-        .get();
-
-    let outcome: FinishOutcome = "done";
-    if (job?.rerun) {
-        const instanceId = crypto.randomUUID();
-        await db
-            .update(loadJobs)
-            .set({
-                instanceId,
-                startedAt: new Date(),
-                rerun: false,
-                rerunForceReload: false,
-                awaitingApproval: false
-            })
-            .where(eq(loadJobs.groupId, params.groupId));
-        await env.LOAD_DOCUMENT_WORKFLOW.create({
-            id: instanceId,
-            params: { ...params, forceReload: job.rerunForceReload }
-        });
-        outcome = "rerun";
-    } else {
-        await db.delete(loadJobs).where(eq(loadJobs.groupId, params.groupId));
-    }
-
+    await db
+        .delete(loadJobs)
+        .where(
+            and(
+                eq(loadJobs.groupId, params.groupId),
+                eq(loadJobs.instanceId, instanceId)
+            )
+        );
     await pushJobStatus(
         env,
         params.libraryId,
         await runningStatus(env, params.libraryId)
     );
-    return outcome;
 }
 
 /** The groups loading, from the rows alone, trusting each to be live. */

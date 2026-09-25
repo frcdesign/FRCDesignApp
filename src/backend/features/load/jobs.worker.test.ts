@@ -28,14 +28,17 @@ function params(groupId: string, forceReload = false): LoadDocumentParams {
     };
 }
 
-/** Every instance reports `status`, as far as the jobs can tell. Returns their `sendEvent`. */
+/** Every instance reports `status`, as far as the jobs can tell. Returns their controls. */
 function instancesAre(status: InstanceStatus["status"]) {
-    const sendEvent = vi.fn().mockResolvedValue(undefined);
-    vi.spyOn(env.LOAD_DOCUMENT_WORKFLOW, "get").mockResolvedValue({
+    const instance = {
         status: () => Promise.resolve({ status }),
-        sendEvent
-    } as never);
-    return sendEvent;
+        sendEvent: vi.fn().mockResolvedValue(undefined),
+        terminate: vi.fn().mockResolvedValue(undefined)
+    };
+    vi.spyOn(env.LOAD_DOCUMENT_WORKFLOW, "get").mockResolvedValue(
+        instance as never
+    );
+    return instance;
 }
 
 const job = (groupId: string) =>
@@ -75,21 +78,33 @@ describe("document loads", () => {
     });
 
     // Two loads writing one group's rows at once would interleave.
-    it("queues a load behind the group's running one, keeping it forced", async () => {
+    it("replaces the group's running load, which it stops", async () => {
         const create = vi
             .spyOn(env.LOAD_DOCUMENT_WORKFLOW, "createBatch")
             .mockResolvedValue([]);
         await requestLoads(env, [params("a")]);
+        const { terminate } = instancesAre("running");
+
+        await requestLoads(env, [params("a")]);
+
+        expect(terminate).toHaveBeenCalledOnce();
+        const replacement = create.mock.calls[1][0][0];
+        expect((await job("a"))?.instanceId).toBe(replacement.id);
+    });
+
+    it("keeps a replaced load's force", async () => {
+        const create = vi
+            .spyOn(env.LOAD_DOCUMENT_WORKFLOW, "createBatch")
+            .mockResolvedValue([]);
+        await requestLoads(env, [params("a", true)]);
         instancesAre("running");
 
-        await requestLoads(env, [params("a", true)]);
         await requestLoads(env, [params("a", false)]);
 
-        expect(create).toHaveBeenCalledOnce();
-        expect(await job("a")).toMatchObject({
-            rerun: true,
-            rerunForceReload: true
+        expect(create.mock.calls[1][0][0].params).toMatchObject({
+            forceReload: true
         });
+        expect(await job("a")).toMatchObject({ forceReload: true });
     });
 
     it("replaces the row of a load that crashed, and flags its group", async () => {
@@ -133,7 +148,7 @@ describe("document loads", () => {
         });
 
         it("lets every held load through", async () => {
-            const sendEvent = instancesAre("waiting");
+            const { sendEvent } = instancesAre("waiting");
 
             expect(await approveHeldLoads(env, TEST_LIBRARY_ID)).toBe(1);
 
@@ -147,21 +162,10 @@ describe("document loads", () => {
             });
         });
 
-        it("approves a held load someone asks for outright", async () => {
-            const sendEvent = instancesAre("waiting");
+        it("replaces a held load with one someone asked for outright", async () => {
+            instancesAre("waiting");
             await requestLoads(env, [params("a")]);
-            expect(sendEvent).toHaveBeenCalledOnce();
             expect(await job("a")).toMatchObject({ awaitingApproval: false });
-        });
-
-        it("keeps holding for another version's webhook", async () => {
-            const sendEvent = instancesAre("waiting");
-            await requestLoads(env, [held]);
-            expect(sendEvent).not.toHaveBeenCalled();
-            expect(await job("a")).toMatchObject({
-                awaitingApproval: true,
-                rerun: true
-            });
         });
     });
 
@@ -173,21 +177,15 @@ describe("document loads", () => {
             ).mockResolvedValue([]);
         });
 
-        it("starts the load queued behind it", async () => {
+        it("leaves the group to the load that replaced it", async () => {
             await requestLoads(env, [params("a")]);
+            const replaced = (await job("a"))?.instanceId ?? "";
             instancesAre("running");
-            await requestLoads(env, [params("a", true)]);
-            const create = vi
-                .spyOn(env.LOAD_DOCUMENT_WORKFLOW, "create")
-                .mockResolvedValue({ id: "next" } as never);
+            await requestLoads(env, [params("a")]);
 
-            expect(await finishLoad(env, params("a"), true)).toBe("rerun");
+            await finishLoad(env, params("a"), replaced, false);
 
-            expect(create.mock.calls[0][0]?.params).toMatchObject({
-                groupId: "a",
-                forceReload: true
-            });
-            expect(await job("a")).toMatchObject({ rerun: false });
+            expect((await job("a"))?.instanceId).not.toBe(replaced);
         });
 
         // Each load publishes what it wrote, standing alone.
@@ -196,11 +194,13 @@ describe("document loads", () => {
                 .spyOn(LibraryDb, "rebuildSearchDb")
                 .mockResolvedValue("");
             await requestLoads(env, [params("a"), params("b")]);
+            const instanceOf = async (groupId: string) =>
+                (await job(groupId))?.instanceId ?? "";
 
-            await finishLoad(env, params("a"), true);
+            await finishLoad(env, params("a"), await instanceOf("a"), true);
             expect(rebuild).toHaveBeenCalledOnce();
 
-            await finishLoad(env, params("b"), false);
+            await finishLoad(env, params("b"), await instanceOf("b"), false);
             expect(rebuild).toHaveBeenCalledOnce();
             expect(await getJobStatus(env, TEST_LIBRARY_ID)).toEqual({
                 loadingGroupIds: [],
