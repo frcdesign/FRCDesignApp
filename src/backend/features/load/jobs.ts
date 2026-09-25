@@ -3,7 +3,7 @@
  * A load requested meanwhile is marked on the running row and started when it
  * finishes. In D1 since concurrent KV writes lose updates.
  */
-import { eq, inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 import type { AppBindings } from "../../lib/context";
 import { getDb } from "../../db/client";
@@ -22,9 +22,17 @@ export interface LoadDocumentParams {
     sessionId?: string;
     /** Reloads insertables whose version has not changed, too. */
     forceReload: boolean;
+    /** Waits for an admin to approve a new version before loading it. */
+    awaitApproval?: boolean;
     /** This deployment's, which the document's webhook is delivered to. */
     origin: string;
 }
+
+/** What a held load waits for; see `approveHeldLoads`. */
+export const APPROVE_EVENT = "approve-version";
+
+/** A version nobody approves in this long is dropped until the next one. */
+export const APPROVAL_TIMEOUT = "1 day";
 
 /** Instance statuses that mean a load is still live. */
 const ACTIVE_STATUSES = new Set<InstanceStatus["status"]>([
@@ -103,9 +111,15 @@ export async function requestLoads(
                 .where(inArray(loadJobs.groupId, chunk)))
         );
     }
-    const running = new Set(
-        (await clearDead(env, existing)).map((job) => job.groupId)
+    const live = await clearDead(env, existing);
+    const running = new Set(live.map((job) => job.groupId));
+
+    // Asking for a load outright approves the version one is holding.
+    const overridden = live.filter(
+        (job) =>
+            job.awaitingApproval && !byGroup.get(job.groupId)?.awaitApproval
     );
+    await releaseHeldLoads(env, overridden);
 
     // Running already: its load starts this one as it finishes.
     const queued = requests.filter((request) => running.has(request.groupId));
@@ -196,7 +210,8 @@ export async function finishLoad(
                 instanceId,
                 startedAt: new Date(),
                 rerun: false,
-                rerunForce: false
+                rerunForce: false,
+                awaitingApproval: false
             })
             .where(eq(loadJobs.groupId, params.groupId));
         await env.LOAD_DOCUMENT_WORKFLOW.create({
@@ -222,10 +237,85 @@ async function runningStatus(
     libraryId: LibraryId
 ): Promise<JobStatus> {
     const rows = await getDb(env.DB)
-        .select({ groupId: loadJobs.groupId })
+        .select({
+            groupId: loadJobs.groupId,
+            awaitingApproval: loadJobs.awaitingApproval
+        })
         .from(loadJobs)
         .where(eq(loadJobs.libraryId, libraryId));
-    return { loadingGroupIds: rows.map((row) => row.groupId) };
+    return {
+        loadingGroupIds: rows
+            .filter((row) => !row.awaitingApproval)
+            .map((row) => row.groupId),
+        awaitingApprovalGroupIds: rows
+            .filter((row) => row.awaitingApproval)
+            .map((row) => row.groupId)
+    };
+}
+
+/** Marks a load as waiting for approval, from inside it. */
+export async function holdLoad(
+    env: AppBindings,
+    params: LoadDocumentParams
+): Promise<void> {
+    await getDb(env.DB)
+        .update(loadJobs)
+        .set({ awaitingApproval: true })
+        .where(eq(loadJobs.groupId, params.groupId));
+    await pushJobStatus(
+        env,
+        params.libraryId,
+        await runningStatus(env, params.libraryId)
+    );
+}
+
+/** An event sent before a load reaches its wait is kept for it. */
+async function releaseHeldLoads(
+    env: AppBindings,
+    jobs: LoadJob[]
+): Promise<void> {
+    await Promise.all(
+        jobs.map(async (job) => {
+            if (!job.instanceId) return;
+            try {
+                const instance = await env.LOAD_DOCUMENT_WORKFLOW.get(
+                    job.instanceId
+                );
+                await instance.sendEvent({ type: APPROVE_EVENT, payload: {} });
+            } catch (error) {
+                console.error(
+                    `Failed to approve the load of ${job.groupId}`,
+                    error
+                );
+            }
+        })
+    );
+    const db = getDb(env.DB);
+    for (const chunk of chunkForInArray(jobs.map((job) => job.groupId))) {
+        await db
+            .update(loadJobs)
+            .set({ awaitingApproval: false })
+            .where(inArray(loadJobs.groupId, chunk));
+    }
+}
+
+/** Lets every load the library is holding through. Returns how many there were. */
+export async function approveHeldLoads(
+    env: AppBindings,
+    libraryId: LibraryId
+): Promise<number> {
+    const held = await getDb(env.DB)
+        .select()
+        .from(loadJobs)
+        .where(
+            and(
+                eq(loadJobs.libraryId, libraryId),
+                eq(loadJobs.awaitingApproval, true)
+            )
+        );
+    await releaseHeldLoads(env, held);
+    await pushJobStatus(env, libraryId, await runningStatus(env, libraryId));
+    return held.length;
 }
 
 /** Also clears rows left by crashed loads. Pushes keep the client current after this. */

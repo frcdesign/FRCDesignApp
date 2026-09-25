@@ -64,7 +64,11 @@ export const libraries = sqliteTable("libraries", {
     adminTeam: text("admin_team", { mode: "json" })
         .$type<AdminTeamMember[]>()
         .notNull()
-        .default([])
+        .default([]),
+    // Holds each new version's load until an admin approves it.
+    approveVersions: integer("approve_versions", { mode: "boolean" })
+        .notNull()
+        .default(false)
 });
 
 /** Before a load pins a real version, so a failed group can still be retried. */
@@ -237,6 +241,10 @@ export const loadJobs = sqliteTable("load_jobs", {
     rerun: integer("rerun", { mode: "boolean" }).notNull().default(false),
     // Whether the rerun reloads unchanged insertables too.
     rerunForce: integer("rerun_force", { mode: "boolean" })
+        .notNull()
+        .default(false),
+    // Its load is waiting for an admin to approve the version.
+    awaitingApproval: integer("awaiting_approval", { mode: "boolean" })
         .notNull()
         .default(false)
 });

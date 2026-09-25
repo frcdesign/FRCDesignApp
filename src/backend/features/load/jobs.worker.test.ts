@@ -7,8 +7,11 @@ import { eq } from "drizzle-orm";
 import { BuildIssueType } from "../build-checker/issues";
 import * as LibraryDb from "../library/db";
 import {
+    APPROVE_EVENT,
+    approveHeldLoads,
     finishLoad,
     getJobStatus,
+    holdLoad,
     requestLoads,
     type LoadDocumentParams
 } from "./jobs";
@@ -25,11 +28,14 @@ function params(groupId: string, forceReload = false): LoadDocumentParams {
     };
 }
 
-/** Every instance reports `status`, as far as the jobs can tell. */
+/** Every instance reports `status`, as far as the jobs can tell. Returns their `sendEvent`. */
 function instancesAre(status: InstanceStatus["status"]) {
+    const sendEvent = vi.fn().mockResolvedValue(undefined);
     vi.spyOn(env.LOAD_DOCUMENT_WORKFLOW, "get").mockResolvedValue({
-        status: () => Promise.resolve({ status })
+        status: () => Promise.resolve({ status }),
+        sendEvent
     } as never);
+    return sendEvent;
 }
 
 const job = (groupId: string) =>
@@ -63,7 +69,8 @@ describe("document loads", () => {
         expect((await job("a"))?.instanceId).toBe(started[0].id);
         instancesAre("running");
         expect(await getJobStatus(env, TEST_LIBRARY_ID)).toEqual({
-            loadingGroupIds: ["a", "b"]
+            loadingGroupIds: ["a", "b"],
+            awaitingApprovalGroupIds: []
         });
     });
 
@@ -99,6 +106,59 @@ describe("document loads", () => {
             .get();
         expect(group?.buildIssues).toContainEqual({
             type: BuildIssueType.LOAD_FAILED
+        });
+    });
+
+    describe("approval", () => {
+        const held = { ...params("a"), awaitApproval: true };
+
+        beforeEach(async () => {
+            vi.spyOn(
+                env.LOAD_DOCUMENT_WORKFLOW,
+                "createBatch"
+            ).mockResolvedValue([]);
+            await requestLoads(env, [held]);
+            await holdLoad(env, held);
+        });
+
+        it("reports a held load apart from the running ones", async () => {
+            instancesAre("waiting");
+            expect(await getJobStatus(env, TEST_LIBRARY_ID)).toEqual({
+                loadingGroupIds: [],
+                awaitingApprovalGroupIds: ["a"]
+            });
+        });
+
+        it("lets every held load through", async () => {
+            const sendEvent = instancesAre("waiting");
+
+            expect(await approveHeldLoads(env, TEST_LIBRARY_ID)).toBe(1);
+
+            expect(sendEvent).toHaveBeenCalledWith({
+                type: APPROVE_EVENT,
+                payload: {}
+            });
+            expect(await getJobStatus(env, TEST_LIBRARY_ID)).toEqual({
+                loadingGroupIds: ["a"],
+                awaitingApprovalGroupIds: []
+            });
+        });
+
+        it("approves a held load someone asks for outright", async () => {
+            const sendEvent = instancesAre("waiting");
+            await requestLoads(env, [params("a")]);
+            expect(sendEvent).toHaveBeenCalledOnce();
+            expect(await job("a")).toMatchObject({ awaitingApproval: false });
+        });
+
+        it("keeps holding for another version's webhook", async () => {
+            const sendEvent = instancesAre("waiting");
+            await requestLoads(env, [held]);
+            expect(sendEvent).not.toHaveBeenCalled();
+            expect(await job("a")).toMatchObject({
+                awaitingApproval: true,
+                rerun: true
+            });
         });
     });
 
@@ -140,7 +200,8 @@ describe("document loads", () => {
             await finishLoad(env, params("b"), false);
             expect(rebuild).toHaveBeenCalledOnce();
             expect(await getJobStatus(env, TEST_LIBRARY_ID)).toEqual({
-                loadingGroupIds: []
+                loadingGroupIds: [],
+                awaitingApprovalGroupIds: []
             });
         });
     });

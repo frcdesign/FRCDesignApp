@@ -101,6 +101,8 @@ Onshape pushes one thing, registered with `isTransient: false` and recorded in t
 
 - **A new version of a library document.** Registered by the document's load; removed with the last group loaded from it. Reloads that document's groups.
 
+A library admin can switch on **Approve new versions** in the settings menu (`libraries.approve_versions`). A webhook's load in that library then holds a new version: it marks its `load_jobs` row `awaiting_approval` and waits on the workflow event `approve-version` for up to a day. **Approve** beside "Held versions" sends that event to every held load, and so does switching approval off. An admin's reload approves the groups it names. A version nobody approves within the day is dropped, and the next reload or new version picks it up again.
+
 Onshape's team webhooks need a company id, which a personal account lacks, so an admin team's membership is pulled again only when the owner sets the team or an admin presses **Refresh** beside "Admin team members" in the settings menu.
 
 A load that fails is flagged `LOAD_FAILED`, including one whose workflow crashed before it could say so; the next look at the library's jobs notices. Reloading the library's outdated documents reruns it.

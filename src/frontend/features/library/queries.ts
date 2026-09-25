@@ -8,8 +8,10 @@ import {
 import { apiDelete, apiGet, apiPost } from "../../lib/api-client";
 import { type LibraryOut } from "@backend/features/library/contract";
 import {
+    type ApproveVersionsOut,
     type JobStatus,
-    type ReloadOut
+    type ReloadOut,
+    type VersionApprovalOut
 } from "@backend/features/load/contract";
 import { hasEditorAccess } from "@backend/features/auth/access-level";
 import { LibraryId } from "@backend/features/library/library-id";
@@ -19,7 +21,8 @@ import { useLibraryId } from "../../lib/library";
 import {
     jobStatusQueryKey,
     libraryDataQueryKey,
-    libraryVersionQueryKey
+    libraryVersionQueryKey,
+    versionApprovalQueryKey
 } from "../../lib/query-keys";
 import { queryClient } from "../../lib/query-client";
 import { getQueryUpdater } from "../../lib/query-cache";
@@ -86,10 +89,13 @@ function getJobStatusQuery(libraryId: LibraryId, canAsk: boolean) {
     });
 }
 
-const NOTHING_LOADING: string[] = [];
+const NO_JOBS: JobStatus = {
+    loadingGroupIds: [],
+    awaitingApprovalGroupIds: []
+};
 
 /** Empty for callers who aren't editors with an Onshape session. */
-function useLoadingGroupIds(): string[] {
+function useJobStatus(): JobStatus {
     const libraryId = useLibraryId();
     const { signedIn, currentAccessLevel } = useAccessData();
     const query = useQuery(
@@ -98,7 +104,16 @@ function useLoadingGroupIds(): string[] {
             signedIn && hasEditorAccess(currentAccessLevel)
         )
     );
-    return query.data?.loadingGroupIds ?? NOTHING_LOADING;
+    return query.data ?? NO_JOBS;
+}
+
+function useLoadingGroupIds(): string[] {
+    return useJobStatus().loadingGroupIds;
+}
+
+/** How many documents have a new version waiting for an admin's approval. */
+export function useAwaitingApprovalCount(): number {
+    return useJobStatus().awaitingApprovalGroupIds.length;
 }
 
 /** Whether anything in the library is loading. */
@@ -169,6 +184,51 @@ export function useReloadMutation(all: boolean) {
         onError: getAppErrorHandler("Failed to reload documents!"),
         onSuccess: (data) => {
             showInfoToast(`Reloading ${data.documents} documents...`);
+        }
+    });
+}
+
+export function useVersionApprovalQuery() {
+    const libraryId = useLibraryId();
+    return useQuery({
+        queryKey: versionApprovalQueryKey(libraryId),
+        queryFn: () =>
+            apiGet<VersionApprovalOut>(
+                "/version-approval" + toLibraryPath(libraryId)
+            )
+    });
+}
+
+/** Turning it off lets the held versions through. */
+export function useSetVersionApprovalMutation() {
+    const libraryId = useLibraryId();
+    return useMutation({
+        mutationKey: ["version-approval", libraryId],
+        mutationFn: (enabled: boolean) =>
+            apiPost<VersionApprovalOut>(
+                "/version-approval" + toLibraryPath(libraryId),
+                { body: { enabled } }
+            ),
+        onError: getAppErrorHandler("Failed to change version approval!"),
+        onSuccess: (approval) =>
+            queryClient.setQueryData(
+                versionApprovalQueryKey(libraryId),
+                approval
+            )
+    });
+}
+
+export function useApproveVersionsMutation() {
+    const libraryId = useLibraryId();
+    return useMutation({
+        mutationKey: ["approve-versions", libraryId],
+        mutationFn: () =>
+            apiPost<ApproveVersionsOut>(
+                "/approve-versions" + toLibraryPath(libraryId)
+            ),
+        onError: getAppErrorHandler("Failed to approve versions!"),
+        onSuccess: (data) => {
+            showInfoToast(`Loading ${data.documents} approved documents...`);
         }
     });
 }

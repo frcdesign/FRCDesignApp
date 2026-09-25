@@ -6,7 +6,7 @@ import { eq } from "drizzle-orm";
 import { type AppBindings, getApp } from "../../lib/context";
 import { forbiddenError } from "../../lib/api-error";
 import { getDb } from "../../db/client";
-import { groups, WebhookSubject } from "../../db/schema";
+import { groups, libraries, WebhookSubject } from "../../db/schema";
 import { requestLoads } from "../load/jobs";
 import {
     findWebhookByToken,
@@ -65,15 +65,23 @@ webhookRoutes.post(UNITS_RECEIVE_PATH.replace(/^\/api/, ""), async (c) => {
     return c.json({});
 });
 
-/** Nobody is signed in behind a webhook, so each load finds an admin's session. */
+/**
+ * Nobody is signed in behind a webhook, so each load finds an admin's session.
+ * A library that approves versions holds the load until an admin does.
+ */
 async function reloadDocument(
     env: AppBindings,
     documentId: string,
     origin: string
 ): Promise<void> {
     const documentGroups = await getDb(env.DB)
-        .select({ groupId: groups.id, libraryId: groups.libraryId })
+        .select({
+            groupId: groups.id,
+            libraryId: groups.libraryId,
+            awaitApproval: libraries.approveVersions
+        })
         .from(groups)
+        .innerJoin(libraries, eq(libraries.id, groups.libraryId))
         .where(eq(groups.documentId, documentId));
     await requestLoads(
         env,

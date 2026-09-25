@@ -32,7 +32,13 @@ import {
     createLoadContext,
     getOnshapeApiFromContext
 } from "./context";
-import { finishLoad, type LoadDocumentParams } from "./jobs";
+import {
+    APPROVAL_TIMEOUT,
+    APPROVE_EVENT,
+    finishLoad,
+    holdLoad,
+    type LoadDocumentParams
+} from "./jobs";
 import { pushLibraryChanged } from "../live/notify";
 import { flagFailedLoads } from "./flag";
 import { loadGroup } from "./load-group";
@@ -110,10 +116,18 @@ async function loadDocument(
             groupId,
             documentId: stored.documentId
         });
+        const isNewVersion = stored.versionId !== target.versionPath.instanceId;
         if (
-            stored.versionId === target.versionPath.instanceId &&
+            !isNewVersion &&
             !forceReload &&
             !hasFailedLoad(stored.buildIssues)
+        ) {
+            result = { status: "skipped" };
+        } else if (
+            isNewVersion &&
+            params.awaitApproval &&
+            !forceReload &&
+            !(await waitForApproval(ctx, params))
         ) {
             result = { status: "skipped" };
         } else {
@@ -163,6 +177,23 @@ async function loadDocument(
         );
     }
     return result;
+}
+
+/** False once nobody has approved it for `APPROVAL_TIMEOUT`. */
+async function waitForApproval(
+    ctx: LoadContext,
+    params: LoadDocumentParams
+): Promise<boolean> {
+    await ctx.step.do("hold-for-approval", () => holdLoad(ctx.env, params));
+    try {
+        await ctx.step.waitForEvent("approval", {
+            type: APPROVE_EVENT,
+            timeout: APPROVAL_TIMEOUT
+        });
+        return true;
+    } catch {
+        return false;
+    }
 }
 
 /**

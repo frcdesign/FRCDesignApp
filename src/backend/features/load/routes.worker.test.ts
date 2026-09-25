@@ -67,3 +67,56 @@ describe("reloading a library", () => {
         expect((await reload(AccessLevel.EDITOR, false)).status).toBe(403);
     });
 });
+
+describe("approving versions", () => {
+    const APPROVAL_PATH = `/api/version-approval/library/${LibraryId.FRC_DESIGN_LIB}`;
+
+    function call(method: "GET" | "POST", path: string, body?: object) {
+        const init = body ? jsonRequest(method, body) : { method };
+        return createTestApp({ accessLevel: AccessLevel.ADMIN }).request(
+            path,
+            {
+                ...init,
+                headers: {
+                    ...("headers" in init ? init.headers : {}),
+                    Cookie: "frc-design-app-cookie=s"
+                }
+            },
+            env
+        );
+    }
+
+    beforeEach(async () => {
+        await resetDb(db);
+        await seedGroup(db, "frc", LibraryId.FRC_DESIGN_LIB);
+    });
+    afterEach(() => vi.restoreAllMocks());
+
+    it("is off until an admin turns it on", async () => {
+        expect(await (await call("GET", APPROVAL_PATH)).json()).toEqual({
+            enabled: false
+        });
+        await call("POST", APPROVAL_PATH, { enabled: true });
+        expect(await (await call("GET", APPROVAL_PATH)).json()).toEqual({
+            enabled: true
+        });
+    });
+
+    it("lets held versions through when turned off", async () => {
+        const approve = vi.spyOn(Jobs, "approveHeldLoads").mockResolvedValue(2);
+        await call("POST", APPROVAL_PATH, { enabled: false });
+        expect(approve).toHaveBeenCalledWith(
+            expect.anything(),
+            LibraryId.FRC_DESIGN_LIB
+        );
+    });
+
+    it("approves every held version", async () => {
+        vi.spyOn(Jobs, "approveHeldLoads").mockResolvedValue(2);
+        const res = await call(
+            "POST",
+            `/api/approve-versions/library/${LibraryId.FRC_DESIGN_LIB}`
+        );
+        expect(await res.json()).toEqual({ documents: 2 });
+    });
+});
