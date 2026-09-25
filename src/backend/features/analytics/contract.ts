@@ -108,9 +108,9 @@ export interface GrowthOut {
 }
 
 export interface LibrarySummaryOut {
-    /** Lifetime, for the headline cards. */
+    /** Over the requested range, for the headline cards. */
     totals: AnalyticsTotals;
-    /** Scoped to the requested range, for the chart and the sparklines. */
+    /** Also over the range, for the chart and the sparklines. */
     metricSeries: DailyMetricPoint[];
     growth: GrowthOut;
     from: string;

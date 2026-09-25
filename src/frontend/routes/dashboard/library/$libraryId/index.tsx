@@ -22,7 +22,7 @@ import { getLibraryName } from "../../../../lib/library";
 import { useCacheVersion } from "../../../../features/library/queries";
 import { useRangePreset } from "../../../../features/dashboard/range-control";
 import { UsageTreemap } from "../../../../features/dashboard/usage-treemap";
-import { LifetimeTiles } from "../../../../features/dashboard/lifetime-tiles";
+import { HeadlineTiles } from "../../../../features/dashboard/headline-tiles";
 import { SectionCard } from "../../../../components/section";
 
 export const Route = createFileRoute("/dashboard/library/$libraryId/")({
@@ -74,7 +74,7 @@ function LibraryBody({
 
     return (
         <>
-            <LifetimeTiles
+            <HeadlineTiles
                 totals={totals}
                 growth={growth}
                 series={metricSeries}

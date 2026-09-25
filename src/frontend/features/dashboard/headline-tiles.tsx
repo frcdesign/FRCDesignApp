@@ -10,7 +10,8 @@ import { perUnit } from "./derived";
 import { toSparkSeries } from "./series";
 import { StatTile } from "./stat-tiles";
 
-interface LifetimeTilesProps {
+interface HeadlineTilesProps {
+    /** Over the selected window, or lifetime where there is no picker. */
     totals: AnalyticsTotals;
     growth: GrowthOut;
     /** Daily points over the selected window, for the sparklines. */
@@ -19,12 +20,12 @@ interface LifetimeTilesProps {
     withOpens?: boolean;
 }
 
-export function LifetimeTiles({
+export function HeadlineTiles({
     totals,
     growth,
     series,
     withOpens = false
-}: LifetimeTilesProps): ReactNode {
+}: HeadlineTilesProps): ReactNode {
     const { season } = growth;
     const perUser =
         totals.uniqueUsers === 0 ? 0 : totals.inserts / totals.uniqueUsers;
@@ -44,9 +45,6 @@ export function LifetimeTiles({
                 change={season.activeUsers}
                 spark={spark.activeUsers}
             />
-            {/* Lifetime uses over everyone who ever used it, against a season's
-                uses over the people active in that season — the same
-                value-and-delta split every tile in this row has. */}
             <StatTile
                 label="Uses per user"
                 value={perUser}

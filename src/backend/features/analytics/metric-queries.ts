@@ -35,7 +35,7 @@ import { type DayRange } from "./day";
 import { eachDay } from "./range";
 import { getHealthCounts } from "./health";
 
-/** Lifetime totals, optionally scoped to one library and to a window. */
+/** Lifetime totals, or scoped to one library or a window. */
 export async function getTotals(
     db: Db,
     libraryId?: LibraryId,

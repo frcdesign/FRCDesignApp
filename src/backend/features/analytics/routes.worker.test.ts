@@ -37,6 +37,7 @@ import {
 import { ElementType } from "../../lib/onshape/element-type";
 import {
     type AnalyticsOverviewOut,
+    type LibrarySummaryOut,
     type UnusedOptionOut,
     type InsertableReportOut,
     type LibraryHealthCounts,
@@ -465,6 +466,20 @@ describe("analytics routes", () => {
             ]);
             // Totals stay lifetime, independent of the range.
             expect(body.totals.inserts).toBe(7);
+        });
+    });
+
+    describe("GET /analytics/summary/library/:libraryId", () => {
+        it("totals over the requested range", async () => {
+            await seedMetric("2026-01-01", 1);
+            await seedMetric("2026-06-01", 2);
+
+            const res = await anonymousGet(
+                `/api/analytics/summary/library/${TEST_LIBRARY_ID}?from=2026-05-01&to=2026-07-01`
+            );
+            const body: LibrarySummaryOut = await res.json();
+
+            expect(body.totals.inserts).toBe(2);
         });
     });
 

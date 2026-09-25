@@ -99,7 +99,7 @@ analyticsRoutes.get(
         const range = clampRange(requested, trackingSince);
 
         const [totals, metricSeries, growth] = await Promise.all([
-            getTotals(db, libraryId),
+            getTotals(db, libraryId, range),
             getMetricSeries(db, range, libraryId),
             getGrowth(db, toReportingDay(Date.now()), trackingSince, libraryId)
         ]);

@@ -13,7 +13,7 @@ import { InsertsByLibraryCard } from "../../features/dashboard/inserts-chart";
 import { InsertSourceBreakdown } from "../../features/dashboard/insert-mix";
 import { RangePreset, toDayRange } from "../../features/dashboard/range";
 import { RecentSection } from "../../features/dashboard/growth-section";
-import { LifetimeTiles } from "../../features/dashboard/lifetime-tiles";
+import { HeadlineTiles } from "../../features/dashboard/headline-tiles";
 import { METRICS } from "../../features/dashboard/metrics";
 import { Section } from "../../components/section";
 import { UsageTreemap } from "../../features/dashboard/usage-treemap";
@@ -46,7 +46,7 @@ function DashboardOverview(): ReactNode {
     return (
         <Stack gap="xl">
             <Section title="Overall">
-                <LifetimeTiles
+                <HeadlineTiles
                     totals={totals}
                     growth={growth}
                     series={metricSeries}
