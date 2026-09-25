@@ -64,8 +64,8 @@
             "class_name": "RenderThumbnailWorkflow"
         }
     ],
-    // Inherited by every environment. v2 deletes the thumbnail render queue,
-    // replaced by RenderThumbnailWorkflow; the object's stored queue goes with it.
+    // Inherited by every environment. v2 swaps the thumbnail render queue,
+    // replaced by RenderThumbnailWorkflow, for the push hub.
     "durable_objects": {
         "bindings": [{ "name": "PUSH_HUB", "class_name": "PushHub" }]
     },
@@ -81,15 +81,8 @@
         },
         {
             "tag": "v2",
-            "deleted_classes": ["ThumbnailRenderer"]
-        },
-        {
-            "tag": "v3",
-            "new_sqlite_classes": ["LiveUpdates"]
-        },
-        {
-            "tag": "v4",
-            "renamed_classes": [{ "from": "LiveUpdates", "to": "PushHub" }]
+            "deleted_classes": ["ThumbnailRenderer"],
+            "new_sqlite_classes": ["PushHub"]
         }
     ],
     /**
@@ -150,9 +143,7 @@
                 }
             ],
             "durable_objects": {
-                "bindings": [
-                    { "name": "PUSH_HUB", "class_name": "PushHub" }
-                ]
+                "bindings": [{ "name": "PUSH_HUB", "class_name": "PushHub" }]
             },
             "vars": {
                 "OWNER_USER_ID": "5eace32713a966103efd2aa0",
@@ -202,9 +193,7 @@
                 }
             ],
             "durable_objects": {
-                "bindings": [
-                    { "name": "PUSH_HUB", "class_name": "PushHub" }
-                ]
+                "bindings": [{ "name": "PUSH_HUB", "class_name": "PushHub" }]
             },
             "vars": {
                 "OWNER_USER_ID": "5eace32713a966103efd2aa0",

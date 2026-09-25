@@ -129,7 +129,7 @@ export async function requestLoads(
             .set({
                 rerun: true,
                 // Once asked for, a forced reload is not downgraded.
-                ...(request.forceReload ? { rerunForce: true } : {})
+                ...(request.forceReload ? { rerunForceReload: true } : {})
             })
             .where(eq(loadJobs.groupId, request.groupId))
     );
@@ -210,13 +210,13 @@ export async function finishLoad(
                 instanceId,
                 startedAt: new Date(),
                 rerun: false,
-                rerunForce: false,
+                rerunForceReload: false,
                 awaitingApproval: false
             })
             .where(eq(loadJobs.groupId, params.groupId));
         await env.LOAD_DOCUMENT_WORKFLOW.create({
             id: instanceId,
-            params: { ...params, forceReload: job.rerunForce }
+            params: { ...params, forceReload: job.rerunForceReload }
         });
         outcome = "rerun";
     } else {

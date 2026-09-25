@@ -1,1 +1,0 @@
-ALTER TABLE `insertables` ADD `excluded_parameter_ids` text DEFAULT '[]' NOT NULL;

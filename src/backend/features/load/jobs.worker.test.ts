@@ -86,7 +86,10 @@ describe("document loads", () => {
         await requestLoads(env, [params("a", false)]);
 
         expect(create).toHaveBeenCalledOnce();
-        expect(await job("a")).toMatchObject({ rerun: true, rerunForce: true });
+        expect(await job("a")).toMatchObject({
+            rerun: true,
+            rerunForceReload: true
+        });
     });
 
     it("replaces the row of a load that crashed, and flags its group", async () => {

@@ -240,7 +240,7 @@ export const loadJobs = sqliteTable("load_jobs", {
     startedAt: integer("started_at", { mode: "timestamp_ms" }).notNull(),
     rerun: integer("rerun", { mode: "boolean" }).notNull().default(false),
     // Whether the rerun reloads unchanged insertables too.
-    rerunForce: integer("rerun_force", { mode: "boolean" })
+    rerunForceReload: integer("rerun_force_reload", { mode: "boolean" })
         .notNull()
         .default(false),
     // Its load is waiting for an admin to approve the version.
