@@ -69,11 +69,6 @@
     "durable_objects": {
         "bindings": [{ "name": "PUSH_HUB", "class_name": "PushHub" }]
     },
-    // Daily, clearing thumbnails nothing shows any more; see the scheduled
-    // handler in src/backend/index.ts. Inherited by every environment.
-    "triggers": {
-        "crons": ["0 9 * * *"]
-    },
     "migrations": [
         {
             "tag": "v1",

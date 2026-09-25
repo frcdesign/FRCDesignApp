@@ -45,7 +45,7 @@ R2 is Cloudflare's blob storage, optimized for unstructured data like images and
 
 | Prefix          | What it holds                                                             | Lifetime                                          |
 | --------------- | ------------------------------------------------------------------------- | ------------------------------------------------- |
-| `thumbnails/`   | Rendered thumbnails, by element and configuration                         | Kept until reconciled; see below                  |
+| `thumbnails/`   | Rendered thumbnails, by element and configuration                         | Deleted by the load that orphans them; see below  |
 | `search-index/` | Each library's serialized MiniSearch index, under a version for its shape | Rewritten on every index rebuild; built on a miss |
 
 Onshape can generate preview thumbnails for parts and assemblies, but fetching them from Onshape on every page load would be slow and eat into API rate limits — a single render can require polling and take minutes. Instead, every thumbnail we ever fetch from Onshape lands in R2 and is served from there afterwards.
@@ -61,14 +61,12 @@ thumbnails/config/{elementId}/{microversionId}/{configKey}/{size}
 
 `{configKey}` is the url-encoded `ConfigurationKey` — the canonical configuration with hidden and default-valued parameters dropped and quantities in meters and radians — so two equivalent selections resolve to one cached image. Encoding it keeps its `;` and `=` inside a single path segment. Including `{microversionId}` makes every object immutable, so an updated document lands on new keys rather than overwriting in place.
 
-Nothing expires on a timer: there is no R2 lifecycle rule, and renders are meant to last. What that costs is orphans — a tab edited into a new microversion leaves its old pair behind, and a deleted group or tab leaves everything it had. A **daily cron** (the `scheduled` handler in `src/backend/index.ts`) collects them, in `features/thumbnails/reconcile.ts`:
+Nothing expires on a timer: there is no R2 lifecycle rule, and renders are meant to last. What that costs is orphans — a tab edited into a new microversion leaves its old pair behind, and a deleted group or tab leaves everything it had. So each load, once it has saved its group, deletes the stale thumbnails of its document's elements, and deleting a group does the same for its elements (`deleteStaleThumbnails` in `features/thumbnails/reconcile.ts`):
 
-- The live set is every `(elementId, microversionId)` still named by an insertable row, plus the ones a group's two stored thumbnail urls point at — a group's document thumbnail is often not one of its own insertables, and those urls are the only record of which element it is.
-- It spans **every library**, because a thumbnail key names no library. A set built from one library would read every other library's thumbnails as orphaned.
-- Both prefixes are reconciled the same way: a configuration render is addressed by the same element and microversion, so it lives and dies with the element's default.
-- An object younger than 24 hours is kept whatever the live set says. A group load stores thumbnails as it goes and commits its rows at the end, and a configuration render is started by a user opening the insert menu rather than by any job — so something in flight is indistinguishable from something orphaned, and only age tells them apart.
-- An empty live set deletes nothing: a library really can have no elements, but so can a read that failed.
-- A run scans at most 50 pages of 1,000. A bucket larger than that is finished by the next run.
+- It lists each element's two prefixes, so it never scans the bucket. The elements are the document's tabs plus the group's stored insertables, which covers a removed tab.
+- What stays is every `(elementId, microversionId)` an insertable row still names, in **any library**, since another library can load the same document, plus what the document's groups' two thumbnail urls point at: a group's document thumbnail is often not one of its insertables, and those urls are the only record of which element it is.
+- Both prefixes are cleaned the same way: a configuration render is addressed by the same element and microversion, so it lives and dies with the element's default.
+- An object younger than an hour is kept. A load stores thumbnails before the rows naming them, and a load replacing another can be storing while the one it replaced cleans up.
 
 Thumbnails are served via `/api/thumbnail/:size/:elementId?v={microversionId}&configurationKey=&insertableId=`:
 

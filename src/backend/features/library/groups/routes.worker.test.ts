@@ -19,6 +19,7 @@ import type { JobStatus } from "../../load/contract";
 import { searchIndexKey } from "../db";
 import { SEARCH_OPTIONS, type SearchDocument } from "../../search/contract";
 import * as DocumentsEndpoint from "../../../lib/onshape/endpoints/documents";
+import * as Reconcile from "../../thumbnails/reconcile";
 import * as Jobs from "../../load/jobs";
 
 const db = getDb(env.DB);
@@ -174,6 +175,29 @@ describe("group admin routes", () => {
 
         expect(await db.select().from(groups).all()).toHaveLength(0);
         expect(await db.select().from(insertables).all()).toHaveLength(0);
+    });
+
+    it("DELETE /group cleans up the thumbnails of the elements it had", async () => {
+        await seedTestData(db);
+        const elementIds = (
+            await db
+                .select({ elementId: insertables.elementId })
+                .from(insertables)
+        ).map((row) => row.elementId);
+        const clean = vi
+            .spyOn(Reconcile, "deleteStaleThumbnails")
+            .mockResolvedValue(0);
+
+        await createTestApp().request(
+            `/api/group/library/${TEST_LIBRARY_ID}?groupId=${TEST_GROUP_ID}`,
+            jsonRequest("DELETE"),
+            env
+        );
+
+        expect(clean.mock.calls[0][2].elementIds).toEqual(
+            expect.arrayContaining(elementIds)
+        );
+        clean.mockRestore();
     });
 });
 

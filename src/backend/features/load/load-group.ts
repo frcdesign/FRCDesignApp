@@ -33,6 +33,7 @@ import {
     syncThumbnailWorkspace
 } from "../thumbnails/workspace";
 import { ONSHAPE_STEP_RETRIES, uploadThumbnailsStep } from "./steps";
+import { deleteStaleThumbnails } from "../thumbnails/reconcile";
 
 interface GroupLoadResult {
     loadedElements: number;
@@ -124,6 +125,24 @@ export async function loadGroup(
             failedInsertableIds
         })
     );
+
+    // After the save, so the rows name what this load stored.
+    await ctx.step
+        .do(`delete-stale-thumbnails-${groupId}`, () =>
+            deleteStaleThumbnails(ctx.env.BLOB, getDb(ctx.env.DB), {
+                documentId: versionPath.documentId,
+                elementIds: [
+                    ...contents.elements.map((element) => element.id),
+                    ...storedInsertables.map((stored) => stored.elementId)
+                ]
+            })
+        )
+        .catch((error: unknown) => {
+            console.error(
+                `Failed to delete stale thumbnails of ${groupId}`,
+                error
+            );
+        });
 
     // Only once the row names the kept workspace. A leftover is clutter, not
     // breakage, so this is never fatal.

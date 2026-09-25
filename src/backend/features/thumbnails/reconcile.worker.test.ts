@@ -10,19 +10,19 @@ import {
 import { ThumbnailSize } from "./contract";
 import { thumbnailKey, thumbnailUrl } from "./keys";
 import { DEFAULT_CONFIGURATION_KEY } from "../configurations/contract";
-import { reconcileThumbnails } from "./reconcile";
+import { deleteStaleThumbnails } from "./reconcile";
 import { LibraryId } from "../library/library-id";
 
-const LIVE_ELEMENT = "element-1";
+const ELEMENT = "element-1";
 const LIVE_MICROVERSION = "mv-live";
 const OLD_MICROVERSION = "mv-old";
+const DOCUMENT = "doc-g1";
 
-/** A day and a half on, so what these tests store is past the grace period. */
-const LATER = Date.now() + 36 * 60 * 60 * 1000;
+/** Past the grace period, so what these tests store counts as settled. */
+const LATER = Date.now() + 2 * 60 * 60 * 1000;
 
 let db: Db;
 
-/** Writes a byte at each key, which is all reconciliation reads. */
 async function store(...keys: string[]): Promise<void> {
     await Promise.all(keys.map((key) => env.BLOB.put(key, "x")));
 }
@@ -32,12 +32,20 @@ async function storedKeys(): Promise<string[]> {
     return listed.objects.map((object) => object.key).sort();
 }
 
-/** Both sizes for one subject, as the store always writes them in a pair. */
 function defaultKeys(elementId: string, microversionId: string): string[] {
     return Object.values(ThumbnailSize).map((size) =>
         thumbnailKey(elementId, microversionId, size)
     );
 }
+
+const clean = (elementIds: string[], now = LATER) =>
+    deleteStaleThumbnails(
+        env.BLOB,
+        db,
+        { documentId: DOCUMENT, elementIds },
+        undefined,
+        now
+    );
 
 beforeEach(async () => {
     db = getDb(env.DB);
@@ -46,184 +54,86 @@ beforeEach(async () => {
     await Promise.all(listed.objects.map((o) => env.BLOB.delete(o.key)));
 });
 
-describe("reconcileThumbnails", () => {
-    it("keeps what an insertable still names and deletes the rest", async () => {
+describe("deleteStaleThumbnails", () => {
+    it("deletes an element's old microversion, renders included", async () => {
         await seedPartStudio(db, {
-            elementId: LIVE_ELEMENT,
+            elementId: ELEMENT,
             microversionId: LIVE_MICROVERSION
         });
+        const render = (microversionId: string) =>
+            thumbnailKey(
+                ELEMENT,
+                microversionId,
+                ThumbnailSize.LARGE,
+                "size=l"
+            );
         await store(
-            ...defaultKeys(LIVE_ELEMENT, LIVE_MICROVERSION),
-            ...defaultKeys(LIVE_ELEMENT, OLD_MICROVERSION),
-            ...defaultKeys("element-gone", LIVE_MICROVERSION)
+            ...defaultKeys(ELEMENT, LIVE_MICROVERSION),
+            ...defaultKeys(ELEMENT, OLD_MICROVERSION),
+            render(LIVE_MICROVERSION),
+            render(OLD_MICROVERSION)
         );
 
-        const result = await reconcileThumbnails(env.BLOB, db, LATER);
-
-        expect(result.deleted).toBe(4);
+        expect(await clean([ELEMENT])).toBe(3);
         expect(await storedKeys()).toEqual(
-            defaultKeys(LIVE_ELEMENT, LIVE_MICROVERSION).sort()
+            [
+                ...defaultKeys(ELEMENT, LIVE_MICROVERSION),
+                render(LIVE_MICROVERSION)
+            ].sort()
         );
     });
 
-    it("deletes a configuration render whose microversion moved on", async () => {
-        await seedPartStudio(db, {
-            elementId: LIVE_ELEMENT,
-            microversionId: LIVE_MICROVERSION
-        });
-        const liveConfig = thumbnailKey(
-            LIVE_ELEMENT,
-            LIVE_MICROVERSION,
-            ThumbnailSize.LARGE,
-            "size=l"
-        );
-        const staleConfig = thumbnailKey(
-            LIVE_ELEMENT,
-            OLD_MICROVERSION,
-            ThumbnailSize.LARGE,
-            "size=l"
-        );
-        await store(liveConfig, staleConfig);
+    it("deletes everything of an element nothing names any more", async () => {
+        await store(...defaultKeys("element-removed", OLD_MICROVERSION));
+        expect(await clean(["element-removed"])).toBe(2);
+        expect(await storedKeys()).toEqual([]);
+    });
 
-        const result = await reconcileThumbnails(env.BLOB, db, LATER);
-
-        expect(result.deleted).toBe(1);
-        expect(await storedKeys()).toEqual([liveConfig]);
+    it("leaves elements outside the document alone", async () => {
+        await store(...defaultKeys("elsewhere", OLD_MICROVERSION));
+        expect(await clean([ELEMENT])).toBe(0);
+        expect(await storedKeys()).toHaveLength(2);
     });
 
     // The row's urls are the only record of which element it is.
-    it("keeps the document thumbnail a group's urls still point at", async () => {
+    it("keeps the document thumbnail a group's urls point at", async () => {
         const subject = {
-            elementId: "doc-thumbnail-element",
+            elementId: "thumbnail-tab",
             microversionId: "mv-doc"
         };
+        const url = (size: ThumbnailSize) =>
+            thumbnailUrl({
+                ...subject,
+                size,
+                configurationKey: DEFAULT_CONFIGURATION_KEY
+            });
         await seedGroup(db, "g1", undefined, {
-            smallThumbnailUrl: thumbnailUrl({
-                ...subject,
-                size: ThumbnailSize.SMALL,
-                configurationKey: DEFAULT_CONFIGURATION_KEY
-            }),
-            largeThumbnailUrl: thumbnailUrl({
-                ...subject,
-                size: ThumbnailSize.LARGE,
-                configurationKey: DEFAULT_CONFIGURATION_KEY
-            })
+            smallThumbnailUrl: url(ThumbnailSize.SMALL),
+            largeThumbnailUrl: url(ThumbnailSize.LARGE)
         });
-        await seedInsertable(db, {
-            groupId: "g1",
-            elementId: LIVE_ELEMENT,
-            microversionId: LIVE_MICROVERSION
-        });
-        const keys = defaultKeys(subject.elementId, subject.microversionId);
-        await store(...keys);
+        await store(...defaultKeys(subject.elementId, subject.microversionId));
 
-        const result = await reconcileThumbnails(env.BLOB, db, LATER);
-
-        expect(result.deleted).toBe(0);
-        expect(await storedKeys()).toEqual(keys.sort());
+        expect(await clean([subject.elementId])).toBe(0);
     });
 
-    it("leaves a key it does not recognize alone", async () => {
-        await seedPartStudio(db, {
-            elementId: LIVE_ELEMENT,
-            microversionId: LIVE_MICROVERSION
-        });
-        await store("thumbnails/something-else", "thumbnails/config/only-two");
-
-        const result = await reconcileThumbnails(env.BLOB, db, LATER);
-
-        expect(result.unrecognized).toBe(2);
-        expect(result.deleted).toBe(0);
-        expect(await storedKeys()).toHaveLength(2);
-    });
-
-    it("touches nothing outside the thumbnail prefix", async () => {
-        await seedPartStudio(db, {
-            elementId: LIVE_ELEMENT,
-            microversionId: LIVE_MICROVERSION
-        });
-        await env.BLOB.put("search-index/frcDesignLib.json", "{}");
-
-        await reconcileThumbnails(env.BLOB, db, LATER);
-
-        expect(await env.BLOB.get("search-index/frcDesignLib.json")).not.toBe(
-            null
-        );
-    });
-
-    it("deletes nothing when the live set is empty", async () => {
-        await store(...defaultKeys(LIVE_ELEMENT, LIVE_MICROVERSION));
-
-        const result = await reconcileThumbnails(env.BLOB, db, LATER);
-
-        expect(result.skipped).toBe(true);
-        expect(result.deleted).toBe(0);
-        expect(await storedKeys()).toHaveLength(2);
-    });
-
-    it("is idempotent, so a retried step re-deletes nothing", async () => {
-        await seedPartStudio(db, {
-            elementId: LIVE_ELEMENT,
-            microversionId: LIVE_MICROVERSION
-        });
-        await store(...defaultKeys(LIVE_ELEMENT, OLD_MICROVERSION));
-
-        expect((await reconcileThumbnails(env.BLOB, db, LATER)).deleted).toBe(
-            2
-        );
-        const second = await reconcileThumbnails(env.BLOB, db, LATER);
-        expect(second.deleted).toBe(0);
-        expect(second.scanned).toBe(0);
-    });
-
-    // Renders are stored before their rows are written, so a new one could be in flight.
-    it("keeps an orphan too new to tell apart from a render in flight", async () => {
-        await seedPartStudio(db, {
-            elementId: LIVE_ELEMENT,
-            microversionId: LIVE_MICROVERSION
-        });
-        await store(...defaultKeys("element-being-added", "mv-new"));
-
-        // Reconciled now, so what was just stored is inside the grace period.
-        const result = await reconcileThumbnails(env.BLOB, db);
-
-        expect(result.tooRecent).toBe(2);
-        expect(result.deleted).toBe(0);
-        expect(await storedKeys()).toHaveLength(2);
-    });
-
-    it("collects that same orphan once it is old enough", async () => {
-        await seedPartStudio(db, {
-            elementId: LIVE_ELEMENT,
-            microversionId: LIVE_MICROVERSION
-        });
-        await store(...defaultKeys("element-being-added", "mv-new"));
-
-        const result = await reconcileThumbnails(env.BLOB, db, LATER);
-
-        expect(result.tooRecent).toBe(0);
-        expect(result.deleted).toBe(2);
-    });
-
-    it("keeps a thumbnail belonging to another library", async () => {
-        await seedPartStudio(db, {
-            elementId: LIVE_ELEMENT,
-            microversionId: LIVE_MICROVERSION
-        });
+    // Another library can load the same document.
+    it("keeps what another library's insertable still names", async () => {
         await seedGroup(db, "g-ftc", LibraryId.FTC_DESIGN_LIB);
         await seedInsertable(db, {
-            id: "other-library-insertable",
+            id: "ftc-insertable",
             groupId: "g-ftc",
             libraryId: LibraryId.FTC_DESIGN_LIB,
-            elementId: "element-ftc",
-            microversionId: "mv-ftc"
+            elementId: ELEMENT,
+            microversionId: LIVE_MICROVERSION
         });
-        const keys = defaultKeys("element-ftc", "mv-ftc");
-        await store(...keys, ...defaultKeys(LIVE_ELEMENT, LIVE_MICROVERSION));
+        await store(...defaultKeys(ELEMENT, LIVE_MICROVERSION));
 
-        const result = await reconcileThumbnails(env.BLOB, db, LATER);
+        expect(await clean([ELEMENT])).toBe(0);
+    });
 
-        expect(result.deleted).toBe(0);
-        expect(await storedKeys()).toHaveLength(4);
+    it("keeps what was stored too recently to be settled", async () => {
+        await store(...defaultKeys(ELEMENT, OLD_MICROVERSION));
+        expect(await clean([ELEMENT], Date.now())).toBe(0);
+        expect(await storedKeys()).toHaveLength(2);
     });
 });

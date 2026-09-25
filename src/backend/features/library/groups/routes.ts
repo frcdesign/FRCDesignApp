@@ -21,6 +21,9 @@ import { handledError } from "../../../lib/api-error";
 import { getJobStatus, requestLoads } from "../../load/jobs";
 import { createShellGroup } from "../../load/workflows";
 import { removeWebhook } from "../../webhooks/registration";
+import { deleteStaleThumbnails } from "../../thumbnails/reconcile";
+import { parseThumbnailUrl } from "../../thumbnails/keys";
+import { runInBackground } from "../../../lib/background";
 import { z } from "zod";
 import { validate } from "../../../lib/validate";
 
@@ -233,14 +236,36 @@ groupRoutes.delete(
 
         const db = getDb(c.env.DB);
 
+        // Read first: the cascade takes the rows naming them.
+        const elements = await db
+            .select({ elementId: insertables.elementId })
+            .from(insertables)
+            .where(eq(insertables.groupId, groupId));
+
         // Cascade deletes insertables → favorites, and configurations automatically
         const [deleted] = await db
             .delete(groups)
             .where(and(eq(groups.id, groupId), eq(groups.libraryId, libraryId)))
-            .returning({ documentId: groups.documentId });
+            .returning({
+                documentId: groups.documentId,
+                smallThumbnailUrl: groups.smallThumbnailUrl
+            });
 
-        // The document's webhook goes with the last group loaded from it.
         if (deleted) {
+            const thumbnailElement = deleted.smallThumbnailUrl
+                ? parseThumbnailUrl(deleted.smallThumbnailUrl)?.elementId
+                : undefined;
+            await runInBackground(c, "delete the group's thumbnails", () =>
+                deleteStaleThumbnails(c.env.BLOB, db, {
+                    documentId: deleted.documentId,
+                    elementIds: [
+                        ...elements.map((row) => row.elementId),
+                        ...(thumbnailElement ? [thumbnailElement] : [])
+                    ]
+                }).then(() => undefined)
+            );
+
+            // The document's webhook goes with the last group loaded from it.
             const stillUsed = await db
                 .select({ id: groups.id })
                 .from(groups)
