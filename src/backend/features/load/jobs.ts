@@ -31,8 +31,8 @@ export interface LoadDocumentParams {
 /** What a held load waits for; see `approveHeldLoads`. */
 export const APPROVE_EVENT = "approve-version";
 
-/** A version nobody approves in this long is dropped until the next one. */
-export const APPROVAL_TIMEOUT = "1 day";
+/** A version nobody approves in this long loads anyway. */
+export const APPROVAL_TIMEOUT = "2 days";
 
 /** Instance statuses that mean a load is still live. */
 const ACTIVE_STATUSES = new Set<InstanceStatus["status"]>([
@@ -253,14 +253,15 @@ async function runningStatus(
     };
 }
 
-/** Marks a load as waiting for approval, from inside it. */
-export async function holdLoad(
+/** From inside the load, as it starts and stops waiting for approval. */
+export async function setAwaitingApproval(
     env: AppBindings,
-    params: LoadDocumentParams
+    params: LoadDocumentParams,
+    awaitingApproval: boolean
 ): Promise<void> {
     await getDb(env.DB)
         .update(loadJobs)
-        .set({ awaitingApproval: true })
+        .set({ awaitingApproval })
         .where(eq(loadJobs.groupId, params.groupId));
     await pushJobStatus(
         env,

@@ -11,7 +11,7 @@ import {
     approveHeldLoads,
     finishLoad,
     getJobStatus,
-    holdLoad,
+    setAwaitingApproval,
     requestLoads,
     type LoadDocumentParams
 } from "./jobs";
@@ -118,7 +118,7 @@ describe("document loads", () => {
                 "createBatch"
             ).mockResolvedValue([]);
             await requestLoads(env, [held]);
-            await holdLoad(env, held);
+            await setAwaitingApproval(env, held, true);
         });
 
         it("reports a held load apart from the running ones", async () => {

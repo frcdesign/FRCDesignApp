@@ -111,6 +111,10 @@ function useLoadingGroupIds(): string[] {
     return useJobStatus().loadingGroupIds;
 }
 
+export function useIsGroupAwaitingApproval(groupId: string): boolean {
+    return useJobStatus().awaitingApprovalGroupIds.includes(groupId);
+}
+
 /** How many documents have a new version waiting for an admin's approval. */
 export function useAwaitingApprovalCount(): number {
     return useJobStatus().awaitingApprovalGroupIds.length;

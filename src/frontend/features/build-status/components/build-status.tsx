@@ -1,5 +1,17 @@
-import { Divider, Group, Loader, Stack, Text, Tooltip } from "@mantine/core";
-import { EyeSlashIcon, GitBranchIcon } from "@phosphor-icons/react";
+import {
+    Badge,
+    Divider,
+    Group,
+    Loader,
+    Stack,
+    Text,
+    Tooltip
+} from "@mantine/core";
+import {
+    EyeSlashIcon,
+    GitBranchIcon,
+    HourglassIcon
+} from "@phosphor-icons/react";
 import { ReactNode } from "react";
 import { formatDaysAgo } from "../../../lib/format-time";
 import {
@@ -16,7 +28,10 @@ import { AppIcon } from "../../../components/app-icon";
 import { AppHoverCard } from "../../../components/app-hover-card";
 import { RequireAccessLevel } from "../../auth/access-level";
 import { useBuildStatusQuery } from "../queries";
-import { useIsGroupLoading } from "../../library/queries";
+import {
+    useIsGroupAwaitingApproval,
+    useIsGroupLoading
+} from "../../library/queries";
 import {
     BuildChecksSection,
     type ConfigurationTarget,
@@ -274,16 +289,40 @@ export function GroupStatusBadge(props: GroupStatusBadgeProps): ReactNode {
     const { data } = useBuildStatusQuery();
     const groupStatus = data?.groups[groupId];
     const issues = useGroupBuildIssues(groupStatus, data?.insertables);
-    if (!groupStatus) return null;
     return (
-        <BuildStatusBadge
-            name={name}
-            groupId={groupId}
-            issues={issues}
-            versionCreatedAt={groupStatus.versionCreatedAt}
-            hoverMenu={
-                <GroupAdminSection groupId={groupId} status={groupStatus} />
-            }
-        />
+        <>
+            {groupStatus && (
+                <BuildStatusBadge
+                    name={name}
+                    groupId={groupId}
+                    issues={issues}
+                    versionCreatedAt={groupStatus.versionCreatedAt}
+                    hoverMenu={
+                        <GroupAdminSection
+                            groupId={groupId}
+                            status={groupStatus}
+                        />
+                    }
+                />
+            )}
+            <AwaitingApprovalBadge groupId={groupId} />
+        </>
+    );
+}
+
+interface AwaitingApprovalBadgeProps {
+    groupId: string;
+}
+
+function AwaitingApprovalBadge(props: AwaitingApprovalBadgeProps): ReactNode {
+    const awaiting = useIsGroupAwaitingApproval(props.groupId);
+    if (!awaiting) return null;
+    return (
+        <Badge
+            color={StatusColor.WARNING}
+            leftSection={<HourglassIcon size={IconSize.TINY} />}
+        >
+            Awaiting approval
+        </Badge>
     );
 }

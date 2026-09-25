@@ -36,7 +36,7 @@ import {
     APPROVAL_TIMEOUT,
     APPROVE_EVENT,
     finishLoad,
-    holdLoad,
+    setAwaitingApproval,
     type LoadDocumentParams
 } from "./jobs";
 import { pushLibraryChanged } from "../live/notify";
@@ -123,14 +123,10 @@ async function loadDocument(
             !hasFailedLoad(stored.buildIssues)
         ) {
             result = { status: "skipped" };
-        } else if (
-            isNewVersion &&
-            params.awaitApproval &&
-            !forceReload &&
-            !(await waitForApproval(ctx, params))
-        ) {
-            result = { status: "skipped" };
         } else {
+            if (isNewVersion && params.awaitApproval && !forceReload) {
+                await waitForApproval(ctx, params);
+            }
             result = {
                 status: "loaded",
                 ...(await loadGroup(
@@ -179,21 +175,26 @@ async function loadDocument(
     return result;
 }
 
-/** False once nobody has approved it for `APPROVAL_TIMEOUT`. */
+/** Loads anyway once nobody has approved it for `APPROVAL_TIMEOUT`. */
 async function waitForApproval(
     ctx: LoadContext,
     params: LoadDocumentParams
-): Promise<boolean> {
-    await ctx.step.do("hold-for-approval", () => holdLoad(ctx.env, params));
+): Promise<void> {
+    await ctx.step.do("hold-for-approval", () =>
+        setAwaitingApproval(ctx.env, params, true)
+    );
     try {
         await ctx.step.waitForEvent("approval", {
             type: APPROVE_EVENT,
             timeout: APPROVAL_TIMEOUT
         });
-        return true;
     } catch {
-        return false;
+        // Timed out.
     }
+    // An approval has cleared it already; a timeout hasn't.
+    await ctx.step.do("release-approval", () =>
+        setAwaitingApproval(ctx.env, params, false)
+    );
 }
 
 /**
