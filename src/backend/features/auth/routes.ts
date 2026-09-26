@@ -33,11 +33,11 @@ function toLocalPath(redirectUrl: string | undefined): string {
 }
 
 /** GET /auth/sign-in?redirectUrl=&sessionCompanyId= */
-authRoutes.get("/sign-in", async (c) => {
+authRoutes.get("/sign-in", (c) => {
     const redirectUrl = toLocalPath(c.req.query("redirectUrl"));
     // Absent standalone, so the user can pick their account on Onshape.
     const companyId = c.req.query("sessionCompanyId");
-    return c.redirect(await doSignIn(c, redirectUrl, companyId));
+    return c.redirect(doSignIn(c, redirectUrl, companyId));
 });
 
 /** Standalone only: inside Onshape, the session is Onshape's to end. */

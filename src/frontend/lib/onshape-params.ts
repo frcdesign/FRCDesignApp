@@ -11,14 +11,9 @@ import {
 } from "./onshape-launch";
 import { toOnshapeOrigin } from "./url";
 
-interface OnshapeLaunchState extends OnshapeLaunch {
-    /** Set on leaving for Onshape, so the returning tab can confirm the sign-in. */
-    justSignedIn: boolean;
-}
-
 /** Per tab, since each browser tab is a different Onshape document. */
-export const useOnshapeLaunch = create<OnshapeLaunchState>()(
-    persist((): OnshapeLaunchState => ({ justSignedIn: false }), {
+export const useOnshapeLaunch = create<OnshapeLaunch>()(
+    persist((): OnshapeLaunch => ({}), {
         name: "onshapeLaunch",
         storage: createJSONStorage(() => window.sessionStorage)
     })

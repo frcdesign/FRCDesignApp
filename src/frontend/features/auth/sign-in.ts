@@ -2,7 +2,6 @@ import { useOnshapeLaunch } from "../../lib/onshape-params";
 
 /** Returns to the page it was started from. */
 export function startSignIn(): void {
-    useOnshapeLaunch.setState({ justSignedIn: true });
     const query = new URLSearchParams({
         redirectUrl: window.location.pathname + window.location.search
     });

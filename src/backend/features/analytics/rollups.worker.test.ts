@@ -47,14 +47,16 @@ const ROLLUPS = [
     userStats
 ];
 
-function fakeContext(): AppContext {
-    return { env } as unknown as AppContext;
+function fakeContext(userId = TEST_USER_ID): AppContext {
+    return {
+        env,
+        var: { getUserId: () => Promise.resolve(userId) }
+    } as unknown as AppContext;
 }
 
 function insertEvent(overrides: Partial<InsertEvent> = {}): InsertEvent {
     return {
         libraryId: TEST_LIBRARY_ID,
-        userId: TEST_USER_ID,
         path: TEST_PART_STUDIO_PATH,
         insertableId: TEST_PART_STUDIO_ID,
         targetElementType: ElementType.PART_STUDIO,
@@ -93,10 +95,7 @@ describe("rollupWrites", () => {
         const clock = vi.spyOn(Date, "now");
 
         clock.mockReturnValue(start);
-        await trackAppOpen(fakeContext(), {
-            libraryId: TEST_LIBRARY_ID,
-            userId: TEST_USER_ID
-        });
+        await trackAppOpen(fakeContext(), TEST_LIBRARY_ID);
         await trackInsert(
             fakeContext(),
             insertEvent({
@@ -118,7 +117,7 @@ describe("rollupWrites", () => {
                 fasten: true
             })
         );
-        await trackInsert(fakeContext(), insertEvent({ userId: "someone-2" }));
+        await trackInsert(fakeContext("someone-2"), insertEvent());
         clock.mockRestore();
 
         const live = await readRollups();

@@ -34,7 +34,6 @@ Queries go through **Drizzle ORM** so you write TypeScript instead of raw SQL. T
 
 KV holds what may expire or be lost. Every key belongs to a `kvStore` (`src/backend/lib/kv-store.ts`) with its own prefix, value type and lifetime:
 
-- `login-session:` — the OAuth `state` and where to return, for the ten minutes of a sign-in.
 - `tokens:` — a signed-in session's access and refresh tokens, keyed by its cookie, for 30 days.
 - `admin-session:` — the owner's and team admins' latest session ids, so a load nobody is signed in behind can run as one of them.
 - `unit-info:` — a workspace's units, for a week. On a miss the route asks Onshape and registers a transient `updateworkspaceunits` webhook, whose delivery drops the entry. Onshape cleans transient webhooks up after a while without events, so nothing records or removes them, and the expiry covers one it drops quietly. Onshape doesn't sign webhooks registered through the API, so the url names the workspace plainly: a forged delivery only costs a refetch (`features/webhooks/transient.ts`).
@@ -122,14 +121,14 @@ The server only gates on sign-in. Where a caller lands is the client's: `/` resu
 Onshape opens the panel at `/init?documentId=…&instanceType=…&elementId=…&elementType=…&server=…&sessionCompanyId=…` (`features/entry/routes.ts`).
 
 1. A version or microversion is sent to `/version-error`: there is nothing to insert into.
-2. If Onshape won't take the caller's session, `/init` sends them through sign-in and back to itself, marked with `signInAttempted` so it never bounces twice.
+2. If the caller has no session, or one for another company than the document's (an enterprise session opening a personal document, say), `/init` sends them through sign-in and back to itself, marked with `signInAttempted` so it never bounces twice. Onshape may hand back a token for whatever company the caller is signed in to, which is what that mark stops from looping.
 3. Otherwise it redirects to `/` with Onshape's parameters kept. `/` counts a launch from Onshape as an open of the library it resumes, through `POST /api/app-open/library/:libraryId`.
 
 The `/app` route reads Onshape's parameters off the url once per page load, into `ui-state` (`routes/app/route.tsx`). From then on the store is what the app reads, and in-app navigation keeps only the app's own parameters (`q`, `part`, `config`, `favorite`) in the url.
 
 ### Signing in
 
-`/auth/sign-in?redirectUrl=<local path>&sessionCompanyId=…` stores `{ state, redirectUrl }` under a login cookie and sends the caller to Onshape's authorize page. An absent or offsite `redirectUrl` becomes `/`. Onshape returns to the OAuth app's registered callback, `/auth/callback`, which checks `state`, exchanges the code for tokens (via [Arctic](https://arcticjs.dev/)), starts a session, and redirects to the stored path.
+`/auth/sign-in?redirectUrl=<local path>&sessionCompanyId=…` puts `{ state, redirectUrl }` in a ten-minute login cookie and sends the caller to Onshape's authorize page. An absent or offsite `redirectUrl` becomes `/`. Onshape returns to the OAuth app's registered callback, `/auth/callback`, which checks `state`, exchanges the code for tokens (via [Arctic](https://arcticjs.dev/)), starts a session, and redirects to the stored path.
 
 `/init` passes itself as the path. The app's own sign-in button passes the page it is on, so a caller comes back where they were.
 

@@ -92,7 +92,8 @@ describe("GET /init", () => {
         expect(location.pathname).toBe("/auth/sign-in");
     });
 
-    it("opens the app for a session it cannot ask Onshape to rescope", async () => {
+    // An enterprise session opening a personal document.
+    it("signs in a caller whose session is for a company the document isn't", async () => {
         const res = await createTestApp({ isAuthenticated: false }).request(
             "/init",
             jsonRequest("GET"),
@@ -100,7 +101,7 @@ describe("GET /init", () => {
         );
 
         const location = new URL(res.headers.get("Location")!, "http://x");
-        expect(location.pathname).toBe("/");
+        expect(location.pathname).toBe("/auth/sign-in");
     });
 
     it.each(["v", "m"])(

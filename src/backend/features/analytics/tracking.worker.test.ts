@@ -25,12 +25,7 @@ import {
 } from "../../../__test_utils__";
 import { getDb } from "../../db/client";
 import { type AppContext } from "../../lib/context";
-import {
-    trackAppOpen,
-    trackInBackground,
-    trackInsert,
-    type InsertEvent
-} from "./tracking";
+import { trackAppOpen, trackInsert, type InsertEvent } from "./tracking";
 import { toDayKey } from "./day";
 import { EVENT_SCHEMA_VERSION, InsertSource } from "./usage";
 import {
@@ -54,15 +49,17 @@ function noop(): void {
 const elementId = TEST_PART_STUDIO_PATH.elementId;
 
 /** A context stub carrying only what the tracking functions touch. */
-function fakeContext(): AppContext {
-    return { env } as unknown as AppContext;
+function fakeContext(userId = TEST_USER_ID): AppContext {
+    return {
+        env,
+        var: { getUserId: () => Promise.resolve(userId) }
+    } as unknown as AppContext;
 }
 
 /** An insert of an unconfigurable part. */
 function insertEvent(overrides: Partial<InsertEvent> = {}): InsertEvent {
     return {
         libraryId: TEST_LIBRARY_ID,
-        userId: TEST_USER_ID,
         path: TEST_PART_STUDIO_PATH,
         insertableId: TEST_PART_STUDIO_ID,
         targetElementType: ElementType.PART_STUDIO,
@@ -196,10 +193,7 @@ describe("tracking", () => {
         it("records a part's user once a day, however often they insert it", async () => {
             await trackInsert(fakeContext(), insertEvent());
             await trackInsert(fakeContext(), insertEvent());
-            await trackInsert(
-                fakeContext(),
-                insertEvent({ userId: "someone-else" })
-            );
+            await trackInsert(fakeContext("someone-else"), insertEvent());
 
             const rows = await db.select().from(dailyInsertableUsers).all();
             expect(rows).toHaveLength(2);
@@ -467,10 +461,7 @@ describe("tracking", () => {
         it("writes one row per user per day however much they do", async () => {
             await trackInsert(fakeContext(), insertEvent());
             await trackInsert(fakeContext(), insertEvent());
-            await trackAppOpen(fakeContext(), {
-                libraryId: TEST_LIBRARY_ID,
-                userId: TEST_USER_ID
-            });
+            await trackAppOpen(fakeContext(), TEST_LIBRARY_ID);
 
             const rows = await db.select().from(dailyUserActivity).all();
             expect(rows).toHaveLength(1);
@@ -483,10 +474,7 @@ describe("tracking", () => {
 
         it("keeps a row per user", async () => {
             await trackInsert(fakeContext(), insertEvent());
-            await trackInsert(
-                fakeContext(),
-                insertEvent({ userId: "someone-else" })
-            );
+            await trackInsert(fakeContext("someone-else"), insertEvent());
 
             const rows = await db.select().from(dailyUserActivity).all();
             expect(rows.map((row) => row.userId).sort()).toEqual([
@@ -498,10 +486,7 @@ describe("tracking", () => {
 
     describe("trackAppOpen", () => {
         it("counts opens separately from inserts", async () => {
-            await trackAppOpen(fakeContext(), {
-                libraryId: TEST_LIBRARY_ID,
-                userId: TEST_USER_ID
-            });
+            await trackAppOpen(fakeContext(), TEST_LIBRARY_ID);
 
             const daily = await db.select().from(dailyMetrics).get();
             expect(daily).toMatchObject({ type: "app_open", count: 1 });
@@ -514,16 +499,18 @@ describe("tracking", () => {
         });
     });
 
-    describe("trackInBackground", () => {
-        it("swallows failures so an insert is never lost to tracking", async () => {
+    describe("a failure", () => {
+        it("is logged, so an insert is never lost to tracking", async () => {
             const consoleError = vi
                 .spyOn(console, "error")
                 .mockImplementation(noop);
+            const failing = {
+                env,
+                var: { getUserId: () => Promise.reject(new Error("no user")) }
+            } as unknown as AppContext;
 
             await expect(
-                trackInBackground(fakeContext(), () =>
-                    Promise.reject(new Error("d1 exploded"))
-                )
+                trackInsert(failing, insertEvent())
             ).resolves.toBeUndefined();
 
             expect(consoleError).toHaveBeenCalled();

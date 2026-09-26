@@ -1,7 +1,7 @@
 import type { BatchItem } from "drizzle-orm/batch";
 import { runInBackground } from "../../lib/background";
 import { type AppContext } from "../../lib/context";
-import { getDb, type Db } from "../../db/client";
+import { getDb } from "../../db/client";
 import { events, type LoggedEvent } from "./schema";
 import { NOT_AN_INSERT, type EventCore } from "./logged-event";
 import { rollupWrites } from "./rollups";
@@ -16,9 +16,9 @@ import {
 import { canonicalValues } from "../configurations/selection";
 import { toDayKey } from "./day";
 
+/** The caller is the one who inserted; see `trackInsert`. */
 export interface InsertEvent {
     libraryId: LibraryId;
-    userId: string;
     /** The rollups key on the element id; the rest records the version. */
     path: ElementPath;
     insertableId: string;
@@ -35,50 +35,34 @@ export interface InsertEvent {
     fasten: boolean;
 }
 
-interface AppOpenEvent {
-    libraryId: LibraryId;
-    userId: string;
+/** After the response, and never failing it: tracking is not what was asked for. */
+export function trackInsert(c: AppContext, event: InsertEvent): Promise<void> {
+    return runInBackground(c, "record an insert", async () =>
+        record(c, {
+            ...(await core(c, EventType.INSERT, event.libraryId)),
+            ...event.path,
+            insertableId: event.insertableId,
+            targetElementType: event.targetElementType,
+            selection: appliedSelection(event.selection, event.parameters),
+            isFavorite: event.isFavorite,
+            isQuickInsert: event.isQuickInsert,
+            source: event.source,
+            fasten: event.fasten
+        })
+    );
 }
 
-/** Tracking never fails an insert, so errors are logged. Awaits without an execution context. */
-export function trackInBackground(
+/** As `trackInsert`. */
+export function trackAppOpen(
     c: AppContext,
-    work: () => Promise<void>
+    libraryId: LibraryId
 ): Promise<void> {
-    return runInBackground(c, "record usage event", work);
-}
-
-export async function trackInsert(
-    c: AppContext,
-    event: InsertEvent
-): Promise<void> {
-    const db = getDb(c.env.DB);
-    const now = Date.now();
-
-    await record(db, {
-        ...core(EventType.INSERT, now, event),
-        ...event.path,
-        insertableId: event.insertableId,
-        targetElementType: event.targetElementType,
-        selection: appliedSelection(event.selection, event.parameters),
-        isFavorite: event.isFavorite,
-        isQuickInsert: event.isQuickInsert,
-        source: event.source,
-        fasten: event.fasten
-    });
-}
-
-export async function trackAppOpen(
-    c: AppContext,
-    event: AppOpenEvent
-): Promise<void> {
-    const db = getDb(c.env.DB);
-    const now = Date.now();
-
-    await record(db, {
-        ...core(EventType.APP_OPEN, now, event),
-        ...NOT_AN_INSERT
-    });
+    return runInBackground(c, "record an app open", async () =>
+        record(c, {
+            ...(await core(c, EventType.APP_OPEN, libraryId)),
+            ...NOT_AN_INSERT
+        })
+    );
 }
 
 /** Canonical, so "5 in" and "(2 + 3) in" count as one. Null when there's nothing to configure. */
@@ -91,24 +75,26 @@ function appliedSelection(
 }
 
 /** What every logged event carries; its kind fills in the rest. */
-function core(
+async function core(
+    c: AppContext,
     type: EventType,
-    now: number,
-    event: { libraryId: LibraryId; userId: string }
-): EventCore {
+    libraryId: LibraryId
+): Promise<EventCore> {
+    const now = Date.now();
     return {
         id: crypto.randomUUID(),
         type,
         createdAt: new Date(now),
         day: toDayKey(now),
-        libraryId: event.libraryId,
-        userId: event.userId,
+        libraryId,
+        userId: await c.var.getUserId(),
         schemaVersion: EVENT_SCHEMA_VERSION
     };
 }
 
 /** Batched so neither half lands without the other. */
-async function record(db: Db, event: LoggedEvent): Promise<void> {
+async function record(c: AppContext, event: LoggedEvent): Promise<void> {
+    const db = getDb(c.env.DB);
     const writes: BatchItem<"sqlite">[] = [
         db.insert(events).values(event),
         ...rollupWrites(db, event)

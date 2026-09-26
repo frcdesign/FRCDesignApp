@@ -168,12 +168,13 @@ describe("GET /auth/sign-in redirect target", () => {
         );
         if (res.status !== 302) return undefined;
 
-        const loginId = new RegExp(`${LOGIN_COOKIE}=([^;]+)`).exec(
+        const login = new RegExp(`${LOGIN_COOKIE}=([^;]+)`).exec(
             res.headers.get("Set-Cookie") ?? ""
         )?.[1];
-        expect(loginId).toBeDefined();
-        const raw = await env.KV.get(`login-session:${loginId!}`);
-        return (JSON.parse(raw!) as { redirectUrl: string }).redirectUrl;
+        expect(login).toBeDefined();
+        return (
+            JSON.parse(decodeURIComponent(login!)) as { redirectUrl: string }
+        ).redirectUrl;
     }
 
     it("returns the caller to the path it was given", async () => {
@@ -192,5 +193,36 @@ describe("GET /auth/sign-in redirect target", () => {
         ]
     ])("sends the caller home given %s", async (_, query) => {
         expect(await storedRedirect(query)).toBe("/");
+    });
+});
+
+describe("GET /auth/callback", () => {
+    function callback(query: string, login?: object) {
+        return createTestApp().request(
+            `/auth/callback?${query}`,
+            {
+                method: "GET",
+                headers: login
+                    ? {
+                          Cookie: `${LOGIN_COOKIE}=${encodeURIComponent(JSON.stringify(login))}`
+                      }
+                    : {},
+                redirect: "manual"
+            },
+            env
+        );
+    }
+
+    it("sends a caller whose browser dropped the login cookie to the cookie error", async () => {
+        const res = await callback("code=c&state=s");
+        expect(res.headers.get("Location")).toBe("/cookie-error");
+    });
+
+    it("refuses a state it did not hand out", async () => {
+        const res = await callback("code=c&state=forged", {
+            state: "s",
+            redirectUrl: "/"
+        });
+        expect(res.status).toBe(401);
     });
 });

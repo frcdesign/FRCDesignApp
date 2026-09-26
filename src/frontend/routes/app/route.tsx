@@ -8,7 +8,7 @@ import { AppShell } from "@mantine/core";
 import { useElementSize } from "@mantine/hooks";
 import { Suspense } from "react";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
-import { adoptOnshapeLaunch, useOnshapeLaunch } from "../../lib/onshape-params";
+import { adoptOnshapeLaunch } from "../../lib/onshape-params";
 import {
     type OnshapeLaunch,
     OnshapeLaunchType
@@ -25,7 +25,6 @@ import { ProgramSelect } from "../../features/library/components/program-select"
 import { SectionLoading } from "../../components/app-notice";
 import { useMessageListener } from "../../lib/messages";
 import { usePushSync } from "../../lib/push-sync";
-import { showSuccessToast } from "../../lib/notifications";
 import { RootAppError } from "../../components/root-error";
 
 export const Route = createFileRoute("/app")({
@@ -52,11 +51,6 @@ function adoptUrl(search: OnshapeLaunch & AppParams): void {
     adopted = true;
     adoptAppParams(search);
     adoptOnshapeLaunch(search);
-    if (useOnshapeLaunch.getState().justSignedIn) {
-        useOnshapeLaunch.setState({ justSignedIn: false });
-        // Onshape only returns here on success.
-        showSuccessToast("Signed in to Onshape.");
-    }
 }
 
 function App() {

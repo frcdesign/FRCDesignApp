@@ -2,25 +2,22 @@
 import { cacheMiddleware } from "../../lib/cache";
 import { getApp, type AppContext } from "../../lib/context";
 import { getLibraryParam, libraryRoute } from "../../lib/route-params";
-import { isSignedIn } from "../auth/request-auth";
 import { requireSignInMiddleware } from "../auth/guards";
-import { getSessionCompanyId, PERSONAL_COMPANY_ID } from "../auth/session";
-import { trackAppOpen, trackInBackground } from "../analytics/tracking";
+import { getSessionCompanyId } from "../auth/session";
+import { trackAppOpen } from "../analytics/tracking";
 
 /** Marks the `/init` a sign-in returns to; see {@link needsSignIn}. */
 const SIGN_IN_ATTEMPTED = "signInAttempted";
 
 /**
- * Onshape's authorize endpoint has no `company_id` for a personal account, so
- * a caller with an enterprise session opening a personal document can't get a
- * session for it; asking anyway loops. So only sign in when there's no session
- * or a company to name, and `SIGN_IN_ATTEMPTED` stops a second bounce.
+ * No session, or one for another company than the document's. Asked once,
+ * marked by `SIGN_IN_ATTEMPTED`: Onshape may hand back a token for the company
+ * the caller is signed in to whatever is asked, which would otherwise loop.
  */
 async function needsSignIn(c: AppContext): Promise<boolean> {
-    if (await c.var.isAuthenticated()) return false;
-    if (c.req.query(SIGN_IN_ATTEMPTED) !== undefined) return false;
     return (
-        !(await isSignedIn(c)) || getSessionCompanyId(c) !== PERSONAL_COMPANY_ID
+        c.req.query(SIGN_IN_ATTEMPTED) === undefined &&
+        !(await c.var.isAuthenticated())
     );
 }
 
@@ -61,11 +58,7 @@ appOpenRoutes.post(
     "/app-open" + libraryRoute(),
     requireSignInMiddleware,
     async (c) => {
-        const libraryId = getLibraryParam(c);
-        const userId = await c.var.getUserId();
-        await trackInBackground(c, () =>
-            trackAppOpen(c, { libraryId, userId })
-        );
+        await trackAppOpen(c, getLibraryParam(c));
         return c.json({});
     }
 );

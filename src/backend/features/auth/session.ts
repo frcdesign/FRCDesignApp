@@ -1,4 +1,4 @@
-/** Session cookie plus the KV records it keys: the session and login state. */
+/** The session cookie and the KV record it keys, plus the sign-in in flight. */
 import { HttpStatus } from "http-status-ts";
 import { internalError } from "../../lib/api-error";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
@@ -52,15 +52,10 @@ interface Session extends AuthTokens {
 /** Still `tokens:`, so sessions signed in before this held a userId survive. */
 const sessions = kvStore<Session>("tokens", { ttlSeconds: SESSION_TTL });
 
-/** The cookie is the caller's to clear. */
-function dropSession(kv: KVNamespace, sessionId: string): Promise<void> {
-    return sessions.delete(kv, sessionId);
-}
-
 export async function endSession(c: AppContext): Promise<void> {
     const sessionId = getCookie(c, SESSION_COOKIE);
     if (sessionId) {
-        await dropSession(c.env.KV, sessionId);
+        await sessions.delete(c.env.KV, sessionId);
     }
     // Matched to how it was set, or the browser keeps the cookie.
     deleteCookie(c, SESSION_COOKIE, COOKIE_OPTIONS);
@@ -79,7 +74,7 @@ export async function beginSession(
     });
     await saveSession(c.env.KV, sessionId, tokens);
     if (previousSessionId) {
-        await dropSession(c.env.KV, previousSessionId);
+        await sessions.delete(c.env.KV, previousSessionId);
     }
 }
 
@@ -111,37 +106,26 @@ interface LoginSession {
     redirectUrl: string;
 }
 
-const loginSessions = kvStore<LoginSession>("login-session", {
-    ttlSeconds: LOGIN_TTL
-});
-
-/** Single-use: reading it also clears it, so a state cannot be replayed. */
-export async function takeLoginSession(
-    c: AppContext
-): Promise<LoginSession | undefined> {
-    const loginId = getCookie(c, LOGIN_COOKIE);
-    if (!loginId) return undefined;
-    const session = await loginSessions.get(c.env.KV, loginId);
-    if (!session) return undefined;
-
-    deleteCookie(c, LOGIN_COOKIE, COOKIE_OPTIONS);
-    void loginSessions.delete(c.env.KV, loginId);
-    return session;
-}
-
 /**
- * On its own cookie, so a caller who never returns through the callback keeps
- * the session they had.
+ * Held in its own cookie, so a caller who never returns through the callback
+ * keeps the session they had. Only the caller's own browser can set it, and the
+ * callback checks its state against Onshape's.
  */
-export async function startLoginSession(
-    c: AppContext,
-    data: LoginSession
-): Promise<void> {
-    const loginId = crypto.randomUUID();
-    setCookie(c, LOGIN_COOKIE, loginId, {
+export function startLoginSession(c: AppContext, login: LoginSession): void {
+    setCookie(c, LOGIN_COOKIE, JSON.stringify(login), {
         ...COOKIE_OPTIONS,
         maxAge: LOGIN_TTL
     });
+}
 
-    await loginSessions.put(c.env.KV, loginId, data);
+/** Single-use: reading it also clears it, so a state cannot be replayed. */
+export function takeLoginSession(c: AppContext): LoginSession | undefined {
+    const raw = getCookie(c, LOGIN_COOKIE);
+    if (!raw) return undefined;
+    deleteCookie(c, LOGIN_COOKIE, COOKIE_OPTIONS);
+    try {
+        return JSON.parse(raw) as LoginSession;
+    } catch {
+        return undefined;
+    }
 }

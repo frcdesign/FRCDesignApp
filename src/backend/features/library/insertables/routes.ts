@@ -29,7 +29,7 @@ import {
 } from "../../load/parse-configuration-records";
 import { ElementType } from "../../../lib/onshape/element-type";
 import { InsertSource } from "../../analytics/usage";
-import { trackInBackground, trackInsert } from "../../analytics/tracking";
+import { trackInsert } from "../../analytics/tracking";
 import { DerivedFeature } from "../../../lib/onshape/objects/derive-feature";
 import { addPartStudioFeature } from "../../../lib/onshape/endpoints/part-studios";
 import {
@@ -334,22 +334,19 @@ insertableRoutes.post(
             feature.getFeature()
         );
 
-        await trackInBackground(c, async () =>
-            trackInsert(c, {
-                libraryId: row.libraryId,
-                userId: await c.var.getUserId(),
-                path: sourcePath,
-                insertableId,
-                targetElementType: ElementType.PART_STUDIO,
-                selection,
-                parameters,
-                isFavorite: body.isFavorite,
-                isQuickInsert: body.isQuickInsert,
-                source: body.source,
-                // Insert-and-fasten is only offered for assembly targets.
-                fasten: false
-            })
-        );
+        await trackInsert(c, {
+            libraryId: row.libraryId,
+            path: sourcePath,
+            insertableId,
+            targetElementType: ElementType.PART_STUDIO,
+            selection,
+            parameters,
+            isFavorite: body.isFavorite,
+            isQuickInsert: body.isQuickInsert,
+            source: body.source,
+            // Insert-and-fasten is only offered for assembly targets.
+            fasten: false
+        });
 
         return c.json({
             featureId: result.feature?.featureId
@@ -442,21 +439,18 @@ insertableRoutes.post(
 
         // Every path below records the insert exactly once.
         const track = (fasten: boolean) =>
-            trackInBackground(c, async () =>
-                trackInsert(c, {
-                    libraryId: row.libraryId,
-                    userId: await c.var.getUserId(),
-                    path: sourcePath,
-                    insertableId,
-                    targetElementType: ElementType.ASSEMBLY,
-                    selection,
-                    parameters,
-                    isFavorite: body.isFavorite,
-                    isQuickInsert: body.isQuickInsert,
-                    source: body.source,
-                    fasten
-                })
-            );
+            trackInsert(c, {
+                libraryId: row.libraryId,
+                path: sourcePath,
+                insertableId,
+                targetElementType: ElementType.ASSEMBLY,
+                selection,
+                parameters,
+                isFavorite: body.isFavorite,
+                isQuickInsert: body.isQuickInsert,
+                source: body.source,
+                fasten
+            });
 
         if (!body.fasten) {
             await track(false);

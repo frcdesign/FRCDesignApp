@@ -29,17 +29,16 @@ export function makeAuthTokens(tokens: OAuth2Tokens): AuthTokens {
 }
 
 /** Stores the redirect url and state; returns the url to send the user to. */
-export async function doSignIn(
+export function doSignIn(
     c: AppContext,
     redirectUrl: string,
     companyId?: string
-): Promise<string> {
+): string {
     const oauthClient = getOauthClient();
 
     const state = generateState();
 
-    // Store the state and redirectUrl so the callback can complete sign-in.
-    await startLoginSession(c, { state, redirectUrl });
+    startLoginSession(c, { state, redirectUrl });
 
     const authorizationUrl = oauthClient.createAuthorizationURL(
         AUTH_ENDPOINT,
@@ -61,7 +60,7 @@ export async function doCallback(c: AppContext): Promise<Response> {
         return c.redirect("/grant-denied");
     }
 
-    const session = await takeLoginSession(c);
+    const session = takeLoginSession(c);
 
     // The redirect cookie was missing.
     if (!session) {
