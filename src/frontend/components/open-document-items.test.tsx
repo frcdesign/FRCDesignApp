@@ -5,7 +5,7 @@ import { Menu } from "@mantine/core";
 import { type ElementPath } from "@backend/lib/onshape/path";
 import { renderWithProviders } from "../../__test_utils__/render";
 import { OpenDocumentItems } from "./open-document-items";
-import { updateUiState } from "../lib/ui-state";
+import { useOnshapeLaunch } from "../lib/onshape-params";
 
 const PATH: ElementPath = {
     documentId: "doc",
@@ -36,7 +36,7 @@ async function copiedLink(selection?: Record<string, string>) {
 describe("OpenDocumentItems", () => {
     afterEach(() => {
         vi.restoreAllMocks();
-        updateUiState({ server: undefined });
+        useOnshapeLaunch.setState({ server: undefined });
     });
 
     it("links to the configuration it is given, as it was typed", async () => {
@@ -47,7 +47,7 @@ describe("OpenDocumentItems", () => {
     });
 
     it("links into the Onshape the panel was launched from", async () => {
-        updateUiState({ server: "https://frcdesign.onshape.com" });
+        useOnshapeLaunch.setState({ server: "https://frcdesign.onshape.com" });
         expect(await copiedLink()).toBe(
             "https://frcdesign.onshape.com/documents/doc/v/ver/e/el"
         );

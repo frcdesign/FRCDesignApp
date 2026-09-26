@@ -1,12 +1,12 @@
-import { getUiState, updateUiState } from "../../lib/ui-state";
+import { useOnshapeLaunch } from "../../lib/onshape-params";
 
 /** Returns to the page it was started from. */
 export function startSignIn(): void {
-    updateUiState({ justSignedIn: true });
+    useOnshapeLaunch.setState({ justSignedIn: true });
     const query = new URLSearchParams({
         redirectUrl: window.location.pathname + window.location.search
     });
-    const { sessionCompanyId } = getUiState();
+    const { sessionCompanyId } = useOnshapeLaunch.getState();
     if (sessionCompanyId) {
         query.set("sessionCompanyId", sessionCompanyId);
     }

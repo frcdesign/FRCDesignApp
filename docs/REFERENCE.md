@@ -176,7 +176,7 @@ owns, `lib/` for cross-cutting plumbing, and a small set of files at the root.
 
 - `main.tsx` — React root; wraps the app in `QueryClientProvider` and `MantineProvider`
 - `routes/` — file-based TanStack Router routes
-- `lib/` — cross-cutting helpers: `api-client.ts` (fetch wrappers), `query-keys.ts` (every query key in one place), `query-client.ts`, `ui-state.ts` (the Zustand store, kept in localStorage and sessionStorage), `refresh.ts`, `notifications.tsx`
+- `lib/` — cross-cutting helpers: `api-client.ts` (fetch wrappers), `query-keys.ts` (every query key in one place), `query-client.ts`, `ui-state.ts` (the Zustand store kept in localStorage), `onshape-params.ts` (the tab's Onshape launch, in sessionStorage), `refresh.ts`, `notifications.tsx`
 - `components/` — UI used by more than one feature, plus the app shell (`app-navbar.tsx`, `alerts.tsx`, `root-error.tsx`)
 - `features/` — `library/`, `favorites/`, `insert/`, `search/`, `settings/`, `thumbnails/`, `build-status/`, `auth/`, each with a `queries.ts` and a `components/` directory
 

@@ -1,17 +1,30 @@
+/** What Onshape launched this browser tab with, kept for the tab alone. */
 import { useMemo } from "react";
+import * as z from "zod";
 import { useShallow } from "zustand/react/shallow";
-import { updateUiState, useUiState } from "./ui-state";
 import {
     LAUNCH_KEYS,
     type OnshapeLaunch,
+    OnshapeLaunchType,
     type TargetElement,
     toTargetElement
 } from "./onshape-launch";
+import { createPersistedStore } from "./persisted-store";
 import { toOnshapeOrigin } from "./url";
+
+/** Per tab, since each browser tab is a different Onshape document. */
+export const useOnshapeLaunch = createPersistedStore(
+    OnshapeLaunchType.extend({
+        /** Set on leaving for Onshape, so the returning tab can confirm the sign-in. */
+        justSignedIn: z.boolean().catch(false)
+    }),
+    "onshapeLaunch",
+    () => window.sessionStorage
+);
 
 /** Only the fields present: an in-app navigation drops the rest from the url. */
 export function adoptOnshapeLaunch(search: OnshapeLaunch): void {
-    updateUiState(
+    useOnshapeLaunch.setState(
         Object.fromEntries(
             LAUNCH_KEYS.filter((key) => search[key] !== undefined).map(
                 (key) => [key, search[key]]
@@ -22,7 +35,7 @@ export function adoptOnshapeLaunch(search: OnshapeLaunch): void {
 
 /** The element the panel can insert into; nothing when there is none. */
 export function useTargetElement(): TargetElement | undefined {
-    const launch = useUiState(
+    const launch = useOnshapeLaunch(
         useShallow((state) => ({
             documentId: state.documentId,
             instanceId: state.instanceId,
@@ -40,7 +53,7 @@ export function useIsConnectedToOnshape(): boolean {
 }
 
 export function useOnshapeServer(): string | undefined {
-    return useUiState((state) => state.server);
+    return useOnshapeLaunch((state) => state.server);
 }
 
 /** What links into Onshape are built on, so they open on the caller's company. */
