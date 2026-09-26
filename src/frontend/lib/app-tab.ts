@@ -1,5 +1,4 @@
 /** "App" tab, since Onshape calls its elements tabs too. */
-import * as z from "zod";
 import { LibraryId } from "@backend/features/library/library-id";
 
 /** A tab that is not a library, having a page of the app's own instead. */
@@ -8,11 +7,6 @@ export enum UtilityTab {
 }
 
 export type AppTab = LibraryId | UtilityTab;
-
-export const AppTabType = z.enum([
-    ...Object.values(LibraryId),
-    ...Object.values(UtilityTab)
-]);
 
 export function isLibraryTab(tab: AppTab): tab is LibraryId {
     return Object.values(LibraryId).includes(tab as LibraryId);
