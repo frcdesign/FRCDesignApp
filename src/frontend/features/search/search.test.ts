@@ -190,8 +190,13 @@ describe("doSearch inch sizes", () => {
             (hit) => names[Number(hit.id.slice("size".length))]
         );
 
-    it("matches only the parts measured in that size", () => {
-        expect(namesFor('1"')).toEqual(['1" Hex Shaft']);
+    // An inch mark is punctuation like any other.
+    it("reads a size with its inch mark as the bare number", () => {
+        expect(namesFor('1"')).toEqual(namesFor("1"));
+    });
+
+    it("ranks the size named exactly above the numbers it starts", () => {
+        expect(namesFor("1")[0]).toBe('1" Hex Shaft');
     });
 
     it("finds a fractional size by its decimal form", () => {
@@ -215,7 +220,7 @@ describe("doSearch size matching", () => {
         ]
     });
 
-    it.each(["1", '1"', "1 in", "1 standoff"])(
+    it.each(["1", '1"', "1 standoff"])(
         "picks the 1 inch configuration for %s",
         (query) => {
             const { hits } = search(searchDb, query);
@@ -248,6 +253,27 @@ describe("doSearch measurements", () => {
 });
 
 // Results arrive as the caller types, and the first keystroke is one letter.
+// Each word narrows what the others found.
+describe("doSearch multiple words", () => {
+    const names = ['1" Hex Shaft', '1/2" Hex Bearing', "16T Pulley"];
+    const base = library();
+    const template = base.insertables.i1;
+    base.insertables = Object.fromEntries(
+        names.map((name, index) => [
+            `w${index}`,
+            { ...template, id: `w${index}`, name }
+        ])
+    );
+    const searchDb = buildSearchDb(base);
+
+    it("keeps only what matches every word", () => {
+        const hits = search(searchDb, "1 hex").hits.map(
+            (hit) => names[Number(hit.id.slice(1))]
+        );
+        expect(hits).toEqual(['1" Hex Shaft']);
+    });
+});
+
 describe("doSearch single letters", () => {
     const searchDb = buildSearchDb(library("Hex Standoff"), {
         i1: [record("TTB-0016", {}, "Standoff")]
@@ -331,8 +357,13 @@ describe("doSearch highlighting", () => {
         expect(highlightFor("Motor Mount", "mou")).toBe("Mou");
     });
 
-    it("underlines the inch mark along with its number", () => {
-        expect(highlightFor('1" Hex Shaft', '1"')).toBe('1"');
+    it("underlines a size as written, whichever spelling found it", () => {
+        expect(highlightFor('1/2" Hex Shaft', ".5")).toBe("1/2");
+        expect(highlightFor('1/2" Hex Shaft', "0.50")).toBe("1/2");
+    });
+
+    it("underlines every word of the query", () => {
+        expect(highlightFor("Hex Bearing", "hex bear")).toBe("HexBear");
     });
 
     it("matches terms literally rather than as patterns", () => {
@@ -374,6 +405,26 @@ describe("doSearch highlighting", () => {
                     hits[0].partNumberPositions ?? []
                 )
             ).toBe("TTB-0016");
+        });
+
+        // The index holds an element's part numbers space-joined in one field.
+        it("underlines a part number typed in full among several", () => {
+            const { hits } = search(
+                buildSearchDb(library(), {
+                    i1: [
+                        record("WCP-0100", { length: "12" }),
+                        record("WCP-0101", { length: "24" })
+                    ]
+                }),
+                "WCP-0101"
+            );
+            expect(hits[0].values).toEqual({ length: "24" });
+            expect(
+                highlighted(
+                    hits[0].partNumber!,
+                    hits[0].partNumberPositions ?? []
+                )
+            ).toBe("WCP-0101");
         });
 
         it("underlines the typed prefix of the part name", () => {

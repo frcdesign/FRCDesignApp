@@ -1,4 +1,7 @@
-import MiniSearch, { SearchResult as MiniSearchResult } from "minisearch";
+import MiniSearch, {
+    type Query,
+    type SearchResult as MiniSearchResult
+} from "minisearch";
 import { Vendor } from "@backend/features/library/vendors";
 import { type Position } from "../../lib/highlight";
 import {
@@ -6,6 +9,17 @@ import {
     SearchDocument
 } from "@backend/features/search/contract";
 import { matchedRecord } from "@backend/features/search/records";
+import {
+    nameSpans,
+    partNumberSpans,
+    queryWords,
+    type TermSpan
+} from "@backend/features/search/tokenize";
+import {
+    NAME_FIELD,
+    PART_NAME_FIELD,
+    PART_NUMBER_FIELD
+} from "@backend/features/search/fields";
 import {
     type ConfigurationKey,
     type PartialSelection
@@ -74,11 +88,18 @@ export function doSearch(args: SearchArgs): SearchResult {
     } = args;
     const filtered: FilterResult = { byVendor: 0, byGroup: 0 };
 
-    if (!query || query.trim() === "") {
+    const words = queryWords(query ?? "");
+    if (words.length === 0) {
         return { hits: [], filtered };
     }
+    const queryTerms = words.flat();
 
-    const miniSearchResults: MiniSearchResult[] = searchDb.search(query, {
+    // Each word narrows: any reading of it will do, but every word must match.
+    const expression: Query = {
+        combineWith: "AND",
+        queries: words.map((terms) => ({ combineWith: "OR", queries: terms }))
+    };
+    const miniSearchResults: MiniSearchResult[] = searchDb.search(expression, {
         fields: searchConfigurations ? undefined : INSERTABLE_FIELDS,
         filter: (result) => {
             // MiniSearch types stored fields as `any`.
@@ -135,81 +156,78 @@ export function doSearch(args: SearchArgs): SearchResult {
                 miniSearchResult.id
             ) as unknown as SearchDocument;
             const record = matchedRecord(
-                query,
+                query ?? "",
                 document.records,
                 Object.values(miniSearchResult.match).flat()
             );
             const partNumber = record?.partNumber;
             const partName = record?.name;
+            const underline = (
+                text: string,
+                field: string,
+                spans: (text: string) => TermSpan[]
+            ) =>
+                highlightPositions(
+                    spans(text),
+                    matchedTerms(miniSearchResult, field),
+                    queryTerms
+                );
             return {
                 id: document.id,
-                positions: generateHighlightPositions(
-                    miniSearchResult,
-                    document.name,
-                    "name"
-                ),
+                positions: underline(document.name, NAME_FIELD, nameSpans),
                 values: record?.values,
                 configurationKey: record?.configurationKey,
                 partNumber,
                 partName,
                 url: record?.url,
-                partNumberPositions: partNumber
-                    ? generateHighlightPositions(
-                          miniSearchResult,
-                          partNumber,
-                          "partNumbers"
-                      )
-                    : undefined,
-                partNamePositions: partName
-                    ? generateHighlightPositions(
-                          miniSearchResult,
-                          partName,
-                          "partNames"
-                      )
-                    : undefined
+                partNumberPositions: underline(
+                    partNumber ?? "",
+                    PART_NUMBER_FIELD,
+                    partNumberSpans
+                ),
+                partNamePositions: underline(
+                    partName ?? "",
+                    PART_NAME_FIELD,
+                    nameSpans
+                )
             };
         });
 
     return { hits, filtered };
 }
 
-/** Escapes a term so it matches literally (terms can carry `.`, `(`, and friends). */
-function escapeRegExp(text: string): string {
-    return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+/** The index terms a result matched in one field. */
+function matchedTerms(result: MiniSearchResult, field: string): Set<string> {
+    return new Set(
+        Object.entries(result.match)
+            .filter(([, fields]) => fields.includes(field))
+            .map(([term]) => term)
+    );
 }
 
-/** The longest query term the match starts with, so a prefix search underlines only what was typed. */
-function matchedPrefixLength(term: string, queryTerms: string[]): number {
-    let length = 0;
-    for (const queryTerm of queryTerms) {
-        if (term.startsWith(queryTerm) && queryTerm.length > length) {
-            length = queryTerm.length;
-        }
-    }
-    return length || term.length;
-}
-
-/** Based on https://github.com/lucaong/minisearch/issues/37 */
-function generateHighlightPositions(
-    result: MiniSearchResult,
-    text: string,
-    field: string
+/**
+ * Each span whose term matched. A literal one is underlined only as far as
+ * the query typed it; a size read into another spelling, as a whole.
+ */
+function highlightPositions(
+    spans: TermSpan[],
+    matched: Set<string>,
+    queryTerms: string[]
 ): Position[] {
-    const haystack = text.toLowerCase();
-    const positions: Position[] = [];
-
-    for (const [term, matchedFields] of Object.entries(result.match)) {
-        if (!matchedFields.includes(field)) {
-            continue;
-        }
-        const length = matchedPrefixLength(term, result.queryTerms);
-        const matchedLocations = haystack.matchAll(
-            new RegExp(escapeRegExp(term), "g")
-        );
-        for (const match of matchedLocations) {
-            positions.push({ start: match.index, length });
-        }
-    }
-
-    return positions;
+    return spans
+        .filter((span) => matched.has(span.term))
+        .map((span) => {
+            const typed = span.literal
+                ? Math.max(
+                      0,
+                      ...queryTerms
+                          .filter((term) => span.term.startsWith(term))
+                          .map((term) => term.length)
+                  )
+                : 0;
+            return {
+                start: span.start,
+                length: typed || span.end - span.start
+            };
+        });
 }

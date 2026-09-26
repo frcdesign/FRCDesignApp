@@ -2,7 +2,7 @@
 import { Options } from "minisearch";
 import { Vendor } from "../library/vendors";
 import { SearchRecord } from "../configurations/contract";
-import { processTerm, tokenize } from "./tokenize";
+import { tokenize } from "./tokenize";
 import {
     GROUP_NAME_FIELD,
     NAME_FIELD,
@@ -47,7 +47,7 @@ export const SEARCH_OPTIONS: Options<SearchDocument> = {
         boost: { partNames: 0.7, groupName: 0.5 },
         prefix: true
     },
-    // Custom tokenizer to split on special characters
     tokenize,
-    processTerm
+    // Terms come out of `tokenize` already lowercased and split.
+    processTerm: (term) => term
 };

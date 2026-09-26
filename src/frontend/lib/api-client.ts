@@ -8,7 +8,7 @@ import { fromApiErrorBody, ImageLoadError } from "./errors";
 import { HttpStatus } from "http-status-ts";
 
 /** Bump when an immutably cached response changes shape, or browsers keep the old one for a year. */
-const RESPONSE_SHAPE = 2;
+const RESPONSE_SHAPE = 3;
 
 function getUrl(
     path: string,
