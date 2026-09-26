@@ -170,7 +170,7 @@ export async function bumpLibraryVersion(
 
 /** Versioned by shape: an older index is ignored and the route rebuilds it. */
 export function searchIndexKey(libraryId: LibraryId): string {
-    return `search-index/v3/${libraryId}.json`;
+    return `search-index/v2/${libraryId}.json`;
 }
 
 /** Rebuilds a library's search index into R2; bump `cacheVersion` alongside. */
