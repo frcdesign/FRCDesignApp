@@ -37,7 +37,7 @@ function get(url: string, sessionId?: string) {
     if (sessionId) {
         init.headers = {
             ...init.headers,
-            Cookie: `frc-design-app-cookie=${sessionId}`
+            Cookie: `frc-design-app-session=${sessionId}`
         };
     }
     // Signed in only with a session, as a real caller is.

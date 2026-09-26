@@ -4,13 +4,9 @@ import { generateState, OAuth2Client, OAuth2Tokens } from "arctic";
 import { internalError } from "../../lib/api-error";
 import { env } from "cloudflare:workers";
 import { type AppContext } from "../../lib/context";
-import {
-    type AuthTokens,
-    beginSession,
-    PERSONAL_COMPANY_ID,
-    startLoginSession,
-    takeLoginSession
-} from "./session";
+import { type AuthTokens, beginSession } from "./session";
+import { PERSONAL_COMPANY_ID } from "./company";
+import { startLogin, takeLogin } from "./login";
 
 const AUTH_ENDPOINT = "https://oauth.onshape.com/oauth/authorize";
 export const TOKEN_ENDPOINT = "https://oauth.onshape.com/oauth/token";
@@ -38,7 +34,7 @@ export function doSignIn(
 
     const state = generateState();
 
-    startLoginSession(c, { state, redirectUrl });
+    startLogin(c, { state, redirectUrl });
 
     const authorizationUrl = oauthClient.createAuthorizationURL(
         AUTH_ENDPOINT,
@@ -60,17 +56,17 @@ export async function doCallback(c: AppContext): Promise<Response> {
         return c.redirect("/grant-denied");
     }
 
-    const session = takeLoginSession(c);
+    const login = takeLogin(c);
 
     // The redirect cookie was missing.
-    if (!session) {
+    if (!login) {
         if (isSafari(c.req.raw)) {
             return c.redirect("/safari-error");
         }
         return c.redirect("/cookie-error");
     }
 
-    if (!search.code || session.state !== search.state) {
+    if (!search.code || login.state !== search.state) {
         throw internalError(
             "Invalid response from Onshape",
             HttpStatus.UNAUTHORIZED
@@ -83,7 +79,7 @@ export async function doCallback(c: AppContext): Promise<Response> {
         .then((tokens) => makeAuthTokens(tokens))
         .then((tokens) => beginSession(c, tokens));
 
-    return c.redirect(session.redirectUrl);
+    return c.redirect(login.redirectUrl);
 }
 
 function isSafari(request: Request): boolean {

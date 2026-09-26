@@ -47,12 +47,12 @@ describe("GET /access-data", () => {
     });
 });
 
-const SESSION_COOKIE = "frc-design-app-cookie";
+const SESSION_COOKIE = "frc-design-app-session";
 
 /** A signed-in session, as the OAuth callback would have left it. */
 async function seedSession(sessionId: string) {
     await env.KV.put(
-        `tokens:${sessionId}`,
+        `session:${sessionId}`,
         JSON.stringify({
             accessToken: "a",
             refreshToken: "r",
@@ -83,7 +83,7 @@ describe("GET /auth/sign-out", () => {
 
         expect(res.status).toBe(302);
         expect(res.headers.get("Location")).toBe("/app/library/frc-design-lib");
-        expect(await env.KV.get("tokens:session-1")).toBeNull();
+        expect(await env.KV.get("session:session-1")).toBeNull();
         expect(res.headers.get("Set-Cookie")).toContain(`${SESSION_COOKIE}=;`);
     });
 
@@ -153,7 +153,7 @@ describe("GET /auth/sign-in", () => {
 
         const setCookie = res.headers.get("Set-Cookie") ?? "";
         expect(setCookie).not.toContain(`${SESSION_COOKIE}=`);
-        expect(await env.KV.get("tokens:session-1")).not.toBeNull();
+        expect(await env.KV.get("session:session-1")).not.toBeNull();
     });
 });
 

@@ -20,7 +20,7 @@ function reload(accessLevel: AccessLevel, forceReload: boolean) {
         PATH,
         {
             ...init,
-            headers: { ...init.headers, Cookie: "frc-design-app-cookie=s" }
+            headers: { ...init.headers, Cookie: "frc-design-app-session=s" }
         },
         env
     );
@@ -79,7 +79,7 @@ describe("approving versions", () => {
                 ...init,
                 headers: {
                     ...("headers" in init ? init.headers : {}),
-                    Cookie: "frc-design-app-cookie=s"
+                    Cookie: "frc-design-app-session=s"
                 }
             },
             env

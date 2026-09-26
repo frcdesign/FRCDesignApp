@@ -34,7 +34,7 @@ Queries go through **Drizzle ORM** so you write TypeScript instead of raw SQL. T
 
 KV holds what may expire or be lost. Every key belongs to a `kvStore` (`src/backend/lib/kv-store.ts`) with its own prefix, value type and lifetime:
 
-- `tokens:` — a signed-in session's access and refresh tokens, keyed by its cookie, for 30 days.
+- `session:` — a signed-in session's access and refresh tokens and user id, keyed by the opaque id in the `frc-design-app-session` cookie, for 30 days (`features/auth/session.ts`). A sign-in in flight keeps nothing here: its state and return path are the whole of the ten-minute `frc-design-app-login` cookie (`features/auth/login.ts`).
 - `admin-session:` — the owner's and team admins' latest session ids, so a load nobody is signed in behind can run as one of them.
 - `unit-info:` — a workspace's units, for a week. On a miss the route asks Onshape and registers a transient `updateworkspaceunits` webhook, whose delivery drops the entry. Onshape cleans transient webhooks up after a while without events, so nothing records or removes them, and the expiry covers one it drops quietly. Onshape doesn't sign webhooks registered through the API, so the url names the workspace plainly: a forged delivery only costs a refetch (`features/webhooks/transient.ts`).
 

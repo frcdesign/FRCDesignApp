@@ -86,7 +86,7 @@ describe("access from a library's admin team", () => {
             `/api/access-data/library/${libraryId}`,
             {
                 method: "GET",
-                headers: { Cookie: `frc-design-app-cookie=${sessionId}` }
+                headers: { Cookie: `frc-design-app-session=${sessionId}` }
             },
             { ...env, OWNER_USER_ID: OWNER }
         );

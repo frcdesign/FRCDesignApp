@@ -3,7 +3,7 @@ import { cacheMiddleware } from "../../lib/cache";
 import { getApp, type AppContext } from "../../lib/context";
 import { getLibraryParam, libraryRoute } from "../../lib/route-params";
 import { requireSignInMiddleware } from "../auth/guards";
-import { getSessionCompanyId } from "../auth/session";
+import { getSessionCompanyId } from "../auth/company";
 import { trackAppOpen } from "../analytics/tracking";
 
 /** Marks the `/init` a sign-in returns to; see {@link needsSignIn}. */
