@@ -11,19 +11,12 @@ afterEach(() => vi.restoreAllMocks());
 
 const key = (size: ThumbnailSize) => thumbnailKey("e1", "mv1", size, "a=1");
 
-const WORKSPACE_ELEMENT = {
-    documentId: "d1",
-    instanceId: "w-thumbnails",
-    instanceType: "w" as const,
-    elementId: "e1"
-};
-
 it("stores both sizes once Onshape has rendered them", async () => {
     vi.spyOn(RequestAuth, "getOnshapeApiFromSessionId").mockResolvedValue(
         {} as OAuthApi
     );
     const fetch = vi
-        .spyOn(ThumbnailEndpoints, "getConfiguredThumbnail")
+        .spyOn(ThumbnailEndpoints, "getThumbnailFromId")
         .mockRejectedValueOnce(new OnshapeApiError("rendering", 404))
         .mockResolvedValue(new TextEncoder().encode("gif").buffer);
 
@@ -37,8 +30,7 @@ it("stores both sizes once Onshape has rendered them", async () => {
     await env.RENDER_THUMBNAIL_WORKFLOW.create({
         id: "render-test",
         params: {
-            elementPath: WORKSPACE_ELEMENT,
-            configuration: { a: "1" },
+            thumbnailId: "thumbnail-id",
             targets: [
                 { size: ThumbnailSize.LARGE, key: key(ThumbnailSize.LARGE) },
                 { size: ThumbnailSize.SMALL, key: key(ThumbnailSize.SMALL) }
@@ -51,10 +43,10 @@ it("stores both sizes once Onshape has rendered them", async () => {
     });
     await instance.waitForStatus("complete");
 
+    // The id it was handed, never one it resolved again itself.
     expect(fetch).toHaveBeenCalledWith(
         expect.anything(),
-        WORKSPACE_ELEMENT,
-        { a: "1" },
+        "thumbnail-id",
         ThumbnailSize.LARGE
     );
     for (const size of Object.values(ThumbnailSize)) {

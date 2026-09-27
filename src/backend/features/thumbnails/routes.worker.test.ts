@@ -282,11 +282,11 @@ describe("rendering a configuration's thumbnail", () => {
         });
     }
 
-    /** Onshape finding a part for the configuration. */
+    /** Onshape resolving the configuration to a render id. */
     function mockThumbnailId() {
         return vi
-            .spyOn(ThumbnailEndpoints, "hasInsertable")
-            .mockResolvedValue(true);
+            .spyOn(ThumbnailEndpoints, "getThumbnailId")
+            .mockResolvedValue("thumbnail-id");
     }
 
     /** Workflows started while `run` is called, with their steps stubbed out. */
@@ -306,10 +306,6 @@ describe("rendering a configuration's thumbnail", () => {
     beforeEach(async () => {
         await resetDb(db);
         await seedPartStudio(db);
-        await db
-            .update(groups)
-            .set({ thumbnailWorkspaceId: "w-branch" })
-            .where(eq(groups.id, TEST_GROUP_ID));
     });
 
     it("starts one render on a miss, however often it is asked", async () => {
@@ -340,6 +336,10 @@ describe("rendering a configuration's thumbnail", () => {
     });
 
     it("renders from the group's thumbnail workspace", async () => {
+        await db
+            .update(groups)
+            .set({ thumbnailWorkspaceId: "w-branch" })
+            .where(eq(groups.id, TEST_GROUP_ID));
         const thumbnailId = mockThumbnailId();
 
         await startedDuring(async () => {
@@ -354,28 +354,14 @@ describe("rendering a configuration's thumbnail", () => {
 
     // The client words "still rendering" and "never will" differently.
     it("answers a configuration Onshape cannot resolve with its own status", async () => {
-        vi.spyOn(ThumbnailEndpoints, "hasInsertable").mockResolvedValue(false);
+        vi.spyOn(ThumbnailEndpoints, "getThumbnailId").mockResolvedValue(
+            undefined
+        );
 
         const started = await startedDuring(async () => {
             expect(
                 (await get(renderUrl("invalid-element"), SESSION_ID)).status
             ).toBe(422);
-        });
-        expect(started).toBe(0);
-    });
-
-    // Onshape serves a configuration's thumbnail from a workspace alone.
-    it("starts nothing for a group with no thumbnail workspace yet", async () => {
-        await db
-            .update(groups)
-            .set({ thumbnailWorkspaceId: null })
-            .where(eq(groups.id, TEST_GROUP_ID));
-        mockThumbnailId();
-
-        const started = await startedDuring(async () => {
-            expect(
-                (await get(renderUrl("unbranched-element"), SESSION_ID)).status
-            ).toBe(404);
         });
         expect(started).toBe(0);
     });
