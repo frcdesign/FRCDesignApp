@@ -163,23 +163,13 @@ async function reindex(
     if (!row) {
         throw internalError("Insertable not found", HttpStatus.NOT_FOUND);
     }
-    if (
-        change.excludedParameterIds &&
-        row.elementType === ElementType.ASSEMBLY
-    ) {
-        throw handledError(
-            "An assembly indexes every parameter it can; none can be excluded.",
-            HttpStatus.BAD_REQUEST
-        );
-    }
-
     const parameters = row.parameters ?? [];
     const settings: IndexingSettings = {
         indexConfigurations: row.indexConfigurations,
         excludedParameterIds: row.excludedParameterIds,
         ...change
     };
-    const indexing = decideIndexing(row.elementType, parameters, settings);
+    const indexing = decideIndexing(parameters, settings);
     const indexed = indexing.shouldIndex
         ? await parseConfigurationRecords(
               await c.var.getOnshapeApi(),

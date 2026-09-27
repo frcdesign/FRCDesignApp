@@ -24,7 +24,7 @@ export interface InsertableBuildStatus {
     isVisible: boolean;
     supportsFasten: boolean;
     indexConfigurations: boolean;
-    /** Parameters an admin left out of indexing; see `effectiveExclusions`. */
+    /** Parameters an admin left out of indexing. */
     excludedParameterIds: string[];
     vendors: Vendor[];
     configuration?: ConfigurationBuildStatus;

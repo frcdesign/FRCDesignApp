@@ -41,10 +41,10 @@ import {
 } from "./issues";
 import {
     ConfigurationSection,
-    InsertableParsedSection,
-    useConfigurationCount
+    InsertableParsedSection
 } from "./parsed-section";
 import { GroupAdminSection, InsertableAdminSection } from "./admin-section";
+import { IndexingSection } from "./indexing-section";
 import styles from "../../../lib/styles.module.css";
 
 /** What the card and the badge both say about a group or an insertable. */
@@ -261,19 +261,17 @@ interface InsertableHoverMenuProps {
     status: InsertableBuildStatus;
 }
 
-/** Enumerates configurations once, for every row of the card that needs it. */
 function InsertableHoverMenu(props: InsertableHoverMenuProps): ReactNode {
     const { insertableId, status } = props;
-    const configurationCount = useConfigurationCount(status);
     return (
         <>
             <InsertableAdminSection
                 insertableId={insertableId}
                 status={status}
-                configurationCount={configurationCount}
             />
+            <IndexingSection insertableId={insertableId} status={status} />
             <InsertableParsedSection status={status} />
-            <ConfigurationSection insertableId={insertableId} status={status} />
+            <ConfigurationSection status={status} />
         </>
     );
 }

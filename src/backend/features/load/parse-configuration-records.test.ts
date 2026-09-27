@@ -55,7 +55,6 @@ describe("decideIndexing", () => {
         { configs: 600, force: true, index: false, issues: TOO_MANY }
     ])("configs=$configs force=$force", ({ configs, force, index, issues }) => {
         const { shouldIndex, buildIssues } = decideIndexing(
-            ElementType.PART_STUDIO,
             paramsWithConfigs(configs),
             { indexConfigurations: force, excludedParameterIds: [] }
         );
@@ -65,39 +64,15 @@ describe("decideIndexing", () => {
         });
     });
 
-    it("indexes an assembly the way it does a part studio", () => {
-        const decision = decideIndexing(
-            ElementType.ASSEMBLY,
-            paramsWithConfigs(3),
-            NO_SETTINGS
-        );
-        expect(decision.shouldIndex).toBe(true);
-        expect(decision.configurations).toHaveLength(3);
-    });
-
-    it("waits on an admin for an assembly past the threshold", () => {
-        expect(
-            decideIndexing(ElementType.ASSEMBLY, paramsWithConfigs(128), {
-                ...NO_SETTINGS,
-                indexConfigurations: true
-            }).shouldIndex
-        ).toBe(true);
-    });
-
-    it("applies exclusions to a part studio but not an assembly", () => {
+    it("leaves excluded parameters out of the combinations", () => {
         const parameters = [
             enumParam("A", ["a1", "a2"]),
             enumParam("B", ["b1", "b2"])
         ];
         const settings = { ...NO_SETTINGS, excludedParameterIds: ["B"] };
         expect(
-            decideIndexing(ElementType.PART_STUDIO, parameters, settings)
-                .configurations
+            decideIndexing(parameters, settings).configurations
         ).toHaveLength(2);
-        expect(
-            decideIndexing(ElementType.ASSEMBLY, parameters, settings)
-                .configurations
-        ).toHaveLength(4);
     });
 });
 
@@ -218,10 +193,9 @@ function mockParts(partsFor: (overrides: Selection) => OnshapePart[]) {
 
 /** The combinations the load would probe, as enumeration names them. */
 function probeSelections(
-    parameters: ConfigurationParameter[],
-    elementType: ElementType = ElementType.PART_STUDIO
+    parameters: ConfigurationParameter[]
 ): PartialSelection[] {
-    return decideIndexing(elementType, parameters, {
+    return decideIndexing(parameters, {
         indexConfigurations: true,
         excludedParameterIds: []
     }).configurations;
@@ -241,7 +215,7 @@ function probeRecords(
             isOpenComposite: options.isOpenComposite ?? false
         },
         parameters,
-        probeSelections(parameters, elementType)
+        probeSelections(parameters)
     );
 }
 

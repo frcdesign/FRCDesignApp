@@ -136,7 +136,7 @@ async function probeInsertable(
     const { isOpenComposite } = parts;
     const hasParts = !hasBuildIssue(parts.buildIssues, BuildIssueType.NO_PARTS);
 
-    const indexing = decideIndexing(target.elementType, parameters, flags);
+    const indexing = decideIndexing(parameters, flags);
 
     const recordsResult = indexing.shouldIndex
         ? await loadConfigurationRecords(

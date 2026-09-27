@@ -7,7 +7,6 @@ import {
     ParameterType
 } from "./contract";
 import { evaluateCondition, getVisibleOptions } from "./utils";
-import { ElementType } from "../../lib/onshape/element-type";
 
 /** Past this nothing is indexed, which bounds load time and Onshape usage. */
 export const MAX_PART_NUMBER_CONFIGURATIONS = 512;
@@ -74,14 +73,6 @@ export function countConfigurations(
                 : IndexingBand.AUTOMATIC,
         configurations
     };
-}
-
-/** An assembly takes none: Onshape can't exclude parameters from one either. */
-export function effectiveExclusions(
-    elementType: ElementType,
-    excludedParameterIds: readonly string[]
-): readonly string[] {
-    return elementType === ElementType.ASSEMBLY ? [] : excludedParameterIds;
 }
 
 /**

@@ -560,21 +560,6 @@ describe("insertable routes", () => {
         ).toEqual([{ size: "l" }]);
     });
 
-    // Onshape can't exclude parameters from an assembly either.
-    it("POST /excluded-parameters refuses an assembly", async () => {
-        await seedAssembly(db);
-
-        const res = await createTestApp().request(
-            `/api/excluded-parameters/insertable/${TEST_ASSEMBLY_ID}`,
-            jsonRequest("POST", { excludedParameterIds: ["size"] }),
-            env
-        );
-        expect(res.status).toBe(400);
-        expect(
-            (await readInsertable(TEST_ASSEMBLY_ID))?.excludedParameterIds
-        ).toEqual([]);
-    });
-
     it("POST /index-configurations leaves the flag off when indexing fails", async () => {
         await seedPartStudio(db);
         vi.spyOn(PartsEndpoints, "getParts").mockRejectedValue(

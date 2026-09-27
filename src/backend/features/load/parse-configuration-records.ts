@@ -17,7 +17,6 @@ import {
 } from "../build-checker/issues";
 import {
     countConfigurations,
-    effectiveExclusions,
     IndexingBand,
     isIndexingEnabled
 } from "../configurations/combinations";
@@ -77,14 +76,13 @@ export interface IndexingSettings {
 
 /** Past the hard cap forcing it on cannot help, since enumeration stops there. */
 export function decideIndexing(
-    elementType: ElementType,
     parameters: ConfigurationParameter[],
     settings: IndexingSettings
 ): IndexingDecision {
     const { indexConfigurations } = settings;
     const { band, configurations } = countConfigurations(
         parameters,
-        effectiveExclusions(elementType, settings.excludedParameterIds)
+        settings.excludedParameterIds
     );
     const shouldIndex = isIndexingEnabled(band, indexConfigurations);
 
