@@ -122,31 +122,20 @@ export function getIssueTitle(issue: BuildIssue): string {
     }
 }
 
-/** Why it matters and how to fix it, where the title doesn't make that plain. */
+/** The fix or reason, only where knowing Onshape doesn't make it plain. */
 export function getIssueDescription(issue: BuildIssue): string | undefined {
     switch (issue.type) {
         case BuildIssueType.THUMBNAIL_FAILED:
-            return "Onshape didn't render it in time. It is tried again when the document gets a new version.";
-        case BuildIssueType.NO_THUMBNAIL_TAB:
-            return "The group shows the document's first tab instead. In Onshape, set a tab as the document thumbnail; it is picked up on the next load.";
+            return "Use Reload thumbnail to try again.";
         case BuildIssueType.NO_VENDORS:
-            return "Vendors are read from the element's name and its configuration options. Include a vendor's name or code, such as REV or WCP, in either.";
-        case BuildIssueType.NO_UNHIDDEN_INSERTABLES:
-            return "Users won't see this group. Turn on Visible to users for at least one element.";
+            return "Vendors are parsed from names and codes in the name or configuration options.";
         case BuildIssueType.CONFIGURATION_LIMIT_EXCEEDED:
-            return `At most ${MAX_PART_NUMBER_CONFIGURATIONS} configurations can be indexed. Stop indexing parameters in the Indexing section until it is under the limit.`;
+            return `Stop indexing parameters to get under ${MAX_PART_NUMBER_CONFIGURATIONS}.`;
         case BuildIssueType.MANUAL_INDEXING_REQUIRED:
-            return `Elements with ${AUTO_INDEX_THRESHOLD} or more configurations are indexed only when enabled. Turn on Enable indexing, or stop indexing parameters to bring it under.`;
-        case BuildIssueType.MULTIPLE_PARTS:
-            return "An element should hold one part. Combine the parts into a composite part, or move them to their own part studios.";
-        case BuildIssueType.CONFIGURATION_MULTIPLE_PARTS:
-            return "Each configuration should produce a single part. Click to open the first one in Onshape.";
+            return `Elements with ${AUTO_INDEX_THRESHOLD}+ configurations must be enabled manually.`;
         case BuildIssueType.UNSTABLE_COMPOSITE:
-            return "The default configuration inserts an open composite part, so every configuration should have one. Click to open the first one in Onshape.";
-        case BuildIssueType.INSERTABLES_FAILED:
-        case BuildIssueType.LOAD_FAILED:
-            return "Reload outdated documents to try again.";
-        case BuildIssueType.NO_PARTS:
+            return "The default configuration has one, so every configuration should.";
+        default:
             return undefined;
     }
 }

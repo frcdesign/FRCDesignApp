@@ -1,5 +1,5 @@
 import { ExternalLink } from "../../../components/external-link";
-import { Badge, Group, Stack, Text } from "@mantine/core";
+import { Badge, Group, Stack, Text, Tooltip } from "@mantine/core";
 import {
     ArrowSquareOutIcon,
     CheckIcon,
@@ -284,14 +284,19 @@ function IssueText(props: IssueTextProps): ReactNode {
     const { issue } = props;
     const description = getIssueDescription(issue);
     return (
-        <Stack gap={2} flex={1}>
-            <Text>{getIssueTitle(issue)}</Text>
+        <>
+            <Text flex={1}>{getIssueTitle(issue)}</Text>
             {description && (
-                <Text size="xs" c={StatusColor.DIMMED}>
-                    {description}
-                </Text>
+                <Tooltip label={description} multiline maw={260}>
+                    <AppIcon
+                        icon={InfoIcon}
+                        color={StatusColor.DIMMED}
+                        className={styles.noShrink}
+                        style={CALLOUT_ICON_NUDGE}
+                    />
+                </Tooltip>
             )}
-        </Stack>
+        </>
     );
 }
 
