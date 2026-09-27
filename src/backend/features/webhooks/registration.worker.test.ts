@@ -100,7 +100,6 @@ describe("registering webhooks", () => {
         expect(post).toHaveBeenCalledTimes(2);
         const [row] = await stored();
         expect(row.webhookId).toBe("replacement");
-        expect(row.registeredAt).toBeInstanceOf(Date);
     });
 
     it("removes one Onshape already dropped without complaint", async () => {

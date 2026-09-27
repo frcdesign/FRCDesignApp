@@ -40,9 +40,9 @@ export interface RenderThumbnailParams {
 
 /** About a minute; a render that takes longer is abandoned rather than spend the allocation. */
 const RENDER_RETRIES = {
-    limit: 12,
+    limit: 20,
     delay: (input: { error: Error }) =>
-        rateLimitDelay(input.error) ?? ("5 seconds" as const),
+        rateLimitDelay(input.error) ?? ("3 seconds" as const),
     backoff: "constant" as const
 };
 

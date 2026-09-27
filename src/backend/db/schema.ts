@@ -214,11 +214,7 @@ export const onshapeWebhooks = sqliteTable(
         // The document id.
         subjectId: text("subject_id").notNull(),
         webhookId: text("webhook_id"),
-        token: text("token").notNull().unique(),
-        // For telling a webhook that never hears anything from one that works.
-        registeredAt: integer("registered_at", { mode: "timestamp_ms" }),
-        lastDeliveryAt: integer("last_delivery_at", { mode: "timestamp_ms" }),
-        lastEvent: text("last_event")
+        token: text("token").notNull().unique()
     },
     (t) => [primaryKey({ columns: [t.subject, t.subjectId] })]
 );

@@ -11,7 +11,6 @@ import { requestLoads } from "../load/jobs";
 import {
     findWebhookByToken,
     forgetWebhook,
-    noteDelivery,
     WEBHOOK_ROUTE,
     WebhookEvent
 } from "./registration";
@@ -42,7 +41,6 @@ webhookRoutes.post(WEBHOOK_ROUTE, async (c) => {
     console.log("Webhook delivery", { event, subject, subjectId });
 
     await runInBackground(c, `handle ${event} for ${subjectId}`, async () => {
-        await noteDelivery(c.env, webhook, event);
         switch (event) {
             case WebhookEvent.CREATE_VERSION:
                 if (subject === WebhookSubject.DOCUMENT) {

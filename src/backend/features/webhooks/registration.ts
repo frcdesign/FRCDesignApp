@@ -111,7 +111,7 @@ export async function ensureWebhook(
     });
     await db
         .update(onshapeWebhooks)
-        .set({ webhookId: webhook.id, registeredAt: new Date() })
+        .set({ webhookId: webhook.id })
         .where(whereSubject(subject, subjectId));
     console.log("Registered webhook", { ...logged, webhookId: webhook.id });
 }
@@ -152,18 +152,6 @@ export function findWebhookByToken(
         .from(onshapeWebhooks)
         .where(eq(onshapeWebhooks.token, token))
         .get();
-}
-
-/** Stamps a delivery, so the table shows which webhooks are heard from. */
-export async function noteDelivery(
-    env: AppBindings,
-    webhook: RegisteredWebhook,
-    event: string
-): Promise<void> {
-    await getDb(env.DB)
-        .update(onshapeWebhooks)
-        .set({ lastDeliveryAt: new Date(), lastEvent: event })
-        .where(whereSubject(webhook.subject, webhook.subjectId));
 }
 
 /** So the next load registers another. */
