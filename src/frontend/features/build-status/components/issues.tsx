@@ -16,6 +16,7 @@ import {
     getIssueConfiguration,
     getIssueDescription,
     getIssueSeverity,
+    getIssueTitle,
     hasBuildIssue
 } from "@backend/features/build-checker/issues";
 import { ConfigurationParameter } from "@backend/features/configurations/contract";
@@ -255,7 +256,7 @@ function IssueCallout(props: IssueCalloutProps): ReactNode {
         return (
             <Group {...CALLOUT_LAYOUT} bg={background} bdrs="sm">
                 <CalloutIcon severity={severity} />
-                <Text>{getIssueDescription(issue)}</Text>
+                <IssueText issue={issue} />
             </Group>
         );
     }
@@ -264,7 +265,7 @@ function IssueCallout(props: IssueCalloutProps): ReactNode {
         <ExternalLink href={url} display="block" underline="never" c="inherit">
             <Group {...CALLOUT_LAYOUT} bg={background} bdrs="sm">
                 <CalloutIcon severity={severity} />
-                <Text flex={1}>{getIssueDescription(issue)}</Text>
+                <IssueText issue={issue} />
                 <AppIcon
                     icon={ArrowSquareOutIcon}
                     className={styles.noShrink}
@@ -272,6 +273,25 @@ function IssueCallout(props: IssueCalloutProps): ReactNode {
                 />
             </Group>
         </ExternalLink>
+    );
+}
+
+interface IssueTextProps {
+    issue: BuildIssue;
+}
+
+function IssueText(props: IssueTextProps): ReactNode {
+    const { issue } = props;
+    const description = getIssueDescription(issue);
+    return (
+        <Stack gap={2} flex={1}>
+            <Text>{getIssueTitle(issue)}</Text>
+            {description && (
+                <Text size="xs" c={StatusColor.DIMMED}>
+                    {description}
+                </Text>
+            )}
+        </Stack>
     );
 }
 

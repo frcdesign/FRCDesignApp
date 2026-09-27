@@ -7,7 +7,7 @@ import {
     BuildIssueType,
     clearBuildIssue,
     getIssueConfiguration,
-    getIssueDescription,
+    getIssueTitle,
     getMaxSeverity,
     knownBuildIssues
 } from "./issues";
@@ -41,14 +41,14 @@ describe("getIssueConfiguration", () => {
     });
 });
 
-describe("getIssueDescription", () => {
+describe("getIssueTitle", () => {
     // The count is the difference between "go fix this one" and "go fix forty".
     it.each([
-        [1, "A configuration resolves to more than one part"],
-        [4, "4 configurations resolve to more than one part"]
+        [1, "A configuration has more than one part"],
+        [4, "4 configurations have more than one part"]
     ])("counts %i offending configurations", (count, expected) => {
         expect(
-            getIssueDescription({
+            getIssueTitle({
                 type: BuildIssueType.CONFIGURATION_MULTIPLE_PARTS,
                 values: { size: "large" },
                 configurationCount: count

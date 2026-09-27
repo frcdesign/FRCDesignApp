@@ -92,7 +92,7 @@ function IndexingRow(props: IndexingRowProps): ReactNode {
         control = (
             <IndexingIcon
                 severity={BuildIssueSeverity.ERROR}
-                tooltip={`More than ${MAX_PART_NUMBER_CONFIGURATIONS} configurations cannot be indexed. To resolve, stop indexing parameters below.`}
+                tooltip={`At most ${MAX_PART_NUMBER_CONFIGURATIONS} configurations can be indexed. Stop indexing parameters below until it is under the limit.`}
             />
         );
     } else if (band === IndexingBand.AUTOMATIC) {

@@ -88,37 +88,66 @@ export function knownBuildIssues(issues: BuildIssue[]): BuildIssue[] {
     return issues.filter((issue) => BUILD_ISSUE_TYPES.has(issue.type));
 }
 
-/** A human-readable description of a build issue, shown to editors. */
-export function getIssueDescription(issue: BuildIssue): string {
+/** What is wrong, in a line. */
+export function getIssueTitle(issue: BuildIssue): string {
     switch (issue.type) {
         case BuildIssueType.THUMBNAIL_FAILED:
-            return "Thumbnail failed to generate";
+            return "Thumbnail failed to render";
         case BuildIssueType.NO_THUMBNAIL_TAB:
-            return "No thumbnail tab set";
+            return "No document thumbnail set";
         case BuildIssueType.NO_VENDORS:
-            return "No vendors could be parsed";
+            return "No vendors found";
         case BuildIssueType.NO_PARTS:
-            return "This part studio has no parts";
+            return "Part studio has no parts";
         case BuildIssueType.NO_UNHIDDEN_INSERTABLES:
-            return "No unhidden insertables";
+            return "Every element is hidden";
         case BuildIssueType.CONFIGURATION_LIMIT_EXCEEDED:
-            return `Over the ${MAX_PART_NUMBER_CONFIGURATIONS} configuration limit, so its configurations cannot be indexed`;
+            return "Too many configurations to index";
         case BuildIssueType.MANUAL_INDEXING_REQUIRED:
-            return `Over ${AUTO_INDEX_THRESHOLD} configurations, so indexing must be enabled manually`;
+            return "Indexing is off";
         case BuildIssueType.MULTIPLE_PARTS:
-            return "This part studio has more than one part";
+            return "Part studio has more than one part";
         case BuildIssueType.CONFIGURATION_MULTIPLE_PARTS:
             return issue.configurationCount === 1
-                ? "A configuration resolves to more than one part"
-                : `${issue.configurationCount} configurations resolve to more than one part`;
+                ? "A configuration has more than one part"
+                : `${issue.configurationCount} configurations have more than one part`;
         case BuildIssueType.UNSTABLE_COMPOSITE:
             return issue.configurationCount === 1
-                ? "A configuration does not use the part studio's open composite"
-                : `${issue.configurationCount} configurations do not use the part studio's open composite`;
+                ? "A configuration has no open composite part"
+                : `${issue.configurationCount} configurations have no open composite part`;
         case BuildIssueType.INSERTABLES_FAILED:
-            return "Some child insertables failed to load";
+            return "Some elements failed to load";
         case BuildIssueType.LOAD_FAILED:
-            return "Failed to load from Onshape. Reload outdated documents to try again";
+            return "Document failed to load";
+    }
+}
+
+/** Why it matters and how to fix it, where the title doesn't make that plain. */
+export function getIssueDescription(issue: BuildIssue): string | undefined {
+    switch (issue.type) {
+        case BuildIssueType.THUMBNAIL_FAILED:
+            return "Onshape didn't render it in time. It is tried again when the document gets a new version.";
+        case BuildIssueType.NO_THUMBNAIL_TAB:
+            return "The group shows the document's first tab instead. In Onshape, set a tab as the document thumbnail; it is picked up on the next load.";
+        case BuildIssueType.NO_VENDORS:
+            return "Vendors are read from the element's name and its configuration options. Include a vendor's name or code, such as REV or WCP, in either.";
+        case BuildIssueType.NO_UNHIDDEN_INSERTABLES:
+            return "Users won't see this group. Turn on Visible to users for at least one element.";
+        case BuildIssueType.CONFIGURATION_LIMIT_EXCEEDED:
+            return `At most ${MAX_PART_NUMBER_CONFIGURATIONS} configurations can be indexed. Stop indexing parameters in the Indexing section until it is under the limit.`;
+        case BuildIssueType.MANUAL_INDEXING_REQUIRED:
+            return `Elements with ${AUTO_INDEX_THRESHOLD} or more configurations are indexed only when enabled. Turn on Enable indexing, or stop indexing parameters to bring it under.`;
+        case BuildIssueType.MULTIPLE_PARTS:
+            return "An element should hold one part. Combine the parts into a composite part, or move them to their own part studios.";
+        case BuildIssueType.CONFIGURATION_MULTIPLE_PARTS:
+            return "Each configuration should produce a single part. Click to open the first one in Onshape.";
+        case BuildIssueType.UNSTABLE_COMPOSITE:
+            return "The default configuration inserts an open composite part, so every configuration should have one. Click to open the first one in Onshape.";
+        case BuildIssueType.INSERTABLES_FAILED:
+        case BuildIssueType.LOAD_FAILED:
+            return "Reload outdated documents to try again.";
+        case BuildIssueType.NO_PARTS:
+            return undefined;
     }
 }
 
