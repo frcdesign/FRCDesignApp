@@ -22,7 +22,7 @@ export function ResetConfigurationItems(
                 leftSection={<ArrowCounterClockwiseIcon />}
                 onClick={() => onReset({})}
             >
-                Reset to default configuration
+                Reset to default
             </Menu.Item>
             {/* A favorite with no selection opens on the defaults. */}
             {favoriteSelection && (
@@ -30,7 +30,7 @@ export function ResetConfigurationItems(
                     leftSection={<FavoriteIcon />}
                     onClick={() => onReset(favoriteSelection)}
                 >
-                    Reset to favorite default configuration
+                    Reset to favorite default
                 </Menu.Item>
             )}
         </MenuSection>
