@@ -38,7 +38,6 @@ webhookRoutes.post(WEBHOOK_ROUTE, async (c) => {
         throw forbiddenError("Unrecognized webhook");
     }
     const { subject, subjectId } = webhook;
-    console.log("Webhook delivery", { event, subject, subjectId });
 
     await runInBackground(c, `handle ${event} for ${subjectId}`, async () => {
         switch (event) {

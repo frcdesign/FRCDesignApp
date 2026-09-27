@@ -36,14 +36,6 @@ export function createWebhook(
     return client.post("/webhooks", { body: params });
 }
 
-/** Onshape delivers a `webhook.ping` to the webhook's url. */
-export function pingWebhook(
-    client: OnshapeApi,
-    webhookId: string
-): Promise<void> {
-    return client.postNone(`/webhooks/${encodeURIComponent(webhookId)}/ping`);
-}
-
 export function deleteWebhook(
     client: OnshapeApi,
     webhookId: string

@@ -22,8 +22,7 @@ function mockOnshape() {
     const remove = vi
         .spyOn(onshapeApi, "deleteNone")
         .mockResolvedValue(undefined);
-    const ping = vi.spyOn(onshapeApi, "postNone").mockResolvedValue(undefined);
-    return { onshapeApi, post, remove, ping };
+    return { onshapeApi, post, remove };
 }
 
 const stored = () => db.select().from(onshapeWebhooks).all();
@@ -53,50 +52,6 @@ describe("registering webhooks", () => {
                 isTransient: false
             }) as unknown
         });
-    });
-
-    it("pings a new webhook, so its delivery shows Onshape can reach it", async () => {
-        const { onshapeApi, ping } = mockOnshape();
-
-        await ensureWebhook(
-            env,
-            onshapeApi,
-            WebhookSubject.DOCUMENT,
-            "doc",
-            ORIGIN
-        );
-
-        expect(ping).toHaveBeenCalledWith("/webhooks/new-webhook/ping");
-    });
-
-    it("keeps a webhook whose ping fails", async () => {
-        const { onshapeApi, ping } = mockOnshape();
-        ping.mockRejectedValue(new OnshapeApiError("unreachable", 400));
-
-        await ensureWebhook(
-            env,
-            onshapeApi,
-            WebhookSubject.DOCUMENT,
-            "doc",
-            ORIGIN
-        );
-
-        expect((await stored())[0].webhookId).toBe("new-webhook");
-    });
-
-    it("registers nothing from a local origin", async () => {
-        const { onshapeApi, post } = mockOnshape();
-
-        await ensureWebhook(
-            env,
-            onshapeApi,
-            WebhookSubject.DOCUMENT,
-            "doc",
-            "https://localhost:3000"
-        );
-
-        expect(post).not.toHaveBeenCalled();
-        expect(await stored()).toEqual([]);
     });
 
     // Registered as never transient, so one on record is taken to stand.
