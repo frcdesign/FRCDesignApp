@@ -37,7 +37,7 @@ describe("resetting the configuration", () => {
         const user = userEvent.setup();
         const onReset = renderItems();
 
-        await user.click(screen.getByText("Reset to default configuration"));
+        await user.click(screen.getByText("Reset to default"));
 
         expect(onReset).toHaveBeenCalledWith({});
     });
@@ -46,17 +46,13 @@ describe("resetting the configuration", () => {
         const user = userEvent.setup();
         const onReset = renderItems(favorite({ size: "large" }));
 
-        await user.click(
-            screen.getByText("Reset to favorite default configuration")
-        );
+        await user.click(screen.getByText("Reset to favorite default"));
 
         expect(onReset).toHaveBeenCalledWith({ size: "large" });
     });
 
     it("offers no favorite reset where the favorite is the defaults", () => {
         renderItems(favorite());
-        expect(
-            screen.queryByText("Reset to favorite default configuration")
-        ).toBeNull();
+        expect(screen.queryByText("Reset to favorite default")).toBeNull();
     });
 });
