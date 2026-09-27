@@ -4,6 +4,8 @@ import { cloudflare } from "@cloudflare/vite-plugin";
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import { fileURLToPath } from "url";
 
+const DEFAULT_DEV_HOSTNAME = "dev.frcdesign.org";
+
 const srcPath = (dir: string) =>
     fileURLToPath(new URL(`./src/${dir}`, import.meta.url));
 
@@ -30,13 +32,10 @@ export default defineConfig(({ mode }) => ({
     server: {
         port: 3000,
         strictPort: true,
-        // The tunnel's hostname, which Vite otherwise turns away.
-        allowedHosts: optionalList(
-            loadEnv(mode, process.cwd(), "").DEV_HOSTNAME
-        )
+        // The dev tunnel's hostname, which Vite otherwise turns away.
+        allowedHosts: [
+            loadEnv(mode, process.cwd(), "").DEV_HOSTNAME ||
+                DEFAULT_DEV_HOSTNAME
+        ]
     }
 }));
-
-function optionalList(value: string | undefined): string[] {
-    return value ? [value] : [];
-}
