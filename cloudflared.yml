@@ -1,4 +1,0 @@
-# Serves the dev server at the hostname routed to the frc-design-app-dev tunnel;
-# see "Tunnel Setup" in the README.
-ingress:
-    - service: http://localhost:3000

@@ -47,8 +47,8 @@ To test Onshape app changes, you will need to create an OAuth application in the
 - Name: (Arbitrary) FRC Design App Test
 - Primary format: (Arbitrary) com.frc-design-app.dev
 - Summary: (Arbitrary) Test for the FRC Design App.
-- Redirect URLs: `https://<your hostname>/auth/callback`
-- OAuth URL: `https://<your hostname>/auth/sign-in`
+- Redirect URLs: `https://<the tunnel hostname>/auth/callback`
+- OAuth URL: `https://<the tunnel hostname>/auth/sign-in`
 - Check the permissions `can read your profile information`, `can read your documents`, `can write to your documents`, and `can delete your documents and workspaces`.
 
 Click Create application, then copy your OAuth app's OAuth client secret (from the popup) and OAuth client identifier into your `.env` file.
@@ -62,8 +62,8 @@ Next, add the necessary Extensions to your OAuth application so you can see it i
     - Location: Element right panel
     - Context: Inside assembly/Inside part studio
     - Action URL:
-        - Assembly: `https://<your hostname>/init?elementType=ASSEMBLY&documentId={$documentId}&instanceType={$workspaceOrVersion}&instanceId={$workspaceOrVersionId}&elementId={$elementId}`
-        - Part Studio: `https://<your hostname>/init?elementType=PARTSTUDIO&documentId={$documentId}&instanceType={$workspaceOrVersion}&instanceId={$workspaceOrVersionId}&elementId={$elementId}`
+        - Assembly: `https://<the tunnel hostname>/init?elementType=ASSEMBLY&documentId={$documentId}&instanceType={$workspaceOrVersion}&instanceId={$workspaceOrVersionId}&elementId={$elementId}`
+        - Part Studio: `https://<the tunnel hostname>/init?elementType=PARTSTUDIO&documentId={$documentId}&instanceType={$workspaceOrVersion}&instanceId={$workspaceOrVersionId}&elementId={$elementId}`
     - Icon: You'll need an icon. A good choice is the one at `/public/frc-design-app-dev.svg`.
 4. Open the [Onshape App Store](https://cad.onshape.com/appstore/myapps) and go to My apps. Find your App and Subscribe to it.
     - If it doesn't show up, try creating a Store Entry first.
@@ -85,24 +85,18 @@ In particular, avoid loading large documents into your local environment and onl
 
 ## Tunnel Setup
 
-Onshape loads the app over https and delivers webhooks from its own servers, so the dev server needs a public https url. A [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/) gives it a fixed hostname, so the urls in your Onshape OAuth app are set once. It needs a domain on your Cloudflare account; the hostname can be any subdomain of it, such as `frc-design-dev.example.com`.
+Onshape loads the app over https and delivers webhooks from its own servers, so the dev server is served at a public https hostname through a shared [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/). The tunnel and its hostname are set up once, so the urls in the Onshape OAuth app never change.
 
-1. Install [cloudflared](https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/downloads/).
-1. Create the tunnel and point your hostname at it, once:
-
-```
-cloudflared tunnel login
-cloudflared tunnel create frc-design-app-dev
-cloudflared tunnel route dns frc-design-app-dev <your hostname>
-```
-
-1. Add your hostname to `.env`, so Vite accepts requests for it:
+1. Install [cloudflared](https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/downloads/) 2025.4.0 or later.
+1. Ask a maintainer for the tunnel's token and hostname. Save the token in a file named `.tunnel-token` at the root of this project (it is git-ignored), and add the hostname to `.env` so Vite accepts requests for it:
 
 ```
-DEV_HOSTNAME=<your hostname>
+DEV_HOSTNAME=<the tunnel hostname>
 ```
 
-`npm run tunnel` runs the tunnel next to `npm run dev`; the `Launch servers` VSCode task starts both. Open the app at `https://<your hostname>`.
+`npm run tunnel` runs the tunnel next to `npm run dev`; the `Launch servers` VSCode task starts both. Open the app at `https://<the tunnel hostname>`.
+
+Only one person can use the tunnel at a time: Cloudflare spreads requests across everyone running it, so stop yours when you're done.
 
 ## VSCode Setup
 
