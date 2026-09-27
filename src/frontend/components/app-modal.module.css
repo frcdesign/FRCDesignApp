@@ -45,3 +45,8 @@
     min-height: 0;
     overflow-y: auto;
 }
+
+/* Holds focus unseen, so opening a modal draws no ring. */
+.focusTarget {
+    outline: none;
+}

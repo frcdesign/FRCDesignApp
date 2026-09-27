@@ -21,7 +21,11 @@ export function AppModalContent(props: PropsWithChildren): ReactNode {
     return (
         <div className={classes.fill}>
             {props.children}
-            <span data-autofocus tabIndex={-1} />
+            <span
+                data-autofocus
+                tabIndex={-1}
+                className={classes.focusTarget}
+            />
         </div>
     );
 }
