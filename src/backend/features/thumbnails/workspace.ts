@@ -1,64 +1,52 @@
 /**
- * Each document gets one workspace to read thumbnails from: Onshape sometimes
+ * Each document gets a workspace to read thumbnails from: Onshape sometimes
  * never renders them in a version, and the document's own workspace drifts.
- * A new version is restored into it rather than branched, so the document's
- * history gains a microversion, not a branch. Restored content takes minutes
- * to render.
+ * Each new version gets a fresh one branched off it, and the old one is
+ * deleted once nothing reads it, so the document keeps no branches of ours. A
+ * new branch takes minutes to render.
  */
 import { type OnshapeApi } from "../../lib/onshape/client";
 import { type DocumentPath, type InstancePath } from "../../lib/onshape/path";
 import {
     createWorkspace,
     deleteWorkspace,
-    getWorkspaces,
-    restoreVersion
+    getWorkspaces
 } from "../../lib/onshape/endpoints/workspaces";
 import { type OnshapeWorkspaceInfo } from "../../lib/onshape/types";
 
 /** Cleanup deletes nothing without it. */
 const WORKSPACE_NAME = "FRCDesignApp Thumbnails (DO NOT EDIT)";
-const WORKSPACE_DESCRIPTION =
-    "Made by the FRCDesignApp to read the latest version's thumbnails from.";
 
 function isOurs(workspace: OnshapeWorkspaceInfo): boolean {
     return workspace.name === WORKSPACE_NAME;
 }
 
-/** What the group row says its workspace holds. */
-export interface StoredThumbnailWorkspace {
-    workspaceId: string;
-    versionId: string;
+/** Names the version, so a load of it finds the workspace already made. */
+export function thumbnailWorkspaceDescription(versionId: string): string {
+    return `Made by the FRCDesignApp to read thumbnails from version ${versionId}.`;
 }
 
 /**
- * The document's thumbnail workspace, holding `versionPath`'s content. Skips
- * the restore when the row says it already holds this version.
+ * A workspace of ours branched off `versionPath`, made if there isn't one.
+ * Shared by every group of the document and by a retried step.
  */
 export async function syncThumbnailWorkspace(
     client: OnshapeApi,
-    versionPath: InstancePath,
-    stored?: StoredThumbnailWorkspace
+    versionPath: InstancePath
 ): Promise<InstancePath> {
-    // The lowest id, so every group of a document settles on the same one.
-    const existing = (await getWorkspaces(client, versionPath))
-        .filter(isOurs)
-        .sort((a, b) => a.id.localeCompare(b.id))[0];
-    if (!existing) {
-        const created = await createWorkspace(client, versionPath, {
+    const description = thumbnailWorkspaceDescription(versionPath.instanceId);
+    const existing = (await getWorkspaces(client, versionPath)).find(
+        (workspace) =>
+            isOurs(workspace) && workspace.description === description
+    );
+    const workspace =
+        existing ??
+        (await createWorkspace(client, versionPath, {
             name: WORKSPACE_NAME,
-            description: WORKSPACE_DESCRIPTION,
+            description,
             versionId: versionPath.instanceId
-        });
-        return toWorkspacePath(versionPath, created.id);
-    }
-    const workspacePath = toWorkspacePath(versionPath, existing.id);
-    const holdsVersion =
-        existing.id === stored?.workspaceId &&
-        versionPath.instanceId === stored.versionId;
-    if (!holdsVersion) {
-        await restoreVersion(client, workspacePath, versionPath.instanceId);
-    }
-    return workspacePath;
+        }));
+    return toWorkspacePath(versionPath, workspace.id);
 }
 
 function toWorkspacePath(

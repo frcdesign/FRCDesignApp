@@ -4,11 +4,9 @@ import {
     Divider,
     Group,
     Input,
-    Loader,
     Stack,
     Tabs,
-    TextInput,
-    Tooltip
+    TextInput
 } from "@mantine/core";
 import {
     GearIcon,
@@ -37,18 +35,12 @@ import { VendorMenu } from "../features/settings/components/vendor-filters";
 import { getUiState, Theme, updateUiState, useUiState } from "../lib/ui-state";
 import { getLibraryName, useLibraryId } from "../lib/library";
 import { APP_TABS, getTabName, useNavigateToTab } from "../lib/tabs";
-import {
-    RequireAccessLevel,
-    useAccessData
-} from "../features/auth/access-level";
+import { useAccessData } from "../features/auth/access-level";
 import { startSignIn } from "../features/auth/sign-in";
 import { LibraryId } from "@backend/features/library/library-id";
 import { type AppTab } from "../lib/app-tab";
 import { queryClient } from "../lib/query-client";
-import {
-    getLibraryVersionQuery,
-    useIsJobRunning
-} from "../features/library/queries";
+import { getLibraryVersionQuery } from "../features/library/queries";
 import { InsertLocationStatus } from "../features/insert-location/components/insert-location-status";
 import styles from "../lib/styles.module.css";
 
@@ -84,7 +76,6 @@ export function AppNavbar(): ReactNode {
                 <AppTabs />
                 <Group gap="xs" ml="auto">
                     <InsertLocationStatus />
-                    <JobIndicator />
                     <SignInButton />
                     <SettingsControls />
                 </Group>
@@ -106,25 +97,6 @@ function SignInButton(): ReactNode {
         <Button variant="outline" size="sm" my="auto" onClick={startSignIn}>
             Sign in
         </Button>
-    );
-}
-
-/** Editor-only spinner shown while a library-load job is running. */
-function JobIndicator(): ReactNode {
-    return (
-        <RequireAccessLevel>
-            <RunningJobLoader />
-        </RequireAccessLevel>
-    );
-}
-
-function RunningJobLoader(): ReactNode {
-    const jobRunning = useIsJobRunning();
-    if (!jobRunning) return null;
-    return (
-        <Tooltip label="The library is being loaded from Onshape in the background">
-            <Loader size={IconSize.CONTROL} />
-        </Tooltip>
     );
 }
 

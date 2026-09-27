@@ -29,6 +29,7 @@ import {
     type LoadingGroup
 } from "./context";
 import * as WorkspaceEndpoints from "../../lib/onshape/endpoints/workspaces";
+import { thumbnailWorkspaceDescription } from "../thumbnails/workspace";
 import { createLimiter } from "../../lib/limiter";
 import * as LoadCommonModule from "./context";
 import {
@@ -300,7 +301,6 @@ describe("loadGroup", () => {
         vi.spyOn(WorkspaceEndpoints, "createWorkspace").mockResolvedValue(
             WORKSPACE
         );
-        vi.spyOn(WorkspaceEndpoints, "restoreVersion").mockResolvedValue();
     });
 
     afterEach(() => vi.restoreAllMocks());
@@ -365,53 +365,50 @@ describe("loadGroup", () => {
         expect((await readGroup())?.thumbnailWorkspaceId).toBe(WORKSPACE.id);
     });
 
-    it("restores a new version into the workspace, and deletes our others", async () => {
+    it("branches a fresh workspace for a new version, and deletes our others", async () => {
         mockContents([tab("e1")]);
         vi.spyOn(ConfigurationEndpoints, "getConfiguration").mockResolvedValue(
             NO_CONFIGURATION
         );
         vi.spyOn(WorkspaceEndpoints, "getWorkspaces").mockResolvedValue([
             { id: "main", name: "Main" },
-            { ...WORKSPACE, id: "w-z-old" },
+            {
+                ...WORKSPACE,
+                id: "w-old",
+                description: thumbnailWorkspaceDescription("v-1")
+            },
             // Only shares part of the name.
-            { id: "w-lookalike", name: "FRCDesignApp Thumbnails" },
-            WORKSPACE
+            { id: "w-lookalike", name: "FRCDesignApp Thumbnails" }
         ]);
         const deleted = vi
             .spyOn(WorkspaceEndpoints, "deleteWorkspace")
             .mockResolvedValue();
 
-        await loadGroup(CTX, LOADED_TARGET, false, {
-            workspaceId: WORKSPACE.id,
-            versionId: "v-1"
-        });
+        await loadGroup(CTX, LOADED_TARGET, false);
 
-        expect(WorkspaceEndpoints.createWorkspace).not.toHaveBeenCalled();
-        expect(WorkspaceEndpoints.restoreVersion).toHaveBeenCalledWith(
+        expect(WorkspaceEndpoints.createWorkspace).toHaveBeenCalledWith(
             MOCK_ONSHAPE_API,
-            expect.objectContaining({ instanceId: WORKSPACE.id }),
-            "v-2"
+            LOADED_TARGET.versionPath,
+            expect.objectContaining({ versionId: "v-2" })
         );
-        expect(deleted.mock.calls.map((call) => call[2])).toEqual(["w-z-old"]);
+        expect(deleted.mock.calls.map((call) => call[2])).toEqual(["w-old"]);
         expect((await readGroup())?.thumbnailWorkspaceId).toBe(WORKSPACE.id);
     });
 
-    // A forced reload of the same version would otherwise re-render everything.
-    it("skips the restore when the workspace already holds the version", async () => {
+    // Another group of the document, or a retried step, made it already.
+    it("reuses the workspace already branched off the version", async () => {
         mockContents([tab("e1")]);
         vi.spyOn(ConfigurationEndpoints, "getConfiguration").mockResolvedValue(
             NO_CONFIGURATION
         );
         vi.spyOn(WorkspaceEndpoints, "getWorkspaces").mockResolvedValue([
-            WORKSPACE
+            { ...WORKSPACE, description: thumbnailWorkspaceDescription("v-2") }
         ]);
 
-        await loadGroup(CTX, LOADED_TARGET, true, {
-            workspaceId: WORKSPACE.id,
-            versionId: "v-2"
-        });
+        await loadGroup(CTX, LOADED_TARGET, true);
 
-        expect(WorkspaceEndpoints.restoreVersion).not.toHaveBeenCalled();
+        expect(WorkspaceEndpoints.createWorkspace).not.toHaveBeenCalled();
+        expect((await readGroup())?.thumbnailWorkspaceId).toBe(WORKSPACE.id);
     });
 
     it("takes the group thumbnail from the designated element without re-reading the document", async () => {

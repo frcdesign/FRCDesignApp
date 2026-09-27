@@ -26,22 +26,18 @@ interface ReloadTarget {
     microversionId: string;
 }
 
-/** Syncs the document's workspace to the group's version, and records it. */
+/** The workspace branched off the group's version, recorded on its row. */
 async function thumbnailWorkspace(
     db: Db,
     onshapeApi: OnshapeApi,
     group: { id: string; documentId: string; versionId: string },
     stored: string | null
 ): Promise<InstancePath> {
-    const workspace = await syncThumbnailWorkspace(
-        onshapeApi,
-        {
-            documentId: group.documentId,
-            instanceId: group.versionId,
-            instanceType: "v"
-        },
-        stored ? { workspaceId: stored, versionId: group.versionId } : undefined
-    );
+    const workspace = await syncThumbnailWorkspace(onshapeApi, {
+        documentId: group.documentId,
+        instanceId: group.versionId,
+        instanceType: "v"
+    });
     if (workspace.instanceId !== stored) {
         await db
             .update(groups)

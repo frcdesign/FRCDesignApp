@@ -120,11 +120,6 @@ export function useAwaitingApprovalCount(): number {
     return useJobStatus().awaitingApprovalGroupIds.length;
 }
 
-/** Whether anything in the library is loading. */
-export function useIsJobRunning(): boolean {
-    return useLoadingGroupIds().length > 0;
-}
-
 /** Whether this group is loading, which its row and its parts show. */
 export function useIsGroupLoading(groupId: string): boolean {
     return useLoadingGroupIds().includes(groupId);

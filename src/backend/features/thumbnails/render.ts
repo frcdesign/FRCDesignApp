@@ -49,7 +49,7 @@ export async function requestRender(
     }
 
     const workflow = c.env.RENDER_THUMBNAIL_WORKFLOW;
-    const id = renderInstanceId(thumbnailId);
+    const id = await renderInstanceId(request);
     const existing = await findInstance(workflow, id);
     if (existing) {
         const { status } = await existing.status();
@@ -89,11 +89,20 @@ export async function requestRender(
 }
 
 /**
- * Onshape serves the bytes by this id alone, so it pins element, version and
- * configuration. Its format is undocumented, so disallowed characters are replaced.
+ * Keyed by where the render is stored, not by Onshape's thumbnail id: two
+ * configurations can share that id, and restarting the other's instance would
+ * store its bytes under the other's key. Hashed to fit an instance id.
  */
-function renderInstanceId(thumbnailId: string): string {
-    return `render-${thumbnailId.replace(/[^\w-]/g, "_")}`.slice(0, 100);
+async function renderInstanceId(request: RenderRequest): Promise<string> {
+    const subject = `${request.elementId}/${request.microversionId}/${request.configurationKey}`;
+    const digest = await crypto.subtle.digest(
+        "SHA-256",
+        new TextEncoder().encode(subject)
+    );
+    const hex = Array.from(new Uint8Array(digest), (byte) =>
+        byte.toString(16).padStart(2, "0")
+    ).join("");
+    return `render-${hex}`;
 }
 
 /** Undefined for an id no instance holds, which `get` answers by throwing. */

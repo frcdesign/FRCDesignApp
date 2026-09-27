@@ -22,6 +22,7 @@ import {
 } from "../../lib/onshape/types";
 import * as ThumbnailEndpoints from "../../lib/onshape/endpoints/thumbnails";
 import * as WorkspaceEndpoints from "../../lib/onshape/endpoints/workspaces";
+import { thumbnailWorkspaceDescription } from "./workspace";
 import { OnshapeApiError } from "../../lib/onshape/client";
 import { ThumbnailSize } from "./contract";
 import { thumbnailKey } from "./keys";
@@ -63,9 +64,18 @@ describe("reloading a thumbnail", () => {
             .set({ thumbnailWorkspaceId: STORED_BRANCH })
             .where(eq(groups.id, TEST_GROUP_ID));
         vi.spyOn(WorkspaceEndpoints, "getWorkspaces").mockResolvedValue([
-            { id: STORED_BRANCH, name: "FRCDesignApp Thumbnails (DO NOT EDIT)" }
+            {
+                id: STORED_BRANCH,
+                name: "FRCDesignApp Thumbnails (DO NOT EDIT)",
+                description: thumbnailWorkspaceDescription(
+                    (await db.select().from(insertables).get())!.versionId
+                )
+            }
         ]);
-        vi.spyOn(WorkspaceEndpoints, "restoreVersion").mockResolvedValue();
+        vi.spyOn(WorkspaceEndpoints, "createWorkspace").mockResolvedValue({
+            id: "w-unexpected",
+            name: "FRCDesignApp Thumbnails (DO NOT EDIT)"
+        });
         vi.spyOn(DocumentEndpoints, "getDocument").mockResolvedValue({
             id: "doc",
             name: "Doc"
@@ -96,7 +106,7 @@ describe("reloading a thumbnail", () => {
         expect(row?.buildIssues).toEqual([]);
     });
 
-    it("reads from the group's thumbnail workspace, restoring nothing", async () => {
+    it("reads from the group's thumbnail workspace, branching nothing", async () => {
         const calls = mockThumbnails(rendered);
 
         await reloadInsertableThumbnail(
@@ -112,7 +122,7 @@ describe("reloading a thumbnail", () => {
                 instanceId: STORED_BRANCH
             });
         }
-        expect(WorkspaceEndpoints.restoreVersion).not.toHaveBeenCalled();
+        expect(WorkspaceEndpoints.createWorkspace).not.toHaveBeenCalled();
     });
 
     it("makes a workspace for a document that has none, and keeps it", async () => {

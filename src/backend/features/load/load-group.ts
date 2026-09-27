@@ -29,7 +29,6 @@ import {
 } from "./context";
 import {
     deleteStaleThumbnailWorkspaces,
-    type StoredThumbnailWorkspace,
     syncThumbnailWorkspace
 } from "../thumbnails/workspace";
 import { ONSHAPE_STEP_RETRIES, uploadThumbnailsStep } from "./steps";
@@ -60,20 +59,18 @@ interface ParsedGroup {
 export async function loadGroup(
     ctx: LoadContext,
     group: GroupTarget,
-    forceReload: boolean,
-    storedWorkspace?: StoredThumbnailWorkspace
+    forceReload: boolean
 ): Promise<GroupLoadResult> {
     const { groupId, versionPath } = group;
 
-    // Here rather than when resolving, so a skipped group restores nothing.
+    // Here rather than when resolving, so a skipped group branches nothing.
     const thumbnailPath = await ctx.step.do(
         `thumbnail-workspace-${groupId}`,
         { retries: ONSHAPE_STEP_RETRIES },
         async () =>
             syncThumbnailWorkspace(
                 await getOnshapeApiFromContext(ctx),
-                versionPath,
-                storedWorkspace
+                versionPath
             )
     );
     const target: LoadingGroup = { ...group, thumbnailPath };

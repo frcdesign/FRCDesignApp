@@ -85,7 +85,6 @@ async function loadDocument(
             .select({
                 documentId: groups.documentId,
                 versionId: groups.versionId,
-                thumbnailWorkspaceId: groups.thumbnailWorkspaceId,
                 buildIssues: groups.buildIssues
             })
             .from(groups)
@@ -115,17 +114,7 @@ async function loadDocument(
             if (isNewVersion && params.awaitApproval && !forceReload) {
                 await waitForApproval(ctx, params);
             }
-            await loadGroup(
-                ctx,
-                target,
-                forceReload,
-                stored.thumbnailWorkspaceId
-                    ? {
-                          workspaceId: stored.thumbnailWorkspaceId,
-                          versionId: stored.versionId
-                      }
-                    : undefined
-            );
+            await loadGroup(ctx, target, forceReload);
         }
     } catch (error) {
         // The row records only that it failed, so this is the only record of why.

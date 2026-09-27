@@ -269,12 +269,15 @@ describe("rendering a configuration's thumbnail", () => {
         );
     }
 
-    function renderUrl(elementId: string) {
+    function renderUrl(
+        elementId: string,
+        configurationKey = CANONICAL_CONFIGURATION
+    ) {
         return thumbnailUrl({
             elementId,
             microversionId: MICROVERSION,
             size: SIZE,
-            configurationKey: CANONICAL_CONFIGURATION,
+            configurationKey,
             insertableId: TEST_PART_STUDIO_ID
         });
     }
@@ -318,6 +321,18 @@ describe("rendering a configuration's thumbnail", () => {
 
         expect(started).toBe(1);
         expect(thumbnailId).toHaveBeenCalledTimes(2);
+    });
+
+    // Restarting the first's instance would store its bytes under its own key.
+    it("renders each configuration, even ones Onshape gives one thumbnail id", async () => {
+        mockThumbnailId();
+
+        const started = await startedDuring(async () => {
+            await get(renderUrl("shared-element"), SESSION_ID);
+            await get(renderUrl("shared-element", "size=other"), SESSION_ID);
+        });
+
+        expect(started).toBe(2);
     });
 
     it("renders from the group's thumbnail workspace", async () => {
