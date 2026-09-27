@@ -27,7 +27,7 @@ function mockUnits() {
 
 const unitInfo = (instanceType: "w" | "v", documentId = "doc") =>
     createTestApp().request(
-        `http://localhost/api/unit-info?documentId=${documentId}&instanceId=ws&instanceType=${instanceType}`,
+        `https://app.example.com/api/unit-info?documentId=${documentId}&instanceId=ws&instanceType=${instanceType}`,
         jsonRequest("GET"),
         env
     );

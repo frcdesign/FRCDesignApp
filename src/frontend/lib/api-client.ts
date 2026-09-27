@@ -7,9 +7,6 @@ import {
 import { fromApiErrorBody, ImageLoadError } from "./errors";
 import { HttpStatus } from "http-status-ts";
 
-/** Bump when an immutably cached response changes shape, or browsers keep the old one for a year. */
-const RESPONSE_SHAPE = 2;
-
 function getUrl(
     path: string,
     query?: URLSearchParamsInit,
@@ -17,7 +14,7 @@ function getUrl(
 ): string {
     const searchParams = createSearchParams(query);
     if (cacheId !== undefined) {
-        searchParams.append("v", `${cacheId}.${RESPONSE_SHAPE}`);
+        searchParams.append("v", String(cacheId));
     }
     return "/api" + path + `?${searchParams}`;
 }

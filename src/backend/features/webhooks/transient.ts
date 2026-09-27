@@ -7,6 +7,7 @@
 import type { OnshapeApi } from "../../lib/onshape/client";
 import { createWebhook } from "../../lib/onshape/endpoints/webhooks";
 import type { InstancePath } from "../../lib/onshape/path";
+import { isLocalOrigin } from "./registration";
 
 /** Under `/api`. */
 export const UNITS_WEBHOOK_ROUTE = "/webhooks/units";
@@ -19,6 +20,9 @@ export async function watchWorkspaceUnits(
     workspace: InstancePath,
     origin: string
 ): Promise<void> {
+    if (isLocalOrigin(origin)) {
+        return;
+    }
     const url = new URL("/api" + UNITS_WEBHOOK_ROUTE, origin);
     url.searchParams.set("documentId", workspace.documentId);
     url.searchParams.set("workspaceId", workspace.instanceId);

@@ -10,7 +10,8 @@ import { type OAuthApi, OnshapeApiError } from "../../lib/onshape/client";
 import {
     createWebhook,
     deleteWebhook,
-    getWebhook
+    getWebhook,
+    pingWebhook
 } from "../../lib/onshape/endpoints/webhooks";
 
 /** Under `/api`. */
@@ -59,6 +60,16 @@ async function isStillRegistered(
     }
 }
 
+/** Onshape can't deliver to this machine, so it cancels such a webhook at once. */
+export function isLocalOrigin(origin: string): boolean {
+    const { hostname } = new URL(origin);
+    return (
+        hostname === "localhost" ||
+        hostname === "[::1]" ||
+        hostname.startsWith("127.")
+    );
+}
+
 /** Registers a webhook for the subject unless Onshape still has the one on record. */
 export async function ensureWebhook(
     env: AppBindings,
@@ -67,6 +78,14 @@ export async function ensureWebhook(
     subjectId: string,
     origin: string
 ): Promise<void> {
+    if (isLocalOrigin(origin)) {
+        console.warn("Not registering a webhook Onshape can't reach", {
+            subject,
+            subjectId,
+            origin
+        });
+        return;
+    }
     const db = getDb(env.DB);
     const existing = await db
         .select({ webhookId: onshapeWebhooks.webhookId })
@@ -114,6 +133,18 @@ export async function ensureWebhook(
         .set({ webhookId: webhook.id })
         .where(whereSubject(subject, subjectId));
     console.log("Registered webhook", { ...logged, webhookId: webhook.id });
+
+    // Arrives as a `webhook.ping` delivery; its absence from the logs means
+    // Onshape can't reach the url.
+    try {
+        await pingWebhook(onshapeApi, webhook.id);
+    } catch (error) {
+        console.error("Webhook ping failed", {
+            ...logged,
+            webhookId: webhook.id,
+            error
+        });
+    }
 }
 
 /** Unregisters the subject's webhook, when nothing needs it any more. */
