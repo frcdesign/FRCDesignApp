@@ -22,17 +22,6 @@ export interface CreateWebhookParams {
     isTransient: boolean;
 }
 
-export async function getCompanyWebhooks(
-    client: OnshapeApi,
-    companyId: string
-): Promise<OnshapeWebhookInfo[]> {
-    const response: { items: OnshapeWebhookInfo[] } = await client.get(
-        "/webhooks",
-        { query: { company: companyId } }
-    );
-    return response.items;
-}
-
 export function getWebhook(
     client: OnshapeApi,
     webhookId: string

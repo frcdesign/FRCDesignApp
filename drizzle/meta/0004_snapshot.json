@@ -1,7 +1,7 @@
 {
     "version": "6",
     "dialect": "sqlite",
-    "id": "d12f3484-8212-4351-baf2-4f6d425b9bd6",
+    "id": "25336daa-566f-4496-9715-414acfb285cc",
     "prevId": "d8945a24-5643-4675-bf1f-b32cff1dbea2",
     "tables": {
         "configurations": {
@@ -609,6 +609,27 @@
                     "type": "text",
                     "primaryKey": false,
                     "notNull": true,
+                    "autoincrement": false
+                },
+                "registered_at": {
+                    "name": "registered_at",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": false,
+                    "autoincrement": false
+                },
+                "last_delivery_at": {
+                    "name": "last_delivery_at",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": false,
+                    "autoincrement": false
+                },
+                "last_event": {
+                    "name": "last_event",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": false,
                     "autoincrement": false
                 }
             },

@@ -74,6 +74,35 @@ describe("registering webhooks", () => {
         expect(post).toHaveBeenCalledOnce();
     });
 
+    // A cancelled or deactivated webhook sends nothing to say so.
+    it("registers again when Onshape no longer has the one on record", async () => {
+        const { onshapeApi, post } = mockOnshape();
+        await ensureWebhook(
+            env,
+            onshapeApi,
+            WebhookSubject.DOCUMENT,
+            "doc",
+            ORIGIN
+        );
+        vi.spyOn(onshapeApi, "get").mockRejectedValue(
+            new OnshapeApiError("gone", 404)
+        );
+        post.mockResolvedValue({ id: "replacement" });
+
+        await ensureWebhook(
+            env,
+            onshapeApi,
+            WebhookSubject.DOCUMENT,
+            "doc",
+            ORIGIN
+        );
+
+        expect(post).toHaveBeenCalledTimes(2);
+        const [row] = await stored();
+        expect(row.webhookId).toBe("replacement");
+        expect(row.registeredAt).toBeInstanceOf(Date);
+    });
+
     it("removes one Onshape already dropped without complaint", async () => {
         const { onshapeApi, remove } = mockOnshape();
         await ensureWebhook(

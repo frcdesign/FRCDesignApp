@@ -1,7 +1,7 @@
 import { PropsWithChildren, ReactNode } from "react";
 import { FloatingPosition, Menu, ActionIcon } from "@mantine/core";
 import { DotsThreeIcon } from "@phosphor-icons/react";
-import { IconSize, StatusColor } from "../lib/style-constants";
+import { IconSize } from "../lib/style-constants";
 import { RequireAccessLevel } from "../features/auth/access-level";
 import classes from "./app-menu.module.css";
 
@@ -81,15 +81,13 @@ export function MenuButton(props: MenuButtonProps): ReactNode {
 interface MenuSectionProps extends PropsWithChildren {
     /** What the items under it are for, e.g. "Insert". */
     label: string;
-    /** Colors the label, for a section only some callers see. */
-    color?: StatusColor;
 }
 
 export function MenuSection(props: MenuSectionProps): ReactNode {
-    const { label, color, children } = props;
+    const { label, children } = props;
     return (
         <>
-            <Menu.Label c={color}>{label}</Menu.Label>
+            <Menu.Label>{label}</Menu.Label>
             {children}
         </>
     );
@@ -99,9 +97,7 @@ export function MenuSection(props: MenuSectionProps): ReactNode {
 export function AdminMenuSection(props: PropsWithChildren): ReactNode {
     return (
         <RequireAccessLevel>
-            <MenuSection label="Admin" color={StatusColor.WARNING}>
-                {props.children}
-            </MenuSection>
+            <MenuSection label="Admin">{props.children}</MenuSection>
         </RequireAccessLevel>
     );
 }

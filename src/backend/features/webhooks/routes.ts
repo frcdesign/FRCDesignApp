@@ -11,9 +11,11 @@ import { requestLoads } from "../load/jobs";
 import {
     findWebhookByToken,
     forgetWebhook,
-    RECEIVE_PATH,
+    noteDelivery,
+    WEBHOOK_ROUTE,
     WebhookEvent
 } from "./registration";
+import { runInBackground } from "../../lib/background";
 import { readUnitsDelivery, UNITS_WEBHOOK_ROUTE } from "./transient";
 import { forgetUnitInfo } from "../configurations/units";
 
@@ -24,30 +26,39 @@ interface WebhookNotification {
     event: string;
 }
 
-/** POST /api/webhooks/onshape?token= */
-webhookRoutes.post(RECEIVE_PATH.replace(/^\/api/, ""), async (c) => {
+/**
+ * POST /api/webhooks/onshape?token=. Answers 200 at once and does the work
+ * after: Onshape deactivates a webhook whose deliveries error or stall.
+ */
+webhookRoutes.post(WEBHOOK_ROUTE, async (c) => {
+    const { event } = await c.req.json<WebhookNotification>();
     const token = c.req.query("token");
     const webhook = token ? await findWebhookByToken(c.env, token) : undefined;
     if (!webhook) {
+        console.warn("Webhook delivery with an unknown token", { event });
         throw forbiddenError("Unrecognized webhook");
     }
+    const { subject, subjectId } = webhook;
+    console.log("Webhook delivery", { event, subject, subjectId });
 
-    const notification = await c.req.json<WebhookNotification>();
-    switch (notification.event) {
-        case WebhookEvent.CREATE_VERSION:
-            if (webhook.subject === WebhookSubject.DOCUMENT) {
-                await reloadDocument(
-                    c.env,
-                    webhook.subjectId,
-                    new URL(c.req.url).origin
-                );
-            }
-            break;
-        case WebhookEvent.UNREGISTER:
-            await forgetWebhook(c.env, webhook);
-            break;
-        // Registration fails without a 200.
-    }
+    await runInBackground(c, `handle ${event} for ${subjectId}`, async () => {
+        await noteDelivery(c.env, webhook, event);
+        switch (event) {
+            case WebhookEvent.CREATE_VERSION:
+                if (subject === WebhookSubject.DOCUMENT) {
+                    await reloadDocument(
+                        c.env,
+                        subjectId,
+                        new URL(c.req.url).origin
+                    );
+                }
+                break;
+            case WebhookEvent.UNREGISTER:
+                await forgetWebhook(c.env, webhook);
+                break;
+            // Anything else, webhook.register included, only wants the 200.
+        }
+    });
     return c.json({});
 });
 

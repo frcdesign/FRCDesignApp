@@ -249,16 +249,18 @@ export function useAddGroupMutation(selectedGroupId?: string) {
             }
             showLoadingToast("Adding document...", "add-group");
             modals.closeAll();
-            return apiPost("/group" + toLibraryPath(libraryId), {
-                body: { newDocumentId, selectedGroupId }
-            });
+            return apiPost<{ name: string }>(
+                "/group" + toLibraryPath(libraryId),
+                { body: { newDocumentId, selectedGroupId } }
+            );
         },
         onError: getAppErrorHandler(
             "Failed to add document. Make sure the document is valid.",
             "add-group"
         ),
-        onSuccess: () => {
-            showInfoToast("Adding document...", { id: "add-group" });
+        // The load goes on in the background, where the group shows its progress.
+        onSuccess: ({ name }) => {
+            showSuccessToast(`Added ${name}.`, "add-group");
         }
     });
 }

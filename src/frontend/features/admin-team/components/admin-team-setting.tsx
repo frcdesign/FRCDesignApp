@@ -23,7 +23,7 @@ export function AdminTeamSetting(): ReactNode {
     };
 
     return (
-        <InputRow label="Admin team id" htmlFor={id}>
+        <InputRow label="Admin team" htmlFor={id}>
             <TextInput
                 // Keyed so a saved or refetched team replaces what was typed.
                 key={stored}

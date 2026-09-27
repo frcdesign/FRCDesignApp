@@ -1,6 +1,7 @@
 import { Button, Switch } from "@mantine/core";
 import { CheckIcon } from "@phosphor-icons/react";
 import { type ReactNode } from "react";
+import { InputRow } from "../../../components/input-row";
 import {
     useApproveVersionsMutation,
     useAwaitingApprovalCount,
@@ -8,7 +9,24 @@ import {
     useVersionApprovalQuery
 } from "../queries";
 
-export function VersionApprovalSwitch(): ReactNode {
+/** Held versions only exist while approval is on, so their row shows only then. */
+export function VersionApprovalSettings(): ReactNode {
+    const enabled = useVersionApprovalQuery().data?.enabled ?? false;
+    return (
+        <>
+            <InputRow label="Approve new versions">
+                <VersionApprovalSwitch />
+            </InputRow>
+            {enabled && (
+                <InputRow label="Held versions">
+                    <ApproveVersionsButton />
+                </InputRow>
+            )}
+        </>
+    );
+}
+
+function VersionApprovalSwitch(): ReactNode {
     const query = useVersionApprovalQuery();
     const mutation = useSetVersionApprovalMutation();
     const enabled = query.data?.enabled ?? false;
@@ -22,7 +40,7 @@ export function VersionApprovalSwitch(): ReactNode {
     );
 }
 
-export function ApproveVersionsButton(): ReactNode {
+function ApproveVersionsButton(): ReactNode {
     const count = useAwaitingApprovalCount();
     const mutation = useApproveVersionsMutation();
     return (

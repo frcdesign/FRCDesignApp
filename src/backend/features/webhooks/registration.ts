@@ -9,10 +9,12 @@ import { onshapeWebhooks, WebhookSubject } from "../../db/schema";
 import { type OAuthApi, OnshapeApiError } from "../../lib/onshape/client";
 import {
     createWebhook,
-    deleteWebhook
+    deleteWebhook,
+    getWebhook
 } from "../../lib/onshape/endpoints/webhooks";
 
-export const RECEIVE_PATH = "/api/webhooks/onshape";
+/** Under `/api`. */
+export const WEBHOOK_ROUTE = "/webhooks/onshape";
 
 export enum WebhookEvent {
     CREATE_VERSION = "onshape.model.lifecycle.createversion",
@@ -38,7 +40,26 @@ function subjectParams(subject: WebhookSubject, subjectId: string) {
     }
 }
 
-/** Registers a webhook for the subject unless one is already on record. */
+/**
+ * Whether Onshape still has it. A webhook it cancelled (a failed registration
+ * ping) or deactivated (deliveries that errored) sends us nothing to say so.
+ */
+async function isStillRegistered(
+    onshapeApi: OAuthApi,
+    webhookId: string
+): Promise<boolean> {
+    try {
+        await getWebhook(onshapeApi, webhookId);
+        return true;
+    } catch (error) {
+        if (error instanceof OnshapeApiError && error.status === 404) {
+            return false;
+        }
+        throw error;
+    }
+}
+
+/** Registers a webhook for the subject unless Onshape still has the one on record. */
 export async function ensureWebhook(
     env: AppBindings,
     onshapeApi: OAuthApi,
@@ -52,8 +73,18 @@ export async function ensureWebhook(
         .from(onshapeWebhooks)
         .where(whereSubject(subject, subjectId))
         .get();
-    if (existing?.webhookId) {
+    if (
+        existing?.webhookId &&
+        (await isStillRegistered(onshapeApi, existing.webhookId))
+    ) {
         return;
+    }
+    if (existing?.webhookId) {
+        console.warn("Webhook gone from Onshape; registering again", {
+            subject,
+            subjectId,
+            webhookId: existing.webhookId
+        });
     }
 
     // Stored first: Onshape posts webhook.register before create returns.
@@ -65,7 +96,9 @@ export async function ensureWebhook(
             target: [onshapeWebhooks.subject, onshapeWebhooks.subjectId],
             set: { token, webhookId: null }
         });
-    const url = new URL(RECEIVE_PATH, origin);
+    const url = new URL("/api" + WEBHOOK_ROUTE, origin);
+    // Logged before the token goes on, since the token is the webhook's password.
+    const logged = { subject, subjectId, url: url.href };
     url.searchParams.set("token", token);
 
     const webhook = await createWebhook(onshapeApi, {
@@ -78,8 +111,9 @@ export async function ensureWebhook(
     });
     await db
         .update(onshapeWebhooks)
-        .set({ webhookId: webhook.id })
+        .set({ webhookId: webhook.id, registeredAt: new Date() })
         .where(whereSubject(subject, subjectId));
+    console.log("Registered webhook", { ...logged, webhookId: webhook.id });
 }
 
 /** Unregisters the subject's webhook, when nothing needs it any more. */
@@ -120,7 +154,19 @@ export function findWebhookByToken(
         .get();
 }
 
-/** So the next load or team change registers another. */
+/** Stamps a delivery, so the table shows which webhooks are heard from. */
+export async function noteDelivery(
+    env: AppBindings,
+    webhook: RegisteredWebhook,
+    event: string
+): Promise<void> {
+    await getDb(env.DB)
+        .update(onshapeWebhooks)
+        .set({ lastDeliveryAt: new Date(), lastEvent: event })
+        .where(whereSubject(webhook.subject, webhook.subjectId));
+}
+
+/** So the next load registers another. */
 export async function forgetWebhook(
     env: AppBindings,
     webhook: RegisteredWebhook

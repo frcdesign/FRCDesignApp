@@ -98,6 +98,8 @@ Onshape pushes one thing, registered with `isTransient: false` and recorded in t
 
 - **A new version of a library document.** Registered by the document's load; removed with the last group loaded from it. Reloads that document's groups.
 
+Each load checks that Onshape still has the document's webhook and registers it again if not: Onshape cancels one whose registration ping fails and deactivates one whose deliveries error, without telling us. The receiving route answers 200 at once and does the work after, so a slow or failing reload never costs the webhook. To troubleshoot, the `onshape_webhooks` row records `registered_at`, `last_delivery_at` and `last_event`, and Workers Logs has a "Registered webhook", "Webhook delivery" or "Webhook gone from Onshape" line for each step; a failed registration is logged by the load with Onshape's status and response.
+
 A library admin can switch on **Approve new versions** in the settings menu (`libraries.approve_versions`). A webhook's load in that library then holds a new version: it marks its `load_jobs` row `awaiting_approval` and waits on the workflow event `approve-version` for up to two days, then loads anyway. The group's row shows an **Awaiting approval** badge, and **Approve** beside "Held versions" sends that event to every held load, and so does switching approval off. An admin's reload replaces a held load with one that doesn't wait, and a newer version's webhook replaces it with one that holds again.
 
 Onshape's team webhooks need a company id, which a personal account lacks, so an admin team's membership is pulled again only when the owner sets the team or an admin presses **Refresh** beside "Admin team members" in the settings menu.

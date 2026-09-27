@@ -86,8 +86,7 @@ export function AppNavbar(): ReactNode {
                     <InsertLocationStatus />
                     <JobIndicator />
                     <SignInButton />
-                    <ThemeToggle />
-                    <SettingsButton />
+                    <SettingsControls />
                 </Group>
             </NavbarRow>
             <Group gap="xs" px="sm" h={NAVBAR_ROW_HEIGHT}>
@@ -183,7 +182,17 @@ function AppTabs(): ReactNode {
     );
 }
 
-export function ThemeToggle(): ReactNode {
+/** The theme toggle and settings, flush: a pair of icons, not two controls. */
+export function SettingsControls(): ReactNode {
+    return (
+        <Group gap={0}>
+            <ThemeToggle />
+            <SettingsButton />
+        </Group>
+    );
+}
+
+function ThemeToggle(): ReactNode {
     const theme = useUiState((state) => state.theme);
     const isDark = theme === Theme.DARK;
     return (
@@ -204,7 +213,7 @@ export function ThemeToggle(): ReactNode {
     );
 }
 
-export function SettingsButton() {
+function SettingsButton() {
     return (
         <ActionIcon
             title="Settings"

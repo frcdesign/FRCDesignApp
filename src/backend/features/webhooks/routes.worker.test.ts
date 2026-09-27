@@ -46,6 +46,29 @@ describe("receiving a webhook", () => {
         expect(res.status).toBe(403);
     });
 
+    // So the table shows which webhooks are heard from at all.
+    it("stamps the delivery on the webhook's row", async () => {
+        const token = await registered(WebhookSubject.DOCUMENT, DOCUMENT);
+        await deliver({ event: "webhook.register" }, token);
+
+        const [row] = await db.select().from(onshapeWebhooks).all();
+        expect(row.lastEvent).toBe("webhook.register");
+        expect(row.lastDeliveryAt).toBeInstanceOf(Date);
+    });
+
+    // Onshape deactivates a webhook whose deliveries error.
+    it("answers 200 even when handling the delivery fails", async () => {
+        const token = await registered(WebhookSubject.DOCUMENT, DOCUMENT);
+        vi.spyOn(Jobs, "requestLoads").mockRejectedValue(new Error("down"));
+        vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+        const res = await deliver(
+            { event: WebhookEvent.CREATE_VERSION },
+            token
+        );
+        expect(res.status).toBe(200);
+    });
+
     // Registration fails unless Onshape's own check is answered.
     it("answers Onshape's registration check", async () => {
         const token = await registered(WebhookSubject.DOCUMENT, DOCUMENT);

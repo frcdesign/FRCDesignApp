@@ -14,6 +14,9 @@ CREATE TABLE `onshape_webhooks` (
 	`subject_id` text NOT NULL,
 	`webhook_id` text,
 	`token` text NOT NULL,
+	`registered_at` integer,
+	`last_delivery_at` integer,
+	`last_event` text,
 	PRIMARY KEY(`subject`, `subject_id`)
 );
 --> statement-breakpoint

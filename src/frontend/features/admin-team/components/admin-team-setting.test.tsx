@@ -30,7 +30,7 @@ describe("the admin team setting", () => {
         const user = userEvent.setup();
         renderWithProviders(<AdminTeamSetting />);
 
-        const field = screen.getByLabelText("Admin team id");
+        const field = screen.getByLabelText("Admin team");
         await user.clear(field);
         await user.type(field, " team-2 {Enter}");
 
@@ -42,7 +42,7 @@ describe("the admin team setting", () => {
         const user = userEvent.setup();
         renderWithProviders(<AdminTeamSetting />);
 
-        await user.clear(screen.getByLabelText("Admin team id"));
+        await user.clear(screen.getByLabelText("Admin team"));
         await user.tab();
 
         expect(mocks.mutate).toHaveBeenCalledWith(null);
@@ -53,7 +53,7 @@ describe("the admin team setting", () => {
         const user = userEvent.setup();
         renderWithProviders(<AdminTeamSetting />);
 
-        await user.click(screen.getByLabelText("Admin team id"));
+        await user.click(screen.getByLabelText("Admin team"));
         await user.tab();
 
         expect(mocks.mutate).not.toHaveBeenCalled();
@@ -63,7 +63,7 @@ describe("the admin team setting", () => {
         mocks.level = AccessLevel.ADMIN;
         renderWithProviders(<AdminTeamSetting />);
 
-        const field = screen.getByLabelText("Admin team id");
+        const field = screen.getByLabelText("Admin team");
         expect((field as HTMLInputElement).value).toBe("team-1");
         expect(field).toHaveProperty("readOnly", true);
     });
