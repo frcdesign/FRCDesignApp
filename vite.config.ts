@@ -1,20 +1,8 @@
-import { defineConfig } from "vite";
+import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 import { cloudflare } from "@cloudflare/vite-plugin";
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
-import { existsSync, readFileSync } from "fs";
 import { fileURLToPath } from "url";
-
-// Only enable https when localhost exists
-const httpsKeyPath = "localhost-key.pem";
-const httpsCertPath = "localhost.pem";
-const httpsDevServer =
-    existsSync(httpsKeyPath) && existsSync(httpsCertPath)
-        ? {
-              key: readFileSync(httpsKeyPath),
-              cert: readFileSync(httpsCertPath)
-          }
-        : undefined;
 
 const srcPath = (dir: string) =>
     fileURLToPath(new URL(`./src/${dir}`, import.meta.url));
@@ -26,7 +14,7 @@ export const alias = {
 };
 
 // https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
     resolve: { alias },
     plugins: [
         tanstackRouter({
@@ -40,8 +28,15 @@ export default defineConfig({
         cloudflare()
     ],
     server: {
-        https: httpsDevServer,
         port: 3000,
-        strictPort: true
+        strictPort: true,
+        // The tunnel's hostname, which Vite otherwise turns away.
+        allowedHosts: optionalList(
+            loadEnv(mode, process.cwd(), "").DEV_HOSTNAME
+        )
     }
-});
+}));
+
+function optionalList(value: string | undefined): string[] {
+    return value ? [value] : [];
+}

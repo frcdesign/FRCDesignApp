@@ -47,8 +47,8 @@ To test Onshape app changes, you will need to create an OAuth application in the
 - Name: (Arbitrary) FRC Design App Test
 - Primary format: (Arbitrary) com.frc-design-app.dev
 - Summary: (Arbitrary) Test for the FRC Design App.
-- Redirect URLs: `https://localhost:3000/auth/callback`
-- OAuth URL: `https://localhost:3000/auth/sign-in`
+- Redirect URLs: `https://<your hostname>/auth/callback`
+- OAuth URL: `https://<your hostname>/auth/sign-in`
 - Check the permissions `can read your profile information`, `can read your documents`, `can write to your documents`, and `can delete your documents and workspaces`.
 
 Click Create application, then copy your OAuth app's OAuth client secret (from the popup) and OAuth client identifier into your `.env` file.
@@ -62,8 +62,8 @@ Next, add the necessary Extensions to your OAuth application so you can see it i
     - Location: Element right panel
     - Context: Inside assembly/Inside part studio
     - Action URL:
-        - Assembly: `https://localhost:3000/init?elementType=ASSEMBLY&documentId={$documentId}&instanceType={$workspaceOrVersion}&instanceId={$workspaceOrVersionId}&elementId={$elementId}`
-        - Part Studio: `https://localhost:3000/init?elementType=PARTSTUDIO&documentId={$documentId}&instanceType={$workspaceOrVersion}&instanceId={$workspaceOrVersionId}&elementId={$elementId}`
+        - Assembly: `https://<your hostname>/init?elementType=ASSEMBLY&documentId={$documentId}&instanceType={$workspaceOrVersion}&instanceId={$workspaceOrVersionId}&elementId={$elementId}`
+        - Part Studio: `https://<your hostname>/init?elementType=PARTSTUDIO&documentId={$documentId}&instanceType={$workspaceOrVersion}&instanceId={$workspaceOrVersionId}&elementId={$elementId}`
     - Icon: You'll need an icon. A good choice is the one at `/public/frc-design-app-dev.svg`.
 4. Open the [Onshape App Store](https://cad.onshape.com/appstore/myapps) and go to My apps. Find your App and Subscribe to it.
     - If it doesn't show up, try creating a Store Entry first.
@@ -83,36 +83,26 @@ Note that Onshape has an annual limit of 2,500 API calls per Onshape account. Th
 
 In particular, avoid loading large documents into your local environment and only force reload the database when necessary.
 
-## HTTPS Setup
+## Tunnel Setup
 
-Onshape requires all apps, even temporary test apps, to use https. This creates a big headache for local development.
+Onshape loads the app over https and delivers webhooks from its own servers, so the dev server needs a public https url. A [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/) gives it a fixed hostname, so the urls in your Onshape OAuth app are set once. It needs a domain on your Cloudflare account; the hostname can be any subdomain of it, such as `frc-design-dev.example.com`.
 
-You can get around this by using [mkcert](https://github.com/FiloSottile/mkcert) to create a self signed certificate which your browser will trust.
-
-1. Install mkcert on your local machine (not in the dev container!).
-   If you are on Windows, this will likely mean installing [Chocolately](https://chocolatey.org/install) and running `choco install mkcert` using a Powershell terminal you run as an Administrator.
-1. Create a local Certificate Authority (CA):
+1. Install [cloudflared](https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/downloads/).
+1. Create the tunnel and point your hostname at it, once:
 
 ```
-mkcert -install
+cloudflared tunnel login
+cloudflared tunnel create frc-design-app-dev
+cloudflared tunnel route dns frc-design-app-dev <your hostname>
 ```
 
-1. Create a localhost certificate (localhost-key.pem and localhost.pem) and copy them into the root of this project:
+1. Add your hostname to `.env`, so Vite accepts requests for it:
 
 ```
-cd ~ # Switch to your user directory
-cd Documents # Switch to the Documents folder - you can also use any other folder you recognize, like Downloads
-mkcert localhost # Create a certificate which allows localhost to run
+DEV_HOSTNAME=<your hostname>
 ```
 
-1. You can then open your Documents folder in File Explorer and copy and paste `localhost-key.pem` and `localhost.pem` into the root of this project.
-
-If you use a chromium-based browser like Google Chrome, MKCert should install the certificate automatically.
-If it doesn't, you'll need to add the Certificate Authority manually. In Firefox, the procedure is:
-
-1. In PowerShell, run `mkcert -CAROOT` and note down the path.
-1. Open Firefox and go to `Settings > Certificates > View Certificates... > Authorities > Import...`
-1. Navigate to the `CAROOT` path and select `rootCA.pem`.
+`npm run tunnel` runs the tunnel next to `npm run dev`; the `Launch servers` VSCode task starts both. Open the app at `https://<your hostname>`.
 
 ## VSCode Setup
 
@@ -126,7 +116,7 @@ npm i
 
 ## Development Servers
 
-You should now be able to run the `Launch dev` VSCode task to launch Vite.
+You should now be able to run the `Launch servers` VSCode task to launch Vite and the tunnel.
 You should then be able to launch the FRC Design App from the right panel of any Onshape Part Studio or Assembly and see the FRC Design App UI appear.
 
 To see documents, add one or more documents and push a new app version to rebuild the search database.

@@ -10,6 +10,7 @@
     },
     "scripts": {
         "dev": "wrangler d1 migrations apply DB --local && vite dev",
+        "tunnel": "cloudflared tunnel --config cloudflared.yml run frc-design-app-dev",
         "tsc": "tsc -b",
         "build": "tsc -b && vite build",
         "lint": "eslint .",

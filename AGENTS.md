@@ -147,8 +147,8 @@ VITE_ACCESS_LEVEL_OVERRIDE=admin # granted by the server, and viewed by the clie
 ```
 
 Then `npm run dev` (applies local D1 migrations, then serves
-http://localhost:3000). The dev server goes https only when `localhost-key.pem`
-and `localhost.pem` are present, so leave them out for a headless browser.
+http://localhost:3000). A headless browser uses that url directly; the tunnel in
+the README is only for Onshape.
 
 The test Worker ignores `.env` (`vitest.config.ts` turns that off), so leaving
 one in place does not rewrite what the auth tests assert.
