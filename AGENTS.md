@@ -113,10 +113,44 @@ is the only place either is built:
   nothing. Never store a key in place of the selection it came from, and never
   send one to Onshape as a configuration outside thumbnails.
 
+`docs/architecture/configurations.md` covers the rest of the area.
+
 Anything that needs values compared or counted — analytics, "is this the
 default" — goes through `canonicalValue`/`canonicalValues`, never through a key.
 Don't add a third form: if something needs a different view of a selection, it
 wants a function in `selection.ts`, not a new shape.
+
+# Architecture docs
+
+`docs/architecture/` holds one document per feature area, indexed in its
+`README.md`: thumbnails, configurations, loading, favorites, and auth (with
+access levels and environment variables). Each states the area's flows, storage,
+**invariants**, failure modes and decisions. Read the area's document before
+changing it, and check the change against its invariants.
+
+Update the document in the same commit when a change:
+
+- adds, removes or reorders a step of a flow it describes;
+- adds, moves or drops storage — a table or column, a `kvStore`, an R2 prefix,
+  a browser store — or changes a lifetime, limit, retry policy or concurrency;
+- adds, renames or removes an environment variable or binding;
+- changes who may do something (a guard);
+- moves or renames a file a document names (`npm run check:docs` fails on these);
+- breaks or replaces an invariant. That is a design change: say so in the
+  commit message, rewrite the invariant, and add the reason under **Decisions**.
+
+A new feature area that stores data, calls Onshape or runs in the background
+gets its own document, in the shape `docs/architecture/README.md` sets out, and
+a row in its index. `docs/REFERENCE.md` stays a short tour that links to these
+rather than repeating them.
+
+Write them as comments are written: what is true now, no history, no hedging.
+Name code by path and symbol in backticks; describe behavior and point at the
+code rather than pasting it.
+
+When a document and the code disagree and it isn't clear which is intended,
+ask rather than quietly changing either. After reading a whole document against
+the code and fixing what disagrees, bump its **Last reviewed** date.
 
 # Tests
 

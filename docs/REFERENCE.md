@@ -40,73 +40,29 @@ KV holds what may expire or be lost. Every key belongs to a `kvStore` (`src/back
 
 ### R2 — Blob Storage (`c.env.BLOB`)
 
-R2 is Cloudflare's blob storage, optimized for unstructured data like images and PDFs. One bucket holds everything the app stores as a blob, kept apart by key prefix:
+R2 is Cloudflare's blob storage. One bucket holds everything the app stores as a blob, kept apart by key prefix:
 
 | Prefix          | What it holds                                                             | Lifetime                                          |
 | --------------- | ------------------------------------------------------------------------- | ------------------------------------------------- |
-| `thumbnails/`   | Rendered thumbnails, by element and configuration                         | Deleted by the load that orphans them; see below  |
+| `thumbnails/`   | Rendered thumbnails, by element, microversion and configuration           | Deleted by the load that orphans them             |
 | `search-index/` | Each library's serialized MiniSearch index, under a version for its shape | Rewritten on every index rebuild; built on a miss |
 
-Onshape can generate preview thumbnails for parts and assemblies, but fetching them from Onshape on every page load would be slow and eat into API rate limits — a single render can require polling and take minutes. Instead, every thumbnail we ever fetch from Onshape lands in R2 and is served from there afterwards.
-
-Every thumbnail is read from the document's **thumbnail workspace** (`FRCDesignApp Thumbnails (DO NOT EDIT)`; `features/thumbnails/workspace.ts`), not from the version itself — Onshape sometimes never renders an element's thumbnail in a version — and not from the document's own workspace, which moves on from that version. A load of a new version branches a fresh one off it, naming the version in its description so every group of the document, and a retried step, finds and shares it. The group row records it, and configuration renders read from it. Once the group is saved, every other workspace of ours is deleted, so the document keeps no branches of ours. A new branch has no thumbnails for a few minutes, so a load's thumbnail steps retry for about 17 minutes, under a limiter of their own so the wait never holds up probing.
-
-Thumbnails are keyed by whether they are the element's default or a specific configuration:
-
-```
-thumbnails/default/{elementId}/{microversionId}/{size}
-thumbnails/config/{elementId}/{microversionId}/{configKey}/{size}
-```
-
-`{configKey}` is the url-encoded `ConfigurationKey` — the canonical configuration with hidden and default-valued parameters dropped and quantities in meters and radians — so two equivalent selections resolve to one cached image. Encoding it keeps its `;` and `=` inside a single path segment. Including `{microversionId}` makes every object immutable, so an updated document lands on new keys rather than overwriting in place.
-
-Nothing expires on a timer: there is no R2 lifecycle rule, and renders are meant to last. What that costs is orphans — a tab edited into a new microversion leaves its old pair behind, and a deleted group or tab leaves everything it had. So each load, once it has saved its group, deletes the stale thumbnails of its document's elements, and deleting a group does the same for its elements (`deleteStaleThumbnails` in `features/thumbnails/reconcile.ts`):
-
-- It lists each element's two prefixes, so it never scans the bucket. The elements are the document's tabs plus the group's stored insertables, which covers a removed tab.
-- What stays is every `(elementId, microversionId)` an insertable row still names, in **any library**, since another library can load the same document, plus what the document's groups' two thumbnail urls point at: a group's document thumbnail is often not one of its insertables, and those urls are the only record of which element it is.
-- Both prefixes are cleaned the same way: a configuration render is addressed by the same element and microversion, so it lives and dies with the element's default.
-- An object younger than an hour is kept. A load stores thumbnails before the rows naming them, and a load replacing another can be storing while the one it replaced cleans up.
-
-Thumbnails are served via `/api/thumbnail/:size/:elementId?v={microversionId}&configurationKey=&insertableId=`:
-
-- **Hit** — streamed from R2 as immutable, cacheable for a year.
-- **Miss** — 404, uncached, so a render landing later is not shadowed. A configuration miss is never answered with the element's default: that would show a part the caller did not ask for. The client shows the default itself while it waits.
-- **Miss with `insertableId`**, from a signed-in caller — the route also starts a `RenderThumbnailWorkflow` for the configuration (`features/thumbnails/render.ts`). The insert menu and favorite rows ask for this; search rows do not, so one cold search cannot start a render per row.
-    - The route resolves Onshape's thumbnail id for the configuration, one Onshape call per miss. Onshape having no part for the configuration answers 422 at once, which the client shows as a configuration that failed to regenerate.
-    - The instance id is built from that thumbnail id, so every miss for one render finds the same instance and starts nothing new.
-    - The workflow is handed that id and both R2 keys, and asks Onshape for both sizes at once until they land (404 means still rendering), for about a minute.
-    - A finished instance found on a miss left no bytes behind, so it is restarted.
+Every thumbnail the app shows is served from R2, never fetched from Onshape per view. How they are rendered, keyed, served and cleaned up is in [architecture/thumbnails.md](./architecture/thumbnails.md).
 
 ### Workflows — Background Jobs
 
-Cloudflare Workflows let you run a long-running background job that survives beyond a single HTTP request's time limit. The load workflow lives in `src/backend/features/load/workflows.ts`; the thumbnail one lives with the feature it serves, in `src/backend/features/thumbnails/render-workflow.ts`:
+Cloudflare Workflows run long background jobs that survive past a request and resume after a failure:
 
 | Binding                     | Class                     | What it does                                                                  |
 | --------------------------- | ------------------------- | ----------------------------------------------------------------------------- |
 | `LOAD_DOCUMENT_WORKFLOW`    | `LoadDocumentWorkflow`    | Loads one group's document when its version moved on (or always, when forced) |
 | `RENDER_THUMBNAIL_WORKFLOW` | `RenderThumbnailWorkflow` | Waits out one configuration's render and stores both sizes in R2              |
 
-Loading a group means walking the document structure, downloading metadata for every part and assembly, probing each indexed configuration, generating thumbnails, and writing it all to D1 — far too long for a single HTTP request. The request kicks the workflow off and returns immediately.
+Loads, their job tracking, webhooks and version approval are in [architecture/loading.md](./architecture/loading.md); renders in [architecture/thumbnails.md](./architecture/thumbnails.md).
 
-Every load is one document: adding a document, a new version of one (see Webhooks below), and a library admin's reload of the library's outdated documents (or the owner's reload of all of them), which starts one per group. `features/load/jobs.ts` keeps at most one load per group running, in the `load_jobs` table: a load asked for while one runs terminates it and takes its row, since the new load reads the latest version itself. A plain load replacing a forced one stays forced (`load_jobs.force_reload`). A replaced load that finishes anyway publishes what it wrote but leaves the row to its replacement. Each load that wrote to its group rebuilds its library's search index and bumps its version, so every load stands alone and a reload simply starts them all at once.
+### Pushes
 
-A load calls Onshape as whoever asked for it, while their session works. A webhook's load has nobody, and a requester's session can expire mid-load, so the load then finds a session itself: the owner's, or else a team admin's of the library (`getOnshapeApiFromContext`). Only the owner's and team admins' latest sessions are kept by user id, in KV under `admin-session:<userId>`, written as their access is checked (`features/auth/admin-sessions.ts`).
-
-### Webhooks and pushes
-
-Onshape pushes one thing, registered with `isTransient: false` and recorded in the `onshape_webhooks` table with its own token in the delivery url (`features/webhooks`):
-
-- **A new version of a library document.** Registered by the document's load; removed with the last group loaded from it. Reloads that document's groups.
-
-Each load checks that Onshape still has the document's webhook and registers it again if not: Onshape cancels one whose registration ping fails and deactivates one whose deliveries error, without telling us. The receiving route answers 200 at once and does the work after, so a slow or failing reload never costs the webhook. To troubleshoot, the `onshape_webhooks` row records `registered_at`, `last_delivery_at` and `last_event`, and Workers Logs has a "Registered webhook", "Webhook delivery" or "Webhook gone from Onshape" line for each step; a failed registration is logged by the load with Onshape's status and response.
-
-A library admin can switch on **Approve new versions** in the settings menu (`libraries.approve_versions`). A webhook's load in that library then holds a new version: it marks its `load_jobs` row `awaiting_approval` and waits on the workflow event `approve-version` for up to two days, then loads anyway. The group's row shows an **Awaiting approval** badge, and **Approve** beside "Held versions" sends that event to every held load, and so does switching approval off. An admin's reload replaces a held load with one that doesn't wait, and a newer version's webhook replaces it with one that holds again.
-
-Onshape's team webhooks need a company id, which a personal account lacks, so an admin team's membership is pulled again only when the owner sets the team or an admin presses **Refresh** beside "Admin team members" in the settings menu.
-
-A load that fails is flagged `LOAD_FAILED`, including one whose workflow crashed before it could say so; the next look at the library's jobs notices. Reloading the library's outdated documents reruns it.
-
-The server pushes to open clients over a WebSocket held by the `PushHub` Durable Object (`features/push`): jobs starting and finishing, a library's new version, and a configuration's render landing. Nothing polls: a client that reconnects asks again for what it may have missed.
+The server pushes to open clients over a WebSocket held by the `PushHub` Durable Object (`src/backend/features/push/`): jobs starting and finishing, a library's new version, and a configuration's render landing. Nothing polls: a client that reconnects asks again for what it may have missed.
 
 ### Assets — Static File Serving (`c.env.ASSETS`)
 
@@ -116,33 +72,19 @@ The asset binding is configured with `single-page-application` mode, which means
 
 ## How Users Get Into the App
 
-The server only gates on sign-in. Where a caller lands is the client's: `/` resumes the last tab and group from `localStorage`, so a new browser starts on the welcome.
+Onshape opens the app at `/init`, which sends a caller without a working session through Onshape sign-in and back, then hands off to the SPA at `/`. `/` resumes the last tab and group from `localStorage`. The sign-in flow, sessions and access are in [architecture/auth.md](./architecture/auth.md).
 
-### From Onshape (`/init`)
-
-Onshape opens the panel at `/init?documentId=…&instanceType=…&elementId=…&elementType=…&server=…&sessionCompanyId=…` (`features/entry/routes.ts`).
-
-1. A version or microversion is sent to `/version-error`: there is nothing to insert into.
-2. If the caller has no session, or one for another company than the document's (an enterprise session opening a personal document, say), `/init` sends them through sign-in and back to itself, marked with `signInAttempted` so it never bounces twice. Onshape may hand back a token for whatever company the caller is signed in to, which is what that mark stops from looping.
-3. Otherwise it redirects to `/` with Onshape's parameters kept. `/` counts a launch from Onshape as an open of the library it resumes, through `POST /api/app-open/library/:libraryId`.
-
-The `/app` route reads Onshape's parameters off the url once per page load, into `ui-state` (`routes/app/route.tsx`). From then on the store is what the app reads, and in-app navigation keeps only the app's own parameters (`q`, `part`, `config`, `favorite`) in the url.
-
-### Signing in
-
-`/auth/sign-in?redirectUrl=<local path>&sessionCompanyId=…` puts `{ state, redirectUrl }` in a ten-minute login cookie and sends the caller to Onshape's authorize page. An absent or offsite `redirectUrl` becomes `/`. Onshape returns to the OAuth app's registered callback, `/auth/callback`, which checks `state`, exchanges the code for tokens (via [Arctic](https://arcticjs.dev/)), starts a session, and redirects to the stored path.
-
-`/init` passes itself as the path. The app's own sign-in button passes the page it is on, so a caller comes back where they were.
+The `/app` route reads Onshape's parameters off the url once per page load, into `ui-state` (`src/frontend/routes/app/route.tsx`). From then on the store is what the app reads, and in-app navigation keeps only the app's own parameters (`q`, `part`, `config`, `favorite`) in the url.
 
 ## Storage at a Glance
 
-| Store              | What it holds                                                                         | Lifetime                                                          | Who reads/writes it                                                                           |
-| ------------------ | ------------------------------------------------------------------------------------- | ----------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| **D1**             | Library data, groups, parts (insertables), configurations, users, favorites           | Permanent (until explicitly changed)                              | Backend Worker on every API request                                                           |
-| **KV**             | OAuth session state (during login) and auth tokens (after login)                      | Login state: 10 minutes. Tokens: 30 days.                         | Backend Worker in `src/backend/features/auth/session.ts`                                      |
-| **R2**             | Thumbnail images and per-library search indexes                                       | Defaults and indexes permanent; configuration thumbnails ~90 days | Backend Worker in `src/backend/features/thumbnails/` and `src/backend/features/library/db.ts` |
-| **localStorage**   | UI state: theme, last tab and group, open/closed panels, search query, vendor filters | Persists across browser sessions                                  | Frontend only, via `src/frontend/lib/ui-state.ts`                                             |
-| **sessionStorage** | Not used                                                                              | —                                                                 | —                                                                                             |
+| Store              | What it holds                                                                         | Lifetime                                                | Who reads/writes it                                                                           |
+| ------------------ | ------------------------------------------------------------------------------------- | ------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| **D1**             | Library data, groups, parts (insertables), configurations, users, favorites           | Permanent (until explicitly changed)                    | Backend Worker on every API request                                                           |
+| **KV**             | Session tokens, borrowable admin sessions, workspace units                            | Sessions: 30 days. Units: a week.                       | Backend Worker, through a `kvStore` per key prefix                                            |
+| **R2**             | Thumbnail images and per-library search indexes                                       | Until a load orphans them; indexes rewritten on rebuild | Backend Worker in `src/backend/features/thumbnails/` and `src/backend/features/library/db.ts` |
+| **localStorage**   | UI state: theme, last tab and group, open/closed panels, search query, vendor filters | Persists across browser sessions                        | Frontend only, via `src/frontend/lib/ui-state.ts`                                             |
+| **sessionStorage** | Not used                                                                              | —                                                       | —                                                                                             |
 
 ## Codebase Map
 
@@ -155,23 +97,25 @@ owns, `lib/` for cross-cutting plumbing, and a small set of files at the root.
 
 ### `src/backend/`
 
-- `index.ts` — Worker entry point; exports the default app and the three Workflow classes
+- `index.ts` — Worker entry point; exports the default app, the two Workflow classes and the `PushHub` Durable Object
 - `app.ts` — composition root, and nothing else: binds the caller onto each request, mounts every feature's routes, and installs the error handler
 - `db/` — `client.ts` (the Drizzle client) and `schema.ts` (table definitions)
 - `lib/` — request plumbing shared by every feature: `context.ts` (bindings, typed context, and the caller binding), `cache.ts` (cache-control middleware), `api-error.ts` and `errors.ts` (the one shape every failed response takes), `validate.ts`, `route-params.ts`, `query-params.ts`
-- `lib/onshape/` — everything that talks to Onshape's REST API: `client.ts` (the client class), `api-path.ts`, `path.ts` (`ElementPath`/`InstancePath` and their serializers), `endpoints/` (per-category wrappers), `objects/` (feature and query builders)
+- `lib/onshape/` — everything that talks to Onshape's REST API: `client.ts` (the client class), `path.ts` (`ElementPath`/`InstancePath` and their serializers), `endpoints/` (per-category wrappers), `objects/` (feature and query builders)
 - `features/` — one directory per feature, each holding its own `routes.ts` plus whatever it owns:
-    - `auth/` — split by role: `session.ts` stores the session cookie and its KV records, `onshape-oauth.ts` runs the handshake, `caller.ts` resolves who is calling (and exports `productionCaller`, the wiring `createApp` binds), `guards.ts` holds both gates, and `routes.ts` serves the OAuth redirects plus `/access-data`
+    - `auth/` — split by role: `session.ts` stores the session cookie and its KV records, `login.ts` holds a sign-in in flight, `onshape-oauth.ts` runs the handshake, `request-auth.ts` resolves who is calling (and exports `productionAuth`, the wiring `createApp` binds), `guards.ts` holds the route gates, and `routes.ts` serves the OAuth redirects plus `/access-data`
     - `entry/` — `/init`, where Onshape lands: gates on auth, then hands the launch to the app
-    - `settings/` — the caller's stored preferences and the `Settings` model
     - `library/` — the library response (`db.ts`), its DTOs, and the groups and insertables endpoints
     - `load/` — everything that turns Onshape into what we store: the `parse-*` modules (document contents, configurations, configuration records, vendors, fasten info), the per-group and per-insertable loaders, the Workflows that drive them, their retry policies, and the job tracker
     - `configurations/` — the configuration domain the frontend shares: models, canonicalization, combination enumeration, and the input parser
 
-    An element's own part number and material live on `insertables.part_data`; a `configurations` row exists exactly when the element has parameters to configure.
+    An element's own part number and material live on `insertables.part_metadata`; a `configurations` row exists exactly when the element has parameters to configure.
     - `thumbnails/` — rendering and R2 storage (`store.ts`), its Workflow, the routes, and the key and URL scheme the client shares
     - `build-checker/` — build issues, the checks that raise them, and the build-status endpoint
-    - `favorites/`, `search/`
+    - `webhooks/` — the per-document webhook that loads new versions, and transient ones for caches
+    - `push/` — the `PushHub` Durable Object and what it pushes
+    - `admin-team/` — each library's admin team, set by the owner and synced from Onshape
+    - `favorites/`, `search/`, `analytics/`, `insert-location/`
 
 ### `src/frontend/`
 
@@ -179,7 +123,7 @@ owns, `lib/` for cross-cutting plumbing, and a small set of files at the root.
 - `routes/` — file-based TanStack Router routes
 - `lib/` — cross-cutting helpers: `api-client.ts` (fetch wrappers), `query-keys.ts` (every query key in one place), `query-client.ts`, `ui-state.ts` (the Zustand store kept in localStorage), `onshape-params.ts` (the tab's Onshape launch, in sessionStorage), `refresh.ts`, `notifications.tsx`
 - `components/` — UI used by more than one feature, plus the app shell (`app-navbar.tsx`, `alerts.tsx`, `root-error.tsx`)
-- `features/` — `library/`, `favorites/`, `insert/`, `search/`, `settings/`, `thumbnails/`, `build-status/`, `auth/`, each with a `queries.ts` and a `components/` directory
+- `features/` — `library/`, `favorites/`, `insert/`, `insert-location/`, `search/`, `settings/`, `thumbnails/`, `build-status/`, `admin-team/`, `dashboard/`, `auth/`, each with its queries and a `components/` directory
 
 Other top-level files:
 
@@ -188,8 +132,8 @@ Other top-level files:
 
 ## Access Levels
 
-The app has four access levels, checked on every protected API call: **OWNER**, **ADMIN**, **EDITOR**, and **USER**. Access is per library. Admin and editor access currently grant the same permissions in their library (adding, removing, and renaming groups, toggling insertable visibility), but they are kept separate so permissions can be tightened in the future if needed. USER access allows anyone who logs in via OAuth to browse the library, insert parts, and manage their own favorites.
+Four levels, per library: **owner** (the user `OWNER_USER_ID` names), **admin** and **editor** (team admins and members of the library's Onshape admin team), and **user** (anyone signed in). What each may do, how the team is synced, and the environment variables that affect access are in [architecture/auth.md](./architecture/auth.md).
 
-The **owner** is the one Onshape user named by `OWNER_USER_ID`, with every library. The owner sets each library's admin team; its members are stored on the library row, in `libraries.admin_team` (team admins as ADMIN, members as EDITOR) and pulled again on demand, so a user's access is a database lookup in `src/backend/features/auth/request-auth.ts`. Routes that require elevated access are wrapped with `requireEditor`, `requireAdminMiddleware` or `requireOwnerMiddleware` from `src/backend/features/auth/guards.ts`; one naming an insertable rather than a library looks the library up from it.
+## Architecture
 
-During local development, you can bypass the team membership check by setting `ACCESS_LEVEL_OVERRIDE=admin` (or `editor`/`user`) in your `.env` file.
+Each area's design, invariants and failure modes live in [architecture/](./architecture/README.md): thumbnails, configurations, loading, favorites, and auth.
