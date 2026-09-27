@@ -13,6 +13,7 @@ import {
     MOCK_ONSHAPE_API,
     TEST_ASSEMBLY_ID,
     TEST_ASSEMBLY_PATH,
+    TEST_LIBRARY_ID,
     TEST_PART_STUDIO_ID,
     createTestApp,
     jsonRequest,
@@ -73,7 +74,7 @@ describe("insertable routes", () => {
         await seedPartStudio(db);
 
         const res = await createTestApp().request(
-            `/api/toggle-insert-and-fasten/insertable/${TEST_PART_STUDIO_ID}`,
+            `/api/toggle-insert-and-fasten/library/${TEST_LIBRARY_ID}/insertable/${TEST_PART_STUDIO_ID}`,
             jsonRequest("POST", { supportsFasten: false }),
             env
         );
@@ -511,7 +512,7 @@ describe("insertable routes", () => {
         ]);
 
         const res = await createTestApp().request(
-            `/api/index-configurations/insertable/${TEST_PART_STUDIO_ID}`,
+            `/api/index-configurations/library/${TEST_LIBRARY_ID}/insertable/${TEST_PART_STUDIO_ID}`,
             jsonRequest("POST", { indexConfigurations: true }),
             env
         );
@@ -542,7 +543,7 @@ describe("insertable routes", () => {
             .mockResolvedValue([{ partId: "p", partNumber: "PN" }]);
 
         const res = await createTestApp().request(
-            `/api/excluded-parameters/insertable/${TEST_PART_STUDIO_ID}`,
+            `/api/excluded-parameters/library/${TEST_LIBRARY_ID}/insertable/${TEST_PART_STUDIO_ID}`,
             jsonRequest("POST", { excludedParameterIds: ["finish"] }),
             env
         );
@@ -567,7 +568,7 @@ describe("insertable routes", () => {
         );
 
         const res = await createTestApp().request(
-            `/api/index-configurations/insertable/${TEST_PART_STUDIO_ID}`,
+            `/api/index-configurations/library/${TEST_LIBRARY_ID}/insertable/${TEST_PART_STUDIO_ID}`,
             jsonRequest("POST", { indexConfigurations: true }),
             env
         );
@@ -600,14 +601,14 @@ describe("insertable routes", () => {
             .spyOn(PartsEndpoints, "getParts")
             .mockResolvedValue([{ partId: "p", partNumber: "PN-123" }]);
         await createTestApp().request(
-            `/api/index-configurations/insertable/${TEST_PART_STUDIO_ID}`,
+            `/api/index-configurations/library/${TEST_LIBRARY_ID}/insertable/${TEST_PART_STUDIO_ID}`,
             jsonRequest("POST", { indexConfigurations: true }),
             env
         );
         spy.mockClear();
 
         const res = await createTestApp().request(
-            `/api/index-configurations/insertable/${TEST_PART_STUDIO_ID}`,
+            `/api/index-configurations/library/${TEST_LIBRARY_ID}/insertable/${TEST_PART_STUDIO_ID}`,
             jsonRequest("POST", { indexConfigurations: false }),
             env
         );
@@ -632,7 +633,7 @@ describe("insertable routes", () => {
         ]);
 
         const res = await createTestApp().request(
-            `/api/index-configurations/insertable/${TEST_PART_STUDIO_ID}`,
+            `/api/index-configurations/library/${TEST_LIBRARY_ID}/insertable/${TEST_PART_STUDIO_ID}`,
             jsonRequest("POST", { indexConfigurations: false }),
             env
         );
@@ -661,7 +662,7 @@ describe("insertable routes", () => {
         ]);
 
         const res = await createTestApp().request(
-            `/api/index-configurations/insertable/${TEST_PART_STUDIO_ID}`,
+            `/api/index-configurations/library/${TEST_LIBRARY_ID}/insertable/${TEST_PART_STUDIO_ID}`,
             jsonRequest("POST", { indexConfigurations: true }),
             env
         );

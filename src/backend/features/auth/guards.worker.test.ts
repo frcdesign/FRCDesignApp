@@ -89,7 +89,7 @@ describe("editing something inside a library", () => {
     beforeEach(() => resetDb(db));
 
     // So an editor of one library can't reach into another.
-    it("takes the access of the library the insertable is in", async () => {
+    it("finds only what is in the library the path names", async () => {
         await seedGroup(db, "ftc-group", LibraryId.FTC_DESIGN_LIB);
         await seedInsertable(db, {
             id: "ftc-part",
@@ -102,12 +102,14 @@ describe("editing something inside a library", () => {
                     ? AccessLevel.ADMIN
                     : AccessLevel.USER
         });
+        const reindex = (libraryId: LibraryId) =>
+            app.request(
+                `/api/index-configurations/library/${libraryId}/insertable/ftc-part`,
+                jsonRequest("POST", { indexConfigurations: true }),
+                env
+            );
 
-        const res = await app.request(
-            "/api/index-configurations/insertable/ftc-part",
-            jsonRequest("POST", { indexConfigurations: true }),
-            env
-        );
-        expect(res.status).toBe(403);
+        expect((await reindex(LibraryId.FRC_DESIGN_LIB)).status).toBe(404);
+        expect((await reindex(LibraryId.FTC_DESIGN_LIB)).status).toBe(403);
     });
 });

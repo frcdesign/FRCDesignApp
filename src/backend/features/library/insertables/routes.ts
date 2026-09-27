@@ -1,20 +1,25 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { handledError, internalError } from "../../../lib/api-error";
 import { validate } from "../../../lib/validate";
 import { HttpStatus } from "http-status-ts";
 import z from "zod";
 import { type AppContext, getApp } from "../../../lib/context";
 import type { BatchItem } from "drizzle-orm/batch";
-import { getInsertableParam, insertableRoute } from "../../../lib/route-params";
-import { getDb, type Db } from "../../../db/client";
-import { requireEditor, requireSignInMiddleware } from "../../auth/guards";
-import { insertables, configurations } from "../../../db/schema";
 import {
-    bumpLibraryVersion,
-    libraryOfInsertable,
-    rebuildSearchDb
-} from "../db";
+    getInsertableParam,
+    getLibraryParam,
+    insertableRoute,
+    libraryRoute
+} from "../../../lib/route-params";
+import { getDb, type Db } from "../../../db/client";
+import {
+    requireEditorMiddleware,
+    requireSignInMiddleware
+} from "../../auth/guards";
+import { insertables, configurations } from "../../../db/schema";
+import { bumpLibraryVersion, rebuildSearchDb } from "../db";
 import { type InsertOut } from "../contract";
+import type { LibraryId } from "../library-id";
 import { toElementPath, INSTANCE_TYPES } from "../../../lib/onshape/path";
 import {
     type ConfigurationParameter,
@@ -52,12 +57,15 @@ import { addBuildIssue, clearBuildIssue } from "../../build-checker/issues";
 
 export const insertableRoutes = getApp();
 
-/** An editor of the library the insertable in the path is in. */
-const requireInsertableEditor = requireEditor((c) =>
-    libraryOfInsertable(getDb(c.env.DB), getInsertableParam(c))
-);
+/** An editor's access is to the path's library, so the insertable must be in it. */
+function inLibrary(libraryId: LibraryId, insertableId: string) {
+    return and(
+        eq(insertables.id, insertableId),
+        eq(insertables.libraryId, libraryId)
+    );
+}
 
-/** POST /api/toggle-insert-and-fasten/insertable/:insertableId */
+/** POST /api/toggle-insert-and-fasten/library/:libraryId/insertable/:insertableId */
 const setFastenBody = z.object({ supportsFasten: z.boolean() });
 
 const indexConfigurationsBody = z.object({ indexConfigurations: z.boolean() });
@@ -67,25 +75,25 @@ const excludedParametersBody = z.object({
 });
 
 insertableRoutes.post(
-    "/toggle-insert-and-fasten" + insertableRoute(),
-    requireInsertableEditor,
+    "/toggle-insert-and-fasten" + libraryRoute() + insertableRoute(),
+    requireEditorMiddleware,
     validate("json", setFastenBody),
     async (c) => {
         const db = getDb(c.env.DB);
 
+        const libraryId = getLibraryParam(c);
         const insertableId = getInsertableParam(c);
         const { supportsFasten } = c.req.valid("json");
 
         const row = await db
             .select({
-                libraryId: insertables.libraryId,
                 documentId: insertables.documentId,
                 versionId: insertables.versionId,
                 elementId: insertables.elementId,
                 elementType: insertables.elementType
             })
             .from(insertables)
-            .where(eq(insertables.id, insertableId))
+            .where(inLibrary(libraryId, insertableId))
             .get();
         if (!row)
             throw internalError("Insertable not found", HttpStatus.NOT_FOUND);
@@ -104,31 +112,35 @@ insertableRoutes.post(
             .set({ supportsFasten, fastenInfo })
             .where(eq(insertables.id, insertableId));
 
-        await bumpLibraryVersion(db, row.libraryId);
+        await bumpLibraryVersion(db, libraryId);
         return c.json({ success: true });
     }
 );
 
-/** POST /api/index-configurations/insertable/:insertableId */
+/** POST /api/index-configurations/library/:libraryId/insertable/:insertableId */
 insertableRoutes.post(
-    "/index-configurations" + insertableRoute(),
-    requireInsertableEditor,
+    "/index-configurations" + libraryRoute() + insertableRoute(),
+    requireEditorMiddleware,
     validate("json", indexConfigurationsBody),
     async (c) => {
         const { indexConfigurations } = c.req.valid("json");
-        await reindex(c, getInsertableParam(c), { indexConfigurations });
+        await reindex(c, getLibraryParam(c), getInsertableParam(c), {
+            indexConfigurations
+        });
         return c.json({ success: true });
     }
 );
 
-/** POST /api/excluded-parameters/insertable/:insertableId */
+/** POST /api/excluded-parameters/library/:libraryId/insertable/:insertableId */
 insertableRoutes.post(
-    "/excluded-parameters" + insertableRoute(),
-    requireInsertableEditor,
+    "/excluded-parameters" + libraryRoute() + insertableRoute(),
+    requireEditorMiddleware,
     validate("json", excludedParametersBody),
     async (c) => {
         const { excludedParameterIds } = c.req.valid("json");
-        await reindex(c, getInsertableParam(c), { excludedParameterIds });
+        await reindex(c, getLibraryParam(c), getInsertableParam(c), {
+            excludedParameterIds
+        });
         return c.json({ success: true });
     }
 );
@@ -136,13 +148,13 @@ insertableRoutes.post(
 /** Probes before writing anything, so a failure writes nothing. */
 async function reindex(
     c: AppContext,
+    libraryId: LibraryId,
     insertableId: string,
     change: Partial<IndexingSettings>
 ): Promise<void> {
     const db = getDb(c.env.DB);
     const row = await db
         .select({
-            libraryId: insertables.libraryId,
             documentId: insertables.documentId,
             versionId: insertables.versionId,
             elementId: insertables.elementId,
@@ -158,7 +170,7 @@ async function reindex(
             configurations,
             eq(configurations.insertableId, insertables.id)
         )
-        .where(eq(insertables.id, insertableId))
+        .where(inLibrary(libraryId, insertableId))
         .get();
     if (!row) {
         throw internalError("Insertable not found", HttpStatus.NOT_FOUND);
@@ -211,8 +223,8 @@ async function reindex(
     await db.batch([writes[0], ...writes.slice(1)]);
 
     // Before the bump, which makes /search-db immutable for a year.
-    await rebuildSearchDb(c.env.BLOB, db, row.libraryId);
-    await bumpLibraryVersion(db, row.libraryId);
+    await rebuildSearchDb(c.env.BLOB, db, libraryId);
+    await bumpLibraryVersion(db, libraryId);
 }
 
 /** Rejected here if half-built, rather than reaching Onshape as a bad url. */

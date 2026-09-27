@@ -10,8 +10,8 @@ import { isSignedIn } from "../auth/request-auth";
 import { thumbnailKey } from "./keys";
 import { DEFAULT_CONFIGURATION_KEY } from "../configurations/contract";
 import { requestRender } from "./render";
-import { requireEditor } from "../auth/guards";
-import { libraryOfGroup, libraryOfInsertable } from "../library/db";
+import { requireEditorMiddleware } from "../auth/guards";
+import { getLibraryParam, libraryRoute } from "../../lib/route-params";
 import { getDb } from "../../db/client";
 import { reloadGroupThumbnail, reloadInsertableThumbnail } from "./reload";
 
@@ -94,22 +94,13 @@ const reloadThumbnailBody = z.object({
     insertableId: z.string().min(1).optional()
 });
 
-/** An editor of the library whose group or insertable the body names. */
-const requireThumbnailEditor = requireEditor(async (c) => {
-    const body = await c.req.json<z.infer<typeof reloadThumbnailBody>>();
-    const db = getDb(c.env.DB);
-    if (body.insertableId) {
-        return libraryOfInsertable(db, body.insertableId);
-    }
-    return body.groupId ? libraryOfGroup(db, body.groupId) : undefined;
-});
-
-/** POST /api/reload-thumbnail: refetches one thumbnail, since loads don't wait for them. */
+/** POST /api/reload-thumbnail/library/:libraryId: refetches one thumbnail, since loads don't wait for them. */
 thumbnailRoutes.post(
-    "/reload-thumbnail",
-    requireThumbnailEditor,
+    "/reload-thumbnail" + libraryRoute(),
+    requireEditorMiddleware,
     validate("json", reloadThumbnailBody),
     async (c) => {
+        const libraryId = getLibraryParam(c);
         const { groupId, insertableId } = c.req.valid("json");
         const db = getDb(c.env.DB);
         const onshapeApi = await c.var.getOnshapeApi();
@@ -119,10 +110,17 @@ thumbnailRoutes.post(
                 db,
                 c.env.BLOB,
                 onshapeApi,
+                libraryId,
                 insertableId
             );
         } else if (groupId) {
-            await reloadGroupThumbnail(db, c.env.BLOB, onshapeApi, groupId);
+            await reloadGroupThumbnail(
+                db,
+                c.env.BLOB,
+                onshapeApi,
+                libraryId,
+                groupId
+            );
         } else {
             throw handledError(
                 "Name a group or an element to reload.",

@@ -264,12 +264,15 @@ export function useAddGroupMutation(selectedGroupId?: string) {
 export function useReloadThumbnailMutation(
     target: { groupId: string } | { insertableId: string }
 ) {
+    const libraryId = useLibraryId();
     const refreshLibrary = useRefreshLibrary();
     return useMutation({
         mutationKey: ["reload-thumbnail", target],
         mutationFn: async () => {
             showLoadingToast("Reloading thumbnail...", "reload-thumbnail");
-            return apiPost("/reload-thumbnail", { body: target });
+            return apiPost("/reload-thumbnail" + toLibraryPath(libraryId), {
+                body: target
+            });
         },
         onError: getAppErrorHandler(
             "Failed to reload thumbnail. Onshape may not have one yet.",

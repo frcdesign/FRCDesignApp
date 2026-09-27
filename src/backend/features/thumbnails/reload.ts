@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { type Db } from "../../db/client";
 import { groups, insertables } from "../../db/schema";
 import {
@@ -19,6 +19,7 @@ import { thumbnailKey } from "./keys";
 import { uploadThumbnails } from "./store";
 import { bumpLibraryVersion } from "../library/db";
 import { syncThumbnailWorkspace } from "./workspace";
+import type { LibraryId } from "../library/library-id";
 
 /** What one reload needs to ask Onshape and to name what it stores. */
 interface ReloadTarget {
@@ -91,11 +92,11 @@ export async function reloadInsertableThumbnail(
     db: Db,
     bucket: R2Bucket,
     onshapeApi: OnshapeApi,
+    libraryId: LibraryId,
     insertableId: string
 ): Promise<void> {
     const row = await db
         .select({
-            libraryId: insertables.libraryId,
             groupId: insertables.groupId,
             documentId: insertables.documentId,
             versionId: insertables.versionId,
@@ -106,7 +107,12 @@ export async function reloadInsertableThumbnail(
         })
         .from(insertables)
         .innerJoin(groups, eq(groups.id, insertables.groupId))
-        .where(eq(insertables.id, insertableId))
+        .where(
+            and(
+                eq(insertables.id, insertableId),
+                eq(insertables.libraryId, libraryId)
+            )
+        )
         .get();
     if (!row) {
         throw handledError("No such element.", HttpStatus.NOT_FOUND);
@@ -128,7 +134,7 @@ export async function reloadInsertableThumbnail(
         .set(reloaded(urls, row.buildIssues))
         .where(eq(insertables.id, insertableId));
     // The urls don't change; this clears the build issue.
-    await bumpLibraryVersion(db, row.libraryId);
+    await bumpLibraryVersion(db, libraryId);
 }
 
 /** Reads the document's contents to find the element and microversion. */
@@ -136,18 +142,18 @@ export async function reloadGroupThumbnail(
     db: Db,
     bucket: R2Bucket,
     onshapeApi: OnshapeApi,
+    libraryId: LibraryId,
     groupId: string
 ): Promise<void> {
     const row = await db
         .select({
-            libraryId: groups.libraryId,
             documentId: groups.documentId,
             versionId: groups.versionId,
             buildIssues: groups.buildIssues,
             thumbnailWorkspaceId: groups.thumbnailWorkspaceId
         })
         .from(groups)
-        .where(eq(groups.id, groupId))
+        .where(and(eq(groups.id, groupId), eq(groups.libraryId, libraryId)))
         .get();
     if (!row) {
         throw handledError("No such group.", HttpStatus.NOT_FOUND);
@@ -189,5 +195,5 @@ export async function reloadGroupThumbnail(
         .update(groups)
         .set(reloaded(urls, row.buildIssues))
         .where(eq(groups.id, groupId));
-    await bumpLibraryVersion(db, row.libraryId);
+    await bumpLibraryVersion(db, libraryId);
 }

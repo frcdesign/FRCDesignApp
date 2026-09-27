@@ -116,6 +116,7 @@ export function useSetVisibilityMutation(
 
 /** Toggles an insertable's "insert and fasten" support (a slow Onshape call). */
 export function useToggleInsertAndFastenMutation(insertableId: string) {
+    const libraryId = useLibraryId();
     const key = useBuildStatusKey();
     const refreshLibrary = useRefreshLibrary();
     const toastId = `insert-and-fasten-${insertableId}`;
@@ -123,7 +124,9 @@ export function useToggleInsertAndFastenMutation(insertableId: string) {
         mutationKey: ["toggle-insert-and-fasten", insertableId],
         mutationFn: (supportsFasten: boolean) =>
             apiPost(
-                "/toggle-insert-and-fasten" + toInsertablePath(insertableId),
+                "/toggle-insert-and-fasten" +
+                    toLibraryPath(libraryId) +
+                    toInsertablePath(insertableId),
                 { body: { supportsFasten } }
             ),
         onMutate: (supportsFasten) => {
@@ -156,15 +159,21 @@ export function useToggleInsertAndFastenMutation(insertableId: string) {
 
 /** The Onshape call runs long, so the toast reports the switch without waiting. */
 export function useIndexConfigurationsMutation(insertableId: string) {
+    const libraryId = useLibraryId();
     const key = useBuildStatusKey();
     const refreshLibrary = useRefreshLibrary();
     const toastId = `index-configurations-${insertableId}`;
     return useMutation({
         mutationKey: ["index-configurations", insertableId],
         mutationFn: (indexConfigurations: boolean) =>
-            apiPost("/index-configurations" + toInsertablePath(insertableId), {
-                body: { indexConfigurations }
-            }),
+            apiPost(
+                "/index-configurations" +
+                    toLibraryPath(libraryId) +
+                    toInsertablePath(insertableId),
+                {
+                    body: { indexConfigurations }
+                }
+            ),
         onMutate: (indexConfigurations) => {
             showInfoToast(
                 indexConfigurations
@@ -196,15 +205,21 @@ export function useIndexConfigurationsMutation(insertableId: string) {
 
 /** Re-probes the part, so the toast reports the change first. */
 export function useExcludedParametersMutation(insertableId: string) {
+    const libraryId = useLibraryId();
     const key = useBuildStatusKey();
     const refreshLibrary = useRefreshLibrary();
     const toastId = `excluded-parameters-${insertableId}`;
     return useMutation({
         mutationKey: ["excluded-parameters", insertableId],
         mutationFn: (excludedParameterIds: string[]) =>
-            apiPost("/excluded-parameters" + toInsertablePath(insertableId), {
-                body: { excludedParameterIds }
-            }),
+            apiPost(
+                "/excluded-parameters" +
+                    toLibraryPath(libraryId) +
+                    toInsertablePath(insertableId),
+                {
+                    body: { excludedParameterIds }
+                }
+            ),
         onMutate: (excludedParameterIds) => {
             showInfoToast("Reindexing part", { id: toastId });
             return patchQuery<LibraryBuildStatus>(key, (status) => {

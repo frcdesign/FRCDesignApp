@@ -7,7 +7,8 @@ import {
     MOCK_ONSHAPE_API,
     resetDb,
     seedGroup,
-    TEST_GROUP_ID
+    TEST_GROUP_ID,
+    TEST_LIBRARY_ID
 } from "../../../__test_utils__";
 import {
     insertableTarget,
@@ -15,6 +16,7 @@ import {
 } from "../../../__test_utils__/insertable-fixtures";
 import { saveInsertable } from "../load/load-insertable";
 import { BuildIssueType } from "../build-checker/issues";
+import { LibraryId } from "../library/library-id";
 import * as DocumentEndpoints from "../../lib/onshape/endpoints/documents";
 import {
     OnshapeElementType,
@@ -98,6 +100,7 @@ describe("reloading a thumbnail", () => {
             db,
             env.BLOB,
             MOCK_ONSHAPE_API,
+            TEST_LIBRARY_ID,
             target.insertableId
         );
 
@@ -113,6 +116,7 @@ describe("reloading a thumbnail", () => {
             db,
             env.BLOB,
             MOCK_ONSHAPE_API,
+            TEST_LIBRARY_ID,
             target.insertableId
         );
 
@@ -141,6 +145,7 @@ describe("reloading a thumbnail", () => {
             db,
             env.BLOB,
             MOCK_ONSHAPE_API,
+            TEST_LIBRARY_ID,
             target.insertableId
         );
 
@@ -165,6 +170,7 @@ describe("reloading a thumbnail", () => {
             db,
             env.BLOB,
             MOCK_ONSHAPE_API,
+            TEST_LIBRARY_ID,
             target.insertableId
         );
 
@@ -179,6 +185,7 @@ describe("reloading a thumbnail", () => {
                 db,
                 env.BLOB,
                 MOCK_ONSHAPE_API,
+                TEST_LIBRARY_ID,
                 target.insertableId
             )
         ).rejects.toThrow();
@@ -194,7 +201,21 @@ describe("reloading a thumbnail", () => {
                 db,
                 env.BLOB,
                 MOCK_ONSHAPE_API,
+                TEST_LIBRARY_ID,
                 "not-an-insertable"
+            )
+        ).rejects.toThrow();
+    });
+
+    // An editor's access is to the named library alone.
+    it("refuses an element of another library", async () => {
+        await expect(
+            reloadInsertableThumbnail(
+                db,
+                env.BLOB,
+                MOCK_ONSHAPE_API,
+                LibraryId.FTC_DESIGN_LIB,
+                target.insertableId
             )
         ).rejects.toThrow();
     });
@@ -220,6 +241,7 @@ describe("reloading a thumbnail", () => {
             db,
             env.BLOB,
             MOCK_ONSHAPE_API,
+            TEST_LIBRARY_ID,
             TEST_GROUP_ID
         );
 
