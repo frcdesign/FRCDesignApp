@@ -5,7 +5,7 @@ import type { AppContext } from "../../lib/context";
 import { handledError } from "../../lib/api-error";
 import { getDb } from "../../db/client";
 import { groups, insertables } from "../../db/schema";
-import { type ElementPath, toElementPath } from "../../lib/onshape/path";
+import { type ElementPath } from "../../lib/onshape/path";
 import { getThumbnailId } from "../../lib/onshape/endpoints/thumbnails";
 import { getSessionId } from "../auth/session";
 import { type ConfigurationKey } from "../configurations/contract";
@@ -30,15 +30,24 @@ const ACTIVE = new Set<InstanceStatus["status"]>([
     "waitingForPause"
 ]);
 
-/** Throws a handled 422 when Onshape has no part for the configuration. */
+/**
+ * Throws a handled 422 when Onshape has no part for the configuration. Renders
+ * only from the thumbnail workspace; a group without one has it after its next
+ * load.
+ */
 export async function requestRender(
     c: AppContext,
     request: RenderRequest
 ): Promise<void> {
     const sessionId = getSessionId(c);
+    const elementPath = await workspacePathOf(c, request.insertableId);
+    if (!elementPath) {
+        console.warn("No thumbnail workspace to render from", request);
+        return;
+    }
     const thumbnailId = await getThumbnailId(
         await c.var.getOnshapeApi(),
-        await elementPathOf(c, request.insertableId),
+        elementPath,
         decodeConfiguration(request.configurationKey)
     );
     if (!thumbnailId) {
@@ -118,14 +127,13 @@ async function findInstance(
 }
 
 /** Read rather than passed in, since a request can carry a version the group has moved past. */
-async function elementPathOf(
+async function workspacePathOf(
     c: AppContext,
     insertableId: string
-): Promise<ElementPath> {
+): Promise<ElementPath | undefined> {
     const row = await getDb(c.env.DB)
         .select({
             documentId: insertables.documentId,
-            versionId: insertables.versionId,
             elementId: insertables.elementId,
             thumbnailWorkspaceId: groups.thumbnailWorkspaceId
         })
@@ -137,7 +145,7 @@ async function elementPathOf(
         throw handledError("No such part.", HttpStatus.NOT_FOUND);
     }
     if (!row.thumbnailWorkspaceId) {
-        return toElementPath(row);
+        return undefined;
     }
     return {
         documentId: row.documentId,
