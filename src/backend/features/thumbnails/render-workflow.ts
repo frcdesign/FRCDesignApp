@@ -1,6 +1,6 @@
 /**
- * Onshape renders a configuration's thumbnail when first asked, answering 404
- * until it's ready, so this asks until the bytes land and stores them. Element
+ * Onshape renders a configuration's thumbnail when first asked, failing until
+ * it's ready, so this asks until the bytes land and stores them. Element
  * defaults render on save and never come through here.
  */
 import {
@@ -9,10 +9,14 @@ import {
     type WorkflowStep
 } from "cloudflare:workers";
 import type { AppBindings } from "../../lib/context";
-import { getThumbnailFromId } from "../../lib/onshape/endpoints/thumbnails";
+import { getConfiguredThumbnail } from "../../lib/onshape/endpoints/thumbnails";
+import { type ElementPath } from "../../lib/onshape/path";
 import { getOnshapeApiFromSessionId } from "../auth/request-auth";
 import { rateLimitDelay } from "../load/steps";
-import { type ConfigurationKey } from "../configurations/contract";
+import {
+    type ConfigurationKey,
+    type Selection
+} from "../configurations/contract";
 import { ThumbnailSize } from "./contract";
 import { putThumbnail } from "./store";
 import { pushThumbnailRendered } from "../push/notify";
@@ -25,8 +29,9 @@ export interface RenderTarget {
 }
 
 export interface RenderThumbnailParams {
-    /** Resolved once by the route; fixed for an element and configuration. */
-    thumbnailId: string;
+    /** In the group's thumbnail workspace, the only place a configuration renders. */
+    elementPath: ElementPath;
+    configuration: Selection;
     /** Both sizes, stored as each lands. */
     targets: RenderTarget[];
     /** What is told to clients waiting on the render once each size lands. */
@@ -79,9 +84,10 @@ async function storeRender(
         env.KV,
         params.sessionId
     );
-    const thumbnail = await getThumbnailFromId(
+    const thumbnail = await getConfiguredThumbnail(
         onshapeApi,
-        params.thumbnailId,
+        params.elementPath,
+        params.configuration,
         target.size
     );
     await putThumbnail(env.BLOB, target.key, thumbnail, {

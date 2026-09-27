@@ -131,7 +131,8 @@ export async function loadGroup(
                 elementIds: [
                     ...contents.elements.map((element) => element.id),
                     ...storedInsertables.map((stored) => stored.elementId)
-                ]
+                ],
+                dropRenders: forceReload
             })
         )
         .catch((error: unknown) => {

@@ -5,8 +5,8 @@ import type { AppContext } from "../../lib/context";
 import { handledError } from "../../lib/api-error";
 import { getDb } from "../../db/client";
 import { groups, insertables } from "../../db/schema";
-import { type ElementPath, toElementPath } from "../../lib/onshape/path";
-import { getThumbnailId } from "../../lib/onshape/endpoints/thumbnails";
+import { type ElementPath } from "../../lib/onshape/path";
+import { hasInsertable } from "../../lib/onshape/endpoints/thumbnails";
 import { getSessionId } from "../auth/session";
 import { type ConfigurationKey } from "../configurations/contract";
 import { decodeConfiguration } from "../configurations/utils";
@@ -30,18 +30,29 @@ const ACTIVE = new Set<InstanceStatus["status"]>([
     "waitingForPause"
 ]);
 
-/** Throws a handled 422 when Onshape has no part for the configuration. */
+/**
+ * Throws a handled 422 when Onshape has no part for the configuration. Renders
+ * only from the thumbnail workspace, the one place Onshape serves a
+ * configuration's thumbnail; a group without one has it after its next load.
+ */
 export async function requestRender(
     c: AppContext,
     request: RenderRequest
 ): Promise<void> {
     const sessionId = getSessionId(c);
-    const thumbnailId = await getThumbnailId(
-        await c.var.getOnshapeApi(),
-        await elementPathOf(c, request.insertableId),
-        decodeConfiguration(request.configurationKey)
-    );
-    if (!thumbnailId) {
+    const elementPath = await workspacePathOf(c, request.insertableId);
+    if (!elementPath) {
+        console.warn("No thumbnail workspace to render from", request);
+        return;
+    }
+    const configuration = decodeConfiguration(request.configurationKey);
+    if (
+        !(await hasInsertable(
+            await c.var.getOnshapeApi(),
+            elementPath,
+            configuration
+        ))
+    ) {
         throw handledError(
             "Onshape has no part for this configuration.",
             HttpStatus.UNPROCESSABLE_ENTITY
@@ -64,7 +75,8 @@ export async function requestRender(
         await workflow.create({
             id,
             params: {
-                thumbnailId,
+                elementPath,
+                configuration,
                 targets: Object.values(ThumbnailSize).map((size) => ({
                     size,
                     key: thumbnailKey(
@@ -118,14 +130,13 @@ async function findInstance(
 }
 
 /** Read rather than passed in, since a request can carry a version the group has moved past. */
-async function elementPathOf(
+async function workspacePathOf(
     c: AppContext,
     insertableId: string
-): Promise<ElementPath> {
+): Promise<ElementPath | undefined> {
     const row = await getDb(c.env.DB)
         .select({
             documentId: insertables.documentId,
-            versionId: insertables.versionId,
             elementId: insertables.elementId,
             thumbnailWorkspaceId: groups.thumbnailWorkspaceId
         })
@@ -137,7 +148,7 @@ async function elementPathOf(
         throw handledError("No such part.", HttpStatus.NOT_FOUND);
     }
     if (!row.thumbnailWorkspaceId) {
-        return toElementPath(row);
+        return undefined;
     }
     return {
         documentId: row.documentId,

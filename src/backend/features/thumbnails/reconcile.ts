@@ -27,6 +27,8 @@ interface StaleThumbnailsScope {
     documentId: string;
     /** Every element of the document the thumbnails could belong to, past and present. */
     elementIds: string[];
+    /** Drops every configuration render too, for a forced reload to redo. */
+    dropRenders?: boolean;
 }
 
 /**
@@ -55,6 +57,9 @@ export async function deleteStaleThumbnails(
                 });
                 const stale = listed.objects
                     .filter((object) => {
+                        if (kind === "config" && scope.dropRenders) {
+                            return true;
+                        }
                         const subject = parseThumbnailKey(object.key);
                         return (
                             subject &&

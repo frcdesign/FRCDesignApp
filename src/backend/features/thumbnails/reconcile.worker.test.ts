@@ -136,4 +136,31 @@ describe("deleteStaleThumbnails", () => {
         expect(await clean([ELEMENT], Date.now())).toBe(0);
         expect(await storedKeys()).toHaveLength(2);
     });
+
+    // A forced reload redoes them, and may be clearing out bad ones.
+    it("drops every configuration render when asked to", async () => {
+        await seedPartStudio(db, {
+            elementId: ELEMENT,
+            microversionId: LIVE_MICROVERSION
+        });
+        const render = thumbnailKey(
+            ELEMENT,
+            LIVE_MICROVERSION,
+            ThumbnailSize.LARGE,
+            "size=l"
+        );
+        await store(...defaultKeys(ELEMENT, LIVE_MICROVERSION), render);
+
+        await deleteStaleThumbnails(
+            env.BLOB,
+            db,
+            { documentId: DOCUMENT, elementIds: [ELEMENT], dropRenders: true },
+            undefined,
+            Date.now()
+        );
+
+        expect(await storedKeys()).toEqual(
+            defaultKeys(ELEMENT, LIVE_MICROVERSION).sort()
+        );
+    });
 });
