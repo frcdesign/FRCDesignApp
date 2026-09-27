@@ -20,9 +20,6 @@ _Other browsers, such as Brave, can have default security policies that prevent 
 Create a new file in the root of this project named `.env` and add the following contents:
 
 ```
-# Server config
-VERBOSE_LOGGING=true # Set to false to reduce logging output
-
 # Onshape API Keys (Optional)
 API_ACCESS_KEY=<Your API Access Key>
 API_SECRET_KEY=<Your API Secret Key>

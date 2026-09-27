@@ -12,7 +12,6 @@ interface __BaseEnv_Env {
 	API_SECRET_KEY: string;
 	OAUTH_CLIENT_ID: string;
 	OAUTH_CLIENT_SECRET: string;
-	SESSION_SECRET: string;
 	VITE_ACCESS_LEVEL_OVERRIDE: string;
 	PUSH_HUB: DurableObjectNamespace<import("./src/backend/index").PushHub>;
 	LOAD_DOCUMENT_WORKFLOW: Workflow<Parameters<import("./src/backend/index").LoadDocumentWorkflow['run']>[0]['payload']>;
@@ -34,7 +33,6 @@ declare namespace Cloudflare {
 		API_SECRET_KEY: string;
 		OAUTH_CLIENT_ID: string;
 		OAUTH_CLIENT_SECRET: string;
-		SESSION_SECRET: string;
 		VITE_ACCESS_LEVEL_OVERRIDE: string;
 		PUSH_HUB: DurableObjectNamespace<import("./src/backend/index").PushHub>;
 		LOAD_DOCUMENT_WORKFLOW: Workflow<Parameters<import("./src/backend/index").LoadDocumentWorkflow['run']>[0]['payload']>;
@@ -51,7 +49,6 @@ declare namespace Cloudflare {
 		API_SECRET_KEY: string;
 		OAUTH_CLIENT_ID: string;
 		OAUTH_CLIENT_SECRET: string;
-		SESSION_SECRET: string;
 		VITE_ACCESS_LEVEL_OVERRIDE: string;
 		PUSH_HUB: DurableObjectNamespace<import("./src/backend/index").PushHub>;
 		LOAD_DOCUMENT_WORKFLOW: Workflow<Parameters<import("./src/backend/index").LoadDocumentWorkflow['run']>[0]['payload']>;
@@ -64,7 +61,7 @@ type StringifyValues<EnvType extends Record<string, unknown>> = {
 	[Binding in keyof EnvType]: EnvType[Binding] extends string ? EnvType[Binding] : string;
 };
 declare namespace NodeJS {
-	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "OWNER_USER_ID" | "NODE_ENV" | "API_ACCESS_KEY" | "API_SECRET_KEY" | "OAUTH_CLIENT_ID" | "OAUTH_CLIENT_SECRET" | "SESSION_SECRET" | "VITE_ACCESS_LEVEL_OVERRIDE">> {}
+	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "OWNER_USER_ID" | "NODE_ENV" | "API_ACCESS_KEY" | "API_SECRET_KEY" | "OAUTH_CLIENT_ID" | "OAUTH_CLIENT_SECRET" | "VITE_ACCESS_LEVEL_OVERRIDE">> {}
 }
 
 // Begin runtime types

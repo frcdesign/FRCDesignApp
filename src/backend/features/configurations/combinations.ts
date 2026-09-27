@@ -77,7 +77,8 @@ export function countConfigurations(
 
 /**
  * Never one with a role, which changes how a part is drawn, not which part it
- * is. Shared with the admin card.
+ * is. No list or checkbox in the libraries has a role yet, so this only guards
+ * a future color or tessellation list. Shared with the admin card.
  */
 export function isIndexedParameter(
     parameter: ConfigurationParameter,
