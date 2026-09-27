@@ -15,9 +15,8 @@ import {
     onshapeOverrides,
     toKey,
     toSelection,
-    toShortestConfiguration,
     toStoredSelection,
-    withDerivationValues
+    fillDerivationValues
 } from "./selection";
 import { QuantityType, Unit } from "./enums";
 import { decodeConfiguration } from "./utils";
@@ -143,14 +142,6 @@ describe("onshapeOverrides", () => {
     });
 });
 
-describe("toShortestConfiguration", () => {
-    it("names the first applied parameter at its value", () => {
-        expect(toShortestConfiguration(select({}), parameters)).toEqual({
-            size: "s"
-        });
-    });
-});
-
 describe("appliedValues", () => {
     const params = [
         size,
@@ -238,18 +229,13 @@ describe("derivation variables", () => {
         );
     });
 
-    it("fills a fresh value for every derive", () => {
-        const selection = select({ size: "l" }, params);
-        const first = withDerivationValues(selection, params);
-        const second = withDerivationValues(first, params);
-        expect(first.dv).not.toBe(derivation.default);
-        expect(second.dv).not.toBe(first.dv);
-    });
-
-    // What the panel does, so the value on screen holds still.
-    it("keeps a value already filled when asked to", () => {
-        const filled = withDerivationValues(select({}, params), params);
-        expect(withDerivationValues(filled, params, true)).toEqual(filled);
+    it("fills one still at its default, and keeps one already filled", () => {
+        const filled = fillDerivationValues(
+            select({ size: "l" }, params),
+            params
+        );
+        expect(filled.dv).not.toBe(derivation.default);
+        expect(fillDerivationValues(filled, params)).toEqual(filled);
     });
 
     it("leaves them out of what is stored", () => {

@@ -94,7 +94,7 @@ export type ConfigurationParameter =
 
 /** Parameters about how a part is derived or drawn, not which part it is; see `roles.ts`. */
 export enum ParameterRole {
-    /** Onshape refuses a second derive of the same configuration, so this gets a unique value. */
+    /** The insert menu fills it with a unique value, so each derive is its own configuration. */
     DERIVATION_VARIABLE = "derivation-variable",
     COLOR = "color",
     /** One of a color's R, G and B, when a part spells a color out as three. */

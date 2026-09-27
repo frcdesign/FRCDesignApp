@@ -42,12 +42,7 @@ import {
     addAssemblyFeature
 } from "../../../lib/onshape/endpoints/assemblies";
 import { PartType } from "../../../lib/onshape/endpoints/documents";
-import {
-    onshapeOverrides,
-    toShortestConfiguration,
-    toSelection,
-    withDerivationValues
-} from "../../configurations/selection";
+import { onshapeOverrides, toSelection } from "../../configurations/selection";
 import { encodeConfiguration } from "../../configurations/utils";
 import { fastenMate } from "../../../lib/onshape/objects/assembly-features";
 import { parseFastenInfo } from "../../load/parse-fasten";
@@ -312,14 +307,11 @@ insertableRoutes.post(
 
         const sourcePath = toElementPath(row);
 
-        const { selection: requested, parameters } = await readSelection(
+        const { selection, parameters } = await readSelection(
             db,
             insertableId,
             body.selection
         );
-        // Always fresh: a restored menu or quick insert would repeat an earlier value.
-        const selection =
-            requested && withDerivationValues(requested, parameters);
 
         const feature = new DerivedFeature(
             row.name,
@@ -413,9 +405,10 @@ insertableRoutes.post(
             configuration === "" &&
             row.elementType === ElementType.PART_STUDIO
         ) {
-            configuration = encodeConfiguration(
-                toShortestConfiguration(selection, parameters)
-            );
+            const [first] = parameters;
+            configuration = encodeConfiguration({
+                [first.id]: selection[first.id]
+            });
         }
 
         // Resolved here, since the marker moves whenever someone drags it.

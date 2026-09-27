@@ -32,8 +32,7 @@ import { OnshapeRateLimitError } from "../../../lib/onshape/client";
 import { AUTO_INDEX_THRESHOLD } from "../../configurations/combinations";
 import {
     enumParam,
-    quantityParam,
-    derivationParam
+    quantityParam
 } from "../../../../__test_utils__/configuration-fixtures";
 
 const db = getDb(env.DB);
@@ -191,40 +190,6 @@ describe("insertable routes", () => {
         expect(JSON.stringify(spy.mock.calls[0][2])).toContain(
             '"expression":"(2 + 3) in"'
         );
-    });
-
-    // Onshape refuses a second derive of the same configuration.
-    it("POST /add-to-part-studio fills a derivation variable afresh each time", async () => {
-        await seedPartStudio(db);
-        await seedConfiguration(db);
-        await db
-            .update(configurations)
-            .set({
-                parameters: [derivationParam("dv")]
-            })
-            .where(eq(configurations.insertableId, TEST_PART_STUDIO_ID));
-        const spy = vi
-            .spyOn(PartStudioEndpoints, "addPartStudioFeature")
-            .mockResolvedValue({ feature: { featureId: "feat-1" } });
-
-        const derive = () =>
-            createTestApp().request(
-                `/api/add-to-part-studio/insertable/${TEST_PART_STUDIO_ID}`,
-                jsonRequest("POST", { targetPath, selection: { dv: "stale" } }),
-                env
-            );
-        await derive();
-        await derive();
-
-        const values = spy.mock.calls.map(
-            (call) =>
-                /"parameterId":"dv","value":"([^"]*)"/.exec(
-                    JSON.stringify(call[2])
-                )?.[1]
-        );
-        expect(values[0]).toBeTruthy();
-        expect(values[0]).not.toBe("stale");
-        expect(values[1]).not.toBe(values[0]);
     });
 
     it.each([
@@ -402,6 +367,23 @@ describe("insertable routes", () => {
             );
         }
     );
+
+    // Onshape refuses a part studio's empty configuration, though not an assembly's.
+    it("POST /add-to-assembly names one default for a part studio left on its defaults", async () => {
+        await seedPartStudio(db);
+        await seedConfiguration(db);
+        const spy = vi
+            .spyOn(AssemblyEndpoints, "addElementToAssembly")
+            .mockResolvedValue({});
+
+        await createTestApp().request(
+            `/api/add-to-assembly/insertable/${TEST_PART_STUDIO_ID}`,
+            jsonRequest("POST", { targetPath, selection: {}, fasten: false }),
+            env
+        );
+
+        expect(spy.mock.calls[0][4]?.configuration).toBe("boolean=true");
+    });
 
     it("POST /add-to-assembly sends a quantity as the expression typed", async () => {
         await seedAssembly(db);

@@ -46,7 +46,7 @@ import {
     toKey,
     toSelection,
     toStoredSelection,
-    withDerivationValues
+    fillDerivationValues
 } from "@backend/features/configurations/selection";
 import { isDerivationVariable } from "@backend/features/configurations/roles";
 import { evaluateExpression } from "@backend/features/configurations/input-parser";
@@ -122,13 +122,12 @@ export function ConfigurationWrapper(
     const whole = useMemo(
         () =>
             parameters
-                ? withDerivationValues(
+                ? fillDerivationValues(
                       normalizeSelection(
                           toSelection(selection ?? {}, parameters),
                           parameters
                       ),
-                      parameters,
-                      true
+                      parameters
                   )
                 : undefined,
         [parameters, selection]
@@ -350,7 +349,7 @@ function BooleanInput(props: ParameterProps<BooleanParameter>): ReactNode {
 }
 
 const DERIVATION_VARIABLE_NOTE =
-    "Onshape does not allow deriving the same part with the same configuration multiple times into a part studio. To avoid this limitation, Derivation Variable has been populated with a unique value.";
+    "Filled with a unique value, so each derive is its own configuration.";
 
 function StringInput(props: ParameterProps<StringParameter>): ReactNode {
     const { parameter, value, onValueChange } = props;

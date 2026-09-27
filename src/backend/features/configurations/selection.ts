@@ -153,23 +153,17 @@ export function toKey(
     return encodeConfiguration(canonical);
 }
 
-/**
- * Gives each derivation variable a fresh value: Onshape refuses a second derive
- * of the same part in the same configuration. `keepFilled` keeps existing ones
- * so the panel doesn't show a new value every render.
- */
-export function withDerivationValues(
+/** Gives each derivation variable still at its default a unique value, so each derive is its own configuration. */
+export function fillDerivationValues(
     selection: Selection,
-    parameters: ConfigurationParameter[],
-    keepFilled = false
+    parameters: ConfigurationParameter[]
 ): Selection {
     const next = { ...selection };
     for (const parameter of parameters) {
-        if (!isDerivationVariable(parameter)) {
-            continue;
-        }
-        const filled = next[parameter.id] !== parameter.default;
-        if (!(keepFilled && filled)) {
+        if (
+            isDerivationVariable(parameter) &&
+            next[parameter.id] === parameter.default
+        ) {
             next[parameter.id] = crypto.randomUUID();
         }
     }
@@ -188,22 +182,6 @@ export function toStoredSelection(
         }
     }
     return stored;
-}
-
-/**
- * The first applied parameter alone. Onshape fills in the rest from defaults,
- * so this names the default part for callers that can't send an empty
- * configuration. Empty only when every parameter is hidden.
- */
-export function toShortestConfiguration(
-    selection: Selection,
-    parameters: ConfigurationParameter[]
-): Selection {
-    const values = appliedValues(selection, parameters);
-    const first = parameters.find(
-        (parameter) => values[parameter.id] !== undefined
-    );
-    return first === undefined ? {} : { [first.id]: values[first.id] };
 }
 
 /**
