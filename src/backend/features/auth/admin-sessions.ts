@@ -16,6 +16,12 @@ import { kvStore } from "../../lib/kv-store";
 /** Each admin's latest session id, by user id. */
 const adminSessions = kvStore<string>("admin-session");
 
+/**
+ * The dev access-level override makes an admin who is on no team, so no user
+ * id finds them; their session is held under this instead. Only dev writes it.
+ */
+const OVERRIDDEN_ADMIN = "access-level-override";
+
 /** Only writes when the session changed. */
 export async function rememberAdminSession(
     kv: KVNamespace,
@@ -25,6 +31,13 @@ export async function rememberAdminSession(
     if ((await adminSessions.get(kv, userId)) !== sessionId) {
         await adminSessions.put(kv, userId, sessionId);
     }
+}
+
+export function rememberOverriddenAdminSession(
+    kv: KVNamespace,
+    sessionId: string
+): Promise<void> {
+    return rememberAdminSession(kv, OVERRIDDEN_ADMIN, sessionId);
 }
 
 async function getLiveApi(
@@ -45,7 +58,10 @@ async function getLiveApi(
     }
 }
 
-/** The owner's session, else the first working one of the libraries' team admins. */
+/**
+ * The owner's session, else the first working one of the libraries' team
+ * admins, else an overridden admin's.
+ */
 export async function getAdminOnshapeApi(
     env: AppBindings,
     libraryIds: LibraryId[]
@@ -53,8 +69,19 @@ export async function getAdminOnshapeApi(
     const owner = env.OWNER_USER_ID
         ? await getLiveApi(env.KV, env.OWNER_USER_ID)
         : undefined;
-    if (owner || libraryIds.length === 0) {
-        return owner;
+    return (
+        owner ??
+        (await getTeamAdminApi(env, libraryIds)) ??
+        (await getLiveApi(env.KV, OVERRIDDEN_ADMIN))
+    );
+}
+
+async function getTeamAdminApi(
+    env: AppBindings,
+    libraryIds: LibraryId[]
+): Promise<OAuthApi | undefined> {
+    if (libraryIds.length === 0) {
+        return undefined;
     }
     const rows = await getDb(env.DB)
         .select({ adminTeam: libraries.adminTeam })

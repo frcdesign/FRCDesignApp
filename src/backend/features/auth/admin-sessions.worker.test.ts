@@ -5,7 +5,11 @@ import { MockOnshapeApi } from "../../../__test_utils__/mock-onshape-api";
 import { getDb } from "../../db/client";
 import { libraries } from "../../db/schema";
 import { eq } from "drizzle-orm";
-import { getAdminOnshapeApi, rememberAdminSession } from "./admin-sessions";
+import {
+    getAdminOnshapeApi,
+    rememberAdminSession,
+    rememberOverriddenAdminSession
+} from "./admin-sessions";
 import * as RequestAuth from "./request-auth";
 
 const db = getDb(env.DB);
@@ -33,6 +37,7 @@ describe("finding an admin's session", () => {
         await resetDb(db);
         await seedLibrary(db);
         await env.KV.delete(`admin-session:${OWNER}`);
+        await env.KV.delete("admin-session:access-level-override");
         await db
             .update(libraries)
             .set({
@@ -62,6 +67,14 @@ describe("finding an admin's session", () => {
         const apis = sessions(["owner-session"]);
 
         expect(await find()).toBe(apis.get("admin-session"));
+    });
+
+    // The dev override's admin is on no team, so nothing else finds them.
+    it("falls back last to the overridden admin's", async () => {
+        await rememberOverriddenAdminSession(env.KV, "override-session");
+        const apis = sessions(["admin-session"]);
+
+        expect(await find()).toBe(apis.get("override-session"));
     });
 
     it("finds nothing when no session works", async () => {

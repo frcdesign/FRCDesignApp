@@ -49,6 +49,32 @@ describe("the dev access-level override", () => {
     it("leaves an unset override to the caller's own session", async () => {
         expect(await getMaxAccessLevel()).toBe(AccessLevel.USER);
     });
+
+    // A webhook's load in dev has no other admin session to borrow.
+    it("keeps the session of an admin it grants", async () => {
+        const kept = async (override: AccessLevel) => {
+            await env.KV.delete("admin-session:access-level-override");
+            const sessionId = crypto.randomUUID();
+            await saveSession(env.KV, sessionId, {
+                accessToken: "token",
+                refreshToken: "refresh",
+                expiresAt: Date.now() + 60_000,
+                userId: "developer"
+            });
+            await app.request(
+                "/api/access-data/library/frc-design-lib",
+                {
+                    method: "GET",
+                    headers: { Cookie: `frc-design-app-session=${sessionId}` }
+                },
+                { ...env, VITE_ACCESS_LEVEL_OVERRIDE: override }
+            );
+            return env.KV.get("admin-session:access-level-override");
+        };
+
+        expect(await kept(AccessLevel.ADMIN)).toBeTruthy();
+        expect(await kept(AccessLevel.EDITOR)).toBeNull();
+    });
 });
 
 describe("access from a library's admin team", () => {

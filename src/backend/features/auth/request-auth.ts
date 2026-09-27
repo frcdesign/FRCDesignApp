@@ -8,7 +8,10 @@ import { getDb } from "../../db/client";
 import { libraries } from "../../db/schema";
 import type { LibraryId } from "../library/library-id";
 import { AccessLevel, isWithinAccessLevel } from "./access-level";
-import { rememberAdminSession } from "./admin-sessions";
+import {
+    rememberAdminSession,
+    rememberOverriddenAdminSession
+} from "./admin-sessions";
 import {
     getOauthClient,
     makeAuthTokens,
@@ -158,6 +161,20 @@ async function lookUpAccessLevel(
     return member.isTeamAdmin ? AccessLevel.ADMIN : AccessLevel.EDITOR;
 }
 
+/** So a load nobody is signed in behind, like a webhook's, can borrow the session in dev. */
+async function rememberOverriddenAdmin(
+    c: AppContext,
+    override: AccessLevel
+): Promise<void> {
+    if (
+        isWithinAccessLevel(AccessLevel.ADMIN, override) &&
+        !isForceSignedIn(c) &&
+        (await isSignedIn(c))
+    ) {
+        await rememberOverriddenAdminSession(c.env.KV, getSessionId(c));
+    }
+}
+
 /** getAccessLevel falls back to USER without a real session. */
 export const productionAuth: AuthResolver = (c) => ({
     getOnshapeApi: () => getOnshapeApi(c),
@@ -170,7 +187,10 @@ export const productionAuth: AuthResolver = (c) => ({
     },
     getAccessLevel: async (libraryId) => {
         const override = getAccessLevelOverride(c);
-        if (override) return override;
+        if (override) {
+            await rememberOverriddenAdmin(c, override);
+            return override;
+        }
         // FORCE_SIGNED_IN has no real session to identify the caller.
         if (!isForceSignedIn(c) && (await isSignedIn(c))) {
             return getLibraryAccessLevel(c, libraryId);
