@@ -35,11 +35,10 @@ describe("registering webhooks", () => {
         const { onshapeApi, post } = mockOnshape();
 
         await ensureWebhook(
-            env,
+            { ...env, APP_URL: ORIGIN },
             onshapeApi,
             WebhookSubject.DOCUMENT,
-            "doc",
-            ORIGIN
+            "doc"
         );
 
         const [row] = await stored();
@@ -58,18 +57,16 @@ describe("registering webhooks", () => {
     it("registers nothing for a subject already registered", async () => {
         const { onshapeApi, post } = mockOnshape();
         await ensureWebhook(
-            env,
+            { ...env, APP_URL: ORIGIN },
             onshapeApi,
             WebhookSubject.DOCUMENT,
-            "doc",
-            ORIGIN
+            "doc"
         );
         await ensureWebhook(
-            env,
+            { ...env, APP_URL: ORIGIN },
             onshapeApi,
             WebhookSubject.DOCUMENT,
-            "doc",
-            ORIGIN
+            "doc"
         );
         expect(post).toHaveBeenCalledOnce();
     });
@@ -78,11 +75,10 @@ describe("registering webhooks", () => {
     it("registers again when Onshape no longer has the one on record", async () => {
         const { onshapeApi, post } = mockOnshape();
         await ensureWebhook(
-            env,
+            { ...env, APP_URL: ORIGIN },
             onshapeApi,
             WebhookSubject.DOCUMENT,
-            "doc",
-            ORIGIN
+            "doc"
         );
         vi.spyOn(onshapeApi, "get").mockRejectedValue(
             new OnshapeApiError("gone", 404)
@@ -90,11 +86,10 @@ describe("registering webhooks", () => {
         post.mockResolvedValue({ id: "replacement" });
 
         await ensureWebhook(
-            env,
+            { ...env, APP_URL: ORIGIN },
             onshapeApi,
             WebhookSubject.DOCUMENT,
-            "doc",
-            ORIGIN
+            "doc"
         );
 
         expect(post).toHaveBeenCalledTimes(2);
@@ -105,11 +100,10 @@ describe("registering webhooks", () => {
     it("removes one Onshape already dropped without complaint", async () => {
         const { onshapeApi, remove } = mockOnshape();
         await ensureWebhook(
-            env,
+            { ...env, APP_URL: ORIGIN },
             onshapeApi,
             WebhookSubject.DOCUMENT,
-            "doc",
-            ORIGIN
+            "doc"
         );
         remove.mockRejectedValue(new OnshapeApiError("gone", 404));
 

@@ -82,8 +82,7 @@ describe("receiving a webhook", () => {
                 libraryId: TEST_LIBRARY_ID,
                 groupId: TEST_GROUP_ID,
                 awaitApproval: false,
-                forceReload: false,
-                origin: "http://localhost"
+                forceReload: false
             }
         ]);
     });

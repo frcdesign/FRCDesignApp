@@ -18,6 +18,8 @@ export interface AppBindings {
     RENDER_THUMBNAIL_WORKFLOW: Workflow<RenderThumbnailParams>;
     /** Relays pushes to open clients; see `features/push`. */
     PUSH_HUB: DurableObjectNamespace<PushHub>;
+    /** Where the app is served, without a trailing slash; see `wrangler.jsonc`. */
+    APP_URL: string;
     /** The Onshape user id granted `AccessLevel.OWNER`; unset grants nobody. */
     OWNER_USER_ID?: string;
     /** Dev-only: the access level granted, bypassing Onshape. */

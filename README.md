@@ -105,7 +105,7 @@ Done once, by someone with access to the frcdesign.org Cloudflare account:
 
 Refreshing the token in the dashboard revokes the old one, for when it leaks or someone leaves.
 
-To serve your own tunnel at another hostname, set `DEV_HOSTNAME=<hostname>` in `.env` so Vite accepts it, and use that hostname in your Onshape OAuth app.
+To serve your own tunnel at another hostname, set `APP_URL=https://<hostname>` in `.env` (it overrides the dev value in `wrangler.jsonc`), and use that hostname in your Onshape OAuth app.
 
 ## VSCode Setup
 

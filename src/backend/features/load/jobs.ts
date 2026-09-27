@@ -24,8 +24,6 @@ export interface LoadDocumentParams {
     forceReload: boolean;
     /** Waits for an admin to approve a new version before loading it. */
     awaitApproval?: boolean;
-    /** This deployment's, which the document's webhook is delivered to. */
-    origin: string;
 }
 
 /** What a held load waits for; see `approveHeldLoads`. */

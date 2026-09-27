@@ -64,8 +64,7 @@ export async function ensureWebhook(
     env: AppBindings,
     onshapeApi: OAuthApi,
     subject: WebhookSubject,
-    subjectId: string,
-    origin: string
+    subjectId: string
 ): Promise<void> {
     const db = getDb(env.DB);
     const existing = await db
@@ -96,7 +95,7 @@ export async function ensureWebhook(
             target: [onshapeWebhooks.subject, onshapeWebhooks.subjectId],
             set: { token, webhookId: null }
         });
-    const url = new URL("/api" + WEBHOOK_ROUTE, origin);
+    const url = new URL("/api" + WEBHOOK_ROUTE, env.APP_URL);
     url.searchParams.set("token", token);
 
     const webhook = await createWebhook(onshapeApi, {

@@ -17,9 +17,9 @@ const UPDATE_WORKSPACE_UNITS = "onshape.model.lifecycle.updateworkspaceunits";
 export async function watchWorkspaceUnits(
     onshapeApi: OnshapeApi,
     workspace: InstancePath,
-    origin: string
+    appUrl: string
 ): Promise<void> {
-    const url = new URL("/api" + UNITS_WEBHOOK_ROUTE, origin);
+    const url = new URL("/api" + UNITS_WEBHOOK_ROUTE, appUrl);
     url.searchParams.set("documentId", workspace.documentId);
     url.searchParams.set("workspaceId", workspace.instanceId);
     await createWebhook(onshapeApi, {

@@ -49,7 +49,8 @@ team, plus one owner set by configuration.
    sends the caller through sign-in and back, marked so it never loops.
 3. `/auth/sign-in` stores `{ state, redirectUrl }` in the login cookie and
    redirects to Onshape's authorize page. The redirect url must be a local path.
-4. Onshape returns to the OAuth app's registered `/auth/callback`, which checks
+4. The authorize request names `APP_URL/auth/callback` as its redirect uri,
+   which must be registered on the OAuth app. Onshape returns there; the callback checks
    the state, exchanges the code, starts a session (a new id), and redirects back.
 
 ### Sign-out
@@ -103,14 +104,14 @@ user chose to view the app as, clamped to what the server grants.
 
 ## Environment variables
 
-| Name                                     | Where it is set                         | Read by                                | Effect                                                             |
-| ---------------------------------------- | --------------------------------------- | -------------------------------------- | ------------------------------------------------------------------ |
-| `OAUTH_CLIENT_ID`, `OAUTH_CLIENT_SECRET` | Secrets per environment; `.env` locally | `onshape-oauth.ts`                     | The Onshape OAuth app                                              |
-| `OWNER_USER_ID`                          | `wrangler.jsonc` vars                   | `request-auth.ts`, `admin-sessions.ts` | The owner; unset grants nobody                                     |
-| `NODE_ENV`                               | `wrangler.jsonc` vars                   | `request-auth.ts`                      | Anything but `production` arms the two dev overrides below         |
-| `VITE_ACCESS_LEVEL_OVERRIDE`             | `.env`                                  | Server and client                      | Server grants it (dev only); client views the app at it by default |
-| `FORCE_SIGNED_IN`                        | `.env`                                  | `request-auth.ts`                      | Dev only: signed in as a fake user with no Onshape session         |
-| `DEV_HOSTNAME`                           | `.env`                                  | `vite.config.ts`                       | Overrides the dev tunnel hostname Vite accepts                     |
+| Name                                     | Where it is set                                  | Read by                                        | Effect                                                                                                  |
+| ---------------------------------------- | ------------------------------------------------ | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `OAUTH_CLIENT_ID`, `OAUTH_CLIENT_SECRET` | Secrets per environment; `.env` locally          | `onshape-oauth.ts`                             | The Onshape OAuth app                                                                                   |
+| `OWNER_USER_ID`                          | `wrangler.jsonc` vars                            | `request-auth.ts`, `admin-sessions.ts`         | The owner; unset grants nobody                                                                          |
+| `NODE_ENV`                               | `wrangler.jsonc` vars                            | `request-auth.ts`                              | Anything but `production` arms the two dev overrides below                                              |
+| `VITE_ACCESS_LEVEL_OVERRIDE`             | `.env`                                           | Server and client                              | Server grants it (dev only); client views the app at it by default                                      |
+| `FORCE_SIGNED_IN`                        | `.env`                                           | `request-auth.ts`                              | Dev only: signed in as a fake user with no Onshape session                                              |
+| `APP_URL`                                | `wrangler.jsonc` vars; `.env` to override in dev | `onshape-oauth.ts`, webhooks, `vite.config.ts` | Where the app is served: the OAuth redirect uri, every webhook url, and the host the dev server accepts |
 
 `README.md` also lists `API_ACCESS_KEY` and `API_SECRET_KEY`, which no code
 reads.

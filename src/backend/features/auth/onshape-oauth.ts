@@ -11,9 +11,13 @@ import { startLogin, takeLogin } from "./login";
 const AUTH_ENDPOINT = "https://oauth.onshape.com/oauth/authorize";
 export const TOKEN_ENDPOINT = "https://oauth.onshape.com/oauth/token";
 
-/** No redirect uri, so Onshape uses the OAuth app's registered callback. */
+/** The redirect uri must match one registered on the Onshape OAuth app. */
 export function getOauthClient(): OAuth2Client {
-    return new OAuth2Client(env.OAUTH_CLIENT_ID, env.OAUTH_CLIENT_SECRET, null);
+    return new OAuth2Client(
+        env.OAUTH_CLIENT_ID,
+        env.OAUTH_CLIENT_SECRET,
+        `${env.APP_URL}/auth/callback`
+    );
 }
 
 export function makeAuthTokens(tokens: OAuth2Tokens): AuthTokens {

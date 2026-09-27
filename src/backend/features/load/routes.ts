@@ -42,14 +42,12 @@ loadRoutes.post(
             .from(groups)
             .where(eq(groups.libraryId, libraryId));
         const sessionId = getSessionId(c);
-        const origin = new URL(c.req.url).origin;
         await requestLoads(
             c.env,
             rows.map((row) => ({
                 ...row,
                 sessionId,
-                forceReload,
-                origin
+                forceReload
             }))
         );
         return c.json({ documents: rows.length } satisfies ReloadOut);

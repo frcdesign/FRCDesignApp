@@ -127,7 +127,7 @@ Each load ends by making sure Onshape has the document's webhook for
 `onshape.model.lifecycle.createversion` (`ensureWebhook`). It checks the stored
 webhook still exists and registers a new one if not: Onshape cancels a webhook
 whose registration check fails, and deactivates one whose deliveries error,
-without telling us. The delivery url carries a random token that identifies the
+without telling us. The delivery url is on `APP_URL` and carries a random token that identifies the
 row; the route answers 200 at once and does the work after, so a slow load never
 costs the webhook. Deleting the last group of a document removes its webhook.
 

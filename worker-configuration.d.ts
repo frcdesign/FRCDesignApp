@@ -7,6 +7,7 @@ interface __BaseEnv_Env {
 	DB: D1Database;
 	ASSETS: Fetcher;
 	OWNER_USER_ID: "5eace32713a966103efd2aa0";
+	APP_URL: "https://dev.frcdesign.org";
 	NODE_ENV: "production" | "development";
 	API_ACCESS_KEY: string;
 	API_SECRET_KEY: string;
@@ -28,6 +29,7 @@ declare namespace Cloudflare {
 		DB: D1Database;
 		ASSETS: Fetcher;
 		OWNER_USER_ID: "5eace32713a966103efd2aa0";
+		APP_URL: "https://frc-design-app-cert.frcdesign-org.workers.dev";
 		NODE_ENV: "production";
 		API_ACCESS_KEY: string;
 		API_SECRET_KEY: string;
@@ -44,6 +46,7 @@ declare namespace Cloudflare {
 		DB: D1Database;
 		ASSETS: Fetcher;
 		OWNER_USER_ID: "5eace32713a966103efd2aa0";
+		APP_URL: "https://app.frcdesign.org";
 		NODE_ENV: "production";
 		API_ACCESS_KEY: string;
 		API_SECRET_KEY: string;
@@ -61,7 +64,7 @@ type StringifyValues<EnvType extends Record<string, unknown>> = {
 	[Binding in keyof EnvType]: EnvType[Binding] extends string ? EnvType[Binding] : string;
 };
 declare namespace NodeJS {
-	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "OWNER_USER_ID" | "NODE_ENV" | "API_ACCESS_KEY" | "API_SECRET_KEY" | "OAUTH_CLIENT_ID" | "OAUTH_CLIENT_SECRET" | "VITE_ACCESS_LEVEL_OVERRIDE">> {}
+	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "OWNER_USER_ID" | "NODE_ENV" | "APP_URL" | "API_ACCESS_KEY" | "API_SECRET_KEY" | "OAUTH_CLIENT_ID" | "OAUTH_CLIENT_SECRET" | "VITE_ACCESS_LEVEL_OVERRIDE">> {}
 }
 
 // Begin runtime types

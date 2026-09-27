@@ -1,10 +1,9 @@
 import { defineConfig, loadEnv } from "vite";
+import { unstable_readConfig } from "wrangler";
 import react from "@vitejs/plugin-react";
 import { cloudflare } from "@cloudflare/vite-plugin";
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import { fileURLToPath } from "url";
-
-const DEFAULT_DEV_HOSTNAME = "dev.frcdesign.org";
 
 const srcPath = (dir: string) =>
     fileURLToPath(new URL(`./src/${dir}`, import.meta.url));
@@ -32,10 +31,18 @@ export default defineConfig(({ mode }) => ({
     server: {
         port: 3000,
         strictPort: true,
-        // The dev tunnel's hostname, which Vite otherwise turns away.
-        allowedHosts: [
-            loadEnv(mode, process.cwd(), "").DEV_HOSTNAME ||
-                DEFAULT_DEV_HOSTNAME
-        ]
+        // The dev tunnel's host, which Vite otherwise turns away.
+        allowedHosts: [new URL(devAppUrl(mode)).hostname]
     }
 }));
+
+/** `.env` overrides the dev var, as it does for the Worker. */
+function devAppUrl(mode: string): string {
+    const appUrl =
+        loadEnv(mode, process.cwd(), "").APP_URL ??
+        unstable_readConfig({ config: "wrangler.jsonc" }).vars.APP_URL;
+    if (typeof appUrl !== "string") {
+        throw new Error("Set APP_URL in wrangler.jsonc's vars");
+    }
+    return appUrl;
+}

@@ -43,11 +43,7 @@ webhookRoutes.post(WEBHOOK_ROUTE, async (c) => {
         switch (event) {
             case WebhookEvent.CREATE_VERSION:
                 if (subject === WebhookSubject.DOCUMENT) {
-                    await reloadDocument(
-                        c.env,
-                        subjectId,
-                        new URL(c.req.url).origin
-                    );
+                    await reloadDocument(c.env, subjectId);
                 }
                 break;
             case WebhookEvent.UNREGISTER:
@@ -79,8 +75,7 @@ webhookRoutes.post(UNITS_WEBHOOK_ROUTE, async (c) => {
  */
 async function reloadDocument(
     env: AppBindings,
-    documentId: string,
-    origin: string
+    documentId: string
 ): Promise<void> {
     const documentGroups = await getDb(env.DB)
         .select({
@@ -95,8 +90,7 @@ async function reloadDocument(
         env,
         documentGroups.map((group) => ({
             ...group,
-            forceReload: false,
-            origin
+            forceReload: false
         }))
     );
 }

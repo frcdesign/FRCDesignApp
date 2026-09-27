@@ -23,8 +23,7 @@ function params(groupId: string, forceReload = false): LoadDocumentParams {
         libraryId: TEST_LIBRARY_ID,
         groupId,
         sessionId: "session",
-        forceReload,
-        origin: "https://app.example.com"
+        forceReload
     };
 }
 

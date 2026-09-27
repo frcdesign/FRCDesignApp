@@ -78,7 +78,7 @@ export async function getUnitInfoCached(
             watchWorkspaceUnits(
                 await c.var.getOnshapeApi(),
                 path,
-                new URL(c.req.url).origin
+                c.env.APP_URL
             )
         );
     }

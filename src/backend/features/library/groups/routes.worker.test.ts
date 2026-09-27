@@ -260,8 +260,7 @@ describe("POST /group", () => {
                 libraryId: TEST_LIBRARY_ID,
                 groupId: rows[1].id,
                 sessionId: "test-session",
-                forceReload: false,
-                origin: "http://localhost"
+                forceReload: false
             }
         ]);
     });

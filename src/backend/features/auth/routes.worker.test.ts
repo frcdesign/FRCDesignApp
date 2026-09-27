@@ -123,10 +123,12 @@ describe("GET /auth/sign-in", () => {
         return new URL(res.headers.get("Location")!);
     }
 
-    // Onshape uses the OAuth app's registered redirect url.
-    it("names no callback, leaving it to the OAuth app", async () => {
+    // It has to match one registered on the Onshape OAuth app.
+    it("names the callback on the app's own url", async () => {
         const url = await authorizationUrl("");
-        expect(url.searchParams.get("redirect_uri")).toBeNull();
+        expect(url.searchParams.get("redirect_uri")).toBe(
+            `${env.APP_URL}/auth/callback`
+        );
     });
 
     it("scopes the sign-in to the enterprise that launched it", async () => {

@@ -135,8 +135,7 @@ async function loadDocument(
                     ctx.env,
                     await getOnshapeApiFromContext(ctx),
                     WebhookSubject.DOCUMENT,
-                    stored.documentId,
-                    params.origin
+                    stored.documentId
                 )
         );
     } catch (error) {

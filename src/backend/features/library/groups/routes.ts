@@ -216,8 +216,7 @@ groupRoutes.post(
                 libraryId,
                 groupId,
                 sessionId,
-                forceReload: false,
-                origin: new URL(c.req.url).origin
+                forceReload: false
             }
         ]);
 

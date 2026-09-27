@@ -90,7 +90,10 @@
         // The Onshape user granted the owner access level, whose session
         // webhook-triggered loads run under.
         "OWNER_USER_ID": "5eace32713a966103efd2aa0",
-        "NODE_ENV": "development"
+        "NODE_ENV": "development",
+        // Where the app is served: OAuth's redirect and every webhook point here.
+        // The dev tunnel's; a developer on their own tunnel overrides it in `.env`.
+        "APP_URL": "https://dev.frcdesign.org"
     },
     /**
      * Service Bindings (communicate between multiple Workers)
@@ -145,7 +148,8 @@
                 // Production, not because cert is production, but because
                 // FORCE_SIGNED_IN and VITE_ACCESS_LEVEL_OVERRIDE are gated on
                 // this alone: anything but "production" leaves them armed.
-                "NODE_ENV": "production"
+                "NODE_ENV": "production",
+                "APP_URL": "https://frc-design-app-cert.frcdesign-org.workers.dev"
             },
             "limits": {
                 "subrequests": 1000
@@ -192,7 +196,8 @@
             },
             "vars": {
                 "OWNER_USER_ID": "5eace32713a966103efd2aa0",
-                "NODE_ENV": "production"
+                "NODE_ENV": "production",
+                "APP_URL": "https://app.frcdesign.org"
             },
             "limits": {
                 "subrequests": 100000
