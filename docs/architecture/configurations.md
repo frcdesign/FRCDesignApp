@@ -78,7 +78,9 @@ Comparing or counting values (analytics, "is this the default") goes through
 1. The load fetches the element's configuration and `parse-configuration.ts`
    turns it into `ConfigurationParameter`s, visibility conditions included.
 2. `withRoles` marks parameters whose names say they are a derivation variable,
-   a color or its channels, or tessellation. Roles are never indexed.
+   a color or its channels, or tessellation. A parameter with a role is never
+   indexed; no list or checkbox in the libraries has one yet, so today that
+   excludes nothing.
 3. The parameters are stored on the `configurations` row.
 
 ### Indexing
@@ -108,13 +110,15 @@ load about the band.
 2. The panel keeps a selection. `normalizeSelection` settles it after each edit:
    hidden parameters take their default and an enum lands on a visible option,
    repeated because settling one parameter can change another's options.
-3. The panel reports the selection and its key; the key drives the preview
+3. The panel gives each derivation variable still at its default a unique
+   value (`fillDerivationValues`), so each derive is its own configuration.
+   An insert that skips the menu leaves it at its default.
+4. The panel reports the selection and its key; the key drives the preview
    thumbnail.
-4. On insert, the server makes the selection whole (`toSelection`), gives each
-   derivation variable a fresh value (`withDerivationValues`, since Onshape
-   refuses a second derive of the same configuration), and sends only the
-   overrides (`onshapeOverrides`). Where Onshape rejects an empty configuration
-   it sends `toShortestConfiguration` instead.
+5. On insert, the server makes the selection whole (`toSelection`) and sends
+   only the overrides (`onshapeOverrides`). Onshape refuses a part studio's
+   empty configuration (an assembly's is fine), so a part studio left on its
+   defaults is sent its first parameter at its default.
 
 ### Search
 
@@ -131,8 +135,7 @@ record for a selection, since records name only what enumeration varied.
   to Onshape as a configuration outside thumbnails.
 - Every boundary that receives a configuration (request body, url, stored
   favorite, search hit) passes it through `toSelection`.
-- Stored and shared selections omit derivation variables (`toStoredSelection`);
-  inserts always give them a fresh value.
+- Stored and shared selections omit derivation variables (`toStoredSelection`).
 - Parameters with a role are never indexed.
 - The load and the admin UI decide the indexing band with the same
   `combinations.ts` functions.
@@ -154,6 +157,9 @@ record for a selection, since records name only what enumeration varied.
   its lossy canonicalization; comparisons use `canonicalValues`.
 - **Roles by name.** Onshape doesn't mark a parameter's purpose, so recognized
   names are stored as `role` at load.
+- **Derivation variables are filled in the menu.** Onshape takes a repeated
+  derive of the same configuration; the unique value only keeps each derive
+  distinct, which is the menu's concern, not the server's.
 - **Assemblies index like part studios.** Their probes send overrides the same
   way, so exclusions apply to both.
 

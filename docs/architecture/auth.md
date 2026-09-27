@@ -52,6 +52,14 @@ team, plus one owner set by configuration.
 4. Onshape returns to the OAuth app's registered `/auth/callback`, which checks
    the state, exchanges the code, starts a session (a new id), and redirects back.
 
+### Sign-out
+
+Standalone only: inside Onshape the session is Onshape's to end. **Sign out**
+sends the browser to `/auth/sign-out?redirectUrl=<current page>`, which deletes
+the session's KV record and its cookie, then returns to the page, where access
+is refetched signed out. The Onshape tokens themselves are not revoked; they
+expire on their own.
+
 ### A request
 
 `bindAuth` puts lazy answers on `c.var`, so a route that asks nothing never calls
@@ -78,9 +86,13 @@ up in the library's stored `admin_team`. It is a database read, never an Onshape
 call; the team is synced when the owner sets it or an admin presses **Refresh**,
 because Onshape's team webhooks need a company, which a personal account lacks.
 
-Routes gate with `requireSignInMiddleware`, `requireEditor(libraryOf)`,
-`requireAdminMiddleware` and `requireOwnerMiddleware`. A route that names an
-insertable or group looks its library up rather than trusting the caller.
+Routes gate with `requireSignInMiddleware`, `requireEditorMiddleware`,
+`requireAdminMiddleware` and `requireOwnerMiddleware`. A library-gated route
+names its library in the path (`libraryRoute()`), and the middleware checks the
+caller's level there; a route acting on a group or element also scopes its
+query to that library, so naming your own library with another's element finds
+nothing. The owner's level is the same everywhere, so the owner check always
+asks about the default library.
 
 Whenever an admin's or the owner's level is checked, their session id is saved
 under `admin-session:` so background work can borrow it (see
@@ -100,8 +112,8 @@ user chose to view the app as, clamped to what the server grants.
 | `FORCE_SIGNED_IN`                        | `.env`                                  | `request-auth.ts`                      | Dev only: signed in as a fake user with no Onshape session         |
 | `DEV_HOSTNAME`                           | `.env`                                  | `vite.config.ts`                       | Overrides the dev tunnel hostname Vite accepts                     |
 
-`README.md` also lists `API_ACCESS_KEY`, `API_SECRET_KEY` and `VERBOSE_LOGGING`,
-and the generated types include `SESSION_SECRET`; no code reads any of them.
+`README.md` also lists `API_ACCESS_KEY` and `API_SECRET_KEY`, which no code
+reads.
 
 Bindings (`DB`, `KV`, `BLOB`, `ASSETS`, the two workflows, `PUSH_HUB`) are
 declared in `wrangler.jsonc` per environment and typed in `AppBindings`. Run

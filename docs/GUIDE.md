@@ -125,20 +125,26 @@ myRoutes.get("/my-thing" + libraryRoute(), async (c) => {
 });
 ```
 
-**Route param helpers** (defined in `src/backend/app.ts`):
+**Route param helpers** (defined in `src/backend/lib/route-params.ts`):
 
 - `libraryRoute()` — returns `"/library/:libraryId"`. Use `getLibraryParam(c)` to read it.
 - `insertableRoute()` — returns `"/insertable/:insertableId"`. Use `getInsertableParam(c)`.
-- `groupRoute()` — returns `"/group/:groupId"`. Use `getGroupParam(c)`.
+- `favoriteRoute()` — returns `"/favorite/:favoriteId"`. Use `getFavoriteParam(c)`.
 
-**Protecting routes:** Wrap the handler with middleware if it requires elevated access:
+**Protecting routes:** A route that needs elevated access names its library in the path and takes the matching middleware from `src/backend/features/auth/guards.ts`. One acting on a group or element also scopes its query to that library:
 
 ```ts
-import { requireEditorMiddleware } from "../access-level-utils";
+import { requireEditorMiddleware } from "../auth/guards";
 
-myRoutes.post("/my-admin-action", requireEditorMiddleware, async (c) => {
-    // only editors and admins reach here
-});
+myRoutes.post(
+    "/my-editor-action" + libraryRoute() + insertableRoute(),
+    requireEditorMiddleware,
+    async (c) => {
+        // only the library's editors, admins and the owner reach here
+        const libraryId = getLibraryParam(c);
+        // ...where(and(eq(insertables.id, id), eq(insertables.libraryId, libraryId)))
+    }
+);
 ```
 
 ### 2. Register the route group in `app.ts`

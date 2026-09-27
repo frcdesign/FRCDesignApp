@@ -19,7 +19,7 @@ account's API allocation. There are three kinds:
 | `src/backend/features/thumbnails/keys.ts`                   | R2 keys and app urls; shared with the client so both build the same url     |
 | `src/backend/features/thumbnails/store.ts`                  | `putThumbnail`, `uploadThumbnails` (both sizes of an element's default)     |
 | `src/backend/features/thumbnails/workspace.ts`              | The per-version thumbnail workspace: `syncThumbnailWorkspace`, cleanup      |
-| `src/backend/features/thumbnails/routes.ts`                 | `GET /api/thumbnail/...`, `POST /api/reload-thumbnail`                      |
+| `src/backend/features/thumbnails/routes.ts`                 | `GET /api/thumbnail/...`, `POST /api/reload-thumbnail/...`                  |
 | `src/backend/features/thumbnails/render.ts`                 | `requestRender`: starts one configuration's render, at most once            |
 | `src/backend/features/thumbnails/render-workflow.ts`        | `RenderThumbnailWorkflow`: waits out Onshape's render and stores both sizes |
 | `src/backend/features/thumbnails/reload.ts`                 | The **Reload thumbnail** action for one element or group                    |
@@ -113,7 +113,7 @@ element's default meanwhile.
 ### Reload thumbnail
 
 Editors can refetch one element's or group's thumbnail from its menu
-(`POST /api/reload-thumbnail`). It deletes the stored pair, fetches again from
+(`POST /api/reload-thumbnail/library/:libraryId`, naming the group or element in the body). It deletes the stored pair, fetches again from
 the thumbnail workspace (syncing it first), clears `THUMBNAIL_FAILED` and bumps
 the library version. Onshape still rendering answers 503.
 
