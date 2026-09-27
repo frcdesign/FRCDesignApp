@@ -11,12 +11,17 @@ export const APP_MODAL_CLASSES = {
     body: classes.body
 };
 
-/** What every modal's content sits in, so its body can scroll. */
+/**
+ * What every modal's content sits in, so its body can scroll. The focus trap
+ * takes the first `data-autofocus` it finds: a field that asks for focus gets
+ * it, and otherwise the empty target after the content does, since landing on
+ * the first control makes it look pre-selected.
+ */
 export function AppModalContent(props: PropsWithChildren): ReactNode {
-    // Otherwise the focus trap lands on the first control, which looks pre-selected.
     return (
-        <div data-autofocus tabIndex={-1} className={classes.fill}>
+        <div className={classes.fill}>
             {props.children}
+            <span data-autofocus tabIndex={-1} />
         </div>
     );
 }

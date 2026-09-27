@@ -26,6 +26,7 @@ function AddGroupMenuContent(props: AddGroupMenuContentProps): ReactNode {
         <>
             <AppModalBody>
                 <TextInput
+                    data-autofocus
                     placeholder="Document url..."
                     value={url}
                     onChange={(event) => setUrl(event.currentTarget.value)}
