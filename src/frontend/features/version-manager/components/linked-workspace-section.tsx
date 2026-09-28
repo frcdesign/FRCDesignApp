@@ -1,6 +1,5 @@
 import {
     Badge,
-    Button,
     Center,
     Divider,
     Group,
@@ -18,7 +17,8 @@ import {
     LinkBreakIcon,
     TreeStructureIcon
 } from "@phosphor-icons/react";
-import { useState, type ReactNode } from "react";
+import { type MouseEvent, useState, type ReactNode } from "react";
+import { useOs } from "@mantine/hooks";
 import {
     LinkDirection,
     PullScopeKind,
@@ -62,10 +62,6 @@ export const DIRECTION_COPY = {
         allAction: "Quick pull from all",
         rowAction: "Quick pull",
         formAction: "Pull",
-        quickAll:
-            "Versions every parent and moves this document's references onto what it cut",
-        quickRow:
-            "Versions this parent and moves this document's references onto what it cut",
         running: "Pulling from Onshape...",
         description:
             "Workspaces this one references. Pulling versions them and moves this workspace's references onto what it cut.",
@@ -76,10 +72,6 @@ export const DIRECTION_COPY = {
         allAction: "Quick push to all",
         rowAction: "Quick push",
         formAction: "Push",
-        quickAll:
-            "Versions this document and moves every child's references onto it",
-        quickRow:
-            "Versions this document and moves this child's references onto it",
         running: "Pushing to Onshape...",
         description:
             "Workspaces that reference this one. Pushing creates a version here and moves their references onto it.",
@@ -136,54 +128,40 @@ export function DirectionInfo(props: { direction: LinkDirection }): ReactNode {
     );
 }
 
-interface ActionButtonProps {
+/**
+ * The key that turns a click into the run itself. Onshape's panel is a browser
+ * pane, and on a Mac ctrl-click is the context menu there, so the command key
+ * is what a Mac reads instead.
+ */
+function useQuickKeyLabel(): string {
+    return useOs() === "macos" ? "⌘ click" : "Ctrl click";
+}
+
+/** Whether the click asked for the run rather than the form. */
+function isQuickClick(event: MouseEvent): boolean {
+    return event.ctrlKey || event.metaKey;
+}
+
+interface RunningIndicatorProps {
     direction: LinkDirection;
-    label: string;
-    /** What it runs, which its label does not say: every button is a quick one. */
-    tooltip: string;
-    /** This button's run is the one going, so it carries the spinner. */
-    loading: boolean;
-    disabled: boolean;
-    onClick: () => void;
+    /** Whether this row or section is the one the run was started from. */
+    running: boolean;
 }
 
 /**
- * A push or a pull, with its arrow after the label. Reports its own progress:
- * a run outlives the click, so the button that started it is where it is shown
- * rather than in a banner over the page.
+ * Where a run shows itself: beside whatever started it, since a run outlives
+ * the click and the page has nothing else moving.
  */
-function ActionButton(props: ActionButtonProps): ReactNode {
-    const { direction, label, tooltip, loading, disabled, onClick } = props;
-    const hint = loading ? DIRECTION_COPY[direction].running : tooltip;
-
+function RunningIndicator(props: RunningIndicatorProps): ReactNode {
+    const { direction, running } = props;
+    if (!running) {
+        return null;
+    }
     return (
-        <Tooltip withArrow label={hint}>
-            {/* A span, so the tooltip still has something to hang off when the
-                button inside it is disabled and stops firing events. */}
-            <span className={styles.noShrink}>
-                <Button
-                    size="compact-sm"
-                    variant="light"
-                    rightSection={
-                        loading ? (
-                            <Loader size={IconSize.SMALL} />
-                        ) : (
-                            <DirectionIcon
-                                direction={direction}
-                                size={IconSize.SMALL}
-                            />
-                        )
-                    }
-                    disabled={disabled}
-                    onClick={(event) => {
-                        // The row itself opens Onshape; this button does not.
-                        event.stopPropagation();
-                        onClick();
-                    }}
-                >
-                    {label}
-                </Button>
-            </span>
+        <Tooltip withArrow label={DIRECTION_COPY[direction].running}>
+            <Center className={styles.noShrink}>
+                <Loader size={IconSize.SMALL} />
+            </Center>
         </Tooltip>
     );
 }
@@ -291,7 +269,7 @@ interface SectionActionsProps {
     actions: LinkActions;
 }
 
-/** The whole section's button and menu, which sit in its header. */
+/** The whole section's actions, which sit in its header as a menu. */
 export function SectionActions(props: SectionActionsProps): ReactNode {
     const { direction, linked, actions } = props;
     const { isRunning, activeTarget } = actions;
@@ -301,18 +279,26 @@ export function SectionActions(props: SectionActionsProps): ReactNode {
 
     return (
         <>
-            <ActionButton
+            <RunningIndicator
                 direction={direction}
-                label={copy.allAction}
-                tooltip={copy.quickAll}
-                loading={activeTarget === ALL_TARGET}
-                disabled={disabled}
-                onClick={() => actions.quickAll(false)}
+                running={activeTarget === ALL_TARGET}
             />
-            {/* No form beside it: one name cannot stand for the several
+            {/* No form among them: one name cannot stand for the several
                 versions a run across a whole direction cuts. */}
             <MenuButton>
                 <MenuSection label={isChild ? "Push" : "Pull"}>
+                    <Menu.Item
+                        leftSection={
+                            <DirectionIcon
+                                direction={direction}
+                                size={IconSize.MEDIUM}
+                            />
+                        }
+                        disabled={disabled}
+                        onClick={() => actions.quickAll(false)}
+                    >
+                        {copy.allAction}
+                    </Menu.Item>
                     {isChild ? (
                         <Menu.Item
                             leftSection={
@@ -347,21 +333,43 @@ interface ActionMenuSectionProps {
     /** Ends in an ellipsis: it opens the form rather than running anything. */
     formLabel: string;
     disabled: boolean;
+    onQuick: () => void;
     onOpenForm: () => void;
     onQuickRecursive: () => void;
 }
 
-/**
- * What a row's button does not: the form, for a run that wants to name the
- * version it cuts, and — pushing — the recursive walk.
- */
+/** Everything a row can run: the run itself, the form, and the walk past it. */
 function ActionMenuSection(props: ActionMenuSectionProps): ReactNode {
-    const { direction, formLabel, disabled, onOpenForm, onQuickRecursive } =
-        props;
+    const {
+        direction,
+        formLabel,
+        disabled,
+        onQuick,
+        onOpenForm,
+        onQuickRecursive
+    } = props;
     const isChild = direction === LinkDirection.CHILD;
+    const quickKey = useQuickKeyLabel();
 
     return (
         <MenuSection label={isChild ? "Push" : "Pull"}>
+            <Menu.Item
+                leftSection={
+                    <DirectionIcon
+                        direction={direction}
+                        size={IconSize.MEDIUM}
+                    />
+                }
+                rightSection={
+                    <Text size="xs" c={StatusColor.DIMMED}>
+                        {quickKey}
+                    </Text>
+                }
+                disabled={disabled}
+                onClick={onQuick}
+            >
+                {DIRECTION_COPY[direction].rowAction}
+            </Menu.Item>
             <Menu.Item
                 leftSection={
                     <DirectionIcon
@@ -478,6 +486,7 @@ function LinkedWorkspaceRow(props: LinkedWorkspaceRowProps): ReactNode {
                 direction={direction}
                 formLabel={`${copy.formAction}...`}
                 disabled={disabled}
+                onQuick={() => actions.quickOne(linked, false)}
                 onOpenForm={() => actions.openOne(linked)}
                 onQuickRecursive={() => actions.quickOne(linked, true)}
             />
@@ -525,19 +534,22 @@ function LinkedWorkspaceRow(props: LinkedWorkspaceRowProps): ReactNode {
             // The menu below carries the same items, in the order this row
             // wants them: the action first, then what to do with the link.
             moreButton={false}
-            // The form, where the button beside it is the run itself. Opening
-            // the document moved to the menu: this list is for pushing and
-            // pulling, and that is what a row should be one click from.
-            onClick={() => actions.openOne(linked)}
+            // A click opens the form; a modified one runs it there and then,
+            // which is what the menu's first item says. Opening the document is
+            // in the menu: this list is for pushing and pulling, and that is
+            // what a row should be one click from.
+            onClick={(event) => {
+                if (isQuickClick(event)) {
+                    actions.quickOne(linked, false);
+                    return;
+                }
+                actions.openOne(linked);
+            }}
             rightSection={
                 <Group gap={4} wrap="nowrap">
-                    <ActionButton
+                    <RunningIndicator
                         direction={direction}
-                        label={copy.rowAction}
-                        tooltip={copy.quickRow}
-                        loading={actions.activeTarget === linked.linkId}
-                        disabled={actions.isRunning}
-                        onClick={() => actions.quickOne(linked, false)}
+                        running={actions.activeTarget === linked.linkId}
                     />
                     <MenuButton>{menuItems}</MenuButton>
                 </Group>

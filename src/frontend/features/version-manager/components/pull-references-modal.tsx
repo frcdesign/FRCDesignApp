@@ -24,7 +24,7 @@ export interface PullReferencesFormProps {
 
 /**
  * What a pull does before it runs: what to call the version it cuts in the
- * parent, this workspace then moving onto that. The Quick pull buttons run
+ * parent, this workspace then moving onto that. A modified click runs
  * without it, under the defaults shown here.
  */
 export function PullReferencesForm(props: PullReferencesFormProps): ReactNode {

@@ -22,6 +22,8 @@ interface UiState {
     tabId?: AppTab;
     /** The group last opened in that tab; undefined for the tab itself. */
     groupId?: string;
+    /** Whether the version manager has ever been opened in this browser. */
+    hasOpenedVersionManager: boolean;
     isFavoritesOpen: boolean;
     isLibraryOpen: boolean;
     /** The version manager's two sections, which open like the home page's. */
@@ -47,6 +49,7 @@ export const useUiState = create<UiState>()(
     persist(
         (): UiState => ({
             theme: Theme.DARK,
+            hasOpenedVersionManager: false,
             isFavoritesOpen: false,
             isLibraryOpen: true,
             isParentsOpen: true,

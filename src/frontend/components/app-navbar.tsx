@@ -4,6 +4,7 @@ import {
     Button,
     Divider,
     Group,
+    Indicator,
     Input,
     Loader,
     Menu,
@@ -59,7 +60,10 @@ import {
 import { LibraryId } from "@backend/features/library/library-id";
 import { queryClient } from "../lib/query-client";
 import { InsertLocationStatus } from "../features/insert-location/components/insert-location-status";
-import { useIsVersionManager } from "../features/version-manager/navigation";
+import {
+    useIsVersionManager,
+    useIsVersionManagerNew
+} from "../features/version-manager/navigation";
 import { useTargetWorkspace } from "../lib/onshape-params";
 
 /**
@@ -182,7 +186,7 @@ const VERSION_MANAGER_TAB = "version-manager";
 /** What the version manager's page is called wherever it is offered. */
 const VERSION_MANAGER_LABEL = "Version Manager";
 
-/** Marks the newest page out. Drop it once the page is no longer news. */
+/** Marks the version manager out to somebody who has not found it yet. */
 const NEW_BADGE = (
     <Badge size="xs" variant="light">
         New
@@ -206,6 +210,7 @@ interface AppPage {
 function useAppPages(): AppPage[] {
     const targetWorkspace = useTargetWorkspace();
     const isVersionManager = useIsVersionManager();
+    const isNew = useIsVersionManagerNew();
 
     const libraries = Object.values(LibraryId).map((libraryId) => ({
         value: libraryId,
@@ -225,7 +230,7 @@ function useAppPages(): AppPage[] {
             value: VERSION_MANAGER_TAB,
             label: VERSION_MANAGER_LABEL,
             group: UTILITIES_GROUP,
-            badge: NEW_BADGE
+            badge: isNew ? NEW_BADGE : undefined
         }
     ];
 }
@@ -238,6 +243,7 @@ function useAppPages(): AppPage[] {
  */
 function PagePicker(): ReactNode {
     const pages = useAppPages();
+    const isNew = useIsVersionManagerNew();
     const currentLibraryId = useLibraryId();
     const isVersionManager = useIsVersionManager();
     const navigate = useNavigate();
@@ -273,6 +279,8 @@ function PagePicker(): ReactNode {
         <PageMenu
             pages={pages}
             current={current}
+            // A page worth finding is behind a closed menu, so the menu says so.
+            marked={isNew}
             onHover={prefetchVersions}
             onSelect={selectPage}
         />
@@ -300,29 +308,42 @@ interface PageMenuProps {
     pages: AppPage[];
     /** The page showing, which the button names and the menu greys out. */
     current: string;
+    /** Dots the button, for a page inside worth pointing out. */
+    marked: boolean;
     onHover: () => void;
     onSelect: (value: string) => void;
 }
 
 /** The same pages as a dropdown, for a navbar too narrow to lay them in a row. */
 function PageMenu(props: PageMenuProps): ReactNode {
-    const { pages, current, onHover, onSelect } = props;
+    const { pages, current, marked, onHover, onSelect } = props;
     const currentPage = pages.find((page) => page.value === current);
 
     return (
         <Menu position="bottom-start" withinPortal>
-            <Menu.Target>
-                <Button
-                    variant="subtle"
-                    color={StatusColor.NEUTRAL}
-                    my="auto"
-                    px="xs"
-                    onMouseEnter={onHover}
-                    rightSection={<CaretDownIcon size={IconSize.SMALL} />}
-                >
-                    {currentPage?.label}
-                </Button>
-            </Menu.Target>
+            {/* The dot is around the target rather than the target itself: the
+                menu hands its props to whatever it wraps, and that has to be
+                the button. */}
+            <Indicator
+                disabled={!marked}
+                color={StatusColor.INFO}
+                size={8}
+                offset={6}
+                className={styles.noShrink}
+            >
+                <Menu.Target>
+                    <Button
+                        variant="subtle"
+                        color={StatusColor.NEUTRAL}
+                        my="auto"
+                        px="xs"
+                        onMouseEnter={onHover}
+                        rightSection={<CaretDownIcon size={IconSize.SMALL} />}
+                    >
+                        {currentPage?.label}
+                    </Button>
+                </Menu.Target>
+            </Indicator>
             <Menu.Dropdown>
                 {groupPages(pages).map(([group, groupPages]) => (
                     <MenuSection key={group} label={group}>

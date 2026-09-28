@@ -58,10 +58,19 @@ document and workspace names, for a week.
 **KV** `linked-workspace-changes:{documentId}|{instanceId}` — its
 `changesSinceVersionSave`, for an hour.
 
-**Browser** `isParentsOpen`, `isChildrenOpen`, `quickActionTipCount` in
-`uiState`.
+**Browser** `isParentsOpen`, `isChildrenOpen`, `quickActionTipCount` and
+`hasOpenedVersionManager` in `uiState`.
 
 ## Flows
+
+### Finding the page
+
+The page picker marks the version manager with a dot and a **New** badge for
+somebody who has a workspace to act on, has never opened the page in this
+browser (`hasOpenedVersionManager`), and has nothing linked. Links of their own
+are the sign they have found it, whether or not this browser remembers.
+`useIsVersionManagerNew` only asks for the links while the answer could still
+be yes, so it costs one Onshape call per person rather than one per page.
 
 ### Showing the page
 
@@ -163,9 +172,9 @@ reconnect; nothing polls. A client's socket is tagged with the workspace it was
 launched in as well as its library, so a run reaches the people in that document
 and nobody else.
 
-While a run is going, the button that started it carries the spinner. What it
-did — how many tabs moved, and whether any would not — arrives as one toast at
-the end.
+While a run is going, a spinner sits where it was started — beside the row, or
+in the section's header. What it did — how many tabs moved, and whether any
+would not — arrives as one toast at the end.
 
 ### Keeping a linked workspace current
 
@@ -212,9 +221,11 @@ deletes a transient webhook that goes quiet, so the entries expire as well.
   references moved, with nothing to resume from.
 - **Direct push by default.** Cutting versions in somebody else's document is
   the opt-in, not the default.
-- **The buttons run; the form is behind the row.** A push usually wants the next
-  `V` number and nothing else, so that is one click. Naming a version, or
-  pushing recursively, is a click on the row.
+- **Every run is in a menu; a modified click is the shortcut.** Rows carry no
+  push or pull button: a list of documents reads as a list, and the buttons
+  competed with the names. Clicking a row opens the form, ctrl-clicking (⌘ on a
+  Mac, where ctrl-click is the context menu) runs it under the defaults, and the
+  menu says so beside the item it is a shortcut for.
 - **Thumbnails are proxied.** `GET /api/workspace-thumbnail` fetches the
   workspace's own thumbnail under the caller's OAuth token. Letting the image
   element fetch Onshape directly was tried; Onshape serves a thumbnail only to

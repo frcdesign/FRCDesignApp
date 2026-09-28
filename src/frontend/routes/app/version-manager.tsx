@@ -31,7 +31,11 @@ export const Route = createFileRoute("/app/version-manager")({
     component: VersionManagerPage,
     // Where entry resumes next time, as a library would be.
     onEnter: () => {
-        updateUiState({ tabId: UtilityTab.VERSION_MANAGER });
+        updateUiState({
+            tabId: UtilityTab.VERSION_MANAGER,
+            // Found, so it stops being pointed out.
+            hasOpenedVersionManager: true
+        });
     },
     beforeLoad: () => {
         // Nothing to act on: the page picker hides this page without a

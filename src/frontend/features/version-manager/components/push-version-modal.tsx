@@ -33,8 +33,8 @@ export interface PushVersionFormProps {
 
 /**
  * What a push does before it runs: what the version is called, and how far it
- * travels. This is what clicking a row opens; the Push buttons beside them run
- * without it, under the defaults shown here.
+ * travels. This is what clicking a row opens; a modified click runs it without
+ * the form, under the defaults shown here.
  */
 export function PushVersionForm(props: PushVersionFormProps): ReactNode {
     const { workspace, target, targets } = props;
