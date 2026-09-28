@@ -28,7 +28,7 @@ their Onshape calls and link here for how those calls behave.
 ## Calling Onshape
 
 Every call goes through `OnshapeApi._call` to
-`https://cad.onshape.com/api/v16{path}`:
+`https://cad.onshape.com/api/v17{path}`:
 
 - **Auth.** `OAuthApi` sends `Authorization: Bearer <access token>`. On a 401 it
   calls its refresh callback once, which exchanges the refresh token, saves the

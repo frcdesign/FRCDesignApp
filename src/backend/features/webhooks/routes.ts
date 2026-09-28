@@ -15,8 +15,14 @@ import {
     WebhookEvent
 } from "./registration";
 import { runInBackground } from "../../lib/background";
-import { readUnitsDelivery, UNITS_WEBHOOK_ROUTE } from "./transient";
+import {
+    LINKED_WORKSPACE_WEBHOOK_ROUTE,
+    readWorkspaceDelivery,
+    UNITS_WEBHOOK_ROUTE
+} from "./transient";
 import { forgetUnitInfo } from "../configurations/units";
+import { forgetWorkspace } from "../version-manager/workspace-cache";
+import { toWorkspacePath } from "../version-manager/contract";
 
 export const webhookRoutes = getApp();
 
@@ -57,7 +63,7 @@ webhookRoutes.post(WEBHOOK_ROUTE, async (c) => {
 
 /** POST /api/webhooks/units?documentId=&workspaceId= */
 webhookRoutes.post(UNITS_WEBHOOK_ROUTE, async (c) => {
-    const workspace = readUnitsDelivery(c.req.query());
+    const workspace = readWorkspaceDelivery(c.req.query());
     if (!workspace) {
         throw forbiddenError("Unrecognized webhook");
     }
@@ -65,6 +71,27 @@ webhookRoutes.post(UNITS_WEBHOOK_ROUTE, async (c) => {
     const { event } = await c.req.json<WebhookNotification>();
     if (!event.startsWith("webhook.")) {
         await forgetUnitInfo(c.env.KV, workspace);
+    }
+    return c.json({});
+});
+
+/**
+ * POST /api/webhooks/linked-workspace?documentId=&workspaceId=
+ *
+ * The workspace was edited, renamed or versioned, so what the version manager
+ * shows of it is asked for again the next time somebody opens the panel.
+ */
+webhookRoutes.post(LINKED_WORKSPACE_WEBHOOK_ROUTE, async (c) => {
+    const workspace = readWorkspaceDelivery(c.req.query());
+    if (!workspace) {
+        throw forbiddenError("Unrecognized webhook");
+    }
+    const { event } = await c.req.json<WebhookNotification>();
+    if (!event.startsWith("webhook.")) {
+        await forgetWorkspace(
+            c.env,
+            toWorkspacePath(workspace.documentId, workspace.instanceId)
+        );
     }
     return c.json({});
 });

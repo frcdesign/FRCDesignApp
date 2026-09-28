@@ -8,7 +8,6 @@ import {
     hasPermissions,
     OnshapePermission
 } from "../../lib/onshape/endpoints/permissions";
-import { getInsertables } from "../../lib/onshape/endpoints/documents";
 import { getVersions } from "../../lib/onshape/endpoints/versions";
 import {
     getWorkspaceLinkParam,
@@ -33,6 +32,7 @@ import {
 } from "./contract";
 import { descendantKeys, LinkCycleError, pushOrder } from "./graph";
 import { getJobStatus, startJob } from "./jobs";
+import { getUnversionedChanges } from "./workspace-cache";
 import {
     addLink,
     collectDescendantEdges,
@@ -170,7 +170,12 @@ versionManagerRoutes.get(
         const describe = (rows: typeof parentRows) =>
             Promise.all(
                 rows.map((row) =>
-                    toLinkedWorkspace(client, row.id, otherEnd(row, workspace))
+                    toLinkedWorkspace(
+                        c,
+                        client,
+                        row.id,
+                        otherEnd(row, workspace)
+                    )
                 )
             );
         const [parents, children]: LinkedWorkspace[][] = await Promise.all([
@@ -304,11 +309,13 @@ versionManagerRoutes.get(
             rows.map(async (row) => {
                 const parent = otherEnd(row, workspace);
                 try {
-                    // No `include` flags: they all default to false, so this
-                    // asks Onshape to enumerate nothing and answer the counters.
-                    const insertables = await getInsertables(client, parent);
-                    if (insertables.changesSinceVersionSave !== undefined) {
-                        changes[row.id] = insertables.changesSinceVersionSave;
+                    const count = await getUnversionedChanges(
+                        c,
+                        client,
+                        parent
+                    );
+                    if (count !== undefined) {
+                        changes[row.id] = count;
                     }
                 } catch (error) {
                     // A parent the caller cannot read, or one Onshape would not

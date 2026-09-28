@@ -4,8 +4,7 @@
 import { and, eq } from "drizzle-orm";
 import type { Db } from "../../db/client";
 import type { OnshapeApi } from "../../lib/onshape/client";
-import { getDocument } from "../../lib/onshape/endpoints/documents";
-import { getWorkspaces } from "../../lib/onshape/endpoints/workspaces";
+import type { AppContext } from "../../lib/context";
 import {
     hasPermissions,
     OnshapePermission
@@ -18,6 +17,7 @@ import {
 } from "./contract";
 import type { WorkspaceEdge } from "./graph";
 import { workspaceLinks, type WorkspaceLinkRow } from "./schema";
+import { describeWorkspace } from "./workspace-cache";
 
 /** How far a push is allowed to walk, so a mislinked graph cannot run forever. */
 const MAX_LINKED_WORKSPACES = 100;
@@ -197,6 +197,7 @@ export async function collectDescendantEdges(
  * is pushed to rather than sitting there greyed out.
  */
 export async function toLinkedWorkspace(
+    c: AppContext,
     client: OnshapeApi,
     linkId: string,
     workspace: WorkspacePath
@@ -206,32 +207,14 @@ export async function toLinkedWorkspace(
     }
 
     try {
-        const document = await getDocument(client, workspace);
-        return {
-            linkId,
-            workspace,
-            isOpenable: true,
-            documentName: document.name,
-            workspaceName: await getWorkspaceName(client, workspace)
-        };
+        const description = await describeWorkspace(c, client, workspace);
+        return { linkId, workspace, isOpenable: true, ...description };
     } catch (error) {
         // Readable a moment ago and not now, or a document that has since been
         // deleted: the link is still real, so show it without the names.
         console.warn(`Failed to describe linked workspace ${linkId}`, error);
         return { linkId, workspace, isOpenable: false };
     }
-}
-
-/**
- * The workspace's own name. A call of its own: the document carries only its
- * default workspace's id, not its name.
- */
-async function getWorkspaceName(
-    client: OnshapeApi,
-    workspace: WorkspacePath
-): Promise<string | undefined> {
-    const workspaces = await getWorkspaces(client, workspace);
-    return workspaces.find((each) => each.id === workspace.instanceId)?.name;
 }
 
 /** The other end of a link from `workspace`'s point of view. */

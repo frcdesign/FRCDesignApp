@@ -4,14 +4,14 @@
  * the caller's own Onshape origin.
  */
 
-const ONSHAPE_API_VERSION = 16;
+const ONSHAPE_API_VERSION = 17;
 
 // Constant across all environments (dev/cert/production), so hardcoded here
 // rather than duplicated as a per-environment var in wrangler.jsonc. A company
 // session's own origin serves the same api; see `toOnshapeOrigin`.
 const ONSHAPE_ORIGIN = "https://cad.onshape.com";
 
-/** What every api path hangs off, e.g. `/api/v16`. */
+/** What every api path hangs off, e.g. `/api/v17`. */
 export const ONSHAPE_API_PREFIX = `/api/v${ONSHAPE_API_VERSION}`;
 
 /** What the worker calls: cad's api, whichever company the caller is in. */
