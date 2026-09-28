@@ -23,6 +23,14 @@ export function isSameWorkspace(a: WorkspacePath, b: WorkspacePath): boolean {
 }
 
 /**
+ * One workspace as one string: what a graph walk keys by, what a job is stored
+ * under, and what a client's push socket is tagged with.
+ */
+export function workspaceKey(workspace: WorkspacePath): string {
+    return `${workspace.documentId}|${workspace.instanceId}`;
+}
+
+/**
  * Which side of a link a workspace is being asked about, from the workspace the
  * panel is open in:
  *

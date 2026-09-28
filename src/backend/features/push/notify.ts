@@ -2,6 +2,7 @@
 import type { AppBindings } from "../../lib/context";
 import type { LibraryId } from "../library/library-id";
 import type { JobStatus } from "../load/contract";
+import type { VersionJobStatus } from "../version-manager/contract";
 import { type PushMessage, PushType, type ThumbnailPush } from "./contract";
 import { getPushHub } from "./push-hub";
 
@@ -31,6 +32,19 @@ export function pushLibraryChanged(
     libraryId: LibraryId
 ): Promise<void> {
     return broadcast(env, { type: PushType.LIBRARY, libraryId });
+}
+
+/** A push or pull, as it now stands, to whoever is in the workspace it runs from. */
+export function pushVersionJob(
+    env: AppBindings,
+    workspaceKey: string,
+    status: VersionJobStatus
+): Promise<void> {
+    return broadcast(env, {
+        type: PushType.VERSION_JOB,
+        workspaceKey,
+        status
+    });
 }
 
 export function pushThumbnailRendered(

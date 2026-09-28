@@ -2,9 +2,17 @@
 import {
     PUSH_LIBRARY_PARAM,
     PUSH_ROUTE,
+    PUSH_WORKSPACE_PARAM,
     type PushMessage
 } from "@backend/features/push/contract";
 import type { LibraryId } from "@backend/features/library/library-id";
+
+/** What the socket is tagged with: the library shown, and the workspace the
+ * app was launched in, if any. */
+export interface PushScope {
+    libraryId: LibraryId;
+    workspaceKey?: string;
+}
 
 type MessageListener = (message: PushMessage) => void;
 type ConnectionListener = (connected: boolean) => void;
@@ -28,15 +36,18 @@ function setConnected(next: boolean): void {
     connectionListeners.forEach((listener) => listener(next));
 }
 
-function pushUrl(libraryId: LibraryId): string {
+function pushUrl(scope: PushScope): string {
     const url = new URL("/api" + PUSH_ROUTE, window.location.href);
     url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
-    url.searchParams.set(PUSH_LIBRARY_PARAM, libraryId);
+    url.searchParams.set(PUSH_LIBRARY_PARAM, scope.libraryId);
+    if (scope.workspaceKey) {
+        url.searchParams.set(PUSH_WORKSPACE_PARAM, scope.workspaceKey);
+    }
     return url.href;
 }
 
-function open(libraryId: LibraryId): void {
-    const current = new WebSocket(pushUrl(libraryId));
+function open(scope: PushScope): void {
+    const current = new WebSocket(pushUrl(scope));
     socket = current;
     current.onopen = () => {
         retryMs = FIRST_RETRY_MS;
@@ -54,14 +65,14 @@ function open(libraryId: LibraryId): void {
         }
         socket = undefined;
         setConnected(false);
-        retryTimer = window.setTimeout(() => open(libraryId), retryMs);
+        retryTimer = window.setTimeout(() => open(scope), retryMs);
         retryMs = Math.min(retryMs * 2, LAST_RETRY_MS);
     };
 }
 
-/** Connects for `libraryId`, dropping any connection for another; returns a disconnect. */
-export function connectPushes(libraryId: LibraryId): () => void {
-    open(libraryId);
+/** Connects for `scope`, dropping any connection for another; returns a disconnect. */
+export function connectPushes(scope: PushScope): () => void {
+    open(scope);
     return () => {
         window.clearTimeout(retryTimer);
         const current = socket;

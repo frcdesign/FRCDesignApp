@@ -7,8 +7,10 @@
  * a panel that was closed and reopened.
  */
 import type { AppBindings } from "../../lib/context";
+import { pushVersionJob } from "../push/notify";
 import {
     VersionJobState,
+    workspaceKey,
     type VersionJobResult,
     type VersionJobStatus,
     type WorkspacePath
@@ -31,10 +33,27 @@ const ACTIVE_STATUSES = new Set([
 ]);
 
 function jobKey(workspace: WorkspacePath): string {
-    return `version-job:${workspace.documentId}|${workspace.instanceId}`;
+    return `version-job:${workspaceKey(workspace)}`;
 }
 
-export async function rememberJob(
+/**
+ * Remembers the run and tells the workspace it is going, so a second person in
+ * the same document sees the spinner rather than an idle page. The workflow
+ * reports the end of it the same way.
+ */
+export async function startJob(
+    env: AppBindings,
+    workspace: WorkspacePath,
+    instanceId: string
+): Promise<void> {
+    await rememberJob(env, workspace, instanceId);
+    await pushVersionJob(env, workspaceKey(workspace), {
+        state: VersionJobState.RUNNING,
+        jobId: instanceId
+    });
+}
+
+async function rememberJob(
     env: AppBindings,
     workspace: WorkspacePath,
     instanceId: string

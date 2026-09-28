@@ -2,11 +2,13 @@
 import type { LibraryId } from "../library/library-id";
 import type { JobStatus } from "../load/contract";
 import type { ConfigurationKey } from "../configurations/contract";
+import type { VersionJobStatus } from "../version-manager/contract";
 
 export enum PushType {
     JOBS = "jobs",
     LIBRARY = "library",
-    THUMBNAIL = "thumbnail"
+    THUMBNAIL = "thumbnail",
+    VERSION_JOB = "version-job"
 }
 
 /** A library's load jobs started or finished. */
@@ -30,8 +32,25 @@ export interface ThumbnailPush {
     configurationKey: ConfigurationKey;
 }
 
-export type PushMessage = JobsPush | LibraryPush | ThumbnailPush;
+/**
+ * A push or pull started from a workspace has moved on. Sent to the clients
+ * showing that workspace, which is what `workspaceKey` tags their socket with:
+ * it names somebody else's document, and only those already in it may hear.
+ */
+export interface VersionJobPush {
+    type: PushType.VERSION_JOB;
+    workspaceKey: string;
+    status: VersionJobStatus;
+}
+
+export type PushMessage =
+    | JobsPush
+    | LibraryPush
+    | ThumbnailPush
+    | VersionJobPush;
 
 /** Under `/api`. A client connects here naming the library it is showing. */
 export const PUSH_ROUTE = "/push";
 export const PUSH_LIBRARY_PARAM = "library";
+/** The workspace the client was launched in, as `workspaceKey` spells it. */
+export const PUSH_WORKSPACE_PARAM = "workspace";

@@ -23,9 +23,6 @@ import {
 } from "../../lib/query-keys";
 import { useIsSignedIn } from "../auth/access-level";
 
-/** How often a running push or pull is asked whether it has finished. */
-const JOB_POLL_MS = 2000;
-
 function toWorkspaceQuery(workspace: WorkspacePath) {
     return {
         documentId: workspace.documentId,
@@ -199,9 +196,10 @@ function adoptJob(workspace: WorkspacePath, jobId: string): void {
 }
 
 /**
- * The run this workspace last started: polled while it is live, and left alone
- * once it is not. Asked without a run in hand too, so a panel that was closed
- * and reopened finds one still going.
+ * The run this workspace last started. Asked once, when the page opens: what it
+ * does next arrives as a push, so nothing here polls. A panel that was closed
+ * and reopened finds a run still going the same way, and a client that
+ * reconnects asks again for what it missed.
  */
 export function useVersionJobQuery(workspace: WorkspacePath | undefined) {
     const isSignedIn = useIsSignedIn();
@@ -214,10 +212,7 @@ export function useVersionJobQuery(workspace: WorkspacePath | undefined) {
                           query: toWorkspaceQuery(workspace)
                       })
                 : skipToken,
-        refetchInterval: (query) =>
-            query.state.data?.state === VersionJobState.RUNNING
-                ? JOB_POLL_MS
-                : false
+        refetchInterval: false
     });
 }
 

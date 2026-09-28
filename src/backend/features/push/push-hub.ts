@@ -6,25 +6,31 @@
 import { DurableObject } from "cloudflare:workers";
 import type { AppBindings } from "../../lib/context";
 import { LibraryId } from "../library/library-id";
-import { PUSH_LIBRARY_PARAM, type PushMessage, PushType } from "./contract";
+import {
+    PUSH_LIBRARY_PARAM,
+    PUSH_WORKSPACE_PARAM,
+    type PushMessage,
+    PushType
+} from "./contract";
 
 export class PushHub extends DurableObject<AppBindings> {
     fetch(request: Request): Response {
-        const libraryId = new URL(request.url).searchParams.get(
-            PUSH_LIBRARY_PARAM
-        );
+        const params = new URL(request.url).searchParams;
+        const libraryId = params.get(PUSH_LIBRARY_PARAM);
+        const workspaceKey = params.get(PUSH_WORKSPACE_PARAM);
         const [client, server] = Object.values(new WebSocketPair());
-        this.ctx.acceptWebSocket(
-            server,
-            isLibraryId(libraryId) ? [libraryId] : []
-        );
+        this.ctx.acceptWebSocket(server, [
+            ...(isLibraryId(libraryId) ? [libraryId] : []),
+            // The Onshape workspace this client was launched in, so a push or
+            // pull started there reaches the people in it and nobody else.
+            ...(workspaceKey ? [workspaceKey] : [])
+        ]);
         return new Response(null, { status: 101, webSocket: client });
     }
 
-    /** A library's message to the clients showing it; any other to every client. */
+    /** To the clients tagged with what the message is about, or to all. */
     broadcast(message: PushMessage): void {
-        const tag =
-            message.type === PushType.THUMBNAIL ? undefined : message.libraryId;
+        const tag = toTag(message);
         const data = JSON.stringify(message);
         for (const socket of this.ctx.getWebSockets(tag)) {
             try {
@@ -33,6 +39,18 @@ export class PushHub extends DurableObject<AppBindings> {
                 // Closing already; its client reconnects and resyncs.
             }
         }
+    }
+}
+
+/** Which sockets a message is for; undefined is every one of them. */
+function toTag(message: PushMessage): string | undefined {
+    switch (message.type) {
+        case PushType.THUMBNAIL:
+            return undefined;
+        case PushType.VERSION_JOB:
+            return message.workspaceKey;
+        default:
+            return message.libraryId;
     }
 }
 

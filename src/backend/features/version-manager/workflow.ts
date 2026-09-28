@@ -11,10 +11,14 @@ import {
 } from "../../lib/onshape/endpoints/versions";
 import type { OnshapeVersionInfo } from "../../lib/onshape/types";
 import { ONSHAPE_STEP_RETRIES } from "../load/steps";
+import { pushVersionJob } from "../push/notify";
 import {
     EMPTY_JOB_RESULT,
     nextVersionName,
+    VersionJobState,
+    workspaceKey,
     type VersionJobResult,
+    type VersionJobStatus,
     type WorkspacePath
 } from "./contract";
 import {
@@ -86,17 +90,45 @@ export class VersionManagerWorkflow extends WorkflowEntrypoint<
         step: WorkflowStep
     ): Promise<VersionJobResult> {
         const params = event.payload;
+        const jobId = event.instanceId;
         try {
-            return params.kind === "push"
-                ? await this._push(params, step)
-                : await this._pull(params, step);
+            const result =
+                params.kind === "push"
+                    ? await this._push(params, step)
+                    : await this._pull(params, step);
+            await this._report(params.workspace, {
+                state: VersionJobState.COMPLETE,
+                jobId,
+                result
+            });
+            return result;
+        } catch (error) {
+            await this._report(params.workspace, {
+                state: VersionJobState.FAILED,
+                jobId,
+                error: error instanceof Error ? error.message : undefined
+            });
+            throw error;
         } finally {
             // The status is read off the instance itself; this only clears the
             // pointer that lets a reopened panel find it.
             await step.do("forget-job", () =>
-                forgetJob(this.env, params.workspace, event.instanceId)
+                forgetJob(this.env, params.workspace, jobId)
             );
         }
+    }
+
+    /**
+     * Tells whoever is in the workspace how the run went, so nothing has to ask
+     * again. Outside a step, and swallowed by `pushVersionJob`: a run that
+     * landed has landed whether or not anyone was still listening, and the
+     * status route answers the same thing to a client that reconnects.
+     */
+    private _report(
+        workspace: WorkspacePath,
+        status: VersionJobStatus
+    ): Promise<void> {
+        return pushVersionJob(this.env, workspaceKey(workspace), status);
     }
 
     private async _pull(

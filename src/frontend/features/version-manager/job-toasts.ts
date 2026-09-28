@@ -7,6 +7,12 @@ import { showErrorToast, showSuccessToast } from "../../lib/notifications";
 import { describeJobResult, useVersionJobQuery } from "./queries";
 
 /**
+ * One toast for the run going, so a second push replaces the first's result
+ * rather than stacking under it.
+ */
+const JOB_TOAST_ID = "version-job";
+
+/**
  * Reports a run once it finishes.
  *
  * While it is going, the button that started it carries a spinner, which is
@@ -29,12 +35,14 @@ export function useVersionJobToasts(
                 showSuccessToast(
                     data?.result
                         ? describeJobResult(data.result)
-                        : "Finished updating Onshape."
+                        : "Finished updating Onshape.",
+                    JOB_TOAST_ID
                 );
             } else if (state === VersionJobState.FAILED) {
                 showErrorToast(
                     data?.error ??
-                        "The push or pull failed. If it keeps happening, contact the FRCDesignApp developers."
+                        "The push or pull failed. If it keeps happening, contact the FRCDesignApp developers.",
+                    JOB_TOAST_ID
                 );
             }
         }

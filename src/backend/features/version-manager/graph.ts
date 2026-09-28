@@ -2,7 +2,7 @@
  * The link graph, as plain edges: who has to be updated before whom. Pure, so
  * the ordering a push depends on is testable without D1 or Onshape.
  */
-import { isSameWorkspace, type WorkspacePath } from "./contract";
+import { isSameWorkspace, workspaceKey, type WorkspacePath } from "./contract";
 
 /** One link: the parent provides the content, the child references it. */
 export interface WorkspaceEdge {
@@ -21,10 +21,6 @@ export class LinkCycleError extends Error {
     }
 }
 
-function toKey(workspace: WorkspacePath): string {
-    return `${workspace.documentId}|${workspace.instanceId}`;
-}
-
 /** The workspaces that reference `workspace` directly. */
 export function childrenOf(
     edges: WorkspaceEdge[],
@@ -34,7 +30,7 @@ export function childrenOf(
     const found: WorkspacePath[] = [];
     for (const edge of edges) {
         if (!isSameWorkspace(edge.parent, workspace)) continue;
-        const key = toKey(edge.child);
+        const key = workspaceKey(edge.child);
         if (seen.has(key)) continue;
         seen.add(key);
         found.push(edge.child);
@@ -71,7 +67,7 @@ export function pushOrder(
     const order: WorkspacePath[] = [];
 
     const visit = (workspace: WorkspacePath): void => {
-        const key = toKey(workspace);
+        const key = workspaceKey(workspace);
         if (active.has(key)) {
             throw new LinkCycleError(workspace);
         }
@@ -103,13 +99,13 @@ export function descendantKeys(
     edges: WorkspaceEdge[],
     workspace: WorkspacePath
 ): Set<string> {
-    const found = new Set<string>([toKey(workspace)]);
+    const found = new Set<string>([workspaceKey(workspace)]);
     let frontier = [workspace];
     while (frontier.length > 0) {
         const next: WorkspacePath[] = [];
         for (const each of frontier) {
             for (const child of childrenOf(edges, each)) {
-                const key = toKey(child);
+                const key = workspaceKey(child);
                 if (found.has(key)) continue;
                 found.add(key);
                 next.push(child);
@@ -118,9 +114,4 @@ export function descendantKeys(
         frontier = next;
     }
     return found;
-}
-
-/** The key {@link descendantKeys} answers in, so a caller can test against it. */
-export function workspaceKey(workspace: WorkspacePath): string {
-    return toKey(workspace);
 }

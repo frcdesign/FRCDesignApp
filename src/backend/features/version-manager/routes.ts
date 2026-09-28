@@ -26,17 +26,13 @@ import {
     PullScopeKind,
     PushScopeKind,
     toWorkspacePath,
+    workspaceKey,
     type LinkedWorkspace,
     type UnversionedChanges,
     type WorkspacePath
 } from "./contract";
-import {
-    descendantKeys,
-    LinkCycleError,
-    pushOrder,
-    workspaceKey
-} from "./graph";
-import { getJobStatus, rememberJob } from "./jobs";
+import { descendantKeys, LinkCycleError, pushOrder } from "./graph";
+import { getJobStatus, startJob } from "./jobs";
 import {
     addLink,
     collectDescendantEdges,
@@ -461,7 +457,7 @@ versionManagerRoutes.post(
                 steps
             }
         });
-        await rememberJob(c.env, workspace, instance.id);
+        await startJob(c.env, workspace, instance.id);
 
         return c.json({ jobId: instance.id });
     }
@@ -570,7 +566,7 @@ versionManagerRoutes.post(
                 sourceDocumentIds
             }
         });
-        await rememberJob(c.env, workspace, instance.id);
+        await startJob(c.env, workspace, instance.id);
 
         return c.json({ jobId: instance.id });
     }
