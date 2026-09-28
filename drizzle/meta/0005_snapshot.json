@@ -1,8 +1,8 @@
 {
     "version": "6",
     "dialect": "sqlite",
-    "id": "ed7074d1-6acd-452d-bdd7-662e8a205082",
-    "prevId": "d8945a24-5643-4675-bf1f-b32cff1dbea2",
+    "id": "fcb81b2b-1673-4853-a0c7-9abd722c236f",
+    "prevId": "ed7074d1-6acd-452d-bdd7-662e8a205082",
     "tables": {
         "configurations": {
             "name": "configurations",
@@ -186,6 +186,13 @@
                     "notNull": false,
                     "autoincrement": false
                 },
+                "thumbnail_workspace_id": {
+                    "name": "thumbnail_workspace_id",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": false,
+                    "autoincrement": false
+                },
                 "sort_alphabetically": {
                     "name": "sort_alphabetically",
                     "type": "integer",
@@ -345,6 +352,14 @@
                     "autoincrement": false,
                     "default": false
                 },
+                "excluded_parameter_ids": {
+                    "name": "excluded_parameter_ids",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false,
+                    "default": "'[]'"
+                },
                 "version_id": {
                     "name": "version_id",
                     "type": "text",
@@ -461,11 +476,156 @@
                     "notNull": true,
                     "autoincrement": false,
                     "default": 0
+                },
+                "admin_team_id": {
+                    "name": "admin_team_id",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": false,
+                    "autoincrement": false
+                },
+                "admin_team": {
+                    "name": "admin_team",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false,
+                    "default": "'[]'"
+                },
+                "approve_versions": {
+                    "name": "approve_versions",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false,
+                    "default": false
                 }
             },
             "indexes": {},
             "foreignKeys": {},
             "compositePrimaryKeys": {},
+            "uniqueConstraints": {},
+            "checkConstraints": {}
+        },
+        "load_jobs": {
+            "name": "load_jobs",
+            "columns": {
+                "group_id": {
+                    "name": "group_id",
+                    "type": "text",
+                    "primaryKey": true,
+                    "notNull": true,
+                    "autoincrement": false
+                },
+                "library_id": {
+                    "name": "library_id",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                },
+                "instance_id": {
+                    "name": "instance_id",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": false,
+                    "autoincrement": false
+                },
+                "started_at": {
+                    "name": "started_at",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                },
+                "force_reload": {
+                    "name": "force_reload",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false,
+                    "default": false
+                },
+                "awaiting_approval": {
+                    "name": "awaiting_approval",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false,
+                    "default": false
+                }
+            },
+            "indexes": {},
+            "foreignKeys": {
+                "load_jobs_group_id_groups_id_fk": {
+                    "name": "load_jobs_group_id_groups_id_fk",
+                    "tableFrom": "load_jobs",
+                    "tableTo": "groups",
+                    "columnsFrom": ["group_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "cascade",
+                    "onUpdate": "no action"
+                },
+                "load_jobs_library_id_libraries_id_fk": {
+                    "name": "load_jobs_library_id_libraries_id_fk",
+                    "tableFrom": "load_jobs",
+                    "tableTo": "libraries",
+                    "columnsFrom": ["library_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "no action",
+                    "onUpdate": "no action"
+                }
+            },
+            "compositePrimaryKeys": {},
+            "uniqueConstraints": {},
+            "checkConstraints": {}
+        },
+        "onshape_webhooks": {
+            "name": "onshape_webhooks",
+            "columns": {
+                "subject": {
+                    "name": "subject",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                },
+                "subject_id": {
+                    "name": "subject_id",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                },
+                "webhook_id": {
+                    "name": "webhook_id",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": false,
+                    "autoincrement": false
+                },
+                "token": {
+                    "name": "token",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                }
+            },
+            "indexes": {
+                "onshape_webhooks_token_unique": {
+                    "name": "onshape_webhooks_token_unique",
+                    "columns": ["token"],
+                    "isUnique": true
+                }
+            },
+            "foreignKeys": {},
+            "compositePrimaryKeys": {
+                "onshape_webhooks_subject_subject_id_pk": {
+                    "columns": ["subject", "subject_id"],
+                    "name": "onshape_webhooks_subject_subject_id_pk"
+                }
+            },
             "uniqueConstraints": {},
             "checkConstraints": {}
         },
@@ -479,14 +639,6 @@
                     "notNull": true,
                     "autoincrement": false
                 },
-                "theme": {
-                    "name": "theme",
-                    "type": "text",
-                    "primaryKey": false,
-                    "notNull": true,
-                    "autoincrement": false,
-                    "default": "'system'"
-                },
                 "library_id": {
                     "name": "library_id",
                     "type": "text",
@@ -494,20 +646,6 @@
                     "notNull": true,
                     "autoincrement": false,
                     "default": "'frc-design-lib'"
-                },
-                "tab_id": {
-                    "name": "tab_id",
-                    "type": "text",
-                    "primaryKey": false,
-                    "notNull": false,
-                    "autoincrement": false
-                },
-                "group_id": {
-                    "name": "group_id",
-                    "type": "text",
-                    "primaryKey": false,
-                    "notNull": false,
-                    "autoincrement": false
                 }
             },
             "indexes": {},

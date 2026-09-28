@@ -127,10 +127,15 @@ interface ConfigurationCount {
     elementId: string;
     parameterId: string;
     value: string;
+    /** The branch it was chosen in; see `toInstanceKeys`. */
+    instanceKey: string;
     count: number;
 }
 
-/** How often each configuration value was chosen inside the window. */
+/**
+ * How often each configuration value was chosen inside the window, split by the
+ * branch it was chosen in — which is what lets one branch be counted on its own.
+ */
 export async function getConfigurationCounts(
     db: Db,
     libraryId: LibraryId,
@@ -142,6 +147,7 @@ export async function getConfigurationCounts(
             elementId: dailyConfigurationMetrics.elementId,
             parameterId: dailyConfigurationMetrics.parameterId,
             value: dailyConfigurationMetrics.value,
+            instanceKey: dailyConfigurationMetrics.instanceKey,
             count: sum(dailyConfigurationMetrics.count)
         })
         .from(dailyConfigurationMetrics)
@@ -158,7 +164,8 @@ export async function getConfigurationCounts(
         .groupBy(
             dailyConfigurationMetrics.elementId,
             dailyConfigurationMetrics.parameterId,
-            dailyConfigurationMetrics.value
+            dailyConfigurationMetrics.value,
+            dailyConfigurationMetrics.instanceKey
         )
         .all();
 

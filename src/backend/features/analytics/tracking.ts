@@ -38,17 +38,21 @@ export interface InsertEvent {
 /** After the response, and never failing it: tracking is not what was asked for. */
 export function trackInsert(c: AppContext, event: InsertEvent): Promise<void> {
     return runInBackground(c, "record an insert", async () =>
-        record(c, {
-            ...(await core(c, EventType.INSERT, event.libraryId)),
-            ...event.path,
-            insertableId: event.insertableId,
-            targetElementType: event.targetElementType,
-            selection: appliedSelection(event.selection, event.parameters),
-            isFavorite: event.isFavorite,
-            isQuickInsert: event.isQuickInsert,
-            source: event.source,
-            fasten: event.fasten
-        })
+        record(
+            c,
+            {
+                ...(await core(c, EventType.INSERT, event.libraryId)),
+                ...event.path,
+                insertableId: event.insertableId,
+                targetElementType: event.targetElementType,
+                selection: appliedSelection(event.selection, event.parameters),
+                isFavorite: event.isFavorite,
+                isQuickInsert: event.isQuickInsert,
+                source: event.source,
+                fasten: event.fasten
+            },
+            event.parameters
+        )
     );
 }
 
@@ -58,10 +62,14 @@ export function trackAppOpen(
     libraryId: LibraryId
 ): Promise<void> {
     return runInBackground(c, "record an app open", async () =>
-        record(c, {
-            ...(await core(c, EventType.APP_OPEN, libraryId)),
-            ...NOT_AN_INSERT
-        })
+        record(
+            c,
+            {
+                ...(await core(c, EventType.APP_OPEN, libraryId)),
+                ...NOT_AN_INSERT
+            },
+            []
+        )
     );
 }
 
@@ -93,11 +101,15 @@ async function core(
 }
 
 /** Batched so neither half lands without the other. */
-async function record(c: AppContext, event: LoggedEvent): Promise<void> {
+async function record(
+    c: AppContext,
+    event: LoggedEvent,
+    parameters: ConfigurationParameter[]
+): Promise<void> {
     const db = getDb(c.env.DB);
     const writes: BatchItem<"sqlite">[] = [
         db.insert(events).values(event),
-        ...rollupWrites(db, event)
+        ...rollupWrites(db, event, parameters)
     ];
 
     await db.batch(writes as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]]);
