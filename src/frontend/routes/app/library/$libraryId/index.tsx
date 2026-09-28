@@ -1,7 +1,7 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
-import { Badge } from "@mantine/core";
 import { AppSection, AppSections } from "../../../../components/app-section";
 import { AppTitle } from "../../../../components/app-title";
+import { LibraryStatusBadge } from "../../../../components/library-status-badge";
 import { BooksIcon, MagnifyingGlassIcon } from "@phosphor-icons/react";
 import { IconSize, PrimaryColor } from "../../../../lib/style-constants";
 import { ReactNode, useState } from "react";
@@ -19,11 +19,7 @@ import { RequireAccessLevel } from "../../../../features/auth/access-level";
 import { AddGroupButton } from "../../../../features/library/components/add-group-menu";
 import { FavoritesList } from "../../../../features/favorites/components/favorites-list";
 import { useLibraryQuery } from "../../../../features/library/queries";
-import {
-    getLibraryName,
-    getLibraryStatus,
-    useLibraryId
-} from "../../../../lib/library";
+import { getLibraryName, useLibraryId } from "../../../../lib/library";
 import { useShallow } from "zustand/react/shallow";
 import { updateUiState, useUiState } from "../../../../lib/ui-state";
 import { useVendorFilters } from "../../../../features/settings/components/vendor-filters";
@@ -161,17 +157,10 @@ interface LibraryTitleProps {
 
 function LibraryTitle(props: LibraryTitleProps): ReactNode {
     const { libraryId } = props;
-    const status = getLibraryStatus(libraryId);
     return (
         <AppTitle
             title={getLibraryName(libraryId)}
-            rightSection={
-                status && (
-                    <Badge size="sm" variant="light">
-                        {status}
-                    </Badge>
-                )
-            }
+            rightSection={<LibraryStatusBadge libraryId={libraryId} />}
         />
     );
 }

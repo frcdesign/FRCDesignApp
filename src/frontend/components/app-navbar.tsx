@@ -62,7 +62,7 @@ import {
     useIsLibraryLoading
 } from "../features/library/queries";
 import { LibraryId } from "@backend/features/library/library-id";
-import { AppColor, getLibraryShade, toShade } from "../theme";
+import { AppColor, getLibraryColor, toShade } from "../theme";
 import { queryClient } from "../lib/query-client";
 import { InsertLocationStatus } from "../features/insert-location/components/insert-location-status";
 import {
@@ -219,11 +219,11 @@ function useAppPages(): AppPage[] {
         label: getLibraryName(libraryId),
         group: getLibraryProgram(libraryId),
         icon: BooksIcon,
-        color: getLibraryShade(libraryId),
+        color: getLibraryColor(libraryId),
         badge: (
             <LibraryStatusBadge
                 libraryId={libraryId}
-                color={getLibraryShade(libraryId)}
+                color={getLibraryColor(libraryId)}
             />
         )
     }));
@@ -242,11 +242,9 @@ function useAppPages(): AppPage[] {
             group: UTILITIES_GROUP,
             // What a version is marked with wherever the app shows one.
             icon: GitBranchIcon,
-            color: toShade(AppColor.VERSION_MANAGER),
+            color: AppColor.VERSION_MANAGER,
             badge: isNew ? (
-                <Badge size="xs" color={toShade(AppColor.VERSION_MANAGER)}>
-                    New
-                </Badge>
+                <Badge color={AppColor.VERSION_MANAGER}>New</Badge>
             ) : undefined
         }
     ];
@@ -372,13 +370,21 @@ function PageMenu(props: PageMenuProps): ReactNode {
                                     <AppIcon
                                         icon={page.icon}
                                         size={IconSize.MEDIUM}
-                                        color={page.color}
+                                        // The shade an icon reads at; a badge
+                                        // wants the name, so its light variant
+                                        // tints rather than fills.
+                                        color={toShade(page.color)}
                                     />
                                 }
-                                rightSection={page.badge}
                                 onClick={() => onSelect(page.value)}
                             >
-                                {page.label}
+                                {/* Beside the name, at the spacing a page
+                                    title badges its own with, rather than
+                                    across the menu in a right section. */}
+                                <Group gap="xs">
+                                    {page.label}
+                                    {page.badge}
+                                </Group>
                             </Menu.Item>
                         ))}
                     </MenuSection>
