@@ -4,11 +4,13 @@ import {
     Divider,
     Group,
     Input,
+    Menu,
     Stack,
     Tabs,
     TextInput
 } from "@mantine/core";
 import {
+    CaretDownIcon,
     GearIcon,
     MagnifyingGlassIcon,
     MoonIcon,
@@ -45,9 +47,14 @@ import { InsertLocationStatus } from "../features/insert-location/components/ins
 import { useIsVersionManager } from "../features/version-manager/navigation";
 import styles from "../lib/styles.module.css";
 
+interface NavbarRowProps extends PropsWithChildren {
+    /** The brand's mark without its name; see {@link AppBrand}. */
+    markOnly?: boolean;
+}
+
 /** Stretched so a full-height child's underline lands on the row's border. */
-export function NavbarRow(props: PropsWithChildren): ReactNode {
-    const { children } = props;
+export function NavbarRow(props: NavbarRowProps): ReactNode {
+    const { children, markOnly } = props;
     return (
         <Group
             gap="sm"
@@ -56,7 +63,7 @@ export function NavbarRow(props: PropsWithChildren): ReactNode {
             align="stretch"
             className={`${styles.frame} ${styles.dividerBottom}`}
         >
-            <AppBrand />
+            <AppBrand markOnly={markOnly} />
             {children && (
                 // Mantine's own divider all but vanishes on gray.
                 <Divider
@@ -77,7 +84,10 @@ export function AppNavbar(): ReactNode {
 
     return (
         <Stack gap={0}>
-            <NavbarRow>
+            {/* The mark alone: the library menu beside it names where you are,
+                and the panel has no room for both. */}
+            <NavbarRow markOnly>
+                <LibraryMenu />
                 <AppTabs />
                 <Group gap="xs" ml="auto">
                     <InsertLocationStatus />
@@ -114,29 +124,76 @@ function useCurrentTab(): AppTab {
     return isVersionManager ? UtilityTab.VERSION_MANAGER : libraryId;
 }
 
-/** Switches tabs; the url is what actually selects one. */
+/**
+ * Picks the library. A menu rather than a tab each: there is one library in
+ * view at a time, and a tab strip said otherwise while taking the room the
+ * pages of the app's own need.
+ */
+function LibraryMenu(): ReactNode {
+    const libraryId = useLibraryId();
+    const navigateToTab = useNavigateToTab();
+
+    // Warm the versions on hover, so picking one has nothing left to wait for.
+    const prefetchVersions = () => {
+        for (const id of Object.values(LibraryId)) {
+            void queryClient.prefetchQuery(getLibraryVersionQuery(id));
+        }
+    };
+
+    return (
+        <Menu position="bottom-start" onOpen={prefetchVersions}>
+            <Menu.Target>
+                <Button
+                    variant="default"
+                    size="compact-sm"
+                    my="auto"
+                    className={styles.noShrink}
+                    rightSection={<CaretDownIcon size={IconSize.SMALL} />}
+                >
+                    {getLibraryName(libraryId)}
+                </Button>
+            </Menu.Target>
+            <Menu.Dropdown>
+                {Object.values(LibraryId).map((id) => (
+                    <Menu.Item
+                        key={id}
+                        disabled={id === libraryId}
+                        onClick={() => {
+                            // Only decides where `/` resumes next time; the url
+                            // is the source of truth.
+                            updateUiState({ tabId: id });
+                            navigateToTab(id);
+                        }}
+                    >
+                        {getLibraryName(id)}
+                    </Menu.Item>
+                ))}
+            </Menu.Dropdown>
+        </Menu>
+    );
+}
+
+/**
+ * The app's own pages, beside the library the menu picked. Only the version
+ * manager so far, and only where there is a workspace for it to act on.
+ */
 function AppTabs(): ReactNode {
     const currentTabId = useCurrentTab();
     const navigateToTab = useNavigateToTab();
     const tabs = useAppTabs();
 
-    // Warm the versions on hover, so picking one has nothing left to wait for.
-    const prefetchVersions = () => {
-        for (const libraryId of Object.values(LibraryId)) {
-            void queryClient.prefetchQuery(getLibraryVersionQuery(libraryId));
-        }
-    };
+    if (tabs.length === 0) {
+        return null;
+    }
 
     return (
         <Tabs
             value={currentTabId}
-            onMouseEnter={prefetchVersions}
             onChange={(value) => {
                 if (!value || value === currentTabId) {
                     return;
                 }
                 const tabId = value as AppTab;
-                // Only decides where `/` resumes next time; the url is the source of truth.
                 updateUiState({ tabId });
                 navigateToTab(tabId);
             }}

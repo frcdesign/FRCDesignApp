@@ -44,23 +44,35 @@ export function AppBrandMark(props: AppBrandMarkProps): ReactNode {
     );
 }
 
+interface AppBrandProps {
+    /**
+     * The mark alone. The Onshape panel is a few hundred pixels wide, and there
+     * the library's name says where you are better than the app's does.
+     */
+    markOnly?: boolean;
+}
+
 /** The book and the app's name, in every navbar, linking out to FRCDesign.org. */
-export function AppBrand(): ReactNode {
+export function AppBrand(props: AppBrandProps): ReactNode {
+    const { markOnly = false } = props;
+
     return (
         <Group gap="xs" h="100%">
             <Center component="a" href={FRC_DESIGN_URL} target="_blank">
                 <AppBrandMark />
             </Center>
-            <Text
-                component="a"
-                href={FRC_DESIGN_URL}
-                target="_blank"
-                fw={FontWeight.BOLD}
-                c="inherit"
-                td="none"
-            >
-                FRCDesignApp
-            </Text>
+            {!markOnly && (
+                <Text
+                    component="a"
+                    href={FRC_DESIGN_URL}
+                    target="_blank"
+                    fw={FontWeight.BOLD}
+                    c="inherit"
+                    td="none"
+                >
+                    FRCDesignApp
+                </Text>
+            )}
         </Group>
     );
 }

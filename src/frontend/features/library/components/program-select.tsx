@@ -115,7 +115,7 @@ export function ProgramSelect(): ReactNode {
                 <SectionNotice
                     icon={<AppBrandMark size={IconSize.PAGE} />}
                     title="Welcome to the FRCDesignApp!"
-                    description="To get started, select your library. You can switch between libraries at any time using the top navbar."
+                    description="To get started, select your library. You can switch between libraries at any time from the menu in the top navbar."
                     action={
                         // Side by side, each would be narrower than its name in Onshape's panel.
                         <Stack gap="sm" w="100%" maw={320}>
