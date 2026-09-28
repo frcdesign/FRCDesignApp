@@ -20,7 +20,6 @@ import { useMatch } from "@tanstack/react-router";
 import { LibraryId } from "@backend/features/library/library-id";
 import { useIsVersionManager } from "./features/version-manager/navigation";
 import { FILLED_SHADE, IconSize, StatusColor } from "./lib/style-constants";
-import classes from "./theme.module.css";
 
 /** Index 6 is the brand color; https://mantine.dev/colors-generator to tune. */
 const frcGreen: MantineColorsTuple = [
@@ -130,8 +129,7 @@ export function createAppTheme(primaryColor: string) {
                 defaultProps: { variant: "subtle", color: StatusColor.NEUTRAL }
             }),
             Badge: Badge.extend({
-                defaultProps: { variant: "light", size: "sm" },
-                classNames: { label: classes.badgeLabel }
+                defaultProps: { variant: "light", size: "sm" }
             }),
             Menu: Menu.extend({
                 defaultProps: { shadow: "md" },
