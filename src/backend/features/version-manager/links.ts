@@ -17,7 +17,7 @@ import {
 } from "./contract";
 import type { WorkspaceEdge } from "./graph";
 import { workspaceLinks, type WorkspaceLinkRow } from "./schema";
-import { describeWorkspace } from "./workspace-cache";
+import { describeWorkspace, getUnversionedChanges } from "./workspace-cache";
 
 /** How far a push is allowed to walk, so a mislinked graph cannot run forever. */
 const MAX_LINKED_WORKSPACES = 100;
@@ -200,20 +200,54 @@ export async function toLinkedWorkspace(
     c: AppContext,
     client: OnshapeApi,
     linkId: string,
-    workspace: WorkspacePath
+    workspace: WorkspacePath,
+    /** Parents only; see {@link LinkedWorkspace.unversionedChanges}. */
+    countChanges = false
 ): Promise<LinkedWorkspace> {
     if (!(await hasPermissions(client, workspace, OnshapePermission.READ))) {
         return { linkId, workspace, isOpenable: false };
     }
 
     try {
-        const description = await describeWorkspace(c, client, workspace);
-        return { linkId, workspace, isOpenable: true, ...description };
+        const [description, unversionedChanges] = await Promise.all([
+            describeWorkspace(c, client, workspace),
+            countChanges
+                ? countUnversionedChanges(c, client, workspace)
+                : undefined
+        ]);
+        return {
+            linkId,
+            workspace,
+            isOpenable: true,
+            ...description,
+            unversionedChanges
+        };
     } catch (error) {
         // Readable a moment ago and not now, or a document that has since been
         // deleted: the link is still real, so show it without the names.
         console.warn(`Failed to describe linked workspace ${linkId}`, error);
         return { linkId, workspace, isOpenable: false };
+    }
+}
+
+/**
+ * What the workspace has changed since its own last version. Counted rather
+ * than failed on: a parent Onshape will not answer for is a row without a
+ * badge, not a list that does not render.
+ */
+async function countUnversionedChanges(
+    c: AppContext,
+    client: OnshapeApi,
+    workspace: WorkspacePath
+): Promise<number | undefined> {
+    try {
+        return await getUnversionedChanges(c, client, workspace);
+    } catch (error) {
+        console.warn(
+            `Failed to count changes in ${workspace.documentId}`,
+            error
+        );
+        return undefined;
     }
 }
 

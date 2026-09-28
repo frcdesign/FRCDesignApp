@@ -69,16 +69,16 @@ The tab appears only when Onshape launched the app in a workspace
 (`useTargetWorkspace`); `beforeLoad` redirects anyone who reaches the url
 without one.
 
-`GET /api/workspace-links` answers `{ parents, children }`. For each row it asks
+`GET /api/workspace-links` answers `{ parents, children, documentName }` — the
+last being this workspace's own document, which the page's copy names. For each row it asks
 Onshape whether the caller may read the far end, and — from the cache — what it
 is called. A workspace the caller cannot read comes back `isOpenable: false` and
 unnamed: they are shown that a link exists, not what it points at.
 
-`GET /api/unversioned-changes` answers, per link id, how far each parent has
-moved since its own last version (`changesSinceVersionSave` on the insertables
-response, asked with no `include` flags so Onshape enumerates nothing). A pull
-moves onto a version, so these are the edits it cannot bring in, and the row
-shows the count as a badge.
+Each parent also carries `unversionedChanges`: how far it has moved since its
+own last version (`changesSinceVersionSave` on the insertables response, asked
+with no `include` flags so Onshape enumerates nothing). A pull has to cut a
+version to bring those edits in, so the row shows the count as a badge.
 
 ### Linking
 
@@ -121,10 +121,15 @@ on.
 
 ### Pulling
 
-`POST /api/pull-references` moves this workspace's references onto the latest
-version of each document it names. `PARENTS` restricts that to the linked
-parents, `ONE` to a single parent, and `ALL` takes every out-of-date reference,
-linked or not — which is the one thing the parent list cannot express.
+`POST /api/pull-references` versions each parent it is aimed at and moves this
+workspace's references onto what it just cut: a reference points at a version,
+so a parent's unversioned edits are only pullable once there is one holding
+them. `PARENTS` takes the linked parents, `ONE` a single parent.
+
+`ALL` is the exception: every out-of-date reference, linked or not, moved onto
+whatever version each document already has. It versions nothing, the documents
+behind those references being nobody's to cut a version in, and it is the one
+thing the parent list cannot express.
 
 There is no recursive pull. Going further would mean versioning a parent's own
 parents, which is a push, and theirs to make.
@@ -210,10 +215,10 @@ deletes a transient webhook that goes quiet, so the entries expire as well.
 - **The buttons run; the form is behind the row.** A push usually wants the next
   `V` number and nothing else, so that is one click. Naming a version, or
   pushing recursively, is a click on the row.
-- **Thumbnails come from Onshape directly.** The browser showing the app is
-  already signed in to Onshape, so the image element fetches the workspace's
-  thumbnail itself and the bytes never cross the worker. Unverified against real
-  Onshape; it fails to the same placeholder a workspace with no thumbnail gets.
+- **Thumbnails are proxied.** `GET /api/workspace-thumbnail` fetches the
+  workspace's own thumbnail under the caller's OAuth token. Letting the image
+  element fetch Onshape directly was tried; Onshape serves a thumbnail only to
+  an OAuth caller, which the browser is not.
 
 ## Unverified against Onshape
 

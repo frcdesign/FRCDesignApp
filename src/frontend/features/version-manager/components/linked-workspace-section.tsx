@@ -2,6 +2,7 @@ import {
     Badge,
     Button,
     Center,
+    Divider,
     Group,
     Loader,
     Menu,
@@ -36,8 +37,8 @@ import {
     PrimaryColor,
     StatusColor
 } from "../../../lib/style-constants";
-import styles from "../../../lib/styles.module.css";
 import { makeUrl, openUrlInNewTab } from "../../../lib/url";
+import styles from "../../../lib/styles.module.css";
 import { useOnshapeOrigin } from "../../../lib/onshape-params";
 import {
     openPullReferencesModal,
@@ -50,8 +51,7 @@ import {
     useMoveLinkMutation,
     usePullReferencesMutation,
     usePushVersionMutation,
-    useRemoveLinkMutation,
-    useUnversionedChangesQuery
+    useRemoveLinkMutation
 } from "../queries";
 import { AddLinkRow } from "./add-link-input";
 
@@ -59,21 +59,27 @@ import { AddLinkRow } from "./add-link-input";
 export const DIRECTION_COPY = {
     [LinkDirection.PARENT]: {
         title: "Parents",
-        allAction: "Pull from all",
-        rowAction: "Pull",
-        quickAll: "Quick pull from every parent",
-        quickRow: "Quick pull",
+        allAction: "Quick pull from all",
+        rowAction: "Quick pull",
+        formAction: "Pull",
+        quickAll:
+            "Versions every parent and moves this document's references onto what it cut",
+        quickRow:
+            "Versions this parent and moves this document's references onto what it cut",
         running: "Pulling from Onshape...",
         description:
-            "Workspaces this one references. Pulling moves this workspace's references onto their latest versions.",
+            "Workspaces this one references. Pulling versions them and moves this workspace's references onto what it cut.",
         empty: "No linked parents"
     },
     [LinkDirection.CHILD]: {
         title: "Children",
-        allAction: "Push to all",
-        rowAction: "Push",
-        quickAll: "Quick push to every child",
-        quickRow: "Quick push",
+        allAction: "Quick push to all",
+        rowAction: "Quick push",
+        formAction: "Push",
+        quickAll:
+            "Versions this document and moves every child's references onto it",
+        quickRow:
+            "Versions this document and moves this child's references onto it",
         running: "Pushing to Onshape...",
         description:
             "Workspaces that reference this one. Pushing creates a version here and moves their references onto it.",
@@ -194,8 +200,10 @@ export interface LinkActions {
     isRunning: boolean;
     /** What the run going is aimed at: {@link ALL_TARGET} or a link's id. */
     activeTarget: string | undefined;
-    /** Opens the form for everything in this direction, or for one link. */
-    openAll: () => void;
+    /**
+     * Opens the form for one link. There is none for a whole direction: it
+     * would name one version for the several the run cuts.
+     */
     openOne: (linked: LinkedWorkspace) => void;
     /** Runs it under the defaults the form would have shown. */
     quickAll: (recursive: boolean) => void;
@@ -206,8 +214,7 @@ export interface LinkActions {
 
 export function useLinkActions(
     workspace: WorkspacePath,
-    direction: LinkDirection,
-    linked: LinkedWorkspace[]
+    direction: LinkDirection
 ): LinkActions {
     const pull = usePullReferencesMutation(workspace);
     const push = usePushVersionMutation(workspace);
@@ -238,30 +245,27 @@ export function useLinkActions(
             });
             return;
         }
-        pull.mutate(
-            each
+        pull.mutate({
+            scope: each
                 ? { kind: PullScopeKind.ONE, workspace: each.workspace }
                 : { kind: PullScopeKind.PARENTS }
-        );
+        });
     };
 
-    const open = (each?: LinkedWorkspace) => {
-        setStartedTarget(each ? each.linkId : ALL_TARGET);
-        const names = each ? [toName(each)] : linked.map(toName);
+    const open = (each: LinkedWorkspace) => {
+        setStartedTarget(each.linkId);
         if (isChild) {
             openPushVersionModal(workspace, {
-                title: each ? `Push to ${toName(each)}` : "Push to every child",
+                title: `Push to ${toName(each)}`,
                 target: each,
-                targets: names
+                targets: [toName(each)]
             });
             return;
         }
         openPullReferencesModal(workspace, {
-            title: each
-                ? `Pull from ${toName(each)}`
-                : "Pull from every parent",
+            title: `Pull from ${toName(each)}`,
             source: each,
-            sources: names
+            sourceName: toName(each)
         });
     };
 
@@ -270,14 +274,13 @@ export function useLinkActions(
         // Derived rather than cleared when the run ends: clearing would be a
         // state write from an effect, and a stale target simply goes unused.
         activeTarget: isRunning ? startedTarget : undefined,
-        openAll: () => open(),
         openOne: (each) => open(each),
         quickAll: (recursive) => runQuick(undefined, recursive),
         quickOne: (each, recursive) => runQuick(each, recursive),
         updateAllReferences: () => {
             retireQuickActionTip();
             setStartedTarget(ALL_TARGET);
-            pull.mutate({ kind: PullScopeKind.ALL });
+            pull.mutate({ scope: { kind: PullScopeKind.ALL } });
         }
     };
 }
@@ -306,18 +309,23 @@ export function SectionActions(props: SectionActionsProps): ReactNode {
                 disabled={disabled}
                 onClick={() => actions.quickAll(false)}
             />
+            {/* No form beside it: one name cannot stand for the several
+                versions a run across a whole direction cuts. */}
             <MenuButton>
-                <ActionMenuSection
-                    direction={direction}
-                    formLabel={`${copy.allAction}...`}
-                    disabled={disabled}
-                    onOpenForm={actions.openAll}
-                    onQuickRecursive={() => actions.quickAll(true)}
-                />
-                {!isChild && (
-                    <MenuSection label="Pull">
-                        {/* Every out-of-date reference, linked or not, which is
-                            the one thing the parent list cannot express. */}
+                <MenuSection label={isChild ? "Push" : "Pull"}>
+                    {isChild ? (
+                        <Menu.Item
+                            leftSection={
+                                <TreeStructureIcon size={IconSize.MEDIUM} />
+                            }
+                            disabled={disabled}
+                            onClick={() => actions.quickAll(true)}
+                        >
+                            Quick recursive push
+                        </Menu.Item>
+                    ) : (
+                        // Every out-of-date reference, linked or not, which is
+                        // the one thing the parent list cannot express.
                         <Menu.Item
                             leftSection={
                                 <ArrowsClockwiseIcon size={IconSize.MEDIUM} />
@@ -327,8 +335,8 @@ export function SectionActions(props: SectionActionsProps): ReactNode {
                         >
                             Update all references
                         </Menu.Item>
-                    </MenuSection>
-                )}
+                    )}
+                </MenuSection>
             </MenuButton>
         </>
     );
@@ -344,8 +352,8 @@ interface ActionMenuSectionProps {
 }
 
 /**
- * What the buttons do not: the form, for a run that wants a version name or a
- * wider scope, and — pushing — the recursive walk.
+ * What a row's button does not: the form, for a run that wants to name the
+ * version it cuts, and — pushing — the recursive walk.
  */
 function ActionMenuSection(props: ActionMenuSectionProps): ReactNode {
     const { direction, formLabel, disabled, onOpenForm, onQuickRecursive } =
@@ -396,30 +404,29 @@ export function LinkedWorkspaceSection(
     const { workspace, direction, linked, actions } = props;
     const removeLink = useRemoveLinkMutation(workspace);
     const moveLink = useMoveLinkMutation(workspace);
-    // Parents only: a child's unversioned changes are its own business, where a
-    // parent's are edits a pull from it would not bring in.
-    const changes = useUnversionedChangesQuery(
-        direction === LinkDirection.PARENT ? workspace : undefined
-    );
     const copy = DIRECTION_COPY[direction];
 
     return (
         <>
             {linked.length === 0 && (
-                <SectionNotice
-                    // Beside the text rather than over it: one line saying a
-                    // list is empty should not take a list's worth of room.
-                    align="left"
-                    title={copy.empty}
-                    description={null}
-                    icon={
-                        <DirectionIcon
-                            direction={direction}
-                            size={IconSize.SECTION}
-                            color={PrimaryColor.FILLED}
-                        />
-                    }
-                />
+                <>
+                    <SectionNotice
+                        // Beside the text rather than over it: one line saying
+                        // a list is empty should not take a list's worth of room.
+                        title={copy.empty}
+                        description={null}
+                        icon={
+                            <DirectionIcon
+                                direction={direction}
+                                size={IconSize.SECTION}
+                                color={PrimaryColor.FILLED}
+                            />
+                        }
+                    />
+                    {/* The field below is a table row, and a row rules off
+                        underneath itself; this is the line above it. */}
+                    <Divider />
+                </>
             )}
             {/* The field is a row of the same table, so it sits on the grid
                 every other row does rather than in a card of its own. */}
@@ -429,7 +436,6 @@ export function LinkedWorkspaceSection(
                         key={each.linkId}
                         linked={each}
                         direction={direction}
-                        unversionedChanges={changes.data?.[each.linkId]}
                         actions={actions}
                         onRemove={() => removeLink.mutate(each.linkId)}
                         onMove={() =>
@@ -453,8 +459,6 @@ function toName(linked: LinkedWorkspace): string {
 interface LinkedWorkspaceRowProps {
     linked: LinkedWorkspace;
     direction: LinkDirection;
-    /** Edits this workspace has made since its own last version, when known. */
-    unversionedChanges?: number;
     actions: LinkActions;
     onRemove: () => void;
     /** Files the link under the other direction. */
@@ -462,8 +466,7 @@ interface LinkedWorkspaceRowProps {
 }
 
 function LinkedWorkspaceRow(props: LinkedWorkspaceRowProps): ReactNode {
-    const { linked, direction, unversionedChanges, actions, onRemove, onMove } =
-        props;
+    const { linked, direction, actions, onRemove, onMove } = props;
     const origin = useOnshapeOrigin();
     const url = makeUrl(origin, linked.workspace);
     const disabled = actions.isRunning;
@@ -473,7 +476,7 @@ function LinkedWorkspaceRow(props: LinkedWorkspaceRowProps): ReactNode {
         <>
             <ActionMenuSection
                 direction={direction}
-                formLabel={`${copy.rowAction}...`}
+                formLabel={`${copy.formAction}...`}
                 disabled={disabled}
                 onOpenForm={() => actions.openOne(linked)}
                 onQuickRecursive={() => actions.quickOne(linked, true)}
@@ -517,12 +520,7 @@ function LinkedWorkspaceRow(props: LinkedWorkspaceRowProps): ReactNode {
 
     return (
         <ItemRow
-            left={
-                <LinkedWorkspaceTitle
-                    linked={linked}
-                    unversionedChanges={unversionedChanges}
-                />
-            }
+            left={<LinkedWorkspaceTitle linked={linked} />}
             menuItems={menuItems}
             // The menu below carries the same items, in the order this row
             // wants them: the action first, then what to do with the link.
@@ -548,10 +546,6 @@ function LinkedWorkspaceRow(props: LinkedWorkspaceRowProps): ReactNode {
     );
 }
 
-interface LinkedWorkspaceThumbnailProps {
-    linked: LinkedWorkspace;
-}
-
 /**
  * A linked workspace's thumbnail: the one Onshape keeps for the document, at
  * the size every row uses, with the same hover card as a part's.
@@ -559,27 +553,20 @@ interface LinkedWorkspaceThumbnailProps {
  * A workspace nobody can read gets none asked for — the placeholder is the
  * answer, and it keeps the row the height of its neighbours.
  */
-function LinkedWorkspaceThumbnail(
-    props: LinkedWorkspaceThumbnailProps
-): ReactNode {
+function LinkedWorkspaceThumbnail(props: {
+    linked: LinkedWorkspace;
+}): ReactNode {
     const { linked } = props;
-    const origin = useOnshapeOrigin();
-
     if (!linked.isOpenable) {
         return <CardThumbnail />;
     }
     return (
         <CardThumbnail
-            // Onshape's own urls, fetched by the browser rather than through
-            // us; see `workspaceThumbnailUrl`.
-            isExternal
             smallThumbnailUrl={workspaceThumbnailUrl(
-                origin,
                 linked.workspace,
                 ThumbnailSize.SMALL
             )}
             largeThumbnailUrl={workspaceThumbnailUrl(
-                origin,
                 linked.workspace,
                 ThumbnailSize.LARGE
             )}
@@ -589,7 +576,6 @@ function LinkedWorkspaceThumbnail(
 
 interface LinkedWorkspaceTitleProps {
     linked: LinkedWorkspace;
-    unversionedChanges?: number;
 }
 
 /**
@@ -599,7 +585,7 @@ interface LinkedWorkspaceTitleProps {
  * remove.
  */
 function LinkedWorkspaceTitle(props: LinkedWorkspaceTitleProps): ReactNode {
-    const { linked, unversionedChanges } = props;
+    const { linked } = props;
     const thumbnail = <LinkedWorkspaceThumbnail linked={linked} />;
 
     if (!linked.isOpenable) {
@@ -623,7 +609,9 @@ function LinkedWorkspaceTitle(props: LinkedWorkspaceTitleProps): ReactNode {
             // say.
             title={linked.documentName ?? "Untitled document"}
             thumbnail={thumbnail}
-            badge={<UnversionedChangesBadge changes={unversionedChanges} />}
+            badge={
+                <UnversionedChangesBadge changes={linked.unversionedChanges} />
+            }
             subtitle={
                 linked.workspaceName && (
                     <Text size="xs" c={StatusColor.DIMMED} truncate>
@@ -658,15 +646,10 @@ function UnversionedChangesBadge(
             withArrow
             multiline
             w={240}
-            label={`${plural(changes, "change")} since this document's last version. A pull moves onto that version, so they are not in it yet.`}
+            label={`${plural(changes, "change")} since the last version.`}
         >
-            <Badge
-                size="sm"
-                variant="light"
-                color={StatusColor.NEUTRAL}
-                className={styles.noShrink}
-            >
-                {changes}
+            <Badge size="sm" variant="light" className={styles.noShrink}>
+                {plural(changes, "change")}
             </Badge>
         </Tooltip>
     );

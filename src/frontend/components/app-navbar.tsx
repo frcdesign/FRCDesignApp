@@ -1,13 +1,15 @@
 import {
     ActionIcon,
+    Badge,
     Button,
     Divider,
     Group,
     Input,
+    Loader,
     Menu,
     Stack,
-    Tabs,
-    TextInput
+    TextInput,
+    Tooltip
 } from "@mantine/core";
 import {
     CaretDownIcon,
@@ -19,8 +21,10 @@ import {
 import {
     IconSize,
     NAVBAR_DIVIDER_COLOR,
-    NAVBAR_ROW_HEIGHT
+    NAVBAR_ROW_HEIGHT,
+    StatusColor
 } from "../lib/style-constants";
+import styles from "../lib/styles.module.css";
 import {
     PropsWithChildren,
     ReactNode,
@@ -29,43 +33,60 @@ import {
     useRef,
     useState
 } from "react";
+import { useNavigate } from "@tanstack/react-router";
 import { useDebouncedCallback } from "@mantine/hooks";
 
 import { AppBrand } from "./app-brand";
+import { LibraryStatusBadge } from "./library-status-badge";
+import { MenuSection } from "./app-menu";
 import { openSettingsMenu } from "../features/settings/open-settings-menu";
 import { VendorMenu } from "../features/settings/components/vendor-filters";
 import { getUiState, Theme, updateUiState, useUiState } from "../lib/ui-state";
-import { getLibraryName, useLibraryId } from "../lib/library";
-import { getTabName, useAppTabs, useNavigateToTab } from "../lib/tabs";
-import { useAccessData } from "../features/auth/access-level";
+import {
+    getLibraryName,
+    getLibraryProgram,
+    useLibraryId
+} from "../lib/library";
+import {
+    RequireAccessLevel,
+    useNeedsSignIn
+} from "../features/auth/access-level";
 import { startSignIn } from "../features/auth/sign-in";
+import {
+    getLibraryVersionQuery,
+    useIsLibraryLoading
+} from "../features/library/queries";
 import { LibraryId } from "@backend/features/library/library-id";
-import { type AppTab, UtilityTab } from "../lib/app-tab";
 import { queryClient } from "../lib/query-client";
-import { getLibraryVersionQuery } from "../features/library/queries";
 import { InsertLocationStatus } from "../features/insert-location/components/insert-location-status";
 import { useIsVersionManager } from "../features/version-manager/navigation";
-import styles from "../lib/styles.module.css";
+import { useTargetWorkspace } from "../lib/onshape-params";
 
-interface NavbarRowProps extends PropsWithChildren {
-    /** The brand's mark without its name; see {@link AppBrand}. */
-    markOnly?: boolean;
-}
-
-/** Stretched so a full-height child's underline lands on the row's border. */
-export function NavbarRow(props: NavbarRowProps): ReactNode {
-    const { children, markOnly } = props;
+/**
+ * The bar every page is topped by: the brand, then whatever that page puts
+ * beside it. Stretched so a full-height child lands its underline on the row's
+ * own border.
+ *
+ * Narrow, the row gives in one order, and nothing else in it has to be told
+ * about widths: the brand folds to its tile at a width of its own, the controls
+ * are pinned because half a button is no use, and the pages — the only thing
+ * left that can — take whatever squeeze is still on, clipping their name.
+ */
+export function NavbarRow(props: PropsWithChildren): ReactNode {
+    const { children } = props;
     return (
         <Group
             gap="sm"
             px="sm"
             h={NAVBAR_ROW_HEIGHT}
+            wrap="nowrap"
             align="stretch"
             className={`${styles.frame} ${styles.dividerBottom}`}
         >
-            <AppBrand markOnly={markOnly} />
+            <AppBrand />
             {children && (
-                // Mantine's own divider all but vanishes on gray.
+                // Closes the brand off, so the name reads as the app rather
+                // than the first tab. Mantine's own all but vanishes on gray.
                 <Divider
                     orientation="vertical"
                     my="sm"
@@ -77,6 +98,10 @@ export function NavbarRow(props: NavbarRowProps): ReactNode {
     );
 }
 
+/**
+ * Provides top-level navigation for the app: a row of library tabs with the
+ * brand and settings alongside, over a row holding search and its filters.
+ */
 export function AppNavbar(): ReactNode {
     // Search and its filters belong to a library, and the version manager is
     // not one; its page fills the room they leave.
@@ -84,19 +109,22 @@ export function AppNavbar(): ReactNode {
 
     return (
         <Stack gap={0}>
-            {/* The mark alone: the library menu beside it names where you are,
-                and the panel has no room for both. */}
-            <NavbarRow markOnly>
-                <LibraryMenu />
-                <AppTabs />
-                <Group gap="xs" ml="auto">
+            <NavbarRow>
+                <PagePicker />
+                <Group
+                    gap="xs"
+                    wrap="nowrap"
+                    ml="auto"
+                    className={styles.noShrink}
+                >
                     <InsertLocationStatus />
+                    <JobIndicator />
                     <SignInButton />
                     <SettingsControls />
                 </Group>
             </NavbarRow>
             {!isVersionManager && (
-                <Group gap="xs" px="sm" h={NAVBAR_ROW_HEIGHT}>
+                <Group gap="xs" px="sm" h={NAVBAR_ROW_HEIGHT} wrap="nowrap">
                     <SearchBar />
                     <VendorMenu />
                 </Group>
@@ -105,10 +133,15 @@ export function AppNavbar(): ReactNode {
     );
 }
 
+/**
+ * Shown only when not signed in; starts the Onshape OAuth flow and returns to
+ * the current location, after which access-data reports the caller signed in.
+ */
 function SignInButton(): ReactNode {
-    const { signedIn, isPending } = useAccessData();
-    // Otherwise the button flashes on every load for someone signed in.
-    if (isPending || signedIn) return null;
+    const needsSignIn = useNeedsSignIn();
+    // Waiting rather than assuming signed out: the button would otherwise
+    // flash on every load for a caller who is already signed in.
+    if (!needsSignIn) return null;
 
     return (
         <Button variant="outline" size="sm" my="auto" onClick={startSignIn}>
@@ -117,112 +150,202 @@ function SignInButton(): ReactNode {
     );
 }
 
-/** Which tab the page showing belongs to: a library, or a utility's page. */
-function useCurrentTab(): AppTab {
-    const libraryId = useLibraryId();
-    const isVersionManager = useIsVersionManager();
-    return isVersionManager ? UtilityTab.VERSION_MANAGER : libraryId;
+/** Editor-only spinner shown while a library-load job is running. */
+function JobIndicator(): ReactNode {
+    return (
+        <RequireAccessLevel>
+            <RunningJobLoader />
+        </RequireAccessLevel>
+    );
 }
 
-/**
- * Picks the library. A menu rather than a tab each: there is one library in
- * view at a time, and a tab strip said otherwise while taking the room the
- * pages of the app's own need.
- */
-function LibraryMenu(): ReactNode {
-    const libraryId = useLibraryId();
-    const navigateToTab = useNavigateToTab();
-
-    // Warm the versions on hover, so picking one has nothing left to wait for.
-    const prefetchVersions = () => {
-        for (const id of Object.values(LibraryId)) {
-            void queryClient.prefetchQuery(getLibraryVersionQuery(id));
-        }
-    };
-
+function RunningJobLoader(): ReactNode {
+    // Single editor-gated job-status consumer, so it owns refresh-on-finish.
+    const jobRunning = useIsLibraryLoading();
+    if (!jobRunning) return null;
     return (
-        <Menu position="bottom-start" onOpen={prefetchVersions}>
-            <Menu.Target>
-                <Button
-                    variant="default"
-                    size="compact-sm"
-                    my="auto"
-                    className={styles.noShrink}
-                    rightSection={<CaretDownIcon size={IconSize.SMALL} />}
-                >
-                    {getLibraryName(libraryId)}
-                </Button>
-            </Menu.Target>
-            <Menu.Dropdown>
-                {Object.values(LibraryId).map((id) => (
-                    <Menu.Item
-                        key={id}
-                        disabled={id === libraryId}
-                        onClick={() => {
-                            // Only decides where `/` resumes next time; the url
-                            // is the source of truth.
-                            updateUiState({ tabId: id });
-                            navigateToTab(id);
-                        }}
-                    >
-                        {getLibraryName(id)}
-                    </Menu.Item>
-                ))}
-            </Menu.Dropdown>
-        </Menu>
+        <Tooltip
+            withArrow
+            label="The library is being loaded from Onshape in the background"
+        >
+            <Loader size={IconSize.CONTROL} />
+        </Tooltip>
     );
 }
 
 /**
- * The app's own pages, beside the library the menu picked. Only the version
- * manager so far, and only where there is a workspace for it to act on.
+ * The value the version manager's tab takes. Not a library id, so it can never
+ * collide with one.
  */
-function AppTabs(): ReactNode {
-    const currentTabId = useCurrentTab();
-    const navigateToTab = useNavigateToTab();
-    const tabs = useAppTabs();
+const VERSION_MANAGER_TAB = "version-manager";
 
-    if (tabs.length === 0) {
-        return null;
+/** What the version manager's page is called wherever it is offered. */
+const VERSION_MANAGER_LABEL = "Version Manager";
+
+/** Marks the newest page out. Drop it once the page is no longer news. */
+const NEW_BADGE = (
+    <Badge size="xs" variant="light">
+        New
+    </Badge>
+);
+
+/** What the menu files the pages that are not a library under. */
+const UTILITIES_GROUP = "Utilities";
+
+/** One of the app's top-level pages, as both the tab row and the menu list it. */
+interface AppPage {
+    /** A library id, or {@link VERSION_MANAGER_TAB}. */
+    value: string;
+    label: string;
+    /** The heading the menu lists it under: its program, or the utilities. */
+    group: string;
+    /** What marks the page out, wherever it is listed. */
+    badge?: ReactNode;
+}
+
+function useAppPages(): AppPage[] {
+    const targetWorkspace = useTargetWorkspace();
+    const isVersionManager = useIsVersionManager();
+
+    const libraries = Object.values(LibraryId).map((libraryId) => ({
+        value: libraryId,
+        label: getLibraryName(libraryId),
+        group: getLibraryProgram(libraryId)
+    }));
+
+    // Only where there is a workspace to push or pull, which is what the page
+    // acts on; standalone there is none. Listed while it is showing either way,
+    // so the picker cannot end up naming a page it does not offer.
+    if (!targetWorkspace && !isVersionManager) {
+        return libraries;
     }
+    return [
+        ...libraries,
+        {
+            value: VERSION_MANAGER_TAB,
+            label: VERSION_MANAGER_LABEL,
+            group: UTILITIES_GROUP,
+            badge: NEW_BADGE
+        }
+    ];
+}
+
+/**
+ * The app's top-level pages: the libraries, and the version manager after them
+ * when the panel was opened somewhere it has a document to act on. One page
+ * shows at a time, so they are a dropdown naming it rather than a row of tabs
+ * — which in Onshape's panel could not lay four names out anyway.
+ */
+function PagePicker(): ReactNode {
+    const pages = useAppPages();
+    const currentLibraryId = useLibraryId();
+    const isVersionManager = useIsVersionManager();
+    const navigate = useNavigate();
+
+    // Warm the versions on hover, so picking one has nothing left to wait for.
+    const prefetchVersions = () => {
+        for (const libraryId of Object.values(LibraryId)) {
+            void queryClient.prefetchQuery(getLibraryVersionQuery(libraryId));
+        }
+    };
+
+    const current = isVersionManager ? VERSION_MANAGER_TAB : currentLibraryId;
+
+    const selectPage = (value: string | null) => {
+        if (!value || value === current) {
+            return;
+        }
+        if (value === VERSION_MANAGER_TAB) {
+            void navigate({ to: "/app/version-manager" });
+            return;
+        }
+        const libraryId = value as LibraryId;
+        // Only decides where `/` resumes next time; the url is the source of
+        // truth.
+        updateUiState({ tabId: libraryId });
+        void navigate({
+            to: "/app/library/$libraryId",
+            params: { libraryId }
+        });
+    };
 
     return (
-        <Tabs
-            value={currentTabId}
-            onChange={(value) => {
-                if (!value || value === currentTabId) {
-                    return;
-                }
-                const tabId = value as AppTab;
-                updateUiState({ tabId });
-                navigateToTab(tabId);
-            }}
-            styles={{
-                // The row draws the line under the tabs.
-                root: { "--tab-border-color": "transparent", minWidth: 0 },
-                // Scroll rather than wrap onto a second row in a narrow panel.
-                list: {
-                    // So the underline lands on the row's border.
-                    height: "100%",
-                    flexWrap: "nowrap",
-                    overflowX: "auto",
-                    scrollbarWidth: "none"
-                },
-                // Overlaps the row's border, so the active indicator replaces it.
-                tab: {
-                    marginBottom: -1,
-                    paddingInline: "var(--mantine-spacing-sm)"
-                }
-            }}
-        >
-            <Tabs.List>
-                {tabs.map((tabId) => (
-                    <Tabs.Tab key={tabId} value={tabId}>
-                        {getTabName(tabId)}
-                    </Tabs.Tab>
+        <PageMenu
+            pages={pages}
+            current={current}
+            onHover={prefetchVersions}
+            onSelect={selectPage}
+        />
+    );
+}
+
+/**
+ * The pages under their headings, each heading in the order its first page
+ * comes in. The tab row keeps the flat order; only the menu has room to group.
+ */
+function groupPages(pages: AppPage[]): [string, AppPage[]][] {
+    const groups = new Map<string, AppPage[]>();
+    for (const page of pages) {
+        const group = groups.get(page.group);
+        if (group) {
+            group.push(page);
+        } else {
+            groups.set(page.group, [page]);
+        }
+    }
+    return [...groups];
+}
+
+interface PageMenuProps {
+    pages: AppPage[];
+    /** The page showing, which the button names and the menu greys out. */
+    current: string;
+    onHover: () => void;
+    onSelect: (value: string) => void;
+}
+
+/** The same pages as a dropdown, for a navbar too narrow to lay them in a row. */
+function PageMenu(props: PageMenuProps): ReactNode {
+    const { pages, current, onHover, onSelect } = props;
+    const currentPage = pages.find((page) => page.value === current);
+
+    return (
+        <Menu position="bottom-start" withinPortal>
+            <Menu.Target>
+                <Button
+                    variant="subtle"
+                    color={StatusColor.NEUTRAL}
+                    my="auto"
+                    px="xs"
+                    onMouseEnter={onHover}
+                    rightSection={<CaretDownIcon size={IconSize.SMALL} />}
+                >
+                    {currentPage?.label}
+                </Button>
+            </Menu.Target>
+            <Menu.Dropdown>
+                {groupPages(pages).map(([group, groupPages]) => (
+                    <MenuSection key={group} label={group}>
+                        {groupPages.map((page) => (
+                            <Menu.Item
+                                key={page.value}
+                                disabled={page.value === current}
+                                rightSection={
+                                    page.badge ?? (
+                                        <LibraryStatusBadge
+                                            libraryId={page.value}
+                                        />
+                                    )
+                                }
+                                onClick={() => onSelect(page.value)}
+                            >
+                                {page.label}
+                            </Menu.Item>
+                        ))}
+                    </MenuSection>
                 ))}
-            </Tabs.List>
-        </Tabs>
+            </Menu.Dropdown>
+        </Menu>
     );
 }
 
@@ -241,6 +364,8 @@ function ThemeToggle(): ReactNode {
     const isDark = theme === Theme.DARK;
     return (
         <ActionIcon
+            variant="subtle"
+            color={StatusColor.NEUTRAL}
             title={isDark ? "Light mode" : "Dark mode"}
             my="auto"
             size="input-sm"
@@ -260,9 +385,12 @@ function ThemeToggle(): ReactNode {
 function SettingsButton() {
     return (
         <ActionIcon
+            variant="subtle"
+            color={StatusColor.NEUTRAL}
             title="Settings"
             my="auto"
-            // Matches the filter button.
+            // The filter button's size and icon, so the navbar's two rows read
+            // as one set of controls.
             size="input-sm"
             onClick={() => openSettingsMenu()}
         >
@@ -280,14 +408,20 @@ function selectAllInputText(ref: RefObject<HTMLInputElement | null>) {
     input.setSelectionRange(0, length);
 }
 
+/**
+ * How long typing pauses before the search runs. Each query re-searches the
+ * index and rebuilds the list, which is enough work to be felt between
+ * keystrokes.
+ */
 const SEARCH_DEBOUNCE_MS = 200;
 
 function SearchBar() {
     const ref = useRef<HTMLInputElement>(null);
     const wasFocused = useRef(false);
     const libraryId = useLibraryId();
-    // Local state, so a keystroke re-renders only the input.
-    const [query, setQuery] = useState(() => getUiState().searchQuery ?? "");
+    // The box owns what is typed and the stored query follows a pause later, so
+    // a keystroke re-renders this input rather than every list reading the query.
+    const [query, setQuery] = useState(() => getUiState().searchQuery);
     const runSearch = useDebouncedCallback(
         (value: string) => {
             updateUiState({ searchQuery: value === "" ? undefined : value });
@@ -296,13 +430,15 @@ function SearchBar() {
         { delay: SEARCH_DEBOUNCE_MS, flushOnUnmount: true }
     );
 
-    // `autoFocus` fires before the ref attaches, so onFocus can't select.
+    // `autoFocus` fires before the ref attaches, so onFocus has nothing to select
+    // through on the first open and last time's query keeps the caret after it.
     useEffect(() => {
         selectAllInputText(ref);
     }, []);
 
     const clearButton = query ? (
         <Input.ClearButton
+            aria-label="Clear input"
             onClick={() => {
                 setQuery("");
                 // Nothing to wait out: the list should empty on the click.
@@ -318,15 +454,19 @@ function SearchBar() {
             // The panel opens to a library the caller is here to search.
             autoFocus
             flex={1}
-            leftSection={<MagnifyingGlassIcon />}
+            leftSection={<MagnifyingGlassIcon size={IconSize.SMALL} />}
             placeholder={`Search ${getLibraryName(libraryId)}...`}
             ref={ref}
             value={query}
             onFocus={() => {
                 selectAllInputText(ref);
             }}
-            // The mouseup of the click that focuses the input would collapse the
-            // select-all; later clicks place the caret normally.
+            // A click on an unfocused input focuses it — selecting everything
+            // above — and then places the caret on mouseup, which collapses
+            // that selection again. Preventing the default only on the click
+            // that did the focusing keeps the select-all while leaving a click
+            // inside an already-focused field to put the caret where it was
+            // aimed.
             onMouseDown={() => {
                 wasFocused.current = document.activeElement === ref.current;
             }}

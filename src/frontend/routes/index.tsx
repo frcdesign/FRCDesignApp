@@ -1,6 +1,7 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { DEFAULT_LIBRARY } from "@backend/features/library/library-id";
-import { getTabPath, isLibraryTab } from "../lib/app-tab";
+import { getTabPath, isLibraryTab, UtilityTab } from "../lib/app-tab";
+import { OnshapeLaunchType, toTargetWorkspace } from "../lib/onshape-launch";
 import { apiPost } from "../lib/api-client";
 import { toLibraryPath } from "../lib/api-paths";
 import { getUiState } from "../lib/ui-state";
@@ -10,7 +11,11 @@ import { RootAppError } from "../components/root-error";
 export const Route = createFileRoute("/")({
     beforeLoad: ({ search }) => {
         const { tabId, groupId } = getUiState();
-        const tab = tabId ?? DEFAULT_LIBRARY;
+        // A utility page the launch gives nothing to act on is not resumed
+        // into: the version manager would send them straight back here.
+        const resumable =
+            tabId && (isLibraryTab(tabId) || canResume(tabId, search));
+        const tab = resumable ? tabId : DEFAULT_LIBRARY;
         // Only launches from Onshape count as opens, and only in a library.
         if ("documentId" in search && isLibraryTab(tab)) {
             // Signed out is refused, and there's no open to count.
@@ -37,3 +42,16 @@ export const Route = createFileRoute("/")({
     },
     errorComponent: RootAppError
 });
+
+/**
+ * Whether a utility page has what it acts on. The version manager acts on the
+ * workspace Onshape launched the app in, and there is no page without one.
+ */
+function canResume(tab: UtilityTab, search: Record<string, unknown>): boolean {
+    switch (tab) {
+        case UtilityTab.VERSION_MANAGER:
+            return (
+                toTargetWorkspace(OnshapeLaunchType.parse(search)) !== undefined
+            );
+    }
+}

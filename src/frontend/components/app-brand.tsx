@@ -1,5 +1,7 @@
 import { Box, Center, Group, Text } from "@mantine/core";
 import { type ReactNode } from "react";
+import { useNeedsSignIn } from "../features/auth/access-level";
+import { useHasRoom } from "../lib/layout";
 import {
     FontWeight,
     IconSize,
@@ -44,24 +46,31 @@ export function AppBrandMark(props: AppBrandMarkProps): ReactNode {
     );
 }
 
-interface AppBrandProps {
-    /**
-     * The mark alone. The Onshape panel is a few hundred pixels wide, and there
-     * the library's name says where you are better than the app's does.
-     */
-    markOnly?: boolean;
-}
+/**
+ * Where the name stops fitting beside the rest of the row, measured: under it
+ * the tile stands in, and the name is never shown part-way.
+ */
+const WORDMARK_MIN_WIDTH = 440;
+
+/**
+ * What the sign-in button takes out of the row while it is showing. The only
+ * thing in the bar whose width comes and goes, and never there in the panel.
+ */
+const SIGN_IN_WIDTH = 100;
 
 /** The book and the app's name, in every navbar, linking out to FRCDesign.org. */
-export function AppBrand(props: AppBrandProps): ReactNode {
-    const { markOnly = false } = props;
+export function AppBrand(): ReactNode {
+    const needsSignIn = useNeedsSignIn();
+    const hasRoomForWordmark = useHasRoom(
+        needsSignIn ? WORDMARK_MIN_WIDTH + SIGN_IN_WIDTH : WORDMARK_MIN_WIDTH
+    );
 
     return (
         <Group gap="xs" h="100%">
             <Center component="a" href={FRC_DESIGN_URL} target="_blank">
                 <AppBrandMark />
             </Center>
-            {!markOnly && (
+            {hasRoomForWordmark && (
                 <Text
                     component="a"
                     href={FRC_DESIGN_URL}

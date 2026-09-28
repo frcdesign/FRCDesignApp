@@ -10,6 +10,8 @@ import { AppSection, AppSections } from "../../components/app-section";
 import { AppTitle } from "../../components/app-title";
 import { SectionLoading, SectionNotice } from "../../components/app-notice";
 import { updateUiState, useUiState } from "../../lib/ui-state";
+import { UtilityTab } from "../../lib/app-tab";
+import { getUiLibraryId } from "../../lib/library";
 import { toTargetWorkspace } from "../../lib/onshape-launch";
 import { useOnshapeLaunch, useTargetWorkspace } from "../../lib/onshape-params";
 import {
@@ -27,11 +29,19 @@ import { useIsSignedIn } from "../../features/auth/access-level";
 
 export const Route = createFileRoute("/app/version-manager")({
     component: VersionManagerPage,
+    // Where entry resumes next time, as a library would be.
+    onEnter: () => {
+        updateUiState({ tabId: UtilityTab.VERSION_MANAGER });
+    },
     beforeLoad: () => {
-        // Nothing to act on: the tab that leads here is hidden without a
+        // Nothing to act on: the page picker hides this page without a
         // workspace, so this only catches a url typed or restored by hand.
         if (!toTargetWorkspace(useOnshapeLaunch.getState())) {
-            throw redirect({ to: "/", replace: true });
+            throw redirect({
+                to: "/app/library/$libraryId",
+                params: { libraryId: getUiLibraryId() },
+                replace: true
+            });
         }
     }
 });
@@ -84,7 +94,12 @@ function VersionManager(props: VersionManagerProps): ReactNode {
     // Nothing linked in either direction: the sections would both be empty, and
     // an empty section says neither what this page is for nor what to do next.
     if (links.parents.length === 0 && links.children.length === 0) {
-        return <VersionManagerZeroState workspace={workspace} />;
+        return (
+            <VersionManagerZeroState
+                workspace={workspace}
+                documentName={links.documentName}
+            />
+        );
     }
 
     const opened = [
@@ -128,7 +143,7 @@ interface LinkSectionProps {
 /** One direction's section: its links, and the run they share. */
 function LinkSection(props: LinkSectionProps): ReactNode {
     const { workspace, direction, linked, opened } = props;
-    const actions = useLinkActions(workspace, direction, linked);
+    const actions = useLinkActions(workspace, direction);
     const copy = DIRECTION_COPY[direction];
 
     return (

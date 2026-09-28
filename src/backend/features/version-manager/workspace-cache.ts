@@ -104,7 +104,8 @@ export async function describeWorkspace(
 
 /**
  * Edits the workspace has made since its own last version, or undefined where
- * Onshape did not say. See `/api/unversioned-changes` for what it means.
+ * Onshape did not say. A pull moves onto a version, so these are the edits it
+ * would have to cut one to bring in.
  */
 export async function getUnversionedChanges(
     c: AppContext,
