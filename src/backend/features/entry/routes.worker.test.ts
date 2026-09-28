@@ -134,7 +134,7 @@ describe("POST /app-open", () => {
 
     it("records a versioned open in the library", async () => {
         const res = await createTestApp().request(
-            `/api/app-open/library/${LibraryId.FTC_DESIGN_LIB}`,
+            `/api/app-open/library/${LibraryId.CONFIG_LIB}`,
             jsonRequest("POST"),
             env
         );
@@ -142,7 +142,7 @@ describe("POST /app-open", () => {
         expect(res.status).toBe(200);
         expect(await db.select().from(events).get()).toMatchObject({
             type: EventType.APP_OPEN,
-            libraryId: LibraryId.FTC_DESIGN_LIB,
+            libraryId: LibraryId.CONFIG_LIB,
             userId: TEST_USER_ID,
             schemaVersion: EVENT_SCHEMA_VERSION
         });
@@ -153,7 +153,7 @@ describe("POST /app-open", () => {
             isAuthenticated: false,
             signedIn: false
         }).request(
-            `/api/app-open/library/${LibraryId.FTC_DESIGN_LIB}`,
+            `/api/app-open/library/${LibraryId.CONFIG_LIB}`,
             jsonRequest("POST"),
             env
         );

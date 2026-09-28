@@ -36,7 +36,7 @@ describe("the push hub", () => {
 
     it("sends a library's messages to its viewers alone", async () => {
         const frc = await connect(LibraryId.FRC_DESIGN_LIB);
-        const ftc = await connect(LibraryId.FTC_DESIGN_LIB);
+        const ftc = await connect(LibraryId.CONFIG_LIB);
         const message: PushMessage = {
             type: PushType.LIBRARY,
             libraryId: LibraryId.FRC_DESIGN_LIB
@@ -53,7 +53,7 @@ describe("the push hub", () => {
 
     it("sends a message for no library to everyone", async () => {
         const frc = await connect(LibraryId.FRC_DESIGN_LIB);
-        const ftc = await connect(LibraryId.FTC_DESIGN_LIB);
+        const ftc = await connect(LibraryId.CONFIG_LIB);
 
         const message: PushMessage = {
             type: PushType.THUMBNAIL,

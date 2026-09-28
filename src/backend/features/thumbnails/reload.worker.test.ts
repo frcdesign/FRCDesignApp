@@ -214,7 +214,7 @@ describe("reloading a thumbnail", () => {
                 db,
                 env.BLOB,
                 MOCK_ONSHAPE_API,
-                LibraryId.FTC_DESIGN_LIB,
+                LibraryId.CONFIG_LIB,
                 target.insertableId
             )
         ).rejects.toThrow();

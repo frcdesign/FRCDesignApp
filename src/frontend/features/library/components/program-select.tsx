@@ -28,7 +28,7 @@ interface Program {
 /** What the app is offered for. MKCad is deprecated, so nobody is started in it. */
 const PROGRAMS: Program[] = [
     { libraryId: LibraryId.FRC_DESIGN_LIB, name: "FRC" },
-    { libraryId: LibraryId.FTC_DESIGN_LIB, name: "FTC" }
+    { libraryId: LibraryId.CONFIG_LIB, name: "FTC" }
 ];
 
 /** FIRST's own site, which their notice has to name. */

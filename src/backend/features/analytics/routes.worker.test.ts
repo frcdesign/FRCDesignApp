@@ -329,7 +329,7 @@ describe("analytics routes", () => {
                 },
                 {
                     day: "2026-06-15",
-                    libraryId: LibraryId.FTC_DESIGN_LIB,
+                    libraryId: LibraryId.CONFIG_LIB,
                     userId: "user-a"
                 }
             ]);

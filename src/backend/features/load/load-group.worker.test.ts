@@ -398,7 +398,7 @@ describe("loadGroup", () => {
 
     // Held for approval in one library, the document can be a version behind there.
     it("keeps a workspace another library's group still reads from", async () => {
-        await seedGroup(db, "held-group", LibraryId.FTC_DESIGN_LIB, {
+        await seedGroup(db, "held-group", LibraryId.CONFIG_LIB, {
             documentId: `doc-${TEST_GROUP_ID}`,
             thumbnailWorkspaceId: "w-held"
         });

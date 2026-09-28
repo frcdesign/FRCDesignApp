@@ -34,8 +34,8 @@ export function getLibraryName(libraryId: string): string {
     switch (libraryId) {
         case LibraryId.FRC_DESIGN_LIB:
             return "FRCDesignLib";
-        case LibraryId.FTC_DESIGN_LIB:
-            return "FTCDesignLib";
+        case LibraryId.CONFIG_LIB:
+            return "ConfigLib";
         case LibraryId.MKCAD:
             return "MKCad";
     }

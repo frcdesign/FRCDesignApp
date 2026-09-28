@@ -30,7 +30,7 @@ describe("reloading a library", () => {
     beforeEach(async () => {
         await resetDb(db);
         await seedGroup(db, "frc", LibraryId.FRC_DESIGN_LIB);
-        await seedGroup(db, "ftc", LibraryId.FTC_DESIGN_LIB);
+        await seedGroup(db, "ftc", LibraryId.CONFIG_LIB);
     });
     afterEach(() => vi.restoreAllMocks());
 

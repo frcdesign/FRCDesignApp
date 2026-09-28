@@ -75,7 +75,7 @@ describe("Vendor", () => {
 
 describe("getLibraryVendors", () => {
     it("stocks each library with its own list", () => {
-        const ftc = getLibraryVendors(LibraryId.FTC_DESIGN_LIB);
+        const ftc = getLibraryVendors(LibraryId.CONFIG_LIB);
         const frc = getLibraryVendors(LibraryId.FRC_DESIGN_LIB);
 
         expect(ftc).toContain(Vendor.GB);
@@ -115,7 +115,7 @@ describe("getLibraryVendors", () => {
 
     it("stocks FTC with exactly the vendors it buys from", () => {
         expect(
-            getLibraryVendors(LibraryId.FTC_DESIGN_LIB).map((vendor) => [
+            getLibraryVendors(LibraryId.CONFIG_LIB).map((vendor) => [
                 getVendorName(vendor),
                 vendor
             ])

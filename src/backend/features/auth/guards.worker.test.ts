@@ -90,11 +90,11 @@ describe("editing something inside a library", () => {
 
     // So an editor of one library can't reach into another.
     it("finds only what is in the library the path names", async () => {
-        await seedGroup(db, "ftc-group", LibraryId.FTC_DESIGN_LIB);
+        await seedGroup(db, "ftc-group", LibraryId.CONFIG_LIB);
         await seedInsertable(db, {
             id: "ftc-part",
             groupId: "ftc-group",
-            libraryId: LibraryId.FTC_DESIGN_LIB
+            libraryId: LibraryId.CONFIG_LIB
         });
         const app = createTestApp({
             accessLevel: (libraryId) =>
@@ -110,6 +110,6 @@ describe("editing something inside a library", () => {
             );
 
         expect((await reindex(LibraryId.FRC_DESIGN_LIB)).status).toBe(404);
-        expect((await reindex(LibraryId.FTC_DESIGN_LIB)).status).toBe(403);
+        expect((await reindex(LibraryId.CONFIG_LIB)).status).toBe(403);
     });
 });

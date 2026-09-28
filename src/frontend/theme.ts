@@ -38,7 +38,7 @@ const frcGreen: MantineColorsTuple = [
 /** Falls back for unknown libraries and non-library tabs. */
 export function getLibraryColor(libraryId: string): string {
     switch (libraryId) {
-        case LibraryId.FTC_DESIGN_LIB:
+        case LibraryId.CONFIG_LIB:
             return "orange";
         case LibraryId.MKCAD:
             return "blue";

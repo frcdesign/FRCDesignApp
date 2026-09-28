@@ -11,7 +11,7 @@ export enum Program {
 export const LIBRARY_PROGRAM: Record<LibraryId, Program> = {
     [LibraryId.FRC_DESIGN_LIB]: Program.FRC,
     [LibraryId.MKCAD]: Program.FRC,
-    [LibraryId.FTC_DESIGN_LIB]: Program.FTC
+    [LibraryId.CONFIG_LIB]: Program.FTC
 };
 
 /** Inclusive. FTC's season spans New Year. */

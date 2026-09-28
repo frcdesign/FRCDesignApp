@@ -79,7 +79,7 @@ const FTC_VENDORS: Vendor[] = [
 
 /** What a library's filters offer. MKCad shares FRC's list. */
 export function getLibraryVendors(libraryId: LibraryId): Vendor[] {
-    return libraryId === LibraryId.FTC_DESIGN_LIB ? FTC_VENDORS : FRC_VENDORS;
+    return libraryId === LibraryId.CONFIG_LIB ? FTC_VENDORS : FRC_VENDORS;
 }
 
 /** Accepts a code or a full name. */

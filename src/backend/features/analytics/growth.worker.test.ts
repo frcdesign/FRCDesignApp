@@ -211,12 +211,12 @@ describe("getGrowth", () => {
         );
         expect(growth.recent.inserts.current).toBe(30);
 
-        // FTCDesignLib runs Sept–Apr, so its off-season season differs.
+        // ConfigLib runs Sept–Apr, so its off-season season differs.
         const ftc = await getGrowth(
             db,
             THROUGH,
             "2026-01-01",
-            LibraryId.FTC_DESIGN_LIB
+            LibraryId.CONFIG_LIB
         );
         expect(ftc.season.inserts.label).toBe("FTC 2025–26");
     });

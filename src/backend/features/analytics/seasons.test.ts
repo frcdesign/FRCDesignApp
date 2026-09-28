@@ -143,7 +143,7 @@ describe("LIBRARY_PROGRAM", () => {
             expect(LIBRARY_PROGRAM[libraryId]).toBeDefined();
         }
         expect(LIBRARY_PROGRAM[LibraryId.MKCAD]).toBe(Program.FRC);
-        expect(LIBRARY_PROGRAM[LibraryId.FTC_DESIGN_LIB]).toBe(Program.FTC);
+        expect(LIBRARY_PROGRAM[LibraryId.CONFIG_LIB]).toBe(Program.FTC);
     });
 });
 

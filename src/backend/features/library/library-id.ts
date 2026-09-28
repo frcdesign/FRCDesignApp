@@ -1,6 +1,6 @@
 export enum LibraryId {
     FRC_DESIGN_LIB = "frc-design-lib",
-    FTC_DESIGN_LIB = "ftc-design-lib",
+    CONFIG_LIB = "config-lib",
     MKCAD = "mkcad"
 }
 
