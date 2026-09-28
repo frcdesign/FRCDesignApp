@@ -3,6 +3,7 @@ import type { BatchItem } from "drizzle-orm/batch";
 import { type Db, getDb } from "../../db/client";
 import { chunkForInArray } from "../../db/chunk";
 import { ElementType } from "../../lib/onshape/element-type";
+import type { DocumentPath } from "../../lib/onshape/path";
 import type { ThumbnailUrls } from "../thumbnails/contract";
 import {
     addBuildIssue,
@@ -150,7 +151,7 @@ export async function loadGroup(
                 deleteStaleThumbnailWorkspaces(
                     await getOnshapeApiFromContext(ctx),
                     versionPath,
-                    thumbnailPath.instanceId
+                    await namedWorkspaces(getDb(ctx.env.DB), versionPath)
                 )
             )
             .catch((error: unknown) => {
@@ -166,6 +167,20 @@ export async function loadGroup(
         deletedElements: removedInsertableIds.length,
         failedElements: failedInsertableIds.length
     };
+}
+
+/** The thumbnail workspaces the document's groups name, in every library. */
+async function namedWorkspaces(
+    db: Db,
+    document: DocumentPath
+): Promise<Set<string>> {
+    const rows = await db
+        .select({ workspaceId: groups.thumbnailWorkspaceId })
+        .from(groups)
+        .where(eq(groups.documentId, document.documentId));
+    return new Set(
+        rows.flatMap((row) => (row.workspaceId ? [row.workspaceId] : []))
+    );
 }
 
 /**

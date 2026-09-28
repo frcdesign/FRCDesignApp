@@ -60,14 +60,17 @@ function toWorkspacePath(
     };
 }
 
-/** Every other workspace of ours, which no load reads from any more. */
+/**
+ * Every workspace of ours no group names. A group in another library can be
+ * pinned to an older version, held for approval, and still read from its own.
+ */
 export async function deleteStaleThumbnailWorkspaces(
     client: OnshapeApi,
     documentPath: DocumentPath,
-    keepWorkspaceId: string
+    keepWorkspaceIds: ReadonlySet<string>
 ): Promise<void> {
     const stale = (await getWorkspaces(client, documentPath)).filter(
-        (workspace) => isOurs(workspace) && workspace.id !== keepWorkspaceId
+        (workspace) => isOurs(workspace) && !keepWorkspaceIds.has(workspace.id)
     );
     for (const workspace of stale) {
         await deleteWorkspace(client, documentPath, workspace.id);

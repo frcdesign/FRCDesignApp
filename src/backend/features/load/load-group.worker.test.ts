@@ -42,6 +42,7 @@ import {
     seedInsertable,
     TEST_VERSION_CREATED_AT
 } from "../../../__test_utils__";
+import { LibraryId } from "../library/library-id";
 
 const GROUP: LoadingGroup = {
     libraryId: TEST_LIBRARY_ID,
@@ -393,6 +394,37 @@ describe("loadGroup", () => {
         );
         expect(deleted.mock.calls.map((call) => call[2])).toEqual(["w-old"]);
         expect((await readGroup())?.thumbnailWorkspaceId).toBe(WORKSPACE.id);
+    });
+
+    // Held for approval in one library, the document can be a version behind there.
+    it("keeps a workspace another library's group still reads from", async () => {
+        await seedGroup(db, "held-group", LibraryId.FTC_DESIGN_LIB, {
+            documentId: `doc-${TEST_GROUP_ID}`,
+            thumbnailWorkspaceId: "w-held"
+        });
+        mockContents([tab("e1")]);
+        vi.spyOn(ConfigurationEndpoints, "getConfiguration").mockResolvedValue(
+            NO_CONFIGURATION
+        );
+        vi.spyOn(WorkspaceEndpoints, "getWorkspaces").mockResolvedValue([
+            {
+                ...WORKSPACE,
+                id: "w-held",
+                description: thumbnailWorkspaceDescription("v-1")
+            },
+            {
+                ...WORKSPACE,
+                id: "w-old",
+                description: thumbnailWorkspaceDescription("v-0")
+            }
+        ]);
+        const deleted = vi
+            .spyOn(WorkspaceEndpoints, "deleteWorkspace")
+            .mockResolvedValue();
+
+        await loadGroup(CTX, LOADED_TARGET, false);
+
+        expect(deleted.mock.calls.map((call) => call[2])).toEqual(["w-old"]);
     });
 
     // Another group of the document, or a retried step, made it already.

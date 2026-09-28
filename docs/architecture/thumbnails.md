@@ -60,8 +60,10 @@ workspace of ours branched off the loaded version.
    workspace whose description names that version, or branches one. Every group
    of the document and every retried step find the same one.
 2. The group row records it (`thumbnail_workspace_id`).
-3. After the group saves, `deleteStaleThumbnailWorkspaces` deletes every other
-   workspace of ours, so the document keeps exactly one.
+3. After the group saves, `deleteStaleThumbnailWorkspaces` deletes every
+   workspace of ours that no group of the document, in any library, names. A
+   group elsewhere can be pinned to an older version, held for approval, and
+   still read from its own.
 
 Deleting waits for the save because until then the group row still names the
 old workspace and the old version's microversions: configuration renders asked
