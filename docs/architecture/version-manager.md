@@ -163,6 +163,14 @@ Tabs are updated one at a time. The port's comment says doing them concurrently
 caused problems and does not say why, so this follows it rather than finding out
 in somebody's document.
 
+### Recording a run
+
+Once the run has finished, the workflow calls `trackVersionRun` with its kind,
+how it was aimed, and the four counts. The event belongs to no library, and
+rolls up into `daily_version_metrics`, which the app dashboard reports as
+references updated, versions synced and documents linked. See
+[analytics.md](./analytics.md).
+
 ### Watching a run
 
 The route pushes `RUNNING` as it starts the workflow, and the workflow pushes
@@ -191,6 +199,7 @@ deletes a transient webhook that goes quiet, so the entries expire as well.
 - Onshape decides what may be done, not the app's access levels. Every route
   checks the caller's Onshape permissions on the documents it would touch.
 - A push checks every workspace it would write to before it cuts anything.
+- A run is recorded once, after it has finished, and never fails the run.
 - A recursive push versions every workspace it passes through, in topological
   order.
 - Nothing about a workspace the caller cannot read reaches them: no name, and no

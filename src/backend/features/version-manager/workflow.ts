@@ -17,6 +17,8 @@ import {
     nextVersionName,
     VersionJobState,
     workspaceKey,
+    type PullScopeKind,
+    type PushScopeKind,
     type VersionJobResult,
     type VersionJobStatus,
     type WorkspacePath
@@ -27,6 +29,8 @@ import {
 } from "./references";
 import { forgetJob } from "./jobs";
 import { pushVersionJob } from "../push/notify";
+import { trackVersionRun } from "../analytics/tracking";
+import { VersionRunKind } from "../analytics/usage";
 
 /** One workspace a push updates, and whether the run versions it afterwards. */
 export interface PushStep {
@@ -42,8 +46,12 @@ export interface PushStep {
 interface JobParamsBase {
     /** Whose Onshape session the run borrows; see the load workflow. */
     sessionId: string;
+    /** Who started it, for the record the run writes when it finishes. */
+    userId: string;
     /** The workspace the run was started from, which its status is keyed by. */
     workspace: WorkspacePath;
+    /** How it was aimed, which only the record it writes reads back. */
+    scope: PushScopeKind | PullScopeKind;
 }
 
 export interface PushJobParams extends JobParamsBase {
@@ -108,6 +116,17 @@ export class VersionManagerWorkflow extends WorkflowEntrypoint<
                 jobId,
                 result
             });
+            await step.do("record-run", () =>
+                trackVersionRun(this.env, {
+                    userId: params.userId,
+                    kind:
+                        params.kind === "push"
+                            ? VersionRunKind.PUSH
+                            : VersionRunKind.PULL,
+                    scope: params.scope,
+                    result
+                })
+            );
             return result;
         } catch (error) {
             await this._report(params.workspace, {

@@ -40,6 +40,7 @@ import {
     getSeries,
     getSources,
     getTotals,
+    getVersionManagerTotals,
     toTargets
 } from "./metric-queries";
 import {
@@ -64,15 +65,23 @@ analyticsRoutes.get(
         // Series are densified, so they need the clamped range.
         const range = clampRange(requested, trackingSince);
 
-        const [totals, perLibrary, series, metricSeries, sources, growth] =
-            await Promise.all([
-                getTotals(db),
-                getLibrarySummaries(db),
-                getSeries(db, range),
-                getMetricSeries(db, range),
-                getSources(db, requested),
-                getGrowth(db, toReportingDay(Date.now()), trackingSince)
-            ]);
+        const [
+            totals,
+            perLibrary,
+            series,
+            metricSeries,
+            sources,
+            versionManager,
+            growth
+        ] = await Promise.all([
+            getTotals(db),
+            getLibrarySummaries(db),
+            getSeries(db, range),
+            getMetricSeries(db, range),
+            getSources(db, requested),
+            getVersionManagerTotals(db, requested),
+            getGrowth(db, toReportingDay(Date.now()), trackingSince)
+        ]);
 
         const out: AnalyticsOverviewOut = {
             totals,
@@ -80,6 +89,7 @@ analyticsRoutes.get(
             series,
             metricSeries,
             sources,
+            versionManager,
             growth,
             ...requested
         };

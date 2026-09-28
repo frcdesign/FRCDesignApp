@@ -5,21 +5,25 @@ import { OnshapeLaunchType, toTargetWorkspace } from "../lib/onshape-launch";
 import { apiPost } from "../lib/api-client";
 import { toLibraryPath } from "../lib/api-paths";
 import { getUiState } from "../lib/ui-state";
+import { getUiLibraryId } from "../lib/library";
 import { RootAppError } from "../components/root-error";
 
 // Entry, from Onshape's /init or opened directly: resumes the last tab and group.
 export const Route = createFileRoute("/")({
     beforeLoad: ({ search }) => {
         const { tabId, groupId } = getUiState();
+        // The library they are in, whichever page they resume on: an open is
+        // the app being opened, not the page it lands on.
+        const libraryId = getUiLibraryId();
         // A utility page the launch gives nothing to act on is not resumed
         // into: the version manager would send them straight back here.
         const resumable =
             tabId && (isLibraryTab(tabId) || canResume(tabId, search));
         const tab = resumable ? tabId : DEFAULT_LIBRARY;
-        // Only launches from Onshape count as opens, and only in a library.
-        if ("documentId" in search && isLibraryTab(tab)) {
+        // Only launches from Onshape count as opens.
+        if ("documentId" in search) {
             // Signed out is refused, and there's no open to count.
-            void apiPost("/app-open" + toLibraryPath(tab)).catch(
+            void apiPost("/app-open" + toLibraryPath(libraryId)).catch(
                 () => undefined
             );
         }

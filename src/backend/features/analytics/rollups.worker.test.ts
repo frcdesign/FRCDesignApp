@@ -15,7 +15,7 @@ import { configurations } from "../../db/schema";
 import { type AppContext } from "../../lib/context";
 import { ElementType } from "../../lib/onshape/element-type";
 import { toSelection } from "../configurations/selection";
-import { InsertSource } from "./usage";
+import { InsertSource, VersionRunKind } from "./usage";
 import { rollupWrites } from "./rollups";
 import {
     dailyConfigurationMetrics,
@@ -25,11 +25,18 @@ import {
     dailySourceMetrics,
     dailyTargetMetrics,
     dailyUserActivity,
+    dailyVersionMetrics,
     events,
     insertableStats,
     userStats
 } from "./schema";
-import { trackAppOpen, trackInsert, type InsertEvent } from "./tracking";
+import {
+    trackAppOpen,
+    trackInsert,
+    trackVersionRun,
+    type InsertEvent
+} from "./tracking";
+import { PushScopeKind } from "../version-manager/contract";
 
 const db = getDb(env.DB);
 const SIZE_PARAMETERS = [enumParam("size", ["small", "large"])];
@@ -43,6 +50,7 @@ const ROLLUPS = [
     dailyInsertableMetrics,
     dailyInsertableUsers,
     dailyConfigurationMetrics,
+    dailyVersionMetrics,
     insertableStats,
     userStats
 ];
@@ -118,6 +126,17 @@ describe("rollupWrites", () => {
             })
         );
         await trackInsert(fakeContext("someone-2"), insertEvent());
+        await trackVersionRun(env, {
+            userId: TEST_USER_ID,
+            kind: VersionRunKind.PUSH,
+            scope: PushScopeKind.CHILDREN,
+            result: {
+                createdVersions: 1,
+                updatedWorkspaces: 2,
+                updatedElements: 5,
+                failedElements: 1
+            }
+        });
         clock.mockRestore();
 
         const live = await readRollups();

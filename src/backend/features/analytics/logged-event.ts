@@ -1,6 +1,7 @@
 /** The one place that knows which columns each kind of event sets. */
 import { type ElementType } from "../../lib/onshape/element-type";
-import { EventType, type InsertSource } from "./usage";
+import { type LibraryId } from "../library/library-id";
+import { EventType, type InsertSource, type VersionRunKind } from "./usage";
 import { type LoggedEvent } from "./schema";
 
 /** What every event carries, whatever kind of event it is. */
@@ -15,8 +16,22 @@ export type EventCore = Pick<
     | "schemaVersion"
 >;
 
-/** The rest, which only an insert fills in. */
-type InsertColumns = Omit<LoggedEvent, keyof EventCore>;
+/** What only a version run fills in. */
+type VersionRunColumns = Pick<
+    LoggedEvent,
+    | "versionKind"
+    | "versionScope"
+    | "createdVersions"
+    | "updatedWorkspaces"
+    | "updatedElements"
+    | "failedElements"
+>;
+
+/** What only an insert fills in. */
+type InsertColumns = Omit<
+    LoggedEvent,
+    keyof EventCore | keyof VersionRunColumns
+>;
 
 /** Spelled out, so a new column fails to compile until someone decides its value here. */
 export const NOT_AN_INSERT: InsertColumns = {
@@ -33,8 +48,36 @@ export const NOT_AN_INSERT: InsertColumns = {
     fasten: null
 };
 
+export const NOT_A_VERSION_RUN: VersionRunColumns = {
+    versionKind: null,
+    versionScope: null,
+    createdVersions: null,
+    updatedWorkspaces: null,
+    updatedElements: null,
+    failedElements: null
+};
+
+/** A logged run, whose own columns a reader can then count on. */
+export type LoggedVersionRun = LoggedEvent &
+    VersionRunColumns & {
+        versionKind: VersionRunKind;
+        createdVersions: number;
+        updatedWorkspaces: number;
+        updatedElements: number;
+        failedElements: number;
+    };
+
+/** Undefined for another kind, or a run from a version without these columns. */
+export function asVersionRun(event: LoggedEvent): LoggedVersionRun | undefined {
+    const isRun =
+        event.type === EventType.VERSION_RUN && event.versionKind !== null;
+    return isRun ? (event as LoggedVersionRun) : undefined;
+}
+
 /** A logged insert, whose own columns a reader can then count on. */
 export type LoggedInsert = LoggedEvent & {
+    /** An insert is always from a library, whatever the column allows. */
+    libraryId: LibraryId;
     elementId: string;
     targetElementType: ElementType;
     source: InsertSource;
@@ -44,6 +87,7 @@ export type LoggedInsert = LoggedEvent & {
 export function asInsert(event: LoggedEvent): LoggedInsert | undefined {
     const isInsert =
         event.type === EventType.INSERT &&
+        event.libraryId !== null &&
         event.elementId !== null &&
         event.targetElementType !== null &&
         event.source !== null;

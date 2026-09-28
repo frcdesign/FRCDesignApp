@@ -1,11 +1,25 @@
 import type { BatchItem } from "drizzle-orm/batch";
 import { runInBackground } from "../../lib/background";
-import { type AppContext } from "../../lib/context";
-import { getDb } from "../../db/client";
+import { type AppBindings, type AppContext } from "../../lib/context";
+import { getDb, type Db } from "../../db/client";
 import { events, type LoggedEvent } from "./schema";
-import { NOT_AN_INSERT, type EventCore } from "./logged-event";
+import {
+    NOT_AN_INSERT,
+    NOT_A_VERSION_RUN,
+    type EventCore
+} from "./logged-event";
 import { rollupWrites } from "./rollups";
-import { EVENT_SCHEMA_VERSION, EventType, InsertSource } from "./usage";
+import {
+    EVENT_SCHEMA_VERSION,
+    EventType,
+    InsertSource,
+    VersionRunKind
+} from "./usage";
+import type {
+    PullScopeKind,
+    PushScopeKind,
+    VersionJobResult
+} from "../version-manager/contract";
 import { type LibraryId } from "../library/library-id";
 import { type ElementPath } from "../../lib/onshape/path";
 import { ElementType } from "../../lib/onshape/element-type";
@@ -39,9 +53,10 @@ export interface InsertEvent {
 export function trackInsert(c: AppContext, event: InsertEvent): Promise<void> {
     return runInBackground(c, "record an insert", async () =>
         record(
-            c,
+            getDb(c.env.DB),
             {
                 ...(await core(c, EventType.INSERT, event.libraryId)),
+                ...NOT_A_VERSION_RUN,
                 ...event.path,
                 insertableId: event.insertableId,
                 targetElementType: event.targetElementType,
@@ -63,10 +78,11 @@ export function trackAppOpen(
 ): Promise<void> {
     return runInBackground(c, "record an app open", async () =>
         record(
-            c,
+            getDb(c.env.DB),
             {
                 ...(await core(c, EventType.APP_OPEN, libraryId)),
-                ...NOT_AN_INSERT
+                ...NOT_AN_INSERT,
+                ...NOT_A_VERSION_RUN
             },
             []
         )
@@ -88,6 +104,15 @@ async function core(
     type: EventType,
     libraryId: LibraryId
 ): Promise<EventCore> {
+    return { ...eventCore(type, libraryId, await c.var.getUserId()) };
+}
+
+/** The same, for a run with no request to read the caller off. */
+function eventCore(
+    type: EventType,
+    libraryId: LibraryId | null,
+    userId: string
+): EventCore {
     const now = Date.now();
     return {
         id: crypto.randomUUID(),
@@ -95,18 +120,51 @@ async function core(
         createdAt: new Date(now),
         day: toDayKey(now),
         libraryId,
-        userId: await c.var.getUserId(),
+        userId,
         schemaVersion: EVENT_SCHEMA_VERSION
     };
 }
 
+/** What a finished push or pull did; see `features/version-manager`. */
+export interface VersionRunEvent {
+    userId: string;
+    kind: VersionRunKind;
+    scope: PushScopeKind | PullScopeKind;
+    result: VersionJobResult;
+}
+
+/**
+ * Recorded by the workflow once the run has finished, so a run that failed
+ * halfway still says what it managed. It belongs to no library: it acts on the
+ * Onshape document the app was launched from.
+ */
+export async function trackVersionRun(
+    env: AppBindings,
+    event: VersionRunEvent
+): Promise<void> {
+    const { result } = event;
+    await record(
+        getDb(env.DB),
+        {
+            ...eventCore(EventType.VERSION_RUN, null, event.userId),
+            ...NOT_AN_INSERT,
+            versionKind: event.kind,
+            versionScope: event.scope,
+            createdVersions: result.createdVersions,
+            updatedWorkspaces: result.updatedWorkspaces,
+            updatedElements: result.updatedElements,
+            failedElements: result.failedElements
+        },
+        []
+    );
+}
+
 /** Batched so neither half lands without the other. */
 async function record(
-    c: AppContext,
+    db: Db,
     event: LoggedEvent,
     parameters: ConfigurationParameter[]
 ): Promise<void> {
-    const db = getDb(c.env.DB);
     const writes: BatchItem<"sqlite">[] = [
         db.insert(events).values(event),
         ...rollupWrites(db, event, parameters)

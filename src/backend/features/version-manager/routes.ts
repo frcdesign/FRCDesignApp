@@ -418,7 +418,9 @@ versionManagerRoutes.post(
             params: {
                 kind: "push",
                 sessionId: getSessionId(c),
+                userId: await c.var.getUserId(),
                 workspace,
+                scope: scope.kind,
                 name,
                 description,
                 steps
@@ -544,7 +546,9 @@ versionManagerRoutes.post(
             params: {
                 kind: "pull",
                 sessionId: getSessionId(c),
+                userId: await c.var.getUserId(),
                 workspace,
+                scope: scope.kind,
                 sources,
                 name,
                 description

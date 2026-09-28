@@ -36,21 +36,28 @@ aggregates.
 no foreign key crosses between them):
 
 - `events` — the append-only log. Every event has an id, type, time, day key,
-  library, user and schema version; an insert adds the element path,
-  insertable, target tab type, canonical selection, source, and the favorite,
-  quick-insert and fasten flags. Keyed on Onshape's element id with no foreign
-  keys, so history survives a reload or a re-added tab.
+  user and schema version, and the library where it has one; an insert adds the
+  element path, insertable, target tab type, canonical selection, source, and
+  the favorite, quick-insert and fasten flags, and a version run adds its kind,
+  scope and four counts. Keyed on Onshape's element id with no foreign keys, so
+  history survives a reload or a re-added tab.
+- `library_id` is null for an event that belongs to no library. A version run
+  acts on the Onshape document the app was launched from, which need not be in
+  any library, so it has none.
 - Rollups, each derived from the log alone: `daily_metrics`,
   `daily_target_metrics`, `daily_source_metrics`, `insertable_stats`,
   `daily_insertable_metrics`, `daily_insertable_users`,
-  `daily_configuration_metrics`, `daily_user_activity`, `user_stats`.
+  `daily_configuration_metrics`, `daily_user_activity`, `user_stats`,
+  `daily_version_metrics`.
 
 ## Flows
 
 ### Recording
 
 1. An insert route calls `trackInsert` once the insert succeeded; `/init`'s
-   handoff calls `POST /api/app-open/...`, which calls `trackAppOpen`.
+   handoff calls `POST /api/app-open/...`, which calls `trackAppOpen`; the
+   version manager's workflow calls `trackVersionRun` once its run has
+   finished, so a run that failed halfway still records what it managed.
 2. Both run in the background (`runInBackground`), after the response, so
    tracking never slows or fails what the user asked for.
 3. The selection is stored canonically (`canonicalValues`), so `5 in` and
@@ -72,7 +79,7 @@ The dashboard is a sibling of `/app`, a full-screen page outside the Onshape
 panel. Its routes read only rollups and return only aggregates:
 
 - **Overview** — totals, per-library summaries, insert and metric series, insert
-  sources, and growth.
+  sources, growth, and the version manager's own totals.
 - **Library** — its summary, health (build issues by severity, hidden elements
   left out), and its parts table.
 - **Part** — one element's history, and usage of each configuration option,
@@ -88,6 +95,8 @@ The range, threshold and preset live in the url, so a view can be shared.
   `getOnshapeApi()`, and never return anything about one user.
 - Every rollup is derivable from `events` alone, so the rollups can be rebuilt by
   replaying the log.
+- Every rollup but `daily_version_metrics` is keyed by library, so an event
+  without one writes only that.
 - An event's columns are decided in `logged-event.ts`; a new column fails to
   compile until each kind of event says what it holds.
 - Values are compared and counted canonically, never by configuration key.
@@ -103,6 +112,14 @@ The range, threshold and preset live in the url, so a view can be shared.
 
 ## Decisions
 
+- **A version run has no library.** It acts on whatever document Onshape
+  launched the app from. Attributing it to the library the person happened to
+  have open would say more about their last tab than about anything real, so
+  `library_id` is null and the run rolls up into a table of its own.
+- **Version runs are not activity.** They write no row to `daily_user_activity`
+  or `user_stats`: "active user" has always meant somebody who inserted
+  something, and counting runs there would move the line under every historical
+  figure.
 - **A log plus rollups.** The log keeps everything for replay; rollups keep every
   dashboard read a small indexed query.
 - **Keyed by element, not insertable.** An insertable row is replaced when a tab

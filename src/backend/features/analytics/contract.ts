@@ -117,6 +117,19 @@ export interface LibrarySummaryOut {
     to: string;
 }
 
+/** What the version manager has done, and how much is linked to do it with. */
+export interface VersionManagerTotals {
+    /** Tabs whose references the app repointed: the work it saved. */
+    updatedElements: number;
+    /** Versions it cut, pushing and pulling together. */
+    createdVersions: number;
+    /** Tabs Onshape refused; a run carries on past them. */
+    failedElements: number;
+    runs: number;
+    /** Current, not over the range: a link is state, not an event. */
+    linkedWorkspaces: number;
+}
+
 export interface AnalyticsOverviewOut {
     /** Lifetime totals, shown as context beneath each tile's range value. */
     totals: AnalyticsTotals;
@@ -125,6 +138,8 @@ export interface AnalyticsOverviewOut {
     series: DailyInsertPoint[];
     metricSeries: DailyMetricPoint[];
     sources: InsertSourceUsage[];
+    /** Over the range, but for `linkedWorkspaces`. */
+    versionManager: VersionManagerTotals;
     from: string;
     to: string;
     growth: GrowthOut;

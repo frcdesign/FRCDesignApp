@@ -11,7 +11,8 @@ import { ElementType } from "../../lib/onshape/element-type";
 import { type InstanceType } from "../../lib/onshape/path";
 import { LibraryId } from "../library/library-id";
 import { Selection } from "../configurations/contract";
-import { EventType, InsertSource } from "./usage";
+import { PullScopeKind, PushScopeKind } from "../version-manager/contract";
+import { EventType, InsertSource, VersionRunKind } from "./usage";
 
 /**
  * Append-only. Keyed on Onshape's `elementId` with no foreign keys, so a reload
@@ -27,7 +28,8 @@ export const events = sqliteTable(
         createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
         // UTC YYYY-MM-DD, denormalized so rollups can be rebuilt with a GROUP BY
         day: text("day").notNull(),
-        libraryId: text("library_id").$type<LibraryId>().notNull(),
+        /** Null for an event that belongs to no library, such as a version run. */
+        libraryId: text("library_id").$type<LibraryId>(),
         userId: text("user_id").notNull(),
         /** Rows predating the column were version 1. */
         schemaVersion: integer("schema_version").notNull().default(1),
@@ -49,7 +51,16 @@ export const events = sqliteTable(
         isQuickInsert: integer("is_quick_insert", { mode: "boolean" }),
         source: text("source").$type<InsertSource>(),
         // Insert-and-fasten, which Onshape only offers for assembly targets.
-        fasten: integer("fasten", { mode: "boolean" })
+        fasten: integer("fasten", { mode: "boolean" }),
+        // A version run's own columns: how it was aimed, and what it did.
+        versionKind: text("version_kind").$type<VersionRunKind>(),
+        versionScope: text("version_scope").$type<
+            PushScopeKind | PullScopeKind
+        >(),
+        createdVersions: integer("created_versions"),
+        updatedWorkspaces: integer("updated_workspaces"),
+        updatedElements: integer("updated_elements"),
+        failedElements: integer("failed_elements")
     },
     // Only used to rebuild the rollups, which walk by day.
     (t) => [index("events_day_idx").on(t.day)]
@@ -218,4 +229,22 @@ export const userStats = sqliteTable(
         }).notNull()
     },
     (t) => [primaryKey({ columns: [t.userId, t.libraryId] })]
+);
+
+/**
+ * A day's pushes and pulls. Keyed by day and kind alone: a version run belongs
+ * to the Onshape documents it touched, not to a library.
+ */
+export const dailyVersionMetrics = sqliteTable(
+    "daily_version_metrics",
+    {
+        day: text("day").notNull(),
+        kind: text("kind").notNull().$type<VersionRunKind>(),
+        runs: integer("runs").notNull().default(0),
+        createdVersions: integer("created_versions").notNull().default(0),
+        updatedWorkspaces: integer("updated_workspaces").notNull().default(0),
+        updatedElements: integer("updated_elements").notNull().default(0),
+        failedElements: integer("failed_elements").notNull().default(0)
+    },
+    (t) => [primaryKey({ columns: [t.day, t.kind] })]
 );

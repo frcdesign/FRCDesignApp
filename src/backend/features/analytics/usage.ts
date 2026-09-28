@@ -4,11 +4,19 @@
  */
 
 /** Bump when the columns' meaning changes. */
-export const EVENT_SCHEMA_VERSION = 1;
+export const EVENT_SCHEMA_VERSION = 2;
 
 export enum EventType {
     INSERT = "insert",
-    APP_OPEN = "app_open"
+    APP_OPEN = "app_open",
+    /** One finished push or pull; see `features/version-manager`. */
+    VERSION_RUN = "version_run"
+}
+
+/** Which way a version run moved references. */
+export enum VersionRunKind {
+    PUSH = "push",
+    PULL = "pull"
 }
 
 /** Not whether the part is favorited. */

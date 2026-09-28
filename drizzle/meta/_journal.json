@@ -57,6 +57,13 @@
             "when": 1790603778658,
             "tag": "0007_config_lib_rename",
             "breakpoints": true
+        },
+        {
+            "idx": 8,
+            "version": "6",
+            "when": 1790617504176,
+            "tag": "0008_version_run_events",
+            "breakpoints": true
         }
     ]
 }

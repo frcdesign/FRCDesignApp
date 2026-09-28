@@ -17,8 +17,10 @@ import {
     dailySourceMetrics,
     dailyTargetMetrics,
     dailyUserActivity,
+    dailyVersionMetrics,
     userStats
 } from "./schema";
+import { workspaceLinks } from "../version-manager/schema";
 import { EventType, InsertSource } from "./usage";
 import { LibraryId } from "../library/library-id";
 import { ElementType } from "../../lib/onshape/element-type";
@@ -29,7 +31,8 @@ import {
     type DailyInsertPoint,
     type DailyMetricPoint,
     type InsertSourceUsage,
-    type LibrarySummary
+    type LibrarySummary,
+    type VersionManagerTotals
 } from "./contract";
 import { type DayRange } from "./day";
 import { eachDay } from "./range";
@@ -351,4 +354,37 @@ export async function getSeries(
         if (!byDay.has(day)) byDay.set(day, { day, counts: {} });
     }
     return [...byDay.values()].sort((a, b) => a.day.localeCompare(b.day));
+}
+
+/** The version manager's totals over a range, and what is linked right now. */
+export async function getVersionManagerTotals(
+    db: Db,
+    range: DayRange
+): Promise<VersionManagerTotals> {
+    const [totals, links] = await Promise.all([
+        db
+            .select({
+                runs: sum(dailyVersionMetrics.runs),
+                createdVersions: sum(dailyVersionMetrics.createdVersions),
+                updatedElements: sum(dailyVersionMetrics.updatedElements),
+                failedElements: sum(dailyVersionMetrics.failedElements)
+            })
+            .from(dailyVersionMetrics)
+            .where(
+                and(
+                    gte(dailyVersionMetrics.day, range.from),
+                    lte(dailyVersionMetrics.day, range.to)
+                )
+            )
+            .get(),
+        db.select({ value: count() }).from(workspaceLinks).get()
+    ]);
+
+    return {
+        runs: Number(totals?.runs ?? 0),
+        createdVersions: Number(totals?.createdVersions ?? 0),
+        updatedElements: Number(totals?.updatedElements ?? 0),
+        failedElements: Number(totals?.failedElements ?? 0),
+        linkedWorkspaces: links?.value ?? 0
+    };
 }
