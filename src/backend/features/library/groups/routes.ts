@@ -9,23 +9,25 @@ import { getSessionId } from "../../auth/session";
 import { getDocument } from "../../../lib/onshape/endpoints/documents";
 import { requireEditorMiddleware } from "../../auth/guards";
 import { type DocumentPath } from "../../../lib/onshape/path";
-import { groups, insertables, favorites } from "../../../db/schema";
-import { bumpLibraryVersion, ensureLibrary, rebuildSearchDb } from "../db";
+import {
+    groups,
+    insertables,
+    favorites,
+    WebhookSubject
+} from "../../../db/schema";
+import { bumpLibraryVersion, rebuildSearchDb } from "../db";
 import { HttpStatus } from "http-status-ts";
 import { handledError } from "../../../lib/api-error";
-import {
-    getJobStatus,
-    isReloadRunning,
-    trackJob
-} from "../../load/job-tracker";
+import { getJobStatus, requestLoads } from "../../load/jobs";
+import { createShellGroup } from "../../load/workflows";
+import { removeWebhook } from "../../webhooks/registration";
+import { deleteStaleThumbnails } from "../../thumbnails/reconcile";
+import { parseThumbnailUrl } from "../../thumbnails/keys";
+import { runInBackground } from "../../../lib/background";
 import { z } from "zod";
 import { validate } from "../../../lib/validate";
 
 export const groupRoutes = getApp();
-
-const reloadGroupsQuery = z.object({
-    forceReload: z.stringbool().default(false)
-});
 
 const setVisibilityBody = z.object({
     insertableIds: z.array(z.string()),
@@ -46,37 +48,7 @@ const addGroupBody = z.object({
 
 const deleteGroupQuery = z.object({ groupId: z.string().min(1) });
 
-/** POST /api/reload-groups/library/:libraryId?forceReload=true */
-groupRoutes.post(
-    "/reload-groups" + libraryRoute(),
-    requireEditorMiddleware,
-    validate("query", reloadGroupsQuery),
-    async (c) => {
-        const libraryId = getLibraryParam(c);
-        const { forceReload } = c.req.valid("query");
-        const sessionId = getSessionId(c);
-
-        // Only one reload per library at a time. Racy under a sub-second
-        // double-trigger (KV has no compare-and-swap), which is fine here.
-        if (await isReloadRunning(c.env, libraryId)) {
-            return c.json({ status: "already-running" });
-        }
-
-        const db = getDb(c.env.DB);
-        await ensureLibrary(db, libraryId);
-
-        // The workflow owns the per-group version check — unchanged documents
-        // are skipped inside it (unless forceReload).
-        const instance = await c.env.LOAD_LIBRARY_WORKFLOW.create({
-            params: { libraryId, sessionId, forceReload }
-        });
-        await trackJob(c.env, libraryId, "reload", instance.id);
-
-        return c.json({ status: "triggered" });
-    }
-);
-
-/** GET /api/job-status/library/:libraryId — checked on load, then polled. */
+/** GET /api/job-status/library/:libraryId — checked on load, then pushed. */
 groupRoutes.get(
     "/job-status" + libraryRoute(),
     requireEditorMiddleware,
@@ -97,8 +69,7 @@ groupRoutes.post(
 
         const db = getDb(c.env.DB);
 
-        // "Hide all elements" names every insertable in a group, which is more
-        // ids than one statement can bind.
+        // "Hide all" can name more ids than one statement binds.
         const writes: BatchItem<"sqlite">[] = [];
         for (const insertableIds of chunkForInArray(body.insertableIds)) {
             if (!body.isVisible) {
@@ -131,8 +102,7 @@ groupRoutes.post(
             );
         }
 
-        // Rebuild before bumping: the new version makes /search-db immutable,
-        // so a client fetching in between would pin the stale index for a year.
+        // Before the bump, which makes /search-db immutable for a year.
         await rebuildSearchDb(c.env.BLOB, db, libraryId);
         await bumpLibraryVersion(db, libraryId);
         return c.json({ success: true });
@@ -234,18 +204,21 @@ groupRoutes.post(
         }
 
         const groupId = crypto.randomUUID();
-
-        const instance = await c.env.ADD_GROUP_WORKFLOW.create({
-            params: {
-                groupId,
-                documentId: body.newDocumentId,
-                documentName,
-                libraryId,
-                sessionId,
-                selectedGroupId: body.selectedGroupId
-            }
+        await createShellGroup(c.env, {
+            groupId,
+            documentId: body.newDocumentId,
+            documentName,
+            libraryId,
+            selectedGroupId: body.selectedGroupId
         });
-        await trackJob(c.env, libraryId, "add-group", instance.id);
+        await requestLoads(c.env, [
+            {
+                libraryId,
+                groupId,
+                sessionId,
+                forceReload: false
+            }
+        ]);
 
         return c.json({ name: documentName });
     }
@@ -262,12 +235,56 @@ groupRoutes.delete(
 
         const db = getDb(c.env.DB);
 
+        // Read first: the cascade takes the rows naming them.
+        const elements = await db
+            .select({ elementId: insertables.elementId })
+            .from(insertables)
+            .where(eq(insertables.groupId, groupId));
+
         // Cascade deletes insertables → favorites, and configurations automatically
-        await db
+        const [deleted] = await db
             .delete(groups)
-            .where(
-                and(eq(groups.id, groupId), eq(groups.libraryId, libraryId))
+            .where(and(eq(groups.id, groupId), eq(groups.libraryId, libraryId)))
+            .returning({
+                documentId: groups.documentId,
+                smallThumbnailUrl: groups.smallThumbnailUrl
+            });
+
+        if (deleted) {
+            const thumbnailElement = deleted.smallThumbnailUrl
+                ? parseThumbnailUrl(deleted.smallThumbnailUrl)?.elementId
+                : undefined;
+            await runInBackground(c, "delete the group's thumbnails", () =>
+                deleteStaleThumbnails(c.env.BLOB, db, {
+                    documentId: deleted.documentId,
+                    elementIds: [
+                        ...elements.map((row) => row.elementId),
+                        ...(thumbnailElement ? [thumbnailElement] : [])
+                    ]
+                }).then(() => undefined)
             );
+
+            // The document's webhook goes with the last group loaded from it.
+            const stillUsed = await db
+                .select({ id: groups.id })
+                .from(groups)
+                .where(eq(groups.documentId, deleted.documentId))
+                .get();
+            if (!stillUsed) {
+                // Logged: a leftover webhook matches no group, so it reloads nothing.
+                await removeWebhook(
+                    c.env,
+                    await c.var.getOnshapeApi(),
+                    WebhookSubject.DOCUMENT,
+                    deleted.documentId
+                ).catch((error: unknown) => {
+                    console.error(
+                        `Failed to remove the webhook for ${deleted.documentId}`,
+                        error
+                    );
+                });
+            }
+        }
 
         await rebuildSearchDb(c.env.BLOB, db, libraryId);
         await bumpLibraryVersion(db, libraryId);

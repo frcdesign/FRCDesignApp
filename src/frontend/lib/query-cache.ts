@@ -12,10 +12,7 @@ export function getQueryUpdater<T>(recipe: (draft: T) => void): Updater<T> {
     };
 }
 
-/**
- * Shows a mutation's result before the server confirms it. There is no snapshot
- * to roll back to: callers invalidate on settle, and the refetch is the undo.
- */
+/** No rollback: callers invalidate on settle, and the refetch is the undo. */
 export async function patchQuery<T>(
     queryKey: QueryKey,
     recipe: (draft: T) => void

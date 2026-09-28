@@ -6,7 +6,7 @@ import {
 } from "@phosphor-icons/react";
 import { IconSize, StatusColor } from "../../../lib/style-constants";
 import { ReactNode } from "react";
-import { Callout } from "../../../components/callout";
+import { Callout, CalloutButton } from "../../../components/callout";
 import {
     ClearFiltersButton,
     useClearVendorFilters
@@ -20,7 +20,7 @@ function plural(objectLabel: ObjectLabel): string {
     return objectLabel + "s";
 }
 import { useNavigate } from "@tanstack/react-router";
-import { SectionNotice } from "../../../components/app-zero-state";
+import { SectionNotice } from "../../../components/app-notice";
 import { useLibraryId } from "../../../lib/library";
 import { AppIcon } from "../../../components/app-icon";
 
@@ -47,9 +47,6 @@ interface FilterCalloutProps {
     filtered: FilterResult;
 }
 
-/**
- * A callout which renders whenever there are items hidden by filters.
- */
 export function SearchCallout(props: FilterCalloutProps): ReactNode {
     const { filtered, objectLabel } = props;
     const searchAllDocuments = useSearchAllDocuments();
@@ -63,22 +60,28 @@ export function SearchCallout(props: FilterCalloutProps): ReactNode {
         return (
             <Callout
                 text={getGroupString(filtered, objectLabel)}
-                action={{
-                    text: "Search all",
-                    icon: <MagnifyingGlassIcon size={IconSize.SMALL} />,
-                    onClick: searchAllDocuments
-                }}
+                action={
+                    <CalloutButton
+                        icon={<MagnifyingGlassIcon size={IconSize.SMALL} />}
+                        onClick={searchAllDocuments}
+                    >
+                        Search all
+                    </CalloutButton>
+                }
             />
         );
     }
     return (
         <Callout
             text={getVendorString(filtered, objectLabel)}
-            action={{
-                text: "Clear filters",
-                icon: <FunnelXIcon size={IconSize.SMALL} />,
-                onClick: clearVendorFilters
-            }}
+            action={
+                <CalloutButton
+                    icon={<FunnelXIcon size={IconSize.SMALL} />}
+                    onClick={clearVendorFilters}
+                >
+                    Clear filters
+                </CalloutButton>
+            }
         />
     );
 }
@@ -127,13 +130,7 @@ export function NoSearchResultError(
             />
         );
     }
-    return (
-        <SectionNotice
-            icon={icon}
-            title={`No ${plural(objectLabel)}`}
-            description={null}
-        />
-    );
+    return <SectionNotice icon={icon} title={`No ${plural(objectLabel)}`} />;
 }
 
 /** Leaves a group's search for the one across the whole library. */
@@ -151,7 +148,7 @@ function SearchAllButton(): ReactNode {
     const searchAllDocuments = useSearchAllDocuments();
     return (
         <Button
-            leftSection={<MagnifyingGlassIcon size={IconSize.SMALL} />}
+            leftSection={<MagnifyingGlassIcon />}
             onClick={searchAllDocuments}
         >
             Search all documents

@@ -1,10 +1,7 @@
 import { LibraryId } from "../library/library-id";
 import { addDays } from "./day";
 
-/**
- * Competition seasons, which is what makes usage comparable: a library built
- * for a Jan–Apr competition has a year nothing like a calendar one.
- */
+/** Usage is compared by season: a Jan–Apr competition's year is nothing like a calendar one. */
 export enum Program {
     FRC = "FRC",
     FTC = "FTC"
@@ -17,10 +14,7 @@ export const LIBRARY_PROGRAM: Record<LibraryId, Program> = {
     [LibraryId.FTC_DESIGN_LIB]: Program.FTC
 };
 
-/**
- * Month a season opens and the month it closes, both inclusive. FTC opens
- * before New Year and closes after it, so its span covers two calendar years.
- */
+/** Inclusive. FTC's season spans New Year. */
 const SPANS: Record<Program, { startMonth: number; endMonth: number }> = {
     [Program.FRC]: { startMonth: 1, endMonth: 4 },
     [Program.FTC]: { startMonth: 9, endMonth: 4 }
@@ -34,10 +28,7 @@ export interface Season {
     /** Those months as `YYYY-MM`, which is all a chart marker needs. */
     startMonth: string;
     endMonth: string;
-    /**
-     * The year the season ends in, which is how both programs name themselves:
-     * FTC's Sept 2026 – Apr 2027 is the 2027 season, as is FRC's Jan–Apr 2027.
-     */
+    /** The year it ends in: FTC's Sept 2026 – Apr 2027 is the 2027 season. */
     year: number;
     /** "2027" or "2026–27" — the season named without naming a program. */
     years: string;
@@ -82,8 +73,7 @@ export function currentSeason(
     day: string
 ): Season | undefined {
     const year = Number(day.slice(0, 4));
-    // A day in January belongs to a season that opened the previous year, so
-    // both candidates have to be tried.
+    // A January day belongs to a season opened the year before.
     for (const candidate of [
         seasonOf(program, year),
         seasonOf(program, year + 1)
@@ -126,10 +116,7 @@ function daysBetween(from: string, to: string): number {
     return Math.round(ms / (24 * 3600 * 1000)) + 1;
 }
 
-/**
- * In season, the season so far; between seasons, the last complete one — an
- * off-season week against a full season would show a collapse every May.
- */
+/** Between seasons, the last complete one, or every May would show a collapse. */
 export function seasonWindow(program: Program, day: string): SeasonWindow {
     const current = currentSeason(program, day);
     if (current === undefined) {
@@ -151,10 +138,7 @@ export function seasonWindow(program: Program, day: string): SeasonWindow {
     };
 }
 
-/**
- * The same stretch of the previous season, so a half-finished season is
- * compared against half of the one before rather than all of it.
- */
+/** The same stretch of the previous season, so a half season compares to a half. */
 export function baselineWindow(window: SeasonWindow): {
     from: string;
     to: string;

@@ -17,10 +17,7 @@ interface RecentSectionProps {
     series: DailyMetricPoint[];
 }
 
-/**
- * The trailing month against the one before it: what says something useful
- * before there is a second season to compare against.
- */
+/** Useful before there's a second season to compare. */
 export function RecentSection({
     growth,
     series

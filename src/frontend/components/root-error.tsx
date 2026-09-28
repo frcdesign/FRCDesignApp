@@ -1,5 +1,5 @@
 import { RequireAccessLevel } from "../features/auth/access-level";
-import { PageNotice } from "./app-zero-state";
+import { PageNotice, PageError } from "./app-notice";
 import { ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import {
@@ -12,28 +12,27 @@ import {
 } from "@mantine/core";
 import { CheckIcon, CopyIcon, HouseIcon } from "@phosphor-icons/react";
 import { IconSize } from "../lib/style-constants";
-import { ReloadGroupsButton } from "../features/library/components/reload-groups-button";
-import { DEFAULT_SETTINGS } from "@backend/features/settings/settings";
+import { ReloadButton } from "../features/library/components/reload-button";
+import { AccessLevel } from "@backend/features/auth/access-level";
+import { DEFAULT_LIBRARY } from "@backend/features/library/library-id";
 
-/**
- * Catch-all error state for when a route below the root fails to load.
- */
 export function RootAppError(): ReactNode {
     return (
-        <PageNotice
+        <PageError
             title="The app has crashed due to an unexpected error."
             action={
-                <RequireAccessLevel useMaxAccessLevel>
-                    <ReloadGroupsButton reloadAll />
+                <RequireAccessLevel
+                    accessLevel={AccessLevel.OWNER}
+                    useMaxAccessLevel
+                >
+                    <ReloadButton all />
                 </RequireAccessLevel>
             }
         />
     );
 }
 
-/**
- * Last-resort fallback for the ROOT route's errorComponent.
- */
+/** The root route's errorComponent. */
 export function RootCrash(): ReactNode {
     return (
         <div
@@ -53,21 +52,13 @@ export function RootCrash(): ReactNode {
     );
 }
 
-/**
- * The address that missed, to hand to a developer. Onshape's panel has no
- * address bar, so this page is the only place the caller can read it — and
- * which url reached it is the whole diagnosis.
- */
+/** Onshape's panel has no address bar, so show the url for a bug report. */
 function MissedUrl(): ReactNode {
-    // Read at render: reaching this page is the end of a navigation, and
-    // leaving it unmounts rather than updates.
     const url = window.location.href;
 
     return (
-        <Group gap={4} wrap="nowrap" align="center" mt="xs" maw="100%">
+        <Group gap={4} align="center" mt="xs" maw="100%">
             <Code
-                // Long, and the panel is narrow, so it breaks anywhere rather
-                // than widening the page past its gutters.
                 style={{
                     overflowWrap: "anywhere",
                     textAlign: "left",
@@ -78,15 +69,10 @@ function MissedUrl(): ReactNode {
             </Code>
             <CopyButton value={url}>
                 {({ copied, copy }) => (
-                    <Tooltip
-                        label={copied ? "Copied" : "Copy address"}
-                        withArrow
-                    >
+                    <Tooltip label={copied ? "Copied" : "Copy address"}>
                         <ActionIcon
-                            variant="subtle"
                             color={copied ? "teal" : "gray"}
                             size={IconSize.SMALL}
-                            aria-label="Copy address"
                             onClick={copy}
                         >
                             {copied ? (
@@ -111,7 +97,7 @@ export function NotFoundError(): ReactNode {
             onClick={() => {
                 void navigate({
                     to: "/app/library/$libraryId",
-                    params: { libraryId: DEFAULT_SETTINGS.libraryId }
+                    params: { libraryId: DEFAULT_LIBRARY }
                 });
             }}
         >
@@ -124,7 +110,7 @@ export function NotFoundError(): ReactNode {
             title="Failed to find page."
             description={
                 <>
-                    Click this button to fix the issue. If it doesn&apos;t,
+                    Click this button to fix the issue. If that does not work,
                     contact the FRCDesignApp developers with the address below.
                     <MissedUrl />
                 </>

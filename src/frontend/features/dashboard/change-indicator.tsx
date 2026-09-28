@@ -14,18 +14,15 @@ interface ChangeIndicatorProps {
     format?: (value: number) => string;
 }
 
-/**
- * How a measure changed, always beside the number and never without naming the
- * baseline: these tiles mix windows, so a bare "+82%" would be unreadable.
- */
+/** Always names the baseline, since the tiles mix windows. */
 export function ChangeIndicator({
     comparison,
     format = formatCount
 }: ChangeIndicatorProps): ReactNode {
     if (comparison.changeRatio === undefined) {
         return (
-            <Tooltip withArrow multiline w={260} label={explain(comparison)}>
-                <Text size="sm" c="dimmed" w="fit-content" ta="right">
+            <Tooltip label={explain(comparison)}>
+                <Text c="dimmed" w="fit-content" ta="right">
                     {shortReason(comparison)}
                 </Text>
             </Tooltip>
@@ -39,17 +36,14 @@ export function ChangeIndicator({
     const color = flat ? "dimmed" : rising ? "green" : "red";
 
     const change = (
-        <Group gap={4} wrap="nowrap">
+        <Group gap={4}>
             <Arrow size={IconSize.TINY} weight="bold" color={color} />
-            <Text size="sm" c={color}>
-                {formatPercentChange(comparison.changeRatio)}
-            </Text>
+            <Text c={color}>{formatPercentChange(comparison.changeRatio)}</Text>
         </Group>
     );
 
     return (
         <Tooltip
-            withArrow
             label={`${format(comparison.previous)} in ${comparison.baselineLabel}`}
         >
             <Stack gap={0} align="flex-end" w="fit-content">

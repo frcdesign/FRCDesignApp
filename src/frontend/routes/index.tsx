@@ -1,30 +1,37 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import { getUiState, updateUiState } from "../lib/ui-state";
-import { showSuccessToast } from "../lib/notifications";
+import { DEFAULT_LIBRARY } from "@backend/features/library/library-id";
+import { getTabPath, isLibraryTab } from "../lib/app-tab";
+import { apiPost } from "../lib/api-client";
+import { toLibraryPath } from "../lib/api-paths";
+import { getUiState } from "../lib/ui-state";
 import { RootAppError } from "../components/root-error";
 
-// Direct entry from outside Onshape, and where signing in returns to; Onshape's
-// own launch is served before this route.
+// Entry, from Onshape's /init or opened directly: resumes the last tab and group.
 export const Route = createFileRoute("/")({
     beforeLoad: ({ search }) => {
-        const { libraryId, groupId, justSignedIn } = getUiState();
-        if (justSignedIn) {
-            updateUiState({ justSignedIn: false });
-            // Onshape only sends the caller back here on success, so arriving
-            // with the flag set is the confirmation.
-            showSuccessToast("Signed in to Onshape.");
+        const { tabId, groupId } = getUiState();
+        const tab = tabId ?? DEFAULT_LIBRARY;
+        // Only launches from Onshape count as opens, and only in a library.
+        if ("documentId" in search && isLibraryTab(tab)) {
+            // Signed out is refused, and there's no open to count.
+            void apiPost("/app-open" + toLibraryPath(tab)).catch(
+                () => undefined
+            );
         }
         // Whatever Onshape launched with rides along; only the path is ours.
+        if (!isLibraryTab(tab)) {
+            throw redirect({ href: getTabPath(tab), search });
+        }
         if (groupId) {
             throw redirect({
                 to: "/app/library/$libraryId/groups/$groupId",
-                params: { libraryId, groupId },
+                params: { libraryId: tab, groupId },
                 search
             });
         }
         throw redirect({
             to: "/app/library/$libraryId",
-            params: { libraryId },
+            params: { libraryId: tab },
             search
         });
     },

@@ -1,10 +1,9 @@
-import { modals } from "@mantine/modals";
 import { openAppModal } from "../../components/open-app-modal";
 
 import type { InsertableOut } from "@backend/features/library/contract";
 import {
     type ConfigurationKey,
-    type Selection
+    type PartialSelection
 } from "@backend/features/configurations/contract";
 import { updateUiState } from "../../lib/ui-state";
 
@@ -19,9 +18,9 @@ import { InsertSource } from "@backend/features/analytics/usage";
 
 interface OpenInsertMenuProps {
     insertable: InsertableOut;
-    initialSelection?: Selection;
-    /** That selection's key, when the caller knows it; the menu reports its
-     * own once the parameters load, which is what keeps the url current. */
+    /** Partial for a search hit or a link, which name only some parameters. */
+    initialSelection?: PartialSelection;
+    /** So the preview needn't wait for the parameters. */
     configurationKey?: ConfigurationKey;
     /** The favorite this was opened from, so a relaunch can reopen it as one. */
     favoriteId?: string;
@@ -31,7 +30,7 @@ interface OpenInsertMenuProps {
 /** Nothing is open, which is what closing the menu leaves behind. */
 const NO_OPEN_MENU = {
     openInsertableId: undefined,
-    openConfigurationKey: undefined,
+    openSelection: undefined,
     openFavoriteId: undefined
 };
 
@@ -43,52 +42,47 @@ export function openInsertMenu(props: OpenInsertMenuProps) {
         favoriteId,
         source
     } = props;
+    // Plain variables, not state: they belong to this one opening, which is outside React.
     let didInsert = false;
-    // Recorded rather than merely rendered: the url mirrors this, and a
-    // relaunch — an Onshape tab switch among them — reopens what it names.
+    // For the restore toast to reopen.
+    let lastSelection = initialSelection;
+    // Recorded so the url mirrors it and a relaunch reopens it.
     updateUiState({
         openInsertableId: insertable.id,
-        openConfigurationKey: configurationKey,
+        openSelection: initialSelection,
         openFavoriteId: favoriteId
     });
-    // Minted here so the content can address the modal it lives in, which is
-    // what lets the header follow the selected configuration.
-    const id = crypto.randomUUID();
     openAppModal({
-        modalId: id,
         title: <MenuTitle name={insertable.name} />,
         size: 500,
         onClose: () => {
             updateUiState(NO_OPEN_MENU);
             if (!didInsert) {
-                showRestoreToast(insertable, source, initialSelection);
+                showRestoreToast(insertable, source, lastSelection);
             }
         },
         children: (
             <InsertMenuContent
                 insertable={insertable}
-                modalId={id}
                 initialSelection={initialSelection}
                 initialConfigurationKey={configurationKey}
+                onSelectionChange={(selection) => {
+                    lastSelection = selection;
+                }}
                 source={source}
                 onInsert={() => {
                     didInsert = true;
-                    modals.close(id);
                 }}
             />
         )
     });
 }
 
-/**
- * Both are shown: the element name is how the part was found, the part number
- * and name are what gets inserted.
- */
-
+/** Offers the menu back, configured the way it was closed. */
 function showRestoreToast(
     insertable: InsertableOut,
     source: InsertSource,
-    selection?: Selection
+    selection?: PartialSelection
 ) {
     const restoreButton: NotificationAction = {
         text: "Restore",
@@ -100,8 +94,7 @@ function showRestoreToast(
             })
     };
 
-    // Keyed on the insertable, so opening and cancelling the same one repeatedly
-    // refreshes one toast rather than stacking up a column of them.
+    // Keyed on the insertable, so repeats refresh one toast.
     showInfoToast(
         renderNotification(`Cancelled ${insertable.name}.`, restoreButton),
         { id: "restore-" + insertable.id, autoClose: 3000 }

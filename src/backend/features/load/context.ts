@@ -1,82 +1,76 @@
 import type { WorkflowStep } from "cloudflare:workers";
+import { createLimiter, type Limiter } from "../../lib/limiter";
 import type { AppBindings } from "../../lib/context";
 import { getOnshapeApiFromSessionId } from "../auth/request-auth";
-import type { OnshapeApi } from "../../lib/onshape/client";
+import { getBackgroundOnshapeApi } from "../auth/background-sessions";
+import type { OAuthApi } from "../../lib/onshape/client";
 import type { ElementType } from "../../lib/onshape/element-type";
 import type { LibraryId } from "../library/library-id";
 import type { ElementPath, InstancePath } from "../../lib/onshape/path";
 
 /**
- * How many insertables a load probes Onshape for at once — see
- * `probeInsertable`, which is the part of a load that asks Onshape anything
- * beyond a thumbnail. What bounds this is Onshape's rate limit rather than
- * anything here: past it the extra calls come back 429 and wait out their
- * `Retry-After` (see `ONSHAPE_STEP_RETRIES`), and a step whose five attempts run
- * out fails its insertable.
- *
- * Back to 15 after 40 drove a load into a rate limit it never climbed out of:
- * six attempts on one step, all 429, across five minutes. Still not measured
- * against where Onshape actually starts pushing back, so this is the number that
- * was working before rather than a considered one.
+ * Bounded by Onshape's rate limit: at 40 a load hit 429s it never recovered
+ * from. 15 is what worked before, not a measured limit.
  */
 export const LOAD_CONCURRENCY = 15;
 
-/** Runs a task, waiting for a slot when the limiter is full. */
-type Limiter = <T>(task: () => Promise<T>) => Promise<T>;
-
-/**
- * Runs at most `max` tasks at once, queueing the rest in call order, so a
- * rate-limit burst only hits the running few.
- */
-export function createLimiter(max: number): Limiter {
-    let active = 0;
-    const queue: (() => void)[] = [];
-
-    const release = () => {
-        active--;
-        const next = queue.shift();
-        if (next) next();
-    };
-
-    return async <T>(task: () => Promise<T>): Promise<T> => {
-        if (active >= max) {
-            await new Promise<void>((resolve) => queue.push(resolve));
-        }
-        active++;
-        try {
-            return await task();
-        } finally {
-            release();
-        }
-    };
-}
+/** Separate from probing, since a thumbnail step holds its slot through minutes of retries. */
+const THUMBNAIL_CONCURRENCY = 10;
 
 /** The runtime plumbing a load runs against. */
 export interface LoadContext {
     env: AppBindings;
-    sessionId: string;
+    libraryId: LibraryId;
+    /** Whoever asked for the load; absent for a webhook's. */
+    sessionId?: string;
     step: WorkflowStep;
     /** Bounds concurrent Onshape probing across the whole run. */
     limit: Limiter;
+    thumbnailLimit: Limiter;
+    /** Resolved once a run needs it; see {@link getOnshapeApiFromContext}. */
+    adminApi?: Promise<OAuthApi>;
 }
 
 export function createLoadContext(
     env: AppBindings,
-    sessionId: string,
+    libraryId: LibraryId,
+    sessionId: string | undefined,
     step: WorkflowStep
 ): LoadContext {
     return {
         env,
+        libraryId,
         sessionId,
         step,
-        limit: createLimiter(LOAD_CONCURRENCY)
+        limit: createLimiter(LOAD_CONCURRENCY),
+        thumbnailLimit: createLimiter(THUMBNAIL_CONCURRENCY)
     };
 }
 
-export function getOnshapeApiFromContext(
+/** The requester's session while it works, else an admin's. */
+export async function getOnshapeApiFromContext(
     ctx: LoadContext
-): Promise<OnshapeApi> {
-    return getOnshapeApiFromSessionId(ctx.env.KV, ctx.sessionId);
+): Promise<OAuthApi> {
+    if (ctx.sessionId) {
+        try {
+            return await getOnshapeApiFromSessionId(ctx.env.KV, ctx.sessionId);
+        } catch {
+            // Signed out or expired since asking; an admin carries on.
+        }
+    }
+    ctx.adminApi ??= getBackgroundOnshapeApi(ctx.env, [ctx.libraryId]).then(
+        (api) => {
+            if (!api) {
+                throw new Error("No owner or admin session to load with");
+            }
+            return api;
+        }
+    );
+    // A failure is retried by the step, so it must not be memoized.
+    return ctx.adminApi.catch((error: unknown) => {
+        ctx.adminApi = undefined;
+        throw error;
+    });
 }
 
 /** A group a load reads, and what the document told us about it. */
@@ -86,25 +80,21 @@ export interface GroupTarget {
     versionPath: InstancePath;
     /** When Onshape cut `versionPath`'s version. */
     versionCreatedAt: Date;
-    /**
-     * The document's default workspace. Everything the library shows is pinned
-     * to the version; this is only where thumbnails are read from, because the
-     * version form of that endpoint does not reliably return them.
-     */
-    workspacePath: InstancePath;
     name: string;
     /** The tab the document renders its thumbnail from, when one is set. */
     thumbnailElementId?: string;
 }
 
+/** Only a group that loads gets a thumbnail workspace; see `loadGroup`. */
+export interface LoadingGroup extends GroupTarget {
+    /** See `thumbnails/workspace.ts`. */
+    thumbnailPath: InstancePath;
+}
+
 /** An insertable a load reads, and what the document's tab listing told us. */
 export interface InsertableTarget {
     insertableId: string;
-    /**
-     * The same tab in the document's workspace, which its thumbnail falls back
-     * to when the version will not answer.
-     */
-    elementWorkspacePath: ElementPath;
+    thumbnailPath: ElementPath;
     libraryId: LibraryId;
     groupId: string;
     elementPath: ElementPath;

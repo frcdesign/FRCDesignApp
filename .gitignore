@@ -40,3 +40,6 @@ dist-ssr
 # Python caches, from the scripts/ helpers
 __pycache__/
 *.pyc
+
+# The shared dev tunnel's token
+.tunnel-token

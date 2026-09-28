@@ -1,52 +1,47 @@
-import { type ConfigurationKey } from "../../../features/configurations/contract";
+import { type Selection } from "../../../features/configurations/contract";
+import { encodeQueryConfiguration } from "../../../features/configurations/utils";
 import { OnshapeApi } from "../client";
 import { assertInstanceType } from "../assertions";
 import { ElementPath, toElementApiPath } from "../path";
-import { apiPath } from "../api-path";
-import { ThumbnailSize } from "../../../features/thumbnails/contract";
 import { getInsertables } from "./documents";
+import { ThumbnailSize } from "../../../features/thumbnails/contract";
 
-/**
- * `GET /thumbnails/d/{did}/{wv}/{wvid}/e/{eid}/s/{size}`
- *
- * Returns the thumbnail for a given element in a workspace or version.
- */
+/** Returns the thumbnail for a given element in a workspace or version. */
 export function getElementThumbnail(
     client: OnshapeApi,
     elementPath: ElementPath,
     size = ThumbnailSize.LARGE
 ): Promise<ArrayBuffer> {
     assertInstanceType(elementPath, "w", "v");
-    const path =
-        apiPath("thumbnails", elementPath, toElementApiPath) + "/s/" + size;
+    const path = `/thumbnails${toElementApiPath(elementPath)}/s/${size}`;
     return client.getImage(path);
 }
 
-/** The configuration matches no insertable, so retrying can only fail again. */
-export class NoSuchConfigurationError extends Error {}
-
+/** Asking for its bytes starts the render. Undefined when no part matches the configuration. */
 export async function getThumbnailId(
     client: OnshapeApi,
     elementPath: ElementPath,
-    configurationKey?: ConfigurationKey
-): Promise<string> {
-    const query: Record<string, string | boolean> = {
-        includeParts: true,
-        includeAssemblies: true,
-        includeCompositeParts: true,
+    configuration: Selection
+): Promise<string | undefined> {
+    const query = new URLSearchParams({
+        includeParts: "true",
+        includeAssemblies: "true",
+        includeCompositeParts: "true",
         elementId: elementPath.elementId
-    };
-    if (configurationKey) query.configuration = configurationKey;
-
-    const insertables = await getInsertables(client, elementPath, query);
-    // A configuration matching nothing comes back with no items at all.
-    const thumbnailId = insertables.items?.[0]?.predictableThumbnailId;
-    if (!thumbnailId) {
-        throw new NoSuchConfigurationError(
-            "Onshape returned no insertable for the configuration"
-        );
+    });
+    // The query form: this is escaped again on its way out.
+    const encoded = encodeQueryConfiguration(configuration);
+    if (encoded) {
+        query.set("configuration", encoded);
     }
-    return thumbnailId;
+
+    const insertables = await getInsertables(
+        client,
+        elementPath,
+        Object.fromEntries(query)
+    );
+    // A configuration matching nothing comes back with no items at all.
+    return insertables.items?.[0]?.predictableThumbnailId;
 }
 
 /** Fails repeatedly while Onshape renders the thumbnail in the background. */
@@ -55,9 +50,6 @@ export function getThumbnailFromId(
     thumbnailId: string,
     size = ThumbnailSize.LARGE
 ): Promise<ArrayBuffer> {
-    const path =
-        apiPath("thumbnails", undefined, undefined, { endId: thumbnailId }) +
-        "/s/" +
-        size;
+    const path = `/thumbnails/${encodeURIComponent(thumbnailId)}/s/${size}`;
     return client.getImage(path);
 }

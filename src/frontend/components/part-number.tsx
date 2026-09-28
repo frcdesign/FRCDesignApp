@@ -1,47 +1,47 @@
-import { Anchor, Text } from "@mantine/core";
-import { ArrowSquareOutIcon } from "@phosphor-icons/react";
+import { Text } from "@mantine/core";
 import { ReactNode } from "react";
-import { IconSize, NO_SHRINK } from "../lib/style-constants";
+import { IconSize } from "../lib/style-constants";
+import styles from "../lib/styles.module.css";
+import { ExternalLink } from "./external-link";
 
-interface PartNumberLinkProps {
-    /** Already-rendered text, so a caller can underline what a query matched. */
-    children: ReactNode;
-    url: string;
-    /**
-     * Holds the link at its own width beside text that can outgrow the row,
-     * which a list row wants. A header wants the opposite: it lets a long part
-     * number shrink and ellipsize rather than push the title around.
-     */
-    noShrink?: boolean;
+interface PartNumberProps {
+    partNumber: string;
+    /** How to draw it, e.g. with a query's matches underlined. @default partNumber */
+    children?: ReactNode;
+    /** The vendor's page for it. */
+    url?: string;
 }
 
-/**
- * A part number pointing at the vendor's page for it. `inline-flex` so the icon
- * centres on the text rather than sitting on its baseline, and takes the link's
- * colour by being inside it.
- */
-export function PartNumberLink(props: PartNumberLinkProps): ReactNode {
-    const { children, url, noShrink = false } = props;
-    return (
-        <Anchor
-            href={url}
-            target="_blank"
-            inherit
-            // The row inserts on click, which is not what the link is for.
-            onClick={(event) => event.stopPropagation()}
-            display="inline-flex"
-            miw={0}
-            maw="100%"
-            style={{
-                alignItems: "center",
-                gap: 2,
-                ...(noShrink ? NO_SHRINK : {})
-            }}
-        >
-            <Text component="span" inherit truncate miw={0}>
+/** Keeps its width beside anything that can shrink, but still ellipsizes past its row's. */
+export function PartNumber(props: PartNumberProps): ReactNode {
+    const { partNumber, children = partNumber, url } = props;
+    const text = (
+        <Text component="span" inherit truncate title={partNumber} miw={0}>
+            {children}
+        </Text>
+    );
+    if (!url) {
+        return (
+            <Text
+                inherit
+                truncate
+                title={partNumber}
+                maw="100%"
+                className={styles.noShrink}
+            >
                 {children}
             </Text>
-            <ArrowSquareOutIcon size={IconSize.TINY} />
-        </Anchor>
+        );
+    }
+    return (
+        <ExternalLink
+            href={url}
+            inherit
+            maw="100%"
+            className={styles.noShrink}
+            iconSize={IconSize.TINY}
+        >
+            {text}
+        </ExternalLink>
     );
 }

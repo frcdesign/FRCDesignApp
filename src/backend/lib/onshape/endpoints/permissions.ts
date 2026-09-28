@@ -1,7 +1,6 @@
 import { HttpStatus } from "http-status-ts";
 import { OnshapeApi, OnshapeApiError } from "../client";
 import { DocumentPath } from "../path";
-import { apiPath } from "../api-path";
 
 /**
  * What Onshape says the caller may do with a document. Only the four the
@@ -32,10 +31,7 @@ export async function getPermissions(
 ): Promise<OnshapePermission[]> {
     try {
         return await client.get(
-            apiPath("documents", documentPath, undefined, {
-                skipDocumentD: true,
-                endRoute: "permissionset"
-            })
+            `/documents/${documentPath.documentId}/permissionset`
         );
     } catch (error) {
         if (

@@ -16,7 +16,6 @@ import { getAppErrorHandler } from "../../lib/errors";
 import { patchQuery } from "../../lib/query-cache";
 import { useRefreshLibrary } from "../../lib/refresh";
 import { toInsertablePath, toLibraryPath } from "../../lib/api-paths";
-import { useCloseBuildCard } from "./components/build-status";
 import { type LibraryBuildStatus } from "@backend/features/build-checker/contract";
 import { LibraryId } from "@backend/features/library/library-id";
 import { useLibraryId } from "../../lib/library";
@@ -30,8 +29,7 @@ function getBuildStatusQuery(libraryId: LibraryId, cacheVersion: number) {
             apiGet("/build-status/library/" + libraryId, {
                 cacheId: cacheVersion
             }),
-        // A toggle bumps cacheVersion (and thus this key); keep the old data on
-        // screen while the new version refetches so the hover card doesn't close.
+        // So the hover card doesn't close while the new version loads.
         placeholderData: keepPreviousData,
         staleTime: Infinity,
         gcTime: Infinity
@@ -58,8 +56,6 @@ export function useSetVisibilityMutation(
     const libraryId = useLibraryId();
     const refreshLibrary = useRefreshLibrary();
     const key = useBuildStatusKey();
-
-    const closeCard = useCloseBuildCard();
 
     const mutation = useMutation({
         mutationKey: ["set-insertable-visibility", ...insertableIds],
@@ -105,7 +101,6 @@ export function useSetVisibilityMutation(
             mutation.mutate();
             return;
         }
-        closeCard();
         modals.openConfirmModal({
             title: "Hide elements",
             children:
@@ -114,13 +109,14 @@ export function useSetVisibilityMutation(
             confirmProps: { color: "red" },
             onConfirm: () => mutation.mutate()
         });
-    }, [isVisible, closeCard, mutation]);
+    }, [isVisible, mutation]);
 
     return { mutate, isPending: mutation.isPending };
 }
 
 /** Toggles an insertable's "insert and fasten" support (a slow Onshape call). */
 export function useToggleInsertAndFastenMutation(insertableId: string) {
+    const libraryId = useLibraryId();
     const key = useBuildStatusKey();
     const refreshLibrary = useRefreshLibrary();
     const toastId = `insert-and-fasten-${insertableId}`;
@@ -128,7 +124,9 @@ export function useToggleInsertAndFastenMutation(insertableId: string) {
         mutationKey: ["toggle-insert-and-fasten", insertableId],
         mutationFn: (supportsFasten: boolean) =>
             apiPost(
-                "/toggle-insert-and-fasten" + toInsertablePath(insertableId),
+                "/toggle-insert-and-fasten" +
+                    toLibraryPath(libraryId) +
+                    toInsertablePath(insertableId),
                 { body: { supportsFasten } }
             ),
         onMutate: (supportsFasten) => {
@@ -159,25 +157,28 @@ export function useToggleInsertAndFastenMutation(insertableId: string) {
     });
 }
 
-/**
- * Toggles part-number indexing for an insertable. The Onshape call behind it
- * runs long, so the toast reports the switch rather than sitting on the response.
- */
+/** The Onshape call runs long, so the toast reports the switch without waiting. */
 export function useIndexConfigurationsMutation(insertableId: string) {
+    const libraryId = useLibraryId();
     const key = useBuildStatusKey();
     const refreshLibrary = useRefreshLibrary();
     const toastId = `index-configurations-${insertableId}`;
     return useMutation({
         mutationKey: ["index-configurations", insertableId],
         mutationFn: (indexConfigurations: boolean) =>
-            apiPost("/index-configurations" + toInsertablePath(insertableId), {
-                body: { indexConfigurations }
-            }),
+            apiPost(
+                "/index-configurations" +
+                    toLibraryPath(libraryId) +
+                    toInsertablePath(insertableId),
+                {
+                    body: { indexConfigurations }
+                }
+            ),
         onMutate: (indexConfigurations) => {
             showInfoToast(
                 indexConfigurations
-                    ? "Enabling part indexing"
-                    : "Disabling part indexing",
+                    ? "Enabling indexing"
+                    : "Disabling indexing",
                 { id: toastId }
             );
             return patchQuery<LibraryBuildStatus>(key, (status) => {
@@ -189,12 +190,47 @@ export function useIndexConfigurationsMutation(insertableId: string) {
         onSuccess: (_result, indexConfigurations) =>
             showSuccessToast(
                 indexConfigurations
-                    ? "Part number indexing enabled."
-                    : "Part number indexing disabled.",
+                    ? "Indexing enabled."
+                    : "Indexing disabled.",
                 toastId
             ),
         onError: getAppErrorHandler(
-            "Unexpectedly failed to update part number indexing.",
+            "Unexpectedly failed to update indexing.",
+            toastId
+        ),
+        onSettled: (_result, error) =>
+            refreshLibrary({ discardPatches: error !== null })
+    });
+}
+
+/** Re-probes the part, so the toast reports the change first. */
+export function useExcludedParametersMutation(insertableId: string) {
+    const libraryId = useLibraryId();
+    const key = useBuildStatusKey();
+    const refreshLibrary = useRefreshLibrary();
+    const toastId = `excluded-parameters-${insertableId}`;
+    return useMutation({
+        mutationKey: ["excluded-parameters", insertableId],
+        mutationFn: (excludedParameterIds: string[]) =>
+            apiPost(
+                "/excluded-parameters" +
+                    toLibraryPath(libraryId) +
+                    toInsertablePath(insertableId),
+                {
+                    body: { excludedParameterIds }
+                }
+            ),
+        onMutate: (excludedParameterIds) => {
+            showInfoToast("Reindexing part", { id: toastId });
+            return patchQuery<LibraryBuildStatus>(key, (status) => {
+                const insertable = status.insertables[insertableId];
+                if (insertable)
+                    insertable.excludedParameterIds = excludedParameterIds;
+            });
+        },
+        onSuccess: () => showSuccessToast("Part reindexed.", toastId),
+        onError: getAppErrorHandler(
+            "Unexpectedly failed to update the indexed parameters.",
             toastId
         ),
         onSettled: (_result, error) =>

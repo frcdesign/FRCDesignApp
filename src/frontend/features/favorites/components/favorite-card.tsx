@@ -1,13 +1,8 @@
 import { DEFAULT_CONFIGURATION_KEY } from "@backend/features/configurations/contract";
-import { RenderSource } from "@backend/features/thumbnails/contract";
 import { ReactNode } from "react";
 import { Favorite } from "@backend/features/favorites/contract";
 import { InsertableOut } from "@backend/features/library/contract";
-import { Menu } from "@mantine/core";
-import { PencilIcon } from "@phosphor-icons/react";
-import { IconSize } from "../../../lib/style-constants";
 import { openInsertMenu } from "../../insert/open-insert-menu";
-import { openFavoriteMenu } from "../open-favorite-menu";
 import { FavoriteButton, FavoriteInsertableItem } from "./favorite-button";
 import {
     CardTitle,
@@ -24,7 +19,6 @@ import { MenuSection } from "../../../components/app-menu";
 import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
 import {
     openCannotDeriveAssemblyAlert,
-    openCannotEditDefaultConfigurationAlert,
     openCannotReorderAlert
 } from "../../../components/alerts";
 import { useFavoritesQuery, useSetFavoriteOrderMutation } from "../queries";
@@ -38,10 +32,6 @@ interface FavoriteCardProps {
     searchHit?: SearchHit;
 }
 
-/**
- * A card for displaying a favorited insertable directly to the user.
- * Very similar in nature to an InsertableCard but with a few tweaks.
- */
 export function FavoriteCard(props: FavoriteCardProps): ReactNode {
     const { insertable, favorite, searchHit } = props;
 
@@ -54,11 +44,8 @@ export function FavoriteCard(props: FavoriteCardProps): ReactNode {
         return null;
     }
 
-    // The part number and name come from the favorite's own configuration, not
-    // from whatever the query matched — the two must never disagree with the
-    // thumbnail beside them, which is that same configuration's. Only the title
-    // underlining is the search's, and favorites do not search the part-number
-    // or part-name fields, so nothing in those ever matched to underline.
+    // From the favorite's own configuration, so it matches the thumbnail. Only
+    // title underlining comes from the search.
     const rowMatch: RowMatch = {
         positions: searchHit?.positions ?? [],
         partNumber: favorite.record?.partNumber,
@@ -95,7 +82,6 @@ export function FavoriteCard(props: FavoriteCardProps): ReactNode {
                                 configurationKey:
                                     favorite.configurationKey ??
                                     DEFAULT_CONFIGURATION_KEY,
-                                renderSource: RenderSource.ROW,
                                 insertableId: insertable.id
                             }}
                         />
@@ -144,22 +130,6 @@ function FavoriteMenuItems(props: FavoriteMenuItemsProps): ReactNode {
                 </MenuSection>
             )}
             <MenuSection label="Favorites">
-                <Menu.Item
-                    leftSection={<PencilIcon size={IconSize.SMALL} />}
-                    onClick={() => {
-                        if (!insertable.isConfigurable) {
-                            openCannotEditDefaultConfigurationAlert();
-                            return;
-                        }
-                        openFavoriteMenu({
-                            favoriteId: favorite.id,
-                            insertableName: insertable.name,
-                            selection: favorite.defaultSelection
-                        });
-                    }}
-                >
-                    Edit default configuration
-                </Menu.Item>
                 <ChangeOrderItems
                     id={favorite.id}
                     order={favoriteOrder}
@@ -177,7 +147,10 @@ function FavoriteMenuItems(props: FavoriteMenuItemsProps): ReactNode {
                 />
             </MenuSection>
             <MenuSection label="Document">
-                <OpenDocumentItems path={insertable.path} />
+                <OpenDocumentItems
+                    path={insertable.path}
+                    selection={favorite.defaultSelection}
+                />
             </MenuSection>
         </>
     );

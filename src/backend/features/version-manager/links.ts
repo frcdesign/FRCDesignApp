@@ -4,10 +4,8 @@
 import { and, eq } from "drizzle-orm";
 import type { Db } from "../../db/client";
 import type { OnshapeApi } from "../../lib/onshape/client";
-import {
-    getDocument,
-    getWorkspaces
-} from "../../lib/onshape/endpoints/documents";
+import { getDocument } from "../../lib/onshape/endpoints/documents";
+import { getWorkspaces } from "../../lib/onshape/endpoints/workspaces";
 import {
     hasPermissions,
     OnshapePermission
@@ -214,7 +212,7 @@ export async function toLinkedWorkspace(
             workspace,
             isOpenable: true,
             documentName: document.name,
-            workspaceName: await getWorkspaceName(client, workspace, document)
+            workspaceName: await getWorkspaceName(client, workspace)
         };
     } catch (error) {
         // Readable a moment ago and not now, or a document that has since been
@@ -225,18 +223,13 @@ export async function toLinkedWorkspace(
 }
 
 /**
- * The workspace's own name. The document already carries the default
- * workspace's, which is the common case and saves the second call.
+ * The workspace's own name. A call of its own: the document carries only its
+ * default workspace's id, not its name.
  */
 async function getWorkspaceName(
     client: OnshapeApi,
-    workspace: WorkspacePath,
-    document: { defaultWorkspace?: { id: string; name?: string } }
+    workspace: WorkspacePath
 ): Promise<string | undefined> {
-    const { defaultWorkspace } = document;
-    if (defaultWorkspace?.id === workspace.instanceId) {
-        return defaultWorkspace.name;
-    }
     const workspaces = await getWorkspaces(client, workspace);
     return workspaces.find((each) => each.id === workspace.instanceId)?.name;
 }

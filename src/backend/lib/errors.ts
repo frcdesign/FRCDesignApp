@@ -12,10 +12,7 @@ import {
 } from "./api-error";
 import type { AppContextEnv } from "./context";
 
-/**
- * What we are willing to say about an Onshape failure. Anything not named here
- * is ours to explain, not Onshape's, so it stays generic.
- */
+/** Anything not named here stays generic. */
 function fromOnshapeError(error: OnshapeApiError): ApiError {
     if (error instanceof OnshapeRateLimitError) {
         return handledError(
@@ -50,8 +47,7 @@ export const errorHandler: ErrorHandler<AppContextEnv> = (err, c) => {
         }
         return c.json(apiError.body, apiError.status);
     }
-    // A raw HTTPException is a validator rejecting a malformed request, which
-    // is our bug rather than something the user can act on.
+    // A validator rejecting a malformed request: our bug, not the user's.
     if (err instanceof HTTPException) {
         console.error(err);
         return c.json(

@@ -3,7 +3,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { type ReactNode } from "react";
 import { NavbarRow } from "../../components/app-navbar";
 import { OpenUrlButton } from "../../components/open-url-button";
-import { APP_STORE_URL } from "../../lib/url";
+import { APP_STORE_PATH } from "../../lib/url";
+import { useOnshapeOrigin } from "../../lib/onshape-params";
 
 import frcDesignAppIcon from "/frc-design-app-prod.svg";
 
@@ -13,6 +14,7 @@ export const Route = createFileRoute("/_pages/setup")({
 
 /** Where "Instructions" lands: what to do to end up with the app in Onshape. */
 function Setup(): ReactNode {
+    const origin = useOnshapeOrigin();
     return (
         <>
             {/* The brand alone: there is nowhere else to go from here. */}
@@ -23,7 +25,7 @@ function Setup(): ReactNode {
                 <Stack gap="lg">
                     <Stack gap="xs">
                         <Title order={2}>Get the FRCDesignApp</Title>
-                        <Text c="dimmed">
+                        <Text size="md" c="dimmed">
                             The FRCDesignApp runs directly in Onshape, making it
                             easy to add parts directly to your CAD.
                         </Text>
@@ -34,13 +36,13 @@ function Setup(): ReactNode {
                     <List type="ordered" spacing="lg">
                         <List.Item>
                             <Stack gap="xs" align="flex-start">
-                                <Text>
+                                <Text size="md">
                                     Subscribe to the FRCDesignApp in the Onshape
                                     App Store.
                                 </Text>
                                 <OpenUrlButton
                                     text="Open the App Store"
-                                    url={APP_STORE_URL}
+                                    url={origin + APP_STORE_PATH}
                                 />
                             </Stack>
                         </List.Item>

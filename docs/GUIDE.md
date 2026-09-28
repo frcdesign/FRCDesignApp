@@ -60,7 +60,7 @@ interface ElementPath extends InstancePath {
 }
 ```
 
-You'll pass these around everywhere. When you need to call an Onshape endpoint, build the right path object and hand it to `apiPath()`.
+You'll pass these around everywhere. When you need to call an Onshape endpoint, build the right path object and serialize it with the helpers in `src/backend/lib/onshape/path.ts`.
 
 ### How Onshape REST URLs are structured
 
@@ -72,22 +72,17 @@ Onshape REST paths look like:
 
 The pattern is always: service → `/d/` → documentId → `/w/` or `/v/` or `/m/` → instanceId → `/e/` → elementId → endpoint action.
 
-### `apiPath()` — building URLs
+### Building URLs
 
-The `apiPath()` function in `src/backend/onshape-api/api-path.ts` assembles these URLs for you. You give it the service name, a path object, a serializer, and any options:
+Endpoint wrappers build their path with the serializers in `src/backend/lib/onshape/path.ts` (`toDocumentApiPath`, `toInstanceApiPath`, `toElementApiPath`), which turn a path object into its URL segment:
 
 ```ts
-import { apiPath } from "../api-path";
-import { toInstanceApiPath, toElementApiPath } from "./path";
+// /documents/d/{did}/w/{wid}/contents
+client.get(`/documents${toInstanceApiPath(instancePath)}/contents`);
 
-// Produces: /assemblies/d/{did}/w/{wid}/e/{eid}/features
-apiPath("assemblies", elementPath, toElementApiPath, { endRoute: "features" });
-
-// Produces: /documents/d/{did}/w/{wid}/elements
-apiPath("documents", instancePath, toInstanceApiPath, { endRoute: "elements" });
+// /assemblies/d/{did}/w/{wid}/e/{eid}/features
+client.get(`/assemblies${toElementApiPath(elementPath)}/features`);
 ```
-
-The serializer functions (`toDocumentApiPath`, `toInstanceApiPath`, `toElementApiPath`) are all defined in `src/backend/lib/onshape/path.ts` and convert a path object into its URL segment string.
 
 ### Calling the Onshape API
 
@@ -97,15 +92,15 @@ All Onshape API calls go through the `OAuthApi` class, which is a wrapper around
 const onshapeApi = await c.var.getOnshapeApi();
 ```
 
-You can then pass it to any function in `src/backend/onshape-api/endpoints/`:
+You can then pass it to any function in `src/backend/lib/onshape/endpoints/`:
 
 ```ts
-import { getDocumentElements } from "../onshape-api/endpoints/documents";
+import { getContents } from "../lib/onshape/endpoints/documents";
 
-const elements = await getDocumentElements(onshapeApi, instancePath);
+const contents = await getContents(onshapeApi, instancePath);
 ```
 
-Before writing a new wrapper function, check if it already exists in one of the files under `src/backend/onshape-api/endpoints/`.
+Before writing a new wrapper function, check if it already exists in one of the files under `src/backend/lib/onshape/endpoints/`.
 
 ## Adding a New Backend Route
 
@@ -130,36 +125,44 @@ myRoutes.get("/my-thing" + libraryRoute(), async (c) => {
 });
 ```
 
-**Route param helpers** (defined in `src/backend/app.ts`):
+**Route param helpers** (defined in `src/backend/lib/route-params.ts`):
 
 - `libraryRoute()` — returns `"/library/:libraryId"`. Use `getLibraryParam(c)` to read it.
 - `insertableRoute()` — returns `"/insertable/:insertableId"`. Use `getInsertableParam(c)`.
-- `groupRoute()` — returns `"/group/:groupId"`. Use `getGroupParam(c)`.
+- `favoriteRoute()` — returns `"/favorite/:favoriteId"`. Use `getFavoriteParam(c)`.
 
-**Protecting routes:** Wrap the handler with middleware if it requires elevated access:
+**Protecting routes:** A route that needs elevated access names its library in the path and takes the matching middleware from `src/backend/features/auth/guards.ts`. One acting on a group or element also scopes its query to that library:
 
 ```ts
-import { requireEditorMiddleware } from "../access-level-utils";
+import { requireEditorMiddleware } from "../auth/guards";
 
-myRoutes.post("/my-admin-action", requireEditorMiddleware, async (c) => {
-    // only editors and admins reach here
-});
+myRoutes.post(
+    "/my-editor-action" + libraryRoute() + insertableRoute(),
+    requireEditorMiddleware,
+    async (c) => {
+        // only the library's editors, admins and the owner reach here
+        const libraryId = getLibraryParam(c);
+        // ...where(and(eq(insertables.id, id), eq(insertables.libraryId, libraryId)))
+    }
+);
 ```
 
-### 2. Register the route group in `create-app.ts`
+### 2. Register the route group in `app.ts`
 
-Open `src/backend/create-app.ts`, import your new routes, and mount them:
+Open `src/backend/app.ts`, import your new routes, and add them to `apiRoutes`, which mounts each under `/api`:
 
 ```ts
-import { myRoutes } from "./routes/my-routes";
+import { myRoutes } from "./features/my-feature/routes";
 
-// Inside createApp():
-app.route("/api", myRoutes);
+const apiRoutes = [
+    // ...
+    myRoutes
+];
 ```
 
 ### 3. Define the response type
 
-If the frontend needs to consume this endpoint, define a TypeScript interface for the response in the feature's `dto.ts` (e.g. `src/backend/features/library/dto.ts`). The backend owns the contract; the frontend imports it through `@backend/features/<feature>/dto`, so both sides agree on the shape.
+If the frontend needs to consume this endpoint, define a TypeScript interface for the response in the feature's `contract.ts` (e.g. `src/backend/features/library/contract.ts`). The backend owns the contract; the frontend imports it through `@backend/features/<feature>/contract`, so both sides agree on the shape.
 
 ---
 
@@ -218,8 +221,8 @@ const { documentId, name } = await c.req.json<{
 
 When calling the Onshape API from the backend, the same concept applies:
 
-- **Path params** are handled by `apiPath()` — the `ElementPath` / `InstancePath` fields become the path segments automatically.
-- **Query params** for Onshape endpoints can be passed through the endpoint wrapper functions in `src/backend/onshape-api/endpoints/`, which append them to the URL returned by `apiPath()`.
+- **Path params** come from the path serializers — `toElementApiPath` and friends turn an `ElementPath` / `InstancePath` into its segments.
+- **Query params** for Onshape endpoints can be passed through the endpoint wrapper functions in `src/backend/lib/onshape/endpoints/`, which pass them to the client as `query`.
 
 ## Modifying the Database Schema
 
@@ -423,7 +426,7 @@ function useMyMutation(someId: string) {
 }
 ```
 
-`getQueryUpdater` (from `src/frontend/lib/utils.ts`) wraps Immer's `produce()` into a function that React Query's `setQueryData` accepts. Immer allows you to mutate query results directly rather than mutating an original cache value, which is much cleaner for nested data.
+`getQueryUpdater` (from `src/frontend/lib/query-cache.ts`) wraps Immer's `produce()` into a function that React Query's `setQueryData` accepts. Immer allows you to mutate query results directly rather than mutating an original cache value, which is much cleaner for nested data.
 
 **Why cancel queries in `onMutate`?** If a background refetch lands after the optimistic update, it will overwrite the cache with stale data. Canceling outstanding queries for that key prevents this race condition.
 

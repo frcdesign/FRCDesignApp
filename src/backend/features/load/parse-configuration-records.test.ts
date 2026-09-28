@@ -8,11 +8,10 @@ import type {
 } from "../../lib/onshape/types";
 import { ElementPath } from "../../lib/onshape/path";
 import {
-    DEFAULT_CONFIGURATION_KEY,
-    Selection,
-    ConfigurationParameter
+    type ConfigurationParameter,
+    type PartialSelection,
+    type Selection
 } from "../configurations/contract";
-import { decodeConfiguration } from "../configurations/utils";
 import {
     enumParam,
     paramsWithConfigs
@@ -39,11 +38,11 @@ const CLIENT = {} as OnshapeApi;
 
 afterEach(() => vi.restoreAllMocks());
 
+const NO_SETTINGS = { indexConfigurations: false, excludedParameterIds: [] };
 const MANY = [{ type: BuildIssueType.MANUAL_INDEXING_REQUIRED }];
 const TOO_MANY = [{ type: BuildIssueType.CONFIGURATION_LIMIT_EXCEEDED }];
 
 describe("decideIndexing", () => {
-    // Vendors no longer enter into it: the configuration count is the only gate.
     it.each([
         // Below the auto line it indexes on its own.
         { configs: 127, force: false, index: true, issues: [] },
@@ -51,15 +50,13 @@ describe("decideIndexing", () => {
         { configs: 128, force: false, index: false, issues: MANY },
         // Enabling it overrides the count, and clears the flag.
         { configs: 128, force: true, index: true, issues: [] },
-        // Past the hard cap there is nothing to enumerate, so enabling it can't
-        // help — it stays unindexed and flagged either way.
+        // Past the cap there is nothing to enumerate, forced or not.
         { configs: 600, force: false, index: false, issues: TOO_MANY },
         { configs: 600, force: true, index: false, issues: TOO_MANY }
     ])("configs=$configs force=$force", ({ configs, force, index, issues }) => {
         const { shouldIndex, buildIssues } = decideIndexing(
-            ElementType.PART_STUDIO,
             paramsWithConfigs(configs),
-            force
+            { indexConfigurations: force, excludedParameterIds: [] }
         );
         expect({ shouldIndex, buildIssues }).toEqual({
             shouldIndex: index,
@@ -67,12 +64,15 @@ describe("decideIndexing", () => {
         });
     });
 
-    // No assembly configures its part properties, so the default probe is the
-    // whole of it however many combinations the count would have enumerated.
-    it("probes only the default for an assembly", () => {
+    it("leaves excluded parameters out of the combinations", () => {
+        const parameters = [
+            enumParam("A", ["a1", "a2"]),
+            enumParam("B", ["b1", "b2"])
+        ];
+        const settings = { ...NO_SETTINGS, excludedParameterIds: ["B"] };
         expect(
-            decideIndexing(ElementType.ASSEMBLY, paramsWithConfigs(600), false)
-        ).toEqual({ shouldIndex: true, buildIssues: [], configurations: [] });
+            decideIndexing(parameters, settings).configurations
+        ).toHaveLength(2);
     });
 });
 
@@ -94,7 +94,7 @@ describe("parsePartStudioRecord", () => {
                 false
             )
         ).toEqual({
-            selection: { size: "L" },
+            values: { size: "L" },
             partNumber: "217-2600",
             name: "Bracket",
             description: "A bracket",
@@ -140,7 +140,7 @@ describe("parsePartStudioRecord", () => {
                 true
             )
         ).toEqual({
-            selection: { size: "S" },
+            values: { size: "S" },
             hasMultipleParts: false,
             // The composite it was expected to resolve to is gone.
             isOpenComposite: false
@@ -149,7 +149,7 @@ describe("parsePartStudioRecord", () => {
 
     it("returns an all-null record for an empty response", () => {
         expect(parsePartStudioRecord([], { A: "a1" }, false)).toEqual({
-            selection: { A: "a1" },
+            values: { A: "a1" },
             hasMultipleParts: false,
             isOpenComposite: false
         });
@@ -170,7 +170,7 @@ describe("parseAssemblyRecord", () => {
             ]
         };
         expect(parseAssemblyRecord(metadata, { q: "1" })).toEqual({
-            selection: { q: "1" },
+            values: { q: "1" },
             partNumber: "AM-1234",
             name: "Gearbox",
             description: "A gearbox",
@@ -182,27 +182,23 @@ describe("parseAssemblyRecord", () => {
     });
 });
 
-/**
- * Mocks the parts endpoint, deriving a studio's parts from what the probe
- * overrode — a key names that alone, the defaults being left out of it.
- */
+/** Parts derive from the overrides alone, as Onshape defaults the rest. */
 function mockParts(partsFor: (overrides: Selection) => OnshapePart[]) {
     return vi
         .spyOn(PartsEndpoints, "getParts")
-        .mockImplementation((_client, _path, configurationKey) =>
-            Promise.resolve(partsFor(decodeConfiguration(configurationKey)))
+        .mockImplementation((_client, _path, configuration) =>
+            Promise.resolve(partsFor(configuration))
         );
 }
 
-/**
- * The combinations the load would probe: whole selections, which is what
- * `decideIndexing` makes of what enumeration names.
- */
+/** The combinations the load would probe, as enumeration names them. */
 function probeSelections(
-    parameters: ConfigurationParameter[],
-    elementType: ElementType = ElementType.PART_STUDIO
-): Selection[] {
-    return decideIndexing(elementType, parameters, true).configurations;
+    parameters: ConfigurationParameter[]
+): PartialSelection[] {
+    return decideIndexing(parameters, {
+        indexConfigurations: true,
+        excludedParameterIds: []
+    }).configurations;
 }
 
 /** Probes an element the way the load does: its own combinations, in full. */
@@ -219,7 +215,7 @@ function probeRecords(
             isOpenComposite: options.isOpenComposite ?? false
         },
         parameters,
-        probeSelections(parameters, elementType)
+        probeSelections(parameters)
     );
 }
 
@@ -232,24 +228,19 @@ describe("parseConfigurationRecords", () => {
         const result = await probeRecords([enumParam("A", ["a1", "a2"])]);
 
         expect(result.buildIssues).toEqual([]);
-        // "a1" is A's default, so that combination is the element's own probe
-        // under another name and is not probed again.
+        // "a1" is A's default, so that combination repeats the default probe.
         expect(result.partMetadata?.partNumber).toBe("PN-default");
         expect(result.records.map((r) => r.partNumber)).toEqual(["PN-a2"]);
     });
 
-    // A stored record is addressed by its key; carrying the selection it was
-    // probed with would put a second copy of that in every row.
-    it("stores the key alone, not the selection behind it", async () => {
+    it("stores the values each record was probed with", async () => {
         mockParts(() => [{ partId: "p", partNumber: "PN" }]);
 
         const result = await probeRecords([enumParam("A", ["a1", "a2"])]);
 
-        expect(result.records).not.toHaveLength(0);
-        for (const record of result.records) {
-            expect(record).not.toHaveProperty("selection");
-            expect(record.configurationKey).toBe("A=a2");
-        }
+        expect(result.records.map((record) => record.values)).toEqual([
+            { A: "a2" }
+        ]);
     });
 
     it("fills the vendor Onshape leaves unset, per configuration", async () => {
@@ -288,8 +279,7 @@ describe("parseConfigurationRecords", () => {
         expect(result.records.map((r) => r.partNumber)).toEqual(["PN-a1"]);
     });
 
-    // The element's own defaults hold, so only the configurations that break
-    // are at fault, and the first of them is what the build card opens.
+    // The defaults hold, so only the breaking configurations are at fault.
     it("blames the configurations that resolve to more than one part", async () => {
         mockParts((configuration) =>
             configuration.A === "a2" || configuration.A === "a3"
@@ -305,14 +295,13 @@ describe("parseConfigurationRecords", () => {
         expect(result.buildIssues).toEqual([
             {
                 type: BuildIssueType.CONFIGURATION_MULTIPLE_PARTS,
-                configurationKey: "A=a2",
+                values: { A: "a2" },
                 configurationCount: 2
             }
         ]);
     });
 
-    // Every configuration inherits a broken default, so there is nothing
-    // narrower to blame or to open.
+    // Every configuration inherits a broken default.
     it("blames the part itself when its own defaults resolve to more than one part", async () => {
         mockParts(() => [
             { partId: "p1", partNumber: "PN-1" },
@@ -347,14 +336,12 @@ describe("parseConfigurationRecords", () => {
         expect(result.buildIssues).toEqual([
             {
                 type: BuildIssueType.UNSTABLE_COMPOSITE,
-                configurationKey: "A=a2",
+                values: { A: "a2" },
                 configurationCount: 1
             }
         ]);
     });
 
-    // Past the cap decideIndexing turns indexing off and raises the issue, so
-    // this only ever runs with nothing to enumerate.
     it("records just the default when there are no combinations", async () => {
         const spy = mockParts(() => [
             { partId: "p", partNumber: "PN-default" }
@@ -385,10 +372,6 @@ describe("parseConfigurationRecords", () => {
             hasMultipleParts: false,
             isOpenComposite: false
         });
-        expect(spy).toHaveBeenCalledWith(
-            CLIENT,
-            PATH,
-            DEFAULT_CONFIGURATION_KEY
-        );
+        expect(spy).toHaveBeenCalledWith(CLIENT, PATH, {});
     });
 });

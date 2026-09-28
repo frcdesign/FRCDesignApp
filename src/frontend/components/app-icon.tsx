@@ -13,30 +13,17 @@ export interface AppIconProps
     color?: StatusColor | string;
     /** @default "regular" */
     weight?: IconWeight;
-    /** What a screen reader calls an icon that carries meaning on its own. */
-    label?: string;
 }
 
-/**
- * A Phosphor icon in a theme color. Box resolves the name, and sizes through
- * `fz` because its own `style` would drop the icon's.
- */
+/** Sized through `fz`, since Box's own `style` would drop the icon's. */
 export function AppIcon({
     icon,
     size = IconSize.SMALL,
     color,
     weight,
-    label,
     ...others
 }: AppIconProps): ReactNode {
     return (
-        <Box
-            component={icon}
-            fz={size}
-            c={color}
-            weight={weight}
-            aria-label={label}
-            {...others}
-        />
+        <Box component={icon} fz={size} c={color} weight={weight} {...others} />
     );
 }

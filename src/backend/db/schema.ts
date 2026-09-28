@@ -3,40 +3,39 @@ import {
     text,
     integer,
     unique,
-    customType
+    customType,
+    primaryKey
 } from "drizzle-orm/sqlite-core";
 import { ElementType } from "../lib/onshape/element-type";
 import { FastenInfo } from "../features/library/insertables/fasten";
-import { LibraryId } from "../features/library/library-id";
-import { DEFAULT_SETTINGS, Theme } from "../features/settings/settings";
+import { DEFAULT_LIBRARY, LibraryId } from "../features/library/library-id";
+import type { AdminTeamMember } from "../features/admin-team/contract";
 import { Vendor } from "../features/library/vendors";
 import {
     ConfigurationParameter,
     ConfigurationRecord,
-    Selection,
+    PartialSelection,
     PartMetadata
 } from "../features/configurations/contract";
 import { BuildIssue, knownBuildIssues } from "../features/build-checker/issues";
 
-/**
- * Build-time issues flagged by the build checker, recomputed on reload. Declared
- * once because both tables carry exactly this column.
- *
- * Filtered on read rather than trusted: a stored array was written by whichever
- * deploy last loaded the row, so it can still name a check that has since been
- * removed. The next write of the row drops it for good.
- */
-const buildIssuesColumn = customType<{
-    data: BuildIssue[];
-    driverData: string;
-}>({
-    dataType: () => "text",
-    toDriver: (issues) => JSON.stringify(issues),
-    fromDriver: (value) => knownBuildIssues(JSON.parse(value) as BuildIssue[])
-});
+/** A JSON column whose stored rows may predate its current shape. */
+function upgradedJson<T>(upgrade: (stored: T) => T) {
+    return customType<{ data: T; driverData: string }>({
+        dataType: () => "text",
+        toDriver: (value) => JSON.stringify(value),
+        fromDriver: (value) => upgrade(JSON.parse(value) as T)
+    });
+}
 
+/**
+ * Filtered on read: a row keeps whatever checks the deploy that wrote it knew,
+ * so it can name one since removed.
+ */
 const buildIssues = () =>
-    buildIssuesColumn("build_issues").notNull().default([]);
+    upgradedJson<BuildIssue[]>(knownBuildIssues)("build_issues")
+        .notNull()
+        .default([]);
 
 /** The pair Onshape renders for a group or an insertable; null until rendered. */
 const thumbnailUrls = () => ({
@@ -44,33 +43,33 @@ const thumbnailUrls = () => ({
     largeThumbnailUrl: text("large_thumbnail_url")
 });
 
-/**
- * Ordered `$type` then constraints, so the column reads as what it holds before
- * what is true of it; the callers add their own `.references`.
- */
 const libraryId = () => text("library_id").$type<LibraryId>().notNull();
 
 /** Null before the first successful load. Failures are conveyed by build issues. */
 const lastLoadedAt = () => integer("last_loaded_at", { mode: "timestamp_ms" });
 
-/**
- * When Onshape cut the version this row is pinned to — what the row depicts,
- * rather than when we last asked. Null until the row has a real version.
- */
+/** When Onshape cut the pinned version. Null until there is one. */
 const versionCreatedAt = () =>
     integer("version_created_at", { mode: "timestamp_ms" });
 
 export const libraries = sqliteTable("libraries", {
-    id: text("id").primaryKey(),
-    cacheVersion: integer("cache_version").notNull().default(0)
-    // The serialized MiniSearch index now lives in R2 (see rebuildSearchDb),
-    // keyed by library id, rather than in a D1 column.
+    id: text("id").$type<LibraryId>().primaryKey(),
+    // The search index is in R2, keyed by library id; see rebuildSearchDb.
+    cacheVersion: integer("cache_version").notNull().default(0),
+    // Null until the owner sets one; until then only the owner can edit.
+    adminTeamId: text("admin_team_id"),
+    // As of the last sync, replaced whole each time.
+    adminTeam: text("admin_team", { mode: "json" })
+        .$type<AdminTeamMember[]>()
+        .notNull()
+        .default([]),
+    // Holds each new version's load until an admin approves it.
+    approveVersions: integer("approve_versions", { mode: "boolean" })
+        .notNull()
+        .default(false)
 });
 
-/**
- * The `versionId` a group carries before a load pins a real one, so a group
- * whose load failed still has a row that can be seen, deleted, and retried.
- */
+/** Before a load pins a real version, so a failed group can still be retried. */
 export const PLACEHOLDER_VERSION_ID = "placeholder";
 
 export const groups = sqliteTable(
@@ -85,6 +84,8 @@ export const groups = sqliteTable(
         documentId: text("document_id").notNull(),
         versionId: text("version_id").notNull(),
         versionCreatedAt: versionCreatedAt(),
+        // See `thumbnails/workspace.ts`. Null until a load has made one.
+        thumbnailWorkspaceId: text("thumbnail_workspace_id"),
         sortAlphabetically: integer("sort_alphabetically", { mode: "boolean" })
             .notNull()
             .default(false),
@@ -120,11 +121,15 @@ export const insertables = sqliteTable("insertables", {
     supportsFasten: integer("supports_fasten", { mode: "boolean" })
         .notNull()
         .default(false),
-    // Indexes this insertable's configurations even above the auto threshold.
-    // User-owned; preserved across reloads.
+    // Set by an admin; kept across reloads.
     indexConfigurations: integer("index_configurations", { mode: "boolean" })
         .notNull()
         .default(false),
+    // Set by an admin; kept across reloads.
+    excludedParameterIds: text("excluded_parameter_ids", { mode: "json" })
+        .$type<string[]>()
+        .notNull()
+        .default([]),
     versionId: text("version_id").notNull(),
     versionCreatedAt: versionCreatedAt(),
     sortOrder: integer("sort_order").notNull().default(0),
@@ -136,8 +141,7 @@ export const insertables = sqliteTable("insertables", {
     fastenInfo: text("fasten_info", {
         mode: "json"
     }).$type<FastenInfo | null>(),
-    // The element's own part identity, probed from its defaults. Null until a
-    // probe succeeds; a configurable insertable left unindexed never gets one.
+    // Null until probed; a configurable insertable left unindexed never is.
     partMetadata: text("part_metadata", {
         mode: "json"
     }).$type<PartMetadata | null>(),
@@ -145,10 +149,8 @@ export const insertables = sqliteTable("insertables", {
     lastLoadedAt: lastLoadedAt()
 });
 
-/**
- * Split off rather than folded into `insertables` because `parameters` and
- * `records` are large: inline, they would slow every scan of the library.
- */
+// Its own table because `parameters` and `records` are large and would slow
+// every scan of `insertables`.
 export const configurations = sqliteTable("configurations", {
     insertableId: text("insertable_id")
         .primaryKey()
@@ -157,8 +159,7 @@ export const configurations = sqliteTable("configurations", {
         .$type<ConfigurationParameter[]>()
         .notNull()
         .default([]),
-    // One record per indexed configuration. Empty unless the insertable is
-    // indexed; the element's own metadata lives on `insertables.partMetadata`.
+    // Empty unless indexed; the default part is `insertables.partMetadata`.
     records: text("records", { mode: "json" })
         .$type<ConfigurationRecord[]>()
         .notNull()
@@ -167,18 +168,11 @@ export const configurations = sqliteTable("configurations", {
 
 export const users = sqliteTable("users", {
     id: text("id").primaryKey(),
-    theme: text("theme")
-        .$type<Theme>()
-        .notNull()
-        .default(DEFAULT_SETTINGS.theme),
-    // The row this points at is upserted wherever one is written, since the default
-    // below is applied by an insert that names no library at all.
+    // Unused, but SQLite can't drop a column in a foreign key, and D1 won't
+    // rebuild the table while favorites reference it.
     libraryId: libraryId()
-        .default(DEFAULT_SETTINGS.libraryId)
-        .references(() => libraries.id),
-    // The group last opened in that library, which entry resumes in. Null for
-    // the library itself; a stale one resolves to that, so it is never cleaned.
-    groupId: text("group_id")
+        .default(DEFAULT_LIBRARY)
+        .references(() => libraries.id)
 });
 
 export const favorites = sqliteTable(
@@ -194,15 +188,55 @@ export const favorites = sqliteTable(
         insertableId: text("insertable_id")
             .notNull()
             .references(() => insertables.id, { onDelete: "cascade" }),
-        // The selection the favorite opens with, whole and canonical like
-        // every stored one. Null for an insertable with nothing to configure.
+        // Null for an insertable with nothing to configure.
         defaultSelection: text("default_selection", {
             mode: "json"
-        }).$type<Selection | null>(),
+        }).$type<PartialSelection | null>(),
         sortOrder: integer("sort_order").notNull().default(0),
-        // Null on rows predating the column: backfilling would draw a cliff
-        // of favorites on a day nobody favorited anything.
+        // Null on rows older than the column.
         createdAt: integer("created_at", { mode: "timestamp_ms" })
     },
     (t) => [unique().on(t.userId, t.libraryId, t.insertableId)]
 );
+
+export enum WebhookSubject {
+    DOCUMENT = "document"
+}
+
+/**
+ * One per subject. The token is stored before Onshape answers the create,
+ * since Onshape calls the url before then.
+ */
+export const onshapeWebhooks = sqliteTable(
+    "onshape_webhooks",
+    {
+        subject: text("subject").$type<WebhookSubject>().notNull(),
+        // The document id.
+        subjectId: text("subject_id").notNull(),
+        webhookId: text("webhook_id"),
+        token: text("token").notNull().unique()
+    },
+    (t) => [primaryKey({ columns: [t.subject, t.subjectId] })]
+);
+
+/**
+ * At most one running load per group; a request meanwhile sets `rerun`. In D1
+ * because concurrent writes to a KV list lose updates.
+ */
+export const loadJobs = sqliteTable("load_jobs", {
+    groupId: text("group_id")
+        .primaryKey()
+        .references(() => groups.id, { onDelete: "cascade" }),
+    libraryId: libraryId().references(() => libraries.id),
+    // Null for the moment between claiming the row and the instance existing.
+    instanceId: text("instance_id"),
+    startedAt: integer("started_at", { mode: "timestamp_ms" }).notNull(),
+    // A plain load replacing this one keeps it forced.
+    forceReload: integer("force_reload", { mode: "boolean" })
+        .notNull()
+        .default(false),
+    // Its load is waiting for an admin to approve the version.
+    awaitingApproval: integer("awaiting_approval", { mode: "boolean" })
+        .notNull()
+        .default(false)
+});

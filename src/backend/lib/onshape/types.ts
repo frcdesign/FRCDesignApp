@@ -1,7 +1,4 @@
-/**
- * Hand-authored subsets of the Onshape responses we use. To find a field's real
- * shape, regenerate `onshape-api-reference/` — see `openapi-ts.config.ts`.
- */
+/** Hand-written subsets. For a field's real shape, regenerate `onshape-api-reference/`; see `openapi-ts.config.ts`. */
 import {
     LogicalOp,
     QuantityType,
@@ -115,7 +112,6 @@ interface OnshapeQuantityRange {
 interface OnshapeParameterBase {
     parameterId: string;
     parameterName: string;
-    isCosmetic: boolean;
     visibilityCondition: OnshapeVisibilityCondition;
 }
 
@@ -162,6 +158,7 @@ export interface OnshapeVersionInfo {
     name: string;
     /** ISO-8601 timestamp. */
     createdAt: string;
+    creator?: { id: string };
 }
 
 // === documents (GET /documents/{did}, GET .../contents) ===
@@ -186,11 +183,15 @@ export interface OnshapeDocumentInfo {
     id: string;
     name: string;
     documentThumbnailElementId?: string;
-    /**
-     * Optional because nothing here has confirmed Onshape always sends it; the
-     * load throws rather than guessing when it is absent.
-     */
-    defaultWorkspace?: { id: string; name?: string };
+    /** Not confirmed to always be sent; the load throws when it's absent. */
+    defaultWorkspace?: { id: string };
+}
+
+/** A workspace, as much of Onshape's `BTWorkspaceInfo` as anything reads. */
+export interface OnshapeWorkspaceInfo {
+    id: string;
+    name: string;
+    description?: string;
 }
 
 /** A folder (group) node in the document contents tree. */
@@ -263,10 +264,7 @@ interface OnshapeSubAssembly {
     features: OnshapeAssemblyFeature[];
 }
 
-/**
- * A part studio feature an instance was inserted from, in the assembly's
- * flattened `partStudioFeatures` list — what `parts` is for part instances.
- */
+/** What `parts` is for part instances. */
 interface OnshapeAssemblyPsFeature {
     documentId?: string;
     elementId?: string;
@@ -406,12 +404,4 @@ export interface OnshapeInsertables {
      * Absent for a version, which is a snapshot and cannot have moved on.
      */
     changesSinceVersionSave?: number;
-}
-
-// === workspaces (GET /documents/d/{did}/workspaces) ===
-
-/** An item from GET /documents/d/{did}/workspaces (the subset we read). */
-export interface OnshapeWorkspaceInfo {
-    id: string;
-    name: string;
 }

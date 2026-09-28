@@ -1,7 +1,6 @@
 import { OnshapeApi } from "../client";
 import { assertWorkspace } from "../assertions";
 import { ElementPath, toElementApiObject, toElementApiPath } from "../path";
-import { apiPath } from "../api-path";
 import { PartType } from "./documents";
 import { ElementType } from "../element-type";
 import { IDENTITY_TRANSFORM } from "../objects/transform";
@@ -23,7 +22,7 @@ export function getAssembly(
         excludeSuppressed?: boolean;
     } = {}
 ): Promise<OnshapeAssemblyDefinition> {
-    return client.get(apiPath("assemblies", assemblyPath, toElementApiPath), {
+    return client.get(`/assemblies${toElementApiPath(assemblyPath)}`, {
         query: new URLSearchParams({
             includeMateFeatures: String(options.includeMateFeatures ?? false),
             includeNonSolids: String(options.includeNonSolids ?? false),
@@ -35,10 +34,7 @@ export function getAssembly(
     });
 }
 
-/**
- * Adds the contents of an element tab to an assembly. For a part studio,
- * `options.partTypes` defaults to PARTS and COMPOSITE_PARTS.
- */
+/** For a part studio, `options.partTypes` defaults to PARTS and COMPOSITE_PARTS. */
 export function addElementToAssembly(
     client: OnshapeApi,
     assemblyPath: ElementPath,
@@ -60,9 +56,7 @@ export function addElementToAssembly(
         ...toElementApiObject(elementPath)
     };
 
-    // An empty configuration is left off rather than sent as "", which Onshape
-    // treats the same way. A caller Onshape does need told something — a part
-    // studio insert is one — passes a non-empty configuration instead.
+    // Onshape treats an empty configuration as absent.
     if (configuration) {
         instance.configuration = configuration;
     }
@@ -80,27 +74,18 @@ export function addElementToAssembly(
     return insertInstance(client, assemblyPath, instance, transform);
 }
 
-/**
- * What the assembly's geometry spans, in metres. Sketches are left out, so a
- * marker already in the assembly does not widen it.
- */
+/** In metres. Excludes sketches, so a marker doesn't widen it. */
 export function getAssemblyBoundingBox(
     client: OnshapeApi,
     assemblyPath: ElementPath
 ): Promise<OnshapeBoundingBox> {
     return client.get(
-        apiPath("assemblies", assemblyPath, toElementApiPath, {
-            endRoute: "boundingboxes"
-        }),
+        `/assemblies${toElementApiPath(assemblyPath)}/boundingboxes`,
         { query: { includeSketches: "false" } }
     );
 }
 
-/**
- * Inserts one part studio feature — a sketch — as an instance of its own.
- * Onshape takes the same instance definition as a part insert, naming the
- * feature in place of the part types to include.
- */
+/** Inserts a single part studio feature, such as a sketch. */
 export function addFeatureToAssembly(
     client: OnshapeApi,
     assemblyPath: ElementPath,
@@ -125,9 +110,7 @@ function insertInstance(
     transform?: number[]
 ): Promise<OnshapeInsertInstancesResponse> {
     return client.post(
-        apiPath("assemblies", assemblyPath, toElementApiPath, {
-            endRoute: "transformedinstances"
-        }),
+        `/assemblies${toElementApiPath(assemblyPath)}/transformedinstances`,
         {
             body: {
                 transformGroups: [
@@ -141,23 +124,15 @@ function insertInstance(
     );
 }
 
-/**
- * Adds or updates a feature in an assembly.
- *
- * @param featureId If specified, the existing feature with this ID is updated rather than creating a new one.
- */
+/** Adds a feature to an assembly. */
 export function addAssemblyFeature(
     client: OnshapeApi,
     assemblyPath: ElementPath,
-    feature: object,
-    featureId?: string
+    feature: object
 ): Promise<OnshapeCreatedFeature> {
     assertWorkspace(assemblyPath);
     return client.post(
-        apiPath("assemblies", assemblyPath, toElementApiPath, {
-            endRoute: "features",
-            featureId
-        }),
+        `/assemblies${toElementApiPath(assemblyPath)}/features`,
         { body: { feature } }
     );
 }

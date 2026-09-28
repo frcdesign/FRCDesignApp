@@ -2,25 +2,43 @@
 
 ## Comments
 
-Explain _why_, not _what_: the what is in the code. Don't restate a signature
-(write "returns the access level, respecting the cache", not a paragraph
-re-deriving the caching), and delete comments that narrate obvious steps.
+Default to none. A good name and type say what a thing is; a comment is for the
+_why_ a reader cannot get from the code: a workaround, a constraint from
+Onshape or Cloudflare, a choice that looks wrong but isn't.
 
-One or two lines is the usual size. Go longer only for something genuinely
-hard — a protocol Onshape does not document, a fix whose reason is not visible
-from the code — and then say the hard thing plainly rather than compressing it
-into dense prose. **No comment is better than a long one, and a long one is
-better than a short one that is wrong.** Brevity is not worth an inaccuracy.
+Keep it to one line, two at most. If it needs more, the code probably wants
+restructuring or the detail belongs in the commit message. The exception is a
+genuinely obscure protocol, and even then aim for a short paragraph.
 
-A comment is a claim, and a reader will believe it without checking. So:
+Write it plainly and with confidence:
 
-- **Hedge where you are actually unsure.** "as far as I can tell" and "Onshape
-  does not document this" are useful; they tell the next person where to look.
-  Confident phrasing on a guess is worse than no comment.
+- **Say what is true now.** No history ("used to", "no longer", "was moved
+  here"), and no alternatives you didn't take ("rather than X"). Those go in
+  the commit message.
+- **Don't hedge.** If you are unsure, check — read the docs, run it, write a
+  test — then state the result. Leave uncertainty in only where it cannot be
+  checked, such as undocumented Onshape behavior, and say so in a few words.
+- **Don't restate the code.** No narrating steps, re-deriving a signature, or
+  listing every caller.
 
-Update the comment in the same change as the code it describes, and delete it
-when it stops being true. A stale comment outranks the code in a reader's head,
-which is what makes it worse than none.
+Update or delete a comment in the same change as the code it describes: a
+stale comment is worse than none.
+
+## Absent values
+
+Prefer `undefined` to `null` for a value that is not there: an optional field
+(`name?: string`), a function that finds nothing, an unset state. Where a
+boundary hands us `null` — a D1 column, KV's `get`, a DOM API, an Onshape
+response — convert it where it enters (`?? undefined`) rather than carrying it
+inward.
+
+`null` stays only where it has to:
+
+- the boundary's own shape: a Drizzle column type, a row straight from a query;
+- where `undefined` cannot go: a TanStack Query result, a Workflow step's
+  result, a JSON field that must be sent to say "clear this";
+- where it means something `undefined` cannot, next to it: `null` for "none at
+  all" beside `undefined` for "the default".
 
 ## Components
 
@@ -41,6 +59,11 @@ function useIsDashboard(): boolean {
     return useMatch({ from: "/dashboard", shouldThrow: false }) !== undefined;
 }
 ```
+
+## Accessibility
+
+Not a goal. Don't add `aria-*` attributes, screen-reader labels or keyboard
+handling for their own sake; the app runs in Onshape's mouse-driven panel.
 
 ## Layout
 
@@ -65,26 +88,82 @@ D1 tables live in `db/schema.ts`, except a feature's own: tracking's are in
 they hold no foreign key into the rest. `drizzle.config.ts` lists every schema
 file, so a new one has to be added there or its tables generate no migration.
 
+KV is for what may expire or be lost: sessions, and caches that save Onshape
+calls. Every key belongs to a `kvStore` (`lib/kv-store.ts`) declared beside the
+code that owns it, with its prefix, value type and lifetime; don't read or
+write `KV` directly. Anything that must last goes in D1.
+
 ## Configurations
 
 A configuration takes exactly two forms, and `features/configurations/selection.ts`
 is the only place either is built:
 
-- A **selection** (`Selection`) is what someone picked: every parameter
-  the insertable declares, each value canonically spelled (base units, trimmed,
-  lowercase booleans). `toSelection` makes one out of whatever arrived — a partial map
-  from a search hit, a stored favorite, a request body — and every boundary
-  calls it. Parameter defaults are canonical too, from `parse-configuration`, so
-  nothing has to canonicalize one to compare against it.
-- A **`ConfigurationKey`** is that selection's identity: what it overrides,
-  encoded as `id=value;id=value`, with hidden parameters left out. It addresses
-  a render — R2 keys, thumbnail urls, stored records, Onshape itself — and
-  `ELEMENT_DEFAULT_KEY` (the empty string) is a selection that overrides
-  nothing.
+- A **selection** (`Selection`) is what someone picked: every parameter the
+  insertable declares, each value **as it was entered**. A quantity is the
+  expression that was typed — `(2 + 3) in`, not `0.127 m` — and a quantity's
+  default is spelled in its own unit (`1 in`). `toSelection` makes one out of
+  whatever arrived — a search hit's values, a stored favorite, a request body,
+  the url — and every boundary calls it. The selection is what is stored, what
+  the url carries, and what Onshape is sent (`onshapeOverrides`), so a derived
+  feature shows the expression that was typed.
+- A **`ConfigurationKey`** is derived from a selection for one purpose: naming
+  its thumbnail. It holds what the selection overrides, canonically spelled
+  (base units, hidden parameters left out), so selections rendering the same
+  part share a render. `DEFAULT_CONFIGURATION_KEY` (the empty string) overrides
+  nothing. Never store a key in place of the selection it came from, and never
+  send one to Onshape as a configuration outside thumbnails.
 
-Raw text lives only inside the input a user is typing into. Don't add a third
-form: if something needs a different view of a selection, it wants a function in
-`selection.ts`, not a new shape.
+`docs/architecture/configurations.md` covers the rest of the area.
+
+Anything that needs values compared or counted — analytics, "is this the
+default" — goes through `canonicalValue`/`canonicalValues`, never through a key.
+Don't add a third form: if something needs a different view of a selection, it
+wants a function in `selection.ts`, not a new shape.
+
+# Architecture docs
+
+`docs/architecture/` holds one document per feature area, indexed in its
+`README.md`: thumbnails, configurations, loading, favorites, auth (with access
+levels and environment variables), search, and analytics. Each states the area's flows, storage,
+**invariants**, failure modes and decisions. Read the area's document before
+changing it, and check the change against its invariants.
+
+Update the document in the same commit when a change:
+
+- adds, removes or reorders a step of a flow it describes;
+- adds, moves or drops storage — a table or column, a `kvStore`, an R2 prefix,
+  a browser store — or changes a lifetime, limit, retry policy or concurrency;
+- adds, renames or removes an environment variable or binding;
+- changes who may do something (a guard);
+- moves or renames a file a document names (`npm run check:docs` fails on these);
+- breaks or replaces an invariant. That is a design change: say so in the
+  commit message, rewrite the invariant, and add the reason under **Decisions**.
+
+A new feature area that stores data, calls Onshape or runs in the background
+gets its own document, in the shape `docs/architecture/README.md` sets out, and
+a row in its index. `docs/REFERENCE.md` stays a short tour that links to these
+rather than repeating them.
+
+Write them as comments are written: what is true now, no history, no hedging.
+Name code by path and symbol in backticks; describe behavior and point at the
+code rather than pasting it.
+
+When a document and the code disagree and it isn't clear which is intended,
+ask rather than quietly changing either. After reading a whole document against
+the code and fixing what disagrees, bump its **Last reviewed** date.
+
+# Tests
+
+`npm test` runs two Vitest projects. A backend test that needs bindings (D1,
+R2, KV, Workflows) is named `*.worker.test.ts` and runs in the Workers runtime
+against a freshly migrated D1; that setup costs far more than most tests, so
+everything else — pure backend logic and the frontend — runs in Node.
+
+Component tests are `*.test.tsx` and run in jsdom (the `dom` project).
+`renderWithProviders` in `__test_utils__/render.tsx` renders the way the app
+does, with a query cache that never fetches: seed what a component reads with
+`setQueryData`. Test what a person does and sees — type, click, read the
+screen — rather than a component's internals.
 
 # Running the app
 
@@ -102,17 +181,19 @@ VITE_ACCESS_LEVEL_OVERRIDE=admin # granted by the server, and viewed by the clie
 ```
 
 Then `npm run dev` (applies local D1 migrations, then serves
-http://localhost:3000). The dev server goes https only when `localhost-key.pem`
-and `localhost.pem` are present, so leave them out for a headless browser.
+http://localhost:3000). A headless browser uses that url directly; the tunnel in
+the README is only for Onshape.
 
 The test Worker ignores `.env` (`vitest.config.ts` turns that off), so leaving
 one in place does not rewrite what the auth tests assert.
 
 Where to point it:
 
-- `/` — redirects to the last library used, from `localStorage`.
+- `/` — redirects to the last tab used, from `localStorage`.
 - `/app/library/<library-id>` — a library; ids are in `library-id.ts`.
 - `/app/library/<library-id>/groups/<group-id>` — one group.
+- `/app/<utility-id>` — a tab that is not a library, from `app-tab.ts`;
+  `getTabPath` is what turns either kind into its path.
 
 Insert and derive key off a full element path in the search params, which is
 what `useIsConnectedToOnshape` tests, so standalone hides them. Append what

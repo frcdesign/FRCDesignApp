@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { type ConfigurationKey } from "@backend/features/configurations/contract";
 import { renderNotification, showInfoToast } from "../../lib/notifications";
 import { useIsThumbnailRendering } from "../thumbnails/queries";
 import { useIsConnectedToOnshape } from "../../lib/onshape-params";
@@ -8,11 +9,7 @@ import { startSignIn } from "../auth/sign-in";
 /** An insert this soon after opening didn't need anything from the menu. */
 export const QUICK_INSERT_WINDOW_MS = 1500;
 
-/**
- * How long a render has to keep the menu waiting before the wait is worth
- * naming. Half the window the preview itself gives up after, so this reaches
- * someone mid-spinner rather than someone who merely took their time.
- */
+/** Half the preview's timeout, to catch someone mid-spinner. */
 const THUMBNAIL_WAIT_MS = 15000;
 
 /** Long enough to read, short enough not to follow them around. */
@@ -27,15 +24,10 @@ export function showQuickInsertTip(): void {
 }
 
 /**
- * Points out, while they are still waiting, that the render was never what the
- * insert needed. Raised on a timer rather than at the click: by the time
- * somebody gives up and inserts they have already spent the wait, and telling
- * them then is too late to save it.
- *
- * The timer restarts whenever a render does, so this is fifteen seconds on one
- * selection rather than fifteen spread across several.
+ * Tells someone waiting that inserting doesn't need the render. On a timer,
+ * since by the time they insert the wait is spent; it restarts with each configuration.
  */
-export function useThumbnailWaitTip(): void {
+export function useThumbnailWaitTip(configurationKey: ConfigurationKey): void {
     const isRendering = useIsThumbnailRendering();
     // Standalone has no insert button for the tip to point at.
     const isConnected = useIsConnectedToOnshape();
@@ -51,13 +43,12 @@ export function useThumbnailWaitTip(): void {
             );
         }, THUMBNAIL_WAIT_MS);
         return () => clearTimeout(timer);
-    }, [isRendering, isConnected]);
+    }, [isRendering, isConnected, configurationKey]);
 }
 
 /**
- * Points out to a signed-out viewer that the preview has stopped following
- * them: with no Onshape session the box falls back to the stored thumbnail of
- * the default. Raised on the first change, not on opening, where they agree.
+ * Signed out, the preview stays on the default's stored thumbnail, so say so
+ * on the first change.
  */
 export function useSignInPreviewTip(isSelectionEdited: boolean): void {
     const { signedIn, isPending } = useAccessData();

@@ -3,18 +3,15 @@ import {
     DocumentPath,
     ElementPath,
     InstancePath,
-    toDocumentApiPath,
     toElementApiObject,
     toElementApiPath,
     toInstanceApiPath
 } from "../path";
-import { apiPath } from "../api-path";
 import {
     OnshapeDocumentContents,
     OnshapeDocumentInfo,
     OnshapeExternalReferences,
-    OnshapeInsertables,
-    OnshapeWorkspaceInfo
+    OnshapeInsertables
 } from "../types";
 
 /** Describes possible part types. */
@@ -28,11 +25,7 @@ export function getDocument(
     client: OnshapeApi,
     documentPath: DocumentPath
 ): Promise<OnshapeDocumentInfo> {
-    return client.get(
-        apiPath("documents", documentPath, toDocumentApiPath, {
-            skipDocumentD: true
-        })
-    );
+    return client.get(`/documents/${documentPath.documentId}`);
 }
 
 export function getContents(
@@ -40,33 +33,9 @@ export function getContents(
     instancePath: InstancePath,
     includeThumbnails = false
 ): Promise<OnshapeDocumentContents> {
-    return client.get(
-        apiPath("documents", instancePath, toInstanceApiPath, {
-            endRoute: "contents"
-        }),
-        { query: { withThumbnails: includeThumbnails } }
-    );
-}
-
-/**
- * `GET /documents/d/{did}/{wv}/{wvid}/insertables`
- *
- * What can be inserted from an instance, and how far a workspace has moved
- * since its last version. Every `include*` flag defaults to false, so a caller
- * after the counters alone passes no query at all and Onshape enumerates
- * nothing.
- */
-export function getInsertables(
-    client: OnshapeApi,
-    instancePath: InstancePath,
-    query: Record<string, string | boolean> = {}
-): Promise<OnshapeInsertables> {
-    return client.get(
-        apiPath("documents", instancePath, toInstanceApiPath, {
-            endRoute: "insertables"
-        }),
-        { query }
-    );
+    return client.get(`/documents${toInstanceApiPath(instancePath)}/contents`, {
+        query: { withThumbnails: includeThumbnails }
+    });
 }
 
 /** The document's units, as much of the response as anything here reads. */
@@ -82,49 +51,43 @@ export function getUnitInfo(
     instancePath: InstancePath
 ): Promise<OnshapeUnitInfo> {
     return onshapeApi.get(
-        apiPath("documents", instancePath, toInstanceApiPath, {
-            endRoute: "unitinfo"
-        })
+        `/documents${toInstanceApiPath(instancePath)}/unitinfo`
     );
 }
 
 /**
- * `GET /documents/d/{did}/workspaces`
+ * `GET /documents/d/{did}/{wv}/{wvid}/insertables`
  *
- * The document's workspaces, which is where a workspace's own name comes from.
+ * What can be inserted from an instance, and how far a workspace has moved
+ * since its last version. Every `include` flag defaults to false, so a caller
+ * after the counters alone passes no query at all and Onshape enumerates
+ * nothing.
  */
-export function getWorkspaces(
+export function getInsertables(
     client: OnshapeApi,
-    documentPath: DocumentPath
-): Promise<OnshapeWorkspaceInfo[]> {
+    instancePath: InstancePath,
+    query: Record<string, string | boolean> = {}
+): Promise<OnshapeInsertables> {
     return client.get(
-        apiPath("documents", documentPath, toDocumentApiPath, {
-            endRoute: "workspaces"
-        })
+        `/documents${toInstanceApiPath(instancePath)}/insertables`,
+        { query }
     );
 }
 
 /**
  * `GET /documents/d/{did}/w/{wid}/externalreferences`
  *
- * Every external instance each of the workspace's tabs references, and the
- * newest version of each of those documents.
- *
- * See {@link OnshapeExternalReferences}: this endpoint is undocumented and
- * OAuth-only, so both the path and the response shape come from the
- * implementation this was ported from rather than from Onshape's own spec.
- * Confirmed absent from that spec: every other Onshape call the version
- * manager makes is listed in `openapi-ts.config.ts`, and adding this one there
- * generates nothing.
+ * Every version of another document this workspace's tabs reference, and the
+ * latest version of each of those documents — which together say what is out of
+ * date. Undocumented and OAuth-only, as far as the app that first used it could
+ * tell; it is absent from Onshape's OpenAPI spec.
  */
 export function getExternalReferences(
     client: OnshapeApi,
     instancePath: InstancePath
 ): Promise<OnshapeExternalReferences> {
     return client.get(
-        apiPath("documents", instancePath, toInstanceApiPath, {
-            endRoute: "externalreferences"
-        })
+        `/documents${toInstanceApiPath(instancePath)}/externalreferences`
     );
 }
 
@@ -151,9 +114,7 @@ export function updateReferences(
     referenceUpdates: ReferenceUpdate[]
 ): Promise<void> {
     return client.postNone(
-        apiPath("elements", elementPath, toElementApiPath, {
-            endRoute: "updatereferences"
-        }),
+        `/elements${toElementApiPath(elementPath)}/updatereferences`,
         {
             body: {
                 referenceUpdates: referenceUpdates.map((update) => ({

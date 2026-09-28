@@ -7,7 +7,12 @@ import {
 } from "@tanstack/react-query";
 import { apiDelete, apiGet, apiPost } from "../../lib/api-client";
 import { type LibraryOut } from "@backend/features/library/contract";
-import { type JobStatus } from "@backend/features/load/contract";
+import {
+    type ApproveVersionsOut,
+    type JobStatus,
+    type ReloadOut,
+    type VersionApprovalOut
+} from "@backend/features/load/contract";
 import { hasEditorAccess } from "@backend/features/auth/access-level";
 import { LibraryId } from "@backend/features/library/library-id";
 import { useAccessData } from "../auth/access-level";
@@ -16,7 +21,8 @@ import { useLibraryId } from "../../lib/library";
 import {
     jobStatusQueryKey,
     libraryDataQueryKey,
-    libraryVersionQueryKey
+    libraryVersionQueryKey,
+    versionApprovalQueryKey
 } from "../../lib/query-keys";
 import { queryClient } from "../../lib/query-client";
 import { getQueryUpdater } from "../../lib/query-cache";
@@ -41,9 +47,7 @@ export function getLibraryQuery(libraryId: LibraryId, cacheVersion: number) {
             apiGet("/library-data/library/" + libraryId, {
                 cacheId: cacheVersion
             }),
-        // An admin change bumps cacheVersion (and thus this key); keep the old
-        // snapshot on screen while the new one loads, so an edit reads as a
-        // merge rather than dropping the whole list back to a spinner.
+        // Keeps the old list up while an edit's new version loads.
         placeholderData: keepPreviousData,
         staleTime: Infinity,
         gcTime: Infinity
@@ -77,60 +81,51 @@ export function useCacheVersion(): number {
     return versionQuery.data ?? 0;
 }
 
-/** Poll a fresh job often, then back off: a full reload runs for hours. */
-const FASTEST_POLL_MS = 3_000;
-const POLL_STEPS = [
-    { untilMs: 15_000, intervalMs: FASTEST_POLL_MS },
-    { untilMs: 75_000, intervalMs: 5_000 }
-];
-const SLOWEST_POLL_MS = 10_000;
-
-function jobPollInterval(runningForMs: number): number {
-    const step = POLL_STEPS.find(({ untilMs }) => runningForMs < untilMs);
-    return step?.intervalMs ?? SLOWEST_POLL_MS;
-}
-
-/**
- * Checked once on load, then polled while something runs and left alone when a
- * check comes back idle. `canPoll` is the caller's gate: the route is editor-only.
- */
-function getJobStatusQuery(libraryId: LibraryId, canPoll: boolean) {
+/** Kept current by pushes after the first fetch. The route is editor-only. */
+function getJobStatusQuery(libraryId: LibraryId, canAsk: boolean) {
     return queryOptions<JobStatus>({
         queryKey: jobStatusQueryKey(libraryId),
         queryFn: () => apiGet("/job-status/library/" + libraryId),
-        enabled: canPoll,
-        // Every status badge observes this, so rows mounting as the user scrolls
-        // would each trigger a fetch. Only the poll should set the pace.
-        staleTime: FASTEST_POLL_MS,
-        refetchInterval: (query) => {
-            const status = query.state.data;
-            if (!status?.running) {
-                return false;
-            }
-            return jobPollInterval(status.runningForMs);
-        }
+        enabled: canAsk,
+        // Every status badge observes this; only a push should change it.
+        staleTime: Infinity
     });
 }
 
-/**
- * Whether a library load is running, which several places show a spinner for.
- * The endpoint is editor-only and needs an Onshape session, so callers who have
- * neither don't poll it at all.
- */
-export function useIsJobRunning(): boolean {
-    const jobStatusQuery = useJobStatusQuery();
-    return jobStatusQuery.data?.running ?? false;
-}
+const NO_JOBS: JobStatus = {
+    loadingGroupIds: [],
+    awaitingApprovalGroupIds: []
+};
 
-function useJobStatusQuery() {
+/** Empty for callers who aren't editors with an Onshape session. */
+function useJobStatus(): JobStatus {
     const libraryId = useLibraryId();
     const { signedIn, currentAccessLevel } = useAccessData();
-    return useQuery(
+    const query = useQuery(
         getJobStatusQuery(
             libraryId,
             signedIn && hasEditorAccess(currentAccessLevel)
         )
     );
+    return query.data ?? NO_JOBS;
+}
+
+function useLoadingGroupIds(): string[] {
+    return useJobStatus().loadingGroupIds;
+}
+
+export function useIsGroupAwaitingApproval(groupId: string): boolean {
+    return useJobStatus().awaitingApprovalGroupIds.includes(groupId);
+}
+
+/** How many documents have a new version waiting for an admin's approval. */
+export function useAwaitingApprovalCount(): number {
+    return useJobStatus().awaitingApprovalGroupIds.length;
+}
+
+/** Whether this group is loading, which its row and its parts show. */
+export function useIsGroupLoading(groupId: string): boolean {
+    return useLoadingGroupIds().includes(groupId);
 }
 
 /** Deleting cascades to insertables and their favorites. */
@@ -173,42 +168,69 @@ export function useSetGroupOrderMutation() {
         onError: () => {
             showErrorToast("Unexpectedly failed to reorder group.");
         },
-        // The bump reconciles it; a failure bumps nothing, so the patch has to
-        // be dropped explicitly.
+        // A failure bumps nothing, so the patch has to be dropped explicitly.
         onSettled: (_result, error) =>
             refreshLibrary({ discardPatches: error !== null })
     });
 }
 
-/**
- * Shows the spinner without waiting for a round trip, and starts the job poll,
- * which stays idle until something is known to be running.
- */
-function markJobStarted(libraryId: LibraryId): void {
-    const justStarted: JobStatus = { running: true, runningForMs: 0 };
-    queryClient.setQueryData<JobStatus>(
-        jobStatusQueryKey(libraryId),
-        justStarted
-    );
-}
-
-/** Reloads documents whose version moved on, or all of them. */
-export function useReloadGroupsMutation(reloadAll: boolean) {
+/** Reloads the library's documents with a new version or a failed load, or every one. */
+export function useReloadMutation(all: boolean) {
     const libraryId = useLibraryId();
     return useMutation({
-        mutationKey: ["reload-groups", libraryId],
-        mutationFn: (): Promise<{ status: string }> =>
-            apiPost("/reload-groups" + toLibraryPath(libraryId), {
-                query: { forceReload: reloadAll }
+        mutationKey: ["reload", libraryId],
+        mutationFn: (): Promise<ReloadOut> =>
+            apiPost("/reload" + toLibraryPath(libraryId), {
+                body: { forceReload: all }
             }),
         onError: getAppErrorHandler("Failed to reload documents!"),
         onSuccess: (data) => {
-            markJobStarted(libraryId);
-            showInfoToast(
-                data.status === "already-running"
-                    ? "A reload is already running."
-                    : "Reloading documents..."
-            );
+            showInfoToast(`Reloading ${data.documents} documents...`);
+        }
+    });
+}
+
+export function useVersionApprovalQuery() {
+    const libraryId = useLibraryId();
+    return useQuery({
+        queryKey: versionApprovalQueryKey(libraryId),
+        queryFn: () =>
+            apiGet<VersionApprovalOut>(
+                "/version-approval" + toLibraryPath(libraryId)
+            )
+    });
+}
+
+/** Turning it off lets the held versions through. */
+export function useSetVersionApprovalMutation() {
+    const libraryId = useLibraryId();
+    return useMutation({
+        mutationKey: ["version-approval", libraryId],
+        mutationFn: (enabled: boolean) =>
+            apiPost<VersionApprovalOut>(
+                "/version-approval" + toLibraryPath(libraryId),
+                { body: { enabled } }
+            ),
+        onError: getAppErrorHandler("Failed to change version approval!"),
+        onSuccess: (approval) =>
+            queryClient.setQueryData(
+                versionApprovalQueryKey(libraryId),
+                approval
+            )
+    });
+}
+
+export function useApproveVersionsMutation() {
+    const libraryId = useLibraryId();
+    return useMutation({
+        mutationKey: ["approve-versions", libraryId],
+        mutationFn: () =>
+            apiPost<ApproveVersionsOut>(
+                "/approve-versions" + toLibraryPath(libraryId)
+            ),
+        onError: getAppErrorHandler("Failed to approve versions!"),
+        onSuccess: (data) => {
+            showInfoToast(`Loading ${data.documents} approved documents...`);
         }
     });
 }
@@ -225,35 +247,35 @@ export function useAddGroupMutation(selectedGroupId?: string) {
             }
             showLoadingToast("Adding document...", "add-group");
             modals.closeAll();
-            return apiPost("/group" + toLibraryPath(libraryId), {
-                body: { newDocumentId, selectedGroupId }
-            });
+            return apiPost<{ name: string }>(
+                "/group" + toLibraryPath(libraryId),
+                { body: { newDocumentId, selectedGroupId } }
+            );
         },
         onError: getAppErrorHandler(
             "Failed to add document. Make sure the document is valid.",
             "add-group"
         ),
-        onSuccess: () => {
-            showInfoToast("Adding document...", { id: "add-group" });
-            markJobStarted(libraryId);
+        // The load goes on in the background, where the group shows its progress.
+        onSuccess: ({ name }) => {
+            showSuccessToast(`Added ${name}.`, "add-group");
         }
     });
 }
 
-/**
- * Asks Onshape for one thumbnail again. A load does not wait for thumbnails,
- * so one that was not there at the time stays missing until the whole document
- * is reloaded; this is how to ask for just the one.
- */
+/** A load doesn't wait for thumbnails, so this refetches one that was missing. */
 export function useReloadThumbnailMutation(
     target: { groupId: string } | { insertableId: string }
 ) {
+    const libraryId = useLibraryId();
     const refreshLibrary = useRefreshLibrary();
     return useMutation({
         mutationKey: ["reload-thumbnail", target],
         mutationFn: async () => {
             showLoadingToast("Reloading thumbnail...", "reload-thumbnail");
-            return apiPost("/reload-thumbnail", { body: target });
+            return apiPost("/reload-thumbnail" + toLibraryPath(libraryId), {
+                body: target
+            });
         },
         onError: getAppErrorHandler(
             "Failed to reload thumbnail. Onshape may not have one yet.",

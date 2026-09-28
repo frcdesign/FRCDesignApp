@@ -22,11 +22,8 @@ import { getLibraryName } from "../../../../lib/library";
 import { useCacheVersion } from "../../../../features/library/queries";
 import { useRangePreset } from "../../../../features/dashboard/range-control";
 import { UsageTreemap } from "../../../../features/dashboard/usage-treemap";
-import { LifetimeTiles } from "../../../../features/dashboard/lifetime-tiles";
+import { HeadlineTiles } from "../../../../features/dashboard/headline-tiles";
 import { SectionCard } from "../../../../components/section";
-
-/** Enough to see the head of the distribution without a wall of rows. */
-const MOST_USED_LIMIT = 10;
 
 export const Route = createFileRoute("/dashboard/library/$libraryId/")({
     component: LibraryOverview
@@ -77,7 +74,7 @@ function LibraryBody({
 
     return (
         <>
-            <LifetimeTiles
+            <HeadlineTiles
                 totals={totals}
                 growth={growth}
                 series={metricSeries}
@@ -89,9 +86,7 @@ function LibraryBody({
                 {parts.data ? (
                     <PartsTable
                         libraryId={libraryId}
-                        // Now that unused parts are included, this would
-                        // otherwise trail off into a list of zeroes.
-                        parts={parts.data.slice(0, MOST_USED_LIMIT)}
+                        parts={parts.data}
                         emptyMessage="No parts have been inserted from this library yet."
                     />
                 ) : (
@@ -106,8 +101,7 @@ function LibraryBody({
             )}
 
             {parts.data ? (
-                /* Keyed so switching library drops a zoom into a group that
-                   the next library does not have. */
+                /* Keyed so a zoom into a group doesn't carry to a library without it. */
                 <UsageTreemap
                     key={libraryId}
                     root={{ libraryId }}

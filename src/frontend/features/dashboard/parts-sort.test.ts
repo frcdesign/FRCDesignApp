@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { PartUsageOut } from "@backend/features/analytics/contract";
+import { LibraryId } from "@backend/features/library/library-id";
 import {
     DEFAULT_SORT,
     filterAndSort,
@@ -9,6 +10,7 @@ import {
 
 function part(overrides: Partial<PartUsageOut> = {}): PartUsageOut {
     return {
+        libraryId: LibraryId.FRC_DESIGN_LIB,
         path: {
             documentId: "doc-1",
             instanceId: "v-1",
@@ -41,8 +43,7 @@ const names = (parts: PartUsageOut[]) => parts.map((p) => p.name);
 
 describe("filterAndSort", () => {
     it("puts the highest rate first by default, not the highest total", () => {
-        // Tube has the most insertions but the lowest rate, so it drops below
-        // the two parts earning three a month.
+        // Tube has the most inserts but the lowest rate.
         expect(names(filterAndSort(PARTS, "", DEFAULT_SORT))).toEqual([
             "Bearing",
             "Spacer",

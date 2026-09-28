@@ -10,7 +10,7 @@ import {
     type WorkspacePath
 } from "@backend/features/version-manager/contract";
 import { AppIcon } from "../../../components/app-icon";
-import { PageNotice, SectionNotice } from "../../../components/app-zero-state";
+import { PageNotice, SectionNotice } from "../../../components/app-notice";
 import { IconSize, PrimaryColor } from "../../../lib/style-constants";
 import { AddLinkField } from "./add-link-input";
 

@@ -1,15 +1,10 @@
 import { Accordion, ActionIcon, Group } from "@mantine/core";
 import { CaretDownIcon } from "@phosphor-icons/react";
 import { type ReactNode } from "react";
-import {
-    BORDER,
-    IconSize,
-    NO_SHRINK,
-    SECTION_HEADER_HEIGHT,
-    StatusColor,
-    TITLE_ICON_NUDGE
-} from "../lib/style-constants";
+import { IconSize, StatusColor } from "../lib/style-constants";
 import { AppTitle } from "./app-title";
+import styles from "../lib/styles.module.css";
+import classes from "./app-section.module.css";
 
 interface AppSectionsProps {
     /** The values of the sections showing their content. */
@@ -35,21 +30,12 @@ export function AppSections(props: AppSectionsProps): ReactNode {
             variant="unstyled"
             value={opened}
             onChange={onChange}
-            styles={{
-                control: {
-                    minHeight: SECTION_HEADER_HEIGHT,
-                    // Mantine brightens a control to pure white or black; a
-                    // section header is a title, so it reads in the text color.
-                    color: "var(--mantine-color-text)"
-                },
-                // Its own padding would outgrow that height.
-                label: { paddingBlock: 0 },
-                content: { padding: 0, borderBottom: BORDER },
-                icon: TITLE_ICON_NUDGE,
-                // Every header ends with a chevron of its own, past whatever
-                // buttons it carries; Mantine's sits against the label, which
-                // is not the far right of anything.
-                chevron: { display: "none" }
+            classNames={{
+                item: classes.item,
+                label: classes.label,
+                content: `${classes.content} ${styles.dividerBottom}`,
+                icon: styles.titleIcon,
+                chevron: classes.chevron
             }}
         >
             {children}
@@ -88,13 +74,10 @@ export function AppSection(props: AppSectionProps): ReactNode {
                 // the chevron beside it are part of the same header, and a
                 // highlight that stopped where they begin would look like a
                 // second thing had started there.
-                className="interactive"
+                className={`${classes.header} ${styles.sectionHeader} ${styles.dividerBottom} interactive`}
                 gap="xs"
                 wrap="nowrap"
                 pr="sm"
-                // On the header, so a collapsed section still divides from the
-                // next one; the content closes off an open one.
-                style={{ borderBottom: BORDER }}
             >
                 <Accordion.Control
                     // Shrinkable, so the buttons beside it keep their width.
@@ -133,7 +116,7 @@ function SectionChevron(props: SectionChevronProps): ReactNode {
             variant="subtle"
             color={StatusColor.NEUTRAL}
             aria-label={`${opened ? "Collapse" : "Expand"} ${name}`}
-            style={NO_SHRINK}
+            className={styles.noShrink}
             onClick={onToggle}
         >
             <CaretDownIcon

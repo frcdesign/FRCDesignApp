@@ -4,38 +4,32 @@ import { MantineProvider } from "@mantine/core";
 import { ModalsProvider } from "@mantine/modals";
 import { Notifications } from "@mantine/notifications";
 import { ReactNode, useMemo } from "react";
-import { useColorScheme } from "@mantine/hooks";
+import { DEFAULT_LIBRARY } from "@backend/features/library/library-id";
 import { queryClient } from "../lib/query-client";
 import { createAppTheme, useAppColor } from "../theme";
-import { getColorTheme } from "../lib/onshape-params";
-import { useGetUiState } from "../lib/ui-state";
+import { useUiState } from "../lib/ui-state";
 import { NotFoundError, RootCrash } from "../components/root-error";
 
 export const Route = createRootRoute({
     component: RootComponent,
     // notFoundComponent renders inside the root Outlet, so it has the provider.
     notFoundComponent: NotFoundError,
-    // errorComponent replaces the root component (no provider), so it must not use
-    // Mantine. It only fires if the always-on root component itself throws.
+    // Replaces the root component, provider included, so no Mantine here.
     errorComponent: RootCrash
 });
 
 function RootComponent(): ReactNode {
-    // The library comes off the url, so the first paint is already its color.
+    // The tab comes off the url, so the first paint is already its color.
     const params = useParams({ strict: false });
-    const { theme: savedTheme, libraryId, systemTheme } = useGetUiState();
-    const color = useAppColor(params.libraryId ?? libraryId);
+    const tabId = useUiState((state) => state.tabId);
+    const colorScheme = useUiState((state) => state.theme);
+    const color = useAppColor(params.libraryId ?? tabId ?? DEFAULT_LIBRARY);
 
     const theme = useMemo(() => createAppTheme(color), [color]);
 
-    // Onshape's own scheme, taken off the launch; standalone there is none,
-    // and the OS is what "system" means.
-    const osColorScheme = useColorScheme();
-    const colorTheme = getColorTheme(savedTheme, systemTheme ?? osColorScheme);
-
     return (
         <QueryClientProvider client={queryClient}>
-            <MantineProvider theme={theme} forceColorScheme={colorTheme}>
+            <MantineProvider theme={theme} forceColorScheme={colorScheme}>
                 <ModalsProvider
                     labels={{ confirm: "Confirm", cancel: "Cancel" }}
                 >
@@ -43,8 +37,7 @@ function RootComponent(): ReactNode {
                         position="bottom-center"
                         limit={3}
                         autoClose={4000}
-                        // Otherwise pinned at 440px, wrapping a message with
-                        // an action button. Still clamped to a narrow viewport.
+                        // Otherwise pinned at 440px.
                         containerWidth="max-content"
                     />
                     <Outlet />

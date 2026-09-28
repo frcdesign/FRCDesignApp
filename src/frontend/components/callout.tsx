@@ -1,27 +1,16 @@
 import { Alert, Button, Group, Text } from "@mantine/core";
 import { InfoIcon } from "@phosphor-icons/react";
 import { ReactNode } from "react";
-import { IconSize, NO_SHRINK, StatusColor } from "../lib/style-constants";
-
-export interface CalloutAction {
-    /** A verb or a destination, e.g. "Instructions". */
-    text: string;
-    icon: ReactNode;
-    onClick: () => void;
-}
+import { IconSize, StatusColor } from "../lib/style-constants";
 
 interface CalloutProps {
     /** A whole sentence, ending in a period. */
     text: string;
-    /** Omitted for a note that only reports something. */
-    action?: CalloutAction;
+    /** A `CalloutButton`; omitted for a note that only reports something. */
+    action?: ReactNode;
 }
 
-/**
- * A note above a list or a preview, saying something about what is under it. It
- * builds its own button, so no caller can style one of its own. Blue rather
- * than the library accent, so it reads as a remark beside the content.
- */
+/** Blue, so it reads as a remark rather than library content. */
 export function Callout(props: CalloutProps): ReactNode {
     const { text, action } = props;
 
@@ -36,24 +25,34 @@ export function Callout(props: CalloutProps): ReactNode {
                 wrapper: { alignItems: "center" }
             }}
         >
-            <Group justify="space-between" wrap="nowrap" gap="sm">
-                <Text size="sm">{text}</Text>
-                {action && (
-                    // Outlined rather than filled, which would shout on a
-                    // note; held at its own width, since the text is what
-                    // gives on a narrow row.
-                    <Button
-                        variant="outline"
-                        color={StatusColor.INFO}
-                        size="compact-sm"
-                        leftSection={action.icon}
-                        style={NO_SHRINK}
-                        onClick={action.onClick}
-                    >
-                        {action.text}
-                    </Button>
-                )}
+            {/* Wraps rather than squeezing: on a narrow panel the button drops
+                under the text instead of running off the edge. */}
+            <Group justify="space-between" gap="xs" wrap="wrap">
+                <Text flex="1 1 12rem">{text}</Text>
+                {action}
             </Group>
         </Alert>
+    );
+}
+
+interface CalloutButtonProps {
+    /** A verb or a destination, e.g. "Instructions". */
+    children: string;
+    icon: ReactNode;
+    onClick: () => void;
+}
+
+export function CalloutButton(props: CalloutButtonProps): ReactNode {
+    const { children, icon, onClick } = props;
+    return (
+        <Button
+            variant="outline"
+            color={StatusColor.INFO}
+            size="compact-sm"
+            leftSection={icon}
+            onClick={onClick}
+        >
+            {children}
+        </Button>
     );
 }

@@ -18,8 +18,7 @@ export const buildStatusRoutes = getApp();
 buildStatusRoutes.get(
     "/build-status" + libraryRoute(),
     requireEditorMiddleware,
-    // The same for every editor, but only for an editor: a shared cache would
-    // hand it to whoever asked for the url next.
+    // Private: only editors may see it.
     cacheMiddleware(CachePolicy.PRIVATE_CACHE),
     async (c) => {
         const libraryId = getLibraryParam(c);
@@ -50,6 +49,7 @@ buildStatusRoutes.get(
                     isVisible: insertables.isVisible,
                     supportsFasten: insertables.supportsFasten,
                     indexConfigurations: insertables.indexConfigurations,
+                    excludedParameterIds: insertables.excludedParameterIds,
                     vendors: insertables.vendors,
                     sortOrder: insertables.sortOrder,
                     versionCreatedAt: insertables.versionCreatedAt
@@ -60,9 +60,7 @@ buildStatusRoutes.get(
                 .all()
         ]);
 
-        // Joined to the library rather than filtered by the ids just read: D1
-        // takes at most 100 bound parameters in a statement, and an `inArray`
-        // binds one per id, so listing them fails on any real library.
+        // Joined rather than filtered by id: D1 binds at most 100 parameters.
         const allConfigurations = await db
             .select({
                 insertableId: configurations.insertableId,
@@ -92,7 +90,7 @@ buildStatusRoutes.get(
                 buildIssues: group.buildIssues,
                 sortAlphabetically: group.sortAlphabetically,
                 insertableOrder: groupInsertables.map((ins) => ins.id),
-                versionCreatedAt: group.versionCreatedAt?.getTime() ?? null
+                versionCreatedAt: group.versionCreatedAt?.getTime()
             };
         }
 
@@ -105,9 +103,10 @@ buildStatusRoutes.get(
                 isVisible: ins.isVisible,
                 supportsFasten: ins.supportsFasten,
                 indexConfigurations: ins.indexConfigurations,
+                excludedParameterIds: ins.excludedParameterIds,
                 vendors: ins.vendors,
                 configuration: configMap.get(ins.id),
-                versionCreatedAt: ins.versionCreatedAt?.getTime() ?? null
+                versionCreatedAt: ins.versionCreatedAt?.getTime()
             };
         }
 

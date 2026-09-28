@@ -1,11 +1,10 @@
 import { type Context, type MiddlewareHandler, Hono } from "hono";
-import type {
-    AddGroupParams,
-    LoadLibraryParams
-} from "../features/load/workflows";
+import type { LoadDocumentParams } from "../features/load/jobs";
+import type { RenderThumbnailParams } from "../features/thumbnails/render-workflow";
+import type { PushHub } from "../features/push/push-hub";
 import type { VersionJobParams } from "../features/version-manager/workflow";
-import type { ThumbnailRenderer } from "../features/thumbnails/renderer";
 import { type AccessLevel } from "../features/auth/access-level";
+import type { LibraryId } from "../features/library/library-id";
 import { type OAuthApi } from "./onshape/client";
 
 export interface AppBindings {
@@ -14,13 +13,18 @@ export interface AppBindings {
     ASSETS: Fetcher;
     /** Thumbnails and search indexes; prefixes keep them apart. */
     BLOB: R2Bucket;
-    LOAD_LIBRARY_WORKFLOW: Workflow<LoadLibraryParams>;
-    ADD_GROUP_WORKFLOW: Workflow<AddGroupParams>;
+    /** One instance per group being loaded at a time; see `load/jobs.ts`. */
+    LOAD_DOCUMENT_WORKFLOW: Workflow<LoadDocumentParams>;
+    /** One instance per configuration being rendered; see `requestRender`. */
+    RENDER_THUMBNAIL_WORKFLOW: Workflow<RenderThumbnailParams>;
     /** Pushes and pulls, which are chains of Onshape writes; see the workflow. */
     VERSION_MANAGER_WORKFLOW: Workflow<VersionJobParams>;
-    /** One per Onshape user; every thumbnail Onshape renders queues here. */
-    THUMBNAIL_RENDERER: DurableObjectNamespace<ThumbnailRenderer>;
-    ADMIN_TEAM: string;
+    /** Relays pushes to open clients; see `features/push`. */
+    PUSH_HUB: DurableObjectNamespace<PushHub>;
+    /** Where the app is served, without a trailing slash; see `wrangler.jsonc`. */
+    APP_URL: string;
+    /** The Onshape user id granted `AccessLevel.OWNER`; unset grants nobody. */
+    OWNER_USER_ID?: string;
     /** Dev-only: the access level granted, bypassing Onshape. */
     VITE_ACCESS_LEVEL_OVERRIDE?: string;
     /** Testing-only: treat requests as signed in with a fake user. Not for production. */
@@ -35,7 +39,7 @@ interface AppVariables {
     /** Injected by {@link bindAuth}; see {@link RequestAuth}. */
     getOnshapeApi: () => Promise<OAuthApi>;
     getUserId: () => Promise<string>;
-    getAccessLevel: () => Promise<AccessLevel>;
+    getAccessLevel: (libraryId: LibraryId) => Promise<AccessLevel>;
     isAuthenticated: () => Promise<boolean>;
 }
 
@@ -46,14 +50,12 @@ export interface AppContextEnv {
 
 export type AppContext = Context<AppContextEnv>;
 
-/**
- * Who is making the request and what they may do. Resolved lazily, so a route that
- * asks nothing calls Onshape not at all, and per request, so a test can answer.
- */
+/** Lazy, so a route that asks nothing never calls Onshape; per request, so tests can stub it. */
 interface RequestAuth {
     getOnshapeApi: () => Promise<OAuthApi>;
     getUserId: () => Promise<string>;
-    getAccessLevel: () => Promise<AccessLevel>;
+    /** The caller's access to one library; the owner's is the same in all. */
+    getAccessLevel: (libraryId: LibraryId) => Promise<AccessLevel>;
     isAuthenticated: () => Promise<boolean>;
 }
 

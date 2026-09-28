@@ -1,4 +1,3 @@
-import { DEFAULT_SETTINGS } from "@backend/features/settings/settings";
 import { type Db } from "@backend/db/client";
 import {
     configurations,
@@ -6,7 +5,9 @@ import {
     groups,
     insertables,
     libraries,
-    users
+    users,
+    loadJobs,
+    onshapeWebhooks
 } from "@backend/db/schema";
 import {
     dailyConfigurationMetrics,
@@ -26,7 +27,10 @@ import {
 } from "@backend/features/configurations/contract";
 import { type ElementPath, type InstancePath } from "@backend/lib/onshape/path";
 import { ElementType } from "@backend/lib/onshape/element-type";
-import { LibraryId } from "@backend/features/library/library-id";
+import {
+    DEFAULT_LIBRARY,
+    LibraryId
+} from "@backend/features/library/library-id";
 
 export const TEST_LIBRARY_ID = LibraryId.FRC_DESIGN_LIB;
 export const TEST_USER_ID = "test-user"; // matches createTestApp's default userId
@@ -57,33 +61,34 @@ export const TEST_PARAMETERS: ConfigurationParameter[] = [
         type: ParameterType.BOOLEAN,
         id: "boolean",
         name: "Test boolean",
-        isCosmetic: false,
         default: "true"
     }
 ];
 
-/**
- * Truncates every table these helpers touch, in FK-safe order. D1 storage is
- * isolated per test *file*, so call this in `beforeEach` to isolate tests.
- */
+/** D1 storage is only isolated per file, so call in `beforeEach`. */
 export async function resetDb(db: Db): Promise<void> {
-    await db.delete(favorites);
-    await db.delete(configurations);
-    await db.delete(insertables);
-    await db.delete(groups);
-    await db.delete(users);
-    await db.delete(libraries);
-    // Analytics has no foreign keys, so nothing cascades these away.
-    await db.delete(events);
-    await db.delete(dailyMetrics);
-    await db.delete(dailySourceMetrics);
-    await db.delete(dailyTargetMetrics);
-    await db.delete(dailyUserActivity);
-    await db.delete(insertableStats);
-    await db.delete(dailyInsertableMetrics);
-    await db.delete(dailyInsertableUsers);
-    await db.delete(dailyConfigurationMetrics);
-    await db.delete(userStats);
+    // One batch, one round trip: this runs before nearly every test.
+    await db.batch([
+        db.delete(favorites),
+        db.delete(configurations),
+        db.delete(loadJobs),
+        db.delete(insertables),
+        db.delete(groups),
+        db.delete(users),
+        db.delete(libraries),
+        db.delete(onshapeWebhooks),
+        // Analytics has no foreign keys, so nothing cascades these away.
+        db.delete(events),
+        db.delete(dailyMetrics),
+        db.delete(dailySourceMetrics),
+        db.delete(dailyTargetMetrics),
+        db.delete(dailyUserActivity),
+        db.delete(insertableStats),
+        db.delete(dailyInsertableMetrics),
+        db.delete(dailyInsertableUsers),
+        db.delete(dailyConfigurationMetrics),
+        db.delete(userStats)
+    ]);
 }
 
 export async function seedLibrary(
@@ -94,17 +99,13 @@ export async function seedLibrary(
     return id;
 }
 
-/**
- * Seeds the library too: `users.library_id` defaults to one and references it,
- * which is what `ensureLibrary` does ahead of the same insert in the app.
- */
+/** Also seeds the default library its dead `library_id` column falls back to. */
 export async function seedUser(
     db: Db,
-    id: string = TEST_USER_ID,
-    libraryId: LibraryId = DEFAULT_SETTINGS.libraryId
+    id: string = TEST_USER_ID
 ): Promise<string> {
-    await seedLibrary(db, libraryId);
-    await db.insert(users).values({ id, libraryId }).onConflictDoNothing();
+    await seedLibrary(db, DEFAULT_LIBRARY);
+    await db.insert(users).values({ id }).onConflictDoNothing();
     return id;
 }
 
@@ -132,10 +133,7 @@ export async function seedGroup(
     return id;
 }
 
-/**
- * Inserts an insertable row, defaulting to the standard part studio. Pass
- * overrides to seed a row with the specific columns a test wants to manipulate.
- */
+/** Defaults to the standard part studio. */
 export async function seedInsertable(
     db: Db,
     overrides: Partial<typeof insertables.$inferInsert> = {}
@@ -197,10 +195,7 @@ export async function seedFavorite(
     return id;
 }
 
-/**
- * Seeds a configuration for a given insertable.
- * Note configurations are always 1:1 with insertables so the configuration id is also the insertable id.
- */
+/** Configurations are 1:1 with insertables and share their id. */
 export async function seedConfiguration(
     db: Db,
     insertableId: string = TEST_PART_STUDIO_ID
@@ -214,10 +209,7 @@ export async function seedConfiguration(
         .onConflictDoNothing();
 }
 
-/**
- * Seeds the canonical dataset: a library, a user, a groups, a part studio, an
- * assembly, and two favorites (the user's, on the part studio and the assembly).
- */
+/** A library, a user, a group, a part studio, an assembly, and a favorite on each. */
 export async function seedTestData(db: Db): Promise<void> {
     await seedLibrary(db);
     await seedGroup(db);

@@ -12,11 +12,9 @@ interface StatTileProps {
     value: number;
     /** Rates need a decimal; counts do not. Also formats the change tooltip. */
     format?: (value: number) => string;
-    /** How the measure changed, drawn to the right of the number — never below
-     * it, so a row of tiles scans as one line of numbers. */
+    /** Beside the number, so a row of tiles scans as one line. */
     change?: PeriodComparison;
-    /** The shape over the selected window, which follows the picker even when
-     * the value above is all time: a sparkline claims no total. */
+    /** Follows the picker even when the value is all time. */
     spark?: number[];
 }
 
@@ -28,10 +26,10 @@ export function StatTile({
     spark
 }: StatTileProps): ReactNode {
     return (
-        <Card withBorder padding="lg" radius="md">
-            <Group justify="space-between" wrap="nowrap" align="flex-start">
+        <Card>
+            <Group justify="space-between" align="flex-start">
                 <div>
-                    <Text size="sm" c="dimmed" tt="uppercase" fw={700}>
+                    <Text c="dimmed" tt="uppercase" fw={700}>
                         {label}
                     </Text>
                     <Title order={2}>{format(value)}</Title>

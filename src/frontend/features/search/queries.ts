@@ -33,8 +33,7 @@ export function getSearchDbQuery(libraryId: LibraryId, cacheVersion: number) {
                 SEARCH_OPTIONS
             );
         },
-        // Keyed by cacheVersion, which an admin change bumps: keep the old
-        // index searchable while the new one downloads.
+        // Keeps the old index searchable while the new one downloads.
         placeholderData: keepPreviousData,
         staleTime: Infinity,
         gcTime: Infinity

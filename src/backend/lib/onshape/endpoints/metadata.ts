@@ -1,22 +1,25 @@
 import { OnshapeApi } from "../client";
 import { ElementPath, toElementApiPath } from "../path";
-import { apiPath } from "../api-path";
-import { type ConfigurationKey } from "../../../features/configurations/contract";
+import { type Selection } from "../../../features/configurations/contract";
+import { encodeQueryConfiguration } from "../../../features/configurations/utils";
 import type { OnshapeMetadataObject } from "../types";
 
 /** Returns an element's metadata properties for a given configuration. */
 export function getElementMetadata(
     client: OnshapeApi,
     elementPath: ElementPath,
-    configurationKey: ConfigurationKey
+    configuration: Selection
 ): Promise<OnshapeMetadataObject> {
-    // Computed properties are expensive and unused, and indexing probes this
-    // once per configuration.
+    // Computed properties are slow, and indexing probes once per configuration.
     const query: Record<string, string> = {
         includeComputedProperties: "false"
     };
-    if (configurationKey) query.configuration = configurationKey;
-    return client.get(apiPath("metadata", elementPath, toElementApiPath), {
+    // The query form: this is escaped again on its way out.
+    const encoded = encodeQueryConfiguration(configuration);
+    if (encoded) {
+        query.configuration = encoded;
+    }
+    return client.get(`/metadata${toElementApiPath(elementPath)}`, {
         query
     });
 }

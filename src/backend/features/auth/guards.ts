@@ -1,8 +1,9 @@
-/** The two gates routes mount: signed in to Onshape at all, and on the admin team. */
 import type { MiddlewareHandler } from "hono";
 import { forbiddenError, signInRequiredError } from "../../lib/api-error";
 import type { AppContext, AppContextEnv } from "../../lib/context";
-import { hasEditorAccess } from "./access-level";
+import { getLibraryParam } from "../../lib/route-params";
+import { DEFAULT_LIBRARY } from "../library/library-id";
+import { AccessLevel, isWithinAccessLevel } from "./access-level";
 import { isSignedIn } from "./request-auth";
 
 async function requireSignIn(c: AppContext): Promise<void> {
@@ -22,18 +23,44 @@ export const requireSignInMiddleware: MiddlewareHandler<AppContextEnv> = async (
 };
 
 /**
- * Editing implies a session: access level alone would admit a signed-out caller
- * under a dev access-level override, and answer 403 rather than 401 otherwise.
+ * For a route under `libraryRoute()`. Requires a session, or a dev override
+ * would let a signed-out caller through. A route acting on a group or
+ * insertable scopes its query to this library, so it can't reach another's.
  */
-export const requireEditorMiddleware: MiddlewareHandler<AppContextEnv> = async (
+function requireLibraryAccess(
+    level: AccessLevel.EDITOR | AccessLevel.ADMIN
+): MiddlewareHandler<AppContextEnv> {
+    return async (c, next) => {
+        await requireSignIn(c);
+        const accessLevel = await c.var.getAccessLevel(getLibraryParam(c));
+        if (!isWithinAccessLevel(level, accessLevel)) {
+            throw forbiddenError(
+                level === AccessLevel.ADMIN
+                    ? "You must be an admin of the library's admin team to use this functionality"
+                    : "You must be on the library's admin team to use this functionality"
+            );
+        }
+        await next();
+    };
+}
+
+export const requireEditorMiddleware = requireLibraryAccess(AccessLevel.EDITOR);
+
+export const requireAdminMiddleware = requireLibraryAccess(AccessLevel.ADMIN);
+
+/** The owner's access is the same everywhere, so any library answers. */
+export async function requireOwner(c: AppContext): Promise<void> {
+    await requireSignIn(c);
+    const level = await c.var.getAccessLevel(DEFAULT_LIBRARY);
+    if (level !== AccessLevel.OWNER) {
+        throw forbiddenError("Only the owner can use this functionality");
+    }
+}
+
+export const requireOwnerMiddleware: MiddlewareHandler<AppContextEnv> = async (
     c,
     next
 ) => {
-    await requireSignIn(c);
-    if (!hasEditorAccess(await c.var.getAccessLevel())) {
-        throw forbiddenError(
-            "You must be on the admin team to use this functionality"
-        );
-    }
+    await requireOwner(c);
     await next();
 };

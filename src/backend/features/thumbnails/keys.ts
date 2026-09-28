@@ -3,15 +3,12 @@ import {
     type ConfigurationKey,
     DEFAULT_CONFIGURATION_KEY
 } from "../configurations/contract";
-import { RenderSource, ThumbnailSize } from "./contract";
+import { ThumbnailSize } from "./contract";
 
 /** Everything a thumbnail is stored under, and what reconciliation scans. */
 export const THUMBNAIL_PREFIX = "thumbnails/";
 
-/**
- * Defaults get their own prefix, everything falling back to them so they never
- * expire. A configuration is url-encoded, keeping `/` and `;` out of the path.
- */
+/** Defaults get their own prefix. The configuration is url-encoded to keep `/` and `;` out of the path. */
 export function thumbnailKey(
     elementId: string,
     microversionId: string,
@@ -25,10 +22,7 @@ export function thumbnailKey(
     return `${THUMBNAIL_PREFIX}config/${elementId}/${microversionId}/${segment}/${size}`;
 }
 
-/**
- * What a stored thumbnail depicts. Both prefixes carry it in the same two
- * segments, so a configuration render lives and dies with its element's.
- */
+/** Both prefixes share these two segments, so a render is cleaned up with its element's. */
 export interface ThumbnailSubject {
     elementId: string;
     microversionId: string;
@@ -39,11 +33,7 @@ export function subjectKey(subject: ThumbnailSubject): string {
     return `${subject.elementId}/${subject.microversionId}`;
 }
 
-/**
- * The element and microversion a key was written for, or undefined when the key
- * is not one {@link thumbnailKey} produces. Reconciliation deletes what this
- * resolves, so anything it does not recognize is left alone.
- */
+/** Undefined for a key it didn't write, which reconciliation then leaves alone. */
 export function parseThumbnailKey(key: string): ThumbnailSubject | undefined {
     if (!key.startsWith(THUMBNAIL_PREFIX)) {
         return undefined;
@@ -65,13 +55,6 @@ interface ThumbnailUrlOptions {
     size: ThumbnailSize;
     /** Empty (the default) serves the element's own thumbnail. */
     configurationKey: ConfigurationKey;
-    /**
-     * Set to have a miss queue this configuration for rendering; which surface
-     * is asking is what orders it against everything else queued.
-     */
-    renderSource?: RenderSource;
-    /** Only needed to render: what the render resolves the element from. */
-    insertableId?: string;
 }
 
 /** The app URL serving a thumbnail; `v` busts caches when the document changes. */
@@ -79,28 +62,17 @@ export function thumbnailUrl({
     elementId,
     microversionId,
     size,
-    configurationKey,
-    renderSource,
-    insertableId
+    configurationKey
 }: ThumbnailUrlOptions): string {
-    // `v` is the one abbreviation: it is the cache version every immutable url
-    // carries, and a render is pinned to the microversion it was taken from.
+    // `v` is the cache version every immutable url carries.
     const query = new URLSearchParams({ v: microversionId });
     if (configurationKey !== DEFAULT_CONFIGURATION_KEY) {
         query.set("configurationKey", configurationKey);
-        if (renderSource && insertableId) {
-            query.set("renderSource", renderSource);
-            query.set("insertableId", insertableId);
-        }
     }
     return `/api/thumbnail/${size}/${elementId}?${query.toString()}`;
 }
 
-/**
- * The subject of a url {@link thumbnailUrl} built. Groups record their document
- * thumbnail only as these two urls, so this is what tells reconciliation which
- * element and microversion they still stand for; `keys.test.ts` pins the pair.
- */
+/** Groups store only these urls, so reconciliation reads the subject back from them. */
 export function parseThumbnailUrl(url: string): ThumbnailSubject | undefined {
     // Relative, so it needs a base to parse against; the origin is discarded.
     const parsed = URL.parse(url, "https://x.invalid");

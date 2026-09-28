@@ -2,10 +2,7 @@ import { ApiErrorKind, type ApiErrorBody } from "@backend/lib/api-error";
 import { renderNotification, showErrorToast } from "./notifications";
 import { startSignIn } from "../features/auth/sign-in";
 
-/**
- * A failure worth telling the user about, from the backend or raised here.
- * `body` is the discriminated shape the backend sends, read by its kind.
- */
+/** `body` is the discriminated shape the backend sends. */
 export class AppError extends Error {
     constructor(readonly body: ApiErrorBody) {
         super(body.message);
@@ -14,11 +11,7 @@ export class AppError extends Error {
     }
 }
 
-/**
- * A failed image fetch. Carries the status because an image route answers with
- * bytes or nothing at all, so the status is the only thing it can say — and a
- * thumbnail still rendering and one that cannot render are different answers.
- */
+/** The status is all an image route can say, and it tells "still rendering" from "can't render". */
 export class ImageLoadError extends Error {
     constructor(readonly status: number) {
         super(`Image request failed with ${status}.`);
@@ -54,10 +47,7 @@ export function getAppErrorHandler(defaultMessage: string, toastId?: string) {
     return (error: Error) => handleAppError(error, defaultMessage, toastId);
 }
 
-/**
- * Only an error worded for the user shows its own message; anything else gets
- * `defaultMessage`. One the caller can act on offers them that action.
- */
+/** Only messages worded for the user are shown; anything else gets `defaultMessage`. */
 export function handleAppError(
     error: Error,
     defaultMessage: string,

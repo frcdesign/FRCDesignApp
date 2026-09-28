@@ -31,8 +31,7 @@ export enum Vendor {
     TTB = "TTB",
     VEX = "VEX",
     WCP = "WCP",
-    /** Last, being the absence of a vendor: the team made it, so nobody sells
-     * it and it has no part number. */
+    /** Made by the team, so nobody sells it. */
     CUSTOM = "Custom"
 }
 
@@ -78,18 +77,12 @@ const FTC_VENDORS: Vendor[] = [
     Vendor.CUSTOM
 ];
 
-/**
- * The vendors a library stocks, which is what its filters offer. Tagging stays
- * library-generic. MKCad is FRC, so it shares that list.
- */
+/** What a library's filters offer. MKCad shares FRC's list. */
 export function getLibraryVendors(libraryId: LibraryId): Vendor[] {
     return libraryId === LibraryId.FTC_DESIGN_LIB ? FTC_VENDORS : FRC_VENDORS;
 }
 
-/**
- * Resolves the free text Onshape carries as a vendor to one we know, written
- * either as its code or as its full name.
- */
+/** Accepts a code or a full name. */
 export function parseVendor(vendor: string | undefined): Vendor | undefined {
     const text = clean(vendor)?.toUpperCase();
     if (!text) {
@@ -102,20 +95,14 @@ export function parseVendor(vendor: string | undefined): Vendor | undefined {
     );
 }
 
-/**
- * The vendor a part number names itself, e.g. `WCP-1025` — more precise than an
- * insertable's tagging, which is generic wherever one part spans vendors.
- */
+/** More precise than tagging, which is generic when a part spans vendors. */
 export function parseVendorFromPartNumber(
     partNumber: string | undefined
 ): Vendor | undefined {
     return parseVendor(VENDOR_PREFIX.exec(clean(partNumber) ?? "")?.[1]);
 }
 
-/**
- * The vendor's page for a part, or its search for one where that is all the
- * site offers. Most vendors have no url derivable from a part number at all.
- */
+/** Most vendors have no url derivable from a part number. */
 export function getVendorPartUrl(
     vendor: Vendor | undefined,
     partNumber: string | undefined
@@ -130,8 +117,7 @@ export function getVendorPartUrl(
         case Vendor.WCP:
             return `https://wcproducts.com/products/${query.toLowerCase()}`;
         case Vendor.AM:
-            // AndyMark redirects a bare part number to the product page for it,
-            // and 404s when it sells no such part.
+            // Redirects to the product, or 404s.
             return `https://andymark.com/${query.toLowerCase()}`;
         case Vendor.REV:
             return `https://www.revrobotics.com/search.php?search_query=${query}&section=product`;

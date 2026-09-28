@@ -12,15 +12,19 @@ import {
 import { type Db, getDb } from "../../db/client";
 import { chunkForInArray } from "../../db/chunk";
 import { users, favorites, configurations, insertables } from "../../db/schema";
-import { toKey, toSelection } from "../configurations/selection";
+import {
+    findRecord,
+    toKey,
+    toSelection,
+    toStoredSelection
+} from "../configurations/selection";
 import { MAX_FAVORITES, type Favorite, type FavoritesData } from "./contract";
 import {
-    DEFAULT_CONFIGURATION_KEY,
     type ConfigurationParameter,
+    type PartialSelection,
     type SearchRecord
 } from "../configurations/contract";
-import { findRecordForConfiguration } from "../configurations/utils";
-import { toSearchRecords } from "../search/records";
+import { searchRecordsOf } from "../search/records";
 import type { LibraryId } from "../library/library-id";
 import { z } from "zod";
 import { validate } from "../../lib/validate";
@@ -63,8 +67,7 @@ async function getFavorites(
         .orderBy(asc(favorites.sortOrder))
         .all();
 
-    // Keyed here rather than stored: the parameters a selection is canonical
-    // against move with the library, and only the row is ours to keep.
+    // Computed, not stored: a reload can move the defaults a key is measured against.
     const configurationsById = await getConfigurations(
         db,
         rows.map((row) => row.insertableId)
@@ -75,32 +78,38 @@ async function getFavorites(
     for (const row of rows) {
         const { parameters = [], records = [] } =
             configurationsById.get(row.insertableId) ?? {};
-        const stored = row.defaultSelection ?? undefined;
-        // Made whole on the way out as well as in: a row written before a
-        // parameter existed still has to answer as a selection.
-        const defaultSelection = stored
-            ? toSelection(stored, parameters)
+        // A row written before a parameter existed still has to be whole.
+        const defaultSelection = row.defaultSelection
+            ? toSelection(
+                  toStoredSelection(row.defaultSelection, parameters),
+                  parameters
+              )
             : undefined;
-        // A favorite storing no selection opens on the element's own defaults,
-        // which is what the empty key names — so it resolves the right record
-        // while the field itself stays absent, as the contract has it.
-        const configurationKey = defaultSelection
-            ? toKey(defaultSelection, parameters)
-            : DEFAULT_CONFIGURATION_KEY;
         const fav: Favorite = {
             id: row.id,
             insertableId: row.insertableId,
             libraryId,
             defaultSelection,
-            configurationKey: defaultSelection ? configurationKey : undefined,
-            // The record this favorite's own selection produces, so a row can
-            // never show a part number belonging to another configuration.
-            record: findRecordForConfiguration(configurationKey, records)
+            configurationKey: defaultSelection
+                ? toKey(defaultSelection, parameters)
+                : undefined,
+            // So a row never shows another configuration's part number.
+            record: findRecord(
+                defaultSelection ?? toSelection({}, parameters),
+                records
+            )
         };
         favoritesOut[row.id] = fav;
         favoriteOrder.push(row.id);
     }
     return { favorites: favoritesOut, favoriteOrder };
+}
+
+function toFavoriteSelection(
+    selection: PartialSelection,
+    parameters: ConfigurationParameter[]
+): PartialSelection {
+    return toStoredSelection(toSelection(selection, parameters), parameters);
 }
 
 /** One insertable's parameters, for making a selection whole. */
@@ -114,33 +123,30 @@ async function getParametersFor(
     );
 }
 
-/** The parameters of each insertable named, for keying against. */
 /** What a favorite's insertable contributes to the response. */
 interface InsertableConfiguration {
-    /** What a stored selection is made whole and canonical against. */
+    /** What a stored selection is made whole against. */
     parameters: ConfigurationParameter[];
-    /** What each configuration is called, for the one this favorite names. */
+    /** Includes the element's own. */
     records: SearchRecord[];
 }
 
 /**
- * Joined from the insertable rather than the configurations row alone: a
- * record's vendor url is derived from the insertable's own vendors. An
- * insertable with nothing to configure has no configurations row, which the
- * left join answers as empty.
+ * Joined with the insertable, whose vendors give a record its url. A left join,
+ * since an unconfigurable insertable has no configurations row.
  */
 async function getConfigurations(
     db: Db,
     insertableIds: string[]
 ): Promise<Map<string, InsertableConfiguration>> {
-    // Chunked: a caller can have more favorites than one statement can bind ids
-    // for.
+    // Chunked: there can be more favorites than one statement binds.
     const reads = await Promise.all(
         chunkForInArray(insertableIds).map((ids) =>
             db
                 .select({
                     insertableId: insertables.id,
                     vendors: insertables.vendors,
+                    partMetadata: insertables.partMetadata,
                     parameters: configurations.parameters,
                     records: configurations.records
                 })
@@ -154,13 +160,15 @@ async function getConfigurations(
         )
     );
     return new Map(
-        reads.flat().map((row) => [
-            row.insertableId,
-            {
-                parameters: row.parameters ?? [],
-                records: toSearchRecords(row.records ?? [], row.vendors)
-            }
-        ])
+        reads.flat().map((row) => {
+            return [
+                row.insertableId,
+                {
+                    parameters: row.parameters ?? [],
+                    records: searchRecordsOf(row)
+                }
+            ];
+        })
     );
 }
 
@@ -191,17 +199,14 @@ favoriteRoutes.post(
 
         const db = getDb(c.env.DB);
 
-        // Named rather than left to the column default, which points at a library this
-        // caller may have no row for. The favorite's own key requires the one they chose.
+        // The favorite references a user row, which a new caller doesn't have yet.
+        // The library is named since the dead column's default may not exist.
         await db
             .insert(users)
             .values({ id: userId, libraryId })
             .onConflictDoNothing();
 
-        // Counted to see whether there is room for one more, and the highest
-        // order taken so the new one lands after it. Not the count: deleting
-        // from the middle leaves a gap, and counting would then reuse an order
-        // a live favorite still holds.
+        // The highest order, not the count: deletes leave gaps.
         const existing = await db
             .select({
                 value: count(),
@@ -218,8 +223,6 @@ favoriteRoutes.post(
 
         const sortOrder = (existing?.highestOrder ?? -1) + 1;
         if ((existing?.value ?? 0) >= MAX_FAVORITES) {
-            // Handled rather than internal: the caller can act on this, and
-            // removing one is the whole of what it takes.
             throw handledError(
                 `You can keep up to ${MAX_FAVORITES} favorites in a library. Remove one to add another.`,
                 HttpStatus.CONFLICT
@@ -234,7 +237,7 @@ favoriteRoutes.post(
                 libraryId,
                 insertableId,
                 defaultSelection: selection
-                    ? toSelection(
+                    ? toFavoriteSelection(
                           selection,
                           await getParametersFor(db, insertableId)
                       )
@@ -272,8 +275,7 @@ favoriteRoutes.post(
         const userId = await c.var.getUserId();
 
         const db = getDb(c.env.DB);
-        // Scoped to the owner rather than checked first: a favorite that is not
-        // theirs matches nothing, which costs no extra read.
+        // Scoped to the owner, so someone else's favorite matches nothing.
         const writes = favoriteOrder.map((id, i) =>
             db
                 .update(favorites)
@@ -314,7 +316,7 @@ favoriteRoutes.post(
         await db
             .update(favorites)
             .set({
-                defaultSelection: toSelection(
+                defaultSelection: toFavoriteSelection(
                     selection,
                     await getParametersFor(db, row.insertableId)
                 )

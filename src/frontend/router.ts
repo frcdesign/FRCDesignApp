@@ -5,8 +5,7 @@ import { RootAppSpinner } from "./components/root-spinner";
 export const router = createRouter({
     routeTree,
     scrollRestoration: true,
-    // Render misses at the root instead of inside `/app`, whose navbar needs a
-    // library in the url to render at all.
+    // `/app`'s navbar needs a library in the url.
     notFoundMode: "root",
     defaultPendingComponent: RootAppSpinner
 });

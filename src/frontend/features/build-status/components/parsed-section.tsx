@@ -7,8 +7,11 @@ import {
     Text,
     Tooltip
 } from "@mantine/core";
-import { CheckIcon, FileXIcon, XIcon } from "@phosphor-icons/react";
-import { ReactNode, useMemo } from "react";
+import {
+    ParameterRoleLabel,
+    ROLE_ICONS
+} from "../../../components/parameter-role";
+import { ReactNode } from "react";
 import { InsertableBuildStatus } from "@backend/features/build-checker/contract";
 import { getVendorName, Vendor } from "@backend/features/library/vendors";
 import {
@@ -16,58 +19,13 @@ import {
     ParameterType
 } from "@backend/features/configurations/contract";
 import {
-    type ConfigurationCount,
-    countCombinations,
-    countConfigurations,
-    MAX_COUNTED_CONFIGURATIONS
-} from "@backend/features/configurations/combinations";
-import {
     CATEGORY_COLOR,
     IconSize,
-    NO_SHRINK,
     StatusColor
 } from "../../../lib/style-constants";
 import { AppIcon } from "../../../components/app-icon";
 import { SectionHeader } from "./sections";
-
-/** Discriminated so `StateValue` renders each kind its own way. */
-type StateRowValue =
-    | { kind: "bool"; value: boolean }
-    | { kind: "text"; text: string; dimmed?: boolean }
-    | { kind: "vendors"; vendors: Vendor[] };
-
-/**
- * Enumerated rather than stored: the same shared routine the load path uses,
- * and it only runs when a hover card opens.
- */
-export function useConfigurationCount(
-    status: InsertableBuildStatus
-): ConfigurationCount {
-    const parameters = status.configuration?.parameters;
-    return useMemo(() => countConfigurations(parameters ?? []), [parameters]);
-}
-
-/** The true total, which runs past the index cap the band is decided by. */
-function useDisplayedConfigurationCount(
-    status: InsertableBuildStatus
-): number | null {
-    const parameters = status.configuration?.parameters;
-    return useMemo(() => countCombinations(parameters ?? []), [parameters]);
-}
-
-/** Open-ended only past the counting cap, which nothing real reaches. */
-function configurationCountValue(count: number | null): StateRowValue {
-    if (count === null) {
-        return {
-            kind: "text",
-            text: `Over ${MAX_COUNTED_CONFIGURATIONS.toLocaleString()}`
-        };
-    }
-    if (count === 0) {
-        return { kind: "text", text: "None", dimmed: true };
-    }
-    return { kind: "text", text: count.toLocaleString() };
-}
+import styles from "../../../lib/styles.module.css";
 
 interface InsertableParsedSectionProps {
     status: InsertableBuildStatus;
@@ -78,20 +36,15 @@ export function InsertableParsedSection(
     props: InsertableParsedSectionProps
 ): ReactNode {
     const { status } = props;
-    const count = useDisplayedConfigurationCount(status);
     return (
         <>
             <Divider />
             <Stack gap={6}>
                 <SectionHeader>Parsed</SectionHeader>
-                <ParsedRow
-                    label="Vendors"
-                    value={{ kind: "vendors", vendors: status.vendors }}
-                />
-                <ParsedRow
-                    label="Indexable Configurations"
-                    value={configurationCountValue(count)}
-                />
+                <Group gap="xl" justify="space-between">
+                    <Text>Vendors</Text>
+                    <VendorBadges vendors={status.vendors} />
+                </Group>
             </Stack>
         </>
     );
@@ -101,14 +54,15 @@ export function InsertableParsedSection(
 const PARAMETER_LIST_MAX_HEIGHT = 220;
 
 interface ConfigurationSectionProps {
-    parameters?: ConfigurationParameter[];
+    status: InsertableBuildStatus;
 }
 
-/** Each parameter's name, the type it takes, and whether indexing varies it. */
+/** Each parameter's name and the type it takes. */
 export function ConfigurationSection(
     props: ConfigurationSectionProps
 ): ReactNode {
-    const { parameters } = props;
+    const { status } = props;
+    const parameters = status.configuration?.parameters;
     if (!parameters || parameters.length === 0) return null;
     return (
         <>
@@ -137,48 +91,38 @@ interface ParameterRowProps {
     parameter: ConfigurationParameter;
 }
 
-/** One parameter: its name, and what varies or excludes it. */
 function ParameterRow(props: ParameterRowProps): ReactNode {
     const { parameter } = props;
     return (
-        <Group gap="xl" wrap="nowrap" justify="space-between">
-            <Text size="sm">{parameter.name}</Text>
-            <Group gap={4} wrap="nowrap">
-                <ExcludedFromPropertiesIcon parameter={parameter} />
+        <Group gap="xl" justify="space-between">
+            <Text>{parameter.name}</Text>
+            <Group gap={6}>
                 <ParameterTypeBadge parameter={parameter} />
+                <RoleIcon parameter={parameter} />
             </Group>
         </Group>
     );
 }
 
-interface ExcludedFromPropertiesIconProps {
+interface RoleIconProps {
     parameter: ConfigurationParameter;
 }
 
-/**
- * Onshape's "exclude from affecting configured properties", the lever on the
- * count. Part studios only, which Onshape itself enforces.
- */
-function ExcludedFromPropertiesIcon(
-    props: ExcludedFromPropertiesIconProps
-): ReactNode {
-    const { parameter } = props;
-    if (!parameter.isCosmetic) {
-        return null;
-    }
+function RoleIcon(props: RoleIconProps): ReactNode {
+    const role = props.parameter.role;
+    if (!role) return null;
     return (
         <Tooltip
-            label="Excluded from affecting part properties in Onshape"
-            multiline
-            maw={260}
-            withArrow
+            label={
+                <ParameterRoleLabel role={role} suffix=", so never indexed" />
+            }
             events={{ hover: true, focus: true, touch: true }}
         >
             <AppIcon
-                icon={FileXIcon}
+                icon={ROLE_ICONS[role]}
                 size={IconSize.SMALL}
                 color={StatusColor.DIMMED}
-                style={NO_SHRINK}
+                className={styles.noShrink}
             />
         </Tooltip>
     );
@@ -188,10 +132,7 @@ interface ParameterTypeBadgeProps {
     parameter: ConfigurationParameter;
 }
 
-/**
- * The parameter's type. An enum also carries its option count, and lists the
- * options on hover — the values that drive its share of the configuration count.
- */
+/** An enum lists its options on hover. */
 function ParameterTypeBadge(props: ParameterTypeBadgeProps): ReactNode {
     const { parameter } = props;
     const isEnum = parameter.type === ParameterType.ENUM;
@@ -200,7 +141,7 @@ function ParameterTypeBadge(props: ParameterTypeBadgeProps): ReactNode {
         : getParameterTypeLabel(parameter.type);
 
     const badge = (
-        <Badge size="xs" variant="light" color={CATEGORY_COLOR}>
+        <Badge size="xs" color={CATEGORY_COLOR}>
             {label}
         </Badge>
     );
@@ -210,9 +151,6 @@ function ParameterTypeBadge(props: ParameterTypeBadgeProps): ReactNode {
     return (
         <Tooltip
             label={parameter.options.map((option) => option.name).join(", ")}
-            multiline
-            maw={260}
-            withArrow
             events={{ hover: true, focus: true, touch: true }}
         >
             {badge}
@@ -221,7 +159,7 @@ function ParameterTypeBadge(props: ParameterTypeBadgeProps): ReactNode {
 }
 
 /** The short label for a parameter's type, shown as a badge. */
-function getParameterTypeLabel(type: ParameterType): string {
+export function getParameterTypeLabel(type: ParameterType): string {
     switch (type) {
         case ParameterType.ENUM:
             return "Enum";
@@ -234,67 +172,20 @@ function getParameterTypeLabel(type: ParameterType): string {
     }
 }
 
-interface ParsedRowProps {
-    label: string;
-    value: StateRowValue;
+interface VendorBadgesProps {
+    vendors: Vendor[];
 }
 
-/** A read-only label/value row in the "Parsed" section. */
-function ParsedRow(props: ParsedRowProps): ReactNode {
-    const { label, value } = props;
-    return (
-        <Group gap="xl" wrap="nowrap" justify="space-between">
-            <Text size="sm">{label}</Text>
-            <StateValue value={value} />
-        </Group>
-    );
-}
-
-interface StateValueProps {
-    value: StateRowValue;
-}
-
-/** Renders a parsed value: a check/cross for booleans, badges for vendors. */
-function StateValue(props: StateValueProps): ReactNode {
-    const { value } = props;
-    if (value.kind === "bool") {
-        return value.value ? (
-            <AppIcon
-                icon={CheckIcon}
-                size={IconSize.SMALL}
-                color={StatusColor.SUCCESS}
-            />
-        ) : (
-            <AppIcon
-                icon={XIcon}
-                size={IconSize.SMALL}
-                color={StatusColor.ERROR}
-            />
-        );
-    }
-
-    if (value.kind === "text") {
-        return (
-            <Text size="sm" c={value.dimmed ? "dimmed" : undefined}>
-                {value.text}
-            </Text>
-        );
-    }
-
-    if (value.vendors.length === 0) {
-        return (
-            <Text size="sm" c={StatusColor.DIMMED}>
-                None
-            </Text>
-        );
+function VendorBadges(props: VendorBadgesProps): ReactNode {
+    const { vendors } = props;
+    if (vendors.length === 0) {
+        return <Text c={StatusColor.DIMMED}>None</Text>;
     }
     return (
         <Group gap={4} wrap="wrap" justify="flex-end">
-            {value.vendors.map((vendor) => (
+            {vendors.map((vendor) => (
                 <Badge
                     key={vendor}
-                    size="sm"
-                    variant="light"
                     color={StatusColor.INFO}
                     title={getVendorName(vendor)}
                 >

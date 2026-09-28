@@ -10,8 +10,7 @@ export const Route = createFileRoute("/dashboard/library/$libraryId")({
         parse: ({ libraryId }) => ({ libraryId: parseLibraryId(libraryId) }),
         stringify: ({ libraryId }) => ({ libraryId })
     },
-    // Awaited as the app's library route awaits it: what is keyed on the version
-    // must not fetch once at zero and again at the real one.
+    // Awaited, so version-keyed queries don't fetch at zero first.
     loader: ({ params }) =>
         queryClient.ensureQueryData(getLibraryVersionQuery(params.libraryId))
 });

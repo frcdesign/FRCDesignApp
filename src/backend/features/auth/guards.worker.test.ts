@@ -1,0 +1,115 @@
+import { env } from "cloudflare:workers";
+import { beforeEach, describe, expect, it } from "vitest";
+import { AccessLevel } from "./access-level";
+import { LibraryId } from "../library/library-id";
+import {
+    createTestApp,
+    jsonRequest,
+    resetDb,
+    seedGroup,
+    seedInsertable,
+    seedLibrary
+} from "../../../__test_utils__";
+import { getDb } from "../../db/client";
+
+const db = getDb(env.DB);
+
+describe("requireSignInMiddleware", () => {
+    beforeEach(async () => {
+        await resetDb(db);
+    });
+
+    it("blocks sign-in-only routes with 401 when not signed in", async () => {
+        const app = createTestApp({ signedIn: false });
+
+        const favorites = await app.request(
+            "/api/favorites/library/" + LibraryId.FRC_DESIGN_LIB,
+            jsonRequest("GET"),
+            env
+        );
+        expect(favorites.status).toBe(401);
+
+        const appOpen = await app.request(
+            "/api/app-open/library/" + LibraryId.FRC_DESIGN_LIB,
+            jsonRequest("POST"),
+            env
+        );
+        expect(appOpen.status).toBe(401);
+    });
+
+    it("allows sign-in-only routes when signed in", async () => {
+        await seedLibrary(db);
+        const app = createTestApp({ signedIn: true });
+
+        const favorites = await app.request(
+            "/api/favorites/library/" + LibraryId.FRC_DESIGN_LIB,
+            jsonRequest("GET"),
+            env
+        );
+        expect(favorites.status).toBe(200);
+    });
+});
+
+describe("requireEditorMiddleware", () => {
+    beforeEach(async () => {
+        await resetDb(db);
+    });
+
+    // A dev access-level override grants the level without a session.
+    it("401s an editor-level caller who is not signed in", async () => {
+        const app = createTestApp({
+            signedIn: false,
+            accessLevel: AccessLevel.ADMIN
+        });
+
+        const res = await app.request(
+            `/api/group-order/library/${LibraryId.FRC_DESIGN_LIB}`,
+            jsonRequest("POST"),
+            env
+        );
+        expect(res.status).toBe(401);
+    });
+
+    it("403s a signed-in caller without editor access", async () => {
+        const app = createTestApp({
+            signedIn: true,
+            accessLevel: AccessLevel.USER
+        });
+
+        const res = await app.request(
+            `/api/group-order/library/${LibraryId.FRC_DESIGN_LIB}`,
+            jsonRequest("POST"),
+            env
+        );
+        expect(res.status).toBe(403);
+    });
+});
+
+describe("editing something inside a library", () => {
+    beforeEach(() => resetDb(db));
+
+    // So an editor of one library can't reach into another.
+    it("finds only what is in the library the path names", async () => {
+        await seedGroup(db, "ftc-group", LibraryId.FTC_DESIGN_LIB);
+        await seedInsertable(db, {
+            id: "ftc-part",
+            groupId: "ftc-group",
+            libraryId: LibraryId.FTC_DESIGN_LIB
+        });
+        const app = createTestApp({
+            accessLevel: (libraryId) =>
+                libraryId === LibraryId.FRC_DESIGN_LIB
+                    ? AccessLevel.ADMIN
+                    : AccessLevel.USER
+        });
+        const reindex = (libraryId: LibraryId) =>
+            app.request(
+                `/api/index-configurations/library/${libraryId}/insertable/ftc-part`,
+                jsonRequest("POST", { indexConfigurations: true }),
+                env
+            );
+
+        expect((await reindex(LibraryId.FRC_DESIGN_LIB)).status).toBe(404);
+        expect((await reindex(LibraryId.FTC_DESIGN_LIB)).status).toBe(403);
+    });
+});

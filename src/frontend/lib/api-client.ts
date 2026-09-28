@@ -14,15 +14,11 @@ function getUrl(
 ): string {
     const searchParams = createSearchParams(query);
     if (cacheId !== undefined) {
-        searchParams.append("v", cacheId.toString());
+        searchParams.append("v", String(cacheId));
     }
     return "/api" + path + `?${searchParams}`;
 }
 
-/**
- * The route's response, as the route says it is. `T` is inferred from the call
- * site, so a contract that stops matching is an error there, not an `any`.
- */
 export async function apiPost<T>(
     path: string,
     options?: PostOptions
@@ -54,9 +50,6 @@ export async function apiGet<T>(
     return handleResponse<T>(response);
 }
 
-/**
- * Gets a response formatted as a raw string from a backend /api route.
- */
 export async function apiGetText(
     path: string,
     options?: QueryOptionsWithCacheId
@@ -75,11 +68,9 @@ export async function apiGetText(
 }
 
 /**
- * Fetching here surfaces failures as a rejected query and warms the browser
- * cache. Returns the url, not a blob url, which has no safe moment to revoke.
- * A configuration still rendering answers 404, so it rejects and the caller
- * retries; the status travels with the rejection so a caller can tell that
- * apart from a refusal worth giving up on.
+ * Fetched to warm the cache and surface failures; returns the url, since a
+ * blob url has no safe moment to revoke. The status rides the rejection so a
+ * render's 404 can be told from a refusal.
  */
 export async function loadImage(
     url: string,
@@ -104,10 +95,7 @@ export async function apiDelete<T>(
     return handleResponse<T>(response);
 }
 
-/**
- * The body, or the error it describes. Asserted rather than parsed: the contract
- * is the backend's, and nothing here can check it at runtime without a schema.
- */
+/** Asserted, not parsed: the backend owns the contract. */
 async function handleResponse<T>(response: Response): Promise<T> {
     const json: unknown = await response.json().catch(() => undefined);
     if (!response.ok) {

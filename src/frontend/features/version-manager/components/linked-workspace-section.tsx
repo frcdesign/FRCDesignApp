@@ -29,15 +29,16 @@ import {
 import { ThumbnailSize } from "@backend/features/thumbnails/contract";
 import { MenuButton, MenuSection } from "../../../components/app-menu";
 import { CardTitle, ItemRow, ItemTable } from "../../../components/item-row";
-import { SectionNotice } from "../../../components/app-zero-state";
+import { SectionNotice } from "../../../components/app-notice";
 import { CardThumbnail } from "../../thumbnails/components/thumbnail";
 import {
     IconSize,
-    NO_SHRINK,
     PrimaryColor,
     StatusColor
 } from "../../../lib/style-constants";
+import styles from "../../../lib/styles.module.css";
 import { makeUrl, openUrlInNewTab } from "../../../lib/url";
+import { useOnshapeOrigin } from "../../../lib/onshape-params";
 import {
     openPullReferencesModal,
     openPushVersionModal
@@ -153,7 +154,7 @@ function ActionButton(props: ActionButtonProps): ReactNode {
         <Tooltip withArrow label={hint}>
             {/* A span, so the tooltip still has something to hang off when the
                 button inside it is disabled and stops firing events. */}
-            <span style={NO_SHRINK}>
+            <span className={styles.noShrink}>
                 <Button
                     size="compact-sm"
                     variant="light"
@@ -463,7 +464,8 @@ interface LinkedWorkspaceRowProps {
 function LinkedWorkspaceRow(props: LinkedWorkspaceRowProps): ReactNode {
     const { linked, direction, unversionedChanges, actions, onRemove, onMove } =
         props;
-    const url = makeUrl(linked.workspace);
+    const origin = useOnshapeOrigin();
+    const url = makeUrl(origin, linked.workspace);
     const disabled = actions.isRunning;
     const copy = DIRECTION_COPY[direction];
 
@@ -546,6 +548,10 @@ function LinkedWorkspaceRow(props: LinkedWorkspaceRowProps): ReactNode {
     );
 }
 
+interface LinkedWorkspaceThumbnailProps {
+    linked: LinkedWorkspace;
+}
+
 /**
  * A linked workspace's thumbnail: the one Onshape keeps for the document, at
  * the size every row uses, with the same hover card as a part's.
@@ -553,10 +559,12 @@ function LinkedWorkspaceRow(props: LinkedWorkspaceRowProps): ReactNode {
  * A workspace nobody can read gets none asked for — the placeholder is the
  * answer, and it keeps the row the height of its neighbours.
  */
-function LinkedWorkspaceThumbnail(props: {
-    linked: LinkedWorkspace;
-}): ReactNode {
+function LinkedWorkspaceThumbnail(
+    props: LinkedWorkspaceThumbnailProps
+): ReactNode {
     const { linked } = props;
+    const origin = useOnshapeOrigin();
+
     if (!linked.isOpenable) {
         return <CardThumbnail />;
     }
@@ -566,10 +574,12 @@ function LinkedWorkspaceThumbnail(props: {
             // us; see `workspaceThumbnailUrl`.
             isExternal
             smallThumbnailUrl={workspaceThumbnailUrl(
+                origin,
                 linked.workspace,
                 ThumbnailSize.SMALL
             )}
             largeThumbnailUrl={workspaceThumbnailUrl(
+                origin,
                 linked.workspace,
                 ThumbnailSize.LARGE
             )}
@@ -654,7 +664,7 @@ function UnversionedChangesBadge(
                 size="sm"
                 variant="light"
                 color={StatusColor.NEUTRAL}
-                style={NO_SHRINK}
+                className={styles.noShrink}
             >
                 {changes}
             </Badge>

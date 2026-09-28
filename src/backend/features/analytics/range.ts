@@ -1,27 +1,17 @@
-/**
- * The window a dashboard read covers, and the days it spans.
- */
 import { min } from "drizzle-orm";
 import z from "zod";
 import { type Db } from "../../db/client";
 import { dailyMetrics } from "./schema";
-import { addDays, toDayKey, type DayRange } from "./day";
+import { addDays, toReportingDay, type DayRange } from "./day";
 
 /** The uses a part must be at or below for the low-usage reports to list it. */
 const DEFAULT_UNUSED_THRESHOLD = 5;
 
-/**
- * The most days one densified series may cover. Only a hand-edited url reaches
- * it: the app asks for at most the days since tracking began.
- */
+/** Only a hand-edited url reaches this. */
 const MAX_SERIES_DAYS = 10 * 366;
 
 const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 
-/**
- * Both bounds are required: every page states the window it reports, so a
- * missing one is the caller's bug.
- */
 export const rangeQuery = z.object({ from: day, to: day });
 
 /** A range, plus the cutoff the low-usage reports list at or below. */
@@ -33,10 +23,7 @@ export const thresholdQuery = rangeQuery.extend({
         .default(DEFAULT_UNUSED_THRESHOLD)
 });
 
-/**
- * Every day in the range. Clamp `from` first, or "all time" fills two decades of
- * zeroes; capped as well, since the allocation happens here.
- */
+/** Clamp `from` first, or "all time" fills two decades. */
 export function eachDay(range: DayRange): string[] {
     const days: string[] = [];
     let day = range.from;
@@ -47,10 +34,7 @@ export function eachDay(range: DayRange): string[] {
     return days;
 }
 
-/**
- * The first day anything was recorded, which is what tells "nothing happened"
- * from "we were not tracking yet".
- */
+/** Tells "nothing happened" from "not tracking yet". */
 export async function getTrackingSince(db: Db): Promise<string | undefined> {
     const row = await db
         .select({ day: min(dailyMetrics.day) })
@@ -59,16 +43,13 @@ export async function getTrackingSince(db: Db): Promise<string | undefined> {
     return row?.day ?? undefined;
 }
 
-/**
- * Narrows a range to the days tracking covers. `to` is held to today as well:
- * nothing was recorded tomorrow, and an unclamped one runs to any year asked for.
- */
+/** `to` is held to the last reported day, since today is still filling. */
 export function clampRange(
     range: DayRange,
     since: string | undefined,
-    today: string = toDayKey(Date.now())
+    latest: string = toReportingDay(Date.now())
 ): DayRange {
-    const to = range.to > today ? today : range.to;
+    const to = range.to > latest ? latest : range.to;
     if (since === undefined) return { from: to, to };
     return { from: range.from < since ? since : range.from, to };
 }

@@ -150,17 +150,19 @@ export const EMPTY_JOB_RESULT: VersionJobResult = {
  * A linked workspace's thumbnail, straight from Onshape rather than through us.
  * The browser is already signed in to Onshape — the app is running inside it —
  * so the image element can fetch this itself, and the bytes never cross the
- * worker.
+ * worker. On the caller's own Onshape origin, which is where their session is.
  *
  * Unverified against real Onshape: it rests on the session cookie reaching a
  * cross-site request from our frame. Where it does not, the row shows the same
  * placeholder as a workspace with no thumbnail at all.
  */
 export function workspaceThumbnailUrl(
+    origin: string,
     workspace: WorkspacePath,
     size: string
 ): string {
     return onshapeApiUrl(
+        origin,
         `/thumbnails/d/${workspace.documentId}/w/${workspace.instanceId}/s/${size}`
     );
 }

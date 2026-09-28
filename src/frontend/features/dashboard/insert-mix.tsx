@@ -34,8 +34,8 @@ export function InsertSourceBreakdown({
             {sources.map((source) => (
                 <div key={source.source}>
                     <Group justify="space-between" gap="xs" mb={4}>
-                        <Text size="sm">{SOURCE_LABELS[source.source]}</Text>
-                        <Text size="sm" c="dimmed">
+                        <Text>{SOURCE_LABELS[source.source]}</Text>
+                        <Text c="dimmed">
                             {formatCount(source.count)} (
                             {formatFraction(source.count, total)})
                         </Text>

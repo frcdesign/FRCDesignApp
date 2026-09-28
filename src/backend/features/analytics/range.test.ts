@@ -16,7 +16,7 @@ describe("clampRange", () => {
         ).toEqual({ from: "2026-06-01", to: TODAY });
     });
 
-    it("holds the end to today, so no chart densifies days that cannot have happened", () => {
+    it("holds the end to the last reported day, so no chart densifies days that cannot have happened", () => {
         expect(
             clampRange(
                 { from: "2026-01-01", to: "9999-12-31" },
@@ -55,8 +55,6 @@ describe("eachDay", () => {
     });
 
     it("caps a far-future end rather than allocating a point per day to it", () => {
-        // Unclamped this is 2.9 million days, which exhausts the Worker before
-        // the caller ever gets to build a point for each one.
         const days = eachDay({ from: "2026-01-01", to: "9999-12-31" });
         expect(days.length).toBeLessThanOrEqual(10 * 366);
         expect(days[0]).toBe("2026-01-01");

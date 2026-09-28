@@ -10,14 +10,10 @@ import {
 } from "../../db/schema";
 import { LibraryId } from "./library-id";
 import { InsertableOut, LibraryOut, Insertables, Groups } from "./contract";
-import { ConfigurationRecord } from "../configurations/contract";
-import { toRecords } from "../configurations/utils";
+import { type SearchRecord } from "../configurations/contract";
 import { buildSearchDb } from "../search/build";
+import { searchRecordsOf } from "../search/records";
 
-/**
- * Assembles the full `LibraryOut` (groups + insertables, in sort order) for a
- * library from D1.
- */
 export async function getLibraryOut(
     db: Db,
     libraryId: LibraryId
@@ -42,8 +38,7 @@ export async function getLibraryOut(
             .where(eq(insertables.libraryId, libraryId))
             .orderBy(asc(insertables.sortOrder))
             .all(),
-        // Ids only: a configurations row exists exactly when there are
-        // parameters, and its payload is fetched when one is opened.
+        // Ids only; the payload is fetched when one is opened.
         db
             .select({ insertableId: configurations.insertableId })
             .from(configurations)
@@ -68,8 +63,7 @@ export async function getLibraryOut(
             groupInsertables.sort((a, b) => a.name.localeCompare(b.name));
         }
         const insertableOrder = groupInsertables.map((ins) => ins.id);
-        // A shell group has no version to link to, so its path stops at the
-        // document rather than pointing at a `/v/placeholder` that 404s.
+        // A shell group has no version, so link to the document instead.
         const hasVersion = group.versionId !== PLACEHOLDER_VERSION_ID;
         groupsOut[group.id] = {
             id: group.id,
@@ -122,10 +116,7 @@ export async function getLibraryOut(
     };
 }
 
-/**
- * Renumbers a library's groups to open a slot and returns its sort order. The
- * caller writes the row, since it also decides create vs. update.
- */
+/** Returns the new slot; the caller writes the row. */
 export async function placeNewGroup(
     db: Db,
     libraryId: LibraryId,
@@ -144,8 +135,6 @@ export async function placeNewGroup(
     // An unknown or unspecified selection puts the new group last.
     const newIndex = selectedIndex === -1 ? siblings.length : selectedIndex + 1;
 
-    // Renumber every sibling to close any gaps: those at or past the new slot
-    // shift up by one to make room for it.
     await Promise.all(
         siblings.map((sibling, index) =>
             db
@@ -158,10 +147,7 @@ export async function placeNewGroup(
     return newIndex;
 }
 
-/**
- * The row everything pointing at a library needs first. Called wherever a library
- * id is written: a library gets its row on the first group added to it.
- */
+/** Called wherever a library id is written. */
 export async function ensureLibrary(
     db: Db,
     libraryId: LibraryId
@@ -182,9 +168,9 @@ export async function bumpLibraryVersion(
         });
 }
 
-/** The R2 object key holding a library's serialized MiniSearch index. */
+/** Versioned by shape: an older index is ignored and the route rebuilds it. */
 export function searchIndexKey(libraryId: LibraryId): string {
-    return `search-index/${libraryId}.json`;
+    return `search-index/v2/${libraryId}.json`;
 }
 
 /** Rebuilds a library's search index into R2; bump `cacheVersion` alongside. */
@@ -193,31 +179,28 @@ export async function rebuildSearchDb(
     db: Db,
     libraryId: LibraryId
 ): Promise<string> {
-    const [libraryData, recordsMap] = await Promise.all([
+    const [libraryData, indexed] = await Promise.all([
         getLibraryOut(db, libraryId),
-        getRecordsMap(db, libraryId)
+        getSearchRecords(db, libraryId)
     ]);
-    const searchDb = JSON.stringify(buildSearchDb(libraryData, recordsMap));
-    // Uncompressed: encoding here would leave the runtime compressing an
-    // already-compressed body.
+    const searchDb = JSON.stringify(buildSearchDb(libraryData, indexed));
+    // Uncompressed, since the runtime compresses responses itself.
     await bucket.put(searchIndexKey(libraryId), searchDb, {
         httpMetadata: { contentType: "application/json" }
     });
     return searchDb;
 }
 
-/**
- * The records `buildSearchDb` dedupes: an element's own part data plus one per
- * indexed configuration. Left joined — an unconfigurable element has no row.
- */
-async function getRecordsMap(
+async function getSearchRecords(
     db: Db,
     libraryId: LibraryId
-): Promise<Record<string, ConfigurationRecord[]>> {
+): Promise<Record<string, SearchRecord[]>> {
     const rows = await db
         .select({
             id: insertables.id,
             partMetadata: insertables.partMetadata,
+            vendors: insertables.vendors,
+            parameters: configurations.parameters,
             records: configurations.records
         })
         .from(insertables)
@@ -228,12 +211,7 @@ async function getRecordsMap(
         .where(eq(insertables.libraryId, libraryId))
         .all();
 
-    const recordsMap: Record<string, ConfigurationRecord[]> = {};
-    for (const row of rows) {
-        const records = toRecords(row.partMetadata, row.records ?? []);
-        if (records.length > 0) {
-            recordsMap[row.id] = records;
-        }
-    }
-    return recordsMap;
+    return Object.fromEntries(
+        rows.map((row) => [row.id, searchRecordsOf(row)])
+    );
 }

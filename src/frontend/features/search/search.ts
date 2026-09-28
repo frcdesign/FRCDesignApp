@@ -1,4 +1,7 @@
-import MiniSearch, { SearchResult as MiniSearchResult } from "minisearch";
+import MiniSearch, {
+    type Query,
+    type SearchResult as MiniSearchResult
+} from "minisearch";
 import { Vendor } from "@backend/features/library/vendors";
 import { type Position } from "../../lib/highlight";
 import {
@@ -6,7 +9,21 @@ import {
     SearchDocument
 } from "@backend/features/search/contract";
 import { matchedRecord } from "@backend/features/search/records";
-import { type ConfigurationKey } from "@backend/features/configurations/contract";
+import {
+    nameSpans,
+    partNumberSpans,
+    queryWords,
+    type TermSpan
+} from "@backend/features/search/tokenize";
+import {
+    NAME_FIELD,
+    PART_NAME_FIELD,
+    PART_NUMBER_FIELD
+} from "@backend/features/search/fields";
+import {
+    type ConfigurationKey,
+    type PartialSelection
+} from "@backend/features/configurations/contract";
 
 /** As many results as a list is worth scrolling. */
 const MAX_HITS = 50;
@@ -20,10 +37,9 @@ export interface SearchFilters {
 export interface SearchHit {
     id: string;
     positions: Position[];
-    /**
-     * The best-matching record for this hit, used to pre-fill the insert menu —
-     * its part number, name, and the key of the selection producing it.
-     */
+    /** The best-matching record's values, which pre-fill the insert menu. */
+    values?: PartialSelection;
+    /** Those values' key, for the row's thumbnail. */
     configurationKey?: ConfigurationKey;
     partNumber?: string;
     partName?: string;
@@ -35,14 +51,8 @@ export interface SearchHit {
 }
 
 export interface FilterResult {
-    /**
-     * The number of items filtered out by vendor filters.
-     */
     byVendor: number;
-    /**
-     * The number of items filtered out by being in a different group.
-     * Does not include results that would have been filtered out by vendors.
-     */
+    /** Excludes results already filtered out by vendor. */
     byGroup: number;
 }
 
@@ -60,10 +70,8 @@ export interface SearchArgs {
     /** @default false */
     showHidden?: boolean;
     /**
-     * Whether a configuration's own part number or name can match. Favorites
-     * turn it off: a favorite names one configuration, but the fields cover
-     * every configuration the insertable has, so a query describing one the
-     * user never favorited would still pull their favorite up.
+     * Off for favorites, which name one configuration: other configurations'
+     * fields would pull them up.
      * @default true
      */
     searchConfigurations?: boolean;
@@ -80,15 +88,21 @@ export function doSearch(args: SearchArgs): SearchResult {
     } = args;
     const filtered: FilterResult = { byVendor: 0, byGroup: 0 };
 
-    if (!query || query.trim() === "") {
+    const words = queryWords(query ?? "");
+    if (words.length === 0) {
         return { hits: [], filtered };
     }
+    const queryTerms = words.flat();
 
-    const miniSearchResults: MiniSearchResult[] = searchDb.search(query, {
+    // Each word narrows: any reading of it will do, but every word must match.
+    const expression: Query = {
+        combineWith: "AND",
+        queries: words.map((terms) => ({ combineWith: "OR", queries: terms }))
+    };
+    const miniSearchResults: MiniSearchResult[] = searchDb.search(expression, {
         fields: searchConfigurations ? undefined : INSERTABLE_FIELDS,
         filter: (result) => {
-            // MiniSearch types a hit's stored fields as `any`; they are the
-            // document that was indexed.
+            // MiniSearch types stored fields as `any`.
             const searchResult = result as unknown as Omit<
                 MiniSearchResult,
                 "id"
@@ -135,94 +149,85 @@ export function doSearch(args: SearchArgs): SearchResult {
     });
 
     const hits: SearchHit[] = miniSearchResults
-        // Sliced before mapping: the rest are never shown, and each one costs a
-        // record match and a highlight pass per field.
+        // Before mapping, since each hit costs a record match and highlighting.
         .slice(0, MAX_HITS)
         .map((miniSearchResult) => {
             const document = searchDb.getStoredFields(
                 miniSearchResult.id
             ) as unknown as SearchDocument;
             const record = matchedRecord(
-                query,
+                query ?? "",
                 document.records,
                 Object.values(miniSearchResult.match).flat()
             );
             const partNumber = record?.partNumber;
             const partName = record?.name;
+            const underline = (
+                text: string,
+                field: string,
+                spans: (text: string) => TermSpan[]
+            ) =>
+                highlightPositions(
+                    spans(text),
+                    matchedTerms(miniSearchResult, field),
+                    queryTerms
+                );
             return {
                 id: document.id,
-                positions: generateHighlightPositions(
-                    miniSearchResult,
-                    document.name,
-                    "name"
-                ),
+                positions: underline(document.name, NAME_FIELD, nameSpans),
+                values: record?.values,
                 configurationKey: record?.configurationKey,
                 partNumber,
                 partName,
                 url: record?.url,
-                partNumberPositions: partNumber
-                    ? generateHighlightPositions(
-                          miniSearchResult,
-                          partNumber,
-                          "partNumbers"
-                      )
-                    : undefined,
-                partNamePositions: partName
-                    ? generateHighlightPositions(
-                          miniSearchResult,
-                          partName,
-                          "partNames"
-                      )
-                    : undefined
+                partNumberPositions: underline(
+                    partNumber ?? "",
+                    PART_NUMBER_FIELD,
+                    partNumberSpans
+                ),
+                partNamePositions: underline(
+                    partName ?? "",
+                    PART_NAME_FIELD,
+                    nameSpans
+                )
             };
         });
 
     return { hits, filtered };
 }
 
-/** Escapes a term so it matches literally (terms can carry `.`, `(`, and friends). */
-function escapeRegExp(text: string): string {
-    return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+/** The index terms a result matched in one field. */
+function matchedTerms(result: MiniSearchResult, field: string): Set<string> {
+    return new Set(
+        Object.entries(result.match)
+            .filter(([, fields]) => fields.includes(field))
+            .map(([term]) => term)
+    );
 }
 
 /**
- * Underlines the longest query term the match starts with, so a prefix search
- * underlines only what was typed. Falls back to the whole term.
+ * Each span whose term matched. A literal one is underlined only as far as
+ * the query typed it; a size read into another spelling, as a whole.
  */
-function matchedPrefixLength(term: string, queryTerms: string[]): number {
-    let length = 0;
-    for (const queryTerm of queryTerms) {
-        if (term.startsWith(queryTerm) && queryTerm.length > length) {
-            length = queryTerm.length;
-        }
-    }
-    return length || term.length;
-}
-
-/**
- * `match` is keyed by matched document terms and `queryTerms` by what was typed.
- * Based on https://github.com/lucaong/minisearch/issues/37
- */
-function generateHighlightPositions(
-    result: MiniSearchResult,
-    text: string,
-    field: string
+function highlightPositions(
+    spans: TermSpan[],
+    matched: Set<string>,
+    queryTerms: string[]
 ): Position[] {
-    const haystack = text.toLowerCase();
-    const positions: Position[] = [];
-
-    for (const [term, matchedFields] of Object.entries(result.match)) {
-        if (!matchedFields.includes(field)) {
-            continue;
-        }
-        const length = matchedPrefixLength(term, result.queryTerms);
-        const matchedLocations = haystack.matchAll(
-            new RegExp(escapeRegExp(term), "g")
-        );
-        for (const match of matchedLocations) {
-            positions.push({ start: match.index, length });
-        }
-    }
-
-    return positions;
+    return spans
+        .filter((span) => matched.has(span.term))
+        .map((span) => {
+            const typed = span.literal
+                ? Math.max(
+                      0,
+                      ...queryTerms
+                          .filter((term) => span.term.startsWith(term))
+                          .map((term) => term.length)
+                  )
+                : 0;
+            return {
+                start: span.start,
+                length: typed || span.end - span.start
+            };
+        });
 }

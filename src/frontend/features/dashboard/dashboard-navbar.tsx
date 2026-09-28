@@ -20,8 +20,8 @@ import {
 import { type ReactNode } from "react";
 import { LibraryId } from "@backend/features/library/library-id";
 import { getLibraryName } from "../../lib/library";
-import { BORDER, IconSize, NAVBAR_ROW_HEIGHT } from "../../lib/style-constants";
-import { NavbarRow, SettingsButton } from "../../components/app-navbar";
+import { IconSize, NAVBAR_ROW_HEIGHT } from "../../lib/style-constants";
+import { NavbarRow, SettingsControls } from "../../components/app-navbar";
 import { RangeControl } from "./range-control";
 import {
     DASHBOARDS,
@@ -30,14 +30,12 @@ import {
     toDashboardKey,
     type DashboardKey
 } from "./dashboard-nav";
+import styles from "../../lib/styles.module.css";
 
 interface DashboardTabsProps {
     current: DashboardKey;
 }
 
-/**
- * Two tiers, like the panel's navbar: the dashboard over the library it reads.
- */
 export function DashboardNavbar(): ReactNode {
     const pathname = useRouterState({ select: (s) => s.location.pathname });
     const current = toDashboardKey(pathname);
@@ -46,9 +44,9 @@ export function DashboardNavbar(): ReactNode {
         <Stack gap={0}>
             <NavbarRow>
                 <DashboardTabs current={current} />
-                <Group gap="xs" wrap="nowrap" ml="auto">
+                <Group gap="xs" ml="auto">
                     <RefreshButton />
-                    <SettingsButton />
+                    <SettingsControls />
                 </Group>
             </NavbarRow>
             {/* Only the library-scoped dashboards have anything to put here:
@@ -59,9 +57,8 @@ export function DashboardNavbar(): ReactNode {
                     gap="sm"
                     px="sm"
                     h={NAVBAR_ROW_HEIGHT}
-                    wrap="nowrap"
                     align="center"
-                    style={{ borderBottom: BORDER }}
+                    className={styles.dividerBottom}
                 >
                     <LibraryMenu dashboard={current} />
                     <Group gap="sm" ml="auto">
@@ -94,7 +91,7 @@ function DashboardTabs({ current }: DashboardTabsProps): ReactNode {
             }}
             styles={TAB_STYLES}
         >
-            <Tabs.List aria-label="Dashboards">
+            <Tabs.List>
                 {DASHBOARDS.map((entry) => (
                     <Tabs.Tab key={entry.key} value={entry.key}>
                         {entry.label}
@@ -118,12 +115,12 @@ function LibraryMenu({ dashboard }: LibraryMenuProps): ReactNode {
     const target = DASHBOARDS.find((entry) => entry.key === dashboard);
 
     return (
-        <Menu position="bottom-start" withinPortal>
+        <Menu position="bottom-start">
             <Menu.Target>
                 <Button
                     variant="default"
                     size="compact-sm"
-                    rightSection={<CaretDownIcon size={IconSize.SMALL} />}
+                    rightSection={<CaretDownIcon />}
                 >
                     {getLibraryName(current)}
                 </Button>
@@ -139,8 +136,7 @@ function LibraryMenu({ dashboard }: LibraryMenuProps): ReactNode {
                                     target?.to ??
                                     "/dashboard/library/$libraryId",
                                 params: { libraryId },
-                                // Dropped, not retained: the part being
-                                // reported on belongs to the old library.
+                                // The part belongs to the old library.
                                 search: { element: undefined }
                             })
                         }
@@ -170,7 +166,6 @@ function ThresholdControl(): ReactNode {
                 </Text>
             }
             leftSectionWidth={THRESHOLD_LABEL_WIDTH}
-            aria-label="Low-usage threshold"
             value={threshold ?? DEFAULT_THRESHOLD}
             onChange={(value) =>
                 void navigate({
@@ -196,12 +191,9 @@ function RefreshButton(): ReactNode {
     const fetching = useIsFetching({ queryKey: ["analytics"] }) > 0;
 
     return (
-        <Tooltip withArrow label="Refresh">
+        <Tooltip label="Refresh">
             <ActionIcon
                 my="auto"
-                variant="subtle"
-                color="gray"
-                aria-label="Refresh"
                 loading={fetching}
                 onClick={() =>
                     void queryClient.invalidateQueries({
@@ -218,8 +210,7 @@ function RefreshButton(): ReactNode {
 const TAB_STYLES = {
     // Hides the line under the tab list alone; the row owns one that spans it.
     root: { "--tab-border-color": "transparent", minWidth: 0 },
-    // Full height, so the underline lands on the row's border rather than
-    // partway up a taller bar.
+    // So the underline lands on the row's border.
     list: {
         height: "100%",
         flexWrap: "nowrap",

@@ -54,14 +54,14 @@
     ],
     "workflows": [
         {
-            "name": "load-library-workflow",
-            "binding": "LOAD_LIBRARY_WORKFLOW",
-            "class_name": "LoadLibraryWorkflow"
+            "name": "load-document-workflow",
+            "binding": "LOAD_DOCUMENT_WORKFLOW",
+            "class_name": "LoadDocumentWorkflow"
         },
         {
-            "name": "add-group-workflow",
-            "binding": "ADD_GROUP_WORKFLOW",
-            "class_name": "AddGroupWorkflow"
+            "name": "render-thumbnail-workflow",
+            "binding": "RENDER_THUMBNAIL_WORKFLOW",
+            "class_name": "RenderThumbnailWorkflow"
         },
         {
             "name": "version-manager-workflow",
@@ -69,25 +69,20 @@
             "class_name": "VersionManagerWorkflow"
         }
     ],
-    /**
-     * One renderer per Onshape user. Onshape appears to run at most one
-     * thumbnail render per user at a time, so every thumbnail fetch queues here
-     * and the object is what makes them one at a time.
-     */
+    // Inherited by every environment. v2 swaps the thumbnail render queue,
+    // replaced by RenderThumbnailWorkflow, for the push hub.
     "durable_objects": {
-        "bindings": [
-            {
-                "name": "THUMBNAIL_RENDERER",
-                "class_name": "ThumbnailRenderer"
-            }
-        ]
+        "bindings": [{ "name": "PUSH_HUB", "class_name": "PushHub" }]
     },
-    // Inherited by every environment, which is what we want: each gets its own
-    // objects under the same class.
     "migrations": [
         {
             "tag": "v1",
             "new_sqlite_classes": ["ThumbnailRenderer"]
+        },
+        {
+            "tag": "v2",
+            "deleted_classes": ["ThumbnailRenderer"],
+            "new_sqlite_classes": ["PushHub"]
         }
     ],
     /**
@@ -97,9 +92,13 @@
      * https://developers.cloudflare.com/workers/configuration/secrets/
      */
     "vars": {
-        // Onshape team ID used to determine editor/admin access level in production
-        "ADMIN_TEAM": "5b620150b2190f0fca90ec10",
-        "NODE_ENV": "development"
+        // The Onshape user granted the owner access level, whose session
+        // webhook-triggered loads run under.
+        "OWNER_USER_ID": "5eace32713a966103efd2aa0",
+        "NODE_ENV": "development",
+        // Where the app is served: OAuth's redirect and every webhook point here.
+        // The dev tunnel's; a developer on their own tunnel overrides it in `.env`.
+        "APP_URL": "https://dev.frcdesign.org"
     },
     /**
      * Service Bindings (communicate between multiple Workers)
@@ -136,14 +135,14 @@
             ],
             "workflows": [
                 {
-                    "name": "load-library-workflow-cert",
-                    "binding": "LOAD_LIBRARY_WORKFLOW",
-                    "class_name": "LoadLibraryWorkflow"
+                    "name": "load-document-workflow-cert",
+                    "binding": "LOAD_DOCUMENT_WORKFLOW",
+                    "class_name": "LoadDocumentWorkflow"
                 },
                 {
-                    "name": "add-group-workflow-cert",
-                    "binding": "ADD_GROUP_WORKFLOW",
-                    "class_name": "AddGroupWorkflow"
+                    "name": "render-thumbnail-workflow-cert",
+                    "binding": "RENDER_THUMBNAIL_WORKFLOW",
+                    "class_name": "RenderThumbnailWorkflow"
                 },
                 {
                     "name": "version-manager-workflow-cert",
@@ -152,19 +151,15 @@
                 }
             ],
             "durable_objects": {
-                "bindings": [
-                    {
-                        "name": "THUMBNAIL_RENDERER",
-                        "class_name": "ThumbnailRenderer"
-                    }
-                ]
+                "bindings": [{ "name": "PUSH_HUB", "class_name": "PushHub" }]
             },
             "vars": {
-                "ADMIN_TEAM": "6a62e6efcc21741bea57362c",
+                "OWNER_USER_ID": "5eace32713a966103efd2aa0",
                 // Production, not because cert is production, but because
                 // FORCE_SIGNED_IN and VITE_ACCESS_LEVEL_OVERRIDE are gated on
                 // this alone: anything but "production" leaves them armed.
-                "NODE_ENV": "production"
+                "NODE_ENV": "production",
+                "APP_URL": "https://frc-design-app-cert.frcdesign-org.workers.dev"
             },
             "limits": {
                 "subrequests": 1000
@@ -196,14 +191,14 @@
             ],
             "workflows": [
                 {
-                    "name": "load-library-workflow-prod",
-                    "binding": "LOAD_LIBRARY_WORKFLOW",
-                    "class_name": "LoadLibraryWorkflow"
+                    "name": "load-document-workflow-prod",
+                    "binding": "LOAD_DOCUMENT_WORKFLOW",
+                    "class_name": "LoadDocumentWorkflow"
                 },
                 {
-                    "name": "add-group-workflow-prod",
-                    "binding": "ADD_GROUP_WORKFLOW",
-                    "class_name": "AddGroupWorkflow"
+                    "name": "render-thumbnail-workflow-prod",
+                    "binding": "RENDER_THUMBNAIL_WORKFLOW",
+                    "class_name": "RenderThumbnailWorkflow"
                 },
                 {
                     "name": "version-manager-workflow-prod",
@@ -212,16 +207,12 @@
                 }
             ],
             "durable_objects": {
-                "bindings": [
-                    {
-                        "name": "THUMBNAIL_RENDERER",
-                        "class_name": "ThumbnailRenderer"
-                    }
-                ]
+                "bindings": [{ "name": "PUSH_HUB", "class_name": "PushHub" }]
             },
             "vars": {
-                "ADMIN_TEAM": "5b620150b2190f0fca90ec10",
-                "NODE_ENV": "production"
+                "OWNER_USER_ID": "5eace32713a966103efd2aa0",
+                "NODE_ENV": "production",
+                "APP_URL": "https://app.frcdesign.org"
             },
             "limits": {
                 "subrequests": 100000

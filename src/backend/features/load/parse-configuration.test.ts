@@ -27,7 +27,6 @@ const RESPONSE: OnshapeConfigurationResponse = {
             btType: OnshapeParameterType.BOOLEAN,
             parameterId: "Show_list",
             parameterName: "Show list",
-            isCosmetic: true,
             defaultValue: true,
             visibilityCondition: NONE
         },
@@ -35,7 +34,6 @@ const RESPONSE: OnshapeConfigurationResponse = {
             btType: OnshapeParameterType.ENUM,
             parameterId: "Vendor",
             parameterName: "Vendor",
-            isCosmetic: false,
             defaultValue: "Default",
             options: [
                 { option: "Default", optionName: "WCP" },
@@ -58,7 +56,6 @@ const RESPONSE: OnshapeConfigurationResponse = {
             btType: OnshapeParameterType.ENUM,
             parameterId: "List",
             parameterName: "List",
-            isCosmetic: false,
             defaultValue: "WCP_1",
             options: [
                 { option: "Default", optionName: "Always shown" },
@@ -87,8 +84,7 @@ const RESPONSE: OnshapeConfigurationResponse = {
                     }
                 ]
             },
-            // A logical wrapper whose only child is the no-op condition, which the
-            // parser drops — exercising the empty-children path.
+            // Its only child is a no-op the parser drops.
             visibilityCondition: {
                 btType: OnshapeVisibilityConditionType.LOGICAL,
                 operation: LogicalOp.AND,
@@ -99,7 +95,6 @@ const RESPONSE: OnshapeConfigurationResponse = {
             btType: OnshapeParameterType.QUANTITY,
             parameterId: "TTB_Length",
             parameterName: "TTB Length",
-            isCosmetic: false,
             quantityType: QuantityType.LENGTH,
             rangeAndDefault: {
                 defaultValue: 1,
@@ -134,12 +129,11 @@ describe("parseOnshapeConfiguration", () => {
         ]);
     });
 
-    it("parses a BOOLEAN parameter and its cosmetic flag", () => {
+    it("parses a BOOLEAN parameter", () => {
         expect(parameters[0]).toEqual({
             type: ParameterType.BOOLEAN,
             id: "Show_list",
             name: "Show list",
-            isCosmetic: true,
             default: "true",
             condition: undefined
         });
@@ -147,7 +141,6 @@ describe("parseOnshapeConfiguration", () => {
 
     it("parses an ENUM parameter with options and a logical condition", () => {
         const vendor = parameters[1];
-        expect(vendor.isCosmetic).toBe(false);
         if (vendor.type !== ParameterType.ENUM)
             throw new Error("expected ENUM");
         expect(vendor.default).toBe("Default");
@@ -195,8 +188,6 @@ describe("parseOnshapeConfiguration", () => {
         ]);
     });
 
-    // A logical left with no children says nothing about when to show the
-    // parameter, so it is dropped rather than stored as a condition of its own.
     it("drops a logical condition whose children were all no-ops", () => {
         expect(parameters[2].condition).toBeUndefined();
     });
@@ -205,9 +196,8 @@ describe("parseOnshapeConfiguration", () => {
         const length = parameters[3];
         if (length.type !== ParameterType.QUANTITY)
             throw new Error("expected QUANTITY");
-        // Canonical, like every value it will be compared against; the
-        // numeric form below is what the input seeds its display from.
-        expect(length.default).toBe("0.0254 m");
+        // In its own unit, as Onshape declares it and a person would type it.
+        expect(length.default).toBe("1 in");
         expect(length.defaultValue).toBe(1);
         expect(length.min).toBe(0);
         expect(length.max).toBe(100000);

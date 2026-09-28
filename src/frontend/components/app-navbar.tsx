@@ -4,20 +4,20 @@ import {
     Divider,
     Group,
     Input,
-    Loader,
     Stack,
     Tabs,
-    TextInput,
-    Tooltip
+    TextInput
 } from "@mantine/core";
-import { GearIcon, MagnifyingGlassIcon } from "@phosphor-icons/react";
 import {
-    BORDER,
-    FRAME_BACKGROUND,
+    GearIcon,
+    MagnifyingGlassIcon,
+    MoonIcon,
+    SunIcon
+} from "@phosphor-icons/react";
+import {
     IconSize,
     NAVBAR_DIVIDER_COLOR,
-    NAVBAR_ROW_HEIGHT,
-    StatusColor
+    NAVBAR_ROW_HEIGHT
 } from "../lib/style-constants";
 import {
     PropsWithChildren,
@@ -27,32 +27,25 @@ import {
     useRef,
     useState
 } from "react";
-import { useNavigate } from "@tanstack/react-router";
 import { useDebouncedCallback } from "@mantine/hooks";
 
 import { AppBrand } from "./app-brand";
 import { openSettingsMenu } from "../features/settings/open-settings-menu";
 import { VendorMenu } from "../features/settings/components/vendor-filters";
-import { getUiState, updateUiState } from "../lib/ui-state";
+import { getUiState, Theme, updateUiState, useUiState } from "../lib/ui-state";
 import { getLibraryName, useLibraryId } from "../lib/library";
-import {
-    RequireAccessLevel,
-    useAccessData
-} from "../features/auth/access-level";
+import { getTabName, useAppTabs, useNavigateToTab } from "../lib/tabs";
+import { useAccessData } from "../features/auth/access-level";
 import { startSignIn } from "../features/auth/sign-in";
-import { useJobStatus } from "../lib/refresh";
 import { LibraryId } from "@backend/features/library/library-id";
+import { type AppTab, UtilityTab } from "../lib/app-tab";
 import { queryClient } from "../lib/query-client";
 import { getLibraryVersionQuery } from "../features/library/queries";
 import { InsertLocationStatus } from "../features/insert-location/components/insert-location-status";
 import { useIsVersionManager } from "../features/version-manager/navigation";
-import { useTargetWorkspace } from "../lib/onshape-params";
+import styles from "../lib/styles.module.css";
 
-/**
- * The bar every page is topped by: the brand, then whatever that page puts
- * beside it. Stretched so a full-height child lands its underline on the row's
- * own border.
- */
+/** Stretched so a full-height child's underline lands on the row's border. */
 export function NavbarRow(props: PropsWithChildren): ReactNode {
     const { children } = props;
     return (
@@ -60,15 +53,12 @@ export function NavbarRow(props: PropsWithChildren): ReactNode {
             gap="sm"
             px="sm"
             h={NAVBAR_ROW_HEIGHT}
-            wrap="nowrap"
             align="stretch"
-            bg={FRAME_BACKGROUND}
-            style={{ borderBottom: BORDER }}
+            className={`${styles.frame} ${styles.dividerBottom}`}
         >
             <AppBrand />
             {children && (
-                // Closes the brand off, so the name reads as the app rather
-                // than the first tab. Mantine's own all but vanishes on gray.
+                // Mantine's own divider all but vanishes on gray.
                 <Divider
                     orientation="vertical"
                     my="sm"
@@ -80,10 +70,6 @@ export function NavbarRow(props: PropsWithChildren): ReactNode {
     );
 }
 
-/**
- * Provides top-level navigation for the app: a row of library tabs with the
- * brand and settings alongside, over a row holding search and its filters.
- */
 export function AppNavbar(): ReactNode {
     // Search and its filters belong to a library, and the version manager is
     // not one; its page fills the room they leave.
@@ -93,15 +79,14 @@ export function AppNavbar(): ReactNode {
         <Stack gap={0}>
             <NavbarRow>
                 <AppTabs />
-                <Group gap="xs" wrap="nowrap" ml="auto">
+                <Group gap="xs" ml="auto">
                     <InsertLocationStatus />
-                    <JobIndicator />
                     <SignInButton />
-                    <SettingsButton />
+                    <SettingsControls />
                 </Group>
             </NavbarRow>
             {!isVersionManager && (
-                <Group gap="xs" px="sm" h={NAVBAR_ROW_HEIGHT} wrap="nowrap">
+                <Group gap="xs" px="sm" h={NAVBAR_ROW_HEIGHT}>
                     <SearchBar />
                     <VendorMenu />
                 </Group>
@@ -110,14 +95,9 @@ export function AppNavbar(): ReactNode {
     );
 }
 
-/**
- * Shown only when not signed in; starts the Onshape OAuth flow and returns to
- * the current location, after which access-data reports the caller signed in.
- */
 function SignInButton(): ReactNode {
     const { signedIn, isPending } = useAccessData();
-    // Waiting rather than assuming signed out: the placeholder would flash the
-    // button on every load for a caller who is already signed in.
+    // Otherwise the button flashes on every load for someone signed in.
     if (isPending || signedIn) return null;
 
     return (
@@ -127,45 +107,18 @@ function SignInButton(): ReactNode {
     );
 }
 
-/** Editor-only spinner shown while a library-load job is running. */
-function JobIndicator(): ReactNode {
-    return (
-        <RequireAccessLevel>
-            <RunningJobLoader />
-        </RequireAccessLevel>
-    );
-}
-
-function RunningJobLoader(): ReactNode {
-    // Single editor-gated job-status consumer, so it owns refresh-on-finish.
-    const jobRunning = useJobStatus();
-    if (!jobRunning) return null;
-    return (
-        <Tooltip
-            withArrow
-            label="The library is being loaded from Onshape in the background"
-        >
-            <Loader size={IconSize.CONTROL} />
-        </Tooltip>
-    );
-}
-
-/**
- * The value the version manager's tab takes. Not a library id, so it can never
- * collide with one.
- */
-const VERSION_MANAGER_TAB = "version-manager";
-
-/**
- * The app's top-level pages: a tab per library, and the version manager after
- * them when the panel was opened somewhere it has a document to act on. The url
- * is what actually selects one.
- */
-function AppTabs(): ReactNode {
-    const currentLibraryId = useLibraryId();
+/** Which tab the page showing belongs to: a library, or a utility's page. */
+function useCurrentTab(): AppTab {
+    const libraryId = useLibraryId();
     const isVersionManager = useIsVersionManager();
-    const targetWorkspace = useTargetWorkspace();
-    const navigate = useNavigate();
+    return isVersionManager ? UtilityTab.VERSION_MANAGER : libraryId;
+}
+
+/** Switches tabs; the url is what actually selects one. */
+function AppTabs(): ReactNode {
+    const currentTabId = useCurrentTab();
+    const navigateToTab = useNavigateToTab();
+    const tabs = useAppTabs();
 
     // Warm the versions on hover, so picking one has nothing left to wait for.
     const prefetchVersions = () => {
@@ -174,80 +127,85 @@ function AppTabs(): ReactNode {
         }
     };
 
-    const currentTab = isVersionManager
-        ? VERSION_MANAGER_TAB
-        : currentLibraryId;
-
     return (
         <Tabs
-            value={currentTab}
+            value={currentTabId}
             onMouseEnter={prefetchVersions}
             onChange={(value) => {
-                if (!value || value === currentTab) {
+                if (!value || value === currentTabId) {
                     return;
                 }
-                if (value === VERSION_MANAGER_TAB) {
-                    void navigate({ to: "/app/version-manager" });
-                    return;
-                }
-                const libraryId = value as LibraryId;
-                // Write-behind: the url displays it, this only decides where
-                // `/init` lands next time.
-                updateUiState({ libraryId });
-                void navigate({
-                    to: "/app/library/$libraryId",
-                    params: { libraryId }
-                });
+                const tabId = value as AppTab;
+                // Only decides where `/` resumes next time; the url is the source of truth.
+                updateUiState({ tabId });
+                navigateToTab(tabId);
             }}
             styles={{
-                // Hides the line under the tab list alone; the row owns one
-                // that spans it. The active indicator is colored separately.
+                // The row draws the line under the tabs.
                 root: { "--tab-border-color": "transparent", minWidth: 0 },
-                // Three full names outgrow a narrow panel; scrolling beats
-                // reflowing the navbar into two rows.
+                // Scroll rather than wrap onto a second row in a narrow panel.
                 list: {
-                    // Full height, so the underline lands on the row's border
-                    // rather than partway up a taller bar.
+                    // So the underline lands on the row's border.
                     height: "100%",
                     flexWrap: "nowrap",
                     overflowX: "auto",
                     scrollbarWidth: "none"
                 },
-                // Pulled onto that divider, so the active tab's indicator
-                // replaces it rather than stacking a line above it.
+                // Overlaps the row's border, so the active indicator replaces it.
                 tab: {
                     marginBottom: -1,
                     paddingInline: "var(--mantine-spacing-sm)"
                 }
             }}
         >
-            <Tabs.List aria-label="Pages">
-                {Object.values(LibraryId).map((libraryId) => (
-                    <Tabs.Tab key={libraryId} value={libraryId}>
-                        {getLibraryName(libraryId)}
+            <Tabs.List>
+                {tabs.map((tabId) => (
+                    <Tabs.Tab key={tabId} value={tabId}>
+                        {getTabName(tabId)}
                     </Tabs.Tab>
                 ))}
-                {/* Only where there is a workspace to push or pull, which is
-                    what the page acts on; standalone there is none. */}
-                {targetWorkspace && (
-                    <Tabs.Tab value={VERSION_MANAGER_TAB}>
-                        Version manager
-                    </Tabs.Tab>
-                )}
             </Tabs.List>
         </Tabs>
     );
 }
 
-export function SettingsButton() {
+/** The theme toggle and settings, flush: a pair of icons, not two controls. */
+export function SettingsControls(): ReactNode {
+    return (
+        <Group gap={0}>
+            <ThemeToggle />
+            <SettingsButton />
+        </Group>
+    );
+}
+
+function ThemeToggle(): ReactNode {
+    const theme = useUiState((state) => state.theme);
+    const isDark = theme === Theme.DARK;
     return (
         <ActionIcon
-            variant="subtle"
-            color={StatusColor.NEUTRAL}
+            title={isDark ? "Light mode" : "Dark mode"}
+            my="auto"
+            size="input-sm"
+            onClick={() =>
+                updateUiState({ theme: isDark ? Theme.LIGHT : Theme.DARK })
+            }
+        >
+            {isDark ? (
+                <SunIcon size={IconSize.CONTROL} />
+            ) : (
+                <MoonIcon size={IconSize.CONTROL} />
+            )}
+        </ActionIcon>
+    );
+}
+
+function SettingsButton() {
+    return (
+        <ActionIcon
             title="Settings"
             my="auto"
-            // The filter button's size and icon, so the navbar's two rows read
-            // as one set of controls.
+            // Matches the filter button.
             size="input-sm"
             onClick={() => openSettingsMenu()}
         >
@@ -265,19 +223,13 @@ function selectAllInputText(ref: RefObject<HTMLInputElement | null>) {
     input.setSelectionRange(0, length);
 }
 
-/**
- * How long typing pauses before the search runs. Each query re-searches the
- * index and rebuilds the list, which is enough work to be felt between
- * keystrokes.
- */
 const SEARCH_DEBOUNCE_MS = 200;
 
 function SearchBar() {
     const ref = useRef<HTMLInputElement>(null);
     const wasFocused = useRef(false);
     const libraryId = useLibraryId();
-    // The box owns what is typed and the stored query follows a pause later, so
-    // a keystroke re-renders this input rather than every list reading the query.
+    // Local state, so a keystroke re-renders only the input.
     const [query, setQuery] = useState(() => getUiState().searchQuery ?? "");
     const runSearch = useDebouncedCallback(
         (value: string) => {
@@ -287,15 +239,13 @@ function SearchBar() {
         { delay: SEARCH_DEBOUNCE_MS, flushOnUnmount: true }
     );
 
-    // `autoFocus` fires before the ref attaches, so onFocus has nothing to select
-    // through on the first open and last time's query keeps the caret after it.
+    // `autoFocus` fires before the ref attaches, so onFocus can't select.
     useEffect(() => {
         selectAllInputText(ref);
     }, []);
 
     const clearButton = query ? (
         <Input.ClearButton
-            aria-label="Clear input"
             onClick={() => {
                 setQuery("");
                 // Nothing to wait out: the list should empty on the click.
@@ -311,19 +261,15 @@ function SearchBar() {
             // The panel opens to a library the caller is here to search.
             autoFocus
             flex={1}
-            leftSection={<MagnifyingGlassIcon size={IconSize.SMALL} />}
+            leftSection={<MagnifyingGlassIcon />}
             placeholder={`Search ${getLibraryName(libraryId)}...`}
             ref={ref}
             value={query}
             onFocus={() => {
                 selectAllInputText(ref);
             }}
-            // A click on an unfocused input focuses it — selecting everything
-            // above — and then places the caret on mouseup, which collapses
-            // that selection again. Preventing the default only on the click
-            // that did the focusing keeps the select-all while leaving a click
-            // inside an already-focused field to put the caret where it was
-            // aimed.
+            // The mouseup of the click that focuses the input would collapse the
+            // select-all; later clicks place the caret normally.
             onMouseDown={() => {
                 wasFocused.current = document.activeElement === ref.current;
             }}

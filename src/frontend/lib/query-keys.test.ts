@@ -13,8 +13,7 @@ import { LibraryId } from "@backend/features/library/library-id";
 const LIBRARY = Object.values(LibraryId)[0];
 
 describe("isVersionedLibraryQuery", () => {
-    // A refresh leaves these alone: their urls are immutable, so refetching the
-    // version a bump is replacing serves what that version already said.
+    // Immutable urls: refetching would serve the old version's answer.
     it.each([
         ["library data", libraryDataQueryKey(LIBRARY, 3)],
         ["search db", searchDbQueryKey(LIBRARY, 3)],

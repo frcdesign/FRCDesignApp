@@ -1,11 +1,73 @@
-import { Box, Group, type MantineSpacing, Stack } from "@mantine/core";
+import { Box, Group, type MantineSpacing, Modal, Stack } from "@mantine/core";
 import { PropsWithChildren, ReactNode } from "react";
-import { BORDER, FRAME_BACKGROUND } from "../lib/style-constants";
+import styles from "../lib/styles.module.css";
+import classes from "./app-modal.module.css";
+
+/** The framing both halves of the app's modals draw. */
+export const APP_MODAL_CLASSES = {
+    content: classes.content,
+    header: `${classes.header} ${styles.frame}`,
+    title: classes.title,
+    body: classes.body
+};
 
 /**
- * Content pinned between the header and the scrolling body, like a preview
- * image. The body below supplies the space under it.
+ * What every modal's content sits in, so its body can scroll. The focus trap
+ * takes the first `data-autofocus` it finds: a field that asks for focus gets
+ * it, and otherwise the empty target after the content does, since landing on
+ * the first control makes it look pre-selected.
  */
+export function AppModalContent(props: PropsWithChildren): ReactNode {
+    return (
+        <div className={classes.fill}>
+            {props.children}
+            <span
+                data-autofocus
+                tabIndex={-1}
+                className={classes.focusTarget}
+            />
+        </div>
+    );
+}
+
+interface AppModalProps extends PropsWithChildren {
+    opened: boolean;
+    /** Unused by a modal that cannot be dismissed. */
+    onClose?: () => void;
+    title?: ReactNode;
+    size?: string | number;
+    /** False for a modal whose content is the only way out. @default true */
+    dismissible?: boolean;
+}
+
+/** Held open by state; `openAppModal` is the imperative version. */
+export function AppModal(props: AppModalProps): ReactNode {
+    const {
+        opened,
+        onClose,
+        title,
+        size,
+        dismissible = true,
+        children
+    } = props;
+
+    return (
+        <Modal
+            opened={opened}
+            onClose={onClose ?? (() => undefined)}
+            title={title}
+            size={size}
+            withCloseButton={dismissible}
+            closeOnClickOutside={dismissible}
+            closeOnEscape={dismissible}
+            classNames={APP_MODAL_CLASSES}
+        >
+            <AppModalContent>{children}</AppModalContent>
+        </Modal>
+    );
+}
+
+/** Pinned above the scrolling body, like a preview image. */
 export function AppModalTop(props: PropsWithChildren): ReactNode {
     return (
         <Box p="sm" pb={0} flex="0 0 auto">
@@ -19,15 +81,11 @@ interface AppModalBodyProps extends PropsWithChildren {
     gap?: MantineSpacing;
 }
 
-/**
- * A modal's content, padded away from the header and footer framing it. The one
- * part of a modal that scrolls — `mih` because a flex item otherwise floors at
- * its content height, which pushes the footer off the modal instead.
- */
+/** The part that scrolls. */
 export function AppModalBody(props: AppModalBodyProps): ReactNode {
     const { gap = "sm", children } = props;
     return (
-        <Stack p="sm" gap={gap} flex={1} mih={0} style={{ overflowY: "auto" }}>
+        <Stack p="sm" gap={gap} className={classes.scroll}>
             {children}
         </Stack>
     );
@@ -38,11 +96,9 @@ export function AppModalFooter(props: PropsWithChildren): ReactNode {
     return (
         <Group
             justify="space-between"
-            wrap="nowrap"
             p="sm"
-            bg={FRAME_BACKGROUND}
             flex="0 0 auto"
-            style={{ borderTop: BORDER }}
+            className={`${styles.frame} ${styles.dividerTop}`}
         >
             {props.children}
         </Group>

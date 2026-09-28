@@ -23,16 +23,13 @@ export function openPushVersionModal(
     workspace: WorkspacePath,
     props: PushModalProps
 ): void {
-    const modalId = "push-version";
     openAppModal({
-        modalId,
         title: props.title,
         children: (
             <PushVersionForm
                 workspace={workspace}
                 target={props.target}
                 targets={props.targets}
-                modalId={modalId}
             />
         )
     });
@@ -49,16 +46,13 @@ export function openPullReferencesModal(
     workspace: WorkspacePath,
     props: PullModalProps
 ): void {
-    const modalId = "pull-references";
     openAppModal({
-        modalId,
         title: props.title,
         children: (
             <PullReferencesForm
                 workspace={workspace}
                 source={props.source}
                 sources={props.sources}
-                modalId={modalId}
             />
         )
     });

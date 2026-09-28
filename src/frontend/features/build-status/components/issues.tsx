@@ -1,4 +1,5 @@
-import { Anchor, Badge, Group, Stack, Text } from "@mantine/core";
+import { ExternalLink } from "../../../components/external-link";
+import { Badge, Group, Stack, Text, Tooltip } from "@mantine/core";
 import {
     ArrowSquareOutIcon,
     CheckIcon,
@@ -12,33 +13,27 @@ import {
     BuildIssue,
     BuildIssueSeverity,
     BuildIssueType,
-    getIssueConfigurationKey,
+    getIssueConfiguration,
     getIssueDescription,
     getIssueSeverity,
+    getIssueTitle,
     hasBuildIssue
 } from "@backend/features/build-checker/issues";
 import { ConfigurationParameter } from "@backend/features/configurations/contract";
-import { fromKey } from "@backend/features/configurations/selection";
+import { toSelection } from "@backend/features/configurations/selection";
 import { ElementPath } from "@backend/lib/onshape/path";
 import { makeUrl } from "../../../lib/url";
 import {
     GroupBuildStatus,
     InsertableBuildStatus
 } from "@backend/features/build-checker/contract";
-import {
-    IconSize,
-    NO_SHRINK,
-    RADIUS,
-    StatusColor,
-    statusBackground
-} from "../../../lib/style-constants";
+import { IconSize, StatusColor } from "../../../lib/style-constants";
 import { AppIcon, type AppIconProps } from "../../../components/app-icon";
 import { SectionHeader } from "./sections";
+import { useOnshapeOrigin } from "../../../lib/onshape-params";
+import styles from "../../../lib/styles.module.css";
 
-/**
- * Stored issues plus the live "no unhidden insertables" check, which needs the
- * per-insertable visibility in the same response.
- */
+/** Adds the live "no unhidden insertables" check, which needs visibility. */
 export function useGroupBuildIssues(
     groupStatus: GroupBuildStatus | undefined,
     insertableStatuses: Record<string, InsertableBuildStatus> | undefined
@@ -48,8 +43,7 @@ export function useGroupBuildIssues(
         const hasUnhidden = groupStatus.insertableOrder.some(
             (id) => insertableStatuses?.[id]?.isVisible
         );
-        // A group that never loaded has no insertables to unhide, so the failure
-        // is the whole story.
+        // A group that never loaded has nothing to unhide.
         if (
             hasUnhidden ||
             hasBuildIssue(groupStatus.buildIssues, BuildIssueType.LOAD_FAILED)
@@ -63,8 +57,8 @@ export function useGroupBuildIssues(
 }
 
 interface IssueIconProps extends Omit<AppIconProps, "icon" | "color"> {
-    /** The severity to render, or null if all checks pass. */
-    severity: BuildIssueSeverity | null;
+    /** The severity to render; absent when every check passes. */
+    severity?: BuildIssueSeverity;
 }
 
 /** The icon each severity is drawn as; `ok` is a build with nothing to say. */
@@ -75,8 +69,8 @@ const SEVERITY_ICONS = {
     ok: CheckIcon
 };
 
-/** The color a severity is spoken in; null is a build with nothing to say. */
-function severityColor(severity: BuildIssueSeverity | null): StatusColor {
+/** The color a severity is spoken in; none is a build with nothing to say. */
+function severityColor(severity?: BuildIssueSeverity): StatusColor {
     switch (severity) {
         case BuildIssueSeverity.ERROR:
             return StatusColor.ERROR;
@@ -84,7 +78,7 @@ function severityColor(severity: BuildIssueSeverity | null): StatusColor {
             return StatusColor.WARNING;
         case BuildIssueSeverity.INFO:
             return StatusColor.INFO;
-        case null:
+        case undefined:
             return StatusColor.SUCCESS;
     }
 }
@@ -110,8 +104,6 @@ export function SeverityBadges(props: SeverityBadgesProps): ReactNode {
     if (issues.length === 0) {
         return (
             <Badge
-                size="sm"
-                variant="light"
                 color={StatusColor.SUCCESS}
                 leftSection={<CheckIcon size={IconSize.TINY} />}
             >
@@ -165,11 +157,7 @@ function CountBadge(props: CountBadgeProps): ReactNode {
     const { color, noun } = SEVERITY_BADGE[severity];
     // Don't pluralize info, e.g. "2 infos" reads wrong.
     const plural = severity !== BuildIssueSeverity.INFO && count > 1 ? "s" : "";
-    return (
-        <Badge size="sm" variant="light" color={color}>
-            {`${count} ${noun}${plural}`}
-        </Badge>
-    );
+    return <Badge color={color}>{`${count} ${noun}${plural}`}</Badge>;
 }
 
 /** How many issues of each severity a build carries. */
@@ -197,10 +185,7 @@ function countSeverities(issues: BuildIssue[]): SeverityCounts {
     return counts;
 }
 
-/**
- * What a configuration issue opens: the tab it belongs to, and the parameters
- * its key is spelled against. An element with no configurations has none.
- */
+/** Undefined for an element with no configurations. */
 export interface ConfigurationTarget {
     elementPath: ElementPath;
     parameters: ConfigurationParameter[];
@@ -208,17 +193,19 @@ export interface ConfigurationTarget {
 
 /** The offending configuration in Onshape, for an issue that blames one. */
 function getIssueUrl(
+    origin: string,
     issue: BuildIssue,
     target: ConfigurationTarget | undefined
 ): string | undefined {
-    const key = getIssueConfigurationKey(issue);
-    if (key === undefined || !target) {
+    const values = getIssueConfiguration(issue);
+    if (values === undefined || !target) {
         return undefined;
     }
-    return makeUrl({
-        ...target.elementPath,
-        selection: fromKey(key, target.parameters)
-    });
+    return makeUrl(
+        origin,
+        target.elementPath,
+        toSelection(values, target.parameters)
+    );
 }
 
 interface BuildChecksSectionProps {
@@ -230,6 +217,7 @@ interface BuildChecksSectionProps {
 /** The build checks: one tinted callout per issue. Rendered only when non-empty. */
 export function BuildChecksSection(props: BuildChecksSectionProps): ReactNode {
     const { issues, configurationTarget } = props;
+    const origin = useOnshapeOrigin();
     return (
         <Stack gap={6}>
             <SectionHeader>Build checks</SectionHeader>
@@ -237,7 +225,7 @@ export function BuildChecksSection(props: BuildChecksSectionProps): ReactNode {
                 <IssueCallout
                     key={issue.type}
                     issue={issue}
-                    url={getIssueUrl(issue, configurationTarget)}
+                    url={getIssueUrl(origin, issue, configurationTarget)}
                 />
             ))}
         </Stack>
@@ -252,61 +240,84 @@ const CALLOUT_LAYOUT = {
     p: "xs"
 } as const;
 
-/** Nudged down so the icon aligns with the first line of text. */
-const CALLOUT_ICON = { ...NO_SHRINK, marginTop: 2 };
-
 interface IssueCalloutProps {
     issue: BuildIssue;
     /** Where the issue opens, when it blames one configuration. */
     url?: string;
 }
 
-/**
- * A single build issue rendered as a tinted callout box in its severity color.
- * An issue that names a configuration is the link to it, whole box included —
- * there is nothing else in the callout to click.
- */
+/** When the issue names a configuration, the whole box links to it. */
 function IssueCallout(props: IssueCalloutProps): ReactNode {
     const { issue, url } = props;
     const severity = getIssueSeverity(issue);
-    const background = {
-        backgroundColor: severityBackground(severity),
-        borderRadius: RADIUS
-    };
+    const background = severityBackground(severity);
 
     if (!url) {
         return (
-            <Group {...CALLOUT_LAYOUT} style={background}>
-                <IssueIcon severity={severity} style={CALLOUT_ICON} />
-                <Text size="sm">{getIssueDescription(issue)}</Text>
+            <Group {...CALLOUT_LAYOUT} bg={background} bdrs="sm">
+                <CalloutIcon severity={severity} />
+                <IssueText issue={issue} />
             </Group>
         );
     }
 
     return (
-        // The box is the link, so the anchor drops its own color and rule and
-        // lets the callout keep the severity's.
-        <Anchor
-            href={url}
-            target="_blank"
-            rel="noreferrer"
-            display="block"
-            underline="never"
-            c="inherit"
-            aria-label={`${getIssueDescription(issue)} — open the configuration in Onshape`}
-        >
-            <Group {...CALLOUT_LAYOUT} style={background}>
-                <IssueIcon severity={severity} style={CALLOUT_ICON} />
-                <Text size="sm" flex={1}>
-                    {getIssueDescription(issue)}
-                </Text>
-                <AppIcon icon={ArrowSquareOutIcon} style={CALLOUT_ICON} />
+        <ExternalLink href={url} display="block" underline="never" c="inherit">
+            <Group {...CALLOUT_LAYOUT} bg={background} bdrs="sm">
+                <CalloutIcon severity={severity} />
+                <IssueText issue={issue} />
+                <AppIcon
+                    icon={ArrowSquareOutIcon}
+                    className={styles.noShrink}
+                    style={CALLOUT_ICON_NUDGE}
+                />
             </Group>
-        </Anchor>
+        </ExternalLink>
+    );
+}
+
+interface IssueTextProps {
+    issue: BuildIssue;
+}
+
+function IssueText(props: IssueTextProps): ReactNode {
+    const { issue } = props;
+    const description = getIssueDescription(issue);
+    return (
+        <>
+            <Text flex={1}>{getIssueTitle(issue)}</Text>
+            {description && (
+                <Tooltip label={description} multiline maw={260}>
+                    <AppIcon
+                        icon={InfoIcon}
+                        color={StatusColor.DIMMED}
+                        className={styles.noShrink}
+                        style={CALLOUT_ICON_NUDGE}
+                    />
+                </Tooltip>
+            )}
+        </>
     );
 }
 
 /** The light background tint for a build-issue callout. */
 function severityBackground(severity: BuildIssueSeverity): string {
-    return statusBackground(severityColor(severity));
+    return `var(--mantine-color-${severityColor(severity)}-light)`;
+}
+
+interface CalloutIconProps {
+    severity: BuildIssueSeverity;
+}
+
+/** Down to the first line of text, which a centred icon sits above. */
+const CALLOUT_ICON_NUDGE = { marginTop: 2 };
+
+function CalloutIcon(props: CalloutIconProps): ReactNode {
+    return (
+        <IssueIcon
+            severity={props.severity}
+            className={styles.noShrink}
+            style={CALLOUT_ICON_NUDGE}
+        />
+    );
 }

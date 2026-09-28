@@ -1,199 +1,163 @@
 /**
- * How search reads text: where names and part numbers break into terms, and how
- * a measurement is spelled. The index is built with these and queried with
- * them, so a change here is a change to both ends at once.
+ * How names and part numbers become terms. Each term keeps where it sits in
+ * its text, so what was indexed is also what gets underlined.
  */
 import { isPlaceholderPartNumber } from "../configurations/part-number";
-import { clean } from "../../lib/text";
 import { PART_NUMBER_FIELD } from "./fields";
 
-/** Where a name breaks: punctuation and space, plus a quote used as a quote. */
-const NAME_SEPARATORS = new RegExp("(?<!\\d)\"|[-()',#&\\s/]+");
-
-/** Where a part number breaks into segments, keeping the whole alongside. */
-const PART_NUMBER_SEPARATORS = new RegExp("[-/]+");
-
-/** camelCase and PascalCase boundaries: MAXSpline -> max spline, MAXTube -> max tube. */
-const WORD_BOUNDARIES = new RegExp(
-    "(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])",
-    "g"
-);
-
-// A mixed number, fraction, decimal or integer. Ordered longest-first so `1-1/2`
-// is consumed whole rather than as `1` + `1/2`.
-const NUMERIC_PATTERN =
-    /(\d+)-(\d+)\/(\d+)|(\d+)\/(\d+)|\d*\.\d+|\d+\.\d*|\d+/g;
-
-/** Leading zeros are spelling, not value: `TTB-0016` and `TTB-16` are one part. */
-function withoutLeadingZeros(digits: string): string {
-    return digits.replace(/^0+(?=\d)/, "");
+/** One term, and the characters of its text it was read from. */
+export interface TermSpan {
+    /** Lowercase, and numbers in canonical decimal form. */
+    term: string;
+    start: number;
+    end: number;
+    /** Spelled as written, so a typed prefix of it can be underlined alone. */
+    literal: boolean;
 }
 
-/** How a measurement is spelled to 2dp: what it rounds to, and what it starts. */
-type DecimalSpelling = (value: number) => string;
+/**
+ * A piece of a name: a mixed number or fraction, which spans the separators,
+ * else a run between them. A mixed number's whole can't lead with a zero, so
+ * `TTB-0016-5/32` stays part 16 in 5/32.
+ */
+const NAME_PIECE = /[1-9]\d*-\d+\/\d+|\d+\/\d+|[^\s\-()',#&/"]+/g;
 
-const rounded: DecimalSpelling = (value) =>
-    String(Math.round(value * 100) / 100);
-const truncated: DecimalSpelling = (value) =>
-    String(Math.trunc(value * 100) / 100);
+/** camelCase and PascalCase boundaries: MAXSpline -> MAX Spline. */
+const WORD_BOUNDARY = /(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])/;
+
+const MIXED = /^(\d+)-(\d+)\/(\d+)$/;
+const FRACTION = /^(\d+)\/(\d+)$/;
+const DECIMAL = /^(\d*\.\d+|\d+\.\d*)$/;
+const INTEGER = /^\d+$/;
+
+/** A size's value, or undefined for anything that isn't one. */
+function numericValue(piece: string): number | undefined {
+    const mixed = MIXED.exec(piece);
+    if (mixed) {
+        return Number(mixed[1]) + Number(mixed[2]) / Number(mixed[3]);
+    }
+    const fraction = FRACTION.exec(piece);
+    if (fraction) {
+        return Number(fraction[1]) / Number(fraction[2]);
+    }
+    return DECIMAL.test(piece) ? Number(piece) : undefined;
+}
 
 /**
- * Both spellings, since the library writes the same measurement either way: one
- * vendor's `.2` is the next one's `.19`. Storing both lets either find the part.
+ * To 2dp both rounded and truncated, since vendors write `.196` as `.2` and
+ * as `.19`.
  */
-const DECIMAL_SPELLINGS: DecimalSpelling[] = [rounded, truncated];
+function decimalSpellings(value: number): string[] {
+    const rounded = String(Math.round(value * 100) / 100);
+    const truncated = String(Math.trunc(value * 100) / 100);
+    return rounded === truncated ? [rounded] : [rounded, truncated];
+}
 
-/**
- * One 2-dp decimal at index and query time alike, which is what lets the raw
- * fragments go unstored. Names only: `217-2600` is not two thousand six hundred.
- */
-function canonicalizeNumbers(text: string, toDecimal: DecimalSpelling): string {
-    return text.replace(
-        NUMERIC_PATTERN,
-        (
-            match: string,
-            mixedWhole: string | undefined,
-            mixedNum: string | undefined,
-            mixedDen: string | undefined,
-            fracNum: string | undefined,
-            fracDen: string | undefined
-        ) => {
-            // Left as written, so a long one cannot round-trip through a float.
-            if (/^\d+$/.test(match)) {
-                return withoutLeadingZeros(match);
-            }
+function pieceSpans(piece: string, start: number): TermSpan[] {
+    const end = start + piece.length;
+    if (INTEGER.test(piece)) {
+        // Leading zeros are spelling, not value: `TTB-0016` is part 16.
+        const term = piece.replace(/^0+(?=\d)/, "");
+        return [{ term, start, end, literal: term === piece }];
+    }
+    const value = numericValue(piece);
+    if (value !== undefined && Number.isFinite(value)) {
+        return decimalSpellings(value).map((term) => ({
+            term,
+            start,
+            end,
+            literal: false
+        }));
+    }
+    const spans: TermSpan[] = [
+        { term: piece.toLowerCase(), start, end, literal: true }
+    ];
+    // So `MAXSpline` is found by `spline`.
+    const words = piece.split(WORD_BOUNDARY);
+    let offset = start;
+    for (const word of words.length > 1 ? words : []) {
+        spans.push({
+            term: word.toLowerCase(),
+            start: offset,
+            end: offset + word.length,
+            literal: true
+        });
+        offset += word.length;
+    }
+    return spans;
+}
 
-            let value: number;
-            if (mixedWhole !== undefined) {
-                const fraction = Number(mixedNum) / Number(mixedDen);
-                // A leading zero marks a part number segment, not a quantity: `TTB-0016-5/32` is
-                // part 16 in 5/32", not 16 and 5/32. Each half still canonicalizes on its own.
-                if (mixedWhole.startsWith("0")) {
-                    return Number.isFinite(fraction)
-                        ? `${withoutLeadingZeros(mixedWhole)}-${toDecimal(fraction)}`
-                        : match;
-                }
-                value = Number(mixedWhole) + fraction;
-            } else if (fracNum !== undefined) {
-                value = Number(fracNum) / Number(fracDen);
-            } else {
-                value = Number(match);
-            }
-            if (!Number.isFinite(value)) {
-                return match;
-            }
-            return toDecimal(value);
-        }
+/** A name describes the part, so `1/2`, `.5` and `0.50` read as one size. */
+export function nameSpans(text: string): TermSpan[] {
+    return [...text.matchAll(NAME_PIECE)].flatMap((match) =>
+        pieceSpans(match[0], match.index)
     );
 }
 
 /**
- * For direct, non-tokenized comparison: the index's canonicalization,
- * lowercased, so a `.5` query lines up with a stored `"1/2 Bearing"`.
+ * A part number identifies, so it is read literally: whole, and by segment.
+ * Space-separated runs are read apart, since the index joins every part
+ * number an element has with spaces.
  */
-export function normalizeForMatch(text: string): string {
-    return canonicalizeNumbers(text, rounded).toLowerCase();
+export function partNumberSpans(text: string): TermSpan[] {
+    return [...text.matchAll(/\S+/g)].flatMap((match) => {
+        const whole = match[0];
+        const spans: TermSpan[] = [
+            {
+                term: whole.toLowerCase(),
+                start: match.index,
+                end: match.index + whole.length,
+                literal: true
+            }
+        ];
+        for (const segment of whole.matchAll(/[^-/]+/g)) {
+            if (segment[0] === whole) continue;
+            const start = match.index + segment.index;
+            spans.push({
+                term: segment[0].toLowerCase(),
+                start,
+                end: start + segment[0].length,
+                literal: true
+            });
+        }
+        return spans;
+    });
+}
+
+function uniqueTerms(spans: TermSpan[]): string[] {
+    return [...new Set(spans.map((span) => span.term))];
 }
 
 /**
- * A name's words, with its sizes in the one decimal spelling. The inch mark
- * stays on its number, so `1"` is a size rather than a prefix of `1.5` and `16t`.
+ * Each word of a query and every way it could be meant: as a name reads it,
+ * and, for a word with a letter, as a part number. A bare `1/2` isn't split,
+ * or it would search `1`.
  */
-export function tokenizeName(text: string): string[] {
-    const tokens = new Set<string>();
-    // Canonicalized before splitting: fractions span `/` and `-`. Casing stays,
-    // since processTerm splits on camelCase.
-    for (const toDecimal of DECIMAL_SPELLINGS) {
-        for (const token of splitWithMarks(
-            canonicalizeNumbers(text, toDecimal)
-        )) {
-            tokens.add(token);
-        }
-    }
-    return Array.from(tokens);
+export function queryWords(query: string): string[][] {
+    return (
+        query
+            .trim()
+            .split(/\s+/)
+            // A placeholder like "n/a" would match anything starting with its letters.
+            .filter((word) => word && !isPlaceholderPartNumber(word))
+            .map((word) => {
+                const literal = /[a-z]/i.test(word)
+                    ? uniqueTerms(partNumberSpans(word))
+                    : [word.toLowerCase()];
+                return [
+                    ...new Set([...uniqueTerms(nameSpans(word)), ...literal])
+                ];
+            })
+            .filter((terms) => terms.length > 0)
+    );
 }
 
-/** Splits on `NAME_SEPARATORS`, keeping a `"` that measures its number. */
-function splitWithMarks(text: string): string[] {
-    const tokens: string[] = [];
-    for (const piece of text.split(NAME_SEPARATORS)) {
-        // The split consumed the separators, so an inch mark left inside a
-        // piece ends the token it measures: `1"x2"` is two sizes.
-        for (const token of piece.split(/(?<=")/)) {
-            if (token) tokens.push(token);
-        }
-    }
-    return tokens;
-}
-
-/**
- * A part number identifies, it does not describe: it is indexed as typed, plus
- * its segments, so `WCP-1025` is found by the whole number or either half.
- */
-export function tokenizePartNumber(text: string): string[] {
-    const whole = clean(text)?.toLowerCase();
-    if (!whole) {
-        return [];
-    }
-    const segments = whole.split(PART_NUMBER_SEPARATORS).filter(Boolean);
-    return Array.from(new Set([whole, ...segments]));
-}
-
-/** The fields holding an identifier rather than a description. */
-function isPartNumberField(field?: string): boolean {
-    return field === PART_NUMBER_FIELD;
-}
-
-/** Splits a field's text the way that field reads; a query has no field. */
+/** MiniSearch's tokenizer: a field's text, or one query word (which has no field). */
 export function tokenize(text: string, field?: string): string[] {
     if (field === undefined) {
-        return tokenizeQuery(text);
+        return queryWords(text).flat();
     }
-    return isPartNumberField(field)
-        ? tokenizePartNumber(text)
-        : tokenizeName(text);
-}
-
-/**
- * A query is split both ways, since the caller may have typed either kind of
- * text: the words of a name, and the literal a part number is indexed as.
- */
-export function tokenizeQuery(text: string): string[] {
-    const tokens: string[] = [];
-    // The name reading keeps its case for processTerm to split camelCase on, so the
-    // literal reading of one word is a duplicate rather than a second term.
-    const seen = new Set<string>();
-    for (const word of text.trim().split(/\s+/)) {
-        // Typed, it is still the word for a part number nobody has, and searching its
-        // letters would answer with whatever starts with `n` or `a`.
-        if (!word || isPlaceholderPartNumber(word)) {
-            continue;
-        }
-        // Segments only what carries a letter, as a part number does: splitting a bare
-        // `1/2` would search `1`, and a prefix that short matches every number.
-        const literal = /[a-z]/i.test(word)
-            ? tokenizePartNumber(word)
-            : [word.toLowerCase()];
-        for (const token of [...tokenizeName(word), ...literal]) {
-            if (seen.has(token.toLowerCase())) {
-                continue;
-            }
-            seen.add(token.toLowerCase());
-            tokens.push(token);
-        }
-    }
-    return tokens;
-}
-
-/**
- * Adds the words inside a compound term, so `MAXSpline` is found by `spline`.
- * A part number is left whole: its segments are already separate tokens.
- */
-export function processTerm(term: string, field?: string): string[] {
-    const base = term.toLowerCase();
-    if (isPartNumberField(field)) {
-        return [base];
-    }
-    const words = term.split(WORD_BOUNDARIES).map((word) => word.toLowerCase());
-    return Array.from(new Set([...words, base]));
+    return uniqueTerms(
+        field === PART_NUMBER_FIELD ? partNumberSpans(text) : nameSpans(text)
+    );
 }

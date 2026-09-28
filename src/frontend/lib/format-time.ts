@@ -2,10 +2,7 @@
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-/**
- * How long ago, counted in whole elapsed days rather than calendar ones — this
- * says how stale a load is, which no clock boundary changes.
- */
+/** Whole elapsed days, not calendar days. */
 export function formatDaysAgo(timestamp: number): string {
     const days = Math.floor((Date.now() - timestamp) / DAY_MS);
     if (days < 1) {

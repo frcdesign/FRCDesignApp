@@ -1,11 +1,15 @@
 import {
     Center,
     Checkbox,
+    type ComboboxProps,
     Loader,
     Select,
-    Stack,
-    TextInput
+    TextInput,
+    Tooltip
 } from "@mantine/core";
+import { InfoIcon } from "@phosphor-icons/react";
+import { AppIcon } from "../../../components/app-icon";
+import { StatusColor } from "../../../lib/style-constants";
 import {
     type Dispatch,
     ReactNode,
@@ -16,6 +20,7 @@ import {
     useState
 } from "react";
 import {
+    type PartialSelection,
     Selection,
     type ConfigurationKey,
     ConfigurationResult,
@@ -25,71 +30,76 @@ import {
     BooleanParameter,
     StringParameter,
     QuantityParameter,
-    UnitInfo,
-    EMPTY_UNIT_INFO,
     SearchRecord
 } from "@backend/features/configurations/contract";
 import {
     evaluateCondition,
-    findRecordForConfiguration,
     getEvaluateOptions,
-    getVisibleOptions
+    getVisibleOptions,
+    resolveSelectedOption
 } from "@backend/features/configurations/utils";
 import {
-    canonicalizeValue,
-    toKey,
-    toSelection
-} from "@backend/features/configurations/selection";
-import { evaluateExpression } from "@backend/features/configurations/input-parser";
-import { useConfigurationQuery, useUnitInfoQuery } from "../queries";
-import { SectionNotice } from "../../../components/app-zero-state";
-import { InputRow } from "../../../components/input-row";
-import { useTargetElement } from "../../../lib/onshape-params";
-import {
+    findRecord,
     normalizeSelection,
-    resolveSelectedOption,
+    onshapeOverrides,
     sameSelection,
-    withParameterValue
-} from "../parameter-value";
-import { seedFrom } from "../quantity-box";
+    toKey,
+    toSelection,
+    toStoredSelection,
+    fillDerivationValues
+} from "@backend/features/configurations/selection";
+import { isDerivationVariable } from "@backend/features/configurations/roles";
+import { evaluateExpression } from "@backend/features/configurations/input-parser";
+import { useConfigurationQuery, useUnitInfo } from "../queries";
+import { SectionError } from "../../../components/app-notice";
+import classes from "./configurations.module.css";
+import { withParameterValue } from "../parameter-value";
+
+/** Reported by the panel, since only it has the parameters. */
+export interface SelectionReport {
+    /** Whole, and settled against the parameters' conditions. */
+    selection: Selection;
+    /** What the url keeps. */
+    overrides: PartialSelection;
+    /** What a favorite keeps: the whole selection, less its derivation variables. */
+    stored: PartialSelection;
+    /** Names the selection's thumbnail. */
+    configurationKey: ConfigurationKey;
+    /** The part the selection produces, for the menu's header. */
+    record: SearchRecord | undefined;
+}
 
 interface ConfigurationWrapperProps {
     insertableId: string;
     microversionId: string;
-    selection?: Selection;
+    /** Partial until the parameters load: a search hit names only its own. */
+    selection?: PartialSelection;
     setSelection: Dispatch<Selection>;
-    /**
-     * Reported here because only this component has the parameters the key is
-     * measured against.
-     */
-    onConfigurationKey?: (configurationKey: ConfigurationKey) => void;
-    /** Reports the record the selection produces, for the menu's header. */
-    onRecord?: (record: SearchRecord | undefined) => void;
-    /**
-     * A row was moved, as against the panel settling the selection on load.
-     * Any interaction counts, including picking what was already picked.
-     */
+    onReport?: (report: SelectionReport) => void;
+    /** A person changed a row, as opposed to the panel settling on load. */
     onEdit?: () => void;
 }
 
-/** Reports the selection's key, and the record it resolves to. */
 function useReportSelection(
-    parameters: ConfigurationParameter[] | undefined,
-    records: SearchRecord[] | undefined,
+    result: ConfigurationResult | undefined,
     selection: Selection | undefined,
-    onConfigurationKey?: (configurationKey: ConfigurationKey) => void,
-    onRecord?: (record: SearchRecord | undefined) => void
+    onReport?: (report: SelectionReport) => void
 ) {
     useEffect(() => {
-        if (!parameters || !selection) {
+        if (!result || !selection) {
             return;
         }
-        const configurationKey = toKey(selection, parameters);
-        onConfigurationKey?.(configurationKey);
-        if (records) {
-            onRecord?.(findRecordForConfiguration(configurationKey, records));
-        }
-    }, [parameters, records, selection, onConfigurationKey, onRecord]);
+        onReport?.({
+            selection,
+            overrides: toStoredSelection(
+                onshapeOverrides(selection, result.parameters),
+                result.parameters
+            ),
+            stored: toStoredSelection(selection, result.parameters),
+            configurationKey: toKey(selection, result.parameters),
+            record: findRecord(selection, result.records)
+        });
+    }, [result, selection, onReport]);
 }
 
 export function ConfigurationWrapper(
@@ -100,54 +110,39 @@ export function ConfigurationWrapper(
         microversionId,
         selection,
         setSelection,
-        onConfigurationKey,
-        onRecord,
+        onReport,
         onEdit
     } = props;
 
     const query = useConfigurationQuery(insertableId, microversionId);
 
-    // Units come from the current document; empty when not connected to one, in
-    // which case each quantity renders in its own unit (see getEvaluateOptions).
-    const target = useTargetElement();
-    const unitInfoQuery = useUnitInfoQuery(target);
-    const unitInfo = unitInfoQuery.data ?? EMPTY_UNIT_INFO;
-
     const parameters = query.data?.parameters;
-    // Whole the moment the parameters are known, since a search hit names only
-    // its overrides, and settled against the conditions so a row never has to
-    // write its own value back through an effect.
+    // A search hit names only its overrides, so fill in the rest and apply the
+    // conditions here, rather than each row writing back its own value.
     const whole = useMemo(
         () =>
             parameters
-                ? normalizeSelection(
-                      toSelection(selection ?? {}, parameters),
+                ? fillDerivationValues(
+                      normalizeSelection(
+                          toSelection(selection ?? {}, parameters),
+                          parameters
+                      ),
                       parameters
                   )
                 : undefined,
         [parameters, selection]
     );
 
-    // The one place the panel writes back: the menu inserts the selection it
-    // holds, so settling has to reach it. `sameSelection` is what stops the
-    // loop, and it stops after one write only while normalizeSelection reaches
-    // a fixed point — see the cap it can bail out at.
+    // The menu inserts the selection it holds, so settling has to reach it.
+    // `sameSelection` stops the loop once normalizeSelection reaches a fixed point.
     useEffect(() => {
         if (whole && !sameSelection(selection, whole)) {
             setSelection(whole);
         }
     }, [whole, selection, setSelection]);
 
-    useReportSelection(
-        parameters,
-        query.data?.records,
-        whole,
-        onConfigurationKey,
-        onRecord
-    );
+    useReportSelection(query.data, whole, onReport);
 
-    // The rows' own writes, as against the settle above: same selection, but
-    // only this one is somebody configuring the part.
     const editSelection = useCallback(
         (newSelection: Selection) => {
             onEdit?.();
@@ -156,14 +151,11 @@ export function ConfigurationWrapper(
         [onEdit, setSelection]
     );
 
-    // Before the spinner: a failed fetch leaves `whole` undefined too, so
-    // testing that first would spin forever instead of reporting the failure.
+    // A failed fetch also leaves `whole` undefined, so check this first.
     if (query.isError) {
-        return <SectionNotice title="Failed to load selection." />;
+        return <SectionError title="Failed to load selection." />;
     }
-    // isLoading, not isPending: the units query sits disabled (and so forever
-    // pending) when there is no document to ask.
-    if (query.isPending || unitInfoQuery.isLoading || !whole) {
+    if (query.isPending || !whole) {
         return (
             <Center my="md">
                 <Loader />
@@ -176,7 +168,6 @@ export function ConfigurationWrapper(
             configurationResult={query.data}
             selection={whole}
             setSelection={editSelection}
-            unitInfo={unitInfo}
         />
     );
 }
@@ -185,18 +176,15 @@ interface ConfigurationParametersProps {
     configurationResult: ConfigurationResult;
     selection: Selection;
     setSelection: Dispatch<Selection>;
-    unitInfo: UnitInfo;
 }
 
 function ConfigurationParameters(
     props: ConfigurationParametersProps
 ): ReactNode {
-    const { configurationResult, selection, setSelection, unitInfo } = props;
+    const { configurationResult, selection, setSelection } = props;
 
-    // Spaced by the stack, not by a margin on each row, which the first row
-    // would add to the gap the body already leaves above it.
     return (
-        <Stack gap="sm">
+        <div className={classes.grid}>
             {configurationResult.parameters.map((parameter) => (
                 <ParameterRow
                     key={parameter.id}
@@ -204,32 +192,61 @@ function ConfigurationParameters(
                     selection={selection}
                     setSelection={setSelection}
                     parameters={configurationResult.parameters}
-                    unitInfo={unitInfo}
                 />
             ))}
-        </Stack>
+        </div>
     );
 }
+
+interface ParameterCellsProps {
+    parameter: ConfigurationParameter;
+    children: ReactNode;
+}
+
+/** A row of the grid: the parameter's name, then its control. */
+function ParameterCells(props: ParameterCellsProps): ReactNode {
+    const { parameter, children } = props;
+    return (
+        <>
+            <label className={classes.label} htmlFor={parameter.id}>
+                {parameter.name}
+            </label>
+            {children}
+        </>
+    );
+}
+
+// Lets a long option sit on one line where there is room.
+const DROPDOWN_PROPS: ComboboxProps = {
+    width: "max-content",
+    position: "bottom-end",
+    middlewares: {
+        shift: { padding: 8 },
+        size: {
+            padding: 8,
+            apply: ({ rects, availableWidth, elements }) => {
+                Object.assign(elements.floating.style, {
+                    minWidth: `${rects.reference.width}px`,
+                    maxWidth: `${availableWidth}px`
+                });
+            }
+        }
+    }
+};
 
 interface ParameterRowProps {
     parameter: ConfigurationParameter;
     selection: Selection;
     setSelection: Dispatch<Selection>;
     parameters: ConfigurationParameter[];
-    unitInfo: UnitInfo;
 }
 
-/**
- * One row, given its own component so its handler is a stable value. Built inside
- * the `.map` it replaces, it changed identity every render — and effects name it.
- */
+/** Its own component so its handler keeps a stable identity. */
 function ParameterRow(props: ParameterRowProps): ReactNode {
-    const { parameter, selection, setSelection, parameters, unitInfo } = props;
+    const { parameter, selection, setSelection, parameters } = props;
 
     const handleValueChange = useCallback(
         (newValue: string | undefined) => {
-            // Hands back the same selection when nothing moves, which React
-            // treats as no change at all.
             setSelection(withParameterValue(selection, parameter, newValue));
         },
         [parameter, selection, setSelection]
@@ -242,7 +259,6 @@ function ParameterRow(props: ParameterRowProps): ReactNode {
             selection={selection}
             parameters={parameters}
             onValueChange={handleValueChange}
-            unitInfo={unitInfo}
         />
     );
 }
@@ -254,7 +270,6 @@ interface ParameterProps<T extends ConfigurationParameter> {
     onValueChange: (newValue: string | undefined) => void;
     selection: Selection;
     parameters: ConfigurationParameter[];
-    unitInfo: UnitInfo;
 }
 
 function ParameterInput(
@@ -266,7 +281,6 @@ function ParameterInput(
         return null;
     }
 
-    // Narrowed on `parameter` rather than `props`, which carries the union.
     switch (parameter.type) {
         case ParameterType.ENUM:
             return <EnumInput {...props} parameter={parameter} />;
@@ -294,7 +308,7 @@ function EnumInput(props: ParameterProps<EnumParameter>): ReactNode {
     }
 
     return (
-        <InputRow label={parameter.name} htmlFor={parameter.id}>
+        <ParameterCells parameter={parameter}>
             <Select
                 id={parameter.id}
                 data={visibleOptions.map((option) => ({
@@ -302,61 +316,78 @@ function EnumInput(props: ParameterProps<EnumParameter>): ReactNode {
                     label: option.name
                 }))}
                 value={currentOption.id}
-                flex={1}
                 allowDeselect={false}
                 checkIconPosition="right"
                 maxDropdownHeight={250}
-                comboboxProps={{ withinPortal: true }}
+                comboboxProps={DROPDOWN_PROPS}
                 onChange={(newValue) => {
                     if (newValue !== null) {
                         onValueChange(newValue);
                     }
                 }}
             />
-        </InputRow>
+        </ParameterCells>
     );
 }
 
 function BooleanInput(props: ParameterProps<BooleanParameter>): ReactNode {
     const { parameter, value, onValueChange } = props;
     return (
-        <InputRow label={parameter.name} htmlFor={parameter.id} controlFirst>
+        <ParameterCells parameter={parameter}>
             <Checkbox
                 id={parameter.id}
+                className={classes.checkbox}
                 checked={(value ?? parameter.default) === "true"}
-                // The checkbox is shorter than an input, so center it against the label
-                style={{ alignSelf: "center" }}
-                styles={{
-                    input: { cursor: "pointer" }
-                }}
                 onChange={(event) =>
                     onValueChange(
                         event.currentTarget.checked ? "true" : "false"
                     )
                 }
             />
-        </InputRow>
+        </ParameterCells>
     );
 }
 
+const DERIVATION_VARIABLE_NOTE =
+    "Filled with a unique value, so each derive is its own configuration.";
+
 function StringInput(props: ParameterProps<StringParameter>): ReactNode {
     const { parameter, value, onValueChange } = props;
+    if (isDerivationVariable(parameter)) {
+        return (
+            <ParameterCells parameter={parameter}>
+                <TextInput
+                    id={parameter.id}
+                    value={value ?? parameter.default}
+                    readOnly
+                    rightSection={
+                        <Tooltip label={DERIVATION_VARIABLE_NOTE}>
+                            <AppIcon
+                                icon={InfoIcon}
+                                color={StatusColor.DIMMED}
+                            />
+                        </Tooltip>
+                    }
+                />
+            </ParameterCells>
+        );
+    }
     return (
-        <InputRow label={parameter.name} htmlFor={parameter.id}>
+        <ParameterCells parameter={parameter}>
             <TextInput
                 id={parameter.id}
                 value={value ?? parameter.default}
-                flex={1}
                 onChange={(event) => onValueChange(event.currentTarget.value)}
             />
-        </InputRow>
+        </ParameterCells>
     );
 }
 
 function QuantityInput(props: ParameterProps<QuantityParameter>): ReactNode {
-    // Alone among the inputs in holding its own state: the box keeps what was
-    // typed, and `value` re-seeds it only when it changes somewhere else.
-    const { parameter, value, onValueChange, unitInfo } = props;
+    // Keeps what was typed; `value` re-seeds it only when it changes elsewhere.
+    const { parameter, value, onValueChange } = props;
+    // Doesn't hold up the panel: the box shows its own unit until these arrive.
+    const unitInfo = useUnitInfo();
 
     const evaluateOptions = useMemo(
         () => getEvaluateOptions(parameter, unitInfo),
@@ -365,50 +396,50 @@ function QuantityInput(props: ParameterProps<QuantityParameter>): ReactNode {
 
     const inputRef = useRef<HTMLInputElement>(null);
     const [focused, setFocused] = useState(false);
+    // Some browsers drop the focus selection on the click's mouseup, so reselect.
+    const selectOnMouseUp = useRef(false);
 
     const [box, setBox] = useState(() =>
-        seedFrom(value, parameter, evaluateOptions)
+        evaluateExpression(value ?? parameter.default, evaluateOptions)
     );
 
-    // A value this box did not submit came from elsewhere — a favorite, a
-    // search hit — so the typed expression it replaces is no longer the value.
+    // A value this box didn't submit came from elsewhere, such as a favorite.
     const [emitted, setEmitted] = useState(value);
     if (value !== emitted) {
         setEmitted(value);
-        setBox(seedFrom(value, parameter, evaluateOptions));
+        setBox(evaluateExpression(value ?? parameter.default, evaluateOptions));
     }
 
     const handleSubmit = () => {
         setFocused(false);
         const result = evaluateExpression(box.expression, evaluateOptions);
-        if (result.hasError) {
-            // Don't change the value so the thumbnail is still okay
-            setBox({
-                expression: result.expression,
-                display: result.expression,
-                errorMessage: result.errorMessage
-            });
+        setBox(result);
+        // An error keeps the last good value, so the thumbnail still matches it.
+        if (result.errorMessage) {
             return;
         }
-        setBox({
-            expression: result.expression,
-            display: result.displayExpression
-        });
-        // Canonical, so the menu holds a selection like everywhere else;
-        // `expression` keeps what was typed for as long as this input lives.
-        const canonical = canonicalizeValue(parameter, result.expression);
-        setEmitted(canonical);
-        onValueChange(canonical);
+        // The expression, so the derived feature shows what was typed.
+        setEmitted(result.expression);
+        onValueChange(result.expression);
     };
 
     return (
-        <InputRow label={parameter.name} htmlFor={parameter.id}>
+        <ParameterCells parameter={parameter}>
             <TextInput
                 id={parameter.id}
                 ref={inputRef}
                 value={focused ? box.expression : box.display}
                 error={box.errorMessage}
-                flex={1}
+                onMouseDown={(event) => {
+                    selectOnMouseUp.current =
+                        document.activeElement !== event.currentTarget;
+                }}
+                onMouseUp={(event) => {
+                    if (selectOnMouseUp.current) {
+                        selectOnMouseUp.current = false;
+                        event.preventDefault();
+                    }
+                }}
                 onFocus={(event) => {
                     setFocused(true);
                     event.currentTarget.select();
@@ -421,12 +452,11 @@ function QuantityInput(props: ParameterProps<QuantityParameter>): ReactNode {
                     }
                 }}
                 onChange={(event) => {
-                    // Read before the updater runs: React nulls `currentTarget`
-                    // once the handler returns, and an updater runs after that.
+                    // React clears `currentTarget` before the updater runs.
                     const expression = event.currentTarget.value;
                     setBox((current) => ({ ...current, expression }));
                 }}
             />
-        </InputRow>
+        </ParameterCells>
     );
 }

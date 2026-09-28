@@ -14,8 +14,7 @@ import {
 } from "./metrics";
 import { formatCount, formatPercent } from "./format";
 
-// The charts' styles, imported where the charts are so they land in the same
-// route chunk rather than the panel's bundle.
+// Imported here so the styles land in the dashboard's chunk.
 import "@mantine/charts/styles.layer.css";
 
 // Keeps the hover panel short enough to fit beside a tile on a laptop.
@@ -102,10 +101,7 @@ export function LibraryInsertsChart({
     );
 }
 
-/**
- * Season markers, placed by month: a season opens and closes on month bounds,
- * and the championship closing it moves within its month every year.
- */
+/** By month, since the championship moves within its month each year. */
 function seasonLines(
     programs: Program[] | undefined,
     points: BucketPoint[]
@@ -117,8 +113,6 @@ function seasonLines(
 
     const labels = new Map<string, string[]>();
     const mark = (month: string, label: string) => {
-        // A monthly bucket is the month; a finer one falls inside it, and the
-        // first such bucket is where the month begins on the axis.
         const bucket = buckets.find((candidate) => candidate.startsWith(month));
         if (bucket === undefined) return;
         const existing = labels.get(bucket) ?? [];

@@ -47,10 +47,7 @@ function canonicalPrecision(type: UnitType): number {
     return Math.round(-Math.log10(TOLERANCE[type]));
 }
 
-/**
- * The one spelling of a value: its base unit, to the decimals its tolerance
- * distinguishes. Two values read as equal spell the same, which is why it keys.
- */
+/** Base unit, to the precision its tolerance distinguishes: equal values spell the same. */
 export function formatBaseValue(value: ValueWithUnits): string {
     return formatValueWithUnits(
         value,
@@ -59,10 +56,7 @@ export function formatBaseValue(value: ValueWithUnits): string {
     );
 }
 
-/**
- * The same value in another unit, still to full precision — every unit here is
- * larger than its base, so the decimals a base spelling keeps are never fewer.
- */
+/** Full precision, since every unit here is larger than its base. */
 export function formatValueInUnit(value: ValueWithUnits, unit: Unit): string {
     return formatValueWithUnits(value, unit, canonicalPrecision(value.type));
 }
@@ -129,10 +123,7 @@ interface ValueWithUnits {
 
 interface ValueLiteral {
     value: number;
-    /**
-     * The raw string value.
-     * Used to maintain decimal accuracy.
-     */
+    /** Kept as a string to preserve decimal accuracy. */
     rawValue: string;
     type: UnitType;
     unit: Unit;
@@ -277,8 +268,7 @@ function classifyUnit(identifier: string): Unit {
 }
 
 /*
- * The grammar below, which the recursive-descent parser implements but does not
- * state. Precedence tightest first: unary sign, `*` and `/`, unit, `+` and `-`.
+ * Precedence, tightest first: unary sign, `*` and `/`, unit, `+` and `-`.
  *
  *   EXP     ::= POSTFIX { ("+" | "-") POSTFIX }
  *   POSTFIX ::= TERM [ Identifier ]           // the unit applies to the TERM
@@ -306,8 +296,7 @@ PRIMARY.setPattern(
             };
             return { kind: "value", value: valueLiteral };
         }),
-        // Kept as a node rather than unwrapped to the inner expression, so
-        // `stringify` writes the parens back and its output re-parses.
+        // Kept as a node so `stringify` writes the parens back.
         apply(
             kmid(tok(TokenKind.LParen), EXP, tok(TokenKind.RParen)),
             (expr): Expr => ({ kind: "paren", expr })
@@ -396,8 +385,8 @@ function getOpName(op: Operator): string {
 }
 
 /**
- * Matching Onshape, a type is only assumed for the final result — so unitless +
- * unit is always invalid, as are units on a unitless quantityType.
+ * Like Onshape, a type is only assumed for the final result, so unitless + unit
+ * is invalid, as are units on a unitless quantity type.
  */
 function evaluateExpressionValue(
     expr: Expr,
@@ -491,8 +480,6 @@ function evaluateExpressionValue(
                     );
 
                 case "/":
-                    // unit / number -> unit
-                    // number / number -> number
                     if (right.type === "number") {
                         if (tolerantEqualsZero(right)) {
                             throw new ParseError(`Cannot divide by 0`);
@@ -564,109 +551,64 @@ function roundToPrecision(num: number, precision: number): string {
     return String(Math.round(num * factor) / factor);
 }
 
-function formatExpression(
-    expr: Expr,
+/** What a quantity type measures, and so the only kind a result may be. */
+function expectedType(quantityType: QuantityType): UnitType {
+    switch (quantityType) {
+        case QuantityType.LENGTH:
+            return "length";
+        case QuantityType.ANGLE:
+            return "angle";
+        case QuantityType.INTEGER:
+        case QuantityType.REAL:
+            return "number";
+    }
+}
+
+/** Why a value the parser accepted can't go in this box, if it can't. */
+function checkValue(
     value: ValueWithUnits,
     options: EvaluateOptions
-): Result | ErrorResult {
-    const { quantityType, displayUnit, displayPrecision } = options;
-
-    let expression = stringify(expr);
-    if (
-        (quantityType === QuantityType.LENGTH ||
-            quantityType === QuantityType.ANGLE) &&
-        value.type === "number"
-    ) {
-        value = valueWithUnits(value.value, displayUnit);
-
-        if (expr.kind === "binary") {
-            expression = `(${expression})`;
-        }
-        expression = expression + " " + getUnitDisplayStr(displayUnit);
+): string | undefined {
+    const expected = expectedType(options.quantityType);
+    // "2 deg" parses in a length box, and the bounds check would throw on it.
+    if (value.type !== expected) {
+        return `Expected ${expected === "number" ? "a number" : `a ${expected}`}`;
     }
-
+    const format = (bound: ValueWithUnits) =>
+        formatValueWithUnits(
+            bound,
+            options.displayUnit,
+            options.displayPrecision
+        );
     if (tolerantLessThan(value, options.min)) {
-        return {
-            hasError: true,
-            expression,
-            errorMessage: `Value must be greater than or equal to ${formatValueWithUnits(
-                options.min,
-                options.displayUnit,
-                options.displayPrecision
-            )}`
-        };
-    } else if (tolerantGreaterThan(value, options.max)) {
-        return {
-            hasError: true,
-            expression,
-            errorMessage: `Value must be less than or equal to ${formatValueWithUnits(
-                options.max,
-                options.displayUnit,
-                options.displayPrecision
-            )}`
-        };
+        return `Value must be greater than or equal to ${format(options.min)}`;
     }
-
-    return {
-        hasError: false,
-        displayExpression: formatValueWithUnits(
-            value,
-            displayUnit,
-            displayPrecision
-        ),
-        expression
-    };
+    if (tolerantGreaterThan(value, options.max)) {
+        return `Value must be less than or equal to ${format(options.max)}`;
+    }
+    return undefined;
 }
 
-export interface Result {
-    hasError: false;
-    /**
-     * The formatted result. Includes the value rounded to the correct display precision and the display unit.
-     * @example `12.00 in`
-     */
-    displayExpression: string;
-    /**
-     * The formatted expression. Essentially the raw input with clean spacing and possibly the display unit applied.
-     * @example "(3.5 + 8.5) in"
-     */
+/** What a quantity box shows for an input. */
+export interface EvaluatedExpression {
+    /** The input with clean spacing, and the display unit if it had none: "(3.5 + 8.5) in". */
     expression: string;
-}
-
-interface ErrorResult {
-    hasError: true;
-    /**
-     * The original, unformatted expression.
-     */
-    expression: string;
-    /**
-     * An error message to display to the user.
-     */
-    errorMessage: string;
+    /** Rounded to display precision, in the display unit: `12.00 in`; the expression when it has an error. */
+    display: string;
+    errorMessage?: string;
 }
 
 export interface EvaluateOptions {
-    /**
-     * The type of the expression.
-     */
     quantityType: QuantityType;
-    /**
-     * Number of decimals to round to.
-     * Should be 0 for real and integer expressions.
-     */
+    /** 0 for real and integer expressions. */
     displayPrecision: number;
-    /**
-     * Unit to use in the displayExpression.
-     * Should be unitless for real and integer expressions.
-     */
+    /** Unitless for real and integer expressions. */
     displayUnit: Unit;
     max: ValueWithUnits;
     min: ValueWithUnits;
 }
 
-/**
- * The value in base units: meters, radians, or unitless. A bare number takes
- * `defaultUnit`, as in the input; undefined when it does not parse.
- */
+/** In meters, radians or unitless; a bare number takes `defaultUnit`. */
 export function evaluateBaseValue(
     input: string,
     quantityType: QuantityType,
@@ -685,41 +627,55 @@ export function evaluateBaseValue(
     ) {
         value = valueWithUnits(value.value, defaultUnit);
     }
-    return value;
+    return value.type === expectedType(quantityType) ? value : undefined;
 }
 
 export function evaluateExpression(
     input: string,
     options: EvaluateOptions
-): Result | ErrorResult {
-    const quantityType = options.quantityType;
+): EvaluatedExpression {
+    const { quantityType, displayUnit, displayPrecision } = options;
+    const failed = (expression: string, errorMessage: string) => ({
+        expression,
+        display: expression,
+        errorMessage
+    });
 
     if (input.trim().length === 0) {
-        return {
-            hasError: true,
-            expression: input,
-            errorMessage: "Enter an expression"
-        };
+        return failed(input, "Enter an expression");
     }
 
-    let expr;
-    let value;
+    let expr: Expr;
+    let value: ValueWithUnits;
     try {
         expr = parseExpression(input);
         value = evaluateExpressionValue(expr, quantityType);
     } catch (error) {
-        let errorMessage;
-        if (error instanceof ParseError) {
-            errorMessage = error.message;
-        } else {
-            errorMessage = "Invalid expression";
-        }
-        return {
-            hasError: true,
-            expression: input,
-            errorMessage
-        };
+        return failed(
+            input,
+            error instanceof ParseError ? error.message : "Invalid expression"
+        );
     }
 
-    return formatExpression(expr, value, options);
+    let expression = stringify(expr);
+    if (
+        (quantityType === QuantityType.LENGTH ||
+            quantityType === QuantityType.ANGLE) &&
+        value.type === "number"
+    ) {
+        value = valueWithUnits(value.value, displayUnit);
+        if (expr.kind === "binary") {
+            expression = `(${expression})`;
+        }
+        expression += " " + getUnitDisplayStr(displayUnit);
+    }
+
+    const errorMessage = checkValue(value, options);
+    if (errorMessage) {
+        return failed(expression, errorMessage);
+    }
+    return {
+        expression,
+        display: formatValueWithUnits(value, displayUnit, displayPrecision)
+    };
 }

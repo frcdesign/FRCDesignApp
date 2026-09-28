@@ -16,18 +16,18 @@ import type {
 import {
     CATEGORY_COLOR,
     FontWeight,
-    MUTED_MARK
+    MUTED_MARK,
+    StatusColor
 } from "../../lib/style-constants";
 import { formatCount, formatPercent } from "./format";
+import { ImplicitDefaultBadge } from "./implicit-default";
+import { AppBreadcrumbs } from "../../components/breadcrumbs";
 
 interface ConfigurationBreakdownProps {
     parameters: ConfigurationParameterUsage[];
 }
 
-/**
- * Per-parameter value counts, which is how a wrong default shows itself: the
- * default sitting below another value, or options nobody ever picks.
- */
+/** Shows a wrong default: one below another value, or options nobody picks. One card per instance. */
 export function ConfigurationBreakdown({
     parameters
 }: ConfigurationBreakdownProps): ReactNode {
@@ -43,7 +43,7 @@ export function ConfigurationBreakdown({
         <Stack>
             {parameters.map((parameter) => (
                 <ParameterCard
-                    key={parameter.parameterId}
+                    key={`${parameter.parameterId}-${parameter.path.join(">")}`}
                     parameter={parameter}
                 />
             ))}
@@ -57,17 +57,16 @@ interface ParameterCardProps {
 
 function ParameterCard({ parameter }: ParameterCardProps): ReactNode {
     return (
-        <Card withBorder padding="md" radius="md">
+        <Card padding="md">
             <Group justify="space-between" mb="sm" wrap="wrap">
-                <Group gap="xs">
-                    <Title order={5}>{parameter.name}</Title>
-                    <Badge variant="light" color={CATEGORY_COLOR} size="sm">
-                        {parameter.type}
-                    </Badge>
+                <Group gap="xs" wrap="wrap">
+                    <AppBreadcrumbs
+                        crumbs={parameter.path.map((label) => ({ label }))}
+                        current={<Title order={5}>{parameter.name}</Title>}
+                    />
+                    <Badge color={CATEGORY_COLOR}>{parameter.type}</Badge>
                 </Group>
-                <Text size="sm" c="dimmed">
-                    {formatCount(parameter.total)} recorded
-                </Text>
+                <Text c="dimmed">{formatCount(parameter.total)} recorded</Text>
             </Group>
 
             {/* A quantity takes any number the user types, so the list of
@@ -91,7 +90,6 @@ function ParameterCard({ parameter }: ParameterCardProps): ReactNode {
     );
 }
 
-/** Six rows or so, past which the card scrolls rather than the page. */
 const VALUES_HEIGHT = 260;
 
 interface ValueRowProps {
@@ -101,33 +99,50 @@ interface ValueRowProps {
 
 function ValueRow({ value, total }: ValueRowProps): ReactNode {
     const percent = total === 0 ? 0 : (value.count / total) * 100;
+    // Either is what an insert lands on untouched.
+    const lands = value.isDefault || value.isImplicitDefault;
 
     return (
         <div>
             <Group justify="space-between" gap="xs" mb={4}>
                 <Group gap="xs">
                     <Text
-                        size="sm"
                         c={value.count === 0 ? "dimmed" : undefined}
-                        fw={value.isDefault ? FontWeight.SEMI_BOLD : undefined}
+                        fw={lands ? FontWeight.SEMI_BOLD : undefined}
                     >
                         {value.label}
                     </Text>
-                    {value.isDefault && (
-                        <Badge size="xs" variant="light">
-                            Default
-                        </Badge>
-                    )}
+                    <DefaultBadge value={value} />
                 </Group>
-                <Text size="sm" c="dimmed">
+                <Text c="dimmed">
                     {formatCount(value.count)} ({formatPercent(percent)})
                 </Text>
             </Group>
             <Progress
                 value={percent}
-                color={value.isDefault ? undefined : MUTED_MARK}
+                color={lands ? undefined : MUTED_MARK}
                 size="sm"
             />
         </div>
     );
+}
+
+interface DefaultBadgeProps {
+    value: ConfigurationValueUsage;
+}
+
+function DefaultBadge({ value }: DefaultBadgeProps): ReactNode {
+    if (value.isImplicitDefault) {
+        return (
+            <ImplicitDefaultBadge
+                size="xs"
+                variant="light"
+                color={StatusColor.INFO}
+            />
+        );
+    }
+    if (value.isDefault) {
+        return <Badge size="xs">Default</Badge>;
+    }
+    return null;
 }

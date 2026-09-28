@@ -3,6 +3,7 @@ import type { BatchItem } from "drizzle-orm/batch";
 import { type Db, getDb } from "../../db/client";
 import { chunkForInArray } from "../../db/chunk";
 import { ElementType } from "../../lib/onshape/element-type";
+import type { DocumentPath } from "../../lib/onshape/path";
 import type { ThumbnailUrls } from "../thumbnails/contract";
 import {
     addBuildIssue,
@@ -24,9 +25,15 @@ import {
     type GroupTarget,
     type InsertableTarget,
     type LoadContext,
+    type LoadingGroup,
     getOnshapeApiFromContext
 } from "./context";
+import {
+    deleteStaleThumbnailWorkspaces,
+    syncThumbnailWorkspace
+} from "../thumbnails/workspace";
 import { ONSHAPE_STEP_RETRIES, uploadThumbnailsStep } from "./steps";
+import { deleteStaleThumbnails } from "../thumbnails/reconcile";
 
 interface GroupLoadResult {
     loadedElements: number;
@@ -46,17 +53,29 @@ interface ParsedGroup {
     versionId?: string;
     /** Moves with `versionId`, so the row's date is always that version's. */
     versionCreatedAt?: Date;
+    /** Moves with `versionId`, which it holds. */
+    thumbnailWorkspaceId?: string;
 }
 
 export async function loadGroup(
     ctx: LoadContext,
-    target: GroupTarget,
+    group: GroupTarget,
     forceReload: boolean
 ): Promise<GroupLoadResult> {
-    const { groupId, versionPath } = target;
+    const { groupId, versionPath } = group;
 
-    // Read once and derive from it: the loadable tabs, and the element the
-    // group's own thumbnail comes from, which is often not one of them.
+    // Here rather than when resolving, so a skipped group branches nothing.
+    const thumbnailPath = await ctx.step.do(
+        `thumbnail-workspace-${groupId}`,
+        { retries: ONSHAPE_STEP_RETRIES },
+        async () =>
+            syncThumbnailWorkspace(
+                await getOnshapeApiFromContext(ctx),
+                versionPath
+            )
+    );
+    const target: LoadingGroup = { ...group, thumbnailPath };
+
     const contents = await ctx.step.do(
         `document-contents-${groupId}`,
         { retries: ONSHAPE_STEP_RETRIES },
@@ -105,6 +124,44 @@ export async function loadGroup(
         })
     );
 
+    // After the save, so the rows name what this load stored.
+    await ctx.step
+        .do(`delete-stale-thumbnails-${groupId}`, () =>
+            deleteStaleThumbnails(ctx.env.BLOB, getDb(ctx.env.DB), {
+                documentId: versionPath.documentId,
+                elementIds: [
+                    ...contents.elements.map((element) => element.id),
+                    ...storedInsertables.map((stored) => stored.elementId)
+                ],
+                dropRenders: forceReload
+            })
+        )
+        .catch((error: unknown) => {
+            console.error(
+                `Failed to delete stale thumbnails of ${groupId}`,
+                error
+            );
+        });
+
+    // Only once the row names the kept workspace. A leftover is clutter, not
+    // breakage, so this is never fatal.
+    if (failedInsertableIds.length === 0) {
+        await ctx.step
+            .do(`delete-stale-workspaces-${groupId}`, async () =>
+                deleteStaleThumbnailWorkspaces(
+                    await getOnshapeApiFromContext(ctx),
+                    versionPath,
+                    await namedWorkspaces(getDb(ctx.env.DB), versionPath)
+                )
+            )
+            .catch((error: unknown) => {
+                console.error(
+                    `Failed to delete stale thumbnail workspaces of ${groupId}`,
+                    error
+                );
+            });
+    }
+
     return {
         loadedElements: insertablesToLoad.length - failedInsertableIds.length,
         deletedElements: removedInsertableIds.length,
@@ -112,10 +169,23 @@ export async function loadGroup(
     };
 }
 
+/** The thumbnail workspaces the document's groups name, in every library. */
+async function namedWorkspaces(
+    db: Db,
+    document: DocumentPath
+): Promise<Set<string>> {
+    const rows = await db
+        .select({ workspaceId: groups.thumbnailWorkspaceId })
+        .from(groups)
+        .where(eq(groups.documentId, document.documentId));
+    return new Set(
+        rows.flatMap((row) => (row.workspaceId ? [row.workspaceId] : []))
+    );
+}
+
 /**
- * Starts every selected insertable at once, returning the ids of the ones that
- * failed. `loadInsertable` holds a limiter slot for the part of itself that
- * asks Onshape anything, so what runs in parallel here is bounded there.
+ * Returns the ids that failed. `loadInsertable` takes a limiter slot for its
+ * Onshape calls, which bounds the parallelism.
  */
 async function loadInsertables(
     ctx: LoadContext,
@@ -127,8 +197,7 @@ async function loadInsertables(
             try {
                 await loadInsertable(ctx, target);
             } catch (error) {
-                // The only record of why: the row stores that it failed, never
-                // what failed.
+                // The row records only that it failed, so this is the only record of why.
                 console.error(
                     `Failed to load insertable ${target.insertableId} (${target.name})`,
                     error
@@ -140,19 +209,15 @@ async function loadInsertables(
     return failedInsertableIds;
 }
 
-/**
- * The group's own thumbnail. Which element it comes from is its own question,
- * asked here rather than in the renderer, which only renders.
- */
 async function loadDocumentThumbnail(
     ctx: LoadContext,
-    target: GroupTarget,
+    target: LoadingGroup,
     contents: OnshapeDocumentContents
 ): Promise<ThumbnailUrls | null> {
-    const { groupId, versionPath, workspacePath } = target;
+    const { groupId, thumbnailPath } = target;
 
-    // Never fatal: `checkGroup` already flags a missing thumbnail, and failing
-    // the load over a cosmetic one would lose the group's insertables.
+    // Not fatal: `checkGroup` flags a missing thumbnail, and failing here would
+    // lose the group's insertables.
     const element = documentThumbnailElement(target, contents);
     if (!element) {
         return null;
@@ -165,19 +230,13 @@ async function loadDocumentThumbnail(
             uploadThumbnails(
                 ctx.env.BLOB,
                 await getOnshapeApiFromContext(ctx),
-                { ...versionPath, elementId: element.id },
-                { ...workspacePath, elementId: element.id },
+                { ...thumbnailPath, elementId: element.id },
                 element.microversionId
             )
     );
 }
 
-/**
- * The element a group's thumbnail is taken from: the one the document
- * designates, or the first it has. Which element that is, and the document's
- * name, both came back with the document when the group was resolved, so this
- * asks Onshape nothing.
- */
+/** The element the document designates, or its first. */
 function documentThumbnailElement(
     target: GroupTarget,
     contents: OnshapeDocumentContents
@@ -198,13 +257,9 @@ interface SaveGroupInput {
     failedInsertableIds: string[];
 }
 
-/**
- * Writes the group row, applies the document's tab order, drops the insertables
- * whose tabs are gone, and flags the ones that failed to load.
- */
 async function saveGroup(
     db: Db,
-    target: GroupTarget,
+    target: LoadingGroup,
     input: SaveGroupInput
 ): Promise<void> {
     const { thumbnailUrls, removedInsertableIds } = input;
@@ -220,21 +275,20 @@ async function saveGroup(
         smallThumbnailUrl: thumbnailUrls?.small ?? null,
         largeThumbnailUrl: thumbnailUrls?.large ?? null,
         buildIssues,
-        // Stamp the successful load; failures never reach here, so a failed
-        // reload leaves the group's last-good time untouched.
+        // Failed loads never get here, so they keep the last good time.
         lastLoadedAt: new Date()
     };
     if (!hasFailedInsertables) {
         parsed.versionId = target.versionPath.instanceId;
         parsed.versionCreatedAt = target.versionCreatedAt;
+        parsed.thumbnailWorkspaceId = target.thumbnailPath.instanceId;
     }
 
     const writes: BatchItem<"sqlite">[] = [
         db.update(groups).set(parsed).where(eq(groups.id, target.groupId))
     ];
     if (!hasFailedInsertables) {
-        // A skipped tab never reaches saveInsertable, so move the whole group
-        // forward: the stale id is what insertion and document links use.
+        // Skipped tabs are never saved, so move the whole group to the new version.
         writes.push(
             db
                 .update(insertables)
@@ -253,8 +307,7 @@ async function saveGroup(
                 .where(eq(insertables.id, insertableId))
         );
     }
-    // Configurations and favorites follow deleted insertables via their
-    // cascading foreign keys.
+    // Configurations and favorites cascade.
     for (const ids of chunkForInArray(removedInsertableIds)) {
         writes.push(db.delete(insertables).where(inArray(insertables.id, ids)));
     }
@@ -266,15 +319,14 @@ async function saveGroup(
 }
 
 /**
- * Keeps the issues the last good load recorded. A brand-new insertable has no
- * row yet, so the group's `INSERTABLES_FAILED` covers it instead.
+ * Keeps the issues the last good load recorded. A new insertable has no row,
+ * so the group's `INSERTABLES_FAILED` covers it.
  */
 async function flagFailedInsertables(
     db: Db,
     failedInsertableIds: string[]
 ): Promise<BatchItem<"sqlite">[]> {
-    // Chunked: a rate-limited load can fail more insertables at once than one
-    // statement can bind ids for.
+    // Chunked: a rate-limited load can fail more ids than one statement binds.
     const reads = await Promise.all(
         chunkForInArray(failedInsertableIds).map((ids) =>
             db
@@ -299,15 +351,11 @@ async function flagFailedInsertables(
     );
 }
 
-/**
- * What an existing insertable row contributes to the reload decision: its id, so
- * a reload keeps it, and its microversion, to tell whether it changed.
- */
 export interface StoredInsertable {
     id: string;
     elementId: string;
     microversionId: string;
-    /** Read so a row the last load failed on is retried rather than skipped. */
+    /** So a row the last load failed on is retried. */
     buildIssues: BuildIssue[];
     /** Where the row sits now, which is what the tab order is compared against. */
     sortOrder: number;
@@ -330,16 +378,11 @@ async function fetchStoredInsertables(
 }
 
 /**
- * New tabs, stored ones whose microversion changed, and stored ones the last
- * load failed on. A stored insertable keeps its id so favorites and links
- * survive.
- *
- * The failed ones are picked up because a failure writes no microversion: the
- * tab looks unchanged next time, so matching on it alone would leave a
- * transient Onshape failure flagged until someone forced a reload.
+ * New tabs, changed ones, and ones the last load failed on: a failure writes no
+ * microversion, so the tab would otherwise look unchanged.
  */
 export function selectInsertablesToLoad(
-    target: GroupTarget,
+    target: LoadingGroup,
     insertableTabs: OnshapeElement[],
     stored: StoredInsertable[],
     forceReload: boolean
@@ -366,10 +409,7 @@ export function selectInsertablesToLoad(
             groupId: target.groupId,
             elementPath: { ...target.versionPath, elementId: tab.id },
             versionCreatedAt: target.versionCreatedAt,
-            elementWorkspacePath: {
-                ...target.workspacePath,
-                elementId: tab.id
-            },
+            thumbnailPath: { ...target.thumbnailPath, elementId: tab.id },
             // OnshapeElementType and the app ElementType share these values.
             elementType: tab.elementType as unknown as ElementType,
             name: tab.name,
@@ -380,10 +420,6 @@ export function selectInsertablesToLoad(
     return insertableTargets;
 }
 
-/**
- * Finds the stored insertables whose tab no longer exists in the document;
- * their ids are the rows to delete.
- */
 export function findRemovedInsertables(
     insertableTabs: OnshapeElement[],
     storedInsertables: StoredInsertable[]
@@ -395,18 +431,14 @@ export function findRemovedInsertables(
 }
 
 /** A stored insertable's new position in the document's tab order. */
-export interface InsertableOrder {
+interface InsertableOrder {
     insertableId: string;
     sortOrder: number;
 }
 
 /**
- * The stored rows the tab order has moved, with the positions to write.
- *
- * Reordering tabs changes no microversion, so the moved rows are usually ones
- * the load skips entirely: the order has to be written from the tab list rather
- * than fall out of saving an insertable. A new row already carries its position
- * from `selectInsertablesToLoad`, and a removed one is not in the tab list.
+ * Stored rows the tab order moved. Reordering changes no microversion, so these
+ * are usually rows the load skips, and the order is written here instead.
  */
 export function findMovedInsertables(
     insertableTabs: OnshapeElement[],

@@ -12,12 +12,7 @@ import {
     ArrowUUpLeftIcon,
     WarningIcon
 } from "@phosphor-icons/react";
-import {
-    BORDER,
-    IconSize,
-    SECTION_HEADER_HEIGHT,
-    StatusColor
-} from "../../../../../lib/style-constants";
+import { IconSize, StatusColor } from "../../../../../lib/style-constants";
 import { ReactNode } from "react";
 import { SearchResults } from "../../../../../features/search/components/search-results";
 import { InsertSource } from "@backend/features/analytics/usage";
@@ -29,18 +24,20 @@ import { ItemTable } from "../../../../../components/item-row";
 import { AppContextMenu, MenuButton } from "../../../../../components/app-menu";
 import { SearchCallout } from "../../../../../features/search/components/search-errors";
 import {
-    PageNotice,
     SectionNotice,
-    SectionLoading
-} from "../../../../../components/app-zero-state";
+    SectionLoading,
+    SectionError,
+    PageNotice
+} from "../../../../../components/app-notice";
 import {
     ClearFiltersButton,
     useVendorFilters
 } from "../../../../../features/settings/components/vendor-filters";
 import { useLibraryQuery } from "../../../../../features/library/queries";
 import { useLibraryId } from "../../../../../lib/library";
-import { updateUiState, useGetUiState } from "../../../../../lib/ui-state";
+import { updateUiState, useUiState } from "../../../../../lib/ui-state";
 import { AppIcon } from "../../../../../components/app-icon";
+import styles from "../../../../../lib/styles.module.css";
 
 export const Route = createFileRoute("/app/library/$libraryId/groups/$groupId")(
     {
@@ -54,17 +51,18 @@ export const Route = createFileRoute("/app/library/$libraryId/groups/$groupId")(
 function GroupList(): ReactNode {
     const navigate = useNavigate();
     const libraryQuery = useLibraryQuery();
-    const { libraryId, groupId } = useParams({
+    const libraryId = useLibraryId();
+    const { groupId } = useParams({
         from: "/app/library/$libraryId/groups/$groupId"
     });
 
-    const uiState = useGetUiState();
+    const searchQuery = useUiState((state) => state.searchQuery);
     const vendorFilters = useVendorFilters();
 
     if (libraryQuery.isPending) {
         return <SectionLoading title="Loading group..." />;
     } else if (libraryQuery.isError) {
-        return <SectionNotice title="Failed to load group." />;
+        return <SectionError title="Failed to load group." />;
     }
     const groups = libraryQuery.data.groups;
     const insertables = libraryQuery.data.insertables;
@@ -75,7 +73,6 @@ function GroupList(): ReactNode {
         return (
             <PageNotice
                 title="Group not found"
-                description={null}
                 justifyUp
                 action={
                     <Button
@@ -96,10 +93,10 @@ function GroupList(): ReactNode {
     }
 
     let content: ReactNode;
-    if (uiState.searchQuery) {
+    if (searchQuery) {
         content = (
             <SearchResults
-                query={uiState.searchQuery}
+                query={searchQuery}
                 filters={{
                     vendors: vendorFilters,
                     groupId: group.id
@@ -119,11 +116,9 @@ function GroupList(): ReactNode {
                 its list wants and no more, capped at what the main region has
                 left — which is what `min-height` allows it to shrink to. */}
             <Box
-                style={{
-                    borderBottom: BORDER,
-                    minHeight: 0,
-                    overflowY: "auto"
-                }}
+                className={styles.dividerBottom}
+                mih={0}
+                style={{ overflowY: "auto" }}
             >
                 {content}
                 <Outlet />
@@ -144,7 +139,8 @@ function GroupHeaderRow(props: GroupHeaderRowProps): ReactNode {
 
     const header = (
         <Box
-            className="interactive"
+            // The same header the library's sections draw, divider and all.
+            className={`interactive ${styles.sectionHeader} ${styles.dividerBottom}`}
             onClick={() =>
                 void navigate({
                     to: "/app/library/$libraryId",
@@ -152,14 +148,9 @@ function GroupHeaderRow(props: GroupHeaderRowProps): ReactNode {
                 })
             }
             px="md"
-            h={SECTION_HEADER_HEIGHT}
-            // Owned here, as an accordion control owns its own, so the row and
-            // its divider measure the same as a section header's. It is also
-            // the one part that does not shrink: the list below gives up its
-            // room, never the header naming it.
-            style={{ borderBottom: BORDER, flexShrink: 0 }}
+            display="flex"
         >
-            <Group wrap="nowrap" justify="space-between" h="100%">
+            <Group justify="space-between" flex={1}>
                 <AppTitle
                     icon={<ArrowLeftIcon size={IconSize.MEDIUM} />}
                     title={group.name}
@@ -189,14 +180,11 @@ function GroupListContent(props: GroupListCardsProps): ReactNode {
 
     if (groupInsertables.length === 0) {
         return group.isLoaded ? (
-            <SectionNotice
-                title="This group has no visible elements"
-                description={null}
-            />
+            <SectionNotice title="This group has no visible elements" />
         ) : (
             <SectionNotice
                 title="This group failed to load."
-                description="Reload documents to try again, or delete the group."
+                description="Reload outdated documents to try again, or delete the group."
             />
         );
     }

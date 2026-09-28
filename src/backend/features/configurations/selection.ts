@@ -1,52 +1,43 @@
 /**
- * The two forms a configuration takes, and the only place either is built.
- * Canonicalizing is lossy: "2 + 3 in" survives only in the input it was typed into.
+ * Builds the two forms of a configuration: a selection, as entered, and the
+ * key derived from it to name a thumbnail. See AGENTS.md.
  */
 import {
     type ConfigurationKey,
     type ConfigurationParameter,
+    type ConfigurationRecord,
     ParameterType,
     type PartialSelection,
     type QuantityParameter,
     type Selection
 } from "./contract";
+import { getUnitDisplayStr } from "./enums";
+import { isDerivationVariable } from "./roles";
 import {
     DEFAULT_QUANTITY_PRECISION,
-    decodeConfiguration,
     encodeConfiguration,
-    evaluateCondition
+    evaluateCondition,
+    getVisibleOptions,
+    resolveSelectedOption
 } from "./utils";
 import {
     evaluateBaseValue,
     formatBaseValue,
-    formatValueInUnit,
     formatValueWithUnits
 } from "./input-parser";
 
-/** Normalizes one parameter's raw value to its canonical spelling. */
-export function canonicalizeValue(
-    parameter: ConfigurationParameter,
-    value: string
+/** A quantity's default in the parameter's own unit, e.g. "1 in". */
+export function quantityDefault(
+    parameter: Pick<QuantityParameter, "defaultValue" | "unit">
 ): string {
-    if (parameter.type === ParameterType.QUANTITY) {
-        // "1in", "1 in" and "25.4 mm" are one configuration: the parser reads
-        // them to one base value. Unparseable values ride as typed.
-        const base = evaluateBaseValue(
-            value,
-            parameter.quantityType,
-            parameter.unit
-        );
-        return base === undefined ? value.trim() : formatBaseValue(base);
-    }
-    if (parameter.type === ParameterType.BOOLEAN) {
-        return value.trim().toLowerCase();
-    }
-    return value.trim();
+    const abbreviation = getUnitDisplayStr(parameter.unit);
+    const value = String(parameter.defaultValue);
+    return abbreviation ? `${value} ${abbreviation}` : value;
 }
 
 /**
- * Every declared parameter, canonically spelled and in parameter order. Filled
- * from the defaults, so a partial map — a search hit's overrides — comes whole.
+ * Every declared parameter, as entered, with missing ones defaulted. Checkboxes
+ * are normalized to Onshape's spelling and quantities trimmed.
  */
 export function toSelection(
     values: PartialSelection,
@@ -54,18 +45,19 @@ export function toSelection(
 ): Selection {
     const selection: Selection = {};
     for (const parameter of parameters) {
-        selection[parameter.id] = canonicalizeValue(
-            parameter,
-            values[parameter.id] ?? parameter.default
-        );
+        const value = values[parameter.id] ?? parameter.default;
+        if (parameter.type === ParameterType.BOOLEAN) {
+            selection[parameter.id] = value.trim().toLowerCase();
+        } else if (parameter.type === ParameterType.QUANTITY) {
+            selection[parameter.id] = value.trim();
+        } else {
+            selection[parameter.id] = value;
+        }
     }
     return selection;
 }
 
-/**
- * What a selection actually applies: Onshape never applies a parameter its
- * condition hides, so a hidden one is left off.
- */
+/** Drops parameters hidden by a condition, which Onshape never applies. */
 export function appliedValues(
     selection: Selection,
     parameters: ConfigurationParameter[]
@@ -83,8 +75,51 @@ export function appliedValues(
     return values;
 }
 
-/** What a selection changes from the element's own defaults, and nothing else. */
-function overriddenValues(
+/** Quantities in base units, so "1in", "1 in" and "25.4 mm" agree. */
+export function canonicalValue(
+    parameter: ConfigurationParameter,
+    value: string
+): string {
+    if (parameter.type !== ParameterType.QUANTITY) {
+        return value;
+    }
+    const base = evaluateBaseValue(
+        value,
+        parameter.quantityType,
+        parameter.unit
+    );
+    return base === undefined ? value : formatBaseValue(base);
+}
+
+/**
+ * Applied values, canonically spelled, for comparing and counting. Derivation
+ * variables are left out since each insert's is unique.
+ */
+export function canonicalValues(
+    selection: Selection,
+    parameters: ConfigurationParameter[]
+): Selection {
+    const applied = appliedValues(selection, parameters);
+    const values: Selection = {};
+    for (const parameter of parameters) {
+        const value = applied[parameter.id];
+        if (value !== undefined && !isDerivationVariable(parameter)) {
+            values[parameter.id] = canonicalValue(parameter, value);
+        }
+    }
+    return values;
+}
+
+/** Whether a value is the parameter's default, however either is spelled. */
+function isDefault(parameter: ConfigurationParameter, value: string): boolean {
+    return (
+        canonicalValue(parameter, value) ===
+        canonicalValue(parameter, parameter.default)
+    );
+}
+
+/** The values that differ from the element's defaults, as entered. */
+export function onshapeOverrides(
     selection: Selection,
     parameters: ConfigurationParameter[]
 ): Selection {
@@ -92,7 +127,7 @@ function overriddenValues(
     const overrides: Selection = {};
     for (const parameter of parameters) {
         const value = values[parameter.id];
-        if (value !== undefined && value !== parameter.default) {
+        if (value !== undefined && !isDefault(parameter, value)) {
             overrides[parameter.id] = value;
         }
     }
@@ -100,84 +135,89 @@ function overriddenValues(
 }
 
 /**
- * A selection's identity: what it overrides, encoded. Two selections that
- * render the same thing key the same, and so share a cache entry.
+ * Selections that render the same part get the same key, so derivation
+ * variables are left out.
  */
 export function toKey(
     selection: Selection,
     parameters: ConfigurationParameter[]
 ): ConfigurationKey {
-    return encodeConfiguration(overriddenValues(selection, parameters));
-}
-
-/**
- * Values encoded the way Onshape is told them, quantities in their own unit.
- * Never a key and never stored as one: a key is an identity, so it stays in
- * base units where two equal values spell alike, while this is only ever read
- * by Onshape, which would rather be told "1.5 in".
- */
-function encodeForOnshape(
-    values: Selection,
-    parameters: ConfigurationParameter[]
-): string {
-    const spelled: Selection = {};
+    const overrides = onshapeOverrides(selection, parameters);
+    const canonical: Selection = {};
     for (const parameter of parameters) {
-        const value = values[parameter.id];
-        if (value === undefined) {
-            continue;
+        const value = overrides[parameter.id];
+        if (value !== undefined && !isDerivationVariable(parameter)) {
+            canonical[parameter.id] = canonicalValue(parameter, value);
         }
-        spelled[parameter.id] =
-            parameter.type === ParameterType.QUANTITY
-                ? toExpression(parameter, value)
-                : value;
     }
-    return encodeConfiguration(spelled);
+    return encodeConfiguration(canonical);
 }
 
-/** The overrides an insert hands Onshape: the short form, empty for defaults. */
-export function toOnshapeConfiguration(
+/** Gives each derivation variable still at its default a unique value, so each derive is its own configuration. */
+export function fillDerivationValues(
     selection: Selection,
-    parameters: ConfigurationParameter[]
-): string {
-    return encodeForOnshape(
-        overriddenValues(selection, parameters),
-        parameters
-    );
-}
-
-/**
- * The shortest configuration that is not empty: the first parameter the
- * selection applies, at the value it applies. Onshape fills the rest in from the
- * element's own defaults, so it names the same render "" does — for a caller
- * that must hand Onshape a configuration but cannot hand it "".
- *
- * Itself empty only when a condition hides every parameter the element has.
- */
-export function toShortestConfiguration(
-    selection: Selection,
-    parameters: ConfigurationParameter[]
-): string {
-    const values = appliedValues(selection, parameters);
-    const first = parameters.find(
-        (parameter) => values[parameter.id] !== undefined
-    );
-    return first === undefined ? "" : encodeForOnshape(values, [first]);
-}
-
-/** The selection a key names: its overrides, over the parameters' defaults. */
-export function fromKey(
-    key: ConfigurationKey,
     parameters: ConfigurationParameter[]
 ): Selection {
-    return toSelection(decodeConfiguration(key), parameters);
+    const next = { ...selection };
+    for (const parameter of parameters) {
+        if (
+            isDerivationVariable(parameter) &&
+            next[parameter.id] === parameter.default
+        ) {
+            next[parameter.id] = crypto.randomUUID();
+        }
+    }
+    return next;
 }
 
-/** A quantity in the unit its parameter declares, rather than the base unit it
- * is stored in; everything else already reads as stored. */
+/** Strips derivation variables before a selection is stored or shared. */
+export function toStoredSelection(
+    selection: PartialSelection,
+    parameters: ConfigurationParameter[]
+): PartialSelection {
+    const stored = { ...selection };
+    for (const parameter of parameters) {
+        if (isDerivationVariable(parameter)) {
+            delete stored[parameter.id];
+        }
+    }
+    return stored;
+}
+
+/**
+ * Records name only what enumeration varied, so several can match; the most
+ * specific wins.
+ */
+export function findRecord<T extends Pick<ConfigurationRecord, "values">>(
+    selection: Selection,
+    records: T[]
+): T | undefined {
+    let best: T | undefined;
+    let bestNamed = -1;
+    for (const record of records) {
+        const named = Object.entries(record.values);
+        const matches = named.every(([id, value]) => selection[id] === value);
+        if (matches && named.length > bestNamed) {
+            best = record;
+            bestNamed = named.length;
+        }
+    }
+    return best;
+}
+
+/**
+ * Enums are left as their option id, which the caller spells from the options
+ * it holds.
+ */
 export function formatValue(
     parameter: ConfigurationParameter,
     value: string
 ): string {
+    if (parameter.type === ParameterType.BOOLEAN) {
+        if (value === "true") return "Yes";
+        if (value === "false") return "No";
+        return value;
+    }
     if (parameter.type !== ParameterType.QUANTITY) {
         return value;
     }
@@ -195,23 +235,59 @@ export function formatValue(
           );
 }
 
-/**
- * What Onshape is handed for a quantity: the parameter's own unit, so a derived
- * feature reads "1.5 in" rather than the "0.0381 meter" a selection stores.
- * Both name the same value — this is the one a person recognizes as theirs.
- *
- * Not the expression that was typed: that lives in the input and nowhere else,
- * so "2 + 3 in" arrives here as "5 in". Unlike {@link formatValue} it keeps
- * every decimal, being the value Onshape builds from rather than a label.
- */
-export function toExpression(
-    parameter: QuantityParameter,
-    value: string
-): string {
-    const base = evaluateBaseValue(
-        value,
-        parameter.quantityType,
-        parameter.unit
+/** One pass: hidden parameters take their default, enums the option they land on. */
+function normalizeOnce(
+    selection: Selection,
+    parameters: ConfigurationParameter[]
+): Selection {
+    const next = { ...selection };
+    for (const parameter of parameters) {
+        if (!evaluateCondition(parameter.condition, next, parameters)) {
+            next[parameter.id] = parameter.default;
+            continue;
+        }
+        if (parameter.type !== ParameterType.ENUM) {
+            continue;
+        }
+        const visible = getVisibleOptions(parameter, next, parameters);
+        next[parameter.id] =
+            resolveSelectedOption(
+                visible,
+                next[parameter.id],
+                parameter.default
+            )?.id ?? parameter.default;
+    }
+    return next;
+}
+
+export function sameSelection(
+    a: PartialSelection | undefined,
+    b: Selection
+): boolean {
+    if (!a) return false;
+    const keys = Object.keys(b);
+    return (
+        keys.length === Object.keys(a).length &&
+        keys.every((key) => a[key] === b[key])
     );
-    return base === undefined ? value : formatValueInUnit(base, parameter.unit);
+}
+
+/**
+ * Repeated because settling one parameter can change another's options. The
+ * pass cap stops parameters whose conditions name each other, so the result
+ * isn't always a fixed point.
+ */
+export function normalizeSelection(
+    selection: Selection,
+    parameters: ConfigurationParameter[]
+): Selection {
+    let current = selection;
+    for (let pass = 0; pass <= parameters.length; pass++) {
+        const next = normalizeOnce(current, parameters);
+        if (sameSelection(current, next)) {
+            return current;
+        }
+        current = next;
+    }
+    return current;
 }

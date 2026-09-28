@@ -26,8 +26,7 @@ describe("parseNameVendor", () => {
         expect(parseNameVendor("REDUX module")).toBe(Vendor.REDUX);
     });
 
-    // FTC vendors spell themselves out in element names rather than using the
-    // code a part number carries.
+    // FTC vendors spell out their names.
     it("detects a vendor written as its whole name", () => {
         expect(parseNameVendor("goBILDA 5203 Motor")).toBe(Vendor.GB);
         expect(parseNameVendor("Misumi Extrusion")).toBe(Vendor.MIS);
@@ -49,7 +48,6 @@ describe("parseVendors", () => {
                 type: ParameterType.ENUM as const,
                 id: "vendor",
                 name: "Vendor",
-                isCosmetic: false,
                 default: "wcp",
                 condition: undefined,
                 optionConditions: [],
@@ -70,7 +68,6 @@ describe("parseVendors", () => {
                 type: ParameterType.ENUM as const,
                 id: "vendor",
                 name: "Vendor",
-                isCosmetic: false,
                 default: "am",
                 condition: undefined,
                 optionConditions: [],
@@ -87,7 +84,6 @@ describe("parseVendors", () => {
                 type: ParameterType.QUANTITY as const,
                 id: "length",
                 name: "Length",
-                isCosmetic: false,
                 default: "10 mm",
                 condition: undefined,
                 quantityType: QuantityType.LENGTH,
@@ -100,8 +96,6 @@ describe("parseVendors", () => {
         expect(parseVendors("Generic Part", parameters)).toEqual([]);
     });
 
-    // Custom marks a part nobody sells, so a missing part number is expected
-    // rather than a warning. The name is the only thing that sets it.
     it("reads Custom out of a name, whatever its case", () => {
         expect(parseVendors("Custom Bracket", [])).toEqual([Vendor.CUSTOM]);
         expect(parseVendors("CUSTOM gusset", [])).toEqual([Vendor.CUSTOM]);
@@ -116,7 +110,6 @@ const vendorParameter = {
     id: "vendor",
     name: "Vendor",
     default: "wcp",
-    isCosmetic: false,
     type: ParameterType.ENUM as const,
     options: [
         { id: "wcp", name: "West Coast Products" },

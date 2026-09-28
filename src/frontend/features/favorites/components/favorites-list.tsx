@@ -13,11 +13,12 @@ import {
     type FavoritesData
 } from "@backend/features/favorites/contract";
 import type { Insertables } from "@backend/features/library/contract";
-import { useGetUiState } from "../../../lib/ui-state";
+import { useUiState } from "../../../lib/ui-state";
 import {
+    SectionNotice,
     SectionLoading,
-    SectionNotice
-} from "../../../components/app-zero-state";
+    SectionError
+} from "../../../components/app-notice";
 import {
     NoSearchResultError,
     SearchCallout
@@ -32,20 +33,16 @@ import { FavoriteIcon } from "./favorite-button";
 import { startSignIn } from "../../auth/sign-in";
 import { useVendorFilters } from "../../settings/components/vendor-filters";
 
-/**
- * A list of current favorite cards.
- * Unlike the normal DocumentList, this list can be searched directly.
- */
+/** Unlike DocumentList, this list can be searched directly. */
 export function FavoritesList(): ReactNode {
-    const { searchQuery } = useGetUiState();
+    const searchQuery = useUiState((state) => state.searchQuery);
     const vendorFilters = useVendorFilters();
 
     const { signedIn, isPending } = useAccessData();
     const favoritesQuery = useFavoritesQuery();
     const libraryQuery = useLibraryQuery();
 
-    // Only once known, and ahead of the pending branch, which favorites never
-    // leaves while signed out: the query stays disabled rather than 401.
+    // Before the pending branch, which never resolves while signed out.
     if (!isPending && !signedIn) {
         return <SignInToViewFavorites />;
     } else if (
@@ -56,7 +53,7 @@ export function FavoritesList(): ReactNode {
         return <SectionLoading title="Loading favorites..." />;
     } else if (libraryQuery.isError || favoritesQuery.isError) {
         return (
-            <SectionNotice
+            <SectionError
                 title="Failed to load favorites."
                 icon={
                     <AppIcon
@@ -131,9 +128,9 @@ function FavoriteSearchResults(props: FavoriteSearchResultsProps): ReactNode {
     if (searchDbQuery.isLoading) {
         return <SectionLoading title="Searching..." />;
     } else if (searchDbQuery.isError) {
-        return <SectionNotice title="Failed to load search database." />;
+        return <SectionError title="Failed to load search database." />;
     } else if (!searchDbQuery.data) {
-        return <SectionNotice title="The search database is empty." />;
+        return <SectionError title="The search database is empty." />;
     }
 
     const result = searchInsertables({
@@ -144,10 +141,7 @@ function FavoriteSearchResults(props: FavoriteSearchResultsProps): ReactNode {
         favoritedInsertableIds: new Set(
             Object.values(favoritesData.favorites).map((f) => f.insertableId)
         ),
-        // A favorite is one configuration, but the index's configuration fields
-        // describe all of them at once, so matching on those pulls a favorite up
-        // for a query naming a configuration the user never saved. Off until
-        // favorites are indexed as themselves.
+        // A favorite is one configuration, so other configurations' fields mustn't match.
         searchConfigurations: false,
         showHidden
     });

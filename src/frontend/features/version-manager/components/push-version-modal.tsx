@@ -7,7 +7,6 @@ import {
     TextInput,
     Textarea
 } from "@mantine/core";
-import { modals } from "@mantine/modals";
 import { ArrowLineUpIcon } from "@phosphor-icons/react";
 import { useState, type ReactNode } from "react";
 import {
@@ -19,6 +18,7 @@ import {
     type WorkspacePath
 } from "@backend/features/version-manager/contract";
 import { AppModalBody, AppModalFooter } from "../../../components/app-modal";
+import { useAppModal } from "../../../components/open-app-modal";
 import { IconSize, StatusColor } from "../../../lib/style-constants";
 import { useNextVersionNameQuery, usePushVersionMutation } from "../queries";
 import { showQuickActionTip } from "../version-manager-tips";
@@ -29,8 +29,6 @@ export interface PushVersionFormProps {
     target?: LinkedWorkspace;
     /** What the push reaches, named for the list above the button. */
     targets: string[];
-    /** Mantine's id for the modal this sits in, so a push can close it. */
-    modalId: string;
 }
 
 /**
@@ -39,7 +37,8 @@ export interface PushVersionFormProps {
  * without it, under the defaults shown here.
  */
 export function PushVersionForm(props: PushVersionFormProps): ReactNode {
-    const { workspace, target, targets, modalId } = props;
+    const { workspace, target, targets } = props;
+    const modal = useAppModal();
     // Undefined until somebody types: the field then shows the name Onshape is
     // about to be asked for, and what they type replaces it. Derived rather
     // than written into state when the query answers, which would be a state
@@ -72,7 +71,7 @@ export function PushVersionForm(props: PushVersionFormProps): ReactNode {
             { name, description: description.trim(), scope },
             {
                 onSuccess: () => {
-                    modals.close(modalId);
+                    modal.close();
                     if (!isEdited) {
                         showQuickActionTip(LinkDirection.CHILD);
                     }

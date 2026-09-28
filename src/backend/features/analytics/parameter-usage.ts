@@ -1,12 +1,9 @@
-/**
- * What a part's recorded configuration values say, merged with the parameters
- * it declares today.
- */
 import {
     ParameterType,
     type ConfigurationParameter
 } from "../configurations/contract";
-import { formatValue } from "../configurations/selection";
+import { toParameterInstances } from "../configurations/instances";
+import { canonicalValue, formatValue } from "../configurations/selection";
 import type {
     ConfigurationParameterUsage,
     ConfigurationValueUsage
@@ -15,51 +12,81 @@ import type {
 /** Values shown per free-form (non-enum) parameter before truncating. */
 const MAX_FREE_FORM_VALUES = 20;
 
+/** One value as it was recorded: what was chosen, and in which branch. */
+export interface ValueCount {
+    parameterId: string;
+    value: string;
+    /** See `toInstanceKeys`; empty for a parameter nothing conditions. */
+    instanceKey: string;
+    count: number;
+}
+
 /**
- * Merged with the parameters declared today, so an unused option still surfaces
- * and a retired one is dropped: nobody can pick it any more.
+ * Against today's parameters, so unused options show and retired ones drop.
+ * One entry per instance, counting only the rows keyed to a branch it covers.
+ * Rows from before keys were written count only where it is reported whole.
  */
 export function buildParameterUsage(
     parameters: ConfigurationParameter[],
-    valueRows: { parameterId: string; value: string; count: number }[]
+    valueRows: ValueCount[]
 ): ConfigurationParameterUsage[] {
     const rowsByParameter = Map.groupBy(valueRows, (row) => row.parameterId);
 
-    return parameters.map((parameter) => {
-        // `new Map(undefined)` is empty, which is what a parameter nobody has
-        // configured should read as.
-        const counts = new Map(
-            rowsByParameter
-                .get(parameter.id)
-                ?.map((row) => [row.value, row.count] as const)
+    return toParameterInstances(parameters).map((instance) => {
+        const parameter = instance.parameter;
+        const counts = countsFor(
+            rowsByParameter.get(parameter.id),
+            instance.keys
         );
 
-        const values =
-            parameter.type === ParameterType.ENUM
-                ? // Seed from the declared options so a never-picked one is visible.
-                  parameter.options.map((option) => ({
-                      value: option.id,
-                      label: option.name,
-                      count: counts.get(option.id) ?? 0,
-                      isDefault: option.id === parameter.default
-                  }))
-                : toFreeFormValues(counts, parameter, parameter.default);
+        const isEnum = parameter.type === ParameterType.ENUM;
+        const values = isEnum
+            ? // Seeded from the options this instance offers, so a never-picked
+              // one is visible and one it does not offer is not listed here.
+              instance.options.map((option) => ({
+                  value: option.id,
+                  label: option.name,
+                  count: counts.get(option.id) ?? 0,
+                  isDefault: option.id === parameter.default,
+                  ...(option.id === instance.implicitDefaultId && {
+                      isImplicitDefault: true
+                  })
+              }))
+            : // Counted canonically, so the default is looked up that way too.
+              toFreeFormValues(
+                  counts,
+                  parameter,
+                  canonicalValue(parameter, parameter.default)
+              );
 
         return {
             parameterId: parameter.id,
             name: parameter.name,
             type: parameter.type,
             defaultValue: parameter.default,
-            total: sumCounts(counts),
+            path: instance.path.map((step) => step.label),
+            // An enum's percentages add to 100; a free-form list is truncated, so it keeps the true total.
+            total: isEnum ? sumValues(values) : sumCounts(counts),
             values: values.sort((a, b) => b.count - a.count)
         };
     });
 }
 
-/**
- * Unbounded distinct values, so only the most-used are returned, plus the
- * default. Labelled in the parameter's unit; nobody reads a tube length in metres.
- */
+/** Narrowed to the branches `keys` names; absent keys count every branch. */
+function countsFor(
+    rows: ValueCount[] | undefined,
+    keys: string[] | undefined
+): Map<string, number> {
+    const wanted = keys === undefined ? undefined : new Set(keys);
+    const counts = new Map<string, number>();
+    for (const row of rows ?? []) {
+        if (wanted && !wanted.has(row.instanceKey)) continue;
+        counts.set(row.value, (counts.get(row.value) ?? 0) + row.count);
+    }
+    return counts;
+}
+
+/** The most-used values plus the default, in the parameter's unit. */
 function toFreeFormValues(
     counts: Map<string, number>,
     parameter: ConfigurationParameter,
@@ -90,4 +117,8 @@ function sumCounts(counts: Map<string, number>): number {
     let total = 0;
     for (const value of counts.values()) total += value;
     return total;
+}
+
+function sumValues(values: ConfigurationValueUsage[]): number {
+    return values.reduce((total, value) => total + value.count, 0);
 }

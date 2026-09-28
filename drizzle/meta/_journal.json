@@ -1,34 +1,55 @@
 {
-    "version": "7",
-    "dialect": "sqlite",
-    "entries": [
-        {
-            "idx": 0,
-            "version": "6",
-            "when": 1789005587221,
-            "tag": "0000_init",
-            "breakpoints": true
-        },
-        {
-            "idx": 1,
-            "version": "6",
-            "when": 1789095381551,
-            "tag": "0001_event_schema_version_and_configurations_key",
-            "breakpoints": true
-        },
-        {
-            "idx": 2,
-            "version": "6",
-            "when": 1789271293083,
-            "tag": "0002_build_issues_and_version_date",
-            "breakpoints": true
-        },
-        {
-            "idx": 3,
-            "version": "6",
-            "when": 1789753943139,
-            "tag": "0003_workspace_links",
-            "breakpoints": true
-        }
-    ]
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1789005587221,
+      "tag": "0000_init",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1789095381551,
+      "tag": "0001_event_schema_version_and_configurations_key",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1789271293083,
+      "tag": "0002_build_issues_and_version_date",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1790053337692,
+      "tag": "0003_user_tab",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1790116094276,
+      "tag": "0004_configuration_instance_key",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1790601046226,
+      "tag": "0005_library_loading",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1790603777658,
+      "tag": "0006_workspace_links",
+      "breakpoints": true
+    }
+  ]
 }

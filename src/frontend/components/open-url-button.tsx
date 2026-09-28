@@ -1,6 +1,5 @@
 import { Button } from "@mantine/core";
 import { ArrowSquareOutIcon } from "@phosphor-icons/react";
-import { IconSize } from "../lib/style-constants";
 import { openUrlInNewTab } from "../lib/url";
 
 interface UrlButtonProps {
@@ -11,9 +10,8 @@ interface UrlButtonProps {
 export function OpenUrlButton(props: UrlButtonProps) {
     return (
         <Button
-            leftSection={<ArrowSquareOutIcon size={IconSize.SMALL} />}
+            leftSection={<ArrowSquareOutIcon />}
             onClick={() => openUrlInNewTab(props.url)}
-            variant="light"
         >
             {props.text}
         </Button>

@@ -1,17 +1,16 @@
-/**
- * Import directly, not through `__test_utils__/index.ts`: the barrel reaches
- * `cloudflare:workers`, which `src/shared`'s node-project tests cannot resolve.
- */
+// Import directly: the barrel reaches `cloudflare:workers`, which node tests can't resolve.
 import {
     ParameterType,
     type BooleanParameter,
     type ConfigurationRecord,
     type EnumParameter,
     type QuantityParameter,
-    type UnitInfo
+    type StringParameter,
+    type UnitInfo,
+    ParameterRole
 } from "@backend/features/configurations/contract";
 import { QuantityType, Unit } from "@backend/features/configurations/enums";
-import { canonicalizeValue } from "@backend/features/configurations/selection";
+import { quantityDefault } from "@backend/features/configurations/selection";
 
 /** Builds an enum parameter whose options are named after their ids. */
 export function enumParam(
@@ -23,7 +22,6 @@ export function enumParam(
         id,
         name: id,
         default: optionIds[0],
-        isCosmetic: false,
         type: ParameterType.ENUM,
         options: optionIds.map((optionId) => ({
             id: optionId,
@@ -49,25 +47,32 @@ export function boolParam(id: string): BooleanParameter {
         id,
         name: id,
         default: "false",
-        isCosmetic: false,
         type: ParameterType.BOOLEAN
     };
 }
 
-/**
- * A length quantity parameter defaulting to 1 inch, canonically spelled — the
- * form `parseOnshapeConfiguration` stores, so tests compare like for like.
- */
+export function stringParam(id: string): StringParameter {
+    return { id, name: id, default: "", type: ParameterType.STRING };
+}
+
+/** A text parameter recognized, as a load would, as a derivation variable. */
+export function derivationParam(id: string): StringParameter {
+    return {
+        ...stringParam(id),
+        name: "Derivation Variable",
+        role: ParameterRole.DERIVATION_VARIABLE
+    };
+}
+
+/** Defaults to 1 inch, spelled as `parseOnshapeConfiguration` stores it. */
 export function quantityParam(
     id: string,
-    extra: Partial<QuantityParameter> = {}
+    extra: Omit<Partial<QuantityParameter>, "default"> = {}
 ): QuantityParameter {
-    const parameter: QuantityParameter = {
+    const parameter = {
         id,
         name: id,
-        default: "1 in",
-        isCosmetic: false,
-        type: ParameterType.QUANTITY,
+        type: ParameterType.QUANTITY as const,
         quantityType: QuantityType.LENGTH,
         defaultValue: 1,
         min: 0,
@@ -75,10 +80,7 @@ export function quantityParam(
         unit: Unit.INCH,
         ...extra
     };
-    return {
-        ...parameter,
-        default: canonicalizeValue(parameter, parameter.default)
-    };
+    return { ...parameter, default: quantityDefault(parameter) };
 }
 
 /** Document units: inches to 4 decimals, degrees to 3. */
@@ -95,7 +97,7 @@ export function configurationRecord(
     overrides: Partial<ConfigurationRecord> = {}
 ): ConfigurationRecord {
     return {
-        configurationKey: "",
+        values: {},
         hasMultipleParts: false,
         isOpenComposite: false,
         ...overrides

@@ -24,21 +24,14 @@ interface Window {
     to: string;
 }
 
-/**
- * The two trailing windows to compare, ending yesterday: a part-finished today
- * would manufacture a decline every morning that recovers by evening.
- */
-export function recentWindows(today: string): {
+/** Ends on the last reported day, since a partial today reads as a decline. */
+export function recentWindows(through: string): {
     current: Window;
     previous: Window;
 } {
-    // Yesterday back a month, inclusive: the -1 is what makes the span the
-    // count of days rather than one more than it.
-    const to = addDays(today, -1);
+    const to = through;
     const from = addDays(to, -(MONTH_DAYS - 1));
 
-    // The equal window immediately before, ending the day before `from`, so the
-    // two are the same length and share no day.
     return {
         current: { from, to },
         previous: {
@@ -48,10 +41,7 @@ export function recentWindows(today: string): {
     };
 }
 
-/**
- * Withholds the percentage when the baseline reaches back past the day tracking
- * started: that window is empty for want of recording, not of activity.
- */
+/** Withheld when the baseline predates tracking, since it's empty for want of data. */
 export function toComparison(
     current: number,
     previous: number,
@@ -79,8 +69,7 @@ export function toComparison(
         return { ...base, unavailable: ChangeUnavailable.PARTIAL_PRIOR_DATA };
     }
     if (previous === 0) {
-        // Both empty is a quiet stretch, not a gap in what was recorded — the
-        // difference decides whether the UI blames tracking or the period.
+        // Lets the UI tell a quiet stretch from missing data.
         return {
             ...base,
             unavailable:
@@ -125,10 +114,7 @@ async function countEvents(
     };
 }
 
-/**
- * Two queries rather than one: a COUNT(DISTINCT) cannot be split by a CASE, and
- * someone active in both windows counts once in each.
- */
+/** Two queries: COUNT(DISTINCT) can't be split by a CASE. */
 async function countPeople(
     db: Db,
     windows: { current: Window; previous: Window },
@@ -156,10 +142,6 @@ async function countPeople(
     return { current: current?.value ?? 0, previous: previous?.value ?? 0 };
 }
 
-/**
- * Measures one window pair three ways, so a set of comparisons is built from a
- * single description of what to compare.
- */
 async function measure(
     db: Db,
     windows: { current: Window; previous: Window },
@@ -190,16 +172,16 @@ async function measure(
 }
 
 /**
- * Growth for a library, or for the app when no library is given. The app spans
- * Sept–Apr, which covers FRC's Jan–Apr, so its season is named without a program.
+ * For the app when no library is given. The app's season spans Sept–Apr, which
+ * covers FRC's Jan–Apr, so it's named without a program.
  */
 export async function getGrowth(
     db: Db,
-    today: string,
+    through: string,
     trackingSince: string | undefined,
     libraryId?: LibraryId
 ): Promise<GrowthOut> {
-    const windows = recentWindows(today);
+    const windows = recentWindows(through);
     const recentLabels = {
         label: `Last ${MONTH_DAYS} days`,
         baselineLabel: `the ${MONTH_DAYS} days before`,
@@ -207,7 +189,7 @@ export async function getGrowth(
     };
 
     const program = libraryId ? LIBRARY_PROGRAM[libraryId] : Program.FTC;
-    const season = seasonWindow(program, today);
+    const season = seasonWindow(program, through);
     const baseline = baselineWindow(season);
     const seasonWindows = {
         current: { from: season.from, to: season.to },

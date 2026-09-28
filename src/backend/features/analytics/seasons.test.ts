@@ -42,8 +42,7 @@ describe("currentSeason", () => {
     it.each([
         ["2026-08-31", undefined],
         ["2026-09-01", "FTC 2026–27"],
-        // The one that a naive year lookup gets wrong: January belongs to a
-        // season that opened the previous September.
+        // January belongs to the season that opened the previous September.
         ["2027-01-15", "FTC 2026–27"],
         ["2027-04-30", "FTC 2026–27"],
         ["2027-05-01", undefined]
@@ -77,8 +76,6 @@ describe("seasonWindow", () => {
 
 describe("baselineWindow", () => {
     it("clips the baseline to the same elapsed stretch", () => {
-        // 32 days into 2027 compares against the first 32 days of 2026, not
-        // against the whole of it.
         const baseline = baselineWindow(
             seasonWindow(Program.FRC, "2027-02-01")
         );

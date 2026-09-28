@@ -1,7 +1,6 @@
 import {
     createFileRoute,
     Outlet,
-    redirect,
     retainSearchParams,
     type SearchSchemaInput
 } from "@tanstack/react-router";
@@ -9,12 +8,9 @@ import { AppShell } from "@mantine/core";
 import { useElementSize } from "@mantine/hooks";
 import { Suspense } from "react";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
-import * as z from "zod";
-import { Theme } from "@backend/features/settings/settings";
 import { adoptOnshapeLaunch } from "../../lib/onshape-params";
 import {
-    isReadOnlyInstance,
-    LAUNCH_KEYS,
+    type OnshapeLaunch,
     OnshapeLaunchType
 } from "../../lib/onshape-launch";
 import {
@@ -25,77 +21,43 @@ import {
 } from "../../lib/app-params";
 import { parseSearch } from "../../lib/search-params";
 import { AppNavbar } from "../../components/app-navbar";
-import { SectionLoading } from "../../components/app-zero-state";
+import { ProgramSelect } from "../../features/library/components/program-select";
+import { SectionLoading } from "../../components/app-notice";
 import { useMessageListener } from "../../lib/messages";
-import { updateUiState } from "../../lib/ui-state";
+import { usePushSync } from "../../lib/push-sync";
 import { RootAppError } from "../../components/root-error";
-
-/** What the entry redirect carries and the app takes off the url. */
-const LaunchSearchType = OnshapeLaunchType.extend({
-    /** The caller's saved theme, from their row. */
-    theme: z.enum(Theme).optional().catch(undefined)
-});
-
-type LaunchSearch = z.infer<typeof LaunchSearchType>;
 
 export const Route = createFileRoute("/app")({
     component: App,
     validateSearch: (search: Record<string, unknown> & SearchSchemaInput) => ({
-        ...parseSearch(LaunchSearchType, search),
+        ...parseSearch(OnshapeLaunchType, search),
         ...parseSearch(AppParamsType, search)
     }),
     search: {
-        // Only the app's own: a launch is taken into the store below and struck
-        // off, so navigating never carries the caller's document around.
         middlewares: [retainSearchParams([...APP_PARAM_KEYS])]
     },
-    beforeLoad: ({ search, location }) => {
-        adoptAppParams(search);
-        adoptOnshapeLaunch(search);
-        // The entry redirect seeds the account's saved theme; ui-state is what
-        // the app reads, so take it rather than leave a second answer in the url.
-        if (search.theme) {
-            updateUiState({ theme: search.theme }, { sync: false });
-        }
-        // Nothing to insert into, so the app cannot do its one job here.
-        if (isReadOnlyInstance(search)) {
-            throw redirect({ to: "/version-error", replace: true });
-        }
-        if (isLaunch(search)) {
-            throw redirect({
-                to: location.pathname,
-                search: strippedOfLaunch(search),
-                replace: true
-            });
-        }
-    },
+    beforeLoad: ({ search }) => adoptUrl(search),
     errorComponent: RootAppError
 });
 
-function isLaunch(search: LaunchSearch): boolean {
-    return (
-        search.theme !== undefined ||
-        LAUNCH_KEYS.some((key) => search[key] !== undefined)
-    );
-}
+// Once per load: after that the store is the source of truth, and in-app
+// navigation drops everything but the app's own params from the url.
+let adopted = false;
 
-/**
- * The url with the launch taken out. Undefined rather than absent:
- * `retainSearchParams` reads a missing key as one it should put back.
- */
-function strippedOfLaunch(search: LaunchSearch & AppParams): AppParams {
-    const cleared = Object.fromEntries(
-        [...LAUNCH_KEYS, "theme"].map((key) => [key, undefined])
-    );
-    return { ...search, ...cleared };
+function adoptUrl(search: OnshapeLaunch & AppParams): void {
+    if (adopted) {
+        return;
+    }
+    adopted = true;
+    adoptAppParams(search);
+    adoptOnshapeLaunch(search);
 }
 
 function App() {
-    // The navbar (control row + always-open filters) is self-sizing, so measure
-    // it and feed its height to AppShell rather than hardcoding one.
     const { ref: headerRef, height: headerHeight } = useElementSize();
 
     useMessageListener();
+    usePushSync();
 
     return (
         <AppShell header={{ height: headerHeight || 56 }}>
@@ -127,6 +89,8 @@ function App() {
                 </Suspense>
                 <TanStackRouterDevtools />
             </AppShell.Main>
+            {/* Over whichever library the app opened in, until it is answered. */}
+            <ProgramSelect />
         </AppShell>
     );
 }

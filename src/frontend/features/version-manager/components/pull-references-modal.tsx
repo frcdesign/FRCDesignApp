@@ -1,5 +1,4 @@
 import { Button, List, SegmentedControl, Stack, Text } from "@mantine/core";
-import { modals } from "@mantine/modals";
 import { ArrowLineDownIcon } from "@phosphor-icons/react";
 import { useState, type ReactNode } from "react";
 import {
@@ -10,6 +9,7 @@ import {
     type WorkspacePath
 } from "@backend/features/version-manager/contract";
 import { AppModalBody, AppModalFooter } from "../../../components/app-modal";
+import { useAppModal } from "../../../components/open-app-modal";
 import { IconSize, StatusColor } from "../../../lib/style-constants";
 import { usePullReferencesMutation } from "../queries";
 import { showQuickActionTip } from "../version-manager-tips";
@@ -20,7 +20,6 @@ export interface PullReferencesFormProps {
     source?: LinkedWorkspace;
     /** What the pull reads, named for the list above the button. */
     sources: string[];
-    modalId: string;
 }
 
 /**
@@ -29,7 +28,8 @@ export interface PullReferencesFormProps {
  * out-of-date reference the workspace has, linked or not.
  */
 export function PullReferencesForm(props: PullReferencesFormProps): ReactNode {
-    const { workspace, source, sources, modalId } = props;
+    const { workspace, source, sources } = props;
+    const modal = useAppModal();
     const [everything, setEverything] = useState(false);
     const pull = usePullReferencesMutation(workspace);
 
@@ -46,7 +46,7 @@ export function PullReferencesForm(props: PullReferencesFormProps): ReactNode {
     const submit = () => {
         pull.mutate(scope, {
             onSuccess: () => {
-                modals.close(modalId);
+                modal.close();
                 if (!isEdited) {
                     showQuickActionTip(LinkDirection.PARENT);
                 }

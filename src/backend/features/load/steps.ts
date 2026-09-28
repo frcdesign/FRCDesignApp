@@ -4,11 +4,8 @@ import { type ThumbnailUrls } from "../thumbnails/contract";
 import type { LoadContext } from "./context";
 
 /**
- * Pinned because the platform's curve compounds with the callbacks below:
- * `backoff` defaults to exponential and multiplies what `delay` returned, which
- * turned the thumbnail poll's capped 120 seconds into 120 × 2^7 — a run waiting
- * 4h16m between attempts. Cloudflare documents the two settings separately and,
- * as far as I saw, not how they combine, so that is read off a run.
+ * Workflows multiplies what `delay` returns by the backoff curve, which is
+ * undocumented; exponential turned a 120s delay into hours.
  */
 const CONSTANT_BACKOFF: WorkflowBackoff = "constant";
 
@@ -19,35 +16,26 @@ interface RetryDelayInput {
 }
 
 /**
- * Spread added on top of Onshape's `Retry-After`. Every step caught in one
- * burst is handed the same number to wait, so without this they all wake at the
- * same instant and re-send together — the burst that earned the 429. Twenty
- * seconds trickles a full set of probe slots back in at a few per second.
+ * Every step in a 429 burst gets the same `Retry-After`; without jitter they
+ * all retry at once and trip it again.
  */
 const RATE_LIMIT_JITTER_SECONDS = 20;
 
 /**
- * How long Onshape asked us to wait plus jitter, or `null` when the error
- * wasn't a rate limit.
- *
- * Read off the message: this runs on an error Workflows rebuilt, which is no
- * longer an `OnshapeRateLimitError`, so an `instanceof` here answered false for
- * every real 429 and quietly handed back the curve below instead.
+ * Undefined when the error wasn't a rate limit. Reads the message because
+ * Workflows rebuilds the error, so `instanceof` fails.
  */
-function rateLimitDelay(error: Error): `${number} seconds` | null {
+export function rateLimitDelay(error: Error): `${number} seconds` | undefined {
     const retryAfterSeconds = readRetryAfterSeconds(error);
-    if (retryAfterSeconds === null) {
-        return null;
+    if (retryAfterSeconds === undefined) {
+        return undefined;
     }
     // Rounded: Workflows documents whole units, not fractional ones.
     const jitter = Math.round(Math.random() * RATE_LIMIT_JITTER_SECONDS);
     return `${retryAfterSeconds + jitter} seconds`;
 }
 
-/**
- * Retry delay honoring Onshape's `Retry-After` on a 429, with an
- * exponential-ish fallback for other transient errors.
- */
+/** Honors `Retry-After` on a 429; exponential otherwise. */
 function onshapeRetryDelay(input: RetryDelayInput): `${number} seconds` {
     const rateLimited = rateLimitDelay(input.error);
     if (rateLimited) {
@@ -57,35 +45,30 @@ function onshapeRetryDelay(input: RetryDelayInput): `${number} seconds` {
     return `${seconds} seconds`;
 }
 
-/**
- * Every step that calls Onshape takes this. The platform default would retry
- * too, but on its own curve — a 429 carries a `Retry-After` and this is what
- * honors it. Five attempts, matching that default rather than shortening it.
- */
+/** For every step that calls Onshape, so a 429's `Retry-After` is honored. */
 export const ONSHAPE_STEP_RETRIES = {
     limit: 5,
     delay: onshapeRetryDelay,
     backoff: CONSTANT_BACKOFF
 };
 
-/**
- * Three tries about ten seconds apart, honouring a rate limit when Onshape
- * asks for one. The workspace either has the thumbnail or does not; this only
- * covers Onshape still writing one out just after a save.
- */
+/** A freshly branched workspace takes minutes to render: about 16 minutes in all. */
+const THUMBNAIL_RETRY_SECONDS = [30, 60, 120, 240, 240, 240];
+
+function thumbnailRetryDelay(input: RetryDelayInput): `${number} seconds` {
+    const scheduled = THUMBNAIL_RETRY_SECONDS.at(input.ctx.attempt - 1) ?? 240;
+    return rateLimitDelay(input.error) ?? `${scheduled} seconds`;
+}
+
 const THUMBNAIL_RETRIES = {
-    limit: 3,
-    delay: onshapeRetryDelay,
+    limit: THUMBNAIL_RETRY_SECONDS.length,
+    delay: thumbnailRetryDelay,
     backoff: CONSTANT_BACKOFF
 };
 
 /**
- * Fetches an element's thumbnails and returns where they are stored, or `null`
- * when neither the version nor the workspace would give one up — which the
- * caller records as a build issue rather than failing the whole load.
- *
- * Bounded by the run's limiter: these are ordinary Onshape reads that start no
- * render, so what caps them is the rate limit rather than anything else.
+ * `null` when Onshape never renders them, which becomes a build issue. The slot
+ * is taken outside the step so waiting for it doesn't count against its timeout.
  */
 export async function uploadThumbnailsStep(
     ctx: LoadContext,
@@ -93,12 +76,7 @@ export async function uploadThumbnailsStep(
     upload: () => Promise<ThumbnailUrls>
 ): Promise<ThumbnailUrls | null> {
     try {
-        // Slot first, step inside — the order `loadInsertable` already takes. A
-        // step's timeout covers its whole callback, so acquiring within one
-        // counted the wait for a slot against it: under a rate limit these spent
-        // all ten minutes queued behind probes that were themselves backing off,
-        // and timed out having asked Onshape for nothing.
-        return await ctx.limit(() =>
+        return await ctx.thumbnailLimit(() =>
             ctx.step.do(name, { retries: THUMBNAIL_RETRIES }, upload)
         );
     } catch {

@@ -1,6 +1,5 @@
 import { OnshapeApi } from "../client";
 import { ElementPath, toElementApiPath } from "../path";
-import { apiPath } from "../api-path";
 import { OnshapeConfigurationResponse } from "../types";
 
 export function getConfiguration(
@@ -8,8 +7,6 @@ export function getConfiguration(
     elementPath: ElementPath
 ): Promise<OnshapeConfigurationResponse> {
     return client.get(
-        apiPath("elements", elementPath, toElementApiPath, {
-            endRoute: "configuration"
-        })
+        `/elements${toElementApiPath(elementPath)}/configuration`
     );
 }

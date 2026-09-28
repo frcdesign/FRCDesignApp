@@ -1,19 +1,9 @@
-/**
- * The windows the dashboard reports over, and the one rate it derives.
- *
- * Imported by both sides, so it stays free of anything Worker-only.
- */
+/** Imported by both sides, so nothing Worker-only. */
 
-/**
- * What "a month" means throughout: the recent comparison window, a sparkline's
- * days, and the span a rate scales to. The dashboard titles itself from it.
- */
+/** The comparison window, a sparkline's length, and the span rates scale to. */
 export const MONTH_DAYS = 30;
 
-/**
- * Inserts per month, so a new part is not buried under an old one. The span is
- * floored at a month, or a first week of 2 extrapolates to 60.
- */
+/** Floored at a month, or a first week of 2 extrapolates to 60. */
 export function usesPerMonth(
     insertCount: number,
     firstInsertedAt: number | undefined,

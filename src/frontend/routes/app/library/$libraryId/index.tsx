@@ -12,8 +12,9 @@ import { SearchResults } from "../../../../features/search/components/search-res
 import { InsertSource } from "@backend/features/analytics/usage";
 import {
     SectionNotice,
-    SectionLoading
-} from "../../../../components/app-zero-state";
+    SectionLoading,
+    SectionError
+} from "../../../../components/app-notice";
 import { RequireAccessLevel } from "../../../../features/auth/access-level";
 import { AddGroupButton } from "../../../../features/library/components/add-group-menu";
 import { FavoritesList } from "../../../../features/favorites/components/favorites-list";
@@ -23,14 +24,15 @@ import {
     getLibraryStatus,
     useLibraryId
 } from "../../../../lib/library";
-import { useGetUiState, updateUiState } from "../../../../lib/ui-state";
+import { useShallow } from "zustand/react/shallow";
+import { updateUiState, useUiState } from "../../../../lib/ui-state";
 import { useVendorFilters } from "../../../../features/settings/components/vendor-filters";
 
 export const Route = createFileRoute("/app/library/$libraryId/")({
     component: HomeList,
     // Back in the library itself, which is where entry should resume.
     onEnter: () => {
-        updateUiState({ groupId: null });
+        updateUiState({ groupId: undefined });
     }
 });
 
@@ -49,7 +51,13 @@ interface Section {
 
 /** The sections the home list shows, in the order they are stacked. */
 function useHomeSections(): Section[] {
-    const uiState = useGetUiState();
+    const { isFavoritesOpen, isLibraryOpen, searchQuery } = useUiState(
+        useShallow((state) => ({
+            isFavoritesOpen: state.isFavoritesOpen,
+            isLibraryOpen: state.isLibraryOpen,
+            searchQuery: state.searchQuery
+        }))
+    );
     // Not persisted: search results open on every visit, unlike the library.
     const [isSearchOpen, setIsSearchOpen] = useState(true);
     const libraryId = useLibraryId();
@@ -61,7 +69,7 @@ function useHomeSections(): Section[] {
         name: "Favorites",
         icon: <FavoriteIcon size={IconSize.MEDIUM} />,
         panel: <FavoritesList />,
-        opened: uiState.isFavoritesOpen,
+        opened: isFavoritesOpen,
         setOpened: (opened) => updateUiState({ isFavoritesOpen: opened })
     };
 
@@ -76,7 +84,7 @@ function useHomeSections(): Section[] {
         ),
         panel: (
             <SearchResults
-                query={uiState.searchQuery ?? ""}
+                query={searchQuery}
                 filters={{ vendors: vendorFilters }}
                 source={InsertSource.SEARCH}
             />
@@ -91,13 +99,12 @@ function useHomeSections(): Section[] {
         icon: <BooksIcon size={IconSize.MEDIUM} color={PrimaryColor.FILLED} />,
         title: <LibraryTitle libraryId={libraryId} />,
         panel: <LibraryList />,
-        opened: uiState.isLibraryOpen,
+        opened: isLibraryOpen,
         setOpened: (opened) => updateUiState({ isLibraryOpen: opened })
     };
 
-    // One slot below favorites, showing search results while a query is active
-    // and the library otherwise. The differing `value` remounts it on the swap.
-    return [favorites, uiState.searchQuery ? search : library];
+    // The differing `value` remounts the slot when search starts or ends.
+    return [favorites, searchQuery ? search : library];
 }
 
 interface SectionAccordionProps {
@@ -175,7 +182,7 @@ function LibraryList() {
     if (libraryQuery.isPending) {
         return <SectionLoading title="Loading groups..." />;
     } else if (libraryQuery.isError) {
-        return <SectionNotice title="Failed to load groups." />;
+        return <SectionError title="Failed to load groups." />;
     }
 
     const groups = libraryQuery.data.groups;
@@ -185,7 +192,6 @@ function LibraryList() {
         return (
             <SectionNotice
                 title="No groups found"
-                description={null}
                 action={
                     <RequireAccessLevel>
                         <AddGroupButton />

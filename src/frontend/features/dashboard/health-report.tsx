@@ -13,40 +13,38 @@ interface HealthTilesProps {
 export function HealthTiles({ counts }: HealthTilesProps): ReactNode {
     const total = counts.groupCount + counts.insertableCount;
 
-    // Info issues are counted in the breakdown below rather than given a tile:
-    // a number nobody acts on does not deserve a quarter of the row.
+    // Info issues get no tile: nobody acts on them.
     const tiles = [
         {
             label: "Parts",
             value: formatCount(counts.insertableCount),
-            severity: undefined
+            icon: undefined
         },
         {
             label: "Healthy",
             value: formatFraction(counts.healthyItems, total),
-            severity: null
+            // Every check passing is drawn as the absence of a severity.
+            icon: <IssueIcon />
         },
         {
             label: "Errors",
             value: formatCount(counts.errorCount),
-            severity: BuildIssueSeverity.ERROR
+            icon: <IssueIcon severity={BuildIssueSeverity.ERROR} />
         },
         {
             label: "Warnings",
             value: formatCount(counts.warningCount),
-            severity: BuildIssueSeverity.WARNING
+            icon: <IssueIcon severity={BuildIssueSeverity.WARNING} />
         }
     ];
 
     return (
         <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }}>
             {tiles.map((tile) => (
-                <Card key={tile.label} withBorder padding="lg" radius="md">
+                <Card key={tile.label}>
                     <Group gap="xs">
-                        {tile.severity !== undefined && (
-                            <IssueIcon severity={tile.severity} />
-                        )}
-                        <Text size="sm" c="dimmed" tt="uppercase" fw={700}>
+                        {tile.icon}
+                        <Text c="dimmed" tt="uppercase" fw={700}>
                             {tile.label}
                         </Text>
                     </Group>

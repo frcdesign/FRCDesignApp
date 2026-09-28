@@ -1,13 +1,6 @@
-import {
-    Anchor,
-    Card,
-    SimpleGrid,
-    Stack,
-    Text,
-    TextInput,
-    Title
-} from "@mantine/core";
-import { ArrowSquareOutIcon, MagnifyingGlassIcon } from "@phosphor-icons/react";
+import { ExternalLink } from "../../../../components/external-link";
+import { Card, SimpleGrid, Stack, Text, TextInput, Title } from "@mantine/core";
+import { MagnifyingGlassIcon } from "@phosphor-icons/react";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, retainSearchParams } from "@tanstack/react-router";
 import { useState, type ReactNode } from "react";
@@ -18,6 +11,7 @@ import type { InsertableReportOut } from "@backend/features/analytics/contract";
 import { IconSize } from "../../../../lib/style-constants";
 import { parseSearch } from "../../../../lib/search-params";
 import { makeUrl } from "../../../../lib/url";
+import { useOnshapeOrigin } from "../../../../lib/onshape-params";
 import { ConfigurationBreakdown } from "../../../../features/dashboard/configuration-breakdown";
 import { METRICS } from "../../../../features/dashboard/metrics";
 import { type DayRange } from "@backend/features/analytics/day";
@@ -66,12 +60,12 @@ function PartReport(): ReactNode {
             )}
 
             {/* Kept below the report so another part is always one click away. */}
-            <Card withBorder padding="lg" radius="md">
+            <Card>
                 <TextInput
                     w={360}
                     mb="md"
                     placeholder="Search parts…"
-                    leftSection={<MagnifyingGlassIcon size={IconSize.SMALL} />}
+                    leftSection={<MagnifyingGlassIcon />}
                     value={search}
                     onChange={(event) => setSearch(event.currentTarget.value)}
                 />
@@ -156,19 +150,16 @@ interface PartTitleProps {
 
 /** The part's name, linked into Onshape like a part number is to its vendor. */
 function PartTitle({ report }: PartTitleProps): ReactNode {
+    const origin = useOnshapeOrigin();
     return (
         <Title order={2}>
-            <Anchor
+            <ExternalLink
                 inherit
-                href={makeUrl(report.path)}
-                target="_blank"
-                rel="noreferrer"
-                // Centres the icon on the text rather than on its baseline.
-                style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
+                href={makeUrl(origin, report.path)}
+                iconSize={IconSize.MEDIUM}
             >
                 {report.name}
-                <ArrowSquareOutIcon size={IconSize.MEDIUM} />
-            </Anchor>
+            </ExternalLink>
         </Title>
     );
 }
@@ -180,8 +171,8 @@ interface SummaryCardProps {
 
 function SummaryCard({ label, value }: SummaryCardProps): ReactNode {
     return (
-        <Card withBorder padding="md" radius="md">
-            <Text size="sm" c="dimmed" tt="uppercase" fw={700}>
+        <Card padding="md">
+            <Text c="dimmed" tt="uppercase" fw={700}>
                 {label}
             </Text>
             <Title order={3}>{value}</Title>

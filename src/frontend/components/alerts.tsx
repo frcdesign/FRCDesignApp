@@ -25,15 +25,9 @@ function openWarningAlert(props: OpenWarningAlertProps): void {
             />
         ),
         children: (
-            // Takes the focus the trap would otherwise land on Close, which
-            // reads as that button being pre-selected. No outline: a focus ring
-            // around a paragraph reads as a text box the reader can type in.
-            <Text
-                data-autofocus
-                tabIndex={-1}
-                size="sm"
-                style={{ outline: "none" }}
-            >
+            // Takes focus from Close, which would look pre-selected. No outline, which
+            // would make the text look editable.
+            <Text data-autofocus tabIndex={-1} style={{ outline: "none" }}>
                 {props.text}
             </Text>
         ),
@@ -55,12 +49,5 @@ export function openCannotReorderAlert(): void {
     openWarningAlert({
         title: "Cannot reorder favorites",
         text: "To prevent confusion, favorites cannot be reordered while filters are active."
-    });
-}
-
-export function openCannotEditDefaultConfigurationAlert(): void {
-    openWarningAlert({
-        title: "Cannot edit configuration",
-        text: "This element is not configurable, so its default configuration cannot be changed."
     });
 }

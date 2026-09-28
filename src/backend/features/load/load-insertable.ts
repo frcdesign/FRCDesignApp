@@ -4,7 +4,7 @@ import {
     type Configuration,
     type PartMetadata,
     type ConfigurationParameter,
-    DEFAULT_CONFIGURATION_KEY
+    type PartialSelection
 } from "../configurations/contract";
 import {
     addBuildIssue,
@@ -28,7 +28,10 @@ import {
     NO_RECORDS,
     computeOpenComposite,
     decideIndexing,
-    loadConfigurationRecords
+    indexRecords,
+    type ConfigurationRecordsResult,
+    type IndexingSettings,
+    type ProbeTarget
 } from "./parse-configuration-records";
 import {
     type InsertableTarget,
@@ -37,10 +40,7 @@ import {
 } from "./context";
 import { ONSHAPE_STEP_RETRIES, uploadThumbnailsStep } from "./steps";
 
-/**
- * Exactly the columns a reload overwrites; the rest of the row is identity or
- * user-owned.
- */
+/** The columns a reload overwrites; the rest is identity or user-owned. */
 export interface ParsedInsertable {
     vendors: Vendor[];
     thumbnailUrls: ThumbnailUrls | null;
@@ -54,16 +54,11 @@ export interface ParsedInsertable {
 }
 
 /** The user-owned flags that decide how much of a load runs. */
-interface InsertableFlags {
+interface InsertableFlags extends IndexingSettings {
     supportsFasten: boolean;
-    /** Forces part-number indexing on, overriding the auto heuristic. */
-    indexConfigurations: boolean;
 }
 
-/**
- * What a load reads under the limiter: every Onshape call an insertable makes
- * except the thumbnail's.
- */
+/** Every Onshape call but the thumbnail's, all under the limiter. */
 interface ProbedInsertable {
     vendors: Vendor[];
     fastenInfo: FastenInfo | null;
@@ -80,16 +75,11 @@ export async function loadInsertable(
     ctx: LoadContext,
     target: InsertableTarget
 ): Promise<void> {
-    const { insertableId, elementPath } = target;
+    const { insertableId } = target;
 
-    // Bounded, because this is where an insertable's Onshape calls are: an
-    // indexed element probes once per configuration.
+    // Limited here since an indexed element probes once per configuration.
     const probed = await ctx.limit(() => probeInsertable(ctx, target));
 
-    // Fetched here rather than queued: an element's own thumbnail is one
-    // Onshape already rendered when the document was saved, so reading it
-    // starts nothing and races nothing. Only a configuration has to queue.
-    //
     // Nothing is asked for an empty studio, which renders to nothing at all.
     const thumbnailUrls = probed.hasParts
         ? await uploadThumbnailsStep(
@@ -99,8 +89,7 @@ export async function loadInsertable(
                   uploadThumbnails(
                       ctx.env.BLOB,
                       await getOnshapeApiFromContext(ctx),
-                      elementPath,
-                      target.elementWorkspacePath,
+                      target.thumbnailPath,
                       target.microversionId
                   )
           )
@@ -145,15 +134,9 @@ async function probeInsertable(
 
     const parts = await readPartsStep(ctx, target);
     const { isOpenComposite } = parts;
-    // An empty studio renders nothing and probes to nothing, so what it raises
-    // decides how much of the rest of the load is worth running.
     const hasParts = !hasBuildIssue(parts.buildIssues, BuildIssueType.NO_PARTS);
 
-    const indexing = decideIndexing(
-        target.elementType,
-        parameters,
-        flags.indexConfigurations
-    );
+    const indexing = decideIndexing(parameters, flags);
 
     const recordsResult = indexing.shouldIndex
         ? await loadConfigurationRecords(
@@ -180,10 +163,7 @@ async function probeInsertable(
     };
 }
 
-/**
- * Reads the flags that decide how much of the load runs. A brand-new insertable
- * has no row yet, so it gets the same defaults the save writes.
- */
+/** A new insertable has no row, so it gets the defaults the save writes. */
 function readFlagsStep(
     ctx: LoadContext,
     insertableId: string
@@ -192,12 +172,19 @@ function readFlagsStep(
         const row = await getDb(ctx.env.DB)
             .select({
                 supportsFasten: insertables.supportsFasten,
-                indexConfigurations: insertables.indexConfigurations
+                indexConfigurations: insertables.indexConfigurations,
+                excludedParameterIds: insertables.excludedParameterIds
             })
             .from(insertables)
             .where(eq(insertables.id, insertableId))
             .get();
-        return row ?? { supportsFasten: false, indexConfigurations: false };
+        return (
+            row ?? {
+                supportsFasten: false,
+                indexConfigurations: false,
+                excludedParameterIds: []
+            }
+        );
     });
 }
 
@@ -225,10 +212,7 @@ interface PartsSummary {
     buildIssues: BuildIssue[];
 }
 
-/**
- * Runs on every load, not just under indexing, so the insert path always asks
- * for the right part types. Assemblies have nothing to read, so they skip it.
- */
+/** Every load, so inserts always ask for the right part types. */
 function readPartsStep(
     ctx: LoadContext,
     { insertableId, elementPath, elementType }: InsertableTarget
@@ -243,7 +227,7 @@ function readPartsStep(
             const parts = await getParts(
                 await getOnshapeApiFromContext(ctx),
                 elementPath,
-                DEFAULT_CONFIGURATION_KEY
+                {}
             );
             return {
                 isOpenComposite: computeOpenComposite(parts),
@@ -271,9 +255,8 @@ function parseFastenInfoStep(
 }
 
 /**
- * Everything outside `parsed` is written only on insert, so a reload preserves
- * the user's flags. Sort order is seeded here and maintained by the group's save
- * instead, which is the only place the document's tab order is known.
+ * Only `parsed` is overwritten, so a reload keeps the user's flags. Sort order
+ * is maintained by the group's save, which knows the tab order.
  */
 export async function saveInsertable(
     db: Db,
@@ -306,8 +289,7 @@ export async function saveInsertable(
             documentId: target.elementPath.documentId,
             elementId: target.elementPath.elementId,
             sortOrder: target.sortOrder,
-            // A new insertable starts hidden with its features off. An existing
-            // one keeps the user's choices, since `set` omits these.
+            // Only on insert, so an existing row keeps the user's choices.
             isVisible: false,
             supportsFasten: false,
             indexConfigurations: false,
@@ -335,4 +317,26 @@ export async function saveInsertable(
     }
 
     await db.batch([insertableWrite, configurationWrite]);
+}
+
+/** One durable step per batch. An exhausted batch throws rather than save a partial list. */
+function loadConfigurationRecords(
+    ctx: LoadContext,
+    insertableId: string,
+    target: ProbeTarget,
+    parameters: ConfigurationParameter[],
+    configurations: PartialSelection[]
+): Promise<ConfigurationRecordsResult> {
+    return indexRecords(
+        () => getOnshapeApiFromContext(ctx),
+        (name, read) =>
+            ctx.step.do(
+                `records-${insertableId}-${name}`,
+                { retries: ONSHAPE_STEP_RETRIES },
+                read
+            ),
+        target,
+        parameters,
+        configurations
+    );
 }

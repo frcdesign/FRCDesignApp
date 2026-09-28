@@ -1,14 +1,18 @@
 import {
+    Badge,
     Divider,
     Group,
-    HoverCard,
     Loader,
     Stack,
     Text,
     Tooltip
 } from "@mantine/core";
-import { EyeSlashIcon, GitBranchIcon } from "@phosphor-icons/react";
-import { ReactNode, createContext, use, useCallback, useState } from "react";
+import {
+    EyeSlashIcon,
+    GitBranchIcon,
+    HourglassIcon
+} from "@phosphor-icons/react";
+import { ReactNode } from "react";
 import { formatDaysAgo } from "../../../lib/format-time";
 import {
     BuildIssue,
@@ -18,14 +22,16 @@ import { InsertableBuildStatus } from "@backend/features/build-checker/contract"
 import {
     FontWeight,
     IconSize,
-    NO_SHRINK,
     StatusColor
 } from "../../../lib/style-constants";
 import { AppIcon } from "../../../components/app-icon";
+import { AppHoverCard } from "../../../components/app-hover-card";
 import { RequireAccessLevel } from "../../auth/access-level";
-import { TruncatedText } from "../../../components/truncated-text";
 import { useBuildStatusQuery } from "../queries";
-import { useIsJobRunning } from "../../library/queries";
+import {
+    useIsGroupAwaitingApproval,
+    useIsGroupLoading
+} from "../../library/queries";
 import {
     BuildChecksSection,
     type ConfigurationTarget,
@@ -35,18 +41,21 @@ import {
 } from "./issues";
 import {
     ConfigurationSection,
-    InsertableParsedSection,
-    useConfigurationCount
+    InsertableParsedSection
 } from "./parsed-section";
 import { GroupAdminSection, InsertableAdminSection } from "./admin-section";
+import { IndexingSection } from "./indexing-section";
+import styles from "../../../lib/styles.module.css";
 
 /** What the card and the badge both say about a group or an insertable. */
 interface BuildStatusSubject {
     /** The group/insertable name shown in the header. */
     name: string;
+    /** The group it is, or is in: a load of that group is what spins. */
+    groupId: string;
     issues: BuildIssue[];
     /** When Onshape cut the version it is pinned to (epoch ms); null if none. */
-    versionCreatedAt: number | null;
+    versionCreatedAt?: number;
     /** Set for an insertable, so an issue can open the configuration it blames. */
     configurationTarget?: ConfigurationTarget;
     /** Draws the badge as hidden-from-users instead of as its worst severity. */
@@ -58,17 +67,20 @@ interface BuildStatusCardProps extends BuildStatusSubject {
     children: ReactNode;
 }
 
-/**
- * The hover-card content: a header (name, severity summary, last-loaded time),
- * the build checks (when any), and the wrapped group/insertable admin menu.
- */
 function BuildStatusCard(props: BuildStatusCardProps): ReactNode {
-    const { name, issues, versionCreatedAt, configurationTarget, children } =
-        props;
+    const {
+        name,
+        groupId,
+        issues,
+        versionCreatedAt,
+        configurationTarget,
+        children
+    } = props;
     return (
         <Stack gap="sm" w={300}>
             <CardHeader
                 name={name}
+                groupId={groupId}
                 issues={issues}
                 versionCreatedAt={versionCreatedAt}
             />
@@ -92,22 +104,7 @@ interface BuildStatusBadgeProps extends BuildStatusSubject {
     hoverMenu: ReactNode;
 }
 
-/**
- * For controls that open a modal: `HoverCard` closes on mouse-leave, which never
- * fires when an overlay covers the dropdown, stranding it behind.
- */
-const CloseCardContext = createContext<() => void>(() => undefined);
-
-/** Dismisses the build-status hover card a control is rendered inside. */
-export function useCloseBuildCard(): () => void {
-    return use(CloseCardContext);
-}
-
-/**
- * A severity icon whose hover card shows the build-status card wrapping the
- * given admin menu. Gated first, so the card and its admin controls only exist
- * for an editor.
- */
+/** Gated first, so the card and its admin controls only exist for an editor. */
 function BuildStatusBadge(props: BuildStatusBadgeProps): ReactNode {
     return (
         <RequireAccessLevel>
@@ -121,6 +118,7 @@ type BuildStatusHoverCardProps = BuildStatusBadgeProps;
 
 function BuildStatusHoverCard({
     name,
+    groupId,
     issues,
     versionCreatedAt,
     configurationTarget,
@@ -128,79 +126,62 @@ function BuildStatusHoverCard({
     hoverMenu
 }: BuildStatusHoverCardProps): ReactNode {
     const maxSeverity = getMaxSeverity(issues);
-    const jobRunning = useIsJobRunning();
-
-    // Remounting is the only way to close an uncontrolled HoverCard on demand.
-    const [cardKey, setCardKey] = useState(0);
-    const close = useCallback(() => setCardKey((key) => key + 1), []);
+    const loading = useIsGroupLoading(groupId);
 
     return (
-        <CloseCardContext value={close}>
-            <HoverCard
-                key={cardKey}
-                withinPortal
-                shadow="md"
-                position="right"
-                withArrow
-                arrowSize={20}
+        <AppHoverCard
+            position="right"
+            arrowSize={20}
+            target={
+                loading ? (
+                    <Loader size={IconSize.SMALL} />
+                ) : isHidden ? (
+                    // Only editors see hidden insertables, so its checks don't matter yet.
+                    <AppIcon icon={EyeSlashIcon} color={StatusColor.WARNING} />
+                ) : (
+                    <IssueIcon severity={maxSeverity} />
+                )
+            }
+        >
+            <BuildStatusCard
+                name={name}
+                groupId={groupId}
+                issues={issues}
+                versionCreatedAt={versionCreatedAt}
+                configurationTarget={configurationTarget}
             >
-                <HoverCard.Target>
-                    {jobRunning ? (
-                        <Loader size={IconSize.SMALL} />
-                    ) : isHidden ? (
-                        // Nobody but an editor sees a hidden insertable, so what
-                        // its checks say about it does not matter yet.
-                        <AppIcon
-                            icon={EyeSlashIcon}
-                            color={StatusColor.WARNING}
-                            label="Hidden"
-                        />
-                    ) : (
-                        <IssueIcon severity={maxSeverity} />
-                    )}
-                </HoverCard.Target>
-                <HoverCard.Dropdown p="md" onClick={(e) => e.stopPropagation()}>
-                    <BuildStatusCard
-                        name={name}
-                        issues={issues}
-                        versionCreatedAt={versionCreatedAt}
-                        configurationTarget={configurationTarget}
-                    >
-                        {hoverMenu}
-                    </BuildStatusCard>
-                </HoverCard.Dropdown>
-            </HoverCard>
-        </CloseCardContext>
+                {hoverMenu}
+            </BuildStatusCard>
+        </AppHoverCard>
     );
 }
 
 interface CardHeaderProps {
     name: string;
+    groupId: string;
     issues: BuildIssue[];
-    versionCreatedAt: number | null;
+    versionCreatedAt?: number;
 }
 
 /** The card header: name + severity summary on the left, the version's age on the right. */
 function CardHeader(props: CardHeaderProps): ReactNode {
-    const { name, issues, versionCreatedAt } = props;
+    const { name, groupId, issues, versionCreatedAt } = props;
     return (
         <Stack gap={6}>
-            <Group
-                justify="space-between"
-                align="center"
-                wrap="nowrap"
-                gap="sm"
-            >
-                <TruncatedText
-                    hoverText={name}
+            <Group justify="space-between" align="center" gap="sm">
+                <Text
+                    truncate
+                    title={name}
                     fw={FontWeight.SEMI_BOLD}
-                    size="sm"
                     flex={1}
                     miw={0}
                 >
                     {name}
-                </TruncatedText>
-                <VersionAge versionCreatedAt={versionCreatedAt} />
+                </Text>
+                <VersionAge
+                    groupId={groupId}
+                    versionCreatedAt={versionCreatedAt}
+                />
             </Group>
             <SeverityBadges issues={issues} />
         </Stack>
@@ -208,32 +189,27 @@ function CardHeader(props: CardHeaderProps): ReactNode {
 }
 
 interface VersionAgeProps {
-    versionCreatedAt: number | null;
+    groupId: string;
+    versionCreatedAt?: number;
 }
 
-/**
- * How old the pinned Onshape version is — when the version was cut, not when we
- * last synced it. A spinner (with a tooltip) stands in while a job is running;
- * otherwise the version icon and a day count say it without a label.
- */
+/** When the pinned version was cut, not when it was synced. */
 function VersionAge(props: VersionAgeProps): ReactNode {
-    const { versionCreatedAt } = props;
-    // Asked for again rather than threaded through three components; React
-    // Query serves both readers from one cache entry.
-    const jobRunning = useIsJobRunning();
-    if (jobRunning) {
+    const { groupId, versionCreatedAt } = props;
+    const loading = useIsGroupLoading(groupId);
+    if (loading) {
         return (
-            <Tooltip label="The library is being loaded from Onshape in the background">
-                <Loader size="xs" style={NO_SHRINK} />
+            <Tooltip label="Being loaded from Onshape in the background">
+                <Loader size="xs" className={styles.noShrink} />
             </Tooltip>
         );
     }
     return (
         <Group
             gap={4}
-            wrap="nowrap"
             c={StatusColor.DIMMED}
-            style={{ whiteSpace: "nowrap", ...NO_SHRINK }}
+            className={styles.noShrink}
+            style={{ whiteSpace: "nowrap" }}
         >
             <GitBranchIcon size={IconSize.TINY} />
             <Text size="xs">
@@ -245,6 +221,7 @@ function VersionAge(props: VersionAgeProps): ReactNode {
 
 interface InsertableStatusBadgeProps {
     insertableId: string;
+    groupId: string;
     name: string;
 }
 
@@ -252,13 +229,14 @@ interface InsertableStatusBadgeProps {
 export function InsertableStatusBadge(
     props: InsertableStatusBadgeProps
 ): ReactNode {
-    const { insertableId, name } = props;
+    const { insertableId, groupId, name } = props;
     const { data } = useBuildStatusQuery();
     const insertable = data?.insertables[insertableId];
     if (!insertable) return null;
     return (
         <BuildStatusBadge
             name={name}
+            groupId={groupId}
             issues={insertable.buildIssues}
             versionCreatedAt={insertable.versionCreatedAt}
             isHidden={!insertable.isVisible}
@@ -283,21 +261,17 @@ interface InsertableHoverMenuProps {
     status: InsertableBuildStatus;
 }
 
-/** Enumerates configurations once, for every row of the card that needs it. */
 function InsertableHoverMenu(props: InsertableHoverMenuProps): ReactNode {
     const { insertableId, status } = props;
-    const configurationCount = useConfigurationCount(status);
     return (
         <>
             <InsertableAdminSection
                 insertableId={insertableId}
                 status={status}
-                configurationCount={configurationCount}
             />
+            <IndexingSection insertableId={insertableId} status={status} />
             <InsertableParsedSection status={status} />
-            <ConfigurationSection
-                parameters={status.configuration?.parameters}
-            />
+            <ConfigurationSection status={status} />
         </>
     );
 }
@@ -313,15 +287,40 @@ export function GroupStatusBadge(props: GroupStatusBadgeProps): ReactNode {
     const { data } = useBuildStatusQuery();
     const groupStatus = data?.groups[groupId];
     const issues = useGroupBuildIssues(groupStatus, data?.insertables);
-    if (!groupStatus) return null;
     return (
-        <BuildStatusBadge
-            name={name}
-            issues={issues}
-            versionCreatedAt={groupStatus.versionCreatedAt}
-            hoverMenu={
-                <GroupAdminSection groupId={groupId} status={groupStatus} />
-            }
-        />
+        <>
+            {groupStatus && (
+                <BuildStatusBadge
+                    name={name}
+                    groupId={groupId}
+                    issues={issues}
+                    versionCreatedAt={groupStatus.versionCreatedAt}
+                    hoverMenu={
+                        <GroupAdminSection
+                            groupId={groupId}
+                            status={groupStatus}
+                        />
+                    }
+                />
+            )}
+            <AwaitingApprovalBadge groupId={groupId} />
+        </>
+    );
+}
+
+interface AwaitingApprovalBadgeProps {
+    groupId: string;
+}
+
+function AwaitingApprovalBadge(props: AwaitingApprovalBadgeProps): ReactNode {
+    const awaiting = useIsGroupAwaitingApproval(props.groupId);
+    if (!awaiting) return null;
+    return (
+        <Badge
+            color={StatusColor.WARNING}
+            leftSection={<HourglassIcon size={IconSize.TINY} />}
+        >
+            Awaiting approval
+        </Badge>
     );
 }

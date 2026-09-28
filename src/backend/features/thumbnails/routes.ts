@@ -3,19 +3,22 @@ import { HttpStatus } from "http-status-ts";
 import { handledError } from "../../lib/api-error";
 import { validate } from "../../lib/validate";
 import { CachePolicy, setCache } from "../../lib/cache";
-import { getApp, type AppContext } from "../../lib/context";
+import { getApp } from "../../lib/context";
 
-import { RenderSource, ThumbnailSize } from "./contract";
+import { type RenderOut, ThumbnailSize } from "./contract";
 import { thumbnailKey } from "./keys";
 import { DEFAULT_CONFIGURATION_KEY } from "../configurations/contract";
-
+import { requestRender } from "./render";
 import {
-    type EnqueueOutcome,
-    requestThumbnails,
-    type ThumbnailRequest
-} from "./renderer";
-import { getSessionId } from "../auth/session";
-import { requireEditorMiddleware } from "../auth/guards";
+    requireEditorMiddleware,
+    requireSignInMiddleware
+} from "../auth/guards";
+import {
+    getInsertableParam,
+    getLibraryParam,
+    insertableRoute,
+    libraryRoute
+} from "../../lib/route-params";
 import { getDb } from "../../db/client";
 import { reloadGroupThumbnail, reloadInsertableThumbnail } from "./reload";
 
@@ -29,74 +32,54 @@ const storedThumbnailParams = z.object({
 /** Absent means the element default, which is what `""` encodes. */
 const configurationKeyQuery = z.string().default(DEFAULT_CONFIGURATION_KEY);
 
-/**
- * Only the two sources a client can legitimately be. The insert menu may take
- * the render thread from whatever holds it, so this is not free-form.
- */
-const renderSourceQuery = z.enum([RenderSource.INSERT_MENU, RenderSource.ROW]);
-
 const storedThumbnailQuery = z.object({
     /** The microversion, part of the key — which is what makes a hit immutable. */
     v: z.string().min(1),
-    configurationKey: configurationKeyQuery,
-    /** Absent means serve what is stored and queue nothing. */
-    renderSource: renderSourceQuery.optional(),
-    /** The insertable to render from; only sent with `renderSource`. */
-    insertableId: z.string().optional()
+    configurationKey: configurationKeyQuery
 });
 
-/**
- * GET /api/thumbnail/:size/:elementId?v=&configurationKey=&renderSource=
- * Each answer caches itself: stored bytes are pinned by the url, a miss is not.
- */
+/** GET /api/thumbnail/:size/:elementId?v=&configurationKey= */
 thumbnailRoutes.get(
     "/thumbnail/:size/:elementId",
     validate("param", storedThumbnailParams),
     validate("query", storedThumbnailQuery),
     async (c) => {
         const { size, elementId } = c.req.valid("param");
-        const {
-            v: microversionId,
-            configurationKey,
-            renderSource,
-            insertableId
-        } = c.req.valid("query");
+        const { v: microversionId, configurationKey } = c.req.valid("query");
         const object = await c.env.BLOB.get(
             thumbnailKey(elementId, microversionId, size, configurationKey)
         );
         if (object) {
-            // The microversion and the configuration are both in the url, so
-            // these bytes are the only ones it will ever mean.
+            // The url pins microversion and configuration.
             return setCache(
                 thumbnailResponse(object),
                 CachePolicy.PUBLIC_CACHE
             );
         }
 
-        // A configuration this has not rendered is a miss, not the element's
-        // own thumbnail: standing that in shows a part the caller did not ask
-        // for, and a favorite pinned to a configuration would show the wrong
-        // one. A caller that wants the element default asks for it by key.
-        if (
-            configurationKey !== DEFAULT_CONFIGURATION_KEY &&
-            renderSource &&
-            insertableId
-        ) {
-            const outcome = await queueConfigurationRender(
-                c,
-                {
-                    insertableId,
-                    elementId,
-                    configurationKey,
-                    microversionId
-                },
-                renderSource
-            );
-            if (outcome === "no-such-configuration") {
-                return noSuchConfiguration();
-            }
-        }
+        // Never the element's default, which would show the wrong part.
         return notRenderedYet();
+    }
+);
+
+const renderBody = z.object({ configurationKey: z.string().min(1) });
+
+/**
+ * POST /api/render-thumbnail/insertable/:insertableId: starts rendering a
+ * configuration the stored thumbnail route missed. Signed in, since the render
+ * calls Onshape as the caller.
+ */
+thumbnailRoutes.post(
+    "/render-thumbnail" + insertableRoute(),
+    requireSignInMiddleware,
+    validate("json", renderBody),
+    async (c) => {
+        const { configurationKey } = c.req.valid("json");
+        const status = await requestRender(c, {
+            insertableId: getInsertableParam(c),
+            configurationKey
+        });
+        return c.json({ status } satisfies RenderOut);
     }
 );
 
@@ -108,50 +91,10 @@ function notRenderedYet(): Response {
     );
 }
 
-/**
- * Onshape has no insertable for this configuration, so no render is coming.
- * Told apart from a miss by its status, which is what lets a client stop
- * polling and say the configuration is what is wrong; the answer is not cached,
- * since a reload of the document can make it wrong.
- */
-function noSuchConfiguration(): Response {
-    return setCache(
-        new Response(null, { status: HttpStatus.UNPROCESSABLE_ENTITY }),
-        CachePolicy.NO_CACHE
-    );
-}
-
 function thumbnailResponse(object: R2ObjectBody): Response {
     const headers = new Headers();
     object.writeHttpMetadata(headers);
     return new Response(object.body, { headers });
-}
-
-/**
- * Queues the render and returns; the client polls this route until the bytes
- * land. Polling is free — the queue names a job by the key it will write, so
- * asking twice is asking once and never disturbs a render already running.
- */
-async function queueConfigurationRender(
-    c: AppContext,
-    request: ThumbnailRequest,
-    source: RenderSource
-): Promise<EnqueueOutcome | undefined> {
-    try {
-        // Read first, so a caller with no session queues nothing: the render
-        // runs later, under this caller's Onshape tokens.
-        const sessionId = getSessionId(c);
-        const userId = await c.var.getUserId();
-        return await requestThumbnails(
-            c.env,
-            { userId, sessionId },
-            request,
-            source
-        );
-    } catch {
-        // Never fatal: the caller just gets a miss until the render lands.
-        return undefined;
-    }
 }
 
 const reloadThumbnailBody = z.object({
@@ -160,19 +103,13 @@ const reloadThumbnailBody = z.object({
     insertableId: z.string().min(1).optional()
 });
 
-/**
- * POST /api/reload-thumbnail
- *
- * Asks Onshape for a thumbnail again and replaces what is stored. A load does
- * not wait for one, so a thumbnail that was not there at the time stays missing
- * until the next reload of the whole document — this is the way to ask for just
- * the one.
- */
+/** POST /api/reload-thumbnail/library/:libraryId: refetches one thumbnail, since loads don't wait for them. */
 thumbnailRoutes.post(
-    "/reload-thumbnail",
+    "/reload-thumbnail" + libraryRoute(),
     requireEditorMiddleware,
     validate("json", reloadThumbnailBody),
     async (c) => {
+        const libraryId = getLibraryParam(c);
         const { groupId, insertableId } = c.req.valid("json");
         const db = getDb(c.env.DB);
         const onshapeApi = await c.var.getOnshapeApi();
@@ -182,10 +119,17 @@ thumbnailRoutes.post(
                 db,
                 c.env.BLOB,
                 onshapeApi,
+                libraryId,
                 insertableId
             );
         } else if (groupId) {
-            await reloadGroupThumbnail(db, c.env.BLOB, onshapeApi, groupId);
+            await reloadGroupThumbnail(
+                db,
+                c.env.BLOB,
+                onshapeApi,
+                libraryId,
+                groupId
+            );
         } else {
             throw handledError(
                 "Name a group or an element to reload.",

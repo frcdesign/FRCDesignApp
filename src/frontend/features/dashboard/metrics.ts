@@ -17,18 +17,9 @@ type MetricKey =
     | "quickFraction"
     | "assemblyFraction";
 
-/**
- * How one number is derived, formatted and trended, so a metric reads the same
- * way wherever it appears.
- */
 export interface MetricDefinition {
     key: MetricKey;
     label: string;
-    /** Shown under the info icon, with room to explain properly. */
-    description: string;
-    /** Names what is being counted, and what it is counted against. */
-    numeratorLabel: string;
-    denominatorLabel?: string;
     /** Percentages divide by `denominator`; counts leave it undefined. */
     numerator: (point: DailyMetricPoint) => number;
     denominator?: (point: DailyMetricPoint) => number;
@@ -43,9 +34,6 @@ export const METRICS: Record<MetricKey, MetricDefinition> = {
     inserts: {
         key: "inserts",
         label: "Total uses",
-        description:
-            "The total number of times a part was inserted by the app.",
-        numeratorLabel: "Total uses",
         numerator: (point) => point.inserts,
         lifetimeValue: (totals) => totals.inserts,
         detailLabel: "Total uses"
@@ -53,10 +41,6 @@ export const METRICS: Record<MetricKey, MetricDefinition> = {
     fastenFraction: {
         key: "fastenFraction",
         label: "Insert and fasten",
-        description:
-            "The percentage of inserts into assemblies which are done using insert and fasten.",
-        numeratorLabel: "Insert and fasten inserts",
-        denominatorLabel: "Inserts into an assembly",
         numerator: (point) => point.fastenInserts,
         // Onshape only offers fasten on an assembly target.
         denominator: (point) => point.targets[ElementType.ASSEMBLY],
@@ -67,10 +51,6 @@ export const METRICS: Record<MetricKey, MetricDefinition> = {
     quickFraction: {
         key: "quickFraction",
         label: "Quick insert",
-        description:
-            "The percentage of inserts which are done via the right click context menu.",
-        numeratorLabel: "Quick inserts",
-        denominatorLabel: "All inserts",
         numerator: (point) => point.quickInserts,
         denominator: (point) => point.inserts,
         lifetimeDenominator: (totals) => totals.inserts,
@@ -80,10 +60,6 @@ export const METRICS: Record<MetricKey, MetricDefinition> = {
     assemblyFraction: {
         key: "assemblyFraction",
         label: "Into an assembly",
-        description:
-            "The percentage of inserts into an assembly (as opposed to a part studio).",
-        numeratorLabel: "Inserts into an assembly",
-        denominatorLabel: "All inserts",
         numerator: (point) => point.targets[ElementType.ASSEMBLY],
         denominator: (point) => point.inserts,
         lifetimeValue: (totals) => totals.targets[ElementType.ASSEMBLY],
@@ -93,12 +69,12 @@ export const METRICS: Record<MetricKey, MetricDefinition> = {
 };
 
 /** The raw numerator and denominator behind a range value. */
-export interface MetricTerms {
+interface MetricTerms {
     numerator: number;
     denominator: number;
 }
 
-/** The totals the range value is computed from, for showing the workings. */
+/** The totals {@link rangeValue} divides. */
 export function rangeTerms(
     points: DailyMetricPoint[],
     metric: MetricDefinition
@@ -112,10 +88,7 @@ export function rangeTerms(
     return { numerator, denominator };
 }
 
-/**
- * Folded from the same points the sparkline plots, so a tile can never disagree
- * with the chart behind it.
- */
+/** From the sparkline's points, so a tile can't disagree with its chart. */
 function metricValue(
     { numerator, denominator }: MetricTerms,
     metric: MetricDefinition
@@ -133,7 +106,6 @@ export function rangeValue(
     return metricValue(rangeTerms(points, metric), metric);
 }
 
-/** True when the metric reads as a percentage rather than a count. */
 export function isPercentage(metric: MetricDefinition): boolean {
     return metric.denominator !== undefined;
 }
@@ -142,10 +114,7 @@ export interface TrendPoint extends BucketPoint {
     value: number;
 }
 
-/**
- * The value per bucket. Shares are ratioed after bucketing, or an average of
- * daily percentages would over-weight quiet days.
- */
+/** Shares are computed after bucketing, or quiet days would be over-weighted. */
 export function toTrend(
     points: DailyMetricPoint[],
     metric: MetricDefinition,

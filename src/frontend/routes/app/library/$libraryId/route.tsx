@@ -9,6 +9,7 @@ import {
 import { getSearchDbQuery } from "../../../../features/search/queries";
 import { parseLibraryId } from "../../../../lib/library";
 import { useAppParamMirror } from "../../../../lib/app-params";
+import { getUiState, updateUiState } from "../../../../lib/ui-state";
 import { useRestoreInsertMenu } from "../../../../features/insert/restore-insert-menu";
 
 export const Route = createFileRoute("/app/library/$libraryId")({
@@ -16,6 +17,15 @@ export const Route = createFileRoute("/app/library/$libraryId")({
     params: {
         parse: ({ libraryId }) => ({ libraryId: parseLibraryId(libraryId) }),
         stringify: ({ libraryId }) => ({ libraryId })
+    },
+    /**
+     * The url selects the library, so the store follows it. Skipped until a tab
+     * is chosen: being shown the default isn't choosing it.
+     */
+    onEnter: (match) => {
+        if (getUiState().tabId) {
+            updateUiState({ tabId: match.params.libraryId });
+        }
     },
     loader: async ({ params }) => {
         const { libraryId } = params;
@@ -33,11 +43,6 @@ export const Route = createFileRoute("/app/library/$libraryId")({
     }
 });
 
-/**
- * The library's pages, plus the two things that follow the library rather than
- * any one of them: the url the app keeps current, and the insert menu it was
- * left with.
- */
 function Library(): ReactNode {
     useAppParamMirror();
     useRestoreInsertMenu();

@@ -1,21 +1,19 @@
 import type { JSX } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { OpenUrlButton } from "../../components/open-url-button";
-import { PageNotice } from "../../components/app-zero-state";
-import { APP_STORE_URL } from "../../lib/url";
+import { PageNotice } from "../../components/app-notice";
+import { APP_STORE_PATH } from "../../lib/url";
+import { useOnshapeOrigin } from "../../lib/onshape-params";
 
-/**
- * Where the beta-era app extension still points. Nothing links here anymore,
- * but an install old enough to predate the cutover launches straight at it, and
- * without this route those callers land on the not-found page instead.
- */
+/** Old installs of the beta extension still launch here. */
 export const Route = createFileRoute("/_pages/beta-complete")({
     component: BetaComplete
 });
 
 function BetaComplete(): JSX.Element {
+    const origin = useOnshapeOrigin();
     const frcDesignAppButton = (
-        <OpenUrlButton text="FRCDesignApp" url={APP_STORE_URL} />
+        <OpenUrlButton text="FRCDesignApp" url={origin + APP_STORE_PATH} />
     );
 
     return (

@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { LibraryId } from "@backend/features/library/library-id";
-import { toNodes, TreemapKind, type UsagePart } from "./treemap-data";
+import type { PartUsageOut } from "@backend/features/analytics/contract";
+import { toNodes, TreemapKind } from "./treemap-data";
 
 function part({
     elementId = "e-1",
     ...overrides
-}: Partial<UsagePart> & { elementId?: string } = {}): UsagePart {
+}: Partial<PartUsageOut> & { elementId?: string } = {}): PartUsageOut {
     return {
         libraryId: LibraryId.FRC_DESIGN_LIB,
         path: {
@@ -88,8 +89,6 @@ describe("toNodes at the group level", () => {
     });
 
     it("never darkens as the tiles get smaller", () => {
-        // Color has to reinforce area, not fight it: a lighter tile always
-        // means a smaller one.
         const many = Array.from({ length: 10 }, (_, index) =>
             part({ groupName: `g-${index}`, insertCount: 10 - index })
         );

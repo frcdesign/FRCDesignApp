@@ -1,7 +1,3 @@
-/**
- * Sizes for Phosphor icons. The first three are general magnitudes for an icon
- * in a line of content; the rest each name the one place they are used.
- */
 export enum IconSize {
     /** Beside xs text: badge labels and metadata rows. */
     TINY = 12,
@@ -23,15 +19,6 @@ export enum FontWeight {
     BOLD = 700
 }
 
-export const BORDER = "1px solid var(--mantine-color-default-border)";
-
-/** The corner every box of ours is cut with, matching the theme's default. */
-export const RADIUS = "var(--mantine-radius-sm)";
-
-/**
- * The colors state is spoken in, as Mantine names them. Named here rather than
- * written at each control, so an error looks like an error everywhere.
- */
 export enum StatusColor {
     ERROR = "red",
     WARNING = "yellow",
@@ -43,70 +30,28 @@ export enum StatusColor {
     DIMMED = "dimmed"
 }
 
-/**
- * A badge naming a kind rather than a state — a configuration parameter's type,
- * say. Off every {@link StatusColor} so it never reads as one, and never gray,
- * which on a badge reads as disabled rather than as a label.
- */
+/** For a badge naming a kind; not a status color, and not gray, which reads as disabled. */
 export const CATEGORY_COLOR = "violet";
 
-/**
- * Mantine's default step for a color: what a bare color name renders as, and
- * so the step anything picking its own color should match.
- */
+/** Mantine's default shade. */
 export const FILLED_SHADE = 6;
 
-/** A Mantine color at one shade, for props that take a CSS value rather than
- * Mantine's own `color.shade` shorthand. */
+/** For props that take a CSS value. */
 export function colorVar(color: string, shade: number): string {
     return `var(--mantine-color-${color}-${shade})`;
 }
 
-/**
- * A mark that must read as secondary but stay legible on both themes, which
- * bare "gray" does not: a reference line, a bar for an unremarkable value.
- */
+/** Secondary but legible in both themes, which bare "gray" isn't. */
 export const MUTED_MARK = `${StatusColor.NEUTRAL}.5`;
 
-/** The same color as a tint to sit content on, e.g. a callout's background. */
-export function statusBackground(color: StatusColor): string {
-    return `var(--mantine-color-${color}-light)`;
-}
-
-/** A step off the page, for the bars framing it: the navbar's tab row, a
- * modal's header and footer. */
-export const FRAME_BACKGROUND =
-    "light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-8))";
-
-/**
- * A surface for a render to sit on. Onshape renders a part light, on white, so
- * a white card leaves the thumbnail with no edge to it; light mode steps down
- * far enough to give it one. Dark mode already has the contrast, so it keeps
- * the card's own background.
- */
+/** Onshape renders parts light on white, so light mode needs a darker card. */
 export const RENDER_BACKGROUND =
     "light-dark(var(--mantine-color-gray-1), var(--mantine-color-body))";
 
-/**
- * What a subtle gray control draws its icon in — the color Mantine resolves
- * `variant="subtle"` to. A bare icon standing beside one has to be given it,
- * or it takes the body text color and reads darker than its neighbours.
- */
+/** Matches a subtle gray control's icon, for a bare icon beside one. */
 export const CONTROL_ICON_COLOR = "var(--mantine-color-gray-light-color)";
 
-/**
- * Text reads as centred on its cap height, a pixel above its line box, so an
- * icon centred on that box looks low. `text-box` clips descenders under truncation.
- */
-export const TITLE_ICON_NUDGE = { transform: "translateY(-1px)" };
-
-/** Holds an icon or badge at its own size beside text that can outgrow the row. */
-export const NO_SHRINK = { flexShrink: 0 };
-
-/**
- * Paints an image in the current text color rather than its own. The url needs
- * quoting: Vite inlines an asset as a data uri, which can contain apostrophes.
- */
+/** Paints an image in the text color. Quoted since data uris can hold apostrophes. */
 export function maskedImage(url: string) {
     return {
         backgroundColor: "currentColor",
@@ -120,24 +65,11 @@ export function maskedImage(url: string) {
 /** The height of a default-sized Mantine input, for aligning beside one. */
 export const INPUT_HEIGHT = "36px";
 
-/**
- * One height for every navbar row, so the app's two tiers and the dashboard's
- * read as the same bar rather than three sizes of one.
- */
 export const NAVBAR_ROW_HEIGHT = 48;
 
-/**
- * A rule that has to read against {@link FRAME_BACKGROUND} rather than a white
- * page, so it takes the same step off the frame in either theme.
- */
+/** Stands out against the navbar's frame in either theme. */
 export const NAVBAR_DIVIDER_COLOR =
     "light-dark(var(--mantine-color-gray-4), var(--mantine-color-dark-3))";
-
-/**
- * One height for a section header, set rather than left to the content: an
- * accordion is sized by its label, a group header by its menu button.
- */
-export const SECTION_HEADER_HEIGHT = 48;
 
 /** The app's primary color as a filled background. */
 export enum PrimaryColor {
@@ -146,3 +78,6 @@ export enum PrimaryColor {
     /** What reads on top of it, typically white. */
     CONTRAST = "var(--mantine-primary-color-contrast)"
 }
+
+/** Wide enough for "Open dashboard", so every settings control ends on one line. */
+export const SETTING_CONTROL_WIDTH = 170;

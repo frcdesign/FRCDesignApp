@@ -3,50 +3,61 @@ import {
     InstancePath,
     ElementPath,
     isInstancePath,
-    isElementPath,
-    ConfigurablePath,
-    isConfigurablePath
+    isElementPath
 } from "@backend/lib/onshape/path";
-import { encodeConfiguration } from "@backend/features/configurations/utils";
+import { type PartialSelection } from "@backend/features/configurations/contract";
+import { encodeQueryConfiguration } from "@backend/features/configurations/utils";
 import { notifications } from "@mantine/notifications";
 import { LinkIcon } from "@phosphor-icons/react";
 import { IconSize } from "./style-constants";
 
-/** The app's listing in the Onshape App Store, where it is subscribed to. */
-export const APP_STORE_URL =
-    "https://cad.onshape.com/appstore/apps/Manufacturers%20Models/6004ec5e83c40b107c183347";
+/** Onshape for anyone outside a company, and for a caller who never launched. */
+export const DEFAULT_ONSHAPE_ORIGIN = "https://cad.onshape.com";
+
+/** A path, so it opens on the caller's own Onshape; see `useOnshapeOrigin`. */
+export const APP_STORE_PATH =
+    "/appstore/apps/Manufacturers%20Models/6004ec5e83c40b107c183347";
+
+/** Where a caller manages the apps they have granted access. */
+export const APPLICATIONS_PATH = "/user/applications";
 
 /**
- * The setup instructions. Opened in a window of their own: a navigation would
- * take the insert menu they are offered from with it.
+ * The company's domain for a company session, else cad's. Only https
+ * onshape.com origins: anyone can write a launch url.
  */
+export function toOnshapeOrigin(server: string | undefined): string {
+    const url = server ? URL.parse(server) : null;
+    const isOnshape =
+        url?.protocol === "https:" &&
+        (url.hostname === "onshape.com" ||
+            url.hostname.endsWith(".onshape.com"));
+    return isOnshape ? url.origin : DEFAULT_ONSHAPE_ORIGIN;
+}
+
+/** Opened in a new window so the insert menu stays. */
 export const SETUP_URL = "/setup";
 
-export function makeUrl(path: ConfigurablePath): string;
-export function makeUrl(path: ElementPath): string;
-export function makeUrl(path: InstancePath): string;
-export function makeUrl(path: DocumentPath): string;
-export function makeUrl(path: DocumentPath): string {
-    let url = `https://cad.onshape.com/documents/${path.documentId}`;
+/** Onshape fills in whatever the configuration leaves out. */
+export function makeUrl(
+    origin: string,
+    path: DocumentPath | InstancePath | ElementPath,
+    configuration?: PartialSelection
+): string {
+    let url = `${origin}/documents/${path.documentId}`;
     if (isInstancePath(path)) {
         url += `/${path.instanceType}/${path.instanceId}`;
     }
     if (isElementPath(path)) {
         url += `/e/${path.elementId}`;
     }
-    if (isConfigurablePath(path)) {
-        // Onshape's own parameter, so it keeps Onshape's name. Escaped here:
-        // the helper's raw output is what their api takes.
-        url +=
-            "?configuration=" +
-            encodeURIComponent(encodeConfiguration(path.selection));
+    const encoded = encodeQueryConfiguration(configuration);
+    if (isElementPath(path) && encoded) {
+        // Onshape unwraps exactly this one layer of escaping.
+        url += "?configuration=" + encodeURIComponent(encoded);
     }
     return url;
 }
 
-/**
- * Opens the given URL in a new tab.
- */
 export function openUrlInNewTab(url: string) {
     window.open(url, "_blank");
 }

@@ -1,7 +1,3 @@
-/**
- * Reads of the per-part rollups: what a part was used for inside a window, and
- * how that lands day by day.
- */
 import { and, count, countDistinct, eq, gte, lte, sum } from "drizzle-orm";
 import { type Db } from "../../db/client";
 import {
@@ -19,11 +15,12 @@ import {
 import { LibraryId } from "../library/library-id";
 import { type PartUsageOut } from "./contract";
 import { MONTH_DAYS, usesPerMonth } from "./measures";
-import { addDays, toDayKey, type DayRange } from "./day";
+import { addDays, toReportingDay, type DayRange } from "./day";
 import { toElementPath } from "../../lib/onshape/path";
 import { type ConfigurationParameter } from "../configurations/contract";
 
 export interface PartRow {
+    libraryId: LibraryId;
     elementId: string;
     name: string;
     groupName: string;
@@ -33,11 +30,7 @@ export interface PartRow {
     firstInsertedAt: Date | null;
 }
 
-/**
- * Every part the library still lists, with the date it was first inserted.
- * Driven off `insertables` rather than the stats table, so a part nobody has
- * used lists at zero and one that has left the library does not list at all.
- */
+/** From `insertables`, so unused parts list at zero and removed ones don't list. */
 export function getPartRows(
     db: Db,
     libraryId: LibraryId,
@@ -47,31 +40,33 @@ export function getPartRows(
     if (options.visibleOnly) {
         filters.push(eq(insertables.isVisible, true));
     }
-    return db
-        .select({
-            elementId: insertables.elementId,
-            name: insertables.name,
-            groupName: groups.name,
-            documentId: insertables.documentId,
-            versionId: insertables.versionId,
-            isVisible: insertables.isVisible,
-            firstInsertedAt: insertableStats.firstInsertedAt
-        })
-        .from(insertables)
-        .leftJoin(
-            insertableStats,
-            and(
-                eq(insertableStats.libraryId, insertables.libraryId),
-                eq(insertableStats.elementId, insertables.elementId)
+    return (
+        db
+            .select({
+                libraryId: insertables.libraryId,
+                elementId: insertables.elementId,
+                name: insertables.name,
+                groupName: groups.name,
+                documentId: insertables.documentId,
+                versionId: insertables.versionId,
+                isVisible: insertables.isVisible,
+                firstInsertedAt: insertableStats.firstInsertedAt
+            })
+            .from(insertables)
+            .leftJoin(
+                insertableStats,
+                and(
+                    eq(insertableStats.libraryId, insertables.libraryId),
+                    eq(insertableStats.elementId, insertables.elementId)
+                )
             )
-        )
-        // `groupId` is a non-null FK that cascades, so a row always matches.
-        .innerJoin(groups, eq(groups.id, insertables.groupId))
-        .where(and(...filters))
-        .all();
+            // `groupId` is a non-null FK that cascades, so a row always matches.
+            .innerJoin(groups, eq(groups.id, insertables.groupId))
+            .where(and(...filters))
+            .all()
+    );
 }
 
-/** One part counted over the window rather than over its whole history. */
 export function toWindowedPart(
     row: PartRow,
     windowed: Map<string, number>,
@@ -81,11 +76,11 @@ export function toWindowedPart(
     const from = Date.parse(`${range.from}T00:00:00Z`);
     const to = Math.min(Date.now(), Date.parse(`${range.to}T23:59:59Z`));
     const insertCount = windowed.get(row.elementId) ?? 0;
-    // Rated over the days the part has existed, so arriving late in the window
-    // does not read as unpopular.
+    // Over the days it existed, so arriving late doesn't read as unpopular.
     const firstUsed = Math.max(row.firstInsertedAt?.getTime() ?? from, from);
 
     return {
+        libraryId: row.libraryId,
         path: toElementPath(row),
         name: row.name,
         groupName: row.groupName,
@@ -100,10 +95,7 @@ export function toWindowedPart(
     };
 }
 
-/**
- * Inserts per element inside the window, folded out of the daily rollup —
- * a range scan, thanks to `daily_insertable_metrics_day_idx`.
- */
+/** A range scan on `daily_insertable_metrics_day_idx`. */
 export async function getWindowedInsertCounts(
     db: Db,
     libraryId: LibraryId,
@@ -135,10 +127,15 @@ interface ConfigurationCount {
     elementId: string;
     parameterId: string;
     value: string;
+    /** The branch it was chosen in; see `toInstanceKeys`. */
+    instanceKey: string;
     count: number;
 }
 
-/** How often each configuration value was chosen inside the window. */
+/**
+ * How often each configuration value was chosen inside the window, split by the
+ * branch it was chosen in — which is what lets one branch be counted on its own.
+ */
 export async function getConfigurationCounts(
     db: Db,
     libraryId: LibraryId,
@@ -150,6 +147,7 @@ export async function getConfigurationCounts(
             elementId: dailyConfigurationMetrics.elementId,
             parameterId: dailyConfigurationMetrics.parameterId,
             value: dailyConfigurationMetrics.value,
+            instanceKey: dailyConfigurationMetrics.instanceKey,
             count: sum(dailyConfigurationMetrics.count)
         })
         .from(dailyConfigurationMetrics)
@@ -166,7 +164,8 @@ export async function getConfigurationCounts(
         .groupBy(
             dailyConfigurationMetrics.elementId,
             dailyConfigurationMetrics.parameterId,
-            dailyConfigurationMetrics.value
+            dailyConfigurationMetrics.value,
+            dailyConfigurationMetrics.instanceKey
         )
         .all();
 
@@ -177,22 +176,18 @@ function emptySparkline(): number[] {
     return Array.from({ length: MONTH_DAYS }, () => 0);
 }
 
-/**
- * Daily insert counts per part over the trailing window, as dense arrays the
- * table can plot directly.
- */
+/** Ends on the last complete day, like every other series. */
 export async function getPartSparklines(
     db: Db,
     libraryId: LibraryId
 ): Promise<Map<string, number[]>> {
-    const today = toDayKey(Date.now());
+    const last = toReportingDay(Date.now());
     const days = Array.from({ length: MONTH_DAYS }, (_, i) =>
-        addDays(today, i - (MONTH_DAYS - 1))
+        addDays(last, i - (MONTH_DAYS - 1))
     );
     const dayIndex = new Map(days.map((day, i) => [day, i]));
 
-    // Summed over targets: a part inserted into both kinds of tab on one day
-    // has a row apiece, and the sparkline plots the day.
+    // Summed over targets, which each have a row.
     const rows = await db
         .select({
             elementId: dailyInsertableMetrics.elementId,
@@ -301,10 +296,6 @@ export function sumPartTargets(
         .all();
 }
 
-/**
- * Favorites are keyed by insertable id, so a part that has left the library has
- * none to count.
- */
 export function countPartFavorites(
     db: Db,
     libraryId: LibraryId,
@@ -323,10 +314,7 @@ export function countPartFavorites(
         .get();
 }
 
-/**
- * The parameters the part declares today. The 1:1 configurations table is keyed
- * by insertable id, so they are only reachable through a live row.
- */
+/** Only reachable through a live insertable row. */
 export async function getPartParameters(
     db: Db,
     insertableId: string | undefined

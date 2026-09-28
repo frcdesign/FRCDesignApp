@@ -1,15 +1,14 @@
-/**
- * Re-exported because the runtime looks them up here: a Durable Object or
- * Workflow class has to be an export of the Worker's entrypoint for the
- * `class_name`s in wrangler.jsonc to resolve.
- */
-export {
-    AddGroupWorkflow,
-    LoadLibraryWorkflow
-} from "./features/load/workflows";
-export { ThumbnailRenderer } from "./features/thumbnails/renderer";
+/** Workflow and Durable Object classes must be exported here for wrangler.jsonc's `class_name`s to resolve. */
+export { LoadDocumentWorkflow } from "./features/load/workflows";
+export { RenderThumbnailWorkflow } from "./features/thumbnails/render-workflow";
+export { PushHub } from "./features/push/push-hub";
 export { VersionManagerWorkflow } from "./features/version-manager/workflow";
 import { createApp } from "./app";
 import { productionAuth } from "./features/auth/request-auth";
+import type { AppBindings } from "./lib/context";
 
-export default createApp(productionAuth);
+const app = createApp(productionAuth);
+
+export default {
+    fetch: app.fetch
+} satisfies ExportedHandler<AppBindings>;

@@ -11,7 +11,9 @@ function License() {
             <Title order={3} ta="center">
                 GNU GENERAL PUBLIC LICENSE
             </Title>
-            <Text ta="center">Version 3, 29 June 2007</Text>
+            <Text size="md" ta="center">
+                Version 3, 29 June 2007
+            </Text>
 
             <p>
                 Copyright &copy; 2007 Free Software Foundation, Inc. &lt;

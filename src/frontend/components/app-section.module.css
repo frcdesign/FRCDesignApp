@@ -1,0 +1,42 @@
+/*
+ * Mantine brightens a control to pure white or black; a section header is a
+ * title like the group page's, so it reads in the same text color.
+ *
+ * Stuck while its own section is on screen, until the next header pushes it
+ * off. Top 0 is below the navbar: the scroll container's padding clears it.
+ * On the header row rather than the control, because the control is only the
+ * left of it — the section's buttons and chevron sit beside it.
+ */
+.header {
+    color: var(--mantine-color-text);
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--mantine-color-body);
+}
+
+/*
+ * A notice is one short block with nothing to scroll through, so a header
+ * stuck over it only half-covers it on the way out.
+ */
+.item:has([data-notice]) .header {
+    position: static;
+}
+
+/* Its own padding would outgrow the header's height. */
+.label {
+    padding-block: 0;
+}
+
+.content {
+    padding: 0;
+}
+
+/*
+ * Every header ends with a chevron of its own, past whatever buttons it
+ * carries; Mantine's sits against the label, which is not the far right of
+ * anything.
+ */
+.chevron {
+    display: none;
+}

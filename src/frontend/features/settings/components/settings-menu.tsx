@@ -1,15 +1,17 @@
-import { DEFAULT_SETTINGS, Theme } from "@backend/features/settings/settings";
 import { Box, Button, Select, Stack } from "@mantine/core";
 import { ArrowLeftIcon, SignOutIcon } from "@phosphor-icons/react";
 import { useMatch } from "@tanstack/react-router";
-import { IconSize, StatusColor } from "../../../lib/style-constants";
+import {
+    SETTING_CONTROL_WIDTH,
+    StatusColor
+} from "../../../lib/style-constants";
 import { ReactNode, useId } from "react";
 import {
     AccessLevel,
     hasEditorAccess,
     isWithinAccessLevel
 } from "@backend/features/auth/access-level";
-import { LibraryId } from "@backend/features/library/library-id";
+import { type AppTab, getTabPath } from "../../../lib/app-tab";
 import { InputRow } from "../../../components/input-row";
 import { OpenUrlButton } from "../../../components/open-url-button";
 import { Section } from "../../../components/section";
@@ -19,11 +21,14 @@ import {
     useAccessData
 } from "../../auth/access-level";
 import { startSignOut } from "../../auth/sign-out";
-import { useGetUiState, updateUiState } from "../../../lib/ui-state";
+import { updateUiState } from "../../../lib/ui-state";
 import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
 import { SETUP_URL } from "../../../lib/url";
 import { useLibraryId } from "../../../lib/library";
-import { ReloadGroupsButton } from "../../library/components/reload-groups-button";
+import { ReloadButton } from "../../library/components/reload-button";
+import { VersionApprovalSettings } from "../../library/components/version-approval";
+import { RefreshAdminTeamButton } from "../../admin-team/components/refresh-admin-team-button";
+import { AdminTeamSetting } from "../../admin-team/components/admin-team-setting";
 
 /** The FRCDesign Discord, where feedback and support now live. */
 const DISCORD_INVITE_URL = "https://discord.gg/PMgzEUTgB7";
@@ -50,7 +55,7 @@ function SettingSelect<T extends string>(props: SettingSelectProps<T>) {
     const id = useId();
 
     return (
-        <InputRow label={label} htmlFor={id} spread>
+        <InputRow label={label} htmlFor={id}>
             <Select
                 id={id}
                 w={SETTING_CONTROL_WIDTH}
@@ -61,7 +66,6 @@ function SettingSelect<T extends string>(props: SettingSelectProps<T>) {
                 value={value}
                 allowDeselect={false}
                 checkIconPosition="right"
-                comboboxProps={{ withinPortal: true }}
                 onChange={(selected) => {
                     if (selected !== null) {
                         onSelect(selected);
@@ -71,9 +75,6 @@ function SettingSelect<T extends string>(props: SettingSelectProps<T>) {
         </InputRow>
     );
 }
-
-/** Wide enough for "Open dashboard", so every control ends on one line. */
-const SETTING_CONTROL_WIDTH = 170;
 
 export function SettingsMenuContent(): ReactNode {
     const { maxAccessLevel } = useAccessData();
@@ -103,11 +104,10 @@ function UserSettings(): ReactNode {
 
     return (
         <Stack gap="sm">
-            <ThemeSelect />
             {/* Only worth offering from inside Onshape's panel, which is what
                 the standalone app is roomier than. */}
             {isConnected && (
-                <InputRow spread label="Open outside Onshape">
+                <InputRow label="Open outside Onshape">
                     <OpenUrlButton
                         text="Open app"
                         url={standaloneUrl(libraryId)}
@@ -116,21 +116,21 @@ function UserSettings(): ReactNode {
             )}
             {/* The dashboard is where the app is the thing worth offering. */}
             {isDashboard ? (
-                <InputRow spread label="Main app">
-                    <OpenAppButton libraryId={libraryId} />
+                <InputRow label="Main app">
+                    <OpenAppButton tabId={libraryId} />
                 </InputRow>
             ) : (
-                <InputRow spread label="Usage dashboard">
+                <InputRow label="Usage dashboard">
                     <OpenUrlButton text="Open dashboard" url={DASHBOARD_URL} />
                 </InputRow>
             )}
-            <InputRow spread label="Discord">
+            <InputRow label="Discord">
                 <OpenUrlButton text="Join discord" url={DISCORD_INVITE_URL} />
             </InputRow>
             {/* Only worth offering to somebody who is not already running the
                 app, which inside Onshape's panel they are. */}
             {!isConnected && (
-                <InputRow spread label="Get the FRCDesignApp">
+                <InputRow label="Get the FRCDesignApp">
                     <OpenUrlButton text="Instructions" url={SETUP_URL} />
                 </InputRow>
             )}
@@ -138,10 +138,9 @@ function UserSettings(): ReactNode {
                 only the standalone app's to offer. */}
             {!isConnected && (
                 <RequireSignIn>
-                    <InputRow spread label="Onshape account">
+                    <InputRow label="Onshape account">
                         <Button
-                            leftSection={<SignOutIcon size={IconSize.SMALL} />}
-                            variant="light"
+                            leftSection={<SignOutIcon />}
                             color={StatusColor.ERROR}
                             onClick={startSignOut}
                         >
@@ -154,49 +153,30 @@ function UserSettings(): ReactNode {
     );
 }
 
-/**
- * The app's own url for the library, free of Onshape's launch params, which are
- * what would keep it embedded. Settings follow on their own, being this browser's.
- */
-function standaloneUrl(libraryId: LibraryId): string {
-    return new URL(`/app/library/${libraryId}`, window.location.origin).href;
+/** Without Onshape's launch params, which keep the app embedded. */
+function standaloneUrl(tabId: AppTab): string {
+    return new URL(getTabPath(tabId), window.location.origin).href;
 }
 
-/** Whether the dashboard is showing, rather than the app itself. */
 function useIsDashboard(): boolean {
     return useMatch({ from: "/dashboard", shouldThrow: false }) !== undefined;
 }
 
 interface OpenAppButtonProps {
-    libraryId: LibraryId;
+    tabId: AppTab;
 }
 
-/** Leaves the dashboard for the app, in place rather than in a second tab. */
+/** In place, not in a new tab. */
 function OpenAppButton(props: OpenAppButtonProps): ReactNode {
     return (
         <Button
-            leftSection={<ArrowLeftIcon size={IconSize.SMALL} />}
-            variant="light"
+            leftSection={<ArrowLeftIcon />}
             onClick={() => {
-                window.location.href = standaloneUrl(props.libraryId);
+                window.location.href = standaloneUrl(props.tabId);
             }}
         >
             Open app
         </Button>
-    );
-}
-
-function ThemeSelect(): ReactNode {
-    const uiState = useGetUiState();
-    const theme = uiState.theme;
-
-    return (
-        <SettingSelect
-            label="Theme"
-            value={theme ?? DEFAULT_SETTINGS.theme}
-            options={[Theme.SYSTEM, Theme.DARK, Theme.LIGHT]}
-            onSelect={(theme) => updateUiState({ theme })}
-        />
     );
 }
 
@@ -205,12 +185,23 @@ function AdminSettings(): ReactNode {
         <Stack gap="sm">
             {/* Always show the access level select so admins can change access level if needed */}
             <AccessLevelSelect />
-            <RequireAccessLevel>
-                <InputRow spread label="Reload outdated documents">
-                    <ReloadGroupsButton />
+            <RequireAccessLevel accessLevel={AccessLevel.ADMIN}>
+                <InputRow label="Outdated documents">
+                    <ReloadButton />
                 </InputRow>
-                <InputRow spread label="Reload all documents">
-                    <ReloadGroupsButton reloadAll />
+            </RequireAccessLevel>
+            <RequireAccessLevel accessLevel={AccessLevel.OWNER}>
+                <InputRow label="All documents">
+                    <ReloadButton all />
+                </InputRow>
+            </RequireAccessLevel>
+            <RequireAccessLevel accessLevel={AccessLevel.ADMIN}>
+                <VersionApprovalSettings />
+            </RequireAccessLevel>
+            <AdminTeamSetting />
+            <RequireAccessLevel accessLevel={AccessLevel.ADMIN}>
+                <InputRow label="Admin team members">
+                    <RefreshAdminTeamButton />
                 </InputRow>
             </RequireAccessLevel>
         </Stack>
@@ -225,6 +216,7 @@ function AccessLevelSelect(): ReactNode {
             label="Access level"
             value={currentAccessLevel}
             options={[
+                AccessLevel.OWNER,
                 AccessLevel.ADMIN,
                 AccessLevel.EDITOR,
                 AccessLevel.USER

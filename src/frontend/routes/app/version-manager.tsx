@@ -8,10 +8,10 @@ import {
 } from "@backend/features/version-manager/contract";
 import { AppSection, AppSections } from "../../components/app-section";
 import { AppTitle } from "../../components/app-title";
-import { SectionLoading, SectionNotice } from "../../components/app-zero-state";
-import { getUiState, updateUiState, useGetUiState } from "../../lib/ui-state";
+import { SectionLoading, SectionNotice } from "../../components/app-notice";
+import { updateUiState, useUiState } from "../../lib/ui-state";
 import { toTargetWorkspace } from "../../lib/onshape-launch";
-import { useTargetWorkspace } from "../../lib/onshape-params";
+import { useOnshapeLaunch, useTargetWorkspace } from "../../lib/onshape-params";
 import {
     DirectionIcon,
     DirectionInfo,
@@ -30,7 +30,7 @@ export const Route = createFileRoute("/app/version-manager")({
     beforeLoad: () => {
         // Nothing to act on: the tab that leads here is hidden without a
         // workspace, so this only catches a url typed or restored by hand.
-        if (!toTargetWorkspace(getUiState())) {
+        if (!toTargetWorkspace(useOnshapeLaunch.getState())) {
             throw redirect({ to: "/", replace: true });
         }
     }
@@ -70,7 +70,8 @@ interface VersionManagerProps {
 function VersionManager(props: VersionManagerProps): ReactNode {
     const { workspace } = props;
     const linksQuery = useWorkspaceLinksQuery(workspace);
-    const uiState = useGetUiState();
+    const isParentsOpen = useUiState((state) => state.isParentsOpen);
+    const isChildrenOpen = useUiState((state) => state.isChildrenOpen);
 
     if (linksQuery.isPending) {
         return <SectionLoading title="Loading linked workspaces..." />;
@@ -87,8 +88,8 @@ function VersionManager(props: VersionManagerProps): ReactNode {
     }
 
     const opened = [
-        ...(uiState.isParentsOpen ? [LinkDirection.PARENT] : []),
-        ...(uiState.isChildrenOpen ? [LinkDirection.CHILD] : [])
+        ...(isParentsOpen ? [LinkDirection.PARENT] : []),
+        ...(isChildrenOpen ? [LinkDirection.CHILD] : [])
     ];
 
     const handleChange = (values: string[]) => {
@@ -104,13 +105,13 @@ function VersionManager(props: VersionManagerProps): ReactNode {
                 workspace={workspace}
                 direction={LinkDirection.PARENT}
                 linked={links.parents}
-                opened={uiState.isParentsOpen}
+                opened={isParentsOpen}
             />
             <LinkSection
                 workspace={workspace}
                 direction={LinkDirection.CHILD}
                 linked={links.children}
-                opened={uiState.isChildrenOpen}
+                opened={isChildrenOpen}
             />
         </AppSections>
     );

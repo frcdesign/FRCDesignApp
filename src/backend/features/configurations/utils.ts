@@ -1,10 +1,7 @@
 import {
-    type ConfigurationKey,
-    type ConfigurationRecord,
     type PartMetadata,
     type PartialSelection,
     Selection,
-    DEFAULT_CONFIGURATION_KEY,
     EnumOption,
     EnumParameter,
     OptionVisibilityCondition,
@@ -12,7 +9,6 @@ import {
     ConfigurationParameter,
     ParameterType,
     QuantityParameter,
-    SearchRecord,
     UnitInfo,
     VisibilityCondition,
     VisibilityType
@@ -26,32 +22,7 @@ import {
 import { LogicalOp, QuantityType, Unit } from "./enums";
 import { type EvaluateOptions, valueWithUnits } from "./input-parser";
 
-/**
- * The record a selection produces. Several can match, since records name only
- * enumerated parameters, so the most specific wins.
- */
-export function findRecordForConfiguration(
-    configurationKey: ConfigurationKey,
-    records: SearchRecord[]
-): SearchRecord | undefined {
-    const selected = new Set(splitConfiguration(configurationKey));
-    let best: SearchRecord | undefined;
-    let bestNamed = -1;
-    for (const record of records) {
-        const named = splitConfiguration(record.configurationKey);
-        const matches = named.every((assignment) => selected.has(assignment));
-        if (matches && named.length > bestNamed) {
-            best = record;
-            bestNamed = named.length;
-        }
-    }
-    return best;
-}
-
-/**
- * Whether a parameter is shown. Takes a partial selection: visibility is what
- * enumeration consults while a combination is still being built up.
- */
+/** Takes a partial selection, since enumeration checks it mid-combination. */
 export function evaluateCondition(
     condition: VisibilityCondition | undefined,
     selection: PartialSelection,
@@ -62,8 +33,7 @@ export function evaluateCondition(
     }
 
     if (condition.type === VisibilityType.LOGICAL) {
-        // An OR of no children reads as false, which would hide a parameter
-        // over a condition the parser merely failed to represent.
+        // An empty OR is a condition the parser failed to represent; don't hide over it.
         if (condition.children.length === 0) {
             return true;
         }
@@ -100,13 +70,9 @@ export function evaluateCondition(
     return true;
 }
 
-/** A description holding a link is the link, rather than a description. */
 const ABSOLUTE_URL = new RegExp("^https?://", "i");
 
-/**
- * The page for a part, in descending precision: a description that is already a
- * url, then the vendor the part number names, then the taggings standing in.
- */
+/** A description that is a url, else the vendor's page for the part number, else the tagged vendor's. */
 export function getPartUrl(
     record: PartMetadata,
     vendors: Vendor[] = []
@@ -114,8 +80,6 @@ export function getPartUrl(
     if (record.description && ABSOLUTE_URL.test(record.description)) {
         return record.description;
     }
-    // WCP-123 -> WCP, then what the part says it is, then the insertable's
-    // tagging when it names one vendor and one only.
     let vendor = parseVendorFromPartNumber(record.partNumber);
     vendor ??= parseVendor(record.vendor);
     if (!vendor && vendors.length === 1) {
@@ -125,23 +89,43 @@ export function getPartUrl(
 }
 
 /**
- * The text form of a configuration: `id=value;id=value`, values percent-encoded
- * so a `;` or `=` typed into a string parameter cannot read as the end of the
- * assignment. {@link decodeConfiguration} is the other half, and `utils.test.ts`
- * pins the round trip.
- *
- * Onshape's own encoding is not documented as far as I can tell; percent-encoding
- * is what this codebase's request bodies already sent, so it is what both halves
- * now agree on. Whether Onshape decodes a configuration in a query string once or
- * twice has not been checked against a live document — if a value with a `%` or a
- * space comes back wrong from Onshape, that is the thing to check first.
+ * `id=value;id=value`, percent-encoded so a typed `;` or `=` can't end an
+ * assignment. For keys and request bodies; a query parameter uses
+ * {@link encodeQueryConfiguration}.
  */
-export function encodeConfiguration(configuration?: Selection): string {
-    if (!configuration) {
-        return "";
-    }
-    return Object.entries(configuration)
+export function encodeConfiguration(configuration?: PartialSelection): string {
+    return assignments(configuration)
         .map(([id, value]) => `${id}=${encodeURIComponent(value)}`)
+        .join(";");
+}
+
+function assignments(configuration?: PartialSelection): [string, string][] {
+    return Object.entries(configuration ?? {}).filter(
+        (entry): entry is [string, string] => entry[1] !== undefined
+    );
+}
+
+/** The characters the text form is structured by, which a value must not spell. */
+const QUERY_ESCAPES: Record<string, string> = {
+    "%": "%25",
+    ";": "%3B",
+    "=": "%3D"
+};
+
+function escapeForQuery(value: string): string {
+    return value.replace(/[%;=]/g, (character) => QUERY_ESCAPES[character]);
+}
+
+/**
+ * Onshape's `configuration` query parameter. Only `;`, `=` and `%` are escaped:
+ * the query adds its own layer, and a value encoded twice reaches Onshape as
+ * `0.381%20m`, which isn't a quantity.
+ */
+export function encodeQueryConfiguration(
+    configuration?: PartialSelection
+): string {
+    return assignments(configuration)
+        .map(([id, value]) => `${id}=${escapeForQuery(value)}`)
         .join(";");
 }
 
@@ -150,10 +134,7 @@ function splitConfiguration(configuration: string): string[] {
     return configuration.split(";").filter((assignment) => assignment !== "");
 }
 
-/**
- * The values a configuration text names. A key names only what it overrides, so
- * what it omits is the parameter's own default — `fromKey` fills those in.
- */
+/** The values a configuration text names, in either encoding. */
 export function decodeConfiguration(configuration: string): Selection {
     const values: Selection = {};
     for (const assignment of splitConfiguration(configuration)) {
@@ -174,10 +155,6 @@ export function getOption(
     return options.find((option) => option.id === optionId);
 }
 
-/**
- * The enum options the selection leaves visible, by the parameter's own option
- * conditions. Partial for the same reason {@link evaluateCondition} is.
- */
 /** The options one condition controls, listed or spanned. */
 function getControlledOptionIds(
     optionCondition: OptionVisibilityCondition,
@@ -195,11 +172,8 @@ function getControlledOptionIds(
 }
 
 /**
- * The options an enum currently offers. A condition restricts the options it
- * names and says nothing about the rest, so an option no condition names is
- * always offered, and one several name is offered while any of them holds.
- * Offering only what a passing condition names instead empties a
- * partly-conditioned enum, and the panel drops a parameter with no options.
+ * An option no condition names is always offered; one several name is offered
+ * while any holds.
  */
 export function getVisibleOptions(
     enumParameter: EnumParameter,
@@ -237,16 +211,32 @@ export function getVisibleOptions(
     );
 }
 
+/** The selected option if still visible, else the default, else the first. */
+export function resolveSelectedOption(
+    visibleOptions: EnumOption[],
+    currentOptionId: string | undefined,
+    defaultOptionId: string
+): EnumOption | undefined {
+    if (visibleOptions.length === 0) {
+        return undefined;
+    }
+    return (
+        (currentOptionId
+            ? getOption(visibleOptions, currentOptionId)
+            : undefined) ??
+        getOption(visibleOptions, defaultOptionId) ??
+        visibleOptions[0]
+    );
+}
+
 /** Display precision used when the document's units aren't available. */
 export const DEFAULT_QUANTITY_PRECISION = 3;
 
-/**
- * The evaluation settings for a quantity parameter: its own bounds, plus the
- * document's display unit and precision, falling back to the parameter's own.
- */
+/** Bounds from the parameter; unit and precision from the document, else the parameter. */
 export function getEvaluateOptions(
     parameter: QuantityParameter,
-    unitInfo: UnitInfo
+    /** The document's; without one, each quantity shows in its own unit. */
+    unitInfo: UnitInfo | undefined
 ): EvaluateOptions {
     const quantityType = parameter.quantityType;
     const minAndMax = {
@@ -257,23 +247,23 @@ export function getEvaluateOptions(
         return {
             quantityType,
             displayPrecision:
-                unitInfo.lengthPrecision ?? DEFAULT_QUANTITY_PRECISION,
-            displayUnit: unitInfo.lengthUnit ?? parameter.unit,
+                unitInfo?.lengthPrecision ?? DEFAULT_QUANTITY_PRECISION,
+            displayUnit: unitInfo?.lengthUnit ?? parameter.unit,
             ...minAndMax
         };
     } else if (quantityType === QuantityType.ANGLE) {
         return {
             quantityType,
             displayPrecision:
-                unitInfo.anglePrecision ?? DEFAULT_QUANTITY_PRECISION,
-            displayUnit: unitInfo.angleUnit ?? parameter.unit,
+                unitInfo?.anglePrecision ?? DEFAULT_QUANTITY_PRECISION,
+            displayUnit: unitInfo?.angleUnit ?? parameter.unit,
             ...minAndMax
         };
     } else if (quantityType === QuantityType.REAL) {
         return {
             quantityType,
             displayPrecision:
-                unitInfo.realPrecision ?? DEFAULT_QUANTITY_PRECISION,
+                unitInfo?.realPrecision ?? DEFAULT_QUANTITY_PRECISION,
             displayUnit: Unit.UNITLESS,
             ...minAndMax
         };
@@ -284,19 +274,4 @@ export function getEvaluateOptions(
         displayUnit: Unit.UNITLESS,
         ...minAndMax
     };
-}
-
-/**
- * An insertable's full record list: its own part data first — the record an
- * unset configuration falls back to — then one per indexed configuration.
- */
-export function toRecords(
-    partMetadata: PartMetadata | null,
-    records: ConfigurationRecord[]
-): ConfigurationRecord[] {
-    if (!partMetadata) return records;
-    return [
-        { ...partMetadata, configurationKey: DEFAULT_CONFIGURATION_KEY },
-        ...records
-    ];
 }
