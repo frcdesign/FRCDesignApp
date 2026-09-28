@@ -74,7 +74,7 @@ analyticsRoutes.get(
             versionManager,
             growth
         ] = await Promise.all([
-            getTotals(db),
+            getTotals(db, undefined, range),
             getLibrarySummaries(db),
             getSeries(db, range),
             getMetricSeries(db, range),

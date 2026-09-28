@@ -18,6 +18,7 @@ import { toSelection } from "../configurations/selection";
 import { InsertSource, VersionRunKind } from "./usage";
 import { rollupWrites } from "./rollups";
 import {
+    dailyAppOpens,
     dailyConfigurationMetrics,
     dailyInsertableMetrics,
     dailyInsertableUsers,
@@ -43,6 +44,7 @@ const SIZE_PARAMETERS = [enumParam("size", ["small", "large"])];
 
 /** Every table the rollups write, read whole so a replay can be compared. */
 const ROLLUPS = [
+    dailyAppOpens,
     dailyMetrics,
     dailySourceMetrics,
     dailyTargetMetrics,
@@ -103,7 +105,7 @@ describe("rollupWrites", () => {
         const clock = vi.spyOn(Date, "now");
 
         clock.mockReturnValue(start);
-        await trackAppOpen(fakeContext(), TEST_LIBRARY_ID);
+        await trackAppOpen(fakeContext());
         await trackInsert(
             fakeContext(),
             insertEvent({

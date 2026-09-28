@@ -17,7 +17,7 @@ import { DashboardState } from "../../../../features/dashboard/dashboard-state";
 import { HealthTiles } from "../../../../features/dashboard/health-report";
 import { InsertsOverTimeCard } from "../../../../features/dashboard/inserts-chart";
 import { PartsTable } from "../../../../features/dashboard/parts-table";
-import { toDayRange } from "../../../../features/dashboard/range";
+import { RangePreset, toDayRange } from "../../../../features/dashboard/range";
 import { getLibraryName } from "../../../../lib/library";
 import { useCacheVersion } from "../../../../features/library/queries";
 import { useRangePreset } from "../../../../features/dashboard/range-control";
@@ -47,6 +47,7 @@ function LibraryOverview(): ReactNode {
                 <LibraryBody
                     libraryId={libraryId}
                     summary={summary.data}
+                    preset={preset}
                     parts={parts}
                     health={health}
                 />
@@ -60,6 +61,8 @@ function LibraryOverview(): ReactNode {
 interface LibraryBodyProps {
     libraryId: LibraryId;
     summary: LibrarySummaryOut;
+    /** Which window the totals cover; the season change fits only all of it. */
+    preset: RangePreset;
     parts: UseQueryResult<PartUsageOut[]>;
     health: UseQueryResult<LibraryHealthCounts>;
 }
@@ -67,6 +70,7 @@ interface LibraryBodyProps {
 function LibraryBody({
     libraryId,
     summary,
+    preset,
     parts,
     health
 }: LibraryBodyProps): ReactNode {
@@ -76,7 +80,7 @@ function LibraryBody({
         <>
             <HeadlineTiles
                 totals={totals}
-                growth={growth}
+                growth={preset === RangePreset.ALL ? growth : undefined}
                 series={metricSeries}
             />
 

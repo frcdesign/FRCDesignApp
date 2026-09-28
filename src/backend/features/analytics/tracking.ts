@@ -55,7 +55,11 @@ export function trackInsert(c: AppContext, event: InsertEvent): Promise<void> {
         record(
             getDb(c.env.DB),
             {
-                ...(await core(c, EventType.INSERT, event.libraryId)),
+                ...eventCore(
+                    EventType.INSERT,
+                    event.libraryId,
+                    await c.var.getUserId()
+                ),
                 ...NOT_A_VERSION_RUN,
                 ...event.path,
                 insertableId: event.insertableId,
@@ -71,16 +75,16 @@ export function trackInsert(c: AppContext, event: InsertEvent): Promise<void> {
     );
 }
 
-/** As `trackInsert`. */
-export function trackAppOpen(
-    c: AppContext,
-    libraryId: LibraryId
-): Promise<void> {
+/**
+ * As `trackInsert`. An open belongs to no library: it is the app being opened,
+ * not the page it resumes into.
+ */
+export function trackAppOpen(c: AppContext): Promise<void> {
     return runInBackground(c, "record an app open", async () =>
         record(
             getDb(c.env.DB),
             {
-                ...(await core(c, EventType.APP_OPEN, libraryId)),
+                ...eventCore(EventType.APP_OPEN, null, await c.var.getUserId()),
                 ...NOT_AN_INSERT,
                 ...NOT_A_VERSION_RUN
             },
@@ -99,15 +103,6 @@ function appliedSelection(
 }
 
 /** What every logged event carries; its kind fills in the rest. */
-async function core(
-    c: AppContext,
-    type: EventType,
-    libraryId: LibraryId
-): Promise<EventCore> {
-    return { ...eventCore(type, libraryId, await c.var.getUserId()) };
-}
-
-/** The same, for a run with no request to read the caller off. */
 function eventCore(
     type: EventType,
     libraryId: LibraryId | null,

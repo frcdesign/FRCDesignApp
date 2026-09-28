@@ -1,7 +1,7 @@
 import { min } from "drizzle-orm";
 import z from "zod";
 import { type Db } from "../../db/client";
-import { dailyMetrics } from "./schema";
+import { dailyAppOpens, dailyMetrics } from "./schema";
 import { addDays, toReportingDay, type DayRange } from "./day";
 
 /** The uses a part must be at or below for the low-usage reports to list it. */
@@ -34,13 +34,25 @@ export function eachDay(range: DayRange): string[] {
     return days;
 }
 
-/** Tells "nothing happened" from "not tracking yet". */
+/**
+ * Tells "nothing happened" from "not tracking yet". Both day-keyed rollups an
+ * event of its own writes, since either may hold the first day recorded.
+ */
 export async function getTrackingSince(db: Db): Promise<string | undefined> {
-    const row = await db
-        .select({ day: min(dailyMetrics.day) })
-        .from(dailyMetrics)
-        .get();
-    return row?.day ?? undefined;
+    const [inserts, opens] = await Promise.all([
+        db
+            .select({ day: min(dailyMetrics.day) })
+            .from(dailyMetrics)
+            .get(),
+        db
+            .select({ day: min(dailyAppOpens.day) })
+            .from(dailyAppOpens)
+            .get()
+    ]);
+    const days = [inserts?.day, opens?.day].filter(
+        (day): day is string => day !== null && day !== undefined
+    );
+    return days.length ? days.reduce((a, b) => (a < b ? a : b)) : undefined;
 }
 
 /** `to` is held to the last reported day, since today is still filling. */

@@ -3,6 +3,7 @@ import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { configurations } from "../../db/schema";
 import {
+    dailyAppOpens,
     dailyConfigurationMetrics,
     dailyInsertableMetrics,
     dailyInsertableUsers,
@@ -27,7 +28,7 @@ import { getDb } from "../../db/client";
 import { type AppContext } from "../../lib/context";
 import { trackAppOpen, trackInsert, type InsertEvent } from "./tracking";
 import { toDayKey } from "./day";
-import { EVENT_SCHEMA_VERSION, InsertSource } from "./usage";
+import { EVENT_SCHEMA_VERSION, EventType, InsertSource } from "./usage";
 import {
     boolParam,
     enumParam,
@@ -136,7 +137,7 @@ describe("tracking", () => {
             expect(daily?.count).toBe(1);
 
             const user = await db.select().from(userStats).get();
-            expect(user).toMatchObject({ insertCount: 1, openCount: 0 });
+            expect(user?.insertCount).toBe(1);
         });
 
         it("increments the rollups rather than duplicating rows", async () => {
@@ -461,7 +462,6 @@ describe("tracking", () => {
         it("writes one row per user per day however much they do", async () => {
             await trackInsert(fakeContext(), insertEvent());
             await trackInsert(fakeContext(), insertEvent());
-            await trackAppOpen(fakeContext(), TEST_LIBRARY_ID);
 
             const rows = await db.select().from(dailyUserActivity).all();
             expect(rows).toHaveLength(1);
@@ -485,17 +485,41 @@ describe("tracking", () => {
     });
 
     describe("trackAppOpen", () => {
-        it("counts opens separately from inserts", async () => {
-            await trackAppOpen(fakeContext(), TEST_LIBRARY_ID);
+        it("counts an open under no library", async () => {
+            await trackAppOpen(fakeContext());
 
-            const daily = await db.select().from(dailyMetrics).get();
-            expect(daily).toMatchObject({ type: "app_open", count: 1 });
+            const event = await db.select().from(events).get();
+            expect(event).toMatchObject({
+                type: EventType.APP_OPEN,
+                userId: TEST_USER_ID,
+                libraryId: null
+            });
 
-            const user = await db.select().from(userStats).get();
-            expect(user).toMatchObject({ openCount: 1, insertCount: 0 });
+            const open = await db.select().from(dailyAppOpens).get();
+            expect(open).toMatchObject({
+                userId: TEST_USER_ID,
+                day: toDayKey(Date.now()),
+                opens: 1
+            });
+        });
 
+        it("writes none of the library rollups", async () => {
+            await trackAppOpen(fakeContext());
+
+            expect(await db.select().from(dailyMetrics).all()).toEqual([]);
+            expect(await db.select().from(userStats).all()).toEqual([]);
+            expect(await db.select().from(dailyUserActivity).all()).toEqual([]);
             // An open isn't tied to a part.
             expect(await db.select().from(insertableStats).all()).toEqual([]);
+        });
+
+        it("adds to the day it is already counted under", async () => {
+            await trackAppOpen(fakeContext());
+            await trackAppOpen(fakeContext());
+
+            const rows = await db.select().from(dailyAppOpens).all();
+            expect(rows).toHaveLength(1);
+            expect(rows[0]?.opens).toBe(2);
         });
     });
 

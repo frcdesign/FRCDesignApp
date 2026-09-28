@@ -2,7 +2,6 @@ import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it } from "vitest";
 import { events } from "../analytics/schema";
 import { EVENT_SCHEMA_VERSION, EventType } from "../analytics/usage";
-import { LibraryId } from "../library/library-id";
 import {
     TEST_USER_ID,
     createTestApp,
@@ -132,9 +131,9 @@ describe("POST /app-open", () => {
         await seedUser(db);
     });
 
-    it("records a versioned open in the library", async () => {
+    it("records an open under no library", async () => {
         const res = await createTestApp().request(
-            `/api/app-open/library/${LibraryId.CONFIG_LIB}`,
+            "/api/app-open",
             jsonRequest("POST"),
             env
         );
@@ -142,7 +141,7 @@ describe("POST /app-open", () => {
         expect(res.status).toBe(200);
         expect(await db.select().from(events).get()).toMatchObject({
             type: EventType.APP_OPEN,
-            libraryId: LibraryId.CONFIG_LIB,
+            libraryId: null,
             userId: TEST_USER_ID,
             schemaVersion: EVENT_SCHEMA_VERSION
         });
@@ -152,11 +151,7 @@ describe("POST /app-open", () => {
         const res = await createTestApp({
             isAuthenticated: false,
             signedIn: false
-        }).request(
-            `/api/app-open/library/${LibraryId.CONFIG_LIB}`,
-            jsonRequest("POST"),
-            env
-        );
+        }).request("/api/app-open", jsonRequest("POST"), env);
 
         expect(res.status).not.toBe(200);
         expect(await db.select().from(events).get()).toBeUndefined();

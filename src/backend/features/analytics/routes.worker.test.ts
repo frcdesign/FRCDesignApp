@@ -3,6 +3,7 @@ import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it } from "vitest";
 import { configurations, insertables } from "../../db/schema";
 import {
+    dailyAppOpens,
     dailyConfigurationMetrics,
     dailyInsertableMetrics,
     dailyInsertableUsers,
@@ -10,8 +11,7 @@ import {
     dailyTargetMetrics,
     dailySourceMetrics,
     dailyUserActivity,
-    insertableStats,
-    userStats
+    insertableStats
 } from "./schema";
 import {
     TEST_LIBRARY_ID,
@@ -70,6 +70,10 @@ async function seedMetric(day: string, count: number, type = EventType.INSERT) {
         type,
         count
     });
+}
+
+async function seedOpens(day: string, opens: number, userId = "user-a") {
+    await db.insert(dailyAppOpens).values({ day, userId, opens });
 }
 
 /** Wide enough to cover every day these tests seed. */
@@ -194,29 +198,32 @@ describe("analytics routes", () => {
     });
 
     describe("GET /analytics/overview", () => {
-        it("sums lifetime totals and counts unique users", async () => {
+        it("sums the range's totals and counts unique users", async () => {
             await seedMetric("2026-01-01", 5);
             await seedMetric("2026-01-02", 3);
-            await seedMetric("2026-01-02", 7, EventType.APP_OPEN);
-            await db.insert(userStats).values([
+            // The same person opening the app, active in two libraries, and
+            // active on two days is still one user.
+            await seedOpens("2026-01-02", 7, "user-a");
+            await db.insert(dailyUserActivity).values([
                 {
-                    userId: "user-a",
+                    day: "2026-01-01",
                     libraryId: TEST_LIBRARY_ID,
-                    firstSeenAt: new Date(1),
-                    lastSeenAt: new Date(1)
+                    userId: "user-a"
                 },
                 {
-                    userId: "user-b",
+                    day: "2026-01-02",
                     libraryId: TEST_LIBRARY_ID,
-                    firstSeenAt: new Date(1),
-                    lastSeenAt: new Date(1)
+                    userId: "user-a"
                 },
-                // Same person in a second library must not double-count.
                 {
-                    userId: "user-a",
+                    day: "2026-01-01",
                     libraryId: LibraryId.MKCAD,
-                    firstSeenAt: new Date(1),
-                    lastSeenAt: new Date(1)
+                    userId: "user-a"
+                },
+                {
+                    day: "2026-01-01",
+                    libraryId: TEST_LIBRARY_ID,
+                    userId: "user-b"
                 }
             ]);
 
@@ -287,7 +294,21 @@ describe("analytics routes", () => {
             });
         });
 
-        it("scopes rangeTotals to the range while totals stay lifetime", async () => {
+        it("counts somebody who only ever opened the app as a user", async () => {
+            await seedOpens("2026-06-15", 2, "opener");
+
+            const res = await anonymousGet(
+                `/api/analytics/overview?${ALL_TIME}`
+            );
+            const body: AnalyticsOverviewOut = await res.json();
+
+            expect(body.totals).toMatchObject({
+                appOpens: 2,
+                uniqueUsers: 1
+            });
+        });
+
+        it("scopes the totals to the range, not to everything recorded", async () => {
             await seedMetric("2026-01-01", 5);
             await seedMetric("2026-06-15", 3);
             // user_stats is all-time, so a range reads the daily rollup.
@@ -315,7 +336,8 @@ describe("analytics routes", () => {
             );
             const body: AnalyticsOverviewOut = await res.json();
 
-            expect(body.totals.inserts).toBe(8);
+            expect(body.totals.inserts).toBe(3);
+            expect(body.totals.uniqueUsers).toBe(1);
         });
 
         // The rollup is per library, so counting rows would count this user twice.
@@ -465,8 +487,8 @@ describe("analytics routes", () => {
             expect(withCounts.map((point) => point.day)).toEqual([
                 "2026-06-01"
             ]);
-            // Totals stay lifetime, independent of the range.
-            expect(body.totals.inserts).toBe(7);
+            // The totals follow the range, as the series does.
+            expect(body.totals.inserts).toBe(2);
         });
     });
 

@@ -49,24 +49,20 @@ export function DashboardNavbar(): ReactNode {
                     <SettingsControls />
                 </Group>
             </NavbarRow>
-            {/* Only the library-scoped dashboards have anything to put here:
-                the app dashboard spans every library, and its cards each state
-                their own window. */}
-            {current !== "app" && (
-                <Group
-                    gap="sm"
-                    px="sm"
-                    h={NAVBAR_ROW_HEIGHT}
-                    align="center"
-                    className={styles.dividerBottom}
-                >
-                    <LibraryMenu dashboard={current} />
-                    <Group gap="sm" ml="auto">
-                        {current === "unused" && <ThresholdControl />}
-                        <RangeControl />
-                    </Group>
+            <Group
+                gap="sm"
+                px="sm"
+                h={NAVBAR_ROW_HEIGHT}
+                align="center"
+                className={styles.dividerBottom}
+            >
+                {/* The app dashboard spans every library, so it picks none. */}
+                {current !== "app" && <LibraryMenu dashboard={current} />}
+                <Group gap="sm" ml="auto">
+                    {current === "unused" && <ThresholdControl />}
+                    <RangeControl />
                 </Group>
-            )}
+            </Group>
         </Stack>
     );
 }

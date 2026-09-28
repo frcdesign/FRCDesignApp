@@ -1,7 +1,6 @@
 /** Where Onshape lands: gates on auth, then hands the launch to the app. */
 import { cacheMiddleware } from "../../lib/cache";
 import { getApp, type AppContext } from "../../lib/context";
-import { getLibraryParam, libraryRoute } from "../../lib/route-params";
 import { requireSignInMiddleware } from "../auth/guards";
 import { getSessionCompanyId } from "../auth/company";
 import { trackAppOpen } from "../analytics/tracking";
@@ -53,12 +52,8 @@ entryRoutes.get("/init", cacheMiddleware(), async (c) => {
 
 export const appOpenRoutes = getApp();
 
-/** POST /api/app-open/library/:libraryId: sent by the app on a launch from Onshape. */
-appOpenRoutes.post(
-    "/app-open" + libraryRoute(),
-    requireSignInMiddleware,
-    async (c) => {
-        await trackAppOpen(c, getLibraryParam(c));
-        return c.json({});
-    }
-);
+/** POST /api/app-open: sent by the app on a launch from Onshape. */
+appOpenRoutes.post("/app-open", requireSignInMiddleware, async (c) => {
+    await trackAppOpen(c);
+    return c.json({});
+});

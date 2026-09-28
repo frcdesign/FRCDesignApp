@@ -12,7 +12,7 @@ import { DashboardState } from "../../features/dashboard/dashboard-state";
 import { InsertsByLibraryCard } from "../../features/dashboard/inserts-chart";
 import { InsertSourceBreakdown } from "../../features/dashboard/insert-mix";
 import { RangePreset, toDayRange } from "../../features/dashboard/range";
-import { RecentSection } from "../../features/dashboard/growth-section";
+import { useRangePreset } from "../../features/dashboard/range-control";
 import { HeadlineTiles } from "../../features/dashboard/headline-tiles";
 import { METRICS } from "../../features/dashboard/metrics";
 import { Section } from "../../components/section";
@@ -34,8 +34,8 @@ function useAllParts(range: DayRange) {
 }
 
 function DashboardOverview(): ReactNode {
-    // No range picker: each section names its own window.
-    const range = toDayRange(RangePreset.ALL);
+    const preset = useRangePreset();
+    const range = toDayRange(preset);
     const query = useQuery(getOverviewQuery(range));
     const allParts = useAllParts(range);
 
@@ -50,13 +50,11 @@ function DashboardOverview(): ReactNode {
             <Section title="Overall">
                 <HeadlineTiles
                     totals={totals}
-                    growth={growth}
+                    growth={preset === RangePreset.ALL ? growth : undefined}
                     series={metricSeries}
                     withOpens
                 />
             </Section>
-
-            <RecentSection growth={growth} series={metricSeries} />
 
             <InsertsByLibraryCard series={series} />
 

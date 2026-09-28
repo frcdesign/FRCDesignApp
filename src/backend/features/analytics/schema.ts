@@ -213,6 +213,22 @@ export const dailyUserActivity = sqliteTable(
     ]
 );
 
+/**
+ * A day's launches from Onshape, per person. An open belongs to no library — it
+ * is the app being opened, not the page it resumes into — so it is counted here
+ * rather than in `daily_metrics`, and the user id keeps app-wide distinct users
+ * a count over days.
+ */
+export const dailyAppOpens = sqliteTable(
+    "daily_app_opens",
+    {
+        day: text("day").notNull(),
+        userId: text("user_id").notNull(),
+        opens: integer("opens").notNull().default(0)
+    },
+    (t) => [primaryKey({ columns: [t.day, t.userId] })]
+);
+
 /** One row per user per library, keeping unique-user counts a cheap COUNT. */
 export const userStats = sqliteTable(
     "user_stats",
@@ -220,7 +236,6 @@ export const userStats = sqliteTable(
         userId: text("user_id").notNull(),
         libraryId: text("library_id").$type<LibraryId>().notNull(),
         insertCount: integer("insert_count").notNull().default(0),
-        openCount: integer("open_count").notNull().default(0),
         firstSeenAt: integer("first_seen_at", {
             mode: "timestamp_ms"
         }).notNull(),

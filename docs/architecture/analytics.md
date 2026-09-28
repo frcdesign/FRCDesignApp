@@ -26,7 +26,7 @@ aggregates.
 | `src/backend/features/analytics/health.ts`                            | Build-issue counts per library                                    |
 | `src/backend/features/analytics/parameter-usage.ts`                   | Option usage, per way a parameter is shown                        |
 | `src/backend/features/analytics/routes.ts`                            | `GET /api/analytics/...`                                          |
-| `src/backend/features/entry/routes.ts`                                | `POST /api/app-open/...`, sent on a launch from Onshape           |
+| `src/backend/features/entry/routes.ts`                                | `POST /api/app-open`, sent on a launch from Onshape               |
 | `src/frontend/routes/dashboard/`                                      | The dashboard pages: overview, library, part, unused              |
 | `src/frontend/features/dashboard/`                                    | The dashboard's queries, charts and tables                        |
 
@@ -41,21 +41,25 @@ no foreign key crosses between them):
   the favorite, quick-insert and fasten flags, and a version run adds its kind,
   scope and four counts. Keyed on Onshape's element id with no foreign keys, so
   history survives a reload or a re-added tab.
-- `library_id` is null for an event that belongs to no library. A version run
-  acts on the Onshape document the app was launched from, which need not be in
-  any library, so it has none.
+- `library_id` is null for an event that belongs to no library: an app open,
+  which is the app being opened rather than the page it resumes into, and a
+  version run, which acts on the Onshape document the app was launched from.
 - Rollups, each derived from the log alone: `daily_metrics`,
   `daily_target_metrics`, `daily_source_metrics`, `insertable_stats`,
   `daily_insertable_metrics`, `daily_insertable_users`,
   `daily_configuration_metrics`, `daily_user_activity`, `user_stats`,
-  `daily_version_metrics`.
+  `daily_app_opens`, `daily_version_metrics`.
+- `daily_app_opens` is keyed by day and user: the count is the app's sessions,
+  and the user id is what makes somebody who only ever opened it a user. Every
+  app-level count of people is that table unioned with `daily_user_activity`
+  (`activeUserRows`), since a library rollup has no row for them.
 
 ## Flows
 
 ### Recording
 
 1. An insert route calls `trackInsert` once the insert succeeded; `/init`'s
-   handoff calls `POST /api/app-open/...`, which calls `trackAppOpen`; the
+   handoff calls `POST /api/app-open`, which calls `trackAppOpen`; the
    version manager's workflow calls `trackVersionRun` once its run has
    finished, so a run that failed halfway still records what it managed.
 2. Both run in the background (`runInBackground`), after the response, so
@@ -88,6 +92,11 @@ panel. Its routes read only rollups and return only aggregates:
 
 The range, threshold and preset live in the url, so a view can be shared.
 
+Every page's totals are over the picked range, and two numbers are not: the
+favorites and linked documents standing now, which are state rather than events
+and say so on the tile. The season comparison beside a headline number is shown
+only on **All time**, its own window being a season rather than the picked one.
+
 ## Invariants
 
 - Tracking never fails or delays the request it records.
@@ -95,8 +104,9 @@ The range, threshold and preset live in the url, so a view can be shared.
   `getOnshapeApi()`, and never return anything about one user.
 - Every rollup is derivable from `events` alone, so the rollups can be rebuilt by
   replaying the log.
-- Every rollup but `daily_version_metrics` is keyed by library, so an event
-  without one writes only that.
+- An event without a library writes one rollup and no other:
+  `daily_app_opens` for an open, `daily_version_metrics` for a version run.
+  Every other rollup is keyed by library.
 - An event's columns are decided in `logged-event.ts`; a new column fails to
   compile until each kind of event says what it holds.
 - Values are compared and counted canonically, never by configuration key.
@@ -112,6 +122,13 @@ The range, threshold and preset live in the url, so a view can be shared.
 
 ## Decisions
 
+- **An app open has no library either.** The library it carried was whichever
+  tab the browser last remembered, and the app resumes into a page that need not
+  be a library at all, so the number said more about somebody's last tab than
+  about the open. It counts app-wide, in `daily_app_opens`. Migration 0009
+  rebuilds that table, `daily_user_activity` and `user_stats` from the log, so
+  the opens already recorded keep counting and a library's users are the people
+  who inserted from it.
 - **A version run has no library.** It acts on whatever document Onshape
   launched the app from. Attributing it to the library the person happened to
   have open would say more about their last tab than about anything real, so
@@ -119,7 +136,8 @@ The range, threshold and preset live in the url, so a view can be shared.
 - **Version runs are not activity.** They write no row to `daily_user_activity`
   or `user_stats`: "active user" has always meant somebody who inserted
   something, and counting runs there would move the line under every historical
-  figure.
+  figure. An open is activity, which is why it is unioned in: it was counted as a
+  user before this, and dropping it would move that line.
 - **A log plus rollups.** The log keeps everything for replay; rollups keep every
   dashboard read a small indexed query.
 - **Keyed by element, not insertable.** An insertable row is replaced when a tab
@@ -129,4 +147,4 @@ The range, threshold and preset live in the url, so a view can be shared.
 - **The module isn't called `events.ts`.** Ad blockers match an `events-<hash>.js`
   chunk, and the frontend imports its enums.
 
-_Last reviewed: 2026-09-27_
+_Last reviewed: 2026-09-28_

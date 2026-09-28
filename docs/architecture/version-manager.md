@@ -168,7 +168,9 @@ in somebody's document.
 Once the run has finished, the workflow calls `trackVersionRun` with its kind,
 how it was aimed, and the four counts. The event belongs to no library, and
 rolls up into `daily_version_metrics`, which the app dashboard reports as
-references updated, versions synced and documents linked. See
+references updated and versions synced, beside the documents linked right now.
+The refusals are recorded but not reported: the toast is where the person who
+ran it is told, and a dashboard tile of them would read as a fault rate. See
 [analytics.md](./analytics.md).
 
 ### Watching a run

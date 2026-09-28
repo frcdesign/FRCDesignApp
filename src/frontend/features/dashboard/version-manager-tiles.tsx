@@ -18,7 +18,7 @@ export function VersionManagerTiles({
 }: VersionManagerTilesProps): ReactNode {
     return (
         <Section title="Version manager">
-            <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }}>
+            <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }}>
                 <StatTile
                     label="References updated"
                     value={totals.updatedElements}
@@ -30,15 +30,8 @@ export function VersionManagerTiles({
                 <StatTile
                     label="Documents linked"
                     value={totals.linkedWorkspaces}
+                    caption="Right now"
                 />
-                {/* Only where Onshape has refused one: a zero here is the
-                    ordinary case, and a tile for it says otherwise. */}
-                {totals.failedElements > 0 && (
-                    <StatTile
-                        label="References refused"
-                        value={totals.failedElements}
-                    />
-                )}
             </SimpleGrid>
         </Section>
     );

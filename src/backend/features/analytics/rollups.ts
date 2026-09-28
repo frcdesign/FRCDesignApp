@@ -18,6 +18,7 @@ import {
     dailyMetrics,
     dailySourceMetrics,
     dailyTargetMetrics,
+    dailyAppOpens,
     dailyUserActivity,
     dailyVersionMetrics,
     insertableStats,
@@ -38,7 +39,10 @@ export function rollupWrites(
     if (run) {
         return [countVersionRunDay(db, run)];
     }
-    // Every other rollup is keyed by library, and only a version run has none.
+    if (event.type === EventType.APP_OPEN) {
+        return [countAppOpenDay(db, event)];
+    }
+    // Every other rollup is keyed by library.
     if (event.libraryId === null) {
         return [];
     }
@@ -101,6 +105,20 @@ function countVersionRunDay(db: Db, run: LoggedVersionRun) {
         });
 }
 
+/**
+ * One person's opens for a day, which is both the session count and the record
+ * that they were about: an open has no library to be counted under.
+ */
+function countAppOpenDay(db: Db, event: LoggedEvent) {
+    return db
+        .insert(dailyAppOpens)
+        .values({ day: event.day, userId: event.userId, opens: 1 })
+        .onConflictDoUpdate({
+            target: [dailyAppOpens.day, dailyAppOpens.userId],
+            set: { opens: increment(dailyAppOpens.opens) }
+        });
+}
+
 /** The library's day: each flag counter a subset of the day's total. */
 function countDay(db: Db, event: LoggedEvent, libraryId: LibraryId) {
     const favorite = event.isFavorite ? 1 : 0;
@@ -148,10 +166,9 @@ function markUserActive(db: Db, event: LoggedEvent, libraryId: LibraryId) {
         .onConflictDoNothing();
 }
 
-/** The user's lifetime row, counting inserts and opens apart. */
+/** The user's lifetime row in one library. */
 function countUser(db: Db, event: LoggedEvent, libraryId: LibraryId) {
     const insert = event.type === EventType.INSERT ? 1 : 0;
-    const open = event.type === EventType.APP_OPEN ? 1 : 0;
 
     return db
         .insert(userStats)
@@ -159,7 +176,6 @@ function countUser(db: Db, event: LoggedEvent, libraryId: LibraryId) {
             userId: event.userId,
             libraryId,
             insertCount: insert,
-            openCount: open,
             firstSeenAt: event.createdAt,
             lastSeenAt: event.createdAt
         })
@@ -167,7 +183,6 @@ function countUser(db: Db, event: LoggedEvent, libraryId: LibraryId) {
             target: [userStats.userId, userStats.libraryId],
             set: {
                 insertCount: increment(userStats.insertCount, insert),
-                openCount: increment(userStats.openCount, open),
                 firstSeenAt: earliest(userStats.firstSeenAt, event.createdAt),
                 lastSeenAt: latest(userStats.lastSeenAt, event.createdAt)
             }

@@ -4,7 +4,7 @@
  */
 
 /** Bump when the columns' meaning changes. */
-export const EVENT_SCHEMA_VERSION = 2;
+export const EVENT_SCHEMA_VERSION = 3;
 
 export enum EventType {
     INSERT = "insert",

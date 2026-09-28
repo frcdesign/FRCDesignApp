@@ -30,7 +30,7 @@ describe("requireSignInMiddleware", () => {
         expect(favorites.status).toBe(401);
 
         const appOpen = await app.request(
-            "/api/app-open/library/" + LibraryId.FRC_DESIGN_LIB,
+            "/api/app-open",
             jsonRequest("POST"),
             env
         );
