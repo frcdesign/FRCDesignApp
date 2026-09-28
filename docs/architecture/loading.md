@@ -113,6 +113,42 @@ the search index, then bumps the library version and pushes; then it deletes the
 `load_jobs` row **only if it still holds this instance**, since a replacement
 owns it otherwise.
 
+### Steps, Onshape calls and retries
+
+Each row is one durable workflow step, named as in the dashboard; a step's
+result is stored, so a retried or resumed load skips steps that finished.
+`ONSHAPE` is `ONSHAPE_STEP_RETRIES`, `THUMBNAIL` is `THUMBNAIL_RETRIES` (see
+[platform.md](./platform.md#retries-and-timeouts)).
+
+| Step                                                       | Onshape call                                                                                            | Retries     |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- | ----------- |
+| `read-group`                                               | —                                                                                                       | default     |
+| `document`                                                 | `GET /documents/{did}`                                                                                  | `ONSHAPE`   |
+| `version`                                                  | `GET /documents/d/{did}/versions` (the latest)                                                          | `ONSHAPE`   |
+| `hold-for-approval`, then a wait for `approve-version`     | —                                                                                                       | default     |
+| `thumbnail-workspace-{group}`                              | `GET /documents/d/{did}/workspaces`, `POST` one if missing                                              | `ONSHAPE`   |
+| `document-contents-{group}`                                | `GET /documents/d/{did}/v/{vid}/contents`                                                               | `ONSHAPE`   |
+| `stored-insertables-{group}`, `select-insertables-{group}` | —                                                                                                       | default     |
+| `flags-{insertable}`                                       | —                                                                                                       | default     |
+| `config-{insertable}`                                      | `GET /elements/d/{did}/v/{vid}/e/{eid}/configuration`                                                   | `ONSHAPE`   |
+| `parts-{insertable}` (part studios)                        | `GET /parts/d/{did}/v/{vid}/e/{eid}`                                                                    | `ONSHAPE`   |
+| `fasten-{insertable}` (if enabled)                         | Assembly definition, or part studio features                                                            | `ONSHAPE`   |
+| `records-{insertable}-{batch}`                             | Per configuration: `GET /parts/...` (part studio) or `GET /metadata/...` (assembly), with the overrides | `ONSHAPE`   |
+| `thumbnail-{insertable}`                                   | `GET /thumbnails/d/{did}/w/{thumbnail wid}/e/{eid}/s/{size}`, both sizes                                | `THUMBNAIL` |
+| `save-{insertable}`                                        | —                                                                                                       | default     |
+| `document-thumbnail-{group}`                               | As `thumbnail-`, for the thumbnail tab                                                                  | `THUMBNAIL` |
+| `save-group-{group}`                                       | —                                                                                                       | default     |
+| `delete-stale-thumbnails-{group}`                          | — (R2 only)                                                                                             | default     |
+| `delete-stale-workspaces-{group}`                          | `DELETE /documents/d/{did}/workspaces/{wid}` per stale one                                              | default     |
+| `register-webhook`                                         | `GET /webhooks/{id}`, `POST /webhooks` if gone                                                          | `ONSHAPE`   |
+| `flag-failed` (on a failure)                               | —                                                                                                       | default     |
+| `finish`                                                   | —                                                                                                       | default     |
+
+"default" is Workflows' own policy for a step given none. A step that exhausts
+its retries throws; a failed insertable step flags that insertable and the rest
+of the group carries on, and a failed group-level step flags the group
+`LOAD_FAILED`.
+
 ### Whose session a load uses
 
 Every Onshape call in a load goes through `getOnshapeApiFromContext`, which

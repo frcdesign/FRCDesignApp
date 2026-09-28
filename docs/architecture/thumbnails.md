@@ -140,6 +140,20 @@ row in **any** library names and no group thumbnail url points at. A forced
 reload also deletes every configuration render of the document
 (`dropRenders`), so bad ones are redone.
 
+### Onshape calls
+
+| Flow              | Call                                                                                                          | Retries                             |
+| ----------------- | ------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
+| Load, reload      | `GET /thumbnails/d/{did}/w/{thumbnail wid}/e/{eid}/s/{size}`, per size                                        | `THUMBNAIL_RETRIES`; none on reload |
+| Render request    | `GET /documents/d/{did}/w/{thumbnail wid}/insertables?elementId=&configuration=` for `predictableThumbnailId` | none: the route answers             |
+| Render workflow   | `GET /thumbnails/{thumbnailId}/s/{size}`, per size                                                            | `RENDER_RETRIES`                    |
+| Workspace sync    | `GET`/`POST /documents/d/{did}/workspaces`                                                                    | `ONSHAPE_STEP_RETRIES` in a load    |
+| Workspace cleanup | `DELETE /documents/d/{did}/workspaces/{wid}`                                                                  | none; failure is logged             |
+
+A render workflow calls Onshape as the session that requested it
+(`getOnshapeApiFromSessionId`), so a render outlives the request but not a
+revoked session.
+
 ## Invariants
 
 - A stored object is never overwritten: its key contains the microversion, so a

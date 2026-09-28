@@ -5,15 +5,16 @@ where it stores things, how its flows run, and the rules that must keep holding.
 They are the reference for reviewing a change against the design, and for
 noticing when the code has drifted from it.
 
-| Document                                 | Covers                                                                      |
-| ---------------------------------------- | --------------------------------------------------------------------------- |
-| [thumbnails.md](./thumbnails.md)         | Element, group and configuration thumbnails: rendering, R2 storage, cleanup |
-| [configurations.md](./configurations.md) | Parameters, selections, configuration keys, indexing and enumeration        |
-| [loading.md](./loading.md)               | Loading a document into the library: jobs, the load workflow, webhooks      |
-| [favorites.md](./favorites.md)           | Per-user favorites and the configuration each opens with                    |
-| [auth.md](./auth.md)                     | Onshape OAuth, sessions, access levels, and the environment variables       |
-| [search.md](./search.md)                 | Building, serving and querying each library's search index                  |
-| [analytics.md](./analytics.md)           | Usage tracking, rollups, and the public dashboard                           |
+| Document                                 | Covers                                                                             |
+| ---------------------------------------- | ---------------------------------------------------------------------------------- |
+| [thumbnails.md](./thumbnails.md)         | Element, group and configuration thumbnails: rendering, R2 storage, cleanup        |
+| [configurations.md](./configurations.md) | Parameters, selections, configuration keys, indexing and enumeration               |
+| [loading.md](./loading.md)               | Loading a document into the library: jobs, the load workflow, webhooks             |
+| [favorites.md](./favorites.md)           | Per-user favorites and the configuration each opens with                           |
+| [auth.md](./auth.md)                     | Onshape OAuth, sessions, access levels, and the environment variables              |
+| [search.md](./search.md)                 | Building, serving and querying each library's search index                         |
+| [analytics.md](./analytics.md)           | Usage tracking, rollups, and the public dashboard                                  |
+| [platform.md](./platform.md)             | Onshape client, errors, retries and timeouts, concurrency, toasts, pushes, caching |
 
 [REFERENCE.md](../REFERENCE.md) is the tour of the whole system and links here
 for depth; [GUIDE.md](../GUIDE.md) holds recipes.
