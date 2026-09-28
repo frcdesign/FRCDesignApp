@@ -1,21 +1,25 @@
 /** The server pushes when a render lands, so a miss waits for that rather than polling. */
-import { HttpStatus } from "http-status-ts";
 import { DEFAULT_CONFIGURATION_KEY } from "@backend/features/configurations/contract";
 import { type PushMessage, PushType } from "@backend/features/push/contract";
 import { parseThumbnailUrl } from "@backend/features/thumbnails/keys";
+import { RenderStatus } from "@backend/features/thumbnails/contract";
 import { loadImage } from "../../lib/api-client";
-import { ImageLoadError } from "../../lib/errors";
 import { subscribePushes } from "../../lib/push-socket";
 
 /** As long as `RenderThumbnailWorkflow` tries. */
 const RENDER_TIMEOUT_MS = 60_000;
 
 /** The part didn't regenerate, so no render is coming. */
+class NoPartError extends Error {
+    constructor() {
+        super("The configuration has no part to render.");
+        this.name = "NoPartError";
+        Object.setPrototypeOf(this, new.target.prototype);
+    }
+}
+
 export function isInvalidConfiguration(error: unknown): boolean {
-    return (
-        error instanceof ImageLoadError &&
-        error.status === HttpStatus.UNPROCESSABLE_ENTITY
-    );
+    return error instanceof NoPartError;
 }
 
 /** Whether a push says the render `url` serves has landed. */
@@ -57,9 +61,10 @@ function sleep(
     });
 }
 
-/** Throws once no render is coming. */
+/** Starts the render on the first miss; throws once no render is coming. */
 export async function loadRenderedImage(
     url: string,
+    startRender: () => Promise<RenderStatus>,
     signal?: AbortSignal
 ): Promise<string> {
     const deadline = Date.now() + RENDER_TIMEOUT_MS;
@@ -71,15 +76,24 @@ export async function loadRenderedImage(
             waiting.wake?.();
         }
     });
+    let started = false;
     try {
         for (;;) {
             waiting.pushed = false;
             try {
                 return await loadImage(url, signal);
             } catch (error) {
-                if (isInvalidConfiguration(error) || Date.now() >= deadline) {
+                if (Date.now() >= deadline) {
                     throw error;
                 }
+            }
+            if (!started) {
+                started = true;
+                if ((await startRender()) === RenderStatus.NO_PART) {
+                    throw new NoPartError();
+                }
+                // It may have landed between the miss and the start.
+                continue;
             }
             // Once more at the deadline, for a push that never reached us.
             if (!waiting.pushed) {

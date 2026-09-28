@@ -5,13 +5,20 @@ import { validate } from "../../lib/validate";
 import { CachePolicy, setCache } from "../../lib/cache";
 import { getApp } from "../../lib/context";
 
-import { ThumbnailSize } from "./contract";
-import { isSignedIn } from "../auth/request-auth";
+import { type RenderOut, ThumbnailSize } from "./contract";
 import { thumbnailKey } from "./keys";
 import { DEFAULT_CONFIGURATION_KEY } from "../configurations/contract";
 import { requestRender } from "./render";
-import { requireEditorMiddleware } from "../auth/guards";
-import { getLibraryParam, libraryRoute } from "../../lib/route-params";
+import {
+    requireEditorMiddleware,
+    requireSignInMiddleware
+} from "../auth/guards";
+import {
+    getInsertableParam,
+    getLibraryParam,
+    insertableRoute,
+    libraryRoute
+} from "../../lib/route-params";
 import { getDb } from "../../db/client";
 import { reloadGroupThumbnail, reloadInsertableThumbnail } from "./reload";
 
@@ -28,23 +35,17 @@ const configurationKeyQuery = z.string().default(DEFAULT_CONFIGURATION_KEY);
 const storedThumbnailQuery = z.object({
     /** The microversion, part of the key — which is what makes a hit immutable. */
     v: z.string().min(1),
-    configurationKey: configurationKeyQuery,
-    /** The insertable to render a miss from; absent serves what is stored. */
-    insertableId: z.string().optional()
+    configurationKey: configurationKeyQuery
 });
 
-/** GET /api/thumbnail/:size/:elementId?v=&configurationKey=&insertableId= */
+/** GET /api/thumbnail/:size/:elementId?v=&configurationKey= */
 thumbnailRoutes.get(
     "/thumbnail/:size/:elementId",
     validate("param", storedThumbnailParams),
     validate("query", storedThumbnailQuery),
     async (c) => {
         const { size, elementId } = c.req.valid("param");
-        const {
-            v: microversionId,
-            configurationKey,
-            insertableId
-        } = c.req.valid("query");
+        const { v: microversionId, configurationKey } = c.req.valid("query");
         const object = await c.env.BLOB.get(
             thumbnailKey(elementId, microversionId, size, configurationKey)
         );
@@ -56,21 +57,29 @@ thumbnailRoutes.get(
             );
         }
 
-        // Never answer with the element's default, which would show the wrong part.
-        // Signed out there is no session to render under.
-        if (
-            configurationKey !== DEFAULT_CONFIGURATION_KEY &&
-            insertableId &&
-            (await isSignedIn(c))
-        ) {
-            await requestRender(c, {
-                insertableId,
-                elementId,
-                configurationKey,
-                microversionId
-            });
-        }
+        // Never the element's default, which would show the wrong part.
         return notRenderedYet();
+    }
+);
+
+const renderBody = z.object({ configurationKey: z.string().min(1) });
+
+/**
+ * POST /api/render-thumbnail/insertable/:insertableId: starts rendering a
+ * configuration the stored thumbnail route missed. Signed in, since the render
+ * calls Onshape as the caller.
+ */
+thumbnailRoutes.post(
+    "/render-thumbnail" + insertableRoute(),
+    requireSignInMiddleware,
+    validate("json", renderBody),
+    async (c) => {
+        const { configurationKey } = c.req.valid("json");
+        const status = await requestRender(c, {
+            insertableId: getInsertableParam(c),
+            configurationKey
+        });
+        return c.json({ status } satisfies RenderOut);
     }
 );
 

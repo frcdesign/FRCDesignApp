@@ -50,20 +50,63 @@ route builds the new shape on its first miss.
 cacheable for a year, since the version in the url changes whenever the index
 does. A missing index (a new shape after a deploy) is built on the spot.
 
-### Searching
+### How text becomes terms
 
-1. `tokenize` splits text into terms: at separators, at camelCase boundaries, and
-   around sizes, with fractions and mixed numbers kept whole (`5/32`,
-   `1-1/2`) and numbers in canonical decimal form so `.196`, `.19` and `0.19`
-   meet. Each term keeps its span, so what matched is what gets underlined.
-2. Each word the user types becomes an OR of its readings, and the words are
-   ANDed: every word must match something. Terms match by prefix; a part name
-   ranks below the title and the group name below that.
-3. Filters apply during the search: visibility, the favorites tab, the group
-   being browsed, and vendors. Hits a filter removed are counted, so the UI can
-   say how many a filter hid.
-4. `matchedRecord` picks the record whose part number or name the query matched,
-   preferring a whole term to a prefix, and the row opens on that configuration
+`tokenize` reads each field into lowercase terms, keeping where each came from
+so what matched is what gets underlined. Names and part numbers are read
+differently: a name describes the part, a part number identifies it.
+
+| Field                        | Text                         | Terms                                               |
+| ---------------------------- | ---------------------------- | --------------------------------------------------- |
+| name, group name, part names | `1/2" Hex Shaft (MAXSpline)` | `0.5`, `hex`, `shaft`, `maxspline`, `max`, `spline` |
+| part numbers                 | `WCP-0016 am-3749`           | `wcp-0016`, `wcp`, `0016`, `am-3749`, `am`, `3749`  |
+
+In a name, sizes become their decimal value (`1/2` and `.5` both read `0.5`; a
+mixed number like `1-1/2` reads `1.5`), leading zeros drop, and camelCase splits.
+A part number is kept whole and also split at `-` and `/`, spelled as written.
+
+### How a query is read
+
+The query is split at spaces into **words**, and each word into its
+**readings**: how a name would read it, plus, for a word with a letter in it,
+how a part number would. From `queryWords`:
+
+| Query              | Words and their readings                            |
+| ------------------ | --------------------------------------------------- |
+| `1/2 hex shaft`    | [`0.5`, `1/2`] · [`hex`] · [`shaft`]                |
+| `WCP-0016`         | [`wcp`, `16`, `wcp-0016`, `0016`]                   |
+| `am-3749 .196`     | [`am`, `3749`, `am-3749`] · [`0.2`, `0.19`, `.196`] |
+| `rev spacer 1-1/2` | [`rev`] · [`spacer`] · [`1.5`, `1-1/2`]             |
+
+A result must match **every word** (AND), and a word matches if **any** of its
+readings does (OR), in any field. So `1/2 hex shaft` finds a part only if some
+field has `0.5` or `1/2`, some field has `hex`, and some field has `shaft`;
+`1/2 hex` alone finds more parts than `1/2 hex shaft`, never fewer. Each reading
+matches by prefix, so `spa` finds `spacer` and `374` finds `3749`.
+
+### How results are scored
+
+MiniSearch scores each matching term with BM25 (a term rare in the library and
+frequent in the field scores higher, and short fields beat long ones), then:
+
+- **Field weight**: the title and part numbers count fully, part names at 0.7,
+  the group name at 0.5. `hex` in a part's own name outranks `hex` in the name
+  of the group it sits in.
+- **Prefix matches** count for less than whole ones, so a query `16` ranks a
+  part numbered `am-16` above one numbered `am-160`.
+- A result's score is the sum over the words it matched, so a part matching a
+  word in two fields ranks above one matching it in one.
+
+Results come back highest score first, capped at a list's worth.
+
+### Filters and the matched configuration
+
+1. Filters apply during the search: hidden parts (unless showing them), the
+   favorites tab, the group being browsed, and vendors. Hits a group or vendor
+   filter removed are counted, so the UI can say how many it hid.
+2. For each hit, `matchedRecord` picks the configuration record whose part
+   number or name the query matched, preferring a whole term to a prefix: `1`
+   names a `1"` shaft but only starts `16`. The row opens on that configuration
    and shows its thumbnail.
 
 ## Invariants

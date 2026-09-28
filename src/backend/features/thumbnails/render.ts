@@ -10,14 +10,11 @@ import { getThumbnailId } from "../../lib/onshape/endpoints/thumbnails";
 import { getSessionId } from "../auth/session";
 import { type ConfigurationKey } from "../configurations/contract";
 import { decodeConfiguration } from "../configurations/utils";
-import { ThumbnailSize } from "./contract";
+import { RenderStatus, ThumbnailSize } from "./contract";
 import { thumbnailKey } from "./keys";
 
 interface RenderRequest {
-    /** What the element path is resolved from, since the caller has only this. */
     insertableId: string;
-    elementId: string;
-    microversionId: string;
     configurationKey: ConfigurationKey;
 }
 
@@ -31,42 +28,44 @@ const ACTIVE = new Set<InstanceStatus["status"]>([
 ]);
 
 /**
- * Throws a handled 422 when Onshape has no part for the configuration. Renders
- * only from the thumbnail workspace; a group without one has it after its next
- * load.
+ * Renders from the insertable's current microversion, in its group's thumbnail
+ * workspace; a group without one has it after its next load.
  */
 export async function requestRender(
     c: AppContext,
     request: RenderRequest
-): Promise<void> {
+): Promise<RenderStatus> {
     const sessionId = getSessionId(c);
-    const elementPath = await workspacePathOf(c, request.insertableId);
-    if (!elementPath) {
+    const target = await renderTargetOf(c, request.insertableId);
+    if (!target.workspacePath) {
         console.warn("No thumbnail workspace to render from", request);
-        return;
+        return RenderStatus.RENDERING;
     }
     const thumbnailId = await getThumbnailId(
         await c.var.getOnshapeApi(),
-        elementPath,
+        target.workspacePath,
         decodeConfiguration(request.configurationKey)
     );
     if (!thumbnailId) {
-        throw handledError(
-            "Onshape has no part for this configuration.",
-            HttpStatus.UNPROCESSABLE_ENTITY
-        );
+        return RenderStatus.NO_PART;
     }
+    const { elementId, microversionId } = target;
+    const { configurationKey } = request;
 
     const workflow = c.env.RENDER_THUMBNAIL_WORKFLOW;
-    const id = await renderInstanceId(request);
+    const id = await renderInstanceId(
+        elementId,
+        microversionId,
+        configurationKey
+    );
     const existing = await findInstance(workflow, id);
     if (existing) {
         const { status } = await existing.status();
-        // Only a miss gets here, so a finished instance left no bytes behind.
+        // A finished one restarts, and returns at once if its bytes are stored.
         if (!ACTIVE.has(status)) {
             await existing.restart();
         }
-        return;
+        return RenderStatus.RENDERING;
     }
 
     try {
@@ -77,15 +76,15 @@ export async function requestRender(
                 targets: Object.values(ThumbnailSize).map((size) => ({
                     size,
                     key: thumbnailKey(
-                        request.elementId,
-                        request.microversionId,
+                        elementId,
+                        microversionId,
                         size,
-                        request.configurationKey
+                        configurationKey
                     )
                 })),
-                elementId: request.elementId,
-                microversionId: request.microversionId,
-                configurationKey: request.configurationKey,
+                elementId,
+                microversionId,
+                configurationKey,
                 sessionId
             }
         });
@@ -95,6 +94,7 @@ export async function requestRender(
             throw error;
         }
     }
+    return RenderStatus.RENDERING;
 }
 
 /**
@@ -102,8 +102,12 @@ export async function requestRender(
  * configurations can share that id, and restarting the other's instance would
  * store its bytes under the other's key. Hashed to fit an instance id.
  */
-async function renderInstanceId(request: RenderRequest): Promise<string> {
-    const subject = `${request.elementId}/${request.microversionId}/${request.configurationKey}`;
+async function renderInstanceId(
+    elementId: string,
+    microversionId: string,
+    configurationKey: ConfigurationKey
+): Promise<string> {
+    const subject = `${elementId}/${microversionId}/${configurationKey}`;
     const digest = await crypto.subtle.digest(
         "SHA-256",
         new TextEncoder().encode(subject)
@@ -126,15 +130,22 @@ async function findInstance(
     }
 }
 
-/** Read rather than passed in, since a request can carry a version the group has moved past. */
-async function workspacePathOf(
+interface RenderTarget {
+    elementId: string;
+    microversionId: string;
+    /** Undefined until the group's next load branches one. */
+    workspacePath?: ElementPath;
+}
+
+async function renderTargetOf(
     c: AppContext,
     insertableId: string
-): Promise<ElementPath | undefined> {
+): Promise<RenderTarget> {
     const row = await getDb(c.env.DB)
         .select({
             documentId: insertables.documentId,
             elementId: insertables.elementId,
+            microversionId: insertables.microversionId,
             thumbnailWorkspaceId: groups.thumbnailWorkspaceId
         })
         .from(insertables)
@@ -144,13 +155,17 @@ async function workspacePathOf(
     if (!row) {
         throw handledError("No such part.", HttpStatus.NOT_FOUND);
     }
-    if (!row.thumbnailWorkspaceId) {
-        return undefined;
-    }
+    const { elementId, microversionId, thumbnailWorkspaceId } = row;
     return {
-        documentId: row.documentId,
-        instanceId: row.thumbnailWorkspaceId,
-        instanceType: "w",
-        elementId: row.elementId
+        elementId,
+        microversionId,
+        workspacePath: thumbnailWorkspaceId
+            ? {
+                  documentId: row.documentId,
+                  instanceId: thumbnailWorkspaceId,
+                  instanceType: "w",
+                  elementId
+              }
+            : undefined
     };
 }

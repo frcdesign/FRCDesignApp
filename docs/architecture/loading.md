@@ -115,11 +115,21 @@ owns it otherwise.
 
 ### Whose session a load uses
 
-A load calls Onshape as the person who asked, while their session works. A
-webhook's load has nobody, and a session can expire mid-load, so
-`getOnshapeApiFromContext` falls back to the owner's saved session, then a team
-admin's, then (in dev) the access-level override's. No session at all fails
-the step.
+Every Onshape call in a load goes through `getOnshapeApiFromContext`, which
+picks the first of these that works, per call:
+
+| Load started by                               | 1st: the requester's session | Then, borrowed (`getAdminOnshapeApi`)                                                          |
+| --------------------------------------------- | ---------------------------- | ---------------------------------------------------------------------------------------------- |
+| Adding a document, **Reload**, **Reload all** | Yes, while it works          | The owner's, then any team admin's of the library, then (dev only) the access-level override's |
+| A webhook for a new version                   | None: nobody asked           | Same order                                                                                     |
+
+A borrowed session is one saved under `admin-session:` in KV, which happens
+whenever the owner's or a team admin's access is checked (they open the app).
+"Works" means its tokens refresh and Onshape accepts one call; a failing one is
+skipped for the next. The requester's session is tried again on every call, so
+one that expires mid-load falls through to a borrowed one and the load carries
+on. No working session at all fails the step, which retries, then fails the
+load (`LOAD_FAILED`).
 
 ### Webhooks
 

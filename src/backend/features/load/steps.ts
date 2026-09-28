@@ -52,15 +52,17 @@ export const ONSHAPE_STEP_RETRIES = {
     backoff: CONSTANT_BACKOFF
 };
 
-/**
- * A freshly branched workspace takes minutes to render: once after a minute,
- * then every two, about 17 minutes in all.
- */
+/** A freshly branched workspace takes minutes to render: about 16 minutes in all. */
+const THUMBNAIL_RETRY_SECONDS = [30, 60, 120, 240, 240, 240];
+
+function thumbnailRetryDelay(input: RetryDelayInput): `${number} seconds` {
+    const scheduled = THUMBNAIL_RETRY_SECONDS.at(input.ctx.attempt - 1) ?? 240;
+    return rateLimitDelay(input.error) ?? `${scheduled} seconds`;
+}
+
 const THUMBNAIL_RETRIES = {
-    limit: 9,
-    delay: (input: RetryDelayInput): `${number} seconds` =>
-        rateLimitDelay(input.error) ??
-        (input.ctx.attempt <= 1 ? "60 seconds" : "120 seconds"),
+    limit: THUMBNAIL_RETRY_SECONDS.length,
+    delay: thumbnailRetryDelay,
     backoff: CONSTANT_BACKOFF
 };
 

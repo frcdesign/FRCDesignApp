@@ -55,8 +55,6 @@ interface ThumbnailUrlOptions {
     size: ThumbnailSize;
     /** Empty (the default) serves the element's own thumbnail. */
     configurationKey: ConfigurationKey;
-    /** Starts a render on a miss; see `ThumbnailTarget`. */
-    insertableId?: string;
 }
 
 /** The app URL serving a thumbnail; `v` busts caches when the document changes. */
@@ -64,16 +62,12 @@ export function thumbnailUrl({
     elementId,
     microversionId,
     size,
-    configurationKey,
-    insertableId
+    configurationKey
 }: ThumbnailUrlOptions): string {
     // `v` is the cache version every immutable url carries.
     const query = new URLSearchParams({ v: microversionId });
     if (configurationKey !== DEFAULT_CONFIGURATION_KEY) {
         query.set("configurationKey", configurationKey);
-        if (insertableId) {
-            query.set("insertableId", insertableId);
-        }
     }
     return `/api/thumbnail/${size}/${elementId}?${query.toString()}`;
 }

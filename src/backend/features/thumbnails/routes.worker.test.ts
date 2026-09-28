@@ -13,7 +13,7 @@ import * as ThumbnailEndpoints from "../../lib/onshape/endpoints/thumbnails";
 import { getDb } from "../../db/client";
 import { groups } from "../../db/schema";
 import { eq } from "drizzle-orm";
-import { ThumbnailSize } from "./contract";
+import { type RenderOut, RenderStatus, ThumbnailSize } from "./contract";
 import {
     parseThumbnailKey,
     parseThumbnailUrl,
@@ -28,7 +28,6 @@ const MICROVERSION = "mv-1";
 const CANONICAL_CONFIGURATION = "size=l";
 
 const SESSION_ID = "test-session";
-const INSERTABLE_ID = "test-insertable";
 
 const db = getDb(env.DB);
 
@@ -119,8 +118,7 @@ describe("reading a thumbnail address back", () => {
         const url = thumbnailUrl({
             ...SUBJECT,
             size: SIZE,
-            configurationKey: "a=1;b=2",
-            insertableId: INSERTABLE_ID
+            configurationKey: "a=1;b=2"
         });
         expect(parseThumbnailUrl(url)).toEqual(SUBJECT);
     });
@@ -261,25 +259,27 @@ describe("thumbnail serving", () => {
 describe("rendering a configuration's thumbnail", () => {
     afterEach(() => vi.restoreAllMocks());
 
-    /** Seeds only the default, so a configuration request always misses. */
-    async function seedDefaultOnly(elementId: string) {
-        await env.BLOB.put(
-            thumbnailKey(elementId, MICROVERSION, SIZE),
-            "default-bytes"
+    async function render(
+        configurationKey = CANONICAL_CONFIGURATION,
+        signedIn = true
+    ): Promise<Response> {
+        const init = jsonRequest("POST", { configurationKey });
+        if (signedIn) {
+            init.headers = {
+                ...init.headers,
+                Cookie: `frc-design-app-session=${SESSION_ID}`
+            };
+        }
+        return createTestApp({ signedIn }).request(
+            `/api/render-thumbnail/insertable/${TEST_PART_STUDIO_ID}`,
+            init,
+            env
         );
     }
 
-    function renderUrl(
-        elementId: string,
-        configurationKey = CANONICAL_CONFIGURATION
-    ) {
-        return thumbnailUrl({
-            elementId,
-            microversionId: MICROVERSION,
-            size: SIZE,
-            configurationKey,
-            insertableId: TEST_PART_STUDIO_ID
-        });
+    async function statusOf(res: Response): Promise<RenderStatus> {
+        const body: RenderOut = await res.json();
+        return body.status;
     }
 
     /** Onshape resolving the configuration to a render id. */
@@ -312,15 +312,12 @@ describe("rendering a configuration's thumbnail", () => {
             .where(eq(groups.id, TEST_GROUP_ID));
     });
 
-    it("starts one render on a miss, however often it is asked", async () => {
-        await seedDefaultOnly("warm-element");
+    it("starts one render, however often it is asked", async () => {
         const thumbnailId = mockThumbnailId();
 
         const started = await startedDuring(async () => {
-            expect(
-                (await get(renderUrl("warm-element"), SESSION_ID)).status
-            ).toBe(404);
-            await get(renderUrl("warm-element"), SESSION_ID);
+            expect(await statusOf(await render())).toBe(RenderStatus.RENDERING);
+            await render();
         });
 
         expect(started).toBe(1);
@@ -332,8 +329,8 @@ describe("rendering a configuration's thumbnail", () => {
         mockThumbnailId();
 
         const started = await startedDuring(async () => {
-            await get(renderUrl("shared-element"), SESSION_ID);
-            await get(renderUrl("shared-element", "size=other"), SESSION_ID);
+            await render();
+            await render("size=other");
         });
 
         expect(started).toBe(2);
@@ -342,9 +339,7 @@ describe("rendering a configuration's thumbnail", () => {
     it("renders from the group's thumbnail workspace", async () => {
         const thumbnailId = mockThumbnailId();
 
-        await startedDuring(async () => {
-            await get(renderUrl("branched-element"), SESSION_ID);
-        });
+        await startedDuring(() => render());
 
         expect(thumbnailId.mock.calls[0][1]).toMatchObject({
             instanceId: "w-branch",
@@ -353,15 +348,13 @@ describe("rendering a configuration's thumbnail", () => {
     });
 
     // The client words "still rendering" and "never will" differently.
-    it("answers a configuration Onshape cannot resolve with its own status", async () => {
+    it("says when the configuration has no part to render", async () => {
         vi.spyOn(ThumbnailEndpoints, "getThumbnailId").mockResolvedValue(
             undefined
         );
 
         const started = await startedDuring(async () => {
-            expect(
-                (await get(renderUrl("invalid-element"), SESSION_ID)).status
-            ).toBe(422);
+            expect(await statusOf(await render())).toBe(RenderStatus.NO_PART);
         });
         expect(started).toBe(0);
     });
@@ -373,20 +366,16 @@ describe("rendering a configuration's thumbnail", () => {
             .where(eq(groups.id, TEST_GROUP_ID));
         mockThumbnailId();
 
-        const started = await startedDuring(async () => {
-            expect(
-                (await get(renderUrl("unbranched-element"), SESSION_ID)).status
-            ).toBe(404);
-        });
+        const started = await startedDuring(() => render());
         expect(started).toBe(0);
     });
 
-    it("starts nothing when there is no session to render under", async () => {
+    it("refuses a caller with no session to render under", async () => {
         const thumbnailId = mockThumbnailId();
 
         const started = await startedDuring(async () => {
-            expect((await get(renderUrl("sessionless-element"))).status).toBe(
-                404
+            expect((await render(CANONICAL_CONFIGURATION, false)).ok).toBe(
+                false
             );
         });
 
@@ -395,7 +384,7 @@ describe("rendering a configuration's thumbnail", () => {
     });
 
     // One cold search mustn't start a render per row.
-    it("starts nothing when no insertable is named", async () => {
+    it("starts nothing on a stored thumbnail's miss", async () => {
         const started = await startedDuring(async () => {
             const res = await get(
                 thumbnailUrl({

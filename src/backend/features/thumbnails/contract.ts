@@ -4,7 +4,19 @@ export enum ThumbnailSize {
     LARGE = "300x300"
 }
 
-/** An element's two stored thumbnail URLs, returned once both are stored. */
+/** What asking for a configuration's render found. */
+export enum RenderStatus {
+    /** Rendering, or already rendered; a push says when each size lands. */
+    RENDERING = "rendering",
+    /** The configuration regenerates into nothing, so no render is coming. */
+    NO_PART = "no-part"
+}
+
+export interface RenderOut {
+    status: RenderStatus;
+}
+
+/** An insertable's two stored thumbnail URLs, returned once both are stored. */
 export interface ThumbnailUrls {
     small: string;
     large: string;

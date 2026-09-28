@@ -1,12 +1,16 @@
 import { skipToken, useQuery } from "@tanstack/react-query";
 import { loadImage } from "../../../lib/api-client";
 import { isInvalidConfiguration, loadRenderedImage } from "../render-wait";
+import { startRender } from "../queries";
 import {
     renderQueryKey,
     storedThumbnailQueryKey
 } from "../../../lib/query-keys";
 import { ElementType } from "@backend/lib/onshape/element-type";
-import { ThumbnailSize } from "@backend/features/thumbnails/contract";
+import {
+    type RenderStatus,
+    ThumbnailSize
+} from "@backend/features/thumbnails/contract";
 import { ElementPath } from "@backend/lib/onshape/path";
 import { Box, Card, Center, Loader } from "@mantine/core";
 import { AppHoverCard } from "../../../components/app-hover-card";
@@ -81,8 +85,12 @@ export function CardThumbnail(props: CardThumbnailProps): ReactNode {
     const fallbackFor = (stored?: string) =>
         configuredTarget ? stored : undefined;
 
-    // Only a row that started the render waits for one.
-    const isRendering = configuredTarget?.insertableId !== undefined;
+    // Only a row that can start the render waits for one.
+    const insertableId = configuredTarget?.insertableId;
+    const render =
+        configuredTarget && insertableId
+            ? () => startRender(insertableId, configuredTarget.configurationKey)
+            : undefined;
 
     return (
         <AppHoverCard
@@ -97,7 +105,7 @@ export function CardThumbnail(props: CardThumbnailProps): ReactNode {
                     fallbackUrl={fallbackFor(smallThumbnailUrl)}
                     heightAndWidth={getHeightAndWidth(ThumbnailSize.SMALL, 0.8)}
                     spinnerSize={25}
-                    isRendering={isRendering}
+                    startRender={render}
                 />
             }
         >
@@ -106,7 +114,7 @@ export function CardThumbnail(props: CardThumbnailProps): ReactNode {
                 fallbackUrl={fallbackFor(largeThumbnailUrl)}
                 heightAndWidth={getHeightAndWidth(ThumbnailSize.LARGE, 0.6)}
                 spinnerSize={48}
-                isRendering={isRendering}
+                startRender={render}
             />
         </AppHoverCard>
     );
@@ -121,24 +129,24 @@ interface ThumbnailProps {
     fallbackUrl?: string;
     spinnerSize: number;
     heightAndWidth: HeightAndWidth;
-    /** Whether a miss is a render still running, and so worth waiting out. */
-    isRendering?: boolean;
+    /** Starts a render on a miss, which is then worth waiting out. */
+    startRender?: () => Promise<RenderStatus>;
 }
 
 function Thumbnail(props: ThumbnailProps): ReactNode {
-    const { url, fallbackUrl, heightAndWidth, spinnerSize, isRendering } =
+    const { url, fallbackUrl, heightAndWidth, spinnerSize, startRender } =
         props;
 
     const imageQuery = useQuery({
         queryKey: storedThumbnailQueryKey(url),
         queryFn: url
             ? ({ signal }) =>
-                  isRendering
-                      ? loadRenderedImage(url, signal)
+                  startRender
+                      ? loadRenderedImage(url, startRender, signal)
                       : loadImage(url, signal)
             : skipToken,
         // A render waits itself out; retrying would restart the wait.
-        retry: isRendering ? false : STORED_RETRIES
+        retry: startRender ? false : STORED_RETRIES
     });
     const fallbackQuery = useQuery({
         queryKey: storedThumbnailQueryKey(fallbackUrl),
@@ -203,13 +211,17 @@ function usePreviewThumbnail(props: PreviewImageProps, enabled: boolean) {
         elementId: path.elementId,
         microversionId,
         size: PREVIEW_SIZE,
-        configurationKey,
-        insertableId
+        configurationKey
     });
 
     return useQuery({
         queryKey: renderQueryKey(url),
-        queryFn: ({ signal }) => loadRenderedImage(url, signal),
+        queryFn: ({ signal }) =>
+            loadRenderedImage(
+                url,
+                () => startRender(insertableId, configurationKey),
+                signal
+            ),
         // Keeps the previous render up while this one is waited on.
         placeholderData: (previousData) => previousData,
         retry: false,
