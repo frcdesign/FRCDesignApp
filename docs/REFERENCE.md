@@ -59,7 +59,7 @@ Cloudflare Workflows run long background jobs that survive past a request and re
 | `RENDER_THUMBNAIL_WORKFLOW` | `RenderThumbnailWorkflow` | Waits out one configuration's render and stores both sizes in R2              |
 | `VERSION_MANAGER_WORKFLOW`  | `VersionManagerWorkflow`  | Runs one push or pull between linked workspaces                               |
 
-Loads, their job tracking, webhooks and version approval are in [architecture/loading.md](./architecture/loading.md); renders in [architecture/thumbnails.md](./architecture/thumbnails.md).
+Loads, their job tracking, webhooks and version approval are in [architecture/loading.md](./architecture/loading.md); renders in [architecture/thumbnails.md](./architecture/thumbnails.md); pushes and pulls between linked workspaces in [architecture/version-manager.md](./architecture/version-manager.md).
 
 ### Pushes
 
@@ -116,7 +116,7 @@ owns, `lib/` for cross-cutting plumbing, and a small set of files at the root.
     - `webhooks/` — the per-document webhook that loads new versions, and transient ones for caches
     - `push/` — the `PushHub` Durable Object and what it pushes
     - `admin-team/` — each library's admin team, set by the owner and synced from Onshape
-    - `version-manager/` — links between Onshape workspaces and the pushes and pulls along them
+    - `version-manager/` — links between Onshape workspaces and the pushes and pulls along them; see [architecture/version-manager.md](./architecture/version-manager.md)
     - `favorites/`, `search/`, `analytics/`, `insert-location/`
 
 ### `src/frontend/`
