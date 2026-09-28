@@ -6,10 +6,10 @@ import { getDb } from "../../db/client";
 import { libraries } from "../../db/schema";
 import { eq } from "drizzle-orm";
 import {
-    getAdminOnshapeApi,
-    rememberAdminSession,
-    rememberOverriddenAdminSession
-} from "./admin-sessions";
+    getBackgroundOnshapeApi,
+    rememberBackgroundSession,
+    rememberOverriddenSession
+} from "./background-sessions";
 import * as RequestAuth from "./request-auth";
 
 const db = getDb(env.DB);
@@ -32,12 +32,12 @@ function sessions(dead: string[] = []) {
     return apis;
 }
 
-describe("finding an admin's session", () => {
+describe("finding a session to work in the background with", () => {
     beforeEach(async () => {
         await resetDb(db);
         await seedLibrary(db);
-        await env.KV.delete(`admin-session:${OWNER}`);
-        await env.KV.delete("admin-session:access-level-override");
+        await env.KV.delete(`background-session:${OWNER}`);
+        await env.KV.delete("background-session:access-level-override");
         await db
             .update(libraries)
             .set({
@@ -47,38 +47,46 @@ describe("finding an admin's session", () => {
                 ]
             })
             .where(eq(libraries.id, TEST_LIBRARY_ID));
-        await rememberAdminSession(env.KV, "member", "member-session");
-        await rememberAdminSession(env.KV, "admin", "admin-session");
+        await rememberBackgroundSession(env.KV, "member", "member-session");
+        await rememberBackgroundSession(env.KV, "admin", "admin-session");
     });
     afterEach(() => vi.restoreAllMocks());
 
     const find = () =>
-        getAdminOnshapeApi({ ...env, OWNER_USER_ID: OWNER }, [TEST_LIBRARY_ID]);
+        getBackgroundOnshapeApi({ ...env, OWNER_USER_ID: OWNER }, [
+            TEST_LIBRARY_ID
+        ]);
 
     it("prefers the owner's", async () => {
-        await rememberAdminSession(env.KV, OWNER, "owner-session");
+        await rememberBackgroundSession(env.KV, OWNER, "owner-session");
         const apis = sessions();
 
         expect(await find()).toBe(apis.get("owner-session"));
     });
 
-    it("falls back to a team admin's, never a member's", async () => {
-        await rememberAdminSession(env.KV, OWNER, "owner-session");
+    it("falls back to a team admin's before a member's", async () => {
+        await rememberBackgroundSession(env.KV, OWNER, "owner-session");
         const apis = sessions(["owner-session"]);
 
         expect(await find()).toBe(apis.get("admin-session"));
     });
 
-    // The dev override's admin is on no team, so nothing else finds them.
-    it("falls back last to the overridden admin's", async () => {
-        await rememberOverriddenAdminSession(env.KV, "override-session");
+    it("falls back to a team member's when no admin's works", async () => {
         const apis = sessions(["admin-session"]);
+
+        expect(await find()).toBe(apis.get("member-session"));
+    });
+
+    // The dev override's user is on no team, so nothing else finds them.
+    it("falls back last to the overridden user's", async () => {
+        await rememberOverriddenSession(env.KV, "override-session");
+        const apis = sessions(["admin-session", "member-session"]);
 
         expect(await find()).toBe(apis.get("override-session"));
     });
 
     it("finds nothing when no session works", async () => {
-        sessions(["admin-session"]);
+        sessions(["admin-session", "member-session"]);
         expect(await find()).toBeUndefined();
     });
 });

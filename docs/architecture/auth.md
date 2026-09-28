@@ -17,7 +17,7 @@ team, plus one owner set by configuration.
 | `src/backend/features/auth/request-auth.ts`                 | `productionAuth`: resolves the caller, their Onshape client and level   |
 | `src/backend/features/auth/access-level.ts`                 | `AccessLevel` and its ordering; shared with the client                  |
 | `src/backend/features/auth/guards.ts`                       | Route middleware: sign-in, editor, admin, owner                         |
-| `src/backend/features/auth/admin-sessions.ts`               | Sessions a load with no requester can borrow                            |
+| `src/backend/features/auth/background-sessions.ts`          | Sessions a load with no requester can borrow                            |
 | `src/backend/features/auth/company.ts`, `cookie-options.ts` | Enterprise company matching; cross-site cookie settings                 |
 | `src/backend/features/auth/routes.ts`                       | `/auth/sign-in`, `/auth/callback`, `/auth/sign-out`, `/api/access-data` |
 | `src/backend/features/admin-team/`                          | The owner sets a library's admin team; members are synced from Onshape  |
@@ -33,9 +33,9 @@ team, plus one owner set by configuration.
   holds a sign-in's OAuth state and return path for ten minutes and is read once.
 - **KV** `session:` — the session's access and refresh tokens, expiry, and the
   user id once resolved, for 30 days.
-- **KV** `admin-session:` — the latest session id of the owner and each team
-  admin, by user id, plus one reserved id for the dev override's admin.
-- **D1** `libraries.admin_team_id`, `libraries.admin_team` — the team the owner
+- **KV** `background-session:` — the latest session id of the owner and each
+  admin team member (admins and editors), by user id, plus one reserved id for
+  the dev override's user.
   chose and its synced members (`isTeamAdmin` per member).
 - **localStorage** (`ui-state`): `accessLevel`, the level the app is viewed as.
 
@@ -95,8 +95,8 @@ query to that library, so naming your own library with another's element finds
 nothing. The owner's level is the same everywhere, so the owner check always
 asks about the default library.
 
-Whenever an admin's or the owner's level is checked, their session id is saved
-under `admin-session:` so background work can borrow it (see
+Whenever the owner's or an admin team member's level is checked, their session
+id is saved under `background-session:` so background work can borrow it (see
 [loading.md](./loading.md)).
 
 On the client, `useAccessData` combines the server's level with the level the
@@ -107,7 +107,7 @@ user chose to view the app as, clamped to what the server grants.
 | Name                                     | Where it is set                                  | Read by                                        | Effect                                                                                                  |
 | ---------------------------------------- | ------------------------------------------------ | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
 | `OAUTH_CLIENT_ID`, `OAUTH_CLIENT_SECRET` | Secrets per environment; `.env` locally          | `onshape-oauth.ts`                             | The Onshape OAuth app                                                                                   |
-| `OWNER_USER_ID`                          | `wrangler.jsonc` vars                            | `request-auth.ts`, `admin-sessions.ts`         | The owner; unset grants nobody                                                                          |
+| `OWNER_USER_ID`                          | `wrangler.jsonc` vars                            | `request-auth.ts`, `background-sessions.ts`    | The owner; unset grants nobody                                                                          |
 | `NODE_ENV`                               | `wrangler.jsonc` vars                            | `request-auth.ts`                              | Anything but `production` arms the two dev overrides below                                              |
 | `VITE_ACCESS_LEVEL_OVERRIDE`             | `.env`                                           | Server and client                              | Server grants it (dev only); client views the app at it by default                                      |
 | `FORCE_SIGNED_IN`                        | `.env`                                           | `request-auth.ts`                              | Dev only: signed in as a fake user with no Onshape session                                              |
@@ -134,13 +134,13 @@ declared in `wrangler.jsonc` per environment and typed in `AppBindings`. Run
 
 ## Failure and recovery
 
-| Failure                                   | Result                                   | Recovery                            |
-| ----------------------------------------- | ---------------------------------------- | ----------------------------------- |
-| Access token expired                      | Refreshed on the next call               | Automatic                           |
-| Refresh token revoked or expired          | Treated as signed out                    | Sign in again                       |
-| Enterprise session opening a personal doc | `/init` sends the caller through sign-in | Automatic, once                     |
-| Team membership changed in Onshape        | Stale access until synced                | **Refresh** beside the admin team   |
-| No saved admin session                    | Webhook loads fail                       | Owner or a team admin opens the app |
+| Failure                                   | Result                                   | Recovery                                 |
+| ----------------------------------------- | ---------------------------------------- | ---------------------------------------- |
+| Access token expired                      | Refreshed on the next call               | Automatic                                |
+| Refresh token revoked or expired          | Treated as signed out                    | Sign in again                            |
+| Enterprise session opening a personal doc | `/init` sends the caller through sign-in | Automatic, once                          |
+| Team membership changed in Onshape        | Stale access until synced                | **Refresh** beside the admin team        |
+| No saved background session               | Webhook loads fail                       | The owner or a team member opens the app |
 
 ## Decisions
 

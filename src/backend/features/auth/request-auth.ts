@@ -7,11 +7,11 @@ import { eq } from "drizzle-orm";
 import { getDb } from "../../db/client";
 import { libraries } from "../../db/schema";
 import type { LibraryId } from "../library/library-id";
-import { AccessLevel, isWithinAccessLevel } from "./access-level";
+import { AccessLevel, hasEditorAccess } from "./access-level";
 import {
-    rememberAdminSession,
-    rememberOverriddenAdminSession
-} from "./admin-sessions";
+    rememberBackgroundSession,
+    rememberOverriddenSession
+} from "./background-sessions";
 import {
     getOauthClient,
     makeAuthTokens,
@@ -135,8 +135,8 @@ async function getLibraryAccessLevel(
 ): Promise<AccessLevel> {
     const userId = await getCachedUserId(c);
     const level = await lookUpAccessLevel(c, libraryId, userId);
-    if (isWithinAccessLevel(AccessLevel.ADMIN, level)) {
-        await rememberAdminSession(c.env.KV, userId, getSessionId(c));
+    if (hasEditorAccess(level)) {
+        await rememberBackgroundSession(c.env.KV, userId, getSessionId(c));
     }
     return level;
 }
@@ -162,16 +162,16 @@ async function lookUpAccessLevel(
 }
 
 /** So a load nobody is signed in behind, like a webhook's, can borrow the session in dev. */
-async function rememberOverriddenAdmin(
+async function rememberOverriddenUser(
     c: AppContext,
     override: AccessLevel
 ): Promise<void> {
     if (
-        isWithinAccessLevel(AccessLevel.ADMIN, override) &&
+        hasEditorAccess(override) &&
         !isForceSignedIn(c) &&
         (await isSignedIn(c))
     ) {
-        await rememberOverriddenAdminSession(c.env.KV, getSessionId(c));
+        await rememberOverriddenSession(c.env.KV, getSessionId(c));
     }
 }
 
@@ -188,7 +188,7 @@ export const productionAuth: AuthResolver = (c) => ({
     getAccessLevel: async (libraryId) => {
         const override = getAccessLevelOverride(c);
         if (override) {
-            await rememberOverriddenAdmin(c, override);
+            await rememberOverriddenUser(c, override);
             return override;
         }
         // FORCE_SIGNED_IN has no real session to identify the caller.

@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { FAKE_STEP, TEST_LIBRARY_ID } from "../../../__test_utils__";
 import { MockOnshapeApi } from "../../../__test_utils__/mock-onshape-api";
 import * as RequestAuth from "../auth/request-auth";
-import * as AdminSessions from "../auth/admin-sessions";
+import * as BackgroundSessions from "../auth/background-sessions";
 import { createLoadContext, getOnshapeApiFromContext } from "./context";
 
 const REQUESTER = new MockOnshapeApi();
@@ -27,7 +27,7 @@ describe("the session a load calls Onshape with", () => {
             new Error("expired")
         );
         const admin = vi
-            .spyOn(AdminSessions, "getAdminOnshapeApi")
+            .spyOn(BackgroundSessions, "getBackgroundOnshapeApi")
             .mockResolvedValue(ADMIN);
 
         expect(await getOnshapeApiFromContext(context("s"))).toBe(ADMIN);
@@ -37,7 +37,7 @@ describe("the session a load calls Onshape with", () => {
     // A webhook's load has no requester.
     it("is an admin's when nobody asked, found once a run", async () => {
         const admin = vi
-            .spyOn(AdminSessions, "getAdminOnshapeApi")
+            .spyOn(BackgroundSessions, "getBackgroundOnshapeApi")
             .mockResolvedValue(ADMIN);
         const ctx = context();
 
@@ -49,7 +49,7 @@ describe("the session a load calls Onshape with", () => {
     // So the step's retry looks again, rather than repeat the same failure.
     it("fails without an admin session, and looks again next time", async () => {
         const admin = vi
-            .spyOn(AdminSessions, "getAdminOnshapeApi")
+            .spyOn(BackgroundSessions, "getBackgroundOnshapeApi")
             .mockResolvedValueOnce(undefined)
             .mockResolvedValueOnce(ADMIN);
         const ctx = context();

@@ -47,7 +47,7 @@ minutes, survive retries, and resume where it stopped.
 **R2**: `search-index/` — each library's serialized search index, rebuilt by
 every load that wrote. Thumbnails are in [thumbnails.md](./thumbnails.md).
 
-**KV**: `admin-session:` — sessions a load with no requester can borrow; see
+**KV**: `background-session:` — sessions a load with no requester can borrow; see
 [auth.md](./auth.md).
 
 ## Flows
@@ -118,13 +118,14 @@ owns it otherwise.
 Every Onshape call in a load goes through `getOnshapeApiFromContext`, which
 picks the first of these that works, per call:
 
-| Load started by                               | 1st: the requester's session | Then, borrowed (`getAdminOnshapeApi`)                                                          |
-| --------------------------------------------- | ---------------------------- | ---------------------------------------------------------------------------------------------- |
-| Adding a document, **Reload**, **Reload all** | Yes, while it works          | The owner's, then any team admin's of the library, then (dev only) the access-level override's |
-| A webhook for a new version                   | None: nobody asked           | Same order                                                                                     |
+| Load started by                               | 1st: the requester's session | Then, borrowed (`getBackgroundOnshapeApi`)                                                                   |
+| --------------------------------------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| Adding a document, **Reload**, **Reload all** | Yes, while it works          | The owner's, then the library's team admins', then its editors', then (dev only) the access-level override's |
+| A webhook for a new version                   | None: nobody asked           | Same order                                                                                                   |
 
-A borrowed session is one saved under `admin-session:` in KV, which happens
-whenever the owner's or a team admin's access is checked (they open the app).
+A borrowed session is one saved under `background-session:` in KV, which
+happens whenever the owner's or an admin team member's access is checked (they
+open the app).
 "Works" means its tokens refresh and Onshape accepts one call; a failing one is
 skipped for the next. The requester's session is tried again on every call, so
 one that expires mid-load falls through to a borrowed one and the load carries
@@ -170,7 +171,7 @@ that doesn't wait.
 | A tab fails                                 | `LOAD_FAILED` on it, `INSERTABLES_FAILED` on the group | **Reload**                                                     |
 | The workflow crashes                        | Row left behind                                        | Next job-status read or request clears it, flags `LOAD_FAILED` |
 | Webhook cancelled or deactivated by Onshape | No automatic loads                                     | Next load of the document registers it again                   |
-| No session to borrow                        | Webhook loads fail                                     | Owner or a team admin opens the app                            |
+| No session to borrow                        | Webhook loads fail                                     | The owner or a team member opens the app                       |
 
 ## Decisions
 

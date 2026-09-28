@@ -1,7 +1,7 @@
 /**
  * Work nobody is signed in behind, like a webhook's load, still calls Onshape
- * as someone: the owner or one of the library's team admins, whoever still has
- * a session Onshape takes. Only their sessions are kept by user id.
+ * as someone: the owner or a member of the library's admin team, whoever still
+ * has a session Onshape takes. Only their sessions are kept by user id.
  */
 import { type OAuthApi } from "../../lib/onshape/client";
 import { getSessionInfo } from "../../lib/onshape/endpoints/users";
@@ -13,38 +13,38 @@ import type { LibraryId } from "../library/library-id";
 import { getOnshapeApiFromSessionId } from "./request-auth";
 import { kvStore } from "../../lib/kv-store";
 
-/** Each admin's latest session id, by user id. */
-const adminSessions = kvStore<string>("admin-session");
+/** Each eligible user's latest session id, by user id. */
+const backgroundSessions = kvStore<string>("background-session");
 
 /**
- * The dev access-level override makes an admin who is on no team, so no user
- * id finds them; their session is held under this instead. Only dev writes it.
+ * The dev access-level override grants access to someone on no team, so no
+ * user id finds them; their session is held under this instead. Only dev writes it.
  */
-const OVERRIDDEN_ADMIN = "access-level-override";
+const OVERRIDDEN_USER = "access-level-override";
 
 /** Only writes when the session changed. */
-export async function rememberAdminSession(
+export async function rememberBackgroundSession(
     kv: KVNamespace,
     userId: string,
     sessionId: string
 ): Promise<void> {
-    if ((await adminSessions.get(kv, userId)) !== sessionId) {
-        await adminSessions.put(kv, userId, sessionId);
+    if ((await backgroundSessions.get(kv, userId)) !== sessionId) {
+        await backgroundSessions.put(kv, userId, sessionId);
     }
 }
 
-export function rememberOverriddenAdminSession(
+export function rememberOverriddenSession(
     kv: KVNamespace,
     sessionId: string
 ): Promise<void> {
-    return rememberAdminSession(kv, OVERRIDDEN_ADMIN, sessionId);
+    return rememberBackgroundSession(kv, OVERRIDDEN_USER, sessionId);
 }
 
 async function getLiveApi(
     kv: KVNamespace,
     userId: string
 ): Promise<OAuthApi | undefined> {
-    const sessionId = await adminSessions.get(kv, userId);
+    const sessionId = await backgroundSessions.get(kv, userId);
     if (!sessionId) {
         return undefined;
     }
@@ -60,9 +60,9 @@ async function getLiveApi(
 
 /**
  * The owner's session, else the first working one of the libraries' team
- * admins, else an overridden admin's.
+ * admins, then team members, else an overridden user's.
  */
-export async function getAdminOnshapeApi(
+export async function getBackgroundOnshapeApi(
     env: AppBindings,
     libraryIds: LibraryId[]
 ): Promise<OAuthApi | undefined> {
@@ -71,12 +71,12 @@ export async function getAdminOnshapeApi(
         : undefined;
     return (
         owner ??
-        (await getTeamAdminApi(env, libraryIds)) ??
-        (await getLiveApi(env.KV, OVERRIDDEN_ADMIN))
+        (await getTeamApi(env, libraryIds)) ??
+        (await getLiveApi(env.KV, OVERRIDDEN_USER))
     );
 }
 
-async function getTeamAdminApi(
+async function getTeamApi(
     env: AppBindings,
     libraryIds: LibraryId[]
 ): Promise<OAuthApi | undefined> {
@@ -87,14 +87,12 @@ async function getTeamAdminApi(
         .select({ adminTeam: libraries.adminTeam })
         .from(libraries)
         .where(inArray(libraries.id, libraryIds));
-    const admins = new Set(
-        rows.flatMap((row) =>
-            row.adminTeam
-                .filter((member) => member.isTeamAdmin)
-                .map((member) => member.userId)
-        )
-    );
-    for (const userId of admins) {
+    const members = rows.flatMap((row) => row.adminTeam);
+    const userIds = new Set([
+        ...members.filter((m) => m.isTeamAdmin).map((m) => m.userId),
+        ...members.filter((m) => !m.isTeamAdmin).map((m) => m.userId)
+    ]);
+    for (const userId of userIds) {
         const api = await getLiveApi(env.KV, userId);
         if (api) {
             return api;

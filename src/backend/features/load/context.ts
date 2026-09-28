@@ -2,7 +2,7 @@ import type { WorkflowStep } from "cloudflare:workers";
 import { createLimiter, type Limiter } from "../../lib/limiter";
 import type { AppBindings } from "../../lib/context";
 import { getOnshapeApiFromSessionId } from "../auth/request-auth";
-import { getAdminOnshapeApi } from "../auth/admin-sessions";
+import { getBackgroundOnshapeApi } from "../auth/background-sessions";
 import type { OAuthApi } from "../../lib/onshape/client";
 import type { ElementType } from "../../lib/onshape/element-type";
 import type { LibraryId } from "../library/library-id";
@@ -58,7 +58,7 @@ export async function getOnshapeApiFromContext(
             // Signed out or expired since asking; an admin carries on.
         }
     }
-    ctx.adminApi ??= getAdminOnshapeApi(ctx.env, [ctx.libraryId]).then(
+    ctx.adminApi ??= getBackgroundOnshapeApi(ctx.env, [ctx.libraryId]).then(
         (api) => {
             if (!api) {
                 throw new Error("No owner or admin session to load with");

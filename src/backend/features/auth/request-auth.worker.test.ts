@@ -51,9 +51,9 @@ describe("the dev access-level override", () => {
     });
 
     // A webhook's load in dev has no other admin session to borrow.
-    it("keeps the session of an admin it grants", async () => {
+    it("keeps the session of an editor or admin it grants", async () => {
         const kept = async (override: AccessLevel) => {
-            await env.KV.delete("admin-session:access-level-override");
+            await env.KV.delete("background-session:access-level-override");
             const sessionId = crypto.randomUUID();
             await saveSession(env.KV, sessionId, {
                 accessToken: "token",
@@ -69,11 +69,11 @@ describe("the dev access-level override", () => {
                 },
                 { ...env, VITE_ACCESS_LEVEL_OVERRIDE: override }
             );
-            return env.KV.get("admin-session:access-level-override");
+            return env.KV.get("background-session:access-level-override");
         };
 
-        expect(await kept(AccessLevel.ADMIN)).toBeTruthy();
-        expect(await kept(AccessLevel.EDITOR)).toBeNull();
+        expect(await kept(AccessLevel.EDITOR)).toBeTruthy();
+        expect(await kept(AccessLevel.USER)).toBeNull();
     });
 });
 
@@ -125,11 +125,13 @@ describe("access from a library's admin team", () => {
     });
 
     // So a load nobody is signed in behind can run as them.
-    it("keeps an admin's session, and nobody else's", async () => {
+    it("keeps the admin team's sessions, and nobody else's", async () => {
         await accessLevelOf("team-admin");
         await accessLevelOf("member");
-        expect(await env.KV.get("admin-session:team-admin")).toBeTruthy();
-        expect(await env.KV.get("admin-session:member")).toBeNull();
+        await accessLevelOf("stranger");
+        expect(await env.KV.get("background-session:team-admin")).toBeTruthy();
+        expect(await env.KV.get("background-session:member")).toBeTruthy();
+        expect(await env.KV.get("background-session:stranger")).toBeNull();
     });
 
     it("makes a member an editor, and a team admin an admin", async () => {
