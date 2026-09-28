@@ -47,8 +47,13 @@ export function getLibraryColor(libraryId: string): string {
     }
 }
 
+/** A color's filled shade, which is what reads as that color beside text. */
+export function toShade(color: string): string {
+    return `${color}.${FILLED_SHADE}`;
+}
+
 export function getLibraryShade(libraryId: string): string {
-    return `${getLibraryColor(libraryId)}.${FILLED_SHADE}`;
+    return toShade(getLibraryColor(libraryId));
 }
 
 /**

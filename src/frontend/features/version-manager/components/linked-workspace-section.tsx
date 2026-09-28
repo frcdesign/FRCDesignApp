@@ -12,8 +12,8 @@ import {
     ArrowLineDownIcon,
     ArrowLineUpIcon,
     ArrowsClockwiseIcon,
+    ArrowsDownUpIcon,
     ArrowSquareOutIcon,
-    InfoIcon,
     LinkBreakIcon,
     TreeStructureIcon
 } from "@phosphor-icons/react";
@@ -29,6 +29,7 @@ import {
 } from "@backend/features/version-manager/contract";
 import { ThumbnailSize } from "@backend/features/thumbnails/contract";
 import { MenuButton, MenuSection } from "../../../components/app-menu";
+import { InfoTooltip } from "../../../components/info-tooltip";
 import { CardTitle, ItemRow, ItemTable } from "../../../components/item-row";
 import { SectionNotice } from "../../../components/app-notice";
 import { CardThumbnail } from "../../thumbnails/components/thumbnail";
@@ -61,7 +62,6 @@ export const DIRECTION_COPY = {
         title: "Parents",
         allAction: "Quick pull from all",
         rowAction: "Quick pull",
-        formAction: "Pull",
         running: "Pulling from Onshape...",
         description:
             "Workspaces this one references. Pulling versions them and moves this workspace's references onto what it cut.",
@@ -71,7 +71,6 @@ export const DIRECTION_COPY = {
         title: "Children",
         allAction: "Quick push to all",
         rowAction: "Quick push",
-        formAction: "Push",
         running: "Pushing to Onshape...",
         description:
             "Workspaces that reference this one. Pushing creates a version here and moves their references onto it.",
@@ -87,9 +86,6 @@ const OTHER_DIRECTION = {
 
 /** What a run can be aimed at: everything in a direction, or one link. */
 const ALL_TARGET = "all";
-
-/** Phosphor takes a CSS color, which the theme's dimmed name is not. */
-const DIMMED_ICON = "var(--mantine-color-dimmed)";
 
 interface DirectionIconProps {
     direction: LinkDirection;
@@ -115,16 +111,10 @@ export function DirectionIcon(props: DirectionIconProps): ReactNode {
  */
 export function DirectionInfo(props: { direction: LinkDirection }): ReactNode {
     return (
-        <Tooltip
-            withArrow
-            multiline
-            w={260}
+        <InfoTooltip
             label={DIRECTION_COPY[props.direction].description}
-        >
-            <Center>
-                <InfoIcon size={IconSize.SMALL} color={DIMMED_ICON} />
-            </Center>
-        </Tooltip>
+            className={styles.noShrink}
+        />
     );
 }
 
@@ -330,24 +320,17 @@ export function SectionActions(props: SectionActionsProps): ReactNode {
 
 interface ActionMenuSectionProps {
     direction: LinkDirection;
-    /** Ends in an ellipsis: it opens the form rather than running anything. */
-    formLabel: string;
     disabled: boolean;
     onQuick: () => void;
-    onOpenForm: () => void;
     onQuickRecursive: () => void;
 }
 
-/** Everything a row can run: the run itself, the form, and the walk past it. */
+/**
+ * What a row can run. Only the runs: the form is a click on the row itself,
+ * which is where somebody who did not want the defaults already is.
+ */
 function ActionMenuSection(props: ActionMenuSectionProps): ReactNode {
-    const {
-        direction,
-        formLabel,
-        disabled,
-        onQuick,
-        onOpenForm,
-        onQuickRecursive
-    } = props;
+    const { direction, disabled, onQuick, onQuickRecursive } = props;
     const isChild = direction === LinkDirection.CHILD;
     const quickKey = useQuickKeyLabel();
 
@@ -369,18 +352,6 @@ function ActionMenuSection(props: ActionMenuSectionProps): ReactNode {
                 onClick={onQuick}
             >
                 {DIRECTION_COPY[direction].rowAction}
-            </Menu.Item>
-            <Menu.Item
-                leftSection={
-                    <DirectionIcon
-                        direction={direction}
-                        size={IconSize.MEDIUM}
-                    />
-                }
-                disabled={disabled}
-                onClick={onOpenForm}
-            >
-                {formLabel}
             </Menu.Item>
             {/* No recursive pull: a pull writes only to this workspace, and
                 going further would mean versioning a parent's own parents,
@@ -478,16 +449,13 @@ function LinkedWorkspaceRow(props: LinkedWorkspaceRowProps): ReactNode {
     const origin = useOnshapeOrigin();
     const url = makeUrl(origin, linked.workspace);
     const disabled = actions.isRunning;
-    const copy = DIRECTION_COPY[direction];
 
     const menuItems = (
         <>
             <ActionMenuSection
                 direction={direction}
-                formLabel={`${copy.formAction}...`}
                 disabled={disabled}
                 onQuick={() => actions.quickOne(linked, false)}
-                onOpenForm={() => actions.openOne(linked)}
                 onQuickRecursive={() => actions.quickOne(linked, true)}
             />
             <MenuSection label="Link">
@@ -502,19 +470,15 @@ function LinkedWorkspaceRow(props: LinkedWorkspaceRowProps): ReactNode {
                     </Menu.Item>
                 )}
                 {/* Linked the wrong way up is a paste into the wrong field,
-                    which is a move rather than a delete and a re-add. */}
+                    which turns the link around rather than deleting and
+                    re-adding it. */}
                 <Menu.Item
-                    leftSection={
-                        <DirectionIcon
-                            direction={OTHER_DIRECTION[direction]}
-                            size={IconSize.MEDIUM}
-                        />
-                    }
+                    leftSection={<ArrowsDownUpIcon size={IconSize.MEDIUM} />}
                     onClick={onMove}
                 >
                     {direction === LinkDirection.PARENT
-                        ? "Move to child"
-                        : "Move to parent"}
+                        ? "Switch to child"
+                        : "Switch to parent"}
                 </Menu.Item>
                 <Menu.Item
                     color={StatusColor.ERROR}

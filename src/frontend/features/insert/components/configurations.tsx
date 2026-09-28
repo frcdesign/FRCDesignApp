@@ -4,12 +4,9 @@ import {
     type ComboboxProps,
     Loader,
     Select,
-    TextInput,
-    Tooltip
+    TextInput
 } from "@mantine/core";
-import { InfoIcon } from "@phosphor-icons/react";
-import { AppIcon } from "../../../components/app-icon";
-import { StatusColor } from "../../../lib/style-constants";
+import { InfoTooltip } from "../../../components/info-tooltip";
 import {
     type Dispatch,
     ReactNode,
@@ -361,12 +358,7 @@ function StringInput(props: ParameterProps<StringParameter>): ReactNode {
                     value={value ?? parameter.default}
                     readOnly
                     rightSection={
-                        <Tooltip label={DERIVATION_VARIABLE_NOTE}>
-                            <AppIcon
-                                icon={InfoIcon}
-                                color={StatusColor.DIMMED}
-                            />
-                        </Tooltip>
+                        <InfoTooltip label={DERIVATION_VARIABLE_NOTE} />
                     }
                 />
             </ParameterCells>

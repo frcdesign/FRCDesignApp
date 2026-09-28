@@ -1,5 +1,5 @@
 import { ExternalLink } from "../../../components/external-link";
-import { Badge, Group, Stack, Text, Tooltip } from "@mantine/core";
+import { Badge, Group, Stack, Text } from "@mantine/core";
 import {
     ArrowSquareOutIcon,
     CheckIcon,
@@ -29,6 +29,7 @@ import {
 } from "@backend/features/build-checker/contract";
 import { IconSize, StatusColor } from "../../../lib/style-constants";
 import { AppIcon, type AppIconProps } from "../../../components/app-icon";
+import { InfoTooltip } from "../../../components/info-tooltip";
 import { SectionHeader } from "./sections";
 import { useOnshapeOrigin } from "../../../lib/onshape-params";
 import styles from "../../../lib/styles.module.css";
@@ -287,14 +288,11 @@ function IssueText(props: IssueTextProps): ReactNode {
         <>
             <Text flex={1}>{getIssueTitle(issue)}</Text>
             {description && (
-                <Tooltip label={description} multiline maw={260}>
-                    <AppIcon
-                        icon={InfoIcon}
-                        color={StatusColor.DIMMED}
-                        className={styles.noShrink}
-                        style={CALLOUT_ICON_NUDGE}
-                    />
-                </Tooltip>
+                <InfoTooltip
+                    label={description}
+                    className={styles.noShrink}
+                    style={CALLOUT_ICON_NUDGE}
+                />
             )}
         </>
     );

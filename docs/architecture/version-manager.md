@@ -98,7 +98,8 @@ resolved to the default workspace, which would be a different one than whoever
 copied the link was looking at.
 
 `POST /api/workspace-link/:linkId/move` turns a link around, for one filed the
-wrong way up. It rewrites the row rather than deleting and re-adding it. Where
+wrong way up — **Switch to parent** or **Switch to child** in the row's menu.
+It rewrites the row rather than deleting and re-adding it. Where
 the reversed edge already exists — a pair that links both ways — it drops this
 row instead, the unique index over the four ids allowing only one.
 
@@ -232,11 +233,12 @@ deletes a transient webhook that goes quiet, so the entries expire as well.
   references moved, with nothing to resume from.
 - **Direct push by default.** Cutting versions in somebody else's document is
   the opt-in, not the default.
-- **Every run is in a menu; a modified click is the shortcut.** Rows carry no
-  push or pull button: a list of documents reads as a list, and the buttons
-  competed with the names. Clicking a row opens the form, ctrl-clicking (⌘ on a
-  Mac, where ctrl-click is the context menu) runs it under the defaults, and the
-  menu says so beside the item it is a shortcut for.
+- **The row is the form; the menu is the runs.** Rows carry no push or pull
+  button: a list of documents reads as a list, and the buttons competed with the
+  names. Clicking a row opens the form, ctrl-clicking (⌘ on a Mac, where
+  ctrl-click is the context menu) runs it under the defaults, and the menu says
+  so beside the item it is a shortcut for. The menu holds the runs alone —
+  anybody who did not want the defaults is one click from the form already.
 - **Thumbnails are proxied.** `GET /api/workspace-thumbnail` fetches the
   workspace's own thumbnail under the caller's OAuth token. Letting the image
   element fetch Onshape directly was tried; Onshape serves a thumbnail only to

@@ -13,8 +13,11 @@ import {
     Tooltip
 } from "@mantine/core";
 import {
+    BooksIcon,
     CaretDownIcon,
     GearIcon,
+    GitBranchIcon,
+    type Icon,
     MagnifyingGlassIcon,
     MoonIcon,
     SunIcon
@@ -38,6 +41,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { useDebouncedCallback } from "@mantine/hooks";
 
 import { AppBrand } from "./app-brand";
+import { AppIcon } from "./app-icon";
 import { LibraryStatusBadge } from "./library-status-badge";
 import { MenuSection } from "./app-menu";
 import { openSettingsMenu } from "../features/settings/open-settings-menu";
@@ -58,6 +62,7 @@ import {
     useIsLibraryLoading
 } from "../features/library/queries";
 import { LibraryId } from "@backend/features/library/library-id";
+import { AppColor, getLibraryShade, toShade } from "../theme";
 import { queryClient } from "../lib/query-client";
 import { InsertLocationStatus } from "../features/insert-location/components/insert-location-status";
 import {
@@ -186,13 +191,6 @@ const VERSION_MANAGER_TAB = "version-manager";
 /** What the version manager's page is called wherever it is offered. */
 const VERSION_MANAGER_LABEL = "Version Manager";
 
-/** Marks the version manager out to somebody who has not found it yet. */
-const NEW_BADGE = (
-    <Badge size="xs" variant="light">
-        New
-    </Badge>
-);
-
 /** What the menu files the pages that are not a library under. */
 const UTILITIES_GROUP = "Utilities";
 
@@ -203,6 +201,10 @@ interface AppPage {
     label: string;
     /** The heading the menu lists it under: its program, or the utilities. */
     group: string;
+    /** What the page is marked with: a book for a library. */
+    icon: Icon;
+    /** The color the page themes the app in, which its icon and badge take. */
+    color: string;
     /** What marks the page out, wherever it is listed. */
     badge?: ReactNode;
 }
@@ -215,7 +217,15 @@ function useAppPages(): AppPage[] {
     const libraries = Object.values(LibraryId).map((libraryId) => ({
         value: libraryId,
         label: getLibraryName(libraryId),
-        group: getLibraryProgram(libraryId)
+        group: getLibraryProgram(libraryId),
+        icon: BooksIcon,
+        color: getLibraryShade(libraryId),
+        badge: (
+            <LibraryStatusBadge
+                libraryId={libraryId}
+                color={getLibraryShade(libraryId)}
+            />
+        )
     }));
 
     // Only where there is a workspace to push or pull, which is what the page
@@ -230,7 +240,14 @@ function useAppPages(): AppPage[] {
             value: VERSION_MANAGER_TAB,
             label: VERSION_MANAGER_LABEL,
             group: UTILITIES_GROUP,
-            badge: isNew ? NEW_BADGE : undefined
+            // What a version is marked with wherever the app shows one.
+            icon: GitBranchIcon,
+            color: toShade(AppColor.VERSION_MANAGER),
+            badge: isNew ? (
+                <Badge size="xs" color={toShade(AppColor.VERSION_MANAGER)}>
+                    New
+                </Badge>
+            ) : undefined
         }
     ];
 }
@@ -351,13 +368,14 @@ function PageMenu(props: PageMenuProps): ReactNode {
                             <Menu.Item
                                 key={page.value}
                                 disabled={page.value === current}
-                                rightSection={
-                                    page.badge ?? (
-                                        <LibraryStatusBadge
-                                            libraryId={page.value}
-                                        />
-                                    )
+                                leftSection={
+                                    <AppIcon
+                                        icon={page.icon}
+                                        size={IconSize.MEDIUM}
+                                        color={page.color}
+                                    />
                                 }
+                                rightSection={page.badge}
                                 onClick={() => onSelect(page.value)}
                             >
                                 {page.label}

@@ -6,6 +6,8 @@ interface LibraryStatusBadgeProps {
     libraryId: string;
     /** Beside a page title rather than in a menu row. @default xs */
     size?: MantineSize;
+    /** The library's own color, where the badge sits away from its page. */
+    color?: string;
 }
 
 /**
@@ -18,7 +20,7 @@ export function LibraryStatusBadge(props: LibraryStatusBadgeProps): ReactNode {
         return null;
     }
     return (
-        <Badge size={props.size ?? "xs"} variant="light">
+        <Badge size={props.size ?? "xs"} variant="light" color={props.color}>
             {status}
         </Badge>
     );
