@@ -67,28 +67,41 @@ export function VersionManagerZeroState(
     props: VersionManagerZeroStateProps
 ): ReactNode {
     return (
-        <PageNotice
-            icon={
-                <AppIcon
-                    icon={TreeStructureIcon}
-                    size={IconSize.PAGE}
-                    color={PrimaryColor.FILLED}
-                />
-            }
-            title="Welcome to Version Manager!"
-            description="Version manager lets you automatically push and pull versions between Onshape documents. To get started, paste the link of another associated Onshape document."
-            action={
-                <Stack align="center" gap="lg">
-                    <LinkExampleDiagram />
-                    <AddFirstLinkCard
-                        workspace={props.workspace}
-                        documentName={props.documentName}
+        // One column for the whole welcome, so the text, the picture and the
+        // card share their edges: this decides the width, and each fills it.
+        <Box w={COLUMN_SHARE} maw={COLUMN_WIDTH} mx="auto">
+            <PageNotice
+                icon={
+                    <AppIcon
+                        icon={TreeStructureIcon}
+                        size={IconSize.PAGE}
+                        color={PrimaryColor.FILLED}
                     />
-                </Stack>
-            }
-        />
+                }
+                title="Welcome to Version Manager!"
+                description="Version manager lets you automatically push and pull versions between Onshape documents. To get started, paste the link of another associated Onshape document."
+                action={
+                    <Stack gap="lg" w="100%">
+                        <LinkExampleDiagram />
+                        <AddFirstLinkCard
+                            workspace={props.workspace}
+                            documentName={props.documentName}
+                        />
+                    </Stack>
+                }
+            />
+        </Box>
     );
 }
+
+/**
+ * How wide the welcome gets: the measure Mantine already caps a notice's
+ * description at, so the picture and the card end where its lines do.
+ */
+const COLUMN_WIDTH = "32rem";
+
+/** Short of the panel's edges, so the card still reads as a card there. */
+const COLUMN_SHARE = "90%";
 
 interface AddFirstLinkCardProps {
     workspace: WorkspacePath;
@@ -110,7 +123,7 @@ function AddFirstLinkCard(props: AddFirstLinkCardProps): ReactNode {
     return (
         // Left, where the notice above it is centred: this is a form, and a
         // centred label over a field reads as a heading for the whole card.
-        <Card withBorder w={CARD_SHARE} maw={CARD_WIDTH} radius="md" ta="left">
+        <Card withBorder radius="md" ta="left">
             <Stack gap="md">
                 <Radio.Group
                     value={direction}
@@ -135,16 +148,6 @@ function AddFirstLinkCard(props: AddFirstLinkCardProps): ReactNode {
         </Card>
     );
 }
-
-/**
- * How wide the picture and the card get before they stop. The panel is narrower
- * than this, so it only bites in a browser — where a form spanning the window
- * reads as the page rather than as one thing to fill in.
- */
-const CARD_WIDTH = 600;
-
-/** Short of the panel's edges, so the card still reads as a card there. */
-const CARD_SHARE = "90%";
 
 /** Mantine's card carries the border; what being picked looks like is ours. */
 const SELECTED_CARD = {
@@ -201,16 +204,12 @@ function DirectionCard(props: DirectionCardProps): ReactNode {
 const EXAMPLE_PARENTS = ["Intake", "Drivetrain", "Shooter"];
 const EXAMPLE_CHILD = "Robot";
 
+/** The room between two documents in the picture. */
+const DOCUMENT_GAP = 20;
+
 /** Where an outer column's middle falls: the connector is drawn across the
  * whole diagram rather than inside the grid, so it is told where to join. */
-const OUTER_COLUMN_CENTER = `${100 / 6}%`;
-
-/**
- * The room between two documents, as padding inside the columns rather than a
- * gap between them: the columns stay exact thirds for the connector to be drawn
- * against, and the rows hang this far outside to line up with the card below.
- */
-const COLUMN_GUTTER = 10;
+const OUTER_COLUMN_CENTER = `calc((100% - ${2 * DOCUMENT_GAP}px) / 6)`;
 
 /** How far the connector drops before it turns in, and how far after. */
 const ELBOW_HEIGHT = 16;
@@ -232,15 +231,8 @@ function LinkExampleDiagram(): ReactNode {
     return (
         // The labels are outside the rows rather than beside the arrow, which
         // is where they would break the line they are labelling.
-        <Stack
-            gap={8}
-            // The card's width plus a gutter each side, which the negative
-            // margins give back: the outer boxes' edges land on the card's.
-            w={`calc(${CARD_SHARE} + ${2 * COLUMN_GUTTER}px)`}
-            maw={CARD_WIDTH + 2 * COLUMN_GUTTER}
-            mx={-COLUMN_GUTTER}
-        >
-            <SimpleGrid cols={3} spacing={0}>
+        <Stack gap={8}>
+            <SimpleGrid cols={3} spacing={DOCUMENT_GAP}>
                 {EXAMPLE_PARENTS.map((name) => (
                     <ExampleDocument key={name} name={name} />
                 ))}
@@ -248,7 +240,7 @@ function LinkExampleDiagram(): ReactNode {
             <DiagramLabel>Parents</DiagramLabel>
             <Connector />
             <DiagramLabel>Children</DiagramLabel>
-            <SimpleGrid cols={3} spacing={0}>
+            <SimpleGrid cols={3} spacing={DOCUMENT_GAP}>
                 {/* The middle column, so the robot is the width of one of the
                     documents above it rather than of all three. */}
                 <Box style={{ gridColumnStart: 2 }}>
@@ -266,13 +258,11 @@ interface ExampleDocumentProps {
 /** One document in the picture; all four boxes are the same box. */
 function ExampleDocument(props: ExampleDocumentProps): ReactNode {
     return (
-        <Box px={COLUMN_GUTTER}>
-            <Paper withBorder radius="sm" py={6} px="sm">
-                <Text size="sm" fw={FontWeight.SEMI_BOLD} ta="center" truncate>
-                    {props.name}
-                </Text>
-            </Paper>
-        </Box>
+        <Paper withBorder radius="sm" py={6} px="sm">
+            <Text size="sm" fw={FontWeight.SEMI_BOLD} ta="center" truncate>
+                {props.name}
+            </Text>
+        </Paper>
     );
 }
 
