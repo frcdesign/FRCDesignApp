@@ -16,7 +16,6 @@ interface PushModalProps {
     title: string;
     /** The child to push to; a whole direction has no form. */
     target: LinkedWorkspace;
-    targets: string[];
 }
 
 export function openPushVersionModal(
@@ -26,11 +25,7 @@ export function openPushVersionModal(
     openAppModal({
         title: props.title,
         children: (
-            <PushVersionForm
-                workspace={workspace}
-                target={props.target}
-                targets={props.targets}
-            />
+            <PushVersionForm workspace={workspace} target={props.target} />
         )
     });
 }
@@ -39,7 +34,6 @@ interface PullModalProps {
     title: string;
     /** The parent to pull from; a whole direction has no form. */
     source: LinkedWorkspace;
-    sourceName: string;
 }
 
 export function openPullReferencesModal(
@@ -49,11 +43,7 @@ export function openPullReferencesModal(
     openAppModal({
         title: props.title,
         children: (
-            <PullReferencesForm
-                workspace={workspace}
-                source={props.source}
-                sourceName={props.sourceName}
-            />
+            <PullReferencesForm workspace={workspace} source={props.source} />
         )
     });
 }

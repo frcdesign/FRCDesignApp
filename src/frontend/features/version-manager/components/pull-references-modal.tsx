@@ -1,4 +1,4 @@
-import { Button, Text, TextInput, Textarea } from "@mantine/core";
+import { Button, TextInput, Textarea } from "@mantine/core";
 import { ArrowLineDownIcon } from "@phosphor-icons/react";
 import { useState, type ReactNode } from "react";
 import {
@@ -10,7 +10,7 @@ import {
 } from "@backend/features/version-manager/contract";
 import { AppModalBody, AppModalFooter } from "../../../components/app-modal";
 import { useAppModal } from "../../../components/open-app-modal";
-import { IconSize, StatusColor } from "../../../lib/style-constants";
+import { IconSize } from "../../../lib/style-constants";
 import { useNextVersionNameQuery, usePullReferencesMutation } from "../queries";
 import { showQuickActionTip } from "../version-manager-tips";
 
@@ -18,8 +18,6 @@ export interface PullReferencesFormProps {
     workspace: WorkspacePath;
     /** The parent to pull from, which the run versions. */
     source: LinkedWorkspace;
-    /** What that parent is called, for the line above the button. */
-    sourceName: string;
 }
 
 /**
@@ -28,7 +26,7 @@ export interface PullReferencesFormProps {
  * without it, under the defaults shown here.
  */
 export function PullReferencesForm(props: PullReferencesFormProps): ReactNode {
-    const { workspace, source, sourceName } = props;
+    const { workspace, source } = props;
     const modal = useAppModal();
     // Undefined until somebody types; see the push form, which this mirrors.
     const [typedName, setTypedName] = useState<string>();
@@ -90,10 +88,6 @@ export function PullReferencesForm(props: PullReferencesFormProps): ReactNode {
                         setDescription(event.currentTarget.value)
                     }
                 />
-                <Text size="sm" c={StatusColor.DIMMED}>
-                    A version of {sourceName} is created, and this document's
-                    references to it move onto that version.
-                </Text>
             </AppModalBody>
             <AppModalFooter>
                 <Button

@@ -90,10 +90,10 @@ export function useMoveLinkMutation(workspace: WorkspacePath) {
                 { body: { workspace, direction } }
             ),
         onSuccess: async () => {
-            showSuccessToast("Moved the link.");
+            showSuccessToast("Switched the link.");
             await refreshLinks(workspace);
         },
-        onError: getAppErrorHandler("Unexpectedly failed to move the link.")
+        onError: getAppErrorHandler("Unexpectedly failed to switch the link.")
     });
 }
 

@@ -67,7 +67,9 @@ document and workspace names, for a week.
 
 The page picker marks the version manager with a dot and a **New** badge for
 somebody who has a workspace to act on, has never opened the page in this
-browser (`hasOpenedVersionManager`), and has nothing linked. Links of their own
+browser (`hasOpenedVersionManager`), and has nothing linked. The dot is on the
+picker's button and again on the version manager's row inside it, so it leads
+to the page it is about. Links of their own
 are the sign they have found it, whether or not this browser remembers.
 `useIsVersionManagerNew` only asks for the links while the answer could still
 be yes, so it costs one Onshape call per person rather than one per page.

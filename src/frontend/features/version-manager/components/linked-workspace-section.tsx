@@ -64,7 +64,7 @@ export const DIRECTION_COPY = {
         rowAction: "Quick pull",
         running: "Pulling from Onshape...",
         description:
-            "Workspaces this one references. Pulling versions them and moves this workspace's references onto what it cut.",
+            "Documents this one uses parts from. Pulling saves a new version of the parent and updates this document to use it.",
         empty: "No linked parents"
     },
     [LinkDirection.CHILD]: {
@@ -73,7 +73,7 @@ export const DIRECTION_COPY = {
         rowAction: "Quick push",
         running: "Pushing to Onshape...",
         description:
-            "Workspaces that reference this one. Pushing creates a version here and moves their references onto it.",
+            "Documents that use parts from this one. Pushing saves a new version of this document and updates each child to use it.",
         empty: "No linked children"
     }
 } as const;
@@ -113,7 +113,9 @@ export function DirectionInfo(props: { direction: LinkDirection }): ReactNode {
     return (
         <InfoTooltip
             label={DIRECTION_COPY[props.direction].description}
-            className={styles.noShrink}
+            // Nudged as the section's own icon is, so the two icons on the row
+            // share a centre.
+            className={`${styles.noShrink} ${styles.titleIcon}`}
         />
     );
 }
@@ -225,15 +227,13 @@ export function useLinkActions(
         if (isChild) {
             openPushVersionModal(workspace, {
                 title: `Push to ${toName(each)}`,
-                target: each,
-                targets: [toName(each)]
+                target: each
             });
             return;
         }
         openPullReferencesModal(workspace, {
             title: `Pull from ${toName(each)}`,
-            source: each,
-            sourceName: toName(each)
+            source: each
         });
     };
 
@@ -390,8 +390,8 @@ export function LinkedWorkspaceSection(
             {linked.length === 0 && (
                 <>
                     <SectionNotice
-                        // Beside the text rather than over it: one line saying
-                        // a list is empty should not take a list's worth of room.
+                        // Centred with the icon above, as the library's own
+                        // empty lists are.
                         title={copy.empty}
                         description={null}
                         icon={

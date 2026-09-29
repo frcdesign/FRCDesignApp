@@ -207,7 +207,12 @@ interface AppPage {
     color: string;
     /** What marks the page out, wherever it is listed. */
     badge?: ReactNode;
+    /** Carries the picker's dot, so the dot leads to the page it is about. */
+    marked?: boolean;
 }
+
+/** The dot that says a page is new, on the picker and on that page's row. */
+const NEW_DOT = { color: StatusColor.INFO, size: 8 } as const;
 
 function useAppPages(): AppPage[] {
     const targetWorkspace = useTargetWorkspace();
@@ -245,7 +250,8 @@ function useAppPages(): AppPage[] {
             color: AppColor.VERSION_MANAGER,
             badge: isNew ? (
                 <Badge color={AppColor.VERSION_MANAGER}>New</Badge>
-            ) : undefined
+            ) : undefined,
+            marked: isNew
         }
     ];
 }
@@ -338,19 +344,19 @@ function PageMenu(props: PageMenuProps): ReactNode {
         <Menu position="bottom-start" withinPortal>
             {/* The dot is around the target rather than the target itself: the
                 menu hands its props to whatever it wraps, and that has to be
-                the button. */}
+                the button. The wrapper is what the navbar row lays out, so it
+                is the one centred on the row. */}
             <Indicator
+                {...NEW_DOT}
                 disabled={!marked}
-                color={StatusColor.INFO}
-                size={8}
                 offset={6}
+                my="auto"
                 className={styles.noShrink}
             >
                 <Menu.Target>
                     <Button
                         variant="subtle"
                         color={StatusColor.NEUTRAL}
-                        my="auto"
                         px="xs"
                         onMouseEnter={onHover}
                         rightSection={<CaretDownIcon size={IconSize.SMALL} />}
@@ -367,14 +373,24 @@ function PageMenu(props: PageMenuProps): ReactNode {
                                 key={page.value}
                                 disabled={page.value === current}
                                 leftSection={
-                                    <AppIcon
-                                        icon={page.icon}
-                                        size={IconSize.MEDIUM}
-                                        // The shade an icon reads at; a badge
-                                        // wants the name, so its light variant
-                                        // tints rather than fills.
-                                        color={toShade(page.color)}
-                                    />
+                                    <Indicator
+                                        {...NEW_DOT}
+                                        disabled={!page.marked}
+                                        offset={2}
+                                    >
+                                        <AppIcon
+                                            icon={page.icon}
+                                            size={IconSize.MEDIUM}
+                                            // The shade an icon reads at; a
+                                            // badge wants the name, so its
+                                            // light variant tints rather than
+                                            // fills.
+                                            color={toShade(page.color)}
+                                            // A block, so the wrapper is the
+                                            // icon's height and not a line's.
+                                            style={{ display: "block" }}
+                                        />
+                                    </Indicator>
                                 }
                                 onClick={() => onSelect(page.value)}
                             >

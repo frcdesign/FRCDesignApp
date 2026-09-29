@@ -1,12 +1,4 @@
-import {
-    Button,
-    Checkbox,
-    List,
-    Stack,
-    Text,
-    TextInput,
-    Textarea
-} from "@mantine/core";
+import { Button, Checkbox, Group, TextInput, Textarea } from "@mantine/core";
 import { ArrowLineUpIcon } from "@phosphor-icons/react";
 import { useState, type ReactNode } from "react";
 import {
@@ -18,8 +10,9 @@ import {
     type WorkspacePath
 } from "@backend/features/version-manager/contract";
 import { AppModalBody, AppModalFooter } from "../../../components/app-modal";
+import { InfoTooltip } from "../../../components/info-tooltip";
 import { useAppModal } from "../../../components/open-app-modal";
-import { IconSize, StatusColor } from "../../../lib/style-constants";
+import { IconSize } from "../../../lib/style-constants";
 import { useNextVersionNameQuery, usePushVersionMutation } from "../queries";
 import { showQuickActionTip } from "../version-manager-tips";
 
@@ -27,8 +20,6 @@ export interface PushVersionFormProps {
     workspace: WorkspacePath;
     /** The one child to push to; absent for every child. */
     target?: LinkedWorkspace;
-    /** What the push reaches, named for the list above the button. */
-    targets: string[];
 }
 
 /**
@@ -37,7 +28,7 @@ export interface PushVersionFormProps {
  * the form, under the defaults shown here.
  */
 export function PushVersionForm(props: PushVersionFormProps): ReactNode {
-    const { workspace, target, targets } = props;
+    const { workspace, target } = props;
     const modal = useAppModal();
     // Undefined until somebody types: the field then shows the name Onshape is
     // about to be asked for, and what they type replaces it. Derived rather
@@ -108,15 +99,18 @@ export function PushVersionForm(props: PushVersionFormProps): ReactNode {
                         setDescription(event.currentTarget.value)
                     }
                 />
-                <Checkbox
-                    label="Recursive push"
-                    description="Also updates everything linked further downstream, cutting a version of each workspace on the way so the next one can reference it."
-                    checked={recursive}
-                    onChange={(event) =>
-                        setRecursive(event.currentTarget.checked)
-                    }
-                />
-                <PushTargets targets={targets} recursive={recursive} />
+                {/* Beside the checkbox rather than in its label, where a click
+                    on the icon would tick the box. */}
+                <Group gap={6}>
+                    <Checkbox
+                        label="Recursive push"
+                        checked={recursive}
+                        onChange={(event) =>
+                            setRecursive(event.currentTarget.checked)
+                        }
+                    />
+                    <InfoTooltip label="Also pushes on to the documents linked below the child, saving a new version of each one along the way so the next can use it." />
+                </Group>
             </AppModalBody>
             <AppModalFooter>
                 <Button
@@ -130,42 +124,5 @@ export function PushVersionForm(props: PushVersionFormProps): ReactNode {
                 </Button>
             </AppModalFooter>
         </>
-    );
-}
-
-interface PushTargetsProps {
-    targets: string[];
-    recursive: boolean;
-}
-
-/** The workspaces the push updates, so the button is not a leap of faith. */
-function PushTargets(props: PushTargetsProps): ReactNode {
-    const { targets, recursive } = props;
-
-    if (targets.length === 0) {
-        return (
-            <Text size="sm" c={StatusColor.DIMMED}>
-                Nothing is linked as a child, so this only creates a version of
-                this workspace.
-            </Text>
-        );
-    }
-
-    return (
-        <Stack gap={4}>
-            <Text size="sm">
-                References to this document will be updated in:
-            </Text>
-            <List size="sm" c={StatusColor.DIMMED}>
-                {targets.map((target) => (
-                    <List.Item key={target}>{target}</List.Item>
-                ))}
-                {/* Named rather than listed: what lies past them is the
-                    server's walk of the graph, not something this form knows. */}
-                {recursive && (
-                    <List.Item>everything linked past them</List.Item>
-                )}
-            </List>
-        </Stack>
     );
 }
