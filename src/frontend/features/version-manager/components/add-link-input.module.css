@@ -1,0 +1,12 @@
+/*
+ * Disabled until a link is typed, but in the page's color rather than Mantine's
+ * disabled gray, which reads as a control that is not there to use. Faded, so it
+ * still says it is waiting on the field.
+ */
+.addButton:disabled:not([data-loading]),
+.addButton[data-disabled]:not([data-loading]) {
+    border: var(--button-bd);
+    background-color: transparent;
+    color: var(--button-color);
+    opacity: 0.5;
+}

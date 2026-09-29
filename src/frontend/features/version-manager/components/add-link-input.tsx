@@ -13,6 +13,7 @@ import {
     parseOnshapeWorkspace
 } from "../../../lib/onshape-url";
 import { useAddLinkMutation } from "../queries";
+import classes from "./add-link-input.module.css";
 
 /** What the two fields below are, minus how they are laid out. */
 interface AddLinkForm {
@@ -91,7 +92,8 @@ export function AddLinkRow(props: AddLinkProps): ReactNode {
                     />
                     <Button
                         size="compact-sm"
-                        variant="subtle"
+                        variant="outline"
+                        className={classes.addButton}
                         rightSection={<PlusIcon size={IconSize.SMALL} />}
                         loading={form.isPending}
                         disabled={form.isEmpty}
@@ -126,6 +128,8 @@ export function AddLinkField(props: AddLinkProps): ReactNode {
                 }}
             />
             <Button
+                variant="outline"
+                className={classes.addButton}
                 rightSection={<PlusIcon size={IconSize.SMALL} />}
                 loading={form.isPending}
                 disabled={form.isEmpty}

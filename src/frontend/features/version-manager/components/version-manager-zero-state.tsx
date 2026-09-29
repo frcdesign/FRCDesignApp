@@ -110,7 +110,7 @@ function AddFirstLinkCard(props: AddFirstLinkCardProps): ReactNode {
     return (
         // Left, where the notice above it is centred: this is a form, and a
         // centred label over a field reads as a heading for the whole card.
-        <Card withBorder maw={CARD_WIDTH} radius="md" ta="left">
+        <Card withBorder w={CARD_SHARE} maw={CARD_WIDTH} radius="md" ta="left">
             <Stack gap="md">
                 <Radio.Group
                     value={direction}
@@ -142,6 +142,9 @@ function AddFirstLinkCard(props: AddFirstLinkCardProps): ReactNode {
  * reads as the page rather than as one thing to fill in.
  */
 const CARD_WIDTH = 600;
+
+/** Short of the panel's edges, so the card still reads as a card there. */
+const CARD_SHARE = "95%";
 
 /** Mantine's card carries the border; what being picked looks like is ours. */
 const SELECTED_CARD = {
