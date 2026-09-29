@@ -144,7 +144,7 @@ function AddFirstLinkCard(props: AddFirstLinkCardProps): ReactNode {
 const CARD_WIDTH = 600;
 
 /** Short of the panel's edges, so the card still reads as a card there. */
-const CARD_SHARE = "95%";
+const CARD_SHARE = "90%";
 
 /** Mantine's card carries the border; what being picked looks like is ours. */
 const SELECTED_CARD = {
@@ -198,12 +198,8 @@ function DirectionCard(props: DirectionCardProps): ReactNode {
 
 /** A robot assembled from three subsystems, each in a document of its own,
  * which is the arrangement version manager is for. */
-const EXAMPLE_PARENTS = [
-    "Intake document",
-    "Drivetrain document",
-    "Shooter document"
-];
-const EXAMPLE_CHILD = "Robot document";
+const EXAMPLE_PARENTS = ["Intake", "Drivetrain", "Shooter"];
+const EXAMPLE_CHILD = "Robot";
 
 /** Where an outer column's middle falls: the connector is drawn across the
  * whole diagram rather than inside the grid, so it is told where to join. */
@@ -236,7 +232,14 @@ function LinkExampleDiagram(): ReactNode {
     return (
         // The labels are outside the rows rather than beside the arrow, which
         // is where they would break the line they are labelling.
-        <Stack gap={8} w="100%" maw={CARD_WIDTH} mx={-COLUMN_GUTTER}>
+        <Stack
+            gap={8}
+            // The card's width plus a gutter each side, which the negative
+            // margins give back: the outer boxes' edges land on the card's.
+            w={`calc(${CARD_SHARE} + ${2 * COLUMN_GUTTER}px)`}
+            maw={CARD_WIDTH + 2 * COLUMN_GUTTER}
+            mx={-COLUMN_GUTTER}
+        >
             <SimpleGrid cols={3} spacing={0}>
                 {EXAMPLE_PARENTS.map((name) => (
                     <ExampleDocument key={name} name={name} />

@@ -354,6 +354,16 @@ function PageMenu(props: PageMenuProps): ReactNode {
                         color={StatusColor.NEUTRAL}
                         px="xs"
                         onMouseEnter={onHover}
+                        // The page's own mark, as its row in the menu has it.
+                        leftSection={
+                            currentPage && (
+                                <AppIcon
+                                    icon={currentPage.icon}
+                                    size={IconSize.MEDIUM}
+                                    color={toShade(currentPage.color)}
+                                />
+                            )
+                        }
                         rightSection={<CaretDownIcon size={IconSize.SMALL} />}
                     >
                         {currentPage?.label}
