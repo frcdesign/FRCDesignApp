@@ -159,6 +159,8 @@ export interface OnshapeVersionInfo {
     /** ISO-8601 timestamp. */
     createdAt: string;
     creator?: { id: string };
+    /** The microversion the version was cut at. */
+    microversion?: string;
 }
 
 // === documents (GET /documents/{did}, GET .../contents) ===
@@ -192,6 +194,8 @@ export interface OnshapeWorkspaceInfo {
     id: string;
     name: string;
     description?: string;
+    /** The workspace's current microversion, which every edit moves on. */
+    microversion?: string;
 }
 
 /** A folder (group) node in the document contents tree. */

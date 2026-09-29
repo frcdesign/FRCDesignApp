@@ -32,6 +32,8 @@ interface UiState {
     /** How many times the version manager has offered its quick-action tip;
      * see `version-manager-tips`. */
     quickActionTipCount: number;
+    /** The run whose last-run callout was closed, which stays closed until the next. */
+    dismissedVersionJobId?: string;
     /** Per library; a library with no entry has every vendor active. */
     vendorFilters: Partial<Record<LibraryId, Vendor[]>>;
     searchQuery: string;

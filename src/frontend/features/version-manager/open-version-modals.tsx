@@ -1,10 +1,13 @@
 import {
     type LinkedWorkspace,
+    type VersionJobStatus,
     type WorkspacePath
 } from "@backend/features/version-manager/contract";
 import { openAppModal } from "../../components/open-app-modal";
+import { JobDetails } from "./components/job-details";
 import { PullReferencesForm } from "./components/pull-references-modal";
 import { PushVersionForm } from "./components/push-version-modal";
+import { jobKindLabel } from "./job-report";
 
 /**
  * Kept out of the component files so those export only components, which is
@@ -27,6 +30,14 @@ export function openPushVersionModal(
         children: (
             <PushVersionForm workspace={workspace} target={props.target} />
         )
+    });
+}
+
+/** The tabs a run could not update, from its toast or its callout. */
+export function openJobDetails(status: VersionJobStatus): void {
+    openAppModal({
+        title: `Last ${jobKindLabel(status.kind)}`,
+        children: <JobDetails status={status} />
     });
 }
 

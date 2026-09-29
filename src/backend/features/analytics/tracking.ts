@@ -125,7 +125,13 @@ export interface VersionRunEvent {
     userId: string;
     kind: VersionRunKind;
     scope: PushScopeKind | PullScopeKind;
-    result: VersionJobResult;
+    result: Pick<
+        VersionJobResult,
+        | "createdVersions"
+        | "updatedWorkspaces"
+        | "updatedElements"
+        | "failedElements"
+    >;
 }
 
 /**

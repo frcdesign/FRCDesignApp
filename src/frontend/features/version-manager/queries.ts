@@ -3,8 +3,8 @@ import {
     LinkDirection,
     type PullScope,
     type PushScope,
+    VersionJobKind,
     VersionJobState,
-    type VersionJobResult,
     type VersionJobStatus,
     type WorkspaceLinksData,
     type WorkspacePath
@@ -139,7 +139,8 @@ export function usePushVersionMutation(workspace: WorkspacePath) {
                     scope
                 }
             }),
-        onSuccess: ({ jobId }) => adoptJob(workspace, jobId),
+        onSuccess: ({ jobId }) =>
+            adoptJob(workspace, jobId, VersionJobKind.PUSH),
         onError: getAppErrorHandler("Unexpectedly failed to push the version.")
     });
 }
@@ -163,7 +164,8 @@ export function usePullReferencesMutation(workspace: WorkspacePath) {
                     scope
                 }
             }),
-        onSuccess: ({ jobId }) => adoptJob(workspace, jobId),
+        onSuccess: ({ jobId }) =>
+            adoptJob(workspace, jobId, VersionJobKind.PULL),
         onError: getAppErrorHandler(
             "Unexpectedly failed to update the references."
         )
@@ -174,10 +176,15 @@ export function usePullReferencesMutation(workspace: WorkspacePath) {
  * Shows the run as running straight away, rather than leaving the page idle
  * until the first poll comes back.
  */
-function adoptJob(workspace: WorkspacePath, jobId: string): void {
+function adoptJob(
+    workspace: WorkspacePath,
+    jobId: string,
+    kind: VersionJobKind
+): void {
     queryClient.setQueryData<VersionJobStatus>(versionJobQueryKey(workspace), {
         state: VersionJobState.RUNNING,
-        jobId
+        jobId,
+        kind
     });
 }
 
@@ -231,30 +238,6 @@ export function useIsVersionJobRunning(
     return (
         useVersionJobQuery(workspace).data?.state === VersionJobState.RUNNING
     );
-}
-
-/** What a finished run did, in one line. */
-export function describeJobResult(result: VersionJobResult): string {
-    const parts: string[] = [];
-    // A pull cuts none, so the count only earns a clause when there is one.
-    if (result.createdVersions > 0) {
-        parts.push(`Created ${plural(result.createdVersions, "version")}`);
-    }
-    parts.push(
-        result.updatedElements === 0
-            ? "nothing needed updating"
-            : `updated ${plural(result.updatedElements, "tab")} in ${plural(
-                  result.updatedWorkspaces,
-                  "workspace"
-              )}`
-    );
-    if (result.failedElements > 0) {
-        parts.push(
-            `${plural(result.failedElements, "tab")} could not be updated`
-        );
-    }
-    const sentence = parts.join(", ") + ".";
-    return sentence.charAt(0).toUpperCase() + sentence.slice(1);
 }
 
 /** "1 change", "2 changes" — the counted noun both the toast and a badge use. */

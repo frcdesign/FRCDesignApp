@@ -23,6 +23,7 @@ import {
     useLinkActions
 } from "../../features/version-manager/components/linked-workspace-section";
 import { VersionManagerZeroState } from "../../features/version-manager/components/version-manager-zero-state";
+import { LastRunCallout } from "../../features/version-manager/components/last-run-callout";
 import { useVersionJobToasts } from "../../features/version-manager/job-toasts";
 import { useWorkspaceLinksQuery } from "../../features/version-manager/queries";
 import { useIsSignedIn } from "../../features/auth/access-level";
@@ -119,20 +120,23 @@ function VersionManager(props: VersionManagerProps): ReactNode {
     };
 
     return (
-        <AppSections opened={opened} onChange={handleChange}>
-            <LinkSection
-                workspace={workspace}
-                direction={LinkDirection.PARENT}
-                linked={links.parents}
-                opened={isParentsOpen}
-            />
-            <LinkSection
-                workspace={workspace}
-                direction={LinkDirection.CHILD}
-                linked={links.children}
-                opened={isChildrenOpen}
-            />
-        </AppSections>
+        <>
+            <LastRunCallout workspace={workspace} />
+            <AppSections opened={opened} onChange={handleChange}>
+                <LinkSection
+                    workspace={workspace}
+                    direction={LinkDirection.PARENT}
+                    linked={links.parents}
+                    opened={isParentsOpen}
+                />
+                <LinkSection
+                    workspace={workspace}
+                    direction={LinkDirection.CHILD}
+                    linked={links.children}
+                    opened={isChildrenOpen}
+                />
+            </AppSections>
+        </>
     );
 }
 

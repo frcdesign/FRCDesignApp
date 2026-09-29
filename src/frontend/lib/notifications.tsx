@@ -1,6 +1,11 @@
 import { notifications } from "@mantine/notifications";
 import type { ReactNode } from "react";
-import { CheckCircleIcon, InfoIcon, XCircleIcon } from "@phosphor-icons/react";
+import {
+    CheckCircleIcon,
+    InfoIcon,
+    WarningIcon,
+    XCircleIcon
+} from "@phosphor-icons/react";
 import { IconSize } from "./style-constants";
 import { Box, Group, Button } from "@mantine/core";
 import styles from "./styles.module.css";
@@ -112,11 +117,36 @@ export function showSuccessToast(message: string, id?: string): string {
     });
 }
 
-export function showErrorToast(message: ReactNode, id?: string): string {
+interface ProblemToastOptions {
+    /** False keeps it up until dismissed, for one somebody has to act on. */
+    autoClose?: number | false;
+}
+
+export function showErrorToast(
+    message: ReactNode,
+    id?: string,
+    options: ProblemToastOptions = {}
+): string {
     return showToast({
         id,
         color: "red",
         icon: <XCircleIcon size={IconSize.MEDIUM} />,
-        message
+        message,
+        ...options
+    });
+}
+
+/** Something went through, but not all of it. */
+export function showWarningToast(
+    message: ReactNode,
+    id?: string,
+    options: ProblemToastOptions = {}
+): string {
+    return showToast({
+        id,
+        color: "yellow",
+        icon: <WarningIcon size={IconSize.MEDIUM} />,
+        message,
+        ...options
     });
 }

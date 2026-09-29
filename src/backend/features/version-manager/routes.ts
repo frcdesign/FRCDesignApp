@@ -28,10 +28,12 @@ import {
     PullScopeKind,
     PushScopeKind,
     toWorkspacePath,
+    VersionJobKind,
     workspaceKey,
-    type LinkedWorkspace,
+    type WorkspaceLinksData,
     type WorkspacePath
 } from "./contract";
+import { getUnversionedChanges } from "./workspace-cache";
 import { descendantKeys, LinkCycleError, pushOrder } from "./graph";
 import { getJobStatus, startJob } from "./jobs";
 import {
@@ -193,12 +195,25 @@ versionManagerRoutes.get(
                     )
                 )
             );
-        const [parents, children]: LinkedWorkspace[][] = await Promise.all([
+        const [parents, children, unversionedChanges] = await Promise.all([
             describe(parentRows, true),
-            describe(childRows, false)
+            describe(childRows, false),
+            // Only where there is somewhere to push to, and only a hint for
+            // the form: the push decides for itself when it runs.
+            childRows.length > 0
+                ? getUnversionedChanges(c, client, workspace).catch(
+                      () => undefined
+                  )
+                : undefined
         ]);
 
-        return c.json({ parents, children, documentName: document.name });
+        const out: WorkspaceLinksData = {
+            parents,
+            children,
+            documentName: document.name,
+            unversionedChanges
+        };
+        return c.json(out);
     }
 );
 
@@ -426,7 +441,7 @@ versionManagerRoutes.post(
                 steps
             }
         });
-        await startJob(c.env, workspace, instance.id);
+        await startJob(c.env, workspace, instance.id, VersionJobKind.PUSH);
 
         return c.json({ jobId: instance.id });
     }
@@ -554,7 +569,7 @@ versionManagerRoutes.post(
                 description
             }
         });
-        await startJob(c.env, workspace, instance.id);
+        await startJob(c.env, workspace, instance.id, VersionJobKind.PULL);
 
         return c.json({ jobId: instance.id });
     }

@@ -70,6 +70,11 @@ export interface WorkspaceLinksData {
     children: LinkedWorkspace[];
     /** What Onshape calls the workspace's own document, which the copy names. */
     documentName: string;
+    /**
+     * This workspace's edits since its own last version, asked only when it has
+     * children to push to. Zero means a push would cut nothing here.
+     */
+    unversionedChanges?: number;
 }
 
 /** How far a push travels; see {@link PushScope}. */
@@ -116,7 +121,29 @@ export type PullScope =
     | { kind: PullScopeKind.ALL }
     | { kind: PullScopeKind.ONE; workspace: WorkspacePath };
 
-/** What a finished push or pull did. */
+export enum VersionJobKind {
+    PUSH = "push",
+    PULL = "pull"
+}
+
+/** One tab Onshape would not update, as the run's report names it. */
+export interface VersionJobFailure {
+    workspace: WorkspacePath;
+    /** Absent where Onshape would not say; the report falls back to the id. */
+    documentName?: string;
+    elementId: string;
+    elementName?: string;
+    /** Why, written for the person who ran it. */
+    reason: string;
+}
+
+/**
+ * How many failures a result lists: enough to act on, few enough that one bad
+ * document cannot bloat the status every client in it is sent.
+ */
+export const MAX_REPORTED_FAILURES = 20;
+
+/** What a push or pull did — all of it, or as far as it got before it stopped. */
 export interface VersionJobResult {
     /** Workspaces whose references were updated. */
     updatedWorkspaces: number;
@@ -124,11 +151,18 @@ export interface VersionJobResult {
     updatedElements: number;
     /**
      * Tabs Onshape refused to update. The run carries on past them, so a
-     * non-zero count is the only sign that it did not fully land.
+     * non-zero count means it did not fully land.
      */
     failedElements: number;
+    /** The first {@link MAX_REPORTED_FAILURES} of those, named. */
+    failures: VersionJobFailure[];
     /** Versions the run cut, the one it started from included. */
     createdVersions: number;
+    /**
+     * Versions it moved references onto without cutting, their workspace having
+     * nothing since. A run over unchanged documents cuts none.
+     */
+    reusedVersions: number;
 }
 
 export enum VersionJobState {
@@ -142,18 +176,32 @@ export enum VersionJobState {
 export interface VersionJobStatus {
     state: VersionJobState;
     jobId?: string;
+    kind?: VersionJobKind;
+    /**
+     * What the run did. On a failure, what it had done before it stopped, which
+     * is still in Onshape.
+     */
     result?: VersionJobResult;
     /** Why it failed, when it did. Written for the user. */
     error?: string;
+    /** When it ended, in epoch milliseconds. */
+    finishedAt?: number;
 }
 
-/** The empty result, which is also what a run that found nothing to do returns. */
-export const EMPTY_JOB_RESULT: VersionJobResult = {
-    updatedWorkspaces: 0,
-    updatedElements: 0,
-    failedElements: 0,
-    createdVersions: 0
-};
+/**
+ * A run that has done nothing yet, which is also what one that found nothing to
+ * do returns. A function, so no two runs share a `failures` array.
+ */
+export function emptyJobResult(): VersionJobResult {
+    return {
+        updatedWorkspaces: 0,
+        updatedElements: 0,
+        failedElements: 0,
+        failures: [],
+        createdVersions: 0,
+        reusedVersions: 0
+    };
+}
 
 /**
  * Where the client fetches a linked workspace's thumbnail. Built here so the

@@ -1,6 +1,22 @@
 /** Shared helpers for rendering timestamps and durations in the UI. */
 
-const DAY_MS = 24 * 60 * 60 * 1000;
+const MINUTE_MS = 60 * 1000;
+const HOUR_MS = 60 * MINUTE_MS;
+const DAY_MS = 24 * HOUR_MS;
+
+/** "just now", "5 minutes ago", "2 hours ago" — for something from today. */
+export function formatTimeAgo(timestamp: number): string {
+    const elapsed = Math.max(0, Date.now() - timestamp);
+    if (elapsed < MINUTE_MS) {
+        return "just now";
+    }
+    if (elapsed < HOUR_MS) {
+        const minutes = Math.floor(elapsed / MINUTE_MS);
+        return `${minutes} ${minutes === 1 ? "minute" : "minutes"} ago`;
+    }
+    const hours = Math.floor(elapsed / HOUR_MS);
+    return `${hours} ${hours === 1 ? "hour" : "hours"} ago`;
+}
 
 /** Whole elapsed days, not calendar days. */
 export function formatDaysAgo(timestamp: number): string {

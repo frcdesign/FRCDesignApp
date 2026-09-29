@@ -4,13 +4,16 @@
  */
 import type { OnshapeApi } from "../../lib/onshape/client";
 import {
+    getContents,
+    getDocument,
     getExternalReferences,
     updateReferences,
     type ReferenceUpdate
 } from "../../lib/onshape/endpoints/documents";
 import type { ElementPath } from "../../lib/onshape/path";
 import type { OnshapeExternalReferences } from "../../lib/onshape/types";
-import type { WorkspacePath } from "./contract";
+import type { VersionJobFailure, WorkspacePath } from "./contract";
+import { describeTabFailure, isTransient } from "./failures";
 
 export interface ReferenceUpdateOptions {
     /**
@@ -31,10 +34,10 @@ export interface ElementUpdatePlan {
     updates: ReferenceUpdate[];
 }
 
-export interface ReferenceUpdateCounts {
+export interface ReferenceUpdateOutcome {
     updatedElements: number;
     /** Tabs Onshape refused; the run goes on past them. */
-    failedElements: number;
+    failures: VersionJobFailure[];
 }
 
 /**
@@ -108,32 +111,72 @@ export function planReferenceUpdates(
  * picks out.
  *
  * One tab at a time, as the implementation this came from had it — its comment
- * says running them concurrently caused problems, and does not say what. A tab
- * Onshape rejects is counted and stepped over rather than abandoning the rest,
- * which that implementation also did, except that it reported the run a success
- * either way.
+ * says running them concurrently caused problems, and does not say what.
+ *
+ * A tab Onshape refuses is recorded and stepped over rather than abandoning the
+ * rest. A transient failure is thrown instead, so the step retries: the retry
+ * plans afresh, and a tab the first attempt moved is already on its version and
+ * is skipped — which also leaves it out of the retry's count.
  */
 export async function updateOutdatedReferences(
     client: OnshapeApi,
     workspace: WorkspacePath,
     options: ReferenceUpdateOptions = {}
-): Promise<ReferenceUpdateCounts> {
+): Promise<ReferenceUpdateOutcome> {
     const externalReferences = await getExternalReferences(client, workspace);
     const plans = planReferenceUpdates(workspace, externalReferences, options);
 
     let updatedElements = 0;
-    let failedElements = 0;
+    const refused: { elementId: string; reason: string }[] = [];
     for (const plan of plans) {
         try {
             await updateReferences(client, plan.elementPath, plan.updates);
             updatedElements++;
         } catch (error) {
+            if (isTransient(error)) {
+                throw error;
+            }
             console.warn(
-                `Failed to update references in ${plan.elementPath.elementId}`,
+                `Onshape refused to update references in ${plan.elementPath.elementId}`,
                 error
             );
-            failedElements++;
+            refused.push({
+                elementId: plan.elementPath.elementId,
+                reason: describeTabFailure(error)
+            });
         }
     }
-    return { updatedElements, failedElements };
+    return {
+        updatedElements,
+        failures: await nameFailures(client, workspace, refused)
+    };
+}
+
+/**
+ * The refused tabs with their document's and their own names, asked for only
+ * when there is something to report. Best effort: a report that shows ids is
+ * still a report, where one that failed to be written is not.
+ */
+async function nameFailures(
+    client: OnshapeApi,
+    workspace: WorkspacePath,
+    refused: { elementId: string; reason: string }[]
+): Promise<VersionJobFailure[]> {
+    if (refused.length === 0) {
+        return [];
+    }
+    const [document, contents] = await Promise.all([
+        getDocument(client, workspace).catch(() => undefined),
+        getContents(client, workspace).catch(() => undefined)
+    ]);
+    const tabNames = new Map(
+        (contents?.elements ?? []).map((element) => [element.id, element.name])
+    );
+    return refused.map((each) => ({
+        workspace,
+        documentName: document?.name,
+        elementId: each.elementId,
+        elementName: tabNames.get(each.elementId),
+        reason: each.reason
+    }));
 }

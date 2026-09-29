@@ -10,27 +10,34 @@ import {
     createVersion,
     getVersions
 } from "../../lib/onshape/endpoints/versions";
+import { getWorkspaces } from "../../lib/onshape/endpoints/workspaces";
 import type { OnshapeVersionInfo } from "../../lib/onshape/types";
 import { ONSHAPE_STEP_RETRIES } from "../load/steps";
 import {
-    EMPTY_JOB_RESULT,
+    emptyJobResult,
+    MAX_REPORTED_FAILURES,
     nextVersionName,
+    VersionJobKind,
     VersionJobState,
-    workspaceKey,
     type PullScopeKind,
     type PushScopeKind,
     type VersionJobResult,
-    type VersionJobStatus,
     type WorkspacePath
 } from "./contract";
 import {
     updateOutdatedReferences,
-    type ReferenceUpdateCounts
+    type ReferenceUpdateOutcome
 } from "./references";
-import { forgetJob } from "./jobs";
-import { pushVersionJob } from "../push/notify";
+import { describeRunFailure } from "./failures";
+import { finishJob } from "./jobs";
 import { trackVersionRun } from "../analytics/tracking";
 import { VersionRunKind } from "../analytics/usage";
+
+/** The version a run moves references onto, and whether it had to cut it. */
+interface VersionChoice {
+    version: OnshapeVersionInfo;
+    reused: boolean;
+}
 
 /** One workspace a push updates, and whether the run versions it afterwards. */
 export interface PushStep {
@@ -106,87 +113,144 @@ export class VersionManagerWorkflow extends WorkflowEntrypoint<
     ): Promise<VersionJobResult> {
         const params = event.payload;
         const jobId = event.instanceId;
-        try {
-            const result =
-                params.kind === "push"
-                    ? await this._push(params, step)
-                    : await this._pull(params, step);
-            await this._report(params.workspace, {
-                state: VersionJobState.COMPLETE,
-                jobId,
-                result
-            });
-            await step.do("record-run", () =>
+        const kind =
+            params.kind === "push" ? VersionJobKind.PUSH : VersionJobKind.PULL;
+        // Added to as the steps come back, which a replay does again from their
+        // saved results: a run that stops can then say what it had done.
+        const result = emptyJobResult();
+
+        // Recorded whichever way it ends: a run that stopped partway still did
+        // what it did.
+        const recordRun = () =>
+            step.do("record-run", () =>
                 trackVersionRun(this.env, {
                     userId: params.userId,
                     kind:
-                        params.kind === "push"
+                        kind === VersionJobKind.PUSH
                             ? VersionRunKind.PUSH
                             : VersionRunKind.PULL,
                     scope: params.scope,
                     result
                 })
             );
-            return result;
+
+        try {
+            if (params.kind === "push") {
+                await this._push(params, step, result);
+            } else {
+                await this._pull(params, step, result);
+            }
         } catch (error) {
-            await this._report(params.workspace, {
-                state: VersionJobState.FAILED,
-                jobId,
-                error: error instanceof Error ? error.message : undefined
-            });
-            throw error;
-        } finally {
-            // The status is read off the instance itself; this only clears the
-            // pointer that lets a reopened panel find it.
-            await step.do("forget-job", () =>
-                forgetJob(this.env, params.workspace, jobId)
+            await step.do("finish-job", () =>
+                finishJob(this.env, params.workspace, {
+                    state: VersionJobState.FAILED,
+                    jobId,
+                    kind,
+                    result,
+                    error: describeRunFailure(error),
+                    finishedAt: Date.now()
+                })
             );
+            await recordRun();
+            throw error;
         }
+
+        await step.do("finish-job", () =>
+            finishJob(this.env, params.workspace, {
+                state: VersionJobState.COMPLETE,
+                jobId,
+                kind,
+                result,
+                finishedAt: Date.now()
+            })
+        );
+        await recordRun();
+        return result;
     }
 
     /**
-     * Tells whoever is in the workspace how the run went, so nothing has to ask
-     * again. Outside a step, and swallowed by `pushVersionJob`: a run that
-     * landed has landed whether or not anyone was still listening, and the
-     * status route answers the same thing to a client that reconnects.
+     * The version to move references onto: the one the workspace is already at
+     * when nothing has changed since it was cut, and otherwise a new one, under
+     * the name given or the one Onshape's own dialog would offer.
+     *
+     * A version records the microversion it was cut at, and every edit moves a
+     * workspace's microversion on, so a match is exact — and holds for a
+     * document with several workspaces, where the newest version may be another
+     * workspace's. It also makes a retried step safe: a version the first
+     * attempt cut is found, not cut twice.
      */
-    private _report(
-        workspace: WorkspacePath,
-        status: VersionJobStatus
-    ): Promise<void> {
-        return pushVersionJob(this.env, workspaceKey(workspace), status);
-    }
-
-    /**
-     * Cuts a version, under the name given or the one Onshape's own dialog
-     * would offer. Per document, so a run that versions several numbers each
-     * from its own history rather than carrying the first one's number.
-     */
-    private async _cutVersion(
+    private async _versionFor(
         client: OnshapeApi,
         target: WorkspacePath,
         name: string | undefined,
         description: string
-    ): Promise<OnshapeVersionInfo> {
+    ): Promise<VersionChoice> {
+        const [workspaces, versions] = await Promise.all([
+            getWorkspaces(client, target),
+            getVersions(client, target)
+        ]);
+        const current = workspaces.find(
+            (each) => each.id === target.instanceId
+        )?.microversion;
+        const unchanged =
+            current === undefined
+                ? undefined
+                : versions.findLast(
+                      (version) => version.microversion === current
+                  );
+        if (unchanged) {
+            return { version: unchanged, reused: true };
+        }
+        // Numbered per document, so a run that versions several numbers each
+        // from its own history rather than carrying the first one's number.
         const versionName =
-            name ??
-            nextVersionName(
-                (await getVersions(client, target)).map(
-                    (version) => version.name
-                )
-            );
-        return createVersion(client, target, versionName, description);
+            name ?? nextVersionName(versions.map((version) => version.name));
+        const version = await createVersion(
+            client,
+            target,
+            versionName,
+            description
+        );
+        return { version, reused: false };
+    }
+
+    /** Folds one workspace's reference updates into the run's result. */
+    private _addOutcome(
+        result: VersionJobResult,
+        outcome: ReferenceUpdateOutcome
+    ): void {
+        result.updatedElements += outcome.updatedElements;
+        if (outcome.updatedElements > 0) {
+            result.updatedWorkspaces++;
+        }
+        result.failedElements += outcome.failures.length;
+        result.failures.push(
+            ...outcome.failures.slice(
+                0,
+                MAX_REPORTED_FAILURES - result.failures.length
+            )
+        );
+    }
+
+    private _addVersion(result: VersionJobResult, choice: VersionChoice): void {
+        if (choice.reused) {
+            result.reusedVersions++;
+        } else {
+            result.createdVersions++;
+        }
     }
 
     /**
-     * A pull versions each parent and moves this workspace onto what it just
-     * cut: a reference points at a version, so the parent's unversioned edits
-     * are only pullable once there is one holding them.
+     * A pull moves this workspace onto a version of each parent: the one the
+     * parent is at if nothing has changed since, and otherwise a new one — a
+     * reference points at a version, so a parent's unversioned edits are only
+     * pullable once there is one holding them.
      */
     private async _pull(
         params: PullJobParams,
-        step: WorkflowStep
-    ): Promise<VersionJobResult> {
+        step: WorkflowStep,
+        result: VersionJobResult
+    ): Promise<void> {
         const client = await getOnshapeApiFromSessionId(
             this.env.KV,
             params.sessionId
@@ -197,24 +261,25 @@ export class VersionManagerWorkflow extends WorkflowEntrypoint<
         // refusing a run naming one twice.
         const pinnedVersions: Record<string, string> = {};
         for (const [index, source] of (sources ?? []).entries()) {
-            const version = await step.do(
-                `create-version-${index}`,
+            const choice = await step.do(
+                `parent-version-${index}`,
                 { retries: ONSHAPE_STEP_RETRIES },
-                (): Promise<OnshapeVersionInfo> =>
-                    this._cutVersion(client, source, name, description)
+                (): Promise<VersionChoice> =>
+                    this._versionFor(client, source, name, description)
             );
-            pinnedVersions[source.documentId] = version.id;
+            pinnedVersions[source.documentId] = choice.version.id;
+            this._addVersion(result, choice);
         }
 
-        const counts = await step.do(
-            "pull-references",
+        const outcome = await step.do(
+            "references",
             { retries: ONSHAPE_STEP_RETRIES },
-            (): Promise<ReferenceUpdateCounts> =>
+            (): Promise<ReferenceUpdateOutcome> =>
                 updateOutdatedReferences(
                     client,
                     params.workspace,
                     // Every out-of-date reference where nothing was versioned,
-                    // and otherwise the versions this run has just cut.
+                    // and otherwise the versions this run has settled on.
                     sources
                         ? {
                               onlyDocumentIds: Object.keys(pinnedVersions),
@@ -223,73 +288,60 @@ export class VersionManagerWorkflow extends WorkflowEntrypoint<
                         : {}
                 )
         );
-        return {
-            ...EMPTY_JOB_RESULT,
-            ...counts,
-            createdVersions: Object.keys(pinnedVersions).length,
-            updatedWorkspaces: counts.updatedElements > 0 ? 1 : 0
-        };
+        this._addOutcome(result, outcome);
     }
 
     private async _push(
         params: PushJobParams,
-        step: WorkflowStep
-    ): Promise<VersionJobResult> {
+        step: WorkflowStep,
+        result: VersionJobResult
+    ): Promise<void> {
         const client = await getOnshapeApiFromSessionId(
             this.env.KV,
             params.sessionId
         );
         const { workspace, name, description } = params;
 
-        const cutVersion = (target: WorkspacePath) =>
-            this._cutVersion(client, target, name, description);
+        const versionFor = (target: WorkspacePath) =>
+            this._versionFor(client, target, name, description);
 
-        const rootVersion = await step.do(
-            "create-version",
+        const root = await step.do(
+            "version",
             { retries: ONSHAPE_STEP_RETRIES },
-            (): Promise<OnshapeVersionInfo> => cutVersion(workspace)
+            (): Promise<VersionChoice> => versionFor(workspace)
         );
+        this._addVersion(result, root);
 
-        // Every version this run has cut, which is what the workspaces further
-        // down are moved onto. Keyed by document, which the route has already
-        // made unambiguous by refusing a run that versions one twice.
+        // Every version this run has settled on, which is what the workspaces
+        // further down are moved onto. Keyed by document, which the route has
+        // already made unambiguous by refusing a run that versions one twice.
         const pinnedVersions: Record<string, string> = {
-            [workspace.documentId]: rootVersion.id
-        };
-
-        const result: VersionJobResult = {
-            ...EMPTY_JOB_RESULT,
-            createdVersions: 1
+            [workspace.documentId]: root.version.id
         };
 
         for (const [index, pushStep] of params.steps.entries()) {
-            const counts = await step.do(
-                `update-refs-${index}`,
+            const outcome = await step.do(
+                `references-${index}`,
                 { retries: ONSHAPE_STEP_RETRIES },
-                (): Promise<ReferenceUpdateCounts> =>
+                (): Promise<ReferenceUpdateOutcome> =>
                     updateOutdatedReferences(client, pushStep.workspace, {
                         onlyDocumentIds: Object.keys(pinnedVersions),
                         pinnedVersions
                     })
             );
-            result.updatedElements += counts.updatedElements;
-            result.failedElements += counts.failedElements;
-            if (counts.updatedElements > 0) {
-                result.updatedWorkspaces++;
-            }
+            this._addOutcome(result, outcome);
 
             if (!pushStep.createVersion) continue;
 
-            const version = await step.do(
-                `create-version-${index}`,
+            // Updating its references moved it on, so a workspace this updated
+            // is versioned afresh; one that needed nothing may reuse its own.
+            const choice = await step.do(
+                `version-${index}`,
                 { retries: ONSHAPE_STEP_RETRIES },
-                (): Promise<OnshapeVersionInfo> =>
-                    cutVersion(pushStep.workspace)
+                (): Promise<VersionChoice> => versionFor(pushStep.workspace)
             );
-            pinnedVersions[pushStep.workspace.documentId] = version.id;
-            result.createdVersions++;
+            pinnedVersions[pushStep.workspace.documentId] = choice.version.id;
+            this._addVersion(result, choice);
         }
-
-        return result;
     }
 }
