@@ -17,7 +17,6 @@ export interface RowMatch {
     /** The vendor's page for the part number, when one can be derived. */
     url?: string;
     partNumberPositions?: Position[];
-    partNamePositions?: Position[];
 }
 
 interface CardTitleProps {
@@ -100,10 +99,7 @@ function PartNameAndNumber(props: PartNameAndNumberProps): ReactNode {
         <Group gap={4} miw={0} fz="xs" lh="xs" c={StatusColor.DIMMED}>
             {partName && (
                 <Text truncate title={partName} inherit miw={0}>
-                    <HighlightedText
-                        text={partName}
-                        positions={match.partNamePositions}
-                    />
+                    {partName}
                 </Text>
             )}
             {partName && partNumber && <Text inherit>·</Text>}

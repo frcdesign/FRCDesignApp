@@ -36,7 +36,6 @@ export function buildSearchDb(
                 partNumbers: uniqueJoin(
                     records.map((record) => record.partNumber)
                 ),
-                partNames: uniqueJoin(records.map((record) => record.name)),
                 records
             };
         });

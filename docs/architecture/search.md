@@ -2,9 +2,9 @@
 
 ## Purpose
 
-Finds parts in a library by name, group, part number or part name, including the
-part number of any indexed configuration, and opens a hit on the configuration
-it matched. The index is built on the server and searched entirely in the
+Finds parts in a library by name, group or part number, including the part
+number of any indexed configuration, and opens a hit on the configuration it
+matched. The index is built on the server and searched entirely in the
 browser, so typing never waits on the network.
 
 ## Code map
@@ -24,8 +24,8 @@ browser, so typing never waits on the network.
 
 ## Storage
 
-**R2** `search-index/v2/{libraryId}.json` — the serialized MiniSearch index. The
-`v2` names the index's shape: a deploy that changes it bumps the version, and the
+**R2** `search-index/v3/{libraryId}.json` — the serialized MiniSearch index. The
+`v3` names the index's shape: a deploy that changes it bumps the version, and the
 route builds the new shape on its first miss.
 
 **D1** `libraries.cache_version` — the `?v=` of every request for the index; see
@@ -39,7 +39,7 @@ route builds the new shape on its first miss.
    `rebuildSearchDb` **before** bumping the library version.
 2. It reads the library and each insertable's search records, and builds one
    document per insertable: its name, group name, vendors, visibility, and the
-   space-joined part numbers and part names of its records. The records
+   space-joined part numbers of its records. The records
    themselves are stored, not indexed, so a hit can say which configuration it
    matched.
 3. The index is written to R2 uncompressed; the runtime compresses responses.
@@ -56,10 +56,10 @@ does. A missing index (a new shape after a deploy) is built on the spot.
 so what matched is what gets underlined. Names and part numbers are read
 differently: a name describes the part, a part number identifies it.
 
-| Field                        | Text                         | Terms                                               |
-| ---------------------------- | ---------------------------- | --------------------------------------------------- |
-| name, group name, part names | `1/2" Hex Shaft (MAXSpline)` | `0.5`, `hex`, `shaft`, `maxspline`, `max`, `spline` |
-| part numbers                 | `WCP-0016 am-3749`           | `wcp-0016`, `wcp`, `0016`, `am-3749`, `am`, `3749`  |
+| Field            | Text                         | Terms                                               |
+| ---------------- | ---------------------------- | --------------------------------------------------- |
+| name, group name | `1/2" Hex Shaft (MAXSpline)` | `0.5`, `hex`, `shaft`, `maxspline`, `max`, `spline` |
+| part numbers     | `WCP-0016 am-3749`           | `wcp-0016`, `wcp`, `0016`, `am-3749`, `am`, `3749`  |
 
 In a name, sizes become their decimal value (`1/2` and `.5` both read `0.5`; a
 mixed number like `1-1/2` reads `1.5`), leading zeros drop, and camelCase splits.
@@ -89,8 +89,8 @@ matches by prefix, so `spa` finds `spacer` and `374` finds `3749`.
 MiniSearch scores each matching term with BM25 (a term rare in the library and
 frequent in the field scores higher, and short fields beat long ones), then:
 
-- **Field weight**: the title and part numbers count fully, part names at 0.7,
-  the group name at 0.5. `hex` in a part's own name outranks `hex` in the name
+- **Field weight**: the title and part numbers count fully, the group name at
+  0.5. `hex` in a part's own name outranks `hex` in the name
   of the group it sits in.
 - **Prefix matches** count for less than whole ones, so a query `16` ranks a
   part numbered `am-16` above one numbered `am-160`.
@@ -105,9 +105,10 @@ Results come back highest score first, capped at a list's worth.
    favorites tab, the group being browsed, and vendors. Hits a group or vendor
    filter removed are counted, so the UI can say how many it hid.
 2. For each hit, `matchedRecord` picks the configuration record whose part
-   number or name the query matched, preferring a whole term to a prefix: `1`
-   names a `1"` shaft but only starts `16`. The row opens on that configuration
-   and shows its thumbnail.
+   number the query matched, preferring a whole term to a prefix: `16` names
+   `am-16` but only starts `am-160`. A hit that matched no part number opens on
+   the default. The row shows that record's name and part number, and its
+   thumbnail.
 
 ## Invariants
 
@@ -134,5 +135,8 @@ Results come back highest score first, capped at a list's worth.
   will do, but a query of several words should narrow, not widen.
 - **Records stored with the index.** A part-number hit opens the configuration
   it names without another request.
+- **Part names are shown, not searched.** A configuration's name mostly repeats
+  its insertable's title with a size, so the title already finds the part, and
+  indexing every configuration's name made each search slower for it.
 
 _Last reviewed: 2026-09-27_

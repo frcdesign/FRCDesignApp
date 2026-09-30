@@ -10,8 +10,8 @@ import { getPartUrl } from "../configurations/utils";
 import { meaningfulPartNumber } from "../configurations/part-number";
 import { Vendor } from "../library/vendors";
 import { clean } from "../../lib/text";
-import { nameSpans, partNumberSpans, queryWords } from "./tokenize";
-import { PART_NAME_FIELD, PART_NUMBER_FIELD } from "./fields";
+import { partNumberSpans, queryWords } from "./tokenize";
+import { PART_NUMBER_FIELD } from "./fields";
 
 /**
  * Moves the record naming no values to the front. Records come in Onshape's
@@ -31,14 +31,10 @@ function defaultFirst(records: SearchRecord[]): SearchRecord[] {
     ];
 }
 
-/** The terms of a record's field, as the index read them. */
-type RecordTerms = (record: SearchRecord) => string[];
-
-const PART_NUMBER_TERMS: RecordTerms = (record) =>
-    partNumberSpans(record.partNumber ?? "").map((span) => span.term);
-
-const PART_NAME_TERMS: RecordTerms = (record) =>
-    nameSpans(record.name ?? "").map((span) => span.term);
+/** A record's part number, as the index read it. */
+function partNumberTerms(record: SearchRecord): string[] {
+    return partNumberSpans(record.partNumber ?? "").map((span) => span.term);
+}
 
 /** A whole term beats a prefix: `1` names a `1"` shaft but only starts `16`. */
 function termScore(terms: string[], queryTerm: string): number {
@@ -52,9 +48,9 @@ function termScore(terms: string[], queryTerm: string): number {
 }
 
 /**
- * The record whose matched fields cover most of the query, every reading of
- * each word counting. Falls back to the default, so a row shows one even when
- * only the title matched; ties go to it too, as the insert menu opens on it.
+ * The record whose part number covers most of the query, every reading of each
+ * word counting. Falls back to the default, so a row shows one even when only
+ * the title matched; ties go to it too, as the insert menu opens on it.
  */
 export function matchedRecord(
     query: string,
@@ -62,19 +58,15 @@ export function matchedRecord(
     matchedFields: string[]
 ): SearchRecord | undefined {
     const records = defaultFirst(documentRecords);
-    const readers: RecordTerms[] = [];
-    if (matchedFields.includes(PART_NUMBER_FIELD)) {
-        readers.push(PART_NUMBER_TERMS);
-    }
-    if (matchedFields.includes(PART_NAME_FIELD)) {
-        readers.push(PART_NAME_TERMS);
+    if (!matchedFields.includes(PART_NUMBER_FIELD)) {
+        return records[0];
     }
     const queryTerms = queryWords(query).flat();
 
     let best = records[0];
     let bestScore = 0;
     for (const record of records) {
-        const terms = readers.flatMap((read) => read(record));
+        const terms = partNumberTerms(record);
         const score = queryTerms.reduce(
             (total, queryTerm) => total + termScore(terms, queryTerm),
             0

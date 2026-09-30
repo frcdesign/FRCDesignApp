@@ -15,11 +15,7 @@ import {
     queryWords,
     type TermSpan
 } from "@backend/features/search/tokenize";
-import {
-    NAME_FIELD,
-    PART_NAME_FIELD,
-    PART_NUMBER_FIELD
-} from "@backend/features/search/fields";
+import { NAME_FIELD, PART_NUMBER_FIELD } from "@backend/features/search/fields";
 import {
     type ConfigurationKey,
     type PartialSelection
@@ -45,9 +41,8 @@ export interface SearchHit {
     partName?: string;
     /** The vendor's page for the part number, when one can be derived. */
     url?: string;
-    /** Where the query matched inside `partNumber` / `partName`, for underlining. */
+    /** Where the query matched inside `partNumber`, for underlining. */
     partNumberPositions?: Position[];
-    partNamePositions?: Position[];
 }
 
 export interface FilterResult {
@@ -161,7 +156,6 @@ export function doSearch(args: SearchArgs): SearchResult {
                 Object.values(miniSearchResult.match).flat()
             );
             const partNumber = record?.partNumber;
-            const partName = record?.name;
             const underline = (
                 text: string,
                 field: string,
@@ -178,17 +172,12 @@ export function doSearch(args: SearchArgs): SearchResult {
                 values: record?.values,
                 configurationKey: record?.configurationKey,
                 partNumber,
-                partName,
+                partName: record?.name,
                 url: record?.url,
                 partNumberPositions: underline(
                     partNumber ?? "",
                     PART_NUMBER_FIELD,
                     partNumberSpans
-                ),
-                partNamePositions: underline(
-                    partName ?? "",
-                    PART_NAME_FIELD,
-                    nameSpans
                 )
             };
         });

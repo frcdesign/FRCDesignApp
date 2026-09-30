@@ -8,6 +8,3 @@ export const GROUP_NAME_FIELD = "groupName";
 
 /** Every indexed configuration's part number, space-joined. */
 export const PART_NUMBER_FIELD = "partNumbers";
-
-/** Every indexed configuration's part name, space-joined. */
-export const PART_NAME_FIELD = "partNames";
