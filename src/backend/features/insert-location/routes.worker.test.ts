@@ -56,7 +56,7 @@ describe("insert location routes", () => {
         } satisfies InsertLocationOut);
     });
 
-    it("GET answers null for an assembly without one", async () => {
+    it("GET answers no instance for an assembly without one", async () => {
         mockAssembly([{ id: "part", type: "Part" }]);
 
         const res = await createTestApp().request(

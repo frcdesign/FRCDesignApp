@@ -7,6 +7,8 @@ import { BadgedIcon } from "../../../components/badged-icon";
 import { StatusIcon } from "../../../components/status-icon";
 import { Status } from "../../../lib/status";
 import { AppHoverCard } from "../../../components/app-hover-card";
+import { NewIndicator } from "../../../components/new-indicator";
+import { useUiState } from "../../../lib/ui-state";
 import {
     useAddInsertLocationMutation,
     useInsertLocationQuery,
@@ -41,6 +43,7 @@ function InsertLocationHoverCard(
     props: InsertLocationHoverCardProps
 ): ReactNode {
     const { target, instanceId } = props;
+    const hasAdded = useUiState((state) => state.hasAddedInsertLocation);
     const found = instanceId !== undefined;
 
     const status = found ? Status.SUCCESS : Status.WARNING;
@@ -50,7 +53,9 @@ function InsertLocationHoverCard(
             position="bottom-end"
             target={
                 <Center my="auto">
-                    <BadgedIcon icon={TargetIcon} status={status} />
+                    <NewIndicator shown={!found && !hasAdded} offset={2}>
+                        <BadgedIcon icon={TargetIcon} status={status} />
+                    </NewIndicator>
                 </Center>
             }
         >

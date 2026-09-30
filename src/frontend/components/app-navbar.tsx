@@ -4,7 +4,6 @@ import {
     Button,
     Divider,
     Group,
-    Indicator,
     Input,
     Loader,
     Menu,
@@ -41,6 +40,7 @@ import { useDebouncedCallback } from "@mantine/hooks";
 
 import { AppBrand } from "./app-brand";
 import { AppIcon } from "./app-icon";
+import { NewIndicator } from "./new-indicator";
 import { LibraryStatusBadge } from "./library-status-badge";
 import { MenuSection } from "./app-menu";
 import { openSettingsMenu } from "../features/settings/open-settings-menu";
@@ -258,11 +258,8 @@ function PagePicker(): ReactNode {
         <Menu position="bottom-start">
             {/* The dot wraps the target: the menu hands its props to the
                 button, and the wrapper is what the row centres. */}
-            <Indicator
-                disabled={!pages.some((page) => page.isNew)}
-                color={StatusColor.INFO}
-                size={8}
-                offset={6}
+            <NewIndicator
+                shown={pages.some((page) => page.isNew)}
                 my="auto"
                 className={styles.noShrink}
             >
@@ -286,7 +283,7 @@ function PagePicker(): ReactNode {
                         {getTabName(current)}
                     </Button>
                 </Menu.Target>
-            </Indicator>
+            </NewIndicator>
             <Menu.Dropdown>
                 {groupPages(pages).map(([group, grouped]) => (
                     <MenuSection key={group} label={group}>
