@@ -3,6 +3,7 @@ import {
     type WorkflowEvent,
     type WorkflowStep
 } from "cloudflare:workers";
+import { NonRetryableError } from "cloudflare:workflows";
 import type { AppBindings } from "../../lib/context";
 import type { OnshapeApi } from "../../lib/onshape/client";
 import { getOnshapeApiFromSessionId } from "../auth/request-auth";
@@ -28,10 +29,29 @@ import {
     updateOutdatedReferences,
     type ReferenceUpdateOutcome
 } from "./references";
-import { describeRunFailure } from "./failures";
+import { describeRunFailure, isTransient } from "./failures";
 import { finishJob } from "./jobs";
 import { trackVersionRun } from "../analytics/tracking";
 import { VersionRunKind } from "../analytics/usage";
+
+/**
+ * Retries a step only when trying again could go differently: a refusal would
+ * fail the same way five more times, minutes apart, before the run could say so.
+ */
+function failFast<T>(callback: () => Promise<T>): () => Promise<T> {
+    return async () => {
+        try {
+            return await callback();
+        } catch (error) {
+            if (isTransient(error)) {
+                throw error;
+            }
+            throw new NonRetryableError(
+                error instanceof Error ? error.message : String(error)
+            );
+        }
+    };
+}
 
 /** The version a run moves references onto, and whether it had to cut it. */
 interface VersionChoice {
@@ -264,8 +284,10 @@ export class VersionManagerWorkflow extends WorkflowEntrypoint<
             const choice = await step.do(
                 `parent-version-${index}`,
                 { retries: ONSHAPE_STEP_RETRIES },
-                (): Promise<VersionChoice> =>
-                    this._versionFor(client, source, name, description)
+                failFast(
+                    (): Promise<VersionChoice> =>
+                        this._versionFor(client, source, name, description)
+                )
             );
             pinnedVersions[source.documentId] = choice.version.id;
             this._addVersion(result, choice);
@@ -274,19 +296,21 @@ export class VersionManagerWorkflow extends WorkflowEntrypoint<
         const outcome = await step.do(
             "references",
             { retries: ONSHAPE_STEP_RETRIES },
-            (): Promise<ReferenceUpdateOutcome> =>
-                updateOutdatedReferences(
-                    client,
-                    params.workspace,
-                    // Every out-of-date reference where nothing was versioned,
-                    // and otherwise the versions this run has settled on.
-                    sources
-                        ? {
-                              onlyDocumentIds: Object.keys(pinnedVersions),
-                              pinnedVersions
-                          }
-                        : {}
-                )
+            failFast(
+                (): Promise<ReferenceUpdateOutcome> =>
+                    updateOutdatedReferences(
+                        client,
+                        params.workspace,
+                        // Every out-of-date reference where nothing was versioned,
+                        // and otherwise the versions this run has settled on.
+                        sources
+                            ? {
+                                  onlyDocumentIds: Object.keys(pinnedVersions),
+                                  pinnedVersions
+                              }
+                            : {}
+                    )
+            )
         );
         this._addOutcome(result, outcome);
     }
@@ -308,7 +332,7 @@ export class VersionManagerWorkflow extends WorkflowEntrypoint<
         const root = await step.do(
             "version",
             { retries: ONSHAPE_STEP_RETRIES },
-            (): Promise<VersionChoice> => versionFor(workspace)
+            failFast((): Promise<VersionChoice> => versionFor(workspace))
         );
         this._addVersion(result, root);
 
@@ -323,11 +347,13 @@ export class VersionManagerWorkflow extends WorkflowEntrypoint<
             const outcome = await step.do(
                 `references-${index}`,
                 { retries: ONSHAPE_STEP_RETRIES },
-                (): Promise<ReferenceUpdateOutcome> =>
-                    updateOutdatedReferences(client, pushStep.workspace, {
-                        onlyDocumentIds: Object.keys(pinnedVersions),
-                        pinnedVersions
-                    })
+                failFast(
+                    (): Promise<ReferenceUpdateOutcome> =>
+                        updateOutdatedReferences(client, pushStep.workspace, {
+                            onlyDocumentIds: Object.keys(pinnedVersions),
+                            pinnedVersions
+                        })
+                )
             );
             this._addOutcome(result, outcome);
 
@@ -338,7 +364,9 @@ export class VersionManagerWorkflow extends WorkflowEntrypoint<
             const choice = await step.do(
                 `version-${index}`,
                 { retries: ONSHAPE_STEP_RETRIES },
-                (): Promise<VersionChoice> => versionFor(pushStep.workspace)
+                failFast(
+                    (): Promise<VersionChoice> => versionFor(pushStep.workspace)
+                )
             );
             pinnedVersions[pushStep.workspace.documentId] = choice.version.id;
             this._addVersion(result, choice);

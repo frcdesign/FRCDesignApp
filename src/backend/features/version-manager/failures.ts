@@ -42,6 +42,18 @@ export function isTransient(error: unknown): boolean {
     );
 }
 
+/**
+ * Whether Onshape refused the whole document rather than one tab: permissions,
+ * and the sign-in behind them, are per document, so no tab of it would fare
+ * better.
+ */
+export function refusesDocument(error: unknown): boolean {
+    const status = onshapeStatus(error);
+    return (
+        status === HttpStatus.UNAUTHORIZED || status === HttpStatus.FORBIDDEN
+    );
+}
+
 /** Onshape's own sentence, out of the JSON body its errors carry. */
 function onshapeMessage(error: unknown): string | undefined {
     if (!(error instanceof Error)) {
@@ -67,11 +79,8 @@ function onshapeMessage(error: unknown): string | undefined {
 
 /** Why Onshape would not update one tab. */
 export function describeTabFailure(error: unknown): string {
-    switch (onshapeStatus(error)) {
-        case HttpStatus.FORBIDDEN:
-            return "You don't have permission to edit this tab.";
-        case HttpStatus.NOT_FOUND:
-            return "The tab, or the version it references, no longer exists.";
+    if (onshapeStatus(error) === HttpStatus.NOT_FOUND) {
+        return "The tab, or the version it references, no longer exists.";
     }
     return onshapeMessage(error) ?? "Onshape refused the update.";
 }

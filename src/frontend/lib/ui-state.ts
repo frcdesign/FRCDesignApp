@@ -32,8 +32,6 @@ interface UiState {
     /** How many times the version manager has offered its quick-action tip;
      * see `version-manager-tips`. */
     quickActionTipCount: number;
-    /** Whether the version manager's last-run section shows its details. */
-    isLastRunOpen: boolean;
     /** Per library; a library with no entry has every vendor active. */
     vendorFilters: Partial<Record<LibraryId, Vendor[]>>;
     searchQuery: string;
@@ -56,7 +54,6 @@ export const useUiState = create<UiState>()(
             isLibraryOpen: true,
             isParentsOpen: true,
             isChildrenOpen: true,
-            isLastRunOpen: false,
             quickActionTipCount: 0,
             vendorFilters: {},
             searchQuery: "",

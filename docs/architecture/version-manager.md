@@ -39,7 +39,7 @@ it.
 | `src/frontend/features/version-manager/queries.ts`                              | The queries and mutations                                                        |
 | `src/frontend/features/version-manager/components/linked-workspace-section.tsx` | A direction's list, its rows, and everything they can run                        |
 | `src/frontend/features/version-manager/job-report.ts`                           | How a finished run went, in words                                                |
-| `src/frontend/features/version-manager/components/last-run-section.tsx`         | The last run's outcome, a collapsible section at the top of the page             |
+| `src/frontend/features/version-manager/components/last-run-callout.tsx`         | The last run's outcome, a callout at the top of the page                         |
 | `src/frontend/routes/app/version-manager.tsx`                                   | The page: two sections, one per direction                                        |
 
 ## Storage
@@ -63,7 +63,7 @@ document and workspace names, for a week.
 `changesSinceVersionSave`, for an hour.
 
 **Browser** `isParentsOpen`, `isChildrenOpen`, `quickActionTipCount`,
-`hasOpenedVersionManager` and `isLastRunOpen` in `uiState`.
+and `hasOpenedVersionManager` in `uiState`.
 
 ## Flows
 
@@ -182,9 +182,17 @@ Two departures from the app this was ported from:
   document, tab and a reason from `describeTabFailure`. A push that only half
   landed should not read as a success.
 
-A failure that could go differently next time — a rate limit, a 408 or 5xx, or
-no answer at all (`isTransient`) — is not a refusal. It leaves the step, which
-retries from the top; tabs already moved need nothing the second time.
+Two kinds of failure are not a tab's:
+
+- One that could go differently next time — a rate limit, a 408 or 5xx, or no
+  answer at all (`isTransient`) — leaves the step, which retries from the top;
+  tabs already moved need nothing the second time.
+- A 401 or 403 (`refusesDocument`) stops the run. Permissions are per
+  document, so no other tab of it would go through.
+
+Any other failure leaving an Onshape step fails it without a retry (`failFast`
+in `workflow.ts`): it would fail the same way five more times, minutes apart,
+before the run could report it.
 
 Tabs are updated one at a time. The port's comment says doing them concurrently
 caused problems and does not say why, so this follows it rather than finding out
@@ -221,14 +229,14 @@ in the section's header. How it went arrives as one toast at the end
 (`job-toasts.ts`), headed by `jobHeadline` in `job-report.ts` — "Push
 succeeded", "Push partially succeeded" or "Push failed": green and gone in a
 few seconds on success; yellow or red, and up until closed, otherwise. Those
-two carry **Details**, which opens `JobDetails`: the run's counts, why it
+two carry **Details**, which opens a modal of `JobDetails`: the run's counts, why it
 stopped if it did, and the refused tabs by document with their reasons and an
 **Open** button each.
 
-The same outcome heads the page as its first section (`LastRunSection`) for as
-long as the status is kept, for whoever opens the panel after the run finished.
-It cannot be closed: collapsed it is the headline and how long ago, and open
-it is `JobDetails`. Whether it is open is `isLastRunOpen`.
+The same headline, with how long ago, heads the page as a callout in the
+outcome's color (`LastRunCallout`) for as long as the status is kept, for
+whoever opens the panel after the run finished. It cannot be closed, and its
+**Details** opens the same `JobDetails`.
 
 ### Keeping a linked workspace current
 
@@ -265,11 +273,12 @@ deletes a transient webhook that goes quiet, so the entries expire as well.
 | The caller cannot write to a child       | The push is refused before it starts         | The child's owner shares write access              |
 | Onshape rate-limits the run              | The step waits its `Retry-After` and resumes | None needed                                        |
 | Onshape errors or times out on a tab     | The step retries                             | None needed                                        |
+| Onshape refuses a document mid-run       | The run stops, reported as failed            | Regain edit access; run it again                   |
 | A tab refuses its update                 | Recorded with its reason, the run carries on | Details names each tab; fix it and run it again    |
 | A step runs out of retries               | The run stops, reported as failed            | The report says what landed; run it again          |
 | The links form a cycle                   | A recursive push is refused                  | Remove a link                                      |
 | A webhook Onshape dropped                | A name or count is stale                     | The entry expires, and the next read watches again |
-| The socket drops mid-run                 | No result toast                              | The reconnect refetches the run; the section shows |
+| The socket drops mid-run                 | No result toast                              | The reconnect refetches the run; the callout shows |
 
 ## Decisions
 

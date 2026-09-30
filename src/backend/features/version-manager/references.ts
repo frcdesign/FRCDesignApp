@@ -13,7 +13,7 @@ import {
 import type { ElementPath } from "../../lib/onshape/path";
 import type { OnshapeExternalReferences } from "../../lib/onshape/types";
 import type { VersionJobFailure, WorkspacePath } from "./contract";
-import { describeTabFailure, isTransient } from "./failures";
+import { describeTabFailure, isTransient, refusesDocument } from "./failures";
 
 export interface ReferenceUpdateOptions {
     /**
@@ -133,7 +133,8 @@ export async function updateOutdatedReferences(
             await updateReferences(client, plan.elementPath, plan.updates);
             updatedElements++;
         } catch (error) {
-            if (isTransient(error)) {
+            // Worth a retry, or no tab of this document would go through.
+            if (isTransient(error) || refusesDocument(error)) {
                 throw error;
             }
             console.warn(

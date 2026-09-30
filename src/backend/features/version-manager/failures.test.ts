@@ -7,7 +7,8 @@ import {
     describeRunFailure,
     describeTabFailure,
     isTransient,
-    onshapeStatus
+    onshapeStatus,
+    refusesDocument
 } from "./failures";
 
 function apiError(status: number, body = ""): OnshapeApiError {
@@ -49,9 +50,16 @@ describe("isTransient", () => {
     });
 });
 
+describe("refusesDocument", () => {
+    it("is a refusal of the whole document, not one tab", () => {
+        expect(refusesDocument(apiError(401))).toBe(true);
+        expect(refusesDocument(apiError(403))).toBe(true);
+        expect(refusesDocument(apiError(404))).toBe(false);
+    });
+});
+
 describe("describeTabFailure", () => {
     it("words the refusals it knows", () => {
-        expect(describeTabFailure(apiError(403))).toMatch(/permission/);
         expect(describeTabFailure(apiError(404))).toMatch(/no longer exists/);
     });
 
