@@ -240,7 +240,7 @@ states, and follows the run as the reports arrive. A finished reference update
 carries how many tabs it moved.
 
 How it went arrives as one toast at the end (`job-toasts.ts`), headed by
-`jobHeadline` — "Push succeeded", "Push partially succeeded" (a step failed
+`jobHeadline` — "Push succeeded", "Push partially failed" (a step failed
 after something changed), "Push failed", or "Update …" for an update-only run:
 green and gone in a few seconds on success; yellow or red, and up until closed,
 otherwise, with **Details**, where each failed step gives its reason.

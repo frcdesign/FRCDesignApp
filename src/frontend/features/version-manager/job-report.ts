@@ -73,7 +73,7 @@ function jobKindName(status: VersionJobStatus): string {
 
 const OUTCOME_VERB = {
     [JobOutcome.SUCCESS]: "succeeded",
-    [JobOutcome.PARTIAL]: "partially succeeded",
+    [JobOutcome.PARTIAL]: "partially failed",
     [JobOutcome.FAILED]: "failed"
 } as const;
 

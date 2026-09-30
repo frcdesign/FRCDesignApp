@@ -70,7 +70,7 @@ describe("jobHeadline", () => {
         };
         expect(jobHeadline(status, JobOutcome.SUCCESS)).toBe("Pull succeeded");
         expect(jobHeadline(status, JobOutcome.PARTIAL)).toBe(
-            "Pull partially succeeded"
+            "Pull partially failed"
         );
         expect(
             jobHeadline({ ...status, updateOnly: true }, JobOutcome.FAILED)

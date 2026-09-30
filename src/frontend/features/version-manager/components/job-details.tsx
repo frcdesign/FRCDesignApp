@@ -7,7 +7,7 @@ import {
     Stack,
     Text
 } from "@mantine/core";
-import { CircleIcon, MinusIcon } from "@phosphor-icons/react";
+import { CircleIcon, MinusCircleIcon } from "@phosphor-icons/react";
 import { type ReactNode } from "react";
 import {
     VersionJobState,
@@ -193,7 +193,7 @@ function TaskStateIcon(props: TaskStateIconProps): ReactNode {
         case VersionTaskState.SKIPPED:
             return (
                 <AppIcon
-                    icon={MinusIcon}
+                    icon={MinusCircleIcon}
                     size={IconSize.MEDIUM}
                     color={StatusColor.DIMMED}
                 />
@@ -231,11 +231,6 @@ function TaskRow(props: TaskRowProps): ReactNode {
                 {task.state === VersionTaskState.FAILED && task.reason && (
                     <Text size="xs" c={StatusColor.DIMMED}>
                         {task.reason}
-                    </Text>
-                )}
-                {task.state === VersionTaskState.SKIPPED && (
-                    <Text size="xs" c={StatusColor.DIMMED}>
-                        Skipped.
                     </Text>
                 )}
             </Stack>
