@@ -4,6 +4,7 @@
  * pull. Onshape's own messages are not shown: they are written for developers.
  */
 import { HttpStatus } from "http-status-ts";
+import { VersionTaskAction } from "./contract";
 
 /** What `OnshapeApi` spells into every error it throws. */
 const STATUS_PATTERN = /Onshape API error (\d{3})/;
@@ -54,22 +55,20 @@ export function isTransient(error: unknown): boolean {
     );
 }
 
-/** What the step that failed was doing to its document. */
-export enum RunAction {
-    VERSION = "version",
-    REFERENCES = "references"
-}
-
 const ACTION_FAILURE = {
-    [RunAction.VERSION]: "Couldn't create a version of this document.",
-    [RunAction.REFERENCES]: "Couldn't update this document's references."
+    [VersionTaskAction.VERSION]: "Couldn't create a version of this document.",
+    [VersionTaskAction.REFERENCES]:
+        "Couldn't update this document's references."
 } as const;
 
 /**
- * Why a step refused by Onshape stopped the run, as the message of the error it
- * leaves with. "This document" is the one the report names beside it.
+ * Why Onshape refused a task, as the message of the error it leaves its step
+ * with. "This document" is the one the report names beside it.
  */
-export function describeStepFailure(error: unknown, action: RunAction): string {
+export function describeStepFailure(
+    error: unknown,
+    action: VersionTaskAction
+): string {
     switch (onshapeStatus(error)) {
         case HttpStatus.UNAUTHORIZED:
             return WORDED_PREFIX + SIGN_IN_EXPIRED;
@@ -87,7 +86,10 @@ export function describeStepFailure(error: unknown, action: RunAction): string {
     return WORDED_PREFIX + ACTION_FAILURE[action];
 }
 
-/** Why a whole run stopped, for the report that says how far it got. */
+/**
+ * Why a task, or the whole run, failed: our own wording from
+ * {@link describeStepFailure}, or one for what outlasted its retries.
+ */
 export function describeRunFailure(error: unknown): string {
     if (!(error instanceof Error)) {
         return UNEXPECTED;

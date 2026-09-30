@@ -11,45 +11,35 @@ import {
     createVersion,
     getVersions
 } from "../../lib/onshape/endpoints/versions";
-import { getWorkspaces } from "../../lib/onshape/endpoints/workspaces";
-import { getDocument } from "../../lib/onshape/endpoints/documents";
-import type { OnshapeVersionInfo } from "../../lib/onshape/types";
 import { ONSHAPE_STEP_RETRIES } from "../load/steps";
 import {
     emptyJobResult,
     nextVersionName,
     VersionJobKind,
     VersionJobState,
+    VersionTaskState,
     type PullScopeKind,
     type PushScopeKind,
+    type VersionJobDocument,
     type VersionJobResult,
-    type VersionJobStop,
+    type VersionJobStatus,
+    type VersionTask,
     type WorkspacePath
 } from "./contract";
 import {
     updateOutdatedReferences,
-    type ReferenceUpdateOutcome
+    type ReferenceUpdateOutcome,
+    type ReferenceUpdateOptions
 } from "./references";
 import {
     describeRunFailure,
     describeStepFailure,
-    isTransient,
-    RunAction
+    isTransient
 } from "./failures";
-import { finishJob } from "./jobs";
+import { reportJob } from "./jobs";
+import { planTasks } from "./tasks";
 import { trackVersionRun } from "../analytics/tracking";
 import { VersionRunKind } from "../analytics/usage";
-
-/** The workspace the run is working on, so a failure can say where it was. */
-interface RunProgress {
-    at?: WorkspacePath;
-}
-
-/** The version a run moves references onto, and whether it had to cut it. */
-interface VersionChoice {
-    version: OnshapeVersionInfo;
-    reused: boolean;
-}
 
 /** One workspace a push updates, and whether the run versions it afterwards. */
 export interface PushStep {
@@ -71,17 +61,26 @@ interface JobParamsBase {
     workspace: WorkspacePath;
     /** How it was aimed, which only the record it writes reads back. */
     scope: PushScopeKind | PullScopeKind;
-}
-
-export interface PushJobParams extends JobParamsBase {
-    kind: "push";
     /**
-     * Absent for a quick push, where each document is versioned as Onshape's
+     * Moves references onto the versions that already exist, cutting none: a
+     * push leaves this workspace unversioned, and a pull its parents.
+     */
+    updateOnly: boolean;
+    /** What the run was aimed at, which its status shows while it goes. */
+    targets: VersionJobDocument[];
+    /** Every document the run touches, by `workspaceKey`, as the route found them named. */
+    documentNames: Record<string, string>;
+    /**
+     * Absent for a quick run, where each document is versioned as Onshape's
      * own dialog would name it: see {@link nextVersionName}. A name given here
      * is used for every version the run cuts.
      */
     name?: string;
     description: string;
+}
+
+export interface PushJobParams extends JobParamsBase {
+    kind: "push";
     /** In the order they have to run; see `pushOrder`. */
     steps: PushStep[];
 }
@@ -96,12 +95,20 @@ export interface PullJobParams extends JobParamsBase {
      * nobody's to cut a version in.
      */
     sources?: WorkspacePath[];
-    /** Absent for a quick pull; the run then names each version as Onshape would. */
-    name?: string;
-    description: string;
 }
 
 export type VersionJobParams = PushJobParams | PullJobParams;
+
+/** What one run is doing, shared by the steps that report on it. */
+interface RunContext {
+    params: VersionJobParams;
+    step: WorkflowStep;
+    client: OnshapeApi;
+    jobId: string;
+    kind: VersionJobKind;
+    tasks: VersionTask[];
+    result: VersionJobResult;
+}
 
 /**
  * Runs a push or a pull.
@@ -111,9 +118,8 @@ export type VersionJobParams = PushJobParams | PullJobParams;
  * cut and half the references moved, with nothing to resume from. Every Onshape
  * step takes {@link ONSHAPE_STEP_RETRIES}, which honors Onshape's `Retry-After`.
  *
- * What may be done was settled before the run started — the route checks
- * permissions across every workspace in `steps`, so a push cannot cut its first
- * version only to find it may not finish.
+ * A document that fails is recorded and passed: the run goes on to every other
+ * document it can still reach, skipping only what needed the one that failed.
  */
 export class VersionManagerWorkflow extends WorkflowEntrypoint<
     AppBindings,
@@ -124,14 +130,21 @@ export class VersionManagerWorkflow extends WorkflowEntrypoint<
         step: WorkflowStep
     ): Promise<VersionJobResult> {
         const params = event.payload;
-        const jobId = event.instanceId;
         const kind =
             params.kind === "push" ? VersionJobKind.PUSH : VersionJobKind.PULL;
-        // Added to as the steps come back, which a replay does again from their
-        // saved results: a run that stops can then say what it had done.
+        // Both moved on as the steps come back, which a replay does again from
+        // their saved results: a run that stops can then say what it had done.
         const result = emptyJobResult();
-        // Moved on as each step starts, which a replay does again in order.
-        const progress: RunProgress = {};
+        const tasks = planTasks(params);
+        const status = (state: VersionJobState): VersionJobStatus => ({
+            state,
+            jobId: event.instanceId,
+            kind,
+            updateOnly: params.updateOnly,
+            targets: params.targets,
+            tasks,
+            result
+        });
 
         // Recorded whichever way it ends: a run that stopped partway still did
         // what it did.
@@ -149,25 +162,29 @@ export class VersionManagerWorkflow extends WorkflowEntrypoint<
             );
 
         try {
+            const client = await getOnshapeApiFromSessionId(
+                this.env.KV,
+                params.sessionId
+            );
+            const ctx: RunContext = {
+                params,
+                step,
+                client,
+                jobId: event.instanceId,
+                kind,
+                tasks,
+                result
+            };
             if (params.kind === "push") {
-                await this._push(params, step, result, progress);
+                await this._push(ctx, params);
             } else {
-                await this._pull(params, step, result, progress);
+                await this._pull(ctx, params);
             }
         } catch (error) {
-            const stoppedAt = await this._stoppedAt(
-                params.sessionId,
-                step,
-                progress
-            );
             await step.do("finish-job", () =>
-                finishJob(this.env, params.workspace, {
-                    state: VersionJobState.FAILED,
-                    jobId,
-                    kind,
-                    result,
+                reportJob(this.env, params.workspace, {
+                    ...status(VersionJobState.FAILED),
                     error: describeRunFailure(error),
-                    stoppedAt,
                     finishedAt: Date.now()
                 })
             );
@@ -176,11 +193,8 @@ export class VersionManagerWorkflow extends WorkflowEntrypoint<
         }
 
         await step.do("finish-job", () =>
-            finishJob(this.env, params.workspace, {
-                state: VersionJobState.COMPLETE,
-                jobId,
-                kind,
-                result,
+            reportJob(this.env, params.workspace, {
+                ...status(VersionJobState.COMPLETE),
                 finishedAt: Date.now()
             })
         );
@@ -189,244 +203,209 @@ export class VersionManagerWorkflow extends WorkflowEntrypoint<
     }
 
     /**
-     * The version to move references onto: the one the workspace is already at
-     * when nothing has changed since it was cut, and otherwise a new one, under
-     * the name given or the one Onshape's own dialog would offer.
-     *
-     * A version records the microversion it was cut at, and every edit moves a
-     * workspace's microversion on, so a match is exact — and holds for a
-     * document with several workspaces, where the newest version may be another
-     * workspace's. It also makes a retried step safe: a version the first
-     * attempt cut is found, not cut twice.
+     * Runs one task: reports it started, then does it in a step that retries
+     * only what could go differently. Any other failure leaves the step at once
+     * in our own words — it would fail the same way five more times, minutes
+     * apart — and is recorded against the task, which is where the run goes on
+     * from. Undefined when the task failed.
      */
-    private async _versionFor(
-        client: OnshapeApi,
-        target: WorkspacePath,
-        name: string | undefined,
-        description: string
-    ): Promise<VersionChoice> {
-        const [workspaces, versions] = await Promise.all([
-            getWorkspaces(client, target),
-            getVersions(client, target)
-        ]);
-        const current = workspaces.find(
-            (each) => each.id === target.instanceId
-        )?.microversion;
-        const unchanged =
-            current === undefined
-                ? undefined
-                : versions.findLast(
-                      (version) => version.microversion === current
-                  );
-        if (unchanged) {
-            return { version: unchanged, reused: true };
-        }
-        // Numbered per document, so a run that versions several numbers each
-        // from its own history rather than carrying the first one's number.
-        const versionName =
-            name ?? nextVersionName(versions.map((version) => version.name));
-        const version = await createVersion(
-            client,
-            target,
-            versionName,
-            description
-        );
-        return { version, reused: false };
-    }
-
-    /** Folds one workspace's reference updates into the run's result. */
-    private _addOutcome(
-        result: VersionJobResult,
-        outcome: ReferenceUpdateOutcome
-    ): void {
-        result.updatedElements += outcome.updatedElements;
-        if (outcome.updatedElements > 0) {
-            result.updatedWorkspaces++;
-        }
-    }
-
-    /**
-     * A step against one document's workspace, which the run records as where
-     * it is. Only a failure that could go differently is retried; any other
-     * leaves in our own words, since it would fail the same way five more times,
-     * minutes apart, before the run could say so.
-     */
-    private _onshapeStep<T extends Rpc.Serializable<T>>(
-        step: WorkflowStep,
-        name: string,
-        target: WorkspacePath,
-        action: RunAction,
-        progress: RunProgress,
+    private async _task<T extends Rpc.Serializable<T>>(
+        ctx: RunContext,
+        index: number,
         callback: () => Promise<T>
-    ): Promise<T> {
-        progress.at = target;
-        return step.do(name, { retries: ONSHAPE_STEP_RETRIES }, async () => {
-            try {
-                return await callback();
-            } catch (error) {
-                if (isTransient(error)) {
-                    throw error;
+    ): Promise<T | undefined> {
+        const task = ctx.tasks[index];
+        task.state = VersionTaskState.RUNNING;
+        await ctx.step.do(`report-${index}`, () =>
+            reportJob(this.env, ctx.params.workspace, {
+                state: VersionJobState.RUNNING,
+                jobId: ctx.jobId,
+                kind: ctx.kind,
+                updateOnly: ctx.params.updateOnly,
+                targets: ctx.params.targets,
+                tasks: ctx.tasks,
+                result: ctx.result
+            })
+        );
+        try {
+            const value = await ctx.step.do(
+                `task-${index}`,
+                { retries: ONSHAPE_STEP_RETRIES },
+                async () => {
+                    try {
+                        return await callback();
+                    } catch (error) {
+                        if (isTransient(error)) {
+                            throw error;
+                        }
+                        throw new NonRetryableError(
+                            describeStepFailure(error, task.action)
+                        );
+                    }
                 }
-                throw new NonRetryableError(describeStepFailure(error, action));
-            }
-        });
-    }
-
-    /** The document a failed run was in, named where Onshape will still say. */
-    private async _stoppedAt(
-        sessionId: string,
-        step: WorkflowStep,
-        progress: RunProgress
-    ): Promise<VersionJobStop | undefined> {
-        const workspace = progress.at;
-        if (!workspace) {
+            );
+            task.state = VersionTaskState.DONE;
+            return value;
+        } catch (error) {
+            task.state = VersionTaskState.FAILED;
+            task.reason = describeRunFailure(error);
             return undefined;
         }
-        const documentName = await step.do(
-            "stopped-at",
-            async (): Promise<string | null> => {
-                try {
-                    const client = await getOnshapeApiFromSessionId(
-                        this.env.KV,
-                        sessionId
-                    );
-                    return (await getDocument(client, workspace)).name;
-                } catch {
-                    // Unshared or deleted, which the report already says.
-                    return null;
-                }
-            }
-        );
-        return { workspace, documentName: documentName ?? undefined };
     }
 
-    private _addVersion(result: VersionJobResult, choice: VersionChoice): void {
-        if (choice.reused) {
-            result.reusedVersions++;
-        } else {
-            result.createdVersions++;
-        }
+    /** Marks a task that will not be tried, and says it was not. */
+    private _skip(ctx: RunContext, index: number): void {
+        ctx.tasks[index].state = VersionTaskState.SKIPPED;
     }
 
     /**
-     * A pull moves this workspace onto a version of each parent: the one the
-     * parent is at if nothing has changed since, and otherwise a new one — a
-     * reference points at a version, so a parent's unversioned edits are only
-     * pullable once there is one holding them.
+     * A new version of the workspace, under the name given or the one
+     * Onshape's own dialog would offer. Numbered per document, so a run that
+     * versions several numbers each from its own history.
      */
-    private async _pull(
-        params: PullJobParams,
-        step: WorkflowStep,
-        result: VersionJobResult,
-        progress: RunProgress
-    ): Promise<void> {
-        const client = await getOnshapeApiFromSessionId(
-            this.env.KV,
-            params.sessionId
+    private async _version(
+        ctx: RunContext,
+        index: number,
+        target: WorkspacePath
+    ): Promise<string | undefined> {
+        const { client, params } = ctx;
+        const versionId = await this._task(ctx, index, async () => {
+            const versions = await getVersions(client, target);
+            const version = await createVersion(
+                client,
+                target,
+                params.name ??
+                    nextVersionName(versions.map((each) => each.name)),
+                params.description
+            );
+            return version.id;
+        });
+        if (versionId !== undefined) {
+            ctx.result.createdVersions++;
+        }
+        return versionId;
+    }
+
+    private async _references(
+        ctx: RunContext,
+        index: number,
+        target: WorkspacePath,
+        options: ReferenceUpdateOptions
+    ): Promise<boolean> {
+        const outcome = await this._task(
+            ctx,
+            index,
+            (): Promise<ReferenceUpdateOutcome> =>
+                updateOutdatedReferences(ctx.client, target, options)
         );
-        const { sources, name, description } = params;
+        if (!outcome) {
+            return false;
+        }
+        ctx.result.updatedElements += outcome.updatedElements;
+        if (outcome.updatedElements > 0) {
+            ctx.result.updatedWorkspaces++;
+        }
+        return true;
+    }
+
+    /**
+     * A pull moves this workspace onto a new version of each parent — a
+     * reference points at a version, so a parent's unversioned edits are only
+     * pullable once there is one holding them. An update-only pull moves it
+     * onto the versions those parents already have.
+     */
+    private async _pull(ctx: RunContext, params: PullJobParams): Promise<void> {
+        const { sources, updateOnly } = params;
+        let index = 0;
+
+        if (!sources) {
+            await this._references(ctx, index, params.workspace, {});
+            return;
+        }
+        if (updateOnly) {
+            await this._references(ctx, index, params.workspace, {
+                onlyDocumentIds: sources.map((each) => each.documentId)
+            });
+            return;
+        }
 
         // Keyed by document, which the route has already made unambiguous by
         // refusing a run naming one twice.
         const pinnedVersions: Record<string, string> = {};
-        for (const [index, source] of (sources ?? []).entries()) {
-            const choice = await this._onshapeStep(
-                step,
-                `parent-version-${index}`,
-                source,
-                RunAction.VERSION,
-                progress,
-                (): Promise<VersionChoice> =>
-                    this._versionFor(client, source, name, description)
-            );
-            pinnedVersions[source.documentId] = choice.version.id;
-            this._addVersion(result, choice);
+        for (const source of sources) {
+            const versionId = await this._version(ctx, index++, source);
+            if (versionId) {
+                pinnedVersions[source.documentId] = versionId;
+            }
         }
-
-        const outcome = await this._onshapeStep(
-            step,
-            "references",
-            params.workspace,
-            RunAction.REFERENCES,
-            progress,
-            (): Promise<ReferenceUpdateOutcome> =>
-                updateOutdatedReferences(
-                    client,
-                    params.workspace,
-                    // Every out-of-date reference where nothing was versioned,
-                    // and otherwise the versions this run has settled on.
-                    sources
-                        ? {
-                              onlyDocumentIds: Object.keys(pinnedVersions),
-                              pinnedVersions
-                          }
-                        : {}
-                )
-        );
-        this._addOutcome(result, outcome);
+        if (Object.keys(pinnedVersions).length === 0) {
+            this._skip(ctx, index);
+            return;
+        }
+        await this._references(ctx, index, params.workspace, {
+            onlyDocumentIds: Object.keys(pinnedVersions),
+            pinnedVersions
+        });
     }
 
-    private async _push(
-        params: PushJobParams,
-        step: WorkflowStep,
-        result: VersionJobResult,
-        progress: RunProgress
-    ): Promise<void> {
-        const client = await getOnshapeApiFromSessionId(
-            this.env.KV,
-            params.sessionId
-        );
-        const { workspace, name, description } = params;
+    private async _push(ctx: RunContext, params: PushJobParams): Promise<void> {
+        const { workspace, updateOnly } = params;
+        let index = 0;
 
-        const versionFor = (target: WorkspacePath) =>
-            this._versionFor(client, target, name, description);
+        if (updateOnly) {
+            // Onto whichever version of this document is newest, which is what
+            // Onshape reports each reference out of date against.
+            for (const pushStep of params.steps) {
+                await this._references(ctx, index++, pushStep.workspace, {
+                    onlyDocumentIds: [workspace.documentId]
+                });
+            }
+            return;
+        }
 
-        const root = await this._onshapeStep(
-            step,
-            "version",
-            workspace,
-            RunAction.VERSION,
-            progress,
-            (): Promise<VersionChoice> => versionFor(workspace)
-        );
-        this._addVersion(result, root);
+        const rootVersion = await this._version(ctx, index++, workspace);
+        if (!rootVersion) {
+            // Nothing for anything below to move onto.
+            while (index < ctx.tasks.length) {
+                this._skip(ctx, index++);
+            }
+            return;
+        }
 
-        // Every version this run has settled on, which is what the workspaces
-        // further down are moved onto. Keyed by document, which the route has
-        // already made unambiguous by refusing a run that versions one twice.
+        // Every version this run has cut, which is what the workspaces further
+        // down are moved onto. Keyed by document, which the route has already
+        // made unambiguous by refusing a run that versions one twice.
         const pinnedVersions: Record<string, string> = {
-            [workspace.documentId]: root.version.id
+            [workspace.documentId]: rootVersion
         };
 
-        for (const [index, pushStep] of params.steps.entries()) {
-            const outcome = await this._onshapeStep(
-                step,
-                `references-${index}`,
+        for (const pushStep of params.steps) {
+            const updated = await this._references(
+                ctx,
+                index++,
                 pushStep.workspace,
-                RunAction.REFERENCES,
-                progress,
-                (): Promise<ReferenceUpdateOutcome> =>
-                    updateOutdatedReferences(client, pushStep.workspace, {
-                        onlyDocumentIds: Object.keys(pinnedVersions),
-                        pinnedVersions
-                    })
+                {
+                    onlyDocumentIds: Object.keys(pinnedVersions),
+                    pinnedVersions
+                }
             );
-            this._addOutcome(result, outcome);
-
             if (!pushStep.createVersion) continue;
 
-            // Updating its references moved it on, so a workspace this updated
-            // is versioned afresh; one that needed nothing may reuse its own.
-            const choice = await this._onshapeStep(
-                step,
-                `version-${index}`,
-                pushStep.workspace,
-                RunAction.VERSION,
-                progress,
-                (): Promise<VersionChoice> => versionFor(pushStep.workspace)
+            const versionIndex = index++;
+            if (!updated) {
+                // A version of it now would hold the references that failed to
+                // move; the documents past it keep the version they have.
+                this._skip(ctx, versionIndex);
+                continue;
+            }
+            const versionId = await this._version(
+                ctx,
+                versionIndex,
+                pushStep.workspace
             );
-            pinnedVersions[pushStep.workspace.documentId] = choice.version.id;
-            this._addVersion(result, choice);
+            if (versionId) {
+                pinnedVersions[pushStep.workspace.documentId] = versionId;
+            }
         }
     }
 }

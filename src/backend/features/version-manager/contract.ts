@@ -70,11 +70,6 @@ export interface WorkspaceLinksData {
     children: LinkedWorkspace[];
     /** What Onshape calls the workspace's own document, which the copy names. */
     documentName: string;
-    /**
-     * This workspace's edits since its own last version, asked only when it has
-     * children to push to. Zero means a push would cut nothing here.
-     */
-    unversionedChanges?: number;
 }
 
 /** How far a push travels; see {@link PushScope}. */
@@ -126,11 +121,34 @@ export enum VersionJobKind {
     PULL = "pull"
 }
 
-/** The document a run stopped in. */
-export interface VersionJobStop {
+/** A document a run acts on, named as the run found it. */
+export interface VersionJobDocument {
     workspace: WorkspacePath;
     /** Absent where Onshape would not say. */
     documentName?: string;
+}
+
+/** What one step of a run does to its document. */
+export enum VersionTaskAction {
+    VERSION = "version",
+    REFERENCES = "references"
+}
+
+export enum VersionTaskState {
+    PENDING = "pending",
+    RUNNING = "running",
+    DONE = "done",
+    FAILED = "failed",
+    /** Not tried, since what it needed from an earlier task failed. */
+    SKIPPED = "skipped"
+}
+
+/** One step of a run, in the order the run takes them. */
+export interface VersionTask extends VersionJobDocument {
+    action: VersionTaskAction;
+    state: VersionTaskState;
+    /** Why it failed, written for the user. */
+    reason?: string;
 }
 
 /** What a push or pull did — all of it, or as far as it got before it stopped. */
@@ -141,11 +159,6 @@ export interface VersionJobResult {
     updatedElements: number;
     /** Versions the run cut, the one it started from included. */
     createdVersions: number;
-    /**
-     * Versions it moved references onto without cutting, their workspace having
-     * nothing since. A run over unchanged documents cuts none.
-     */
-    reusedVersions: number;
 }
 
 export enum VersionJobState {
@@ -160,15 +173,19 @@ export interface VersionJobStatus {
     state: VersionJobState;
     jobId?: string;
     kind?: VersionJobKind;
+    /** Moves references onto versions that exist, and cuts none. */
+    updateOnly?: boolean;
+    /** What it was aimed at: the children pushed to, or the parents pulled from. */
+    targets?: VersionJobDocument[];
+    /** Its steps, each as far as it has got. */
+    tasks?: VersionTask[];
     /**
      * What the run did. On a failure, what it had done before it stopped, which
      * is still in Onshape.
      */
     result?: VersionJobResult;
-    /** Why it failed, when it did. Written for the user. */
+    /** Why the whole run stopped, when it did. Written for the user. */
     error?: string;
-    /** Where it failed, when that was in a document. */
-    stoppedAt?: VersionJobStop;
     /** When it ended, in epoch milliseconds. */
     finishedAt?: number;
 }
@@ -181,8 +198,7 @@ export function emptyJobResult(): VersionJobResult {
     return {
         updatedWorkspaces: 0,
         updatedElements: 0,
-        createdVersions: 0,
-        reusedVersions: 0
+        createdVersions: 0
     };
 }
 

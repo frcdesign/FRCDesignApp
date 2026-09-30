@@ -12,7 +12,6 @@ import { pushVersionJob } from "../push/notify";
 import {
     VersionJobState,
     workspaceKey,
-    type VersionJobKind,
     type VersionJobResult,
     type VersionJobStatus,
     type WorkspacePath
@@ -47,22 +46,24 @@ export async function startJob(
     env: AppBindings,
     workspace: WorkspacePath,
     instanceId: string,
-    kind: VersionJobKind
-): Promise<void> {
+    run: Pick<VersionJobStatus, "kind" | "updateOnly" | "targets">
+): Promise<VersionJobStatus> {
     const status: VersionJobStatus = {
+        ...run,
         state: VersionJobState.RUNNING,
-        jobId: instanceId,
-        kind
+        jobId: instanceId
     };
     await jobs.put(env.KV, workspaceKey(workspace), status);
     await pushVersionJob(env, workspaceKey(workspace), status);
+    return status;
 }
 
 /**
- * Tells the workspace how the run ended, and keeps it — unless a later run has
- * taken the workspace over, whose mark it would otherwise overwrite.
+ * Tells the workspace how the run is going or how it ended, and keeps it —
+ * unless a later run has taken the workspace over, whose mark it would
+ * otherwise overwrite.
  */
-export async function finishJob(
+export async function reportJob(
     env: AppBindings,
     workspace: WorkspacePath,
     status: VersionJobStatus
@@ -97,7 +98,10 @@ export async function getJobStatus(
     }
     // Asked rather than trusted: a run that died before it could report leaves
     // its mark saying it is still going.
-    return { ...(await readInstance(env, stored.jobId)), kind: stored.kind };
+    const live = await readInstance(env, stored.jobId);
+    return live.state === VersionJobState.RUNNING
+        ? stored
+        : { ...stored, ...live };
 }
 
 /** The run as the platform has it, for one whose own report is not to hand. */

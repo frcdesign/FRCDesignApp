@@ -3,7 +3,6 @@ import {
     LinkDirection,
     type PullScope,
     type PushScope,
-    VersionJobKind,
     VersionJobState,
     type VersionJobStatus,
     type WorkspaceLinksData,
@@ -119,28 +118,35 @@ export interface PushVersionArgs {
     name?: string;
     description?: string;
     scope: PushScope;
+    /** Moves the children onto this document's newest version, cutting none. */
+    updateOnly?: boolean;
 }
 
 /**
- * Starts a push. The work runs in a workflow, so what comes back is the run's
- * id; {@link useVersionJobQuery} is what says how it went.
+ * Starts a push. The work runs in a workflow, so what comes back is the run
+ * as it starts; {@link useVersionJobQuery} is what says how it goes.
  */
 export function usePushVersionMutation(workspace: WorkspacePath) {
     return useMutation({
         mutationKey: ["push-version", workspace],
-        mutationFn: ({ name, description, scope }: PushVersionArgs) =>
-            apiPost<{ jobId: string }>("/push-version", {
+        mutationFn: ({
+            name,
+            description,
+            scope,
+            updateOnly
+        }: PushVersionArgs) =>
+            apiPost<VersionJobStatus>("/push-version", {
                 // An empty name is left off rather than sent: the name is what
                 // the server defaults, and "" is not a name.
                 body: {
                     workspace,
                     name: name?.trim() || undefined,
                     description,
-                    scope
+                    scope,
+                    updateOnly
                 }
             }),
-        onSuccess: ({ jobId }) =>
-            adoptJob(workspace, jobId, VersionJobKind.PUSH),
+        onSuccess: (status) => adoptJob(workspace, status),
         onError: getAppErrorHandler("Unexpectedly failed to push the version.")
     });
 }
@@ -150,22 +156,29 @@ export interface PullReferencesArgs {
     name?: string;
     description?: string;
     scope: PullScope;
+    /** Moves onto the parents' newest versions, cutting none. */
+    updateOnly?: boolean;
 }
 
 export function usePullReferencesMutation(workspace: WorkspacePath) {
     return useMutation({
         mutationKey: ["pull-references", workspace],
-        mutationFn: ({ name, description, scope }: PullReferencesArgs) =>
-            apiPost<{ jobId: string }>("/pull-references", {
+        mutationFn: ({
+            name,
+            description,
+            scope,
+            updateOnly
+        }: PullReferencesArgs) =>
+            apiPost<VersionJobStatus>("/pull-references", {
                 body: {
                     workspace,
                     name: name?.trim() || undefined,
                     description,
-                    scope
+                    scope,
+                    updateOnly
                 }
             }),
-        onSuccess: ({ jobId }) =>
-            adoptJob(workspace, jobId, VersionJobKind.PULL),
+        onSuccess: (status) => adoptJob(workspace, status),
         onError: getAppErrorHandler(
             "Unexpectedly failed to update the references."
         )
@@ -176,16 +189,12 @@ export function usePullReferencesMutation(workspace: WorkspacePath) {
  * Shows the run as running straight away, rather than leaving the page idle
  * until the first poll comes back.
  */
-function adoptJob(
-    workspace: WorkspacePath,
-    jobId: string,
-    kind: VersionJobKind
-): void {
-    queryClient.setQueryData<VersionJobStatus>(versionJobQueryKey(workspace), {
-        state: VersionJobState.RUNNING,
-        jobId,
-        kind
-    });
+function adoptJob(workspace: WorkspacePath, started: VersionJobStatus): void {
+    // The socket can have brought this run's first progress already.
+    queryClient.setQueryData<VersionJobStatus>(
+        versionJobQueryKey(workspace),
+        (current) => (current?.jobId === started.jobId ? current : started)
+    );
 }
 
 /**

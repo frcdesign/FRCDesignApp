@@ -32,14 +32,16 @@ it.
 | `src/backend/features/version-manager/graph.ts`                                 | Pure: the order a push runs in, and cycle detection                              |
 | `src/backend/features/version-manager/references.ts`                            | The reference-update engine both a push and a pull run                           |
 | `src/backend/features/version-manager/workflow.ts`                              | `VersionManagerWorkflow`, one class over a push or a pull                        |
+| `src/backend/features/version-manager/tasks.ts`                                 | Pure: the steps a run will take, which its status lists                          |
 | `src/backend/features/version-manager/jobs.ts`                                  | The run a workspace last started, and its status                                 |
 | `src/backend/features/version-manager/failures.ts`                              | Which Onshape failures to retry, and each in words                               |
 | `src/backend/features/version-manager/workspace-cache.ts`                       | A linked workspace's names and pending-change count, cached                      |
 | `src/backend/features/version-manager/routes.ts`                                | Every route below                                                                |
 | `src/frontend/features/version-manager/queries.ts`                              | The queries and mutations                                                        |
 | `src/frontend/features/version-manager/components/linked-workspace-section.tsx` | A direction's list, its rows, and everything they can run                        |
-| `src/frontend/features/version-manager/job-report.ts`                           | How a finished run went, in words                                                |
-| `src/frontend/features/version-manager/components/last-run-callout.tsx`         | The last run's outcome, a callout at the top of the page                         |
+| `src/frontend/features/version-manager/job-report.ts`                           | How a run is going or went, in words                                             |
+| `src/frontend/features/version-manager/components/last-run-callout.tsx`         | The last run, going or finished, as a callout at the top of the page             |
+| `src/frontend/features/version-manager/components/job-details.tsx`              | The run's steps as they complete, in the Details modal                           |
 | `src/frontend/routes/app/version-manager.tsx`                                   | The page: two sections, one per direction                                        |
 
 ## Storage
@@ -52,9 +54,9 @@ holds no foreign key into the rest of the schema: a link is between two Onshape
 workspaces, neither of which need be in any library.
 
 **KV** `version-job:{documentId}|{instanceId}` — the `VersionJobStatus` of the
-run a workspace last started, for six hours: `RUNNING` with its instance id
-while it goes, then how it ended — its counts and, for a run that stopped, the
-document it stopped in and why.
+run a workspace last started, for six hours: `RUNNING` with its instance id,
+what it was aimed at and each of its steps as far as it has got, then how it
+ended — its counts, and why any step failed.
 
 **KV** `linked-workspace:{documentId}|{instanceId}` — a linked workspace's
 document and workspace names, for a week.
@@ -82,11 +84,9 @@ The tab appears only when Onshape launched the app in a workspace
 (`useTargetWorkspace`); `beforeLoad` redirects anyone who reaches the url
 without one.
 
-`GET /api/workspace-links` answers
-`{ parents, children, documentName, unversionedChanges }` — the last two being
-this workspace's own: its document's name, which the page's copy names, and,
-when it has children, its count of changes since its last version, which the
-push form reads. For each row it asks
+`GET /api/workspace-links` answers `{ parents, children, documentName }` — the
+last being this workspace's own document, which the page's copy names. For each
+row it asks
 Onshape whether the caller may read the far end, and — from the cache — what it
 is called. A workspace the caller cannot read comes back `isOpenable: false` and
 unnamed: they are shown that a link exists, not what it points at.
@@ -116,17 +116,11 @@ belongs to both workspaces.
 ### Pushing
 
 `POST /api/push-version` resolves what the push reaches into an ordered list of
-steps, checks permissions across all of them, starts the workflow and answers
-its `jobId`.
+steps, checks permissions across all of them, names every document from the
+cache, starts the workflow and answers the run's first status.
 
-Every version a run moves references onto comes from `_versionFor`: the
-workspace's own latest version when nothing has changed since it — some version's
-`microversion` equals the workspace's current one — and otherwise a new one. A
-push from a document with nothing new therefore still moves its children onto
-its last version, and a retried step finds the version its first attempt cut
-rather than cutting another.
-
-A new version takes the name the form was given, and otherwise the one
+A push or pull always cuts a new version, whether or not anything changed since
+the last one. A version takes the name the form was given, and otherwise the one
 Onshape's own dialog would offer that document (`nextVersionName`), so a
 recursive push left unnamed numbers each document from its own history. The
 form shows that suggestion as a placeholder and sends a name only when one was
@@ -145,19 +139,25 @@ typed.
 
 Permissions are checked for every workspace in the order before the first
 version is cut: write and link on this workspace, write on each one the run
-writes to, and link on each one it versions. A push that cut a version and then
-found it could not finish would have already changed the document it was called
-on.
+writes to, and link on each one it versions.
+
+**Update references** in a child's menu, or **Update all references** in the
+section's, is a push with `updateOnly`: it cuts nothing, and moves the children
+onto this document's newest version — whatever Onshape reports their references
+out of date against. It cannot be recursive, which would need the versions it
+does not cut.
 
 ### Pulling
 
 `POST /api/pull-references` versions each parent it is aimed at and moves this
 workspace's references onto that version: a reference points at a version, so
 a parent's unversioned edits are only pullable once there is one holding them.
-A parent with nothing new since its last version is moved onto that one, as a
-push would; the form says so and asks for no name. `PARENTS` takes the linked parents, `ONE` a single parent.
+`PARENTS` takes the linked parents, `ONE` a single parent. **Update references**
+in a parent's menu is a pull with `updateOnly`, which cuts nothing and moves
+onto the version the parent already has.
 
-`ALL` is the exception: every out-of-date reference, linked or not, moved onto
+`ALL` — **Update all references** in the parents' menu — is every out-of-date
+reference, linked or not, moved onto
 whatever version each document already has. It versions nothing, the documents
 behind those references being nobody's to cut a version in, and it is the one
 thing the parent list cannot express.
@@ -182,14 +182,24 @@ Two departures from the app this was ported from:
   ported from swallowed them one tab at a time; permissions are per document,
   so a push that only half landed would have read as a success.
 
-Every Onshape step runs through `_onshapeStep` in `workflow.ts`, which records
-the workspace it is working on. A failure that could go differently next time —
-a rate limit, a 408 or 5xx, or no answer at all (`isTransient`) — is retried
-from the top of the step; tabs already moved need nothing the second time. Any
-other fails the step at once, as a `NonRetryableError` worded by
-`describeStepFailure` from its status and the call that failed ("Couldn't
-update this document's references."). Onshape's own messages are never shown:
-they are written for developers.
+### Running the steps
+
+A run's steps are laid out before it takes any (`planTasks`): a version of a
+document, or its references moved. Each runs through `_task` in `workflow.ts`,
+which reports it started and then does it in its own Workflow step. A failure
+that could go differently next time — a rate limit, a 408 or 5xx, or no answer
+at all (`isTransient`) — is retried from the top of the step; tabs already moved
+need nothing the second time. Any other fails the step at once, as a
+`NonRetryableError` worded by `describeStepFailure` from its status and the call
+that failed ("Couldn't update this document's references."). Onshape's own
+messages are never shown: they are written for developers.
+
+A failed step is recorded, with its reason, and the run goes on. It skips only
+what needed the failure: everything after this document's own version when that
+fails, a recursive push's version of a document whose references failed (it
+would hold the ones that did not move), and a pull's reference update when no
+parent could be versioned. A document past a skipped one keeps the version of
+it that it has.
 
 Tabs are updated one at a time. The port's comment says doing them concurrently
 caused problems and does not say why, so this follows it rather than finding out
@@ -206,12 +216,12 @@ and versions synced, beside the documents linked right now. See
 
 ### Watching a run
 
-The route stores and pushes `RUNNING` as it starts the workflow, and the
-workflow's `finish-job` step stores and pushes how it ended, over the socket in
-[platform.md](./platform.md). A run that throws is reported too: `FAILED`, with
-what it had done before it stopped, the document it was working on, and a
-reason from `describeRunFailure`. A
-later run's mark is never overwritten by an earlier run finishing. The
+The route stores and pushes `RUNNING` as it starts the workflow, with what it
+was aimed at; the workflow's `report-{n}` steps store and push each step as it
+starts, and `finish-job` how the run ended, over the socket in
+[platform.md](./platform.md). A run that throws outside a step is reported too:
+`FAILED`, with what it had done and a reason from `describeRunFailure`. A later
+run's mark is never overwritten by an earlier run's report. The
 client asks `GET /api/version-job` once when the page opens and again after a
 reconnect; nothing polls. A client's socket is tagged with the workspace it was
 launched in as well as its library, so a run reaches the people in that document
@@ -222,18 +232,22 @@ and nobody else.
 could report leaves one behind.
 
 While a run is going, a spinner sits where it was started — beside the row, or
-in the section's header. How it went arrives as one toast at the end
-(`job-toasts.ts`), headed by `jobHeadline` in `job-report.ts` — "Push
-succeeded", "Push partially succeeded" (it stopped after changing something) or
-"Push failed": green and gone in a few seconds on success; yellow or red, and up
-until closed, otherwise. Those two carry **Details**, which opens a modal of
-`JobDetails` under the same icon and headline: the run's counts and, for one
-that stopped, the document it stopped in, with an icon to open it, and why.
+in the section's header — and the page is headed by a callout with a spinner
+(`LastRunCallout`): "Pushing to Practice Bot...", "Pulling from 2 documents..."
+(`runningHeadline` in `job-report.ts`). Its **Details** opens `JobDetails`, which
+lists each step with its state and follows the run as the reports arrive.
 
-The same headline, with how long ago, heads the page as a callout in the
-outcome's color (`LastRunCallout`) for as long as the status is kept, for
-whoever opens the panel after the run finished. It cannot be closed, and its
-**Details** opens the same `JobDetails`.
+How it went arrives as one toast at the end (`job-toasts.ts`), headed by
+`jobHeadline` — "Push succeeded", "Push partially succeeded" (a step failed
+after something changed), "Push failed", or "Update …" for an update-only run:
+green and gone in a few seconds on success; yellow or red, and up until closed,
+otherwise, with **Details**. There each failed step gives its reason and an
+**Open** button into the document.
+
+The callout then carries the same headline and how long ago, in the outcome's
+color with the standard `StatusIcon` — the run's own icon with the outcome's
+badged on — for as long as the status is kept. It cannot be closed, and its
+**Details** opens the same modal.
 
 ### Keeping a linked workspace current
 
@@ -256,11 +270,11 @@ deletes a transient webhook that goes quiet, so the entries expire as well.
 - Nothing about a workspace the caller cannot read reaches them: no name, and no
   thumbnail.
 - Permissions are never cached; names and change counts are.
-- A run cuts a version only of a workspace that has changed since its last
-  one.
+- A push or pull always cuts its versions; only an update-only run cuts none.
 - A run that finished, or stopped, says so: its status is stored whichever way
-  it ended.
-- A failure is a document's, never a tab's: any refusal stops the run.
+  it ended, step by step.
+- A failure is a document's, never a tab's, and fails only its own step: the
+  run goes on to everything that did not need it.
 - Only a transient Onshape failure is retried, and only our own wording of a
   failure reaches the person who ran it.
 
@@ -272,8 +286,8 @@ deletes a transient webhook that goes quiet, so the entries expire as well.
 | The caller cannot write to a child       | The push is refused before it starts         | The child's owner shares write access              |
 | Onshape rate-limits the run              | The step waits its `Retry-After` and resumes | None needed                                        |
 | Onshape errors or times out on a tab     | The step retries                             | None needed                                        |
-| Onshape refuses a document mid-run       | The run stops at once, reported as failed    | Details names the document and why; run it again   |
-| A step runs out of retries               | The run stops, reported as failed            | The report says what landed; run it again          |
+| Onshape refuses a document mid-run       | Its step fails at once; the run goes on      | Details names the step and why; run it again       |
+| A step runs out of retries               | It fails; the run goes on                    | Details names the step and why; run it again       |
 | The links form a cycle                   | A recursive push is refused                  | Remove a link                                      |
 | A webhook Onshape dropped                | A name or count is stale                     | The entry expires, and the next read watches again |
 | The socket drops mid-run                 | No result toast                              | The reconnect refetches the run; the callout shows |
@@ -296,17 +310,17 @@ deletes a transient webhook that goes quiet, so the entries expire as well.
   ctrl-click is the context menu) runs it under the defaults, and the menu says
   so beside the item it is a shortcut for. The menu holds the runs alone —
   anybody who did not want the defaults is one click from the form already.
-- **A version is reused when nothing changed.** Cutting one in a document with
-  nothing new adds an empty entry to its history. A pull reuses a parent's the
-  same way, which reads oddly for a "pull" that versions nothing, but the
-  alternative is the same empty entry in somebody else's document.
+- **Always a new version; updating is its own action.** A push or pull that
+  sometimes versions and sometimes does not reads oddly, most of all a pull that
+  versions nothing. Moving references without versioning is asked for by name
+  instead — **Update references** — and a push or pull does what it says.
 - **Unnamed versions are numbered per document.** A name is sent only when one
   was typed; the suggestion is this document's next number, which would be
   wrong for every other document a recursive push versions.
-- **Failures are per document.** Permissions are, and nothing observed fails
-  one tab and not the rest, so a refusal stops the run where it is rather than
-  being recorded against a tab and stepped over. The report then names one
-  document and one reason, in our words.
+- **Failures are per document, and runs push on past them.** Permissions are
+  per document, and nothing observed fails one tab and not the rest. A run
+  aimed at several documents finishes every one it can, and the report names
+  each step that failed and why, in our words.
 - **The result is stored, not read off the instance.** The instance's output is
   lost when the run throws, and a failed run is the one whose report matters.
 - **Thumbnails are proxied.** `GET /api/workspace-thumbnail` fetches the
@@ -319,8 +333,7 @@ deletes a transient webhook that goes quiet, so the entries expire as well.
 Nothing in this feature has run against real Onshape. `externalreferences` and
 `updatereferences` are hand-authored from the Flask app this was ported from —
 `externalreferences` is absent from Onshape's OpenAPI spec, and appears to be
-OAuth-only. That a version's `microversion` equals its workspace's when nothing
-has changed since is inferred from the spec's fields, not observed. Everything
+OAuth-only. Everything
 else was checked against the spec, and the counts and
 permissions came back as modelled, but a live push is what would prove it.
 

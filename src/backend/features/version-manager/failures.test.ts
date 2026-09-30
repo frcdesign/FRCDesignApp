@@ -7,9 +7,9 @@ import {
     describeRunFailure,
     describeStepFailure,
     isTransient,
-    onshapeStatus,
-    RunAction
+    onshapeStatus
 } from "./failures";
+import { VersionTaskAction } from "./contract";
 
 function apiError(status: number, body = ""): OnshapeApiError {
     return new OnshapeApiError(`Onshape API error ${status}: ${body}`, status);
@@ -52,27 +52,27 @@ describe("isTransient", () => {
 
 describe("describeStepFailure", () => {
     // Only the message survives Workflows rebuilding the step's error.
-    const reported = (error: unknown, action: RunAction) =>
+    const reported = (error: unknown, action: VersionTaskAction) =>
         describeRunFailure(new Error(describeStepFailure(error, action)));
 
     it("says what went wrong with the document, in our words", () => {
-        expect(reported(apiError(403), RunAction.REFERENCES)).toBe(
+        expect(reported(apiError(403), VersionTaskAction.REFERENCES)).toBe(
             "You don't have permission to edit this document."
         );
-        expect(reported(apiError(404), RunAction.VERSION)).toMatch(
+        expect(reported(apiError(404), VersionTaskAction.VERSION)).toMatch(
             /deleted or is no longer shared/
         );
-        expect(reported(apiError(401), RunAction.VERSION)).toMatch(
+        expect(reported(apiError(401), VersionTaskAction.VERSION)).toMatch(
             /sign-in expired/
         );
     });
 
     it("names the call that failed rather than passing Onshape's message on", () => {
         const refusal = apiError(400, JSON.stringify({ message: "Bad ref" }));
-        expect(reported(refusal, RunAction.REFERENCES)).toBe(
+        expect(reported(refusal, VersionTaskAction.REFERENCES)).toBe(
             "Couldn't update this document's references."
         );
-        expect(reported(refusal, RunAction.VERSION)).toBe(
+        expect(reported(refusal, VersionTaskAction.VERSION)).toBe(
             "Couldn't create a version of this document."
         );
     });

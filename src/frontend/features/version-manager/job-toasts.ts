@@ -20,7 +20,10 @@ import { useVersionJobQuery } from "./queries";
  */
 const JOB_TOAST_ID = "version-job";
 
-function showJobToast(status: VersionJobStatus): void {
+function showJobToast(
+    status: VersionJobStatus,
+    workspace: WorkspacePath
+): void {
     const outcome = jobOutcome(status);
     if (!outcome) {
         return;
@@ -34,7 +37,7 @@ function showJobToast(status: VersionJobStatus): void {
     // toast that left on its own took the what with it.
     const withDetails = renderNotification(message, {
         text: "Details",
-        onClick: () => openJobDetails(status)
+        onClick: () => openJobDetails(workspace)
     });
     if (outcome === JobOutcome.PARTIAL) {
         showWarningToast(withDetails, JOB_TOAST_ID, { autoClose: false });
@@ -61,9 +64,9 @@ export function useVersionJobToasts(
 
     useEffect(() => {
         const isRunning = data?.state === VersionJobState.RUNNING;
-        if (wasRunning.current && !isRunning && data) {
-            showJobToast(data);
+        if (wasRunning.current && !isRunning && data && workspace) {
+            showJobToast(data, workspace);
         }
         wasRunning.current = isRunning;
-    }, [data]);
+    }, [data, workspace]);
 }

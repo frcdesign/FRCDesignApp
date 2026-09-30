@@ -1,4 +1,4 @@
-import { Button, Text, TextInput, Textarea } from "@mantine/core";
+import { Button, TextInput, Textarea } from "@mantine/core";
 import { ArrowLineDownIcon } from "@phosphor-icons/react";
 import { useState, type ReactNode } from "react";
 import {
@@ -10,7 +10,7 @@ import {
 } from "@backend/features/version-manager/contract";
 import { AppModalBody, AppModalFooter } from "../../../components/app-modal";
 import { useAppModal } from "../../../components/open-app-modal";
-import { IconSize, StatusColor } from "../../../lib/style-constants";
+import { IconSize } from "../../../lib/style-constants";
 import { useNextVersionNameQuery, usePullReferencesMutation } from "../queries";
 import { showQuickActionTip } from "../version-manager-tips";
 
@@ -34,9 +34,6 @@ export function PullReferencesForm(props: PullReferencesFormProps): ReactNode {
     const suggested = useNextVersionNameQuery(source.workspace);
     const pull = usePullReferencesMutation(workspace);
 
-    // The parent has nothing since its last version, so the pull moves onto
-    // that one and cuts nothing to name. A hint only — the run checks too.
-    const isUnchanged = source.unversionedChanges === 0;
     // Nothing here was touched, so the form did nothing a menu item would not
     // have done — which is what the tip is for.
     const isEdited = typedName !== "" || description !== "";
@@ -44,8 +41,8 @@ export function PullReferencesForm(props: PullReferencesFormProps): ReactNode {
     const submit = () => {
         pull.mutate(
             {
-                name: isUnchanged ? undefined : typedName,
-                description: isUnchanged ? undefined : description.trim(),
+                name: typedName,
+                description: description.trim(),
                 scope: {
                     kind: PullScopeKind.ONE,
                     workspace: source.workspace
@@ -65,41 +62,31 @@ export function PullReferencesForm(props: PullReferencesFormProps): ReactNode {
     return (
         <>
             <AppModalBody>
-                {isUnchanged ? (
-                    <Text size="sm" c={StatusColor.DIMMED}>
-                        {source.documentName ?? "That document"} has no changes
-                        since its last version, so this document moves onto that
-                        version instead of a new one.
-                    </Text>
-                ) : (
-                    <>
-                        <TextInput
-                            label="Version name"
-                            placeholder={
-                                suggested.isPending
-                                    ? "Reading that document's versions..."
-                                    : suggested.data?.name
-                            }
-                            maxLength={MAX_VERSION_NAME_LENGTH}
-                            value={typedName}
-                            onChange={(event) =>
-                                setTypedName(event.currentTarget.value)
-                            }
-                            data-autofocus
-                        />
-                        <Textarea
-                            label="Description"
-                            placeholder="Optional"
-                            autosize
-                            minRows={2}
-                            maxRows={5}
-                            value={description}
-                            onChange={(event) =>
-                                setDescription(event.currentTarget.value)
-                            }
-                        />
-                    </>
-                )}
+                <TextInput
+                    label="Version name"
+                    placeholder={
+                        suggested.isPending
+                            ? "Reading that document's versions..."
+                            : suggested.data?.name
+                    }
+                    maxLength={MAX_VERSION_NAME_LENGTH}
+                    value={typedName}
+                    onChange={(event) =>
+                        setTypedName(event.currentTarget.value)
+                    }
+                    data-autofocus
+                />
+                <Textarea
+                    label="Description"
+                    placeholder="Optional"
+                    autosize
+                    minRows={2}
+                    maxRows={5}
+                    value={description}
+                    onChange={(event) =>
+                        setDescription(event.currentTarget.value)
+                    }
+                />
             </AppModalBody>
             <AppModalFooter>
                 <Button

@@ -1,11 +1,4 @@
-import {
-    Button,
-    Checkbox,
-    Group,
-    Text,
-    TextInput,
-    Textarea
-} from "@mantine/core";
+import { Button, Checkbox, Group, TextInput, Textarea } from "@mantine/core";
 import { ArrowLineUpIcon } from "@phosphor-icons/react";
 import { useState, type ReactNode } from "react";
 import {
@@ -19,12 +12,8 @@ import {
 import { AppModalBody, AppModalFooter } from "../../../components/app-modal";
 import { InfoTooltip } from "../../../components/info-tooltip";
 import { useAppModal } from "../../../components/open-app-modal";
-import { IconSize, StatusColor } from "../../../lib/style-constants";
-import {
-    useNextVersionNameQuery,
-    usePushVersionMutation,
-    useWorkspaceLinksQuery
-} from "../queries";
+import { IconSize } from "../../../lib/style-constants";
+import { useNextVersionNameQuery, usePushVersionMutation } from "../queries";
 import { showQuickActionTip } from "../version-manager-tips";
 
 export interface PushVersionFormProps {
@@ -48,15 +37,8 @@ export function PushVersionForm(props: PushVersionFormProps): ReactNode {
     const [description, setDescription] = useState("");
     const [recursive, setRecursive] = useState(false);
     const suggested = useNextVersionNameQuery(workspace);
-    const links = useWorkspaceLinksQuery(workspace);
     const push = usePushVersionMutation(workspace);
 
-    // Nothing here since the last version: the push reuses that one, and cuts
-    // nothing here to name. A hint only — the run checks for itself.
-    const isUnchanged = links.data?.unversionedChanges === 0;
-    // A recursive push still versions the documents below, which is where a
-    // name then goes.
-    const namesVersions = !isUnchanged || recursive;
     // Nothing here was touched, so the form did nothing a menu item would not
     // have done — which is what the tip is for.
     const isEdited = typedName !== "" || description !== "" || recursive;
@@ -76,8 +58,8 @@ export function PushVersionForm(props: PushVersionFormProps): ReactNode {
     const submit = () => {
         push.mutate(
             {
-                name: namesVersions ? typedName : undefined,
-                description: namesVersions ? description.trim() : undefined,
+                name: typedName,
+                description: description.trim(),
                 scope
             },
             {
@@ -94,42 +76,31 @@ export function PushVersionForm(props: PushVersionFormProps): ReactNode {
     return (
         <>
             <AppModalBody>
-                {isUnchanged && (
-                    <Text size="sm" c={StatusColor.DIMMED}>
-                        {recursive
-                            ? "Nothing has changed in this document since its last version, so the push starts from that version. The documents below are versioned as usual."
-                            : `Nothing has changed in this document since its last version, so the push moves ${target?.documentName ?? "its children"} onto that version instead of creating a new one.`}
-                    </Text>
-                )}
-                {namesVersions && (
-                    <>
-                        <TextInput
-                            label="Version name"
-                            placeholder={
-                                suggested.isPending
-                                    ? "Reading this document's versions..."
-                                    : suggested.data?.name
-                            }
-                            maxLength={MAX_VERSION_NAME_LENGTH}
-                            value={typedName}
-                            onChange={(event) =>
-                                setTypedName(event.currentTarget.value)
-                            }
-                            data-autofocus
-                        />
-                        <Textarea
-                            label="Description"
-                            placeholder="Optional"
-                            autosize
-                            minRows={2}
-                            maxRows={5}
-                            value={description}
-                            onChange={(event) =>
-                                setDescription(event.currentTarget.value)
-                            }
-                        />
-                    </>
-                )}
+                <TextInput
+                    label="Version name"
+                    placeholder={
+                        suggested.isPending
+                            ? "Reading this document's versions..."
+                            : suggested.data?.name
+                    }
+                    maxLength={MAX_VERSION_NAME_LENGTH}
+                    value={typedName}
+                    onChange={(event) =>
+                        setTypedName(event.currentTarget.value)
+                    }
+                    data-autofocus
+                />
+                <Textarea
+                    label="Description"
+                    placeholder="Optional"
+                    autosize
+                    minRows={2}
+                    maxRows={5}
+                    value={description}
+                    onChange={(event) =>
+                        setDescription(event.currentTarget.value)
+                    }
+                />
                 {/* Beside the checkbox rather than in its label, where a click
                     on the icon would tick the box. */}
                 <Group gap={6}>

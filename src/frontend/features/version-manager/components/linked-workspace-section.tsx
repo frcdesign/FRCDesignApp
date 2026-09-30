@@ -178,8 +178,13 @@ export interface LinkActions {
     /** Runs it under the defaults the form would have shown. */
     quickAll: (recursive: boolean) => void;
     quickOne: (linked: LinkedWorkspace, recursive: boolean) => void;
-    /** Parents only: every out-of-date reference, linked or not. */
-    updateAllReferences: () => void;
+    /** Moves one link's references onto versions that exist, cutting none. */
+    updateOne: (linked: LinkedWorkspace) => void;
+    /**
+     * The same for every child; for parents, every out-of-date reference,
+     * linked or not.
+     */
+    updateAll: () => void;
 }
 
 export function useLinkActions(
@@ -245,9 +250,33 @@ export function useLinkActions(
         openOne: (each) => open(each),
         quickAll: (recursive) => runQuick(undefined, recursive),
         quickOne: (each, recursive) => runQuick(each, recursive),
-        updateAllReferences: () => {
-            retireQuickActionTip();
+        updateOne: (each) => {
+            setStartedTarget(each.linkId);
+            if (isChild) {
+                push.mutate({
+                    scope: {
+                        kind: PushScopeKind.ONE,
+                        workspace: each.workspace,
+                        recursive: false
+                    },
+                    updateOnly: true
+                });
+                return;
+            }
+            pull.mutate({
+                scope: { kind: PullScopeKind.ONE, workspace: each.workspace },
+                updateOnly: true
+            });
+        },
+        updateAll: () => {
             setStartedTarget(ALL_TARGET);
+            if (isChild) {
+                push.mutate({
+                    scope: { kind: PushScopeKind.CHILDREN },
+                    updateOnly: true
+                });
+                return;
+            }
             pull.mutate({ scope: { kind: PullScopeKind.ALL } });
         }
     };
@@ -289,7 +318,7 @@ export function SectionActions(props: SectionActionsProps): ReactNode {
                     >
                         {copy.allAction}
                     </Menu.Item>
-                    {isChild ? (
+                    {isChild && (
                         <Menu.Item
                             leftSection={
                                 <TreeStructureIcon size={IconSize.MEDIUM} />
@@ -299,19 +328,18 @@ export function SectionActions(props: SectionActionsProps): ReactNode {
                         >
                             Quick recursive push
                         </Menu.Item>
-                    ) : (
-                        // Every out-of-date reference, linked or not, which is
-                        // the one thing the parent list cannot express.
-                        <Menu.Item
-                            leftSection={
-                                <ArrowsClockwiseIcon size={IconSize.MEDIUM} />
-                            }
-                            disabled={isRunning}
-                            onClick={actions.updateAllReferences}
-                        >
-                            Update all references
-                        </Menu.Item>
                     )}
+                    <Menu.Item
+                        leftSection={
+                            <ArrowsClockwiseIcon size={IconSize.MEDIUM} />
+                        }
+                        // For parents it reaches past the list, to every
+                        // out-of-date reference, so needs none linked.
+                        disabled={isChild ? disabled : isRunning}
+                        onClick={actions.updateAll}
+                    >
+                        Update all references
+                    </Menu.Item>
                 </MenuSection>
             </MenuButton>
         </>
@@ -323,6 +351,7 @@ interface ActionMenuSectionProps {
     disabled: boolean;
     onQuick: () => void;
     onQuickRecursive: () => void;
+    onUpdate: () => void;
 }
 
 /**
@@ -330,7 +359,7 @@ interface ActionMenuSectionProps {
  * which is where somebody who did not want the defaults already is.
  */
 function ActionMenuSection(props: ActionMenuSectionProps): ReactNode {
-    const { direction, disabled, onQuick, onQuickRecursive } = props;
+    const { direction, disabled, onQuick, onQuickRecursive, onUpdate } = props;
     const isChild = direction === LinkDirection.CHILD;
     const quickKey = useQuickKeyLabel();
 
@@ -365,6 +394,13 @@ function ActionMenuSection(props: ActionMenuSectionProps): ReactNode {
                     Quick recursive push
                 </Menu.Item>
             )}
+            <Menu.Item
+                leftSection={<ArrowsClockwiseIcon size={IconSize.MEDIUM} />}
+                disabled={disabled}
+                onClick={onUpdate}
+            >
+                Update references
+            </Menu.Item>
         </MenuSection>
     );
 }
@@ -457,6 +493,7 @@ function LinkedWorkspaceRow(props: LinkedWorkspaceRowProps): ReactNode {
                 disabled={disabled}
                 onQuick={() => actions.quickOne(linked, false)}
                 onQuickRecursive={() => actions.quickOne(linked, true)}
+                onUpdate={() => actions.updateOne(linked)}
             />
             <MenuSection label="Link">
                 {linked.isOpenable && (

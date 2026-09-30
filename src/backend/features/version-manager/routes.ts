@@ -30,10 +30,10 @@ import {
     toWorkspacePath,
     VersionJobKind,
     workspaceKey,
+    type VersionJobDocument,
     type WorkspaceLinksData,
     type WorkspacePath
 } from "./contract";
-import { getUnversionedChanges } from "./workspace-cache";
 import { descendantKeys, LinkCycleError, pushOrder } from "./graph";
 import { getJobStatus, startJob } from "./jobs";
 import {
@@ -48,6 +48,7 @@ import {
     toEdge,
     toLinkedWorkspace
 } from "./links";
+import { describeWorkspace } from "./workspace-cache";
 import type { PushStep } from "./workflow";
 
 export const versionManagerRoutes = getApp();
@@ -108,7 +109,9 @@ const pushBody = z.object({
     /** Absent for a quick push; the workflow names it as Onshape would. */
     name: z.string().min(1).max(MAX_VERSION_NAME_LENGTH).optional(),
     description: z.string().max(10_000).optional(),
-    scope: pushScope.default({ kind: PushScopeKind.CHILDREN })
+    scope: pushScope.default({ kind: PushScopeKind.CHILDREN }),
+    /** Moves the children onto this document's newest version, cutting none. */
+    updateOnly: z.boolean().default(false)
 });
 
 const pullBody = z.object({
@@ -116,7 +119,9 @@ const pullBody = z.object({
     /** Absent for a quick pull; the workflow names it as Onshape would. */
     name: z.string().min(1).max(MAX_VERSION_NAME_LENGTH).optional(),
     description: z.string().max(10_000).optional(),
-    scope: pullScope.default({ kind: PullScopeKind.PARENTS })
+    scope: pullScope.default({ kind: PullScopeKind.PARENTS }),
+    /** Moves onto the parents' newest versions, cutting none. */
+    updateOnly: z.boolean().default(false)
 });
 
 type WorkspaceInput = z.infer<typeof workspaceSchema>;
@@ -195,23 +200,15 @@ versionManagerRoutes.get(
                     )
                 )
             );
-        const [parents, children, unversionedChanges] = await Promise.all([
+        const [parents, children] = await Promise.all([
             describe(parentRows, true),
-            describe(childRows, false),
-            // Only where there is somewhere to push to, and only a hint for
-            // the form: the push decides for itself when it runs.
-            childRows.length > 0
-                ? getUnversionedChanges(c, client, workspace).catch(
-                      () => undefined
-                  )
-                : undefined
+            describe(childRows, false)
         ]);
 
         const out: WorkspaceLinksData = {
             parents,
             children,
-            documentName: document.name,
-            unversionedChanges
+            documentName: document.name
         };
         return c.json(out);
     }
@@ -382,7 +379,8 @@ versionManagerRoutes.post(
  * references of the children named by {@link PushScope} onto it. An absent
  * `name` is the ordinary case — the run then names each version as Onshape's
  * own dialog would. Answers the run's `jobId`, which `/api/version-job` reports
- * on; the work itself happens in {@link VersionManagerWorkflow}.
+ * on; the work itself happens in {@link VersionManagerWorkflow}. `updateOnly`
+ * cuts nothing, moving the children onto this document's newest version.
  *
  * Requires write and link on the caller's workspace, write on every workspace
  * the run would touch, and link on each one it would version. Checked across
@@ -395,10 +393,16 @@ versionManagerRoutes.post(
     validate("json", pushBody),
     async (c) => {
         const body = c.req.valid("json");
-        const { name, description = "", scope } = body;
+        const { name, description = "", scope, updateOnly } = body;
         const workspace = toWorkspace(body.workspace);
         const client = await c.var.getOnshapeApi();
 
+        if (updateOnly && isRecursive(scope)) {
+            throw handledError(
+                "A recursive push has to version the documents it passes through.",
+                HttpStatus.BAD_REQUEST
+            );
+        }
         const order = await resolvePushOrder(c, workspace, scope);
         // Only a walk that carries on versions what it passes through; it is
         // what the workspaces past this one have to reference.
@@ -410,13 +414,15 @@ versionManagerRoutes.post(
         // Checked across the whole run before it starts: a push that cuts a
         // version and then finds it cannot finish has already changed the
         // document it was called on.
-        await requirePermissions(
-            client,
-            workspace,
-            "create a version in this document",
-            OnshapePermission.WRITE,
-            OnshapePermission.LINK
-        );
+        if (!updateOnly) {
+            await requirePermissions(
+                client,
+                workspace,
+                "create a version in this document",
+                OnshapePermission.WRITE,
+                OnshapePermission.LINK
+            );
+        }
         for (const step of steps) {
             await requirePermissions(
                 client,
@@ -429,6 +435,14 @@ versionManagerRoutes.post(
             );
         }
 
+        const documentNames = await nameDocuments(c, client, [
+            workspace,
+            ...order
+        ]);
+        const targets = toDocuments(
+            await resolvePushTargets(c, workspace, scope, order),
+            documentNames
+        );
         const instance = await c.env.VERSION_MANAGER_WORKFLOW.create({
             params: {
                 kind: "push",
@@ -436,16 +450,79 @@ versionManagerRoutes.post(
                 userId: await c.var.getUserId(),
                 workspace,
                 scope: scope.kind,
+                updateOnly,
+                targets,
+                documentNames,
                 name,
                 description,
                 steps
             }
         });
-        await startJob(c.env, workspace, instance.id, VersionJobKind.PUSH);
+        const status = await startJob(c.env, workspace, instance.id, {
+            kind: VersionJobKind.PUSH,
+            updateOnly,
+            targets
+        });
 
-        return c.json({ jobId: instance.id });
+        return c.json(status);
     }
 );
+
+/**
+ * Every workspace's document name, by `workspaceKey`, for the run's status to
+ * show. From the cache the rows are named from; a name Onshape will not give is
+ * left out.
+ */
+async function nameDocuments(
+    c: AppContext,
+    client: OnshapeApi,
+    workspaces: WorkspacePath[]
+): Promise<Record<string, string>> {
+    const names = await Promise.all(
+        workspaces.map((each) =>
+            describeWorkspace(c, client, each)
+                .then((description) => description.documentName)
+                .catch(() => undefined)
+        )
+    );
+    return Object.fromEntries(
+        workspaces.flatMap((each, index) => {
+            const name = names[index];
+            return name ? [[workspaceKey(each), name]] : [];
+        })
+    );
+}
+
+function toDocuments(
+    workspaces: WorkspacePath[],
+    documentNames: Record<string, string>
+): VersionJobDocument[] {
+    return workspaces.map((each) => ({
+        workspace: each,
+        documentName: documentNames[workspaceKey(each)]
+    }));
+}
+
+/**
+ * What the push was aimed at: the one child named, or every child this
+ * workspace has — not the documents a recursive push reaches past them.
+ */
+async function resolvePushTargets(
+    c: AppContext,
+    workspace: WorkspacePath,
+    scope: PushScopeInput,
+    order: WorkspacePath[]
+): Promise<WorkspacePath[]> {
+    if (scope.kind === PushScopeKind.ONE) {
+        return [toWorkspace(scope.workspace)];
+    }
+    const children = new Set(
+        (await getChildLinks(getDb(c.env.DB), workspace)).map((row) =>
+            workspaceKey(toEdge(row).child)
+        )
+    );
+    return order.filter((each) => children.has(workspaceKey(each)));
+}
 
 /** Whether the push carries on past the workspaces it first reaches. */
 function isRecursive(scope: PushScopeInput): boolean {
@@ -521,9 +598,9 @@ async function resolvePushOrder(
  * reference points at a version, so a parent's unversioned edits are only
  * pullable once there is one holding them. Answers the run's `jobId`.
  *
- * The exception is every-reference scope, which versions nothing: those
- * documents are not linked here and are nobody's to cut a version in, so it
- * moves onto whatever versions they already have.
+ * `updateOnly` versions nothing either, moving onto whatever versions the
+ * parents already have; so does every-reference scope, whose documents are not
+ * linked here and are nobody's to cut a version in.
  *
  * Requires write on the caller's workspace, and write and link on each parent
  * it would version. Checked before the run starts, as a push's are.
@@ -534,7 +611,7 @@ versionManagerRoutes.post(
     validate("json", pullBody),
     async (c) => {
         const body = c.req.valid("json");
-        const { name, description = "", scope } = body;
+        const { name, description = "", scope, updateOnly } = body;
         const workspace = toWorkspace(body.workspace);
 
         const client = await c.var.getOnshapeApi();
@@ -546,7 +623,8 @@ versionManagerRoutes.post(
         );
 
         const sources = await resolvePullSources(c, workspace, scope);
-        for (const source of sources ?? []) {
+        // An update-only pull versions none of them, so asks nothing of them.
+        for (const source of updateOnly ? [] : (sources ?? [])) {
             await requirePermissions(
                 client,
                 source,
@@ -557,6 +635,11 @@ versionManagerRoutes.post(
             );
         }
 
+        const documentNames = await nameDocuments(c, client, [
+            workspace,
+            ...(sources ?? [])
+        ]);
+        const targets = toDocuments(sources ?? [], documentNames);
         const instance = await c.env.VERSION_MANAGER_WORKFLOW.create({
             params: {
                 kind: "pull",
@@ -564,14 +647,21 @@ versionManagerRoutes.post(
                 userId: await c.var.getUserId(),
                 workspace,
                 scope: scope.kind,
+                updateOnly,
+                targets,
+                documentNames,
                 sources,
                 name,
                 description
             }
         });
-        await startJob(c.env, workspace, instance.id, VersionJobKind.PULL);
+        const status = await startJob(c.env, workspace, instance.id, {
+            kind: VersionJobKind.PULL,
+            updateOnly,
+            targets
+        });
 
-        return c.json({ jobId: instance.id });
+        return c.json(status);
     }
 );
 
