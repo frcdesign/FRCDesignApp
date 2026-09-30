@@ -68,7 +68,6 @@ export function useAddLinkMutation(workspace: WorkspacePath) {
             }),
         onSuccess: async () => {
             showSuccessToast("Linked the workspace.");
-            markHintSeen(Hint.LINKED_WORKSPACE);
             await refreshLinks(workspace);
         },
         onError: getAppErrorHandler("Unexpectedly failed to add the link.")
@@ -181,6 +180,7 @@ export function usePullReferencesMutation(workspace: WorkspacePath) {
 
 /** Shows the run going straight away, before the socket says so. */
 function adoptJob(workspace: WorkspacePath, started: VersionJobStatus): void {
+    markHintSeen(Hint.RAN_VERSION_JOB);
     // The socket can have brought this run's first progress already.
     queryClient.setQueryData<VersionJobStatus>(
         versionJobQueryKey(workspace),

@@ -12,13 +12,16 @@ const targetPath = {
     elementId: "target-element"
 };
 
-async function seenHints(app: ReturnType<typeof createTestApp>) {
+async function seenHints(
+    app: ReturnType<typeof createTestApp>
+): Promise<Hint[]> {
     const res = await app.request(
         "/api/access-data/library/frc-design-lib",
         jsonRequest("GET"),
         env
     );
-    return ((await res.json()) as AccessData).seenHints;
+    const data: AccessData = await res.json();
+    return data.seenHints;
 }
 
 beforeEach(async () => {
@@ -60,7 +63,7 @@ describe("hints", () => {
     it("are none while signed out", async () => {
         await env.KV.put(
             "seen-hints:test-user",
-            JSON.stringify([Hint.LINKED_WORKSPACE])
+            JSON.stringify([Hint.RAN_VERSION_JOB])
         );
         expect(await seenHints(createTestApp({ signedIn: false }))).toEqual([]);
     });

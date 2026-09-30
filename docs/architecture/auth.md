@@ -38,9 +38,10 @@ team, plus one owner set by configuration.
   admin team member (admins and editors), by user id, plus one reserved id for
   the dev override's user.
   chose and its synced members (`isTeamAdmin` per member).
-- **KV** `seen-hints:` — by user id, the features (`Hint`) whose blue dot the
-  user no longer needs, recorded by the request that used the feature
-  (`markHintSeen`). Kept until deleted; losing it only shows a dot again.
+- **KV** `seen-hints:` — by user id, the features (`Hint`) whose blue dot and
+  **New** badge the user no longer needs, recorded by the request that used the
+  feature (`markHintSeen`): starting a push or pull, adding an insert location.
+  Kept until deleted; losing it only shows a dot again.
 - **localStorage** (`ui-state`): `accessLevel`, the level the app is viewed as.
 
 ## Flows

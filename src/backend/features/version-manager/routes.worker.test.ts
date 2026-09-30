@@ -11,6 +11,8 @@ import {
     VersionJobState,
     type WorkspacePath
 } from "./contract";
+import { Hint } from "../hints/contract";
+import { getSeenHints } from "../hints/store";
 import * as Jobs from "./jobs";
 import { addLink } from "./links";
 import { workspaceLinks } from "./schema";
@@ -113,5 +115,28 @@ describe("version manager routes", () => {
             scope: { kind: PullScopeKind.ONE, workspace: toInput(ROOT) }
         });
         expect(res.status).toBe(403);
+    });
+
+    it("records a started run, which stops the page being pointed out", async () => {
+        grant({ root: ALL, child: ALL });
+        await env.KV.delete("seen-hints:test-user");
+        vi.spyOn(env.VERSION_MANAGER_WORKFLOW, "create").mockResolvedValue({
+            id: "started"
+        } as WorkflowInstance);
+        const res = await app.request(
+            "/api/push-version",
+            {
+                ...jsonRequest("POST", { workspace: toInput(ROOT) }),
+                headers: {
+                    "Content-Type": "application/json",
+                    Cookie: "frc-design-app-session=session"
+                }
+            },
+            env
+        );
+        expect(res.status).toBe(200);
+        expect(await getSeenHints(env.KV, "test-user")).toEqual([
+            Hint.RAN_VERSION_JOB
+        ]);
     });
 });

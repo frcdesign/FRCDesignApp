@@ -1,6 +1,5 @@
 import {
     ActionIcon,
-    Badge,
     Button,
     Divider,
     Group,
@@ -40,7 +39,7 @@ import { useDebouncedCallback } from "@mantine/hooks";
 
 import { AppBrand } from "./app-brand";
 import { AppIcon } from "./app-icon";
-import { NewIndicator } from "./new-indicator";
+import { NewBadge, NewIndicator } from "./new-feature";
 import { LibraryStatusBadge } from "./library-status-badge";
 import { MenuSection } from "./app-menu";
 import { openSettingsMenu } from "../features/settings/open-settings-menu";
@@ -213,9 +212,7 @@ function useAppPages(): AppPage[] {
             group: UTILITIES_GROUP,
             icon: GitBranchIcon,
             color: AppColor.VERSION_MANAGER,
-            badge: isNew ? (
-                <Badge color={AppColor.VERSION_MANAGER}>New</Badge>
-            ) : undefined,
+            badge: isNew ? <NewBadge /> : undefined,
             isNew
         }
     ];

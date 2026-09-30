@@ -64,21 +64,18 @@ document and workspace names, for a week.
 **KV** `linked-workspace-changes:{documentId}|{instanceId}` — its
 `changesSinceVersionSave`, for an hour.
 
-**Browser** `isParentsOpen`, `isChildrenOpen`, `quickActionTipCount`,
-and `hasOpenedVersionManager` in `uiState`.
+**Browser** `isParentsOpen`, `isChildrenOpen` and `quickActionTipCount` in
+`uiState`.
 
 ## Flows
 
 ### Finding the page
 
 The page picker marks the version manager with a dot and a **New** badge for
-somebody who has a workspace to act on, has never linked a workspace, has not
-opened the page in this browser (`hasOpenedVersionManager`), and finds nothing
-linked here. Linking one is recorded against the user in KV as a side effect
-of `POST /api/workspace-links` (`Hint.LINKED_WORKSPACE`, see
+somebody who has a workspace to act on and has never started a push or pull
+(`useIsVersionManagerNew`). Starting one is recorded against the user in KV as
+a side effect of the route that starts it (`Hint.RAN_VERSION_JOB`, see
 [auth.md](./auth.md)), so the dot stays gone on every computer they use.
-`useIsVersionManagerNew` only asks for the links while the answer could still
-be yes, so it costs one Onshape call per person rather than one per page.
 
 ### Showing the page
 

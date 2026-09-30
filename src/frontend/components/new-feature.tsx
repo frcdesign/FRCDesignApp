@@ -1,4 +1,4 @@
-import { Indicator, type IndicatorProps } from "@mantine/core";
+import { Badge, Indicator, type IndicatorProps } from "@mantine/core";
 import { ReactNode } from "react";
 import { StatusColor } from "../lib/style-constants";
 
@@ -22,4 +22,9 @@ export function NewIndicator(props: NewIndicatorProps): ReactNode {
             {...others}
         />
     );
+}
+
+/** The badge beside a new feature's name, in the dot's color. */
+export function NewBadge(): ReactNode {
+    return <Badge color={StatusColor.INFO}>New</Badge>;
 }

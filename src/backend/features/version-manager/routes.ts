@@ -261,7 +261,6 @@ versionManagerRoutes.post(
                 ? [linked, workspace]
                 : [workspace, linked];
         await addLink(getDb(c.env.DB), parent, child);
-        await markHintSeen(c, Hint.LINKED_WORKSPACE);
 
         return c.json({ success: true });
     }
@@ -465,6 +464,7 @@ versionManagerRoutes.post(
             targets
         });
 
+        await markHintSeen(c, Hint.RAN_VERSION_JOB);
         return c.json(status);
     }
 );
@@ -669,6 +669,7 @@ versionManagerRoutes.post(
             targets
         });
 
+        await markHintSeen(c, Hint.RAN_VERSION_JOB);
         return c.json(status);
     }
 );
