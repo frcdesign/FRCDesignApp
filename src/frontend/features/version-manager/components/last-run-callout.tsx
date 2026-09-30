@@ -6,12 +6,11 @@ import {
     type WorkspacePath
 } from "@backend/features/version-manager/contract";
 import { Callout, CalloutButton } from "../../../components/callout";
-import { StatusIcon } from "../../../components/status-icon";
+import { AppIcon } from "../../../components/app-icon";
 import { formatTimeAgo } from "../../../lib/format-time";
 import { IconSize, StatusColor } from "../../../lib/style-constants";
 import {
     jobHeadline,
-    jobKindIcon,
     jobOutcome,
     OUTCOME_STYLE,
     runningHeadline
@@ -68,13 +67,7 @@ export function LastRunCallout(props: LastRunCalloutProps): ReactNode {
         <Callout
             text={`${jobHeadline(status, outcome)}${when}.`}
             color={color}
-            icon={
-                <StatusIcon
-                    icon={jobKindIcon(status)}
-                    status={icon}
-                    color={color}
-                />
-            }
+            icon={<AppIcon icon={icon} size={IconSize.MEDIUM} />}
             action={details(color)}
         />
     );

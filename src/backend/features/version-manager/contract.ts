@@ -149,6 +149,8 @@ export interface VersionTask extends VersionJobDocument {
     state: VersionTaskState;
     /** Why it failed, written for the user. */
     reason?: string;
+    /** Tabs a finished reference update repointed. */
+    updatedElements?: number;
 }
 
 /** What a push or pull did — all of it, or as far as it got before it stopped. */

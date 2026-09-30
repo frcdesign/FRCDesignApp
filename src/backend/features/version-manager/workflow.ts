@@ -301,6 +301,7 @@ export class VersionManagerWorkflow extends WorkflowEntrypoint<
         if (!outcome) {
             return false;
         }
+        ctx.tasks[index].updatedElements = outcome.updatedElements;
         ctx.result.updatedElements += outcome.updatedElements;
         if (outcome.updatedElements > 0) {
             ctx.result.updatedWorkspaces++;

@@ -1,6 +1,5 @@
 import {
     Badge,
-    Button,
     Center,
     EmptyState,
     Group,
@@ -9,7 +8,6 @@ import {
     Text
 } from "@mantine/core";
 import {
-    ArrowSquareOutIcon,
     CheckCircleIcon,
     CircleIcon,
     MinusCircleIcon,
@@ -26,19 +24,23 @@ import {
 } from "@backend/features/version-manager/contract";
 import { AppIcon } from "../../../components/app-icon";
 import { AppTitle } from "../../../components/app-title";
+import { ExternalLink } from "../../../components/external-link";
 import { useOnshapeOrigin } from "../../../lib/onshape-params";
-import { IconSize, StatusColor } from "../../../lib/style-constants";
-import { makeUrl, openUrlInNewTab } from "../../../lib/url";
-import styles from "../../../lib/styles.module.css";
+import {
+    FontWeight,
+    IconSize,
+    StatusColor
+} from "../../../lib/style-constants";
+import { makeUrl } from "../../../lib/url";
 import {
     jobHeadline,
     jobOutcome,
     jobStats,
     OUTCOME_STYLE,
     runningHeadline,
-    taskLabel
+    TASK_LABEL
 } from "../job-report";
-import { useVersionJobQuery } from "../queries";
+import { plural, useVersionJobQuery } from "../queries";
 
 interface JobDetailsProps {
     workspace: WorkspacePath;
@@ -104,15 +106,63 @@ export function JobDetails(props: JobDetailsProps): ReactNode {
                     ))}
                 </Group>
             )}
-            <Stack gap="sm">
-                {/* A run takes each action on a document once. */}
-                {(status.tasks ?? []).map((task) => (
-                    <TaskRow
-                        key={`${task.action}:${workspaceKey(task.workspace)}`}
-                        task={task}
-                    />
-                ))}
-            </Stack>
+            {groupByDocument(status.tasks ?? []).map((group) => (
+                <DocumentSteps key={group.key} group={group} />
+            ))}
+        </Stack>
+    );
+}
+
+interface DocumentGroup {
+    key: string;
+    workspace: WorkspacePath;
+    documentName?: string;
+    tasks: VersionTask[];
+}
+
+/** By document, in the order the run first reaches each. */
+function groupByDocument(tasks: VersionTask[]): DocumentGroup[] {
+    const groups = new Map<string, DocumentGroup>();
+    for (const task of tasks) {
+        const key = workspaceKey(task.workspace);
+        const group = groups.get(key) ?? {
+            key,
+            workspace: task.workspace,
+            documentName: task.documentName,
+            tasks: []
+        };
+        group.tasks.push(task);
+        groups.set(key, group);
+    }
+    return [...groups.values()];
+}
+
+interface DocumentStepsProps {
+    group: DocumentGroup;
+}
+
+/** One document, named as a link into it, and what the run does there. */
+function DocumentSteps(props: DocumentStepsProps): ReactNode {
+    const { group } = props;
+    const origin = useOnshapeOrigin();
+
+    return (
+        <Stack gap={6}>
+            <Group miw={0}>
+                <ExternalLink
+                    href={makeUrl(origin, group.workspace)}
+                    fw={FontWeight.SEMI_BOLD}
+                    maw="100%"
+                    iconSize={IconSize.SMALL}
+                >
+                    <Text component="span" inherit truncate miw={0}>
+                        {group.documentName ?? "A linked document"}
+                    </Text>
+                </ExternalLink>
+            </Group>
+            {group.tasks.map((task) => (
+                <TaskRow key={task.action} task={task} />
+            ))}
         </Stack>
     );
 }
@@ -136,7 +186,6 @@ interface TaskRowProps {
 
 function TaskRow(props: TaskRowProps): ReactNode {
     const { task } = props;
-    const origin = useOnshapeOrigin();
     const isQuiet =
         task.state === VersionTaskState.PENDING ||
         task.state === VersionTaskState.SKIPPED;
@@ -155,9 +204,17 @@ function TaskRow(props: TaskRowProps): ReactNode {
                 )}
             </Center>
             <Stack gap={0} miw={0} flex={1}>
-                <Text size="sm" c={isQuiet ? StatusColor.DIMMED : undefined}>
-                    {taskLabel(task)}
-                </Text>
+                <Group gap="xs">
+                    <Text
+                        size="sm"
+                        c={isQuiet ? StatusColor.DIMMED : undefined}
+                    >
+                        {TASK_LABEL[task.action]}
+                    </Text>
+                    {task.updatedElements !== undefined && (
+                        <UpdatedBadge count={task.updatedElements} />
+                    )}
+                </Group>
                 {task.state === VersionTaskState.FAILED && task.reason && (
                     <Text size="xs" c={StatusColor.DIMMED}>
                         {task.reason}
@@ -165,23 +222,26 @@ function TaskRow(props: TaskRowProps): ReactNode {
                 )}
                 {task.state === VersionTaskState.SKIPPED && (
                     <Text size="xs" c={StatusColor.DIMMED}>
-                        Skipped, since a step it needed failed.
+                        Skipped.
                     </Text>
                 )}
             </Stack>
-            {task.state === VersionTaskState.FAILED && (
-                <Button
-                    variant="outline"
-                    size="compact-sm"
-                    className={styles.noShrink}
-                    rightSection={<ArrowSquareOutIcon size={IconSize.SMALL} />}
-                    onClick={() =>
-                        openUrlInNewTab(makeUrl(origin, task.workspace))
-                    }
-                >
-                    Open
-                </Button>
-            )}
         </Group>
+    );
+}
+
+interface UpdatedBadgeProps {
+    count: number;
+}
+
+function UpdatedBadge(props: UpdatedBadgeProps): ReactNode {
+    const { count } = props;
+    if (count === 0) {
+        return <Badge color={StatusColor.NEUTRAL}>Up to date</Badge>;
+    }
+    return (
+        <Badge color={StatusColor.SUCCESS}>
+            {plural(count, "tab")} updated
+        </Badge>
     );
 }

@@ -9,9 +9,6 @@ import {
     type VersionTask
 } from "@backend/features/version-manager/contract";
 import {
-    ArrowLineDownIcon,
-    ArrowLineUpIcon,
-    ArrowsClockwiseIcon,
     CheckCircleIcon,
     WarningIcon,
     XCircleIcon,
@@ -69,16 +66,6 @@ export function jobOutcome(
     return hasChanged(status.result) ? JobOutcome.PARTIAL : JobOutcome.FAILED;
 }
 
-/** The icon for what the run does: a push, a pull, or moving references. */
-export function jobKindIcon(status: VersionJobStatus): Icon {
-    if (status.updateOnly) {
-        return ArrowsClockwiseIcon;
-    }
-    return status.kind === VersionJobKind.PULL
-        ? ArrowLineDownIcon
-        : ArrowLineUpIcon;
-}
-
 function jobKindName(status: VersionJobStatus): string {
     if (status.updateOnly) {
         return "Update";
@@ -131,13 +118,10 @@ export function runningHeadline(status: VersionJobStatus): string {
         : `Pushing to ${targets}`;
 }
 
-/** "Create a version of Practice Bot" and the like. */
-export function taskLabel(task: VersionTask): string {
-    const document = task.documentName ?? "a linked document";
-    return task.action === VersionTaskAction.VERSION
-        ? `Create a version of ${document}`
-        : `Update references in ${document}`;
-}
+export const TASK_LABEL = {
+    [VersionTaskAction.VERSION]: "Create version",
+    [VersionTaskAction.REFERENCES]: "Update references"
+} as const;
 
 export interface JobStat {
     label: string;

@@ -235,18 +235,18 @@ While a run is going, a spinner sits where it was started — beside the row, or
 in the section's header — and the page is headed by a callout with a spinner
 (`LastRunCallout`): "Pushing to Practice Bot...", "Pulling from 2 documents..."
 (`runningHeadline` in `job-report.ts`). Its **Details** opens `JobDetails`, which
-lists each step with its state and follows the run as the reports arrive.
+lists the steps under each document — its name a link into it — with their
+states, and follows the run as the reports arrive. A finished reference update
+carries how many tabs it moved.
 
 How it went arrives as one toast at the end (`job-toasts.ts`), headed by
 `jobHeadline` — "Push succeeded", "Push partially succeeded" (a step failed
 after something changed), "Push failed", or "Update …" for an update-only run:
 green and gone in a few seconds on success; yellow or red, and up until closed,
-otherwise, with **Details**. There each failed step gives its reason and an
-**Open** button into the document.
+otherwise, with **Details**, where each failed step gives its reason.
 
 The callout then carries the same headline and how long ago, in the outcome's
-color with the standard `StatusIcon` — the run's own icon with the outcome's
-badged on — for as long as the status is kept. It cannot be closed, and its
+color and with its icon, for as long as the status is kept. It cannot be closed, and its
 **Details** opens the same modal.
 
 ### Keeping a linked workspace current
