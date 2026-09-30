@@ -1,4 +1,3 @@
-import { Loader } from "@mantine/core";
 import { ListBulletsIcon } from "@phosphor-icons/react";
 import { type ReactNode } from "react";
 import {
@@ -6,7 +5,6 @@ import {
     type WorkspacePath
 } from "@backend/features/version-manager/contract";
 import { Callout, CalloutButton } from "../../../components/callout";
-import { AppIcon } from "../../../components/app-icon";
 import { formatTimeAgo } from "../../../lib/format-time";
 import { IconSize, StatusColor } from "../../../lib/style-constants";
 import {
@@ -49,7 +47,7 @@ export function LastRunCallout(props: LastRunCalloutProps): ReactNode {
         return (
             <Callout
                 text={`${runningHeadline(status)}...`}
-                icon={<Loader size={IconSize.MEDIUM} />}
+                loading
                 action={details(StatusColor.INFO)}
             />
         );
@@ -67,7 +65,7 @@ export function LastRunCallout(props: LastRunCalloutProps): ReactNode {
         <Callout
             text={`${jobHeadline(status, outcome)}${when}.`}
             color={color}
-            icon={<AppIcon icon={icon} size={IconSize.MEDIUM} />}
+            icon={icon}
             action={details(color)}
         />
     );
