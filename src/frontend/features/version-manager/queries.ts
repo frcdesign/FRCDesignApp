@@ -19,6 +19,8 @@ import {
     workspaceLinksQueryKey
 } from "../../lib/query-keys";
 import { useIsSignedIn } from "../auth/access-level";
+import { Hint } from "@backend/features/hints/contract";
+import { markHintSeen } from "../hints/queries";
 
 function toWorkspaceQuery(workspace: WorkspacePath) {
     return {
@@ -66,6 +68,7 @@ export function useAddLinkMutation(workspace: WorkspacePath) {
             }),
         onSuccess: async () => {
             showSuccessToast("Linked the workspace.");
+            markHintSeen(Hint.LINKED_WORKSPACE);
             await refreshLinks(workspace);
         },
         onError: getAppErrorHandler("Unexpectedly failed to add the link.")

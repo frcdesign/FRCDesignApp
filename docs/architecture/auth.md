@@ -20,6 +20,7 @@ team, plus one owner set by configuration.
 | `src/backend/features/auth/background-sessions.ts`          | Sessions a load with no requester can borrow                            |
 | `src/backend/features/auth/company.ts`, `cookie-options.ts` | Enterprise company matching; cross-site cookie settings                 |
 | `src/backend/features/auth/routes.ts`                       | `/auth/sign-in`, `/auth/callback`, `/auth/sign-out`, `/api/access-data` |
+| `src/backend/features/hints/store.ts`                       | Which features' dots a user has seen, carried by `/api/access-data`     |
 | `src/backend/features/admin-team/`                          | The owner sets a library's admin team; members are synced from Onshape  |
 | `src/backend/features/entry/routes.ts`                      | `/init`, where Onshape launches the app                                 |
 | `src/backend/lib/context.ts`                                | `AppBindings` (every binding and variable) and `bindAuth`               |
@@ -37,6 +38,9 @@ team, plus one owner set by configuration.
   admin team member (admins and editors), by user id, plus one reserved id for
   the dev override's user.
   chose and its synced members (`isTeamAdmin` per member).
+- **KV** `seen-hints:` — by user id, the features (`Hint`) whose blue dot the
+  user no longer needs, recorded by the request that used the feature
+  (`markHintSeen`). Kept until deleted; losing it only shows a dot again.
 - **localStorage** (`ui-state`): `accessLevel`, the level the app is viewed as.
 
 ## Flows

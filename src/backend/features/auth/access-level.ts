@@ -1,4 +1,6 @@
 /** The permission tiers the app grants, and the predicates routes gate on. */
+import type { Hint } from "../hints/contract";
+
 export enum AccessLevel {
     /** `OWNER_USER_ID`: an admin whose session the server borrows for its own work. */
     OWNER = "owner",
@@ -30,4 +32,6 @@ export function isWithinAccessLevel(
 export interface AccessData {
     maxAccessLevel: AccessLevel;
     signedIn: boolean;
+    /** Empty while signed out, there being nobody to remember them for. */
+    seenHints: Hint[];
 }

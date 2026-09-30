@@ -8,7 +8,8 @@ import { StatusIcon } from "../../../components/status-icon";
 import { Status } from "../../../lib/status";
 import { AppHoverCard } from "../../../components/app-hover-card";
 import { NewIndicator } from "../../../components/new-indicator";
-import { useUiState } from "../../../lib/ui-state";
+import { Hint } from "@backend/features/hints/contract";
+import { useHasSeenHint } from "../../hints/queries";
 import {
     useAddInsertLocationMutation,
     useInsertLocationQuery,
@@ -43,7 +44,7 @@ function InsertLocationHoverCard(
     props: InsertLocationHoverCardProps
 ): ReactNode {
     const { target, instanceId } = props;
-    const hasAdded = useUiState((state) => state.hasAddedInsertLocation);
+    const hasAdded = useHasSeenHint(Hint.ADDED_INSERT_LOCATION);
     const found = instanceId !== undefined;
 
     const status = found ? Status.SUCCESS : Status.WARNING;

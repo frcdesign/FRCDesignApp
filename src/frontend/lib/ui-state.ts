@@ -24,8 +24,6 @@ interface UiState {
     groupId?: string;
     /** Whether the version manager has ever been opened in this browser. */
     hasOpenedVersionManager: boolean;
-    /** Whether an insert location has ever been added from this browser. */
-    hasAddedInsertLocation: boolean;
     isFavoritesOpen: boolean;
     isLibraryOpen: boolean;
     /** The version manager's two sections, which open like the home page's. */
@@ -52,7 +50,6 @@ export const useUiState = create<UiState>()(
         (): UiState => ({
             theme: Theme.DARK,
             hasOpenedVersionManager: false,
-            hasAddedInsertLocation: false,
             isFavoritesOpen: false,
             isLibraryOpen: true,
             isParentsOpen: true,

@@ -23,7 +23,8 @@ describe("GET /access-data", () => {
         expect(res.status).toBe(200);
         expect(await res.json()).toEqual({
             maxAccessLevel: AccessLevel.EDITOR,
-            signedIn: true
+            signedIn: true,
+            seenHints: []
         });
     });
 
@@ -42,7 +43,8 @@ describe("GET /access-data", () => {
         expect(res.status).toBe(200);
         expect(await res.json()).toEqual({
             maxAccessLevel: AccessLevel.USER,
-            signedIn: false
+            signedIn: false,
+            seenHints: []
         });
     });
 });

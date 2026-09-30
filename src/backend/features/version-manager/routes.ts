@@ -57,6 +57,8 @@ import {
 } from "./links";
 import { onshapeStatus } from "./failures";
 import { describeWorkspace } from "./workspace-cache";
+import { markHintSeen } from "../hints/store";
+import { Hint } from "../hints/contract";
 
 export const versionManagerRoutes = getApp();
 
@@ -259,6 +261,7 @@ versionManagerRoutes.post(
                 ? [linked, workspace]
                 : [workspace, linked];
         await addLink(getDb(c.env.DB), parent, child);
+        await markHintSeen(c, Hint.LINKED_WORKSPACE);
 
         return c.json({ success: true });
     }

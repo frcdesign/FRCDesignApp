@@ -3,6 +3,7 @@ import { cacheMiddleware } from "../../lib/cache";
 import { getLibraryParam, libraryRoute } from "../../lib/route-params";
 import { type AccessData } from "./access-level";
 import { isSignedIn } from "./request-auth";
+import { getSeenHints } from "../hints/store";
 import { doCallback, doSignIn } from "./onshape-oauth";
 import { endSession } from "./session";
 
@@ -17,9 +18,14 @@ accessRoutes.get(
     "/access-data" + libraryRoute(),
     cacheMiddleware(),
     async (c) => {
+        const signedIn = await isSignedIn(c);
         return c.json({
             maxAccessLevel: await c.var.getAccessLevel(getLibraryParam(c)),
-            signedIn: await isSignedIn(c)
+            signedIn,
+            // Carried here so the app learns them without a request of their own.
+            seenHints: signedIn
+                ? await getSeenHints(c.env.KV, await c.var.getUserId())
+                : []
         } satisfies AccessData);
     }
 );

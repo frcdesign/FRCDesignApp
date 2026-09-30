@@ -21,7 +21,8 @@ const DEFAULT_ACCESS_LEVEL =
 /** Granted as well as viewed, or the clamp would drop a dev override while pending. */
 const DEFAULT_ACCESS_DATA: AccessData = {
     maxAccessLevel: DEFAULT_ACCESS_LEVEL,
-    signedIn: false
+    signedIn: false,
+    seenHints: []
 };
 
 /** Access to one library: its admin team is what grants more than a user's. */

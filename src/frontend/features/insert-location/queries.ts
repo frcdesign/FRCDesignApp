@@ -9,7 +9,8 @@ import { useIsSignedIn } from "../auth/access-level";
 import { queryClient } from "../../lib/query-client";
 import { insertLocationQueryKey } from "../../lib/query-keys";
 import { showSuccessToast } from "../../lib/notifications";
-import { updateUiState } from "../../lib/ui-state";
+import { Hint } from "@backend/features/hints/contract";
+import { markHintSeen } from "../hints/queries";
 
 /** Only an assembly has one; a derive places itself. */
 export function useInsertLocationTarget(): TargetElement | undefined {
@@ -55,7 +56,7 @@ export function useAddInsertLocationMutation(target: TargetElement) {
             }),
         onSuccess: (result) => {
             queryClient.setQueryData(insertLocationQueryKey(target), result);
-            updateUiState({ hasAddedInsertLocation: true });
+            markHintSeen(Hint.ADDED_INSERT_LOCATION);
             showSuccessToast("Added an insert location.");
         },
         onError: getAppErrorHandler(
