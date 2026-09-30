@@ -18,8 +18,11 @@ const TIP_TEXT = {
     [LinkDirection.PARENT]: "pull from it without opening the pull menu."
 } as const;
 
-/** The click that runs it; see `useQuickKeyLabel` for why a Mac differs. */
-function quickClickName(): string {
+/**
+ * The click that runs a row's action without its form. On a Mac ctrl-click is
+ * the context menu, so the command key is what a Mac reads instead.
+ */
+export function quickClickName(): string {
     return navigator.userAgent.includes("Mac") ? "⌘-click" : "ctrl-click";
 }
 

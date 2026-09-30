@@ -9,16 +9,15 @@ import {
     type EventCore
 } from "./logged-event";
 import { rollupWrites } from "./rollups";
+import { EVENT_SCHEMA_VERSION, EventType, InsertSource } from "./usage";
 import {
-    EVENT_SCHEMA_VERSION,
-    EventType,
-    InsertSource,
-    VersionRunKind
-} from "./usage";
-import type {
-    PullScopeKind,
-    PushScopeKind,
-    VersionJobResult
+    failedTaskCount,
+    jobOutcome,
+    VersionJobOutcome,
+    type PullScopeKind,
+    type VersionJobKind,
+    type PushScopeKind,
+    type VersionJobStatus
 } from "../version-manager/contract";
 import { type LibraryId } from "../library/library-id";
 import { type ElementPath } from "../../lib/onshape/path";
@@ -75,10 +74,7 @@ export function trackInsert(c: AppContext, event: InsertEvent): Promise<void> {
     );
 }
 
-/**
- * As `trackInsert`. An open belongs to no library: it is the app being opened,
- * not the page it resumes into.
- */
+/** As `trackInsert`, for a launch from Onshape. */
 export function trackAppOpen(c: AppContext): Promise<void> {
     return runInBackground(c, "record an app open", async () =>
         record(
@@ -120,27 +116,21 @@ function eventCore(
     };
 }
 
-/** What a finished push or pull did; see `features/version-manager`. */
+/** A finished push or pull; see `features/version-manager`. */
 export interface VersionRunEvent {
     userId: string;
-    kind: VersionRunKind;
+    kind: VersionJobKind;
     scope: PushScopeKind | PullScopeKind;
-    result: Pick<
-        VersionJobResult,
-        "createdVersions" | "updatedWorkspaces" | "updatedElements"
-    >;
+    /** How it ended. */
+    status: VersionJobStatus;
 }
 
-/**
- * Recorded by the workflow once the run has finished, so a run that failed
- * halfway still says what it managed. It belongs to no library: it acts on the
- * Onshape document the app was launched from.
- */
+/** Recorded by the workflow once the run has ended, however it ended. */
 export async function trackVersionRun(
     env: AppBindings,
     event: VersionRunEvent
 ): Promise<void> {
-    const { result } = event;
+    const { status } = event;
     await record(
         getDb(env.DB),
         {
@@ -148,9 +138,11 @@ export async function trackVersionRun(
             ...NOT_AN_INSERT,
             versionKind: event.kind,
             versionScope: event.scope,
-            createdVersions: result.createdVersions,
-            updatedWorkspaces: result.updatedWorkspaces,
-            updatedElements: result.updatedElements
+            versionUpdateOnly: status.updateOnly ?? false,
+            versionOutcome: jobOutcome(status) ?? VersionJobOutcome.FAILED,
+            failedSteps: failedTaskCount(status),
+            createdVersions: status.result?.createdVersions ?? 0,
+            updatedElements: status.result?.updatedElements ?? 0
         },
         []
     );

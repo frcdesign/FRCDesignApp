@@ -61,22 +61,8 @@
         {
             "idx": 8,
             "version": "6",
-            "when": 1790617504176,
-            "tag": "0008_version_run_events",
-            "breakpoints": true
-        },
-        {
-            "idx": 9,
-            "version": "6",
-            "when": 1790631163535,
-            "tag": "0009_app_opens_have_no_library",
-            "breakpoints": true
-        },
-        {
-            "idx": 10,
-            "version": "6",
-            "when": 1790734252143,
-            "tag": "0010_version_runs_have_no_failed_tabs",
+            "when": 1790744931435,
+            "tag": "0008_version_runs_and_app_opens",
             "breakpoints": true
         }
     ]

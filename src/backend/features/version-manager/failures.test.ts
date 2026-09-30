@@ -43,7 +43,8 @@ describe("isTransient", () => {
         expect(isTransient(new Error("The operation timed out"))).toBe(true);
     });
 
-    it("does not retry a refusal", () => {
+    it("does not retry a refusal, or a bug", () => {
+        expect(isTransient(new TypeError("x is undefined"))).toBe(false);
         expect(isTransient(apiError(400))).toBe(false);
         expect(isTransient(apiError(403))).toBe(false);
         expect(isTransient(apiError(404))).toBe(false);
@@ -54,27 +55,23 @@ describe("describeStepFailure", () => {
     // Only the message survives Workflows rebuilding the step's error.
     const reported = (error: unknown, action: VersionTaskAction) =>
         describeRunFailure(new Error(describeStepFailure(error, action)));
+    const refusal = apiError(400, JSON.stringify({ message: "Bad ref" }));
 
-    it("says what went wrong with the document, in our words", () => {
-        expect(reported(apiError(403), VersionTaskAction.REFERENCES)).toBe(
-            "You don't have permission to edit this document."
-        );
-        expect(reported(apiError(404), VersionTaskAction.VERSION)).toMatch(
-            /deleted or is no longer shared/
-        );
-        expect(reported(apiError(401), VersionTaskAction.VERSION)).toMatch(
-            /sign-in expired/
+    it("never passes Onshape's own message on", () => {
+        expect(reported(refusal, VersionTaskAction.REFERENCES)).not.toContain(
+            "Bad ref"
         );
     });
 
-    it("names the call that failed rather than passing Onshape's message on", () => {
-        const refusal = apiError(400, JSON.stringify({ message: "Bad ref" }));
-        expect(reported(refusal, VersionTaskAction.REFERENCES)).toBe(
-            "Couldn't update this document's references."
-        );
-        expect(reported(refusal, VersionTaskAction.VERSION)).toBe(
-            "Couldn't create a version of this document."
-        );
+    it("tells the refusals apart, and the calls that were refused", () => {
+        const messages = [
+            reported(apiError(401), VersionTaskAction.VERSION),
+            reported(apiError(403), VersionTaskAction.VERSION),
+            reported(apiError(404), VersionTaskAction.VERSION),
+            reported(refusal, VersionTaskAction.VERSION),
+            reported(refusal, VersionTaskAction.REFERENCES)
+        ];
+        expect(new Set(messages).size).toBe(messages.length);
     });
 });
 
@@ -88,8 +85,8 @@ describe("describeRunFailure", () => {
         expect(
             describeRunFailure(new Error("undefined is not a function"))
         ).toMatch(/Something went wrong/);
-        expect(describeRunFailure(apiError(400, "Bad ref"))).toMatch(
-            /Something went wrong/
+        expect(describeRunFailure(apiError(400, "Bad ref"))).not.toContain(
+            "Bad ref"
         );
     });
 });

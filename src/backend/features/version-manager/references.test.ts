@@ -11,7 +11,9 @@ const WORKSPACE = toWorkspacePath("this-doc", "this-w");
  */
 function externalReferences(
     reference: Partial<
-        OnshapeExternalReferences["elementExternalReferences"][string][number]
+        NonNullable<
+            OnshapeExternalReferences["elementExternalReferences"]
+        >[string][number]
     > = {},
     latestVersions: { documentId: string; id: string }[] = [
         { documentId: "library", id: "v2" }

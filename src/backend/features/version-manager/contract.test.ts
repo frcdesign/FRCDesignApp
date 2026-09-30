@@ -1,5 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { nextVersionName } from "./contract";
+import {
+    emptyJobResult,
+    jobOutcome,
+    nextVersionName,
+    toWorkspacePath,
+    VersionJobOutcome,
+    VersionJobState,
+    VersionTaskAction,
+    VersionTaskState,
+    type VersionJobResult,
+    type VersionTask
+} from "./contract";
 
 describe("nextVersionName", () => {
     it("starts at V1 in a document with no versions of its own", () => {
@@ -24,5 +35,60 @@ describe("nextVersionName", () => {
 
     it("reads a name Onshape padded with spaces", () => {
         expect(nextVersionName([" V7 "])).toBe("V8");
+    });
+});
+
+describe("jobOutcome", () => {
+    const result = (update: Partial<VersionJobResult>): VersionJobResult => ({
+        ...emptyJobResult(),
+        ...update
+    });
+    const task = (state: VersionTaskState): VersionTask => ({
+        workspace: toWorkspacePath("practice", "practice-w"),
+        action: VersionTaskAction.REFERENCES,
+        state
+    });
+    const changed = result({ createdVersions: 1 });
+
+    it("has nothing to report while a run is going", () => {
+        expect(jobOutcome({ state: VersionJobState.RUNNING })).toBeUndefined();
+        expect(jobOutcome(undefined)).toBeUndefined();
+    });
+
+    it("succeeds when every step did", () => {
+        expect(
+            jobOutcome({
+                state: VersionJobState.COMPLETE,
+                tasks: [task(VersionTaskState.DONE)],
+                result: result({})
+            })
+        ).toBe(VersionJobOutcome.SUCCESS);
+    });
+
+    it("is partial when a step failed after something changed", () => {
+        const failedStep = [task(VersionTaskState.FAILED)];
+        expect(
+            jobOutcome({
+                state: VersionJobState.COMPLETE,
+                tasks: failedStep,
+                result: changed
+            })
+        ).toBe(VersionJobOutcome.PARTIAL);
+        expect(
+            jobOutcome({ state: VersionJobState.FAILED, result: changed })
+        ).toBe(VersionJobOutcome.PARTIAL);
+    });
+
+    it("fails when nothing changed", () => {
+        expect(
+            jobOutcome({
+                state: VersionJobState.COMPLETE,
+                tasks: [task(VersionTaskState.FAILED)],
+                result: result({})
+            })
+        ).toBe(VersionJobOutcome.FAILED);
+        expect(jobOutcome({ state: VersionJobState.FAILED })).toBe(
+            VersionJobOutcome.FAILED
+        );
     });
 });

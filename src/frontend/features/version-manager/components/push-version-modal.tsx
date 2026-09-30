@@ -6,61 +6,53 @@ import {
     MAX_VERSION_NAME_LENGTH,
     PushScopeKind,
     type LinkedWorkspace,
-    type PushScope,
     type WorkspacePath
 } from "@backend/features/version-manager/contract";
 import { AppModalBody, AppModalFooter } from "../../../components/app-modal";
 import { InfoTooltip } from "../../../components/info-tooltip";
 import { useAppModal } from "../../../components/open-app-modal";
 import { IconSize } from "../../../lib/style-constants";
-import { useNextVersionNameQuery, usePushVersionMutation } from "../queries";
+import {
+    useIsVersionJobRunning,
+    useNextVersionNameQuery,
+    usePushVersionMutation
+} from "../queries";
 import { showQuickActionTip } from "../version-manager-tips";
 
-export interface PushVersionFormProps {
+interface PushVersionFormProps {
     workspace: WorkspacePath;
-    /** The one child to push to; absent for every child. */
-    target?: LinkedWorkspace;
+    target: LinkedWorkspace;
 }
 
 /**
  * What a push does before it runs: what the version is called, and how far it
- * travels. This is what clicking a row opens; a modified click runs it without
- * the form, under the defaults shown here.
+ * travels. A modified click on the row runs it under the defaults shown here.
  */
 export function PushVersionForm(props: PushVersionFormProps): ReactNode {
     const { workspace, target } = props;
     const modal = useAppModal();
-    // Empty unless somebody types one: the suggestion is the placeholder, and
-    // left alone each document the push versions is numbered from its own
-    // history rather than all taking this one's number.
+    // Empty unless typed: the suggestion is only a placeholder, so each
+    // document a recursive push versions is numbered from its own history.
     const [typedName, setTypedName] = useState("");
     const [description, setDescription] = useState("");
     const [recursive, setRecursive] = useState(false);
     const suggested = useNextVersionNameQuery(workspace);
     const push = usePushVersionMutation(workspace);
+    const isRunning = useIsVersionJobRunning(workspace);
 
-    // Nothing here was touched, so the form did nothing a menu item would not
-    // have done — which is what the tip is for.
+    // Untouched, the form did what a quick push does, which the tip points out.
     const isEdited = typedName !== "" || description !== "" || recursive;
-
-    const scope: PushScope = target
-        ? {
-              kind: PushScopeKind.ONE,
-              workspace: target.workspace,
-              recursive
-          }
-        : {
-              kind: recursive
-                  ? PushScopeKind.DESCENDANTS
-                  : PushScopeKind.CHILDREN
-          };
 
     const submit = () => {
         push.mutate(
             {
                 name: typedName,
                 description: description.trim(),
-                scope
+                scope: {
+                    kind: PushScopeKind.ONE,
+                    workspace: target.workspace,
+                    recursive
+                }
             },
             {
                 onSuccess: () => {
@@ -120,6 +112,7 @@ export function PushVersionForm(props: PushVersionFormProps): ReactNode {
                     ml="auto"
                     rightSection={<ArrowLineUpIcon size={IconSize.SMALL} />}
                     loading={push.isPending}
+                    disabled={isRunning}
                     onClick={submit}
                 >
                     Push

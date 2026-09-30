@@ -86,9 +86,8 @@ without one.
 
 `GET /api/workspace-links` answers `{ parents, children, documentName }` — the
 last being this workspace's own document, which the page's copy names. For each
-row it asks
-Onshape whether the caller may read the far end, and — from the cache — what it
-is called. A workspace the caller cannot read comes back `isOpenable: false` and
+row it asks Onshape whether the caller may read the far end, and — from the
+cache — what it is called. A workspace the caller cannot read comes back `isOpenable: false` and
 unnamed: they are shown that a link exists, not what it points at.
 
 Each parent also carries `unversionedChanges`: how far it has moved since its
@@ -115,9 +114,10 @@ belongs to both workspaces.
 
 ### Pushing
 
-`POST /api/push-version` resolves what the push reaches into an ordered list of
-steps, checks permissions across all of them, names every document from the
-cache, starts the workflow and answers the run's first status.
+`POST /api/push-version` refuses to start while a run from this workspace is
+still going (`requireIdle`, 409), resolves what the push reaches into an ordered
+list of steps, checks permissions across all of them, names every document from
+the cache, starts the workflow and answers the run's first status.
 
 A push or pull always cuts a new version, whether or not anything changed since
 the last one. A version takes the name the form was given, and otherwise the one
@@ -134,8 +134,10 @@ typed.
    passes. A workspace two hops out can only pick the change up from a version
    of the workspace between them, so there has to be one. Two parents feeding
    one workspace is why the order is topological rather than breadth-first: it
-   must be updated once, after both have versions. A cycle fails the run before
-   it starts (`LinkCycleError`).
+   must be updated once, after both have versions. A cycle is refused before
+   the run starts (`LinkCycleError`, answered as a 409), and so are two
+   workspaces of one document (`requireDistinctDocuments`): a version is pinned
+   per document, so the second would move everything after it.
 
 Permissions are checked for every workspace in the order before the first
 version is cut: write and link on this workspace, write on each one the run
@@ -156,9 +158,13 @@ a parent's unversioned edits are only pullable once there is one holding them.
 in a parent's menu is a pull with `updateOnly`, which cuts nothing and moves
 onto the version the parent already has.
 
+An update-only pull needs only read on its parents; one that versions them
+needs write and link, and refuses two parents in one document as a recursive
+push does.
+
 `ALL` — **Update all references** in the parents' menu — is every out-of-date
-reference, linked or not, moved onto
-whatever version each document already has. It versions nothing, the documents
+reference, linked or not, moved onto whatever version each document already
+has. It versions nothing, the documents
 behind those references being nobody's to cut a version in, and it is the one
 thing the parent list cannot express.
 
@@ -184,15 +190,24 @@ Two departures from the app this was ported from:
 
 ### Running the steps
 
-A run's steps are laid out before it takes any (`planTasks`): a version of a
-document, or its references moved. Each runs through `_task` in `workflow.ts`,
-which reports it started and then does it in its own Workflow step. A failure
-that could go differently next time — a rate limit, a 408 or 5xx, or no answer
-at all (`isTransient`) — is retried from the top of the step; tabs already moved
-need nothing the second time. Any other fails the step at once, as a
-`NonRetryableError` worded by `describeStepFailure` from its status and the call
-that failed ("Couldn't update this document's references."). Onshape's own
+A run's steps are laid out before it takes any (`planTasks` in `tasks.ts`): a
+version of a document, or its references moved. A push versions this workspace
+and then moves each child, versioning each after it when recursive; a pull
+versions each parent and then moves this workspace. An update-only run is the
+reference moves alone.
+
+Each step runs through `_task` in `workflow.ts`, which reports it started, then
+makes each Onshape call in its own retried Workflow step. A failure that could
+go differently next time — a rate limit, a 408 or 5xx, or a request that never
+got an answer (`isTransient`) — is retried from the top of that step; tabs
+already moved need nothing the second time. Any other fails the step at once,
+as a `NonRetryableError` worded by `describeStepFailure` from its status and the
+call that failed ("Couldn't update this document's references."). Onshape's own
 messages are never shown: they are written for developers.
+
+Cutting a version is two steps, so a retry cannot cut a second one: the name is
+settled first, and the create step looks for a version of that name made since
+the run started (less a minute for clock skew) before it creates one.
 
 A failed step is recorded, with its reason, and the run goes on. It skips only
 what needed the failure: everything after this document's own version when that
@@ -207,29 +222,31 @@ in somebody's document.
 
 ### Recording a run
 
-Once the run has finished or stopped, the workflow calls `trackVersionRun`
-with its kind, how it was aimed, and three counts: versions created, workspaces
-and tabs updated. The event belongs to no library, and rolls up into
-`daily_version_metrics`, which the app dashboard reports as references updated
-and versions synced, beside the documents linked right now. See
-[analytics.md](./analytics.md).
+Once the run has finished or stopped, its `record-run` step calls
+`trackVersionRun` with its kind, how it was aimed, whether it was update-only,
+its outcome (`jobOutcome`: success, partial or failed), how many steps failed,
+and the versions it created and tabs it updated. A failure to record is logged
+and swallowed. The event belongs to no library, and rolls up into
+`daily_version_metrics`, which the app dashboard reports as runs (and how many
+had failures), tabs updated and versions created, beside the documents linked
+right now. See [analytics.md](./analytics.md).
 
 ### Watching a run
 
-The route stores and pushes `RUNNING` as it starts the workflow, with what it
-was aimed at; the workflow's `report-{n}` steps store and push each step as it
-starts, and `finish-job` how the run ended, over the socket in
-[platform.md](./platform.md). A run that throws outside a step is reported too:
-`FAILED`, with what it had done and a reason from `describeRunFailure`. A later
-run's mark is never overwritten by an earlier run's report. The
-client asks `GET /api/version-job` once when the page opens and again after a
-reconnect; nothing polls. A client's socket is tagged with the workspace it was
-launched in as well as its library, so a run reaches the people in that document
-and nobody else.
+The route stores `RUNNING` as it starts the workflow, with what it was aimed at;
+the workflow's `report-{n}` steps store each step as it starts, and
+`finish-job` how the run ended. A run that throws outside a step is reported
+too: `FAILED`, with what it had done and a reason from `describeRunFailure`.
+Each store is announced over the socket in [platform.md](./platform.md) by the
+workspace's key alone, and the client refetches `GET /api/version-job`, which
+needs read on the workspace: the status names documents, so it goes only to
+somebody who may see them. The client also asks once when the page opens and
+again after a reconnect; nothing polls.
 
 `GET /api/version-job` answers the stored status. A mark still reading
 `RUNNING` is checked against the instance, since a run that died before it
-could report leaves one behind.
+could report leaves one behind: once the instance has finished, its running
+step is marked failed and those it never reached skipped.
 
 While a run is going, a spinner sits where it was started — beside the row, or
 in the section's header — and the page is headed by a callout with a spinner
@@ -251,7 +268,7 @@ color and with its icon, for as long as the status is kept. It cannot be closed,
 
 ### Keeping a linked workspace current
 
-The first read of a linked workspace registers a transient webhook on it for
+A cache miss on a linked workspace's names registers a transient webhook on it for
 `onshape.model.lifecycle.changed`, `.metadata` and `.createversion`. A delivery
 drops both cached entries, so the next panel to open asks Onshape again. Onshape
 deletes a transient webhook that goes quiet, so the entries expire as well.
@@ -264,11 +281,13 @@ deletes a transient webhook that goes quiet, so the entries expire as well.
 - Onshape decides what may be done, not the app's access levels. Every route
   checks the caller's Onshape permissions on the documents it would touch.
 - A push checks every workspace it would write to before it cuts anything.
+- One run at a time per workspace, and no run versions one document twice.
+- A retried step never cuts a second version.
 - A run is recorded once, after it has finished, and never fails the run.
 - A recursive push versions every workspace it passes through, in topological
   order.
-- Nothing about a workspace the caller cannot read reaches them: no name, and no
-  thumbnail.
+- Nothing about a workspace the caller cannot read reaches them: no name, no
+  thumbnail, and no run status. The socket says only that a status changed.
 - Permissions are never cached; names and change counts are.
 - A push or pull always cuts its versions; only an update-only run cuts none.
 - A run that finished, or stopped, says so: its status is stored whichever way
@@ -280,17 +299,18 @@ deletes a transient webhook that goes quiet, so the entries expire as well.
 
 ## Failure and recovery
 
-| Failure                                  | Result                                       | Recovery                                           |
-| ---------------------------------------- | -------------------------------------------- | -------------------------------------------------- |
-| A linked document is unshared or deleted | The row shows "Missing access" and no name   | Remove the link                                    |
-| The caller cannot write to a child       | The push is refused before it starts         | The child's owner shares write access              |
-| Onshape rate-limits the run              | The step waits its `Retry-After` and resumes | None needed                                        |
-| Onshape errors or times out on a tab     | The step retries                             | None needed                                        |
-| Onshape refuses a document mid-run       | Its step fails at once; the run goes on      | Details names the step and why; run it again       |
-| A step runs out of retries               | It fails; the run goes on                    | Details names the step and why; run it again       |
-| The links form a cycle                   | A recursive push is refused                  | Remove a link                                      |
-| A webhook Onshape dropped                | A name or count is stale                     | The entry expires, and the next read watches again |
-| The socket drops mid-run                 | No result toast                              | The reconnect refetches the run; the callout shows |
+| Failure                                  | Result                                         | Recovery                                           |
+| ---------------------------------------- | ---------------------------------------------- | -------------------------------------------------- |
+| A linked document is unshared or deleted | The row shows "Missing access" and no name     | Remove the link                                    |
+| The caller cannot write to a child       | The push is refused before it starts           | The child's owner shares write access              |
+| Onshape rate-limits the run              | The step waits its `Retry-After` and resumes   | None needed                                        |
+| Onshape errors or times out on a tab     | The step retries                               | None needed                                        |
+| Onshape refuses a document mid-run       | Its step fails at once; the run goes on        | Details names the step and why; run it again       |
+| A step runs out of retries               | It fails; the run goes on                      | Details names the step and why; run it again       |
+| The links form a cycle                   | A recursive push is refused                    | Remove a link                                      |
+| A run is already going from here         | The new one is refused, and the UI disables it | Wait for it to finish                              |
+| A webhook Onshape dropped                | A name or count is stale                       | The entry expires, and the next read watches again |
+| The socket drops mid-run                 | No result toast                                | The reconnect refetches the run; the callout shows |
 
 ## Decisions
 
@@ -321,6 +341,12 @@ deletes a transient webhook that goes quiet, so the entries expire as well.
   per document, and nothing observed fails one tab and not the rest. A run
   aimed at several documents finishes every one it can, and the report names
   each step that failed and why, in our words.
+- **The socket says that, not what.** Everybody in a document shares its
+  socket, not its permissions, so a push names the workspace alone and each
+  client asks for the status under its own access.
+- **A version is found before it is cut.** A step can be retried after Onshape
+  created the version but before the answer arrived; looking it up by name and
+  time is what keeps a retry from cutting two.
 - **The result is stored, not read off the instance.** The instance's output is
   lost when the run throws, and a failed run is the one whose report matters.
 - **Thumbnails are proxied.** `GET /api/workspace-thumbnail` fetches the
@@ -337,4 +363,4 @@ OAuth-only. Everything
 else was checked against the spec, and the counts and
 permissions came back as modelled, but a live push is what would prove it.
 
-_Last reviewed: 2026-09-29_
+_Last reviewed: 2026-09-30_

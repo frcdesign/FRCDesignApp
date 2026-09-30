@@ -52,10 +52,9 @@ export function usePushSync(): void {
                 case PushType.VERSION_JOB:
                     // Tagged to this workspace, so it is this page's run.
                     if (workspace) {
-                        queryClient.setQueryData(
-                            versionJobQueryKey(workspace),
-                            message.status
-                        );
+                        void queryClient.invalidateQueries({
+                            queryKey: versionJobQueryKey(workspace)
+                        });
                     }
                     break;
                 case PushType.THUMBNAIL:

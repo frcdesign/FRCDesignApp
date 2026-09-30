@@ -29,12 +29,19 @@ import {
     PushScopeKind,
     toWorkspacePath,
     VersionJobKind,
+    VersionJobState,
     workspaceKey,
     type VersionJobDocument,
     type WorkspaceLinksData,
     type WorkspacePath
 } from "./contract";
-import { descendantKeys, LinkCycleError, pushOrder } from "./graph";
+import {
+    childrenOf,
+    descendantKeys,
+    LinkCycleError,
+    pushOrder,
+    type WorkspaceEdge
+} from "./graph";
 import { getJobStatus, startJob } from "./jobs";
 import {
     addLink,
@@ -48,8 +55,8 @@ import {
     toEdge,
     toLinkedWorkspace
 } from "./links";
+import { onshapeStatus } from "./failures";
 import { describeWorkspace } from "./workspace-cache";
-import type { PushStep } from "./workflow";
 
 export const versionManagerRoutes = getApp();
 
@@ -59,16 +66,9 @@ const workspaceSchema = z.object({
     instanceId: z.string().min(1)
 });
 
-const workspaceQuery = workspaceSchema;
-
 const thumbnailQuery = workspaceSchema.extend({
     /** Which of Onshape's two stored sizes to serve. */
     size: z.enum(ThumbnailSize).default(ThumbnailSize.SMALL)
-});
-
-const jobQuery = workspaceSchema.extend({
-    /** The run the client is watching; without one, the workspace's latest. */
-    jobId: z.string().min(1).optional()
 });
 
 const addLinkBody = z.object({
@@ -126,8 +126,6 @@ const pullBody = z.object({
 
 type WorkspaceInput = z.infer<typeof workspaceSchema>;
 
-// The parsed scopes, whose workspace is the wire's two ids rather than the
-// contract's whole path; `toWorkspace` is what makes one of the other.
 type PushScopeInput = z.infer<typeof pushScope>;
 type PullScopeInput = z.infer<typeof pullScope>;
 
@@ -168,7 +166,7 @@ versionManagerRoutes.get(
     "/workspace-links",
     requireSignInMiddleware,
     cacheMiddleware(),
-    validate("query", workspaceQuery),
+    validate("query", workspaceSchema),
     async (c) => {
         const workspace = toWorkspace(c.req.valid("query"));
         const client = await c.var.getOnshapeApi();
@@ -282,11 +280,8 @@ versionManagerRoutes.delete(
         const linkId = getWorkspaceLinkParam(c);
         const db = getDb(c.env.DB);
         const row = await getLink(db, linkId);
-        // Gone already is the state the caller wanted.
         if (!row) return c.json({ success: true });
 
-        // Either end: a link belongs to both workspaces, so being able to edit
-        // one of them is enough to take it back.
         const client = await c.var.getOnshapeApi();
         const { parent, child } = toEdge(row);
         const allowed = await Promise.all([
@@ -378,8 +373,8 @@ versionManagerRoutes.post(
  * Starts a push: cuts a version of the caller's workspace, then moves the
  * references of the children named by {@link PushScope} onto it. An absent
  * `name` is the ordinary case — the run then names each version as Onshape's
- * own dialog would. Answers the run's `jobId`, which `/api/version-job` reports
- * on; the work itself happens in {@link VersionManagerWorkflow}. `updateOnly`
+ * own dialog would. Answers the run's first status; the work itself happens in
+ * {@link VersionManagerWorkflow}. `updateOnly`
  * cuts nothing, moving the children onto this document's newest version.
  *
  * Requires write and link on the caller's workspace, write on every workspace
@@ -395,57 +390,59 @@ versionManagerRoutes.post(
         const body = c.req.valid("json");
         const { name, description = "", scope, updateOnly } = body;
         const workspace = toWorkspace(body.workspace);
+        const recursive = isRecursive(scope);
         const client = await c.var.getOnshapeApi();
 
-        if (updateOnly && isRecursive(scope)) {
+        if (updateOnly && recursive) {
             throw handledError(
                 "A recursive push has to version the documents it passes through.",
                 HttpStatus.BAD_REQUEST
             );
         }
-        const order = await resolvePushOrder(c, workspace, scope);
-        // Only a walk that carries on versions what it passes through; it is
-        // what the workspaces past this one have to reference.
-        const steps: PushStep[] = order.map((each) => ({
-            workspace: each,
-            createVersion: isRecursive(scope)
-        }));
+        await requireIdle(c, workspace);
+        const { order, edges } = await resolvePushOrder(c, workspace, scope);
+        if (recursive) {
+            requireDistinctDocuments([workspace, ...order]);
+        }
 
-        // Checked across the whole run before it starts: a push that cuts a
-        // version and then finds it cannot finish has already changed the
-        // document it was called on.
-        if (!updateOnly) {
-            await requirePermissions(
-                client,
-                workspace,
-                "create a version in this document",
-                OnshapePermission.WRITE,
-                OnshapePermission.LINK
-            );
-        }
-        for (const step of steps) {
-            await requirePermissions(
-                client,
-                step.workspace,
-                "update every linked document this push would write to",
-                OnshapePermission.WRITE,
-                // Only when the run versions it, which makes it the source of
-                // the references the workspaces past it carry.
-                ...(step.createVersion ? [OnshapePermission.LINK] : [])
-            );
-        }
+        await Promise.all([
+            ...(updateOnly
+                ? []
+                : [
+                      requirePermissions(
+                          client,
+                          workspace,
+                          "create a version in this document",
+                          OnshapePermission.WRITE,
+                          OnshapePermission.LINK
+                      )
+                  ]),
+            ...order.map((each) =>
+                requirePermissions(
+                    client,
+                    each,
+                    "update every linked document this push would write to",
+                    OnshapePermission.WRITE,
+                    // What the run versions is what the workspaces past it
+                    // come to reference.
+                    ...(recursive ? [OnshapePermission.LINK] : [])
+                )
+            )
+        ]);
 
         const documentNames = await nameDocuments(c, client, [
             workspace,
             ...order
         ]);
         const targets = toDocuments(
-            await resolvePushTargets(c, workspace, scope, order),
+            scope.kind === PushScopeKind.ONE
+                ? [toWorkspace(scope.workspace)]
+                : childrenOf(edges, workspace),
             documentNames
         );
         const instance = await c.env.VERSION_MANAGER_WORKFLOW.create({
             params: {
-                kind: "push",
+                kind: VersionJobKind.PUSH,
                 sessionId: getSessionId(c),
                 userId: await c.var.getUserId(),
                 workspace,
@@ -455,7 +452,8 @@ versionManagerRoutes.post(
                 documentNames,
                 name,
                 description,
-                steps
+                steps: order,
+                recursive
             }
         });
         const status = await startJob(c.env, workspace, instance.id, {
@@ -503,25 +501,32 @@ function toDocuments(
     }));
 }
 
-/**
- * What the push was aimed at: the one child named, or every child this
- * workspace has — not the documents a recursive push reaches past them.
- */
-async function resolvePushTargets(
+/** Refuses a second run while one from this workspace is still going. */
+async function requireIdle(
     c: AppContext,
-    workspace: WorkspacePath,
-    scope: PushScopeInput,
-    order: WorkspacePath[]
-): Promise<WorkspacePath[]> {
-    if (scope.kind === PushScopeKind.ONE) {
-        return [toWorkspace(scope.workspace)];
+    workspace: WorkspacePath
+): Promise<void> {
+    const current = await getJobStatus(c.env, workspace);
+    if (current.state === VersionJobState.RUNNING) {
+        throw handledError(
+            "A push or pull from this document is still running.",
+            HttpStatus.CONFLICT
+        );
     }
-    const children = new Set(
-        (await getChildLinks(getDb(c.env.DB), workspace)).map((row) =>
-            workspaceKey(toEdge(row).child)
-        )
-    );
-    return order.filter((each) => children.has(workspaceKey(each)));
+}
+
+/**
+ * A version is pinned per document, so one document versioned twice would
+ * leave everything after it on whichever was cut last.
+ */
+function requireDistinctDocuments(workspaces: WorkspacePath[]): void {
+    const documentIds = workspaces.map((each) => each.documentId);
+    if (new Set(documentIds).size !== documentIds.length) {
+        throw handledError(
+            "This would version two workspaces of the same document. Run them one at a time.",
+            HttpStatus.CONFLICT
+        );
+    }
 }
 
 /** Whether the push carries on past the workspaces it first reaches. */
@@ -533,14 +538,15 @@ function isRecursive(scope: PushScopeInput): boolean {
 }
 
 /**
- * The workspaces the push has to update, in order, with the two ways the graph
- * can refuse to give one turned into something the caller can act on.
+ * The workspaces the push has to update, in order, and the edges they came
+ * from, with the two ways the graph can refuse turned into something the caller
+ * can act on.
  */
 async function resolvePushOrder(
     c: AppContext,
     workspace: WorkspacePath,
     scope: PushScopeInput
-): Promise<WorkspacePath[]> {
+): Promise<{ order: WorkspacePath[]; edges: WorkspaceEdge[] }> {
     const db = getDb(c.env.DB);
     const recursive = isRecursive(scope);
     const edges = recursive
@@ -561,8 +567,7 @@ async function resolvePushOrder(
     }
 
     if (scope.kind === PushScopeKind.ONE) {
-        // Narrowed rather than trusted: a workspace nobody linked is not one
-        // this push has any business writing to.
+        // Only a linked workspace may be written to.
         const target = toWorkspace(scope.workspace);
         if (!order.some((each) => isSameWorkspace(each, target))) {
             throw handledError(
@@ -570,24 +575,11 @@ async function resolvePushOrder(
                 HttpStatus.CONFLICT
             );
         }
-        // Filtered rather than rebuilt, so what survives keeps the order the
-        // whole graph put it in: a workspace fed by two of these still comes
-        // after both.
+        // Filtered, so a workspace fed by two of these still comes after both.
         const kept = descendantKeys(edges, target);
         order = order.filter((each) => kept.has(workspaceKey(each)));
     }
-
-    // A version is pinned per document, so one document appearing twice leaves
-    // the references of everything downstream pointing at whichever was cut
-    // last. Refused rather than guessed at.
-    const documentIds = [workspace, ...order].map((each) => each.documentId);
-    if (new Set(documentIds).size !== documentIds.length) {
-        throw handledError(
-            "This push would version two workspaces of the same document. Push them one at a time.",
-            HttpStatus.CONFLICT
-        );
-    }
-    return order;
+    return { order, edges };
 }
 
 /**
@@ -596,7 +588,7 @@ async function resolvePushOrder(
  * Starts a pull: versions each parent {@link PullScope} names — one of them or
  * all of them — and moves this workspace's references onto what was cut. A
  * reference points at a version, so a parent's unversioned edits are only
- * pullable once there is one holding them. Answers the run's `jobId`.
+ * pullable once there is one holding them. Answers the run's first status.
  *
  * `updateOnly` versions nothing either, moving onto whatever versions the
  * parents already have; so does every-reference scope, whose documents are not
@@ -615,25 +607,38 @@ versionManagerRoutes.post(
         const workspace = toWorkspace(body.workspace);
 
         const client = await c.var.getOnshapeApi();
-        await requirePermissions(
-            client,
-            workspace,
-            "edit this document",
-            OnshapePermission.WRITE
-        );
-
+        await requireIdle(c, workspace);
         const sources = await resolvePullSources(c, workspace, scope);
-        // An update-only pull versions none of them, so asks nothing of them.
-        for (const source of updateOnly ? [] : (sources ?? [])) {
-            await requirePermissions(
-                client,
-                source,
-                "create a version in every document this pull reads",
-                OnshapePermission.WRITE,
-                // The reference this workspace ends up carrying points at it.
-                OnshapePermission.LINK
-            );
+        if (sources && !updateOnly) {
+            requireDistinctDocuments(sources);
         }
+
+        await Promise.all([
+            requirePermissions(
+                client,
+                workspace,
+                "edit this document",
+                OnshapePermission.WRITE
+            ),
+            ...(sources ?? []).map((source) =>
+                updateOnly
+                    ? requirePermissions(
+                          client,
+                          source,
+                          "read every document this pull reads",
+                          OnshapePermission.READ
+                      )
+                    : requirePermissions(
+                          client,
+                          source,
+                          "create a version in every document this pull reads",
+                          OnshapePermission.WRITE,
+                          // The reference this workspace ends up carrying
+                          // points at it.
+                          OnshapePermission.LINK
+                      )
+            )
+        ]);
 
         const documentNames = await nameDocuments(c, client, [
             workspace,
@@ -642,7 +647,7 @@ versionManagerRoutes.post(
         const targets = toDocuments(sources ?? [], documentNames);
         const instance = await c.env.VERSION_MANAGER_WORKFLOW.create({
             params: {
-                kind: "pull",
+                kind: VersionJobKind.PULL,
                 sessionId: getSessionId(c),
                 userId: await c.var.getUserId(),
                 workspace,
@@ -704,36 +709,33 @@ async function resolvePullSources(
 }
 
 /**
- * `GET /api/version-job?documentId=&instanceId=&jobId=`
+ * `GET /api/version-job?documentId=&instanceId=`
  *
- * How a push or pull is going, as {@link VersionJobStatus}, and what it did
- * once it is done. `jobId` names the run the client is watching; without one
- * this answers for whatever the workspace last started, which is how a panel
- * that was closed and reopened finds a run still going.
+ * The push or pull this workspace last started, as {@link VersionJobStatus}:
+ * how it is going, or what it did. Requires read on the workspace.
  */
 versionManagerRoutes.get(
     "/version-job",
     requireSignInMiddleware,
     cacheMiddleware(),
-    validate("query", jobQuery),
+    validate("query", workspaceSchema),
     async (c) => {
-        const query = c.req.valid("query");
-        const status = await getJobStatus(
-            c.env,
-            toWorkspace(query),
-            query.jobId
+        const workspace = toWorkspace(c.req.valid("query"));
+        await requirePermissions(
+            await c.var.getOnshapeApi(),
+            workspace,
+            "read this document",
+            OnshapePermission.READ
         );
-        return c.json(status);
+        return c.json(await getJobStatus(c.env, workspace));
     }
 );
 
 /**
  * `GET /api/next-version-name?documentId=&instanceId=`
  *
- * What a push with no name of its own would call the version it cuts here —
- * `V<n>` after the highest the document already carries, which is what
- * Onshape's own dialog offers. The naming form opens on it, so what it shows is
- * the name that would have been used rather than a guess made without asking.
+ * What a run with no name of its own would call a version it cuts here: `V<n>`
+ * after the highest the document carries, as Onshape's own dialog offers.
  *
  * Requires read on the workspace.
  */
@@ -741,7 +743,7 @@ versionManagerRoutes.get(
     "/next-version-name",
     requireSignInMiddleware,
     cacheMiddleware(),
-    validate("query", workspaceQuery),
+    validate("query", workspaceSchema),
     async (c) => {
         const workspace = toWorkspace(c.req.valid("query"));
         const client = await c.var.getOnshapeApi();
@@ -797,13 +799,12 @@ versionManagerRoutes.get(
         try {
             bytes = await getWorkspaceThumbnail(client, workspace, query.size);
         } catch (error) {
-            // A document Onshape has no picture for, which is an answer rather
-            // than a failure: the client falls back to the placeholder.
-            console.warn(
-                `No thumbnail for ${workspace.documentId}/${workspace.instanceId}`,
-                error
-            );
-            return c.body(null, HttpStatus.NOT_FOUND);
+            // A document Onshape has no picture for: the client shows the
+            // placeholder.
+            if (onshapeStatus(error) === HttpStatus.NOT_FOUND) {
+                return c.body(null, HttpStatus.NOT_FOUND);
+            }
+            throw error;
         }
 
         return new Response(bytes, {

@@ -15,7 +15,7 @@ import { configurations } from "../../db/schema";
 import { type AppContext } from "../../lib/context";
 import { ElementType } from "../../lib/onshape/element-type";
 import { toSelection } from "../configurations/selection";
-import { InsertSource, VersionRunKind } from "./usage";
+import { InsertSource } from "./usage";
 import { rollupWrites } from "./rollups";
 import {
     dailyAppOpens,
@@ -37,7 +37,11 @@ import {
     trackVersionRun,
     type InsertEvent
 } from "./tracking";
-import { PushScopeKind } from "../version-manager/contract";
+import {
+    PushScopeKind,
+    VersionJobKind,
+    VersionJobState
+} from "../version-manager/contract";
 
 const db = getDb(env.DB);
 const SIZE_PARAMETERS = [enumParam("size", ["small", "large"])];
@@ -130,12 +134,11 @@ describe("rollupWrites", () => {
         await trackInsert(fakeContext("someone-2"), insertEvent());
         await trackVersionRun(env, {
             userId: TEST_USER_ID,
-            kind: VersionRunKind.PUSH,
+            kind: VersionJobKind.PUSH,
             scope: PushScopeKind.CHILDREN,
-            result: {
-                createdVersions: 1,
-                updatedWorkspaces: 2,
-                updatedElements: 5
+            status: {
+                state: VersionJobState.COMPLETE,
+                result: { createdVersions: 1, updatedElements: 5 }
             }
         });
         clock.mockRestore();

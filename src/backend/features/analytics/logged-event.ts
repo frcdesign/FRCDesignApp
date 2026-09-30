@@ -1,7 +1,11 @@
 /** The one place that knows which columns each kind of event sets. */
 import { type ElementType } from "../../lib/onshape/element-type";
 import { type LibraryId } from "../library/library-id";
-import { EventType, type InsertSource, type VersionRunKind } from "./usage";
+import type {
+    VersionJobKind,
+    VersionJobOutcome
+} from "../version-manager/contract";
+import { EventType, type InsertSource } from "./usage";
 import { type LoggedEvent } from "./schema";
 
 /** What every event carries, whatever kind of event it is. */
@@ -21,8 +25,10 @@ type VersionRunColumns = Pick<
     LoggedEvent,
     | "versionKind"
     | "versionScope"
+    | "versionUpdateOnly"
+    | "versionOutcome"
+    | "failedSteps"
     | "createdVersions"
-    | "updatedWorkspaces"
     | "updatedElements"
 >;
 
@@ -50,21 +56,24 @@ export const NOT_AN_INSERT: InsertColumns = {
 export const NOT_A_VERSION_RUN: VersionRunColumns = {
     versionKind: null,
     versionScope: null,
+    versionUpdateOnly: null,
+    versionOutcome: null,
+    failedSteps: null,
     createdVersions: null,
-    updatedWorkspaces: null,
     updatedElements: null
 };
 
 /** A logged run, whose own columns a reader can then count on. */
-export type LoggedVersionRun = LoggedEvent &
-    VersionRunColumns & {
-        versionKind: VersionRunKind;
-        createdVersions: number;
-        updatedWorkspaces: number;
-        updatedElements: number;
-    };
+export type LoggedVersionRun = LoggedEvent & {
+    versionKind: VersionJobKind;
+    versionUpdateOnly: boolean;
+    versionOutcome: VersionJobOutcome;
+    failedSteps: number;
+    createdVersions: number;
+    updatedElements: number;
+};
 
-/** Undefined for another kind, or a run from a version without these columns. */
+/** Undefined for another kind of event. */
 export function asVersionRun(event: LoggedEvent): LoggedVersionRun | undefined {
     const isRun =
         event.type === EventType.VERSION_RUN && event.versionKind !== null;

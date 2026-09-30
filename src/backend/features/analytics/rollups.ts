@@ -4,6 +4,7 @@ import { type ConfigurationParameter } from "../configurations/contract";
 import { toInstanceKeys } from "../configurations/instances";
 import { earliest, increment, latest } from "../../db/updates";
 import { EventType } from "./usage";
+import { VersionJobOutcome } from "../version-manager/contract";
 import {
     asInsert,
     asVersionRun,
@@ -72,8 +73,10 @@ function countVersionRunDay(db: Db, run: LoggedVersionRun) {
         day: run.day,
         kind: run.versionKind,
         runs: 1,
+        updateOnlyRuns: run.versionUpdateOnly ? 1 : 0,
+        partialRuns: run.versionOutcome === VersionJobOutcome.PARTIAL ? 1 : 0,
+        failedRuns: run.versionOutcome === VersionJobOutcome.FAILED ? 1 : 0,
         createdVersions: run.createdVersions,
-        updatedWorkspaces: run.updatedWorkspaces,
         updatedElements: run.updatedElements
     };
 
@@ -84,13 +87,21 @@ function countVersionRunDay(db: Db, run: LoggedVersionRun) {
             target: [dailyVersionMetrics.day, dailyVersionMetrics.kind],
             set: {
                 runs: increment(dailyVersionMetrics.runs),
+                updateOnlyRuns: increment(
+                    dailyVersionMetrics.updateOnlyRuns,
+                    values.updateOnlyRuns
+                ),
+                partialRuns: increment(
+                    dailyVersionMetrics.partialRuns,
+                    values.partialRuns
+                ),
+                failedRuns: increment(
+                    dailyVersionMetrics.failedRuns,
+                    values.failedRuns
+                ),
                 createdVersions: increment(
                     dailyVersionMetrics.createdVersions,
                     values.createdVersions
-                ),
-                updatedWorkspaces: increment(
-                    dailyVersionMetrics.updatedWorkspaces,
-                    values.updatedWorkspaces
                 ),
                 updatedElements: increment(
                     dailyVersionMetrics.updatedElements,
@@ -100,10 +111,7 @@ function countVersionRunDay(db: Db, run: LoggedVersionRun) {
         });
 }
 
-/**
- * One person's opens for a day, which is both the session count and the record
- * that they were about: an open has no library to be counted under.
- */
+/** One person's opens for a day. */
 function countAppOpenDay(db: Db, event: LoggedEvent) {
     return db
         .insert(dailyAppOpens)

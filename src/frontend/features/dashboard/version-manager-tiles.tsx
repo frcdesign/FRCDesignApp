@@ -8,28 +8,26 @@ interface VersionManagerTilesProps {
     totals: VersionManagerTotals;
 }
 
-/**
- * What pushing and pulling has done. References updated leads: each one is a
- * tab somebody would have opened and repointed by hand. Versions synced is the
- * app's own action, and documents linked is what it has to work with.
- */
+/** What pushing and pulling has done, in the words the run report uses. */
 export function VersionManagerTiles({
     totals
 }: VersionManagerTilesProps): ReactNode {
     return (
         <Section title="Version manager">
-            <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }}>
+            <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }}>
                 <StatTile
-                    label="References updated"
-                    value={totals.updatedElements}
+                    label="Runs"
+                    value={totals.runs}
+                    caption={`${totals.runsWithFailures} with failures`}
                 />
+                <StatTile label="Tabs updated" value={totals.updatedElements} />
                 <StatTile
-                    label="Versions synced"
+                    label="Versions created"
                     value={totals.createdVersions}
                 />
                 <StatTile
-                    label="Documents linked"
-                    value={totals.linkedWorkspaces}
+                    label="Links"
+                    value={totals.links}
                     caption="Right now"
                 />
             </SimpleGrid>

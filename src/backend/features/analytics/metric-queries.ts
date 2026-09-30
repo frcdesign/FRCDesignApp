@@ -136,22 +136,11 @@ function countUsers(db: Db, libraryId?: LibraryId, range?: DayRange) {
             .from(active)
             .get();
     }
-    if (libraryId) {
-        return db
-            .select({ value: count() })
-            .from(userStats)
-            .where(eq(userStats.libraryId, libraryId))
-            .get();
-    }
-    // Everyone who has used the app, opens included: somebody who only ever
-    // opened it has no library row. UNION is distinct, so the count is too.
-    const everyone = db
-        .select({ userId: userStats.userId })
+    return db
+        .select({ value: count() })
         .from(userStats)
-        .union(db.select({ userId: dailyAppOpens.userId }).from(dailyAppOpens))
-        .as("everyone");
-
-    return db.select({ value: count() }).from(everyone).get();
+        .where(libraryId ? eq(userStats.libraryId, libraryId) : undefined)
+        .get();
 }
 
 /** Both bounds inclusive, as every day key is. */
@@ -162,7 +151,7 @@ function openFilters(range: DayRange): SQL[] {
     ];
 }
 
-/** App-wide: an open belongs to no library, so a library's total is none. */
+/** App-wide only; see `dailyAppOpens`. */
 function countAppOpens(db: Db, libraryId?: LibraryId, range?: DayRange) {
     if (libraryId) return undefined;
     return db
@@ -428,6 +417,8 @@ export async function getVersionManagerTotals(
         db
             .select({
                 runs: sum(dailyVersionMetrics.runs),
+                partialRuns: sum(dailyVersionMetrics.partialRuns),
+                failedRuns: sum(dailyVersionMetrics.failedRuns),
                 createdVersions: sum(dailyVersionMetrics.createdVersions),
                 updatedElements: sum(dailyVersionMetrics.updatedElements)
             })
@@ -444,8 +435,10 @@ export async function getVersionManagerTotals(
 
     return {
         runs: Number(totals?.runs ?? 0),
+        runsWithFailures:
+            Number(totals?.partialRuns ?? 0) + Number(totals?.failedRuns ?? 0),
         createdVersions: Number(totals?.createdVersions ?? 0),
         updatedElements: Number(totals?.updatedElements ?? 0),
-        linkedWorkspaces: links?.value ?? 0
+        links: links?.value ?? 0
     };
 }

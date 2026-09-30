@@ -78,9 +78,8 @@ export function getInsertables(
  * `GET /documents/d/{did}/w/{wid}/externalreferences`
  *
  * Every version of another document this workspace's tabs reference, and the
- * latest version of each of those documents — which together say what is out of
- * date. Undocumented and OAuth-only, as far as the app that first used it could
- * tell; it is absent from Onshape's OpenAPI spec.
+ * latest version of each of those documents. Undocumented (absent from the
+ * OpenAPI spec); shape unverified.
  */
 export function getExternalReferences(
     client: OnshapeApi,
@@ -100,13 +99,9 @@ export interface ReferenceUpdate {
 /**
  * `POST /elements/d/{did}/w/{wid}/e/{eid}/updatereferences`
  *
- * Repoints the references one tab makes: each update names the element path a
- * reference points at now and the one it should point at instead, which for a
- * version bump is the same tab in a newer version.
- *
- * Onshape answers with no body worth reading, so a caller learns only that it
- * did not throw. Requires write on the tab's document, and link on each
- * document being referenced.
+ * Repoints the references one tab makes, each from the element path it points
+ * at now to the one it should. Requires write on the tab's document, and link
+ * on each document being referenced.
  */
 export function updateReferences(
     client: OnshapeApi,

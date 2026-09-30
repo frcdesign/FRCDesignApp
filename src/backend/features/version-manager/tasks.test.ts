@@ -3,6 +3,7 @@ import {
     PullScopeKind,
     PushScopeKind,
     toWorkspacePath,
+    VersionJobKind,
     VersionTaskAction,
     VersionTaskState,
     workspaceKey
@@ -26,10 +27,11 @@ const base = {
 function push(update: Partial<PushJobParams>): PushJobParams {
     return {
         ...base,
-        kind: "push",
+        kind: VersionJobKind.PUSH,
         scope: PushScopeKind.CHILDREN,
         updateOnly: false,
         steps: [],
+        recursive: false,
         ...update
     };
 }
@@ -37,7 +39,7 @@ function push(update: Partial<PushJobParams>): PushJobParams {
 function pull(update: Partial<PullJobParams>): PullJobParams {
     return {
         ...base,
-        kind: "pull",
+        kind: VersionJobKind.PULL,
         scope: PullScopeKind.PARENTS,
         updateOnly: false,
         ...update
@@ -49,9 +51,7 @@ const summary = (params: PushJobParams | PullJobParams) =>
 
 describe("planTasks", () => {
     it("versions this document, then each child's references", () => {
-        const tasks = planTasks(
-            push({ steps: [{ workspace: child, createVersion: false }] })
-        );
+        const tasks = planTasks(push({ steps: [child] }));
         expect(tasks.map((task) => [task.action, task.workspace])).toEqual([
             [VersionTaskAction.VERSION, root],
             [VersionTaskAction.REFERENCES, child]
@@ -64,14 +64,7 @@ describe("planTasks", () => {
 
     it("versions each document a recursive push passes through", () => {
         expect(
-            summary(
-                push({
-                    steps: [
-                        { workspace: child, createVersion: true },
-                        { workspace: grandchild, createVersion: true }
-                    ]
-                })
-            )
+            summary(push({ steps: [child, grandchild], recursive: true }))
         ).toEqual([
             [VersionTaskAction.VERSION, "robot"],
             [VersionTaskAction.REFERENCES, "practice"],
@@ -82,14 +75,9 @@ describe("planTasks", () => {
     });
 
     it("cuts nothing for an update-only push", () => {
-        expect(
-            summary(
-                push({
-                    updateOnly: true,
-                    steps: [{ workspace: child, createVersion: false }]
-                })
-            )
-        ).toEqual([[VersionTaskAction.REFERENCES, "practice"]]);
+        expect(summary(push({ updateOnly: true, steps: [child] }))).toEqual([
+            [VersionTaskAction.REFERENCES, "practice"]
+        ]);
     });
 
     it("versions each parent a pull reads, unless it only updates", () => {

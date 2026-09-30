@@ -1,3 +1,4 @@
+/** Kept out of the component files, so those export only components for React Refresh. */
 import {
     type LinkedWorkspace,
     type WorkspacePath
@@ -8,27 +9,28 @@ import { JobDetails, JobDetailsTitle } from "./components/job-details";
 import { PullReferencesForm } from "./components/pull-references-modal";
 import { PushVersionForm } from "./components/push-version-modal";
 
-/**
- * Kept out of the component files so those export only components, which is
- * what lets React Refresh swap them in place instead of reloading their
- * callers.
- */
-
-interface PushModalProps {
-    title: string;
-    /** The child to push to; a whole direction has no form. */
-    target: LinkedWorkspace;
+function documentName(linked: LinkedWorkspace): string {
+    return linked.documentName ?? "Untitled document";
 }
 
+/** The form for one child. A whole direction has none: one name cannot stand for the several versions it cuts. */
 export function openPushVersionModal(
     workspace: WorkspacePath,
-    props: PushModalProps
+    target: LinkedWorkspace
 ): void {
     openAppModal({
-        title: props.title,
-        children: (
-            <PushVersionForm workspace={workspace} target={props.target} />
-        )
+        title: `Push to ${documentName(target)}`,
+        children: <PushVersionForm workspace={workspace} target={target} />
+    });
+}
+
+export function openPullReferencesModal(
+    workspace: WorkspacePath,
+    source: LinkedWorkspace
+): void {
+    openAppModal({
+        title: `Pull from ${documentName(source)}`,
+        children: <PullReferencesForm workspace={workspace} source={source} />
     });
 }
 
@@ -40,24 +42,6 @@ export function openJobDetails(workspace: WorkspacePath): void {
             <AppModalBody>
                 <JobDetails workspace={workspace} />
             </AppModalBody>
-        )
-    });
-}
-
-interface PullModalProps {
-    title: string;
-    /** The parent to pull from; a whole direction has no form. */
-    source: LinkedWorkspace;
-}
-
-export function openPullReferencesModal(
-    workspace: WorkspacePath,
-    props: PullModalProps
-): void {
-    openAppModal({
-        title: props.title,
-        children: (
-            <PullReferencesForm workspace={workspace} source={props.source} />
         )
     });
 }

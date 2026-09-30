@@ -28,9 +28,8 @@ function toWorkspaceQuery(workspace: WorkspacePath) {
 }
 
 /**
- * The workspaces linked to this one. Reading them means asking Onshape for each
- * one's name and the caller's permissions, so it stays idle while signed out
- * rather than answering 401.
+ * The workspaces linked to this one. Each read asks Onshape about every link,
+ * so it is refreshed only when something changes them.
  */
 export function useWorkspaceLinksQuery(workspace: WorkspacePath | undefined) {
     const isSignedIn = useIsSignedIn();
@@ -43,7 +42,7 @@ export function useWorkspaceLinksQuery(workspace: WorkspacePath | undefined) {
                           query: toWorkspaceQuery(workspace)
                       })
                 : skipToken,
-        refetchInterval: false
+        staleTime: Infinity
     });
 }
 
@@ -110,11 +109,7 @@ export function useRemoveLinkMutation(workspace: WorkspacePath) {
 }
 
 export interface PushVersionArgs {
-    /**
-     * Absent for the ordinary case, which is most of them: the server then
-     * names each version as Onshape's own dialog would, V<n> after the highest
-     * the document already has.
-     */
+    /** Absent or blank, each version is named as Onshape's own dialog would. */
     name?: string;
     description?: string;
     scope: PushScope;
@@ -136,8 +131,6 @@ export function usePushVersionMutation(workspace: WorkspacePath) {
             updateOnly
         }: PushVersionArgs) =>
             apiPost<VersionJobStatus>("/push-version", {
-                // An empty name is left off rather than sent: the name is what
-                // the server defaults, and "" is not a name.
                 body: {
                     workspace,
                     name: name?.trim() || undefined,
@@ -179,16 +172,11 @@ export function usePullReferencesMutation(workspace: WorkspacePath) {
                 }
             }),
         onSuccess: (status) => adoptJob(workspace, status),
-        onError: getAppErrorHandler(
-            "Unexpectedly failed to update the references."
-        )
+        onError: getAppErrorHandler("Unexpectedly failed to pull.")
     });
 }
 
-/**
- * Shows the run as running straight away, rather than leaving the page idle
- * until the first poll comes back.
- */
+/** Shows the run going straight away, before the socket says so. */
 function adoptJob(workspace: WorkspacePath, started: VersionJobStatus): void {
     // The socket can have brought this run's first progress already.
     queryClient.setQueryData<VersionJobStatus>(
@@ -198,10 +186,8 @@ function adoptJob(workspace: WorkspacePath, started: VersionJobStatus): void {
 }
 
 /**
- * The run this workspace last started. Asked once, when the page opens: what it
- * does next arrives as a push, so nothing here polls. A panel that was closed
- * and reopened finds a run still going the same way, and a client that
- * reconnects asks again for what it missed.
+ * The run this workspace last started. Refreshed when the socket says it moved
+ * on, and after a reconnect; nothing polls.
  */
 export function useVersionJobQuery(workspace: WorkspacePath | undefined) {
     const isSignedIn = useIsSignedIn();
@@ -214,16 +200,11 @@ export function useVersionJobQuery(workspace: WorkspacePath | undefined) {
                           query: toWorkspaceQuery(workspace)
                       })
                 : skipToken,
-        refetchInterval: false
+        staleTime: Infinity
     });
 }
 
-/**
- * The name a push would give the version it cuts, which the naming form opens
- * with. Read fresh each time the form opens: somebody else may have cut a
- * version since, and offering a number Onshape has already used is worse than
- * waiting a moment for the real one.
- */
+/** The name a run would give a version it cuts here, which the forms offer. */
 export function useNextVersionNameQuery(workspace: WorkspacePath | undefined) {
     const isSignedIn = useIsSignedIn();
     return useQuery<{ name: string }>({
@@ -234,9 +215,7 @@ export function useNextVersionNameQuery(workspace: WorkspacePath | undefined) {
                       apiGet("/next-version-name", {
                           query: toWorkspaceQuery(workspace)
                       })
-                : skipToken,
-        staleTime: 0,
-        refetchInterval: false
+                : skipToken
     });
 }
 
@@ -247,9 +226,4 @@ export function useIsVersionJobRunning(
     return (
         useVersionJobQuery(workspace).data?.state === VersionJobState.RUNNING
     );
-}
-
-/** "1 change", "2 changes" — the counted noun both the toast and a badge use. */
-export function plural(count: number, noun: string): string {
-    return `${count} ${noun}${count === 1 ? "" : "s"}`;
 }

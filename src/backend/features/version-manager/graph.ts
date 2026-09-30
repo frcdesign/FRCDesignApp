@@ -26,16 +26,9 @@ export function childrenOf(
     edges: WorkspaceEdge[],
     workspace: WorkspacePath
 ): WorkspacePath[] {
-    const seen = new Set<string>();
-    const found: WorkspacePath[] = [];
-    for (const edge of edges) {
-        if (!isSameWorkspace(edge.parent, workspace)) continue;
-        const key = workspaceKey(edge.child);
-        if (seen.has(key)) continue;
-        seen.add(key);
-        found.push(edge.child);
-    }
-    return found;
+    return edges
+        .filter((edge) => isSameWorkspace(edge.parent, workspace))
+        .map((edge) => edge.child);
 }
 
 /**
@@ -48,9 +41,7 @@ export function childrenOf(
  * run that it references — a child of two of them has to wait for both, which
  * is why this is a topological order and not a breadth-first walk.
  *
- * @throws {LinkCycleError} when the reachable subgraph is not acyclic. There is
- * no order to run a cycle in, so the caller is told rather than left with a
- * partial one.
+ * @throws {LinkCycleError} when the reachable subgraph has a cycle.
  */
 export function pushOrder(
     edges: WorkspaceEdge[],

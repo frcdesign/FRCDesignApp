@@ -1,16 +1,15 @@
 /**
  * Finding the run a workspace last started, and how it went.
  *
- * Not the library `job-tracker`: that one is keyed by library and answers only
- * running or not. Here what the run did is what the user is waiting for, so the
- * status it ended with is kept — for a panel opened after it finished, and for
- * a client that missed the push saying so.
+ * Not the library `job-tracker`, which is keyed by library and answers only
+ * running or not: here what the run did is what the user is waiting for.
  */
 import type { AppBindings } from "../../lib/context";
 import { kvStore } from "../../lib/kv-store";
 import { pushVersionJob } from "../push/notify";
 import {
     VersionJobState,
+    VersionTaskState,
     workspaceKey,
     type VersionJobResult,
     type VersionJobStatus,
@@ -53,15 +52,13 @@ export async function startJob(
         state: VersionJobState.RUNNING,
         jobId: instanceId
     };
-    await jobs.put(env.KV, workspaceKey(workspace), status);
-    await pushVersionJob(env, workspaceKey(workspace), status);
+    await reportJob(env, workspace, status);
     return status;
 }
 
 /**
- * Tells the workspace how the run is going or how it ended, and keeps it —
- * unless a later run has taken the workspace over, whose mark it would
- * otherwise overwrite.
+ * Keeps how the run is going or how it ended, and tells the workspace it moved
+ * on. Nothing else writes the mark: a workspace runs one at a time.
  */
 export async function reportJob(
     env: AppBindings,
@@ -69,39 +66,45 @@ export async function reportJob(
     status: VersionJobStatus
 ): Promise<void> {
     const id = workspaceKey(workspace);
-    const current = await jobs.get(env.KV, id);
-    if (!current || current.jobId === status.jobId) {
-        await jobs.put(env.KV, id, status);
-    }
-    await pushVersionJob(env, id, status);
+    await jobs.put(env.KV, id, status);
+    await pushVersionJob(env, id);
 }
 
-/**
- * What the run is doing, or did. `jobId` is the client saying which run it is
- * watching; without one this is whatever the workspace last started.
- */
+/** What the run this workspace last started is doing, or did. */
 export async function getJobStatus(
     env: AppBindings,
-    workspace: WorkspacePath,
-    jobId?: string
+    workspace: WorkspacePath
 ): Promise<VersionJobStatus> {
     const stored = await jobs.get(env.KV, workspaceKey(workspace));
-    if (jobId && stored?.jobId !== jobId) {
-        // A run this workspace has since moved on from.
-        return readInstance(env, jobId);
-    }
-    if (!stored?.jobId) {
+    if (!stored) {
         return { state: VersionJobState.NONE };
     }
-    if (stored.state !== VersionJobState.RUNNING) {
+    if (stored.state !== VersionJobState.RUNNING || !stored.jobId) {
         return stored;
     }
     // Asked rather than trusted: a run that died before it could report leaves
     // its mark saying it is still going.
     const live = await readInstance(env, stored.jobId);
-    return live.state === VersionJobState.RUNNING
-        ? stored
-        : { ...stored, ...live };
+    if (live.state === VersionJobState.RUNNING) {
+        return stored;
+    }
+    return {
+        ...stored,
+        ...live,
+        tasks: stored.tasks?.map((task) => ({
+            ...task,
+            state:
+                task.state === VersionTaskState.RUNNING
+                    ? VersionTaskState.FAILED
+                    : task.state === VersionTaskState.PENDING
+                      ? VersionTaskState.SKIPPED
+                      : task.state,
+            reason:
+                task.state === VersionTaskState.RUNNING
+                    ? live.error
+                    : task.reason
+        }))
+    };
 }
 
 /** The run as the platform has it, for one whose own report is not to hand. */
@@ -131,19 +134,8 @@ async function readInstance(
     return {
         state: VersionJobState.FAILED,
         jobId: instanceId,
-        error: describeRunFailure(toError(status.error))
+        error: describeRunFailure(
+            status.error && new Error(status.error.message)
+        )
     };
-}
-
-/**
- * Workflows reports an error as a string on some paths and an object on others;
- * either becomes an `Error` whose message is what it said.
- */
-function toError(error: unknown): Error | undefined {
-    if (typeof error === "string") return new Error(error);
-    if (error && typeof error === "object" && "message" in error) {
-        const { message } = error;
-        if (typeof message === "string") return new Error(message);
-    }
-    return undefined;
 }

@@ -74,8 +74,7 @@ export function planReferenceUpdates(
 
             for (const referencedElement of reference.referencedElements) {
                 updates.push({
-                    // References are always to versions, which is why both ends
-                    // are spelled `v` rather than carried from the caller.
+                    // References are always to versions.
                     fromReference: {
                         documentId,
                         instanceId: reference.id,
@@ -105,10 +104,7 @@ export function planReferenceUpdates(
  * Repoints every reference in `workspace` that {@link planReferenceUpdates}
  * picks out.
  *
- * One tab at a time, as the implementation this came from had it — its comment
- * says running them concurrently caused problems, and does not say what.
- *
- * A failure on any tab is the document's, and leaves the step: a retry plans
+ * One tab at a time: concurrent updates are known to misbehave. A failure on any tab is the document's, and leaves the step: a retry plans
  * afresh, and a tab the first attempt moved is already on its version and is
  * skipped — which also leaves it out of the retry's count.
  */

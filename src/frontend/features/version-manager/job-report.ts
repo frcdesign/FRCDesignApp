@@ -1,86 +1,38 @@
 /** How a run is going or went, in the few words the toast and the callout share. */
 import {
+    failedTaskCount,
     VersionJobKind,
-    VersionJobState,
+    VersionJobOutcome,
     VersionTaskAction,
-    VersionTaskState,
-    type VersionJobResult,
-    type VersionJobStatus,
-    type VersionTask
+    type VersionJobStatus
 } from "@backend/features/version-manager/contract";
+import { plural } from "../../lib/plural";
 import { Status } from "../../lib/status";
 import { StatusColor } from "../../lib/style-constants";
-import { plural } from "./queries";
 
-export enum JobOutcome {
-    SUCCESS = "success",
-    /** Some of it failed, after changing something in Onshape. */
-    PARTIAL = "partial",
-    FAILED = "failed"
-}
-
-export const OUTCOME_STATUS: Record<JobOutcome, Status> = {
-    [JobOutcome.SUCCESS]: Status.SUCCESS,
-    [JobOutcome.PARTIAL]: Status.WARNING,
-    [JobOutcome.FAILED]: Status.ERROR
+export const OUTCOME_STATUS: Record<VersionJobOutcome, Status> = {
+    [VersionJobOutcome.SUCCESS]: Status.SUCCESS,
+    [VersionJobOutcome.PARTIAL]: Status.WARNING,
+    [VersionJobOutcome.FAILED]: Status.ERROR
 };
-
-/** What stays in Onshape whatever else the run did. */
-function hasChanged(result: VersionJobResult | undefined): boolean {
-    return (
-        result !== undefined &&
-        (result.createdVersions > 0 || result.updatedElements > 0)
-    );
-}
-
-export function failedTasks(status: VersionJobStatus): VersionTask[] {
-    return (status.tasks ?? []).filter(
-        (task) => task.state === VersionTaskState.FAILED
-    );
-}
-
-/** Undefined while there is nothing finished to report. */
-export function jobOutcome(
-    status: VersionJobStatus | undefined
-): JobOutcome | undefined {
-    if (
-        status?.state !== VersionJobState.COMPLETE &&
-        status?.state !== VersionJobState.FAILED
-    ) {
-        return undefined;
-    }
-    const failed =
-        status.state === VersionJobState.FAILED ||
-        failedTasks(status).length > 0;
-    if (!failed) {
-        return JobOutcome.SUCCESS;
-    }
-    return hasChanged(status.result) ? JobOutcome.PARTIAL : JobOutcome.FAILED;
-}
 
 function jobKindName(status: VersionJobStatus): string {
     if (status.updateOnly) {
         return "Update";
     }
-    switch (status.kind) {
-        case VersionJobKind.PUSH:
-            return "Push";
-        case VersionJobKind.PULL:
-            return "Pull";
-    }
-    return "Run";
+    return status.kind === VersionJobKind.PULL ? "Pull" : "Push";
 }
 
 const OUTCOME_VERB = {
-    [JobOutcome.SUCCESS]: "succeeded",
-    [JobOutcome.PARTIAL]: "partially failed",
-    [JobOutcome.FAILED]: "failed"
+    [VersionJobOutcome.SUCCESS]: "succeeded",
+    [VersionJobOutcome.PARTIAL]: "partially failed",
+    [VersionJobOutcome.FAILED]: "failed"
 } as const;
 
 /** "Push succeeded", "Pull failed" and the like. */
 export function jobHeadline(
     status: VersionJobStatus,
-    outcome: JobOutcome
+    outcome: VersionJobOutcome
 ): string {
     return `${jobKindName(status)} ${OUTCOME_VERB[outcome]}`;
 }
@@ -89,7 +41,7 @@ export function jobHeadline(
 function targetsName(status: VersionJobStatus): string {
     const targets = status.targets ?? [];
     if (targets.length === 1) {
-        return targets[0].documentName ?? "a linked document";
+        return targets[0].documentName ?? "Untitled document";
     }
     return plural(targets.length, "document");
 }
@@ -136,7 +88,7 @@ export function jobStats(status: VersionJobStatus): JobStat[] {
             color: StatusColor.SUCCESS
         });
     }
-    const failed = failedTasks(status).length;
+    const failed = failedTaskCount(status);
     if (failed > 0) {
         stats.push({
             label: `${plural(failed, "step")} failed`,

@@ -42,13 +42,15 @@ export function onshapeStatus(error: unknown): number | undefined {
 
 /**
  * Whether trying again could go differently: a rate limit, Onshape having a bad
- * moment, or a request that got no answer at all. A refusal fails the same way
- * every time.
+ * moment, or a request that got no answer at all. Anything else fails the same
+ * way every time.
  */
 export function isTransient(error: unknown): boolean {
     const status = onshapeStatus(error);
+    if (status === undefined) {
+        return error instanceof Error && NO_ANSWER_PATTERN.test(error.message);
+    }
     return (
-        status === undefined ||
         status === HttpStatus.TOO_MANY_REQUESTS ||
         status === HttpStatus.REQUEST_TIMEOUT ||
         status >= HttpStatus.INTERNAL_SERVER_ERROR

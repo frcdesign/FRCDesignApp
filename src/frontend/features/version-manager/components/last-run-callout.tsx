@@ -1,19 +1,16 @@
 import { ListBulletsIcon } from "@phosphor-icons/react";
 import { type ReactNode } from "react";
 import {
+    jobOutcome,
     VersionJobState,
+    type VersionJobStatus,
     type WorkspacePath
 } from "@backend/features/version-manager/contract";
 import { Callout, CalloutButton } from "../../../components/callout";
 import { formatTimeAgo } from "../../../lib/format-time";
 import { Status } from "../../../lib/status";
 import { IconSize } from "../../../lib/style-constants";
-import {
-    jobHeadline,
-    jobOutcome,
-    OUTCOME_STATUS,
-    runningHeadline
-} from "../job-report";
+import { jobHeadline, OUTCOME_STATUS, runningHeadline } from "../job-report";
 import { openJobDetails } from "../open-version-modals";
 import { useVersionJobQuery } from "../queries";
 
@@ -23,50 +20,44 @@ interface LastRunCalloutProps {
 
 /**
  * The push or pull this workspace last started: what it is doing while it
- * goes, then how it went for as long as the status is kept. A toast reaches
- * only whoever was looking when the run finished; this is for whoever opens
- * the page after, which for a long recursive push is most people.
+ * goes, then how it went for as long as the status is kept.
  */
 export function LastRunCallout(props: LastRunCalloutProps): ReactNode {
     const { workspace } = props;
     const { data: status } = useVersionJobQuery(workspace);
 
-    if (!status) {
+    const outcome = jobOutcome(status);
+    const isRunning = status?.state === VersionJobState.RUNNING;
+    if (!status || (!outcome && !isRunning)) {
         return null;
     }
-    const details = (outcomeStatus: Status) => (
-        <CalloutButton
-            status={outcomeStatus}
-            icon={<ListBulletsIcon size={IconSize.SMALL} />}
-            onClick={() => openJobDetails(workspace)}
-        >
-            Details
-        </CalloutButton>
+    const calloutStatus = outcome ? OUTCOME_STATUS[outcome] : Status.INFO;
+
+    return (
+        <Callout
+            text={calloutText(status)}
+            status={calloutStatus}
+            loading={isRunning}
+            action={
+                <CalloutButton
+                    status={calloutStatus}
+                    icon={<ListBulletsIcon size={IconSize.SMALL} />}
+                    onClick={() => openJobDetails(workspace)}
+                >
+                    Details
+                </CalloutButton>
+            }
+        />
     );
+}
 
-    if (status.state === VersionJobState.RUNNING) {
-        return (
-            <Callout
-                text={`${runningHeadline(status)}...`}
-                loading
-                action={details(Status.INFO)}
-            />
-        );
-    }
-
+function calloutText(status: VersionJobStatus): string {
     const outcome = jobOutcome(status);
     if (!outcome) {
-        return null;
+        return `${runningHeadline(status)}...`;
     }
-    const outcomeStatus = OUTCOME_STATUS[outcome];
     const when = status.finishedAt
         ? ` ${formatTimeAgo(status.finishedAt)}`
         : "";
-    return (
-        <Callout
-            text={`${jobHeadline(status, outcome)}${when}.`}
-            status={outcomeStatus}
-            action={details(outcomeStatus)}
-        />
-    );
+    return `${jobHeadline(status, outcome)}${when}.`;
 }

@@ -35,8 +35,8 @@ export function eachDay(range: DayRange): string[] {
 }
 
 /**
- * Tells "nothing happened" from "not tracking yet". Both day-keyed rollups an
- * event of its own writes, since either may hold the first day recorded.
+ * Tells "nothing happened" from "not tracking yet": the first day either
+ * insert or open rollup holds.
  */
 export async function getTrackingSince(db: Db): Promise<string | undefined> {
     const [inserts, opens] = await Promise.all([

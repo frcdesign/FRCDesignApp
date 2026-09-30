@@ -2,15 +2,10 @@ import { HttpStatus } from "http-status-ts";
 import { OnshapeApi, OnshapeApiError } from "../client";
 import { DocumentPath } from "../path";
 
-/**
- * What Onshape says the caller may do with a document. Only the four the
- * version manager asks about are spelled out; Onshape sends others (COMMENT,
- * RESHARE, EXPORT, COPY, OWNER) which nothing here reads.
- */
+/** The permissions the app asks about; Onshape sends others nothing reads. */
 export enum OnshapePermission {
     READ = "READ",
     WRITE = "WRITE",
-    DELETE = "DELETE",
     /** Required to reference the document from another one. */
     LINK = "LINK"
 }

@@ -1,15 +1,8 @@
-import {
-    Badge,
-    Center,
-    EmptyState,
-    Group,
-    Loader,
-    Stack,
-    Text
-} from "@mantine/core";
+import { Badge, Center, Group, Loader, Stack, Text } from "@mantine/core";
 import { CircleIcon, MinusCircleIcon } from "@phosphor-icons/react";
 import { type ReactNode } from "react";
 import {
+    jobOutcome,
     VersionJobState,
     VersionTaskState,
     workspaceKey,
@@ -17,6 +10,7 @@ import {
     type WorkspacePath
 } from "@backend/features/version-manager/contract";
 import { AppIcon } from "../../../components/app-icon";
+import { SectionNotice } from "../../../components/app-notice";
 import { AppTitle } from "../../../components/app-title";
 import { StatusIcon } from "../../../components/status-icon";
 import { Status } from "../../../lib/status";
@@ -30,27 +24,30 @@ import {
 import { makeUrl } from "../../../lib/url";
 import {
     jobHeadline,
-    jobOutcome,
     jobStats,
     OUTCOME_STATUS,
     runningHeadline,
     TASK_LABEL
 } from "../job-report";
-import { plural, useVersionJobQuery } from "../queries";
+import { plural } from "../../../lib/plural";
+import { useVersionJobQuery } from "../queries";
 
-interface JobDetailsProps {
+interface JobDetailsTitleProps {
     workspace: WorkspacePath;
 }
 
 /** The modal's title, which moves on with the run as its body does. */
-export function JobDetailsTitle(props: JobDetailsProps): ReactNode {
+export function JobDetailsTitle(props: JobDetailsTitleProps): ReactNode {
     const { data: status } = useVersionJobQuery(props.workspace);
     const outcome = jobOutcome(status);
 
+    if (status?.state === VersionJobState.NONE) {
+        return <AppTitle title="No recent run" />;
+    }
     if (!status || !outcome) {
         return (
             <AppTitle
-                title={status ? runningHeadline(status) : "Loading..."}
+                title={status ? `${runningHeadline(status)}...` : "Loading..."}
                 icon={<Loader size={IconSize.MEDIUM} />}
             />
         );
@@ -69,9 +66,13 @@ export function JobDetailsTitle(props: JobDetailsProps): ReactNode {
     );
 }
 
+interface JobDetailsProps {
+    workspace: WorkspacePath;
+}
+
 /**
  * The run this workspace last started, step by step as it goes: what it did,
- * and for each step that failed, why and a way into the document.
+ * and for each step that failed, why.
  */
 export function JobDetails(props: JobDetailsProps): ReactNode {
     const { data: status } = useVersionJobQuery(props.workspace);
@@ -84,16 +85,16 @@ export function JobDetails(props: JobDetailsProps): ReactNode {
     return (
         <Stack gap="md">
             {status.error && (
-                <EmptyState
+                <SectionNotice
                     align="left"
-                    size="sm"
+                    py={0}
                     icon={
                         <StatusIcon
                             status={Status.ERROR}
                             size={IconSize.CONTROL}
                         />
                     }
-                    title="Stopped early"
+                    title="Stopped early."
                     description={status.error}
                 />
             )}
@@ -156,7 +157,7 @@ function DocumentSteps(props: DocumentStepsProps): ReactNode {
                     iconSize={IconSize.SMALL}
                 >
                     <Text component="span" inherit truncate miw={0}>
-                        {group.documentName ?? "A linked document"}
+                        {group.documentName ?? "Untitled document"}
                     </Text>
                 </ExternalLink>
             </Group>

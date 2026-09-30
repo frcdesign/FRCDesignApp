@@ -372,16 +372,13 @@ export interface OnshapeExternalReference {
 
 /**
  * GET /documents/d/{did}/w/{wid}/externalreferences (the subset we read).
- *
- * Undocumented and OAuth-only, as far as the app that first used it could tell;
- * this shape is carried over from that implementation rather than from Onshape's
- * API spec, so treat it as unverified against the current API.
+ * Undocumented (absent from the OpenAPI spec); shape unverified.
  */
 export interface OnshapeExternalReferences {
     /** Keyed by the referencing tab's element id. */
-    elementExternalReferences: Record<string, OnshapeExternalReference[]>;
+    elementExternalReferences?: Record<string, OnshapeExternalReference[]>;
     /** The newest version of each referenced document. */
-    latestVersions: { documentId: string; id: string }[];
+    latestVersions?: { documentId: string; id: string }[];
 }
 
 // === insertables (GET /documents/d/{did}/{wv}/{wvid}/insertables) ===
@@ -391,12 +388,7 @@ interface OnshapeInsertable {
     predictableThumbnailId?: string;
 }
 
-/**
- * GET /documents/d/{did}/{wv}/{wvid}/insertables (the subset we read).
- *
- * Every `include*` flag defaults to false, so a call that asks for none of them
- * comes back with no items and the counters alone.
- */
+/** GET /documents/d/{did}/{wv}/{wvid}/insertables (the subset we read). */
 export interface OnshapeInsertables {
     items?: OnshapeInsertable[];
     /**

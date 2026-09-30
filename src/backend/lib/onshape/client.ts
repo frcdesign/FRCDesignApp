@@ -5,8 +5,7 @@ import {
     type PostOptions
 } from "../query-params";
 
-// Constant across all environments (dev/cert/production), so hardcoded here
-// rather than duplicated as a per-environment var in wrangler.jsonc.
+// The same in every environment.
 const ONSHAPE_API_BASE_PATH = "https://cad.onshape.com";
 const ONSHAPE_API_VERSION = 17;
 

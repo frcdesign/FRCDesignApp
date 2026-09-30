@@ -11,10 +11,14 @@ import {
 import { AppModalBody, AppModalFooter } from "../../../components/app-modal";
 import { useAppModal } from "../../../components/open-app-modal";
 import { IconSize } from "../../../lib/style-constants";
-import { useNextVersionNameQuery, usePullReferencesMutation } from "../queries";
+import {
+    useIsVersionJobRunning,
+    useNextVersionNameQuery,
+    usePullReferencesMutation
+} from "../queries";
 import { showQuickActionTip } from "../version-manager-tips";
 
-export interface PullReferencesFormProps {
+interface PullReferencesFormProps {
     workspace: WorkspacePath;
     /** The parent to pull from, which the run versions. */
     source: LinkedWorkspace;
@@ -28,14 +32,14 @@ export interface PullReferencesFormProps {
 export function PullReferencesForm(props: PullReferencesFormProps): ReactNode {
     const { workspace, source } = props;
     const modal = useAppModal();
-    // Empty unless somebody types one; see the push form, which this mirrors.
+    // Empty unless typed; see the push form.
     const [typedName, setTypedName] = useState("");
     const [description, setDescription] = useState("");
     const suggested = useNextVersionNameQuery(source.workspace);
     const pull = usePullReferencesMutation(workspace);
+    const isRunning = useIsVersionJobRunning(workspace);
 
-    // Nothing here was touched, so the form did nothing a menu item would not
-    // have done — which is what the tip is for.
+    // Untouched, the form did what a quick run does, which the tip points out.
     const isEdited = typedName !== "" || description !== "";
 
     const submit = () => {
@@ -94,6 +98,7 @@ export function PullReferencesForm(props: PullReferencesFormProps): ReactNode {
                     ml="auto"
                     rightSection={<ArrowLineDownIcon size={IconSize.SMALL} />}
                     loading={pull.isPending}
+                    disabled={isRunning}
                     onClick={submit}
                 >
                     Pull

@@ -2,7 +2,6 @@ import {
     Badge,
     Center,
     Divider,
-    Group,
     Loader,
     Menu,
     Text,
@@ -17,14 +16,17 @@ import {
     LinkBreakIcon,
     TreeStructureIcon
 } from "@phosphor-icons/react";
-import { type MouseEvent, useState, type ReactNode } from "react";
-import { useOs } from "@mantine/hooks";
+import { type MouseEvent, type ReactNode } from "react";
 import {
+    isSameWorkspace,
     LinkDirection,
     PullScopeKind,
     PushScopeKind,
+    VersionJobKind,
+    VersionJobState,
     workspaceThumbnailUrl,
     type LinkedWorkspace,
+    type VersionJobStatus,
     type WorkspacePath
 } from "@backend/features/version-manager/contract";
 import { ThumbnailSize } from "@backend/features/thumbnails/contract";
@@ -45,14 +47,15 @@ import {
     openPullReferencesModal,
     openPushVersionModal
 } from "../open-version-modals";
-import { retireQuickActionTip } from "../version-manager-tips";
+import { quickClickName, retireQuickActionTip } from "../version-manager-tips";
+import { plural } from "../../../lib/plural";
+import { runningHeadline } from "../job-report";
 import {
-    plural,
-    useIsVersionJobRunning,
     useMoveLinkMutation,
     usePullReferencesMutation,
     usePushVersionMutation,
-    useRemoveLinkMutation
+    useRemoveLinkMutation,
+    useVersionJobQuery
 } from "../queries";
 import { AddLinkRow } from "./add-link-input";
 
@@ -62,7 +65,6 @@ export const DIRECTION_COPY = {
         title: "Parents",
         allAction: "Quick pull from all",
         rowAction: "Quick pull",
-        running: "Pulling from Onshape...",
         description:
             "Documents this one uses parts from. Pulling saves a new version of the parent and updates this document to use it.",
         empty: "No linked parents"
@@ -71,7 +73,6 @@ export const DIRECTION_COPY = {
         title: "Children",
         allAction: "Quick push to all",
         rowAction: "Quick push",
-        running: "Pushing to Onshape...",
         description:
             "Documents that use parts from this one. Pushing saves a new version of this document and updates each child to use it.",
         empty: "No linked children"
@@ -84,8 +85,11 @@ const OTHER_DIRECTION = {
     [LinkDirection.CHILD]: LinkDirection.PARENT
 } as const;
 
-/** What a run can be aimed at: everything in a direction, or one link. */
-const ALL_TARGET = "all";
+/** The kind of run each direction's actions start. */
+const DIRECTION_KIND = {
+    [LinkDirection.PARENT]: VersionJobKind.PULL,
+    [LinkDirection.CHILD]: VersionJobKind.PUSH
+} as const;
 
 interface DirectionIconProps {
     direction: LinkDirection;
@@ -104,12 +108,12 @@ export function DirectionIcon(props: DirectionIconProps): ReactNode {
     );
 }
 
-/**
- * What a direction means, on the title rather than over the list: a line of
- * explanation earns its room the first few times and never again, which is
- * what a bubble is for.
- */
-export function DirectionInfo(props: { direction: LinkDirection }): ReactNode {
+interface DirectionInfoProps {
+    direction: LinkDirection;
+}
+
+/** What a direction means, beside its title. */
+export function DirectionInfo(props: DirectionInfoProps): ReactNode {
     return (
         <InfoTooltip
             label={DIRECTION_COPY[props.direction].description}
@@ -120,37 +124,19 @@ export function DirectionInfo(props: { direction: LinkDirection }): ReactNode {
     );
 }
 
-/**
- * The key that turns a click into the run itself. Onshape's panel is a browser
- * pane, and on a Mac ctrl-click is the context menu there, so the command key
- * is what a Mac reads instead.
- */
-function useQuickKeyLabel(): string {
-    return useOs() === "macos" ? "⌘ click" : "Ctrl click";
-}
-
 /** Whether the click asked for the run rather than the form. */
 function isQuickClick(event: MouseEvent): boolean {
     return event.ctrlKey || event.metaKey;
 }
 
 interface RunningIndicatorProps {
-    direction: LinkDirection;
-    /** Whether this row or section is the one the run was started from. */
-    running: boolean;
+    status: VersionJobStatus;
 }
 
-/**
- * Where a run shows itself: beside whatever started it, since a run outlives
- * the click and the page has nothing else moving.
- */
+/** A run going, beside the row or section it is aimed at. */
 function RunningIndicator(props: RunningIndicatorProps): ReactNode {
-    const { direction, running } = props;
-    if (!running) {
-        return null;
-    }
     return (
-        <Tooltip withArrow label={DIRECTION_COPY[direction].running}>
+        <Tooltip label={`${runningHeadline(props.status)}...`}>
             <Center className={styles.noShrink}>
                 <Loader size={IconSize.SMALL} />
             </Center>
@@ -159,21 +145,18 @@ function RunningIndicator(props: RunningIndicatorProps): ReactNode {
 }
 
 /**
- * Everything a section and its rows can set running, held once per direction so
- * the header outside the accordion panel and the rows inside it share a run.
- *
- * The buttons run it there and then; the form is behind a click on the row and
- * in the menus. Both end in the same mutation, which is why they are declared
- * together.
+ * Everything a section and its rows can run, held once per direction so the
+ * header outside the accordion panel and the rows inside it share a run.
  */
 export interface LinkActions {
-    isRunning: boolean;
-    /** What the run going is aimed at: {@link ALL_TARGET} or a link's id. */
-    activeTarget: string | undefined;
-    /**
-     * Opens the form for one link. There is none for a whole direction: it
-     * would name one version for the several the run cuts.
-     */
+    /** The run going from this workspace, whichever direction it is. */
+    running: VersionJobStatus | undefined;
+    /** Whether that run is this direction's and aimed at exactly `linked`. */
+    isRunningFor: (linked: LinkedWorkspace) => boolean;
+    /** Whether it is this direction's and aimed at the whole section. */
+    isRunningForAll: boolean;
+    /** Opens one link's form. A whole direction has none: one name cannot
+     * stand for the several versions it cuts. */
     openOne: (linked: LinkedWorkspace) => void;
     /** Runs it under the defaults the form would have shown. */
     quickAll: (recursive: boolean) => void;
@@ -193,9 +176,15 @@ export function useLinkActions(
 ): LinkActions {
     const pull = usePullReferencesMutation(workspace);
     const push = usePushVersionMutation(workspace);
-    const isRunning = useIsVersionJobRunning(workspace);
-    const [startedTarget, setStartedTarget] = useState<string>();
+    const { data: status } = useVersionJobQuery(workspace);
     const isChild = direction === LinkDirection.CHILD;
+
+    const running =
+        status?.state === VersionJobState.RUNNING ? status : undefined;
+    const ownTargets =
+        running?.kind === DIRECTION_KIND[direction]
+            ? (running.targets ?? [])
+            : undefined;
 
     const runQuick = (
         each: LinkedWorkspace | undefined,
@@ -203,7 +192,6 @@ export function useLinkActions(
     ) => {
         // They have found the shortcut, so the form stops pointing at it.
         retireQuickActionTip();
-        setStartedTarget(each ? each.linkId : ALL_TARGET);
         if (isChild) {
             push.mutate({
                 scope: each
@@ -227,31 +215,19 @@ export function useLinkActions(
         });
     };
 
-    const open = (each: LinkedWorkspace) => {
-        setStartedTarget(each.linkId);
-        if (isChild) {
-            openPushVersionModal(workspace, {
-                title: `Push to ${toName(each)}`,
-                target: each
-            });
-            return;
-        }
-        openPullReferencesModal(workspace, {
-            title: `Pull from ${toName(each)}`,
-            source: each
-        });
-    };
-
     return {
-        isRunning,
-        // Derived rather than cleared when the run ends: clearing would be a
-        // state write from an effect, and a stale target simply goes unused.
-        activeTarget: isRunning ? startedTarget : undefined,
-        openOne: (each) => open(each),
+        running,
+        isRunningFor: (each) =>
+            ownTargets?.length === 1 &&
+            isSameWorkspace(ownTargets[0].workspace, each.workspace),
+        isRunningForAll: ownTargets !== undefined && ownTargets.length !== 1,
+        openOne: (each) =>
+            isChild
+                ? openPushVersionModal(workspace, each)
+                : openPullReferencesModal(workspace, each),
         quickAll: (recursive) => runQuick(undefined, recursive),
         quickOne: (each, recursive) => runQuick(each, recursive),
         updateOne: (each) => {
-            setStartedTarget(each.linkId);
             if (isChild) {
                 push.mutate({
                     scope: {
@@ -269,7 +245,6 @@ export function useLinkActions(
             });
         },
         updateAll: () => {
-            setStartedTarget(ALL_TARGET);
             if (isChild) {
                 push.mutate({
                     scope: { kind: PushScopeKind.CHILDREN },
@@ -277,7 +252,10 @@ export function useLinkActions(
                 });
                 return;
             }
-            pull.mutate({ scope: { kind: PullScopeKind.ALL } });
+            pull.mutate({
+                scope: { kind: PullScopeKind.ALL },
+                updateOnly: true
+            });
         }
     };
 }
@@ -291,28 +269,20 @@ interface SectionActionsProps {
 /** The whole section's actions, which sit in its header as a menu. */
 export function SectionActions(props: SectionActionsProps): ReactNode {
     const { direction, linked, actions } = props;
-    const { isRunning, activeTarget } = actions;
+    const { running } = actions;
     const copy = DIRECTION_COPY[direction];
     const isChild = direction === LinkDirection.CHILD;
-    const disabled = isRunning || linked.length === 0;
+    const disabled = running !== undefined || linked.length === 0;
 
     return (
         <>
-            <RunningIndicator
-                direction={direction}
-                running={activeTarget === ALL_TARGET}
-            />
-            {/* No form among them: one name cannot stand for the several
-                versions a run across a whole direction cuts. */}
+            {running && actions.isRunningForAll && (
+                <RunningIndicator status={running} />
+            )}
             <MenuButton>
                 <MenuSection label={isChild ? "Push" : "Pull"}>
                     <Menu.Item
-                        leftSection={
-                            <DirectionIcon
-                                direction={direction}
-                                size={IconSize.MEDIUM}
-                            />
-                        }
+                        leftSection={<DirectionIcon direction={direction} />}
                         disabled={disabled}
                         onClick={() => actions.quickAll(false)}
                     >
@@ -326,7 +296,7 @@ export function SectionActions(props: SectionActionsProps): ReactNode {
                             disabled={disabled}
                             onClick={() => actions.quickAll(true)}
                         >
-                            Quick recursive push
+                            Quick recursive push to all
                         </Menu.Item>
                     )}
                     <Menu.Item
@@ -335,7 +305,7 @@ export function SectionActions(props: SectionActionsProps): ReactNode {
                         }
                         // For parents it reaches past the list, to every
                         // out-of-date reference, so needs none linked.
-                        disabled={isChild ? disabled : isRunning}
+                        disabled={isChild ? disabled : running !== undefined}
                         onClick={actions.updateAll}
                     >
                         Update all references
@@ -361,20 +331,14 @@ interface ActionMenuSectionProps {
 function ActionMenuSection(props: ActionMenuSectionProps): ReactNode {
     const { direction, disabled, onQuick, onQuickRecursive, onUpdate } = props;
     const isChild = direction === LinkDirection.CHILD;
-    const quickKey = useQuickKeyLabel();
 
     return (
         <MenuSection label={isChild ? "Push" : "Pull"}>
             <Menu.Item
-                leftSection={
-                    <DirectionIcon
-                        direction={direction}
-                        size={IconSize.MEDIUM}
-                    />
-                }
+                leftSection={<DirectionIcon direction={direction} />}
                 rightSection={
                     <Text size="xs" c={StatusColor.DIMMED}>
-                        {quickKey}
+                        {quickClickName()}
                     </Text>
                 }
                 disabled={disabled}
@@ -426,10 +390,7 @@ export function LinkedWorkspaceSection(
             {linked.length === 0 && (
                 <>
                     <SectionNotice
-                        // Centred with the icon above, as the library's own
-                        // empty lists are.
                         title={copy.empty}
-                        description={null}
                         icon={
                             <DirectionIcon
                                 direction={direction}
@@ -443,8 +404,6 @@ export function LinkedWorkspaceSection(
                     <Divider />
                 </>
             )}
-            {/* The field is a row of the same table, so it sits on the grid
-                every other row does rather than in a card of its own. */}
             <ItemTable>
                 {linked.map((each) => (
                     <LinkedWorkspaceRow
@@ -467,10 +426,6 @@ export function LinkedWorkspaceSection(
     );
 }
 
-function toName(linked: LinkedWorkspace): string {
-    return linked.documentName ?? "a document you cannot open";
-}
-
 interface LinkedWorkspaceRowProps {
     linked: LinkedWorkspace;
     direction: LinkDirection;
@@ -484,17 +439,20 @@ function LinkedWorkspaceRow(props: LinkedWorkspaceRowProps): ReactNode {
     const { linked, direction, actions, onRemove, onMove } = props;
     const origin = useOnshapeOrigin();
     const url = makeUrl(origin, linked.workspace);
-    const disabled = actions.isRunning;
+    const { running } = actions;
 
     const menuItems = (
         <>
-            <ActionMenuSection
-                direction={direction}
-                disabled={disabled}
-                onQuick={() => actions.quickOne(linked, false)}
-                onQuickRecursive={() => actions.quickOne(linked, true)}
-                onUpdate={() => actions.updateOne(linked)}
-            />
+            {/* Nothing can be run on a document the caller cannot read. */}
+            {linked.isOpenable && (
+                <ActionMenuSection
+                    direction={direction}
+                    disabled={running !== undefined}
+                    onQuick={() => actions.quickOne(linked, false)}
+                    onQuickRecursive={() => actions.quickOne(linked, true)}
+                    onUpdate={() => actions.updateOne(linked)}
+                />
+            )}
             <MenuSection label="Link">
                 {linked.isOpenable && (
                     <Menu.Item
@@ -506,9 +464,6 @@ function LinkedWorkspaceRow(props: LinkedWorkspaceRowProps): ReactNode {
                         Open document
                     </Menu.Item>
                 )}
-                {/* Linked the wrong way up is a paste into the wrong field,
-                    which turns the link around rather than deleting and
-                    re-adding it. */}
                 <Menu.Item
                     leftSection={<ArrowsDownUpIcon size={IconSize.MEDIUM} />}
                     onClick={onMove}
@@ -532,14 +487,13 @@ function LinkedWorkspaceRow(props: LinkedWorkspaceRowProps): ReactNode {
         <ItemRow
             left={<LinkedWorkspaceTitle linked={linked} />}
             menuItems={menuItems}
-            // The menu below carries the same items, in the order this row
-            // wants them: the action first, then what to do with the link.
+            // Its own menu button, so the spinner comes before it.
             moreButton={false}
-            // A click opens the form; a modified one runs it there and then,
-            // which is what the menu's first item says. Opening the document is
-            // in the menu: this list is for pushing and pulling, and that is
-            // what a row should be one click from.
+            // A click opens the form; a modified one runs it with the defaults.
             onClick={(event) => {
+                if (running || !linked.isOpenable) {
+                    return;
+                }
                 if (isQuickClick(event)) {
                     actions.quickOne(linked, false);
                     return;
@@ -547,28 +501,25 @@ function LinkedWorkspaceRow(props: LinkedWorkspaceRowProps): ReactNode {
                 actions.openOne(linked);
             }}
             rightSection={
-                <Group gap={4} wrap="nowrap">
-                    <RunningIndicator
-                        direction={direction}
-                        running={actions.activeTarget === linked.linkId}
-                    />
+                <>
+                    {running && actions.isRunningFor(linked) && (
+                        <RunningIndicator status={running} />
+                    )}
                     <MenuButton>{menuItems}</MenuButton>
-                </Group>
+                </>
             }
         />
     );
 }
 
-/**
- * A linked workspace's thumbnail: the one Onshape keeps for the document, at
- * the size every row uses, with the same hover card as a part's.
- *
- * A workspace nobody can read gets none asked for — the placeholder is the
- * answer, and it keeps the row the height of its neighbours.
- */
-function LinkedWorkspaceThumbnail(props: {
+interface LinkedWorkspaceThumbnailProps {
     linked: LinkedWorkspace;
-}): ReactNode {
+}
+
+/** The thumbnail Onshape keeps for the document; a placeholder if unreadable. */
+function LinkedWorkspaceThumbnail(
+    props: LinkedWorkspaceThumbnailProps
+): ReactNode {
     const { linked } = props;
     if (!linked.isOpenable) {
         return <CardThumbnail />;
@@ -591,12 +542,7 @@ interface LinkedWorkspaceTitleProps {
     linked: LinkedWorkspace;
 }
 
-/**
- * The document and workspace a link points at, on the same block every list in
- * the app uses. A link the caller cannot read shows that it exists and nothing
- * else: what it points at is not theirs to know, and the row is still theirs to
- * remove.
- */
+/** The document and workspace a link points at; only that it exists, if unreadable. */
 function LinkedWorkspaceTitle(props: LinkedWorkspaceTitleProps): ReactNode {
     const { linked } = props;
     const thumbnail = <LinkedWorkspaceThumbnail linked={linked} />;
@@ -618,8 +564,6 @@ function LinkedWorkspaceTitle(props: LinkedWorkspaceTitleProps): ReactNode {
 
     return (
         <CardTitle
-            // Readable but unnamed: the document answered, and had nothing to
-            // say.
             title={linked.documentName ?? "Untitled document"}
             thumbnail={thumbnail}
             badge={
@@ -641,11 +585,7 @@ interface UnversionedChangesBadgeProps {
     changes: number | undefined;
 }
 
-/**
- * What the workspace has changed since its own last version. A pull moves onto
- * a version, so these are the edits it would leave behind — the count is the
- * one thing a row cannot say by naming the document.
- */
+/** What the parent has changed since its own last version, which a pull versions. */
 function UnversionedChangesBadge(
     props: UnversionedChangesBadgeProps
 ): ReactNode {
@@ -655,12 +595,7 @@ function UnversionedChangesBadge(
     }
 
     return (
-        <Tooltip
-            withArrow
-            multiline
-            w={240}
-            label={`${plural(changes, "change")} since the last version.`}
-        >
+        <Tooltip label={`${plural(changes, "change")} since the last version.`}>
             <Badge size="sm" variant="light" className={styles.noShrink}>
                 {plural(changes, "change")}
             </Badge>

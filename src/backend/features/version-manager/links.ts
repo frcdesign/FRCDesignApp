@@ -2,6 +2,8 @@
  * Reading and writing links, and resolving one into what the client shows.
  */
 import { and, eq } from "drizzle-orm";
+import { HttpStatus } from "http-status-ts";
+import { handledError } from "../../lib/api-error";
 import type { Db } from "../../db/client";
 import type { OnshapeApi } from "../../lib/onshape/client";
 import type { AppContext } from "../../lib/context";
@@ -13,13 +15,14 @@ import {
     isSameWorkspace,
     type LinkedWorkspace,
     toWorkspacePath,
+    workspaceKey,
     type WorkspacePath
 } from "./contract";
 import type { WorkspaceEdge } from "./graph";
 import { workspaceLinks, type WorkspaceLinkRow } from "./schema";
 import { describeWorkspace, getUnversionedChanges } from "./workspace-cache";
 
-/** How far a push is allowed to walk, so a mislinked graph cannot run forever. */
+/** The most workspaces a recursive push reaches. */
 const MAX_LINKED_WORKSPACES = 100;
 
 export function toEdge(row: WorkspaceLinkRow): WorkspaceEdge {
@@ -96,7 +99,7 @@ export async function addLink(
 }
 
 /** The row for one edge, in the direction given. */
-export function findLink(
+function findLink(
     db: Db,
     parent: WorkspacePath,
     child: WorkspacePath
@@ -116,9 +119,8 @@ export function findLink(
 }
 
 /**
- * Turns an edge around, so what provided content now takes it. The row is
- * rewritten rather than deleted and re-added: one row is one edge, and a delete
- * whose insert did not land would lose the link.
+ * Turns an edge around, so what provided content now takes it. Rewritten in
+ * place, so the link cannot be lost halfway.
  */
 export async function reverseLink(
     db: Db,
@@ -149,11 +151,8 @@ export async function deleteLink(db: Db, linkId: string): Promise<void> {
 }
 
 /**
- * The edges below `root`, gathered a frontier at a time so a push reads the
- * part of the graph it is going to walk rather than the whole table.
- *
- * Revisits are skipped, so a cycle terminates here and is reported by
- * `pushOrder`, which is where an order would have to exist for one.
+ * The edges below `root`, gathered a frontier at a time. Revisits are skipped,
+ * so a cycle ends the walk here and `pushOrder` reports it.
  */
 export async function collectDescendantEdges(
     db: Db,
@@ -166,12 +165,13 @@ export async function collectDescendantEdges(
     while (frontier.length > 0) {
         const next: WorkspacePath[] = [];
         for (const workspace of frontier) {
-            const key = `${workspace.documentId}|${workspace.instanceId}`;
+            const key = workspaceKey(workspace);
             if (visited.has(key)) continue;
             visited.add(key);
             if (visited.size > MAX_LINKED_WORKSPACES) {
-                throw new Error(
-                    `More than ${MAX_LINKED_WORKSPACES} workspaces linked below ${root.documentId}`
+                throw handledError(
+                    `A push can reach at most ${MAX_LINKED_WORKSPACES} linked workspaces.`,
+                    HttpStatus.CONFLICT
                 );
             }
             const rows = await getChildLinks(db, workspace);
@@ -187,14 +187,8 @@ export async function collectDescendantEdges(
 }
 
 /**
- * Fills in what the client shows for a linked workspace: its names, and whether
- * the caller may read it at all.
- *
- * A workspace the caller cannot read comes back openable-false and unnamed —
- * they are being shown that a link exists, not what it points at. Whether they
- * may *write* to it is not asked here: the push route checks that across the
- * whole run before it starts, so a row that cannot be pushed to says so when it
- * is pushed to rather than sitting there greyed out.
+ * What the client shows for a linked workspace. One the caller cannot read
+ * comes back unopenable and unnamed: they see that a link exists, not where.
  */
 export async function toLinkedWorkspace(
     c: AppContext,

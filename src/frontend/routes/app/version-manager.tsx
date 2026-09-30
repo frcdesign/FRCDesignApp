@@ -3,12 +3,18 @@ import { type ReactNode } from "react";
 import {
     LinkDirection,
     type LinkedWorkspace,
-    type WorkspaceLinksData,
     type WorkspacePath
 } from "@backend/features/version-manager/contract";
 import { AppSection, AppSections } from "../../components/app-section";
 import { AppTitle } from "../../components/app-title";
-import { SectionLoading, SectionNotice } from "../../components/app-notice";
+import { Button } from "@mantine/core";
+import { GitBranchIcon } from "@phosphor-icons/react";
+import {
+    SectionError,
+    SectionLoading,
+    SectionNotice
+} from "../../components/app-notice";
+import { IconSize } from "../../lib/style-constants";
 import { updateUiState, useUiState } from "../../lib/ui-state";
 import { UtilityTab } from "../../lib/app-tab";
 import { getUiLibraryId } from "../../lib/library";
@@ -24,9 +30,9 @@ import {
 } from "../../features/version-manager/components/linked-workspace-section";
 import { VersionManagerZeroState } from "../../features/version-manager/components/version-manager-zero-state";
 import { LastRunCallout } from "../../features/version-manager/components/last-run-callout";
-import { useVersionJobToasts } from "../../features/version-manager/job-toasts";
 import { useWorkspaceLinksQuery } from "../../features/version-manager/queries";
-import { useIsSignedIn } from "../../features/auth/access-level";
+import { useNeedsSignIn } from "../../features/auth/access-level";
+import { startSignIn } from "../../features/auth/sign-in";
 
 export const Route = createFileRoute("/app/version-manager")({
     component: VersionManagerPage,
@@ -53,21 +59,23 @@ export const Route = createFileRoute("/app/version-manager")({
 
 function VersionManagerPage(): ReactNode {
     const workspace = useTargetWorkspace();
-    const isSignedIn = useIsSignedIn();
-    // Mounted once for the page: a run belongs to the workspace, not to either
-    // section, so it is reported in one place however it was started.
-    useVersionJobToasts(workspace);
+    const needsSignIn = useNeedsSignIn();
 
     if (!workspace) {
-        // The redirect above has already been thrown; this is what renders on
-        // the way out.
+        // What renders on the way out, `beforeLoad` having redirected.
         return <SectionLoading title="Loading..." />;
     }
-    if (!isSignedIn) {
+    if (needsSignIn) {
         return (
             <SectionNotice
-                title="Sign in to manage versions."
-                description="Linking workspaces and pushing versions both happen in your Onshape documents, which needs your Onshape session."
+                icon={<GitBranchIcon size={IconSize.SECTION} />}
+                title="Sign in to manage versions"
+                description="Pushing and pulling happen in your Onshape documents."
+                action={
+                    <Button variant="light" onClick={startSignIn}>
+                        Sign in
+                    </Button>
+                }
             />
         );
     }
@@ -78,10 +86,7 @@ interface VersionManagerProps {
     workspace: WorkspacePath;
 }
 
-/**
- * The two link lists, each owning its own push or pull: there is no page-level
- * action, because every action belongs to one direction or one row.
- */
+/** The two link lists, each owning its own push or pull. */
 function VersionManager(props: VersionManagerProps): ReactNode {
     const { workspace } = props;
     const linksQuery = useWorkspaceLinksQuery(workspace);
@@ -92,12 +97,10 @@ function VersionManager(props: VersionManagerProps): ReactNode {
         return <SectionLoading title="Loading linked workspaces..." />;
     }
     if (linksQuery.isError || !linksQuery.data) {
-        return <SectionNotice title="Failed to load linked workspaces." />;
+        return <SectionError title="Failed to load linked workspaces." />;
     }
 
-    const links: WorkspaceLinksData = linksQuery.data;
-    // Nothing linked in either direction: the sections would both be empty, and
-    // an empty section says neither what this page is for nor what to do next.
+    const links = linksQuery.data;
     if (links.parents.length === 0 && links.children.length === 0) {
         return (
             <VersionManagerZeroState

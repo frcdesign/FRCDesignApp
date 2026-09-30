@@ -3,19 +3,14 @@ import {
     emptyJobResult,
     toWorkspacePath,
     VersionJobKind,
+    VersionJobOutcome,
     VersionJobState,
     VersionTaskAction,
     VersionTaskState,
     type VersionJobResult,
     type VersionTask
 } from "@backend/features/version-manager/contract";
-import {
-    jobHeadline,
-    JobOutcome,
-    jobOutcome,
-    jobStats,
-    runningHeadline
-} from "./job-report";
+import { jobHeadline, jobStats, runningHeadline } from "./job-report";
 
 function result(update: Partial<VersionJobResult>): VersionJobResult {
     return { ...emptyJobResult(), ...update };
@@ -30,50 +25,23 @@ function task(state: VersionTaskState): VersionTask {
     return { ...practiceBot, action: VersionTaskAction.REFERENCES, state };
 }
 
-describe("jobOutcome", () => {
-    it("has nothing to report while a run is going", () => {
-        expect(jobOutcome({ state: VersionJobState.RUNNING })).toBeUndefined();
-        expect(jobOutcome(undefined)).toBeUndefined();
-    });
-
-    it("calls a run with a failed step partial when it changed something", () => {
-        const failedStep = [task(VersionTaskState.FAILED)];
-        expect(
-            jobOutcome({
-                state: VersionJobState.COMPLETE,
-                tasks: failedStep,
-                result: result({ createdVersions: 1 })
-            })
-        ).toBe(JobOutcome.PARTIAL);
-        expect(
-            jobOutcome({
-                state: VersionJobState.COMPLETE,
-                tasks: failedStep,
-                result: result({})
-            })
-        ).toBe(JobOutcome.FAILED);
-        expect(
-            jobOutcome({
-                state: VersionJobState.COMPLETE,
-                tasks: [task(VersionTaskState.DONE)],
-                result: result({})
-            })
-        ).toBe(JobOutcome.SUCCESS);
-    });
-});
-
 describe("jobHeadline", () => {
     it("names the run and how it went", () => {
         const status = {
             state: VersionJobState.COMPLETE,
             kind: VersionJobKind.PULL
         };
-        expect(jobHeadline(status, JobOutcome.SUCCESS)).toBe("Pull succeeded");
-        expect(jobHeadline(status, JobOutcome.PARTIAL)).toBe(
+        expect(jobHeadline(status, VersionJobOutcome.SUCCESS)).toBe(
+            "Pull succeeded"
+        );
+        expect(jobHeadline(status, VersionJobOutcome.PARTIAL)).toBe(
             "Pull partially failed"
         );
         expect(
-            jobHeadline({ ...status, updateOnly: true }, JobOutcome.FAILED)
+            jobHeadline(
+                { ...status, updateOnly: true },
+                VersionJobOutcome.FAILED
+            )
         ).toBe("Update failed");
     });
 });
@@ -97,6 +65,24 @@ describe("runningHeadline", () => {
                 updateOnly: true
             })
         ).toBe("Updating references in Practice Bot");
+    });
+
+    it("names a pull with no parents for what it does", () => {
+        expect(
+            runningHeadline({
+                state: VersionJobState.RUNNING,
+                kind: VersionJobKind.PULL,
+                targets: []
+            })
+        ).toBe("Updating references");
+        expect(
+            runningHeadline({
+                state: VersionJobState.RUNNING,
+                kind: VersionJobKind.PULL,
+                updateOnly: true,
+                targets: [{ workspace: practiceBot.workspace }]
+            })
+        ).toBe("Updating references to Untitled document");
     });
 
     it("counts several", () => {

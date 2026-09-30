@@ -15,7 +15,7 @@ export function emptyTargets(): InsertTargets {
 /** Lifetime counts, either overall or scoped to one library. */
 export interface AnalyticsTotals {
     inserts: number;
-    /** App-wide: an open belongs to no library, so a library's is zero. */
+    /** App-wide only; zero for a library. */
     appOpens: number;
     uniqueUsers: number;
     /** Subsets of `inserts`; divide by it for the percentages. */
@@ -119,13 +119,15 @@ export interface LibrarySummaryOut {
 
 /** What the version manager has done, and how much is linked to do it with. */
 export interface VersionManagerTotals {
-    /** Tabs whose references the app repointed: the work it saved. */
-    updatedElements: number;
-    /** Versions it cut, pushing and pulling together. */
-    createdVersions: number;
+    /** Pushes and pulls together. */
     runs: number;
+    /** Runs with a step that failed, partway or entirely. */
+    runsWithFailures: number;
+    /** Tabs whose references the app repointed. */
+    updatedElements: number;
+    createdVersions: number;
     /** Current, not over the range: a link is state, not an event. */
-    linkedWorkspaces: number;
+    links: number;
 }
 
 export interface AnalyticsOverviewOut {
@@ -136,7 +138,7 @@ export interface AnalyticsOverviewOut {
     series: DailyInsertPoint[];
     metricSeries: DailyMetricPoint[];
     sources: InsertSourceUsage[];
-    /** Over the range, but for `linkedWorkspaces`. */
+    /** Over the range, but for `links`. */
     versionManager: VersionManagerTotals;
     from: string;
     to: string;

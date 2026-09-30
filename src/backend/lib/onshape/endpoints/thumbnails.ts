@@ -11,12 +11,7 @@ import {
 import { getInsertables } from "./documents";
 import { ThumbnailSize } from "../../../features/thumbnails/contract";
 
-/**
- * The whole workspace's thumbnail — what Onshape shows the document as, which
- * it keeps current on its own. Nothing here renders it or waits for one: a
- * workspace either has a thumbnail or does not, unlike a configuration, whose
- * render has to be asked for and waited out.
- */
+/** The thumbnail Onshape keeps for the whole workspace. */
 export function getWorkspaceThumbnail(
     client: OnshapeApi,
     workspacePath: InstancePath,

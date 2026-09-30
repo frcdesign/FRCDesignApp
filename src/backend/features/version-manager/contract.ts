@@ -25,20 +25,13 @@ export function isSameWorkspace(a: WorkspacePath, b: WorkspacePath): boolean {
  * One workspace as one string: what a graph walk keys by, what a job is stored
  * under, and what a client's push socket is tagged with.
  */
-export function workspaceKey(workspace: WorkspacePath): string {
+export function workspaceKey(workspace: InstancePath): string {
     return `${workspace.documentId}|${workspace.instanceId}`;
 }
 
 /**
- * Which side of a link a workspace is being asked about, from the workspace the
- * panel is open in:
- *
- * - `parent` — a workspace it references, which it pulls from.
- * - `child` — a workspace that references it, which it pushes to.
- *
- * Note this is the opposite of an assembly tree's sense, where the assembly is
- * the parent of the parts in it. Here the document a change starts in is the
- * parent, and the change flows down to its children.
+ * From the workspace the panel is open in: a parent is one it references and
+ * pulls from, a child one that references it and is pushed to.
  */
 export enum LinkDirection {
     PARENT = "parent",
@@ -57,10 +50,8 @@ export interface LinkedWorkspace {
     documentName?: string;
     workspaceName?: string;
     /**
-     * Parents only: how far this one has moved since its own last version. A
-     * pull moves onto a version, so these are the edits it would leave behind.
-     * Absent rather than zero where Onshape would not say, zero meaning caught
-     * up.
+     * Parents only: edits since its own last version, which a pull versions.
+     * Absent where Onshape would not say.
      */
     unversionedChanges?: number;
 }
@@ -85,8 +76,8 @@ export enum PushScopeKind {
  * - `children` — this workspace's children, left un-versioned.
  * - `descendants` — every workspace below it, versioning each so the next one
  *   has something to reference.
- * - `one` — a single child, which is what a row's own push does; `recursive`
- *   carries it on through that child's own descendants.
+ * - `one` — a single child; `recursive` carries it on through that child's own
+ *   descendants.
  */
 export type PushScope =
     | { kind: PushScopeKind.CHILDREN }
@@ -105,7 +96,7 @@ export enum PullScopeKind {
  *
  * - `parents` — this workspace's linked parents.
  * - `all` — every out-of-date reference, linked or not.
- * - `one` — a single parent, which is what a row's own pull does.
+ * - `one` — a single parent.
  *
  * There is no recursive pull: a pull only writes to this workspace, and going
  * further would mean versioning a parent's own parents — which is a push, and
@@ -155,8 +146,6 @@ export interface VersionTask extends VersionJobDocument {
 
 /** What a push or pull did — all of it, or as far as it got before it stopped. */
 export interface VersionJobResult {
-    /** Workspaces whose references were updated. */
-    updatedWorkspaces: number;
     /** Tabs whose references were repointed. */
     updatedElements: number;
     /** Versions the run cut, the one it started from included. */
@@ -192,16 +181,44 @@ export interface VersionJobStatus {
     finishedAt?: number;
 }
 
-/**
- * A run that has done nothing yet, which is also what one that found nothing to
- * do returns. A function, since a run adds to the one it is given.
- */
+/** A function, since a run adds to the one it is given. */
 export function emptyJobResult(): VersionJobResult {
-    return {
-        updatedWorkspaces: 0,
-        updatedElements: 0,
-        createdVersions: 0
-    };
+    return { updatedElements: 0, createdVersions: 0 };
+}
+
+export enum VersionJobOutcome {
+    SUCCESS = "success",
+    /** Some of it failed, after changing something in Onshape. */
+    PARTIAL = "partial",
+    FAILED = "failed"
+}
+
+export function failedTaskCount(status: VersionJobStatus): number {
+    return (status.tasks ?? []).filter(
+        (task) => task.state === VersionTaskState.FAILED
+    ).length;
+}
+
+/** How a finished run went; undefined while there is nothing finished. */
+export function jobOutcome(
+    status: VersionJobStatus | undefined
+): VersionJobOutcome | undefined {
+    if (
+        status?.state !== VersionJobState.COMPLETE &&
+        status?.state !== VersionJobState.FAILED
+    ) {
+        return undefined;
+    }
+    if (
+        status.state === VersionJobState.COMPLETE &&
+        failedTaskCount(status) === 0
+    ) {
+        return VersionJobOutcome.SUCCESS;
+    }
+    const changed =
+        (status.result?.createdVersions ?? 0) > 0 ||
+        (status.result?.updatedElements ?? 0) > 0;
+    return changed ? VersionJobOutcome.PARTIAL : VersionJobOutcome.FAILED;
 }
 
 /**
@@ -228,7 +245,7 @@ export const MAX_VERSION_NAME_LENGTH = 256;
  * The names Onshape's own version dialog offers, which a push with no name of
  * its own follows: the highest `V<n>` a document already has, plus one.
  */
-export const VERSION_NAME_PATTERN = /^V(\d+)$/;
+const VERSION_NAME_PATTERN = /^V(\d+)$/;
 
 /**
  * The next `V<n>` after the names given, per document — so two documents in one

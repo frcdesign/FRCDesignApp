@@ -84,8 +84,9 @@ pure types and functions, no Worker-only imports — or it lands in the client
 bundle.
 
 D1 tables live in `db/schema.ts`, except a feature's own: tracking's are in
-`features/analytics/schema.ts`, since nothing outside analytics reads them and
-they hold no foreign key into the rest. `drizzle.config.ts` lists every schema
+`features/analytics/schema.ts` and workspace links in
+`features/version-manager/schema.ts`, since nothing outside those features reads
+them and they hold no foreign key into the rest. `drizzle.config.ts` lists every schema
 file, so a new one has to be added there or its tables generate no migration.
 
 KV is for what may expire or be lost: sessions, and caches that save Onshape

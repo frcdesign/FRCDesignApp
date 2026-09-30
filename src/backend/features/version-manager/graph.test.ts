@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { toWorkspacePath, type WorkspacePath } from "./contract";
+import { toWorkspacePath, workspaceKey, type WorkspacePath } from "./contract";
 import {
     childrenOf,
+    descendantKeys,
     LinkCycleError,
     pushOrder,
     type WorkspaceEdge
@@ -22,8 +23,8 @@ function names(workspaces: WorkspacePath[]): string[] {
 }
 
 describe("childrenOf", () => {
-    it("returns each workspace once, however many edges reach it", () => {
-        const edges = [edge("a", "b"), edge("a", "b"), edge("a", "c")];
+    it("returns only the workspace's own children", () => {
+        const edges = [edge("a", "b"), edge("a", "c"), edge("b", "d")];
         expect(names(childrenOf(edges, ws("a")))).toEqual(["b", "c"]);
     });
 });
@@ -76,5 +77,20 @@ describe("pushOrder", () => {
     it("pushes directly into a cycle it is not asked to walk", () => {
         const cycle = [edge("a", "b"), edge("b", "c"), edge("c", "a")];
         expect(names(pushOrder(cycle, ws("a"), false))).toEqual(["b"]);
+    });
+});
+
+describe("descendantKeys", () => {
+    it("reaches everything below a workspace, through a diamond, and nothing beside it", () => {
+        const edges = [
+            edge("a", "b"),
+            edge("a", "c"),
+            edge("b", "d"),
+            edge("c", "d"),
+            edge("a", "e")
+        ];
+        expect(descendantKeys(edges, ws("b"))).toEqual(
+            new Set([workspaceKey(ws("b")), workspaceKey(ws("d"))])
+        );
     });
 });

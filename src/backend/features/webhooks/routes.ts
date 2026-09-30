@@ -3,7 +3,8 @@
  * payload names: the token is all that keeps others from triggering this.
  */
 import { eq } from "drizzle-orm";
-import { type AppBindings, getApp } from "../../lib/context";
+import { type AppBindings, type AppContext, getApp } from "../../lib/context";
+import type { InstancePath } from "../../lib/onshape/path";
 import { forbiddenError } from "../../lib/api-error";
 import { getDb } from "../../db/client";
 import { groups, libraries, WebhookSubject } from "../../db/schema";
@@ -22,7 +23,6 @@ import {
 } from "./transient";
 import { forgetUnitInfo } from "../configurations/units";
 import { forgetWorkspace } from "../version-manager/workspace-cache";
-import { toWorkspacePath } from "../version-manager/contract";
 
 export const webhookRoutes = getApp();
 
@@ -61,40 +61,34 @@ webhookRoutes.post(WEBHOOK_ROUTE, async (c) => {
     return c.json({});
 });
 
-/** POST /api/webhooks/units?documentId=&workspaceId= */
-webhookRoutes.post(UNITS_WEBHOOK_ROUTE, async (c) => {
-    const workspace = readWorkspaceDelivery(c.req.query());
-    if (!workspace) {
-        throw forbiddenError("Unrecognized webhook");
-    }
-    // Registration and pings only want a 200; any other event is the change.
-    const { event } = await c.req.json<WebhookNotification>();
-    if (!event.startsWith("webhook.")) {
-        await forgetUnitInfo(c.env.KV, workspace);
-    }
-    return c.json({});
-});
-
 /**
- * POST /api/webhooks/linked-workspace?documentId=&workspaceId=
- *
- * The workspace was edited, renamed or versioned, so what the version manager
- * shows of it is asked for again the next time somebody opens the panel.
+ * A transient webhook's delivery: a change to the workspace it watches, which
+ * drops what is cached of it. Registration and pings only want a 200.
  */
-webhookRoutes.post(LINKED_WORKSPACE_WEBHOOK_ROUTE, async (c) => {
-    const workspace = readWorkspaceDelivery(c.req.query());
-    if (!workspace) {
-        throw forbiddenError("Unrecognized webhook");
-    }
-    const { event } = await c.req.json<WebhookNotification>();
-    if (!event.startsWith("webhook.")) {
-        await forgetWorkspace(
-            c.env,
-            toWorkspacePath(workspace.documentId, workspace.instanceId)
-        );
-    }
-    return c.json({});
-});
+function forgetOnChange(
+    forget: (kv: KVNamespace, workspace: InstancePath) => Promise<void>
+) {
+    return async (c: AppContext) => {
+        const workspace = readWorkspaceDelivery(c.req.query());
+        if (!workspace) {
+            throw forbiddenError("Unrecognized webhook");
+        }
+        const { event } = await c.req.json<WebhookNotification>();
+        if (!event.startsWith("webhook.")) {
+            await forget(c.env.KV, workspace);
+        }
+        return c.json({});
+    };
+}
+
+/** POST /api/webhooks/units?documentId=&workspaceId= */
+webhookRoutes.post(UNITS_WEBHOOK_ROUTE, forgetOnChange(forgetUnitInfo));
+
+/** POST /api/webhooks/linked-workspace?documentId=&workspaceId= */
+webhookRoutes.post(
+    LINKED_WORKSPACE_WEBHOOK_ROUTE,
+    forgetOnChange(forgetWorkspace)
+);
 
 /**
  * Nobody is signed in behind a webhook, so each load finds an admin's session.

@@ -1,5 +1,7 @@
 import { useEffect, useRef } from "react";
 import {
+    jobOutcome,
+    VersionJobOutcome,
     VersionJobState,
     type VersionJobStatus,
     type WorkspacePath
@@ -10,7 +12,10 @@ import {
     showSuccessToast,
     showWarningToast
 } from "../../lib/notifications";
-import { jobHeadline, JobOutcome, jobOutcome } from "./job-report";
+import { useTargetWorkspace } from "../../lib/onshape-params";
+import { queryClient } from "../../lib/query-client";
+import { workspaceLinksQueryKey } from "../../lib/query-keys";
+import { jobHeadline } from "./job-report";
 import { openJobDetails } from "./open-version-modals";
 import { useVersionJobQuery } from "./queries";
 
@@ -29,17 +34,16 @@ function showJobToast(
         return;
     }
     const message = `${jobHeadline(status, outcome)}.`;
-    if (outcome === JobOutcome.SUCCESS) {
+    if (outcome === VersionJobOutcome.SUCCESS) {
         showSuccessToast(message, JOB_TOAST_ID);
         return;
     }
-    // Up until dismissed: somebody has something to do about these, and a
-    // toast that left on its own took the what with it.
+    // Up until closed: somebody has something to do about these.
     const withDetails = renderNotification(message, {
         text: "Details",
         onClick: () => openJobDetails(workspace)
     });
-    if (outcome === JobOutcome.PARTIAL) {
+    if (outcome === VersionJobOutcome.PARTIAL) {
         showWarningToast(withDetails, JOB_TOAST_ID, { autoClose: false });
     } else {
         showErrorToast(withDetails, JOB_TOAST_ID, { autoClose: false });
@@ -47,25 +51,23 @@ function showJobToast(
 }
 
 /**
- * Reports a run once it finishes, to whoever was watching it go.
- *
- * While it is going, the button that started it carries a spinner, which is
- * where somebody watching for it is already looking. What they cannot see there
- * is what it did, so that arrives as a toast at the end; the page keeps the same
- * report for whoever opens it afterwards.
+ * Reports a run once it finishes, to whoever watched it go, and brings the
+ * links it moved up to date. Mounted in the app shell, so a run started here
+ * still reports from a library.
  */
-export function useVersionJobToasts(
-    workspace: WorkspacePath | undefined
-): void {
+export function useVersionJobToasts(): void {
+    const workspace = useTargetWorkspace();
     const { data } = useVersionJobQuery(workspace);
-    // A ref, not state: noticing the transition should not trigger a render,
-    // and a state write from an effect is not how this app tracks one.
+    // A ref, not state: noticing the transition should not trigger a render.
     const wasRunning = useRef(false);
 
     useEffect(() => {
         const isRunning = data?.state === VersionJobState.RUNNING;
         if (wasRunning.current && !isRunning && data && workspace) {
             showJobToast(data, workspace);
+            void queryClient.invalidateQueries({
+                queryKey: workspaceLinksQueryKey(workspace)
+            });
         }
         wasRunning.current = isRunning;
     }, [data, workspace]);

@@ -16,10 +16,6 @@ import {
  * Push runs along it, pull runs against it — so the source is what the contract
  * calls the parent, and the target its child.
  *
- * Stored once rather than as a row per end. The implementation this came from
- * kept both, which meant a link could half-exist when only one of the two
- * writes landed.
- *
  * Not owned by a user: a link belongs to the workspaces, so everyone who opens
  * the document works from the same graph.
  */

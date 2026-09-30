@@ -13,15 +13,11 @@ import { StatTile } from "./stat-tiles";
 interface HeadlineTilesProps {
     /** Over the selected window. */
     totals: AnalyticsTotals;
-    /**
-     * The season comparison, which belongs to an all-time total: passed only
-     * when the window is all of it, since a season's change against a week's
-     * number is two different stretches read as one.
-     */
+    /** Season change; only meaningful on All time. */
     growth?: GrowthOut;
     /** Daily points over the selected window, for the sparklines. */
     series: DailyMetricPoint[];
-    /** An open belongs to no library, so app level only. */
+    /** App level only. */
     withOpens?: boolean;
 }
 

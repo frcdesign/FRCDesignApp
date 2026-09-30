@@ -2,7 +2,6 @@
 import type { LibraryId } from "../library/library-id";
 import type { JobStatus } from "../load/contract";
 import type { ConfigurationKey } from "../configurations/contract";
-import type { VersionJobStatus } from "../version-manager/contract";
 
 export enum PushType {
     JOBS = "jobs",
@@ -32,15 +31,10 @@ export interface ThumbnailPush {
     configurationKey: ConfigurationKey;
 }
 
-/**
- * A push or pull started from a workspace has moved on. Sent to the clients
- * showing that workspace, which is what `workspaceKey` tags their socket with:
- * it names somebody else's document, and only those already in it may hear.
- */
+/** A push or pull started from a workspace has moved on. */
 export interface VersionJobPush {
     type: PushType.VERSION_JOB;
     workspaceKey: string;
-    status: VersionJobStatus;
 }
 
 export type PushMessage =

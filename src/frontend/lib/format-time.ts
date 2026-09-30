@@ -1,4 +1,4 @@
-/** Shared helpers for rendering timestamps and durations in the UI. */
+import { plural } from "./plural";
 
 const MINUTE_MS = 60 * 1000;
 const HOUR_MS = 60 * MINUTE_MS;
@@ -11,11 +11,9 @@ export function formatTimeAgo(timestamp: number): string {
         return "just now";
     }
     if (elapsed < HOUR_MS) {
-        const minutes = Math.floor(elapsed / MINUTE_MS);
-        return `${minutes} ${minutes === 1 ? "minute" : "minutes"} ago`;
+        return `${plural(Math.floor(elapsed / MINUTE_MS), "minute")} ago`;
     }
-    const hours = Math.floor(elapsed / HOUR_MS);
-    return `${hours} ${hours === 1 ? "hour" : "hours"} ago`;
+    return `${plural(Math.floor(elapsed / HOUR_MS), "hour")} ago`;
 }
 
 /** Whole elapsed days, not calendar days. */

@@ -8,7 +8,8 @@
  * watches again. Nothing caller-specific is stored: permissions are asked every
  * time, and the names are only ever shown to somebody who has read access.
  */
-import type { AppBindings, AppContext } from "../../lib/context";
+import type { AppContext } from "../../lib/context";
+import type { InstancePath } from "../../lib/onshape/path";
 import { runInBackground } from "../../lib/background";
 import { kvStore } from "../../lib/kv-store";
 import type { OnshapeApi } from "../../lib/onshape/client";
@@ -50,27 +51,27 @@ const changeCounts = kvStore<{ changes: number }>("linked-workspace-changes", {
 
 /** Both entries for a workspace, dropped when its webhook says it changed. */
 export async function forgetWorkspace(
-    env: AppBindings,
-    workspace: WorkspacePath
+    kv: KVNamespace,
+    workspace: InstancePath
 ): Promise<void> {
     const id = workspaceKey(workspace);
     await Promise.all([
-        descriptions.delete(env.KV, id),
-        changeCounts.delete(env.KV, id)
+        descriptions.delete(kv, id),
+        changeCounts.delete(kv, id)
     ]);
 }
 
 /**
- * Starts watching a workspace we have just read, best effort: a webhook we
+ * Starts watching a workspace we have just described, best effort: a webhook we
  * cannot register only means the cache falls back on its expiry.
  */
-function watch(c: AppContext, workspace: WorkspacePath): Promise<void> {
-    return runInBackground(c, "watch a linked workspace", async () =>
-        watchLinkedWorkspace(
-            await c.var.getOnshapeApi(),
-            workspace,
-            c.env.APP_URL
-        )
+function watch(
+    c: AppContext,
+    client: OnshapeApi,
+    workspace: WorkspacePath
+): Promise<void> {
+    return runInBackground(c, "watch a linked workspace", () =>
+        watchLinkedWorkspace(client, workspace, c.env.APP_URL)
     );
 }
 
@@ -98,7 +99,7 @@ export async function describeWorkspace(
     };
 
     await descriptions.put(c.env.KV, id, description);
-    await watch(c, workspace);
+    await watch(c, client, workspace);
     return description;
 }
 
@@ -118,8 +119,6 @@ export async function getUnversionedChanges(
         return cached.changes;
     }
 
-    // No `include` flags: they all default to false, so this asks Onshape to
-    // enumerate nothing and answer the counters.
     const insertables = await getInsertables(client, workspace);
     const changes = insertables.changesSinceVersionSave;
     if (changes === undefined) {
@@ -127,6 +126,5 @@ export async function getUnversionedChanges(
     }
 
     await changeCounts.put(c.env.KV, id, { changes });
-    await watch(c, workspace);
     return changes;
 }

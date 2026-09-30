@@ -11,8 +11,13 @@ import { ElementType } from "../../lib/onshape/element-type";
 import { type InstanceType } from "../../lib/onshape/path";
 import { LibraryId } from "../library/library-id";
 import { Selection } from "../configurations/contract";
-import { PullScopeKind, PushScopeKind } from "../version-manager/contract";
-import { EventType, InsertSource, VersionRunKind } from "./usage";
+import {
+    PullScopeKind,
+    PushScopeKind,
+    VersionJobKind,
+    VersionJobOutcome
+} from "../version-manager/contract";
+import { EventType, InsertSource } from "./usage";
 
 /**
  * Append-only. Keyed on Onshape's `elementId` with no foreign keys, so a reload
@@ -53,12 +58,14 @@ export const events = sqliteTable(
         // Insert-and-fasten, which Onshape only offers for assembly targets.
         fasten: integer("fasten", { mode: "boolean" }),
         // A version run's own columns: how it was aimed, and what it did.
-        versionKind: text("version_kind").$type<VersionRunKind>(),
+        versionKind: text("version_kind").$type<VersionJobKind>(),
         versionScope: text("version_scope").$type<
             PushScopeKind | PullScopeKind
         >(),
+        versionUpdateOnly: integer("version_update_only", { mode: "boolean" }),
+        versionOutcome: text("version_outcome").$type<VersionJobOutcome>(),
+        failedSteps: integer("failed_steps"),
         createdVersions: integer("created_versions"),
-        updatedWorkspaces: integer("updated_workspaces"),
         updatedElements: integer("updated_elements")
     },
     // Only used to rebuild the rollups, which walk by day.
@@ -213,10 +220,8 @@ export const dailyUserActivity = sqliteTable(
 );
 
 /**
- * A day's launches from Onshape, per person. An open belongs to no library — it
- * is the app being opened, not the page it resumes into — so it is counted here
- * rather than in `daily_metrics`, and the user id keeps app-wide distinct users
- * a count over days.
+ * A day's launches from Onshape, per person. An open belongs to no library: it
+ * is the app being opened, not the page it resumes into.
  */
 export const dailyAppOpens = sqliteTable(
     "daily_app_opens",
@@ -253,10 +258,13 @@ export const dailyVersionMetrics = sqliteTable(
     "daily_version_metrics",
     {
         day: text("day").notNull(),
-        kind: text("kind").notNull().$type<VersionRunKind>(),
+        kind: text("kind").notNull().$type<VersionJobKind>(),
         runs: integer("runs").notNull().default(0),
+        updateOnlyRuns: integer("update_only_runs").notNull().default(0),
+        /** Runs that failed partway, having changed something. */
+        partialRuns: integer("partial_runs").notNull().default(0),
+        failedRuns: integer("failed_runs").notNull().default(0),
         createdVersions: integer("created_versions").notNull().default(0),
-        updatedWorkspaces: integer("updated_workspaces").notNull().default(0),
         updatedElements: integer("updated_elements").notNull().default(0)
     },
     (t) => [primaryKey({ columns: [t.day, t.kind] })]
