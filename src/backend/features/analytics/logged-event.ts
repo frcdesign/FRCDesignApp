@@ -24,7 +24,6 @@ type VersionRunColumns = Pick<
     | "createdVersions"
     | "updatedWorkspaces"
     | "updatedElements"
-    | "failedElements"
 >;
 
 /** What only an insert fills in. */
@@ -53,8 +52,7 @@ export const NOT_A_VERSION_RUN: VersionRunColumns = {
     versionScope: null,
     createdVersions: null,
     updatedWorkspaces: null,
-    updatedElements: null,
-    failedElements: null
+    updatedElements: null
 };
 
 /** A logged run, whose own columns a reader can then count on. */
@@ -64,7 +62,6 @@ export type LoggedVersionRun = LoggedEvent &
         createdVersions: number;
         updatedWorkspaces: number;
         updatedElements: number;
-        failedElements: number;
     };
 
 /** Undefined for another kind, or a run from a version without these columns. */

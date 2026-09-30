@@ -127,10 +127,7 @@ export interface VersionRunEvent {
     scope: PushScopeKind | PullScopeKind;
     result: Pick<
         VersionJobResult,
-        | "createdVersions"
-        | "updatedWorkspaces"
-        | "updatedElements"
-        | "failedElements"
+        "createdVersions" | "updatedWorkspaces" | "updatedElements"
     >;
 }
 
@@ -153,8 +150,7 @@ export async function trackVersionRun(
             versionScope: event.scope,
             createdVersions: result.createdVersions,
             updatedWorkspaces: result.updatedWorkspaces,
-            updatedElements: result.updatedElements,
-            failedElements: result.failedElements
+            updatedElements: result.updatedElements
         },
         []
     );

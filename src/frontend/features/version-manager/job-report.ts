@@ -16,7 +16,7 @@ import { plural } from "./queries";
 
 export enum JobOutcome {
     SUCCESS = "success",
-    /** Finished, but Onshape refused some tabs. */
+    /** Stopped partway, after changing something in Onshape. */
     PARTIAL = "partial",
     FAILED = "failed"
 }
@@ -30,17 +30,22 @@ export const OUTCOME_STYLE: Record<
     [JobOutcome.FAILED]: { color: StatusColor.ERROR, icon: XCircleIcon }
 };
 
+/** What stays in Onshape whether or not the run went on to finish. */
+function hasChanged(result: VersionJobResult): boolean {
+    return result.createdVersions > 0 || result.updatedElements > 0;
+}
+
 /** Undefined while there is nothing finished to report. */
 export function jobOutcome(
     status: VersionJobStatus | undefined
 ): JobOutcome | undefined {
     switch (status?.state) {
         case VersionJobState.COMPLETE:
-            return (status.result?.failedElements ?? 0) > 0
-                ? JobOutcome.PARTIAL
-                : JobOutcome.SUCCESS;
+            return JobOutcome.SUCCESS;
         case VersionJobState.FAILED:
-            return JobOutcome.FAILED;
+            return status.result && hasChanged(status.result)
+                ? JobOutcome.PARTIAL
+                : JobOutcome.FAILED;
     }
     return undefined;
 }
@@ -93,12 +98,6 @@ export function jobStats(result: VersionJobResult): JobStat[] {
         stats.push({
             label: `${plural(result.updatedElements, "tab")} updated`,
             color: StatusColor.SUCCESS
-        });
-    }
-    if (result.failedElements > 0) {
-        stats.push({
-            label: `${plural(result.failedElements, "tab")} failed`,
-            color: StatusColor.ERROR
         });
     }
     return stats;

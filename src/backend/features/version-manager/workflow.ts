@@ -12,45 +12,37 @@ import {
     getVersions
 } from "../../lib/onshape/endpoints/versions";
 import { getWorkspaces } from "../../lib/onshape/endpoints/workspaces";
+import { getDocument } from "../../lib/onshape/endpoints/documents";
 import type { OnshapeVersionInfo } from "../../lib/onshape/types";
 import { ONSHAPE_STEP_RETRIES } from "../load/steps";
 import {
     emptyJobResult,
-    MAX_REPORTED_FAILURES,
     nextVersionName,
     VersionJobKind,
     VersionJobState,
     type PullScopeKind,
     type PushScopeKind,
     type VersionJobResult,
+    type VersionJobStop,
     type WorkspacePath
 } from "./contract";
 import {
     updateOutdatedReferences,
     type ReferenceUpdateOutcome
 } from "./references";
-import { describeRunFailure, isTransient } from "./failures";
+import {
+    describeRunFailure,
+    describeStepFailure,
+    isTransient,
+    RunAction
+} from "./failures";
 import { finishJob } from "./jobs";
 import { trackVersionRun } from "../analytics/tracking";
 import { VersionRunKind } from "../analytics/usage";
 
-/**
- * Retries a step only when trying again could go differently: a refusal would
- * fail the same way five more times, minutes apart, before the run could say so.
- */
-function failFast<T>(callback: () => Promise<T>): () => Promise<T> {
-    return async () => {
-        try {
-            return await callback();
-        } catch (error) {
-            if (isTransient(error)) {
-                throw error;
-            }
-            throw new NonRetryableError(
-                error instanceof Error ? error.message : String(error)
-            );
-        }
-    };
+/** The workspace the run is working on, so a failure can say where it was. */
+interface RunProgress {
+    at?: WorkspacePath;
 }
 
 /** The version a run moves references onto, and whether it had to cut it. */
@@ -138,6 +130,8 @@ export class VersionManagerWorkflow extends WorkflowEntrypoint<
         // Added to as the steps come back, which a replay does again from their
         // saved results: a run that stops can then say what it had done.
         const result = emptyJobResult();
+        // Moved on as each step starts, which a replay does again in order.
+        const progress: RunProgress = {};
 
         // Recorded whichever way it ends: a run that stopped partway still did
         // what it did.
@@ -156,11 +150,16 @@ export class VersionManagerWorkflow extends WorkflowEntrypoint<
 
         try {
             if (params.kind === "push") {
-                await this._push(params, step, result);
+                await this._push(params, step, result, progress);
             } else {
-                await this._pull(params, step, result);
+                await this._pull(params, step, result, progress);
             }
         } catch (error) {
+            const stoppedAt = await this._stoppedAt(
+                params.sessionId,
+                step,
+                progress
+            );
             await step.do("finish-job", () =>
                 finishJob(this.env, params.workspace, {
                     state: VersionJobState.FAILED,
@@ -168,6 +167,7 @@ export class VersionManagerWorkflow extends WorkflowEntrypoint<
                     kind,
                     result,
                     error: describeRunFailure(error),
+                    stoppedAt,
                     finishedAt: Date.now()
                 })
             );
@@ -243,13 +243,61 @@ export class VersionManagerWorkflow extends WorkflowEntrypoint<
         if (outcome.updatedElements > 0) {
             result.updatedWorkspaces++;
         }
-        result.failedElements += outcome.failures.length;
-        result.failures.push(
-            ...outcome.failures.slice(
-                0,
-                MAX_REPORTED_FAILURES - result.failures.length
-            )
+    }
+
+    /**
+     * A step against one document's workspace, which the run records as where
+     * it is. Only a failure that could go differently is retried; any other
+     * leaves in our own words, since it would fail the same way five more times,
+     * minutes apart, before the run could say so.
+     */
+    private _onshapeStep<T extends Rpc.Serializable<T>>(
+        step: WorkflowStep,
+        name: string,
+        target: WorkspacePath,
+        action: RunAction,
+        progress: RunProgress,
+        callback: () => Promise<T>
+    ): Promise<T> {
+        progress.at = target;
+        return step.do(name, { retries: ONSHAPE_STEP_RETRIES }, async () => {
+            try {
+                return await callback();
+            } catch (error) {
+                if (isTransient(error)) {
+                    throw error;
+                }
+                throw new NonRetryableError(describeStepFailure(error, action));
+            }
+        });
+    }
+
+    /** The document a failed run was in, named where Onshape will still say. */
+    private async _stoppedAt(
+        sessionId: string,
+        step: WorkflowStep,
+        progress: RunProgress
+    ): Promise<VersionJobStop | undefined> {
+        const workspace = progress.at;
+        if (!workspace) {
+            return undefined;
+        }
+        const documentName = await step.do(
+            "stopped-at",
+            async (): Promise<string | null> => {
+                try {
+                    const client = await getOnshapeApiFromSessionId(
+                        this.env.KV,
+                        sessionId
+                    );
+                    return (await getDocument(client, workspace)).name;
+                } catch {
+                    // Unshared or deleted, which the report already says.
+                    return null;
+                }
+            }
         );
+        return { workspace, documentName: documentName ?? undefined };
     }
 
     private _addVersion(result: VersionJobResult, choice: VersionChoice): void {
@@ -269,7 +317,8 @@ export class VersionManagerWorkflow extends WorkflowEntrypoint<
     private async _pull(
         params: PullJobParams,
         step: WorkflowStep,
-        result: VersionJobResult
+        result: VersionJobResult,
+        progress: RunProgress
     ): Promise<void> {
         const client = await getOnshapeApiFromSessionId(
             this.env.KV,
@@ -281,36 +330,38 @@ export class VersionManagerWorkflow extends WorkflowEntrypoint<
         // refusing a run naming one twice.
         const pinnedVersions: Record<string, string> = {};
         for (const [index, source] of (sources ?? []).entries()) {
-            const choice = await step.do(
+            const choice = await this._onshapeStep(
+                step,
                 `parent-version-${index}`,
-                { retries: ONSHAPE_STEP_RETRIES },
-                failFast(
-                    (): Promise<VersionChoice> =>
-                        this._versionFor(client, source, name, description)
-                )
+                source,
+                RunAction.VERSION,
+                progress,
+                (): Promise<VersionChoice> =>
+                    this._versionFor(client, source, name, description)
             );
             pinnedVersions[source.documentId] = choice.version.id;
             this._addVersion(result, choice);
         }
 
-        const outcome = await step.do(
+        const outcome = await this._onshapeStep(
+            step,
             "references",
-            { retries: ONSHAPE_STEP_RETRIES },
-            failFast(
-                (): Promise<ReferenceUpdateOutcome> =>
-                    updateOutdatedReferences(
-                        client,
-                        params.workspace,
-                        // Every out-of-date reference where nothing was versioned,
-                        // and otherwise the versions this run has settled on.
-                        sources
-                            ? {
-                                  onlyDocumentIds: Object.keys(pinnedVersions),
-                                  pinnedVersions
-                              }
-                            : {}
-                    )
-            )
+            params.workspace,
+            RunAction.REFERENCES,
+            progress,
+            (): Promise<ReferenceUpdateOutcome> =>
+                updateOutdatedReferences(
+                    client,
+                    params.workspace,
+                    // Every out-of-date reference where nothing was versioned,
+                    // and otherwise the versions this run has settled on.
+                    sources
+                        ? {
+                              onlyDocumentIds: Object.keys(pinnedVersions),
+                              pinnedVersions
+                          }
+                        : {}
+                )
         );
         this._addOutcome(result, outcome);
     }
@@ -318,7 +369,8 @@ export class VersionManagerWorkflow extends WorkflowEntrypoint<
     private async _push(
         params: PushJobParams,
         step: WorkflowStep,
-        result: VersionJobResult
+        result: VersionJobResult,
+        progress: RunProgress
     ): Promise<void> {
         const client = await getOnshapeApiFromSessionId(
             this.env.KV,
@@ -329,10 +381,13 @@ export class VersionManagerWorkflow extends WorkflowEntrypoint<
         const versionFor = (target: WorkspacePath) =>
             this._versionFor(client, target, name, description);
 
-        const root = await step.do(
+        const root = await this._onshapeStep(
+            step,
             "version",
-            { retries: ONSHAPE_STEP_RETRIES },
-            failFast((): Promise<VersionChoice> => versionFor(workspace))
+            workspace,
+            RunAction.VERSION,
+            progress,
+            (): Promise<VersionChoice> => versionFor(workspace)
         );
         this._addVersion(result, root);
 
@@ -344,16 +399,17 @@ export class VersionManagerWorkflow extends WorkflowEntrypoint<
         };
 
         for (const [index, pushStep] of params.steps.entries()) {
-            const outcome = await step.do(
+            const outcome = await this._onshapeStep(
+                step,
                 `references-${index}`,
-                { retries: ONSHAPE_STEP_RETRIES },
-                failFast(
-                    (): Promise<ReferenceUpdateOutcome> =>
-                        updateOutdatedReferences(client, pushStep.workspace, {
-                            onlyDocumentIds: Object.keys(pinnedVersions),
-                            pinnedVersions
-                        })
-                )
+                pushStep.workspace,
+                RunAction.REFERENCES,
+                progress,
+                (): Promise<ReferenceUpdateOutcome> =>
+                    updateOutdatedReferences(client, pushStep.workspace, {
+                        onlyDocumentIds: Object.keys(pinnedVersions),
+                        pinnedVersions
+                    })
             );
             this._addOutcome(result, outcome);
 
@@ -361,12 +417,13 @@ export class VersionManagerWorkflow extends WorkflowEntrypoint<
 
             // Updating its references moved it on, so a workspace this updated
             // is versioned afresh; one that needed nothing may reuse its own.
-            const choice = await step.do(
+            const choice = await this._onshapeStep(
+                step,
                 `version-${index}`,
-                { retries: ONSHAPE_STEP_RETRIES },
-                failFast(
-                    (): Promise<VersionChoice> => versionFor(pushStep.workspace)
-                )
+                pushStep.workspace,
+                RunAction.VERSION,
+                progress,
+                (): Promise<VersionChoice> => versionFor(pushStep.workspace)
             );
             pinnedVersions[pushStep.workspace.documentId] = choice.version.id;
             this._addVersion(result, choice);

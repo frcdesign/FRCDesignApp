@@ -59,8 +59,7 @@ export const events = sqliteTable(
         >(),
         createdVersions: integer("created_versions"),
         updatedWorkspaces: integer("updated_workspaces"),
-        updatedElements: integer("updated_elements"),
-        failedElements: integer("failed_elements")
+        updatedElements: integer("updated_elements")
     },
     // Only used to rebuild the rollups, which walk by day.
     (t) => [index("events_day_idx").on(t.day)]
@@ -258,8 +257,7 @@ export const dailyVersionMetrics = sqliteTable(
         runs: integer("runs").notNull().default(0),
         createdVersions: integer("created_versions").notNull().default(0),
         updatedWorkspaces: integer("updated_workspaces").notNull().default(0),
-        updatedElements: integer("updated_elements").notNull().default(0),
-        failedElements: integer("failed_elements").notNull().default(0)
+        updatedElements: integer("updated_elements").notNull().default(0)
     },
     (t) => [primaryKey({ columns: [t.day, t.kind] })]
 );

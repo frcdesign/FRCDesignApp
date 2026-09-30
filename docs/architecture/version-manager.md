@@ -53,8 +53,8 @@ workspaces, neither of which need be in any library.
 
 **KV** `version-job:{documentId}|{instanceId}` — the `VersionJobStatus` of the
 run a workspace last started, for six hours: `RUNNING` with its instance id
-while it goes, then how it ended — its counts, up to `MAX_REPORTED_FAILURES`
-refused tabs, and, for a run that stopped, why.
+while it goes, then how it ended — its counts and, for a run that stopped, the
+document it stopped in and why.
 
 **KV** `linked-workspace:{documentId}|{instanceId}` — a linked workspace's
 document and workspace names, for a week.
@@ -178,21 +178,18 @@ Two departures from the app this was ported from:
   whenever its instance id differs from the pinned one, rather than when Onshape
   flags it `isOutOfDate`. The push cut that version moments earlier, and the
   flag is not something to race.
-- A tab Onshape refuses to update is recorded and passed, not swallowed: its
-  document, tab and a reason from `describeTabFailure`. A push that only half
-  landed should not read as a success.
+- A failure on any tab is the document's, and leaves the step. The app this was
+  ported from swallowed them one tab at a time; permissions are per document,
+  so a push that only half landed would have read as a success.
 
-Two kinds of failure are not a tab's:
-
-- One that could go differently next time — a rate limit, a 408 or 5xx, or no
-  answer at all (`isTransient`) — leaves the step, which retries from the top;
-  tabs already moved need nothing the second time.
-- A 401 or 403 (`refusesDocument`) stops the run. Permissions are per
-  document, so no other tab of it would go through.
-
-Any other failure leaving an Onshape step fails it without a retry (`failFast`
-in `workflow.ts`): it would fail the same way five more times, minutes apart,
-before the run could report it.
+Every Onshape step runs through `_onshapeStep` in `workflow.ts`, which records
+the workspace it is working on. A failure that could go differently next time —
+a rate limit, a 408 or 5xx, or no answer at all (`isTransient`) — is retried
+from the top of the step; tabs already moved need nothing the second time. Any
+other fails the step at once, as a `NonRetryableError` worded by
+`describeStepFailure` from its status and the call that failed ("Couldn't
+update this document's references."). Onshape's own messages are never shown:
+they are written for developers.
 
 Tabs are updated one at a time. The port's comment says doing them concurrently
 caused problems and does not say why, so this follows it rather than finding out
@@ -201,11 +198,10 @@ in somebody's document.
 ### Recording a run
 
 Once the run has finished or stopped, the workflow calls `trackVersionRun`
-with its kind, how it was aimed, and the four counts. The event belongs to no
-library, and rolls up into `daily_version_metrics`, which the app dashboard reports as
-references updated and versions synced, beside the documents linked right now.
-The refusals are recorded but not reported: the toast is where the person who
-ran it is told, and a dashboard tile of them would read as a fault rate. See
+with its kind, how it was aimed, and three counts: versions created, workspaces
+and tabs updated. The event belongs to no library, and rolls up into
+`daily_version_metrics`, which the app dashboard reports as references updated
+and versions synced, beside the documents linked right now. See
 [analytics.md](./analytics.md).
 
 ### Watching a run
@@ -213,7 +209,8 @@ ran it is told, and a dashboard tile of them would read as a fault rate. See
 The route stores and pushes `RUNNING` as it starts the workflow, and the
 workflow's `finish-job` step stores and pushes how it ended, over the socket in
 [platform.md](./platform.md). A run that throws is reported too: `FAILED`, with
-what it had done before it stopped and a reason from `describeRunFailure`. A
+what it had done before it stopped, the document it was working on, and a
+reason from `describeRunFailure`. A
 later run's mark is never overwritten by an earlier run finishing. The
 client asks `GET /api/version-job` once when the page opens and again after a
 reconnect; nothing polls. A client's socket is tagged with the workspace it was
@@ -227,11 +224,11 @@ could report leaves one behind.
 While a run is going, a spinner sits where it was started — beside the row, or
 in the section's header. How it went arrives as one toast at the end
 (`job-toasts.ts`), headed by `jobHeadline` in `job-report.ts` — "Push
-succeeded", "Push partially succeeded" or "Push failed": green and gone in a
-few seconds on success; yellow or red, and up until closed, otherwise. Those
-two carry **Details**, which opens a modal of `JobDetails`: the run's counts, why it
-stopped if it did, and the refused tabs by document with their reasons and an
-**Open** button each.
+succeeded", "Push partially succeeded" (it stopped after changing something) or
+"Push failed": green and gone in a few seconds on success; yellow or red, and up
+until closed, otherwise. Those two carry **Details**, which opens a modal of
+`JobDetails` under the same icon and headline: the run's counts and, for one
+that stopped, the document it stopped in, with an icon to open it, and why.
 
 The same headline, with how long ago, heads the page as a callout in the
 outcome's color (`LastRunCallout`) for as long as the status is kept, for
@@ -262,8 +259,10 @@ deletes a transient webhook that goes quiet, so the entries expire as well.
 - A run cuts a version only of a workspace that has changed since its last
   one.
 - A run that finished, or stopped, says so: its status is stored whichever way
-  it ended, and a refused tab is never counted as updated.
-- A transient Onshape failure is retried, never recorded as a refusal.
+  it ended.
+- A failure is a document's, never a tab's: any refusal stops the run.
+- Only a transient Onshape failure is retried, and only our own wording of a
+  failure reaches the person who ran it.
 
 ## Failure and recovery
 
@@ -273,8 +272,7 @@ deletes a transient webhook that goes quiet, so the entries expire as well.
 | The caller cannot write to a child       | The push is refused before it starts         | The child's owner shares write access              |
 | Onshape rate-limits the run              | The step waits its `Retry-After` and resumes | None needed                                        |
 | Onshape errors or times out on a tab     | The step retries                             | None needed                                        |
-| Onshape refuses a document mid-run       | The run stops, reported as failed            | Regain edit access; run it again                   |
-| A tab refuses its update                 | Recorded with its reason, the run carries on | Details names each tab; fix it and run it again    |
+| Onshape refuses a document mid-run       | The run stops at once, reported as failed    | Details names the document and why; run it again   |
 | A step runs out of retries               | The run stops, reported as failed            | The report says what landed; run it again          |
 | The links form a cycle                   | A recursive push is refused                  | Remove a link                                      |
 | A webhook Onshape dropped                | A name or count is stale                     | The entry expires, and the next read watches again |
@@ -305,6 +303,10 @@ deletes a transient webhook that goes quiet, so the entries expire as well.
 - **Unnamed versions are numbered per document.** A name is sent only when one
   was typed; the suggestion is this document's next number, which would be
   wrong for every other document a recursive push versions.
+- **Failures are per document.** Permissions are, and nothing observed fails
+  one tab and not the rest, so a refusal stops the run where it is rather than
+  being recorded against a tab and stepped over. The report then names one
+  document and one reason, in our words.
 - **The result is stored, not read off the instance.** The instance's output is
   lost when the run throws, and a failed run is the one whose report matters.
 - **Thumbnails are proxied.** `GET /api/workspace-thumbnail` fetches the

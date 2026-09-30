@@ -135,8 +135,7 @@ describe("rollupWrites", () => {
             result: {
                 createdVersions: 1,
                 updatedWorkspaces: 2,
-                updatedElements: 5,
-                failedElements: 1
+                updatedElements: 5
             }
         });
         clock.mockRestore();

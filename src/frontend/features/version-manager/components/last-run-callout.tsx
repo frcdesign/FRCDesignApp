@@ -1,4 +1,3 @@
-import { Box } from "@mantine/core";
 import { ListBulletsIcon } from "@phosphor-icons/react";
 import { type ReactNode } from "react";
 import type { WorkspacePath } from "@backend/features/version-manager/contract";
@@ -33,21 +32,19 @@ export function LastRunCallout(props: LastRunCalloutProps): ReactNode {
         : "";
 
     return (
-        <Box p="sm">
-            <Callout
-                text={`${jobHeadline(status, outcome)}${when}.`}
-                color={color}
-                icon={<AppIcon icon={icon} size={IconSize.MEDIUM} />}
-                action={
-                    <CalloutButton
-                        color={color}
-                        icon={<ListBulletsIcon size={IconSize.SMALL} />}
-                        onClick={() => openJobDetails(status)}
-                    >
-                        Details
-                    </CalloutButton>
-                }
-            />
-        </Box>
+        <Callout
+            text={`${jobHeadline(status, outcome)}${when}.`}
+            color={color}
+            icon={<AppIcon icon={icon} size={IconSize.MEDIUM} />}
+            action={
+                <CalloutButton
+                    color={color}
+                    icon={<ListBulletsIcon size={IconSize.SMALL} />}
+                    onClick={() => openJobDetails(status)}
+                >
+                    Details
+                </CalloutButton>
+            }
+        />
     );
 }

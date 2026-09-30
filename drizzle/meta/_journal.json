@@ -71,6 +71,13 @@
             "when": 1790631163535,
             "tag": "0009_app_opens_have_no_library",
             "breakpoints": true
+        },
+        {
+            "idx": 10,
+            "version": "6",
+            "when": 1790734252143,
+            "tag": "0010_version_runs_have_no_failed_tabs",
+            "breakpoints": true
         }
     ]
 }

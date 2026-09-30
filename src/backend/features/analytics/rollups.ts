@@ -74,8 +74,7 @@ function countVersionRunDay(db: Db, run: LoggedVersionRun) {
         runs: 1,
         createdVersions: run.createdVersions,
         updatedWorkspaces: run.updatedWorkspaces,
-        updatedElements: run.updatedElements,
-        failedElements: run.failedElements
+        updatedElements: run.updatedElements
     };
 
     return db
@@ -96,10 +95,6 @@ function countVersionRunDay(db: Db, run: LoggedVersionRun) {
                 updatedElements: increment(
                     dailyVersionMetrics.updatedElements,
                     values.updatedElements
-                ),
-                failedElements: increment(
-                    dailyVersionMetrics.failedElements,
-                    values.failedElements
                 )
             }
         });

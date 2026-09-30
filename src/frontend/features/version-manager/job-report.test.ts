@@ -17,13 +17,16 @@ describe("jobOutcome", () => {
         expect(jobOutcome(undefined)).toBeUndefined();
     });
 
-    it("calls a run that finished with refused tabs partial", () => {
+    it("calls a run that stopped after changing something partial", () => {
         expect(
             jobOutcome({
-                state: VersionJobState.COMPLETE,
-                result: result({ failedElements: 1 })
+                state: VersionJobState.FAILED,
+                result: result({ createdVersions: 1 })
             })
         ).toBe(JobOutcome.PARTIAL);
+        expect(
+            jobOutcome({ state: VersionJobState.FAILED, result: result({}) })
+        ).toBe(JobOutcome.FAILED);
         expect(
             jobOutcome({ state: VersionJobState.COMPLETE, result: result({}) })
         ).toBe(JobOutcome.SUCCESS);
@@ -52,11 +55,11 @@ describe("jobStats", () => {
             jobStats(
                 result({
                     createdVersions: 1,
-                    updatedElements: 5,
-                    failedElements: 2
+                    reusedVersions: 2,
+                    updatedElements: 5
                 })
             ).map((stat) => stat.label)
-        ).toEqual(["1 version created", "5 tabs updated", "2 tabs failed"]);
+        ).toEqual(["1 version created", "2 versions reused", "5 tabs updated"]);
         expect(jobStats(result({}))).toEqual([]);
     });
 });

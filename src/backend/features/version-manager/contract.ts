@@ -126,22 +126,12 @@ export enum VersionJobKind {
     PULL = "pull"
 }
 
-/** One tab Onshape would not update, as the run's report names it. */
-export interface VersionJobFailure {
+/** The document a run stopped in. */
+export interface VersionJobStop {
     workspace: WorkspacePath;
-    /** Absent where Onshape would not say; the report falls back to the id. */
+    /** Absent where Onshape would not say. */
     documentName?: string;
-    elementId: string;
-    elementName?: string;
-    /** Why, written for the person who ran it. */
-    reason: string;
 }
-
-/**
- * How many failures a result lists: enough to act on, few enough that one bad
- * document cannot bloat the status every client in it is sent.
- */
-export const MAX_REPORTED_FAILURES = 20;
 
 /** What a push or pull did — all of it, or as far as it got before it stopped. */
 export interface VersionJobResult {
@@ -149,13 +139,6 @@ export interface VersionJobResult {
     updatedWorkspaces: number;
     /** Tabs whose references were repointed. */
     updatedElements: number;
-    /**
-     * Tabs Onshape refused to update. The run carries on past them, so a
-     * non-zero count means it did not fully land.
-     */
-    failedElements: number;
-    /** The first {@link MAX_REPORTED_FAILURES} of those, named. */
-    failures: VersionJobFailure[];
     /** Versions the run cut, the one it started from included. */
     createdVersions: number;
     /**
@@ -184,20 +167,20 @@ export interface VersionJobStatus {
     result?: VersionJobResult;
     /** Why it failed, when it did. Written for the user. */
     error?: string;
+    /** Where it failed, when that was in a document. */
+    stoppedAt?: VersionJobStop;
     /** When it ended, in epoch milliseconds. */
     finishedAt?: number;
 }
 
 /**
  * A run that has done nothing yet, which is also what one that found nothing to
- * do returns. A function, so no two runs share a `failures` array.
+ * do returns. A function, since a run adds to the one it is given.
  */
 export function emptyJobResult(): VersionJobResult {
     return {
         updatedWorkspaces: 0,
         updatedElements: 0,
-        failedElements: 0,
-        failures: [],
         createdVersions: 0,
         reusedVersions: 0
     };

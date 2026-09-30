@@ -5,10 +5,10 @@ import {
 } from "../../lib/onshape/client";
 import {
     describeRunFailure,
-    describeTabFailure,
+    describeStepFailure,
     isTransient,
     onshapeStatus,
-    refusesDocument
+    RunAction
 } from "./failures";
 
 function apiError(status: number, body = ""): OnshapeApiError {
@@ -50,34 +50,36 @@ describe("isTransient", () => {
     });
 });
 
-describe("refusesDocument", () => {
-    it("is a refusal of the whole document, not one tab", () => {
-        expect(refusesDocument(apiError(401))).toBe(true);
-        expect(refusesDocument(apiError(403))).toBe(true);
-        expect(refusesDocument(apiError(404))).toBe(false);
-    });
-});
+describe("describeStepFailure", () => {
+    // Only the message survives Workflows rebuilding the step's error.
+    const reported = (error: unknown, action: RunAction) =>
+        describeRunFailure(new Error(describeStepFailure(error, action)));
 
-describe("describeTabFailure", () => {
-    it("words the refusals it knows", () => {
-        expect(describeTabFailure(apiError(404))).toMatch(/no longer exists/);
+    it("says what went wrong with the document, in our words", () => {
+        expect(reported(apiError(403), RunAction.REFERENCES)).toBe(
+            "You don't have permission to edit this document."
+        );
+        expect(reported(apiError(404), RunAction.VERSION)).toMatch(
+            /deleted or is no longer shared/
+        );
+        expect(reported(apiError(401), RunAction.VERSION)).toMatch(
+            /sign-in expired/
+        );
     });
 
-    it("passes on Onshape's own message otherwise", () => {
-        expect(
-            describeTabFailure(
-                apiError(400, JSON.stringify({ message: "Bad reference" }))
-            )
-        ).toBe("Bad reference");
-        expect(describeTabFailure(apiError(400, "<html>"))).toBe(
-            "Onshape refused the update."
+    it("names the call that failed rather than passing Onshape's message on", () => {
+        const refusal = apiError(400, JSON.stringify({ message: "Bad ref" }));
+        expect(reported(refusal, RunAction.REFERENCES)).toBe(
+            "Couldn't update this document's references."
+        );
+        expect(reported(refusal, RunAction.VERSION)).toBe(
+            "Couldn't create a version of this document."
         );
     });
 });
 
 describe("describeRunFailure", () => {
-    it("says why the run stopped without the raw error", () => {
-        expect(describeRunFailure(apiError(401))).toMatch(/sign-in expired/);
+    it("words what outlasted its retries without the raw error", () => {
         expect(describeRunFailure(apiError(429))).toMatch(/limiting requests/);
         expect(describeRunFailure(apiError(503))).toMatch(/having problems/);
         expect(describeRunFailure(new Error("fetch failed"))).toMatch(
@@ -86,5 +88,8 @@ describe("describeRunFailure", () => {
         expect(
             describeRunFailure(new Error("undefined is not a function"))
         ).toMatch(/Something went wrong/);
+        expect(describeRunFailure(apiError(400, "Bad ref"))).toMatch(
+            /Something went wrong/
+        );
     });
 });
