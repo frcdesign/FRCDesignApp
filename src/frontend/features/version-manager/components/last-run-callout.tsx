@@ -6,11 +6,12 @@ import {
 } from "@backend/features/version-manager/contract";
 import { Callout, CalloutButton } from "../../../components/callout";
 import { formatTimeAgo } from "../../../lib/format-time";
-import { IconSize, StatusColor } from "../../../lib/style-constants";
+import { Status } from "../../../lib/status";
+import { IconSize } from "../../../lib/style-constants";
 import {
     jobHeadline,
     jobOutcome,
-    OUTCOME_STYLE,
+    OUTCOME_STATUS,
     runningHeadline
 } from "../job-report";
 import { openJobDetails } from "../open-version-modals";
@@ -33,9 +34,9 @@ export function LastRunCallout(props: LastRunCalloutProps): ReactNode {
     if (!status) {
         return null;
     }
-    const details = (color: StatusColor) => (
+    const details = (outcomeStatus: Status) => (
         <CalloutButton
-            color={color}
+            status={outcomeStatus}
             icon={<ListBulletsIcon size={IconSize.SMALL} />}
             onClick={() => openJobDetails(workspace)}
         >
@@ -48,7 +49,7 @@ export function LastRunCallout(props: LastRunCalloutProps): ReactNode {
             <Callout
                 text={`${runningHeadline(status)}...`}
                 loading
-                action={details(StatusColor.INFO)}
+                action={details(Status.INFO)}
             />
         );
     }
@@ -57,16 +58,15 @@ export function LastRunCallout(props: LastRunCalloutProps): ReactNode {
     if (!outcome) {
         return null;
     }
-    const { color, icon } = OUTCOME_STYLE[outcome];
+    const outcomeStatus = OUTCOME_STATUS[outcome];
     const when = status.finishedAt
         ? ` ${formatTimeAgo(status.finishedAt)}`
         : "";
     return (
         <Callout
             text={`${jobHeadline(status, outcome)}${when}.`}
-            color={color}
-            icon={icon}
-            action={details(color)}
+            status={outcomeStatus}
+            action={details(outcomeStatus)}
         />
     );
 }

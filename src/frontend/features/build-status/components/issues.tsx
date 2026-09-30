@@ -1,12 +1,6 @@
 import { ExternalLink } from "../../../components/external-link";
 import { Badge, Group, Stack, Text } from "@mantine/core";
-import {
-    ArrowSquareOutIcon,
-    CheckIcon,
-    InfoIcon,
-    WarningIcon,
-    WarningOctagonIcon
-} from "@phosphor-icons/react";
+import { ArrowSquareOutIcon, CheckIcon } from "@phosphor-icons/react";
 import { ReactNode, useMemo } from "react";
 import {
     addBuildIssue,
@@ -29,6 +23,8 @@ import {
 } from "@backend/features/build-checker/contract";
 import { IconSize, StatusColor } from "../../../lib/style-constants";
 import { AppIcon, type AppIconProps } from "../../../components/app-icon";
+import { StatusIcon } from "../../../components/status-icon";
+import { Status, STATUS_COLOR } from "../../../lib/status";
 import { InfoTooltip } from "../../../components/info-tooltip";
 import { SectionHeader } from "./sections";
 import { useOnshapeOrigin } from "../../../lib/onshape-params";
@@ -62,37 +58,23 @@ interface IssueIconProps extends Omit<AppIconProps, "icon" | "color"> {
     severity?: BuildIssueSeverity;
 }
 
-/** The icon each severity is drawn as; `ok` is a build with nothing to say. */
-const SEVERITY_ICONS = {
-    [BuildIssueSeverity.ERROR]: WarningOctagonIcon,
-    [BuildIssueSeverity.WARNING]: WarningIcon,
-    [BuildIssueSeverity.INFO]: InfoIcon,
-    ok: CheckIcon
-};
-
-/** The color a severity is spoken in; none is a build with nothing to say. */
-function severityColor(severity?: BuildIssueSeverity): StatusColor {
+/** The status a severity is drawn as; none is a build with nothing to say. */
+function severityStatus(severity?: BuildIssueSeverity): Status {
     switch (severity) {
         case BuildIssueSeverity.ERROR:
-            return StatusColor.ERROR;
+            return Status.ERROR;
         case BuildIssueSeverity.WARNING:
-            return StatusColor.WARNING;
+            return Status.WARNING;
         case BuildIssueSeverity.INFO:
-            return StatusColor.INFO;
+            return Status.INFO;
         case undefined:
-            return StatusColor.SUCCESS;
+            return Status.SUCCESS;
     }
 }
 
-/** Renders the icon for a build-issue severity in its severity color. */
+/** The {@link StatusIcon} for a build-issue severity. */
 export function IssueIcon({ severity, ...others }: IssueIconProps): ReactNode {
-    return (
-        <AppIcon
-            icon={SEVERITY_ICONS[severity ?? "ok"]}
-            color={severityColor(severity)}
-            {...others}
-        />
-    );
+    return <StatusIcon status={severityStatus(severity)} {...others} />;
 }
 
 interface SeverityBadgesProps {
@@ -300,7 +282,7 @@ function IssueText(props: IssueTextProps): ReactNode {
 
 /** The light background tint for a build-issue callout. */
 function severityBackground(severity: BuildIssueSeverity): string {
-    return `var(--mantine-color-${severityColor(severity)}-light)`;
+    return `var(--mantine-color-${STATUS_COLOR[severityStatus(severity)]}-light)`;
 }
 
 interface CalloutIconProps {

@@ -1,15 +1,11 @@
 import { ReactNode } from "react";
 import { Button, Center, EmptyState } from "@mantine/core";
-import {
-    CheckIcon,
-    PlusIcon,
-    TargetIcon,
-    WarningIcon
-} from "@phosphor-icons/react";
+import { PlusIcon, TargetIcon } from "@phosphor-icons/react";
 import { type TargetElement } from "../../../lib/onshape-launch";
-import { IconSize, StatusColor } from "../../../lib/style-constants";
-import { AppIcon } from "../../../components/app-icon";
+import { IconSize } from "../../../lib/style-constants";
+import { BadgedIcon } from "../../../components/badged-icon";
 import { StatusIcon } from "../../../components/status-icon";
+import { Status } from "../../../lib/status";
 import { AppHoverCard } from "../../../components/app-hover-card";
 import {
     useAddInsertLocationMutation,
@@ -47,32 +43,21 @@ function InsertLocationHoverCard(
     const { target, instanceId } = props;
     const found = instanceId !== undefined;
 
-    const stateIcon = found ? CheckIcon : WarningIcon;
-    const stateColor = found ? StatusColor.SUCCESS : StatusColor.WARNING;
+    const status = found ? Status.SUCCESS : Status.WARNING;
 
     return (
         <AppHoverCard
             position="bottom-end"
             target={
                 <Center my="auto">
-                    <StatusIcon
-                        icon={TargetIcon}
-                        status={stateIcon}
-                        color={stateColor}
-                    />
+                    <BadgedIcon icon={TargetIcon} status={status} />
                 </Center>
             }
         >
             <EmptyState
                 align="left"
                 size="sm"
-                icon={
-                    <AppIcon
-                        icon={stateIcon}
-                        size={IconSize.CONTROL}
-                        color={stateColor}
-                    />
-                }
+                icon={<StatusIcon status={status} size={IconSize.CONTROL} />}
                 title={
                     found
                         ? "Insert location active"

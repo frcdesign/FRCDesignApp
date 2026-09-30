@@ -1,6 +1,8 @@
 export enum IconSize {
     /** Beside xs text: badge labels and metadata rows. */
     TINY = 12,
+    /** A status on another icon's corner: big enough that a tick and a warning can be told apart. */
+    BADGE = 14,
     /** The default, beside a label in a button or menu option. */
     SMALL = 16,
     /** Standalone in a row, and the icon of a toast. */

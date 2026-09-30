@@ -7,13 +7,7 @@ import {
     Stack,
     Text
 } from "@mantine/core";
-import {
-    CheckCircleIcon,
-    CircleIcon,
-    MinusCircleIcon,
-    WarningCircleIcon,
-    XCircleIcon
-} from "@phosphor-icons/react";
+import { CircleIcon, MinusIcon } from "@phosphor-icons/react";
 import { type ReactNode } from "react";
 import {
     VersionJobState,
@@ -24,6 +18,8 @@ import {
 } from "@backend/features/version-manager/contract";
 import { AppIcon } from "../../../components/app-icon";
 import { AppTitle } from "../../../components/app-title";
+import { StatusIcon } from "../../../components/status-icon";
+import { Status } from "../../../lib/status";
 import { ExternalLink } from "../../../components/external-link";
 import { useOnshapeOrigin } from "../../../lib/onshape-params";
 import {
@@ -36,7 +32,7 @@ import {
     jobHeadline,
     jobOutcome,
     jobStats,
-    OUTCOME_STYLE,
+    OUTCOME_STATUS,
     runningHeadline,
     TASK_LABEL
 } from "../job-report";
@@ -59,11 +55,15 @@ export function JobDetailsTitle(props: JobDetailsProps): ReactNode {
             />
         );
     }
-    const { color, icon } = OUTCOME_STYLE[outcome];
     return (
         <AppTitle
             title={jobHeadline(status, outcome)}
-            icon={<AppIcon icon={icon} size={IconSize.MEDIUM} color={color} />}
+            icon={
+                <StatusIcon
+                    status={OUTCOME_STATUS[outcome]}
+                    size={IconSize.MEDIUM}
+                />
+            }
         />
     );
 }
@@ -87,10 +87,9 @@ export function JobDetails(props: JobDetailsProps): ReactNode {
                     align="left"
                     size="sm"
                     icon={
-                        <AppIcon
-                            icon={WarningCircleIcon}
+                        <StatusIcon
+                            status={Status.ERROR}
                             size={IconSize.CONTROL}
-                            color={StatusColor.ERROR}
                         />
                     }
                     title="Stopped early"
@@ -167,18 +166,39 @@ function DocumentSteps(props: DocumentStepsProps): ReactNode {
     );
 }
 
-const STATE_ICON = {
-    [VersionTaskState.PENDING]: { icon: CircleIcon, color: StatusColor.DIMMED },
-    [VersionTaskState.DONE]: {
-        icon: CheckCircleIcon,
-        color: StatusColor.SUCCESS
-    },
-    [VersionTaskState.FAILED]: { icon: XCircleIcon, color: StatusColor.ERROR },
-    [VersionTaskState.SKIPPED]: {
-        icon: MinusCircleIcon,
-        color: StatusColor.DIMMED
+interface TaskStateIconProps {
+    state: VersionTaskState;
+}
+
+/** How far a step has got: the standard status for one that finished. */
+function TaskStateIcon(props: TaskStateIconProps): ReactNode {
+    switch (props.state) {
+        case VersionTaskState.RUNNING:
+            return <Loader size={IconSize.SMALL} />;
+        case VersionTaskState.DONE:
+            return (
+                <StatusIcon status={Status.SUCCESS} size={IconSize.MEDIUM} />
+            );
+        case VersionTaskState.FAILED:
+            return <StatusIcon status={Status.ERROR} size={IconSize.MEDIUM} />;
+        case VersionTaskState.PENDING:
+            return (
+                <AppIcon
+                    icon={CircleIcon}
+                    size={IconSize.MEDIUM}
+                    color={StatusColor.DIMMED}
+                />
+            );
+        case VersionTaskState.SKIPPED:
+            return (
+                <AppIcon
+                    icon={MinusIcon}
+                    size={IconSize.MEDIUM}
+                    color={StatusColor.DIMMED}
+                />
+            );
     }
-} as const;
+}
 
 interface TaskRowProps {
     task: VersionTask;
@@ -193,15 +213,7 @@ function TaskRow(props: TaskRowProps): ReactNode {
     return (
         <Group gap="sm" wrap="nowrap" align="flex-start">
             <Center w={IconSize.MEDIUM} h={IconSize.MEDIUM} mt={2}>
-                {task.state === VersionTaskState.RUNNING ? (
-                    <Loader size={IconSize.SMALL} />
-                ) : (
-                    <AppIcon
-                        icon={STATE_ICON[task.state].icon}
-                        size={IconSize.MEDIUM}
-                        color={STATE_ICON[task.state].color}
-                    />
-                )}
+                <TaskStateIcon state={task.state} />
             </Center>
             <Stack gap={0} miw={0} flex={1}>
                 <Group gap="xs">

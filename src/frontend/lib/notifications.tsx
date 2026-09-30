@@ -1,11 +1,7 @@
 import { notifications } from "@mantine/notifications";
 import type { ReactNode } from "react";
-import {
-    CheckCircleIcon,
-    InfoIcon,
-    WarningIcon,
-    XCircleIcon
-} from "@phosphor-icons/react";
+import { StatusIcon } from "../components/status-icon";
+import { Status } from "./status";
 import { IconSize } from "./style-constants";
 import { Box, Group, Button } from "@mantine/core";
 import styles from "./styles.module.css";
@@ -91,7 +87,13 @@ export function showInfoToast(
 ): string {
     return showToast({
         color: "blue",
-        icon: <InfoIcon size={IconSize.MEDIUM} />,
+        icon: (
+            <StatusIcon
+                status={Status.INFO}
+                size={IconSize.MEDIUM}
+                color="white"
+            />
+        ),
         message,
         ...options
     });
@@ -112,7 +114,13 @@ export function showSuccessToast(message: string, id?: string): string {
     return showToast({
         id,
         color: "green",
-        icon: <CheckCircleIcon size={IconSize.MEDIUM} />,
+        icon: (
+            <StatusIcon
+                status={Status.SUCCESS}
+                size={IconSize.MEDIUM}
+                color="white"
+            />
+        ),
         message
     });
 }
@@ -130,7 +138,13 @@ export function showErrorToast(
     return showToast({
         id,
         color: "red",
-        icon: <XCircleIcon size={IconSize.MEDIUM} />,
+        icon: (
+            <StatusIcon
+                status={Status.ERROR}
+                size={IconSize.MEDIUM}
+                color="white"
+            />
+        ),
         message,
         ...options
     });
@@ -145,7 +159,13 @@ export function showWarningToast(
     return showToast({
         id,
         color: "yellow",
-        icon: <WarningIcon size={IconSize.MEDIUM} />,
+        icon: (
+            <StatusIcon
+                status={Status.WARNING}
+                size={IconSize.MEDIUM}
+                color="white"
+            />
+        ),
         message,
         ...options
     });

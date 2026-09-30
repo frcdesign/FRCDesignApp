@@ -8,12 +8,7 @@ import {
     type VersionJobStatus,
     type VersionTask
 } from "@backend/features/version-manager/contract";
-import {
-    CheckCircleIcon,
-    WarningIcon,
-    XCircleIcon,
-    type Icon
-} from "@phosphor-icons/react";
+import { Status } from "../../lib/status";
 import { StatusColor } from "../../lib/style-constants";
 import { plural } from "./queries";
 
@@ -24,13 +19,10 @@ export enum JobOutcome {
     FAILED = "failed"
 }
 
-export const OUTCOME_STYLE: Record<
-    JobOutcome,
-    { color: StatusColor; icon: Icon }
-> = {
-    [JobOutcome.SUCCESS]: { color: StatusColor.SUCCESS, icon: CheckCircleIcon },
-    [JobOutcome.PARTIAL]: { color: StatusColor.WARNING, icon: WarningIcon },
-    [JobOutcome.FAILED]: { color: StatusColor.ERROR, icon: XCircleIcon }
+export const OUTCOME_STATUS: Record<JobOutcome, Status> = {
+    [JobOutcome.SUCCESS]: Status.SUCCESS,
+    [JobOutcome.PARTIAL]: Status.WARNING,
+    [JobOutcome.FAILED]: Status.ERROR
 };
 
 /** What stays in Onshape whatever else the run did. */

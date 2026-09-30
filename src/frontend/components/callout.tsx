@@ -1,36 +1,29 @@
 import { Alert, Button, Group, Loader, Text } from "@mantine/core";
-import { InfoIcon, type Icon } from "@phosphor-icons/react";
 import { ReactNode } from "react";
-import { IconSize, StatusColor } from "../lib/style-constants";
-import { AppIcon } from "./app-icon";
+import { Status, STATUS_COLOR } from "../lib/status";
+import { IconSize } from "../lib/style-constants";
+import { StatusIcon } from "./status-icon";
 
 interface CalloutProps {
     /** A whole sentence, ending in a period. */
     text: string;
     /** A `CalloutButton`; omitted for a note that only reports something. */
     action?: ReactNode;
-    /** @default StatusColor.INFO */
-    color?: StatusColor;
-    /** Drawn filled, in the callout's color. @default InfoIcon */
-    icon?: Icon;
+    /** Sets the color and the {@link StatusIcon}. @default Status.INFO */
+    status?: Status;
     /** A spinner in place of the icon, for something still going. */
     loading?: boolean;
 }
 
 /**
- * Blue by default, so it reads as a remark rather than library content; a
- * status color for one reporting how something went. Icon and text both take
- * the color, over a faint wash of it: Mantine's dark-mode tint is a solid
+ * Info by default, so it reads as a remark rather than library content; another
+ * status for one reporting how something went. Icon and text both take the
+ * status's color, over a faint wash of it: Mantine's dark-mode tint is a solid
  * shade, and its text on it all but white.
  */
 export function Callout(props: CalloutProps): ReactNode {
-    const {
-        text,
-        action,
-        color = StatusColor.INFO,
-        icon = InfoIcon,
-        loading = false
-    } = props;
+    const { text, action, status = Status.INFO, loading = false } = props;
+    const color = STATUS_COLOR[status];
     const background = `light-dark(var(--mantine-color-${color}-light), color-mix(in srgb, var(--mantine-color-${color}-filled) 20%, transparent))`;
     const foreground = `light-dark(var(--mantine-color-${color}-light-color), var(--mantine-color-${color}-4))`;
 
@@ -43,7 +36,13 @@ export function Callout(props: CalloutProps): ReactNode {
                 loading ? (
                     <Loader size={IconSize.MEDIUM} color="var(--alert-color)" />
                 ) : (
-                    <AppIcon icon={icon} size={IconSize.MEDIUM} weight="fill" />
+                    <StatusIcon
+                        status={status}
+                        size={IconSize.MEDIUM}
+                        // Phosphor fills its check into a square.
+                        weight={status === Status.SUCCESS ? "bold" : "fill"}
+                        color="var(--alert-color)"
+                    />
                 )
             }
             vars={() => ({
@@ -71,16 +70,16 @@ interface CalloutButtonProps {
     children: string;
     icon: ReactNode;
     onClick: () => void;
-    /** Matches the callout it sits in. @default StatusColor.INFO */
-    color?: StatusColor;
+    /** Matches the callout it sits in. @default Status.INFO */
+    status?: Status;
 }
 
 export function CalloutButton(props: CalloutButtonProps): ReactNode {
-    const { children, icon, onClick, color = StatusColor.INFO } = props;
+    const { children, icon, onClick, status = Status.INFO } = props;
     return (
         <Button
             variant="outline"
-            color={color}
+            color={STATUS_COLOR[status]}
             size="compact-sm"
             leftSection={icon}
             onClick={onClick}
