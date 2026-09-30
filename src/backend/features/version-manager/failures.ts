@@ -13,8 +13,8 @@ const STATUS_PATTERN = /Onshape API error (\d{3})/;
 const NO_ANSWER_PATTERN = /timeout|timed out|aborted|fetch failed|network/i;
 
 /**
- * Marks a message this module already worded, which is all that survives of an
- * error once Workflows has rebuilt it outside the step.
+ * Marks a message this module already worded. Workflows rebuilds an error that
+ * leaves a step with its name prefixed to the message, so it is found anywhere.
  */
 const WORDED_PREFIX = "Version run stopped: ";
 
@@ -96,8 +96,9 @@ export function describeRunFailure(error: unknown): string {
     if (!(error instanceof Error)) {
         return UNEXPECTED;
     }
-    if (error.message.startsWith(WORDED_PREFIX)) {
-        return error.message.slice(WORDED_PREFIX.length);
+    const worded = error.message.indexOf(WORDED_PREFIX);
+    if (worded !== -1) {
+        return error.message.slice(worded + WORDED_PREFIX.length);
     }
     const status = onshapeStatus(error);
     if (status === undefined) {

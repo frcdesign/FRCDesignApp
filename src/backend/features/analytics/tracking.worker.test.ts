@@ -5,6 +5,7 @@ import { configurations } from "../../db/schema";
 import {
     dailyAppOpens,
     dailyConfigurationMetrics,
+    dailyVersionMetrics,
     dailyInsertableMetrics,
     dailyInsertableUsers,
     dailyMetrics,
@@ -26,7 +27,12 @@ import {
 } from "../../../__test_utils__";
 import { getDb } from "../../db/client";
 import { type AppContext } from "../../lib/context";
-import { trackAppOpen, trackInsert, type InsertEvent } from "./tracking";
+import {
+    trackAppOpen,
+    trackInsert,
+    trackVersionRun,
+    type InsertEvent
+} from "./tracking";
 import { toDayKey } from "./day";
 import { EVENT_SCHEMA_VERSION, EventType, InsertSource } from "./usage";
 import {
@@ -40,6 +46,15 @@ import {
 } from "../configurations/contract";
 import { toSelection } from "../configurations/selection";
 import { ElementType } from "../../lib/onshape/element-type";
+import {
+    PushScopeKind,
+    toWorkspacePath,
+    VersionJobKind,
+    VersionJobState,
+    VersionTaskAction,
+    VersionTaskState,
+    type VersionJobStatus
+} from "../version-manager/contract";
 
 const db = getDb(env.DB);
 
@@ -520,6 +535,62 @@ describe("tracking", () => {
             const rows = await db.select().from(dailyAppOpens).all();
             expect(rows).toHaveLength(1);
             expect(rows[0]?.opens).toBe(2);
+        });
+    });
+
+    describe("trackVersionRun", () => {
+        const failedTask = {
+            action: VersionTaskAction.REFERENCES,
+            state: VersionTaskState.FAILED,
+            workspace: toWorkspacePath("doc", "doc-w")
+        };
+        const pushed = (status: VersionJobStatus) =>
+            trackVersionRun(env, {
+                userId: TEST_USER_ID,
+                kind: VersionJobKind.PUSH,
+                scope: PushScopeKind.CHILDREN,
+                status
+            });
+
+        it("counts each outcome, and what the runs changed", async () => {
+            await pushed({
+                state: VersionJobState.COMPLETE,
+                result: { createdVersions: 1, updatedElements: 3 }
+            });
+            await pushed({
+                state: VersionJobState.COMPLETE,
+                updateOnly: true,
+                tasks: [failedTask],
+                result: { createdVersions: 0, updatedElements: 2 }
+            });
+            await pushed({
+                state: VersionJobState.FAILED,
+                tasks: [failedTask],
+                result: { createdVersions: 0, updatedElements: 0 }
+            });
+
+            expect(
+                await db.select().from(dailyVersionMetrics).get()
+            ).toMatchObject({
+                kind: VersionJobKind.PUSH,
+                runs: 3,
+                updateOnlyRuns: 1,
+                partialRuns: 1,
+                failedRuns: 1,
+                createdVersions: 1,
+                updatedElements: 5
+            });
+        });
+
+        it("records the run under no library, and as no one's activity", async () => {
+            await pushed({ state: VersionJobState.COMPLETE });
+
+            expect(await db.select().from(events).get()).toMatchObject({
+                type: EventType.VERSION_RUN,
+                libraryId: null,
+                failedSteps: 0
+            });
+            expect(await db.select().from(dailyUserActivity).all()).toEqual([]);
         });
     });
 

@@ -52,14 +52,24 @@ describe("isTransient", () => {
 });
 
 describe("describeStepFailure", () => {
-    // Only the message survives Workflows rebuilding the step's error.
+    // As Workflows rebuilds the step's error: its name, then its message.
     const reported = (error: unknown, action: VersionTaskAction) =>
-        describeRunFailure(new Error(describeStepFailure(error, action)));
+        describeRunFailure(
+            new Error(
+                `NonRetryableError: ${describeStepFailure(error, action)}`
+            )
+        );
     const refusal = apiError(400, JSON.stringify({ message: "Bad ref" }));
 
     it("never passes Onshape's own message on", () => {
         expect(reported(refusal, VersionTaskAction.REFERENCES)).not.toContain(
             "Bad ref"
+        );
+    });
+
+    it("says what was refused in its own words", () => {
+        expect(reported(apiError(403), VersionTaskAction.REFERENCES)).toBe(
+            "You don't have permission to edit this document."
         );
     });
 

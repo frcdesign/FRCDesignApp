@@ -226,7 +226,7 @@ export class VersionManagerWorkflow extends WorkflowEntrypoint<
         }
         const documentIds = Object.keys(pinned);
         return documentIds.length > 0
-            ? { onlyDocumentIds: documentIds, pinnedVersions: pinned }
+            ? { onlyDocumentIds: documentIds, pinnedVersions: { ...pinned } }
             : undefined;
     }
 
