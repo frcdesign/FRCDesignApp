@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { formatTimeAgo, formatTimeAgoLabel } from "./format-time";
+import { formatShortTimeAgo, formatTimeAgo } from "./format-time";
 
 const NOW = new Date("2026-09-30T12:00:00Z").getTime();
 const MINUTE = 60 * 1000;
@@ -30,8 +30,11 @@ it("gives a date once it is a week old", () => {
     expect(formatTimeAgo(NOW - 7 * DAY)).toBe("Sep 23, 2026");
 });
 
-it("capitalizes a label that stands on its own", () => {
-    expect(formatTimeAgoLabel(NOW - DAY)).toBe("Yesterday");
-    expect(formatTimeAgoLabel(NOW)).toBe("Just now");
-    expect(formatTimeAgoLabel(NOW - 7 * DAY)).toBe("Sep 23, 2026");
+it("shortens the units for a label with little room", () => {
+    expect(formatShortTimeAgo(NOW)).toBe("Just now");
+    expect(formatShortTimeAgo(NOW - 5 * MINUTE)).toBe("5m ago");
+    expect(formatShortTimeAgo(NOW - 3 * HOUR)).toBe("3h ago");
+    expect(formatShortTimeAgo(NOW - DAY)).toBe("1d ago");
+    expect(formatShortTimeAgo(NOW - 7 * DAY)).toBe("Sep 23");
+    expect(formatShortTimeAgo(NOW - 365 * DAY)).toBe("Sep 30, 2025");
 });
