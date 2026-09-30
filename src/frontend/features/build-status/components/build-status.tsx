@@ -13,7 +13,7 @@ import {
     HourglassIcon
 } from "@phosphor-icons/react";
 import { ReactNode } from "react";
-import { formatTimeAgo } from "../../../lib/format-time";
+import { formatTimeAgoLabel } from "../../../lib/format-time";
 import {
     BuildIssue,
     getMaxSeverity
@@ -213,7 +213,9 @@ function VersionAge(props: VersionAgeProps): ReactNode {
         >
             <GitBranchIcon size={IconSize.TINY} />
             <Text size="xs">
-                {versionCreatedAt ? formatTimeAgo(versionCreatedAt) : "Unknown"}
+                {versionCreatedAt
+                    ? formatTimeAgoLabel(versionCreatedAt)
+                    : "Unknown"}
             </Text>
         </Group>
     );

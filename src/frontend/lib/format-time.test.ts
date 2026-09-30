@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { formatTimeAgo } from "./format-time";
+import { formatTimeAgo, formatTimeAgoLabel } from "./format-time";
 
 const NOW = new Date("2026-09-30T12:00:00Z").getTime();
 const MINUTE = 60 * 1000;
@@ -28,4 +28,10 @@ it("counts the largest whole unit that has passed", () => {
 
 it("gives a date once it is a week old", () => {
     expect(formatTimeAgo(NOW - 7 * DAY)).toBe("Sep 23, 2026");
+});
+
+it("capitalizes a label that stands on its own", () => {
+    expect(formatTimeAgoLabel(NOW - DAY)).toBe("Yesterday");
+    expect(formatTimeAgoLabel(NOW)).toBe("Just now");
+    expect(formatTimeAgoLabel(NOW - 7 * DAY)).toBe("Sep 23, 2026");
 });

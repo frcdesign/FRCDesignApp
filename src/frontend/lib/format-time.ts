@@ -32,3 +32,9 @@ export function formatTimeAgo(timestamp: number): string {
     }
     return "just now";
 }
+
+/** {@link formatTimeAgo} standing on its own rather than ending a sentence. */
+export function formatTimeAgoLabel(timestamp: number): string {
+    const text = formatTimeAgo(timestamp);
+    return text.charAt(0).toUpperCase() + text.slice(1);
+}
