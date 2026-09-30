@@ -1,6 +1,6 @@
 import { ExternalLink } from "../../../components/external-link";
 import { Badge, Group, Stack, Text } from "@mantine/core";
-import { ArrowSquareOutIcon, CheckIcon } from "@phosphor-icons/react";
+import { ArrowSquareOutIcon } from "@phosphor-icons/react";
 import { ReactNode, useMemo } from "react";
 import {
     addBuildIssue,
@@ -22,9 +22,12 @@ import {
     InsertableBuildStatus
 } from "@backend/features/build-checker/contract";
 import { IconSize, StatusColor } from "../../../lib/style-constants";
-import { AppIcon, type AppIconProps } from "../../../components/app-icon";
-import { StatusIcon } from "../../../components/status-icon";
-import { Status, STATUS_COLOR } from "../../../lib/status";
+import { AppIcon } from "../../../components/app-icon";
+import {
+    StatusIcon,
+    type StatusIconProps
+} from "../../../components/status-icon";
+import { Status, STATUS_COLOR, statusWash } from "../../../lib/status";
 import { InfoTooltip } from "../../../components/info-tooltip";
 import { SectionHeader } from "./sections";
 import { useOnshapeOrigin } from "../../../lib/onshape-params";
@@ -53,7 +56,7 @@ export function useGroupBuildIssues(
     }, [groupStatus, insertableStatuses]);
 }
 
-interface IssueIconProps extends Omit<AppIconProps, "icon" | "color"> {
+interface IssueIconProps extends Omit<StatusIconProps, "status"> {
     /** The severity to render; absent when every check passes. */
     severity?: BuildIssueSeverity;
 }
@@ -88,7 +91,13 @@ export function SeverityBadges(props: SeverityBadgesProps): ReactNode {
         return (
             <Badge
                 color={StatusColor.SUCCESS}
-                leftSection={<CheckIcon size={IconSize.TINY} />}
+                leftSection={
+                    <StatusIcon
+                        status={Status.SUCCESS}
+                        size={IconSize.TINY}
+                        raised={false}
+                    />
+                }
             >
                 All checks pass
             </Badge>
@@ -120,14 +129,10 @@ export function SeverityBadges(props: SeverityBadgesProps): ReactNode {
     );
 }
 
-/** The badge color and singular noun for each severity. */
-const SEVERITY_BADGE: Record<
-    BuildIssueSeverity,
-    { color: string; noun: string }
-> = {
-    [BuildIssueSeverity.ERROR]: { color: "red", noun: "error" },
-    [BuildIssueSeverity.WARNING]: { color: "yellow", noun: "warning" },
-    [BuildIssueSeverity.INFO]: { color: "blue", noun: "info" }
+const SEVERITY_NOUN: Record<BuildIssueSeverity, string> = {
+    [BuildIssueSeverity.ERROR]: "error",
+    [BuildIssueSeverity.WARNING]: "warning",
+    [BuildIssueSeverity.INFO]: "info"
 };
 
 interface CountBadgeProps {
@@ -137,7 +142,8 @@ interface CountBadgeProps {
 
 function CountBadge(props: CountBadgeProps): ReactNode {
     const { severity, count } = props;
-    const { color, noun } = SEVERITY_BADGE[severity];
+    const color = STATUS_COLOR[severityStatus(severity)];
+    const noun = SEVERITY_NOUN[severity];
     // Don't pluralize info, e.g. "2 infos" reads wrong.
     const plural = severity !== BuildIssueSeverity.INFO && count > 1 ? "s" : "";
     return <Badge color={color}>{`${count} ${noun}${plural}`}</Badge>;
@@ -233,7 +239,7 @@ interface IssueCalloutProps {
 function IssueCallout(props: IssueCalloutProps): ReactNode {
     const { issue, url } = props;
     const severity = getIssueSeverity(issue);
-    const background = severityBackground(severity);
+    const background = statusWash(severityStatus(severity));
 
     if (!url) {
         return (
@@ -280,11 +286,6 @@ function IssueText(props: IssueTextProps): ReactNode {
     );
 }
 
-/** The light background tint for a build-issue callout. */
-function severityBackground(severity: BuildIssueSeverity): string {
-    return `var(--mantine-color-${STATUS_COLOR[severityStatus(severity)]}-light)`;
-}
-
 interface CalloutIconProps {
     severity: BuildIssueSeverity;
 }
@@ -298,6 +299,7 @@ function CalloutIcon(props: CalloutIconProps): ReactNode {
             severity={props.severity}
             className={styles.noShrink}
             style={CALLOUT_ICON_NUDGE}
+            raised={false}
         />
     );
 }

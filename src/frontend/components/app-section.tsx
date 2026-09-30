@@ -1,7 +1,7 @@
 import { Accordion, ActionIcon, Group } from "@mantine/core";
 import { CaretDownIcon } from "@phosphor-icons/react";
 import { type ReactNode } from "react";
-import { IconSize, StatusColor } from "../lib/style-constants";
+import { IconSize } from "../lib/style-constants";
 import { AppTitle } from "./app-title";
 import styles from "../lib/styles.module.css";
 import classes from "./app-section.module.css";
@@ -14,12 +14,9 @@ interface AppSectionsProps {
 }
 
 /**
- * A page's stack of collapsing sections, each opening and closing on its own.
- * Which are open belongs to the caller, since it usually outlives the page.
- *
- * The content is laid out flush to the page's edges: a section's rows sit on
- * the same grid as every other list in the app, so padding here would inset
- * them from it.
+ * A page's stack of collapsing sections. Which are open belongs to the caller,
+ * since it usually outlives the page. Flush to the page's edges, so a section's
+ * rows sit on the same grid as every other list.
  */
 export function AppSections(props: AppSectionsProps): ReactNode {
     const { opened, onChange, children } = props;
@@ -58,11 +55,7 @@ interface AppSectionProps {
     children: ReactNode;
 }
 
-/**
- * One section. Its controls sit beside the header rather than inside it — a
- * button cannot be nested in a button — and the chevron comes after them, at
- * the end of the row.
- */
+/** One section. Its controls sit beside the header: a button cannot nest in a button. */
 export function AppSection(props: AppSectionProps): ReactNode {
     const { value, name, title, icon, actions, opened, onToggle, children } =
         props;
@@ -70,13 +63,9 @@ export function AppSection(props: AppSectionProps): ReactNode {
     return (
         <Accordion.Item value={value}>
             <Group
-                // The whole row highlights, not the control: the buttons and
-                // the chevron beside it are part of the same header, and a
-                // highlight that stopped where they begin would look like a
-                // second thing had started there.
+                // The whole row highlights, buttons and chevron included.
                 className={`${classes.header} ${styles.sectionHeader} ${styles.dividerBottom} interactive`}
                 gap="xs"
-                wrap="nowrap"
                 pr="sm"
             >
                 <Accordion.Control
@@ -87,11 +76,7 @@ export function AppSection(props: AppSectionProps): ReactNode {
                     {title ?? <AppTitle title={name} />}
                 </Accordion.Control>
                 {actions}
-                <SectionChevron
-                    name={name}
-                    opened={opened}
-                    onToggle={onToggle}
-                />
+                <SectionChevron opened={opened} onToggle={onToggle} />
             </Group>
             <Accordion.Panel>{children}</Accordion.Panel>
         </Accordion.Item>
@@ -99,26 +84,16 @@ export function AppSection(props: AppSectionProps): ReactNode {
 }
 
 interface SectionChevronProps {
-    name: string;
     opened: boolean;
     onToggle: () => void;
 }
 
-/**
- * The section's own chevron. Mantine's is hidden and this stands in for it, so
- * it lands at the end of the row rather than against the title.
- */
+/** Mantine's chevron is hidden, so this one lands at the end of the row. */
 function SectionChevron(props: SectionChevronProps): ReactNode {
-    const { name, opened, onToggle } = props;
+    const { opened, onToggle } = props;
 
     return (
-        <ActionIcon
-            variant="subtle"
-            color={StatusColor.NEUTRAL}
-            aria-label={`${opened ? "Collapse" : "Expand"} ${name}`}
-            className={styles.noShrink}
-            onClick={onToggle}
-        >
+        <ActionIcon className={styles.noShrink} onClick={onToggle}>
             <CaretDownIcon
                 size={IconSize.MEDIUM}
                 style={{

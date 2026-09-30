@@ -36,11 +36,7 @@ export function StatTile({
                         {label}
                     </Text>
                     <Title order={2}>{format(value)}</Title>
-                    {caption && (
-                        <Text size="sm" c="dimmed">
-                            {caption}
-                        </Text>
-                    )}
+                    {caption && <Text c="dimmed">{caption}</Text>}
                 </div>
                 {change && (
                     <ChangeIndicator comparison={change} format={format} />

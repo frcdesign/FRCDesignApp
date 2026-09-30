@@ -1,11 +1,11 @@
 import { Center, EmptyState, Loader } from "@mantine/core";
-import { XIcon } from "@phosphor-icons/react";
-import { IconSize, StatusColor } from "../lib/style-constants";
+import { Status } from "../lib/status";
+import { IconSize } from "../lib/style-constants";
 import { ReactNode } from "react";
-import { AppIcon } from "./app-icon";
+import { StatusIcon } from "./status-icon";
 
 const ERROR_ICON = (
-    <AppIcon icon={XIcon} size={IconSize.PAGE} color={StatusColor.ERROR} />
+    <StatusIcon status={Status.ERROR} size={IconSize.PAGE} raised={false} />
 );
 
 const CONTACT_DEVELOPERS =

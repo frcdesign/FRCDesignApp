@@ -108,7 +108,6 @@ export function PushVersionForm(props: PushVersionFormProps): ReactNode {
             </AppModalBody>
             <AppModalFooter>
                 <Button
-                    variant="light"
                     ml="auto"
                     rightSection={<ArrowLineUpIcon size={IconSize.SMALL} />}
                     loading={push.isPending}

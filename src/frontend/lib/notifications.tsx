@@ -75,21 +75,30 @@ function showToast(config: ToastConfig): string {
     return id;
 }
 
-interface InfoToastOptions {
+interface ToastOptions {
     /** A repeat with the same id updates the toast. */
     id?: string;
+    /** False keeps it up until dismissed, for one somebody has to act on. */
     autoClose?: number | false;
 }
 
-export function showInfoToast(
+const STATUS_TOAST_COLOR: Record<Status, string> = {
+    [Status.SUCCESS]: "green",
+    [Status.INFO]: "blue",
+    [Status.WARNING]: "yellow",
+    [Status.ERROR]: "red"
+};
+
+function showStatusToast(
+    status: Status,
     message: ReactNode,
-    options: InfoToastOptions = {}
+    options: ToastOptions
 ): string {
     return showToast({
-        color: "blue",
+        color: STATUS_TOAST_COLOR[status],
         icon: (
             <StatusIcon
-                status={Status.INFO}
+                status={status}
                 size={IconSize.MEDIUM}
                 color="white"
                 raised={false}
@@ -100,10 +109,17 @@ export function showInfoToast(
     });
 }
 
+export function showInfoToast(
+    message: ReactNode,
+    options: ToastOptions = {}
+): string {
+    return showStatusToast(Status.INFO, message, options);
+}
+
 export function showLoadingToast(message: string, id: string): string {
     return showToast({
         id,
-        color: "blue",
+        color: STATUS_TOAST_COLOR[Status.INFO],
         loading: true,
         message,
         autoClose: false,
@@ -112,65 +128,22 @@ export function showLoadingToast(message: string, id: string): string {
 }
 
 export function showSuccessToast(message: string, id?: string): string {
-    return showToast({
-        id,
-        color: "green",
-        icon: (
-            <StatusIcon
-                status={Status.SUCCESS}
-                size={IconSize.MEDIUM}
-                color="white"
-                raised={false}
-            />
-        ),
-        message
-    });
-}
-
-interface ProblemToastOptions {
-    /** False keeps it up until dismissed, for one somebody has to act on. */
-    autoClose?: number | false;
+    return showStatusToast(Status.SUCCESS, message, { id });
 }
 
 export function showErrorToast(
     message: ReactNode,
     id?: string,
-    options: ProblemToastOptions = {}
+    options: Omit<ToastOptions, "id"> = {}
 ): string {
-    return showToast({
-        id,
-        color: "red",
-        icon: (
-            <StatusIcon
-                status={Status.ERROR}
-                size={IconSize.MEDIUM}
-                color="white"
-                raised={false}
-            />
-        ),
-        message,
-        ...options
-    });
+    return showStatusToast(Status.ERROR, message, { id, ...options });
 }
 
 /** Something went through, but not all of it. */
 export function showWarningToast(
     message: ReactNode,
     id?: string,
-    options: ProblemToastOptions = {}
+    options: Omit<ToastOptions, "id"> = {}
 ): string {
-    return showToast({
-        id,
-        color: "yellow",
-        icon: (
-            <StatusIcon
-                status={Status.WARNING}
-                size={IconSize.MEDIUM}
-                color="white"
-                raised={false}
-            />
-        ),
-        message,
-        ...options
-    });
+    return showStatusToast(Status.WARNING, message, { id, ...options });
 }

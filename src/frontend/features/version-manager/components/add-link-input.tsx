@@ -15,28 +15,27 @@ import {
 import { useAddLinkMutation } from "../queries";
 import classes from "./add-link-input.module.css";
 
-/** What the two fields below are, minus how they are laid out. */
-interface AddLinkForm {
-    url: string;
-    setUrl: (url: string) => void;
-    submit: () => void;
-    isPending: boolean;
-    /** Nothing typed yet, which is what leaves the button disabled. */
-    isEmpty: boolean;
+interface AddLinkInputProps {
+    workspace: WorkspacePath;
+    direction: LinkDirection;
+    /** Unbordered, as the last row of a list rather than the page's one field. */
+    compact?: boolean;
 }
 
 /**
  * Links a workspace by its Onshape url, which is the one handle on a document
  * everybody already has: copy the link, paste it here.
  */
-function useAddLinkForm(
-    workspace: WorkspacePath,
-    direction: LinkDirection
-): AddLinkForm {
+export function AddLinkInput(props: AddLinkInputProps): ReactNode {
+    const { workspace, direction, compact = false } = props;
     const [url, setUrl] = useState("");
     const addLink = useAddLinkMutation(workspace);
+    const isEmpty = url.trim() === "";
 
     const submit = () => {
+        if (isEmpty) {
+            return;
+        }
         const linked = parseOnshapeWorkspace(url);
         if (!linked) {
             showErrorToast(INVALID_WORKSPACE_URL);
@@ -49,94 +48,46 @@ function useAddLinkForm(
         addLink.mutate({ linked, direction }, { onSuccess: () => setUrl("") });
     };
 
-    return {
-        url,
-        setUrl,
-        submit,
-        isPending: addLink.isPending,
-        isEmpty: url.trim() === ""
-    };
+    return (
+        <Group gap={compact ? "xs" : "sm"}>
+            <TextInput
+                flex={1}
+                variant={compact ? "unstyled" : undefined}
+                leftSection={<LinkIcon size={IconSize.SMALL} />}
+                placeholder="Onshape document link..."
+                value={url}
+                onChange={(event) => setUrl(event.currentTarget.value)}
+                onKeyDown={(event) => {
+                    if (event.key === "Enter") submit();
+                }}
+            />
+            <Button
+                size={compact ? "compact-sm" : undefined}
+                variant="outline"
+                className={classes.addButton}
+                rightSection={<PlusIcon size={IconSize.SMALL} />}
+                loading={addLink.isPending}
+                disabled={isEmpty}
+                onClick={submit}
+            >
+                {compact ? "Add" : "Add document"}
+            </Button>
+        </Group>
+    );
 }
 
-interface AddLinkProps {
+interface AddLinkRowProps {
     workspace: WorkspacePath;
     direction: LinkDirection;
 }
 
-/**
- * The last row of the list it adds to, on the same grid as the links above it:
- * a card of its own sat inside the table and left both it and the row above at
- * a different height from the rest.
- */
-export function AddLinkRow(props: AddLinkProps): ReactNode {
-    const { workspace, direction } = props;
-    const form = useAddLinkForm(workspace, direction);
-
+/** The last row of the list it adds to, on the same grid as the links above it. */
+export function AddLinkRow(props: AddLinkRowProps): ReactNode {
     return (
         <Table.Tr>
             <Table.Td>
-                <Group gap="xs" wrap="nowrap">
-                    <TextInput
-                        flex={1}
-                        size="sm"
-                        variant="unstyled"
-                        leftSection={<LinkIcon size={IconSize.SMALL} />}
-                        placeholder="Onshape document link..."
-                        value={form.url}
-                        onChange={(event) =>
-                            form.setUrl(event.currentTarget.value)
-                        }
-                        onKeyDown={(event) => {
-                            if (event.key === "Enter") form.submit();
-                        }}
-                    />
-                    <Button
-                        size="compact-sm"
-                        variant="outline"
-                        className={classes.addButton}
-                        rightSection={<PlusIcon size={IconSize.SMALL} />}
-                        loading={form.isPending}
-                        disabled={form.isEmpty}
-                        onClick={form.submit}
-                    >
-                        Add
-                    </Button>
-                </Group>
+                <AddLinkInput {...props} compact />
             </Table.Td>
         </Table.Tr>
-    );
-}
-
-/**
- * The same field where it is the page's one instruction rather than a list's
- * last row: bordered, and with a button that says what it adds.
- */
-export function AddLinkField(props: AddLinkProps): ReactNode {
-    const { workspace, direction } = props;
-    const form = useAddLinkForm(workspace, direction);
-
-    return (
-        <Group gap="sm" wrap="nowrap">
-            <TextInput
-                flex={1}
-                leftSection={<LinkIcon size={IconSize.SMALL} />}
-                placeholder="Onshape document link..."
-                value={form.url}
-                onChange={(event) => form.setUrl(event.currentTarget.value)}
-                onKeyDown={(event) => {
-                    if (event.key === "Enter") form.submit();
-                }}
-            />
-            <Button
-                variant="outline"
-                className={classes.addButton}
-                rightSection={<PlusIcon size={IconSize.SMALL} />}
-                loading={form.isPending}
-                disabled={form.isEmpty}
-                onClick={form.submit}
-            >
-                Add document
-            </Button>
-        </Group>
     );
 }

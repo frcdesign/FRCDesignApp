@@ -37,7 +37,6 @@ import {
     useRef,
     useState
 } from "react";
-import { useNavigate } from "@tanstack/react-router";
 import { useDebouncedCallback } from "@mantine/hooks";
 
 import { AppBrand } from "./app-brand";
@@ -70,16 +69,13 @@ import {
     useIsVersionManagerNew
 } from "../features/version-manager/navigation";
 import { useTargetWorkspace } from "../lib/onshape-params";
+import { type AppTab, UtilityTab } from "../lib/app-tab";
+import { getTabName, useNavigateToTab } from "../lib/tabs";
 
 /**
  * The bar every page is topped by: the brand, then whatever that page puts
  * beside it. Stretched so a full-height child lands its underline on the row's
  * own border.
- *
- * Narrow, the row gives in one order, and nothing else in it has to be told
- * about widths: the brand folds to its tile at a width of its own, the controls
- * are pinned because half a button is no use, and the pages — the only thing
- * left that can — take whatever squeeze is still on, clipping their name.
  */
 export function NavbarRow(props: PropsWithChildren): ReactNode {
     const { children } = props;
@@ -88,7 +84,6 @@ export function NavbarRow(props: PropsWithChildren): ReactNode {
             gap="sm"
             px="sm"
             h={NAVBAR_ROW_HEIGHT}
-            wrap="nowrap"
             align="stretch"
             className={`${styles.frame} ${styles.dividerBottom}`}
         >
@@ -107,10 +102,7 @@ export function NavbarRow(props: PropsWithChildren): ReactNode {
     );
 }
 
-/**
- * Provides top-level navigation for the app: a row of library tabs with the
- * brand and settings alongside, over a row holding search and its filters.
- */
+/** The page picker with the brand and settings, over search and its filters. */
 export function AppNavbar(): ReactNode {
     // Search and its filters belong to a library, and the version manager is
     // not one; its page fills the room they leave.
@@ -120,12 +112,7 @@ export function AppNavbar(): ReactNode {
         <Stack gap={0}>
             <NavbarRow>
                 <PagePicker />
-                <Group
-                    gap="xs"
-                    wrap="nowrap"
-                    ml="auto"
-                    className={styles.noShrink}
-                >
+                <Group gap="xs" ml="auto" className={styles.noShrink}>
                     <InsertLocationStatus />
                     <JobIndicator />
                     <SignInButton />
@@ -133,7 +120,7 @@ export function AppNavbar(): ReactNode {
                 </Group>
             </NavbarRow>
             {!isVersionManager && (
-                <Group gap="xs" px="sm" h={NAVBAR_ROW_HEIGHT} wrap="nowrap">
+                <Group gap="xs" px="sm" h={NAVBAR_ROW_HEIGHT}>
                     <SearchBar />
                     <VendorMenu />
                 </Group>
@@ -173,40 +160,27 @@ function RunningJobLoader(): ReactNode {
     const jobRunning = useIsLibraryLoading();
     if (!jobRunning) return null;
     return (
-        <Tooltip
-            withArrow
-            label="The library is being loaded from Onshape in the background"
-        >
+        <Tooltip label="The library is being loaded from Onshape in the background">
             <Loader size={IconSize.CONTROL} />
         </Tooltip>
     );
 }
 
-/**
- * The value the version manager's tab takes. Not a library id, so it can never
- * collide with one.
- */
-const VERSION_MANAGER_TAB = "version-manager";
-
-/** What the version manager's page is called wherever it is offered. */
-const VERSION_MANAGER_LABEL = "Version Manager";
-
 /** What the menu files the pages that are not a library under. */
 const UTILITIES_GROUP = "Utilities";
 
-/** One of the app's top-level pages, as both the tab row and the menu list it. */
+/** One of the app's top-level pages, as the page picker lists it. */
 interface AppPage {
-    /** A library id, or {@link VERSION_MANAGER_TAB}. */
-    value: string;
-    label: string;
+    tab: AppTab;
     /** The heading the menu lists it under: its program, or the utilities. */
     group: string;
-    /** What the page is marked with: a book for a library. */
+    /** A book for a library. */
     icon: Icon;
     /** The color the page themes the app in, which its icon and badge take. */
     color: string;
-    /** What marks the page out, wherever it is listed. */
     badge?: ReactNode;
+    /** Worth pointing out behind the closed menu. */
+    isNew?: boolean;
 }
 
 function useAppPages(): AppPage[] {
@@ -215,8 +189,7 @@ function useAppPages(): AppPage[] {
     const isNew = useIsVersionManagerNew();
 
     const libraries = Object.values(LibraryId).map((libraryId) => ({
-        value: libraryId,
-        label: getLibraryName(libraryId),
+        tab: libraryId,
         group: getLibraryProgram(libraryId),
         icon: BooksIcon,
         color: getLibraryColor(libraryId),
@@ -228,40 +201,46 @@ function useAppPages(): AppPage[] {
         )
     }));
 
-    // Only where there is a workspace to push or pull, which is what the page
-    // acts on; standalone there is none. Listed while it is showing either way,
-    // so the picker cannot end up naming a page it does not offer.
+    // Listed while it is showing even without a workspace, so the picker never
+    // names a page it does not offer.
     if (!targetWorkspace && !isVersionManager) {
         return libraries;
     }
     return [
         ...libraries,
         {
-            value: VERSION_MANAGER_TAB,
-            label: VERSION_MANAGER_LABEL,
+            tab: UtilityTab.VERSION_MANAGER,
             group: UTILITIES_GROUP,
-            // What a version is marked with wherever the app shows one.
             icon: GitBranchIcon,
             color: AppColor.VERSION_MANAGER,
             badge: isNew ? (
                 <Badge color={AppColor.VERSION_MANAGER}>New</Badge>
-            ) : undefined
+            ) : undefined,
+            isNew
         }
     ];
 }
 
-/**
- * The app's top-level pages: the libraries, and the version manager after them
- * when the panel was opened somewhere it has a document to act on. One page
- * shows at a time, so they are a dropdown naming it rather than a row of tabs
- * — which in Onshape's panel could not lay four names out anyway.
- */
+/** The pages under their headings, each heading where its first page comes. */
+function groupPages(pages: AppPage[]): [string, AppPage[]][] {
+    const groups = new Map<string, AppPage[]>();
+    for (const page of pages) {
+        groups.set(page.group, [...(groups.get(page.group) ?? []), page]);
+    }
+    return [...groups];
+}
+
+/** The app's top-level pages, as a dropdown naming the one showing. */
 function PagePicker(): ReactNode {
     const pages = useAppPages();
-    const isNew = useIsVersionManagerNew();
     const currentLibraryId = useLibraryId();
     const isVersionManager = useIsVersionManager();
-    const navigate = useNavigate();
+    const navigateToTab = useNavigateToTab();
+
+    const current: AppTab = isVersionManager
+        ? UtilityTab.VERSION_MANAGER
+        : currentLibraryId;
+    const currentPage = pages.find((page) => page.tab === current);
 
     // Warm the versions on hover, so picking one has nothing left to wait for.
     const prefetchVersions = () => {
@@ -270,78 +249,17 @@ function PagePicker(): ReactNode {
         }
     };
 
-    const current = isVersionManager ? VERSION_MANAGER_TAB : currentLibraryId;
-
-    const selectPage = (value: string | null) => {
-        if (!value || value === current) {
-            return;
-        }
-        if (value === VERSION_MANAGER_TAB) {
-            void navigate({ to: "/app/version-manager" });
-            return;
-        }
-        const libraryId = value as LibraryId;
-        // Only decides where `/` resumes next time; the url is the source of
-        // truth.
-        updateUiState({ tabId: libraryId });
-        void navigate({
-            to: "/app/library/$libraryId",
-            params: { libraryId }
-        });
+    const selectPage = (tab: AppTab) => {
+        updateUiState({ tabId: tab });
+        navigateToTab(tab);
     };
 
     return (
-        <PageMenu
-            pages={pages}
-            current={current}
-            // A page worth finding is behind a closed menu, so the menu says so.
-            marked={isNew}
-            onHover={prefetchVersions}
-            onSelect={selectPage}
-        />
-    );
-}
-
-/**
- * The pages under their headings, each heading in the order its first page
- * comes in. The tab row keeps the flat order; only the menu has room to group.
- */
-function groupPages(pages: AppPage[]): [string, AppPage[]][] {
-    const groups = new Map<string, AppPage[]>();
-    for (const page of pages) {
-        const group = groups.get(page.group);
-        if (group) {
-            group.push(page);
-        } else {
-            groups.set(page.group, [page]);
-        }
-    }
-    return [...groups];
-}
-
-interface PageMenuProps {
-    pages: AppPage[];
-    /** The page showing, which the button names and the menu greys out. */
-    current: string;
-    /** Dots the button, for a page inside worth pointing out. */
-    marked: boolean;
-    onHover: () => void;
-    onSelect: (value: string) => void;
-}
-
-/** The same pages as a dropdown, for a navbar too narrow to lay them in a row. */
-function PageMenu(props: PageMenuProps): ReactNode {
-    const { pages, current, marked, onHover, onSelect } = props;
-    const currentPage = pages.find((page) => page.value === current);
-
-    return (
-        <Menu position="bottom-start" withinPortal>
-            {/* The dot is around the target rather than the target itself: the
-                menu hands its props to whatever it wraps, and that has to be
-                the button. The wrapper is what the navbar row lays out, so it
-                is the one centred on the row. */}
+        <Menu position="bottom-start">
+            {/* The dot wraps the target: the menu hands its props to the
+                button, and the wrapper is what the row centres. */}
             <Indicator
-                disabled={!marked}
+                disabled={!pages.some((page) => page.isNew)}
                 color={StatusColor.INFO}
                 size={8}
                 offset={6}
@@ -353,8 +271,7 @@ function PageMenu(props: PageMenuProps): ReactNode {
                         variant="subtle"
                         color={StatusColor.NEUTRAL}
                         px="xs"
-                        onMouseEnter={onHover}
-                        // The page's own mark, as its row in the menu has it.
+                        onMouseEnter={prefetchVersions}
                         leftSection={
                             currentPage && (
                                 <AppIcon
@@ -366,34 +283,28 @@ function PageMenu(props: PageMenuProps): ReactNode {
                         }
                         rightSection={<CaretDownIcon size={IconSize.SMALL} />}
                     >
-                        {currentPage?.label}
+                        {getTabName(current)}
                     </Button>
                 </Menu.Target>
             </Indicator>
             <Menu.Dropdown>
-                {groupPages(pages).map(([group, groupPages]) => (
+                {groupPages(pages).map(([group, grouped]) => (
                     <MenuSection key={group} label={group}>
-                        {groupPages.map((page) => (
+                        {grouped.map((page) => (
                             <Menu.Item
-                                key={page.value}
-                                disabled={page.value === current}
+                                key={page.tab}
+                                disabled={page.tab === current}
                                 leftSection={
                                     <AppIcon
                                         icon={page.icon}
                                         size={IconSize.MEDIUM}
-                                        // The shade an icon reads at; a badge
-                                        // wants the name, so its light variant
-                                        // tints rather than fills.
                                         color={toShade(page.color)}
                                     />
                                 }
-                                onClick={() => onSelect(page.value)}
+                                onClick={() => selectPage(page.tab)}
                             >
-                                {/* Beside the name, at the spacing a page
-                                    title badges its own with, rather than
-                                    across the menu in a right section. */}
                                 <Group gap="xs">
-                                    {page.label}
+                                    {getTabName(page.tab)}
                                     {page.badge}
                                 </Group>
                             </Menu.Item>
@@ -420,8 +331,6 @@ function ThemeToggle(): ReactNode {
     const isDark = theme === Theme.DARK;
     return (
         <ActionIcon
-            variant="subtle"
-            color={StatusColor.NEUTRAL}
             title={isDark ? "Light mode" : "Dark mode"}
             my="auto"
             size="input-sm"
@@ -441,8 +350,6 @@ function ThemeToggle(): ReactNode {
 function SettingsButton() {
     return (
         <ActionIcon
-            variant="subtle"
-            color={StatusColor.NEUTRAL}
             title="Settings"
             my="auto"
             // The filter button's size and icon, so the navbar's two rows read

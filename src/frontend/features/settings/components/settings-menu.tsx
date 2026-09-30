@@ -1,6 +1,6 @@
 import { Box, Button, Select, Stack } from "@mantine/core";
 import { ArrowLeftIcon, SignOutIcon } from "@phosphor-icons/react";
-import { useMatch } from "@tanstack/react-router";
+import { useIsDashboard } from "../../dashboard/dashboard-nav";
 import {
     SETTING_CONTROL_WIDTH,
     StatusColor
@@ -156,10 +156,6 @@ function UserSettings(): ReactNode {
 /** Without Onshape's launch params, which keep the app embedded. */
 function standaloneUrl(tabId: AppTab): string {
     return new URL(getTabPath(tabId), window.location.origin).href;
-}
-
-function useIsDashboard(): boolean {
-    return useMatch({ from: "/dashboard", shouldThrow: false }) !== undefined;
 }
 
 interface OpenAppButtonProps {

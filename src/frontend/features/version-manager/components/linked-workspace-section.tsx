@@ -596,7 +596,7 @@ function UnversionedChangesBadge(
 
     return (
         <Tooltip label={`${plural(changes, "change")} since the last version.`}>
-            <Badge size="sm" variant="light" className={styles.noShrink}>
+            <Badge className={styles.noShrink}>
                 {plural(changes, "change")}
             </Badge>
         </Tooltip>

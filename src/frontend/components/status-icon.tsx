@@ -3,7 +3,7 @@ import { Status, STATUS_COLOR, STATUS_ICON } from "../lib/status";
 import styles from "../lib/styles.module.css";
 import { AppIcon, type AppIconProps } from "./app-icon";
 
-interface StatusIconProps extends Omit<AppIconProps, "icon"> {
+export interface StatusIconProps extends Omit<AppIconProps, "icon"> {
     status: Status;
     /**
      * Off where something else places it: a title that raises its own icon, or

@@ -1,0 +1,57 @@
+.directionCard[data-checked] {
+    border-color: var(--mantine-primary-color-filled);
+    background-color: var(--mantine-primary-color-light);
+}
+
+.connector {
+    --line: 1px solid var(--mantine-color-default-border);
+    --elbow-height: 16px;
+    --arrow-width: 9px;
+    --arrow-height: 7px;
+    /* An outer column's middle, in a three-column grid with this gap. */
+    --outer-center: calc((100% - 2 * var(--document-gap)) / 6);
+
+    position: relative;
+    height: calc(var(--elbow-height) + 18px);
+}
+
+.elbow {
+    position: absolute;
+    top: 0;
+    height: var(--elbow-height);
+    border-bottom: var(--line);
+}
+
+.elbow[data-side="left"] {
+    left: var(--outer-center);
+    right: 50%;
+    border-left: var(--line);
+    border-bottom-left-radius: var(--mantine-radius-default);
+}
+
+.elbow[data-side="right"] {
+    left: 50%;
+    right: var(--outer-center);
+    border-right: var(--line);
+    border-bottom-right-radius: var(--mantine-radius-default);
+}
+
+.trunk {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    border-left: var(--line);
+    transform: translateX(-50%);
+}
+
+/* A CSS triangle, so its point lands exactly where the trunk stops. */
+.arrow {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    border-left: calc(var(--arrow-width) / 2) solid transparent;
+    border-right: calc(var(--arrow-width) / 2) solid transparent;
+    border-top: var(--arrow-height) solid var(--mantine-color-default-border);
+    transform: translateX(-50%);
+}

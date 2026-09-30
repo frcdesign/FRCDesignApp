@@ -71,11 +71,7 @@ function VersionManagerPage(): ReactNode {
                 icon={<GitBranchIcon size={IconSize.SECTION} />}
                 title="Sign in to manage versions"
                 description="Pushing and pulling happen in your Onshape documents."
-                action={
-                    <Button variant="light" onClick={startSignIn}>
-                        Sign in
-                    </Button>
-                }
+                action={<Button onClick={startSignIn}>Sign in</Button>}
             />
         );
     }

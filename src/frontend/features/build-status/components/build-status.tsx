@@ -139,7 +139,7 @@ function BuildStatusHoverCard({
                     // Only editors see hidden insertables, so its checks don't matter yet.
                     <AppIcon icon={EyeSlashIcon} color={StatusColor.WARNING} />
                 ) : (
-                    <IssueIcon severity={maxSeverity} />
+                    <IssueIcon severity={maxSeverity} raised={false} />
                 )
             }
         >

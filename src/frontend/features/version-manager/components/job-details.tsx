@@ -213,16 +213,13 @@ function TaskRow(props: TaskRowProps): ReactNode {
         task.state === VersionTaskState.SKIPPED;
 
     return (
-        <Group gap="sm" wrap="nowrap" align="flex-start">
+        <Group gap="sm" align="flex-start">
             <Center w={IconSize.MEDIUM} h={IconSize.MEDIUM} mt={2}>
                 <TaskStateIcon state={task.state} />
             </Center>
             <Stack gap={0} miw={0} flex={1}>
                 <Group gap="xs">
-                    <Text
-                        size="sm"
-                        c={isQuiet ? StatusColor.DIMMED : undefined}
-                    >
+                    <Text c={isQuiet ? StatusColor.DIMMED : undefined}>
                         {TASK_LABEL[task.action]}
                     </Text>
                     {task.updatedElements !== undefined && (

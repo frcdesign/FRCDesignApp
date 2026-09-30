@@ -94,7 +94,6 @@ export function PullReferencesForm(props: PullReferencesFormProps): ReactNode {
             </AppModalBody>
             <AppModalFooter>
                 <Button
-                    variant="light"
                     ml="auto"
                     rightSection={<ArrowLineDownIcon size={IconSize.SMALL} />}
                     loading={pull.isPending}

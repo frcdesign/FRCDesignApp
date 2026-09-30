@@ -1,7 +1,8 @@
 import { Alert, Button, Group, Loader, Text } from "@mantine/core";
 import { ReactNode } from "react";
-import { Status, STATUS_COLOR } from "../lib/status";
+import { Status, STATUS_COLOR, statusWash } from "../lib/status";
 import { IconSize } from "../lib/style-constants";
+import styles from "../lib/styles.module.css";
 import { StatusIcon } from "./status-icon";
 
 interface CalloutProps {
@@ -15,16 +16,10 @@ interface CalloutProps {
     loading?: boolean;
 }
 
-/**
- * Info by default, so it reads as a remark rather than library content; another
- * status for one reporting how something went. Icon and text both take the
- * status's color, over a faint wash of it: Mantine's dark-mode tint is a solid
- * shade, and its text on it all but white.
- */
+/** Info by default, so it reads as a remark rather than library content. */
 export function Callout(props: CalloutProps): ReactNode {
     const { text, action, status = Status.INFO, loading = false } = props;
     const color = STATUS_COLOR[status];
-    const background = `light-dark(var(--mantine-color-${color}-light), color-mix(in srgb, var(--mantine-color-${color}-filled) 20%, transparent))`;
     const foreground = `light-dark(var(--mantine-color-${color}-light-color), var(--mantine-color-${color}-4))`;
 
     return (
@@ -34,7 +29,11 @@ export function Callout(props: CalloutProps): ReactNode {
             px="sm"
             icon={
                 loading ? (
-                    <Loader size={IconSize.MEDIUM} color="var(--alert-color)" />
+                    <Loader
+                        size={IconSize.MEDIUM}
+                        color="var(--alert-color)"
+                        className={styles.titleIcon}
+                    />
                 ) : (
                     <StatusIcon
                         status={status}
@@ -46,7 +45,10 @@ export function Callout(props: CalloutProps): ReactNode {
                 )
             }
             vars={() => ({
-                root: { "--alert-bg": background, "--alert-color": foreground }
+                root: {
+                    "--alert-bg": statusWash(status),
+                    "--alert-color": foreground
+                }
             })}
             styles={{
                 body: { minWidth: 0 },

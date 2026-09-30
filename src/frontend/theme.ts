@@ -16,7 +16,7 @@ import {
     Text,
     Tooltip
 } from "@mantine/core";
-import { useMatch } from "@tanstack/react-router";
+import { useIsDashboard } from "./features/dashboard/dashboard-nav";
 import { LibraryId } from "@backend/features/library/library-id";
 import { useIsVersionManager } from "./features/version-manager/navigation";
 import { FILLED_SHADE, IconSize, StatusColor } from "./lib/style-constants";
@@ -72,8 +72,7 @@ export enum AppColor {
  * and the library's otherwise.
  */
 export function useAppColor(libraryId: string): string {
-    const isDashboard =
-        useMatch({ from: "/dashboard", shouldThrow: false }) !== undefined;
+    const isDashboard = useIsDashboard();
     const isVersionManager = useIsVersionManager();
 
     if (isDashboard) {

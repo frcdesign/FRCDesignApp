@@ -4,11 +4,11 @@ import {
     ArrowRightIcon,
     EyeIcon,
     EyeSlashIcon,
-    TrashIcon,
-    WarningIcon
+    TrashIcon
 } from "@phosphor-icons/react";
-import { AppIcon } from "../../../components/app-icon";
 import { AppTitle } from "../../../components/app-title";
+import { StatusIcon } from "../../../components/status-icon";
+import { Status } from "../../../lib/status";
 import { IconSize, StatusColor } from "../../../lib/style-constants";
 import { useNavigate } from "@tanstack/react-router";
 import { PropsWithChildren, ReactNode } from "react";
@@ -179,10 +179,10 @@ function DeleteGroupMenuItem(props: DeleteGroupMenuItemProps): ReactNode {
             title: (
                 <AppTitle
                     icon={
-                        <AppIcon
-                            icon={WarningIcon}
+                        <StatusIcon
+                            status={Status.ERROR}
                             size={IconSize.MEDIUM}
-                            color={StatusColor.ERROR}
+                            raised={false}
                         />
                     }
                     title="Delete group"

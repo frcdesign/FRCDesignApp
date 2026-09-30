@@ -7,12 +7,10 @@ import {
     useParams
 } from "@tanstack/react-router";
 import { Box, Button, Group } from "@mantine/core";
-import {
-    ArrowLeftIcon,
-    ArrowUUpLeftIcon,
-    WarningIcon
-} from "@phosphor-icons/react";
-import { IconSize, StatusColor } from "../../../../../lib/style-constants";
+import { ArrowLeftIcon, ArrowUUpLeftIcon } from "@phosphor-icons/react";
+import { StatusIcon } from "../../../../../components/status-icon";
+import { Status } from "../../../../../lib/status";
+import { IconSize } from "../../../../../lib/style-constants";
 import { ReactNode } from "react";
 import { SearchResults } from "../../../../../features/search/components/search-results";
 import { InsertSource } from "@backend/features/analytics/usage";
@@ -36,7 +34,6 @@ import {
 import { useLibraryQuery } from "../../../../../features/library/queries";
 import { useLibraryId } from "../../../../../lib/library";
 import { updateUiState, useUiState } from "../../../../../lib/ui-state";
-import { AppIcon } from "../../../../../components/app-icon";
 import styles from "../../../../../lib/styles.module.css";
 
 export const Route = createFileRoute("/app/library/$libraryId/groups/$groupId")(
@@ -76,7 +73,6 @@ function GroupList(): ReactNode {
                 justifyUp
                 action={
                     <Button
-                        variant="light"
                         leftSection={<ArrowUUpLeftIcon size={IconSize.SMALL} />}
                         onClick={() => {
                             void navigate({
@@ -198,10 +194,10 @@ function GroupListContent(props: GroupListCardsProps): ReactNode {
         return (
             <SectionNotice
                 icon={
-                    <AppIcon
-                        icon={WarningIcon}
+                    <StatusIcon
+                        status={Status.WARNING}
                         size={IconSize.SECTION}
-                        color={StatusColor.WARNING}
+                        raised={false}
                     />
                 }
                 title="All elements are hidden by filters"

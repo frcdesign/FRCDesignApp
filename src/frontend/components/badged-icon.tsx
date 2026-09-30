@@ -13,7 +13,7 @@ interface BadgedIconProps {
     status: Status;
 }
 
-/** The size any other icon-only control in the bar is drawn at. */
+/** The size of any other icon-only control in the bar. */
 const SUBJECT_SIZE = IconSize.CONTROL;
 
 const BADGE_OVERHANG = 4;
@@ -26,8 +26,8 @@ export function BadgedIcon(props: BadgedIconProps): ReactNode {
             pos="relative"
             w={SUBJECT_SIZE}
             h={SUBJECT_SIZE}
-            // Or the box takes a text row's height and the badge floats off the corner.
             className={styles.noShrink}
+            // Or the box takes a text row's height and the badge floats off the corner.
             lh={0}
         >
             <AppIcon

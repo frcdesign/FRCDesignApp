@@ -1,9 +1,9 @@
 import { modals } from "@mantine/modals";
 import { Text } from "@mantine/core";
-import { WarningIcon } from "@phosphor-icons/react";
 import { AppTitle } from "./app-title";
+import { Status } from "../lib/status";
 import { IconSize, StatusColor } from "../lib/style-constants";
-import { AppIcon } from "./app-icon";
+import { StatusIcon } from "./status-icon";
 
 interface OpenWarningAlertProps {
     title: string;
@@ -15,10 +15,10 @@ function openWarningAlert(props: OpenWarningAlertProps): void {
         title: (
             <AppTitle
                 icon={
-                    <AppIcon
-                        icon={WarningIcon}
+                    <StatusIcon
+                        status={Status.WARNING}
                         size={IconSize.MEDIUM}
-                        color={StatusColor.WARNING}
+                        raised={false}
                     />
                 }
                 title={props.title}
@@ -32,9 +32,8 @@ function openWarningAlert(props: OpenWarningAlertProps): void {
             </Text>
         ),
         labels: { confirm: "Close", cancel: null },
-        centered: true,
         cancelProps: { display: "none" },
-        confirmProps: { color: "yellow" }
+        confirmProps: { color: StatusColor.WARNING }
     });
 }
 

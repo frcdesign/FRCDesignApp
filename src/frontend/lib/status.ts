@@ -28,3 +28,12 @@ export const STATUS_COLOR: Record<Status, StatusColor> = {
     [Status.WARNING]: StatusColor.WARNING,
     [Status.ERROR]: StatusColor.ERROR
 };
+
+/**
+ * A faint tint of the status to set a callout on. Mantine's own dark-mode tint
+ * is a solid shade, which its text all but disappears into.
+ */
+export function statusWash(status: Status): string {
+    const color = STATUS_COLOR[status];
+    return `light-dark(var(--mantine-color-${color}-light), color-mix(in srgb, var(--mantine-color-${color}-filled) 20%, transparent))`;
+}

@@ -1,18 +1,8 @@
-/**
- * Reading a pasted Onshape url, which is how both the library's groups and the
- * version manager's links are added: copy the address bar, paste it in.
- *
- * A leaf, so the parsing can be tested on its own — `url.tsx`, which builds
- * these urls and opens them, reaches components and notifications.
- */
+/** Reading a pasted Onshape url. A leaf, so the parsing can be tested alone. */
 import { INSTANCE_TYPES, type InstanceType } from "@backend/lib/onshape/path";
 import { type WorkspacePath } from "@backend/features/version-manager/contract";
 
-/**
- * What an Onshape url names. Everything past the document is optional: a link
- * to a document carries only its id, while one copied from an open tab carries
- * the instance and the tab as well.
- */
+/** What an Onshape url names. A link to a document carries only its id. */
 export interface OnshapeUrlPath {
     documentId: string;
     instanceType?: InstanceType;
@@ -29,11 +19,9 @@ export const INVALID_WORKSPACE_URL =
     "That does not look like a link to an Onshape workspace. Copy the url from the document's address bar.";
 
 /**
- * The path a pasted url names, or undefined when it names no document at all.
- *
- * Onshape's urls run `/documents/{did}/{wvm}/{wvmid}/e/{eid}`, and every
- * segment after the document is dropped rather than half-read: a `/w/` with
- * nothing after it names no instance, so it answers as the document alone.
+ * The path a pasted url names, or undefined when it names no document. Onshape's
+ * urls run `/documents/{did}/{wvm}/{wvmid}/e/{eid}`; a segment with nothing
+ * after it is dropped.
  */
 export function parseOnshapeUrl(urlString: string): OnshapeUrlPath | undefined {
     const url = URL.parse(urlString);
@@ -61,21 +49,15 @@ function isInstanceType(value: string | undefined): value is InstanceType {
     return INSTANCE_TYPES.includes(value as InstanceType);
 }
 
-/**
- * The document a pasted url names. Only the id: a link to the document itself
- * carries nothing more, and that is enough to add one to a library.
- */
+/** The document a pasted url names, which is enough to add one to a library. */
 export function parseOnshapeDocumentId(urlString: string): string | undefined {
     return parseOnshapeUrl(urlString)?.documentId;
 }
 
 /**
- * The workspace a pasted url names, or undefined when it names none.
- *
- * Only a workspace will do: the version manager writes to what it is given, and
- * a version or a microversion cannot be written to. A url that stops at the
- * document is refused rather than resolved to the default workspace, which
- * would be a different one than whoever copied the link was looking at.
+ * The workspace a pasted url names, or undefined when it names none: a version
+ * cannot be written to, and a url that stops at the document may not mean its
+ * default workspace.
  */
 export function parseOnshapeWorkspace(
     urlString: string

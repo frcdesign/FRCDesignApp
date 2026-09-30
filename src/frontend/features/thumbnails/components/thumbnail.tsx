@@ -66,16 +66,11 @@ interface CardThumbnailProps {
     largeThumbnailUrl?: string;
     /** Omit for the element's default. */
     target?: ThumbnailTarget;
-    /**
-     * Set where the urls are Onshape's own rather than ours — see
-     * {@link ThumbnailProps.isExternal}.
-     */
-    isExternal?: boolean;
 }
 
 /** Both sizes come from one configuration, so a row and its hover never disagree. */
 export function CardThumbnail(props: CardThumbnailProps): ReactNode {
-    const { smallThumbnailUrl, largeThumbnailUrl, target, isExternal } = props;
+    const { smallThumbnailUrl, largeThumbnailUrl, target } = props;
 
     // Always asked for by key, so a row that can't start a render still shows one
     // that something else started.
@@ -111,7 +106,6 @@ export function CardThumbnail(props: CardThumbnailProps): ReactNode {
                     heightAndWidth={getHeightAndWidth(ThumbnailSize.SMALL, 0.8)}
                     spinnerSize={25}
                     startRender={render}
-                    isExternal={isExternal}
                 />
             }
         >
@@ -121,7 +115,6 @@ export function CardThumbnail(props: CardThumbnailProps): ReactNode {
                 heightAndWidth={getHeightAndWidth(ThumbnailSize.LARGE, 0.6)}
                 spinnerSize={48}
                 startRender={render}
-                isExternal={isExternal}
             />
         </AppHoverCard>
     );
@@ -138,36 +131,22 @@ interface ThumbnailProps {
     heightAndWidth: HeightAndWidth;
     /** Starts a render on a miss, which is then worth waiting out. */
     startRender?: () => Promise<RenderStatus>;
-    /**
-     * Onshape's own url rather than one of ours. It is handed straight to the
-     * image element: fetching it first would be a cross-origin request, which
-     * fails on Onshape's terms where the element itself loads fine. A refusal
-     * then arrives on the element, which is what `onError` is for.
-     */
-    isExternal?: boolean;
 }
 
 function Thumbnail(props: ThumbnailProps): ReactNode {
-    const {
-        url,
-        fallbackUrl,
-        heightAndWidth,
-        spinnerSize,
-        startRender,
-        isExternal = false
-    } = props;
+    const { url, fallbackUrl, heightAndWidth, spinnerSize, startRender } =
+        props;
     // The one url the element itself has rejected; kept rather than a flag, so
     // a new url is tried afresh without an effect to clear anything.
     const [brokenUrl, setBrokenUrl] = useState<string>();
 
-    const probedUrl = isExternal ? undefined : url;
     const imageQuery = useQuery({
-        queryKey: storedThumbnailQueryKey(probedUrl),
-        queryFn: probedUrl
+        queryKey: storedThumbnailQueryKey(url),
+        queryFn: url
             ? ({ signal }) =>
                   startRender
-                      ? loadRenderedImage(probedUrl, startRender, signal)
-                      : loadImage(probedUrl, signal)
+                      ? loadRenderedImage(url, startRender, signal)
+                      : loadImage(url, signal)
             : skipToken,
         // A render waits itself out; retrying would restart the wait.
         retry: startRender ? false : STORED_RETRIES
@@ -181,7 +160,7 @@ function Thumbnail(props: ThumbnailProps): ReactNode {
         enabled: !imageQuery.isSuccess
     });
 
-    const shownUrl = (isExternal ? url : imageQuery.data) ?? fallbackQuery.data;
+    const shownUrl = imageQuery.data ?? fallbackQuery.data;
     const isBroken = shownUrl !== undefined && shownUrl === brokenUrl;
 
     let content;
