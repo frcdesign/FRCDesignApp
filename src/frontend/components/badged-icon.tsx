@@ -45,6 +45,7 @@ export function BadgedIcon(props: BadgedIconProps): ReactNode {
                     status={status}
                     size={IconSize.BADGE}
                     weight="bold"
+                    raised={false}
                 />
             </Box>
         </Box>

@@ -92,6 +92,7 @@ export function showInfoToast(
                 status={Status.INFO}
                 size={IconSize.MEDIUM}
                 color="white"
+                raised={false}
             />
         ),
         message,
@@ -119,6 +120,7 @@ export function showSuccessToast(message: string, id?: string): string {
                 status={Status.SUCCESS}
                 size={IconSize.MEDIUM}
                 color="white"
+                raised={false}
             />
         ),
         message
@@ -143,6 +145,7 @@ export function showErrorToast(
                 status={Status.ERROR}
                 size={IconSize.MEDIUM}
                 color="white"
+                raised={false}
             />
         ),
         message,
@@ -164,6 +167,7 @@ export function showWarningToast(
                 status={Status.WARNING}
                 size={IconSize.MEDIUM}
                 color="white"
+                raised={false}
             />
         ),
         message,

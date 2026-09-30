@@ -62,6 +62,7 @@ export function JobDetailsTitle(props: JobDetailsProps): ReactNode {
                 <StatusIcon
                     status={OUTCOME_STATUS[outcome]}
                     size={IconSize.MEDIUM}
+                    raised={false}
                 />
             }
         />
