@@ -14,7 +14,7 @@ const UNITS: [Intl.RelativeTimeFormatUnit, number][] = [
 /** Anything older reads better as a date than as a count of days. */
 const MAX_RELATIVE_DAYS = 7;
 
-/** "just now", "5 minutes ago", "yesterday", "3 days ago", then a date. */
+/** "Just now", "5 minutes ago", "Yesterday", "3 days ago", then a date. */
 export function formatTimeAgo(timestamp: number): string {
     const elapsed = Math.max(0, Date.now() - timestamp);
     if (elapsed >= MAX_RELATIVE_DAYS * DAY_MS) {
@@ -27,14 +27,9 @@ export function formatTimeAgo(timestamp: number): string {
     for (const [unit, unitMs] of UNITS) {
         const count = Math.floor(elapsed / unitMs);
         if (count >= 1) {
-            return RELATIVE.format(-count, unit);
+            const text = RELATIVE.format(-count, unit);
+            return text.charAt(0).toUpperCase() + text.slice(1);
         }
     }
-    return "just now";
-}
-
-/** {@link formatTimeAgo} standing on its own rather than ending a sentence. */
-export function formatTimeAgoLabel(timestamp: number): string {
-    const text = formatTimeAgo(timestamp);
-    return text.charAt(0).toUpperCase() + text.slice(1);
+    return "Just now";
 }
