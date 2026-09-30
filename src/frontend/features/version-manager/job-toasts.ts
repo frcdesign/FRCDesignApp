@@ -10,7 +10,7 @@ import {
     showSuccessToast,
     showWarningToast
 } from "../../lib/notifications";
-import { describeJob, JobOutcome, jobOutcome } from "./job-report";
+import { jobHeadline, JobOutcome, jobOutcome } from "./job-report";
 import { openJobDetails } from "./open-version-modals";
 import { useVersionJobQuery } from "./queries";
 
@@ -21,23 +21,24 @@ import { useVersionJobQuery } from "./queries";
 const JOB_TOAST_ID = "version-job";
 
 function showJobToast(status: VersionJobStatus): void {
-    const message = describeJob(status);
     const outcome = jobOutcome(status);
+    if (!outcome) {
+        return;
+    }
+    const message = `${jobHeadline(status, outcome)}.`;
     if (outcome === JobOutcome.SUCCESS) {
         showSuccessToast(message, JOB_TOAST_ID);
         return;
     }
     // Up until dismissed: somebody has something to do about these, and a
     // toast that left on its own took the what with it.
-    const withDetails = renderNotification(
-        message,
-        (status.result?.failures.length ?? 0) > 0
-            ? { text: "Details", onClick: () => openJobDetails(status) }
-            : undefined
-    );
+    const withDetails = renderNotification(message, {
+        text: "Details",
+        onClick: () => openJobDetails(status)
+    });
     if (outcome === JobOutcome.PARTIAL) {
         showWarningToast(withDetails, JOB_TOAST_ID, { autoClose: false });
-    } else if (outcome === JobOutcome.FAILED) {
+    } else {
         showErrorToast(withDetails, JOB_TOAST_ID, { autoClose: false });
     }
 }

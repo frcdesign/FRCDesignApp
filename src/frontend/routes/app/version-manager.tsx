@@ -23,7 +23,10 @@ import {
     useLinkActions
 } from "../../features/version-manager/components/linked-workspace-section";
 import { VersionManagerZeroState } from "../../features/version-manager/components/version-manager-zero-state";
-import { LastRunCallout } from "../../features/version-manager/components/last-run-callout";
+import {
+    LAST_RUN_SECTION,
+    LastRunSection
+} from "../../features/version-manager/components/last-run-section";
 import { useVersionJobToasts } from "../../features/version-manager/job-toasts";
 import { useWorkspaceLinksQuery } from "../../features/version-manager/queries";
 import { useIsSignedIn } from "../../features/auth/access-level";
@@ -87,6 +90,7 @@ function VersionManager(props: VersionManagerProps): ReactNode {
     const linksQuery = useWorkspaceLinksQuery(workspace);
     const isParentsOpen = useUiState((state) => state.isParentsOpen);
     const isChildrenOpen = useUiState((state) => state.isChildrenOpen);
+    const isLastRunOpen = useUiState((state) => state.isLastRunOpen);
 
     if (linksQuery.isPending) {
         return <SectionLoading title="Loading linked workspaces..." />;
@@ -108,35 +112,35 @@ function VersionManager(props: VersionManagerProps): ReactNode {
     }
 
     const opened = [
+        ...(isLastRunOpen ? [LAST_RUN_SECTION] : []),
         ...(isParentsOpen ? [LinkDirection.PARENT] : []),
         ...(isChildrenOpen ? [LinkDirection.CHILD] : [])
     ];
 
     const handleChange = (values: string[]) => {
         updateUiState({
+            isLastRunOpen: values.includes(LAST_RUN_SECTION),
             isParentsOpen: values.includes(LinkDirection.PARENT),
             isChildrenOpen: values.includes(LinkDirection.CHILD)
         });
     };
 
     return (
-        <>
-            <LastRunCallout workspace={workspace} />
-            <AppSections opened={opened} onChange={handleChange}>
-                <LinkSection
-                    workspace={workspace}
-                    direction={LinkDirection.PARENT}
-                    linked={links.parents}
-                    opened={isParentsOpen}
-                />
-                <LinkSection
-                    workspace={workspace}
-                    direction={LinkDirection.CHILD}
-                    linked={links.children}
-                    opened={isChildrenOpen}
-                />
-            </AppSections>
-        </>
+        <AppSections opened={opened} onChange={handleChange}>
+            <LastRunSection workspace={workspace} opened={isLastRunOpen} />
+            <LinkSection
+                workspace={workspace}
+                direction={LinkDirection.PARENT}
+                linked={links.parents}
+                opened={isParentsOpen}
+            />
+            <LinkSection
+                workspace={workspace}
+                direction={LinkDirection.CHILD}
+                linked={links.children}
+                opened={isChildrenOpen}
+            />
+        </AppSections>
     );
 }
 

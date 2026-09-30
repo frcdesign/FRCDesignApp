@@ -1,10 +1,17 @@
-/** How a run went, in words: what the toast and the last-run callout both say. */
+/** How a run went, in the few words the toast and the page's last-run section share. */
 import {
     VersionJobKind,
     VersionJobState,
     type VersionJobResult,
     type VersionJobStatus
 } from "@backend/features/version-manager/contract";
+import {
+    CheckCircleIcon,
+    WarningIcon,
+    XCircleIcon,
+    type Icon
+} from "@phosphor-icons/react";
+import { StatusColor } from "../../lib/style-constants";
 import { plural } from "./queries";
 
 export enum JobOutcome {
@@ -13,6 +20,15 @@ export enum JobOutcome {
     PARTIAL = "partial",
     FAILED = "failed"
 }
+
+export const OUTCOME_STYLE: Record<
+    JobOutcome,
+    { color: StatusColor; icon: Icon }
+> = {
+    [JobOutcome.SUCCESS]: { color: StatusColor.SUCCESS, icon: CheckCircleIcon },
+    [JobOutcome.PARTIAL]: { color: StatusColor.WARNING, icon: WarningIcon },
+    [JobOutcome.FAILED]: { color: StatusColor.ERROR, icon: XCircleIcon }
+};
 
 /** Undefined while there is nothing finished to report. */
 export function jobOutcome(
@@ -29,83 +45,61 @@ export function jobOutcome(
     return undefined;
 }
 
-/** "push", "pull", or "run" when the status doesn't say which. */
-export function jobKindLabel(kind: VersionJobKind | undefined): string {
+function jobKindName(kind: VersionJobKind | undefined): string {
     switch (kind) {
         case VersionJobKind.PUSH:
-            return "push";
+            return "Push";
         case VersionJobKind.PULL:
-            return "pull";
+            return "Pull";
     }
-    return "run";
+    return "Run";
 }
 
-/** What the run changed, as clauses that can end either sentence below. */
-function doneClauses(result: VersionJobResult): string[] {
-    const clauses: string[] = [];
+const OUTCOME_VERB = {
+    [JobOutcome.SUCCESS]: "succeeded",
+    [JobOutcome.PARTIAL]: "partially succeeded",
+    [JobOutcome.FAILED]: "failed"
+} as const;
+
+/** "Push succeeded", "Pull failed" and the like. */
+export function jobHeadline(
+    status: VersionJobStatus,
+    outcome: JobOutcome
+): string {
+    return `${jobKindName(status.kind)} ${OUTCOME_VERB[outcome]}`;
+}
+
+export interface JobStat {
+    label: string;
+    color: StatusColor;
+}
+
+/** One per thing the run did, omitting what it did none of. */
+export function jobStats(result: VersionJobResult): JobStat[] {
+    const stats: JobStat[] = [];
     if (result.createdVersions > 0) {
-        clauses.push(`created ${plural(result.createdVersions, "version")}`);
+        stats.push({
+            label: `${plural(result.createdVersions, "version")} created`,
+            color: StatusColor.INFO
+        });
+    }
+    if (result.reusedVersions > 0) {
+        stats.push({
+            label: `${plural(result.reusedVersions, "version")} reused`,
+            color: StatusColor.NEUTRAL
+        });
     }
     if (result.updatedElements > 0) {
-        clauses.push(
-            `updated ${plural(result.updatedElements, "tab")} in ${plural(
-                result.updatedWorkspaces,
-                "workspace"
-            )}`
-        );
+        stats.push({
+            label: `${plural(result.updatedElements, "tab")} updated`,
+            color: StatusColor.SUCCESS
+        });
     }
-    return clauses;
-}
-
-function refusedSentence(result: VersionJobResult): string | undefined {
-    return result.failedElements > 0
-        ? `${plural(result.failedElements, "tab")} couldn't be updated.`
-        : undefined;
-}
-
-function capitalize(text: string): string {
-    return text.charAt(0).toUpperCase() + text.slice(1);
-}
-
-/** What a finished run did. */
-export function describeJobResult(result: VersionJobResult): string {
-    const done = doneClauses(result);
-    const opening =
-        done.length > 0
-            ? capitalize(done.join(" and ")) + "."
-            : result.failedElements > 0
-              ? "Nothing was updated."
-              : "Everything was already up to date.";
-    return [opening, refusedSentence(result)].filter(Boolean).join(" ");
-}
-
-/**
- * Why a run stopped, and what it had already done — which stays done in
- * Onshape, and is what somebody needs to know before running it again.
- */
-export function describeJobFailure(status: VersionJobStatus): string {
-    const reason = status.error ?? "The run stopped unexpectedly.";
-    if (!status.result) {
-        return reason;
+    if (result.failedElements > 0) {
+        stats.push({
+            label: `${plural(result.failedElements, "tab")} failed`,
+            color: StatusColor.ERROR
+        });
     }
-    const done = doneClauses(status.result);
-    return [
-        reason,
-        done.length > 0
-            ? `Before it stopped, it ${done.join(" and ")}.`
-            : undefined,
-        refusedSentence(status.result)
-    ]
-        .filter(Boolean)
-        .join(" ");
-}
-
-/** The report for a finished run, whichever way it went. */
-export function describeJob(status: VersionJobStatus): string {
-    if (status.state === VersionJobState.FAILED) {
-        return describeJobFailure(status);
-    }
-    return status.result
-        ? describeJobResult(status.result)
-        : "Finished updating Onshape.";
+    return stats;
 }

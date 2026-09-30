@@ -6,44 +6,23 @@ import { IconSize, StatusColor } from "../lib/style-constants";
 interface CalloutProps {
     /** A whole sentence, ending in a period. */
     text: string;
-    /** A few words over the text, for a callout reporting on something. */
-    title?: string;
     /** A `CalloutButton`; omitted for a note that only reports something. */
     action?: ReactNode;
-    /** @default StatusColor.INFO */
-    color?: StatusColor;
-    /** @default an info icon */
-    icon?: ReactNode;
-    /** Gives it a close button, for a report somebody may be done with. */
-    onClose?: () => void;
 }
 
-/**
- * Blue by default, so it reads as a remark rather than library content; a
- * status color for one reporting how something went.
- */
+/** Blue, so it reads as a remark rather than library content. */
 export function Callout(props: CalloutProps): ReactNode {
-    const {
-        text,
-        title,
-        action,
-        color = StatusColor.INFO,
-        icon = <InfoIcon size={IconSize.MEDIUM} />,
-        onClose
-    } = props;
+    const { text, action } = props;
 
     return (
         <Alert
-            color={color}
+            color={StatusColor.INFO}
             py="xs"
             px="sm"
-            icon={icon}
-            title={title}
-            withCloseButton={onClose !== undefined}
-            onClose={onClose}
+            icon={<InfoIcon size={IconSize.MEDIUM} />}
             styles={{
                 body: { minWidth: 0 },
-                wrapper: { alignItems: title ? undefined : "center" }
+                wrapper: { alignItems: "center" }
             }}
         >
             {/* Wraps rather than squeezing: on a narrow panel the button drops
@@ -61,16 +40,14 @@ interface CalloutButtonProps {
     children: string;
     icon: ReactNode;
     onClick: () => void;
-    /** Matches the callout it sits in. @default StatusColor.INFO */
-    color?: StatusColor;
 }
 
 export function CalloutButton(props: CalloutButtonProps): ReactNode {
-    const { children, icon, onClick, color = StatusColor.INFO } = props;
+    const { children, icon, onClick } = props;
     return (
         <Button
             variant="outline"
-            color={color}
+            color={StatusColor.INFO}
             size="compact-sm"
             leftSection={icon}
             onClick={onClick}

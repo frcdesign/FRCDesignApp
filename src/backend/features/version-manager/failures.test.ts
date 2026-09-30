@@ -70,13 +70,13 @@ describe("describeTabFailure", () => {
 describe("describeRunFailure", () => {
     it("says why the run stopped without the raw error", () => {
         expect(describeRunFailure(apiError(401))).toMatch(/sign-in expired/);
-        expect(describeRunFailure(apiError(429))).toMatch(/limiting/);
+        expect(describeRunFailure(apiError(429))).toMatch(/limiting requests/);
         expect(describeRunFailure(apiError(503))).toMatch(/having problems/);
         expect(describeRunFailure(new Error("fetch failed"))).toMatch(
             /stopped responding/
         );
         expect(
             describeRunFailure(new Error("undefined is not a function"))
-        ).toMatch(/stopped unexpectedly/);
+        ).toMatch(/Something went wrong/);
     });
 });

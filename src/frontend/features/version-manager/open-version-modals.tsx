@@ -3,11 +3,12 @@ import {
     type VersionJobStatus,
     type WorkspacePath
 } from "@backend/features/version-manager/contract";
+import { AppModalBody } from "../../components/app-modal";
 import { openAppModal } from "../../components/open-app-modal";
 import { JobDetails } from "./components/job-details";
 import { PullReferencesForm } from "./components/pull-references-modal";
 import { PushVersionForm } from "./components/push-version-modal";
-import { jobKindLabel } from "./job-report";
+import { jobHeadline, JobOutcome, jobOutcome } from "./job-report";
 
 /**
  * Kept out of the component files so those export only components, which is
@@ -33,11 +34,15 @@ export function openPushVersionModal(
     });
 }
 
-/** The tabs a run could not update, from its toast or its callout. */
+/** How a run went, from its toast. */
 export function openJobDetails(status: VersionJobStatus): void {
     openAppModal({
-        title: `Last ${jobKindLabel(status.kind)}`,
-        children: <JobDetails status={status} />
+        title: jobHeadline(status, jobOutcome(status) ?? JobOutcome.FAILED),
+        children: (
+            <AppModalBody>
+                <JobDetails status={status} />
+            </AppModalBody>
+        )
     });
 }
 

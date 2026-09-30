@@ -39,7 +39,7 @@ it.
 | `src/frontend/features/version-manager/queries.ts`                              | The queries and mutations                                                        |
 | `src/frontend/features/version-manager/components/linked-workspace-section.tsx` | A direction's list, its rows, and everything they can run                        |
 | `src/frontend/features/version-manager/job-report.ts`                           | How a finished run went, in words                                                |
-| `src/frontend/features/version-manager/components/last-run-callout.tsx`         | The last run's report at the top of the page                                     |
+| `src/frontend/features/version-manager/components/last-run-section.tsx`         | The last run's outcome, a collapsible section at the top of the page             |
 | `src/frontend/routes/app/version-manager.tsx`                                   | The page: two sections, one per direction                                        |
 
 ## Storage
@@ -63,7 +63,7 @@ document and workspace names, for a week.
 `changesSinceVersionSave`, for an hour.
 
 **Browser** `isParentsOpen`, `isChildrenOpen`, `quickActionTipCount`,
-`hasOpenedVersionManager` and `dismissedVersionJobId` in `uiState`.
+`hasOpenedVersionManager` and `isLastRunOpen` in `uiState`.
 
 ## Flows
 
@@ -218,16 +218,17 @@ could report leaves one behind.
 
 While a run is going, a spinner sits where it was started — beside the row, or
 in the section's header. How it went arrives as one toast at the end
-(`job-toasts.ts`), worded by `job-report.ts`: green and gone in a few seconds
-when every tab moved; yellow, and up until closed, when some were refused;
-red, and up until closed, when the run stopped. The last two carry **Details**,
-which lists the refused tabs by document with their reasons and an **Open**
-button each.
+(`job-toasts.ts`), headed by `jobHeadline` in `job-report.ts` — "Push
+succeeded", "Push partially succeeded" or "Push failed": green and gone in a
+few seconds on success; yellow or red, and up until closed, otherwise. Those
+two carry **Details**, which opens `JobDetails`: the run's counts, why it
+stopped if it did, and the refused tabs by document with their reasons and an
+**Open** button each.
 
-The same report heads the page as a callout (`LastRunCallout`) for as long as
-the status is kept, for whoever opens the panel after the run finished. Closing
-it records the run's id in `dismissedVersionJobId`, so it stays closed until
-the next run.
+The same outcome heads the page as its first section (`LastRunSection`) for as
+long as the status is kept, for whoever opens the panel after the run finished.
+It cannot be closed: collapsed it is the headline and how long ago, and open
+it is `JobDetails`. Whether it is open is `isLastRunOpen`.
 
 ### Keeping a linked workspace current
 
@@ -268,7 +269,7 @@ deletes a transient webhook that goes quiet, so the entries expire as well.
 | A step runs out of retries               | The run stops, reported as failed            | The report says what landed; run it again          |
 | The links form a cycle                   | A recursive push is refused                  | Remove a link                                      |
 | A webhook Onshape dropped                | A name or count is stale                     | The entry expires, and the next read watches again |
-| The socket drops mid-run                 | No result toast                              | The reconnect refetches the run; the callout shows |
+| The socket drops mid-run                 | No result toast                              | The reconnect refetches the run; the section shows |
 
 ## Decisions
 

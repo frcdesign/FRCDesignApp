@@ -81,23 +81,23 @@ export function describeRunFailure(error: unknown): string {
     const status = onshapeStatus(error);
     if (status === undefined) {
         return error instanceof Error && NO_ANSWER_PATTERN.test(error.message)
-            ? "Onshape stopped responding, so the run stopped. Try again shortly."
-            : "The run stopped unexpectedly. If it keeps happening, contact the FRCDesignApp developers.";
+            ? "Onshape stopped responding. Try again shortly."
+            : "Something went wrong. If it keeps happening, contact the FRCDesignApp developers.";
     }
     if (status === HttpStatus.UNAUTHORIZED) {
-        return "Your Onshape sign-in expired, so the run stopped. Open the app from Onshape again and rerun it.";
+        return "Your Onshape sign-in expired. Reopen the app from Onshape and try again.";
     }
     if (status === HttpStatus.TOO_MANY_REQUESTS) {
-        return "Onshape kept limiting requests, so the run stopped. Try again in a few minutes.";
+        return "Onshape is limiting requests. Try again in a few minutes.";
     }
     if (status >= HttpStatus.INTERNAL_SERVER_ERROR) {
-        return "Onshape was having problems, so the run stopped. Try again shortly.";
+        return "Onshape is having problems. Try again shortly.";
     }
     if (status === HttpStatus.FORBIDDEN) {
-        return "You no longer have permission to change one of the documents in this run.";
+        return "You no longer have permission to edit one of the documents.";
     }
     if (status === HttpStatus.NOT_FOUND) {
-        return "One of the documents in this run was deleted or is no longer shared with you.";
+        return "One of the documents was deleted or is no longer shared with you.";
     }
     return onshapeMessage(error) ?? "Onshape refused part of the run.";
 }

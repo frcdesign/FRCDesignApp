@@ -5,7 +5,7 @@ import {
     VersionJobState,
     type VersionJobResult
 } from "@backend/features/version-manager/contract";
-import { describeJob, JobOutcome, jobOutcome } from "./job-report";
+import { jobHeadline, JobOutcome, jobOutcome, jobStats } from "./job-report";
 
 function result(update: Partial<VersionJobResult>): VersionJobResult {
     return { ...emptyJobResult(), ...update };
@@ -30,45 +30,33 @@ describe("jobOutcome", () => {
     });
 });
 
-describe("describeJob", () => {
-    it("says what a run did", () => {
+describe("jobHeadline", () => {
+    it("names the run and how it went", () => {
+        const status = {
+            state: VersionJobState.COMPLETE,
+            kind: VersionJobKind.PULL
+        };
+        expect(jobHeadline(status, JobOutcome.SUCCESS)).toBe("Pull succeeded");
+        expect(jobHeadline(status, JobOutcome.PARTIAL)).toBe(
+            "Pull partially succeeded"
+        );
         expect(
-            describeJob({
-                state: VersionJobState.COMPLETE,
-                result: result({
+            jobHeadline({ state: VersionJobState.FAILED }, JobOutcome.FAILED)
+        ).toBe("Run failed");
+    });
+});
+
+describe("jobStats", () => {
+    it("counts what the run did, leaving out what it did none of", () => {
+        expect(
+            jobStats(
+                result({
                     createdVersions: 1,
                     updatedElements: 5,
-                    updatedWorkspaces: 2
+                    failedElements: 2
                 })
-            })
-        ).toBe("Created 1 version and updated 5 tabs in 2 workspaces.");
-    });
-
-    it("says when there was nothing to do", () => {
-        expect(
-            describeJob({ state: VersionJobState.COMPLETE, result: result({}) })
-        ).toBe("Everything was already up to date.");
-    });
-
-    it("counts the tabs Onshape refused", () => {
-        expect(
-            describeJob({
-                state: VersionJobState.COMPLETE,
-                result: result({ failedElements: 2 })
-            })
-        ).toBe("Nothing was updated. 2 tabs couldn't be updated.");
-    });
-
-    it("says why a run stopped and what it had already done", () => {
-        expect(
-            describeJob({
-                state: VersionJobState.FAILED,
-                kind: VersionJobKind.PUSH,
-                error: "Onshape was having problems, so the run stopped.",
-                result: result({ createdVersions: 2 })
-            })
-        ).toBe(
-            "Onshape was having problems, so the run stopped. Before it stopped, it created 2 versions."
-        );
+            ).map((stat) => stat.label)
+        ).toEqual(["1 version created", "5 tabs updated", "2 tabs failed"]);
+        expect(jobStats(result({}))).toEqual([]);
     });
 });

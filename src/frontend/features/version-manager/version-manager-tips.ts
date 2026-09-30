@@ -12,12 +12,16 @@ const TIP_AUTO_CLOSE_MS = 8000;
  */
 const MAX_TIPS = 3;
 
+/** Worded as the library's quick-insert tip is. */
 const TIP_TEXT = {
-    [LinkDirection.CHILD]:
-        "Tip: ctrl-click a row to push straight away, without opening this form.",
-    [LinkDirection.PARENT]:
-        "Tip: ctrl-click a row to pull straight away, without opening this form."
+    [LinkDirection.CHILD]: "push to it without opening the push menu.",
+    [LinkDirection.PARENT]: "pull from it without opening the pull menu."
 } as const;
+
+/** The click that runs it; see `useQuickKeyLabel` for why a Mac differs. */
+function quickClickName(): string {
+    return navigator.userAgent.includes("Mac") ? "⌘-click" : "ctrl-click";
+}
 
 /**
  * Points out the shortcut to somebody whose last run did not need the form:
@@ -32,10 +36,13 @@ export function showQuickActionTip(direction: LinkDirection): void {
         return;
     }
     updateUiState({ quickActionTipCount: shown + 1 });
-    showInfoToast(TIP_TEXT[direction], {
-        id: "quick-version-action-tip",
-        autoClose: TIP_AUTO_CLOSE_MS
-    });
+    showInfoToast(
+        `Tip: ${quickClickName()} a document to ${TIP_TEXT[direction]}`,
+        {
+            id: "quick-version-action-tip",
+            autoClose: TIP_AUTO_CLOSE_MS
+        }
+    );
 }
 
 /** Called when a quick action runs: they have found it, so the tip is done. */
