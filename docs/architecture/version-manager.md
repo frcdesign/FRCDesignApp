@@ -262,10 +262,9 @@ after something changed), "Push failed", or "Update …" for an update-only run:
 green and gone in a few seconds on success; yellow or red, and up until closed,
 otherwise, with **Details**, where each failed step gives its reason.
 
-The callout then carries the same headline, in the outcome's color and with its
-icon, for as long as the status is kept. Beside its **Details**, which opens the
-same modal, is how long ago the run finished (`TimeAgo`, as a build status card
-shows a version's age). It cannot be closed.
+The callout then carries the same headline and how long ago, in the outcome's
+color and with its icon, for as long as the status is kept. It cannot be closed, and its
+**Details** opens the same modal.
 
 ### Keeping a linked workspace current
 

@@ -1,5 +1,4 @@
-import { Group } from "@mantine/core";
-import { ClockIcon, ListBulletsIcon } from "@phosphor-icons/react";
+import { ListBulletsIcon } from "@phosphor-icons/react";
 import { type ReactNode } from "react";
 import {
     jobOutcome,
@@ -8,7 +7,7 @@ import {
     type WorkspacePath
 } from "@backend/features/version-manager/contract";
 import { Callout, CalloutButton } from "../../../components/callout";
-import { TimeAgo } from "../../../components/time-ago";
+import { formatTimeAgo } from "../../../lib/format-time";
 import { Status } from "../../../lib/status";
 import { IconSize } from "../../../lib/style-constants";
 import { jobHeadline, OUTCOME_STATUS, runningHeadline } from "../job-report";
@@ -40,21 +39,13 @@ export function LastRunCallout(props: LastRunCalloutProps): ReactNode {
             status={calloutStatus}
             loading={isRunning}
             action={
-                <Group gap="sm" ml="auto">
-                    {outcome && (
-                        <TimeAgo
-                            timestamp={status.finishedAt}
-                            icon={ClockIcon}
-                        />
-                    )}
-                    <CalloutButton
-                        status={calloutStatus}
-                        icon={<ListBulletsIcon size={IconSize.SMALL} />}
-                        onClick={() => openJobDetails(workspace)}
-                    >
-                        Details
-                    </CalloutButton>
-                </Group>
+                <CalloutButton
+                    status={calloutStatus}
+                    icon={<ListBulletsIcon size={IconSize.SMALL} />}
+                    onClick={() => openJobDetails(workspace)}
+                >
+                    Details
+                </CalloutButton>
             }
         />
     );
@@ -65,5 +56,8 @@ function calloutText(status: VersionJobStatus): string {
     if (!outcome) {
         return `${runningHeadline(status)}...`;
     }
-    return `${jobHeadline(status, outcome)}.`;
+    const when = status.finishedAt
+        ? ` ${formatTimeAgo(status.finishedAt)}`
+        : "";
+    return `${jobHeadline(status, outcome)}${when}.`;
 }
