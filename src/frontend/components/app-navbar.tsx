@@ -4,11 +4,9 @@ import {
     Divider,
     Group,
     Input,
-    Loader,
     Menu,
     Stack,
-    TextInput,
-    Tooltip
+    TextInput
 } from "@mantine/core";
 import {
     BooksIcon,
@@ -50,15 +48,9 @@ import {
     getLibraryProgram,
     useLibraryId
 } from "../lib/library";
-import {
-    RequireAccessLevel,
-    useNeedsSignIn
-} from "../features/auth/access-level";
+import { useNeedsSignIn } from "../features/auth/access-level";
 import { startSignIn } from "../features/auth/sign-in";
-import {
-    getLibraryVersionQuery,
-    useIsLibraryLoading
-} from "../features/library/queries";
+import { getLibraryVersionQuery } from "../features/library/queries";
 import { LibraryId } from "@backend/features/library/library-id";
 import { AppColor, getLibraryColor, toShade } from "../theme";
 import { queryClient } from "../lib/query-client";
@@ -71,11 +63,7 @@ import { useTargetWorkspace } from "../lib/onshape-params";
 import { type AppTab, UtilityTab } from "../lib/app-tab";
 import { getTabName, useNavigateToTab } from "../lib/tabs";
 
-/**
- * The bar every page is topped by: the brand, then whatever that page puts
- * beside it. Stretched so a full-height child lands its underline on the row's
- * own border.
- */
+/** Stretched so a full-height child's underline lands on the row's border. */
 export function NavbarRow(props: PropsWithChildren): ReactNode {
     const { children } = props;
     return (
@@ -88,8 +76,7 @@ export function NavbarRow(props: PropsWithChildren): ReactNode {
         >
             <AppBrand />
             {children && (
-                // Closes the brand off, so the name reads as the app rather
-                // than the first tab. Mantine's own all but vanishes on gray.
+                // Mantine's own divider all but vanishes on gray.
                 <Divider
                     orientation="vertical"
                     my="sm"
@@ -113,7 +100,6 @@ export function AppNavbar(): ReactNode {
                 <PagePicker />
                 <Group gap="xs" ml="auto" className={styles.noShrink}>
                     <InsertLocationStatus />
-                    <JobIndicator />
                     <SignInButton />
                     <SettingsControls />
                 </Group>
@@ -128,40 +114,15 @@ export function AppNavbar(): ReactNode {
     );
 }
 
-/**
- * Shown only when not signed in; starts the Onshape OAuth flow and returns to
- * the current location, after which access-data reports the caller signed in.
- */
 function SignInButton(): ReactNode {
     const needsSignIn = useNeedsSignIn();
-    // Waiting rather than assuming signed out: the button would otherwise
-    // flash on every load for a caller who is already signed in.
+    // Otherwise the button flashes on every load for someone signed in.
     if (!needsSignIn) return null;
 
     return (
         <Button variant="outline" size="sm" my="auto" onClick={startSignIn}>
             Sign in
         </Button>
-    );
-}
-
-/** Editor-only spinner shown while a library-load job is running. */
-function JobIndicator(): ReactNode {
-    return (
-        <RequireAccessLevel>
-            <RunningJobLoader />
-        </RequireAccessLevel>
-    );
-}
-
-function RunningJobLoader(): ReactNode {
-    // Single editor-gated job-status consumer, so it owns refresh-on-finish.
-    const jobRunning = useIsLibraryLoading();
-    if (!jobRunning) return null;
-    return (
-        <Tooltip label="The library is being loaded from Onshape in the background.">
-            <Loader size={IconSize.CONTROL} />
-        </Tooltip>
     );
 }
 
@@ -351,8 +312,7 @@ function SettingsButton() {
         <ActionIcon
             title="Settings"
             my="auto"
-            // The filter button's size and icon, so the navbar's two rows read
-            // as one set of controls.
+            // Matches the filter button.
             size="input-sm"
             onClick={() => openSettingsMenu()}
         >
@@ -370,20 +330,14 @@ function selectAllInputText(ref: RefObject<HTMLInputElement | null>) {
     input.setSelectionRange(0, length);
 }
 
-/**
- * How long typing pauses before the search runs. Each query re-searches the
- * index and rebuilds the list, which is enough work to be felt between
- * keystrokes.
- */
 const SEARCH_DEBOUNCE_MS = 200;
 
 function SearchBar() {
     const ref = useRef<HTMLInputElement>(null);
     const wasFocused = useRef(false);
     const libraryId = useLibraryId();
-    // The box owns what is typed and the stored query follows a pause later, so
-    // a keystroke re-renders this input rather than every list reading the query.
-    const [query, setQuery] = useState(() => getUiState().searchQuery);
+    // Local state, so a keystroke re-renders only the input.
+    const [query, setQuery] = useState(() => getUiState().searchQuery ?? "");
     const runSearch = useDebouncedCallback(
         (value: string) => {
             updateUiState({ searchQuery: value === "" ? undefined : value });
@@ -392,15 +346,13 @@ function SearchBar() {
         { delay: SEARCH_DEBOUNCE_MS, flushOnUnmount: true }
     );
 
-    // `autoFocus` fires before the ref attaches, so onFocus has nothing to select
-    // through on the first open and last time's query keeps the caret after it.
+    // `autoFocus` fires before the ref attaches, so onFocus can't select.
     useEffect(() => {
         selectAllInputText(ref);
     }, []);
 
     const clearButton = query ? (
         <Input.ClearButton
-            aria-label="Clear input"
             onClick={() => {
                 setQuery("");
                 // Nothing to wait out: the list should empty on the click.
@@ -416,19 +368,15 @@ function SearchBar() {
             // The panel opens to a library the caller is here to search.
             autoFocus
             flex={1}
-            leftSection={<MagnifyingGlassIcon size={IconSize.SMALL} />}
+            leftSection={<MagnifyingGlassIcon />}
             placeholder={`Search ${getLibraryName(libraryId)}...`}
             ref={ref}
             value={query}
             onFocus={() => {
                 selectAllInputText(ref);
             }}
-            // A click on an unfocused input focuses it — selecting everything
-            // above — and then places the caret on mouseup, which collapses
-            // that selection again. Preventing the default only on the click
-            // that did the focusing keeps the select-all while leaving a click
-            // inside an already-focused field to put the caret where it was
-            // aimed.
+            // The mouseup of the click that focuses the input would collapse the
+            // select-all; later clicks place the caret normally.
             onMouseDown={() => {
                 wasFocused.current = document.activeElement === ref.current;
             }}

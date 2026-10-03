@@ -114,11 +114,6 @@ function useLoadingGroupIds(): string[] {
     return useJobStatus().loadingGroupIds;
 }
 
-/** Whether any of the library's documents is loading, for the navbar's spinner. */
-export function useIsLibraryLoading(): boolean {
-    return useLoadingGroupIds().length > 0;
-}
-
 export function useIsGroupAwaitingApproval(groupId: string): boolean {
     return useJobStatus().awaitingApprovalGroupIds.includes(groupId);
 }
