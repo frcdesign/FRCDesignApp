@@ -1,15 +1,8 @@
 import { LinkDirection } from "@backend/features/version-manager/contract";
-import { showInfoToast } from "../../lib/notifications";
+import { showTipToast } from "../../lib/notifications";
 import { getUiState, updateUiState } from "../../lib/ui-state";
 
-/** Long enough to read, short enough not to follow them around. */
-const TIP_AUTO_CLOSE_MS = 8000;
-
-/**
- * How many times the tip may be offered before it stops. Somebody who keeps
- * taking the form's defaults after three reminders is telling us they would
- * rather have the form.
- */
+/** Somebody still taking the form's defaults after this many would rather have the form. */
 const MAX_TIPS = 3;
 
 /** Worded as the library's quick-insert tip is. */
@@ -26,25 +19,16 @@ export function quickClickName(): string {
     return navigator.userAgent.includes("Mac") ? "⌘-click" : "ctrl-click";
 }
 
-/**
- * Points out the shortcut to somebody whose last run did not need the form:
- * they opened it, changed nothing, and ran what a modified click runs.
- *
- * Quiet after {@link MAX_TIPS}, and silent from the moment they take the
- * shortcut themselves — see {@link retireQuickActionTip}.
- */
+/** For somebody who opened the form, changed nothing, and ran what a modified click runs. */
 export function showQuickActionTip(direction: LinkDirection): void {
     const shown = getUiState().quickActionTipCount;
     if (shown >= MAX_TIPS) {
         return;
     }
     updateUiState({ quickActionTipCount: shown + 1 });
-    showInfoToast(
+    showTipToast(
         `Tip: ${quickClickName()} a document to ${TIP_TEXT[direction]}`,
-        {
-            id: "quick-version-action-tip",
-            autoClose: TIP_AUTO_CLOSE_MS
-        }
+        "quick-version-action-tip"
     );
 }
 

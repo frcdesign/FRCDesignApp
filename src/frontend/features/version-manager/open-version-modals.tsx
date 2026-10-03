@@ -8,10 +8,7 @@ import { openAppModal } from "../../components/open-app-modal";
 import { JobDetails, JobDetailsTitle } from "./components/job-details";
 import { PullReferencesForm } from "./components/pull-references-modal";
 import { PushVersionForm } from "./components/push-version-modal";
-
-function documentName(linked: LinkedWorkspace): string {
-    return linked.documentName ?? "Untitled document";
-}
+import { documentLabel } from "./document-label";
 
 /** The form for one child. A whole direction has none: one name cannot stand for the several versions it cuts. */
 export function openPushVersionModal(
@@ -19,7 +16,7 @@ export function openPushVersionModal(
     target: LinkedWorkspace
 ): void {
     openAppModal({
-        title: `Push to ${documentName(target)}`,
+        title: `Push to ${documentLabel(target.documentName)}`,
         children: <PushVersionForm workspace={workspace} target={target} />
     });
 }
@@ -29,7 +26,7 @@ export function openPullReferencesModal(
     source: LinkedWorkspace
 ): void {
     openAppModal({
-        title: `Pull from ${documentName(source)}`,
+        title: `Pull from ${documentLabel(source.documentName)}`,
         children: <PullReferencesForm workspace={workspace} source={source} />
     });
 }

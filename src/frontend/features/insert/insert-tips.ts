@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { type ConfigurationKey } from "@backend/features/configurations/contract";
-import { renderNotification, showInfoToast } from "../../lib/notifications";
+import { renderNotification, showTipToast } from "../../lib/notifications";
 import { useIsThumbnailRendering } from "../thumbnails/queries";
 import { useIsConnectedToOnshape } from "../../lib/onshape-params";
 import { useAccessData } from "../auth/access-level";
@@ -12,14 +12,11 @@ export const QUICK_INSERT_WINDOW_MS = 1500;
 /** Half the preview's timeout, to catch someone mid-spinner. */
 const THUMBNAIL_WAIT_MS = 15000;
 
-/** Long enough to read, short enough not to follow them around. */
-const TIP_AUTO_CLOSE_MS = 8000;
-
 /** Points out that a right-click would have done it; the menu decides when. */
 export function showQuickInsertTip(): void {
-    showInfoToast(
+    showTipToast(
         "Tip: right-click a part to insert it without opening the insert menu.",
-        { id: "quick-insert-tip", autoClose: TIP_AUTO_CLOSE_MS }
+        "quick-insert-tip"
     );
 }
 
@@ -37,9 +34,9 @@ export function useThumbnailWaitTip(configurationKey: ConfigurationKey): void {
             return;
         }
         const timer = setTimeout(() => {
-            showInfoToast(
+            showTipToast(
                 "Tip: you can insert a part even while the part's thumbnail is still generating.",
-                { id: "thumbnail-wait-tip", autoClose: TIP_AUTO_CLOSE_MS }
+                "thumbnail-wait-tip"
             );
         }, THUMBNAIL_WAIT_MS);
         return () => clearTimeout(timer);
@@ -58,12 +55,12 @@ export function useSignInPreviewTip(isSelectionEdited: boolean): void {
         if (isPending || signedIn || !isSelectionEdited) {
             return;
         }
-        showInfoToast(
+        showTipToast(
             renderNotification(
                 "Sign in to Onshape to see a preview of your selection.",
                 { text: "Sign in", onClick: startSignIn }
             ),
-            { id: "sign-in-preview", autoClose: TIP_AUTO_CLOSE_MS }
+            "sign-in-preview"
         );
     }, [signedIn, isPending, isSelectionEdited]);
 }

@@ -9,6 +9,7 @@ import {
 import { plural } from "../../lib/plural";
 import { Status } from "../../lib/status";
 import { StatusColor } from "../../lib/style-constants";
+import { documentLabel } from "./document-label";
 
 export const OUTCOME_STATUS: Record<VersionJobOutcome, Status> = {
     [VersionJobOutcome.SUCCESS]: Status.SUCCESS,
@@ -41,7 +42,7 @@ export function jobHeadline(
 function targetsName(status: VersionJobStatus): string {
     const targets = status.targets ?? [];
     if (targets.length === 1) {
-        return targets[0].documentName ?? "Untitled document";
+        return documentLabel(targets[0].documentName);
     }
     return plural(targets.length, "document");
 }
@@ -67,7 +68,7 @@ export const TASK_LABEL = {
     [VersionTaskAction.REFERENCES]: "Update references"
 } as const;
 
-export interface JobStat {
+interface JobStat {
     label: string;
     color: StatusColor;
 }

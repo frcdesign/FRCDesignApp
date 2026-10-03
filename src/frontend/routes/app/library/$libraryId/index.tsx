@@ -130,8 +130,6 @@ function SectionAccordion(props: SectionAccordionProps): ReactNode {
                     name={section.name}
                     title={section.title}
                     icon={section.icon}
-                    opened={section.opened}
-                    onToggle={() => section.setOpened(!section.opened)}
                 >
                     {section.panel}
                 </AppSection>

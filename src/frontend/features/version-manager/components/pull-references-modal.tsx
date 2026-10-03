@@ -1,22 +1,16 @@
-import { Button, TextInput, Textarea } from "@mantine/core";
 import { ArrowLineDownIcon } from "@phosphor-icons/react";
-import { useState, type ReactNode } from "react";
+import { type ReactNode } from "react";
 import {
     LinkDirection,
-    MAX_VERSION_NAME_LENGTH,
     PullScopeKind,
     type LinkedWorkspace,
     type WorkspacePath
 } from "@backend/features/version-manager/contract";
-import { AppModalBody, AppModalFooter } from "../../../components/app-modal";
 import { useAppModal } from "../../../components/open-app-modal";
 import { IconSize } from "../../../lib/style-constants";
-import {
-    useIsVersionJobRunning,
-    useNextVersionNameQuery,
-    usePullReferencesMutation
-} from "../queries";
+import { useIsVersionJobRunning, usePullReferencesMutation } from "../queries";
 import { showQuickActionTip } from "../version-manager-tips";
+import { VersionForm, type VersionFields } from "./version-form";
 
 interface PullReferencesFormProps {
     workspace: WorkspacePath;
@@ -24,38 +18,25 @@ interface PullReferencesFormProps {
     source: LinkedWorkspace;
 }
 
-/**
- * What a pull does before it runs: what to call the version it cuts in the
- * parent, this workspace then moving onto that. A modified click runs
- * without it, under the defaults shown here.
- */
+/** A modified click on the row runs this under the defaults it shows. */
 export function PullReferencesForm(props: PullReferencesFormProps): ReactNode {
     const { workspace, source } = props;
     const modal = useAppModal();
-    // Empty unless typed; see the push form.
-    const [typedName, setTypedName] = useState("");
-    const [description, setDescription] = useState("");
-    const suggested = useNextVersionNameQuery(source.workspace);
     const pull = usePullReferencesMutation(workspace);
     const isRunning = useIsVersionJobRunning(workspace);
 
-    // Untouched, the form did what a quick run does, which the tip points out.
-    const isEdited = typedName !== "" || description !== "";
-
-    const submit = () => {
+    const submit = ({ name, description }: VersionFields) => {
         pull.mutate(
             {
-                name: typedName,
-                description: description.trim(),
-                scope: {
-                    kind: PullScopeKind.ONE,
-                    workspace: source.workspace
-                }
+                name,
+                description,
+                scope: { kind: PullScopeKind.ONE, workspace: source.workspace }
             },
             {
                 onSuccess: () => {
                     modal.close();
-                    if (!isEdited) {
+                    // Untouched, the form did what a quick pull does.
+                    if (!name && !description) {
                         showQuickActionTip(LinkDirection.PARENT);
                     }
                 }
@@ -64,45 +45,13 @@ export function PullReferencesForm(props: PullReferencesFormProps): ReactNode {
     };
 
     return (
-        <>
-            <AppModalBody>
-                <TextInput
-                    label="Version name"
-                    placeholder={
-                        suggested.isPending
-                            ? "Reading that document's versions..."
-                            : suggested.data?.name
-                    }
-                    maxLength={MAX_VERSION_NAME_LENGTH}
-                    value={typedName}
-                    onChange={(event) =>
-                        setTypedName(event.currentTarget.value)
-                    }
-                    data-autofocus
-                />
-                <Textarea
-                    label="Description"
-                    placeholder="Optional"
-                    autosize
-                    minRows={2}
-                    maxRows={5}
-                    value={description}
-                    onChange={(event) =>
-                        setDescription(event.currentTarget.value)
-                    }
-                />
-            </AppModalBody>
-            <AppModalFooter>
-                <Button
-                    ml="auto"
-                    rightSection={<ArrowLineDownIcon size={IconSize.SMALL} />}
-                    loading={pull.isPending}
-                    disabled={isRunning}
-                    onClick={submit}
-                >
-                    Pull
-                </Button>
-            </AppModalFooter>
-        </>
+        <VersionForm
+            versioned={source.workspace}
+            submitLabel="Pull"
+            submitIcon={<ArrowLineDownIcon size={IconSize.SMALL} />}
+            isPending={pull.isPending}
+            disabled={isRunning}
+            onSubmit={submit}
+        />
     );
 }

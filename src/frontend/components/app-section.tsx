@@ -1,6 +1,6 @@
 import { Accordion, ActionIcon, Group } from "@mantine/core";
 import { CaretDownIcon } from "@phosphor-icons/react";
-import { type ReactNode } from "react";
+import { createContext, use, type ReactNode } from "react";
 import { IconSize } from "../lib/style-constants";
 import { AppTitle } from "./app-title";
 import styles from "../lib/styles.module.css";
@@ -13,6 +13,12 @@ interface AppSectionsProps {
     children: ReactNode;
 }
 
+/** Lets each section's chevron toggle itself without the caller wiring it. */
+const SectionsContext = createContext<{
+    opened: string[];
+    onChange: (opened: string[]) => void;
+}>({ opened: [], onChange: () => undefined });
+
 /**
  * A page's stack of collapsing sections. Which are open belongs to the caller,
  * since it usually outlives the page. Flush to the page's edges, so a section's
@@ -22,21 +28,23 @@ export function AppSections(props: AppSectionsProps): ReactNode {
     const { opened, onChange, children } = props;
 
     return (
-        <Accordion
-            multiple
-            variant="unstyled"
-            value={opened}
-            onChange={onChange}
-            classNames={{
-                item: classes.item,
-                label: classes.label,
-                content: `${classes.content} ${styles.dividerBottom}`,
-                icon: styles.titleIcon,
-                chevron: classes.chevron
-            }}
-        >
-            {children}
-        </Accordion>
+        <SectionsContext value={{ opened, onChange }}>
+            <Accordion
+                multiple
+                variant="unstyled"
+                value={opened}
+                onChange={onChange}
+                classNames={{
+                    item: classes.item,
+                    label: classes.label,
+                    content: `${classes.content} ${styles.dividerBottom}`,
+                    icon: styles.titleIcon,
+                    chevron: classes.chevron
+                }}
+            >
+                {children}
+            </Accordion>
+        </SectionsContext>
     );
 }
 
@@ -50,15 +58,21 @@ interface AppSectionProps {
     icon?: ReactNode;
     /** The section's own controls, between its title and its chevron. */
     actions?: ReactNode;
-    opened: boolean;
-    onToggle: () => void;
     children: ReactNode;
 }
 
 /** One section. Its controls sit beside the header: a button cannot nest in a button. */
 export function AppSection(props: AppSectionProps): ReactNode {
-    const { value, name, title, icon, actions, opened, onToggle, children } =
-        props;
+    const { value, name, title, icon, actions, children } = props;
+    const sections = use(SectionsContext);
+    const opened = sections.opened.includes(value);
+
+    const toggle = () =>
+        sections.onChange(
+            opened
+                ? sections.opened.filter((each) => each !== value)
+                : [...sections.opened, value]
+        );
 
     return (
         <Accordion.Item value={value}>
@@ -76,7 +90,7 @@ export function AppSection(props: AppSectionProps): ReactNode {
                     {title ?? <AppTitle title={name} />}
                 </Accordion.Control>
                 {actions}
-                <SectionChevron opened={opened} onToggle={onToggle} />
+                <SectionChevron opened={opened} onToggle={toggle} />
             </Group>
             <Accordion.Panel>{children}</Accordion.Panel>
         </Accordion.Item>

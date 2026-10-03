@@ -122,13 +122,11 @@ function VersionManager(props: VersionManagerProps): ReactNode {
                     workspace={workspace}
                     direction={LinkDirection.PARENT}
                     linked={links.parents}
-                    opened={isParentsOpen}
                 />
                 <LinkSection
                     workspace={workspace}
                     direction={LinkDirection.CHILD}
                     linked={links.children}
-                    opened={isChildrenOpen}
                 />
             </AppSections>
         </>
@@ -139,13 +137,11 @@ interface LinkSectionProps {
     workspace: WorkspacePath;
     direction: LinkDirection;
     linked: LinkedWorkspace[];
-    /** Which way this section's own chevron points. */
-    opened: boolean;
 }
 
 /** One direction's section: its links, and the run they share. */
 function LinkSection(props: LinkSectionProps): ReactNode {
-    const { workspace, direction, linked, opened } = props;
+    const { workspace, direction, linked } = props;
     const actions = useLinkActions(workspace, direction);
     const copy = DIRECTION_COPY[direction];
 
@@ -166,14 +162,6 @@ function LinkSection(props: LinkSectionProps): ReactNode {
                     linked={linked}
                     actions={actions}
                 />
-            }
-            opened={opened}
-            onToggle={() =>
-                updateUiState(
-                    direction === LinkDirection.PARENT
-                        ? { isParentsOpen: !opened }
-                        : { isChildrenOpen: !opened }
-                )
             }
         >
             <LinkedWorkspaceSection

@@ -31,6 +31,7 @@ import {
 } from "../job-report";
 import { plural } from "../../../lib/plural";
 import { useVersionJobQuery } from "../queries";
+import { documentLabel } from "../document-label";
 
 interface JobDetailsTitleProps {
     workspace: WorkspacePath;
@@ -157,7 +158,7 @@ function DocumentSteps(props: DocumentStepsProps): ReactNode {
                     iconSize={IconSize.SMALL}
                 >
                     <Text component="span" inherit truncate miw={0}>
-                        {group.documentName ?? "Untitled document"}
+                        {documentLabel(group.documentName)}
                     </Text>
                 </ExternalLink>
             </Group>

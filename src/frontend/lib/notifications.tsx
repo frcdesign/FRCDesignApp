@@ -116,6 +116,14 @@ export function showInfoToast(
     return showStatusToast(Status.INFO, message, options);
 }
 
+/** Long enough to read, short enough not to follow somebody around. */
+const TIP_AUTO_CLOSE_MS = 8000;
+
+/** A hint about the app; one per `id` on screen at a time. */
+export function showTipToast(message: ReactNode, id: string): string {
+    return showInfoToast(message, { id, autoClose: TIP_AUTO_CLOSE_MS });
+}
+
 export function showLoadingToast(message: string, id: string): string {
     return showToast({
         id,

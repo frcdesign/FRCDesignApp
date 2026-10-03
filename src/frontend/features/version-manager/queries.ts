@@ -22,30 +22,38 @@ import { useIsSignedIn } from "../auth/access-level";
 import { Hint } from "@backend/features/hints/contract";
 import { markHintSeen } from "../hints/queries";
 
-function toWorkspaceQuery(workspace: WorkspacePath) {
-    return {
-        documentId: workspace.documentId,
-        instanceId: workspace.instanceId
-    };
-}
-
-/**
- * The workspaces linked to this one. Each read asks Onshape about every link,
- * so it is refreshed only when something changes them.
- */
-export function useWorkspaceLinksQuery(workspace: WorkspacePath | undefined) {
+/** A GET about the workspace; idle without one, or signed out. */
+function useWorkspaceQuery<T>(
+    queryKey: unknown[],
+    path: string,
+    workspace: WorkspacePath | undefined,
+    staleTime?: number
+) {
     const isSignedIn = useIsSignedIn();
-    return useQuery<WorkspaceLinksData>({
-        queryKey: workspaceLinksQueryKey(workspace),
+    return useQuery<T>({
+        queryKey,
         queryFn:
             workspace && isSignedIn
                 ? () =>
-                      apiGet("/workspace-links", {
-                          query: toWorkspaceQuery(workspace)
+                      apiGet(path, {
+                          query: {
+                              documentId: workspace.documentId,
+                              instanceId: workspace.instanceId
+                          }
                       })
                 : skipToken,
-        staleTime: Infinity
+        staleTime
     });
+}
+
+/** Each read asks Onshape about every link, so it is refreshed only when something changes them. */
+export function useWorkspaceLinksQuery(workspace: WorkspacePath | undefined) {
+    return useWorkspaceQuery<WorkspaceLinksData>(
+        workspaceLinksQueryKey(workspace),
+        "/workspace-links",
+        workspace,
+        Infinity
+    );
 }
 
 async function refreshLinks(workspace: WorkspacePath): Promise<void> {
@@ -110,72 +118,49 @@ export function useRemoveLinkMutation(workspace: WorkspacePath) {
     });
 }
 
-export interface PushVersionArgs {
+interface RunArgs<Scope> {
     /** Absent or blank, each version is named as Onshape's own dialog would. */
     name?: string;
     description?: string;
-    scope: PushScope;
-    /** Moves the children onto this document's newest version, cutting none. */
+    scope: Scope;
+    /** Moves references onto versions that exist, cutting none. */
     updateOnly?: boolean;
 }
 
 /**
- * Starts a push. The work runs in a workflow, so what comes back is the run
- * as it starts; {@link useVersionJobQuery} is what says how it goes.
+ * Starts a push or a pull. The work runs in a workflow, so what comes back is
+ * the run as it starts; {@link useVersionJobQuery} says how it goes.
  */
-export function usePushVersionMutation(workspace: WorkspacePath) {
+function useRunMutation<Scope>(
+    workspace: WorkspacePath,
+    path: "/push-version" | "/pull-references",
+    failure: string
+) {
     return useMutation({
-        mutationKey: ["push-version", workspace],
-        mutationFn: ({
-            name,
-            description,
-            scope,
-            updateOnly
-        }: PushVersionArgs) =>
-            apiPost<VersionJobStatus>("/push-version", {
-                body: {
-                    workspace,
-                    name: name?.trim() || undefined,
-                    description,
-                    scope,
-                    updateOnly
-                }
+        mutationKey: [path, workspace],
+        mutationFn: ({ name, ...args }: RunArgs<Scope>) =>
+            apiPost<VersionJobStatus>(path, {
+                body: { workspace, name: name?.trim() || undefined, ...args }
             }),
         onSuccess: (status) => adoptJob(workspace, status),
-        onError: getAppErrorHandler("Unexpectedly failed to push the version.")
+        onError: getAppErrorHandler(failure)
     });
 }
 
-export interface PullReferencesArgs {
-    /** Names the version cut in each parent; see {@link PushVersionArgs.name}. */
-    name?: string;
-    description?: string;
-    scope: PullScope;
-    /** Moves onto the parents' newest versions, cutting none. */
-    updateOnly?: boolean;
+export function usePushVersionMutation(workspace: WorkspacePath) {
+    return useRunMutation<PushScope>(
+        workspace,
+        "/push-version",
+        "Unexpectedly failed to push the version."
+    );
 }
 
 export function usePullReferencesMutation(workspace: WorkspacePath) {
-    return useMutation({
-        mutationKey: ["pull-references", workspace],
-        mutationFn: ({
-            name,
-            description,
-            scope,
-            updateOnly
-        }: PullReferencesArgs) =>
-            apiPost<VersionJobStatus>("/pull-references", {
-                body: {
-                    workspace,
-                    name: name?.trim() || undefined,
-                    description,
-                    scope,
-                    updateOnly
-                }
-            }),
-        onSuccess: (status) => adoptJob(workspace, status),
-        onError: getAppErrorHandler("Unexpectedly failed to pull.")
-    });
+    return useRunMutation<PullScope>(
+        workspace,
+        "/pull-references",
+        "Unexpectedly failed to pull."
+    );
 }
 
 /** Shows the run going straight away, before the socket says so. */
@@ -193,33 +178,21 @@ function adoptJob(workspace: WorkspacePath, started: VersionJobStatus): void {
  * on, and after a reconnect; nothing polls.
  */
 export function useVersionJobQuery(workspace: WorkspacePath | undefined) {
-    const isSignedIn = useIsSignedIn();
-    return useQuery<VersionJobStatus>({
-        queryKey: versionJobQueryKey(workspace),
-        queryFn:
-            workspace && isSignedIn
-                ? () =>
-                      apiGet("/version-job", {
-                          query: toWorkspaceQuery(workspace)
-                      })
-                : skipToken,
-        staleTime: Infinity
-    });
+    return useWorkspaceQuery<VersionJobStatus>(
+        versionJobQueryKey(workspace),
+        "/version-job",
+        workspace,
+        Infinity
+    );
 }
 
 /** The name a run would give a version it cuts here, which the forms offer. */
 export function useNextVersionNameQuery(workspace: WorkspacePath | undefined) {
-    const isSignedIn = useIsSignedIn();
-    return useQuery<{ name: string }>({
-        queryKey: nextVersionNameQueryKey(workspace),
-        queryFn:
-            workspace && isSignedIn
-                ? () =>
-                      apiGet("/next-version-name", {
-                          query: toWorkspaceQuery(workspace)
-                      })
-                : skipToken
-    });
+    return useWorkspaceQuery<{ name: string }>(
+        nextVersionNameQueryKey(workspace),
+        "/next-version-name",
+        workspace
+    );
 }
 
 /** Whether a run started from this workspace is still going. */
