@@ -289,11 +289,16 @@ function PagePicker(): ReactNode {
                                 key={page.tab}
                                 disabled={page.tab === current}
                                 leftSection={
-                                    <AppIcon
-                                        icon={page.icon}
-                                        size={IconSize.MEDIUM}
-                                        color={toShade(page.color)}
-                                    />
+                                    <NewIndicator
+                                        shown={page.isNew ?? false}
+                                        offset={-1}
+                                    >
+                                        <AppIcon
+                                            icon={page.icon}
+                                            size={IconSize.MEDIUM}
+                                            color={toShade(page.color)}
+                                        />
+                                    </NewIndicator>
                                 }
                                 onClick={() => selectPage(page.tab)}
                             >
