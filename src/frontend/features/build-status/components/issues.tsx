@@ -278,6 +278,9 @@ function IssueText(props: IssueTextProps): ReactNode {
             {description && (
                 <InfoTooltip
                     label={description}
+                    color={
+                        STATUS_COLOR[severityStatus(getIssueSeverity(issue))]
+                    }
                     className={styles.noShrink}
                     style={CALLOUT_ICON_NUDGE}
                 />

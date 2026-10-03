@@ -7,6 +7,8 @@ import { AppIcon } from "./app-icon";
 interface InfoTooltipProps {
     /** What the bubble says; the icon is only its handle. */
     label: ReactNode;
+    /** The color of what it sits in, where that has one. @default PrimaryColor.FILLED */
+    color?: string;
     className?: string;
     /** For the odd icon that has to be nudged onto the line it sits in. */
     style?: CSSProperties;
@@ -14,14 +16,14 @@ interface InfoTooltipProps {
 
 /** In the page's own color, so it reads as something offered rather than a warning. */
 export function InfoTooltip(props: InfoTooltipProps): ReactNode {
-    const { label, className, style } = props;
+    const { label, color = PrimaryColor.FILLED, className, style } = props;
 
     return (
         <Tooltip label={label}>
             <AppIcon
                 icon={InfoIcon}
                 size={IconSize.SMALL}
-                color={PrimaryColor.FILLED}
+                color={color}
                 className={className}
                 style={style}
             />
