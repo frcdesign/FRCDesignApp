@@ -3,7 +3,7 @@ import { z } from "zod";
 import { forbiddenError, handledError } from "../../lib/api-error";
 import { cacheMiddleware } from "../../lib/cache";
 import { getApp, type AppContext } from "../../lib/context";
-import type { OnshapeApi } from "../../lib/onshape/client";
+import { OnshapeApiError, type OnshapeApi } from "../../lib/onshape/client";
 import {
     hasPermissions,
     OnshapePermission
@@ -55,7 +55,6 @@ import {
     toEdge,
     toLinkedWorkspace
 } from "./links";
-import { onshapeStatus } from "./failures";
 import { describeWorkspace } from "./workspace-cache";
 import { markHintSeen } from "../hints/store";
 import { Hint } from "../hints/contract";
@@ -106,24 +105,22 @@ const pullScope = z.discriminatedUnion("kind", [
     })
 ]);
 
-const pushBody = z.object({
+/** What a push and a pull both take. */
+const runBody = z.object({
     workspace: workspaceSchema,
-    /** Absent for a quick push; the workflow names it as Onshape would. */
+    /** Absent for a quick run; the workflow names each version as Onshape would. */
     name: z.string().min(1).max(MAX_VERSION_NAME_LENGTH).optional(),
     description: z.string().max(10_000).optional(),
-    scope: pushScope.default({ kind: PushScopeKind.CHILDREN }),
-    /** Moves the children onto this document's newest version, cutting none. */
+    /** Moves references onto versions that exist, cutting none. */
     updateOnly: z.boolean().default(false)
 });
 
-const pullBody = z.object({
-    workspace: workspaceSchema,
-    /** Absent for a quick pull; the workflow names it as Onshape would. */
-    name: z.string().min(1).max(MAX_VERSION_NAME_LENGTH).optional(),
-    description: z.string().max(10_000).optional(),
-    scope: pullScope.default({ kind: PullScopeKind.PARENTS }),
-    /** Moves onto the parents' newest versions, cutting none. */
-    updateOnly: z.boolean().default(false)
+const pushBody = runBody.extend({
+    scope: pushScope.default({ kind: PushScopeKind.CHILDREN })
+});
+
+const pullBody = runBody.extend({
+    scope: pullScope.default({ kind: PullScopeKind.PARENTS })
 });
 
 type WorkspaceInput = z.infer<typeof workspaceSchema>;
@@ -135,10 +132,7 @@ function toWorkspace(input: WorkspaceInput): WorkspacePath {
     return toWorkspacePath(input.documentId, input.instanceId);
 }
 
-/**
- * Onshape decides what may be done here, not the app's own access levels: these
- * are the caller's documents, and the library has no say over them.
- */
+/** Onshape decides what may be done here: the library's access levels have no say over somebody's documents. */
 async function requirePermissions(
     client: OnshapeApi,
     workspace: WorkspacePath,
@@ -152,18 +146,20 @@ async function requirePermissions(
     }
 }
 
-/**
- * `GET /api/workspace-links?documentId=&instanceId=`
- *
- * The links either side of a workspace, as {@link WorkspaceLinksData}: the
- * parents it pulls from and the children it pushes to, and the workspace's own
- * document name. Each link is resolved against Onshape for its names and the
- * caller's permissions, so a link to something they cannot read comes back
- * unopenable and unnamed; a parent also carries what it has changed since its
- * own last version, which is what a pull would leave behind.
- *
- * Requires read on the workspace being asked about.
- */
+/** What every route that only shows a workspace asks for. */
+function requireRead(
+    client: OnshapeApi,
+    workspace: WorkspacePath
+): Promise<void> {
+    return requirePermissions(
+        client,
+        workspace,
+        "read this document",
+        OnshapePermission.READ
+    );
+}
+
+/** GET /api/workspace-links?documentId=&instanceId= — the links either side of a workspace. */
 versionManagerRoutes.get(
     "/workspace-links",
     requireSignInMiddleware,
@@ -172,16 +168,9 @@ versionManagerRoutes.get(
     async (c) => {
         const workspace = toWorkspace(c.req.valid("query"));
         const client = await c.var.getOnshapeApi();
-        await requirePermissions(
-            client,
-            workspace,
-            "read this document",
-            OnshapePermission.READ
-        );
+        await requireRead(client, workspace);
 
         const db = getDb(c.env.DB);
-        // The caller has read on the workspace, so Onshape describing it is
-        // taken for granted: a failure here is unexpected and says so.
         const [parentRows, childRows, document] = await Promise.all([
             getParentLinks(db, workspace),
             getChildLinks(db, workspace),
@@ -214,17 +203,7 @@ versionManagerRoutes.get(
     }
 );
 
-/**
- * `POST /api/workspace-links`
- *
- * Links another workspace to this one. The body names the caller's workspace,
- * the one being linked, and which side of the relationship it takes
- * ({@link LinkDirection}). Adding a link that exists is not an error.
- *
- * Requires write on the caller's workspace and read on the one being linked:
- * linking is an edit to this document's graph, and pointing at something they
- * cannot see is not one they should be able to make.
- */
+/** POST /api/workspace-links — adding one that exists is not an error. */
 versionManagerRoutes.post(
     "/workspace-links",
     requireSignInMiddleware,
@@ -242,18 +221,20 @@ versionManagerRoutes.post(
         }
 
         const client = await c.var.getOnshapeApi();
-        await requirePermissions(
-            client,
-            workspace,
-            "edit this document",
-            OnshapePermission.WRITE
-        );
-        await requirePermissions(
-            client,
-            linked,
-            "read the document you linked",
-            OnshapePermission.READ
-        );
+        await Promise.all([
+            requirePermissions(
+                client,
+                workspace,
+                "edit this document",
+                OnshapePermission.WRITE
+            ),
+            requirePermissions(
+                client,
+                linked,
+                "read the document you linked",
+                OnshapePermission.READ
+            )
+        ]);
 
         // A parent provides to this workspace; a child takes from it.
         const [parent, child] =
@@ -266,15 +247,7 @@ versionManagerRoutes.post(
     }
 );
 
-/**
- * `DELETE /api/workspace-link/:linkId`
- *
- * Removes a link. Deleting one that is already gone is the state the caller
- * asked for, so it answers success.
- *
- * Requires write on either end: a link belongs to both workspaces, so being
- * able to edit one of them is enough to take it back.
- */
+/** DELETE /api/workspace-link/:linkId — needs write on either end, a link being both workspaces'. */
 versionManagerRoutes.delete(
     workspaceLinkRoute(),
     requireSignInMiddleware,
@@ -301,17 +274,7 @@ versionManagerRoutes.delete(
     }
 );
 
-/**
- * `POST /api/workspace-link/:linkId/move`
- *
- * Turns a link around: a parent becomes a child, or a child a parent. Answers
- * success where it is already the way round the caller asked for, that being
- * the state they wanted.
- *
- * Requires write on the caller's workspace and read on the other end — a move
- * is an unlink and a link in the other direction, so it asks for what linking
- * asks for.
- */
+/** POST /api/workspace-link/:linkId/move — turns a link around; already that way round is success. */
 versionManagerRoutes.post(
     workspaceLinkRoute() + "/move",
     requireSignInMiddleware,
@@ -351,39 +314,27 @@ versionManagerRoutes.post(
         }
 
         const client = await c.var.getOnshapeApi();
-        await requirePermissions(
-            client,
-            workspace,
-            "edit this document",
-            OnshapePermission.WRITE
-        );
-        await requirePermissions(
-            client,
-            linked,
-            "read the linked document",
-            OnshapePermission.READ
-        );
+        await Promise.all([
+            requirePermissions(
+                client,
+                workspace,
+                "edit this document",
+                OnshapePermission.WRITE
+            ),
+            requirePermissions(
+                client,
+                linked,
+                "read the linked document",
+                OnshapePermission.READ
+            )
+        ]);
 
         await reverseLink(db, row);
         return c.json({ success: true });
     }
 );
 
-/**
- * `POST /api/push-version`
- *
- * Starts a push: cuts a version of the caller's workspace, then moves the
- * references of the children named by {@link PushScope} onto it. An absent
- * `name` is the ordinary case — the run then names each version as Onshape's
- * own dialog would. Answers the run's first status; the work itself happens in
- * {@link VersionManagerWorkflow}. `updateOnly`
- * cuts nothing, moving the children onto this document's newest version.
- *
- * Requires write and link on the caller's workspace, write on every workspace
- * the run would touch, and link on each one it would version. Checked across
- * the whole run before it starts: a push that cuts a version and then finds it
- * cannot finish has already changed the document it was called on.
- */
+/** POST /api/push-version — checks every workspace the run writes to before it starts. */
 versionManagerRoutes.post(
     "/push-version",
     requireSignInMiddleware,
@@ -469,11 +420,7 @@ versionManagerRoutes.post(
     }
 );
 
-/**
- * Every workspace's document name, by `workspaceKey`, for the run's status to
- * show. From the cache the rows are named from; a name Onshape will not give is
- * left out.
- */
+/** Each workspace's document name, by `workspaceKey`, for the run's status; one Onshape won't give is left out. */
 async function nameDocuments(
     c: AppContext,
     client: OnshapeApi,
@@ -518,10 +465,7 @@ async function requireIdle(
     }
 }
 
-/**
- * A version is pinned per document, so one document versioned twice would
- * leave everything after it on whichever was cut last.
- */
+/** A version is pinned per document, so versioning one twice would leave everything after it on the last. */
 function requireDistinctDocuments(workspaces: WorkspacePath[]): void {
     const documentIds = workspaces.map((each) => each.documentId);
     if (new Set(documentIds).size !== documentIds.length) {
@@ -540,11 +484,7 @@ function isRecursive(scope: PushScopeInput): boolean {
     );
 }
 
-/**
- * The workspaces the push has to update, in order, and the edges they came
- * from, with the two ways the graph can refuse turned into something the caller
- * can act on.
- */
+/** The workspaces the push updates, in order, with the edges they came from. */
 async function resolvePushOrder(
     c: AppContext,
     workspace: WorkspacePath,
@@ -585,21 +525,7 @@ async function resolvePushOrder(
     return { order, edges };
 }
 
-/**
- * `POST /api/pull-references`
- *
- * Starts a pull: versions each parent {@link PullScope} names — one of them or
- * all of them — and moves this workspace's references onto what was cut. A
- * reference points at a version, so a parent's unversioned edits are only
- * pullable once there is one holding them. Answers the run's first status.
- *
- * `updateOnly` versions nothing either, moving onto whatever versions the
- * parents already have; so does every-reference scope, whose documents are not
- * linked here and are nobody's to cut a version in.
- *
- * Requires write on the caller's workspace, and write and link on each parent
- * it would version. Checked before the run starts, as a push's are.
- */
+/** POST /api/pull-references — checks every parent it versions before it starts. */
 versionManagerRoutes.post(
     "/pull-references",
     requireSignInMiddleware,
@@ -674,11 +600,7 @@ versionManagerRoutes.post(
     }
 );
 
-/**
- * The parents a pull versions and takes those versions from, or undefined for
- * every out-of-date reference. Narrowed to the parents, so a pull only moves
- * references the graph accounts for.
- */
+/** The parents a pull versions, or undefined for every out-of-date reference. */
 async function resolvePullSources(
     c: AppContext,
     workspace: WorkspacePath,
@@ -712,12 +634,7 @@ async function resolvePullSources(
     return rows.map((row) => toEdge(row).parent);
 }
 
-/**
- * `GET /api/version-job?documentId=&instanceId=`
- *
- * The push or pull this workspace last started, as {@link VersionJobStatus}:
- * how it is going, or what it did. Requires read on the workspace.
- */
+/** GET /api/version-job?documentId=&instanceId= */
 versionManagerRoutes.get(
     "/version-job",
     requireSignInMiddleware,
@@ -725,24 +642,12 @@ versionManagerRoutes.get(
     validate("query", workspaceSchema),
     async (c) => {
         const workspace = toWorkspace(c.req.valid("query"));
-        await requirePermissions(
-            await c.var.getOnshapeApi(),
-            workspace,
-            "read this document",
-            OnshapePermission.READ
-        );
+        await requireRead(await c.var.getOnshapeApi(), workspace);
         return c.json(await getJobStatus(c.env, workspace));
     }
 );
 
-/**
- * `GET /api/next-version-name?documentId=&instanceId=`
- *
- * What a run with no name of its own would call a version it cuts here: `V<n>`
- * after the highest the document carries, as Onshape's own dialog offers.
- *
- * Requires read on the workspace.
- */
+/** GET /api/next-version-name?documentId=&instanceId= — what an unnamed run would call a version here. */
 versionManagerRoutes.get(
     "/next-version-name",
     requireSignInMiddleware,
@@ -751,12 +656,7 @@ versionManagerRoutes.get(
     async (c) => {
         const workspace = toWorkspace(c.req.valid("query"));
         const client = await c.var.getOnshapeApi();
-        await requirePermissions(
-            client,
-            workspace,
-            "read this document",
-            OnshapePermission.READ
-        );
+        await requireRead(client, workspace);
         const versions = await getVersions(client, workspace);
         return c.json({
             name: nextVersionName(versions.map((version) => version.name))
@@ -764,26 +664,10 @@ versionManagerRoutes.get(
     }
 );
 
-/**
- * Long enough that a row and the card it opens on hover share one fetch, short
- * enough that a workspace somebody just changed looks current again soon. Not
- * one of {@link CachePolicy}'s three: a workspace thumbnail is neither
- * immutable, as a rendered configuration's is, nor unstorable.
- */
+/** Neither immutable nor unstorable, so none of `CachePolicy`'s: a row and its hover share one fetch. */
 const WORKSPACE_THUMBNAIL_CACHE = "private, max-age=300";
 
-/**
- * `GET /api/workspace-thumbnail?documentId=&instanceId=&size=`
- *
- * The linked workspace's own thumbnail, proxied: Onshape serves it only to an
- * OAuth caller, so the browser cannot fetch it directly. Nothing is stored or
- * rendered — this is the picture Onshape already keeps for the document.
- *
- * A workspace with no thumbnail answers 404, which the client shows as the same
- * placeholder any other missing image gets.
- *
- * Requires read on the workspace.
- */
+/** GET /api/workspace-thumbnail?documentId=&instanceId=&size= — proxied, Onshape serving it only to an OAuth caller. */
 versionManagerRoutes.get(
     "/workspace-thumbnail",
     requireSignInMiddleware,
@@ -792,20 +676,17 @@ versionManagerRoutes.get(
         const query = c.req.valid("query");
         const workspace = toWorkspace(query);
         const client = await c.var.getOnshapeApi();
-        await requirePermissions(
-            client,
-            workspace,
-            "read this document",
-            OnshapePermission.READ
-        );
+        await requireRead(client, workspace);
 
         let bytes: ArrayBuffer;
         try {
             bytes = await getWorkspaceThumbnail(client, workspace, query.size);
         } catch (error) {
-            // A document Onshape has no picture for: the client shows the
-            // placeholder.
-            if (onshapeStatus(error) === HttpStatus.NOT_FOUND) {
+            // No picture: the client shows its placeholder.
+            if (
+                error instanceof OnshapeApiError &&
+                error.status === HttpStatus.NOT_FOUND
+            ) {
                 return c.body(null, HttpStatus.NOT_FOUND);
             }
             throw error;

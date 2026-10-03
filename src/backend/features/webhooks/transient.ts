@@ -27,40 +27,59 @@ const LINKED_WORKSPACE_EVENTS = [
     "onshape.model.lifecycle.createversion"
 ];
 
-/** Tells the units cache when the workspace's units change. */
-export async function watchWorkspaceUnits(
+interface TransientWebhook {
+    route: string;
+    events: string[];
+    /** What the webhook is called, and what keeping it is for, in Onshape. */
+    name: string;
+    description: string;
+}
+
+/** Registers one on `workspace`, delivered to `route` with the workspace in the url. */
+async function watchWorkspace(
     onshapeApi: OnshapeApi,
     workspace: InstancePath,
-    appUrl: string
+    appUrl: string,
+    webhook: TransientWebhook
 ): Promise<void> {
     await createWebhook(onshapeApi, {
         documentId: workspace.documentId,
         workspaceId: workspace.instanceId,
-        events: [UPDATE_WORKSPACE_UNITS],
-        url: toWorkspaceUrl(UNITS_WEBHOOK_ROUTE, workspace, appUrl),
-        name: "FRCDesignApp units",
-        description: "Keeps the FRCDesignApp's copy of these units current.",
+        events: webhook.events,
+        url: toWorkspaceUrl(webhook.route, workspace, appUrl),
+        name: webhook.name,
+        description: webhook.description,
         options: { collapseEvents: true },
         isTransient: true
     });
 }
 
-/** Tells the version manager's caches when a linked workspace changes. */
-export async function watchLinkedWorkspace(
+/** Tells the units cache when the workspace's units change. */
+export function watchWorkspaceUnits(
     onshapeApi: OnshapeApi,
     workspace: InstancePath,
     appUrl: string
 ): Promise<void> {
-    await createWebhook(onshapeApi, {
-        documentId: workspace.documentId,
-        workspaceId: workspace.instanceId,
+    return watchWorkspace(onshapeApi, workspace, appUrl, {
+        route: UNITS_WEBHOOK_ROUTE,
+        events: [UPDATE_WORKSPACE_UNITS],
+        name: "FRCDesignApp units",
+        description: "Keeps the FRCDesignApp's copy of these units current."
+    });
+}
+
+/** Tells the version manager's caches when a linked workspace changes. */
+export function watchLinkedWorkspace(
+    onshapeApi: OnshapeApi,
+    workspace: InstancePath,
+    appUrl: string
+): Promise<void> {
+    return watchWorkspace(onshapeApi, workspace, appUrl, {
+        route: LINKED_WORKSPACE_WEBHOOK_ROUTE,
         events: LINKED_WORKSPACE_EVENTS,
-        url: toWorkspaceUrl(LINKED_WORKSPACE_WEBHOOK_ROUTE, workspace, appUrl),
         name: "FRCDesignApp version manager",
         description:
-            "Keeps the FRCDesignApp's copy of this workspace's name and pending changes current.",
-        options: { collapseEvents: true },
-        isTransient: true
+            "Keeps the FRCDesignApp's copy of this workspace's name and pending changes current."
     });
 }
 

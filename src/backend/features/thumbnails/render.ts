@@ -12,20 +12,12 @@ import { type ConfigurationKey } from "../configurations/contract";
 import { decodeConfiguration } from "../configurations/utils";
 import { RenderStatus, ThumbnailSize } from "./contract";
 import { thumbnailKey } from "./keys";
+import { isInstanceActive } from "../../lib/workflows";
 
 interface RenderRequest {
     insertableId: string;
     configurationKey: ConfigurationKey;
 }
-
-/** Statuses of an instance still working towards its bytes. */
-const ACTIVE = new Set<InstanceStatus["status"]>([
-    "queued",
-    "running",
-    "waiting",
-    "paused",
-    "waitingForPause"
-]);
 
 /**
  * Renders from the insertable's current microversion, in its group's thumbnail
@@ -62,7 +54,7 @@ export async function requestRender(
     if (existing) {
         const { status } = await existing.status();
         // A finished one restarts, and returns at once if its bytes are stored.
-        if (!ACTIVE.has(status)) {
+        if (!isInstanceActive(status)) {
             await existing.restart();
         }
         return RenderStatus.RENDERING;

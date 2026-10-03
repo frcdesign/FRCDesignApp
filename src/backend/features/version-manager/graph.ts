@@ -14,10 +14,9 @@ export interface WorkspaceEdge {
 export class LinkCycleError extends Error {
     constructor(readonly workspace: WorkspacePath) {
         super(
-            `Linked workspaces form a cycle through ${workspace.documentId}/${workspace.instanceId}.`
+            `Linked workspaces form a cycle through ${workspaceKey(workspace)}.`
         );
         this.name = "LinkCycleError";
-        Object.setPrototypeOf(this, new.target.prototype);
     }
 }
 
@@ -32,14 +31,8 @@ export function childrenOf(
 }
 
 /**
- * The workspaces a push from `root` has to update, in the order it has to
- * update them. `root` itself is not among them: it is versioned first, and
- * nothing in it changes.
- *
- * A direct push stops at `root`'s children. A recursive one carries on through
- * every descendant, ordered so a workspace comes after every workspace in the
- * run that it references — a child of two of them has to wait for both, which
- * is why this is a topological order and not a breadth-first walk.
+ * The workspaces a push from `root` updates, in order, `root` excluded. A
+ * recursive push orders them topologically: a child of two of them waits for both.
  *
  * @throws {LinkCycleError} when the reachable subgraph has a cycle.
  */

@@ -1,7 +1,4 @@
-/**
- * Moving a workspace's external references onto newer versions — the one
- * operation both push and pull are made of.
- */
+/** Moving a workspace's external references onto newer versions, which both a push and a pull do. */
 import type { OnshapeApi } from "../../lib/onshape/client";
 import {
     getExternalReferences,
@@ -26,12 +23,12 @@ export interface ReferenceUpdateOptions {
 }
 
 /** The updates one tab needs, ready to post. */
-export interface ElementUpdatePlan {
+interface ElementUpdatePlan {
     elementPath: ElementPath;
     updates: ReferenceUpdate[];
 }
 
-export interface ReferenceUpdateOutcome {
+interface ReferenceUpdateOutcome {
     updatedElements: number;
 }
 
@@ -101,12 +98,9 @@ export function planReferenceUpdates(
 }
 
 /**
- * Repoints every reference in `workspace` that {@link planReferenceUpdates}
- * picks out.
- *
- * One tab at a time: concurrent updates are known to misbehave. A failure on any tab is the document's, and leaves the step: a retry plans
- * afresh, and a tab the first attempt moved is already on its version and is
- * skipped — which also leaves it out of the retry's count.
+ * Repoints what {@link planReferenceUpdates} picks out, one tab at a time:
+ * concurrent updates are known to misbehave. A retry plans afresh, so a tab
+ * already moved is skipped, and left out of the count.
  */
 export async function updateOutdatedReferences(
     client: OnshapeApi,

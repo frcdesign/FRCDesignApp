@@ -195,7 +195,7 @@ and then moves each child, versioning each after it when recursive; a pull
 versions each parent and then moves this workspace. An update-only run is the
 reference moves alone.
 
-Each step runs through `_task` in `workflow.ts`, which reports it started, then
+Each step runs through `runTask` in `workflow.ts`, which reports it started, then
 makes each Onshape call in its own retried Workflow step. A failure that could
 go differently next time — a rate limit, a 408 or 5xx, or a request that never
 got an answer (`isTransient`) — is retried from the top of that step; tabs
@@ -245,7 +245,9 @@ again after a reconnect; nothing polls.
 `GET /api/version-job` answers the stored status. A mark still reading
 `RUNNING` is checked against the instance, since a run that died before it
 could report leaves one behind: once the instance has finished, its running
-step is marked failed and those it never reached skipped.
+step is marked failed and those it never reached skipped. When the platform
+can't be asked, the mark stands: the instance outlives the mark, so a failed
+read is transient.
 
 While a run is going, a spinner sits where it was started — beside the row, or
 in the section's header — and the page is headed by a callout with a spinner

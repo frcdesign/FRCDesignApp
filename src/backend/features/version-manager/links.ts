@@ -1,6 +1,4 @@
-/**
- * Reading and writing links, and resolving one into what the client shows.
- */
+/** Reading and writing links, and resolving one into what the client shows. */
 import { and, eq } from "drizzle-orm";
 import { HttpStatus } from "http-status-ts";
 import { handledError } from "../../lib/api-error";
@@ -32,21 +30,26 @@ export function toEdge(row: WorkspaceLinkRow): WorkspaceEdge {
     };
 }
 
+function isParent(workspace: WorkspacePath) {
+    return and(
+        eq(workspaceLinks.sourceDocumentId, workspace.documentId),
+        eq(workspaceLinks.sourceWorkspaceId, workspace.instanceId)
+    );
+}
+
+function isChild(workspace: WorkspacePath) {
+    return and(
+        eq(workspaceLinks.targetDocumentId, workspace.documentId),
+        eq(workspaceLinks.targetWorkspaceId, workspace.instanceId)
+    );
+}
+
 /** The links to the workspaces `workspace` provides content to. */
 export function getChildLinks(
     db: Db,
     workspace: WorkspacePath
 ): Promise<WorkspaceLinkRow[]> {
-    return db
-        .select()
-        .from(workspaceLinks)
-        .where(
-            and(
-                eq(workspaceLinks.sourceDocumentId, workspace.documentId),
-                eq(workspaceLinks.sourceWorkspaceId, workspace.instanceId)
-            )
-        )
-        .all();
+    return db.select().from(workspaceLinks).where(isParent(workspace)).all();
 }
 
 /** The links to the workspaces `workspace` takes content from. */
@@ -54,16 +57,7 @@ export function getParentLinks(
     db: Db,
     workspace: WorkspacePath
 ): Promise<WorkspaceLinkRow[]> {
-    return db
-        .select()
-        .from(workspaceLinks)
-        .where(
-            and(
-                eq(workspaceLinks.targetDocumentId, workspace.documentId),
-                eq(workspaceLinks.targetWorkspaceId, workspace.instanceId)
-            )
-        )
-        .all();
+    return db.select().from(workspaceLinks).where(isChild(workspace)).all();
 }
 
 export function getLink(
@@ -107,14 +101,7 @@ function findLink(
     return db
         .select()
         .from(workspaceLinks)
-        .where(
-            and(
-                eq(workspaceLinks.sourceDocumentId, parent.documentId),
-                eq(workspaceLinks.sourceWorkspaceId, parent.instanceId),
-                eq(workspaceLinks.targetDocumentId, child.documentId),
-                eq(workspaceLinks.targetWorkspaceId, child.instanceId)
-            )
-        )
+        .where(and(isParent(parent), isChild(child)))
         .get();
 }
 
@@ -163,25 +150,26 @@ export async function collectDescendantEdges(
     let frontier: WorkspacePath[] = [root];
 
     while (frontier.length > 0) {
-        const next: WorkspacePath[] = [];
-        for (const workspace of frontier) {
+        const unvisited = frontier.filter((workspace) => {
             const key = workspaceKey(workspace);
-            if (visited.has(key)) continue;
+            if (visited.has(key)) {
+                return false;
+            }
             visited.add(key);
-            if (visited.size > MAX_LINKED_WORKSPACES) {
-                throw handledError(
-                    `A push can reach at most ${MAX_LINKED_WORKSPACES} linked workspaces.`,
-                    HttpStatus.CONFLICT
-                );
-            }
-            const rows = await getChildLinks(db, workspace);
-            for (const row of rows) {
-                const edge = toEdge(row);
-                edges.push(edge);
-                next.push(edge.child);
-            }
+            return true;
+        });
+        if (visited.size > MAX_LINKED_WORKSPACES) {
+            throw handledError(
+                `A push can reach at most ${MAX_LINKED_WORKSPACES} linked workspaces.`,
+                HttpStatus.CONFLICT
+            );
         }
-        frontier = next;
+        const rows = await Promise.all(
+            unvisited.map((workspace) => getChildLinks(db, workspace))
+        );
+        const level = rows.flat().map(toEdge);
+        edges.push(...level);
+        frontier = level.map((edge) => edge.child);
     }
     return edges;
 }

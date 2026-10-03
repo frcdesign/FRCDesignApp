@@ -14,6 +14,7 @@ import type { LibraryId } from "../library/library-id";
 import { pushJobStatus, pushLibraryChanged } from "../push/notify";
 import type { JobStatus } from "./contract";
 import { flagFailedLoads, publishLibraries } from "./flag";
+import { isInstanceActive } from "../../lib/workflows";
 
 export interface LoadDocumentParams {
     libraryId: LibraryId;
@@ -31,15 +32,6 @@ export const APPROVE_EVENT = "approve-version";
 
 /** A version nobody approves in this long loads anyway. */
 export const APPROVAL_TIMEOUT = "2 days";
-
-/** Instance statuses that mean a load is still live. */
-const ACTIVE_STATUSES = new Set<InstanceStatus["status"]>([
-    "queued",
-    "running",
-    "paused",
-    "waiting",
-    "waitingForPause"
-]);
 
 /** After this, a claimed row with no instance is treated as a failed start. */
 const CLAIM_GRACE_MS = 60_000;
@@ -59,7 +51,7 @@ async function isAlive(env: AppBindings, job: LoadJob): Promise<boolean> {
     }
     try {
         const instance = await env.LOAD_DOCUMENT_WORKFLOW.get(job.instanceId);
-        return ACTIVE_STATUSES.has((await instance.status()).status);
+        return isInstanceActive((await instance.status()).status);
     } catch {
         return false; // Aged out of retention, or never created.
     }

@@ -13,9 +13,11 @@ import {
     workspaceKey,
     type VersionJobResult,
     type VersionJobStatus,
+    type VersionTask,
     type WorkspacePath
 } from "./contract";
 import { describeRunFailure } from "./failures";
+import { isInstanceActive } from "../../lib/workflows";
 
 /**
  * How long a run's status outlives it. Long enough to reopen the panel and read
@@ -27,15 +29,6 @@ const JOB_TTL_SECONDS = 60 * 60 * 6;
 const jobs = kvStore<VersionJobStatus>("version-job", {
     ttlSeconds: JOB_TTL_SECONDS
 });
-
-/** Instance statuses that mean the run is still live. */
-const ACTIVE_STATUSES = new Set([
-    "queued",
-    "running",
-    "paused",
-    "waiting",
-    "waitingForPause"
-]);
 
 /**
  * Marks the run and tells the workspace it is going, so a second person in the
@@ -85,43 +78,47 @@ export async function getJobStatus(
     // Asked rather than trusted: a run that died before it could report leaves
     // its mark saying it is still going.
     const live = await readInstance(env, stored.jobId);
-    if (live.state === VersionJobState.RUNNING) {
+    if (!live || live.state === VersionJobState.RUNNING) {
         return stored;
     }
     return {
         ...stored,
         ...live,
-        tasks: stored.tasks?.map((task) => ({
-            ...task,
-            state:
-                task.state === VersionTaskState.RUNNING
-                    ? VersionTaskState.FAILED
-                    : task.state === VersionTaskState.PENDING
-                      ? VersionTaskState.SKIPPED
-                      : task.state,
-            reason:
-                task.state === VersionTaskState.RUNNING
-                    ? live.error
-                    : task.reason
-        }))
+        tasks: stored.tasks?.map((task) => settleTask(task, live.error))
     };
 }
 
-/** The run as the platform has it, for one whose own report is not to hand. */
+/** A step of a run that ended without reporting: the one going failed, the rest never ran. */
+function settleTask(task: VersionTask, reason?: string): VersionTask {
+    switch (task.state) {
+        case VersionTaskState.RUNNING:
+            return { ...task, state: VersionTaskState.FAILED, reason };
+        case VersionTaskState.PENDING:
+            return { ...task, state: VersionTaskState.SKIPPED };
+        default:
+            return task;
+    }
+}
+
+/**
+ * The run as the platform has it, or undefined when it can't say. The route
+ * creates the instance before marking it, and Workflows keeps it longer than
+ * the mark, so a failed read is transient and the mark stands.
+ */
 async function readInstance(
     env: AppBindings,
     instanceId: string
-): Promise<VersionJobStatus> {
+): Promise<VersionJobStatus | undefined> {
     let status;
     try {
         const instance = await env.VERSION_MANAGER_WORKFLOW.get(instanceId);
         status = await instance.status();
-    } catch {
-        // Aged out of the platform's retention, or never existed.
-        return { state: VersionJobState.NONE };
+    } catch (error) {
+        console.warn(`Failed to read version run ${instanceId}`, error);
+        return undefined;
     }
 
-    if (ACTIVE_STATUSES.has(status.status)) {
+    if (isInstanceActive(status.status)) {
         return { state: VersionJobState.RUNNING, jobId: instanceId };
     }
     if (status.status === "complete") {

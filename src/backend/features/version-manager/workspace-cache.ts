@@ -1,12 +1,7 @@
 /**
- * What a linked workspace is called, and how far it has moved since its last
- * version — cached, because a panel that opens asks about every link at once
- * and the answers change only when somebody edits that document.
- *
- * A transient webhook on the workspace drops both entries when it does. Onshape
- * may drop that webhook quietly, so entries expire as well, and the next miss
- * watches again. Nothing caller-specific is stored: permissions are asked every
- * time, and the names are only ever shown to somebody who has read access.
+ * A linked workspace's names and unversioned changes, cached as `units.ts`
+ * caches units: a transient webhook drops the entries, and they expire in case
+ * Onshape drops the webhook. Nothing caller-specific is stored.
  */
 import type { AppContext } from "../../lib/context";
 import type { InstancePath } from "../../lib/onshape/path";
@@ -22,22 +17,15 @@ import { watchLinkedWorkspace } from "../webhooks/transient";
 import { workspaceKey, type WorkspacePath } from "./contract";
 
 /** What the list shows of a workspace, minus what the caller may do with it. */
-export interface WorkspaceDescription {
+interface WorkspaceDescription {
     documentName?: string;
     workspaceName?: string;
 }
 
-/**
- * A week: a rename is heard about by webhook, so the expiry is only there for
- * a webhook Onshape dropped without telling us.
- */
+/** Long, as a rename is heard about by webhook. */
 const DESCRIPTION_TTL_SECONDS = 7 * 24 * 3600;
 
-/**
- * An hour. Shorter than a name's, because an edit is ordinary where a rename is
- * not: a badge that is an hour stale after a missed delivery is still a badge
- * worth showing.
- */
+/** Shorter than a name's: an edit is ordinary where a rename is not. */
 const CHANGES_TTL_SECONDS = 3600;
 
 const descriptions = kvStore<WorkspaceDescription>("linked-workspace", {
@@ -61,10 +49,7 @@ export async function forgetWorkspace(
     ]);
 }
 
-/**
- * Starts watching a workspace we have just described, best effort: a webhook we
- * cannot register only means the cache falls back on its expiry.
- */
+/** Best effort: a webhook that can't be registered leaves the expiry. */
 function watch(
     c: AppContext,
     client: OnshapeApi,
@@ -103,11 +88,7 @@ export async function describeWorkspace(
     return description;
 }
 
-/**
- * Edits the workspace has made since its own last version, or undefined where
- * Onshape did not say. A pull moves onto a version, so these are the edits it
- * would have to cut one to bring in.
- */
+/** Edits since the workspace's own last version, or undefined where Onshape didn't say. */
 export async function getUnversionedChanges(
     c: AppContext,
     client: OnshapeApi,

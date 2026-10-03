@@ -84,6 +84,7 @@ type StepRunner = <T extends Rpc.Serializable<T>>(
 
 /** One run, shared by the steps that report on it. */
 interface RunContext {
+    env: AppBindings;
     params: VersionJobParams;
     step: WorkflowStep;
     startedAt: number;
@@ -116,6 +117,7 @@ export class VersionManagerWorkflow extends WorkflowEntrypoint<
         const result = emptyJobResult();
         const tasks = planTasks(params);
         const ctx: RunContext = {
+            env: this.env,
             params,
             step,
             startedAt: event.timestamp.getTime(),
@@ -134,7 +136,7 @@ export class VersionManagerWorkflow extends WorkflowEntrypoint<
 
         let error: unknown;
         try {
-            await this._runTasks(ctx);
+            await runTasks(ctx);
         } catch (thrown) {
             error = thrown;
         }
@@ -165,187 +167,186 @@ export class VersionManagerWorkflow extends WorkflowEntrypoint<
         }
         return result;
     }
+}
 
-    private async _runTasks(ctx: RunContext): Promise<void> {
-        // Every version this run has cut, by document, which is what the
-        // references after it are moved onto. The route refuses a run that
-        // would version one document twice.
-        const pinned: Record<string, string> = {};
+async function runTasks(ctx: RunContext): Promise<void> {
+    // Every version this run has cut, by document, which is what the
+    // references after it are moved onto. The route refuses a run that
+    // would version one document twice.
+    const pinned: Record<string, string> = {};
 
-        for (const [index, task] of ctx.tasks.entries()) {
-            if (task.action === VersionTaskAction.VERSION) {
-                if (this._needsFailedUpdate(ctx, task)) {
-                    task.state = VersionTaskState.SKIPPED;
-                    continue;
-                }
-                const versionId = await this._version(ctx, index);
-                if (versionId) {
-                    pinned[task.workspace.documentId] = versionId;
-                }
-                continue;
-            }
-            const options = this._referenceOptions(ctx.params, pinned);
-            if (!options) {
+    for (const [index, task] of ctx.tasks.entries()) {
+        if (task.action === VersionTaskAction.VERSION) {
+            if (needsFailedUpdate(ctx, task)) {
                 task.state = VersionTaskState.SKIPPED;
                 continue;
             }
-            await this._references(ctx, index, options);
+            const versionId = await cutVersion(ctx, index);
+            if (versionId) {
+                pinned[task.workspace.documentId] = versionId;
+            }
+            continue;
         }
-    }
-
-    /**
-     * Whether this version would hold references that failed to move: a
-     * recursive push versions a workspace only once they have.
-     */
-    private _needsFailedUpdate(ctx: RunContext, task: VersionTask): boolean {
-        const update = ctx.tasks.find(
-            (each) =>
-                each.action === VersionTaskAction.REFERENCES &&
-                isSameWorkspace(each.workspace, task.workspace)
-        );
-        return update !== undefined && update.state !== VersionTaskState.DONE;
-    }
-
-    /** Which references to move, or undefined when there is nothing to move onto. */
-    private _referenceOptions(
-        params: VersionJobParams,
-        pinned: Record<string, string>
-    ): ReferenceUpdateOptions | undefined {
-        if (params.kind === VersionJobKind.PULL && !params.sources) {
-            return {};
+        const options = referenceOptions(ctx.params, pinned);
+        if (!options) {
+            task.state = VersionTaskState.SKIPPED;
+            continue;
         }
-        if (params.updateOnly) {
-            // Onto each document's newest version, which is what Onshape
-            // reports a reference out of date against.
-            return {
-                onlyDocumentIds:
-                    params.kind === VersionJobKind.PUSH
-                        ? [params.workspace.documentId]
-                        : (params.sources ?? []).map((each) => each.documentId)
-            };
-        }
-        const documentIds = Object.keys(pinned);
-        return documentIds.length > 0
-            ? { onlyDocumentIds: documentIds, pinnedVersions: { ...pinned } }
-            : undefined;
+        await moveReferences(ctx, index, options);
     }
+}
 
-    /**
-     * Runs one task: reports it started, then does its work, one retried step
-     * per Onshape call. Only a failure that could go differently is retried;
-     * any other leaves at once in our own words, and is recorded against the
-     * task. Undefined when the task failed.
-     */
-    private async _task<T>(
-        ctx: RunContext,
-        index: number,
-        work: (run: StepRunner) => Promise<T>
-    ): Promise<T | undefined> {
-        const task = ctx.tasks[index];
-        task.state = VersionTaskState.RUNNING;
-        await ctx.step.do(`report-${index}`, () =>
-            reportJob(
-                this.env,
-                ctx.params.workspace,
-                ctx.status(VersionJobState.RUNNING)
-            )
-        );
+/**
+ * Whether this version would hold references that failed to move: a
+ * recursive push versions a workspace only once they have.
+ */
+function needsFailedUpdate(ctx: RunContext, task: VersionTask): boolean {
+    const update = ctx.tasks.find(
+        (each) =>
+            each.action === VersionTaskAction.REFERENCES &&
+            isSameWorkspace(each.workspace, task.workspace)
+    );
+    return update !== undefined && update.state !== VersionTaskState.DONE;
+}
 
-        const run: StepRunner = (name, callback) =>
-            ctx.step.do(
-                `${name}-${index}`,
-                { retries: ONSHAPE_STEP_RETRIES },
-                async () => {
-                    try {
-                        return await callback(
-                            await getOnshapeApiFromSessionId(
-                                this.env.KV,
-                                ctx.params.sessionId
-                            )
-                        );
-                    } catch (error) {
-                        if (isTransient(error)) {
-                            throw error;
-                        }
-                        throw new NonRetryableError(
-                            describeStepFailure(error, task.action)
-                        );
-                    }
-                }
-            );
-
-        try {
-            const value = await work(run);
-            task.state = VersionTaskState.DONE;
-            return value;
-        } catch (error) {
-            task.state = VersionTaskState.FAILED;
-            task.reason = describeRunFailure(error);
-            return undefined;
-        }
+/** Which references to move, or undefined when there is nothing to move onto. */
+function referenceOptions(
+    params: VersionJobParams,
+    pinned: Record<string, string>
+): ReferenceUpdateOptions | undefined {
+    if (params.kind === VersionJobKind.PULL && !params.sources) {
+        return {};
     }
+    if (params.updateOnly) {
+        // Onto each document's newest version, which is what Onshape
+        // reports a reference out of date against.
+        return {
+            onlyDocumentIds:
+                params.kind === VersionJobKind.PUSH
+                    ? [params.workspace.documentId]
+                    : (params.sources ?? []).map((each) => each.documentId)
+        };
+    }
+    const documentIds = Object.keys(pinned);
+    return documentIds.length > 0
+        ? { onlyDocumentIds: documentIds, pinnedVersions: { ...pinned } }
+        : undefined;
+}
 
-    /**
-     * A new version of the task's workspace, under the name given or the one
-     * Onshape's own dialog would offer, numbered from that document's history.
-     */
-    private async _version(
-        ctx: RunContext,
-        index: number
-    ): Promise<string | undefined> {
-        const { workspace } = ctx.tasks[index];
-        const { name, description } = ctx.params;
-        const versionId = await this._task(ctx, index, async (run) => {
-            // Its own step, so a retried create looks for the same name.
-            const versionName =
-                name ??
-                (await run("name", async (client) =>
-                    nextVersionName(
-                        (await getVersions(client, workspace)).map(
-                            (each) => each.name
+/**
+ * Runs one task: reports it started, then does its work, one retried step
+ * per Onshape call. Only a failure that could go differently is retried;
+ * any other leaves at once in our own words, and is recorded against the
+ * task. Undefined when the task failed.
+ */
+async function runTask<T>(
+    ctx: RunContext,
+    index: number,
+    work: (run: StepRunner) => Promise<T>
+): Promise<T | undefined> {
+    const task = ctx.tasks[index];
+    task.state = VersionTaskState.RUNNING;
+    await ctx.step.do(`report-${index}`, () =>
+        reportJob(
+            ctx.env,
+            ctx.params.workspace,
+            ctx.status(VersionJobState.RUNNING)
+        )
+    );
+
+    const run: StepRunner = (name, callback) =>
+        ctx.step.do(
+            `${name}-${index}`,
+            { retries: ONSHAPE_STEP_RETRIES },
+            async () => {
+                try {
+                    return await callback(
+                        await getOnshapeApiFromSessionId(
+                            ctx.env.KV,
+                            ctx.params.sessionId
                         )
-                    )
-                ));
-            return run("version", async (client) => {
-                // One an earlier attempt cut before its answer was lost.
-                const cut = (await getVersions(client, workspace)).find(
-                    (each) =>
-                        each.name === versionName &&
-                        Date.parse(each.createdAt) >=
-                            ctx.startedAt - CLOCK_SLACK_MS
-                );
-                return (
-                    cut ??
-                    (await createVersion(
-                        client,
-                        workspace,
-                        versionName,
-                        description
-                    ))
-                ).id;
-            });
-        });
-        if (versionId !== undefined) {
-            ctx.result.createdVersions++;
-        }
-        return versionId;
-    }
-
-    private async _references(
-        ctx: RunContext,
-        index: number,
-        options: ReferenceUpdateOptions
-    ): Promise<void> {
-        const task = ctx.tasks[index];
-        const outcome = await this._task(ctx, index, (run) =>
-            run("references", (client) =>
-                updateOutdatedReferences(client, task.workspace, options)
-            )
+                    );
+                } catch (error) {
+                    if (isTransient(error)) {
+                        throw error;
+                    }
+                    throw new NonRetryableError(
+                        describeStepFailure(error, task.action)
+                    );
+                }
+            }
         );
-        if (!outcome) {
-            return;
-        }
-        task.updatedElements = outcome.updatedElements;
-        ctx.result.updatedElements += outcome.updatedElements;
+
+    try {
+        const value = await work(run);
+        task.state = VersionTaskState.DONE;
+        return value;
+    } catch (error) {
+        task.state = VersionTaskState.FAILED;
+        task.reason = describeRunFailure(error);
+        return undefined;
     }
+}
+
+/**
+ * A new version of the task's workspace, under the name given or the one
+ * Onshape's own dialog would offer, numbered from that document's history.
+ */
+async function cutVersion(
+    ctx: RunContext,
+    index: number
+): Promise<string | undefined> {
+    const { workspace } = ctx.tasks[index];
+    const { name, description } = ctx.params;
+    const versionId = await runTask(ctx, index, async (run) => {
+        // Its own step, so a retried create looks for the same name.
+        const versionName =
+            name ??
+            (await run("name", async (client) =>
+                nextVersionName(
+                    (await getVersions(client, workspace)).map(
+                        (each) => each.name
+                    )
+                )
+            ));
+        return run("version", async (client) => {
+            // One an earlier attempt cut before its answer was lost.
+            const cut = (await getVersions(client, workspace)).find(
+                (each) =>
+                    each.name === versionName &&
+                    Date.parse(each.createdAt) >= ctx.startedAt - CLOCK_SLACK_MS
+            );
+            return (
+                cut ??
+                (await createVersion(
+                    client,
+                    workspace,
+                    versionName,
+                    description
+                ))
+            ).id;
+        });
+    });
+    if (versionId !== undefined) {
+        ctx.result.createdVersions++;
+    }
+    return versionId;
+}
+
+async function moveReferences(
+    ctx: RunContext,
+    index: number,
+    options: ReferenceUpdateOptions
+): Promise<void> {
+    const task = ctx.tasks[index];
+    const outcome = await runTask(ctx, index, (run) =>
+        run("references", (client) =>
+            updateOutdatedReferences(client, task.workspace, options)
+        )
+    );
+    if (!outcome) {
+        return;
+    }
+    task.updatedElements = outcome.updatedElements;
+    ctx.result.updatedElements += outcome.updatedElements;
 }
