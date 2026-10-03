@@ -159,7 +159,7 @@ function RunningJobLoader(): ReactNode {
     const jobRunning = useIsLibraryLoading();
     if (!jobRunning) return null;
     return (
-        <Tooltip label="The library is being loaded from Onshape in the background">
+        <Tooltip label="The library is being loaded from Onshape in the background.">
             <Loader size={IconSize.CONTROL} />
         </Tooltip>
     );

@@ -114,7 +114,7 @@ function RoleIcon(props: RoleIconProps): ReactNode {
     return (
         <Tooltip
             label={
-                <ParameterRoleLabel role={role} suffix=", so never indexed" />
+                <ParameterRoleLabel role={role} suffix=", so never indexed." />
             }
             events={{ hover: true, focus: true, touch: true }}
         >

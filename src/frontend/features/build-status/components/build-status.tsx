@@ -199,7 +199,7 @@ function VersionAge(props: VersionAgeProps): ReactNode {
     const loading = useIsGroupLoading(groupId);
     if (loading) {
         return (
-            <Tooltip label="Being loaded from Onshape in the background">
+            <Tooltip label="Being loaded from Onshape in the background.">
                 <Loader size="xs" className={styles.noShrink} />
             </Tooltip>
         );

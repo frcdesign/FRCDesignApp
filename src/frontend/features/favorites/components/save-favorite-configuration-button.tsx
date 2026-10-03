@@ -31,7 +31,7 @@ export function SaveFavoriteConfigurationButton(
         <Tooltip
             label={
                 isSaved
-                    ? "This is the favorite default configuration"
+                    ? "This is the favorite default configuration."
                     : "Update favorite default configuration"
             }
         >
