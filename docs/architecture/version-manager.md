@@ -54,7 +54,7 @@ holds no foreign key into the rest of the schema: a link is between two Onshape
 workspaces, neither of which need be in any library.
 
 **KV** `version-job:{documentId}|{instanceId}` — the `VersionJobStatus` of the
-run a workspace last started, for six hours: `RUNNING` with its instance id,
+run a workspace last started, for six hours: `RUNNING` with its workflow run id,
 what it was aimed at and each of its steps as far as it has got, then how it
 ended — its counts, and why any step failed.
 
@@ -180,7 +180,7 @@ and returns the counts.
 Two departures from the app this was ported from:
 
 - Where a push has pinned a version for a document, a reference is updated
-  whenever its instance id differs from the pinned one, rather than when Onshape
+  whenever the version it points at differs from the pinned one, rather than when Onshape
   flags it `isOutOfDate`. The push cut that version moments earlier, and the
   flag is not something to race.
 - A failure on any tab is the document's, and leaves the step. The app this was
@@ -243,10 +243,10 @@ somebody who may see them. The client also asks once when the page opens and
 again after a reconnect; nothing polls.
 
 `GET /api/version-job` answers the stored status. A mark still reading
-`RUNNING` is checked against the instance, since a run that died before it
-could report leaves one behind: once the instance has finished, its running
-step is marked failed and those it never reached skipped. When the platform
-can't be asked, the mark stands: the instance outlives the mark, so a failed
+`RUNNING` is checked against its workflow run, since a run that died before it
+could report leaves one behind: once the workflow run has finished, its running
+step is marked failed and those it never reached skipped. When Workflows
+can't be asked, the mark stands: the workflow run outlives the mark, so a failed
 read is transient.
 
 While a run is going, a spinner sits where it was started — beside the row, or
@@ -348,7 +348,7 @@ deletes a transient webhook that goes quiet, so the entries expire as well.
 - **A version is found before it is cut.** A step can be retried after Onshape
   created the version but before the answer arrived; looking it up by name and
   time is what keeps a retry from cutting two.
-- **The result is stored, not read off the instance.** The instance's output is
+- **The result is stored, not read off the workflow run.** Its output is
   lost when the run throws, and a failed run is the one whose report matters.
 - **Thumbnails are proxied.** `GET /api/workspace-thumbnail` fetches the
   workspace's own thumbnail under the caller's OAuth token. Letting the image

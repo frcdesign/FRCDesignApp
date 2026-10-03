@@ -1,4 +1,4 @@
-/** Statuses of an instance that hasn't finished, one way or the other. */
+/** Statuses of a workflow run that hasn't finished, one way or the other. */
 const ACTIVE_STATUSES = new Set<InstanceStatus["status"]>([
     "queued",
     "running",
@@ -7,6 +7,6 @@ const ACTIVE_STATUSES = new Set<InstanceStatus["status"]>([
     "waitingForPause"
 ]);
 
-export function isInstanceActive(status: InstanceStatus["status"]): boolean {
+export function isWorkflowActive(status: InstanceStatus["status"]): boolean {
     return ACTIVE_STATUSES.has(status);
 }

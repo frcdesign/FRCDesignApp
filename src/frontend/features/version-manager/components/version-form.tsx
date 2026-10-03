@@ -1,4 +1,4 @@
-import { Button, TextInput, Textarea } from "@mantine/core";
+import { Button, Group, TextInput, Textarea } from "@mantine/core";
 import { useState, type ReactNode } from "react";
 import {
     MAX_VERSION_NAME_LENGTH,
@@ -21,8 +21,8 @@ interface VersionFormProps {
     isPending: boolean;
     disabled: boolean;
     onSubmit: (fields: VersionFields) => void;
-    /** The run's own options, under the fields. */
-    children?: ReactNode;
+    /** The run's own options, beside the submit button as the insert menu's fasten is. */
+    options?: ReactNode;
 }
 
 /** What a push or a pull asks before it runs: what to call the version it cuts. */
@@ -34,7 +34,7 @@ export function VersionForm(props: VersionFormProps): ReactNode {
         isPending,
         disabled,
         onSubmit,
-        children
+        options
     } = props;
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
@@ -66,20 +66,21 @@ export function VersionForm(props: VersionFormProps): ReactNode {
                         setDescription(event.currentTarget.value)
                     }
                 />
-                {children}
             </AppModalBody>
             <AppModalFooter>
-                <Button
-                    ml="auto"
-                    rightSection={submitIcon}
-                    loading={isPending}
-                    disabled={disabled}
-                    onClick={() =>
-                        onSubmit({ name, description: description.trim() })
-                    }
-                >
-                    {submitLabel}
-                </Button>
+                <Group gap="sm" ml="auto">
+                    {options}
+                    <Button
+                        rightSection={submitIcon}
+                        loading={isPending}
+                        disabled={disabled}
+                        onClick={() =>
+                            onSubmit({ name, description: description.trim() })
+                        }
+                    >
+                        {submitLabel}
+                    </Button>
+                </Group>
             </AppModalFooter>
         </>
     );

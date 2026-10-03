@@ -46,7 +46,7 @@ it("reads a run that died before it could report as failed where it stopped", as
     expect(status.tasks?.[1].reason).toMatch(/having problems/);
 });
 
-it("keeps a running mark when the platform can't be asked", async () => {
+it("keeps a running mark when Workflows can't be asked", async () => {
     vi.spyOn(env.VERSION_MANAGER_WORKFLOW, "get").mockRejectedValue(
         new Error("unavailable")
     );

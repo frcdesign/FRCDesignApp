@@ -12,7 +12,7 @@ import { type ConfigurationKey } from "../configurations/contract";
 import { decodeConfiguration } from "../configurations/utils";
 import { RenderStatus, ThumbnailSize } from "./contract";
 import { thumbnailKey } from "./keys";
-import { isInstanceActive } from "../../lib/workflows";
+import { isWorkflowActive } from "../../lib/workflows";
 
 interface RenderRequest {
     insertableId: string;
@@ -54,7 +54,7 @@ export async function requestRender(
     if (existing) {
         const { status } = await existing.status();
         // A finished one restarts, and returns at once if its bytes are stored.
-        if (!isInstanceActive(status)) {
+        if (!isWorkflowActive(status)) {
             await existing.restart();
         }
         return RenderStatus.RENDERING;

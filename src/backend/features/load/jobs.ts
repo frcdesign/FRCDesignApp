@@ -14,7 +14,7 @@ import type { LibraryId } from "../library/library-id";
 import { pushJobStatus, pushLibraryChanged } from "../push/notify";
 import type { JobStatus } from "./contract";
 import { flagFailedLoads, publishLibraries } from "./flag";
-import { isInstanceActive } from "../../lib/workflows";
+import { isWorkflowActive } from "../../lib/workflows";
 
 export interface LoadDocumentParams {
     libraryId: LibraryId;
@@ -51,7 +51,7 @@ async function isAlive(env: AppBindings, job: LoadJob): Promise<boolean> {
     }
     try {
         const instance = await env.LOAD_DOCUMENT_WORKFLOW.get(job.instanceId);
-        return isInstanceActive((await instance.status()).status);
+        return isWorkflowActive((await instance.status()).status);
     } catch {
         return false; // Aged out of retention, or never created.
     }

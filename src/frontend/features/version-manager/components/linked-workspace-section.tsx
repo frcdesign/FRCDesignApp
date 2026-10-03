@@ -64,16 +64,14 @@ import { documentLabel } from "../document-label";
 export const DIRECTION_COPY = {
     [LinkDirection.PARENT]: {
         title: "Parents",
-        allAction: "Quick pull from all",
-        rowAction: "Quick pull",
+        quickAction: "Quick pull",
         description:
             "Documents this one uses parts from. Pulling saves a new version of the parent and updates this document to use it.",
         empty: "No linked parents"
     },
     [LinkDirection.CHILD]: {
         title: "Children",
-        allAction: "Quick push to all",
-        rowAction: "Quick push",
+        quickAction: "Quick push",
         description:
             "Documents that use parts from this one. Pushing saves a new version of this document and updates each child to use it.",
         empty: "No linked children"
@@ -307,7 +305,6 @@ function RunMenuSection(props: RunMenuSectionProps): ReactNode {
     } = props;
     const isChild = direction === LinkDirection.CHILD;
     const copy = DIRECTION_COPY[direction];
-    const toAll = linked === undefined ? " to all" : "";
 
     return (
         <MenuSection label={isChild ? "Push" : "Pull"}>
@@ -323,7 +320,7 @@ function RunMenuSection(props: RunMenuSectionProps): ReactNode {
                 disabled={disabled}
                 onClick={onQuick}
             >
-                {linked ? copy.rowAction : copy.allAction}
+                {copy.quickAction}
             </Menu.Item>
             {/* No recursive pull: going further would mean versioning a
                 parent's own parents, which is a push and theirs to make. */}
@@ -333,7 +330,7 @@ function RunMenuSection(props: RunMenuSectionProps): ReactNode {
                     disabled={disabled}
                     onClick={onQuickRecursive}
                 >
-                    Quick recursive push{toAll}
+                    Quick recursive push
                 </Menu.Item>
             )}
             <Menu.Item

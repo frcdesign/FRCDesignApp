@@ -17,7 +17,7 @@ import {
     type WorkspacePath
 } from "./contract";
 import { describeRunFailure } from "./failures";
-import { isInstanceActive } from "../../lib/workflows";
+import { isWorkflowActive } from "../../lib/workflows";
 
 /**
  * How long a run's status outlives it. Long enough to reopen the panel and read
@@ -37,13 +37,13 @@ const jobs = kvStore<VersionJobStatus>("version-job", {
 export async function startJob(
     env: AppBindings,
     workspace: WorkspacePath,
-    instanceId: string,
+    jobId: string,
     run: Pick<VersionJobStatus, "kind" | "updateOnly" | "targets">
 ): Promise<VersionJobStatus> {
     const status: VersionJobStatus = {
         ...run,
         state: VersionJobState.RUNNING,
-        jobId: instanceId
+        jobId
     };
     await reportJob(env, workspace, status);
     return status;
@@ -77,7 +77,7 @@ export async function getJobStatus(
     }
     // Asked rather than trusted: a run that died before it could report leaves
     // its mark saying it is still going.
-    const live = await readInstance(env, stored.jobId);
+    const live = await readWorkflowRun(env, stored.jobId);
     if (!live || live.state === VersionJobState.RUNNING) {
         return stored;
     }
@@ -101,36 +101,36 @@ function settleTask(task: VersionTask, reason?: string): VersionTask {
 }
 
 /**
- * The run as the platform has it, or undefined when it can't say. The route
- * creates the instance before marking it, and Workflows keeps it longer than
- * the mark, so a failed read is transient and the mark stands.
+ * The run as Workflows has it, or undefined when it can't say. The route
+ * creates the workflow run before marking it, and Workflows keeps it longer
+ * than the mark, so a failed read is transient and the mark stands.
  */
-async function readInstance(
+async function readWorkflowRun(
     env: AppBindings,
-    instanceId: string
+    jobId: string
 ): Promise<VersionJobStatus | undefined> {
     let status;
     try {
-        const instance = await env.VERSION_MANAGER_WORKFLOW.get(instanceId);
-        status = await instance.status();
+        const run = await env.VERSION_MANAGER_WORKFLOW.get(jobId);
+        status = await run.status();
     } catch (error) {
-        console.warn(`Failed to read version run ${instanceId}`, error);
+        console.warn(`Failed to read version run ${jobId}`, error);
         return undefined;
     }
 
-    if (isInstanceActive(status.status)) {
-        return { state: VersionJobState.RUNNING, jobId: instanceId };
+    if (isWorkflowActive(status.status)) {
+        return { state: VersionJobState.RUNNING, jobId: jobId };
     }
     if (status.status === "complete") {
         return {
             state: VersionJobState.COMPLETE,
-            jobId: instanceId,
+            jobId: jobId,
             result: status.output as VersionJobResult | undefined
         };
     }
     return {
         state: VersionJobState.FAILED,
-        jobId: instanceId,
+        jobId: jobId,
         error: describeRunFailure(
             status.error && new Error(status.error.message)
         )

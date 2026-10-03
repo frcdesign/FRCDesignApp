@@ -393,7 +393,7 @@ versionManagerRoutes.post(
                 : childrenOf(edges, workspace),
             documentNames
         );
-        const instance = await c.env.VERSION_MANAGER_WORKFLOW.create({
+        const run = await c.env.VERSION_MANAGER_WORKFLOW.create({
             params: {
                 kind: VersionJobKind.PUSH,
                 sessionId: getSessionId(c),
@@ -409,7 +409,7 @@ versionManagerRoutes.post(
                 recursive
             }
         });
-        const status = await startJob(c.env, workspace, instance.id, {
+        const status = await startJob(c.env, workspace, run.id, {
             kind: VersionJobKind.PUSH,
             updateOnly,
             targets
@@ -574,7 +574,7 @@ versionManagerRoutes.post(
             ...(sources ?? [])
         ]);
         const targets = toDocuments(sources ?? [], documentNames);
-        const instance = await c.env.VERSION_MANAGER_WORKFLOW.create({
+        const run = await c.env.VERSION_MANAGER_WORKFLOW.create({
             params: {
                 kind: VersionJobKind.PULL,
                 sessionId: getSessionId(c),
@@ -589,7 +589,7 @@ versionManagerRoutes.post(
                 description
             }
         });
-        const status = await startJob(c.env, workspace, instance.id, {
+        const status = await startJob(c.env, workspace, run.id, {
             kind: VersionJobKind.PULL,
             updateOnly,
             targets

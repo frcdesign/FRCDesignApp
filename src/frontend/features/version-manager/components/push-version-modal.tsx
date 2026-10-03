@@ -58,18 +58,19 @@ export function PushVersionForm(props: PushVersionFormProps): ReactNode {
             isPending={push.isPending}
             disabled={isRunning}
             onSubmit={submit}
-        >
-            {/* Beside the checkbox, where a click on the icon can't tick it. */}
-            <Group gap={6}>
-                <Checkbox
-                    label="Recursive push"
-                    checked={recursive}
-                    onChange={(event) =>
-                        setRecursive(event.currentTarget.checked)
-                    }
-                />
-                <InfoTooltip label="Also pushes on to the documents linked below the child, saving a new version of each one along the way so the next can use it. Each is numbered from its own versions unless you name them above." />
-            </Group>
-        </VersionForm>
+            options={
+                // The tooltip beside the checkbox, where a click on it can't tick it.
+                <Group gap={6}>
+                    <Checkbox
+                        label="Recursive"
+                        checked={recursive}
+                        onChange={(event) =>
+                            setRecursive(event.currentTarget.checked)
+                        }
+                    />
+                    <InfoTooltip label="Also pushes on to the documents linked below the child, saving a new version of each one along the way so the next can use it. Each is numbered from its own versions unless you name them above." />
+                </Group>
+            }
+        />
     );
 }
