@@ -60,12 +60,15 @@ export async function getThumbnailId(
     return insertables.items?.[0]?.predictableThumbnailId;
 }
 
-/** Fails repeatedly while Onshape renders the thumbnail in the background. */
+/**
+ * Fails repeatedly while Onshape renders the thumbnail in the background.
+ * `skipDefaultImage` makes it fail rather than answer with Onshape's stand-in.
+ */
 export function getThumbnailFromId(
     client: OnshapeApi,
     thumbnailId: string,
     size = ThumbnailSize.LARGE
 ): Promise<ArrayBuffer> {
     const path = `/thumbnails/${encodeURIComponent(thumbnailId)}/s/${size}`;
-    return client.getImage(path);
+    return client.getImage(path, { query: { skipDefaultImage: true } });
 }

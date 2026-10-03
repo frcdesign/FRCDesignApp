@@ -21,7 +21,8 @@ interface RenderRequest {
 
 /**
  * Renders from the insertable's current microversion, in its group's thumbnail
- * workspace; a group without one has it after its next load.
+ * workspace. A group without one is refused, since branching one takes edit
+ * access the caller may not have; its next load branches it.
  */
 export async function requestRender(
     c: AppContext,
@@ -31,7 +32,10 @@ export async function requestRender(
     const target = await renderTargetOf(c, request.insertableId);
     if (!target.workspacePath) {
         console.warn("No thumbnail workspace to render from", request);
-        return RenderStatus.RENDERING;
+        throw handledError(
+            "This part can't preview configurations until its library reloads.",
+            HttpStatus.SERVICE_UNAVAILABLE
+        );
     }
     const thumbnailId = await getThumbnailId(
         await c.var.getOnshapeApi(),

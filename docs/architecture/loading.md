@@ -59,7 +59,8 @@ Three things call `requestLoads`, each with one request per group:
 - **Adding a document** writes a shell group first, so a failed first load still
   leaves something to retry or delete, then loads it.
 - **Reload** (admin): every group of the library; each load skips itself when
-  its version is unchanged and it has no failure. **Reload all** (owner) forces
+  its version is unchanged, it has no failure and it has a thumbnail workspace
+  (`isLoaded`). **Reload all** (owner) forces
   every group, which spends a lot of the Onshape allocation.
 - **A webhook** for a new version loads every group of that document, holding
   for approval when the library asks for it.
@@ -80,7 +81,7 @@ Three things call `requestLoads`, each with one request per group:
 ```mermaid
 flowchart TD
     A[read group row] --> B[resolve document + latest version]
-    B --> C{new version, forced,<br/>or failed last time?}
+    B --> C{new version, forced, failed last time,<br/>or no thumbnail workspace?}
     C -- no --> W
     C -- yes --> D{held for approval?}
     D -- yes --> E[wait for approve-version<br/>up to 2 days]

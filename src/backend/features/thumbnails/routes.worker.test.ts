@@ -359,14 +359,17 @@ describe("rendering a configuration's thumbnail", () => {
         expect(started).toBe(0);
     });
 
-    it("starts nothing for a group with no thumbnail workspace yet", async () => {
+    // Answering "rendering" would leave the client waiting on a push that never comes.
+    it("refuses a group with no thumbnail workspace yet", async () => {
         await db
             .update(groups)
             .set({ thumbnailWorkspaceId: null })
             .where(eq(groups.id, TEST_GROUP_ID));
         mockThumbnailId();
 
-        const started = await startedDuring(() => render());
+        const started = await startedDuring(async () => {
+            expect((await render()).status).toBe(503);
+        });
         expect(started).toBe(0);
     });
 
