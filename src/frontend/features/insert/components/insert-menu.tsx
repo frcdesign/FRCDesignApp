@@ -2,7 +2,7 @@ import { ReactNode, useCallback, useEffect, useState } from "react";
 import { type Favorite } from "@backend/features/favorites/contract";
 import { InsertableOut } from "@backend/features/library/contract";
 import { ElementType } from "@backend/lib/onshape/element-type";
-import { Button, Checkbox, Group, Stack } from "@mantine/core";
+import { Button, Group, Stack } from "@mantine/core";
 import { PlusIcon } from "@phosphor-icons/react";
 import {
     AppModalBody,
@@ -41,6 +41,7 @@ import { RequireSignIn } from "../../auth/access-level";
 import { useTargetElementType } from "../insert-hooks";
 import { InsertSource } from "@backend/features/analytics/usage";
 import { InsertLocationStatus } from "../../insert-location/components/insert-location-status";
+import { InfoCheckbox } from "../../../components/info-checkbox";
 
 interface InsertMenuContentProps {
     insertable: InsertableOut;
@@ -276,10 +277,11 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
         <Group gap="sm" align="center">
             <InsertLocationStatus />
             {canFasten && (
-                <Checkbox
+                <InfoCheckbox
                     label="Fasten"
+                    info="Also create a fasten mate which references the inserted part."
                     checked={fasten}
-                    onChange={() => updateUiState({ fasten: !fasten })}
+                    onChange={(checked) => updateUiState({ fasten: checked })}
                 />
             )}
             <Button

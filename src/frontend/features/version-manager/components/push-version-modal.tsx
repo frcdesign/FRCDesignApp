@@ -1,4 +1,3 @@
-import { Checkbox, Group } from "@mantine/core";
 import { ArrowLineUpIcon } from "@phosphor-icons/react";
 import { useState, type ReactNode } from "react";
 import {
@@ -7,7 +6,7 @@ import {
     type LinkedWorkspace,
     type WorkspacePath
 } from "@backend/features/version-manager/contract";
-import { InfoTooltip } from "../../../components/info-tooltip";
+import { InfoCheckbox } from "../../../components/info-checkbox";
 import { useAppModal } from "../../../components/open-app-modal";
 import { IconSize } from "../../../lib/style-constants";
 import { useIsVersionJobRunning, usePushVersionMutation } from "../queries";
@@ -59,17 +58,12 @@ export function PushVersionForm(props: PushVersionFormProps): ReactNode {
             disabled={isRunning}
             onSubmit={submit}
             options={
-                // The tooltip beside the checkbox, where a click on it can't tick it.
-                <Group gap={6}>
-                    <Checkbox
-                        label="Recursive"
-                        checked={recursive}
-                        onChange={(event) =>
-                            setRecursive(event.currentTarget.checked)
-                        }
-                    />
-                    <InfoTooltip label="Also pushes on to the documents linked below the child, saving a new version of each one along the way so the next can use it. Each is numbered from its own versions unless you name them above." />
-                </Group>
+                <InfoCheckbox
+                    label="Recursive"
+                    info="Also pushes on to the documents linked below the child, saving a new version of each one along the way so the next can use it. Each is numbered from its own versions unless you name them above."
+                    checked={recursive}
+                    onChange={setRecursive}
+                />
             }
         />
     );
