@@ -33,42 +33,49 @@ export function getElementThumbnail(
     return client.getImage(path);
 }
 
-/** Asking for its bytes starts the render. Undefined when no part matches the configuration. */
-export async function getThumbnailId(
+/**
+ * Onshape's own name for a configuration's render: base32 of a FeatureScript
+ * map, which only insertables spells. Undefined when no part matches.
+ */
+export async function getEncodedConfiguration(
     client: OnshapeApi,
-    elementPath: ElementPath,
+    workspacePath: ElementPath,
     configuration: Selection
 ): Promise<string | undefined> {
-    const query = new URLSearchParams({
+    assertInstanceType(workspacePath, "w");
+    const query: Record<string, string> = {
         includeParts: "true",
         includeAssemblies: "true",
         includeCompositeParts: "true",
-        elementId: elementPath.elementId
-    });
-    // The query form: this is escaped again on its way out.
+        elementId: workspacePath.elementId
+    };
     const encoded = encodeQueryConfiguration(configuration);
     if (encoded) {
-        query.set("configuration", encoded);
+        query.configuration = encoded;
     }
 
-    const insertables = await getInsertables(
-        client,
-        elementPath,
-        Object.fromEntries(query)
-    );
+    const insertables = await getInsertables(client, workspacePath, query);
     // A configuration matching nothing comes back with no items at all.
-    return insertables.items?.[0]?.predictableThumbnailId;
+    if (!insertables.items?.length) {
+        return undefined;
+    }
+    if (!insertables.configurationKey) {
+        throw new Error("Onshape named no configuration key to render.");
+    }
+    return insertables.configurationKey;
 }
 
 /**
- * Fails repeatedly while Onshape renders the thumbnail in the background.
- * `skipDefaultImage` makes it fail rather than answer with Onshape's stand-in.
+ * What Onshape's own insert dialog polls: 404 until the configuration is
+ * rendered, which asking starts.
  */
-export function getThumbnailFromId(
+export function getConfiguredThumbnail(
     client: OnshapeApi,
-    thumbnailId: string,
+    workspacePath: ElementPath,
+    encodedConfiguration: string,
     size = ThumbnailSize.LARGE
 ): Promise<ArrayBuffer> {
-    const path = `/thumbnails/${encodeURIComponent(thumbnailId)}/s/${size}`;
-    return client.getImage(path, { query: { skipDefaultImage: true } });
+    assertInstanceType(workspacePath, "w");
+    const path = `/thumbnails${toElementApiPath(workspacePath)}/c/${encodedConfiguration}/s/${size}`;
+    return client.getImage(path);
 }

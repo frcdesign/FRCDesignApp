@@ -85,7 +85,8 @@ async function loadDocument(
             .select({
                 documentId: groups.documentId,
                 versionId: groups.versionId,
-                buildIssues: groups.buildIssues
+                buildIssues: groups.buildIssues,
+                thumbnailWorkspaceId: groups.thumbnailWorkspaceId
             })
             .from(groups)
             .where(eq(groups.id, groupId))
@@ -104,11 +105,7 @@ async function loadDocument(
             documentId: stored.documentId
         });
         const isNewVersion = stored.versionId !== target.versionPath.instanceId;
-        if (
-            !isNewVersion &&
-            !forceReload &&
-            !hasFailedLoad(stored.buildIssues)
-        ) {
+        if (!isNewVersion && !forceReload && isLoaded(stored)) {
             changed = false;
         } else {
             if (isNewVersion && params.awaitApproval && !forceReload) {
@@ -166,6 +163,21 @@ async function waitForApproval(
     // An approval has cleared it already; a timeout hasn't.
     await ctx.step.do("release-approval", () =>
         setAwaitingApproval(ctx.env, params, false)
+    );
+}
+
+/**
+ * Whether a group's last load of its version left nothing to redo. One without
+ * a thumbnail workspace can't render configurations until a load branches one.
+ */
+export function isLoaded(
+    group: Pick<
+        typeof groups.$inferSelect,
+        "buildIssues" | "thumbnailWorkspaceId"
+    >
+): boolean {
+    return (
+        !hasFailedLoad(group.buildIssues) && group.thumbnailWorkspaceId !== null
     );
 }
 

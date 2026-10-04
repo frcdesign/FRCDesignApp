@@ -9,7 +9,8 @@ import {
     type WorkflowStep
 } from "cloudflare:workers";
 import type { AppBindings } from "../../lib/context";
-import { getThumbnailFromId } from "../../lib/onshape/endpoints/thumbnails";
+import { getConfiguredThumbnail } from "../../lib/onshape/endpoints/thumbnails";
+import { type ElementPath } from "../../lib/onshape/path";
 import { getOnshapeApiFromSessionId } from "../auth/request-auth";
 import { rateLimitDelay } from "../load/steps";
 import { type ConfigurationKey } from "../configurations/contract";
@@ -25,8 +26,10 @@ export interface RenderTarget {
 }
 
 export interface RenderThumbnailParams {
-    /** Resolved once by the route; fixed for an element and configuration. */
-    thumbnailId: string;
+    /** The group's thumbnail workspace, which Onshape renders in. */
+    workspacePath: ElementPath;
+    /** Onshape's spelling of the configuration, resolved once by the route. */
+    encodedConfiguration: string;
     /** Both sizes, stored as each lands. */
     targets: RenderTarget[];
     /** What is told to clients waiting on the render once each size lands. */
@@ -79,9 +82,10 @@ async function storeRender(
         env.KV,
         params.sessionId
     );
-    const thumbnail = await getThumbnailFromId(
+    const thumbnail = await getConfiguredThumbnail(
         onshapeApi,
-        params.thumbnailId,
+        params.workspacePath,
+        params.encodedConfiguration,
         target.size
     );
     await putThumbnail(env.BLOB, target.key, thumbnail, {
