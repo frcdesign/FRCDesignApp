@@ -1,6 +1,6 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { DEFAULT_LIBRARY } from "@backend/features/library/library-id";
-import { getTabPath, isLibraryTab, UtilityTab } from "../lib/app-tab";
+import { isLibraryTab, UtilityTab } from "../lib/app-tab";
 import { OnshapeLaunchType, toTargetWorkspace } from "../lib/onshape-launch";
 import { apiPost } from "../lib/api-client";
 import { getUiState } from "../lib/ui-state";
@@ -21,8 +21,9 @@ export const Route = createFileRoute("/")({
             void apiPost("/app-open").catch(() => undefined);
         }
         // Whatever Onshape launched with rides along; only the path is ours.
+        // By `to`, since an `href` carries its own search and drops this one.
         if (!isLibraryTab(tab)) {
-            throw redirect({ href: getTabPath(tab), search });
+            throw redirect({ to: utilityRoute(tab), search });
         }
         if (groupId) {
             throw redirect({
@@ -39,6 +40,13 @@ export const Route = createFileRoute("/")({
     },
     errorComponent: RootAppError
 });
+
+function utilityRoute(tab: UtilityTab) {
+    switch (tab) {
+        case UtilityTab.VERSION_MANAGER:
+            return "/app/version-manager" as const;
+    }
+}
 
 /**
  * Whether a utility page has what it acts on. The version manager acts on the
