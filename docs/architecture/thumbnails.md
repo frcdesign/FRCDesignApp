@@ -132,72 +132,53 @@ A render workflow calls Onshape as the session that requested it
 (`getOnshapeApiFromSessionId`), so a render outlives the request but not a
 revoked session.
 
-### Retries, timeouts and toasts
+### When a thumbnail isn't there yet
 
-Every limit a thumbnail meets on its way to the screen, in the order it meets
-them. Shared policies are in [platform.md](./platform.md#retries-and-timeouts).
+How long the app keeps trying in each situation, and what the person sees
+meanwhile and when it gives up. Every call to Onshape gives up after 60 s, and
+a rate limit waits however long Onshape asks.
 
-**Onshape client** (`src/backend/lib/onshape/client.ts`), under every call
-below:
+**A library loads a document.** Each part's default picture is read from the
+version, or from the document's own workspace when the version has none. A
+load tries four times over about 70 s (`THUMBNAIL_RETRIES`), and then moves on
+without it. The part shows a question mark in the library, and editors see
+"Thumbnail failed to render" in its build status until a **Reload thumbnail**
+or the next version's load.
 
-- Each request aborts after 60 s (`REQUEST_TIMEOUT_MS`).
-- No retry of its own. A 429 throws `OnshapeRateLimitError` carrying
-  `Retry-After`, or 60 s when Onshape sends none (`DEFAULT_RETRY_AFTER_SECONDS`).
+**Someone browses the library, a group, search results or favorites.** Each row
+shows a picture we already have. If it won't load, the row asks once more after
+a second, then shows a question mark. A search result that matched a
+configuration shows that configuration's picture if someone has rendered it,
+and the part's default otherwise; it never starts a render, so a search can't
+start one per row.
 
-**Load, default thumbnails** (`uploadThumbnailsStep`, `src/backend/features/load/steps.ts`):
+**Someone picks a configuration in the insert menu.** The preview keeps the
+previous picture up with a small spinner while the new one renders.
 
-| Setting                 | Policy                                                                             |
-| ----------------------- | ---------------------------------------------------------------------------------- |
-| One attempt             | Each size not stored: the version, then the document's workspace on any failure    |
-| `THUMBNAIL_RETRIES`     | 3 retries after 10, 20 and 40 s; a 429 waits `Retry-After` plus 0–20 s of jitter   |
-| `THUMBNAIL_CONCURRENCY` | 10 thumbnail steps at once, apart from probing; a slot is held through the retries |
-| Exhausted               | No urls, `THUMBNAIL_FAILED` on the insertable or group; the load carries on        |
+- The server asks Onshape for it, large size first, every 2 s for about a
+  minute (`RENDER_RETRIES`).
+- The menu swaps the picture in the moment the server says it has landed, and
+  gives up a minute after it started waiting (`RENDER_TIMEOUT_MS`).
+- After 15 s of waiting inside Onshape, a tip says the part can be inserted
+  anyway. It closes after 8 s.
+- On giving up, the preview says "The thumbnail could not be loaded." A
+  configuration that produces no part says "Part failed to regenerate." at once.
+- Picking the configuration again tries again.
 
-**Reload thumbnail** (`reload.ts`, `useReloadThumbnailMutation`):
+**A favorite was saved with a configuration.** Its row starts the same render,
+showing the part's default until it lands. The row's small picture is rendered
+after the large one, so it can arrive after the row has stopped waiting; the
+row still picks it up when the server says it landed.
 
-- One attempt per size, version then workspace, no retry. Onshape not having
-  one answers a handled 503.
-- Toasts share the id `reload-thumbnail`: "Reloading thumbnail..." stays until
-  the answer, then "Thumbnail reloaded." or the 503's message ("Onshape has not
-  rendered this thumbnail yet. Try again in a few minutes."), falling back to
-  "Failed to reload thumbnail. Onshape may not have one yet."
+**An editor reloads a thumbnail.** One attempt, no retry. A toast says
+"Reloading thumbnail..." until the answer, then "Thumbnail reloaded." If
+Onshape has nothing yet it says "Onshape has not rendered this thumbnail yet.
+Try again in a few minutes.", and any other failure "Failed to reload
+thumbnail. Onshape may not have one yet."
 
-**Serving** (`GET /api/thumbnail/...`): a hit is cached immutably for a year; a
-miss is a 404 marked not to be cached.
-
-**Configuration render, server side:**
-
-| Setting                      | Policy                                                                                                  |
-| ---------------------------- | ------------------------------------------------------------------------------------------------------- |
-| `POST /api/render-thumbnail` | One insertables call, no retry; an Onshape failure fails the request                                    |
-| `RENDER_RETRIES`             | Per size, large then small: 30 retries every 2 s, about a minute; a 429 waits `Retry-After` plus jitter |
-| Exhausted                    | The instance errors with nothing stored; asking again restarts it                                       |
-| Instances                    | One per key (`version-render-…`); a running one is left alone, a finished one restarted                 |
-
-**Configuration render, client side** (`loadRenderedImage`, `render-wait.ts`):
-
-1. Fetch the stored url. On a miss, start the render once and fetch again at
-   once.
-2. Then fetch again on each matching `thumbnail` push, and once more at the
-   deadline, 60 s after the first fetch (`RENDER_TIMEOUT_MS`).
-3. Still missing at the deadline: the query errors and is not retried
-   (`retry: false`). The preview shows "The thumbnail could not be loaded.";
-   a row keeps showing the insertable's default. `no-part` errors at once
-   ("Part failed to regenerate."). Picking the configuration again starts over.
-
-**Stored thumbnails on the client** (`Thumbnail`, `thumbnail.tsx`): a row's
-image and its fallback retry once (`STORED_RETRIES`, TanStack's default delay of
-1 s). A row that can't start a render but errored is refetched when a matching
-`thumbnail` push arrives (`usePushSync`).
-
-**Pushes** (`push-socket.ts`): a dropped socket reconnects after 1 s, doubling
-to 30 s. A push missed meanwhile is lost, which the render wait's deadline
-fetch covers.
-
-**Tips** (`insert-tips.ts`, `showTipToast`): after 15 s of a render in the
-insert menu (`THUMBNAIL_WAIT_MS`), and only inside Onshape, "Tip: you can insert
-a part even while the part's thumbnail is still generating." It closes after
-8 s (`TIP_AUTO_CLOSE_MS`) and is restarted by each new configuration.
+**The app loses its connection to the server's updates.** It reconnects after
+1 s, then waits twice as long each time, up to 30 s. A render that lands while
+it is disconnected is still picked up by the insert menu when its minute is up.
 
 ## Invariants
 
