@@ -53,8 +53,9 @@ records the group's thumbnail workspace.
 ### The thumbnail workspace
 
 Onshape sometimes never renders thumbnails in a version, and the document's own
-workspace moves on from the version we loaded. So every thumbnail is read from a
-workspace of ours branched off the loaded version.
+workspace moves on from the version we loaded. So every element and group
+thumbnail is read from a workspace of ours branched off the loaded version.
+Configuration renders are not: see below.
 
 1. A load of a new version calls `syncThumbnailWorkspace`, which finds our
    workspace whose description names that version, or branches one. Every group
@@ -66,9 +67,8 @@ workspace of ours branched off the loaded version.
    still read from its own.
 
 Deleting waits for the save because until then the group row still names the
-old workspace and the old version's microversions: configuration renders asked
-for meanwhile read from it, and a load that fails part-way keeps the old
-version, so its workspace is kept too. Onshape can't move a workspace to
+old workspace, and a load that fails part-way keeps the old version, so its
+workspace is kept too. Onshape can't move a workspace to
 another version, so a new version always means a new branch.
 
 A fresh branch has no rendered thumbnails for a few minutes.
@@ -105,13 +105,10 @@ start one, so a cold search cannot start a render per row.
 1. The client calls `POST /api/render-thumbnail/insertable/:insertableId` with
    the configuration key. It must be signed in: the render calls Onshape as the
    caller.
-2. `requestRender` reads the insertable's element, current microversion and its
-   group's thumbnail workspace. A group without one is refused with a 503, which
-   the client shows as a preview that could not load; its next load branches
-   one. The render doesn't branch it, since that takes edit access to the
-   document and any signed-in user can ask for a render.
+2. `requestRender` reads the insertable's version, element and current
+   microversion.
 3. It asks Onshape for the configuration's thumbnail id through the insertables
-   endpoint, in the workspace. None answers `no-part`, which the client shows as
+   endpoint, on the version. None answers `no-part`, which the client shows as
    a configuration that failed to regenerate; otherwise it answers `rendering`.
 4. The instance id is `render-` plus a SHA-256 of
    `elementId/microversionId/configurationKey`, so every request for one render
@@ -148,13 +145,13 @@ reload also deletes every configuration render of the document
 
 ### Onshape calls
 
-| Flow              | Call                                                                                                          | Retries                             |
-| ----------------- | ------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
-| Load, reload      | `GET /thumbnails/d/{did}/w/{thumbnail wid}/e/{eid}/s/{size}`, per size                                        | `THUMBNAIL_RETRIES`; none on reload |
-| Render request    | `GET /documents/d/{did}/w/{thumbnail wid}/insertables?elementId=&configuration=` for `predictableThumbnailId` | none: the route answers             |
-| Render workflow   | `GET /thumbnails/{thumbnailId}/s/{size}?skipDefaultImage=true`, per size                                      | `RENDER_RETRIES`                    |
-| Workspace sync    | `GET`/`POST /documents/d/{did}/workspaces`                                                                    | `ONSHAPE_STEP_RETRIES` in a load    |
-| Workspace cleanup | `DELETE /documents/d/{did}/workspaces/{wid}`                                                                  | none; failure is logged             |
+| Flow              | Call                                                                                                | Retries                             |
+| ----------------- | --------------------------------------------------------------------------------------------------- | ----------------------------------- |
+| Load, reload      | `GET /thumbnails/d/{did}/w/{thumbnail wid}/e/{eid}/s/{size}`, per size                              | `THUMBNAIL_RETRIES`; none on reload |
+| Render request    | `GET /documents/d/{did}/v/{vid}/insertables?elementId=&configuration=` for `predictableThumbnailId` | none: the route answers             |
+| Render workflow   | `GET /thumbnails/{thumbnailId}/s/{size}?skipDefaultImage=true`, per size                            | `RENDER_RETRIES`                    |
+| Workspace sync    | `GET`/`POST /documents/d/{did}/workspaces`                                                          | `ONSHAPE_STEP_RETRIES` in a load    |
+| Workspace cleanup | `DELETE /documents/d/{did}/workspaces/{wid}`                                                        | none; failure is logged             |
 
 A render workflow calls Onshape as the session that requested it
 (`getOnshapeApiFromSessionId`), so a render outlives the request but not a
@@ -168,8 +165,9 @@ revoked session.
   cached.
 - Serving never starts a render; only `POST /api/render-thumbnail/...` does, for
   a signed-in caller, and at most one instance runs per key.
-- Thumbnails are read from the thumbnail workspace only, never from the version
-  or the document's own workspace.
+- Element and group thumbnails are read from the thumbnail workspace only, never
+  from the version or the document's own workspace. A configuration's thumbnail
+  id is resolved on the version, never in a workspace.
 - Configuration thumbnails are named by `ConfigurationKey`, and keys are used for
   nothing else (see [configurations.md](./configurations.md)).
 - Cleanup keeps anything younger than `STALE_THUMBNAIL_GRACE_MS` (one hour): a
@@ -181,7 +179,6 @@ revoked session.
 | -------------------------------------------------- | --------------------------------------------- | ------------------------------------------------------------- |
 | Onshape never renders an insertable within ~16 min | `THUMBNAIL_FAILED` on the insertable or group | **Reload thumbnail**, or the next version's load              |
 | A configuration never renders within ~1 min        | Client keeps showing the default              | Picking it again restarts the finished instance               |
-| A group has no thumbnail workspace                 | Configuration previews fail at once           | Any **Reload** of the library branches one                    |
 | A bad configuration render was stored              | Wrong picture, immutably cached               | Owner's **Reload all documents** drops the document's renders |
 | A load crashes between storing and saving          | Orphaned objects                              | Next cleanup, after the grace period                          |
 
@@ -193,6 +190,10 @@ revoked session.
 - **Keyed by the version's microversion though read from the workspace.** The
   workspace is branched from that version, so its content renders the same, and
   the version's microversion is what the rows already hold.
+- **Configuration ids from the version.** In a workspace, insertables answered
+  three different configurations with one `predictableThumbnailId`, so every
+  configuration rendered alike. On the version, the id moves with the
+  configuration. The bytes are still fetched by that id.
 - **Renders by thumbnail id.** The id Onshape reports for an insertable in a
   configuration is fetched through `/thumbnails/{id}`; the documented
   configured-thumbnail endpoint and its strictness flags returned wrong or

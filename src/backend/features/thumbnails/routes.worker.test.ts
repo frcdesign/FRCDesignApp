@@ -2,8 +2,8 @@ import { env } from "cloudflare:workers";
 import { introspectWorkflow } from "cloudflare:test";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
-    TEST_GROUP_ID,
     TEST_PART_STUDIO_ID,
+    TEST_PART_STUDIO_PATH,
     createTestApp,
     jsonRequest,
     resetDb,
@@ -11,8 +11,6 @@ import {
 } from "../../../__test_utils__";
 import * as ThumbnailEndpoints from "../../lib/onshape/endpoints/thumbnails";
 import { getDb } from "../../db/client";
-import { groups } from "../../db/schema";
-import { eq } from "drizzle-orm";
 import { type RenderOut, RenderStatus, ThumbnailSize } from "./contract";
 import {
     parseThumbnailKey,
@@ -306,10 +304,6 @@ describe("rendering a configuration's thumbnail", () => {
     beforeEach(async () => {
         await resetDb(db);
         await seedPartStudio(db);
-        await db
-            .update(groups)
-            .set({ thumbnailWorkspaceId: "w-branch" })
-            .where(eq(groups.id, TEST_GROUP_ID));
     });
 
     it("starts one render, however often it is asked", async () => {
@@ -336,15 +330,13 @@ describe("rendering a configuration's thumbnail", () => {
         expect(started).toBe(2);
     });
 
-    it("renders from the group's thumbnail workspace", async () => {
+    // A workspace answers every configuration with one id.
+    it("resolves the thumbnail id on the insertable's version", async () => {
         const thumbnailId = mockThumbnailId();
 
         await startedDuring(() => render());
 
-        expect(thumbnailId.mock.calls[0][1]).toMatchObject({
-            instanceId: "w-branch",
-            instanceType: "w"
-        });
+        expect(thumbnailId.mock.calls[0][1]).toEqual(TEST_PART_STUDIO_PATH);
     });
 
     // The client words "still rendering" and "never will" differently.
@@ -355,20 +347,6 @@ describe("rendering a configuration's thumbnail", () => {
 
         const started = await startedDuring(async () => {
             expect(await statusOf(await render())).toBe(RenderStatus.NO_PART);
-        });
-        expect(started).toBe(0);
-    });
-
-    // Answering "rendering" would leave the client waiting on a push that never comes.
-    it("refuses a group with no thumbnail workspace yet", async () => {
-        await db
-            .update(groups)
-            .set({ thumbnailWorkspaceId: null })
-            .where(eq(groups.id, TEST_GROUP_ID));
-        mockThumbnailId();
-
-        const started = await startedDuring(async () => {
-            expect((await render()).status).toBe(503);
         });
         expect(started).toBe(0);
     });
