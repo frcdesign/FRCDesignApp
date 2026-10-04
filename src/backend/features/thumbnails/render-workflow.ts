@@ -14,7 +14,6 @@ import { getOnshapeApiFromSessionId } from "../auth/request-auth";
 import { rateLimitDelay } from "../load/steps";
 import { type ConfigurationKey } from "../configurations/contract";
 import { ThumbnailSize } from "./contract";
-import { thumbnailKey } from "./keys";
 import { putThumbnail } from "./store";
 import { pushThumbnailRendered } from "../push/notify";
 
@@ -85,14 +84,6 @@ async function storeRender(
         params.thumbnailId,
         target.size
     );
-    if (await isElementDefault(env.BLOB, params, target.size, thumbnail)) {
-        console.warn("Onshape answered a configuration with its default", {
-            thumbnailId: params.thumbnailId,
-            configurationKey: params.configurationKey,
-            size: target.size
-        });
-        throw new Error("Onshape has not rendered the configuration yet.");
-    }
     await putThumbnail(env.BLOB, target.key, thumbnail, {
         microversionId: params.microversionId,
         configurationKey: params.configurationKey
@@ -102,25 +93,4 @@ async function storeRender(
         microversionId: params.microversionId,
         configurationKey: params.configurationKey
     });
-}
-
-/**
- * Onshape can answer a configuration it hasn't rendered with the element's own
- * image, which stored under the configuration's key would never be replaced.
- */
-async function isElementDefault(
-    bucket: R2Bucket,
-    params: RenderThumbnailParams,
-    size: ThumbnailSize,
-    thumbnail: ArrayBuffer
-): Promise<boolean> {
-    const stored = await bucket.get(
-        thumbnailKey(params.elementId, params.microversionId, size)
-    );
-    if (!stored || stored.size !== thumbnail.byteLength) {
-        return false;
-    }
-    const expected = new Uint8Array(await stored.arrayBuffer());
-    const actual = new Uint8Array(thumbnail);
-    return expected.every((byte, index) => byte === actual[index]);
 }

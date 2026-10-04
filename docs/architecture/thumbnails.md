@@ -119,9 +119,7 @@ start one, so a cold search cannot start a render per row.
    restarted, and returns at once if its bytes are already stored.
 5. `RenderThumbnailWorkflow` fetches both sizes by thumbnail id with
    `skipDefaultImage`, so a size not yet rendered fails rather than answering
-   with Onshape's stand-in. Bytes identical to the element's stored default
-   count as not rendered either (`isElementDefault`), and are logged. Each size
-   is retried
+   with Onshape's stand-in, each retried
    every five seconds for about a minute (`RENDER_RETRIES`), and stores each as
    it lands.
 6. Each stored size pushes a `thumbnail` message (`src/backend/features/push/`).
@@ -172,7 +170,6 @@ revoked session.
   a signed-in caller, and at most one instance runs per key.
 - Thumbnails are read from the thumbnail workspace only, never from the version
   or the document's own workspace.
-- A configuration's key never stores bytes identical to its element's default.
 - Configuration thumbnails are named by `ConfigurationKey`, and keys are used for
   nothing else (see [configurations.md](./configurations.md)).
 - Cleanup keeps anything younger than `STALE_THUMBNAIL_GRACE_MS` (one hour): a
@@ -180,14 +177,13 @@ revoked session.
 
 ## Failure and recovery
 
-| Failure                                            | Result                                        | Recovery                                                       |
-| -------------------------------------------------- | --------------------------------------------- | -------------------------------------------------------------- |
-| Onshape never renders an insertable within ~16 min | `THUMBNAIL_FAILED` on the insertable or group | **Reload thumbnail**, or the next version's load               |
-| A configuration never renders within ~1 min        | Client keeps showing the default              | Picking it again restarts the finished instance                |
-| Onshape answers with the element's default         | Retried; after ~1 min the preview fails       | `requestRender` logs each id, to compare across configurations |
-| A group has no thumbnail workspace                 | Configuration previews fail at once           | Any **Reload** of the library branches one                     |
-| A bad configuration render was stored              | Wrong picture, immutably cached               | Owner's **Reload all documents** drops the document's renders  |
-| A load crashes between storing and saving          | Orphaned objects                              | Next cleanup, after the grace period                           |
+| Failure                                            | Result                                        | Recovery                                                      |
+| -------------------------------------------------- | --------------------------------------------- | ------------------------------------------------------------- |
+| Onshape never renders an insertable within ~16 min | `THUMBNAIL_FAILED` on the insertable or group | **Reload thumbnail**, or the next version's load              |
+| A configuration never renders within ~1 min        | Client keeps showing the default              | Picking it again restarts the finished instance               |
+| A group has no thumbnail workspace                 | Configuration previews fail at once           | Any **Reload** of the library branches one                    |
+| A bad configuration render was stored              | Wrong picture, immutably cached               | Owner's **Reload all documents** drops the document's renders |
+| A load crashes between storing and saving          | Orphaned objects                              | Next cleanup, after the grace period                          |
 
 ## Decisions
 

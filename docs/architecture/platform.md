@@ -37,6 +37,9 @@ Every call goes through `OnshapeApi._call` to
 - **Timeout.** Each request aborts after 60 s (`REQUEST_TIMEOUT_MS`), well under
   a workflow step's 10-minute limit, so a hung call fails the step and it
   retries.
+- **Query.** Built by `toQueryString` (`src/backend/lib/query-params.ts`),
+  which spells a space `%20`: Onshape reads a `+` literally, and a
+  configuration sent with one (`0.1524+m`) is ignored without an error.
 - **Headers.** JSON in and out; images are fetched with `Accept: */*`, since
   under `image/*` a thumbnail still rendering answers 406 rather than 404.
 - **Errors.** Any non-2xx throws `OnshapeApiError` with the status and the

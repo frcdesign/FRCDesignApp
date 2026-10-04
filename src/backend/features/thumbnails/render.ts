@@ -42,11 +42,6 @@ export async function requestRender(
         target.workspacePath,
         decodeConfiguration(request.configurationKey)
     );
-    // Two configurations answered with one id means Onshape ignored the configuration.
-    console.log("Rendering", {
-        configurationKey: request.configurationKey,
-        thumbnailId
-    });
     if (!thumbnailId) {
         return RenderStatus.NO_PART;
     }

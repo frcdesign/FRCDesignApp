@@ -1,6 +1,6 @@
 import { HttpStatus } from "http-status-ts";
 import {
-    createSearchParams,
+    toQueryString,
     type QueryOptions,
     type PostOptions
 } from "../query-params";
@@ -117,8 +117,7 @@ export abstract class OnshapeApi {
         options?: QueryOptions,
         body?: unknown
     ): Promise<Response> {
-        const params = createSearchParams(options?.query);
-        const url = `${this._baseUrl}${path}?${params.toString()}`;
+        const url = `${this._baseUrl}${path}?${toQueryString(options?.query)}`;
         const headers = options?.accept
             ? new Headers({ Accept: options.accept })
             : undefined;
