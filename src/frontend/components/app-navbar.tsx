@@ -9,6 +9,7 @@ import {
     TextInput
 } from "@mantine/core";
 import {
+    ArrowClockwiseIcon,
     BooksIcon,
     CaretDownIcon,
     GearIcon,
@@ -28,12 +29,12 @@ import styles from "../lib/styles.module.css";
 import {
     PropsWithChildren,
     ReactNode,
-    RefObject,
     useEffect,
     useRef,
     useState
 } from "react";
 import { useDebouncedCallback } from "@mantine/hooks";
+import { useSelectAllOnFocus } from "../lib/select-all";
 
 import { AppBrand } from "./app-brand";
 import { AppIcon } from "./app-icon";
@@ -62,6 +63,8 @@ import {
 import { useTargetWorkspace } from "../lib/onshape-params";
 import { type AppTab, UtilityTab } from "../lib/app-tab";
 import { getTabName, useNavigateToTab } from "../lib/tabs";
+import { useRefreshLibrary } from "../lib/refresh";
+import { useRefreshVersionManagerMutation } from "../features/version-manager/queries";
 
 /** Stretched so a full-height child's underline lands on the row's border. */
 export function NavbarRow(props: PropsWithChildren): ReactNode {
@@ -99,9 +102,13 @@ export function AppNavbar(): ReactNode {
             <NavbarRow>
                 <PagePicker />
                 <Group gap="xs" ml="auto" className={styles.noShrink}>
-                    <InsertLocationStatus />
+                    {/* Inserting is the library's; the version manager inserts nothing. */}
+                    {!isVersionManager && <InsertLocationStatus />}
                     <SignInButton />
-                    <SettingsControls />
+                    <Group gap={0}>
+                        <RefreshButton />
+                        <SettingsControls />
+                    </Group>
                 </Group>
             </NavbarRow>
             {!isVersionManager && (
@@ -286,6 +293,36 @@ export function SettingsControls(): ReactNode {
     );
 }
 
+/** Reads the page showing again: the library, or the version manager's links. */
+function RefreshButton(): ReactNode {
+    const isVersionManager = useIsVersionManager();
+    const refreshLibrary = useRefreshLibrary();
+    const workspace = useTargetWorkspace();
+    const refreshVersionManager = useRefreshVersionManagerMutation(workspace);
+    const [isRefreshingLibrary, setIsRefreshingLibrary] = useState(false);
+
+    const refresh = () => {
+        if (isVersionManager) {
+            refreshVersionManager.mutate();
+            return;
+        }
+        setIsRefreshingLibrary(true);
+        void refreshLibrary().finally(() => setIsRefreshingLibrary(false));
+    };
+
+    return (
+        <ActionIcon
+            title="Refresh"
+            my="auto"
+            size="input-sm"
+            loading={refreshVersionManager.isPending || isRefreshingLibrary}
+            onClick={refresh}
+        >
+            <ArrowClockwiseIcon size={IconSize.CONTROL} />
+        </ActionIcon>
+    );
+}
+
 function ThemeToggle(): ReactNode {
     const theme = useUiState((state) => state.theme);
     const isDark = theme === Theme.DARK;
@@ -321,20 +358,11 @@ function SettingsButton() {
     );
 }
 
-function selectAllInputText(ref: RefObject<HTMLInputElement | null>) {
-    const input = ref.current;
-    if (!input) {
-        return;
-    }
-    const length = input.value.length;
-    input.setSelectionRange(0, length);
-}
-
 const SEARCH_DEBOUNCE_MS = 200;
 
 function SearchBar() {
     const ref = useRef<HTMLInputElement>(null);
-    const wasFocused = useRef(false);
+    const selectAll = useSelectAllOnFocus();
     const libraryId = useLibraryId();
     // Local state, so a keystroke re-renders only the input.
     const [query, setQuery] = useState(() => getUiState().searchQuery ?? "");
@@ -348,7 +376,7 @@ function SearchBar() {
 
     // `autoFocus` fires before the ref attaches, so onFocus can't select.
     useEffect(() => {
-        selectAllInputText(ref);
+        ref.current?.select();
     }, []);
 
     const clearButton = query ? (
@@ -372,19 +400,7 @@ function SearchBar() {
             placeholder={`Search ${getLibraryName(libraryId)}...`}
             ref={ref}
             value={query}
-            onFocus={() => {
-                selectAllInputText(ref);
-            }}
-            // The mouseup of the click that focuses the input would collapse the
-            // select-all; later clicks place the caret normally.
-            onMouseDown={() => {
-                wasFocused.current = document.activeElement === ref.current;
-            }}
-            onMouseUp={(event) => {
-                if (!wasFocused.current) {
-                    event.preventDefault();
-                }
-            }}
+            {...selectAll}
             onChange={(event) => {
                 const value = event.currentTarget.value;
                 setQuery(value);

@@ -13,6 +13,7 @@ import {
     parseOnshapeWorkspace
 } from "../../../lib/onshape-url";
 import { useAddLinkMutation } from "../queries";
+import { useSelectAllOnFocus } from "../../../lib/select-all";
 import classes from "./add-link-input.module.css";
 
 interface AddLinkInputProps {
@@ -30,6 +31,7 @@ export function AddLinkInput(props: AddLinkInputProps): ReactNode {
     const { workspace, direction, compact = false } = props;
     const [url, setUrl] = useState("");
     const addLink = useAddLinkMutation(workspace);
+    const selectAll = useSelectAllOnFocus();
     const isEmpty = url.trim() === "";
 
     const submit = () => {
@@ -56,6 +58,7 @@ export function AddLinkInput(props: AddLinkInputProps): ReactNode {
                 leftSection={<LinkIcon size={IconSize.SMALL} />}
                 placeholder="Onshape document link..."
                 value={url}
+                {...selectAll}
                 onChange={(event) => setUrl(event.currentTarget.value)}
                 onKeyDown={(event) => {
                     if (event.key === "Enter") submit();

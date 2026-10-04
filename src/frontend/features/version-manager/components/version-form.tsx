@@ -5,11 +5,12 @@ import {
     type WorkspacePath
 } from "@backend/features/version-manager/contract";
 import { AppModalBody, AppModalFooter } from "../../../components/app-modal";
+import { useSelectAllOnFocus } from "../../../lib/select-all";
 import { useNextVersionNameQuery } from "../queries";
 
 export interface VersionFields {
-    /** Empty unless typed, so each document a run versions is numbered from its own history. */
-    name: string;
+    /** Undefined while it is the suggestion, so each document a run versions is numbered from its own history. */
+    name?: string;
     description: string;
 }
 
@@ -36,23 +37,29 @@ export function VersionForm(props: VersionFormProps): ReactNode {
         onSubmit,
         options
     } = props;
-    const [name, setName] = useState("");
+    // Undefined until edited, so the field shows the suggestion once it arrives.
+    const [edited, setEdited] = useState<string>();
     const [description, setDescription] = useState("");
     const suggested = useNextVersionNameQuery(versioned);
+    const selectAll = useSelectAllOnFocus();
+    const suggestion = suggested.data?.name;
+    const name = edited ?? suggestion ?? "";
 
     return (
         <>
             <AppModalBody>
                 <TextInput
                     label="Version name"
+                    required
                     placeholder={
                         suggested.isPending
                             ? "Reading the document's versions..."
-                            : suggested.data?.name
+                            : undefined
                     }
                     maxLength={MAX_VERSION_NAME_LENGTH}
                     value={name}
-                    onChange={(event) => setName(event.currentTarget.value)}
+                    {...selectAll}
+                    onChange={(event) => setEdited(event.currentTarget.value)}
                     data-autofocus
                 />
                 <Textarea
@@ -62,6 +69,7 @@ export function VersionForm(props: VersionFormProps): ReactNode {
                     minRows={2}
                     maxRows={5}
                     value={description}
+                    {...selectAll}
                     onChange={(event) =>
                         setDescription(event.currentTarget.value)
                     }
@@ -73,9 +81,12 @@ export function VersionForm(props: VersionFormProps): ReactNode {
                     <Button
                         rightSection={submitIcon}
                         loading={isPending}
-                        disabled={disabled}
+                        disabled={disabled || name.trim() === ""}
                         onClick={() =>
-                            onSubmit({ name, description: description.trim() })
+                            onSubmit({
+                                name: name === suggestion ? undefined : name,
+                                description: description.trim()
+                            })
                         }
                     >
                         {submitLabel}

@@ -65,15 +65,13 @@ export const DIRECTION_COPY = {
     [LinkDirection.PARENT]: {
         title: "Parents",
         quickAction: "Quick pull",
-        description:
-            "Documents this one uses parts from. Pulling saves a new version of the parent and updates this document to use it.",
+        description: "Documents you can pull changes from.",
         empty: "No linked parents"
     },
     [LinkDirection.CHILD]: {
         title: "Children",
         quickAction: "Quick push",
-        description:
-            "Documents that use parts from this one. Pushing saves a new version of this document and updates each child to use it.",
+        description: "Documents you can push changes to.",
         empty: "No linked children"
     }
 } as const;

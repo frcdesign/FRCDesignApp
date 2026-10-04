@@ -183,7 +183,7 @@ export function useReloadMutation(all: boolean) {
             apiPost("/reload" + toLibraryPath(libraryId), {
                 body: { forceReload: all }
             }),
-        onError: getAppErrorHandler("Failed to reload documents!"),
+        onError: getAppErrorHandler("Failed to reload documents."),
         onSuccess: (data) => {
             showInfoToast(`Reloading ${data.documents} documents...`);
         }
@@ -211,7 +211,7 @@ export function useSetVersionApprovalMutation() {
                 "/version-approval" + toLibraryPath(libraryId),
                 { body: { enabled } }
             ),
-        onError: getAppErrorHandler("Failed to change version approval!"),
+        onError: getAppErrorHandler("Failed to change version approval."),
         onSuccess: (approval) =>
             queryClient.setQueryData(
                 versionApprovalQueryKey(libraryId),
@@ -228,7 +228,7 @@ export function useApproveVersionsMutation() {
             apiPost<ApproveVersionsOut>(
                 "/approve-versions" + toLibraryPath(libraryId)
             ),
-        onError: getAppErrorHandler("Failed to approve versions!"),
+        onError: getAppErrorHandler("Failed to approve versions."),
         onSuccess: (data) => {
             showInfoToast(`Loading ${data.documents} approved documents...`);
         }

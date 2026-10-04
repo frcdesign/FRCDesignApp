@@ -15,7 +15,7 @@ import {
     getWorkspaceLinkParam,
     workspaceLinkRoute
 } from "../../lib/route-params";
-import { getDb } from "../../db/client";
+import { type Db, getDb } from "../../db/client";
 import { validate } from "../../lib/validate";
 import { requireSignInMiddleware } from "../auth/guards";
 import { ThumbnailSize } from "../thumbnails/contract";
@@ -31,6 +31,7 @@ import {
     VersionJobKind,
     VersionJobState,
     workspaceKey,
+    type AddLinkOut,
     type VersionJobDocument,
     type WorkspaceLinksData,
     type WorkspacePath
@@ -55,7 +56,7 @@ import {
     toEdge,
     toLinkedWorkspace
 } from "./links";
-import { describeWorkspace } from "./workspace-cache";
+import { describeWorkspace, forgetWorkspace } from "./workspace-cache";
 import { markHintSeen } from "../hints/store";
 import { Hint } from "../hints/contract";
 
@@ -108,7 +109,7 @@ const pullScope = z.discriminatedUnion("kind", [
 /** What a push and a pull both take. */
 const runBody = z.object({
     workspace: workspaceSchema,
-    /** Absent for a quick run; the workflow names each version as Onshape would. */
+    /** Absent while the form shows its suggestion; the workflow numbers each version from its own document's. */
     name: z.string().min(1).max(MAX_VERSION_NAME_LENGTH).optional(),
     description: z.string().max(10_000).optional(),
     /** Moves references onto versions that exist, cutting none. */
@@ -203,7 +204,34 @@ versionManagerRoutes.get(
     }
 );
 
-/** POST /api/workspace-links — adding one that exists is not an error. */
+const refreshBody = z.object({ workspace: workspaceSchema });
+
+/** POST /api/workspace-links/refresh — forgets what is cached of the linked documents, for an explicit refresh. */
+versionManagerRoutes.post(
+    "/workspace-links/refresh",
+    requireSignInMiddleware,
+    validate("json", refreshBody),
+    async (c) => {
+        const workspace = toWorkspace(c.req.valid("json").workspace);
+        await requireRead(await c.var.getOnshapeApi(), workspace);
+
+        const db = getDb(c.env.DB);
+        const rows = (
+            await Promise.all([
+                getParentLinks(db, workspace),
+                getChildLinks(db, workspace)
+            ])
+        ).flat();
+        await Promise.all(
+            rows.map((row) =>
+                forgetWorkspace(c.env.KV, otherEnd(row, workspace))
+            )
+        );
+        return c.json({ success: true });
+    }
+);
+
+/** POST /api/workspace-links — a document already linked either way is refused. */
 versionManagerRoutes.post(
     "/workspace-links",
     requireSignInMiddleware,
@@ -236,16 +264,50 @@ versionManagerRoutes.post(
             )
         ]);
 
+        const db = getDb(c.env.DB);
+        await refuseLinkedDocument(db, workspace, linked);
+
         // A parent provides to this workspace; a child takes from it.
         const [parent, child] =
             body.direction === LinkDirection.PARENT
                 ? [linked, workspace]
                 : [workspace, linked];
-        await addLink(getDb(c.env.DB), parent, child);
+        await addLink(db, parent, child);
+        await markHintSeen(c, Hint.USED_VERSION_MANAGER);
 
-        return c.json({ success: true });
+        const out: AddLinkOut = await describeWorkspace(
+            c,
+            client,
+            linked
+        ).catch((error: unknown) => {
+            console.warn("Failed to name a new link", error);
+            return {};
+        });
+        return c.json(out);
     }
 );
+
+/** Linking the same document twice, as a parent and a child or twice over, is a mistake. */
+async function refuseLinkedDocument(
+    db: Db,
+    workspace: WorkspacePath,
+    linked: WorkspacePath
+): Promise<void> {
+    const [parentRows, childRows] = await Promise.all([
+        getParentLinks(db, workspace),
+        getChildLinks(db, workspace)
+    ]);
+    const isLinked = (rows: typeof parentRows) =>
+        rows.some(
+            (row) => otherEnd(row, workspace).documentId === linked.documentId
+        );
+    if (isLinked(parentRows) || isLinked(childRows)) {
+        throw handledError(
+            `That document is already linked as a ${isLinked(parentRows) ? "parent" : "child"}.`,
+            HttpStatus.CONFLICT
+        );
+    }
+}
 
 /** DELETE /api/workspace-link/:linkId — needs write on either end, a link being both workspaces'. */
 versionManagerRoutes.delete(
@@ -415,7 +477,7 @@ versionManagerRoutes.post(
             targets
         });
 
-        await markHintSeen(c, Hint.RAN_VERSION_JOB);
+        await markHintSeen(c, Hint.USED_VERSION_MANAGER);
         return c.json(status);
     }
 );
@@ -595,7 +657,7 @@ versionManagerRoutes.post(
             targets
         });
 
-        await markHintSeen(c, Hint.RAN_VERSION_JOB);
+        await markHintSeen(c, Hint.USED_VERSION_MANAGER);
         return c.json(status);
     }
 );

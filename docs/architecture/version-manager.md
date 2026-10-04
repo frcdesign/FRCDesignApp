@@ -64,6 +64,10 @@ document and workspace names, for a week.
 **KV** `linked-workspace-changes:{documentId}|{instanceId}` — its
 `changesSinceVersionSave`, for an hour.
 
+Both are dropped by the linked workspace's webhook when it changes, and by
+`POST /api/workspace-links/refresh` — the navbar's refresh button on this page —
+for every workspace linked to the caller's.
+
 **Browser** `isParentsOpen`, `isChildrenOpen` and `quickActionTipCount` in
 `uiState`.
 
@@ -72,9 +76,9 @@ document and workspace names, for a week.
 ### Finding the page
 
 The page picker marks the version manager with a dot and a **New** badge for
-somebody who has a workspace to act on and has never started a push or pull
-(`useIsVersionManagerNew`). Starting one is recorded against the user in KV as
-a side effect of the route that starts it (`Hint.RAN_VERSION_JOB`, see
+somebody who has a workspace to act on and has never linked a document or
+started a push or pull (`useIsVersionManagerNew`). Either is recorded against
+the user in KV as a side effect of the route that does it (`Hint.USED_VERSION_MANAGER`, see
 [auth.md](./auth.md)), so the dot stays gone on every computer they use.
 
 ### Showing the page
@@ -100,7 +104,9 @@ version to bring those edits in, so the row shows the count as a badge.
 workspace by `parseOnshapeWorkspace`. Only a workspace will do: a version cannot
 be written to, and a url that stops at the document is refused rather than
 resolved to the default workspace, which would be a different one than whoever
-copied the link was looking at.
+copied the link was looking at. A document already linked to this workspace, as
+a parent or a child and in any of its workspaces, is refused with a 409. The
+answer names what was linked (`AddLinkOut`), for the toast.
 
 `POST /api/workspace-link/:linkId/move` turns a link around, for one filed the
 wrong way up — **Switch to parent** or **Switch to child** in the row's menu.
@@ -122,8 +128,9 @@ A push or pull always cuts a new version, whether or not anything changed since
 the last one. A version takes the name the form was given, and otherwise the one
 Onshape's own dialog would offer that document (`nextVersionName`), so a
 recursive push left unnamed numbers each document from its own history. The
-form shows that suggestion as a placeholder and sends a name only when one was
-typed.
+form opens with that suggestion filled in and will not submit a blank name;
+while the name is still the untouched suggestion, `VersionForm` sends none, so
+each document still gets its own next number.
 
 1. **Direct** (the default, `PushScopeKind.CHILDREN` or `ONE`): a version of
    this workspace, then each child's references moved onto it. The children are
@@ -335,9 +342,10 @@ deletes a transient webhook that goes quiet, so the entries expire as well.
   sometimes versions and sometimes does not reads oddly, most of all a pull that
   versions nothing. Moving references without versioning is asked for by name
   instead — **Update references** — and a push or pull does what it says.
-- **Unnamed versions are numbered per document.** A name is sent only when one
-  was typed; the suggestion is this document's next number, which would be
-  wrong for every other document a recursive push versions.
+- **The suggested name is numbered per document.** The suggestion is this
+  document's next number, which would be wrong for every other document a
+  recursive push versions, so the form sends it as no name. A name somebody
+  typed, even one spelled `V<n>`, is used as given.
 - **Failures are per document, and runs push on past them.** Permissions are
   per document, and nothing observed fails one tab and not the rest. A run
   aimed at several documents finishes every one it can, and the report names

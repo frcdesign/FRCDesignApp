@@ -11,9 +11,9 @@ export function useIsVersionManager(): boolean {
     );
 }
 
-/** Whether to point the page out: until somebody first pushes or pulls. */
+/** Whether to point the page out: until somebody first links, pushes or pulls. */
 export function useIsVersionManagerNew(): boolean {
-    const hasRun = useHasSeenHint(Hint.RAN_VERSION_JOB);
+    const hasUsed = useHasSeenHint(Hint.USED_VERSION_MANAGER);
     const workspace = useTargetWorkspace();
-    return workspace !== undefined && !hasRun;
+    return workspace !== undefined && !hasUsed;
 }

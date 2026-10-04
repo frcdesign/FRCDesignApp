@@ -177,7 +177,7 @@ export function useIndexConfigurationsMutation(insertableId: string) {
         onMutate: (indexConfigurations) => {
             showInfoToast(
                 indexConfigurations
-                    ? "Enabling indexing"
+                    ? "Enabling indexing..."
                     : "Disabling indexing",
                 { id: toastId }
             );
@@ -221,7 +221,7 @@ export function useExcludedParametersMutation(insertableId: string) {
                 }
             ),
         onMutate: (excludedParameterIds) => {
-            showInfoToast("Reindexing part", { id: toastId });
+            showInfoToast("Reindexing part...", { id: toastId });
             return patchQuery<LibraryBuildStatus>(key, (status) => {
                 const insertable = status.insertables[insertableId];
                 if (insertable)

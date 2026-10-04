@@ -56,6 +56,12 @@ export interface LinkedWorkspace {
     unversionedChanges?: number;
 }
 
+/** The workspace just linked, named for the toast; unnamed where Onshape wouldn't say. */
+export interface AddLinkOut {
+    documentName?: string;
+    workspaceName?: string;
+}
+
 export interface WorkspaceLinksData {
     parents: LinkedWorkspace[];
     children: LinkedWorkspace[];

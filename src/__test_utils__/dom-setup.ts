@@ -22,6 +22,13 @@ globalThis.ResizeObserver ??= class {
     disconnect = ignore;
 };
 
+// An autosizing Textarea listens for fonts loading.
+if (!("fonts" in document)) {
+    Object.assign(document, {
+        fonts: { addEventListener: ignore, removeEventListener: ignore }
+    });
+}
+
 if (!("scrollIntoView" in Element.prototype)) {
     Object.assign(Element.prototype, { scrollIntoView: ignore });
 }

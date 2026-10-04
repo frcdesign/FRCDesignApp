@@ -63,7 +63,7 @@ describe("hints", () => {
     it("are none while signed out", async () => {
         await env.KV.put(
             "seen-hints:test-user",
-            JSON.stringify([Hint.RAN_VERSION_JOB])
+            JSON.stringify([Hint.USED_VERSION_MANAGER])
         );
         expect(await seenHints(createTestApp({ signedIn: false }))).toEqual([]);
     });

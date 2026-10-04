@@ -1,5 +1,6 @@
 import { skipToken, useMutation, useQuery } from "@tanstack/react-query";
 import {
+    type AddLinkOut,
     LinkDirection,
     type PullScope,
     type PushScope,
@@ -21,6 +22,7 @@ import {
 import { useIsSignedIn } from "../auth/access-level";
 import { Hint } from "@backend/features/hints/contract";
 import { markHintSeen } from "../hints/queries";
+import { documentLabel } from "./document-label";
 
 /** A GET about the workspace; idle without one, or signed out. */
 function useWorkspaceQuery<T>(
@@ -62,6 +64,29 @@ async function refreshLinks(workspace: WorkspacePath): Promise<void> {
     });
 }
 
+/** Reads the linked documents again from Onshape, past what the server cached of them. */
+export function useRefreshVersionManagerMutation(
+    workspace: WorkspacePath | undefined
+) {
+    return useMutation({
+        mutationKey: ["refresh-version-manager", workspace],
+        mutationFn: async () => {
+            if (!workspace) {
+                return;
+            }
+            await apiPost("/workspace-links/refresh", { body: { workspace } });
+            await Promise.all(
+                [
+                    workspaceLinksQueryKey(workspace),
+                    versionJobQueryKey(workspace),
+                    nextVersionNameQueryKey(workspace)
+                ].map((queryKey) => queryClient.invalidateQueries({ queryKey }))
+            );
+        },
+        onError: getAppErrorHandler("Unexpectedly failed to refresh.")
+    });
+}
+
 interface AddLinkArgs {
     linked: WorkspacePath;
     direction: LinkDirection;
@@ -71,15 +96,24 @@ export function useAddLinkMutation(workspace: WorkspacePath) {
     return useMutation({
         mutationKey: ["add-workspace-link", workspace],
         mutationFn: ({ linked, direction }: AddLinkArgs) =>
-            apiPost<{ success: boolean }>("/workspace-links", {
+            apiPost<AddLinkOut>("/workspace-links", {
                 body: { workspace, linked, direction }
             }),
-        onSuccess: async () => {
-            showSuccessToast("Linked the workspace.");
+        onSuccess: async (linked) => {
+            markHintSeen(Hint.USED_VERSION_MANAGER);
+            showSuccessToast(`Successfully linked ${linkedName(linked)}.`);
             await refreshLinks(workspace);
         },
         onError: getAppErrorHandler("Unexpectedly failed to add the link.")
     });
+}
+
+/** "Document - Workspace", or the document alone where Onshape named no workspace. */
+function linkedName(linked: AddLinkOut): string {
+    const document = documentLabel(linked.documentName);
+    return linked.workspaceName
+        ? `${document} - ${linked.workspaceName}`
+        : document;
 }
 
 interface MoveLinkArgs {
@@ -165,7 +199,7 @@ export function usePullReferencesMutation(workspace: WorkspacePath) {
 
 /** Shows the run going straight away, before the socket says so. */
 function adoptJob(workspace: WorkspacePath, started: VersionJobStatus): void {
-    markHintSeen(Hint.RAN_VERSION_JOB);
+    markHintSeen(Hint.USED_VERSION_MANAGER);
     // The socket can have brought this run's first progress already.
     queryClient.setQueryData<VersionJobStatus>(
         versionJobQueryKey(workspace),

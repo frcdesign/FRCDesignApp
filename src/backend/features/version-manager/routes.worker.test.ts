@@ -5,6 +5,7 @@ import { getDb } from "../../db/client";
 import * as Permissions from "../../lib/onshape/endpoints/permissions";
 import { OnshapePermission } from "../../lib/onshape/endpoints/permissions";
 import {
+    LinkDirection,
     PullScopeKind,
     PushScopeKind,
     toWorkspacePath,
@@ -14,6 +15,7 @@ import {
 import { Hint } from "../hints/contract";
 import { getSeenHints } from "../hints/store";
 import * as Jobs from "./jobs";
+import * as WorkspaceCache from "./workspace-cache";
 import { addLink } from "./links";
 import { workspaceLinks } from "./schema";
 
@@ -46,6 +48,21 @@ const ALL = [
 
 function post(path: string, body: unknown) {
     return app.request(`/api${path}`, jsonRequest("POST", body), env);
+}
+
+/** As `post`, under a session, which is what records a seen hint. */
+function postSignedIn(path: string, body: unknown) {
+    return app.request(
+        `/api${path}`,
+        {
+            ...jsonRequest("POST", body),
+            headers: {
+                "Content-Type": "application/json",
+                Cookie: "frc-design-app-session=session"
+            }
+        },
+        env
+    );
 }
 
 const toInput = (workspace: WorkspacePath) => ({
@@ -117,6 +134,54 @@ describe("version manager routes", () => {
         expect(res.status).toBe(403);
     });
 
+    // A second workspace of a document already linked is still that document.
+    it("refuses a document already linked, either way round", async () => {
+        grant({ root: ALL, child: ALL });
+        const res = await post("/workspace-links", {
+            workspace: toInput(ROOT),
+            linked: toInput(ws("child", "child-other")),
+            direction: LinkDirection.PARENT
+        });
+        expect(res.status).toBe(409);
+        expect(await res.json()).toMatchObject({
+            message: "That document is already linked as a child."
+        });
+    });
+
+    it("names what it linked, which stops the page being pointed out", async () => {
+        grant({ root: ALL, other: ALL });
+        await env.KV.delete("seen-hints:test-user");
+        vi.spyOn(WorkspaceCache, "describeWorkspace").mockResolvedValue({
+            documentName: "Gearbox",
+            workspaceName: "Main"
+        });
+        const res = await postSignedIn("/workspace-links", {
+            workspace: toInput(ROOT),
+            linked: toInput(ws("other")),
+            direction: LinkDirection.CHILD
+        });
+        expect(res.status).toBe(200);
+        expect(await res.json()).toEqual({
+            documentName: "Gearbox",
+            workspaceName: "Main"
+        });
+        expect(await getSeenHints(env.KV, "test-user")).toEqual([
+            Hint.USED_VERSION_MANAGER
+        ]);
+    });
+
+    it("forgets what is cached of each linked workspace on a refresh", async () => {
+        grant({ child: ALL });
+        const forget = vi
+            .spyOn(WorkspaceCache, "forgetWorkspace")
+            .mockResolvedValue();
+        const res = await post("/workspace-links/refresh", {
+            workspace: toInput(CHILD)
+        });
+        expect(res.status).toBe(200);
+        expect(forget.mock.calls.map((call) => call[1])).toEqual([ROOT]);
+    });
+
     it("records a started run, which stops the page being pointed out", async () => {
         grant({ root: ALL, child: ALL });
         await env.KV.delete("seen-hints:test-user");
@@ -136,7 +201,7 @@ describe("version manager routes", () => {
         );
         expect(res.status).toBe(200);
         expect(await getSeenHints(env.KV, "test-user")).toEqual([
-            Hint.RAN_VERSION_JOB
+            Hint.USED_VERSION_MANAGER
         ]);
     });
 });
