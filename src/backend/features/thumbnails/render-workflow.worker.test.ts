@@ -56,6 +56,7 @@ it("stores both sizes once Onshape has rendered them", async () => {
         expect.anything(),
         WORKSPACE_PATH,
         "ENCODED",
+        "mv1",
         ThumbnailSize.LARGE
     );
     for (const size of Object.values(ThumbnailSize)) {

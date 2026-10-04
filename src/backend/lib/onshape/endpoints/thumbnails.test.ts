@@ -54,10 +54,12 @@ it("asks for a configured thumbnail where Onshape does", async () => {
         api as unknown as OnshapeApi,
         WORKSPACE,
         "PNGGK3TH",
+        "ec7326fdc70bed5fcf2d5275",
         ThumbnailSize.SMALL
     );
 
     expect(api.getImage).toHaveBeenCalledWith(
-        `/thumbnails/d/ec194c001a419592e9fd55fd/w/c932796bcac2f7e7344a2072/e/8c8050a96ba6021887368f7a/c/PNGGK3TH/s/${ThumbnailSize.SMALL}`
+        `/thumbnails/d/ec194c001a419592e9fd55fd/w/c932796bcac2f7e7344a2072/e/8c8050a96ba6021887368f7a/c/PNGGK3TH/s/${ThumbnailSize.SMALL}`,
+        { query: { t: "ec7326fdc70bed5fcf2d5275", rejectEmpty: "true" } }
     );
 });

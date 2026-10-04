@@ -156,13 +156,13 @@ reload also deletes every configuration render of the document
 
 ### Onshape calls
 
-| Flow              | Call                                                                                                    | Retries                             |
-| ----------------- | ------------------------------------------------------------------------------------------------------- | ----------------------------------- |
-| Load, reload      | `GET /thumbnails/d/{did}/w/{thumbnail wid}/e/{eid}/s/{size}`, per size                                  | `THUMBNAIL_RETRIES`; none on reload |
-| Render request    | `GET /documents/d/{did}/w/{thumbnail wid}/insertables?elementId=&configuration=` for `configurationKey` | none: the route answers             |
-| Render workflow   | `GET /thumbnails/d/{did}/w/{thumbnail wid}/e/{eid}/c/{configurationKey}/s/{size}`, per size             | `RENDER_RETRIES`                    |
-| Workspace sync    | `GET`/`POST /documents/d/{did}/workspaces`                                                              | `ONSHAPE_STEP_RETRIES` in a load    |
-| Workspace cleanup | `DELETE /documents/d/{did}/workspaces/{wid}`                                                            | none; failure is logged             |
+| Flow              | Call                                                                                                                            | Retries                             |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
+| Load, reload      | `GET /thumbnails/d/{did}/w/{thumbnail wid}/e/{eid}/s/{size}`, per size                                                          | `THUMBNAIL_RETRIES`; none on reload |
+| Render request    | `GET /documents/d/{did}/w/{thumbnail wid}/insertables?elementId=&configuration=` for `configurationKey`                         | none: the route answers             |
+| Render workflow   | `GET /thumbnails/d/{did}/w/{thumbnail wid}/e/{eid}/c/{configurationKey}/s/{size}?t={microversionId}&rejectEmpty=true`, per size | `RENDER_RETRIES`                    |
+| Workspace sync    | `GET`/`POST /documents/d/{did}/workspaces`                                                                                      | `ONSHAPE_STEP_RETRIES` in a load    |
+| Workspace cleanup | `DELETE /documents/d/{did}/workspaces/{wid}`                                                                                    | none; failure is logged             |
 
 A render workflow calls Onshape as the session that requested it
 (`getOnshapeApiFromSessionId`), so a render outlives the request but not a

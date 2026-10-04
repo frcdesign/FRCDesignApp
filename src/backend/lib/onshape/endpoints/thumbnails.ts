@@ -74,18 +74,21 @@ export async function getEncodedConfiguration(
 }
 
 /**
- * What Onshape's own insert dialog polls: 404 until the configuration is
- * rendered, which asking starts.
+ * What Onshape's own insert dialog polls, with its query: 404 until the
+ * configuration is rendered. `t` is the workspace's microversion.
  */
 export function getConfiguredThumbnail(
     client: OnshapeApi,
     workspacePath: ElementPath,
     encodedConfiguration: string,
+    microversionId: string,
     size = ThumbnailSize.LARGE
 ): Promise<ArrayBuffer> {
     assertInstanceType(workspacePath, "w");
     const path = `/thumbnails${toElementApiPath(workspacePath)}/c/${encodedConfiguration}/s/${size}`;
-    return client.getImage(path);
+    return client.getImage(path, {
+        query: { t: microversionId, rejectEmpty: "true" }
+    });
 }
 
 /** TEMPORARY: reads Onshape's base32 configuration key, for the log. */

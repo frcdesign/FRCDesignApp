@@ -89,6 +89,7 @@ async function storeRender(
             onshapeApi,
             params.workspacePath,
             params.encodedConfiguration,
+            params.microversionId,
             target.size
         );
     } catch (error) {
