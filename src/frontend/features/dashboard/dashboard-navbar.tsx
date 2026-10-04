@@ -1,15 +1,13 @@
 import {
-    ActionIcon,
     Button,
     Group,
     Menu,
     NumberInput,
     Stack,
     Text,
-    Tabs,
-    Tooltip
+    Tabs
 } from "@mantine/core";
-import { ArrowClockwiseIcon, CaretDownIcon } from "@phosphor-icons/react";
+import { CaretDownIcon } from "@phosphor-icons/react";
 import { useIsFetching, useQueryClient } from "@tanstack/react-query";
 import {
     useNavigate,
@@ -20,8 +18,9 @@ import {
 import { type ReactNode } from "react";
 import { LibraryId } from "@backend/features/library/library-id";
 import { getLibraryName } from "../../lib/library";
-import { IconSize, NAVBAR_ROW_HEIGHT } from "../../lib/style-constants";
+import { NAVBAR_ROW_HEIGHT } from "../../lib/style-constants";
 import { NavbarRow, SettingsControls } from "../../components/app-navbar";
+import { RefreshButton } from "../../components/refresh-button";
 import { RangeControl } from "./range-control";
 import {
     DASHBOARDS,
@@ -45,7 +44,7 @@ export function DashboardNavbar(): ReactNode {
             <NavbarRow>
                 <DashboardTabs current={current} />
                 <Group gap="xs" ml="auto">
-                    <RefreshButton />
+                    <DashboardRefreshButton />
                     <SettingsControls />
                 </Group>
             </NavbarRow>
@@ -182,24 +181,17 @@ function ThresholdControl(): ReactNode {
 const THRESHOLD_LABEL_WIDTH = 52;
 
 /** Refetches whatever the current dashboard is showing. */
-function RefreshButton(): ReactNode {
+function DashboardRefreshButton(): ReactNode {
     const queryClient = useQueryClient();
     const fetching = useIsFetching({ queryKey: ["analytics"] }) > 0;
 
     return (
-        <Tooltip label="Refresh">
-            <ActionIcon
-                my="auto"
-                loading={fetching}
-                onClick={() =>
-                    void queryClient.invalidateQueries({
-                        queryKey: ["analytics"]
-                    })
-                }
-            >
-                <ArrowClockwiseIcon size={IconSize.MEDIUM} />
-            </ActionIcon>
-        </Tooltip>
+        <RefreshButton
+            loading={fetching}
+            onClick={() =>
+                void queryClient.invalidateQueries({ queryKey: ["analytics"] })
+            }
+        />
     );
 }
 

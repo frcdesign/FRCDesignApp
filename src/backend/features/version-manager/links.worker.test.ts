@@ -1,10 +1,11 @@
 import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it } from "vitest";
 import { getDb } from "../../db/client";
-import { toWorkspacePath, type WorkspacePath } from "./contract";
+import { LinkDirection, toWorkspacePath, type WorkspacePath } from "./contract";
+import type { WorkspaceEdge } from "./graph";
 import {
     addLink,
-    collectDescendantEdges,
+    collectEdges,
     deleteLink,
     getChildLinks,
     getLink,
@@ -102,24 +103,35 @@ describe("links", () => {
     });
 });
 
-describe("collectDescendantEdges", () => {
+const arrows = (edges: WorkspaceEdge[]) =>
+    edges.map((e) => `${e.parent.documentId}->${e.child.documentId}`);
+
+describe("collectEdges", () => {
     it("gathers the whole chain below a workspace", async () => {
         await addLink(db, ws("a"), ws("b"));
         await addLink(db, ws("b"), ws("c"));
         // A parent of the root, so no part of a push from it.
         await addLink(db, ws("x"), ws("a"));
 
-        const edges = await collectDescendantEdges(db, ws("a"));
-        expect(
-            edges.map((e) => `${e.parent.documentId}->${e.child.documentId}`)
-        ).toEqual(["a->b", "b->c"]);
+        const edges = await collectEdges(db, ws("a"), LinkDirection.CHILD);
+        expect(arrows(edges)).toEqual(["a->b", "b->c"]);
+    });
+
+    it("gathers the whole chain above a workspace", async () => {
+        await addLink(db, ws("a"), ws("b"));
+        await addLink(db, ws("b"), ws("c"));
+        // A child of the root, so no part of a pull into it.
+        await addLink(db, ws("c"), ws("x"));
+
+        const edges = await collectEdges(db, ws("c"), LinkDirection.PARENT);
+        expect(arrows(edges)).toEqual(["b->c", "a->b"]);
     });
 
     it("terminates on a cycle rather than walking it", async () => {
         await addLink(db, ws("a"), ws("b"));
         await addLink(db, ws("b"), ws("a"));
 
-        const edges = await collectDescendantEdges(db, ws("a"));
+        const edges = await collectEdges(db, ws("a"), LinkDirection.CHILD);
         expect(edges).toHaveLength(2);
     });
 });

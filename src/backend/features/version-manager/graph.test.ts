@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { toWorkspacePath, workspaceKey, type WorkspacePath } from "./contract";
 import {
+    ancestorKeys,
     childrenOf,
     descendantKeys,
     LinkCycleError,
+    pullOrder,
     pushOrder,
     type WorkspaceEdge
 } from "./graph";
@@ -91,6 +93,41 @@ describe("descendantKeys", () => {
         ];
         expect(descendantKeys(edges, ws("b"))).toEqual(
             new Set([workspaceKey(ws("b")), workspaceKey(ws("d"))])
+        );
+    });
+});
+
+describe("pullOrder", () => {
+    it("versions every parent above the root, each after its own parents", () => {
+        // a feeds b and c, which both feed d.
+        const diamond = [
+            edge("a", "b"),
+            edge("a", "c"),
+            edge("b", "d"),
+            edge("c", "d")
+        ];
+        const order = names(pullOrder(diamond, ws("d")));
+        expect(order[0]).toBe("a");
+        expect(order.slice(1).sort()).toEqual(["b", "c"]);
+    });
+
+    it("leaves out the root and anything beside or below it", () => {
+        const edges = [edge("a", "b"), edge("b", "c"), edge("x", "c")];
+        expect(names(pullOrder(edges, ws("b")))).toEqual(["a"]);
+        expect(pullOrder(edges, ws("a"))).toEqual([]);
+    });
+
+    it("rejects a cycle above the root", () => {
+        const cycle = [edge("a", "b"), edge("b", "a"), edge("b", "c")];
+        expect(() => pullOrder(cycle, ws("c"))).toThrow(LinkCycleError);
+    });
+});
+
+describe("ancestorKeys", () => {
+    it("reaches everything above a workspace, and nothing beside it", () => {
+        const edges = [edge("a", "b"), edge("b", "c"), edge("x", "c")];
+        expect(ancestorKeys(edges, ws("b"))).toEqual(
+            new Set([workspaceKey(ws("b")), workspaceKey(ws("a"))])
         );
     });
 });

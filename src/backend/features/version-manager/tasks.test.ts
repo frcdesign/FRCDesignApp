@@ -92,4 +92,22 @@ describe("planTasks", () => {
             [VersionTaskAction.REFERENCES, "robot"]
         ]);
     });
+
+    // The renders feed practice, which feeds the robot.
+    it("moves each parent a recursive pull passes through before versioning it", () => {
+        expect(
+            summary(
+                pull({
+                    scope: PullScopeKind.ANCESTORS,
+                    sources: [grandchild, child],
+                    referencing: [child]
+                })
+            )
+        ).toEqual([
+            [VersionTaskAction.VERSION, "renders"],
+            [VersionTaskAction.REFERENCES, "practice"],
+            [VersionTaskAction.VERSION, "practice"],
+            [VersionTaskAction.REFERENCES, "robot"]
+        ]);
+    });
 });

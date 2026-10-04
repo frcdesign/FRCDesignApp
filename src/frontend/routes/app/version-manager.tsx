@@ -10,9 +10,9 @@ import { AppTitle } from "../../components/app-title";
 import { Button } from "@mantine/core";
 import { GitBranchIcon } from "@phosphor-icons/react";
 import {
-    SectionError,
-    SectionLoading,
-    SectionNotice
+    PageError,
+    PageLoading,
+    PageNotice
 } from "../../components/app-notice";
 import { IconSize } from "../../lib/style-constants";
 import { updateUiState, useUiState } from "../../lib/ui-state";
@@ -59,11 +59,11 @@ function VersionManagerPage(): ReactNode {
 
     if (!workspace) {
         // What renders on the way out, `beforeLoad` having redirected.
-        return <SectionLoading title="Loading..." />;
+        return <PageLoading title="Loading..." />;
     }
     if (needsSignIn) {
         return (
-            <SectionNotice
+            <PageNotice
                 icon={<GitBranchIcon size={IconSize.SECTION} />}
                 title="Sign in to manage versions"
                 description="Pushing and pulling happen in your Onshape documents."
@@ -86,10 +86,10 @@ function VersionManager(props: VersionManagerProps): ReactNode {
     const isChildrenOpen = useUiState((state) => state.isChildrenOpen);
 
     if (linksQuery.isPending) {
-        return <SectionLoading title="Loading linked workspaces..." />;
+        return <PageLoading title="Loading linked documents..." />;
     }
     if (linksQuery.isError || !linksQuery.data) {
-        return <SectionError title="Failed to load linked workspaces." />;
+        return <PageError title="Failed to load linked documents." />;
     }
 
     const links = linksQuery.data;

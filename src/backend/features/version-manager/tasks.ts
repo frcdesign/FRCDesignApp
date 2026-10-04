@@ -1,5 +1,6 @@
 /** The tasks a run will take, laid out before it takes any. */
 import {
+    isSameWorkspace,
     VersionJobKind,
     VersionTaskAction,
     VersionTaskState,
@@ -35,9 +36,15 @@ export function planTasks(params: VersionJobParams): VersionTask[] {
         ];
     }
 
+    const referencing = params.referencing ?? [];
     const versions =
         params.sources && !params.updateOnly
-            ? params.sources.map((source) => task(VERSION, source))
+            ? params.sources.flatMap((source) => [
+                  ...(referencing.some((each) => isSameWorkspace(each, source))
+                      ? [task(REFERENCES, source)]
+                      : []),
+                  task(VERSION, source)
+              ])
             : [];
     return [...versions, task(REFERENCES, params.workspace)];
 }

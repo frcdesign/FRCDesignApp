@@ -40,6 +40,7 @@ import {
 import { reportJob } from "./jobs";
 import { planTasks } from "./tasks";
 import { trackVersionRun } from "../analytics/tracking";
+import { forgetChanges } from "./workspace-cache";
 
 interface JobParamsBase {
     /** Whose Onshape session the run borrows; see the load workflow. */
@@ -70,8 +71,16 @@ export interface PushJobParams extends JobParamsBase {
 
 export interface PullJobParams extends JobParamsBase {
     kind: VersionJobKind.PULL;
-    /** The parents to pull from; absent for every out-of-date reference. */
+    /**
+     * The parents to version, in the order they have to run (see `pullOrder`);
+     * absent for every out-of-date reference.
+     */
     sources?: WorkspacePath[];
+    /**
+     * Sources a recursive pull moves onto the versions cut before them, before
+     * versioning them in turn.
+     */
+    referencing?: WorkspacePath[];
 }
 
 export type VersionJobParams = PushJobParams | PullJobParams;
@@ -277,15 +286,19 @@ async function runTask<T>(
             }
         );
 
+    let value: T | undefined;
     try {
-        const value = await work(run);
+        value = await work(run);
         task.state = VersionTaskState.DONE;
-        return value;
     } catch (error) {
         task.state = VersionTaskState.FAILED;
         task.reason = describeRunFailure(error);
-        return undefined;
     }
+    // Even a failed task can have moved some references.
+    await ctx.step.do(`forget-changes-${index}`, () =>
+        forgetChanges(ctx.env.KV, task.workspace)
+    );
+    return value;
 }
 
 /**

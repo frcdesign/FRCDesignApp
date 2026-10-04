@@ -1,19 +1,22 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { toWorkspacePath } from "@backend/features/version-manager/contract";
 import { renderWithProviders } from "../../../../__test_utils__/render";
 import { VersionForm } from "./version-form";
 
+const ANSWERED = { isPending: false, data: { name: "V5" } };
+
 // The suggestion as the server answers it; the query's own gating isn't under test.
+let suggested: { isPending: boolean; data?: { name: string } } = ANSWERED;
 vi.mock("../queries", () => ({
-    useNextVersionNameQuery: () => ({ isPending: false, data: { name: "V5" } })
+    useNextVersionNameQuery: () => suggested
 }));
 
 const WORKSPACE = toWorkspacePath("doc", "doc-w");
 
-function renderForm(onSubmit = vi.fn()) {
-    renderWithProviders(
+function form(onSubmit: () => void) {
+    return (
         <VersionForm
             versioned={WORKSPACE}
             submitLabel="Push"
@@ -23,19 +26,31 @@ function renderForm(onSubmit = vi.fn()) {
             onSubmit={onSubmit}
         />
     );
+}
+
+function renderForm(onSubmit = vi.fn()) {
+    renderWithProviders(form(onSubmit));
     return onSubmit;
 }
 
-describe("VersionForm", () => {
-    it("opens with the suggested name as text, all of it selected on a click", async () => {
-        const user = userEvent.setup();
-        renderForm();
+const nameField = () =>
+    screen.getByRole<HTMLInputElement>("textbox", { name: /Version name/ });
 
-        const name = screen.getByRole<HTMLInputElement>("textbox", {
-            name: /Version name/
-        });
+beforeEach(() => {
+    suggested = ANSWERED;
+});
+
+describe("VersionForm", () => {
+    it("focuses the suggested name, all of it selected, once it arrives", () => {
+        suggested = { isPending: true };
+        const { rerender } = renderWithProviders(form(vi.fn()));
+
+        suggested = ANSWERED;
+        rerender(form(vi.fn()));
+
+        const name = nameField();
         expect(name.value).toBe("V5");
-        await user.click(name);
+        expect(document.activeElement).toBe(name);
         expect([name.selectionStart, name.selectionEnd]).toEqual([0, 2]);
     });
 
@@ -56,7 +71,7 @@ describe("VersionForm", () => {
         const user = userEvent.setup();
         renderForm();
 
-        await user.clear(screen.getByRole("textbox", { name: /Version name/ }));
+        await user.clear(nameField());
 
         expect(
             screen.getByRole<HTMLButtonElement>("button", { name: "Push" })
@@ -68,7 +83,6 @@ describe("VersionForm", () => {
         const user = userEvent.setup();
         const onSubmit = renderForm();
 
-        await user.click(screen.getByRole("textbox", { name: /Version name/ }));
         await user.keyboard("Release");
         await user.click(screen.getByRole("button", { name: "Push" }));
 

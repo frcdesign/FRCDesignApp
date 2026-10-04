@@ -49,6 +49,14 @@ export async function forgetWorkspace(
     ]);
 }
 
+/** What a run changed in the workspace, which no webhook reports before the list is read again. */
+export async function forgetChanges(
+    kv: KVNamespace,
+    workspace: InstancePath
+): Promise<void> {
+    await changeCounts.delete(kv, workspaceKey(workspace));
+}
+
 /** Best effort: a webhook that can't be registered leaves the expiry. */
 function watch(
     c: AppContext,

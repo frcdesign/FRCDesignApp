@@ -88,6 +88,11 @@ export function PageNotice(props: PageNoticeProps): ReactNode {
     );
 }
 
+/** {@link SectionLoading} for a whole page. */
+export function PageLoading(props: SectionLoadingProps): ReactNode {
+    return <PageNotice title={props.title} icon={<Loader />} />;
+}
+
 /** {@link SectionError} for a whole page. */
 export function PageError(
     props: Omit<PageNoticeProps, "description">

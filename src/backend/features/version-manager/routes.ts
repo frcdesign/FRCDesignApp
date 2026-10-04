@@ -37,16 +37,19 @@ import {
     type WorkspacePath
 } from "./contract";
 import {
+    ancestorKeys,
     childrenOf,
     descendantKeys,
     LinkCycleError,
+    parentsOf,
+    pullOrder,
     pushOrder,
     type WorkspaceEdge
 } from "./graph";
 import { getJobStatus, startJob } from "./jobs";
 import {
     addLink,
-    collectDescendantEdges,
+    collectEdges,
     deleteLink,
     getChildLinks,
     getLink,
@@ -99,10 +102,13 @@ const pushScope = z.discriminatedUnion("kind", [
 
 const pullScope = z.discriminatedUnion("kind", [
     z.object({ kind: z.literal(PullScopeKind.PARENTS) }),
+    z.object({ kind: z.literal(PullScopeKind.ANCESTORS) }),
     z.object({ kind: z.literal(PullScopeKind.ALL) }),
     z.object({
         kind: z.literal(PullScopeKind.ONE),
-        workspace: workspaceSchema
+        workspace: workspaceSchema,
+        /** Carries the pull on up through that parent's own ancestors. */
+        recursive: z.boolean().default(false)
     })
 ]);
 
@@ -546,6 +552,32 @@ function isRecursive(scope: PushScopeInput): boolean {
     );
 }
 
+/** Whether the pull carries on above the parents it first reaches. */
+function isRecursivePull(scope: PullScopeInput): boolean {
+    return (
+        scope.kind === PullScopeKind.ANCESTORS ||
+        (scope.kind === PullScopeKind.ONE && scope.recursive)
+    );
+}
+
+/** The run's order, or a refusal where the links loop. */
+function orderOrRefuse(
+    run: "push" | "pull",
+    order: () => WorkspacePath[]
+): WorkspacePath[] {
+    try {
+        return order();
+    } catch (error) {
+        if (error instanceof LinkCycleError) {
+            throw handledError(
+                `The linked workspaces form a loop, so there is no order to ${run} them in. Remove a link and try again.`,
+                HttpStatus.CONFLICT
+            );
+        }
+        throw error;
+    }
+}
+
 /** The workspaces the push updates, in order, with the edges they came from. */
 async function resolvePushOrder(
     c: AppContext,
@@ -555,21 +587,12 @@ async function resolvePushOrder(
     const db = getDb(c.env.DB);
     const recursive = isRecursive(scope);
     const edges = recursive
-        ? await collectDescendantEdges(db, workspace)
+        ? await collectEdges(db, workspace, LinkDirection.CHILD)
         : (await getChildLinks(db, workspace)).map(toEdge);
 
-    let order: WorkspacePath[];
-    try {
-        order = pushOrder(edges, workspace, recursive);
-    } catch (error) {
-        if (error instanceof LinkCycleError) {
-            throw handledError(
-                "The linked workspaces form a loop, so there is no order to push them in. Remove a link and try again.",
-                HttpStatus.CONFLICT
-            );
-        }
-        throw error;
-    }
+    let order = orderOrRefuse("push", () =>
+        pushOrder(edges, workspace, recursive)
+    );
 
     if (scope.kind === PushScopeKind.ONE) {
         // Only a linked workspace may be written to.
@@ -596,10 +619,21 @@ versionManagerRoutes.post(
         const body = c.req.valid("json");
         const { name, description = "", scope, updateOnly } = body;
         const workspace = toWorkspace(body.workspace);
+        const recursive = isRecursivePull(scope);
 
+        if (updateOnly && recursive) {
+            throw handledError(
+                "A recursive pull has to version the documents it passes through.",
+                HttpStatus.BAD_REQUEST
+            );
+        }
         const client = await c.var.getOnshapeApi();
         await requireIdle(c, workspace);
-        const sources = await resolvePullSources(c, workspace, scope);
+        const { sources, edges } = await resolvePullSources(
+            c,
+            workspace,
+            scope
+        );
         if (sources && !updateOnly) {
             requireDistinctDocuments(sources);
         }
@@ -635,7 +669,14 @@ versionManagerRoutes.post(
             workspace,
             ...(sources ?? [])
         ]);
-        const targets = toDocuments(sources ?? [], documentNames);
+        const targets = toDocuments(
+            recursive
+                ? scope.kind === PullScopeKind.ONE
+                    ? [toWorkspace(scope.workspace)]
+                    : parentsOf(edges, workspace)
+                : (sources ?? []),
+            documentNames
+        );
         const run = await c.env.VERSION_MANAGER_WORKFLOW.create({
             params: {
                 kind: VersionJobKind.PULL,
@@ -647,6 +688,12 @@ versionManagerRoutes.post(
                 targets,
                 documentNames,
                 sources,
+                // Those with parents of their own in the run.
+                referencing: recursive
+                    ? (sources ?? []).filter(
+                          (each) => parentsOf(edges, each).length > 0
+                      )
+                    : undefined,
                 name,
                 description
             }
@@ -662,38 +709,53 @@ versionManagerRoutes.post(
     }
 );
 
-/** The parents a pull versions, or undefined for every out-of-date reference. */
+/**
+ * The parents a pull versions, in order, or undefined for every out-of-date
+ * reference; with the edges they came from.
+ */
 async function resolvePullSources(
     c: AppContext,
     workspace: WorkspacePath,
     scope: PullScopeInput
-): Promise<WorkspacePath[] | undefined> {
+): Promise<{ sources?: WorkspacePath[]; edges: WorkspaceEdge[] }> {
     if (scope.kind === PullScopeKind.ALL) {
-        return undefined;
+        return { edges: [] };
     }
 
-    const rows = await getParentLinks(getDb(c.env.DB), workspace);
+    const db = getDb(c.env.DB);
+    const recursive = isRecursivePull(scope);
+    const edges = recursive
+        ? await collectEdges(db, workspace, LinkDirection.PARENT)
+        : (await getParentLinks(db, workspace)).map(toEdge);
+    const parents = parentsOf(edges, workspace);
+    const order = () =>
+        recursive
+            ? orderOrRefuse("pull", () => pullOrder(edges, workspace))
+            : parents;
+
     if (scope.kind === PullScopeKind.ONE) {
         const parent = toWorkspace(scope.workspace);
-        const row = rows.find((each) =>
-            isSameWorkspace(toEdge(each).parent, parent)
-        );
-        if (!row) {
+        if (!parents.some((each) => isSameWorkspace(each, parent))) {
             throw handledError(
                 "That workspace is no longer a parent of this one.",
                 HttpStatus.CONFLICT
             );
         }
-        return [toEdge(row).parent];
+        // Filtered, so a parent fed by two of these still comes after both.
+        const kept = ancestorKeys(edges, parent);
+        return {
+            sources: order().filter((each) => kept.has(workspaceKey(each))),
+            edges
+        };
     }
 
-    if (rows.length === 0) {
+    if (parents.length === 0) {
         throw handledError(
             "This workspace has no parents to pull from.",
             HttpStatus.CONFLICT
         );
     }
-    return rows.map((row) => toEdge(row).parent);
+    return { sources: order(), edges };
 }
 
 /** GET /api/version-job?documentId=&instanceId= */

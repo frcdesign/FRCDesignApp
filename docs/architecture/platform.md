@@ -119,19 +119,21 @@ which is how a loading toast turns into its result.
 
 The flows that use them:
 
-| Action                        | Toast id                                                  | While                               | Then                                                            |
-| ----------------------------- | --------------------------------------------------------- | ----------------------------------- | --------------------------------------------------------------- |
-| Insert                        | per insertable                                            | "Inserting {name}..."               | "Successfully inserted {name}." (and "…created a Fasten mate.") |
-| Add document                  | `add-group`                                               | "Adding document..."                | "Added {name}."                                                 |
-| Reload thumbnail              | `reload-thumbnail`                                        | "Reloading thumbnail..."            | "Thumbnail reloaded."                                           |
-| Show or hide elements         | `set-visibility`                                          | "Showing/Hiding insertables..."     | "Insertables shown/hidden."                                     |
-| Toggle insert and fasten      | per insertable                                            | loading                             | success                                                         |
-| Enable or disable indexing    | per insertable                                            | info: "Enabling/Disabling indexing" | "Indexing enabled/disabled."                                    |
-| Exclude parameters            | per insertable                                            | info: "Reindexing part"             | "Part reindexed."                                               |
-| Set or refresh the admin team | none                                                      | —                                   | "Admin team set/refreshed: {n} members."                        |
-| Reload documents / approve    | none                                                      | —                                   | info: "Reloading {n} documents..."                              |
-| Save favorite configuration   | none                                                      | —                                   | "Favorite default configuration set."                           |
-| Tips                          | `quick-insert-tip`, `thumbnail-wait-tip`, sign-in preview | —                                   | info, 8 s                                                       |
+| Action                        | Toast id                                                  | While                                  | Then                                                            |
+| ----------------------------- | --------------------------------------------------------- | -------------------------------------- | --------------------------------------------------------------- |
+| Insert                        | per insertable                                            | "Inserting {name}..."                  | "Successfully inserted {name}." (and "…created a Fasten mate.") |
+| Add document                  | `add-group`                                               | "Adding document..."                   | "Added {name}."                                                 |
+| Reload thumbnail              | `reload-thumbnail`                                        | "Reloading thumbnail..."               | "Thumbnail reloaded."                                           |
+| Show or hide elements         | `set-visibility`                                          | "Showing/Hiding insertables..."        | "Insertables shown/hidden."                                     |
+| Toggle insert and fasten      | per insertable                                            | loading                                | success                                                         |
+| Enable or disable indexing    | per insertable                                            | info: "Enabling/Disabling indexing..." | "Indexing enabled/disabled."                                    |
+| Exclude parameters            | per insertable                                            | info: "Reindexing part..."             | "Part reindexed."                                               |
+| Set or refresh the admin team | none                                                      | —                                      | "Admin team set/refreshed: {n} members."                        |
+| Reload documents / approve    | none                                                      | —                                      | info: "Reloading {n} documents..."                              |
+| Save favorite configuration   | none                                                      | —                                      | "Favorite default configuration set."                           |
+| Link a document               | none                                                      | —                                      | "Successfully linked {document} - {workspace}."                 |
+| Refresh the version manager   | none                                                      | the button's spinner                   | "Refreshed linked documents."                                   |
+| Tips                          | `quick-insert-tip`, `thumbnail-wait-tip`, sign-in preview | —                                      | info, 8 s                                                       |
 
 Loading toasts are for work the user watches; background work gets an info
 toast and then shows its progress where it happens (a group's spinner, a job

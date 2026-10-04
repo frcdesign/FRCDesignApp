@@ -11,6 +11,7 @@ import {
 } from "../../lib/onshape/endpoints/permissions";
 import {
     isSameWorkspace,
+    LinkDirection,
     type LinkedWorkspace,
     toWorkspacePath,
     workspaceKey,
@@ -20,7 +21,7 @@ import type { WorkspaceEdge } from "./graph";
 import { workspaceLinks, type WorkspaceLinkRow } from "./schema";
 import { describeWorkspace, getUnversionedChanges } from "./workspace-cache";
 
-/** The most workspaces a recursive push reaches. */
+/** The most workspaces a recursive run reaches. */
 const MAX_LINKED_WORKSPACES = 100;
 
 export function toEdge(row: WorkspaceLinkRow): WorkspaceEdge {
@@ -138,13 +139,16 @@ export async function deleteLink(db: Db, linkId: string): Promise<void> {
 }
 
 /**
- * The edges below `root`, gathered a frontier at a time. Revisits are skipped,
- * so a cycle ends the walk here and `pushOrder` reports it.
+ * The edges below `root`, or above it toward its parents, gathered a frontier
+ * at a time. Revisits are skipped, so a cycle ends the walk here and
+ * `pushOrder` or `pullOrder` reports it.
  */
-export async function collectDescendantEdges(
+export async function collectEdges(
     db: Db,
-    root: WorkspacePath
+    root: WorkspacePath,
+    toward: LinkDirection
 ): Promise<WorkspaceEdge[]> {
+    const isUp = toward === LinkDirection.PARENT;
     const edges: WorkspaceEdge[] = [];
     const visited = new Set<string>();
     let frontier: WorkspacePath[] = [root];
@@ -160,16 +164,20 @@ export async function collectDescendantEdges(
         });
         if (visited.size > MAX_LINKED_WORKSPACES) {
             throw handledError(
-                `A push can reach at most ${MAX_LINKED_WORKSPACES} linked workspaces.`,
+                `A recursive run can reach at most ${MAX_LINKED_WORKSPACES} linked workspaces.`,
                 HttpStatus.CONFLICT
             );
         }
         const rows = await Promise.all(
-            unvisited.map((workspace) => getChildLinks(db, workspace))
+            unvisited.map((workspace) =>
+                isUp
+                    ? getParentLinks(db, workspace)
+                    : getChildLinks(db, workspace)
+            )
         );
         const level = rows.flat().map(toEdge);
         edges.push(...level);
-        frontier = level.map((edge) => edge.child);
+        frontier = level.map((edge) => (isUp ? edge.parent : edge.child));
     }
     return edges;
 }

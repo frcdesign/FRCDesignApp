@@ -9,7 +9,6 @@ import {
     TextInput
 } from "@mantine/core";
 import {
-    ArrowClockwiseIcon,
     BooksIcon,
     CaretDownIcon,
     GearIcon,
@@ -63,8 +62,8 @@ import {
 import { useTargetWorkspace } from "../lib/onshape-params";
 import { type AppTab, UtilityTab } from "../lib/app-tab";
 import { getTabName, useNavigateToTab } from "../lib/tabs";
-import { useRefreshLibrary } from "../lib/refresh";
 import { useRefreshVersionManagerMutation } from "../features/version-manager/queries";
+import { RefreshButton } from "./refresh-button";
 
 /** Stretched so a full-height child's underline lands on the row's border. */
 export function NavbarRow(props: PropsWithChildren): ReactNode {
@@ -105,10 +104,8 @@ export function AppNavbar(): ReactNode {
                     {/* Inserting is the library's; the version manager inserts nothing. */}
                     {!isVersionManager && <InsertLocationStatus />}
                     <SignInButton />
-                    <Group gap={0}>
-                        <RefreshButton />
-                        <SettingsControls />
-                    </Group>
+                    {isVersionManager && <VersionManagerRefreshButton />}
+                    <SettingsControls />
                 </Group>
             </NavbarRow>
             {!isVersionManager && (
@@ -293,33 +290,15 @@ export function SettingsControls(): ReactNode {
     );
 }
 
-/** Reads the page showing again: the library, or the version manager's links. */
-function RefreshButton(): ReactNode {
-    const isVersionManager = useIsVersionManager();
-    const refreshLibrary = useRefreshLibrary();
+/** Reads the linked documents again, past what the server cached of them. */
+function VersionManagerRefreshButton(): ReactNode {
     const workspace = useTargetWorkspace();
-    const refreshVersionManager = useRefreshVersionManagerMutation(workspace);
-    const [isRefreshingLibrary, setIsRefreshingLibrary] = useState(false);
-
-    const refresh = () => {
-        if (isVersionManager) {
-            refreshVersionManager.mutate();
-            return;
-        }
-        setIsRefreshingLibrary(true);
-        void refreshLibrary().finally(() => setIsRefreshingLibrary(false));
-    };
-
+    const refresh = useRefreshVersionManagerMutation(workspace);
     return (
-        <ActionIcon
-            title="Refresh"
-            my="auto"
-            size="input-sm"
-            loading={refreshVersionManager.isPending || isRefreshingLibrary}
-            onClick={refresh}
-        >
-            <ArrowClockwiseIcon size={IconSize.CONTROL} />
-        </ActionIcon>
+        <RefreshButton
+            loading={refresh.isPending}
+            onClick={() => refresh.mutate()}
+        />
     );
 }
 

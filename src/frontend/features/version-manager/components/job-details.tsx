@@ -24,7 +24,6 @@ import {
 import { makeUrl } from "../../../lib/url";
 import {
     jobHeadline,
-    jobStats,
     OUTCOME_STATUS,
     runningHeadline,
     TASK_LABEL
@@ -80,8 +79,6 @@ export function JobDetails(props: JobDetailsProps): ReactNode {
     if (!status) {
         return null;
     }
-    const isRunning = status.state === VersionJobState.RUNNING;
-    const stats = isRunning ? [] : jobStats(status);
 
     return (
         <Stack gap="md">
@@ -98,15 +95,6 @@ export function JobDetails(props: JobDetailsProps): ReactNode {
                     title="Stopped early."
                     description={status.error}
                 />
-            )}
-            {stats.length > 0 && (
-                <Group gap="xs">
-                    {stats.map((stat) => (
-                        <Badge key={stat.label} color={stat.color}>
-                            {stat.label}
-                        </Badge>
-                    ))}
-                </Group>
             )}
             {groupByDocument(status.tasks ?? []).map((group) => (
                 <DocumentSteps key={group.key} group={group} />

@@ -7,6 +7,7 @@ import { OnshapeApiError, type OAuthApi } from "../../lib/onshape/client";
 import type { OnshapeVersionInfo } from "../../lib/onshape/types";
 import {
     jobOutcome,
+    PullScopeKind,
     PushScopeKind,
     VersionJobKind,
     VersionJobOutcome,
@@ -18,6 +19,7 @@ import {
 } from "./contract";
 import { getJobStatus } from "./jobs";
 import * as References from "./references";
+import * as WorkspaceCache from "./workspace-cache";
 import type { VersionJobParams } from "./workflow";
 
 const ws = (documentId: string): WorkspacePath => ({
@@ -124,6 +126,54 @@ describe("VersionManagerWorkflow", () => {
             updatedElements: 4
         });
         expect(jobOutcome(status)).toBe(VersionJobOutcome.SUCCESS);
+    });
+
+    // GRANDCHILD feeds CHILD, which feeds ROOT.
+    it("pins each parent a recursive pull passes through to the versions cut above it", async () => {
+        vi.spyOn(VersionEndpoints, "createVersion").mockImplementation(
+            (_client, path, name) =>
+                Promise.resolve(version(`${path.documentId}-v`, name))
+        );
+        const update = vi
+            .spyOn(References, "updateOutdatedReferences")
+            .mockResolvedValue({ updatedElements: 1 });
+
+        const status = await run("recursive-pull", {
+            ...BASE,
+            kind: VersionJobKind.PULL,
+            scope: PullScopeKind.ANCESTORS,
+            sources: [GRANDCHILD, CHILD],
+            referencing: [CHILD]
+        });
+
+        expect(update).toHaveBeenNthCalledWith(1, expect.anything(), CHILD, {
+            onlyDocumentIds: ["grandchild"],
+            pinnedVersions: { grandchild: "grandchild-v" }
+        });
+        expect(update).toHaveBeenNthCalledWith(2, expect.anything(), ROOT, {
+            onlyDocumentIds: ["grandchild", "child"],
+            pinnedVersions: { grandchild: "grandchild-v", child: "child-v" }
+        });
+        expect(status.result).toEqual({
+            createdVersions: 2,
+            updatedElements: 2
+        });
+    });
+
+    // So the row's count of changes since the last version is read again.
+    it("forgets the cached changes of every workspace it touched", async () => {
+        vi.spyOn(VersionEndpoints, "createVersion").mockImplementation(
+            (_client, path, name) =>
+                Promise.resolve(version(`${path.documentId}-v`, name))
+        );
+        vi.spyOn(References, "updateOutdatedReferences").mockResolvedValue({
+            updatedElements: 1
+        });
+        const forget = vi.spyOn(WorkspaceCache, "forgetChanges");
+
+        await run("forgets", push([CHILD]));
+
+        expect(forget.mock.calls.map((call) => call[1])).toEqual([ROOT, CHILD]);
     });
 
     it("numbers an unnamed version from that document's own history", async () => {

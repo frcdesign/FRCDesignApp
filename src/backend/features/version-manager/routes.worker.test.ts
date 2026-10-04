@@ -134,6 +134,50 @@ describe("version manager routes", () => {
         expect(res.status).toBe(403);
     });
 
+    it("refuses an update-only pull that would have to recurse", async () => {
+        grant({ root: ALL, child: ALL });
+        const res = await post("/pull-references", {
+            workspace: toInput(CHILD),
+            scope: { kind: PullScopeKind.ANCESTORS },
+            updateOnly: true
+        });
+        expect(res.status).toBe(400);
+    });
+
+    it("refuses a recursive pull before it starts when a grandparent is not writable", async () => {
+        const top = ws("top");
+        await addLink(db, top, ROOT);
+        grant({ child: ALL, root: ALL, top: [OnshapePermission.READ] });
+        const res = await post("/pull-references", {
+            workspace: toInput(CHILD),
+            scope: {
+                kind: PullScopeKind.ONE,
+                workspace: toInput(ROOT),
+                recursive: true
+            }
+        });
+        expect(res.status).toBe(403);
+    });
+
+    it("starts a recursive pull from the top, moving each parent before versioning it", async () => {
+        const top = ws("top");
+        await addLink(db, top, ROOT);
+        grant({ child: ALL, root: ALL, top: ALL });
+        const create = vi
+            .spyOn(env.VERSION_MANAGER_WORKFLOW, "create")
+            .mockResolvedValue({ id: "started" } as WorkflowInstance);
+        const res = await postSignedIn("/pull-references", {
+            workspace: toInput(CHILD),
+            scope: { kind: PullScopeKind.ANCESTORS }
+        });
+        expect(res.status).toBe(200);
+        expect(create.mock.calls[0][0]?.params).toMatchObject({
+            sources: [top, ROOT],
+            referencing: [ROOT],
+            targets: [{ workspace: ROOT }]
+        });
+    });
+
     // A second workspace of a document already linked is still that document.
     it("refuses a document already linked, either way round", async () => {
         grant({ root: ALL, child: ALL });

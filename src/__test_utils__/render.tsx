@@ -14,23 +14,26 @@ export function createTestQueryClient(): QueryClient {
     });
 }
 
+/** The providers wrap as RTL's `wrapper`, so a `rerender` keeps them. */
 export function renderWithProviders(
     ui: ReactNode,
     queryClient: QueryClient = createTestQueryClient()
 ) {
     return {
         queryClient,
-        ...render(
-            <QueryClientProvider client={queryClient}>
-                {/* `test` turns off transitions and portals, which jsdom
-                    cannot run, and which would hide a dropdown's options. */}
-                <MantineProvider
-                    theme={createAppTheme(getLibraryColor(DEFAULT_LIBRARY))}
-                    env="test"
-                >
-                    {ui}
-                </MantineProvider>
-            </QueryClientProvider>
-        )
+        ...render(ui, {
+            wrapper: ({ children }) => (
+                <QueryClientProvider client={queryClient}>
+                    {/* `test` turns off transitions and portals, which jsdom
+                        cannot run, and which would hide a dropdown's options. */}
+                    <MantineProvider
+                        theme={createAppTheme(getLibraryColor(DEFAULT_LIBRARY))}
+                        env="test"
+                    >
+                        {children}
+                    </MantineProvider>
+                </QueryClientProvider>
+            )
+        })
     };
 }

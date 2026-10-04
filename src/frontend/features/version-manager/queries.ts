@@ -83,6 +83,7 @@ export function useRefreshVersionManagerMutation(
                 ].map((queryKey) => queryClient.invalidateQueries({ queryKey }))
             );
         },
+        onSuccess: () => showSuccessToast("Refreshed linked documents."),
         onError: getAppErrorHandler("Unexpectedly failed to refresh.")
     });
 }

@@ -93,6 +93,7 @@ export type PushScope =
 /** Where a pull takes its versions from; see {@link PullScope}. */
 export enum PullScopeKind {
     PARENTS = "parents",
+    ANCESTORS = "ancestors",
     ALL = "all",
     ONE = "one"
 }
@@ -101,17 +102,17 @@ export enum PullScopeKind {
  * What a pull reads.
  *
  * - `parents` — this workspace's linked parents.
+ * - `ancestors` — every workspace above it, each moved onto its own parents'
+ *   new versions and then versioned, so this one picks up changes from the top.
  * - `all` — every out-of-date reference, linked or not.
- * - `one` — a single parent.
- *
- * There is no recursive pull: a pull only writes to this workspace, and going
- * further would mean versioning a parent's own parents — which is a push, and
- * theirs to make.
+ * - `one` — a single parent; `recursive` carries it on up through that
+ *   parent's own ancestors.
  */
 export type PullScope =
     | { kind: PullScopeKind.PARENTS }
+    | { kind: PullScopeKind.ANCESTORS }
     | { kind: PullScopeKind.ALL }
-    | { kind: PullScopeKind.ONE; workspace: WorkspacePath };
+    | { kind: PullScopeKind.ONE; workspace: WorkspacePath; recursive: boolean };
 
 export enum VersionJobKind {
     PUSH = "push",

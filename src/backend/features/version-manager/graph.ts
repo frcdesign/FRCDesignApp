@@ -1,6 +1,6 @@
 /**
  * The link graph, as plain edges: who has to be updated before whom. Pure, so
- * the ordering a push depends on is testable without D1 or Onshape.
+ * the ordering a run depends on is testable without D1 or Onshape.
  */
 import { isSameWorkspace, workspaceKey, type WorkspacePath } from "./contract";
 
@@ -10,7 +10,7 @@ export interface WorkspaceEdge {
     child: WorkspacePath;
 }
 
-/** Thrown when a workspace's descendants lead back to it. */
+/** Thrown when following links from a workspace leads back to it. */
 export class LinkCycleError extends Error {
     constructor(readonly workspace: WorkspacePath) {
         super(
@@ -30,21 +30,25 @@ export function childrenOf(
         .map((edge) => edge.child);
 }
 
+/** The workspaces `workspace` references directly. */
+export function parentsOf(
+    edges: WorkspaceEdge[],
+    workspace: WorkspacePath
+): WorkspacePath[] {
+    return edges
+        .filter((edge) => isSameWorkspace(edge.child, workspace))
+        .map((edge) => edge.parent);
+}
+
+type Step = (workspace: WorkspacePath) => WorkspacePath[];
+
 /**
- * The workspaces a push from `root` updates, in order, `root` excluded. A
- * recursive push orders them topologically: a child of two of them waits for both.
+ * Everything reachable from `root` by `next`, `root` included, each after
+ * every workspace it reaches.
  *
  * @throws {LinkCycleError} when the reachable subgraph has a cycle.
  */
-export function pushOrder(
-    edges: WorkspaceEdge[],
-    root: WorkspacePath,
-    recursive: boolean
-): WorkspacePath[] {
-    if (!recursive) {
-        return childrenOf(edges, root);
-    }
-
+function postOrder(root: WorkspacePath, next: Step): WorkspacePath[] {
     const finished = new Set<string>();
     // Everything on the current path, which is what makes a back edge visible.
     const active = new Set<string>();
@@ -59,43 +63,89 @@ export function pushOrder(
             return;
         }
         active.add(key);
-        for (const next of childrenOf(edges, workspace)) {
-            visit(next);
+        for (const each of next(workspace)) {
+            visit(each);
         }
         active.delete(key);
         finished.add(key);
-        // Post-order, so a workspace lands before everything it references;
-        // reversed below, which is the order they have to be updated in.
         order.push(workspace);
     };
 
     visit(root);
-    order.reverse();
-    // The root leads, having been visited last.
-    return order.slice(1);
+    return order;
 }
 
 /**
- * `workspace` and everything below it, as a set of keys — what a push aimed at
- * one child keeps when it carries on recursively.
+ * The workspaces a push from `root` updates, in order, `root` excluded. A
+ * recursive push orders them topologically: a child of two of them waits for both.
+ *
+ * @throws {LinkCycleError} when the reachable subgraph has a cycle.
+ */
+export function pushOrder(
+    edges: WorkspaceEdge[],
+    root: WorkspacePath,
+    recursive: boolean
+): WorkspacePath[] {
+    if (!recursive) {
+        return childrenOf(edges, root);
+    }
+    // Reversed, so each comes before what references it; the root leads.
+    return postOrder(root, (each) => childrenOf(edges, each))
+        .reverse()
+        .slice(1);
+}
+
+/**
+ * The workspaces above `root` that a recursive pull versions, `root` excluded:
+ * each after all of its own parents, whose new versions it is moved onto.
+ *
+ * @throws {LinkCycleError} when the reachable subgraph has a cycle.
+ */
+export function pullOrder(
+    edges: WorkspaceEdge[],
+    root: WorkspacePath
+): WorkspacePath[] {
+    // The root comes last, having been visited first.
+    return postOrder(root, (each) => parentsOf(edges, each)).slice(0, -1);
+}
+
+/** `workspace` and everything reachable from it by `next`, as a set of keys. */
+function reachableKeys(workspace: WorkspacePath, next: Step): Set<string> {
+    const found = new Set<string>([workspaceKey(workspace)]);
+    let frontier = [workspace];
+    while (frontier.length > 0) {
+        const reached: WorkspacePath[] = [];
+        for (const each of frontier) {
+            for (const other of next(each)) {
+                const key = workspaceKey(other);
+                if (found.has(key)) continue;
+                found.add(key);
+                reached.push(other);
+            }
+        }
+        frontier = reached;
+    }
+    return found;
+}
+
+/**
+ * `workspace` and everything below it — what a push aimed at one child keeps
+ * when it carries on recursively.
  */
 export function descendantKeys(
     edges: WorkspaceEdge[],
     workspace: WorkspacePath
 ): Set<string> {
-    const found = new Set<string>([workspaceKey(workspace)]);
-    let frontier = [workspace];
-    while (frontier.length > 0) {
-        const next: WorkspacePath[] = [];
-        for (const each of frontier) {
-            for (const child of childrenOf(edges, each)) {
-                const key = workspaceKey(child);
-                if (found.has(key)) continue;
-                found.add(key);
-                next.push(child);
-            }
-        }
-        frontier = next;
-    }
-    return found;
+    return reachableKeys(workspace, (each) => childrenOf(edges, each));
+}
+
+/**
+ * `workspace` and everything above it — what a pull from one parent keeps
+ * when it carries on recursively.
+ */
+export function ancestorKeys(
+    edges: WorkspaceEdge[],
+    workspace: WorkspacePath
+): Set<string> {
+    return reachableKeys(workspace, (each) => parentsOf(edges, each));
 }

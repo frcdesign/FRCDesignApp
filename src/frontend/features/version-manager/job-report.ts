@@ -1,6 +1,5 @@
 /** How a run is going or went, in the few words the toast and the callout share. */
 import {
-    failedTaskCount,
     VersionJobKind,
     VersionJobOutcome,
     VersionTaskAction,
@@ -8,7 +7,6 @@ import {
 } from "@backend/features/version-manager/contract";
 import { plural } from "../../lib/plural";
 import { Status } from "../../lib/status";
-import { StatusColor } from "../../lib/style-constants";
 import { documentLabel } from "./document-label";
 
 export const OUTCOME_STATUS: Record<VersionJobOutcome, Status> = {
@@ -67,34 +65,3 @@ export const TASK_LABEL = {
     [VersionTaskAction.VERSION]: "Create version",
     [VersionTaskAction.REFERENCES]: "Update references"
 } as const;
-
-interface JobStat {
-    label: string;
-    color: StatusColor;
-}
-
-/** One per thing the run did, omitting what it did none of. */
-export function jobStats(status: VersionJobStatus): JobStat[] {
-    const stats: JobStat[] = [];
-    const { result } = status;
-    if (result && result.createdVersions > 0) {
-        stats.push({
-            label: `${plural(result.createdVersions, "version")} created`,
-            color: StatusColor.INFO
-        });
-    }
-    if (result && result.updatedElements > 0) {
-        stats.push({
-            label: `${plural(result.updatedElements, "tab")} updated`,
-            color: StatusColor.SUCCESS
-        });
-    }
-    const failed = failedTaskCount(status);
-    if (failed > 0) {
-        stats.push({
-            label: `${plural(failed, "step")} failed`,
-            color: StatusColor.ERROR
-        });
-    }
-    return stats;
-}

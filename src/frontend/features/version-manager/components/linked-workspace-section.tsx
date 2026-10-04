@@ -167,6 +167,17 @@ interface LinkActions {
     updateAll: () => void;
 }
 
+/** Updating all reaches every out-of-date reference, linked or not. */
+function wholePullKind(
+    recursive: boolean,
+    updateOnly: boolean
+): Exclude<PullScopeKind, PullScopeKind.ONE> {
+    if (updateOnly) {
+        return PullScopeKind.ALL;
+    }
+    return recursive ? PullScopeKind.ANCESTORS : PullScopeKind.PARENTS;
+}
+
 export function useLinkActions(
     workspace: WorkspacePath,
     direction: LinkDirection
@@ -207,13 +218,12 @@ export function useLinkActions(
         }
         pull.mutate({
             scope: each
-                ? { kind: PullScopeKind.ONE, workspace: each.workspace }
-                : {
-                      // Updating all reaches every out-of-date reference, linked or not.
-                      kind: updateOnly
-                          ? PullScopeKind.ALL
-                          : PullScopeKind.PARENTS
-                  },
+                ? {
+                      kind: PullScopeKind.ONE,
+                      workspace: each.workspace,
+                      recursive
+                  }
+                : { kind: wholePullKind(recursive, updateOnly) },
             updateOnly
         });
     };
@@ -320,17 +330,13 @@ function RunMenuSection(props: RunMenuSectionProps): ReactNode {
             >
                 {copy.quickAction}
             </Menu.Item>
-            {/* No recursive pull: going further would mean versioning a
-                parent's own parents, which is a push and theirs to make. */}
-            {isChild && (
-                <Menu.Item
-                    leftSection={<TreeStructureIcon size={IconSize.MEDIUM} />}
-                    disabled={disabled}
-                    onClick={onQuickRecursive}
-                >
-                    Quick recursive push
-                </Menu.Item>
-            )}
+            <Menu.Item
+                leftSection={<TreeStructureIcon size={IconSize.MEDIUM} />}
+                disabled={disabled}
+                onClick={onQuickRecursive}
+            >
+                {isChild ? "Quick recursive push" : "Quick recursive pull"}
+            </Menu.Item>
             <Menu.Item
                 leftSection={<ArrowsClockwiseIcon size={IconSize.MEDIUM} />}
                 disabled={updateDisabled}

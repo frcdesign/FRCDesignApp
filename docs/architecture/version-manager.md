@@ -29,7 +29,7 @@ it.
 | `src/backend/features/version-manager/contract.ts`                              | `WorkspacePath`, `LinkDirection`, the scopes, `VersionJobStatus`, `workspaceKey` |
 | `src/backend/features/version-manager/schema.ts`                                | `workspace_links`, the feature's own table                                       |
 | `src/backend/features/version-manager/links.ts`                                 | The D1 reads and writes, and resolving a row into what the client shows          |
-| `src/backend/features/version-manager/graph.ts`                                 | Pure: the order a push runs in, and cycle detection                              |
+| `src/backend/features/version-manager/graph.ts`                                 | Pure: the order a recursive push or pull runs in, and cycle detection            |
 | `src/backend/features/version-manager/references.ts`                            | The reference-update engine both a push and a pull run                           |
 | `src/backend/features/version-manager/workflow.ts`                              | `VersionManagerWorkflow`, one class over a push or a pull                        |
 | `src/backend/features/version-manager/tasks.ts`                                 | Pure: the steps a run will take, which its status lists                          |
@@ -65,8 +65,11 @@ document and workspace names, for a week.
 `changesSinceVersionSave`, for an hour.
 
 Both are dropped by the linked workspace's webhook when it changes, and by
-`POST /api/workspace-links/refresh` — the navbar's refresh button on this page —
-for every workspace linked to the caller's.
+`POST /api/workspace-links/refresh` — the navbar's refresh button, shown on this
+page alone — for every workspace linked to the caller's. A run drops the change
+count of each workspace it versions or moves (`forgetChanges`, a step after
+each of its own), and the client reads the links again once the run ends, so a
+parent's badge reflects the version just cut.
 
 **Browser** `isParentsOpen`, `isChildrenOpen` and `quickActionTipCount` in
 `uiState`.
@@ -168,14 +171,19 @@ An update-only pull needs only read on its parents; one that versions them
 needs write and link, and refuses two parents in one document as a recursive
 push does.
 
+A **recursive** pull (`ANCESTORS`, or `ONE` with `recursive`) carries on up
+through the parents' own parents: the whole closure above this workspace in
+topological order (`pullOrder`), each one moved onto the new versions of its
+parents (`referencing` lists those with parents in the run) and then versioned
+itself. This workspace moves last, onto every version the run cut. It needs write and
+link on each document it versions, and is refused, as a recursive push is, over
+a cycle or two workspaces of one document. It cannot be update-only.
+
 `ALL` — **Update all references** in the parents' menu — is every out-of-date
 reference, linked or not, moved onto whatever version each document already
 has. It versions nothing, the documents
 behind those references being nobody's to cut a version in, and it is the one
 thing the parent list cannot express.
-
-There is no recursive pull. Going further would mean versioning a parent's own
-parents, which is a push, and theirs to make.
 
 ### Updating references
 
@@ -199,8 +207,9 @@ Two departures from the app this was ported from:
 A run's steps are laid out before it takes any (`planTasks` in `tasks.ts`): a
 version of a document, or its references moved. A push versions this workspace
 and then moves each child, versioning each after it when recursive; a pull
-versions each parent and then moves this workspace. An update-only run is the
-reference moves alone.
+versions each parent and then moves this workspace, moving each parent onto
+those above it first when recursive. An update-only run is the reference moves
+alone.
 
 Each step runs through `runTask` in `workflow.ts`, which reports it started, then
 makes each Onshape call in its own retried Workflow step. A failure that could
@@ -217,7 +226,7 @@ the run started (less a minute for clock skew) before it creates one.
 
 A failed step is recorded, with its reason, and the run goes on. It skips only
 what needed the failure: everything after this document's own version when that
-fails, a recursive push's version of a document whose references failed (it
+fails, a recursive run's version of a document whose references failed (it
 would hold the ones that did not move), and a pull's reference update when no
 parent could be versioned. A document past a skipped one keeps the version of
 it that it has.
@@ -288,12 +297,13 @@ deletes a transient webhook that goes quiet, so the entries expire as well.
   snapshot with no references to update, and a microversion cannot be written to.
 - Onshape decides what may be done, not the app's access levels. Every route
   checks the caller's Onshape permissions on the documents it would touch.
-- A push checks every workspace it would write to before it cuts anything.
+- A push or pull checks every workspace it would write to before it cuts
+  anything.
 - One run at a time per workspace, and no run versions one document twice.
 - A retried step never cuts a second version.
 - A run is recorded once, after it has finished, and never fails the run.
-- A recursive push versions every workspace it passes through, in topological
-  order.
+- A recursive push or pull versions every workspace it passes through, in
+  topological order.
 - Nothing about a workspace the caller cannot read reaches them: no name, no
   thumbnail, and no run status. The socket says only that a status changed.
 - Permissions are never cached; names and change counts are.
@@ -315,7 +325,7 @@ deletes a transient webhook that goes quiet, so the entries expire as well.
 | Onshape errors or times out on a tab     | The step retries                               | None needed                                        |
 | Onshape refuses a document mid-run       | Its step fails at once; the run goes on        | Details names the step and why; run it again       |
 | A step runs out of retries               | It fails; the run goes on                      | Details names the step and why; run it again       |
-| The links form a cycle                   | A recursive push is refused                    | Remove a link                                      |
+| The links form a cycle                   | A recursive push or pull is refused            | Remove a link                                      |
 | A run is already going from here         | The new one is refused, and the UI disables it | Wait for it to finish                              |
 | A webhook Onshape dropped                | A name or count is stale                       | The entry expires, and the next read watches again |
 | The socket drops mid-run                 | No result toast                                | The reconnect refetches the run; the callout shows |
@@ -342,6 +352,10 @@ deletes a transient webhook that goes quiet, so the entries expire as well.
   sometimes versions and sometimes does not reads oddly, most of all a pull that
   versions nothing. Moving references without versioning is asked for by name
   instead — **Update references** — and a push or pull does what it says.
+- **Pulling can recurse, by request.** A pull that carries on upstream
+  versions documents beyond the parents it names, as a recursive push does
+  downstream, so it is asked for by name — **Quick recursive pull**, or the
+  form's **Recursive** — and never the default.
 - **The suggested name is numbered per document.** The suggestion is this
   document's next number, which would be wrong for every other document a
   recursive push versions, so the form sends it as no name. A name somebody

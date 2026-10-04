@@ -1,5 +1,5 @@
 import { Button, Group, TextInput, Textarea } from "@mantine/core";
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
     MAX_VERSION_NAME_LENGTH,
     type WorkspacePath
@@ -42,13 +42,23 @@ export function VersionForm(props: VersionFormProps): ReactNode {
     const [description, setDescription] = useState("");
     const suggested = useNextVersionNameQuery(versioned);
     const selectAll = useSelectAllOnFocus();
+    const nameRef = useRef<HTMLInputElement>(null);
     const suggestion = suggested.data?.name;
     const name = edited ?? suggestion ?? "";
+
+    // The suggestion usually lands after the modal has focused the empty field.
+    useEffect(() => {
+        if (edited === undefined && suggestion !== undefined) {
+            nameRef.current?.focus();
+            nameRef.current?.select();
+        }
+    }, [edited, suggestion]);
 
     return (
         <>
             <AppModalBody>
                 <TextInput
+                    ref={nameRef}
                     label="Version name"
                     required
                     placeholder={
