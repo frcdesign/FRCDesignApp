@@ -84,8 +84,6 @@ export const groups = sqliteTable(
         documentId: text("document_id").notNull(),
         versionId: text("version_id").notNull(),
         versionCreatedAt: versionCreatedAt(),
-        // See `thumbnails/workspace.ts`. Null until a load has made one.
-        thumbnailWorkspaceId: text("thumbnail_workspace_id"),
         sortAlphabetically: integer("sort_alphabetically", { mode: "boolean" })
             .notNull()
             .default(false),

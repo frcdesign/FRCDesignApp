@@ -9,13 +9,6 @@ import { thumbnailKey } from "./keys";
 
 afterEach(() => vi.restoreAllMocks());
 
-const WORKSPACE_PATH = {
-    documentId: "d1",
-    instanceId: "w1",
-    instanceType: "w" as const,
-    elementId: "e1"
-};
-
 const key = (size: ThumbnailSize) => thumbnailKey("e1", "mv1", size, "a=1");
 
 it("stores both sizes once Onshape has rendered them", async () => {
@@ -23,7 +16,7 @@ it("stores both sizes once Onshape has rendered them", async () => {
         {} as OAuthApi
     );
     const fetch = vi
-        .spyOn(ThumbnailEndpoints, "getConfiguredThumbnail")
+        .spyOn(ThumbnailEndpoints, "getThumbnailFromId")
         .mockRejectedValueOnce(new OnshapeApiError("rendering", 404))
         .mockResolvedValue(new TextEncoder().encode("gif").buffer);
 
@@ -37,8 +30,7 @@ it("stores both sizes once Onshape has rendered them", async () => {
     await env.RENDER_THUMBNAIL_WORKFLOW.create({
         id: "render-test",
         params: {
-            workspacePath: WORKSPACE_PATH,
-            encodedConfiguration: "ENCODED",
+            thumbnailId: "thumbnail-id",
             targets: [
                 { size: ThumbnailSize.LARGE, key: key(ThumbnailSize.LARGE) },
                 { size: ThumbnailSize.SMALL, key: key(ThumbnailSize.SMALL) }
@@ -51,14 +43,13 @@ it("stores both sizes once Onshape has rendered them", async () => {
     });
     await instance.waitForStatus("complete");
 
-    // What it was handed, never one it resolved again itself.
-    expect(fetch).toHaveBeenCalledWith(
-        expect.anything(),
-        WORKSPACE_PATH,
-        "ENCODED",
-        "mv1",
-        ThumbnailSize.LARGE
-    );
+    // The id it was handed, never one it resolved again itself; and one size
+    // at a time, since asking for the other would abandon the render.
+    expect(fetch.mock.calls.map((call) => [call[1], call[2]])).toEqual([
+        ["thumbnail-id", ThumbnailSize.LARGE],
+        ["thumbnail-id", ThumbnailSize.LARGE],
+        ["thumbnail-id", ThumbnailSize.SMALL]
+    ]);
     for (const size of Object.values(ThumbnailSize)) {
         const stored = await env.BLOB.get(key(size));
         expect(stored?.customMetadata).toEqual({

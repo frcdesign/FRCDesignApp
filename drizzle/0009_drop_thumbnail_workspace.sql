@@ -1,0 +1,1 @@
+ALTER TABLE `groups` DROP COLUMN `thumbnail_workspace_id`;

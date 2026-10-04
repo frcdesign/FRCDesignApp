@@ -36,17 +36,32 @@ export async function putThumbnail(
 const BOTH_SIZES = [ThumbnailSize.SMALL, ThumbnailSize.LARGE];
 
 /**
- * Skips sizes already stored; throws while Onshape hasn't rendered. Keyed by
- * the version's microversion though read from the thumbnail workspace,
- * assuming the restored content renders the same.
+ * One size, the version first and the document's workspace when it won't
+ * answer: Onshape's version form of this endpoint is unreliable, its workspace
+ * form isn't, and the version is what the library shows.
  */
+async function fetchThumbnail(
+    onshapeApi: OnshapeApi,
+    elementPath: ElementPath,
+    elementWorkspacePath: ElementPath,
+    size: ThumbnailSize
+): Promise<ArrayBuffer> {
+    try {
+        return await getElementThumbnail(onshapeApi, elementPath, size);
+    } catch {
+        return getElementThumbnail(onshapeApi, elementWorkspacePath, size);
+    }
+}
+
+/** Skips sizes already stored; throws when neither instance gives one up. */
 export async function uploadThumbnails(
     bucket: R2Bucket,
     onshapeApi: OnshapeApi,
-    thumbnailPath: ElementPath,
+    elementPath: ElementPath,
+    elementWorkspacePath: ElementPath,
     microversionId: string
 ): Promise<ThumbnailUrls> {
-    const { elementId } = thumbnailPath;
+    const { elementId } = elementPath;
 
     // Sequential, so a failed attempt costs one call.
     for (const size of BOTH_SIZES) {
@@ -54,9 +69,10 @@ export async function uploadThumbnails(
         if (await bucket.head(key)) {
             continue;
         }
-        const thumbnail = await getElementThumbnail(
+        const thumbnail = await fetchThumbnail(
             onshapeApi,
-            thumbnailPath,
+            elementPath,
+            elementWorkspacePath,
             size
         );
         await putThumbnail(bucket, key, thumbnail, {

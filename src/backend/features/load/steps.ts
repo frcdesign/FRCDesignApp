@@ -52,17 +52,13 @@ export const ONSHAPE_STEP_RETRIES = {
     backoff: CONSTANT_BACKOFF
 };
 
-/** A freshly branched workspace takes minutes to render: about 16 minutes in all. */
-const THUMBNAIL_RETRY_SECONDS = [30, 60, 120, 240, 240, 240];
-
-function thumbnailRetryDelay(input: RetryDelayInput): `${number} seconds` {
-    const scheduled = THUMBNAIL_RETRY_SECONDS.at(input.ctx.attempt - 1) ?? 240;
-    return rateLimitDelay(input.error) ?? `${scheduled} seconds`;
-}
-
+/**
+ * Three retries, honoring a rate limit. An element's thumbnail is rendered on
+ * save, so this only covers Onshape still writing one out just after it.
+ */
 const THUMBNAIL_RETRIES = {
-    limit: THUMBNAIL_RETRY_SECONDS.length,
-    delay: thumbnailRetryDelay,
+    limit: 3,
+    delay: onshapeRetryDelay,
     backoff: CONSTANT_BACKOFF
 };
 

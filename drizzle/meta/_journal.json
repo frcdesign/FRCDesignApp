@@ -64,6 +64,13 @@
             "when": 1790744931435,
             "tag": "0008_version_runs_and_app_opens",
             "breakpoints": true
+        },
+        {
+            "idx": 9,
+            "version": "6",
+            "when": 1791092555971,
+            "tag": "0009_drop_thumbnail_workspace",
+            "breakpoints": true
         }
     ]
 }

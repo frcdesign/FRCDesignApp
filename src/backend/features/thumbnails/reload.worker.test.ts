@@ -2,7 +2,7 @@ import { env } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getDb } from "../../db/client";
-import { groups, insertables } from "../../db/schema";
+import { insertables } from "../../db/schema";
 import {
     MOCK_ONSHAPE_API,
     resetDb,
@@ -23,15 +23,13 @@ import {
     OnshapeFolderEntryType
 } from "../../lib/onshape/types";
 import * as ThumbnailEndpoints from "../../lib/onshape/endpoints/thumbnails";
-import * as WorkspaceEndpoints from "../../lib/onshape/endpoints/workspaces";
-import { thumbnailWorkspaceDescription } from "./workspace";
 import { OnshapeApiError } from "../../lib/onshape/client";
 import { ThumbnailSize } from "./contract";
 import { thumbnailKey } from "./keys";
 import { reloadGroupThumbnail, reloadInsertableThumbnail } from "./reload";
 
 const db = getDb(env.DB);
-const STORED_BRANCH = "w-stored";
+const MAIN_WORKSPACE = "w-main";
 
 function mockThumbnails(answer: () => Promise<ArrayBuffer>) {
     return vi
@@ -61,26 +59,10 @@ describe("reloading a thumbnail", () => {
             })
             .where(eq(insertables.id, target.insertableId));
 
-        await db
-            .update(groups)
-            .set({ thumbnailWorkspaceId: STORED_BRANCH })
-            .where(eq(groups.id, TEST_GROUP_ID));
-        vi.spyOn(WorkspaceEndpoints, "getWorkspaces").mockResolvedValue([
-            {
-                id: STORED_BRANCH,
-                name: "FRCDesignApp Thumbnails (DO NOT EDIT)",
-                description: thumbnailWorkspaceDescription(
-                    (await db.select().from(insertables).get())!.versionId
-                )
-            }
-        ]);
-        vi.spyOn(WorkspaceEndpoints, "createWorkspace").mockResolvedValue({
-            id: "w-unexpected",
-            name: "FRCDesignApp Thumbnails (DO NOT EDIT)"
-        });
         vi.spyOn(DocumentEndpoints, "getDocument").mockResolvedValue({
             id: "doc",
-            name: "Doc"
+            name: "Doc",
+            defaultWorkspace: { id: MAIN_WORKSPACE }
         });
     });
 
@@ -109,8 +91,12 @@ describe("reloading a thumbnail", () => {
         expect(row?.buildIssues).toEqual([]);
     });
 
-    it("reads from the group's thumbnail workspace, branching nothing", async () => {
-        const calls = mockThumbnails(rendered);
+    it("reads from the version, and the document's workspace when that fails", async () => {
+        const calls = vi
+            .spyOn(ThumbnailEndpoints, "getElementThumbnail")
+            .mockImplementation((_api, path) =>
+                path.instanceType === "v" ? missing() : rendered()
+            );
 
         await reloadInsertableThumbnail(
             db,
@@ -120,41 +106,13 @@ describe("reloading a thumbnail", () => {
             target.insertableId
         );
 
-        for (const call of calls.mock.calls) {
-            expect(call[1]).toMatchObject({
-                instanceType: "w",
-                instanceId: STORED_BRANCH
-            });
-        }
-        expect(WorkspaceEndpoints.createWorkspace).not.toHaveBeenCalled();
-    });
-
-    it("makes a workspace for a document that has none, and keeps it", async () => {
-        await db
-            .update(groups)
-            .set({ thumbnailWorkspaceId: null })
-            .where(eq(groups.id, TEST_GROUP_ID));
-        vi.spyOn(WorkspaceEndpoints, "getWorkspaces").mockResolvedValue([]);
-        vi.spyOn(WorkspaceEndpoints, "createWorkspace").mockResolvedValue({
-            id: "w-new",
-            name: "FRCDesignApp thumbnails"
-        });
-        mockThumbnails(rendered);
-
-        await reloadInsertableThumbnail(
-            db,
-            env.BLOB,
-            MOCK_ONSHAPE_API,
-            TEST_LIBRARY_ID,
-            target.insertableId
-        );
-
-        const group = await db
-            .select()
-            .from(groups)
-            .where(eq(groups.id, TEST_GROUP_ID))
-            .get();
-        expect(group?.thumbnailWorkspaceId).toBe("w-new");
+        expect(calls.mock.calls.map((call) => call[1].instanceId)).toEqual([
+            target.elementPath.instanceId,
+            MAIN_WORKSPACE,
+            target.elementPath.instanceId,
+            MAIN_WORKSPACE
+        ]);
+        expect((await readRow())?.buildIssues).toEqual([]);
     });
 
     it("replaces what is already stored", async () => {

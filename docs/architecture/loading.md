@@ -59,8 +59,7 @@ Three things call `requestLoads`, each with one request per group:
 - **Adding a document** writes a shell group first, so a failed first load still
   leaves something to retry or delete, then loads it.
 - **Reload** (admin): every group of the library; each load skips itself when
-  its version is unchanged, it has no failure and it has a thumbnail workspace
-  (`isLoaded`). **Reload all** (owner) forces
+  its version is unchanged and it has no failure. **Reload all** (owner) forces
   every group, which spends a lot of the Onshape allocation.
 - **A webhook** for a new version loads every group of that document, holding
   for approval when the library asks for it.
@@ -81,7 +80,7 @@ Three things call `requestLoads`, each with one request per group:
 ```mermaid
 flowchart TD
     A[read group row] --> B[resolve document + latest version]
-    B --> C{new version, forced, failed last time,<br/>or no thumbnail workspace?}
+    B --> C{new version, forced,<br/>or failed last time?}
     C -- no --> W
     C -- yes --> D{held for approval?}
     D -- yes --> E[wait for approve-version<br/>up to 2 days]
@@ -93,17 +92,15 @@ flowchart TD
 
 `loadGroup`:
 
-1. Syncs the version's thumbnail workspace.
-2. Reads the document's contents and the group's stored insertables.
-3. Selects tabs to load: new ones, changed ones (microversion differs), ones
+1. Reads the document's contents and the group's stored insertables.
+2. Selects tabs to load: new ones, changed ones (microversion differs), ones
    whose last load failed, or all when forced. Removed and reordered tabs are
    computed from the same lists.
-4. Loads each selected tab (`loadInsertable`) in parallel under the load limiter
+3. Loads each selected tab (`loadInsertable`) in parallel under the load limiter
    (`LOAD_CONCURRENCY`, 15). A tab that fails is recorded and the rest carry on.
-5. Stores the group's thumbnail, then saves the group in one step: its fields,
+4. Stores the group's thumbnail, then saves the group in one step: its fields,
    removals, new order, and `INSERTABLES_FAILED` if any tab failed.
-6. Deletes stale thumbnails, and stale thumbnail workspaces when nothing
-   failed. Neither is fatal.
+5. Deletes stale thumbnails, which is never fatal.
 
 `loadInsertable`: probes the tab under the limiter (configuration, parts, fasten
 info, vendors, and a record per indexed combination), fetches its thumbnail
@@ -127,7 +124,6 @@ result is stored, so a retried or resumed load skips steps that finished.
 | `document`                                                 | `GET /documents/{did}`                                                                                  | `ONSHAPE`   |
 | `version`                                                  | `GET /documents/d/{did}/versions` (the latest)                                                          | `ONSHAPE`   |
 | `hold-for-approval`, then a wait for `approve-version`     | —                                                                                                       | default     |
-| `thumbnail-workspace-{group}`                              | `GET /documents/d/{did}/workspaces`, `POST` one if missing                                              | `ONSHAPE`   |
 | `document-contents-{group}`                                | `GET /documents/d/{did}/v/{vid}/contents`                                                               | `ONSHAPE`   |
 | `stored-insertables-{group}`, `select-insertables-{group}` | —                                                                                                       | default     |
 | `flags-{insertable}`                                       | —                                                                                                       | default     |
@@ -135,12 +131,11 @@ result is stored, so a retried or resumed load skips steps that finished.
 | `parts-{insertable}` (part studios)                        | `GET /parts/d/{did}/v/{vid}/e/{eid}`                                                                    | `ONSHAPE`   |
 | `fasten-{insertable}` (if enabled)                         | Assembly definition, or part studio features                                                            | `ONSHAPE`   |
 | `records-{insertable}-{batch}`                             | Per configuration: `GET /parts/...` (part studio) or `GET /metadata/...` (assembly), with the overrides | `ONSHAPE`   |
-| `thumbnail-{insertable}`                                   | `GET /thumbnails/d/{did}/w/{thumbnail wid}/e/{eid}/s/{size}`, both sizes                                | `THUMBNAIL` |
+| `thumbnail-{insertable}`                                   | `GET /thumbnails/d/{did}/v/{vid}/e/{eid}/s/{size}`, then `/w/{wid}/` on failure, both sizes             | `THUMBNAIL` |
 | `save-{insertable}`                                        | —                                                                                                       | default     |
 | `document-thumbnail-{group}`                               | As `thumbnail-`, for the thumbnail tab                                                                  | `THUMBNAIL` |
 | `save-group-{group}`                                       | —                                                                                                       | default     |
 | `delete-stale-thumbnails-{group}`                          | — (R2 only)                                                                                             | default     |
-| `delete-stale-workspaces-{group}`                          | `DELETE /documents/d/{did}/workspaces/{wid}` per stale one                                              | default     |
 | `register-webhook`                                         | `GET /webhooks/{id}`, `POST /webhooks` if gone                                                          | `ONSHAPE`   |
 | `flag-failed` (on a failure)                               | —                                                                                                       | default     |
 | `finish`                                                   | —                                                                                                       | default     |

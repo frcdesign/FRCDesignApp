@@ -9,8 +9,7 @@ import {
     resetDb,
     seedGroup
 } from "../../../__test_utils__";
-import { BuildIssueType } from "../build-checker/issues";
-import { createShellGroup, isLoaded, type ShellGroup } from "./workflows";
+import { createShellGroup, type ShellGroup } from "./workflows";
 
 const db = getDb(env.DB);
 
@@ -66,32 +65,5 @@ describe("createShellGroup", () => {
         await createShellGroup(env, PARAMS);
 
         expect(await readVersion()).toBeGreaterThan(startVersion ?? 0);
-    });
-});
-
-describe("isLoaded", () => {
-    it("skips a group whose load left nothing to redo", () => {
-        expect(
-            isLoaded({
-                buildIssues: [{ type: BuildIssueType.NO_VENDORS }],
-                thumbnailWorkspaceId: "w-branch"
-            })
-        ).toBe(true);
-    });
-
-    it("loads a group the last load failed on", () => {
-        expect(
-            isLoaded({
-                buildIssues: [{ type: BuildIssueType.LOAD_FAILED }],
-                thumbnailWorkspaceId: "w-branch"
-            })
-        ).toBe(false);
-    });
-
-    // Otherwise a group loaded before it had one never renders a configuration.
-    it("loads a group with no thumbnail workspace", () => {
-        expect(isLoaded({ buildIssues: [], thumbnailWorkspaceId: null })).toBe(
-            false
-        );
     });
 });

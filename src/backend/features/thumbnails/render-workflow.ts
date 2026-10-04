@@ -9,8 +9,7 @@ import {
     type WorkflowStep
 } from "cloudflare:workers";
 import type { AppBindings } from "../../lib/context";
-import { getConfiguredThumbnail } from "../../lib/onshape/endpoints/thumbnails";
-import { type ElementPath } from "../../lib/onshape/path";
+import { getThumbnailFromId } from "../../lib/onshape/endpoints/thumbnails";
 import { getOnshapeApiFromSessionId } from "../auth/request-auth";
 import { rateLimitDelay } from "../load/steps";
 import { type ConfigurationKey } from "../configurations/contract";
@@ -26,11 +25,9 @@ export interface RenderTarget {
 }
 
 export interface RenderThumbnailParams {
-    /** The group's thumbnail workspace, which Onshape renders in. */
-    workspacePath: ElementPath;
-    /** Onshape's spelling of the configuration, resolved once by the route. */
-    encodedConfiguration: string;
-    /** Both sizes, stored as each lands. */
+    /** Resolved once by the route; fixed for an element and configuration. */
+    thumbnailId: string;
+    /** Both sizes, the preview's first, stored as each lands. */
     targets: RenderTarget[];
     /** What is told to clients waiting on the render once each size lands. */
     elementId: string;
@@ -57,15 +54,14 @@ export class RenderThumbnailWorkflow extends WorkflowEntrypoint<
         event: WorkflowEvent<RenderThumbnailParams>,
         step: WorkflowStep
     ): Promise<void> {
-        await Promise.all(
-            event.payload.targets.map((target) =>
-                step.do(
-                    `store-${target.size}`,
-                    { retries: RENDER_RETRIES },
-                    () => storeRender(this.env, event.payload, target)
-                )
-            )
-        );
+        // One at a time: asking for one size abandons the other's render.
+        for (const target of event.payload.targets) {
+            await step.do(
+                `store-${target.size}`,
+                { retries: RENDER_RETRIES },
+                () => storeRender(this.env, event.payload, target)
+            );
+        }
     }
 }
 
@@ -82,25 +78,11 @@ async function storeRender(
         env.KV,
         params.sessionId
     );
-    // TEMPORARY: why each try fails.
-    let thumbnail: ArrayBuffer;
-    try {
-        thumbnail = await getConfiguredThumbnail(
-            onshapeApi,
-            params.workspacePath,
-            params.encodedConfiguration,
-            params.microversionId,
-            target.size
-        );
-    } catch (error) {
-        console.warn("Configured thumbnail not ready", {
-            workspacePath: params.workspacePath,
-            encodedConfiguration: params.encodedConfiguration,
-            size: target.size,
-            error: String(error)
-        });
-        throw error;
-    }
+    const thumbnail = await getThumbnailFromId(
+        onshapeApi,
+        params.thumbnailId,
+        target.size
+    );
     await putThumbnail(env.BLOB, target.key, thumbnail, {
         microversionId: params.microversionId,
         configurationKey: params.configurationKey

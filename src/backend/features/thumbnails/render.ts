@@ -4,9 +4,9 @@ import { HttpStatus } from "http-status-ts";
 import type { AppContext } from "../../lib/context";
 import { handledError } from "../../lib/api-error";
 import { getDb } from "../../db/client";
-import { configurations, groups, insertables } from "../../db/schema";
-import { type ElementPath } from "../../lib/onshape/path";
-import { getEncodedConfiguration } from "../../lib/onshape/endpoints/thumbnails";
+import { configurations, insertables } from "../../db/schema";
+import { type ElementPath, toElementPath } from "../../lib/onshape/path";
+import { getThumbnailId } from "../../lib/onshape/endpoints/thumbnails";
 import { getSessionId } from "../auth/session";
 import {
     type ConfigurationKey,
@@ -23,17 +23,16 @@ import { RenderStatus, ThumbnailSize } from "./contract";
 import { thumbnailKey } from "./keys";
 import { isWorkflowActive } from "../../lib/workflows";
 
+/** The insert menu's preview first, since somebody is waiting on it. */
+const RENDER_ORDER = [ThumbnailSize.LARGE, ThumbnailSize.SMALL];
+
 interface RenderRequest {
     insertableId: string;
     /** As entered; the key it is stored under is derived here, not trusted. */
     selection: PartialSelection;
 }
 
-/**
- * Renders from the insertable's current microversion, in its group's thumbnail
- * workspace. A group without one is refused, since branching one takes edit
- * access the caller may not have; its next load branches it.
- */
+/** Renders the insertable's current version, which is what the library shows. */
 export async function requestRender(
     c: AppContext,
     request: RenderRequest
@@ -49,23 +48,16 @@ export async function requestRender(
             HttpStatus.BAD_REQUEST
         );
     }
-    if (!target.workspacePath) {
-        console.warn("No thumbnail workspace to render from", request);
-        throw handledError(
-            "This part can't preview configurations until its library reloads.",
-            HttpStatus.SERVICE_UNAVAILABLE
-        );
-    }
-    const { workspacePath } = target;
-    const encodedConfiguration = await getEncodedConfiguration(
+    const thumbnailId = await getThumbnailId(
         await c.var.getOnshapeApi(),
-        workspacePath,
+        target.path,
         renderOverrides(selection, parameters)
     );
-    if (!encodedConfiguration) {
+    if (!thumbnailId) {
         return RenderStatus.NO_PART;
     }
-    const { elementId, microversionId } = target;
+    const { elementId } = target.path;
+    const { microversionId } = target;
 
     const workflow = c.env.RENDER_THUMBNAIL_WORKFLOW;
     const id = await renderInstanceId(
@@ -87,9 +79,8 @@ export async function requestRender(
         await workflow.create({
             id,
             params: {
-                workspacePath,
-                encodedConfiguration,
-                targets: Object.values(ThumbnailSize).map((size) => ({
+                thumbnailId,
+                targets: RENDER_ORDER.map((size) => ({
                     size,
                     key: thumbnailKey(
                         elementId,
@@ -130,7 +121,7 @@ async function renderInstanceId(
     const hex = Array.from(new Uint8Array(digest), (byte) =>
         byte.toString(16).padStart(2, "0")
     ).join("");
-    return `configured-render-${hex}`;
+    return `version-render-${hex}`;
 }
 
 /** Undefined for an id no instance holds, which `get` answers by throwing. */
@@ -146,12 +137,10 @@ async function findInstance(
 }
 
 interface RenderTarget {
-    elementId: string;
+    path: ElementPath;
     microversionId: string;
     /** Empty for an insertable with nothing to configure. */
     parameters: ConfigurationParameter[];
-    /** Undefined until the group's next load branches one. */
-    workspacePath?: ElementPath;
 }
 
 async function renderTargetOf(
@@ -161,13 +150,12 @@ async function renderTargetOf(
     const row = await getDb(c.env.DB)
         .select({
             documentId: insertables.documentId,
+            versionId: insertables.versionId,
             elementId: insertables.elementId,
             microversionId: insertables.microversionId,
-            thumbnailWorkspaceId: groups.thumbnailWorkspaceId,
             parameters: configurations.parameters
         })
         .from(insertables)
-        .innerJoin(groups, eq(groups.id, insertables.groupId))
         .leftJoin(
             configurations,
             eq(configurations.insertableId, insertables.id)
@@ -177,18 +165,9 @@ async function renderTargetOf(
     if (!row) {
         throw handledError("No such part.", HttpStatus.NOT_FOUND);
     }
-    const { elementId, microversionId, thumbnailWorkspaceId } = row;
     return {
-        elementId,
-        microversionId,
-        parameters: row.parameters ?? [],
-        workspacePath: thumbnailWorkspaceId
-            ? {
-                  documentId: row.documentId,
-                  instanceId: thumbnailWorkspaceId,
-                  instanceType: "w",
-                  elementId
-              }
-            : undefined
+        path: toElementPath(row),
+        microversionId: row.microversionId,
+        parameters: row.parameters ?? []
     };
 }

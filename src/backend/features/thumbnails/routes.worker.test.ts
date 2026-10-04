@@ -2,7 +2,7 @@ import { env } from "cloudflare:workers";
 import { introspectWorkflow } from "cloudflare:test";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
-    TEST_GROUP_ID,
+    TEST_PART_STUDIO_PATH,
     TEST_PART_STUDIO_ID,
     createTestApp,
     jsonRequest,
@@ -11,12 +11,11 @@ import {
 } from "../../../__test_utils__";
 import * as ThumbnailEndpoints from "../../lib/onshape/endpoints/thumbnails";
 import { getDb } from "../../db/client";
-import { configurations, groups } from "../../db/schema";
+import { configurations } from "../../db/schema";
 import {
     enumParam,
     quantityParam
 } from "../../../__test_utils__/configuration-fixtures";
-import { eq } from "drizzle-orm";
 import { type RenderOut, RenderStatus, ThumbnailSize } from "./contract";
 import {
     parseThumbnailKey,
@@ -289,11 +288,11 @@ describe("rendering a configuration's thumbnail", () => {
         return body.status;
     }
 
-    /** Onshape spelling the configuration it will render. */
-    function mockEncodedConfiguration() {
+    /** Onshape resolving the configuration to a render id. */
+    function mockThumbnailId() {
         return vi
-            .spyOn(ThumbnailEndpoints, "getEncodedConfiguration")
-            .mockResolvedValue("ENCODED");
+            .spyOn(ThumbnailEndpoints, "getThumbnailId")
+            .mockResolvedValue("thumbnail-id");
     }
 
     /** Workflows started while `run` is called, with their steps stubbed out. */
@@ -313,10 +312,6 @@ describe("rendering a configuration's thumbnail", () => {
     beforeEach(async () => {
         await resetDb(db);
         await seedPartStudio(db);
-        await db
-            .update(groups)
-            .set({ thumbnailWorkspaceId: "w-branch" })
-            .where(eq(groups.id, TEST_GROUP_ID));
         await db.insert(configurations).values({
             insertableId: TEST_PART_STUDIO_ID,
             parameters: [
@@ -327,7 +322,7 @@ describe("rendering a configuration's thumbnail", () => {
     });
 
     it("starts one render, however often it is asked", async () => {
-        const encode = mockEncodedConfiguration();
+        const thumbnailId = mockThumbnailId();
 
         const started = await startedDuring(async () => {
             expect(await statusOf(await render())).toBe(RenderStatus.RENDERING);
@@ -335,12 +330,12 @@ describe("rendering a configuration's thumbnail", () => {
         });
 
         expect(started).toBe(1);
-        expect(encode).toHaveBeenCalledTimes(2);
+        expect(thumbnailId).toHaveBeenCalledTimes(2);
     });
 
     // Restarting the first's instance would store its bytes under its own key.
-    it("renders each configuration, even ones Onshape spells alike", async () => {
-        mockEncodedConfiguration();
+    it("renders each configuration, even ones Onshape gives one thumbnail id", async () => {
+        mockThumbnailId();
 
         const started = await startedDuring(async () => {
             await render();
@@ -350,31 +345,28 @@ describe("rendering a configuration's thumbnail", () => {
         expect(started).toBe(2);
     });
 
-    it("renders from the group's thumbnail workspace", async () => {
-        const encode = mockEncodedConfiguration();
+    it("resolves the render on the insertable's version", async () => {
+        const thumbnailId = mockThumbnailId();
 
         await startedDuring(() => render());
 
-        expect(encode.mock.calls[0][1]).toMatchObject({
-            instanceId: "w-branch",
-            instanceType: "w"
-        });
+        expect(thumbnailId.mock.calls[0][1]).toEqual(TEST_PART_STUDIO_PATH);
     });
 
     // Onshape names a render by the value it computes from what was typed.
     it("asks Onshape for the selection as entered, stored under its key", async () => {
-        const encode = mockEncodedConfiguration();
+        const thumbnailId = mockThumbnailId();
 
         const started = await startedDuring(() =>
             render({ length: "2.25 in", size: "s" })
         );
 
         expect(started).toBe(1);
-        expect(encode.mock.calls[0][2]).toEqual({ length: "2.25 in" });
+        expect(thumbnailId.mock.calls[0][2]).toEqual({ length: "2.25 in" });
     });
 
     it("refuses a selection that is the element's default", async () => {
-        mockEncodedConfiguration();
+        mockThumbnailId();
 
         const started = await startedDuring(async () => {
             expect((await render({ size: "s" })).status).toBe(400);
@@ -384,10 +376,9 @@ describe("rendering a configuration's thumbnail", () => {
 
     // The client words "still rendering" and "never will" differently.
     it("says when the configuration has no part to render", async () => {
-        vi.spyOn(
-            ThumbnailEndpoints,
-            "getEncodedConfiguration"
-        ).mockResolvedValue(undefined);
+        vi.spyOn(ThumbnailEndpoints, "getThumbnailId").mockResolvedValue(
+            undefined
+        );
 
         const started = await startedDuring(async () => {
             expect(await statusOf(await render())).toBe(RenderStatus.NO_PART);
@@ -395,29 +386,15 @@ describe("rendering a configuration's thumbnail", () => {
         expect(started).toBe(0);
     });
 
-    // Answering "rendering" would leave the client waiting on a push that never comes.
-    it("refuses a group with no thumbnail workspace yet", async () => {
-        await db
-            .update(groups)
-            .set({ thumbnailWorkspaceId: null })
-            .where(eq(groups.id, TEST_GROUP_ID));
-        mockEncodedConfiguration();
-
-        const started = await startedDuring(async () => {
-            expect((await render()).status).toBe(503);
-        });
-        expect(started).toBe(0);
-    });
-
     it("refuses a caller with no session to render under", async () => {
-        const encode = mockEncodedConfiguration();
+        const thumbnailId = mockThumbnailId();
 
         const started = await startedDuring(async () => {
             expect((await render({ size: "l" }, false)).ok).toBe(false);
         });
 
         expect(started).toBe(0);
-        expect(encode).not.toHaveBeenCalled();
+        expect(thumbnailId).not.toHaveBeenCalled();
     });
 
     // One cold search mustn't start a render per row.

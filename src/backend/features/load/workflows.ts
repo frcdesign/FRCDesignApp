@@ -85,8 +85,7 @@ async function loadDocument(
             .select({
                 documentId: groups.documentId,
                 versionId: groups.versionId,
-                buildIssues: groups.buildIssues,
-                thumbnailWorkspaceId: groups.thumbnailWorkspaceId
+                buildIssues: groups.buildIssues
             })
             .from(groups)
             .where(eq(groups.id, groupId))
@@ -105,7 +104,11 @@ async function loadDocument(
             documentId: stored.documentId
         });
         const isNewVersion = stored.versionId !== target.versionPath.instanceId;
-        if (!isNewVersion && !forceReload && isLoaded(stored)) {
+        if (
+            !isNewVersion &&
+            !forceReload &&
+            !hasFailedLoad(stored.buildIssues)
+        ) {
             changed = false;
         } else {
             if (isNewVersion && params.awaitApproval && !forceReload) {
@@ -167,21 +170,6 @@ async function waitForApproval(
 }
 
 /**
- * Whether a group's last load of its version left nothing to redo. One without
- * a thumbnail workspace can't render configurations until a load branches one.
- */
-export function isLoaded(
-    group: Pick<
-        typeof groups.$inferSelect,
-        "buildIssues" | "thumbnailWorkspaceId"
-    >
-): boolean {
-    return (
-        !hasFailedLoad(group.buildIssues) && group.thumbnailWorkspaceId !== null
-    );
-}
-
-/**
  * A failure leaves the version where it was, so a group that failed on the
  * latest version would otherwise be skipped until a forced reload.
  */
@@ -220,11 +208,20 @@ async function resolveGroupTarget(
         instanceId: version.id,
         instanceType: "v"
     };
+    // Thrown rather than guessed: a guess would read another document's thumbnails.
+    if (!document.defaultWorkspace) {
+        throw new Error(`Document ${documentId} reports no default workspace`);
+    }
     return {
         libraryId: ids.libraryId,
         groupId: ids.groupId,
         versionPath,
         versionCreatedAt: new Date(version.createdAt),
+        workspacePath: {
+            documentId,
+            instanceId: document.defaultWorkspace.id,
+            instanceType: "w"
+        },
         name: document.name,
         thumbnailElementId: document.documentThumbnailElementId
     };

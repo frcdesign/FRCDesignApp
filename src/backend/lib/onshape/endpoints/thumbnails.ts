@@ -34,77 +34,39 @@ export function getElementThumbnail(
 }
 
 /**
- * Onshape's own name for a configuration's render: base32 of a FeatureScript
- * map, which only insertables spells. Undefined when no part matches.
+ * The id Onshape renders a configuration under; asking for its bytes starts
+ * the render. Undefined when no part matches the configuration.
  */
-export async function getEncodedConfiguration(
+export async function getThumbnailId(
     client: OnshapeApi,
-    workspacePath: ElementPath,
+    elementPath: ElementPath,
     configuration: Selection
 ): Promise<string | undefined> {
-    assertInstanceType(workspacePath, "w");
     const query: Record<string, string> = {
         includeParts: "true",
         includeAssemblies: "true",
         includeCompositeParts: "true",
-        elementId: workspacePath.elementId
+        elementId: elementPath.elementId
     };
     const encoded = encodeQueryConfiguration(configuration);
     if (encoded) {
         query.configuration = encoded;
     }
 
-    const insertables = await getInsertables(client, workspacePath, query);
-    // TEMPORARY: what insertables names besides its items.
-    const { items, ...rest } = insertables as Record<string, unknown>;
-    console.log("Insertables for render", {
-        query,
-        itemCount: Array.isArray(items) ? items.length : items,
-        rest,
-        decodedKey: decodeBase32(insertables.configurationKey)
-    });
+    const insertables = await getInsertables(client, elementPath, query);
     // A configuration matching nothing comes back with no items at all.
-    if (!insertables.items?.length) {
-        return undefined;
-    }
-    if (!insertables.configurationKey) {
-        throw new Error("Onshape named no configuration key to render.");
-    }
-    return insertables.configurationKey;
+    return insertables.items?.[0]?.predictableThumbnailId;
 }
 
 /**
- * What Onshape's own insert dialog polls, with its query: 404 until the
- * configuration is rendered. `t` is the workspace's microversion.
+ * Answers 404 while Onshape renders, which the first ask starts. Asking for
+ * another render meanwhile abandons this one (observed, not documented).
  */
-export function getConfiguredThumbnail(
+export function getThumbnailFromId(
     client: OnshapeApi,
-    workspacePath: ElementPath,
-    encodedConfiguration: string,
-    microversionId: string,
+    thumbnailId: string,
     size = ThumbnailSize.LARGE
 ): Promise<ArrayBuffer> {
-    assertInstanceType(workspacePath, "w");
-    const path = `/thumbnails${toElementApiPath(workspacePath)}/c/${encodedConfiguration}/s/${size}`;
-    return client.getImage(path, {
-        query: { t: microversionId, rejectEmpty: "true" }
-    });
-}
-
-/** TEMPORARY: reads Onshape's base32 configuration key, for the log. */
-function decodeBase32(text?: string): string | undefined {
-    if (!text) {
-        return undefined;
-    }
-    const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
-    let bits = "";
-    for (const character of text.replace(/=+$/, "")) {
-        const index = alphabet.indexOf(character);
-        if (index < 0) {
-            return `not base32: ${text}`;
-        }
-        bits += index.toString(2).padStart(5, "0");
-    }
-    const bytes = bits.match(/.{8}/g) ?? [];
-    return String.fromCharCode(...bytes.map((byte) => parseInt(byte, 2)));
+    const path = `/thumbnails/${encodeURIComponent(thumbnailId)}/s/${size}`;
+    return client.getImage(path);
 }

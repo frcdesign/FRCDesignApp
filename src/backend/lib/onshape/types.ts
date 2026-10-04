@@ -384,14 +384,13 @@ export interface OnshapeExternalReferences {
 // === insertables (GET /documents/d/{did}/{wv}/{wvid}/insertables) ===
 
 /** GET /documents/d/{did}/{wv}/{wvid}/insertables (the subset we read). */
+/** One thing that can be inserted from an instance (the subset we read). */
+interface OnshapeInsertable {
+    predictableThumbnailId?: string;
+}
+
 export interface OnshapeInsertables {
-    /** Only counted: none means the configuration regenerates into nothing. */
-    items?: unknown[];
-    /**
-     * The asked-for configuration as base32 of a FeatureScript map, which names
-     * its thumbnail in `/thumbnails/.../c/{configurationKey}`.
-     */
-    configurationKey?: string;
+    items?: OnshapeInsertable[];
     /**
      * Edits made in the workspace that its latest version does not carry.
      * Absent for a version, which is a snapshot and cannot have moved on.
