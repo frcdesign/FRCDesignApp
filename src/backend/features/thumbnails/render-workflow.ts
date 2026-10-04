@@ -82,12 +82,24 @@ async function storeRender(
         env.KV,
         params.sessionId
     );
-    const thumbnail = await getConfiguredThumbnail(
-        onshapeApi,
-        params.workspacePath,
-        params.encodedConfiguration,
-        target.size
-    );
+    // TEMPORARY: why each try fails.
+    let thumbnail: ArrayBuffer;
+    try {
+        thumbnail = await getConfiguredThumbnail(
+            onshapeApi,
+            params.workspacePath,
+            params.encodedConfiguration,
+            target.size
+        );
+    } catch (error) {
+        console.warn("Configured thumbnail not ready", {
+            workspacePath: params.workspacePath,
+            encodedConfiguration: params.encodedConfiguration,
+            size: target.size,
+            error: String(error)
+        });
+        throw error;
+    }
     await putThumbnail(env.BLOB, target.key, thumbnail, {
         microversionId: params.microversionId,
         configurationKey: params.configurationKey

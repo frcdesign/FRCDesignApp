@@ -55,6 +55,14 @@ export async function getEncodedConfiguration(
     }
 
     const insertables = await getInsertables(client, workspacePath, query);
+    // TEMPORARY: what insertables names besides its items.
+    const { items, ...rest } = insertables as Record<string, unknown>;
+    console.log("Insertables for render", {
+        query,
+        itemCount: Array.isArray(items) ? items.length : items,
+        rest,
+        decodedKey: decodeBase32(insertables.configurationKey)
+    });
     // A configuration matching nothing comes back with no items at all.
     if (!insertables.items?.length) {
         return undefined;
@@ -78,4 +86,22 @@ export function getConfiguredThumbnail(
     assertInstanceType(workspacePath, "w");
     const path = `/thumbnails${toElementApiPath(workspacePath)}/c/${encodedConfiguration}/s/${size}`;
     return client.getImage(path);
+}
+
+/** TEMPORARY: reads Onshape's base32 configuration key, for the log. */
+function decodeBase32(text?: string): string | undefined {
+    if (!text) {
+        return undefined;
+    }
+    const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+    let bits = "";
+    for (const character of text.replace(/=+$/, "")) {
+        const index = alphabet.indexOf(character);
+        if (index < 0) {
+            return `not base32: ${text}`;
+        }
+        bits += index.toString(2).padStart(5, "0");
+    }
+    const bytes = bits.match(/.{8}/g) ?? [];
+    return String.fromCharCode(...bytes.map((byte) => parseInt(byte, 2)));
 }
