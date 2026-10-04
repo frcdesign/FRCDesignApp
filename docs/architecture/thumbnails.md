@@ -94,7 +94,7 @@ start one, so a cold search cannot start a render per row.
 5. `RenderThumbnailWorkflow` fetches the sizes by thumbnail id one at a time,
    the preview's first: the first ask starts Onshape's render and it answers 404
    until done, and asking for another meanwhile abandons it. Each size is retried
-   every five seconds for about a minute (`RENDER_RETRIES`), and stored as it
+   every two seconds for about a minute (`RENDER_RETRIES`), and stored as it
    lands.
 6. Each stored size pushes a `thumbnail` message (`src/backend/features/push/`).
 

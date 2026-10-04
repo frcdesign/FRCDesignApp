@@ -82,7 +82,7 @@ the status.
 | Any Onshape request             | `REQUEST_TIMEOUT_MS`               | Aborts after 60 s                                                                          |
 | Load steps calling Onshape      | `ONSHAPE_STEP_RETRIES`             | 5 retries after 10, 20, 40, 80, 160 s; a 429 waits its `Retry-After` plus 0–20 s of jitter |
 | Load thumbnail steps            | `THUMBNAIL_RETRIES`                | 3 retries after 10, 20, 40 s; a 429 as above                                               |
-| Configuration renders           | `RENDER_RETRIES`                   | 12 retries every 5 s; a 429 waits its `Retry-After` plus jitter                            |
+| Configuration renders           | `RENDER_RETRIES`                   | 30 retries every 2 s; a 429 waits its `Retry-After` plus jitter                            |
 | A held load                     | `APPROVAL_TIMEOUT`                 | Waits 2 days for approval, then loads                                                      |
 | A claimed job with no instance  | `CLAIM_GRACE_MS`                   | Treated as failed after 60 s                                                               |
 | Client queries                  | `queryClient` default              | 2 retries, none for an `AppError` that isn't `internal`                                    |
