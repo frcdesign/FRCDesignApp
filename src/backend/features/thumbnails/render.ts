@@ -9,7 +9,12 @@ import { type ElementPath } from "../../lib/onshape/path";
 import { getThumbnailId } from "../../lib/onshape/endpoints/thumbnails";
 import { getSessionId } from "../auth/session";
 import { type ConfigurationKey } from "../configurations/contract";
-import { decodeConfiguration } from "../configurations/utils";
+import {
+    decodeConfiguration,
+    encodeQueryConfiguration
+} from "../configurations/utils";
+import { getInsertables } from "../../lib/onshape/endpoints/documents";
+import { type OnshapeApi } from "../../lib/onshape/client";
 import { RenderStatus, ThumbnailSize } from "./contract";
 import { thumbnailKey } from "./keys";
 import { isWorkflowActive } from "../../lib/workflows";
@@ -37,6 +42,11 @@ export async function requestRender(
             HttpStatus.SERVICE_UNAVAILABLE
         );
     }
+    await probeThumbnailIds(
+        await c.var.getOnshapeApi(),
+        target,
+        request.configurationKey
+    );
     const thumbnailId = await getThumbnailId(
         await c.var.getOnshapeApi(),
         target.workspacePath,
@@ -127,6 +137,8 @@ async function findInstance(
 }
 
 interface RenderTarget {
+    documentId: string;
+    versionId: string;
     elementId: string;
     microversionId: string;
     /** Undefined until the group's next load branches one. */
@@ -140,6 +152,7 @@ async function renderTargetOf(
     const row = await getDb(c.env.DB)
         .select({
             documentId: insertables.documentId,
+            versionId: insertables.versionId,
             elementId: insertables.elementId,
             microversionId: insertables.microversionId,
             thumbnailWorkspaceId: groups.thumbnailWorkspaceId
@@ -153,6 +166,8 @@ async function renderTargetOf(
     }
     const { elementId, microversionId, thumbnailWorkspaceId } = row;
     return {
+        documentId: row.documentId,
+        versionId: row.versionId,
         elementId,
         microversionId,
         workspacePath: thumbnailWorkspaceId
@@ -164,4 +179,53 @@ async function renderTargetOf(
               }
             : undefined
     };
+}
+
+/** TEMPORARY: logs the thumbnail id each spelling of the configuration gets. */
+async function probeThumbnailIds(
+    api: OnshapeApi,
+    target: RenderTarget,
+    configurationKey: ConfigurationKey
+): Promise<void> {
+    const single = encodeQueryConfiguration(
+        decodeConfiguration(configurationKey)
+    );
+    const spellings: Record<string, string | undefined> = {
+        none: undefined,
+        single,
+        double: encodeURIComponent(single),
+        plus: single.replaceAll(" ", "+")
+    };
+    const paths: Record<string, ElementPath | undefined> = {
+        workspace: target.workspacePath,
+        version: {
+            documentId: target.documentId,
+            instanceId: target.versionId,
+            instanceType: "v",
+            elementId: target.elementId
+        }
+    };
+    const ids: Record<string, string | undefined> = {};
+    for (const [pathName, path] of Object.entries(paths)) {
+        for (const [spellingName, configuration] of Object.entries(spellings)) {
+            if (!path) {
+                continue;
+            }
+            try {
+                const response = await getInsertables(api, path, {
+                    includeParts: "true",
+                    includeAssemblies: "true",
+                    includeCompositeParts: "true",
+                    elementId: path.elementId,
+                    ...(configuration === undefined ? {} : { configuration })
+                });
+                ids[`${pathName} ${spellingName}`] =
+                    response.items?.[0]?.predictableThumbnailId ??
+                    `no items (${response.items?.length ?? 0})`;
+            } catch (error) {
+                ids[`${pathName} ${spellingName}`] = String(error);
+            }
+        }
+    }
+    console.log("Thumbnail id probe", { configurationKey, single, ids });
 }
