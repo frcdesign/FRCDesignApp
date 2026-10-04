@@ -82,7 +82,10 @@ export function FavoriteCard(props: FavoriteCardProps): ReactNode {
                                 configurationKey:
                                     favorite.configurationKey ??
                                     DEFAULT_CONFIGURATION_KEY,
-                                insertableId: insertable.id
+                                renderSource: {
+                                    insertableId: insertable.id,
+                                    selection: favorite.defaultSelection ?? {}
+                                }
                             }}
                         />
                     }

@@ -11,7 +11,11 @@ import {
 } from "../../../__test_utils__";
 import * as ThumbnailEndpoints from "../../lib/onshape/endpoints/thumbnails";
 import { getDb } from "../../db/client";
-import { groups } from "../../db/schema";
+import { configurations, groups } from "../../db/schema";
+import {
+    enumParam,
+    quantityParam
+} from "../../../__test_utils__/configuration-fixtures";
 import { eq } from "drizzle-orm";
 import { type RenderOut, RenderStatus, ThumbnailSize } from "./contract";
 import {
@@ -20,7 +24,10 @@ import {
     thumbnailKey,
     thumbnailUrl
 } from "./keys";
-import { DEFAULT_CONFIGURATION_KEY } from "../configurations/contract";
+import {
+    DEFAULT_CONFIGURATION_KEY,
+    type PartialSelection
+} from "../configurations/contract";
 
 const SIZE = ThumbnailSize.LARGE;
 const MICROVERSION = "mv-1";
@@ -260,10 +267,10 @@ describe("rendering a configuration's thumbnail", () => {
     afterEach(() => vi.restoreAllMocks());
 
     async function render(
-        configurationKey = CANONICAL_CONFIGURATION,
+        selection: PartialSelection = { size: "l" },
         signedIn = true
     ): Promise<Response> {
-        const init = jsonRequest("POST", { configurationKey });
+        const init = jsonRequest("POST", { selection });
         if (signedIn) {
             init.headers = {
                 ...init.headers,
@@ -310,6 +317,13 @@ describe("rendering a configuration's thumbnail", () => {
             .update(groups)
             .set({ thumbnailWorkspaceId: "w-branch" })
             .where(eq(groups.id, TEST_GROUP_ID));
+        await db.insert(configurations).values({
+            insertableId: TEST_PART_STUDIO_ID,
+            parameters: [
+                enumParam("size", ["s", "l", "other"]),
+                quantityParam("length")
+            ]
+        });
     });
 
     it("starts one render, however often it is asked", async () => {
@@ -330,7 +344,7 @@ describe("rendering a configuration's thumbnail", () => {
 
         const started = await startedDuring(async () => {
             await render();
-            await render("size=other");
+            await render({ size: "other" });
         });
 
         expect(started).toBe(2);
@@ -345,6 +359,27 @@ describe("rendering a configuration's thumbnail", () => {
             instanceId: "w-branch",
             instanceType: "w"
         });
+    });
+
+    // Onshape names a render by the value it computes from what was typed.
+    it("asks Onshape for the selection as entered, stored under its key", async () => {
+        const encode = mockEncodedConfiguration();
+
+        const started = await startedDuring(() =>
+            render({ length: "2.25 in", size: "s" })
+        );
+
+        expect(started).toBe(1);
+        expect(encode.mock.calls[0][2]).toEqual({ length: "2.25 in" });
+    });
+
+    it("refuses a selection that is the element's default", async () => {
+        mockEncodedConfiguration();
+
+        const started = await startedDuring(async () => {
+            expect((await render({ size: "s" })).status).toBe(400);
+        });
+        expect(started).toBe(0);
     });
 
     // The client words "still rendering" and "never will" differently.
@@ -378,9 +413,7 @@ describe("rendering a configuration's thumbnail", () => {
         const encode = mockEncodedConfiguration();
 
         const started = await startedDuring(async () => {
-            expect((await render(CANONICAL_CONFIGURATION, false)).ok).toBe(
-                false
-            );
+            expect((await render({ size: "l" }, false)).ok).toBe(false);
         });
 
         expect(started).toBe(0);

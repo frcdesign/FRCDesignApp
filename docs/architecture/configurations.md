@@ -132,7 +132,8 @@ record for a selection, since records name only what enumeration varied.
 - `selection.ts` is the only place a `Selection` or `ConfigurationKey` is built,
   and there are only these two forms.
 - A selection is never replaced by its key in storage, and a key is never sent
-  to Onshape as a configuration outside thumbnails.
+  to Onshape as a configuration, a render's included: Onshape names a render by
+  the value it computes from what was typed, which a key's base units round.
 - Every boundary that receives a configuration (request body, url, stored
   favorite, search hit) passes it through `toSelection`.
 - Stored and shared selections omit derivation variables (`toStoredSelection`).

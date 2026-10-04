@@ -133,6 +133,7 @@ export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
                         microversionId={insertable.microversionId}
                         largeThumbnailUrl={insertable.largeThumbnailUrl}
                         configurationKey={configurationKey}
+                        selection={report?.selection ?? selection ?? {}}
                     />
                 </Stack>
             </AppModalTop>

@@ -112,7 +112,7 @@ is the only place either is built:
   (base units, hidden parameters left out), so selections rendering the same
   part share a render. `DEFAULT_CONFIGURATION_KEY` (the empty string) overrides
   nothing. Never store a key in place of the selection it came from, and never
-  send one to Onshape as a configuration outside thumbnails.
+  send one to Onshape as a configuration, not even for a thumbnail.
 
 `docs/architecture/configurations.md` covers the rest of the area.
 

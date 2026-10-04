@@ -103,28 +103,34 @@ can wait for it: the insert menu's preview and favorite rows. Search rows never
 start one, so a cold search cannot start a render per row.
 
 1. The client calls `POST /api/render-thumbnail/insertable/:insertableId` with
-   the configuration key. It must be signed in: the render calls Onshape as the
-   caller.
-2. `requestRender` reads the insertable's element, current microversion and its
+   the selection as entered. It must be signed in: the render calls Onshape as
+   the caller.
+2. `requestRender` makes the selection whole against the insertable's
+   parameters and derives its key itself, so a caller can't store one
+   configuration's picture under another's key. The element's default is
+   refused with a 400.
+3. It reads the insertable's element, current microversion and its
    group's thumbnail workspace. A group without one is refused with a 503, which
    the client shows as a preview that could not load; its next load branches
    one. The render doesn't branch it, since that takes edit access to the
    document and any signed-in user can ask for a render.
-3. It asks the insertables endpoint, in the workspace, for Onshape's own
+4. It asks the insertables endpoint, in the workspace, for Onshape's own
    spelling of the configuration (`configurationKey`, base32 of a FeatureScript
-   map; `getEncodedConfiguration`). No insertables answers `no-part`, which the client shows as
+   map; `getEncodedConfiguration`), sending `renderOverrides`: the values as
+   entered, since that spelling holds the double Onshape computes from them and
+   `2.25 in` and `0.05715 m` differ in its last bit. No insertables answers `no-part`, which the client shows as
    a configuration that failed to regenerate; otherwise it answers `rendering`.
-4. The instance id is `render-` plus a SHA-256 of
+5. The instance id is `configured-render-` plus a SHA-256 of
    `elementId/microversionId/configurationKey`, so every request for one render
    finds the same instance. A running instance is left alone; a finished one is
    restarted, and returns at once if its bytes are already stored.
-5. `RenderThumbnailWorkflow` fetches both sizes from
+6. `RenderThumbnailWorkflow` fetches both sizes from
    `/thumbnails/.../c/{configurationKey}`, the call Onshape's own insert dialog
    polls: it answers 404 until the configuration is rendered. Each size is
    retried
    every five seconds for about a minute (`RENDER_RETRIES`), and stores each as
    it lands.
-6. Each stored size pushes a `thumbnail` message (`src/backend/features/push/`).
+7. Each stored size pushes a `thumbnail` message (`src/backend/features/push/`).
 
 On the client, `loadRenderedImage` fetches; on the first miss it starts the
 render and fetches again at once, then waits for the push (or its 60-second

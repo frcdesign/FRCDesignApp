@@ -4,19 +4,29 @@ import { HttpStatus } from "http-status-ts";
 import type { AppContext } from "../../lib/context";
 import { handledError } from "../../lib/api-error";
 import { getDb } from "../../db/client";
-import { groups, insertables } from "../../db/schema";
+import { configurations, groups, insertables } from "../../db/schema";
 import { type ElementPath } from "../../lib/onshape/path";
 import { getEncodedConfiguration } from "../../lib/onshape/endpoints/thumbnails";
 import { getSessionId } from "../auth/session";
-import { type ConfigurationKey } from "../configurations/contract";
-import { decodeConfiguration } from "../configurations/utils";
+import {
+    type ConfigurationKey,
+    type ConfigurationParameter,
+    DEFAULT_CONFIGURATION_KEY,
+    type PartialSelection
+} from "../configurations/contract";
+import {
+    renderOverrides,
+    toKey,
+    toSelection
+} from "../configurations/selection";
 import { RenderStatus, ThumbnailSize } from "./contract";
 import { thumbnailKey } from "./keys";
 import { isWorkflowActive } from "../../lib/workflows";
 
 interface RenderRequest {
     insertableId: string;
-    configurationKey: ConfigurationKey;
+    /** As entered; the key it is stored under is derived here, not trusted. */
+    selection: PartialSelection;
 }
 
 /**
@@ -30,6 +40,15 @@ export async function requestRender(
 ): Promise<RenderStatus> {
     const sessionId = getSessionId(c);
     const target = await renderTargetOf(c, request.insertableId);
+    const { parameters } = target;
+    const selection = toSelection(request.selection, parameters);
+    const configurationKey = toKey(selection, parameters);
+    if (configurationKey === DEFAULT_CONFIGURATION_KEY) {
+        throw handledError(
+            "The default configuration's thumbnail is stored with the part.",
+            HttpStatus.BAD_REQUEST
+        );
+    }
     if (!target.workspacePath) {
         console.warn("No thumbnail workspace to render from", request);
         throw handledError(
@@ -41,13 +60,12 @@ export async function requestRender(
     const encodedConfiguration = await getEncodedConfiguration(
         await c.var.getOnshapeApi(),
         workspacePath,
-        decodeConfiguration(request.configurationKey)
+        renderOverrides(selection, parameters)
     );
     if (!encodedConfiguration) {
         return RenderStatus.NO_PART;
     }
     const { elementId, microversionId } = target;
-    const { configurationKey } = request;
 
     const workflow = c.env.RENDER_THUMBNAIL_WORKFLOW;
     const id = await renderInstanceId(
@@ -130,6 +148,8 @@ async function findInstance(
 interface RenderTarget {
     elementId: string;
     microversionId: string;
+    /** Empty for an insertable with nothing to configure. */
+    parameters: ConfigurationParameter[];
     /** Undefined until the group's next load branches one. */
     workspacePath?: ElementPath;
 }
@@ -143,10 +163,15 @@ async function renderTargetOf(
             documentId: insertables.documentId,
             elementId: insertables.elementId,
             microversionId: insertables.microversionId,
-            thumbnailWorkspaceId: groups.thumbnailWorkspaceId
+            thumbnailWorkspaceId: groups.thumbnailWorkspaceId,
+            parameters: configurations.parameters
         })
         .from(insertables)
         .innerJoin(groups, eq(groups.id, insertables.groupId))
+        .leftJoin(
+            configurations,
+            eq(configurations.insertableId, insertables.id)
+        )
         .where(eq(insertables.id, insertableId))
         .get();
     if (!row) {
@@ -156,6 +181,7 @@ async function renderTargetOf(
     return {
         elementId,
         microversionId,
+        parameters: row.parameters ?? [],
         workspacePath: thumbnailWorkspaceId
             ? {
                   documentId: row.documentId,
