@@ -104,6 +104,22 @@ describe("ConfigurationWrapper", () => {
         expect(input).toHaveProperty("value", "(1 + 1) in");
     });
 
+    // The box swaps its display for the expression on focus, which would drop
+    // a selection made before the swap.
+    it("selects the whole expression when a shortened value is clicked", async () => {
+        const user = userEvent.setup();
+        renderPanel(
+            { parameters: [length], records: [] },
+            { length: "(1 + 1) in" }
+        );
+
+        const input = await screen.findByLabelText<HTMLInputElement>("length");
+        await user.click(input);
+
+        expect(input.selectionStart).toBe(0);
+        expect(input.selectionEnd).toBe("(1 + 1) in".length);
+    });
+
     it("keeps a bad expression out of the selection, and says why", async () => {
         const user = userEvent.setup();
         const { lastReport } = renderPanel({

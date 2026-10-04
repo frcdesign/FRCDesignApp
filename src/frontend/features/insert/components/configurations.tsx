@@ -12,6 +12,7 @@ import {
     ReactNode,
     useCallback,
     useEffect,
+    useLayoutEffect,
     useMemo,
     useRef,
     useState
@@ -395,6 +396,14 @@ function QuantityInput(props: ParameterProps<QuantityParameter>): ReactNode {
         evaluateExpression(value ?? parameter.default, evaluateOptions)
     );
 
+    // After focus swaps the display for the expression, since changing the
+    // value drops a selection made before it.
+    useLayoutEffect(() => {
+        if (focused) {
+            inputRef.current?.select();
+        }
+    }, [focused]);
+
     // A value this box didn't submit came from elsewhere, such as a favorite.
     const [emitted, setEmitted] = useState(value);
     if (value !== emitted) {
@@ -432,10 +441,7 @@ function QuantityInput(props: ParameterProps<QuantityParameter>): ReactNode {
                         event.preventDefault();
                     }
                 }}
-                onFocus={(event) => {
-                    setFocused(true);
-                    event.currentTarget.select();
-                }}
+                onFocus={() => setFocused(true)}
                 onBlur={handleSubmit}
                 onKeyDown={(event) => {
                     // blur() submits; calling handleSubmit too ran it twice.
