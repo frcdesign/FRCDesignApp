@@ -53,6 +53,7 @@ function InsertLocationHoverCard(
     return (
         <AppHoverCard
             position="bottom-end"
+            interactive
             target={
                 <Center my="auto">
                     <NewIndicator shown={isNew} offset={2}>

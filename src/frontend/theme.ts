@@ -135,7 +135,13 @@ export function createAppTheme(primaryColor: string) {
                 styles: { itemSection: ICON_SECTION }
             }),
             Popover: Popover.extend({ defaultProps: FLOATING }),
-            HoverCard: HoverCard.extend({ defaultProps: FLOATING }),
+            HoverCard: HoverCard.extend({
+                // Tapping is off by default, as a Tooltip's touch is.
+                defaultProps: {
+                    ...FLOATING,
+                    events: { hover: true, focus: true, touch: true }
+                }
+            }),
             Input: Input.extend({ styles: { section: ICON_SECTION } }),
             Modal: Modal.extend({ defaultProps: { centered: true } }),
             Table: Table.extend({ defaultProps: { highlightOnHover: true } })

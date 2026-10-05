@@ -132,6 +132,7 @@ function BuildStatusHoverCard({
         <AppHoverCard
             position="right"
             arrowSize={20}
+            interactive
             target={
                 loading ? (
                     <Loader size={IconSize.SMALL} />
