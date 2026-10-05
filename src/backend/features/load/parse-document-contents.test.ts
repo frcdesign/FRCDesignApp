@@ -7,13 +7,17 @@ import {
     OnshapeElementType,
     OnshapeFolderEntryType
 } from "../../lib/onshape/types";
-import { parseInsertableTabs } from "./parse-document-contents";
+import {
+    parseInsertableTabs,
+    withoutDeprecated
+} from "./parse-document-contents";
 
 function element(
     id: string,
-    elementType = OnshapeElementType.PART_STUDIO
+    elementType = OnshapeElementType.PART_STUDIO,
+    name = `Tab ${id}`
 ): OnshapeElement {
-    return { id, name: `Tab ${id}`, elementType, microversionId: "mv-1" };
+    return { id, name, elementType, microversionId: "mv-1" };
 }
 
 function ref(elementId: string): OnshapeFolderEntry {
@@ -22,6 +26,13 @@ function ref(elementId: string): OnshapeFolderEntry {
 
 function folder(...entries: OnshapeFolderEntry[]): OnshapeElementGroup {
     return { btType: OnshapeFolderEntryType.GROUP, groups: entries };
+}
+
+function named(
+    groupName: string,
+    ...entries: OnshapeFolderEntry[]
+): OnshapeElementGroup {
+    return { ...folder(...entries), groupName };
 }
 
 function contents(
@@ -75,5 +86,54 @@ describe("parseInsertableTabs", () => {
             folder(ref("a"), ref("b"))
         );
         expect(tabIds(document)).toEqual(["a", "b", "orphan"]);
+    });
+});
+
+describe("withoutDeprecated", () => {
+    const deprecatedTabs = () =>
+        tabIds(
+            withoutDeprecated(
+                contents(
+                    [
+                        element("a"),
+                        element(
+                            "old",
+                            OnshapeElementType.PART_STUDIO,
+                            "Gearbox (DEPRECATED)"
+                        ),
+                        element("b")
+                    ],
+                    folder(ref("a"), ref("old"), ref("b"))
+                )
+            )
+        );
+
+    it("drops a tab whose name says it is deprecated, in any case", () => {
+        expect(deprecatedTabs()).toEqual(["a", "b"]);
+    });
+
+    it("drops every tab in a deprecated folder, however deep", () => {
+        const document = withoutDeprecated(
+            contents(
+                [element("a"), element("b"), element("c"), element("d")],
+                folder(
+                    ref("a"),
+                    named("Deprecated parts", ref("b"), named("Old", ref("c"))),
+                    ref("d")
+                )
+            )
+        );
+        expect(tabIds(document)).toEqual(["a", "d"]);
+        expect(document.elements.map((each) => each.id)).toEqual(["a", "d"]);
+    });
+
+    it("keeps the tabs of a folder whose name doesn't say so", () => {
+        const document = withoutDeprecated(
+            contents(
+                [element("a"), element("b")],
+                folder(named("Gearboxes", ref("a")), ref("b"))
+            )
+        );
+        expect(tabIds(document)).toEqual(["a", "b"]);
     });
 });

@@ -442,6 +442,33 @@ describe("loadGroup", () => {
         expect(rows.map((row) => row.elementId)).toEqual(["e2", "e1"]);
     });
 
+    // Renaming the tab, not deleting it, is how an author retires a part.
+    it("removes an insertable whose tab is now named deprecated", async () => {
+        mockContents([
+            tab("e1"),
+            { ...tab("e2", "mv-2"), name: "Old gearbox (deprecated)" }
+        ]);
+        for (const elementId of ["e1", "e2"]) {
+            await seedInsertable(db, {
+                id: `ins-${elementId}`,
+                elementId,
+                name: "Existing",
+                microversionId: "mv-1"
+            });
+        }
+        const configurationSpy = vi.spyOn(
+            ConfigurationEndpoints,
+            "getConfiguration"
+        );
+
+        const result = await loadGroup(CTX, LOADED_TARGET, false);
+
+        expect(result).toMatchObject({ loadedElements: 0, deletedElements: 1 });
+        expect(configurationSpy).not.toHaveBeenCalled();
+        const rows = await db.select().from(insertables).all();
+        expect(rows.map((row) => row.elementId)).toEqual(["e1"]);
+    });
+
     it("makes room in the tab order for a newly added tab", async () => {
         mockContents([tab("new"), tab("e1")]);
         await seedInsertable(db, {

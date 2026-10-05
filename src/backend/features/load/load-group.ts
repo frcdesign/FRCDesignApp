@@ -18,7 +18,10 @@ import type {
     OnshapeElement
 } from "../../lib/onshape/types";
 import { checkGroup } from "../build-checker/checks";
-import { parseInsertableTabs } from "./parse-document-contents";
+import {
+    parseInsertableTabs,
+    withoutDeprecated
+} from "./parse-document-contents";
 import { loadInsertable } from "./load-insertable";
 import {
     type GroupTarget,
@@ -56,11 +59,13 @@ export async function loadGroup(
 ): Promise<GroupLoadResult> {
     const { groupId, versionPath } = target;
 
-    const contents = await ctx.step.do(
-        `document-contents-${groupId}`,
-        { retries: ONSHAPE_STEP_RETRIES },
-        async () =>
-            getContents(await getOnshapeApiFromContext(ctx), versionPath)
+    const contents = withoutDeprecated(
+        await ctx.step.do(
+            `document-contents-${groupId}`,
+            { retries: ONSHAPE_STEP_RETRIES },
+            async () =>
+                getContents(await getOnshapeApiFromContext(ctx), versionPath)
+        )
     );
     const insertableTabs = parseInsertableTabs(contents);
     const storedInsertables = await ctx.step.do(

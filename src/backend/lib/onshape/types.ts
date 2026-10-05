@@ -197,6 +197,8 @@ export interface OnshapeWorkspaceInfo {
 /** A folder (group) node in the document contents tree. */
 export interface OnshapeElementGroup {
     btType: OnshapeFolderEntryType.GROUP;
+    /** The folder's name; the root folder's is not one anybody sees. */
+    groupName?: string;
     /** Child folders and element references, in display order. */
     groups: OnshapeFolderEntry[];
 }

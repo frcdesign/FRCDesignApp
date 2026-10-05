@@ -92,7 +92,10 @@ flowchart TD
 
 `loadGroup`:
 
-1. Reads the document's contents and the group's stored insertables.
+1. Reads the document's contents and the group's stored insertables. A tab
+   whose name contains "deprecated", in any case, or any tab inside a folder
+   so named, is dropped from the contents (`withoutDeprecated`), so everything
+   after treats it as deleted.
 2. Selects tabs to load: new ones, changed ones (microversion differs), ones
    whose last load failed, or all when forced. Removed and reordered tabs are
    computed from the same lists.
@@ -213,6 +216,10 @@ that doesn't wait.
 - **Replace rather than queue.** A newer request always wants the latest
   version, which a fresh load reads anyway.
 - **Job rows in D1, not KV.** Concurrent KV writes lose updates.
+- **"Deprecated" in a name deletes the tab.** Authors retire a part by
+  renaming it or moving it into a deprecated folder, keeping it in the
+  document for anything that still references it; the library drops it as it
+  would a deleted tab. Configuration options are not filtered.
 - **Loads skip unchanged versions.** Reloading spends the Onshape allocation;
   only the owner can force it.
 
