@@ -258,7 +258,9 @@ export async function createShellGroup(
             libraryId: params.libraryId,
             name: params.documentName,
             versionId: PLACEHOLDER_VERSION_ID,
-            sortOrder
+            sortOrder,
+            // Says so even if the load never starts; the first save clears it.
+            buildIssues: [{ type: BuildIssueType.NOT_LOADED }]
         })
         .onConflictDoNothing();
     // Library responses are pinned to the version, so the row is unreachable until

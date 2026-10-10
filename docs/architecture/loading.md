@@ -56,8 +56,10 @@ every load that wrote. Thumbnails are in [thumbnails.md](./thumbnails.md).
 
 Three things call `requestLoads`, each with one request per group:
 
-- **Adding a document** writes a shell group first, so a failed first load still
-  leaves something to retry or delete, then loads it.
+- **Adding a document** writes a shell group first, flagged `NOT_LOADED`, so a
+  first load that fails or never starts still leaves something to retry or
+  delete, then loads it. The load's save clears the flag; a failure replaces
+  it with `LOAD_FAILED`.
 - **Reload** (admin): every group of the library; each load skips itself when
   its version is unchanged and it has no failure. **Reload all** (owner) forces
   every group, which spends a lot of the Onshape allocation.
@@ -204,6 +206,7 @@ that doesn't wait.
 | ------------------------------------------- | ------------------------------------------------------ | -------------------------------------------------------------- |
 | An Onshape step fails                       | Retried with backoff, honoring `Retry-After`           | Automatic; exhausted, the group or tab is flagged              |
 | A tab fails                                 | `LOAD_FAILED` on it, `INSERTABLES_FAILED` on the group | **Reload**                                                     |
+| A new document's load never starts          | The shell group keeps `NOT_LOADED`                     | **Reload**                                                     |
 | The workflow crashes                        | Row left behind                                        | Next job-status read or request clears it, flags `LOAD_FAILED` |
 | Webhook cancelled or deactivated by Onshape | No automatic loads                                     | Next load of the document registers it again                   |
 | No session to borrow                        | Webhook loads fail                                     | The owner or a team member opens the app                       |

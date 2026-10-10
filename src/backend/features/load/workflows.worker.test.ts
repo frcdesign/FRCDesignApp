@@ -10,6 +10,8 @@ import {
     seedGroup
 } from "../../../__test_utils__";
 import { createShellGroup, type ShellGroup } from "./workflows";
+import { flagFailedLoads } from "./flag";
+import { BuildIssueType } from "../build-checker/issues";
 
 const db = getDb(env.DB);
 
@@ -54,6 +56,10 @@ describe("createShellGroup", () => {
         expect(shell.name).toBe(PARAMS.documentName);
         expect(shell.versionId).toBe(PLACEHOLDER_VERSION_ID);
         expect(shell.lastLoadedAt).toBeNull();
+        // So a load that never starts still shows.
+        expect(shell.buildIssues).toEqual([
+            { type: BuildIssueType.NOT_LOADED }
+        ]);
     });
 
     // Library responses are pinned to the version, so without a bump the group
@@ -65,5 +71,21 @@ describe("createShellGroup", () => {
         await createShellGroup(env, PARAMS);
 
         expect(await readVersion()).toBeGreaterThan(startVersion ?? 0);
+    });
+
+    it("swaps not loaded for failed when its load fails", async () => {
+        await seedGroup(db);
+        await createShellGroup(env, PARAMS);
+
+        await flagFailedLoads(env, [PARAMS.groupId]);
+
+        const shell = await db
+            .select()
+            .from(groups)
+            .where(eq(groups.id, PARAMS.groupId))
+            .get();
+        expect(shell?.buildIssues).toEqual([
+            { type: BuildIssueType.LOAD_FAILED }
+        ]);
     });
 });

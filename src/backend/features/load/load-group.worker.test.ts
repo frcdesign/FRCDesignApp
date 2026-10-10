@@ -324,6 +324,23 @@ describe("loadGroup", () => {
         }
     });
 
+    it("clears a new group's not-loaded issue once it saves", async () => {
+        await db
+            .update(groups)
+            .set({ buildIssues: [{ type: BuildIssueType.NOT_LOADED }] })
+            .where(eq(groups.id, TEST_GROUP_ID));
+        mockContents([tab("e1")]);
+        vi.spyOn(ConfigurationEndpoints, "getConfiguration").mockResolvedValue(
+            NO_CONFIGURATION
+        );
+
+        await loadGroup(CTX, LOADED_TARGET, false);
+
+        expect((await readGroup())?.buildIssues).not.toContainEqual({
+            type: BuildIssueType.NOT_LOADED
+        });
+    });
+
     it("reads each thumbnail from the version, then the document's workspace", async () => {
         mockContents([tab("e1"), tab("e2")]);
         vi.spyOn(ConfigurationEndpoints, "getConfiguration").mockResolvedValue(

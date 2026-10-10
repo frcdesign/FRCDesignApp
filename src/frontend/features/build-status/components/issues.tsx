@@ -46,7 +46,11 @@ export function useGroupBuildIssues(
         // A group that never loaded has nothing to unhide.
         if (
             hasUnhidden ||
-            hasBuildIssue(groupStatus.buildIssues, BuildIssueType.LOAD_FAILED)
+            hasBuildIssue(
+                groupStatus.buildIssues,
+                BuildIssueType.LOAD_FAILED,
+                BuildIssueType.NOT_LOADED
+            )
         ) {
             return groupStatus.buildIssues;
         }

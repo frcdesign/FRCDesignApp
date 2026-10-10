@@ -1,8 +1,6 @@
 /**
- * Finding the run a workspace last started, and how it went.
- *
- * Not the library `job-tracker`, which is keyed by library and answers only
- * running or not: here what the run did is what the user is waiting for.
+ * Finding the run a workspace last started, and how it went. Ephemeral, so in
+ * KV; the run's lasting record is its analytics event.
  */
 import type { AppBindings } from "../../lib/context";
 import { kvStore } from "../../lib/kv-store";

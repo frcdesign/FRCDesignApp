@@ -5,7 +5,11 @@ import { groups } from "../../db/schema";
 import { bumpLibraryVersion } from "../library/db";
 import type { LibraryId } from "../library/library-id";
 import { pushLibraryChanged } from "../push/notify";
-import { addBuildIssue, BuildIssueType } from "../build-checker/issues";
+import {
+    addBuildIssue,
+    BuildIssueType,
+    clearBuildIssue
+} from "../build-checker/issues";
 
 /** Marks each group for an admin to reload; publishing the change is the caller's. */
 export async function flagFailedLoads(
@@ -23,7 +27,16 @@ export async function flagFailedLoads(
         if (row) {
             await db
                 .update(groups)
-                .set({ buildIssues: addBuildIssue(row.buildIssues, { type }) })
+                .set({
+                    // A failure says more than that it never loaded.
+                    buildIssues: addBuildIssue(
+                        clearBuildIssue(
+                            row.buildIssues,
+                            BuildIssueType.NOT_LOADED
+                        ),
+                        { type }
+                    )
+                })
                 .where(eq(groups.id, groupId));
         }
     }
