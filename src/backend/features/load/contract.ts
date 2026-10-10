@@ -5,11 +5,6 @@ export interface JobStatus {
     awaitingApprovalGroupIds: string[];
 }
 
-export interface VersionApprovalOut {
-    /** Whether new versions wait for an admin's approval before loading. */
-    enabled: boolean;
-}
-
 export interface ApproveVersionsOut {
     /** How many documents were let through. */
     documents: number;

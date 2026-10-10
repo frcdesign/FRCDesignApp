@@ -7,8 +7,9 @@ import { type AppBindings, type AppContext, getApp } from "../../lib/context";
 import type { InstancePath } from "../../lib/onshape/path";
 import { forbiddenError } from "../../lib/api-error";
 import { getDb } from "../../db/client";
-import { groups, libraries, WebhookSubject } from "../../db/schema";
-import { requestLoads } from "../load/jobs";
+import { groups, WebhookSubject } from "../../db/schema";
+import type { LibraryId } from "../library/library-id";
+import { requestReload } from "../load/jobs";
 import {
     findWebhookByToken,
     forgetWebhook,
@@ -91,27 +92,30 @@ webhookRoutes.post(
 );
 
 /**
- * Nobody is signed in behind a webhook, so each load finds an admin's session.
- * A library that approves versions holds the load until an admin does.
+ * A new version is held until an admin approves it, or for a week. Nobody is
+ * signed in behind a webhook, so each reload finds an admin's session.
  */
 async function reloadDocument(
     env: AppBindings,
     documentId: string
 ): Promise<void> {
     const documentGroups = await getDb(env.DB)
-        .select({
-            groupId: groups.id,
-            libraryId: groups.libraryId,
-            awaitApproval: libraries.approveVersions
-        })
+        .select({ groupId: groups.id, libraryId: groups.libraryId })
         .from(groups)
-        .innerJoin(libraries, eq(libraries.id, groups.libraryId))
         .where(eq(groups.documentId, documentId));
-    await requestLoads(
-        env,
-        documentGroups.map((group) => ({
-            ...group,
-            forceReload: false
-        }))
-    );
+    const byLibrary = new Map<LibraryId, string[]>();
+    for (const { groupId, libraryId } of documentGroups) {
+        byLibrary.set(libraryId, [
+            ...(byLibrary.get(libraryId) ?? []),
+            groupId
+        ]);
+    }
+    for (const [libraryId, groupIds] of byLibrary) {
+        await requestReload(env, {
+            libraryId,
+            groupIds,
+            forceReload: false,
+            held: true
+        });
+    }
 }

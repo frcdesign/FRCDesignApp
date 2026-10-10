@@ -10,8 +10,7 @@ import { type LibraryOut } from "@backend/features/library/contract";
 import {
     type ApproveVersionsOut,
     type JobStatus,
-    type ReloadOut,
-    type VersionApprovalOut
+    type ReloadOut
 } from "@backend/features/load/contract";
 import { hasEditorAccess } from "@backend/features/auth/access-level";
 import { LibraryId } from "@backend/features/library/library-id";
@@ -21,8 +20,7 @@ import { useLibraryId } from "../../lib/library";
 import {
     jobStatusQueryKey,
     libraryDataQueryKey,
-    libraryVersionQueryKey,
-    versionApprovalQueryKey
+    libraryVersionQueryKey
 } from "../../lib/query-keys";
 import { queryClient } from "../../lib/query-client";
 import { getQueryUpdater } from "../../lib/query-cache";
@@ -187,36 +185,6 @@ export function useReloadMutation(all: boolean) {
         onSuccess: (data) => {
             showInfoToast(`Reloading ${data.documents} documents...`);
         }
-    });
-}
-
-export function useVersionApprovalQuery() {
-    const libraryId = useLibraryId();
-    return useQuery({
-        queryKey: versionApprovalQueryKey(libraryId),
-        queryFn: () =>
-            apiGet<VersionApprovalOut>(
-                "/version-approval" + toLibraryPath(libraryId)
-            )
-    });
-}
-
-/** Turning it off lets the held versions through. */
-export function useSetVersionApprovalMutation() {
-    const libraryId = useLibraryId();
-    return useMutation({
-        mutationKey: ["version-approval", libraryId],
-        mutationFn: (enabled: boolean) =>
-            apiPost<VersionApprovalOut>(
-                "/version-approval" + toLibraryPath(libraryId),
-                { body: { enabled } }
-            ),
-        onError: getAppErrorHandler("Failed to change version approval."),
-        onSuccess: (approval) =>
-            queryClient.setQueryData(
-                versionApprovalQueryKey(libraryId),
-                approval
-            )
     });
 }
 

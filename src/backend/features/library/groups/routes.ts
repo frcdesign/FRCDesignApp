@@ -18,7 +18,7 @@ import {
 import { bumpLibraryVersion, rebuildSearchDb } from "../db";
 import { HttpStatus } from "http-status-ts";
 import { handledError } from "../../../lib/api-error";
-import { getJobStatus, requestLoads } from "../../load/jobs";
+import { getJobStatus, requestReload } from "../../load/jobs";
 import { createShellGroup } from "../../load/workflows";
 import { removeWebhook } from "../../webhooks/registration";
 import { deleteStaleThumbnails } from "../../thumbnails/reconcile";
@@ -211,14 +211,13 @@ groupRoutes.post(
             libraryId,
             selectedGroupId: body.selectedGroupId
         });
-        await requestLoads(c.env, [
-            {
-                libraryId,
-                groupId,
-                sessionId,
-                forceReload: false
-            }
-        ]);
+        await requestReload(c.env, {
+            libraryId,
+            groupIds: [groupId],
+            sessionId,
+            forceReload: false,
+            held: false
+        });
 
         return c.json({ name: documentName });
     }

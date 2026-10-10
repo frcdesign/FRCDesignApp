@@ -35,26 +35,50 @@ import {
 import {
     APPROVAL_TIMEOUT,
     APPROVE_EVENT,
-    finishLoad,
-    setAwaitingApproval,
-    type LoadDocumentParams
+    claimLibrary,
+    finishReload,
+    releaseHold,
+    reportProgress,
+    TURN_INTERVAL,
+    type ReloadParams,
+    type RunningReload
 } from "./jobs";
 import { pushLibraryChanged } from "../push/notify";
 import { flagFailedLoads } from "./flag";
 import { loadGroup } from "./load-group";
-import { ONSHAPE_STEP_RETRIES } from "./steps";
+import { ONSHAPE_STEP_RETRIES, prefixSteps } from "./steps";
 import { ensureWebhook } from "../webhooks/registration";
 
-/** Loads one group's document when its version moved, or on a forced reload. One per group at a time; see `jobs.ts`. */
-export class LoadDocumentWorkflow extends WorkflowEntrypoint<
+/**
+ * Reloads a library's groups, all of them or the few it is given. One holds a
+ * library at a time; another waits its turn. A webhook's waits for approval
+ * first. Every group shares the run's Onshape budget, and the search index is
+ * rebuilt once, at the end.
+ */
+export class ReloadLibraryWorkflow extends WorkflowEntrypoint<
     AppBindings,
-    LoadDocumentParams
+    ReloadParams
 > {
     async run(
-        event: WorkflowEvent<LoadDocumentParams>,
+        event: WorkflowEvent<ReloadParams>,
         step: WorkflowStep
     ): Promise<void> {
         const params = event.payload;
+        const instanceId = event.instanceId;
+        if (params.held) {
+            await waitForApproval(this.env, step, params, instanceId);
+        }
+
+        let claim: RunningReload | undefined;
+        for (let turn = 0; !claim; turn++) {
+            if (turn > 0) {
+                await step.sleep(`wait-${turn}`, TURN_INTERVAL);
+            }
+            claim = await step.do(`claim-${turn}`, () =>
+                claimLibrary(this.env, params, instanceId)
+            );
+        }
+
         const ctx = createLoadContext(
             this.env,
             params.libraryId,
@@ -64,22 +88,69 @@ export class LoadDocumentWorkflow extends WorkflowEntrypoint<
         // A throw past loadDocument's own handling may have written too.
         let changed = true;
         try {
-            changed = await loadDocument(ctx, params);
+            changed = await reloadGroups(ctx, params, claim);
         } finally {
-            // Always, so whatever queued behind this load starts.
+            // Always, so the next reload of the library can start.
             await step.do("finish", () =>
-                finishLoad(this.env, params, event.instanceId, changed)
+                finishReload(this.env, params.libraryId, instanceId, changed)
             );
         }
     }
 }
 
+/** Loads anyway once nobody has approved it for `APPROVAL_TIMEOUT`. */
+async function waitForApproval(
+    env: AppBindings,
+    step: WorkflowStep,
+    params: ReloadParams,
+    instanceId: string
+): Promise<void> {
+    try {
+        await step.waitForEvent("approval", {
+            type: APPROVE_EVENT,
+            timeout: APPROVAL_TIMEOUT
+        });
+    } catch {
+        // Timed out.
+    }
+    await step.do("release-hold", () => releaseHold(env, params, instanceId));
+}
+
+/** Every group at once; their Onshape calls share the run's limiter. */
+async function reloadGroups(
+    ctx: LoadContext,
+    params: ReloadParams,
+    claim: RunningReload
+): Promise<boolean> {
+    const remaining = new Set(claim.loadingGroupIds);
+    // Chained, so an older report never lands after a newer one.
+    let reported = Promise.resolve();
+    const results = await Promise.all(
+        params.groupIds.map(async (groupId) => {
+            const changed = await loadDocument(
+                { ...ctx, step: prefixSteps(ctx.step, `${groupId}-`) },
+                groupId,
+                params.forceReload
+            );
+            remaining.delete(groupId);
+            const progress = { ...claim, loadingGroupIds: [...remaining] };
+            reported = reported.then(() =>
+                reportProgress(ctx.env, params.libraryId, progress)
+            );
+            return changed;
+        })
+    );
+    await reported;
+    return results.some(Boolean);
+}
+
 /** Whether it wrote to the group, which a failure does by flagging it. */
 async function loadDocument(
     ctx: LoadContext,
-    params: LoadDocumentParams
+    groupId: string,
+    forceReload: boolean
 ): Promise<boolean> {
-    const { groupId, libraryId, forceReload } = params;
+    const { libraryId } = ctx;
     const stored = await ctx.step.do("read-group", () =>
         getDb(ctx.env.DB)
             .select({
@@ -91,7 +162,7 @@ async function loadDocument(
             .where(eq(groups.id, groupId))
             .get()
     );
-    // Deleted since the load was asked for.
+    // Deleted since the reload was asked for.
     if (!stored) {
         return false;
     }
@@ -111,9 +182,6 @@ async function loadDocument(
         ) {
             changed = false;
         } else {
-            if (isNewVersion && params.awaitApproval && !forceReload) {
-                await waitForApproval(ctx, params);
-            }
             await loadGroup(ctx, target, forceReload);
         }
     } catch (error) {
@@ -145,28 +213,6 @@ async function loadDocument(
         );
     }
     return changed;
-}
-
-/** Loads anyway once nobody has approved it for `APPROVAL_TIMEOUT`. */
-async function waitForApproval(
-    ctx: LoadContext,
-    params: LoadDocumentParams
-): Promise<void> {
-    await ctx.step.do("hold-for-approval", () =>
-        setAwaitingApproval(ctx.env, params, true)
-    );
-    try {
-        await ctx.step.waitForEvent("approval", {
-            type: APPROVE_EVENT,
-            timeout: APPROVAL_TIMEOUT
-        });
-    } catch {
-        // Timed out.
-    }
-    // An approval has cleared it already; a timeout hasn't.
-    await ctx.step.do("release-approval", () =>
-        setAwaitingApproval(ctx.env, params, false)
-    );
 }
 
 /**

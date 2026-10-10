@@ -6,7 +6,6 @@ import {
     insertables,
     libraries,
     users,
-    loadJobs,
     onshapeWebhooks
 } from "@backend/db/schema";
 import {
@@ -74,7 +73,6 @@ export async function resetDb(db: Db): Promise<void> {
     await db.batch([
         db.delete(favorites),
         db.delete(configurations),
-        db.delete(loadJobs),
         db.delete(insertables),
         db.delete(groups),
         db.delete(users),

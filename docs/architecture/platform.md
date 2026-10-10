@@ -83,8 +83,9 @@ the status.
 | Load steps calling Onshape      | `ONSHAPE_STEP_RETRIES`             | 5 retries after 10, 20, 40, 80, 160 s; a 429 waits its `Retry-After` plus 0–20 s of jitter |
 | Load thumbnail steps            | `THUMBNAIL_RETRIES`                | 3 retries after 10, 20, 40 s; a 429 as above                                               |
 | Configuration renders           | `RENDER_RETRIES`                   | 30 retries every 2 s; a 429 waits its `Retry-After` plus jitter                            |
-| A held load                     | `APPROVAL_TIMEOUT`                 | Waits 2 days for approval, then loads                                                      |
-| A claimed job with no instance  | `CLAIM_GRACE_MS`                   | Treated as failed after 60 s                                                               |
+| A held reload                   | `APPROVAL_TIMEOUT`                 | Waits a week for approval, then loads                                                      |
+| A reload waiting its turn       | `TURN_INTERVAL`                    | Checks the library again every 30 s                                                        |
+| A queued reload's mark          | `CREATE_GRACE_MS`                  | Not checked against Workflows for its first 60 s                                           |
 | Client queries                  | `queryClient` default              | 2 retries, none for an `AppError` that isn't `internal`                                    |
 | Stored thumbnails on the client | `STORED_RETRIES`                   | 1 retry                                                                                    |
 | Waiting on a render             | `RENDER_TIMEOUT_MS`                | Gives up after 60 s without the image                                                      |
@@ -95,13 +96,13 @@ its own delay from a function and sets `backoff: "constant"`.
 
 ## Concurrency
 
-| Limit                   | Value         | Bounds                                                           |
-| ----------------------- | ------------- | ---------------------------------------------------------------- |
-| `LOAD_CONCURRENCY`      | 15            | A load's insertables probed at once                              |
-| `THUMBNAIL_CONCURRENCY` | 10            | A load's thumbnail steps at once; a slot is held through retries |
-| `BATCH_SIZE` (records)  | 20            | Configurations probed per workflow step                          |
-| Loads                   | one per group | `load_jobs`; a new request replaces the running one              |
-| Renders                 | one per key   | The instance id is derived from the render's key                 |
+| Limit                   | Value           | Bounds                                                             |
+| ----------------------- | --------------- | ------------------------------------------------------------------ |
+| `LOAD_CONCURRENCY`      | 30              | A reload's insertables probed at once, across all its groups       |
+| `THUMBNAIL_CONCURRENCY` | 10              | A reload's thumbnail steps at once; a slot is held through retries |
+| `BATCH_SIZE` (records)  | 20              | Configurations probed per workflow step                            |
+| Reloads                 | one per library | `library-reload` in KV; another waits its turn                     |
+| Renders                 | one per key     | The instance id is derived from the render's key                   |
 
 ## Toasts
 
@@ -148,7 +149,7 @@ tags each with the library it shows.
 
 | Message       | Sent by                                              | To                       | The client                                                     |
 | ------------- | ---------------------------------------------------- | ------------------------ | -------------------------------------------------------------- |
-| `jobs`        | `requestLoads`, `finishLoad`, approval changes       | That library's sockets   | Sets the job status query (editors only)                       |
+| `jobs`        | A reload asked for, claiming, progressing, finishing | That library's sockets   | Sets the job status query (editors only)                       |
 | `library`     | A load that wrote, a shell group, an admin team sync | That library's sockets   | `refreshLibrary()`, which moves to the new cache version       |
 | `thumbnail`   | Each stored render size                              | Every socket             | Refetches rows that missed that render; wakes a waiting render |
 | `version-job` | A push or pull starting, and the workflow ending it  | That workspace's sockets | Sets the run's status query                                    |

@@ -1,5 +1,5 @@
 import { type Context, type MiddlewareHandler, Hono } from "hono";
-import type { LoadDocumentParams } from "../features/load/jobs";
+import type { ReloadParams } from "../features/load/jobs";
 import type { RenderThumbnailParams } from "../features/thumbnails/render-workflow";
 import type { ClientRelay } from "../features/push/client-relay";
 import type { VersionJobParams } from "../features/version-manager/workflow";
@@ -14,7 +14,7 @@ export interface AppBindings {
     /** Thumbnails and search indexes; prefixes keep them apart. */
     BLOB: R2Bucket;
     /** One instance per group being loaded at a time; see `load/jobs.ts`. */
-    LOAD_DOCUMENT_WORKFLOW: Workflow<LoadDocumentParams>;
+    RELOAD_LIBRARY_WORKFLOW: Workflow<ReloadParams>;
     /** One instance per configuration being rendered; see `requestRender`. */
     RENDER_THUMBNAIL_WORKFLOW: Workflow<RenderThumbnailParams>;
     /** Pushes and pulls, which are chains of Onshape writes; see the workflow. */

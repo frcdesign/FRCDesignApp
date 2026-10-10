@@ -62,11 +62,7 @@ export const libraries = sqliteTable("libraries", {
     adminTeam: text("admin_team", { mode: "json" })
         .$type<AdminTeamMember[]>()
         .notNull()
-        .default([]),
-    // Holds each new version's load until an admin approves it.
-    approveVersions: integer("approve_versions", { mode: "boolean" })
-        .notNull()
-        .default(false)
+        .default([])
 });
 
 /** Before a load pins a real version, so a failed group can still be retried. */
@@ -216,25 +212,3 @@ export const onshapeWebhooks = sqliteTable(
     },
     (t) => [primaryKey({ columns: [t.subject, t.subjectId] })]
 );
-
-/**
- * At most one running load per group; a request meanwhile sets `rerun`. In D1
- * because concurrent writes to a KV list lose updates.
- */
-export const loadJobs = sqliteTable("load_jobs", {
-    groupId: text("group_id")
-        .primaryKey()
-        .references(() => groups.id, { onDelete: "cascade" }),
-    libraryId: libraryId().references(() => libraries.id),
-    // Null for the moment between claiming the row and the instance existing.
-    instanceId: text("instance_id"),
-    startedAt: integer("started_at", { mode: "timestamp_ms" }).notNull(),
-    // A plain load replacing this one keeps it forced.
-    forceReload: integer("force_reload", { mode: "boolean" })
-        .notNull()
-        .default(false),
-    // Its load is waiting for an admin to approve the version.
-    awaitingApproval: integer("awaiting_approval", { mode: "boolean" })
-        .notNull()
-        .default(false)
-});

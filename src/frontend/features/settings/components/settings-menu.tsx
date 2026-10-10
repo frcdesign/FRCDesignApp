@@ -26,7 +26,7 @@ import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
 import { SETUP_URL } from "../../../lib/url";
 import { useLibraryId } from "../../../lib/library";
 import { ReloadButton } from "../../library/components/reload-button";
-import { VersionApprovalSettings } from "../../library/components/version-approval";
+import { HeldVersionsSetting } from "../../library/components/version-approval";
 import { RefreshAdminTeamButton } from "../../admin-team/components/refresh-admin-team-button";
 import { AdminTeamSetting } from "../../admin-team/components/admin-team-setting";
 
@@ -192,7 +192,7 @@ function AdminSettings(): ReactNode {
                 </InputRow>
             </RequireAccessLevel>
             <RequireAccessLevel accessLevel={AccessLevel.ADMIN}>
-                <VersionApprovalSettings />
+                <HeldVersionsSetting />
             </RequireAccessLevel>
             <AdminTeamSetting />
             <RequireAccessLevel accessLevel={AccessLevel.ADMIN}>

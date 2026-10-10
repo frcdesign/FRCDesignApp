@@ -49,7 +49,7 @@ describe("receiving a webhook", () => {
     // Onshape deactivates a webhook whose deliveries error.
     it("answers 200 even when handling the delivery fails", async () => {
         const token = await registered(WebhookSubject.DOCUMENT, DOCUMENT);
-        vi.spyOn(Jobs, "requestLoads").mockRejectedValue(new Error("down"));
+        vi.spyOn(Jobs, "requestReload").mockRejectedValue(new Error("down"));
         vi.spyOn(console, "error").mockImplementation(() => undefined);
 
         const res = await deliver(
@@ -66,10 +66,10 @@ describe("receiving a webhook", () => {
         expect(res.status).toBe(200);
     });
 
-    // Nobody is signed in behind a webhook, so the load finds a session itself.
-    it("loads the document's groups on a new version, with no session", async () => {
+    // Nobody is signed in behind a webhook, so the reload finds a session itself.
+    it("holds a reload of the document's groups for approval, with no session", async () => {
         const token = await registered(WebhookSubject.DOCUMENT, DOCUMENT);
-        const load = vi.spyOn(Jobs, "requestLoads").mockResolvedValue();
+        const load = vi.spyOn(Jobs, "requestReload").mockResolvedValue();
 
         await deliver(
             // What the payload names is not trusted; the token's subject is.
@@ -77,14 +77,12 @@ describe("receiving a webhook", () => {
             token
         );
 
-        expect(load).toHaveBeenCalledWith(expect.anything(), [
-            {
-                libraryId: TEST_LIBRARY_ID,
-                groupId: TEST_GROUP_ID,
-                awaitApproval: false,
-                forceReload: false
-            }
-        ]);
+        expect(load).toHaveBeenCalledWith(expect.anything(), {
+            libraryId: TEST_LIBRARY_ID,
+            groupIds: [TEST_GROUP_ID],
+            forceReload: false,
+            held: true
+        });
     });
 
     // So the next load of the document registers a new one.

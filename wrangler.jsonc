@@ -54,9 +54,11 @@
     ],
     "workflows": [
         {
-            "name": "load-document-workflow",
-            "binding": "LOAD_DOCUMENT_WORKFLOW",
-            "class_name": "LoadDocumentWorkflow"
+            "name": "reload-library-workflow",
+            "binding": "RELOAD_LIBRARY_WORKFLOW",
+            "class_name": "ReloadLibraryWorkflow",
+            // A forced reload of a large library runs every group's steps in one instance.
+            "limits": { "steps": 25000 }
         },
         {
             "name": "render-thumbnail-workflow",
@@ -139,9 +141,11 @@
             ],
             "workflows": [
                 {
-                    "name": "load-document-workflow-cert",
-                    "binding": "LOAD_DOCUMENT_WORKFLOW",
-                    "class_name": "LoadDocumentWorkflow"
+                    "name": "reload-library-workflow-cert",
+                    "binding": "RELOAD_LIBRARY_WORKFLOW",
+                    "class_name": "ReloadLibraryWorkflow",
+                    // A forced reload of a large library runs every group's steps in one instance.
+                    "limits": { "steps": 25000 }
                 },
                 {
                     "name": "render-thumbnail-workflow-cert",
@@ -197,9 +201,11 @@
             ],
             "workflows": [
                 {
-                    "name": "load-document-workflow-prod",
-                    "binding": "LOAD_DOCUMENT_WORKFLOW",
-                    "class_name": "LoadDocumentWorkflow"
+                    "name": "reload-library-workflow-prod",
+                    "binding": "RELOAD_LIBRARY_WORKFLOW",
+                    "class_name": "ReloadLibraryWorkflow",
+                    // A forced reload of a large library runs every group's steps in one instance.
+                    "limits": { "steps": 25000 }
                 },
                 {
                     "name": "render-thumbnail-workflow-prod",

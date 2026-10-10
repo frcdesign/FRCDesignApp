@@ -1,4 +1,4 @@
-import type { WorkflowBackoff } from "cloudflare:workers";
+import type { WorkflowBackoff, WorkflowStep } from "cloudflare:workers";
 import { readRetryAfterSeconds } from "../../lib/onshape/client";
 import { type ThumbnailUrls } from "../thumbnails/contract";
 import type { LoadContext } from "./context";
@@ -78,4 +78,23 @@ export async function uploadThumbnailsStep(
     } catch {
         return null;
     }
+}
+
+/**
+ * The same steps under names of their own, so one reload can run a group's
+ * steps for each of its groups. Step names identify a step's stored result.
+ */
+export function prefixSteps(step: WorkflowStep, prefix: string): WorkflowStep {
+    return {
+        do: (name: string, ...rest: unknown[]) =>
+            (step.do as (name: string, ...rest: unknown[]) => unknown)(
+                `${prefix}${name}`,
+                ...rest
+            ),
+        sleep: (name, duration) => step.sleep(`${prefix}${name}`, duration),
+        sleepUntil: (name, timestamp) =>
+            step.sleepUntil(`${prefix}${name}`, timestamp),
+        waitForEvent: (name, options) =>
+            step.waitForEvent(`${prefix}${name}`, options)
+    } as WorkflowStep;
 }

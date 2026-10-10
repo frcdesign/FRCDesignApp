@@ -15,7 +15,7 @@ interface __BaseEnv_Env {
 	OAUTH_CLIENT_SECRET: string;
 	VITE_ACCESS_LEVEL_OVERRIDE: string;
 	CLIENT_RELAY: DurableObjectNamespace<import("./src/backend/index").ClientRelay>;
-	LOAD_DOCUMENT_WORKFLOW: Workflow<Parameters<import("./src/backend/index").LoadDocumentWorkflow['run']>[0]['payload']>;
+	RELOAD_LIBRARY_WORKFLOW: Workflow<Parameters<import("./src/backend/index").ReloadLibraryWorkflow['run']>[0]['payload']>;
 	RENDER_THUMBNAIL_WORKFLOW: Workflow<Parameters<import("./src/backend/index").RenderThumbnailWorkflow['run']>[0]['payload']>;
 	VERSION_MANAGER_WORKFLOW: Workflow<Parameters<import("./src/backend/index").VersionManagerWorkflow['run']>[0]['payload']>;
 }
@@ -38,7 +38,7 @@ declare namespace Cloudflare {
 		OAUTH_CLIENT_SECRET: string;
 		VITE_ACCESS_LEVEL_OVERRIDE: string;
 		CLIENT_RELAY: DurableObjectNamespace<import("./src/backend/index").ClientRelay>;
-		LOAD_DOCUMENT_WORKFLOW: Workflow<Parameters<import("./src/backend/index").LoadDocumentWorkflow['run']>[0]['payload']>;
+		RELOAD_LIBRARY_WORKFLOW: Workflow<Parameters<import("./src/backend/index").ReloadLibraryWorkflow['run']>[0]['payload']>;
 		RENDER_THUMBNAIL_WORKFLOW: Workflow<Parameters<import("./src/backend/index").RenderThumbnailWorkflow['run']>[0]['payload']>;
 		VERSION_MANAGER_WORKFLOW: Workflow<Parameters<import("./src/backend/index").VersionManagerWorkflow['run']>[0]['payload']>;
 	}
@@ -56,7 +56,7 @@ declare namespace Cloudflare {
 		OAUTH_CLIENT_SECRET: string;
 		VITE_ACCESS_LEVEL_OVERRIDE: string;
 		CLIENT_RELAY: DurableObjectNamespace<import("./src/backend/index").ClientRelay>;
-		LOAD_DOCUMENT_WORKFLOW: Workflow<Parameters<import("./src/backend/index").LoadDocumentWorkflow['run']>[0]['payload']>;
+		RELOAD_LIBRARY_WORKFLOW: Workflow<Parameters<import("./src/backend/index").ReloadLibraryWorkflow['run']>[0]['payload']>;
 		RENDER_THUMBNAIL_WORKFLOW: Workflow<Parameters<import("./src/backend/index").RenderThumbnailWorkflow['run']>[0]['payload']>;
 		VERSION_MANAGER_WORKFLOW: Workflow<Parameters<import("./src/backend/index").VersionManagerWorkflow['run']>[0]['payload']>;
 	}

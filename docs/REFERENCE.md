@@ -36,6 +36,7 @@ KV holds what may expire or be lost. Every key belongs to a `kvStore` (`src/back
 
 - `session:` — a signed-in session's access and refresh tokens and user id, keyed by the opaque id in the `frc-design-app-session` cookie, for 30 days (`features/auth/session.ts`). A sign-in in flight keeps nothing here: its state and return path are the whole of the ten-minute `frc-design-app-login` cookie (`features/auth/login.ts`).
 - `background-session:` — the latest session ids of the owner and each admin team member, so a load nobody is signed in behind can run as one of them.
+- `library-reload:`, `library-reload-queued:` — the reload holding each library, and those waiting for their turn or for approval ([architecture/loading.md](./architecture/loading.md)).
 - `unit-info:` — a workspace's units, for a week. On a miss the route asks Onshape and registers a transient `updateworkspaceunits` webhook, whose delivery drops the entry. Onshape cleans transient webhooks up after a while without events, so nothing records or removes them, and the expiry covers one it drops quietly. Onshape doesn't sign webhooks registered through the API, so the url names the workspace plainly: a forged delivery only costs a refetch (`features/webhooks/transient.ts`).
 
 ### R2 — Blob Storage (`c.env.BLOB`)
@@ -53,11 +54,11 @@ Every thumbnail the app shows is served from R2, never fetched from Onshape per 
 
 Cloudflare Workflows run long background jobs that survive past a request and resume after a failure:
 
-| Binding                     | Class                     | What it does                                                                  |
-| --------------------------- | ------------------------- | ----------------------------------------------------------------------------- |
-| `LOAD_DOCUMENT_WORKFLOW`    | `LoadDocumentWorkflow`    | Loads one group's document when its version moved on (or always, when forced) |
-| `RENDER_THUMBNAIL_WORKFLOW` | `RenderThumbnailWorkflow` | Waits out one configuration's render and stores both sizes in R2              |
-| `VERSION_MANAGER_WORKFLOW`  | `VersionManagerWorkflow`  | Runs one push or pull between linked workspaces                               |
+| Binding                     | Class                     | What it does                                                                   |
+| --------------------------- | ------------------------- | ------------------------------------------------------------------------------ |
+| `RELOAD_LIBRARY_WORKFLOW`   | `ReloadLibraryWorkflow`   | Reloads a library's groups, or the few named, one reload per library at a time |
+| `RENDER_THUMBNAIL_WORKFLOW` | `RenderThumbnailWorkflow` | Waits out one configuration's render and stores both sizes in R2               |
+| `VERSION_MANAGER_WORKFLOW`  | `VersionManagerWorkflow`  | Runs one push or pull between linked workspaces                                |
 
 Loads, their job tracking, webhooks and version approval are in [architecture/loading.md](./architecture/loading.md); renders in [architecture/thumbnails.md](./architecture/thumbnails.md); pushes and pulls between linked workspaces in [architecture/version-manager.md](./architecture/version-manager.md).
 

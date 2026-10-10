@@ -9,10 +9,10 @@ import type { LibraryId } from "../library/library-id";
 import type { ElementPath, InstancePath } from "../../lib/onshape/path";
 
 /**
- * Bounded by Onshape's rate limit: at 40 a load hit 429s it never recovered
- * from. 15 is what worked before, not a measured limit.
+ * Onshape calls in flight across a whole reload, every group sharing it.
+ * Chosen, not measured: a 429 waits out its `Retry-After`.
  */
-export const LOAD_CONCURRENCY = 15;
+export const LOAD_CONCURRENCY = 30;
 
 /** Separate from probing, so a thumbnail step's retries never hold a probe's slot. */
 const THUMBNAIL_CONCURRENCY = 10;
@@ -24,7 +24,7 @@ export interface LoadContext {
     /** Whoever asked for the load; absent for a webhook's. */
     sessionId?: string;
     step: WorkflowStep;
-    /** Bounds concurrent Onshape probing across the whole run. */
+    /** Bounds concurrent Onshape probing across the whole reload. */
     limit: Limiter;
     thumbnailLimit: Limiter;
     /** Resolved once a run needs it; see {@link getOnshapeApiFromContext}. */
