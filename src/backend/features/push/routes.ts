@@ -2,7 +2,7 @@ import { HttpStatus } from "http-status-ts";
 import { getApp } from "../../lib/context";
 import { handledError } from "../../lib/api-error";
 import { PUSH_ROUTE } from "./contract";
-import { getPushHub } from "./push-hub";
+import { getClientRelay } from "./client-relay";
 
 export const pushRoutes = getApp();
 
@@ -14,5 +14,5 @@ pushRoutes.get(PUSH_ROUTE, (c) => {
             HttpStatus.UPGRADE_REQUIRED
         );
     }
-    return getPushHub(c.env).fetch(c.req.raw);
+    return getClientRelay(c.env).fetch(c.req.raw);
 });

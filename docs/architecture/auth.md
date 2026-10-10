@@ -121,7 +121,7 @@ user chose to view the app as, clamped to what the server grants.
 `README.md` also lists `API_ACCESS_KEY` and `API_SECRET_KEY`, which no code
 reads.
 
-Bindings (`DB`, `KV`, `BLOB`, `ASSETS`, the two workflows, `PUSH_HUB`) are
+Bindings (`DB`, `KV`, `BLOB`, `ASSETS`, the two workflows, `CLIENT_RELAY`) are
 declared in `wrangler.jsonc` per environment and typed in `AppBindings`. Run
 `npx wrangler types` after changing them.
 

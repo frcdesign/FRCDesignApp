@@ -63,7 +63,7 @@ Loads, their job tracking, webhooks and version approval are in [architecture/lo
 
 ### Pushes
 
-The server pushes to open clients over a WebSocket held by the `PushHub` Durable Object (`src/backend/features/push/`): jobs starting and finishing, a library's new version, and a configuration's render landing. Nothing polls: a client that reconnects asks again for what it may have missed.
+The server pushes to open clients over a WebSocket held by the `ClientRelay` Durable Object (`src/backend/features/push/`): jobs starting and finishing, a library's new version, and a configuration's render landing. Nothing polls: a client that reconnects asks again for what it may have missed.
 
 ### Assets — Static File Serving (`c.env.ASSETS`)
 
@@ -98,7 +98,7 @@ owns, `lib/` for cross-cutting plumbing, and a small set of files at the root.
 
 ### `src/backend/`
 
-- `index.ts` — Worker entry point; exports the default app, the two Workflow classes and the `PushHub` Durable Object
+- `index.ts` — Worker entry point; exports the default app, the two Workflow classes and the `ClientRelay` Durable Object
 - `app.ts` — composition root, and nothing else: binds the caller onto each request, mounts every feature's routes, and installs the error handler
 - `db/` — `client.ts` (the Drizzle client) and `schema.ts` (table definitions)
 - `lib/` — request plumbing shared by every feature: `context.ts` (bindings, typed context, and the caller binding), `cache.ts` (cache-control middleware), `api-error.ts` and `errors.ts` (the one shape every failed response takes), `validate.ts`, `route-params.ts`, `query-params.ts`
@@ -114,7 +114,7 @@ owns, `lib/` for cross-cutting plumbing, and a small set of files at the root.
     - `thumbnails/` — rendering and R2 storage (`store.ts`), its Workflow, the routes, and the key and URL scheme the client shares
     - `build-checker/` — build issues, the checks that raise them, and the build-status endpoint
     - `webhooks/` — the per-document webhook that loads new versions, and transient ones for caches
-    - `push/` — the `PushHub` Durable Object and what it pushes
+    - `push/` — the `ClientRelay` Durable Object and what it pushes
     - `admin-team/` — each library's admin team, set by the owner and synced from Onshape
     - `version-manager/` — links between Onshape workspaces and the pushes and pulls along them; see [architecture/version-manager.md](./architecture/version-manager.md)
     - `favorites/`, `search/`, `analytics/`, `insert-location/`

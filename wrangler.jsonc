@@ -72,7 +72,7 @@
     // Inherited by every environment. v2 swaps the thumbnail render queue,
     // replaced by RenderThumbnailWorkflow, for the push hub.
     "durable_objects": {
-        "bindings": [{ "name": "PUSH_HUB", "class_name": "PushHub" }]
+        "bindings": [{ "name": "CLIENT_RELAY", "class_name": "ClientRelay" }]
     },
     "migrations": [
         {
@@ -83,6 +83,10 @@
             "tag": "v2",
             "deleted_classes": ["ThumbnailRenderer"],
             "new_sqlite_classes": ["PushHub"]
+        },
+        {
+            "tag": "v3",
+            "renamed_classes": [{ "from": "PushHub", "to": "ClientRelay" }]
         }
     ],
     /**
@@ -151,7 +155,9 @@
                 }
             ],
             "durable_objects": {
-                "bindings": [{ "name": "PUSH_HUB", "class_name": "PushHub" }]
+                "bindings": [
+                    { "name": "CLIENT_RELAY", "class_name": "ClientRelay" }
+                ]
             },
             "vars": {
                 "OWNER_USER_ID": "5eace32713a966103efd2aa0",
@@ -207,7 +213,9 @@
                 }
             ],
             "durable_objects": {
-                "bindings": [{ "name": "PUSH_HUB", "class_name": "PushHub" }]
+                "bindings": [
+                    { "name": "CLIENT_RELAY", "class_name": "ClientRelay" }
+                ]
             },
             "vars": {
                 "OWNER_USER_ID": "5eace32713a966103efd2aa0",

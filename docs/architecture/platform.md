@@ -18,7 +18,7 @@ their Onshape calls and link here for how those calls behave.
 | `src/backend/features/load/steps.ts`              | Workflow retry policies for Onshape and thumbnail steps                           |
 | `src/backend/features/load/context.ts`            | The load's limiters                                                               |
 | `src/backend/lib/cache.ts`                        | `CachePolicy`, `cacheMiddleware`, `setCache`                                      |
-| `src/backend/features/push/`                      | `PushHub` Durable Object, message contract, `notify.ts` senders                   |
+| `src/backend/features/push/`                      | `ClientRelay` Durable Object, message contract, `notify.ts` senders               |
 | `src/frontend/lib/api-client.ts`                  | `apiGet`, `apiPost`, `apiDelete`, `loadImage`; appends `?v=` for cached reads     |
 | `src/frontend/lib/errors.ts`                      | `AppError`, `handleAppError`, `getAppErrorHandler`                                |
 | `src/frontend/lib/notifications.tsx`              | `showLoadingToast`, `showSuccessToast`, `showInfoToast`, `showErrorToast`         |
@@ -142,7 +142,7 @@ loading toast.
 
 ## Pushes
 
-One `PushHub` Durable Object holds every client's WebSocket
+One `ClientRelay` Durable Object holds every client's WebSocket
 (`GET /api/push?library=<id>`), hibernating so idle sockets cost nothing, and
 tags each with the library it shows.
 

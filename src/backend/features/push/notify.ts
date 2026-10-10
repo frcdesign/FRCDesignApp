@@ -3,14 +3,14 @@ import type { AppBindings } from "../../lib/context";
 import type { LibraryId } from "../library/library-id";
 import type { JobStatus } from "../load/contract";
 import { type PushMessage, PushType, type ThumbnailPush } from "./contract";
-import { getPushHub } from "./push-hub";
+import { getClientRelay } from "./client-relay";
 
 async function broadcast(
     env: AppBindings,
     message: PushMessage
 ): Promise<void> {
     try {
-        await getPushHub(env).broadcast(message);
+        await getClientRelay(env).broadcast(message);
     } catch (error) {
         console.error(`Failed to push ${message.type}`, error);
     }

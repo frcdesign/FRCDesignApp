@@ -13,7 +13,7 @@ import {
     PushType
 } from "./contract";
 
-export class PushHub extends DurableObject<AppBindings> {
+export class ClientRelay extends DurableObject<AppBindings> {
     fetch(request: Request): Response {
         const params = new URL(request.url).searchParams;
         const libraryId = params.get(PUSH_LIBRARY_PARAM);
@@ -59,6 +59,6 @@ function isLibraryId(value: string | null): value is LibraryId {
 }
 
 /** The one instance every client connects to. */
-export function getPushHub(env: AppBindings) {
-    return env.PUSH_HUB.getByName("all");
+export function getClientRelay(env: AppBindings) {
+    return env.CLIENT_RELAY.getByName("all");
 }

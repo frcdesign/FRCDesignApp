@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { createTestApp } from "../../../__test_utils__";
 import { LibraryId } from "../library/library-id";
 import { PUSH_ROUTE, type PushMessage, PushType } from "./contract";
-import { getPushHub } from "./push-hub";
+import { getClientRelay } from "./client-relay";
 
 /** A client connected for `libraryId`, collecting what it is sent. */
 async function connect(libraryId: LibraryId) {
@@ -42,7 +42,7 @@ describe("the push hub", () => {
             libraryId: LibraryId.FRC_DESIGN_LIB
         };
 
-        await getPushHub(env).broadcast(message);
+        await getClientRelay(env).broadcast(message);
         await settle();
 
         expect(frc.received).toEqual([message]);
@@ -61,7 +61,7 @@ describe("the push hub", () => {
             microversionId: "mv1",
             configurationKey: ""
         };
-        await getPushHub(env).broadcast(message);
+        await getClientRelay(env).broadcast(message);
         await settle();
 
         expect(frc.received).toEqual([message]);
