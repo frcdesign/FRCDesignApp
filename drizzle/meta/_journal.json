@@ -40,43 +40,8 @@
         {
             "idx": 5,
             "version": "6",
-            "when": 1790601046226,
-            "tag": "0005_library_loading",
-            "breakpoints": true
-        },
-        {
-            "idx": 6,
-            "version": "6",
-            "when": 1790603777658,
-            "tag": "0006_workspace_links",
-            "breakpoints": true
-        },
-        {
-            "idx": 7,
-            "version": "6",
-            "when": 1790603778658,
-            "tag": "0007_config_lib_rename",
-            "breakpoints": true
-        },
-        {
-            "idx": 8,
-            "version": "6",
-            "when": 1790744931435,
-            "tag": "0008_version_runs_and_app_opens",
-            "breakpoints": true
-        },
-        {
-            "idx": 9,
-            "version": "6",
-            "when": 1791092555971,
-            "tag": "0009_drop_thumbnail_workspace",
-            "breakpoints": true
-        },
-        {
-            "idx": 10,
-            "version": "6",
-            "when": 1791662061117,
-            "tag": "0010_reloads_in_kv",
+            "when": 1791899151528,
+            "tag": "0005_teams_webhooks_and_version_manager",
             "breakpoints": true
         }
     ]
