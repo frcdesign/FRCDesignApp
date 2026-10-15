@@ -5,7 +5,7 @@ import { getDb } from "../../db/client";
 import { groups } from "../../db/schema";
 import { getLibraryParam, libraryRoute } from "../../lib/route-params";
 import { validate } from "../../lib/validate";
-import { requireAdminMiddleware, requireOwner } from "../auth/guards";
+import { requireEditorMiddleware, requireOwner } from "../auth/guards";
 import { getSessionId } from "../auth/session";
 import { approveHeldReloads, requestReload } from "./jobs";
 import type { ApproveVersionsOut, ReloadOut } from "./contract";
@@ -19,13 +19,14 @@ const reloadBody = z.object({
 
 /**
  * POST /api/reload/library/:libraryId: the documents with a new version or a
- * failed load, or every one when forced. Forcing spends a lot of the Onshape
- * allocation, so it is the owner's alone. It loads any held version too, so
+ * failed load, or every one when forced. Editors may, so a held or failed
+ * document is never something they can only watch; forcing spends a lot of
+ * the Onshape allocation, so it is the owner's alone. It loads any held version too, so
  * their holds are lifted.
  */
 loadRoutes.post(
     "/reload" + libraryRoute(),
-    requireAdminMiddleware,
+    requireEditorMiddleware,
     validate("json", reloadBody),
     async (c) => {
         const libraryId = getLibraryParam(c);
@@ -52,7 +53,7 @@ loadRoutes.post(
 /** POST /api/approve-versions/library/:libraryId */
 loadRoutes.post(
     "/approve-versions" + libraryRoute(),
-    requireAdminMiddleware,
+    requireEditorMiddleware,
     async (c) => {
         const documents = await approveHeldReloads(c.env, getLibraryParam(c));
         return c.json({ documents } satisfies ApproveVersionsOut);

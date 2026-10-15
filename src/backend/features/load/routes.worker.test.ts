@@ -79,10 +79,18 @@ describe("reloading a library", () => {
 
     it("keeps reloading every document to the owner", async () => {
         expect((await reload(AccessLevel.ADMIN, true)).status).toBe(403);
+        expect((await reload(AccessLevel.EDITOR, true)).status).toBe(403);
     });
 
-    it("turns away an editor", async () => {
-        expect((await reload(AccessLevel.EDITOR, false)).status).toBe(403);
+    // Held and failed documents show to editors, so they can act on them.
+    it("reloads for an editor", async () => {
+        vi.spyOn(Jobs, "requestReload").mockResolvedValue();
+        vi.spyOn(Jobs, "approveHeldReloads").mockResolvedValue(0);
+        expect((await reload(AccessLevel.EDITOR, false)).status).toBe(200);
+    });
+
+    it("turns away somebody who only views", async () => {
+        expect((await reload(AccessLevel.USER, false)).status).toBe(403);
     });
 });
 
@@ -93,7 +101,7 @@ describe("approving versions", () => {
     it("approves every held version", async () => {
         vi.spyOn(Jobs, "approveHeldReloads").mockResolvedValue(2);
         const res = await createTestApp({
-            accessLevel: AccessLevel.ADMIN
+            accessLevel: AccessLevel.EDITOR
         }).request(
             `/api/approve-versions/library/${LibraryId.FRC_DESIGN_LIB}`,
             { method: "POST", headers: { Cookie: "frc-design-app-session=s" } },

@@ -85,7 +85,6 @@ the status.
 | Configuration renders           | `RENDER_RETRIES`                   | 30 retries every 2 s; a 429 waits its `Retry-After` plus jitter                            |
 | A held reload                   | `APPROVAL_TIMEOUT`                 | Waits a week for approval, then loads                                                      |
 | A reload waiting its turn       | `TURN_INTERVAL`                    | Checks the library again every 30 s                                                        |
-| A queued reload's mark          | `CREATE_GRACE_MS`                  | Not checked against Workflows for its first 60 s                                           |
 | Client queries                  | `queryClient` default              | 2 retries, none for an `AppError` that isn't `internal`                                    |
 | Stored thumbnails on the client | `STORED_RETRIES`                   | 1 retry                                                                                    |
 | Waiting on a render             | `RENDER_TIMEOUT_MS`                | Gives up after 60 s without the image                                                      |

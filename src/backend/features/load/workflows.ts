@@ -14,7 +14,10 @@ import {
 } from "../library/db";
 import { getDocument } from "../../lib/onshape/endpoints/documents";
 import { getLatestVersion } from "../../lib/onshape/endpoints/versions";
-import type { InstancePath } from "../../lib/onshape/path";
+import {
+    type InstancePath,
+    toDefaultWorkspacePath
+} from "../../lib/onshape/path";
 import {
     groups,
     PLACEHOLDER_VERSION_ID,
@@ -254,8 +257,9 @@ async function resolveGroupTarget(
         instanceId: version.id,
         instanceType: "v"
     };
+    const workspacePath = toDefaultWorkspacePath(document);
     // Thrown rather than guessed: a guess would read another document's thumbnails.
-    if (!document.defaultWorkspace) {
+    if (!workspacePath) {
         throw new Error(`Document ${documentId} reports no default workspace`);
     }
     return {
@@ -263,11 +267,7 @@ async function resolveGroupTarget(
         groupId: ids.groupId,
         versionPath,
         versionCreatedAt: new Date(version.createdAt),
-        workspacePath: {
-            documentId,
-            instanceId: document.defaultWorkspace.id,
-            instanceType: "w"
-        },
+        workspacePath,
         name: document.name,
         thumbnailElementId: document.documentThumbnailElementId
     };

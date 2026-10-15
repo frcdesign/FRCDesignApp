@@ -79,9 +79,10 @@ start one, so a cold search cannot start a render per row.
    the selection as entered. It must be signed in: the render calls Onshape as
    the caller.
 2. `requestRender` makes the selection whole against the insertable's
-   parameters and derives its key itself, so a caller can't store one
-   configuration's picture under another's key. The element's default is
-   refused with a 400.
+   parameters and settles it as the insert menu does (`normalizeSelection`),
+   then derives its key itself: the key matches the one the menu shows, and a
+   caller can't store one configuration's picture under another's key. The
+   element's default is refused with a 400.
 3. It asks the insertables endpoint, on the insertable's version, for the
    configuration's `predictableThumbnailId`, sending `renderOverrides`: the
    values as entered, escaped once (`encodeQueryConfiguration`). No insertables
@@ -95,7 +96,9 @@ start one, so a cold search cannot start a render per row.
    the preview's first: the first ask starts Onshape's render and it answers 404
    until done, and asking for another meanwhile abandons it. Each size is retried
    every two seconds for about a minute (`RENDER_RETRIES`), and stored as it
-   lands.
+   lands. It asks under the requester's session while that works, then an
+   admin's of the insertable's library: a restart reruns with the first
+   requester's.
 6. Each stored size pushes a `thumbnail` message (`src/backend/features/push/`).
 
 On the client, `loadRenderedImage` fetches; on the first miss it starts the
@@ -107,9 +110,12 @@ meanwhile.
 
 Editors can refetch one insertable's or group's thumbnail from its menu
 (`POST /api/reload-thumbnail/library/:libraryId`, naming the group or insertable
-in the body). It deletes the stored pair, fetches again as a load does (the
-version, then the document's workspace), clears `THUMBNAIL_FAILED` and bumps
-the library version. Onshape still rendering answers 503.
+in the body). It fetches again as a load does (the version, then the
+document's workspace), overwriting each stored size only once its new image is
+in hand, clears `THUMBNAIL_FAILED` and bumps the library version. Onshape still
+rendering answers 503 and leaves what was stored. A group's tab is picked as a
+load picks it (`documentThumbnailElement`, deprecated tabs left out), and a
+group that has never loaded is refused.
 
 ### Cleanup
 
@@ -182,8 +188,9 @@ it is disconnected is still picked up by the insert menu when its minute is up.
 
 ## Invariants
 
-- A stored object is never overwritten: its key contains the microversion, so a
-  changed element lands on new keys.
+- A stored object is overwritten only by **Reload thumbnail**, and only with a
+  new image in hand: its key contains the microversion, so a changed element
+  lands on new keys.
 - A configuration url never serves the insertable's default, and a miss is never
   cached.
 - Serving never starts a render; only `POST /api/render-thumbnail/...` does, for

@@ -21,7 +21,7 @@ export interface ReloadParams {
     sessionId?: string;
     /** Reloads groups whose version has not changed, too. */
     forceReload: boolean;
-    /** A webhook's new version, which waits for an admin's approval first. */
+    /** A webhook's new version, which waits for an editor's approval first. */
     held: boolean;
 }
 
@@ -36,7 +36,6 @@ export interface RunningReload {
 interface QueuedReload {
     groupIds: string[];
     held: boolean;
-    requestedAt: number;
 }
 
 /** A backstop for a reload that died holding the library; a read finds it sooner. */
@@ -66,9 +65,6 @@ export const APPROVAL_TIMEOUT = "7 days";
 /** How often a reload waiting for its turn checks the library again. */
 export const TURN_INTERVAL = "30 seconds";
 
-/** A queued mark is written before its reload exists, so a young one isn't asked about. */
-const CREATE_GRACE_MS = 60_000;
-
 /** Starts a reload of the groups; it waits its turn if the library is busy. */
 export async function requestReload(
     env: AppBindings,
@@ -81,19 +77,29 @@ export async function requestReload(
     // Before the instance exists, so the status shows it from the start.
     await queued.put(env.KV, queuedId(params.libraryId, id), {
         groupIds: params.groupIds,
-        held: params.held,
-        requestedAt: Date.now()
+        held: params.held
     });
-    await env.RELOAD_LIBRARY_WORKFLOW.create({ id, params });
+    try {
+        await env.RELOAD_LIBRARY_WORKFLOW.create({ id, params });
+    } catch (error) {
+        // So every mark names a reload that exists.
+        await queued.delete(env.KV, queuedId(params.libraryId, id));
+        throw error;
+    }
     await publishJobStatus(env, params.libraryId);
 }
 
+/**
+ * Every mark names a reload that exists, and Workflows keeps it far longer
+ * than the mark, so a failed read is transient and the reload is taken as live.
+ */
 async function isAlive(env: AppBindings, instanceId: string): Promise<boolean> {
     try {
         const instance = await env.RELOAD_LIBRARY_WORKFLOW.get(instanceId);
         return isWorkflowActive((await instance.status()).status);
-    } catch {
-        return false; // Aged out of retention, or never created.
+    } catch (error) {
+        console.warn(`Failed to read reload ${instanceId}`, error);
+        return true;
     }
 }
 
@@ -271,8 +277,7 @@ export async function getJobStatus(
     }
     const waiting: { reload: QueuedReload }[] = [];
     for (const each of await readQueued(env, libraryId)) {
-        const isYoung = Date.now() - each.reload.requestedAt < CREATE_GRACE_MS;
-        if (isYoung || (await isAlive(env, each.instanceId))) {
+        if (await isAlive(env, each.instanceId)) {
             waiting.push(each);
         } else {
             await queued.delete(env.KV, queuedId(libraryId, each.instanceId));

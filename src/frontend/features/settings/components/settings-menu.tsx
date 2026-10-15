@@ -181,7 +181,7 @@ function AdminSettings(): ReactNode {
         <Stack gap="sm">
             {/* Always show the access level select so admins can change access level if needed */}
             <AccessLevelSelect />
-            <RequireAccessLevel accessLevel={AccessLevel.ADMIN}>
+            <RequireAccessLevel>
                 <InputRow label="Outdated documents">
                     <ReloadButton />
                 </InputRow>
@@ -191,7 +191,7 @@ function AdminSettings(): ReactNode {
                     <ReloadButton all />
                 </InputRow>
             </RequireAccessLevel>
-            <RequireAccessLevel accessLevel={AccessLevel.ADMIN}>
+            <RequireAccessLevel>
                 <HeldVersionsSetting />
             </RequireAccessLevel>
             <AdminTeamSetting />

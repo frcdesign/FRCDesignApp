@@ -19,6 +19,7 @@ import type {
 } from "../../lib/onshape/types";
 import { checkGroup } from "../build-checker/checks";
 import {
+    documentThumbnailElement,
     parseInsertableTabs,
     withoutDeprecated
 } from "./parse-document-contents";
@@ -170,7 +171,10 @@ async function loadDocumentThumbnail(
 
     // Not fatal: `checkGroup` flags a missing thumbnail, and failing here would
     // lose the group's insertables.
-    const element = documentThumbnailElement(target, contents);
+    const element = documentThumbnailElement(
+        contents,
+        target.thumbnailElementId
+    );
     if (!element) {
         return null;
     }
@@ -187,17 +191,6 @@ async function loadDocumentThumbnail(
                 element.microversionId
             )
     );
-}
-
-/** The element the document designates, or its first. */
-function documentThumbnailElement(
-    target: GroupTarget,
-    contents: OnshapeDocumentContents
-): OnshapeElement | undefined {
-    const designated = target.thumbnailElementId;
-    return designated
-        ? contents.elements.find((element) => element.id === designated)
-        : contents.elements[0];
 }
 
 interface SaveGroupInput {

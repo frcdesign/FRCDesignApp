@@ -11,7 +11,7 @@ import {
     clearBuildIssue
 } from "../build-checker/issues";
 
-/** Marks each group for an admin to reload; publishing the change is the caller's. */
+/** Marks each group for an editor to reload; publishing the change is the caller's. */
 export async function flagFailedLoads(
     env: AppBindings,
     groupIds: string[]

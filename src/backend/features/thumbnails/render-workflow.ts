@@ -9,8 +9,11 @@ import {
     type WorkflowStep
 } from "cloudflare:workers";
 import type { AppBindings } from "../../lib/context";
+import type { OnshapeApi } from "../../lib/onshape/client";
 import { getThumbnailFromId } from "../../lib/onshape/endpoints/thumbnails";
 import { getOnshapeApiFromSessionId } from "../auth/request-auth";
+import { getBackgroundOnshapeApi } from "../auth/background-sessions";
+import type { LibraryId } from "../library/library-id";
 import { rateLimitDelay } from "../load/steps";
 import { type ConfigurationKey } from "../configurations/contract";
 import { ThumbnailSize } from "./contract";
@@ -34,8 +37,10 @@ export interface RenderThumbnailParams {
     /** Tagged onto each stored object, for telling later what it depicts. */
     microversionId: string;
     configurationKey: ConfigurationKey;
-    /** Whose Onshape tokens the render is asked for under. */
+    /** Whose Onshape tokens the render is asked for under, while they work. */
     sessionId: string;
+    /** Whose admins' sessions it borrows after that. */
+    libraryId: LibraryId;
 }
 
 /** About a minute; a render that takes longer is abandoned rather than spend the allocation. */
@@ -74,12 +79,8 @@ async function storeRender(
     if (await env.BLOB.head(target.key)) {
         return;
     }
-    const onshapeApi = await getOnshapeApiFromSessionId(
-        env.KV,
-        params.sessionId
-    );
     const thumbnail = await getThumbnailFromId(
-        onshapeApi,
+        await getRenderApi(env, params),
         params.thumbnailId,
         target.size
     );
@@ -92,4 +93,23 @@ async function storeRender(
         microversionId: params.microversionId,
         configurationKey: params.configurationKey
     });
+}
+
+/**
+ * The requester's session, else an admin's: a restart reruns with the first
+ * requester's, which may have ended since.
+ */
+async function getRenderApi(
+    env: AppBindings,
+    params: RenderThumbnailParams
+): Promise<OnshapeApi> {
+    try {
+        return await getOnshapeApiFromSessionId(env.KV, params.sessionId);
+    } catch {
+        const api = await getBackgroundOnshapeApi(env, [params.libraryId]);
+        if (!api) {
+            throw new Error("No session to render with");
+        }
+        return api;
+    }
 }

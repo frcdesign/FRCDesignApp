@@ -365,6 +365,17 @@ describe("rendering a configuration's thumbnail", () => {
         expect(thumbnailId.mock.calls[0][2]).toEqual({ length: "2.25 in" });
     });
 
+    // The insert menu settles a selection before naming its key; so must this.
+    it("settles the selection as the insert menu does", async () => {
+        mockThumbnailId();
+
+        const started = await startedDuring(async () => {
+            // No such option: settled, it is the default, which has no render.
+            expect((await render({ size: "gone" })).status).toBe(400);
+        });
+        expect(started).toBe(0);
+    });
+
     it("refuses a selection that is the element's default", async () => {
         mockThumbnailId();
 

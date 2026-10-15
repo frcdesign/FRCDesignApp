@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { type Db } from "../../db/client";
-import { groups, insertables } from "../../db/schema";
+import { groups, insertables, PLACEHOLDER_VERSION_ID } from "../../db/schema";
 import {
     type BuildIssue,
     BuildIssueType,
@@ -14,13 +14,17 @@ import { type OnshapeApi } from "../../lib/onshape/client";
 import {
     type ElementPath,
     type InstancePath,
+    toDefaultWorkspacePath,
     toElementPath
 } from "../../lib/onshape/path";
 import { handledError } from "../../lib/api-error";
 import { HttpStatus } from "http-status-ts";
-import { ThumbnailSize, type ThumbnailUrls } from "./contract";
-import { thumbnailKey } from "./keys";
+import { type ThumbnailUrls } from "./contract";
 import { uploadThumbnails } from "./store";
+import {
+    documentThumbnailElement,
+    withoutDeprecated
+} from "../load/parse-document-contents";
 import { bumpLibraryVersion } from "../library/db";
 import type { LibraryId } from "../library/library-id";
 import type { OnshapeDocumentInfo } from "../../lib/onshape/types";
@@ -33,42 +37,31 @@ interface ReloadTarget {
 }
 
 /** Where a thumbnail the version won't give up is read; rows carry only the version. */
-function workspacePath(
-    document: OnshapeDocumentInfo,
-    documentId: string
-): InstancePath {
-    if (!document.defaultWorkspace) {
+function workspacePath(document: OnshapeDocumentInfo): InstancePath {
+    const workspace = toDefaultWorkspacePath(document);
+    if (!workspace) {
         throw handledError(
             "Onshape reports no default workspace for this document.",
             HttpStatus.BAD_GATEWAY
         );
     }
-    return {
-        documentId,
-        instanceId: document.defaultWorkspace.id,
-        instanceType: "w"
-    };
+    return workspace;
 }
 
-/** Deletes first, since `uploadThumbnails` skips stored sizes. */
+/** Overwrites each size once Onshape gives up a new one, so a failure keeps the old. */
 async function replaceThumbnails(
     bucket: R2Bucket,
     onshapeApi: OnshapeApi,
     target: ReloadTarget
 ): Promise<ThumbnailUrls> {
-    const { elementPath, microversionId } = target;
-    await bucket.delete(
-        [ThumbnailSize.SMALL, ThumbnailSize.LARGE].map((size) =>
-            thumbnailKey(elementPath.elementId, microversionId, size)
-        )
-    );
     try {
         return await uploadThumbnails(
             bucket,
             onshapeApi,
-            elementPath,
+            target.elementPath,
             target.elementWorkspacePath,
-            microversionId
+            target.microversionId,
+            true
         );
     } catch {
         throw handledError(
@@ -121,7 +114,7 @@ export async function reloadInsertableThumbnail(
     const document = await getDocument(onshapeApi, {
         documentId: row.documentId
     });
-    const workspace = workspacePath(document, row.documentId);
+    const workspace = workspacePath(document);
     const urls = await replaceThumbnails(bucket, onshapeApi, {
         elementPath: toElementPath(row),
         elementWorkspacePath: { ...workspace, elementId: row.elementId },
@@ -156,6 +149,12 @@ export async function reloadGroupThumbnail(
     if (!row) {
         throw handledError("No such group.", HttpStatus.NOT_FOUND);
     }
+    if (row.versionId === PLACEHOLDER_VERSION_ID) {
+        throw handledError(
+            "This document hasn't loaded yet. Reload it first.",
+            HttpStatus.CONFLICT
+        );
+    }
 
     const versionPath: InstancePath = {
         documentId: row.documentId,
@@ -166,12 +165,12 @@ export async function reloadGroupThumbnail(
         getDocument(onshapeApi, { documentId: row.documentId }),
         getContents(onshapeApi, versionPath)
     ]);
-    const workspace = workspacePath(document, row.documentId);
-
-    const designated = document.documentThumbnailElementId;
-    const element = designated
-        ? contents.elements.find((entry) => entry.id === designated)
-        : contents.elements[0];
+    const workspace = workspacePath(document);
+    // As a load picks it, which never reads a deprecated tab.
+    const element = documentThumbnailElement(
+        withoutDeprecated(contents),
+        document.documentThumbnailElementId
+    );
     if (!element) {
         throw handledError(
             "This document has no element to take a thumbnail from.",

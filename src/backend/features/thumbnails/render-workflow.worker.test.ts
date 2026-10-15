@@ -6,6 +6,8 @@ import * as RequestAuth from "../auth/request-auth";
 import { OnshapeApiError, type OAuthApi } from "../../lib/onshape/client";
 import { ThumbnailSize } from "./contract";
 import { thumbnailKey } from "./keys";
+import { TEST_LIBRARY_ID } from "../../../__test_utils__";
+import * as BackgroundSessions from "../auth/background-sessions";
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -38,7 +40,8 @@ it("stores both sizes once Onshape has rendered them", async () => {
             elementId: "e1",
             microversionId: "mv1",
             configurationKey: "a=1",
-            sessionId: "session"
+            sessionId: "session",
+            libraryId: TEST_LIBRARY_ID
         }
     });
     await instance.waitForStatus("complete");
@@ -57,4 +60,45 @@ it("stores both sizes once Onshape has rendered them", async () => {
             configurationKey: "a=1"
         });
     }
+});
+
+// A restart reruns with the first requester's session, which may have ended.
+it("borrows an admin's session once the requester's has ended", async () => {
+    vi.spyOn(RequestAuth, "getOnshapeApiFromSessionId").mockRejectedValue(
+        new Error("signed out")
+    );
+    const admin = {} as OAuthApi;
+    vi.spyOn(BackgroundSessions, "getBackgroundOnshapeApi").mockResolvedValue(
+        admin
+    );
+    const fetch = vi
+        .spyOn(ThumbnailEndpoints, "getThumbnailFromId")
+        .mockResolvedValue(new TextEncoder().encode("gif").buffer);
+    const renderKey = (size: ThumbnailSize) =>
+        thumbnailKey("e2", "mv1", size, "a=1");
+
+    await using instance = await introspectWorkflowInstance(
+        env.RENDER_THUMBNAIL_WORKFLOW,
+        "render-borrowed"
+    );
+    await env.RENDER_THUMBNAIL_WORKFLOW.create({
+        id: "render-borrowed",
+        params: {
+            thumbnailId: "thumbnail-id",
+            targets: [
+                {
+                    size: ThumbnailSize.LARGE,
+                    key: renderKey(ThumbnailSize.LARGE)
+                }
+            ],
+            elementId: "e2",
+            microversionId: "mv1",
+            configurationKey: "a=1",
+            sessionId: "ended",
+            libraryId: TEST_LIBRARY_ID
+        }
+    });
+    await instance.waitForStatus("complete");
+
+    expect(fetch.mock.calls[0][0]).toBe(admin);
 });

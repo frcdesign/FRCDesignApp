@@ -65,7 +65,7 @@ Three things call `requestReload`, each naming the groups to load:
   first load that fails or never starts still leaves something to retry or
   delete, then reloads it. The load's save clears the flag; a failure replaces
   it with `LOAD_FAILED`.
-- **Reload** (admin): every group of the library; each skips itself when its
+- **Reload** (editor): every group of the library; each skips itself when its
   version is unchanged and it has no failure. **Reload all** (owner) forces
   every group, which spends a lot of the Onshape allocation. Either loads any
   held version too, so it lets the library's held reloads through.
@@ -193,7 +193,7 @@ costs the webhook. Deleting the last group of a document removes its webhook.
 Every webhook reload is held: it waits on the workflow event `approve-version`
 for up to a week (`APPROVAL_TIMEOUT`), then loads anyway. While it waits, its
 groups show as awaiting approval. **Approve** under **Held versions** sends the
-event to every held reload of the library; an admin's **Reload** does too,
+event to every held reload of the library; an editor's **Reload** does too,
 since it loads the new versions itself. A released reload then waits its turn
 like any other.
 
@@ -222,6 +222,7 @@ like any other.
 | A new document's load never starts          | The shell group keeps `NOT_LOADED`                     | **Reload**                                                                                    |
 | A reload dies holding the library           | Its claim is left behind                               | The next reload or job-status read takes over and flags what it hadn't finished `LOAD_FAILED` |
 | A queued reload dies                        | Its groups still show as waiting                       | The next job-status read drops it                                                             |
+| Workflows can't be asked about a reload     | It is taken as live                                    | The next read asks again; its mark expires regardless                                         |
 | Webhook cancelled or deactivated by Onshape | No new versions held                                   | Next load of the document registers it again                                                  |
 | No session to borrow                        | Webhook loads fail                                     | The owner or a team member opens the app                                                      |
 

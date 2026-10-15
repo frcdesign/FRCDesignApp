@@ -15,6 +15,7 @@ import {
     type PartialSelection
 } from "../configurations/contract";
 import {
+    normalizeSelection,
     renderOverrides,
     toKey,
     toSelection
@@ -22,6 +23,7 @@ import {
 import { RenderStatus, ThumbnailSize } from "./contract";
 import { thumbnailKey } from "./keys";
 import { isWorkflowActive } from "../../lib/workflows";
+import type { LibraryId } from "../library/library-id";
 
 /** The insert menu's preview first, since somebody is waiting on it. */
 const RENDER_ORDER = [ThumbnailSize.LARGE, ThumbnailSize.SMALL];
@@ -40,7 +42,11 @@ export async function requestRender(
     const sessionId = getSessionId(c);
     const target = await renderTargetOf(c, request.insertableId);
     const { parameters } = target;
-    const selection = toSelection(request.selection, parameters);
+    // Settled as the insert menu settles it, so the key matches the one it shows.
+    const selection = normalizeSelection(
+        toSelection(request.selection, parameters),
+        parameters
+    );
     const configurationKey = toKey(selection, parameters);
     if (configurationKey === DEFAULT_CONFIGURATION_KEY) {
         throw handledError(
@@ -92,7 +98,8 @@ export async function requestRender(
                 elementId,
                 microversionId,
                 configurationKey,
-                sessionId
+                sessionId,
+                libraryId: target.libraryId
             }
         });
     } catch (error) {
@@ -137,6 +144,7 @@ async function findInstance(
 }
 
 interface RenderTarget {
+    libraryId: LibraryId;
     path: ElementPath;
     microversionId: string;
     /** Empty for an insertable with nothing to configure. */
@@ -149,6 +157,7 @@ async function renderTargetOf(
 ): Promise<RenderTarget> {
     const row = await getDb(c.env.DB)
         .select({
+            libraryId: insertables.libraryId,
             documentId: insertables.documentId,
             versionId: insertables.versionId,
             elementId: insertables.elementId,
@@ -166,6 +175,7 @@ async function renderTargetOf(
         throw handledError("No such part.", HttpStatus.NOT_FOUND);
     }
     return {
+        libraryId: row.libraryId,
         path: toElementPath(row),
         microversionId: row.microversionId,
         parameters: row.parameters ?? []

@@ -80,12 +80,12 @@ Onshape:
 
 ### Access levels
 
-| Level      | Who                                | May                                                                                                    |
-| ---------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| **Owner**  | The user `OWNER_USER_ID` names     | Everything, in every library; set admin teams; **Reload all**                                          |
-| **Admin**  | A team admin of the library's team | Editor rights, plus **Reload**, version approval, refreshing the team                                  |
-| **Editor** | A member of the library's team     | Groups (add, delete, order, sort), element settings and visibility, build status, **Reload thumbnail** |
-| **User**   | Anyone signed in                   | Browse, insert, favorites                                                                              |
+| Level      | Who                                | May                                                                                                                                         |
+| ---------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Owner**  | The user `OWNER_USER_ID` names     | Everything, in every library; set admin teams; **Reload all**                                                                               |
+| **Admin**  | A team admin of the library's team | Editor rights, plus refreshing the team                                                                                                     |
+| **Editor** | A member of the library's team     | Groups (add, delete, order, sort), element settings and visibility, build status, **Reload**, approving held versions, **Reload thumbnail** |
+| **User**   | Anyone signed in                   | Browse, insert, favorites                                                                                                                   |
 
 `getAccessLevel` returns owner for `OWNER_USER_ID`, otherwise looks the caller
 up in the library's stored `admin_team`. It is a database read, never an Onshape

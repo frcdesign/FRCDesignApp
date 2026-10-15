@@ -2,7 +2,7 @@ import { env } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getDb } from "../../db/client";
-import { insertables } from "../../db/schema";
+import { groups, insertables, PLACEHOLDER_VERSION_ID } from "../../db/schema";
 import {
     MOCK_ONSHAPE_API,
     resetDb,
@@ -135,6 +135,29 @@ describe("reloading a thumbnail", () => {
         expect(await (await env.BLOB.get(key))?.text()).not.toBe("stale-bytes");
     });
 
+    // The row still names the stored image, so it must still be there.
+    it("keeps what is stored when Onshape gives up nothing new", async () => {
+        const key = thumbnailKey(
+            target.elementPath.elementId,
+            target.microversionId,
+            ThumbnailSize.SMALL
+        );
+        await env.BLOB.put(key, "good-bytes");
+        mockThumbnails(missing);
+
+        await expect(
+            reloadInsertableThumbnail(
+                db,
+                env.BLOB,
+                MOCK_ONSHAPE_API,
+                TEST_LIBRARY_ID,
+                target.insertableId
+            )
+        ).rejects.toThrow();
+
+        expect(await (await env.BLOB.get(key))?.text()).toBe("good-bytes");
+    });
+
     it("leaves the row alone while Onshape has not rendered one", async () => {
         mockThumbnails(missing);
 
@@ -205,5 +228,54 @@ describe("reloading a thumbnail", () => {
 
         const key = thumbnailKey("cover", "mv-cover", ThumbnailSize.SMALL);
         expect(await env.BLOB.head(key)).not.toBeNull();
+    });
+
+    // As a load picks it: a deprecated tab is one the library treats as gone.
+    it("takes a group's thumbnail from its first tab still in use", async () => {
+        vi.spyOn(DocumentEndpoints, "getContents").mockResolvedValue({
+            elements: [
+                {
+                    id: "old",
+                    name: "Old (deprecated)",
+                    elementType: OnshapeElementType.PART_STUDIO,
+                    microversionId: "mv-old"
+                },
+                {
+                    id: "current",
+                    name: "Current",
+                    elementType: OnshapeElementType.PART_STUDIO,
+                    microversionId: "mv-current"
+                }
+            ],
+            folders: { btType: OnshapeFolderEntryType.GROUP, groups: [] }
+        });
+        const calls = mockThumbnails(rendered);
+
+        await reloadGroupThumbnail(
+            db,
+            env.BLOB,
+            MOCK_ONSHAPE_API,
+            TEST_LIBRARY_ID,
+            TEST_GROUP_ID
+        );
+
+        expect(calls.mock.calls[0][1].elementId).toBe("current");
+    });
+
+    it("refuses a group whose document has never loaded", async () => {
+        await db
+            .update(groups)
+            .set({ versionId: PLACEHOLDER_VERSION_ID })
+            .where(eq(groups.id, TEST_GROUP_ID));
+
+        await expect(
+            reloadGroupThumbnail(
+                db,
+                env.BLOB,
+                MOCK_ONSHAPE_API,
+                TEST_LIBRARY_ID,
+                TEST_GROUP_ID
+            )
+        ).rejects.toThrow("hasn't loaded yet");
     });
 });

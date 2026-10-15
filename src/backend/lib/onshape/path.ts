@@ -16,6 +16,20 @@ export interface ElementPath extends InstancePath {
     elementId: string;
 }
 
+/** A document's own workspace; undefined when Onshape didn't name one. */
+export function toDefaultWorkspacePath(document: {
+    id: string;
+    defaultWorkspace?: { id: string };
+}): InstancePath | undefined {
+    return document.defaultWorkspace
+        ? {
+              documentId: document.id,
+              instanceId: document.defaultWorkspace.id,
+              instanceType: "w"
+          }
+        : undefined;
+}
+
 /** The version-pinned tab a stored insertable row addresses. */
 export function toElementPath(row: {
     documentId: string;

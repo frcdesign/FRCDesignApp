@@ -53,20 +53,25 @@ async function fetchThumbnail(
     }
 }
 
-/** Skips sizes already stored; throws when neither instance gives one up. */
+/**
+ * Skips sizes already stored unless replacing them; throws when neither
+ * instance gives one up. A replaced size is overwritten only once its new
+ * image is in hand.
+ */
 export async function uploadThumbnails(
     bucket: R2Bucket,
     onshapeApi: OnshapeApi,
     elementPath: ElementPath,
     elementWorkspacePath: ElementPath,
-    microversionId: string
+    microversionId: string,
+    replace = false
 ): Promise<ThumbnailUrls> {
     const { elementId } = elementPath;
 
     // Sequential, so a failed attempt costs one call.
     for (const size of BOTH_SIZES) {
         const key = thumbnailKey(elementId, microversionId, size);
-        if (await bucket.head(key)) {
+        if (!replace && (await bucket.head(key))) {
             continue;
         }
         const thumbnail = await fetchThumbnail(

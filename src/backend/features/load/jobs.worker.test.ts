@@ -196,27 +196,42 @@ describe("library reloads", () => {
     describe("status", () => {
         it("drops a waiting reload that has since ended", async () => {
             stubCreate();
-            vi.useFakeTimers({ toFake: ["Date"] });
             await requestReload(env, params(["a"]));
-            vi.setSystemTime(Date.now() + 5 * 60_000);
             running();
 
             expect(await getJobStatus(env, TEST_LIBRARY_ID)).toEqual({
                 loadingGroupIds: [],
                 awaitingApprovalGroupIds: []
             });
-            vi.useRealTimers();
         });
 
-        // Its mark is written before Workflows has the reload.
-        it("keeps a reload asked for a moment ago", async () => {
-            stubCreate();
-            await requestReload(env, params(["a"]));
-            running();
+        // A held reload dropped on a blip would wait out its week unapproved.
+        it("keeps a reload Workflows can't be asked about", async () => {
+            const create = stubCreate();
+            await requestReload(env, params(["a"], true));
+            vi.spyOn(env.RELOAD_LIBRARY_WORKFLOW, "get").mockRejectedValue(
+                new Error("unavailable")
+            );
+            vi.spyOn(console, "warn").mockImplementation(() => undefined);
 
             expect(
-                (await getJobStatus(env, TEST_LIBRARY_ID)).loadingGroupIds
+                (await getJobStatus(env, TEST_LIBRARY_ID))
+                    .awaitingApprovalGroupIds
             ).toEqual(["a"]);
+            expect(createdIds(create)).toHaveLength(1);
+        });
+
+        it("leaves no mark when the reload can't be started", async () => {
+            vi.spyOn(env.RELOAD_LIBRARY_WORKFLOW, "create").mockRejectedValue(
+                new Error("down")
+            );
+
+            await expect(requestReload(env, params(["a"]))).rejects.toThrow();
+
+            expect(await getJobStatus(env, TEST_LIBRARY_ID)).toEqual({
+                loadingGroupIds: [],
+                awaitingApprovalGroupIds: []
+            });
         });
 
         it("fails the groups a dead holder hadn't finished", async () => {

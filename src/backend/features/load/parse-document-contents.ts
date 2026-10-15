@@ -81,3 +81,13 @@ function* traverseFolders(entries: OnshapeFolderEntry[]): Generator<string> {
         }
     }
 }
+
+/** The tab the document designates for its thumbnail, or its first. */
+export function documentThumbnailElement(
+    contents: OnshapeDocumentContents,
+    designatedId: string | undefined
+): OnshapeElement | undefined {
+    return designatedId
+        ? contents.elements.find((element) => element.id === designatedId)
+        : contents.elements[0];
+}

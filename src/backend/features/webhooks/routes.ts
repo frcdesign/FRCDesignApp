@@ -92,7 +92,7 @@ webhookRoutes.post(
 );
 
 /**
- * A new version is held until an admin approves it, or for a week. Nobody is
+ * A new version is held until an editor approves it, or for a week. Nobody is
  * signed in behind a webhook, so each reload finds an admin's session.
  */
 async function reloadDocument(
