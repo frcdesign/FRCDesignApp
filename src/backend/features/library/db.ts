@@ -101,6 +101,7 @@ export async function getLibraryOut(
             microversionId: ins.microversionId,
             isVisible: ins.isVisible,
             supportsFasten: ins.supportsFasten,
+            supportsReplicate: ins.supportsReplicate === true,
             elementType: ins.elementType,
             smallThumbnailUrl: ins.smallThumbnailUrl ?? undefined,
             largeThumbnailUrl: ins.largeThumbnailUrl ?? undefined,

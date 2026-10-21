@@ -18,7 +18,7 @@ import {
 } from "../../auth/guards";
 import { insertables, configurations } from "../../../db/schema";
 import { bumpLibraryVersion, rebuildSearchDb } from "../db";
-import { type InsertOut, MAX_FASTEN_CIRCLES } from "../contract";
+import { type InsertOut } from "../contract";
 import type { LibraryId } from "../library-id";
 import { toElementPath, INSTANCE_TYPES } from "../../../lib/onshape/path";
 import {
@@ -47,7 +47,11 @@ import { encodeConfiguration } from "../../configurations/utils";
 import { fastenMate } from "../../../lib/onshape/objects/assembly-features";
 import { parseFastenInfo } from "../../load/parse-fasten";
 import { getFastenQuery } from "./fasten-query";
-import { fastenToCircles, getInstancePath } from "./fasten-circles";
+import {
+    extendReplicate,
+    fastenToCircles,
+    getInstancePath
+} from "./fasten-circles";
 import { getInsertLocationTransform } from "../../insert-location/parse";
 import { addBuildIssue, clearBuildIssue } from "../../build-checker/issues";
 import { markHintSeen } from "../../hints/store";
@@ -109,6 +113,32 @@ insertableRoutes.post(
             .update(insertables)
             .set({ supportsFasten, fastenInfo })
             .where(eq(insertables.id, insertableId));
+
+        await bumpLibraryVersion(db, libraryId);
+        return c.json({ success: true });
+    }
+);
+
+const setReplicateBody = z.object({ supportsReplicate: z.boolean() });
+
+/** POST /api/toggle-replicate/library/:libraryId/insertable/:insertableId */
+insertableRoutes.post(
+    "/toggle-replicate" + libraryRoute() + insertableRoute(),
+    requireEditorMiddleware,
+    validate("json", setReplicateBody),
+    async (c) => {
+        const db = getDb(c.env.DB);
+        const libraryId = getLibraryParam(c);
+        const { supportsReplicate } = c.req.valid("json");
+
+        const updated = await db
+            .update(insertables)
+            .set({ supportsReplicate })
+            .where(inLibrary(libraryId, getInsertableParam(c)))
+            .returning({ id: insertables.id });
+        if (updated.length === 0) {
+            throw internalError("Insertable not found", HttpStatus.NOT_FOUND);
+        }
 
         await bumpLibraryVersion(db, libraryId);
         return c.json({ success: true });
@@ -274,8 +304,7 @@ const addToPartStudioBody = insertBody.extend({
 });
 
 const circleSchema = z.object({
-    // Spliced into a FeatureScript query string.
-    selectionId: z.string().regex(/^[^"\\]+$/),
+    selectionId: z.string().min(1),
     occurrencePath: z.array(z.string()).default([])
 });
 
@@ -284,8 +313,8 @@ const addToAssemblyBody = insertBody.extend({
     /** The insert location marker's instance id, when the assembly has one. */
     insertLocationId: z.string().optional(),
     /** Where to fasten; none leaves the mate open for the caller to finish. */
-    circles: z.array(circleSchema).max(MAX_FASTEN_CIRCLES).default([]),
-    /** With several circles, one instance replicated onto the rest. */
+    circles: z.array(circleSchema).default([]),
+    /** Ignored unless an editor allowed the insertable to replicate. */
     replicate: z.boolean().default(false)
 });
 
@@ -384,7 +413,8 @@ insertableRoutes.post(
                 name: insertables.name,
                 elementType: insertables.elementType,
                 isOpenComposite: insertables.isOpenComposite,
-                fastenInfo: insertables.fastenInfo
+                fastenInfo: insertables.fastenInfo,
+                supportsReplicate: insertables.supportsReplicate
             })
             .from(insertables)
             .where(eq(insertables.id, insertableId))
@@ -433,20 +463,6 @@ insertableRoutes.post(
               )
             : undefined;
 
-        const insert = () =>
-            addElementToAssembly(
-                onshapeApi,
-                targetPath,
-                sourcePath,
-                row.elementType,
-                {
-                    configuration,
-                    partTypes,
-                    transform
-                }
-            );
-        const result = await insert();
-
         // Every path below records the insert exactly once.
         const track = (fasten: boolean) =>
             trackInsert(c, {
@@ -461,6 +477,39 @@ insertableRoutes.post(
                 source: body.source,
                 fasten
             });
+
+        const replicate = body.replicate && row.supportsReplicate === true;
+        const fastenedCount = body.circles.length;
+        if (
+            body.fasten &&
+            row.fastenInfo &&
+            replicate &&
+            fastenedCount > 0 &&
+            (await extendReplicate(
+                onshapeApi,
+                targetPath,
+                { sourcePath, configuration },
+                body.circles
+            ))
+        ) {
+            await track(true);
+            await markHintSeen(c, Hint.FASTENED_TO_CIRCLES);
+            return c.json({ fastenedCount } satisfies InsertOut);
+        }
+
+        const insert = () =>
+            addElementToAssembly(
+                onshapeApi,
+                targetPath,
+                sourcePath,
+                row.elementType,
+                {
+                    configuration,
+                    partTypes,
+                    transform
+                }
+            );
+        const result = await insert();
 
         if (!body.fasten) {
             await track(false);
@@ -480,20 +529,18 @@ insertableRoutes.post(
             getFastenQuery(row.elementType, instancePath, fastenInfo);
 
         try {
-            if (body.circles.length > 0) {
+            if (fastenedCount > 0) {
                 await fastenToCircles(onshapeApi, targetPath, {
                     name: row.name,
                     inserted: result,
                     insert,
                     fastenQuery,
                     circles: body.circles,
-                    replicate: body.replicate
+                    replicate
                 });
                 await track(true);
                 await markHintSeen(c, Hint.FASTENED_TO_CIRCLES);
-                return c.json({
-                    fastenedCount: body.circles.length
-                } satisfies InsertOut);
+                return c.json({ fastenedCount } satisfies InsertOut);
             }
 
             const fastenResult = await addAssemblyFeature(

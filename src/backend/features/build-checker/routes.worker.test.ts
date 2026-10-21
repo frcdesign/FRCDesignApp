@@ -15,6 +15,7 @@ import {
 } from "../../../__test_utils__";
 import { getDb } from "../../db/client";
 import type { LibraryBuildStatus } from "./contract";
+import { BuildIssueType } from "./issues";
 
 const db = getDb(env.DB);
 
@@ -57,6 +58,24 @@ describe("GET /build-status", () => {
         expect(body.insertables[TEST_PART_STUDIO_ID].versionCreatedAt).toBe(
             INSERTABLE_VERSION_AT.getTime()
         );
+    });
+
+    it("warns about a fastened part nobody has decided may replicate", async () => {
+        await seedPartStudio(db);
+        await db
+            .update(insertables)
+            .set({ supportsFasten: true })
+            .where(eq(insertables.id, TEST_PART_STUDIO_ID));
+
+        const res = await createTestApp().request(
+            `/api/build-status/library/${TEST_LIBRARY_ID}?v=3`,
+            { method: "GET" },
+            env
+        );
+        const body: LibraryBuildStatus = await res.json();
+        expect(
+            body.insertables[TEST_PART_STUDIO_ID].buildIssues
+        ).toContainEqual({ type: BuildIssueType.REPLICATE_UNDECIDED });
     });
 
     it("caches privately, since only editors may read it", async () => {

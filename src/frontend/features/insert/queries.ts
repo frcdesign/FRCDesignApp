@@ -125,7 +125,8 @@ export function useInsertMutation(
                       insertLocationId,
                       // Read at the click, since Onshape reports picks as they happen.
                       circles: fasten ? getSelectedCircles() : [],
-                      replicate: getUiState().replicate
+                      replicate:
+                          insertable.supportsReplicate && getUiState().replicate
                   }
               }
             : {

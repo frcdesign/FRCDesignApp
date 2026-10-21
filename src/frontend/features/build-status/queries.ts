@@ -17,6 +17,10 @@ import { patchQuery } from "../../lib/query-cache";
 import { useRefreshLibrary } from "../../lib/refresh";
 import { toInsertablePath, toLibraryPath } from "../../lib/api-paths";
 import { type LibraryBuildStatus } from "@backend/features/build-checker/contract";
+import {
+    BuildIssueType,
+    clearBuildIssue
+} from "@backend/features/build-checker/issues";
 import { LibraryId } from "@backend/features/library/library-id";
 import { useLibraryId } from "../../lib/library";
 import { useCacheVersion } from "../library/queries";
@@ -152,6 +156,37 @@ export function useToggleInsertAndFastenMutation(insertableId: string) {
             "Failed to enable insert and fasten. Is the target valid?",
             toastId
         ),
+        onSettled: (_result, error) =>
+            refreshLibrary({ discardPatches: error !== null })
+    });
+}
+
+/** Records whether an insertable may replicate onto several circles. */
+export function useToggleReplicateMutation(insertableId: string) {
+    const libraryId = useLibraryId();
+    const key = useBuildStatusKey();
+    const refreshLibrary = useRefreshLibrary();
+    return useMutation({
+        mutationKey: ["toggle-replicate", insertableId],
+        mutationFn: (supportsReplicate: boolean) =>
+            apiPost(
+                "/toggle-replicate" +
+                    toLibraryPath(libraryId) +
+                    toInsertablePath(insertableId),
+                { body: { supportsReplicate } }
+            ),
+        onMutate: (supportsReplicate) =>
+            patchQuery<LibraryBuildStatus>(key, (status) => {
+                const insertable = status.insertables[insertableId];
+                if (insertable) {
+                    insertable.supportsReplicate = supportsReplicate;
+                    insertable.buildIssues = clearBuildIssue(
+                        insertable.buildIssues,
+                        BuildIssueType.REPLICATE_UNDECIDED
+                    );
+                }
+            }),
+        onError: getAppErrorHandler("Failed to change whether it replicates."),
         onSettled: (_result, error) =>
             refreshLibrary({ discardPatches: error !== null })
     });

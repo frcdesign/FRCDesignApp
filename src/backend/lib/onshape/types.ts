@@ -247,6 +247,9 @@ export interface OnshapeAssemblyInstance {
     documentId?: string;
     elementId?: string;
     featureId?: string;
+    /** The version it was inserted from; absent for one from a workspace. */
+    documentVersion?: string;
+    configuration?: string;
 }
 
 /** Where one instance sits, as a row-major 4×4 and the path that owns it. */
@@ -309,10 +312,29 @@ export interface OnshapeInsertInstancesResponse {
 /** POST /assemblies|partstudios/.../features response (the subset we read). */
 export interface OnshapeCreatedFeature {
     feature: { featureId: string };
-    /** Onshape adds a feature that fails to regenerate, and says so here. */
-    featureState?: {
-        featureStatus?: "OK" | "INFO" | "WARNING" | "ERROR" | "UNKNOWN";
-    };
+}
+
+/** A query in a feature parameter; which fields it has depends on `btType`. */
+export interface OnshapeQuery {
+    btType: string;
+    path?: string[];
+    deterministicIds?: string[];
+}
+
+/** A feature parameter; only query lists carry `queries`. */
+export interface OnshapeFeatureParameter {
+    btType: string;
+    parameterId: string;
+    queries?: OnshapeQuery[];
+}
+
+/** GET /assemblies/.../features: each feature as it would be posted back. */
+export interface OnshapeAssemblyFeatureList {
+    features: {
+        btType: string;
+        featureId: string;
+        parameters?: OnshapeFeatureParameter[];
+    }[];
 }
 
 // === parts (GET /parts/d/{did}/{wvm}/{wvmid}/e/{eid}) ===

@@ -5,6 +5,8 @@ import { getLibraryParam, libraryRoute } from "../../lib/route-params";
 import { getDb } from "../../db/client";
 import { toElementPath } from "../../lib/onshape/path";
 import { requireEditorMiddleware } from "../auth/guards";
+import { addBuildIssue } from "./issues";
+import { checkInsertableSettings } from "./checks";
 import { groups, insertables, configurations } from "../../db/schema";
 import type {
     LibraryBuildStatus,
@@ -48,6 +50,7 @@ buildStatusRoutes.get(
                     elementType: insertables.elementType,
                     isVisible: insertables.isVisible,
                     supportsFasten: insertables.supportsFasten,
+                    supportsReplicate: insertables.supportsReplicate,
                     indexConfigurations: insertables.indexConfigurations,
                     excludedParameterIds: insertables.excludedParameterIds,
                     vendors: insertables.vendors,
@@ -97,11 +100,19 @@ buildStatusRoutes.get(
         const insertablesOut: Record<string, InsertableBuildStatus> = {};
         for (const ins of allInsertables) {
             insertablesOut[ins.id] = {
-                buildIssues: ins.buildIssues,
+                // Checked here, so changing a setting needs no reload to show.
+                buildIssues: addBuildIssue(
+                    ins.buildIssues,
+                    ...checkInsertableSettings({
+                        supportsFasten: ins.supportsFasten,
+                        supportsReplicate: ins.supportsReplicate ?? undefined
+                    })
+                ),
                 elementPath: toElementPath(ins),
                 elementType: ins.elementType,
                 isVisible: ins.isVisible,
                 supportsFasten: ins.supportsFasten,
+                supportsReplicate: ins.supportsReplicate ?? undefined,
                 indexConfigurations: ins.indexConfigurations,
                 excludedParameterIds: ins.excludedParameterIds,
                 vendors: ins.vendors,

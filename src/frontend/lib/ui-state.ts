@@ -34,7 +34,7 @@ interface UiState {
     vendorFilters: Partial<Record<LibraryId, Vendor[]>>;
     searchQuery: string;
     fasten: boolean;
-    /** Fastening to several circles replicates one instance onto the rest. */
+    /** Fastening to circles extends or makes a Replicate, where the part allows it. */
     replicate: boolean;
     /** How many times an insert and fasten has offered the circles tip; see `insert-tips`. */
     fastenCirclesTipCount: number;

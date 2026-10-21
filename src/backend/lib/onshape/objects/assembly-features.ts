@@ -81,6 +81,16 @@ function edgeQueryString(edge: EdgeReference): string {
     return `query=qTransient("${edge.deterministicId}");`;
 }
 
+/** The edge itself, as a Replicate's matches name it. */
+export function edgeQuery(edge: EdgeReference): object {
+    return {
+        btType: "BTMIndividualQueryWithOccurrence-811",
+        entityQuery: edgeQueryString(edge),
+        deterministicIds: [edge.deterministicId],
+        path: edge.path
+    };
+}
+
 /** The center of a circular edge, where a fastener's axis runs. */
 function circleCenterQuery(edge: EdgeReference): object {
     return {
@@ -124,6 +134,11 @@ export function fastenMateToCircle(
     );
 }
 
+export const REPLICATE_BT_TYPE = "BTMAssemblyReplicateFeature-1351";
+
+/** How a feature names an instance, e.g. a Replicate's seed. */
+export const OCCURRENCE_QUERY_BT_TYPE = "BTMIndividualOccurrenceQuery-626";
+
 /**
  * Copies a fastened instance onto more circles, matching each by the seed's
  * mate. Onshape publishes no spec for Replicate, so these parameter ids are
@@ -136,15 +151,12 @@ export function replicateFeature(
     circles: EdgeReference[]
 ): object {
     return {
-        btType: "BTMAssemblyReplicateFeature-1351",
+        btType: REPLICATE_BT_TYPE,
         featureType: "replicate",
         name,
         parameters: [
             queryParameter("instances", [
-                {
-                    btType: "BTMIndividualOccurrenceQuery-626",
-                    path: instancePath
-                }
+                { btType: OCCURRENCE_QUERY_BT_TYPE, path: instancePath }
             ]),
             queryParameter("mate", [featureOccurrenceQuery(mateFeatureId)]),
             {
@@ -153,15 +165,7 @@ export function replicateFeature(
                 value: "INDIVIDUAL_EDGES",
                 enumName: "Match scope"
             },
-            queryParameter(
-                "matches",
-                circles.map((circle) => ({
-                    btType: "BTMIndividualQueryWithOccurrence-811",
-                    entityQuery: edgeQueryString(circle),
-                    deterministicIds: [circle.deterministicId],
-                    path: circle.path
-                }))
-            )
+            queryParameter("matches", circles.map(edgeQuery))
         ]
     };
 }

@@ -43,9 +43,18 @@ interface SwitchRowProps {
     label: string;
     description?: string;
     checked: boolean;
+    /** Neither on nor off, until somebody decides; the thumb sits in the middle. */
+    indeterminate?: boolean;
     disabled?: boolean;
     onToggle: () => void;
 }
+
+const INDETERMINATE_STYLES = {
+    thumb: {
+        "--switch-thumb-start": "calc(50% - var(--switch-thumb-size) / 2)"
+    },
+    track: { borderColor: "var(--mantine-color-yellow-filled)" }
+};
 
 export function SwitchRow(props: SwitchRowProps): ReactNode {
     return (
@@ -55,7 +64,10 @@ export function SwitchRow(props: SwitchRowProps): ReactNode {
             control={
                 <Switch
                     size="sm"
-                    checked={props.checked}
+                    checked={props.checked && !props.indeterminate}
+                    styles={
+                        props.indeterminate ? INDETERMINATE_STYLES : undefined
+                    }
                     disabled={props.disabled}
                     onChange={props.onToggle}
                     withThumbIndicator={false}

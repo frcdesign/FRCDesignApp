@@ -9,10 +9,7 @@ import {
     Text
 } from "@mantine/core";
 import { CircleDashedIcon } from "@phosphor-icons/react";
-import {
-    type CircleSelection,
-    MAX_FASTEN_CIRCLES
-} from "@backend/features/library/contract";
+import { type CircleSelection } from "@backend/features/library/contract";
 import { Hint } from "@backend/features/hints/contract";
 import { AppHoverCard } from "../../../components/app-hover-card";
 import { BadgedIcon } from "../../../components/badged-icon";
@@ -32,8 +29,16 @@ import {
     useSelectedCircles
 } from "../circle-selection";
 
+interface FastenCirclesStatusProps {
+    /** Whether an editor allowed the part to replicate. */
+    supportsReplicate: boolean;
+}
+
 /** For an insert that will fasten: the circles it will fasten to, and where to pick more. */
-export function FastenCirclesStatus(): ReactNode {
+export function FastenCirclesStatus(
+    props: FastenCirclesStatusProps
+): ReactNode {
+    const { supportsReplicate } = props;
     const circles = useSelectedCircles();
     const isSelecting = useIsSelectingCircles();
     const replicate = useUiState((state) => state.replicate);
@@ -42,8 +47,8 @@ export function FastenCirclesStatus(): ReactNode {
 
     const found = circles.length > 0;
     const isNew = !found && !hasFastened;
-    const status = getCirclesStatus(circles.length);
-    const canReplicate = circles.length > 1;
+    const status = found ? Status.SUCCESS : Status.INFO;
+    const canReplicate = supportsReplicate && found;
 
     return (
         <AppHoverCard
@@ -91,7 +96,7 @@ export function FastenCirclesStatus(): ReactNode {
                 {canReplicate && (
                     <InfoCheckbox
                         label="Replicate"
-                        info="Insert one part and replicate it onto the other circles, rather than inserting a part for each."
+                        info="Add the circles to a Replicate of this part, making one if the assembly has none, rather than inserting a part for each."
                         checked={replicate}
                         onChange={(checked) =>
                             updateUiState({ replicate: checked })
@@ -103,25 +108,17 @@ export function FastenCirclesStatus(): ReactNode {
     );
 }
 
-function getCirclesStatus(count: number): Status {
-    if (count > MAX_FASTEN_CIRCLES) {
-        return Status.WARNING;
-    }
-    return count > 0 ? Status.SUCCESS : Status.INFO;
-}
-
 function describeFasten(count: number, replicate: boolean): string {
-    if (count > MAX_FASTEN_CIRCLES) {
-        return `At most ${MAX_FASTEN_CIRCLES} circles can be fastened to at once; deselect some in Onshape.`;
-    }
     if (count === 0) {
         return "Select circles in Onshape to fasten the part to them, or finish the fasten mate after inserting.";
     }
-    if (count === 1) {
-        return "The part will be fastened to the selected circle.";
+    if (replicate) {
+        return count === 1
+            ? "The circle will be added to this part's Replicate, or the part fastened to it if there is none."
+            : "The circles will be added to this part's Replicate, or one part fastened and replicated onto the rest.";
     }
-    return replicate
-        ? "The part will be fastened to the first circle and replicated onto the rest."
+    return count === 1
+        ? "The part will be fastened to the selected circle."
         : "A part will be inserted and fastened to each selected circle.";
 }
 

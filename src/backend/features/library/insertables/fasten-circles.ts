@@ -6,14 +6,24 @@ import {
 import { type ElementPath } from "../../../lib/onshape/path";
 import {
     addAssemblyFeature,
-    deleteAssemblyFeature
+    getAssembly,
+    getAssemblyFeatures,
+    updateAssemblyFeature
 } from "../../../lib/onshape/endpoints/assemblies";
 import {
     type EdgeReference,
+    edgeQuery,
     fastenMateToCircle,
+    OCCURRENCE_QUERY_BT_TYPE,
+    REPLICATE_BT_TYPE,
     replicateFeature
 } from "../../../lib/onshape/objects/assembly-features";
-import { type OnshapeInsertInstancesResponse } from "../../../lib/onshape/types";
+import {
+    type OnshapeAssemblyInstance,
+    type OnshapeFeatureParameter,
+    type OnshapeInsertInstancesResponse,
+    type OnshapeQuery
+} from "../../../lib/onshape/types";
 import { type CircleSelection } from "../contract";
 
 interface FastenToCirclesArgs {
@@ -88,10 +98,7 @@ interface ReplicateArgs {
     circles: EdgeReference[];
 }
 
-/**
- * False when Onshape refuses the replicate or adds it broken, leaving nothing
- * behind; the caller fastens one instance per circle instead.
- */
+/** False when Onshape refuses it; the caller fastens one instance per circle instead. */
 async function tryReplicate(
     onshapeApi: OnshapeApi,
     targetPath: ElementPath,
@@ -104,27 +111,139 @@ async function tryReplicate(
         args.circles
     );
     try {
-        const result = await addAssemblyFeature(
-            onshapeApi,
-            targetPath,
-            feature
-        );
-        if (result.featureState?.featureStatus !== "ERROR") {
-            return true;
-        }
-        console.warn("Replicate failed to regenerate", result.feature);
-        await deleteAssemblyFeature(
-            onshapeApi,
-            targetPath,
-            result.feature.featureId
-        );
-        return false;
+        await addAssemblyFeature(onshapeApi, targetPath, feature);
+        return true;
     } catch (error) {
-        // The fallback would only spend more of the same allocation.
-        if (error instanceof OnshapeRateLimitError) {
-            throw error;
-        }
+        rethrowRateLimit(error);
         console.warn("Onshape refused a replicate", error);
         return false;
+    }
+}
+
+/** What an insert would place: the library's version of a tab, configured. */
+export interface InsertSource {
+    sourcePath: ElementPath;
+    configuration?: string;
+}
+
+/**
+ * Adds the circles to a Replicate already seeded with the same insert, so the
+ * assembly keeps one per part. False when there is none to extend.
+ */
+export async function extendReplicate(
+    onshapeApi: OnshapeApi,
+    targetPath: ElementPath,
+    source: InsertSource,
+    circles: CircleSelection[]
+): Promise<boolean> {
+    try {
+        const { features } = await getAssemblyFeatures(onshapeApi, targetPath);
+        const replicates = features.filter(
+            (feature) => feature.btType === REPLICATE_BT_TYPE
+        );
+        if (replicates.length === 0) {
+            return false;
+        }
+
+        const { rootAssembly } = await getAssembly(onshapeApi, targetPath);
+        for (const replicate of replicates) {
+            const parameters = findReplicateParameters(replicate.parameters);
+            const seed =
+                parameters &&
+                rootAssembly.instances.find(
+                    (instance) => instance.id === parameters.seedPath[0]
+                );
+            if (!parameters || !seed || !isSameInsert(seed, source)) {
+                continue;
+            }
+
+            const matched = new Set(
+                parameters.targets.queries?.map((query) =>
+                    edgeKey(query.path ?? [], query.deterministicIds?.[0])
+                )
+            );
+            const added = circles
+                .map(toEdgeReference)
+                .filter(
+                    (edge) =>
+                        !matched.has(edgeKey(edge.path, edge.deterministicId))
+                );
+            if (added.length > 0) {
+                parameters.targets.queries = [
+                    ...(parameters.targets.queries ?? []),
+                    ...added.map((edge) => edgeQuery(edge) as OnshapeQuery)
+                ];
+                await updateAssemblyFeature(
+                    onshapeApi,
+                    targetPath,
+                    replicate.featureId,
+                    replicate
+                );
+            }
+            return true;
+        }
+        return false;
+    } catch (error) {
+        rethrowRateLimit(error);
+        console.warn("Failed to extend a replicate", error);
+        return false;
+    }
+}
+
+/**
+ * Found by what they hold rather than by id, so a Replicate made in Onshape
+ * qualifies too: the seed is a top-level instance, and the targets are edges.
+ */
+function findReplicateParameters(
+    parameters: OnshapeFeatureParameter[] = []
+): { seedPath: string[]; targets: OnshapeFeatureParameter } | undefined {
+    const queryLists = parameters.filter(
+        (parameter) => parameter.queries !== undefined
+    );
+    const seed = queryLists
+        .flatMap((parameter) => parameter.queries ?? [])
+        .find((query) => query.btType === OCCURRENCE_QUERY_BT_TYPE);
+    const targets = queryLists.find((parameter) =>
+        parameter.queries?.some((query) => query.deterministicIds?.length)
+    );
+    if (!seed?.path || seed.path.length !== 1 || !targets) {
+        return undefined;
+    }
+    return { seedPath: seed.path, targets };
+}
+
+function edgeKey(path: string[], deterministicId: string | undefined): string {
+    return `${path.join("/")}:${deterministicId}`;
+}
+
+function isSameInsert(
+    instance: OnshapeAssemblyInstance,
+    { sourcePath, configuration }: InsertSource
+): boolean {
+    return (
+        instance.documentId === sourcePath.documentId &&
+        instance.elementId === sourcePath.elementId &&
+        instance.documentVersion === sourcePath.instanceId &&
+        normalizeConfiguration(instance.configuration) ===
+            normalizeConfiguration(configuration)
+    );
+}
+
+/** Onshape's spelling of an instance's configuration is undocumented; "default" is none. */
+function normalizeConfiguration(configuration: string | undefined): string {
+    if (!configuration || configuration === "default") {
+        return "";
+    }
+    try {
+        return decodeURIComponent(configuration);
+    } catch {
+        return configuration;
+    }
+}
+
+/** A fallback would only spend more of the same allocation. */
+function rethrowRateLimit(error: unknown): void {
+    if (error instanceof OnshapeRateLimitError) {
+        throw error;
     }
 }

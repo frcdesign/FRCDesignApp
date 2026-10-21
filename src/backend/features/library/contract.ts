@@ -17,6 +17,8 @@ export interface InsertableOut {
     microversionId: string;
     isVisible: boolean;
     supportsFasten: boolean;
+    /** Whether an editor allowed replicating it onto several circles. */
+    supportsReplicate: boolean;
     elementType: ElementType;
     smallThumbnailUrl?: string;
     largeThumbnailUrl?: string;
@@ -47,9 +49,6 @@ export interface CircleSelection {
     /** The instance the edge belongs to. */
     occurrencePath: string[];
 }
-
-/** Each circle past the first costs an insert and a mate unless replicated. */
-export const MAX_FASTEN_CIRCLES = 24;
 
 export interface InsertOut {
     /** The feature to open: the derive, or a fasten mate left for the caller to finish. */

@@ -30,9 +30,11 @@ function sentMessages(postMessage: { mock: { calls: unknown[][] } }) {
     );
 }
 
-async function openCard() {
+async function openCard(supportsReplicate = false) {
     const user = userEvent.setup();
-    renderWithProviders(<FastenCirclesStatus />);
+    renderWithProviders(
+        <FastenCirclesStatus supportsReplicate={supportsReplicate} />
+    );
     // The icon is the card's only target, wrapped in the span it listens on.
     await user.hover(document.querySelector("svg")!.closest("span")!);
     return user;
@@ -69,18 +71,23 @@ describe("FastenCirclesStatus", () => {
         expect(screen.queryByText("Circle 3")).toBeNull();
     });
 
-    it("offers to replicate only once there is more than one circle", async () => {
-        setOnshapeSelections([edge("JH1")]);
+    it("offers to replicate only a part an editor allowed to", async () => {
+        setOnshapeSelections([edge("JH1"), edge("JH2")]);
         await openCard();
         expect(screen.queryByLabelText("Replicate")).toBeNull();
-
-        act(() => setOnshapeSelections([edge("JH1"), edge("JH2")]));
-        expect(screen.getByLabelText("Replicate")).toBeTruthy();
         expect(
             screen.getByText(
                 "A part will be inserted and fastened to each selected circle."
             )
         ).toBeTruthy();
+    });
+
+    it("offers to replicate once a circle is selected", async () => {
+        await openCard(true);
+        expect(screen.queryByLabelText("Replicate")).toBeNull();
+
+        act(() => setOnshapeSelections([edge("JH1")]));
+        expect(screen.getByLabelText("Replicate")).toBeTruthy();
     });
 
     it("holds Onshape to circles while the field is active", async () => {
