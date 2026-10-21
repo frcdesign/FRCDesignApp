@@ -69,10 +69,12 @@ describe("QuickFastenerPanel", () => {
         renderWithProviders(<QuickFastenerPanel assembly={ASSEMBLY} />);
         expect(screen.getByText("Holes to skip")).toBeTruthy();
 
-        await userEvent.click(screen.getByText("Locations"));
+        await userEvent.click(screen.getByText("Circular edges"));
 
         expect(screen.queryByText("Holes to skip")).toBeNull();
-        expect(screen.getByText("Locations", { selector: "p" })).toBeTruthy();
+        expect(
+            screen.getByText("Circular edges", { selector: "p" })
+        ).toBeTruthy();
     });
 
     it("inserts what's picked, then clears the picks", async () => {

@@ -4,6 +4,10 @@
  * time it changes; a focused list takes what's newly in it.
  */
 import { create } from "zustand";
+import {
+    type SelectedEntity,
+    SelectedEntityType
+} from "@backend/features/quick-fastener/contract";
 
 /** An edge, face or other entity picked in an assembly. */
 export interface OnshapeSelection {
@@ -12,6 +16,23 @@ export interface OnshapeSelection {
     selectionId: string;
     /** The part occurrence it's on, from the assembly down. */
     occurrencePath: string[];
+}
+
+export const isEdge = (selection: OnshapeSelection): boolean =>
+    selection.entityType === SelectedEntityType.EDGE;
+
+export const isFace = (selection: OnshapeSelection): boolean =>
+    selection.entityType === SelectedEntityType.FACE;
+
+/** As a request carries picks. */
+export function toSelectedEntities(
+    selections: OnshapeSelection[]
+): SelectedEntity[] {
+    return selections.map((selection) => ({
+        occurrencePath: selection.occurrencePath,
+        entityId: selection.selectionId,
+        entityType: selection.entityType as SelectedEntityType
+    }));
 }
 
 export function selectionKey(selection: OnshapeSelection): string {

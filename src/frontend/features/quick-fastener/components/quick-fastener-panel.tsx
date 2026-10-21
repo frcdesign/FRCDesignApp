@@ -3,30 +3,15 @@ import { type ReactNode } from "react";
 import {
     FastenerJobState,
     type QuickFastenerIn,
-    SelectedEntityType,
     SelectionMode
 } from "@backend/features/quick-fastener/contract";
 import { type ElementPath } from "@backend/lib/onshape/path";
 import { QueryList } from "../../../components/query-list";
-import { type OnshapeSelection } from "../../../lib/selection";
+import { isEdge, isFace, toSelectedEntities } from "../../../lib/selection";
 import { useFastenerJobQuery, useInsertMutation } from "../queries";
 import { useQuickFastenerStore } from "../store";
 import { FastenerOptionsForm } from "./fastener-options-form";
 import { LastRunCallout } from "./last-run-callout";
-
-const isEdge = (entity: OnshapeSelection) =>
-    entity.entityType === SelectedEntityType.EDGE;
-
-const isFace = (entity: OnshapeSelection) =>
-    entity.entityType === SelectedEntityType.FACE;
-
-function toEntities(selections: OnshapeSelection[]) {
-    return selections.map((selection) => ({
-        occurrencePath: selection.occurrencePath,
-        entityId: selection.selectionId,
-        entityType: selection.entityType as SelectedEntityType
-    }));
-}
 
 interface QuickFastenerPanelProps {
     assembly: ElementPath;
@@ -54,8 +39,8 @@ export function QuickFastenerPanel(props: QuickFastenerPanelProps): ReactNode {
         const body: QuickFastenerIn = {
             assembly,
             selectionMode,
-            targets: toEntities(targets),
-            excluded: isFaces ? toEntities(excluded) : [],
+            targets: toSelectedEntities(targets),
+            excluded: isFaces ? toSelectedEntities(excluded) : [],
             options
         };
         insertMutation.mutate(body, {
@@ -74,7 +59,7 @@ export function QuickFastenerPanel(props: QuickFastenerPanelProps): ReactNode {
                 fullWidth
                 data={[
                     { value: SelectionMode.FACES, label: "Faces" },
-                    { value: SelectionMode.LOCATIONS, label: "Locations" }
+                    { value: SelectionMode.LOCATIONS, label: "Circular edges" }
                 ]}
                 value={selectionMode}
                 onChange={(value) => setSelectionMode(value)}
@@ -101,7 +86,7 @@ export function QuickFastenerPanel(props: QuickFastenerPanelProps): ReactNode {
             ) : (
                 <QueryList
                     id="quick-fastener-locations"
-                    label="Locations"
+                    label="Circular edges"
                     prompt="Select the circular edges of holes to fasten."
                     entities={targets}
                     onChange={setTargets}

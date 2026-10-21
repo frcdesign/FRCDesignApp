@@ -32,7 +32,9 @@ import { getUiState } from "../../lib/ui-state";
 import { plural } from "../../lib/plural";
 import { Hint } from "@backend/features/hints/contract";
 import { markHintSeen } from "../hints/queries";
-import { clearSelectedCircles, getSelectedCircles } from "./circle-selection";
+import { clearFastenPicks, useFastenPicks } from "./fasten-picks";
+import { toSelectedEntities } from "../../lib/selection";
+import { SelectionMode } from "@backend/features/quick-fastener/contract";
 
 interface InsertArgs {
     /** Whether the part is favorited — see `source` for where the insert began. */
@@ -116,6 +118,10 @@ export function useInsertMutation(
             isQuickInsert: insertArgs.isQuickInsert ?? false,
             source: insertArgs.source
         };
+        // Read at the click, since picks land as Onshape reports them.
+        const { fastenSelectionMode, replicate } = getUiState();
+        const { targets, excluded } = useFastenPicks.getState();
+        const isFaces = fastenSelectionMode === SelectionMode.FACES;
         return elementType === ElementType.ASSEMBLY
             ? {
                   endpoint: "/add-to-assembly",
@@ -123,10 +129,11 @@ export function useInsertMutation(
                       ...common,
                       fasten,
                       insertLocationId,
-                      // Read at the click, since Onshape reports picks as they happen.
-                      circles: fasten ? getSelectedCircles() : [],
-                      replicate:
-                          insertable.supportsReplicate && getUiState().replicate
+                      selectionMode: fastenSelectionMode,
+                      targets: fasten ? toSelectedEntities(targets) : [],
+                      excluded:
+                          fasten && isFaces ? toSelectedEntities(excluded) : [],
+                      replicate: insertable.supportsReplicate && replicate
                   }
               }
             : {
@@ -158,8 +165,8 @@ export function useInsertMutation(
                 sendOpenFeatureMessage(target, result.featureId);
             }
             if (result.fastenedCount !== undefined) {
-                clearSelectedCircles();
-                markHintSeen(Hint.FASTENED_TO_CIRCLES);
+                clearFastenPicks();
+                markHintSeen(Hint.FASTENED_TO_CIRCULAR_EDGES);
                 showSuccessToast(
                     `Successfully inserted ${insertable.name} and fastened it to ${plural(result.fastenedCount, "circular edge")}.`,
                     toastId

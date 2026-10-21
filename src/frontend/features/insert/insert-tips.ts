@@ -8,13 +8,13 @@ import { startSignIn } from "../auth/sign-in";
 import { Hint } from "@backend/features/hints/contract";
 import { useHasSeenHint } from "../hints/queries";
 import { getUiState, updateUiState } from "../../lib/ui-state";
-import { getSelectedCircles } from "./circle-selection";
+import { useFastenPicks } from "./fasten-picks";
 
 /** An insert this soon after opening didn't need anything from the menu. */
 export const QUICK_INSERT_WINDOW_MS = 1500;
 
 /** Somebody still fastening without circles after this many has a reason to. */
-const MAX_FASTEN_CIRCLES_TIPS = 3;
+const MAX_FASTEN_CIRCULAR_EDGES_TIPS = 3;
 
 /** Half the preview's timeout, to catch someone mid-spinner. */
 const THUMBNAIL_WAIT_MS = 15000;
@@ -31,23 +31,23 @@ export function showQuickInsertTip(): void {
  * For an insert and fasten with no circles selected, until somebody has
  * fastened to some. The caller skips it when it has shown another tip.
  */
-export function useFastenCirclesTip(): (fasten: boolean) => void {
-    const hasFastened = useHasSeenHint(Hint.FASTENED_TO_CIRCLES);
+export function useFastenCircularEdgesTip(): (fasten: boolean) => void {
+    const hasFastened = useHasSeenHint(Hint.FASTENED_TO_CIRCULAR_EDGES);
     return useCallback(
         (fasten: boolean) => {
-            const shown = getUiState().fastenCirclesTipCount;
+            const shown = getUiState().fastenCircularEdgesTipCount;
             if (
                 !fasten ||
                 hasFastened ||
-                shown >= MAX_FASTEN_CIRCLES_TIPS ||
-                getSelectedCircles().length > 0
+                shown >= MAX_FASTEN_CIRCULAR_EDGES_TIPS ||
+                useFastenPicks.getState().targets.length > 0
             ) {
                 return;
             }
-            updateUiState({ fastenCirclesTipCount: shown + 1 });
+            updateUiState({ fastenCircularEdgesTipCount: shown + 1 });
             showTipToast(
                 "Tip: select circular edges in Onshape before you insert and fasten, and the part is fastened to each of them.",
-                "fasten-circles-tip"
+                "fasten-circular-edges-tip"
             );
         },
         [hasFastened]

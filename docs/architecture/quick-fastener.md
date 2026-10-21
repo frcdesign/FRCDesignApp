@@ -88,7 +88,7 @@ The panel's selection mode decides what the picks are:
 
 - **Faces** — every circular edge of each face is a hole to fasten; _Holes to
   skip_ takes the edges of holes in them to leave out.
-- **Locations** — each picked circular edge is a hole to fasten; nothing is
+- **Circular edges** — each picked circular edge is a hole to fasten; nothing is
   skipped.
 
 `insertBody` in `routes.ts` refuses a body whose picks don't match its mode.

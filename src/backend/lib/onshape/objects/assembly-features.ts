@@ -102,7 +102,7 @@ function edgeQuery(edge: EdgeReference): object {
 }
 
 /** The center of a circular edge, where a fastener's axis runs. */
-function circleCenterQuery(edge: EdgeReference): object {
+function circularEdgeCenterQuery(edge: EdgeReference): object {
     return {
         btType: "BTMInferenceQueryWithOccurrence-1083",
         inferenceType: "CENTER",
@@ -131,29 +131,29 @@ function implicitMateConnector(originQuery: object): object {
     };
 }
 
-/** Fastens `query`'s connector to the center of a circle, which stays in place. */
-export function fastenMateToCircle(
+/** Fastens `query`'s connector to the center of a circular edge, whose part stays in place. */
+export function fastenMateToCircularEdge(
     name: string,
     query: object,
-    circle: EdgeReference
+    edge: EdgeReference
 ): object {
     return fastenMate(
         name,
         [query, featureOccurrenceQuery(PLACEHOLDER_FEATURE_ID)],
-        [implicitMateConnector(circleCenterQuery(circle))]
+        [implicitMateConnector(circularEdgeCenterQuery(edge))]
     );
 }
 
 /**
- * Copies a fastened instance onto more circles, matching each by the seed's
- * mate, so every circle must be the size of the seed's. Onshape publishes no spec for Replicate, so these parameter ids are
+ * Copies a fastened instance onto more circular edges, matching each by the
+ * seed's mate, so every edge must be the diameter of the seed's. Onshape publishes no spec for Replicate, so these parameter ids are
  * unverified.
  */
 export function replicateFeature(
     name: string,
     instancePath: string[],
     mateFeatureId: string,
-    circles: EdgeReference[]
+    edges: EdgeReference[]
 ): object {
     return {
         btType: "BTMAssemblyReplicateFeature-1351",
@@ -173,7 +173,7 @@ export function replicateFeature(
                 value: "INDIVIDUAL_EDGES",
                 enumName: "Match scope"
             },
-            queryParameter("matches", circles.map(edgeQuery))
+            queryParameter("matches", edges.map(edgeQuery))
         ]
     };
 }

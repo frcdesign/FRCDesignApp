@@ -47,7 +47,18 @@ import { encodeConfiguration } from "../../configurations/utils";
 import { fastenMate } from "../../../lib/onshape/objects/assembly-features";
 import { parseFastenInfo } from "../../load/parse-fasten";
 import { getFastenQuery } from "./fasten-query";
-import { fastenToCircles, getInstancePath } from "./fasten-circles";
+import {
+    fastenToCircularEdges,
+    getInstancePath
+} from "./fasten-circular-edges";
+import { gather } from "../../quick-fastener/gather";
+import { SelectionMode } from "../../quick-fastener/contract";
+import {
+    entitySchema,
+    INCONSISTENT_PICK_MESSAGE,
+    isConsistentPick,
+    MAX_SELECTIONS
+} from "../../quick-fastener/picked";
 import { getInsertLocationTransform } from "../../insert-location/parse";
 import { addBuildIssue, clearBuildIssue } from "../../build-checker/issues";
 import { markHintSeen } from "../../hints/store";
@@ -299,20 +310,19 @@ const addToPartStudioBody = insertBody.extend({
     useMateConnector: z.boolean().default(false)
 });
 
-const circleSchema = z.object({
-    selectionId: z.string().min(1),
-    occurrencePath: z.array(z.string()).default([])
-});
-
-const addToAssemblyBody = insertBody.extend({
-    fasten: z.boolean().default(false),
-    /** The insert location marker's instance id, when the assembly has one. */
-    insertLocationId: z.string().optional(),
-    /** Where to fasten; none leaves the mate open for the caller to finish. */
-    circles: z.array(circleSchema).default([]),
-    /** Ignored unless an editor allowed the insertable to replicate. */
-    replicate: z.boolean().default(false)
-});
+const addToAssemblyBody = insertBody
+    .extend({
+        fasten: z.boolean().default(false),
+        /** The insert location marker's instance id, when the assembly has one. */
+        insertLocationId: z.string().optional(),
+        /** What to fasten to, as Quick fastener takes it; none leaves the mate open. */
+        selectionMode: z.enum(SelectionMode).default(SelectionMode.LOCATIONS),
+        targets: z.array(entitySchema).max(MAX_SELECTIONS).default([]),
+        excluded: z.array(entitySchema).max(MAX_SELECTIONS).default([]),
+        /** Ignored unless an editor allowed the insertable to replicate. */
+        replicate: z.boolean().default(false)
+    })
+    .refine(isConsistentPick, INCONSISTENT_PICK_MESSAGE);
 
 /** POST /api/add-to-part-studio/insertable/:insertableId */
 insertableRoutes.post(
@@ -475,7 +485,26 @@ insertableRoutes.post(
             });
 
         const replicate = body.replicate && row.supportsReplicate === true;
-        const fastenedCount = body.circles.length;
+        // Read before inserting, so picks with no circular edge insert nothing.
+        const fastensToPicks =
+            body.fasten && row.fastenInfo !== null && body.targets.length > 0;
+        const edges = fastensToPicks
+            ? (
+                  await gather(
+                      onshapeApi,
+                      c.env.KV,
+                      targetPath,
+                      body.targets,
+                      body.excluded
+                  )
+              ).circles
+            : [];
+        if (fastensToPicks && edges.length === 0) {
+            throw handledError(
+                "No circular edges were found in what was selected.",
+                HttpStatus.BAD_REQUEST
+            );
+        }
         const insert = () =>
             addElementToAssembly(
                 onshapeApi,
@@ -508,18 +537,20 @@ insertableRoutes.post(
             getFastenQuery(row.elementType, instancePath, fastenInfo);
 
         try {
-            if (fastenedCount > 0) {
-                await fastenToCircles(onshapeApi, targetPath, {
+            if (edges.length > 0) {
+                await fastenToCircularEdges(onshapeApi, targetPath, {
                     name: row.name,
                     inserted: result,
                     insert,
                     fastenQuery,
-                    circles: body.circles,
+                    edges,
                     replicate
                 });
                 await track(true);
-                await markHintSeen(c, Hint.FASTENED_TO_CIRCLES);
-                return c.json({ fastenedCount } satisfies InsertOut);
+                await markHintSeen(c, Hint.FASTENED_TO_CIRCULAR_EDGES);
+                return c.json({
+                    fastenedCount: edges.length
+                } satisfies InsertOut);
             }
 
             const fastenResult = await addAssemblyFeature(

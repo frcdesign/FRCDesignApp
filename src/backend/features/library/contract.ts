@@ -17,7 +17,7 @@ export interface InsertableOut {
     microversionId: string;
     isVisible: boolean;
     supportsFasten: boolean;
-    /** Whether an editor allowed replicating it onto several circles. */
+    /** Whether an editor allowed replicating it onto several circular edges. */
     supportsReplicate: boolean;
     elementType: ElementType;
     smallThumbnailUrl?: string;
@@ -43,17 +43,10 @@ export interface GroupOut {
 export type Insertables = Record<string, InsertableOut>;
 export type Groups = Record<string, GroupOut>;
 
-/** A circular edge picked in the Onshape window, as Onshape's selection reports it. */
-export interface CircleSelection {
-    selectionId: string;
-    /** The instance the edge belongs to. */
-    occurrencePath: string[];
-}
-
 export interface InsertOut {
     /** The feature to open: the derive, or a fasten mate left for the caller to finish. */
     featureId?: string;
-    /** How many circles the part was fastened to; absent when it was fastened to none. */
+    /** How many circular edges the part was fastened to; absent when it was fastened to none. */
     fastenedCount?: number;
 }
 

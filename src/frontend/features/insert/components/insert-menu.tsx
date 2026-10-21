@@ -14,7 +14,7 @@ import { useAppModal } from "../../../components/open-app-modal";
 import {
     QUICK_INSERT_WINDOW_MS,
     showQuickInsertTip,
-    useFastenCirclesTip,
+    useFastenCircularEdgesTip,
     useSignInPreviewTip,
     useThumbnailWaitTip
 } from "../insert-tips";
@@ -43,7 +43,7 @@ import { useTargetElementType } from "../insert-hooks";
 import { InsertSource } from "@backend/features/analytics/usage";
 import { InsertLocationStatus } from "../../insert-location/components/insert-location-status";
 import { InfoCheckbox } from "../../../components/info-checkbox";
-import { FastenCirclesStatus } from "./fasten-circles-status";
+import { FastenCircularEdgesStatus } from "./fasten-circular-edges-status";
 
 interface InsertMenuContentProps {
     insertable: InsertableOut;
@@ -255,7 +255,7 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
         source
     });
     const fasten = useUiState((state) => state.fasten);
-    const showFastenCirclesTip = useFastenCirclesTip();
+    const showFastenCircularEdgesTip = useFastenCircularEdgesTip();
 
     const isLoadingConfiguration = useIsFetchingConfiguration(
         insertable.id,
@@ -270,7 +270,7 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
         if (canShowQuickInsertTip) {
             showQuickInsertTip();
         } else {
-            showFastenCirclesTip(canFasten && fasten);
+            showFastenCircularEdgesTip(canFasten && fasten);
         }
         onInsert();
     }, [
@@ -279,7 +279,7 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
         canFasten,
         fasten,
         canShowQuickInsertTip,
-        showFastenCirclesTip
+        showFastenCircularEdgesTip
     ]);
 
     if (!targetElementType) {
@@ -290,7 +290,7 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
         <Group gap="sm" align="center">
             <InsertLocationStatus />
             {canFasten && fasten && (
-                <FastenCirclesStatus
+                <FastenCircularEdgesStatus
                     supportsReplicate={insertable.supportsReplicate}
                 />
             )}

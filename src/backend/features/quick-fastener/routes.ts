@@ -13,28 +13,23 @@ import {
     FastenerTaskAction,
     FastenerTaskState,
     type FastenerJobStatus,
-    SelectedEntityType,
     SelectionMode,
     StopCondition
 } from "./contract";
 import { studioLocation } from "./insert";
 import { getJobStatus, reportJob } from "./jobs";
-import { DETERMINISTIC_ID } from "./scan";
+import {
+    entitySchema,
+    INCONSISTENT_PICK_MESSAGE,
+    isConsistentPick,
+    MAX_SELECTIONS
+} from "./picked";
 
 export const quickFastenerRoutes = getApp();
-
-/** More than anyone picks by hand; each is scanned and fastened. */
-const MAX_SELECTIONS = 200;
 
 /** Inches: the longest standard screw, and a gap wider than any worth ignoring. */
 const MAX_LENGTH_LIMIT = 10 * 0.0254;
 const MAX_GAP_LIMIT = 1 * 0.0254;
-
-const entitySchema = z.object({
-    occurrencePath: z.array(z.string().min(1)).min(1),
-    entityId: z.string().regex(DETERMINISTIC_ID),
-    entityType: z.enum(SelectedEntityType)
-});
 
 /** An assembly in a workspace: fasteners are only ever added to one. */
 const assemblySchema = z.object({
@@ -66,20 +61,7 @@ const insertBody = z
             maxGap: z.number().min(0).max(MAX_GAP_LIMIT)
         })
     })
-    .refine(
-        (body) =>
-            body.selectionMode === SelectionMode.FACES
-                ? body.targets.every(
-                      (each) => each.entityType === SelectedEntityType.FACE
-                  ) &&
-                  body.excluded.every(
-                      (each) => each.entityType === SelectedEntityType.EDGE
-                  )
-                : body.targets.every(
-                      (each) => each.entityType === SelectedEntityType.EDGE
-                  ) && body.excluded.length === 0,
-        "Faces fasten every hole in them, less the edges excluded; locations are edges alone."
-    );
+    .refine(isConsistentPick, INCONSISTENT_PICK_MESSAGE);
 
 const assemblyQuery = z.object({
     documentId: z.string().min(1),

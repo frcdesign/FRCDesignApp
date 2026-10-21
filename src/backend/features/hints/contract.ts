@@ -3,5 +3,5 @@ export enum Hint {
     /** Spelled as records already hold it, so nobody who ran a job sees the dot again. */
     USED_VERSION_MANAGER = "ran-version-job",
     ADDED_INSERT_LOCATION = "added-insert-location",
-    FASTENED_TO_CIRCLES = "fastened-to-circles"
+    FASTENED_TO_CIRCULAR_EDGES = "fastened-to-circular-edges"
 }

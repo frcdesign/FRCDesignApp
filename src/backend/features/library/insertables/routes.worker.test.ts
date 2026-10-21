@@ -28,6 +28,7 @@ import { getDb } from "../../../db/client";
 import * as PartStudioEndpoints from "../../../lib/onshape/endpoints/part-studios";
 import * as AssemblyEndpoints from "../../../lib/onshape/endpoints/assemblies";
 import * as PartsEndpoints from "../../../lib/onshape/endpoints/parts";
+import * as Gather from "../../quick-fastener/gather";
 import { OnshapeRateLimitError } from "../../../lib/onshape/client";
 import { AUTO_INDEX_THRESHOLD } from "../../configurations/combinations";
 import {
@@ -488,7 +489,7 @@ describe("insertable routes", () => {
         expect(await loggedInsert()).toMatchObject({ fasten: false });
     });
 
-    function fastenToCircles(body: Record<string, unknown>) {
+    function fastenToPicks(body: Record<string, unknown>) {
         return createTestApp().request(
             `/api/add-to-assembly/insertable/${TEST_ASSEMBLY_ID}`,
             jsonRequest("POST", { targetPath, fasten: true, ...body }),
@@ -496,11 +497,27 @@ describe("insertable routes", () => {
         );
     }
 
-    const CIRCLES = [
-        { selectionId: "JH1", occurrencePath: ["base"] },
-        { selectionId: "JH2", occurrencePath: ["base"] },
-        { selectionId: "JH3", occurrencePath: [] }
-    ];
+    const EDGE_PICKS = ["JH1", "JH2", "JH3"].map((entityId) => ({
+        occurrencePath: ["base"],
+        entityId,
+        entityType: "EDGE"
+    }));
+
+    /** What `gather` finds for the picks: one circle per edge, with these radii in metres. */
+    function mockGather(radii: Record<string, number>) {
+        return vi.spyOn(Gather, "gather").mockResolvedValue({
+            circles: Object.entries(radii).map(([edgeId, radius]) => ({
+                key: `base|${edgeId}`,
+                occurrencePath: ["base"],
+                edgeId,
+                center: [0, 0, 0],
+                normal: [0, 0, 1],
+                radius
+            })),
+            holes: [],
+            placed: []
+        });
+    }
 
     /** Feature types in the order they were added. */
     function addedFeatureTypes(spy: { mock: { calls: unknown[][] } }) {
@@ -509,17 +526,19 @@ describe("insertable routes", () => {
         );
     }
 
-    it("fastens one inserted instance to each circle", async () => {
+    it("fastens one inserted instance to each circular edge", async () => {
         await seedFastenable();
+        const gather = mockGather({ JH1: 0.0025, JH2: 0.0025, JH3: 0.004 });
         const addFeature = vi
             .spyOn(AssemblyEndpoints, "addAssemblyFeature")
             .mockResolvedValue({ feature: { featureId: "f1" } });
 
-        const res = await fastenToCircles({ circles: CIRCLES });
+        const res = await fastenToPicks({ targets: EDGE_PICKS });
         expect(res.status).toBe(200);
         const body: InsertOut = await res.json();
         expect(body).toEqual({ fastenedCount: 3 });
 
+        expect(gather.mock.calls[0][3]).toEqual(EDGE_PICKS);
         expect(AssemblyEndpoints.addElementToAssembly).toHaveBeenCalledTimes(3);
         expect(addedFeatureTypes(addFeature)).toEqual(["mate", "mate", "mate"]);
 
@@ -531,92 +550,61 @@ describe("insertable routes", () => {
         expect(await loggedInsert()).toMatchObject({ fasten: true });
     });
 
-    /** One part instance, "base", whose edges have the given radii in metres. */
-    function mockCircleSizes(radii: Record<string, number>) {
-        vi.spyOn(AssemblyEndpoints, "getAssembly").mockResolvedValue({
-            rootAssembly: {
-                features: [],
-                instances: [
-                    {
-                        id: "base",
-                        type: "Part",
-                        documentId: "d-base",
-                        elementId: "e-base",
-                        documentMicroversion: "m-base",
-                        configuration: "default",
-                        partId: "JHD"
-                    }
-                ]
-            },
-            parts: [],
-            subAssemblies: []
+    it("passes faces and the edges to skip through to the scan", async () => {
+        await seedFastenable();
+        const gather = mockGather({ JH1: 0.0025 });
+        vi.spyOn(AssemblyEndpoints, "addAssemblyFeature").mockResolvedValue({
+            feature: { featureId: "f1" }
         });
-        return vi
-            .spyOn(PartsEndpoints, "getPartBodyDetails")
-            .mockResolvedValue({
-                bodies: [
-                    {
-                        edges: Object.entries(radii).map(([id, radius]) => ({
-                            id,
-                            curve: { type: "CIRCLE", radius }
-                        }))
-                    }
-                ]
-            });
-    }
+        const face = {
+            occurrencePath: ["base"],
+            entityId: "JF1",
+            entityType: "FACE"
+        };
 
-    const ON_BASE = [
-        { selectionId: "JH1", occurrencePath: ["base"] },
-        { selectionId: "JH2", occurrencePath: ["base"] },
-        { selectionId: "JH3", occurrencePath: ["base"] }
-    ];
-
-    it("replicates one instance onto the other circles of the same size", async () => {
-        await seedFastenable(true);
-        mockCircleSizes({ JH1: 0.0025, JH2: 0.0025, JH3: 0.0025 });
-        const addFeature = vi
-            .spyOn(AssemblyEndpoints, "addAssemblyFeature")
-            .mockResolvedValue({ feature: { featureId: "f1" } });
-
-        const res = await fastenToCircles({
-            circles: ON_BASE,
-            replicate: true
+        const res = await fastenToPicks({
+            selectionMode: "faces",
+            targets: [face],
+            excluded: [EDGE_PICKS[1]]
         });
         expect(res.status).toBe(200);
-        expect(await res.json()).toEqual({ fastenedCount: 3 });
-
-        expect(AssemblyEndpoints.addElementToAssembly).toHaveBeenCalledTimes(1);
-        expect(addedFeatureTypes(addFeature)).toEqual(["mate", "replicate"]);
-        const replicate = JSON.stringify(addFeature.mock.calls[1][2]);
-        expect(replicate).toContain("JH3");
-        expect(replicate).not.toContain("JH1");
+        expect(gather.mock.calls[0].slice(3)).toEqual([
+            [face],
+            [EDGE_PICKS[1]]
+        ]);
     });
 
-    it("fastens and replicates once per circle size", async () => {
-        await seedFastenable(true);
-        const bodyDetails = mockCircleSizes({
-            JH1: 0.0025,
-            JH2: 0.004,
-            JH3: 0.0025000000001
+    it("refuses faces picked as circular edges", async () => {
+        await seedFastenable();
+        const res = await fastenToPicks({
+            targets: [{ ...EDGE_PICKS[0], entityType: "FACE" }]
         });
+        expect(res.status).toBe(400);
+        expect(AssemblyEndpoints.addElementToAssembly).not.toHaveBeenCalled();
+    });
+
+    it("inserts nothing when no circular edge is found in the picks", async () => {
+        await seedFastenable();
+        mockGather({});
+
+        const res = await fastenToPicks({ targets: EDGE_PICKS });
+        expect(res.status).toBe(400);
+        expect(AssemblyEndpoints.addElementToAssembly).not.toHaveBeenCalled();
+    });
+
+    it("fastens and replicates once per edge diameter", async () => {
+        await seedFastenable(true);
+        mockGather({ JH1: 0.0025, JH2: 0.004, JH3: 0.0025000000001 });
         const addFeature = vi
             .spyOn(AssemblyEndpoints, "addAssemblyFeature")
             .mockResolvedValue({ feature: { featureId: "f1" } });
 
-        const res = await fastenToCircles({
-            circles: ON_BASE,
+        const res = await fastenToPicks({
+            targets: EDGE_PICKS,
             replicate: true
         });
         expect(res.status).toBe(200);
 
-        // One read for the one part both sizes lie on.
-        expect(bodyDetails).toHaveBeenCalledTimes(1);
-        expect(bodyDetails.mock.calls[0][1]).toEqual({
-            documentId: "d-base",
-            instanceType: "m",
-            instanceId: "m-base",
-            elementId: "e-base"
-        });
         expect(AssemblyEndpoints.addElementToAssembly).toHaveBeenCalledTimes(2);
         expect(addedFeatureTypes(addFeature)).toEqual([
             "mate",
@@ -627,53 +615,36 @@ describe("insertable routes", () => {
             JSON.stringify(call[2])
         );
         expect(features[1]).toContain("JH3");
+        expect(features[1]).not.toContain("JH1");
         expect(features[2]).toContain("JH2");
     });
 
-    it("fastens an instance per circle when their sizes can't be read", async () => {
-        await seedFastenable(true);
-        vi.spyOn(AssemblyEndpoints, "getAssembly").mockRejectedValue(
-            new Error("unreadable")
-        );
-        const addFeature = vi
-            .spyOn(AssemblyEndpoints, "addAssemblyFeature")
-            .mockResolvedValue({ feature: { featureId: "f1" } });
-
-        const res = await fastenToCircles({
-            circles: ON_BASE,
-            replicate: true
-        });
-        expect(res.status).toBe(200);
-        expect(addedFeatureTypes(addFeature)).toEqual(["mate", "mate", "mate"]);
-    });
-
-    it("fastens an instance per circle for a part not allowed to replicate", async () => {
+    it("fastens an instance per edge for a part not allowed to replicate", async () => {
         await seedFastenable();
-        const bodyDetails = mockCircleSizes({ JH1: 1, JH2: 1, JH3: 1 });
+        mockGather({ JH1: 1, JH2: 1, JH3: 1 });
         const addFeature = vi
             .spyOn(AssemblyEndpoints, "addAssemblyFeature")
             .mockResolvedValue({ feature: { featureId: "f1" } });
 
-        const res = await fastenToCircles({
-            circles: ON_BASE,
+        const res = await fastenToPicks({
+            targets: EDGE_PICKS,
             replicate: true
         });
         expect(res.status).toBe(200);
-        expect(bodyDetails).not.toHaveBeenCalled();
         expect(addedFeatureTypes(addFeature)).toEqual(["mate", "mate", "mate"]);
     });
 
-    it("fastens an instance per circle when Onshape refuses the replicate", async () => {
+    it("fastens an instance per edge when Onshape refuses the replicate", async () => {
         await seedFastenable(true);
-        mockCircleSizes({ JH1: 1, JH2: 1, JH3: 1 });
+        mockGather({ JH1: 1, JH2: 1, JH3: 1 });
         const addFeature = vi
             .spyOn(AssemblyEndpoints, "addAssemblyFeature")
             .mockResolvedValueOnce({ feature: { featureId: "mate" } })
             .mockRejectedValueOnce(new Error("bad feature"))
             .mockResolvedValue({ feature: { featureId: "f" } });
 
-        const res = await fastenToCircles({
-            circles: ON_BASE,
+        const res = await fastenToPicks({
+            targets: EDGE_PICKS,
             replicate: true
         });
         expect(res.status).toBe(200);

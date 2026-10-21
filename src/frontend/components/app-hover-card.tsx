@@ -15,6 +15,11 @@ interface AppHoverCardProps extends Pick<
     children: ReactNode;
     /** @default "md" */
     padding?: string;
+    /**
+     * Keeps the card's contents mounted while hidden, so their effects go on
+     * running: a query list there still takes picks with the card closed.
+     */
+    keepMounted?: boolean;
 }
 
 // The card sits inside clickable rows, and React bubbles clicks out of portals.
@@ -25,11 +30,20 @@ const stopPropagation = (event: MouseEvent) => event.stopPropagation();
  * row underneath. Set `interactive` when the card holds controls.
  */
 export function AppHoverCard(props: AppHoverCardProps): ReactNode {
-    const { target, children, padding = "md", ...hoverCardProps } = props;
+    const {
+        target,
+        children,
+        padding = "md",
+        keepMounted,
+        ...hoverCardProps
+    } = props;
 
     return (
         <HoverCard
             {...hoverCardProps}
+            keepMounted={keepMounted}
+            // Activity would suspend the hidden contents' effects.
+            keepMountedMode="display-none"
             onOpen={watchPresses}
             onDismiss={swallowDismissingClick}
         >

@@ -10,6 +10,7 @@ import type { LibraryId } from "@backend/features/library/library-id";
 import type { Vendor } from "@backend/features/library/vendors";
 import type { PartialSelection } from "@backend/features/configurations/contract";
 import type { AppTab } from "./app-tab";
+import { SelectionMode } from "@backend/features/quick-fastener/contract";
 
 export enum Theme {
     DARK = "dark",
@@ -34,10 +35,12 @@ interface UiState {
     vendorFilters: Partial<Record<LibraryId, Vendor[]>>;
     searchQuery: string;
     fasten: boolean;
-    /** Fastening to several circles replicates per size, where the part allows it. */
+    /** What an insert and fasten's picks are: circular edges, or faces with holes to skip. */
+    fastenSelectionMode: SelectionMode;
+    /** Fastening to several circular edges replicates per diameter, where the part allows it. */
     replicate: boolean;
-    /** How many times an insert and fasten has offered the circles tip; see `insert-tips`. */
-    fastenCirclesTipCount: number;
+    /** How many times an insert and fasten has offered the circular edges tip; see `insert-tips`. */
+    fastenCircularEdgesTipCount: number;
     /** The access level to view the app as; absent means the granted default. */
     accessLevel?: AccessLevel;
     /** So a relaunch can reopen the insert menu. */
@@ -59,8 +62,9 @@ export const useUiState = create<UiState>()(
             vendorFilters: {},
             searchQuery: "",
             fasten: true,
+            fastenSelectionMode: SelectionMode.LOCATIONS,
             replicate: false,
-            fastenCirclesTipCount: 0
+            fastenCircularEdgesTipCount: 0
         }),
         { name: "uiState" }
     )
