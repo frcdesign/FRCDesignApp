@@ -105,6 +105,10 @@ Comparing or counting values (analytics, "is this the default") goes through
 The admin card counts with the same functions, so it cannot disagree with the
 load about the band.
 
+A generated part skips all of this: every configuration is indexed from
+robot-code's records, whatever its count, and its indexing isn't configurable
+(see [generated-parts.md](./generated-parts.md)).
+
 ### Configuring and inserting
 
 1. The insert menu fetches `GET /api/configuration/insertable/:id?v={microversion}`,

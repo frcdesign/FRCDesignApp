@@ -43,6 +43,13 @@
             "when": 1791899151528,
             "tag": "0005_teams_webhooks_and_version_manager",
             "breakpoints": true
+        },
+        {
+            "idx": 6,
+            "version": "6",
+            "when": 1792623242197,
+            "tag": "0006_insertable_generated_studio",
+            "breakpoints": true
         }
     ]
 }

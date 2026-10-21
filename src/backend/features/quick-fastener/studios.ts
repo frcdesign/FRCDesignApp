@@ -1,7 +1,8 @@
 /**
- * Quick fastener's Part Studios: each one's configuration parameters, parsed
- * from the configuration robot-code writes to it as any element's is, and
- * where it's released. A leaf module: the client builds its options from these.
+ * Quick fastener's view of the library fasteners, which robot-code generates
+ * (see `generated-parts/`): each kind's parameters and where it's released,
+ * and settling a screw, washer or nut onto what the studios make. A leaf
+ * module: the client builds its options from these.
  */
 import {
     type ConfigurationParameter,
@@ -17,9 +18,11 @@ import {
     toSelection
 } from "../configurations/selection";
 import { getVisibleOptions } from "../configurations/utils";
-import { parseOnshapeConfiguration } from "../load/parse-configuration";
-import { type OnshapeConfigurationResponse } from "../../lib/onshape/types";
-import { COUNTERSUNK_HEADS, STUDIOS } from "./studios.gen";
+import {
+    getGeneratedStudio,
+    type StudioLocation
+} from "../generated-parts/studios";
+import { COUNTERSUNK_HEADS } from "./heads.gen";
 
 export enum FastenerKind {
     SCREW = "screw",
@@ -27,40 +30,29 @@ export enum FastenerKind {
     NUT = "nut"
 }
 
-/** Where a studio is released; null until its Part Studio is made. */
-export interface StudioLocation {
-    documentId: string;
-    versionId: string;
-    elementId: string;
-}
+/** The generated set the fasteners are in. */
+const FASTENERS = "fasteners";
 
-interface SyncedStudio {
-    feature: string;
-    configuration: Omit<OnshapeConfigurationResponse, "btType">;
-    location: StudioLocation | null;
+function parameters(kind: FastenerKind): ConfigurationParameter[] {
+    const studio = getGeneratedStudio(FASTENERS, kind);
+    if (!studio) {
+        throw new Error(`No generated ${FASTENERS} studio ${kind}`);
+    }
+    return studio.parameters;
 }
-
-const synced = STUDIOS as unknown as Record<FastenerKind, SyncedStudio>;
 
 export const STUDIO_PARAMETERS: Record<FastenerKind, ConfigurationParameter[]> =
     {
-        [FastenerKind.SCREW]: parse(FastenerKind.SCREW),
-        [FastenerKind.WASHER]: parse(FastenerKind.WASHER),
-        [FastenerKind.NUT]: parse(FastenerKind.NUT)
+        [FastenerKind.SCREW]: parameters(FastenerKind.SCREW),
+        [FastenerKind.WASHER]: parameters(FastenerKind.WASHER),
+        [FastenerKind.NUT]: parameters(FastenerKind.NUT)
     };
-
-function parse(kind: FastenerKind): ConfigurationParameter[] {
-    return parseOnshapeConfiguration({
-        btType: "BTConfigurationResponse-2019",
-        ...synced[kind].configuration
-    });
-}
 
 /** Where a kind's studio is released; undefined until its Part Studio is made. */
 export function getStudioLocation(
     kind: FastenerKind
 ): StudioLocation | undefined {
-    return synced[kind].location ?? undefined;
+    return getGeneratedStudio(FASTENERS, kind)?.location;
 }
 
 /** Whether a head sits in a countersink, where no washer goes under it. */

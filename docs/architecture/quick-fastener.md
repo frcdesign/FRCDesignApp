@@ -21,11 +21,10 @@ only what's made.
 
 | Path                                                                        | Role                                                                                          |
 | --------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| `scripts/sync-quick-fastener.js`                                            | `npm run sync:quick-fastener`: copies robot-code's manifest in at a pinned commit             |
-| `src/backend/features/quick-fastener/studios.gen.ts`                        | The synced studios: each one's configuration as Onshape answers it, and the countersunk heads |
-| `src/backend/features/quick-fastener/catalog.gen.ts`                        | The synced catalog: vendors, sizes, heads, screws, nuts, washers                              |
+| `src/backend/features/quick-fastener/heads.gen.ts`                          | The synced countersunk heads, for the client                                                  |
+| `src/backend/features/quick-fastener/catalog.gen.ts`                        | The synced catalog: the parts' dimensions, which it plans with                                |
 | `src/backend/features/quick-fastener/hole-scan.gen.ts`                      | The synced hole scan: the FeatureScript lambda evaluated in each Part Studio                  |
-| `src/backend/features/quick-fastener/studios.ts`                            | Each studio's parameters, parsed by `parseOnshapeConfiguration`; settling parts; client-safe  |
+| `src/backend/features/quick-fastener/studios.ts`                            | The fasteners' parameters and locations, from `generated-parts/`; settling parts; client-safe |
 | `src/backend/features/quick-fastener/catalog.ts`                            | The parts' dimensions, which the planner sizes by; the server's alone                         |
 | `src/backend/features/quick-fastener/contract.ts`                           | `FastenerOptions`, `QuickFastenerIn`, `PlannedHole`, `FastenerJobStatus` and the run's steps  |
 | `src/backend/features/quick-fastener/geometry.ts`                           | Vectors, Onshape's 4×4 transforms, `LINEAR_TOLERANCE`                                         |
@@ -57,7 +56,11 @@ robot-code (`robot-education/robot-code`) owns everything the catalog says:
 FeatureScript data, the Part Studios' configurations, and the manifest synced
 here, and `fastenerHoleScan.fs` is the hole scan. It releases the features
 to FRCDesign's Fasteners library document, whose Part Studios use them
-(`[tool.fs.libraries.fasteners]`), not to its public frontend document.
+(`[tool.fs.libraries.fasteners]`), not to its public frontend document. The
+studios are generated parts, synced by `npm run sync:generated-parts` (see
+[generated-parts.md](./generated-parts.md)), which also writes this area's
+`catalog.gen.ts`, `heads.gen.ts` and `hole-scan.gen.ts` from the fasteners'
+manifest.
 
 ## Storage
 

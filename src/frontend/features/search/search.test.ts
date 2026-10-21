@@ -70,6 +70,7 @@ function library(name = "Bracket"): LibraryOut {
                 supportsFasten: false,
                 elementType: ElementType.PART_STUDIO,
                 isConfigurable: false,
+                isGenerated: false,
                 vendors: []
             }
         }

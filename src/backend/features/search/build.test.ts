@@ -136,6 +136,7 @@ function library(name: string, vendors: Vendor[] = []): LibraryOut {
                 supportsFasten: false,
                 elementType: ElementType.PART_STUDIO,
                 isConfigurable: false,
+                isGenerated: false,
                 vendors
             }
         }

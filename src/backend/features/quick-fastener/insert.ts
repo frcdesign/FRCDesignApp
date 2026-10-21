@@ -27,9 +27,9 @@ import {
     FastenerKind,
     getStudioLocation,
     type PartChoice,
-    studioConfiguration,
-    type StudioLocation
+    studioConfiguration
 } from "./studios";
+import { type StudioLocation } from "../generated-parts/studios";
 
 /** What a part is fastened to: an edge in the assembly, or the top of a washer placed with it. */
 export type PartSeat = { edge: MateEdge } | { washer: number };

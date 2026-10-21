@@ -50,6 +50,7 @@ buildStatusRoutes.get(
                     supportsFasten: insertables.supportsFasten,
                     indexConfigurations: insertables.indexConfigurations,
                     excludedParameterIds: insertables.excludedParameterIds,
+                    generatedStudio: insertables.generatedStudio,
                     vendors: insertables.vendors,
                     sortOrder: insertables.sortOrder,
                     versionCreatedAt: insertables.versionCreatedAt
@@ -104,6 +105,7 @@ buildStatusRoutes.get(
                 supportsFasten: ins.supportsFasten,
                 indexConfigurations: ins.indexConfigurations,
                 excludedParameterIds: ins.excludedParameterIds,
+                generatedStudio: ins.generatedStudio ?? undefined,
                 vendors: ins.vendors,
                 configuration: configMap.get(ins.id),
                 versionCreatedAt: ins.versionCreatedAt?.getTime()

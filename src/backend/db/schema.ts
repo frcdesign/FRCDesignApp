@@ -139,6 +139,9 @@ export const insertables = sqliteTable("insertables", {
     partMetadata: text("part_metadata", {
         mode: "json"
     }).$type<PartMetadata | null>(),
+    // The generated studio it is (`fasteners/screw`), whose records a load
+    // indexes in place of asking Onshape; null for a tab modeled by hand.
+    generatedStudio: text("generated_studio"),
     buildIssues: buildIssues(),
     lastLoadedAt: lastLoadedAt()
 });

@@ -1,7 +1,4 @@
-/* Synced from robot-education/robot-code@a9be8cc067da34e800b212d3f9dff1a325acc2aa (featurescripts/fasteners/fasteners.gen.json) by `npm run sync:quick-fastener` -- DO NOT EDIT */
-
-export const CATALOG_SOURCE =
-    "robot-education/robot-code@a9be8cc067da34e800b212d3f9dff1a325acc2aa";
+/* Synced from robot-education/robot-code@8706ebce47110c14129e0f2981a870f0034f0ee4 by `npm run sync:generated-parts` -- DO NOT EDIT */
 
 export const CATALOG = {
     source: "featurescripts/fasteners/fastenerTables.py",

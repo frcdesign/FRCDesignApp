@@ -543,6 +543,26 @@ describe("insertable routes", () => {
         ).toEqual([{ size: "l" }]);
     });
 
+    it("POST /index-configurations refuses a generated part, which indexes every configuration", async () => {
+        await seedPartStudio(db);
+        await db
+            .update(insertables)
+            .set({ generatedStudio: "fasteners/screw" })
+            .where(eq(insertables.id, TEST_PART_STUDIO_ID));
+        const getParts = vi.spyOn(PartsEndpoints, "getParts");
+
+        const res = await createTestApp().request(
+            `/api/index-configurations/library/${TEST_LIBRARY_ID}/insertable/${TEST_PART_STUDIO_ID}`,
+            jsonRequest("POST", { indexConfigurations: true }),
+            env
+        );
+        expect(res.status).toBe(400);
+        expect(getParts).not.toHaveBeenCalled();
+        expect(
+            (await readInsertable(TEST_PART_STUDIO_ID))?.indexConfigurations
+        ).toBe(false);
+    });
+
     it("POST /index-configurations leaves the flag off when indexing fails", async () => {
         await seedPartStudio(db);
         vi.spyOn(PartsEndpoints, "getParts").mockRejectedValue(

@@ -21,6 +21,8 @@ import { uploadThumbnails } from "../thumbnails/store";
 import { getConfiguration } from "../../lib/onshape/endpoints/configurations";
 import { getParts } from "../../lib/onshape/endpoints/parts";
 import { checkInsertable } from "../build-checker/checks";
+import { generatedConfiguration } from "../generated-parts/records";
+import { findGeneratedStudio } from "../generated-parts/studios";
 import { parseOnshapeConfiguration } from "./parse-configuration";
 import { parseVendors } from "./parse-vendors";
 import { parseFastenInfo } from "./parse-fasten";
@@ -51,6 +53,8 @@ export interface ParsedInsertable {
     /** The element's own part data; null when nothing was probed. */
     partMetadata: PartMetadata | null;
     configuration: Configuration;
+    /** The generated studio it is, as `set/key`; null for a tab modeled by hand. */
+    generatedStudio: string | null;
 }
 
 /** The user-owned flags that decide how much of a load runs. */
@@ -67,6 +71,7 @@ interface ProbedInsertable {
     hasParts: boolean;
     partMetadata: PartMetadata | null;
     configuration: Configuration;
+    generatedStudio: string | null;
     /** Everything raised so far; the thumbnail check adds its own. */
     buildIssues: BuildIssue[];
 }
@@ -108,7 +113,8 @@ export async function loadInsertable(
             ...probed.buildIssues
         ),
         partMetadata: probed.partMetadata,
-        configuration: probed.configuration
+        configuration: probed.configuration,
+        generatedStudio: probed.generatedStudio
     };
 
     await ctx.step.do(`save-${insertableId}`, () =>
@@ -127,7 +133,16 @@ async function probeInsertable(
 
     const parameters = await parseConfigurationStep(ctx, target);
 
-    const vendors = parseVendors(target.name, parameters);
+    // Its records are robot-code's, which a mismatch throws over rather than probe
+    const studio = findGeneratedStudio(
+        elementPath.documentId,
+        elementPath.elementId
+    );
+    const generated = studio && generatedConfiguration(studio, parameters);
+
+    const vendors = generated
+        ? generated.vendors
+        : parseVendors(target.name, parameters);
 
     const fastenInfo = flags.supportsFasten
         ? await parseFastenInfoStep(ctx, target)
@@ -137,17 +152,26 @@ async function probeInsertable(
     const { isOpenComposite } = parts;
     const hasParts = !hasBuildIssue(parts.buildIssues, BuildIssueType.NO_PARTS);
 
-    const indexing = decideIndexing(parameters, flags);
+    // A generated studio indexes every configuration, whatever its count or the admin's settings
+    const indexing = generated
+        ? { shouldIndex: false, configurations: [], buildIssues: [] }
+        : decideIndexing(parameters, flags);
 
-    const recordsResult = indexing.shouldIndex
-        ? await loadConfigurationRecords(
-              ctx,
-              insertableId,
-              { elementPath, elementType: target.elementType, isOpenComposite },
-              parameters,
-              indexing.configurations
-          )
-        : NO_RECORDS;
+    const recordsResult = generated
+        ? { ...generated, buildIssues: [] }
+        : indexing.shouldIndex
+          ? await loadConfigurationRecords(
+                ctx,
+                insertableId,
+                {
+                    elementPath,
+                    elementType: target.elementType,
+                    isOpenComposite
+                },
+                parameters,
+                indexing.configurations
+            )
+          : NO_RECORDS;
 
     return {
         vendors,
@@ -156,6 +180,7 @@ async function probeInsertable(
         hasParts,
         partMetadata: recordsResult.partMetadata,
         configuration: { parameters, records: recordsResult.records },
+        generatedStudio: studio ? `${studio.set}/${studio.key}` : null,
         buildIssues: addBuildIssue(
             hasParts ? [] : parts.buildIssues,
             ...recordsResult.buildIssues,
@@ -277,6 +302,7 @@ export async function saveInsertable(
         fastenInfo: parsed.fastenInfo,
         isOpenComposite: parsed.isOpenComposite,
         partMetadata: parsed.partMetadata,
+        generatedStudio: parsed.generatedStudio,
         buildIssues: parsed.buildIssues,
         lastLoadedAt: new Date()
     };

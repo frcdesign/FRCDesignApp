@@ -24,6 +24,7 @@ import {
     withoutDeprecated
 } from "./parse-document-contents";
 import { loadInsertable } from "./load-insertable";
+import { GeneratedPartMismatchError } from "../generated-parts/records";
 import {
     type GroupTarget,
     type InsertableTarget,
@@ -97,7 +98,8 @@ export async function loadGroup(
         storedInsertables
     );
 
-    const failedInsertableIds = await loadInsertables(ctx, insertablesToLoad);
+    const { failedInsertableIds, mismatchedInsertableIds } =
+        await loadInsertables(ctx, insertablesToLoad);
 
     const thumbnailUrls = await loadDocumentThumbnail(ctx, target, contents);
 
@@ -106,7 +108,8 @@ export async function loadGroup(
             thumbnailUrls,
             removedInsertableIds,
             movedInsertables,
-            failedInsertableIds
+            failedInsertableIds,
+            mismatchedInsertableIds
         })
     );
 
@@ -136,6 +139,12 @@ export async function loadGroup(
     };
 }
 
+interface LoadedInsertables {
+    failedInsertableIds: string[];
+    /** Those of the failed whose tab isn't configured as its generated studio. */
+    mismatchedInsertableIds: string[];
+}
+
 /**
  * Returns the ids that failed. `loadInsertable` takes a limiter slot for its
  * Onshape calls, which bounds the parallelism.
@@ -143,8 +152,9 @@ export async function loadGroup(
 async function loadInsertables(
     ctx: LoadContext,
     targets: InsertableTarget[]
-): Promise<string[]> {
+): Promise<LoadedInsertables> {
     const failedInsertableIds: string[] = [];
+    const mismatchedInsertableIds: string[] = [];
     await Promise.all(
         targets.map(async (target) => {
             try {
@@ -156,10 +166,13 @@ async function loadInsertables(
                     error
                 );
                 failedInsertableIds.push(target.insertableId);
+                if (error instanceof GeneratedPartMismatchError) {
+                    mismatchedInsertableIds.push(target.insertableId);
+                }
             }
         })
     );
-    return failedInsertableIds;
+    return { failedInsertableIds, mismatchedInsertableIds };
 }
 
 async function loadDocumentThumbnail(
@@ -201,6 +214,8 @@ interface SaveGroupInput {
     movedInsertables: InsertableOrder[];
     /** Insertables that threw while loading. */
     failedInsertableIds: string[];
+    /** Those of them whose tab isn't configured as its generated studio. */
+    mismatchedInsertableIds: string[];
 }
 
 async function saveGroup(
@@ -257,7 +272,11 @@ async function saveGroup(
         writes.push(db.delete(insertables).where(inArray(insertables.id, ids)));
     }
     writes.push(
-        ...(await flagFailedInsertables(db, input.failedInsertableIds))
+        ...(await flagFailedInsertables(
+            db,
+            input.failedInsertableIds,
+            input.mismatchedInsertableIds
+        ))
     );
 
     await db.batch(writes as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]]);
@@ -269,8 +288,10 @@ async function saveGroup(
  */
 async function flagFailedInsertables(
     db: Db,
-    failedInsertableIds: string[]
+    failedInsertableIds: string[],
+    mismatchedInsertableIds: string[]
 ): Promise<BatchItem<"sqlite">[]> {
+    const mismatched = new Set(mismatchedInsertableIds);
     // Chunked: a rate-limited load can fail more ids than one statement binds.
     const reads = await Promise.all(
         chunkForInArray(failedInsertableIds).map((ids) =>
@@ -288,9 +309,17 @@ async function flagFailedInsertables(
         db
             .update(insertables)
             .set({
-                buildIssues: addBuildIssue(row.buildIssues, {
-                    type: BuildIssueType.LOAD_FAILED
-                })
+                buildIssues: addBuildIssue(
+                    row.buildIssues,
+                    { type: BuildIssueType.LOAD_FAILED },
+                    ...(mismatched.has(row.id)
+                        ? [
+                              {
+                                  type: BuildIssueType.GENERATED_PART_MISMATCH as const
+                              }
+                          ]
+                        : [])
+                )
             })
             .where(eq(insertables.id, row.id))
     );
