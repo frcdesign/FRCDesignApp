@@ -109,8 +109,8 @@ Onshape calls preselections. Part studios derive instead and are not fastened.
   every mate and the Replicate are built.
 - Nothing replicates unless `supports_replicate` is true: the client hides the
   option, and the route ignores `replicate` for any other part.
-- Every circle a Replicate targets is the radius of its seed's circle, to the
-  micrometre; Onshape matches no other.
+- Every circle a Replicate targets is the radius of its seed's circle, within
+  Onshape's length tolerance (`tolerantEquals`); Onshape matches no other.
 - Mates and inserts are added one at a time: Onshape rejects a feature-list edit
   that races another.
 

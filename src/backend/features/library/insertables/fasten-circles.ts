@@ -13,6 +13,7 @@ import {
 import { type OnshapeInsertInstancesResponse } from "../../../lib/onshape/types";
 import { type CircleSelection } from "../contract";
 import { getCircleRadii } from "./circle-radii";
+import { tolerantEquals } from "../../configurations/input-parser";
 
 interface FastenToCirclesArgs {
     name: string;
@@ -99,7 +100,7 @@ async function groupBySize(
         return circles.map((circle) => [circle]);
     }
 
-    const sizes = new Map<number, CircleSelection[]>();
+    const sizes: { radius: number; circles: CircleSelection[] }[] = [];
     const groups: CircleSelection[][] = [];
     for (const [index, circle] of circles.entries()) {
         const radius = radii[index];
@@ -107,15 +108,18 @@ async function groupBySize(
             groups.push([circle]);
             continue;
         }
-        // To the micrometre, which absorbs floating-point noise in what Onshape reports.
-        const key = Math.round(radius * 1e6);
-        const group = sizes.get(key);
-        if (group) {
-            group.push(circle);
+        const size = sizes.find((candidate) =>
+            tolerantEquals(
+                { value: candidate.radius, type: "length" },
+                { value: radius, type: "length" }
+            )
+        );
+        if (size) {
+            size.circles.push(circle);
         } else {
-            const created = [circle];
-            sizes.set(key, created);
-            groups.push(created);
+            const created = { radius, circles: [circle] };
+            sizes.push(created);
+            groups.push(created.circles);
         }
     }
     return groups;
