@@ -16,6 +16,7 @@ noticing when the code has drifted from it.
 | [search.md](./search.md)                   | Building, serving and querying each library's search index                         |
 | [analytics.md](./analytics.md)             | Usage tracking, rollups, and the public dashboard                                  |
 | [version-manager.md](./version-manager.md) | Links between Onshape workspaces, and the pushes and pulls along them              |
+| [quick-fastener.md](./quick-fastener.md)   | Sizing fasteners to an assembly's holes, scanning and caching, inserting, picking  |
 | [platform.md](./platform.md)               | Onshape client, errors, retries and timeouts, concurrency, toasts, pushes, caching |
 
 [REFERENCE.md](../REFERENCE.md) is the tour of the whole system and links here

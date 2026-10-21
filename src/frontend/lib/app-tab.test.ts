@@ -10,6 +10,9 @@ describe("app tabs", () => {
         expect(getTabPath(UtilityTab.VERSION_MANAGER)).toBe(
             "/app/version-manager"
         );
+        expect(getTabPath(UtilityTab.QUICK_FASTENER)).toBe(
+            "/app/quick-fastener"
+        );
     });
 
     it("tells a library from a utility", () => {

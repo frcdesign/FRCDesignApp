@@ -13,6 +13,7 @@ import {
     CaretDownIcon,
     GearIcon,
     GitBranchIcon,
+    ScrewdriverIcon,
     type Icon,
     MagnifyingGlassIcon,
     MoonIcon,
@@ -59,7 +60,8 @@ import {
     useIsVersionManager,
     useIsVersionManagerNew
 } from "../features/version-manager/navigation";
-import { useTargetWorkspace } from "../lib/onshape-params";
+import { useTargetElement, useTargetWorkspace } from "../lib/onshape-params";
+import { useIsQuickFastener } from "../features/quick-fastener/navigation";
 import { type AppTab, UtilityTab } from "../lib/app-tab";
 import { getTabName, useNavigateToTab } from "../lib/tabs";
 import { useRefreshVersionManagerMutation } from "../features/version-manager/queries";
@@ -92,9 +94,11 @@ export function NavbarRow(props: PropsWithChildren): ReactNode {
 
 /** The page picker with the brand and settings, over search and its filters. */
 export function AppNavbar(): ReactNode {
-    // Search and its filters belong to a library, and the version manager is
-    // not one; its page fills the room they leave.
+    // Search and its filters belong to a library, and neither utility is
+    // one; their pages fill the room they leave.
     const isVersionManager = useIsVersionManager();
+    const isQuickFastener = useIsQuickFastener();
+    const isUtility = isVersionManager || isQuickFastener;
 
     return (
         <Stack gap={0}>
@@ -102,13 +106,13 @@ export function AppNavbar(): ReactNode {
                 <PagePicker />
                 <Group gap="xs" ml="auto" className={styles.noShrink}>
                     {/* Inserting is the library's; the version manager inserts nothing. */}
-                    {!isVersionManager && <InsertLocationStatus />}
+                    {!isUtility && <InsertLocationStatus />}
                     <SignInButton />
                     {isVersionManager && <VersionManagerRefreshButton />}
                     <SettingsControls />
                 </Group>
             </NavbarRow>
-            {!isVersionManager && (
+            {!isUtility && (
                 <Group gap="xs" px="sm" h={NAVBAR_ROW_HEIGHT}>
                     <SearchBar />
                     <VendorMenu />
@@ -149,7 +153,9 @@ interface AppPage {
 
 function useAppPages(): AppPage[] {
     const targetWorkspace = useTargetWorkspace();
+    const targetElement = useTargetElement();
     const isVersionManager = useIsVersionManager();
+    const isQuickFastener = useIsQuickFastener();
     const isNew = useIsVersionManagerNew();
 
     const libraries = Object.values(LibraryId).map((libraryId) => ({
@@ -165,22 +171,33 @@ function useAppPages(): AppPage[] {
         )
     }));
 
-    // Listed while it is showing even without a workspace, so the picker never
-    // names a page it does not offer.
-    if (!targetWorkspace && !isVersionManager) {
-        return libraries;
-    }
-    return [
-        ...libraries,
-        {
-            tab: UtilityTab.VERSION_MANAGER,
-            group: UTILITIES_GROUP,
-            icon: GitBranchIcon,
-            color: AppColor.VERSION_MANAGER,
-            badge: isNew ? <NewBadge /> : undefined,
-            isNew
-        }
+    // Each is listed while it is showing even without what it acts on, so the
+    // picker never names a page it does not offer.
+    const utilities: AppPage[] = [
+        ...(targetWorkspace || isVersionManager
+            ? [
+                  {
+                      tab: UtilityTab.VERSION_MANAGER,
+                      group: UTILITIES_GROUP,
+                      icon: GitBranchIcon,
+                      color: AppColor.VERSION_MANAGER,
+                      badge: isNew ? <NewBadge /> : undefined,
+                      isNew
+                  }
+              ]
+            : []),
+        ...(targetElement || isQuickFastener
+            ? [
+                  {
+                      tab: UtilityTab.QUICK_FASTENER,
+                      group: UTILITIES_GROUP,
+                      icon: ScrewdriverIcon,
+                      color: AppColor.QUICK_FASTENER
+                  }
+              ]
+            : [])
     ];
+    return [...libraries, ...utilities];
 }
 
 /** The pages under their headings, each heading where its first page comes. */
@@ -197,11 +214,14 @@ function PagePicker(): ReactNode {
     const pages = useAppPages();
     const currentLibraryId = useLibraryId();
     const isVersionManager = useIsVersionManager();
+    const isQuickFastener = useIsQuickFastener();
     const navigateToTab = useNavigateToTab();
 
     const current: AppTab = isVersionManager
         ? UtilityTab.VERSION_MANAGER
-        : currentLibraryId;
+        : isQuickFastener
+          ? UtilityTab.QUICK_FASTENER
+          : currentLibraryId;
     const currentPage = pages.find((page) => page.tab === current);
 
     // Warm the versions on hover, so picking one has nothing left to wait for.

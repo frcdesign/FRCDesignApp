@@ -1,5 +1,6 @@
 /** Library-scoped keys hang off {@link libraryQueryKey}, so a refresh invalidates one prefix. */
 import { LibraryId } from "@backend/features/library/library-id";
+import { assemblyKey } from "@backend/features/quick-fastener/contract";
 import { ElementPath, InstancePath } from "@backend/lib/onshape/path";
 
 /** Access is per library; without one, the prefix every library's shares. */
@@ -105,4 +106,9 @@ export function versionJobQueryKey(workspace: InstancePath | undefined) {
 /** The name a push would give the version it cuts here, read from Onshape. */
 export function nextVersionNameQueryKey(workspace: InstancePath | undefined) {
     return ["next-version-name", workspace];
+}
+
+/** By the assembly's key, so a launch's extra fields don't make a second entry. */
+export function fastenerJobQueryKey(assembly: ElementPath | undefined) {
+    return ["fastener-job", assembly && assemblyKey(assembly)];
 }
