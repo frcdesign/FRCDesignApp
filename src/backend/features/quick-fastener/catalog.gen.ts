@@ -1,7 +1,7 @@
-/* Synced from robot-education/robot-code@099e2a6a82f67d8cfe6896d32ab12e0bad2d54af (featurescripts/quickFastener/quickFastener.gen.json) by `npm run sync:quick-fastener` -- DO NOT EDIT */
+/* Synced from robot-education/robot-code@0d1604e2de868c5af904710dcbe081c0735a7774 (featurescripts/quickFastener/quickFastener.gen.json) by `npm run sync:quick-fastener` -- DO NOT EDIT */
 
 export const CATALOG_SOURCE =
-    "robot-education/robot-code@099e2a6a82f67d8cfe6896d32ab12e0bad2d54af";
+    "robot-education/robot-code@0d1604e2de868c5af904710dcbe081c0735a7774";
 
 export const CATALOG = {
     source: "featurescripts/quickFastener/quickFastenerTables.py",
@@ -21,6 +21,10 @@ export const CATALOG = {
         {
             id: "WCP",
             name: "WCP"
+        },
+        {
+            id: "ANDYMARK",
+            name: "AndyMark"
         }
     ],
     sizes: [
@@ -591,6 +595,11 @@ export const CATALOG = {
                     id: "IN_2",
                     name: "2 in.",
                     length: 0.0508
+                },
+                {
+                    id: "IN_2_125",
+                    name: "2-1/8 in.",
+                    length: 0.053975
                 },
                 {
                     id: "IN_2_25",
@@ -1318,6 +1327,11 @@ export const CATALOG = {
                     id: "IN_3",
                     name: "3 in.",
                     length: 0.0762
+                },
+                {
+                    id: "IN_3_25",
+                    name: "3-1/4 in.",
+                    length: 0.08255
                 },
                 {
                     id: "IN_3_5",
@@ -5013,6 +5027,83 @@ export const CATALOG = {
         },
         {
             vendor: "WCP",
+            size: "NO_4_40",
+            head: "BUTTON",
+            lengths: [
+                {
+                    id: "IN_0_25",
+                    name: "1/4 in.",
+                    length: 0.00635,
+                    partNumber: "WCP-2354",
+                    url: "https://wcproducts.com/products/wcp-2354"
+                },
+                {
+                    id: "IN_0_375",
+                    name: "3/8 in.",
+                    length: 0.009525,
+                    partNumber: "WCP-2355",
+                    url: "https://wcproducts.com/products/wcp-2355"
+                },
+                {
+                    id: "IN_0_75",
+                    name: "3/4 in.",
+                    length: 0.01905,
+                    partNumber: "WCP-2356",
+                    url: "https://wcproducts.com/products/wcp-2356"
+                }
+            ]
+        },
+        {
+            vendor: "WCP",
+            size: "NO_6_32",
+            head: "BUTTON",
+            lengths: [
+                {
+                    id: "IN_0_25",
+                    name: "1/4 in.",
+                    length: 0.00635,
+                    partNumber: "WCP-2353",
+                    url: "https://wcproducts.com/products/wcp-2353"
+                }
+            ]
+        },
+        {
+            vendor: "WCP",
+            size: "NO_8_32",
+            head: "SOCKET",
+            lengths: [
+                {
+                    id: "IN_1",
+                    name: "1 in.",
+                    length: 0.0254,
+                    partNumber: "WCP-2249",
+                    url: "https://wcproducts.com/products/wcp-2249"
+                }
+            ]
+        },
+        {
+            vendor: "WCP",
+            size: "NO_8_32",
+            head: "BUTTON",
+            lengths: [
+                {
+                    id: "IN_0_25",
+                    name: "1/4 in.",
+                    length: 0.00635,
+                    partNumber: "WCP-1548",
+                    url: "https://wcproducts.com/products/wcp-1548"
+                },
+                {
+                    id: "IN_0_5",
+                    name: "1/2 in.",
+                    length: 0.0127,
+                    partNumber: "WCP-0250",
+                    url: "https://wcproducts.com/products/wcp-0250"
+                }
+            ]
+        },
+        {
+            vendor: "WCP",
             size: "NO_10_32",
             head: "SOCKET",
             lengths: [
@@ -5139,8 +5230,8 @@ export const CATALOG = {
                     id: "IN_0_75",
                     name: "3/4 in.",
                     length: 0.01905,
-                    partNumber: "WCP-0254",
-                    url: "https://wcproducts.com/products/wcp-0254"
+                    partNumber: "WCP-0135",
+                    url: "https://wcproducts.com/products/wcp-0135"
                 },
                 {
                     id: "IN_0_875",
@@ -5218,6 +5309,510 @@ export const CATALOG = {
                     length: 0.12065,
                     partNumber: "WCP-1656",
                     url: "https://wcproducts.com/products/wcp-1656"
+                }
+            ]
+        },
+        {
+            vendor: "ANDYMARK",
+            size: "NO_4_40",
+            head: "SOCKET",
+            lengths: [
+                {
+                    id: "IN_0_375",
+                    name: "3/8 in.",
+                    length: 0.009525,
+                    partNumber: "am-1032",
+                    url: "https://andymark.com/products/4-40-x-0-375-in-socket-head-cap-screw-1"
+                },
+                {
+                    id: "IN_0_5",
+                    name: "1/2 in.",
+                    length: 0.0127,
+                    partNumber: "am-1136",
+                    url: "https://andymark.com/products/4-40-x-0-5-in-socket-head-cap-screw"
+                }
+            ]
+        },
+        {
+            vendor: "ANDYMARK",
+            size: "NO_4_40",
+            head: "BUTTON",
+            lengths: [
+                {
+                    id: "IN_0_25",
+                    name: "1/4 in.",
+                    length: 0.00635,
+                    partNumber: "am-1679",
+                    url: "https://andymark.com/products/4-40-x-0-25-in-button-head-cap-screw-with-nylon-patch"
+                }
+            ]
+        },
+        {
+            vendor: "ANDYMARK",
+            size: "NO_4_40",
+            head: "FLAT",
+            lengths: [
+                {
+                    id: "IN_0_375",
+                    name: "3/8 in.",
+                    length: 0.009525,
+                    partNumber: "am-1586",
+                    url: "https://andymark.com/products/4-40-x-0-375-in-flat-head-cap-screw-with-nylon-patch"
+                }
+            ]
+        },
+        {
+            vendor: "ANDYMARK",
+            size: "NO_6_32",
+            head: "SOCKET",
+            lengths: [
+                {
+                    id: "IN_2_125",
+                    name: "2-1/8 in.",
+                    length: 0.053975,
+                    partNumber: "am-1657",
+                    url: "https://andymark.com/products/6-32-x-2-125-in-socket-head-cap-screw"
+                }
+            ]
+        },
+        {
+            vendor: "ANDYMARK",
+            size: "NO_6_32",
+            head: "FLAT",
+            lengths: [
+                {
+                    id: "IN_0_625",
+                    name: "5/8 in.",
+                    length: 0.015875,
+                    partNumber: "am-1570",
+                    url: "https://andymark.com/products/6-32-x-0-625-in-flat-head-socket-cap-screw"
+                }
+            ]
+        },
+        {
+            vendor: "ANDYMARK",
+            size: "NO_8_32",
+            head: "BUTTON",
+            lengths: [
+                {
+                    id: "IN_0_5",
+                    name: "1/2 in.",
+                    length: 0.0127,
+                    partNumber: "am-1691",
+                    url: "https://andymark.com/products/8-32-x-0-5-in-button-head-cap-screw-with-nylon-patch"
+                }
+            ]
+        },
+        {
+            vendor: "ANDYMARK",
+            size: "NO_10_32",
+            head: "SOCKET",
+            lengths: [
+                {
+                    id: "IN_0_25",
+                    name: "1/4 in.",
+                    length: 0.00635,
+                    partNumber: "am-1771",
+                    url: "https://andymark.com/products/10-32-x-250-in-socket-head-cap-screw-with-nylon-thread-lock-patch"
+                },
+                {
+                    id: "IN_0_375",
+                    name: "3/8 in.",
+                    length: 0.009525,
+                    partNumber: "am-1359",
+                    url: "https://andymark.com/products/10-32-x-0-375-in-socket-head-cap-screw-1"
+                },
+                {
+                    id: "IN_0_5",
+                    name: "1/2 in.",
+                    length: 0.0127,
+                    partNumber: "am-1002",
+                    url: "https://andymark.com/products/10-32-x-0-5-in-socket-head-cap-screw-1"
+                },
+                {
+                    id: "IN_0_625",
+                    name: "5/8 in.",
+                    length: 0.015875,
+                    partNumber: "am-1007",
+                    url: "https://andymark.com/products/10-32-x-0-625-in-socket-head-cap-screw-1"
+                },
+                {
+                    id: "IN_0_75",
+                    name: "3/4 in.",
+                    length: 0.01905,
+                    partNumber: "am-1047",
+                    url: "https://andymark.com/products/10-32-x-0-75-in-socket-head-cap-screw"
+                },
+                {
+                    id: "IN_0_875",
+                    name: "7/8 in.",
+                    length: 0.022225,
+                    partNumber: "am-1753",
+                    url: "https://andymark.com/products/10-32-x-0-875-in-socket-head-cap-screw"
+                },
+                {
+                    id: "IN_1",
+                    name: "1 in.",
+                    length: 0.0254,
+                    partNumber: "am-1056",
+                    url: "https://andymark.com/products/10-32-x-1-in-socket-head-cap-screw-1"
+                },
+                {
+                    id: "IN_1_125",
+                    name: "1-1/8 in.",
+                    length: 0.028575,
+                    partNumber: "am-1013",
+                    url: "https://andymark.com/products/10-32-x-1-125-in-socket-head-cap-screw-1"
+                },
+                {
+                    id: "IN_1_25",
+                    name: "1-1/4 in.",
+                    length: 0.03175,
+                    partNumber: "am-1041",
+                    url: "https://andymark.com/products/10-32-x-1-25-in-socket-head-cap-screw-1"
+                },
+                {
+                    id: "IN_1_375",
+                    name: "1-3/8 in.",
+                    length: 0.034925,
+                    partNumber: "am-1154",
+                    url: "https://andymark.com/products/10-32-x-1-375-in-socket-head-cap-screw"
+                },
+                {
+                    id: "IN_1_5",
+                    name: "1-1/2 in.",
+                    length: 0.0381,
+                    partNumber: "am-1014",
+                    url: "https://andymark.com/products/10-32-x-1-5-in-socket-head-cap-screw"
+                },
+                {
+                    id: "IN_1_75",
+                    name: "1-3/4 in.",
+                    length: 0.04445,
+                    partNumber: "am-1048",
+                    url: "https://andymark.com/products/10-32-x-1-75-in-socket-head-cap-screw-1"
+                },
+                {
+                    id: "IN_2",
+                    name: "2 in.",
+                    length: 0.0508,
+                    partNumber: "am-1049",
+                    url: "https://andymark.com/products/10-32-x-2-in-socket-head-cap-screw-1"
+                },
+                {
+                    id: "IN_2_25",
+                    name: "2-1/4 in.",
+                    length: 0.05715,
+                    partNumber: "am-1156",
+                    url: "https://andymark.com/products/10-32-x-2-25-in-socket-head-cap-screw-2"
+                },
+                {
+                    id: "IN_2_5",
+                    name: "2-1/2 in.",
+                    length: 0.0635,
+                    partNumber: "am-1024",
+                    url: "https://andymark.com/products/10-32-x-2-5-in-socket-head-cap-screw-1"
+                },
+                {
+                    id: "IN_2_75",
+                    name: "2-3/4 in.",
+                    length: 0.06985,
+                    partNumber: "am-1397",
+                    url: "https://andymark.com/products/10-32-x-2-75-in-socket-head-cap-screw"
+                },
+                {
+                    id: "IN_3",
+                    name: "3 in.",
+                    length: 0.0762,
+                    partNumber: "am-1522",
+                    url: "https://andymark.com/products/10-32-x-3-in-socket-head-cap-screw"
+                },
+                {
+                    id: "IN_3_25",
+                    name: "3-1/4 in.",
+                    length: 0.08255,
+                    partNumber: "am-1258",
+                    url: "https://andymark.com/products/10-32-x-3-25-in-socket-head-cap-screw-1"
+                },
+                {
+                    id: "IN_3_5",
+                    name: "3-1/2 in.",
+                    length: 0.0889,
+                    partNumber: "am-1402",
+                    url: "https://andymark.com/products/10-32-x-3-5-in-socket-head-cap-screw"
+                }
+            ]
+        },
+        {
+            vendor: "ANDYMARK",
+            size: "NO_10_32",
+            head: "BUTTON",
+            lengths: [
+                {
+                    id: "IN_0_375",
+                    name: "3/8 in.",
+                    length: 0.009525,
+                    partNumber: "am-1588",
+                    url: "https://andymark.com/products/10-32-x-3-8-in-button-head-cap-screw-with-nylon-patch"
+                },
+                {
+                    id: "IN_0_5",
+                    name: "1/2 in.",
+                    length: 0.0127,
+                    partNumber: "am-1512",
+                    url: "https://andymark.com/products/10-32-x-0-5-in-button-head-cap-screw"
+                },
+                {
+                    id: "IN_0_625",
+                    name: "5/8 in.",
+                    length: 0.015875,
+                    partNumber: "am-1549",
+                    url: "https://andymark.com/products/10-32-x-0-625-in-button-head-cap-screw-with-nylon-patch"
+                },
+                {
+                    id: "IN_0_75",
+                    name: "3/4 in.",
+                    length: 0.01905,
+                    partNumber: "am-1524",
+                    url: "https://andymark.com/products/10-32-x-0-75-in-hex-drive-button-head-cap-screw"
+                },
+                {
+                    id: "IN_1",
+                    name: "1 in.",
+                    length: 0.0254,
+                    partNumber: "am-1396",
+                    url: "https://andymark.com/products/10-32-x-1-in-button-head-cap-screw-1"
+                },
+                {
+                    id: "IN_1_25",
+                    name: "1-1/4 in.",
+                    length: 0.03175,
+                    partNumber: "am-1260",
+                    url: "https://andymark.com/products/10-32-x-1-25-in-button-head-cap-screw"
+                },
+                {
+                    id: "IN_1_5",
+                    name: "1-1/2 in.",
+                    length: 0.0381,
+                    partNumber: "am-1730",
+                    url: "https://andymark.com/products/10-32-x-1-5-in-button-head-cap-screw"
+                },
+                {
+                    id: "IN_1_75",
+                    name: "1-3/4 in.",
+                    length: 0.04445,
+                    partNumber: "am-1584",
+                    url: "https://andymark.com/products/10-32-x-1-75-in-button-head-cap-screw"
+                }
+            ]
+        },
+        {
+            vendor: "ANDYMARK",
+            size: "NO_10_32",
+            head: "FLAT",
+            lengths: [
+                {
+                    id: "IN_0_5",
+                    name: "1/2 in.",
+                    length: 0.0127,
+                    partNumber: "am-1404",
+                    url: "https://andymark.com/products/10-32-x-0-5-in-flat-head-cap-screw"
+                },
+                {
+                    id: "IN_0_625",
+                    name: "5/8 in.",
+                    length: 0.015875,
+                    partNumber: "am-1252",
+                    url: "https://andymark.com/products/10-32-x-0-625-in-flat-head-cap-screw"
+                },
+                {
+                    id: "IN_0_75",
+                    name: "3/4 in.",
+                    length: 0.01905,
+                    partNumber: "am-1170",
+                    url: "https://andymark.com/products/10-32-x-0-75-in-flat-head-cap-screw"
+                },
+                {
+                    id: "IN_1",
+                    name: "1 in.",
+                    length: 0.0254,
+                    partNumber: "am-1324",
+                    url: "https://andymark.com/products/10-32-x-1-in-flat-head-cap-screw-1"
+                },
+                {
+                    id: "IN_1_5",
+                    name: "1-1/2 in.",
+                    length: 0.0381,
+                    partNumber: "am-1756",
+                    url: "https://andymark.com/products/10-32-x-1-500-in-flat-head-cap-screw"
+                },
+                {
+                    id: "IN_2",
+                    name: "2 in.",
+                    length: 0.0508,
+                    partNumber: "am-1383",
+                    url: "https://andymark.com/products/10-32-x-2-in-flat-head-cap-screw-black-oxide"
+                }
+            ]
+        },
+        {
+            vendor: "ANDYMARK",
+            size: "QUARTER_20",
+            head: "SOCKET",
+            lengths: [
+                {
+                    id: "IN_0_625",
+                    name: "5/8 in.",
+                    length: 0.015875,
+                    partNumber: "am-1053",
+                    url: "https://andymark.com/products/1-4-20-x-0-625-in-hex-drive-socket-head-cap-screw"
+                },
+                {
+                    id: "IN_1",
+                    name: "1 in.",
+                    length: 0.0254,
+                    partNumber: "am-1341",
+                    url: "https://andymark.com/products/1-4-20-x-1-in-socket-head-cap-screw"
+                },
+                {
+                    id: "IN_1_5",
+                    name: "1-1/2 in.",
+                    length: 0.0381,
+                    partNumber: "am-1131",
+                    url: "https://andymark.com/products/1-4-20-x-1-5-in-socket-head-cap-screw"
+                },
+                {
+                    id: "IN_1_75",
+                    name: "1-3/4 in.",
+                    length: 0.04445,
+                    partNumber: "am-1058",
+                    url: "https://andymark.com/products/1-4-20-x-1-75-in-hex-drive-socket-head-cap-screw"
+                },
+                {
+                    id: "IN_2",
+                    name: "2 in.",
+                    length: 0.0508,
+                    partNumber: "am-1012",
+                    url: "https://andymark.com/products/1-4-20-x-2-in-socket-head-cap-screw"
+                },
+                {
+                    id: "IN_2_5",
+                    name: "2-1/2 in.",
+                    length: 0.0635,
+                    partNumber: "am-1031",
+                    url: "https://andymark.com/products/1-4-20-x-2-5-in-hex-drive-socket-head-cap-screw"
+                },
+                {
+                    id: "IN_3",
+                    name: "3 in.",
+                    length: 0.0762,
+                    partNumber: "am-1030",
+                    url: "https://andymark.com/products/1-4-20-x-3-in-socket-head-cap-screw-1"
+                },
+                {
+                    id: "IN_3_25",
+                    name: "3-1/4 in.",
+                    length: 0.08255,
+                    partNumber: "am-3338",
+                    url: "https://andymark.com/products/1-4-20-x-3-25-in-socket-head-cap-screw"
+                }
+            ]
+        },
+        {
+            vendor: "ANDYMARK",
+            size: "QUARTER_20",
+            head: "BUTTON",
+            lengths: [
+                {
+                    id: "IN_0_375",
+                    name: "3/8 in.",
+                    length: 0.009525,
+                    partNumber: "am-1520",
+                    url: "https://andymark.com/products/1-4-20-x-0-375-in-button-head-cap-screw"
+                },
+                {
+                    id: "IN_0_5",
+                    name: "1/2 in.",
+                    length: 0.0127,
+                    partNumber: "am-1039",
+                    url: "https://andymark.com/products/1-4-20-x-0-5-in-button-head-cap-screw"
+                },
+                {
+                    id: "IN_0_625",
+                    name: "5/8 in.",
+                    length: 0.015875,
+                    partNumber: "am-1681",
+                    url: "https://andymark.com/products/1-4-20-x-0-625-in-button-head-cap-screw"
+                },
+                {
+                    id: "IN_0_75",
+                    name: "3/4 in.",
+                    length: 0.01905,
+                    partNumber: "am-1754",
+                    url: "https://andymark.com/products/screw-bhcs-1-4-20-x-750-zinc"
+                },
+                {
+                    id: "IN_1",
+                    name: "1 in.",
+                    length: 0.0254,
+                    partNumber: "am-1525",
+                    url: "https://andymark.com/products/1-4-20-x-1-in-button-head-cap-screw"
+                },
+                {
+                    id: "IN_1_25",
+                    name: "1-1/4 in.",
+                    length: 0.03175,
+                    partNumber: "am-1183",
+                    url: "https://andymark.com/products/1-4-20-x-1-25-in-button-head-cap-screw"
+                },
+                {
+                    id: "IN_1_5",
+                    name: "1-1/2 in.",
+                    length: 0.0381,
+                    partNumber: "am-1118",
+                    url: "https://andymark.com/products/1-4-20-x-1-5-in-button-head-cap-screw"
+                },
+                {
+                    id: "IN_1_75",
+                    name: "1-3/4 in.",
+                    length: 0.04445,
+                    partNumber: "am-1420",
+                    url: "https://andymark.com/products/1-4-20-x-1-75-in-button-head-cap-screw"
+                },
+                {
+                    id: "IN_2",
+                    name: "2 in.",
+                    length: 0.0508,
+                    partNumber: "am-1655",
+                    url: "https://andymark.com/products/1-4-20-x-2-in-button-head-cap-screw"
+                },
+                {
+                    id: "IN_2_5",
+                    name: "2-1/2 in.",
+                    length: 0.0635,
+                    partNumber: "am-1695",
+                    url: "https://andymark.com/products/1-4-20-x-2-5-in-button-head-cap-screw"
+                }
+            ]
+        },
+        {
+            vendor: "ANDYMARK",
+            size: "QUARTER_20",
+            head: "FLAT",
+            lengths: [
+                {
+                    id: "IN_0_75",
+                    name: "3/4 in.",
+                    length: 0.01905,
+                    partNumber: "am-1672",
+                    url: "https://andymark.com/products/1-4-20-x-0-75-in-flat-head-cap-screw"
+                },
+                {
+                    id: "IN_2",
+                    name: "2 in.",
+                    length: 0.0508,
+                    partNumber: "am-1707",
+                    url: "https://andymark.com/products/1-4-20-x-2-in-flat-head-cap-screw"
                 }
             ]
         }
