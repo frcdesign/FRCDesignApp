@@ -30,6 +30,7 @@ import * as AssemblyEndpoints from "../../../lib/onshape/endpoints/assemblies";
 import * as PartsEndpoints from "../../../lib/onshape/endpoints/parts";
 import * as Gather from "../../quick-fastener/gather";
 import { OnshapeRateLimitError } from "../../../lib/onshape/client";
+import { OnshapeFailure } from "../../../lib/onshape/failures";
 import { AUTO_INDEX_THRESHOLD } from "../../configurations/combinations";
 import {
     enumParam,
@@ -739,7 +740,7 @@ describe("insertable routes", () => {
         );
         expect(res.status).toBe(429);
         const body: { message: string } = await res.json();
-        expect(body.message).toContain("rate limit");
+        expect(body.message).toBe(OnshapeFailure.RATE_LIMITED);
 
         const row = await readInsertable(TEST_PART_STUDIO_ID);
         expect(row?.indexConfigurations).toBe(false);

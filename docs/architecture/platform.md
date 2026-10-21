@@ -9,21 +9,23 @@ their Onshape calls and link here for how those calls behave.
 
 ## Code map
 
-| Path                                              | Role                                                                              |
-| ------------------------------------------------- | --------------------------------------------------------------------------------- |
-| `src/backend/lib/onshape/client.ts`               | `OnshapeApi`, `OAuthApi`, `ApiKeyApi`; `OnshapeApiError`, `OnshapeRateLimitError` |
-| `src/backend/lib/onshape/endpoints/`              | One wrapper per Onshape endpoint, grouped by Onshape's API category               |
-| `src/backend/lib/api-error.ts`                    | `ApiError` and its four kinds; the body every failed `/api` response carries      |
-| `src/backend/lib/errors.ts`                       | `errorHandler`: turns any thrown error into that body and a status                |
-| `src/backend/features/load/steps.ts`              | Workflow retry policies for Onshape and thumbnail steps                           |
-| `src/backend/features/load/context.ts`            | The load's limiters                                                               |
-| `src/backend/lib/cache.ts`                        | `CachePolicy`, `cacheMiddleware`, `setCache`                                      |
-| `src/backend/features/push/`                      | `ClientRelay` Durable Object, message contract, `notify.ts` senders               |
-| `src/frontend/lib/api-client.ts`                  | `apiGet`, `apiPost`, `apiDelete`, `loadImage`; appends `?v=` for cached reads     |
-| `src/frontend/lib/errors.ts`                      | `AppError`, `handleAppError`, `getAppErrorHandler`                                |
-| `src/frontend/lib/notifications.tsx`              | `showLoadingToast`, `showSuccessToast`, `showInfoToast`, `showErrorToast`         |
-| `src/frontend/lib/query-client.ts`                | TanStack Query defaults, including retry                                          |
-| `src/frontend/lib/push-socket.ts`, `push-sync.ts` | The client's WebSocket, and applying pushes to the cache                          |
+| Path                                              | Role                                                                                                                   |
+| ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `src/backend/lib/onshape/client.ts`               | `OnshapeApi`, `OAuthApi`, `ApiKeyApi`; `OnshapeApiError`, `OnshapeRateLimitError`                                      |
+| `src/backend/lib/onshape/endpoints/`              | One wrapper per Onshape endpoint, grouped by Onshape's API category                                                    |
+| `src/backend/lib/api-error.ts`                    | `ApiError` and its four kinds; the body every failed `/api` response carries                                           |
+| `src/backend/lib/errors.ts`                       | `errorHandler`: turns any thrown error into that body and a status                                                     |
+| `src/backend/lib/onshape/failures.ts`             | `onshapeStatus`, `isTransient`, `isRateLimited`; `OnshapeFailure` and `describeOnshapeFailure`: one wording per status |
+| `src/backend/lib/run-failures.ts`                 | `runFailures`: a background run's failures worded at the step and read back at the report                              |
+| `src/backend/features/load/steps.ts`              | Workflow retry policies for Onshape and thumbnail steps                                                                |
+| `src/backend/features/load/context.ts`            | The load's limiters                                                                                                    |
+| `src/backend/lib/cache.ts`                        | `CachePolicy`, `cacheMiddleware`, `setCache`                                                                           |
+| `src/backend/features/push/`                      | `ClientRelay` Durable Object, message contract, `notify.ts` senders                                                    |
+| `src/frontend/lib/api-client.ts`                  | `apiGet`, `apiPost`, `apiDelete`, `loadImage`; appends `?v=` for cached reads                                          |
+| `src/frontend/lib/errors.ts`                      | `AppError`, `handleAppError`, `getAppErrorHandler`                                                                     |
+| `src/frontend/lib/notifications.tsx`              | `showLoadingToast`, `showSuccessToast`, `showInfoToast`, `showErrorToast`                                              |
+| `src/frontend/lib/query-client.ts`                | TanStack Query defaults, including retry                                                                               |
+| `src/frontend/lib/push-socket.ts`, `push-sync.ts` | The client's WebSocket, and applying pushes to the cache                                                               |
 
 ## Calling Onshape
 
@@ -55,18 +57,18 @@ Which calls each flow makes is listed in that flow's document.
 
 A route throws; `errorHandler` answers with `{ kind, message }` and a status:
 
-| Thrown                           | Kind               | Status   | Message the user sees                                       |
-| -------------------------------- | ------------------ | -------- | ----------------------------------------------------------- |
-| `handledError(message, status)`  | `handled`          | as given | `message`                                                   |
-| `signInRequiredError(message)`   | `sign-in-required` | 401      | `message`, with a **Sign in** button                        |
-| `forbiddenError(message)`        | `forbidden`        | 403      | `message`                                                   |
-| `internalError(message, status)` | `internal`         | as given | The caller's default wording; `message` is logged           |
-| `OnshapeRateLimitError`          | `handled`          | 429      | "Onshape rate limit reached. Please try again later."       |
-| `OnshapeApiError` 401            | `sign-in-required` | 401      | "Onshape did not accept the session. Try signing in again." |
-| `OnshapeApiError` 403            | `forbidden`        | 403      | "Onshape rejected the operation. …"                         |
-| Any other `OnshapeApiError`      | `internal`         | 502      | Default wording; logged                                     |
-| A validator's `HTTPException`    | `internal`         | its own  | Default wording; logged                                     |
-| Anything else                    | `internal`         | 500      | Default wording; logged                                     |
+| Thrown                           | Kind               | Status   | Message the user sees                             |
+| -------------------------------- | ------------------ | -------- | ------------------------------------------------- |
+| `handledError(message, status)`  | `handled`          | as given | `message`                                         |
+| `signInRequiredError(message)`   | `sign-in-required` | 401      | `message`, with a **Sign in** button              |
+| `forbiddenError(message)`        | `forbidden`        | 403      | `message`                                         |
+| `internalError(message, status)` | `internal`         | as given | The caller's default wording; `message` is logged |
+| `OnshapeRateLimitError`          | `handled`          | 429      | `OnshapeFailure.RATE_LIMITED`                     |
+| `OnshapeApiError` 401            | `sign-in-required` | 401      | `OnshapeFailure.SIGN_IN_EXPIRED`                  |
+| `OnshapeApiError` 403            | `forbidden`        | 403      | `OnshapeFailure.FORBIDDEN`                        |
+| Any other `OnshapeApiError`      | `internal`         | 502      | Default wording; logged                           |
+| A validator's `HTTPException`    | `internal`         | its own  | Default wording; logged                           |
+| Anything else                    | `internal`         | 500      | Default wording; logged                           |
 
 On the client, `apiGet`/`apiPost` throw an `AppError` holding that body. A
 mutation's `onError` is `getAppErrorHandler(defaultMessage, toastId)`, which
@@ -74,6 +76,24 @@ shows the body's message for `handled` and `forbidden`, adds a **Sign in**
 action for `sign-in-required`, and shows `defaultMessage` for `internal` or any
 non-`AppError`. Images use `loadImage`, which throws `ImageLoadError` with only
 the status.
+
+A background run (the version manager's, Quick fastener's) has no response to
+carry a body, so each feature makes a `runFailures(marker)`. A step that fails
+leaves with `word(message)`, the message being `describeOnshapeFailure` with
+the feature's own words for a refusal, or the feature's wording for the step;
+the report reads it back with `describe`, which falls back to what the status
+says and then to `UNEXPECTED_FAILURE`.
+
+| `OnshapeFailure`  | Message                                                                                                                              |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `SIGN_IN_EXPIRED` | "Your Onshape sign-in expired. Sign in again, then try again."                                                                       |
+| `FORBIDDEN`       | "Onshape rejected the operation. Make sure you have access to this document and you're signed in to the correct Onshape enterprise." |
+| `RATE_LIMITED`    | "Onshape is limiting requests. Try again in a few minutes."                                                                          |
+| `UNAVAILABLE`     | "Onshape is having problems. Try again shortly." (5xx)                                                                               |
+| `NO_ANSWER`       | "Onshape stopped responding. Try again shortly." (no response)                                                                       |
+
+`UNEXPECTED_FAILURE` (`src/backend/lib/api-error.ts`): "Something went wrong.
+If it keeps happening, contact the FRCDesignApp developers."
 
 ## Retries and timeouts
 

@@ -28,7 +28,7 @@ vendor makes. It has no FTC fasteners yet.
 | `src/backend/features/quick-fastener/insert.ts`                             | `placements`, the insert's groups, each part's fasten mate, washers' top edges                  |
 | `src/backend/features/quick-fastener/workflow.ts`                           | `QuickFastenerWorkflow`: a run, step by step                                                    |
 | `src/backend/features/quick-fastener/jobs.ts`                               | `reportJob` and `getJobStatus`: the run an assembly last started                                |
-| `src/backend/features/quick-fastener/failures.ts`                           | A failed step or run, in the user's words; which writes are retried                             |
+| `src/backend/features/quick-fastener/failures.ts`                           | A failed step or run, in the user's words, on `runFailures`                                     |
 | `src/backend/features/quick-fastener/routes.ts`                             | The two routes below                                                                            |
 | `src/frontend/lib/selection.ts`                                             | Onshape's SELECTION messages, and the one query list taking picks                               |
 | `src/frontend/components/query-list.tsx`                                    | `QueryList`: Onshape's query parameter, for entities picked in the Onshape window               |

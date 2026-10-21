@@ -25,6 +25,10 @@ export type ApiErrorBody =
     | ApiErrorOf<ApiErrorKind.FORBIDDEN>
     | ApiErrorOf<ApiErrorKind.INTERNAL>;
 
+/** What the user sees for a failure nothing explains. */
+export const UNEXPECTED_FAILURE =
+    "Something went wrong. If it keeps happening, contact the FRCDesignApp developers.";
+
 /** Thrown by a route; the app's error handler turns it into the response. */
 export class ApiError extends Error {
     constructor(

@@ -13,7 +13,7 @@ import {
 import { type ElementPath } from "../../lib/onshape/path";
 import { getOnshapeApiFromSessionId } from "../auth/request-auth";
 import { ONSHAPE_STEP_RETRIES } from "../load/steps";
-import { isTransient } from "../version-manager/failures";
+import { isRateLimited, isTransient } from "../../lib/onshape/failures";
 import {
     FastenerJobState,
     FastenerTaskAction,
@@ -24,11 +24,7 @@ import {
     type PlannedHole,
     type QuickFastenerIn
 } from "./contract";
-import {
-    describeRunFailure,
-    describeStepFailure,
-    isRateLimited
-} from "./failures";
+import { describeRunFailure, describeStepFailure } from "./failures";
 import { gather } from "./gather";
 import {
     insertGroups,

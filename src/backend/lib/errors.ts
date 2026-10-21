@@ -2,6 +2,7 @@ import type { ErrorHandler } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { HttpStatus } from "http-status-ts";
 import { OnshapeApiError, OnshapeRateLimitError } from "./onshape/client";
+import { OnshapeFailure } from "./onshape/failures";
 import {
     ApiError,
     ApiErrorKind,
@@ -16,19 +17,15 @@ import type { AppContextEnv } from "./context";
 function fromOnshapeError(error: OnshapeApiError): ApiError {
     if (error instanceof OnshapeRateLimitError) {
         return handledError(
-            "Onshape rate limit reached. Please try again later.",
+            OnshapeFailure.RATE_LIMITED,
             HttpStatus.TOO_MANY_REQUESTS
         );
     }
     if (error.status === HttpStatus.UNAUTHORIZED) {
-        return signInRequiredError(
-            "Onshape did not accept the session. Try signing in again."
-        );
+        return signInRequiredError(OnshapeFailure.SIGN_IN_EXPIRED);
     }
     if (error.status === HttpStatus.FORBIDDEN) {
-        return forbiddenError(
-            "Onshape rejected the operation. Make sure you have access to this document and you're signed in to the correct Onshape enterprise."
-        );
+        return forbiddenError(OnshapeFailure.FORBIDDEN);
     }
     return internalError(
         `Onshape request failed: ${error.message}`,

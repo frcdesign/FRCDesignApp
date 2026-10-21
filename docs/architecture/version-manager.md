@@ -34,7 +34,7 @@ it.
 | `src/backend/features/version-manager/workflow.ts`                              | `VersionManagerWorkflow`, one class over a push or a pull                        |
 | `src/backend/features/version-manager/tasks.ts`                                 | Pure: the steps a run will take, which its status lists                          |
 | `src/backend/features/version-manager/jobs.ts`                                  | The run a workspace last started, and its status                                 |
-| `src/backend/features/version-manager/failures.ts`                              | Which Onshape failures to retry, and each in words                               |
+| `src/backend/features/version-manager/failures.ts`                              | Each task's failure in words, on `runFailures`                                   |
 | `src/backend/features/version-manager/workspace-cache.ts`                       | A linked workspace's names and pending-change count, cached                      |
 | `src/backend/features/version-manager/routes.ts`                                | Every route below                                                                |
 | `src/frontend/features/version-manager/queries.ts`                              | The queries and mutations                                                        |
