@@ -247,9 +247,11 @@ export interface OnshapeAssemblyInstance {
     documentId?: string;
     elementId?: string;
     featureId?: string;
-    /** The version it was inserted from; absent for one from a workspace. */
-    documentVersion?: string;
+    /** Its source's state when it was inserted, and its encoded configuration. */
+    documentMicroversion?: string;
     configuration?: string;
+    /** Set on a part instance. */
+    partId?: string;
 }
 
 /** Where one instance sits, as a row-major 4×4 and the path that owns it. */
@@ -264,9 +266,18 @@ interface OnshapeAssemblyPart {
     mateConnectors?: { featureId: string }[];
 }
 
-/** A subassembly in the assembly's flattened `subAssemblies` list. */
+/**
+ * A subassembly in the assembly's flattened `subAssemblies` list, one per
+ * distinct source, which an instance of it matches on all four fields.
+ */
 interface OnshapeSubAssembly {
     features: OnshapeAssemblyFeature[];
+    /** Optional only so a test fixture can leave out what it does not read. */
+    instances?: OnshapeAssemblyInstance[];
+    documentId?: string;
+    elementId?: string;
+    documentMicroversion?: string;
+    configuration?: string;
 }
 
 /** What `parts` is for part instances. */
@@ -314,30 +325,19 @@ export interface OnshapeCreatedFeature {
     feature: { featureId: string };
 }
 
-/** A query in a feature parameter; which fields it has depends on `btType`. */
-export interface OnshapeQuery {
-    btType: string;
-    path?: string[];
-    deterministicIds?: string[];
-}
+// === parts (GET /parts/d/{did}/{wvm}/{wvmid}/e/{eid}) ===
 
-/** A feature parameter; only query lists carry `queries`. */
-export interface OnshapeFeatureParameter {
-    btType: string;
-    parameterId: string;
-    queries?: OnshapeQuery[];
-}
-
-/** GET /assemblies/.../features: each feature as it would be posted back. */
-export interface OnshapeAssemblyFeatureList {
-    features: {
-        btType: string;
-        featureId: string;
-        parameters?: OnshapeFeatureParameter[];
+/** GET /parts/.../partid/{pid}/bodydetails (the subset we read). */
+export interface OnshapeBodyDetails {
+    bodies: {
+        edges?: {
+            /** The edge's deterministic id, which a selection reports. */
+            id: string;
+            /** In metres, on a circle or arc. */
+            curve?: { type?: string; radius?: number };
+        }[];
     }[];
 }
-
-// === parts (GET /parts/d/{did}/{wvm}/{wvmid}/e/{eid}) ===
 
 /** A part's body classification; `composite` marks an open composite's part. */
 type OnshapePartBodyType = "solid" | "sheet" | "composite";

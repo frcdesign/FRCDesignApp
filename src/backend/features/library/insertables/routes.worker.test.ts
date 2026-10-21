@@ -531,20 +531,59 @@ describe("insertable routes", () => {
         expect(await loggedInsert()).toMatchObject({ fasten: true });
     });
 
-    it("replicates one instance onto the other circles", async () => {
-        await seedFastenable(true);
-        vi.spyOn(AssemblyEndpoints, "getAssemblyFeatures").mockResolvedValue({
-            features: []
+    /** One part instance, "base", whose edges have the given radii in metres. */
+    function mockCircleSizes(radii: Record<string, number>) {
+        vi.spyOn(AssemblyEndpoints, "getAssembly").mockResolvedValue({
+            rootAssembly: {
+                features: [],
+                instances: [
+                    {
+                        id: "base",
+                        type: "Part",
+                        documentId: "d-base",
+                        elementId: "e-base",
+                        documentMicroversion: "m-base",
+                        configuration: "default",
+                        partId: "JHD"
+                    }
+                ]
+            },
+            parts: [],
+            subAssemblies: []
         });
+        return vi
+            .spyOn(PartsEndpoints, "getPartBodyDetails")
+            .mockResolvedValue({
+                bodies: [
+                    {
+                        edges: Object.entries(radii).map(([id, radius]) => ({
+                            id,
+                            curve: { type: "CIRCLE", radius }
+                        }))
+                    }
+                ]
+            });
+    }
+
+    const ON_BASE = [
+        { selectionId: "JH1", occurrencePath: ["base"] },
+        { selectionId: "JH2", occurrencePath: ["base"] },
+        { selectionId: "JH3", occurrencePath: ["base"] }
+    ];
+
+    it("replicates one instance onto the other circles of the same size", async () => {
+        await seedFastenable(true);
+        mockCircleSizes({ JH1: 0.0025, JH2: 0.0025, JH3: 0.0025 });
         const addFeature = vi
             .spyOn(AssemblyEndpoints, "addAssemblyFeature")
             .mockResolvedValue({ feature: { featureId: "f1" } });
 
         const res = await fastenToCircles({
-            circles: CIRCLES,
+            circles: ON_BASE,
             replicate: true
         });
         expect(res.status).toBe(200);
+        expect(await res.json()).toEqual({ fastenedCount: 3 });
 
         expect(AssemblyEndpoints.addElementToAssembly).toHaveBeenCalledTimes(1);
         expect(addedFeatureTypes(addFeature)).toEqual(["mate", "replicate"]);
@@ -553,25 +592,80 @@ describe("insertable routes", () => {
         expect(replicate).not.toContain("JH1");
     });
 
-    it("fastens an instance per circle for a part not allowed to replicate", async () => {
-        await seedFastenable();
+    it("fastens and replicates once per circle size", async () => {
+        await seedFastenable(true);
+        const bodyDetails = mockCircleSizes({
+            JH1: 0.0025,
+            JH2: 0.004,
+            JH3: 0.0025000000001
+        });
         const addFeature = vi
             .spyOn(AssemblyEndpoints, "addAssemblyFeature")
             .mockResolvedValue({ feature: { featureId: "f1" } });
 
         const res = await fastenToCircles({
-            circles: CIRCLES,
+            circles: ON_BASE,
+            replicate: true
+        });
+        expect(res.status).toBe(200);
+
+        // One read for the one part both sizes lie on.
+        expect(bodyDetails).toHaveBeenCalledTimes(1);
+        expect(bodyDetails.mock.calls[0][1]).toEqual({
+            documentId: "d-base",
+            instanceType: "m",
+            instanceId: "m-base",
+            elementId: "e-base"
+        });
+        expect(AssemblyEndpoints.addElementToAssembly).toHaveBeenCalledTimes(2);
+        expect(addedFeatureTypes(addFeature)).toEqual([
+            "mate",
+            "replicate",
+            "mate"
+        ]);
+        const features = addFeature.mock.calls.map((call) =>
+            JSON.stringify(call[2])
+        );
+        expect(features[1]).toContain("JH3");
+        expect(features[2]).toContain("JH2");
+    });
+
+    it("fastens an instance per circle when their sizes can't be read", async () => {
+        await seedFastenable(true);
+        vi.spyOn(AssemblyEndpoints, "getAssembly").mockRejectedValue(
+            new Error("unreadable")
+        );
+        const addFeature = vi
+            .spyOn(AssemblyEndpoints, "addAssemblyFeature")
+            .mockResolvedValue({ feature: { featureId: "f1" } });
+
+        const res = await fastenToCircles({
+            circles: ON_BASE,
             replicate: true
         });
         expect(res.status).toBe(200);
         expect(addedFeatureTypes(addFeature)).toEqual(["mate", "mate", "mate"]);
     });
 
+    it("fastens an instance per circle for a part not allowed to replicate", async () => {
+        await seedFastenable();
+        const bodyDetails = mockCircleSizes({ JH1: 1, JH2: 1, JH3: 1 });
+        const addFeature = vi
+            .spyOn(AssemblyEndpoints, "addAssemblyFeature")
+            .mockResolvedValue({ feature: { featureId: "f1" } });
+
+        const res = await fastenToCircles({
+            circles: ON_BASE,
+            replicate: true
+        });
+        expect(res.status).toBe(200);
+        expect(bodyDetails).not.toHaveBeenCalled();
+        expect(addedFeatureTypes(addFeature)).toEqual(["mate", "mate", "mate"]);
+    });
+
     it("fastens an instance per circle when Onshape refuses the replicate", async () => {
         await seedFastenable(true);
-        vi.spyOn(AssemblyEndpoints, "getAssemblyFeatures").mockResolvedValue({
-            features: []
-        });
+        mockCircleSizes({ JH1: 1, JH2: 1, JH3: 1 });
         const addFeature = vi
             .spyOn(AssemblyEndpoints, "addAssemblyFeature")
             .mockResolvedValueOnce({ feature: { featureId: "mate" } })
@@ -579,7 +673,7 @@ describe("insertable routes", () => {
             .mockResolvedValue({ feature: { featureId: "f" } });
 
         const res = await fastenToCircles({
-            circles: CIRCLES,
+            circles: ON_BASE,
             replicate: true
         });
         expect(res.status).toBe(200);
@@ -589,101 +683,6 @@ describe("insertable routes", () => {
             "mate",
             "mate"
         ]);
-    });
-
-    /** A Replicate seeded with `seed`, as Onshape lists it, already on JH1. */
-    function existingReplicate() {
-        return {
-            btType: "BTMAssemblyReplicateFeature-1351",
-            featureId: "rep1",
-            parameters: [
-                {
-                    btType: "BTMParameterQueryWithOccurrenceList-67",
-                    parameterId: "seedInstances",
-                    queries: [
-                        {
-                            btType: "BTMIndividualOccurrenceQuery-626",
-                            path: ["seed"]
-                        }
-                    ]
-                },
-                {
-                    btType: "BTMParameterQueryWithOccurrenceList-67",
-                    parameterId: "targets",
-                    queries: [
-                        {
-                            btType: "BTMIndividualQueryWithOccurrence-811",
-                            path: ["base"],
-                            deterministicIds: ["JH1"]
-                        }
-                    ]
-                }
-            ]
-        };
-    }
-
-    function mockAssemblyWithSeed(seed: Record<string, string>) {
-        vi.spyOn(AssemblyEndpoints, "getAssemblyFeatures").mockResolvedValue({
-            features: [existingReplicate()]
-        });
-        vi.spyOn(AssemblyEndpoints, "getAssembly").mockResolvedValue({
-            rootAssembly: {
-                features: [],
-                instances: [{ id: "seed", type: "Assembly", ...seed }]
-            },
-            parts: [],
-            subAssemblies: []
-        });
-    }
-
-    const SAME_INSERT = {
-        documentId: TEST_ASSEMBLY_PATH.documentId,
-        elementId: TEST_ASSEMBLY_PATH.elementId,
-        documentVersion: TEST_ASSEMBLY_PATH.instanceId,
-        configuration: "default"
-    };
-
-    it("adds the new circles to a replicate of the same insert, inserting nothing", async () => {
-        await seedFastenable(true);
-        mockAssemblyWithSeed(SAME_INSERT);
-        const update = vi
-            .spyOn(AssemblyEndpoints, "updateAssemblyFeature")
-            .mockResolvedValue({ feature: { featureId: "rep1" } });
-        const addFeature = vi.spyOn(AssemblyEndpoints, "addAssemblyFeature");
-
-        const res = await fastenToCircles({
-            circles: CIRCLES,
-            replicate: true
-        });
-        expect(res.status).toBe(200);
-        expect(await res.json()).toEqual({ fastenedCount: 3 });
-
-        expect(AssemblyEndpoints.addElementToAssembly).not.toHaveBeenCalled();
-        expect(addFeature).not.toHaveBeenCalled();
-        expect(update.mock.calls[0][2]).toBe("rep1");
-        const targets = JSON.stringify(update.mock.calls[0][3]);
-        // JH1 was already matched, so only the other two are added.
-        expect(targets.match(/JH1/g)).toHaveLength(1);
-        expect(targets).toContain("JH2");
-        expect(targets).toContain("JH3");
-        expect(await loggedInsert()).toMatchObject({ fasten: true });
-    });
-
-    it("makes a new replicate when the existing one seeds another configuration", async () => {
-        await seedFastenable(true);
-        mockAssemblyWithSeed({ ...SAME_INSERT, configuration: "size=large" });
-        const update = vi.spyOn(AssemblyEndpoints, "updateAssemblyFeature");
-        const addFeature = vi
-            .spyOn(AssemblyEndpoints, "addAssemblyFeature")
-            .mockResolvedValue({ feature: { featureId: "f1" } });
-
-        const res = await fastenToCircles({
-            circles: CIRCLES,
-            replicate: true
-        });
-        expect(res.status).toBe(200);
-        expect(update).not.toHaveBeenCalled();
-        expect(addedFeatureTypes(addFeature)).toEqual(["mate", "replicate"]);
     });
 
     it("POST /toggle-replicate records the editor's decision", async () => {

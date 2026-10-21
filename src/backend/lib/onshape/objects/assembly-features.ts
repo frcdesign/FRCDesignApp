@@ -82,7 +82,7 @@ function edgeQueryString(edge: EdgeReference): string {
 }
 
 /** The edge itself, as a Replicate's matches name it. */
-export function edgeQuery(edge: EdgeReference): object {
+function edgeQuery(edge: EdgeReference): object {
     return {
         btType: "BTMIndividualQueryWithOccurrence-811",
         entityQuery: edgeQueryString(edge),
@@ -134,14 +134,9 @@ export function fastenMateToCircle(
     );
 }
 
-export const REPLICATE_BT_TYPE = "BTMAssemblyReplicateFeature-1351";
-
-/** How a feature names an instance, e.g. a Replicate's seed. */
-export const OCCURRENCE_QUERY_BT_TYPE = "BTMIndividualOccurrenceQuery-626";
-
 /**
  * Copies a fastened instance onto more circles, matching each by the seed's
- * mate. Onshape publishes no spec for Replicate, so these parameter ids are
+ * mate, so every circle must be the size of the seed's. Onshape publishes no spec for Replicate, so these parameter ids are
  * unverified.
  */
 export function replicateFeature(
@@ -151,12 +146,15 @@ export function replicateFeature(
     circles: EdgeReference[]
 ): object {
     return {
-        btType: REPLICATE_BT_TYPE,
+        btType: "BTMAssemblyReplicateFeature-1351",
         featureType: "replicate",
         name,
         parameters: [
             queryParameter("instances", [
-                { btType: OCCURRENCE_QUERY_BT_TYPE, path: instancePath }
+                {
+                    btType: "BTMIndividualOccurrenceQuery-626",
+                    path: instancePath
+                }
             ]),
             queryParameter("mate", [featureOccurrenceQuery(mateFeatureId)]),
             {

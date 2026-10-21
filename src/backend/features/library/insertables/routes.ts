@@ -47,11 +47,7 @@ import { encodeConfiguration } from "../../configurations/utils";
 import { fastenMate } from "../../../lib/onshape/objects/assembly-features";
 import { parseFastenInfo } from "../../load/parse-fasten";
 import { getFastenQuery } from "./fasten-query";
-import {
-    extendReplicate,
-    fastenToCircles,
-    getInstancePath
-} from "./fasten-circles";
+import { fastenToCircles, getInstancePath } from "./fasten-circles";
 import { getInsertLocationTransform } from "../../insert-location/parse";
 import { addBuildIssue, clearBuildIssue } from "../../build-checker/issues";
 import { markHintSeen } from "../../hints/store";
@@ -480,23 +476,6 @@ insertableRoutes.post(
 
         const replicate = body.replicate && row.supportsReplicate === true;
         const fastenedCount = body.circles.length;
-        if (
-            body.fasten &&
-            row.fastenInfo &&
-            replicate &&
-            fastenedCount > 0 &&
-            (await extendReplicate(
-                onshapeApi,
-                targetPath,
-                { sourcePath, configuration },
-                body.circles
-            ))
-        ) {
-            await track(true);
-            await markHintSeen(c, Hint.FASTENED_TO_CIRCLES);
-            return c.json({ fastenedCount } satisfies InsertOut);
-        }
-
         const insert = () =>
             addElementToAssembly(
                 onshapeApi,

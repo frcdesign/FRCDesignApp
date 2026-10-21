@@ -82,11 +82,12 @@ describe("FastenCirclesStatus", () => {
         ).toBeTruthy();
     });
 
-    it("offers to replicate once a circle is selected", async () => {
+    it("offers to replicate once there is more than one circle", async () => {
+        setOnshapeSelections([edge("JH1")]);
         await openCard(true);
         expect(screen.queryByLabelText("Replicate")).toBeNull();
 
-        act(() => setOnshapeSelections([edge("JH1")]));
+        act(() => setOnshapeSelections([edge("JH1"), edge("JH2")]));
         expect(screen.getByLabelText("Replicate")).toBeTruthy();
     });
 

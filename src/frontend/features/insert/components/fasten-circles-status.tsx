@@ -48,7 +48,7 @@ export function FastenCirclesStatus(
     const found = circles.length > 0;
     const isNew = !found && !hasFastened;
     const status = found ? Status.SUCCESS : Status.INFO;
-    const canReplicate = supportsReplicate && found;
+    const canReplicate = supportsReplicate && circles.length > 1;
 
     return (
         <AppHoverCard
@@ -96,7 +96,7 @@ export function FastenCirclesStatus(
                 {canReplicate && (
                     <InfoCheckbox
                         label="Replicate"
-                        info="Add the circles to a Replicate of this part, making one if the assembly has none, rather than inserting a part for each."
+                        info="Insert one part per circle size and replicate it onto the other circles that size, rather than inserting a part for each."
                         checked={replicate}
                         onChange={(checked) =>
                             updateUiState({ replicate: checked })
@@ -112,13 +112,11 @@ function describeFasten(count: number, replicate: boolean): string {
     if (count === 0) {
         return "Select circles in Onshape to fasten the part to them, or finish the fasten mate after inserting.";
     }
-    if (replicate) {
-        return count === 1
-            ? "The circle will be added to this part's Replicate, or the part fastened to it if there is none."
-            : "The circles will be added to this part's Replicate, or one part fastened and replicated onto the rest.";
+    if (count === 1) {
+        return "The part will be fastened to the selected circle.";
     }
-    return count === 1
-        ? "The part will be fastened to the selected circle."
+    return replicate
+        ? "One part will be fastened per circle size and replicated onto the other circles that size."
         : "A part will be inserted and fastened to each selected circle.";
 }
 

@@ -6,7 +6,6 @@ import { ElementType } from "../element-type";
 import { IDENTITY_TRANSFORM } from "../objects/transform";
 import {
     OnshapeAssemblyDefinition,
-    OnshapeAssemblyFeatureList,
     OnshapeBoundingBox,
     OnshapeCreatedFeature,
     OnshapeInsertInstancesResponse
@@ -134,28 +133,6 @@ export function addAssemblyFeature(
     assertWorkspace(assemblyPath);
     return client.post(
         `/assemblies${toElementApiPath(assemblyPath)}/features`,
-        { body: { feature } }
-    );
-}
-
-/** Every feature in the assembly's feature list, with its parameters. */
-export function getAssemblyFeatures(
-    client: OnshapeApi,
-    assemblyPath: ElementPath
-): Promise<OnshapeAssemblyFeatureList> {
-    return client.get(`/assemblies${toElementApiPath(assemblyPath)}/features`);
-}
-
-/** Replaces a feature's definition; `feature` is the whole feature, as read. */
-export function updateAssemblyFeature(
-    client: OnshapeApi,
-    assemblyPath: ElementPath,
-    featureId: string,
-    feature: object
-): Promise<OnshapeCreatedFeature> {
-    assertWorkspace(assemblyPath);
-    return client.post(
-        `/assemblies${toElementApiPath(assemblyPath)}/features/featureid/${featureId}`,
         { body: { feature } }
     );
 }
