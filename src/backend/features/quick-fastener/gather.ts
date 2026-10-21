@@ -18,7 +18,7 @@ import {
     withoutExcluded,
     type PartOccurrence
 } from "./assembly";
-import { FastenerKind, getStudioLocation } from "./catalog";
+import { FastenerKind, getStudioLocation } from "./studios";
 import { type SelectedEntity } from "./contract";
 import {
     type AssemblyCircle,

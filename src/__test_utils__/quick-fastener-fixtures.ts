@@ -8,6 +8,7 @@ import { Program } from "@backend/features/quick-fastener/catalog";
 import {
     DEFAULT_MAX_GAP,
     DEFAULT_MAX_LENGTH,
+    DEFAULT_MAX_THREAD_DEPTH,
     FastenerMode,
     type QuickFastenerIn,
     SelectedEntityType,
@@ -122,14 +123,16 @@ export const BODY: QuickFastenerIn = {
     options: {
         program: Program.FRC,
         mode: FastenerMode.AUTOMATIC,
-        vendor: "GENERIC",
-        size: "NO_10_32",
-        head: "BUTTON",
-        startWasher: false,
-        endWasher: false,
-        nutType: "NYLOCK",
+        screw: {
+            vendor: "GENERIC",
+            size: "NO_10_32",
+            head: "BUTTON",
+            length: "IN_0_5"
+        },
+        nut: { vendor: "GENERIC", size: "NO_10_32", type: "NYLOCK" },
         stop: StopCondition.MAX_LENGTH,
         maxLength: DEFAULT_MAX_LENGTH,
-        maxGap: DEFAULT_MAX_GAP
+        maxGap: DEFAULT_MAX_GAP,
+        maxThreadDepth: DEFAULT_MAX_THREAD_DEPTH
     }
 };

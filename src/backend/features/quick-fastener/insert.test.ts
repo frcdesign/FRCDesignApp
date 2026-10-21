@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { FastenerKind } from "./catalog";
+import { FastenerKind } from "./studios";
 import { HoleEnd, HoleStatus } from "./contract";
 import { partMate, placements, washerTopEdge } from "./insert";
 import { type HolePlan } from "./planner";
@@ -27,9 +27,9 @@ const PLAN: HolePlan = {
             head: "BUTTON",
             length: "IN_1"
         },
-        startWasher: WASHER,
+        screwWasher: WASHER,
         nut: { vendor: "GENERIC", size: "NO_10_32", type: "NYLOCK" },
-        endWasher: WASHER
+        nutWasher: WASHER
     },
     exit: {
         point: [0, 0, -0.5 * INCH],
@@ -47,12 +47,12 @@ describe("placements", () => {
             FastenerKind.WASHER,
             FastenerKind.NUT
         ]);
-        const [startWasher, screw, endWasher, nut] = parts;
-        expect(startWasher.seat).toEqual({
+        const [screwWasher, screw, nutWasher, nut] = parts;
+        expect(screwWasher.seat).toEqual({
             edge: { occurrencePath: ["plate"], edgeId: "E" }
         });
         expect(screw.seat).toEqual({ washer: 0 });
-        expect(endWasher.seat).toEqual({
+        expect(nutWasher.seat).toEqual({
             edge: { occurrencePath: ["bottom"], edgeId: "B" }
         });
         expect(nut.seat).toEqual({ washer: 2 });
@@ -64,13 +64,8 @@ describe("placements", () => {
         expect(screw.transform[10]).toBeCloseTo(1);
         expect(nut.transform[11]).toBeCloseTo(-0.549 * INCH);
         expect(nut.transform[10]).toBeCloseTo(-1);
-        expect(screw.configuration).toEqual({
-            vendor: "GENERIC",
-            size: "NO_10_32",
-            head: "BUTTON",
-            length: "IN_1",
-            washer: "false"
-        });
+        // What differs from the studio's defaults
+        expect(screw.configuration).toEqual({ length: "IN_1" });
     });
 
     it("seats parts on the hole's edges without washers", () => {
@@ -79,8 +74,8 @@ describe("placements", () => {
                 ...PLAN,
                 planned: {
                     ...PLAN.planned,
-                    startWasher: undefined,
-                    endWasher: undefined
+                    screwWasher: undefined,
+                    nutWasher: undefined
                 }
             }
         ]);

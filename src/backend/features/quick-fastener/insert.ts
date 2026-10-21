@@ -16,22 +16,20 @@ import {
     partStudioMateConnectorQuery
 } from "../../lib/onshape/objects/assembly-features";
 import { type ElementPath } from "../../lib/onshape/path";
+import { type Selection } from "../configurations/contract";
 import { encodeConfiguration } from "../configurations/utils";
-import {
-    FastenerKind,
-    type FastenerConfiguration,
-    getStudioLocation,
-    getWasher,
-    nutConfiguration,
-    screwConfiguration,
-    type StudioLocation,
-    type WasherChoice,
-    washerConfiguration
-} from "./catalog";
+import { getWasher } from "./catalog";
 import { HoleStatus } from "./contract";
 import { add, frameTransform, scale, type Vec3 } from "./geometry";
 import { type HolePlan, type MateEdge } from "./planner";
 import { scanStudio, type ScannedParts, type StudioSource } from "./scan";
+import {
+    FastenerKind,
+    getStudioLocation,
+    type PartChoice,
+    studioConfiguration,
+    type StudioLocation
+} from "./studios";
 
 /** What a part is fastened to: an edge in the assembly, or the top of a washer placed with it. */
 export type PartSeat = { edge: MateEdge } | { washer: number };
@@ -39,7 +37,8 @@ export type PartSeat = { edge: MateEdge } | { washer: number };
 /** One part to insert: from which studio, configured how, placed where, and fastened to what. */
 export interface PartPlacement {
     kind: FastenerKind;
-    configuration: FastenerConfiguration;
+    /** The studio's overrides of its defaults. */
+    configuration: Selection;
     transform: number[];
     seat: PartSeat;
     name: string;
@@ -48,7 +47,7 @@ export interface PartPlacement {
 /** A released studio's mate connector, by its version: a version's never changes. */
 const mateConnectorIds = kvStore<string>("quick-fastener-mate-connector");
 
-function thickness(washer: WasherChoice | undefined): number {
+function thickness(washer: PartChoice | undefined): number {
     return washer
         ? (getWasher(washer.vendor, washer.size, washer.type)?.thickness ?? 0)
         : 0;
@@ -71,11 +70,14 @@ export function placements(plans: HolePlan[]): PartPlacement[] {
             edgeId: circle.edgeId
         };
         let screwSeat: PartSeat = { edge: entry };
-        if (planned.startWasher) {
+        if (planned.screwWasher) {
             screwSeat = { washer: parts.length };
             parts.push({
                 kind: FastenerKind.WASHER,
-                configuration: washerConfiguration(planned.startWasher),
+                configuration: studioConfiguration(
+                    FastenerKind.WASHER,
+                    planned.screwWasher
+                ),
                 transform: frameTransform(circle.center, out),
                 seat: { edge: entry },
                 name: "Quick fastener washer"
@@ -83,9 +85,12 @@ export function placements(plans: HolePlan[]): PartPlacement[] {
         }
         parts.push({
             kind: FastenerKind.SCREW,
-            configuration: screwConfiguration(planned.screw),
+            configuration: studioConfiguration(
+                FastenerKind.SCREW,
+                planned.screw
+            ),
             transform: frameTransform(
-                add(circle.center, scale(out, thickness(planned.startWasher))),
+                add(circle.center, scale(out, thickness(planned.screwWasher))),
                 out
             ),
             seat: screwSeat,
@@ -96,11 +101,14 @@ export function placements(plans: HolePlan[]): PartPlacement[] {
         }
         const back = scale(out, -1);
         let nutSeat: PartSeat = { edge: exit.edge };
-        if (planned.endWasher) {
+        if (planned.nutWasher) {
             nutSeat = { washer: parts.length };
             parts.push({
                 kind: FastenerKind.WASHER,
-                configuration: washerConfiguration(planned.endWasher),
+                configuration: studioConfiguration(
+                    FastenerKind.WASHER,
+                    planned.nutWasher
+                ),
                 transform: frameTransform(exit.point, back),
                 seat: { edge: exit.edge },
                 name: "Quick fastener washer"
@@ -108,11 +116,11 @@ export function placements(plans: HolePlan[]): PartPlacement[] {
         }
         const nutAt: Vec3 = add(
             exit.point,
-            scale(back, thickness(planned.endWasher))
+            scale(back, thickness(planned.nutWasher))
         );
         parts.push({
             kind: FastenerKind.NUT,
-            configuration: nutConfiguration(planned.nut),
+            configuration: studioConfiguration(FastenerKind.NUT, planned.nut),
             transform: frameTransform(nutAt, back),
             seat: nutSeat,
             name: "Quick fastener nut"
@@ -206,9 +214,7 @@ export async function mateConnectorIdsFor(
 }
 
 /** The washer studio at its release, in one configuration: what its top edge is read from. */
-export function washerSource(
-    configuration: FastenerConfiguration
-): StudioSource {
+export function washerSource(configuration: Selection): StudioSource {
     const location = studioLocation(FastenerKind.WASHER);
     const encoded = encodeConfiguration(configuration);
     return {

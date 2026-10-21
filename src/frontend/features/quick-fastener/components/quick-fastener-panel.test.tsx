@@ -3,6 +3,7 @@ import { act, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {
     FastenerJobState,
+    FastenerMode,
     FastenerTaskAction,
     FastenerTaskState,
     SelectionMode
@@ -17,7 +18,7 @@ import {
     useOnshapeSelection,
     type OnshapeSelection
 } from "../../../lib/selection";
-import { defaultOptions } from "../options";
+import { defaultChoices } from "../options";
 import { useQuickFastenerStore } from "../store";
 import { QuickFastenerPanel } from "./quick-fastener-panel";
 
@@ -48,6 +49,11 @@ function select(...selections: OnshapeSelection[]) {
     act(() => useOnshapeSelection.getState().receive(selections));
 }
 
+async function choose(label: string, option: string) {
+    await userEvent.click(screen.getByLabelText(label));
+    await userEvent.click(await screen.findByRole("option", { name: option }));
+}
+
 const insertButton = () =>
     screen.getByRole<HTMLButtonElement>("button", { name: "Insert" });
 
@@ -55,8 +61,7 @@ beforeEach(() => {
     vi.spyOn(window.parent, "postMessage").mockImplementation(vi.fn());
     useOnshapeSelection.setState({ current: [], focused: undefined });
     useQuickFastenerStore.setState({
-        options: defaultOptions(),
-        selectionMode: SelectionMode.FACES,
+        ...defaultChoices(),
         targets: [],
         excluded: []
     });
@@ -65,17 +70,17 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks());
 
 describe("QuickFastenerPanel", () => {
-    it("skips holes only when fastening faces", async () => {
+    it("picks faces, with holes to skip, or locations alone", async () => {
         renderWithProviders(<QuickFastenerPanel assembly={ASSEMBLY} />);
         expect(screen.getByText("Holes to skip")).toBeTruthy();
 
-        await userEvent.click(screen.getByText("Locations"));
+        await choose("Select by", "Locations");
 
         expect(screen.queryByText("Holes to skip")).toBeNull();
         expect(screen.getByText("Locations", { selector: "p" })).toBeTruthy();
     });
 
-    it("inserts what's picked, then clears the picks", async () => {
+    it("inserts what's picked with the parts chosen, then clears the picks", async () => {
         renderWithProviders(<QuickFastenerPanel assembly={ASSEMBLY} />);
         expect(insertButton().disabled).toBe(true);
 
@@ -93,7 +98,11 @@ describe("QuickFastenerPanel", () => {
                         entityType: "FACE"
                     }
                 ],
-                excluded: []
+                excluded: [],
+                options: expect.objectContaining({
+                    mode: FastenerMode.AUTOMATIC,
+                    nut: { vendor: "GENERIC", size: "NO_10_32", type: "NYLOCK" }
+                })
             })
         });
         expect(useQuickFastenerStore.getState().targets).toEqual([]);
@@ -122,30 +131,51 @@ describe("QuickFastenerPanel", () => {
         expect(insertButton().disabled).toBe(true);
     });
 
-    it("offers a start washer only under a head that sits on the surface", () => {
-        useQuickFastenerStore.setState({
-            options: { ...defaultOptions(), head: "FLAT" }
-        });
+    it("shows a part's rows while it's ticked, and a nut washer only with a nut", async () => {
         renderWithProviders(<QuickFastenerPanel assembly={ASSEMBLY} />);
+        // The nut's Type; the screw washer isn't ticked
+        expect(screen.getAllByLabelText("Type")).toHaveLength(1);
 
+        await userEvent.click(
+            screen.getByRole("checkbox", { name: "Add screw washer" })
+        );
+        expect(screen.getAllByLabelText("Type")).toHaveLength(2);
+
+        await userEvent.click(
+            screen.getByRole("checkbox", { name: "Add nut" })
+        );
         expect(
-            screen.getByRole<HTMLInputElement>("checkbox", {
-                name: "Add start washer"
-            }).disabled
-        ).toBe(true);
+            screen.queryByRole("checkbox", { name: "Add nut washer" })
+        ).toBeNull();
     });
 
-    it("asks for the max gap once gaps are respected", async () => {
-        const user = userEvent.setup();
+    it("asks for the parts' vendors only under a vendor's screw", async () => {
+        renderWithProviders(<QuickFastenerPanel assembly={ASSEMBLY} />);
+        expect(screen.getAllByLabelText("Vendor")).toHaveLength(1);
+
+        await choose("Vendor", "McMaster-Carr");
+
+        // The nut's
+        expect(screen.getAllByLabelText("Vendor")).toHaveLength(2);
+    });
+
+    it("has no screw washer under a flat head", () => {
+        useQuickFastenerStore.setState({ screw: { head: "FLAT" } });
+        renderWithProviders(<QuickFastenerPanel assembly={ASSEMBLY} />);
+        expect(screen.queryByText("Add screw washer")).toBeNull();
+    });
+
+    it("stops an automatic screw by the condition chosen, and a preset one not at all", async () => {
         renderWithProviders(<QuickFastenerPanel assembly={ASSEMBLY} />);
         expect(screen.getByLabelText("Max length")).toBeTruthy();
+        expect(screen.getByLabelText("Max thread depth")).toBeTruthy();
 
-        await user.click(screen.getByLabelText("Stop condition"));
-        await user.click(
-            await screen.findByRole("option", { name: "Respect gaps" })
-        );
-
+        await choose("Stop condition", "First gap");
         expect(screen.queryByLabelText("Max length")).toBeNull();
         expect(screen.getByLabelText("Max gap to ignore")).toBeTruthy();
+
+        await choose("Length", "1/2 in.");
+        expect(useQuickFastenerStore.getState().mode).toBe(FastenerMode.PRESET);
+        expect(screen.queryByLabelText("Stop condition")).toBeNull();
     });
 });

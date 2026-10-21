@@ -6,9 +6,11 @@
  *     npm run sync:quick-fastener -- <ref>
  *     npm run sync:quick-fastener -- <ref> --from ../robot-code   # a local clone
  *
- * Writes `catalog.gen.ts` (what the client may import too) and
- * `hole-scan.gen.ts` (the FeatureScript the server evaluates), both under
- * `src/backend/features/quick-fastener/`, so a catalog change is a diff here.
+ * Writes, under `src/backend/features/quick-fastener/`, so a catalog change is
+ * a diff here: `studios.gen.ts` (each Part Studio's configuration, as Onshape
+ * answers it, and the countersunk heads: what the client imports), `catalog.gen.ts` (the parts' data,
+ * which the server plans with) and `hole-scan.gen.ts` (the FeatureScript the
+ * server evaluates).
  */
 import { execFileSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
@@ -40,6 +42,15 @@ function resolveCommit(ref, from) {
     }).trim();
 }
 
+/** A washer can't go under these, which sit in their countersinks. */
+function countersunkHeads(catalog) {
+    return catalog.heads
+        .filter((head) =>
+            Object.values(head.sizes).some((size) => size.countersunk)
+        )
+        .map((head) => head.id);
+}
+
 async function main() {
     const [ref, flag, from] = process.argv.slice(2);
     if (!ref || (flag && flag !== "--from") || (flag && !from)) {
@@ -48,7 +59,9 @@ async function main() {
         );
         process.exit(2);
     }
-    const { holeScan, ...catalog } = JSON.parse(await readManifest(ref, from));
+    const { holeScan, studios, ...catalog } = JSON.parse(
+        await readManifest(ref, from)
+    );
     const source = `${REPO}@${resolveCommit(ref, from)}`;
     const header = `/* Synced from ${source} (${MANIFEST}) by \`npm run sync:quick-fastener\` -- DO NOT EDIT */\n`;
 
@@ -56,13 +69,27 @@ async function main() {
         `${OUT}/catalog.gen.ts`,
         `${header}\nexport const CATALOG_SOURCE = ${JSON.stringify(source)};\n\nexport const CATALOG = ${JSON.stringify(catalog, null, 4)};\n`
     );
+    // One line: prettier would spread the configurations over thousands
+    writeFileSync(
+        `${OUT}/studios.gen.ts`,
+        `${header}\nexport const STUDIOS = ${JSON.stringify(studios)};\n\nexport const COUNTERSUNK_HEADS = ${JSON.stringify(countersunkHeads(catalog))};\n`
+    );
     writeFileSync(
         `${OUT}/hole-scan.gen.ts`,
         `${header}\nexport const HOLE_SCAN = ${JSON.stringify(holeScan)};\n`
     );
-    execFileSync("npx", ["prettier", "--write", `${OUT}/*.gen.ts`], {
-        stdio: "ignore"
-    });
+    execFileSync(
+        "npx",
+        [
+            "prettier",
+            "--write",
+            `${OUT}/catalog.gen.ts`,
+            `${OUT}/hole-scan.gen.ts`
+        ],
+        {
+            stdio: "ignore"
+        }
+    );
     console.log(`Synced Quick fastener's catalog from ${source}.`);
 }
 

@@ -6,7 +6,7 @@ import { getApp } from "../../lib/context";
 import { validate } from "../../lib/validate";
 import { requireSignInMiddleware } from "../auth/guards";
 import { getSessionId } from "../auth/session";
-import { FastenerKind, getCatalog, Program } from "./catalog";
+import { getCatalog, Program } from "./catalog";
 import {
     FastenerJobState,
     FastenerMode,
@@ -20,6 +20,12 @@ import {
 import { studioLocation } from "./insert";
 import { getJobStatus, reportJob } from "./jobs";
 import { DETERMINISTIC_ID } from "./scan";
+import {
+    FastenerKind,
+    isMade,
+    type PartChoice,
+    type ScrewChoice
+} from "./studios";
 
 export const quickFastenerRoutes = getApp();
 
@@ -29,6 +35,65 @@ const MAX_SELECTIONS = 200;
 /** Inches: the longest standard screw, and a gap wider than any worth ignoring. */
 const MAX_LENGTH_LIMIT = 10 * 0.0254;
 const MAX_GAP_LIMIT = 1 * 0.0254;
+
+const optionId = z.string().min(1);
+
+const screwSchema = z.object({
+    vendor: optionId,
+    size: optionId,
+    head: optionId,
+    length: optionId
+});
+
+/** A washer or nut. */
+const partSchema = z.object({
+    vendor: optionId,
+    size: optionId,
+    type: optionId
+});
+
+function isEveryPartMade(options: {
+    screw: ScrewChoice;
+    screwWasher?: PartChoice;
+    nut?: PartChoice;
+    nutWasher?: PartChoice;
+}): boolean {
+    const parts: [FastenerKind, PartChoice | undefined][] = [
+        [FastenerKind.WASHER, options.screwWasher],
+        [FastenerKind.NUT, options.nut],
+        [FastenerKind.WASHER, options.nutWasher]
+    ];
+    return (
+        isMade(FastenerKind.SCREW, options.screw) &&
+        parts.every(
+            ([kind, part]) =>
+                !part ||
+                (part.size === options.screw.size && isMade(kind, part))
+        )
+    );
+}
+
+const optionsSchema = z
+    .object({
+        program: z.enum(Program),
+        mode: z.enum(FastenerMode),
+        screw: screwSchema,
+        screwWasher: partSchema.optional(),
+        nut: partSchema.optional(),
+        nutWasher: partSchema.optional(),
+        stop: z.enum(StopCondition),
+        maxLength: z.number().positive().max(MAX_LENGTH_LIMIT),
+        maxGap: z.number().min(0).max(MAX_GAP_LIMIT),
+        maxThreadDepth: z.number().positive().max(MAX_LENGTH_LIMIT)
+    })
+    .refine(
+        isEveryPartMade,
+        "Every part must be one its vendor makes, in the screw's size."
+    )
+    .refine(
+        (options) => !options.nutWasher || options.nut,
+        "A nut washer goes under a nut."
+    );
 
 const entitySchema = z.object({
     occurrencePath: z.array(z.string().min(1)).min(1),
@@ -50,21 +115,7 @@ const insertBody = z
         selectionMode: z.enum(SelectionMode),
         targets: z.array(entitySchema).min(1).max(MAX_SELECTIONS),
         excluded: z.array(entitySchema).max(MAX_SELECTIONS).default([]),
-        options: z.object({
-            program: z.enum(Program),
-            mode: z.enum(FastenerMode),
-            vendor: z.string().min(1),
-            size: z.string().min(1),
-            head: z.string().min(1),
-            length: z.string().optional(),
-            startWasher: z.boolean(),
-            endWasher: z.boolean(),
-            washerType: z.string().optional(),
-            nutType: z.string().optional(),
-            stop: z.enum(StopCondition),
-            maxLength: z.number().positive().max(MAX_LENGTH_LIMIT),
-            maxGap: z.number().min(0).max(MAX_GAP_LIMIT)
-        })
+        options: optionsSchema
     })
     .refine(
         (body) =>

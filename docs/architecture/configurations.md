@@ -29,6 +29,8 @@ or the load that probes Onshape ([loading.md](./loading.md)); both consume it.
 | `src/backend/features/load/parse-configuration-records.ts`           | `decideIndexing`, probing each combination into a record               |
 | `src/backend/features/search/records.ts`                             | Records to search records, each with its thumbnail key                 |
 | `src/frontend/features/insert/components/configurations.tsx`         | The parameter panel in the insert menu                                 |
+| `src/frontend/components/parameter-input.tsx`                        | `ParameterInput` and `ParameterGrid`: each parameter's row, shared     |
+| `src/frontend/lib/unit-info.ts`                                      | `useUnitInfo`: the document's units, which quantities show in          |
 | `src/frontend/features/build-status/components/indexing-section.tsx` | Admin indexing controls                                                |
 
 ## Storage

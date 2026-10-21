@@ -8,7 +8,7 @@ import {
     type OnshapeAssemblyDefinition,
     type OnshapeAssemblyInstance
 } from "../../lib/onshape/types";
-import { type StudioLocation } from "./catalog";
+import { type StudioLocation } from "./studios";
 import { SelectedEntityType, type SelectedEntity } from "./contract";
 import { transformDirection, transformPoint, type Vec3 } from "./geometry";
 import {
