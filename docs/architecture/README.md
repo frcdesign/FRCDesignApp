@@ -27,15 +27,24 @@ Every document uses the same sections, in this order, leaving out any that
 would be empty:
 
 1. **Purpose** — what the area is for, and what it deliberately is not.
-2. **Code map** — the files that own it, each with one line on its role.
+2. **Code map** — the functions to start reading, as signatures in `ts`
+   blocks grouped under the file paths they live in, in the order the area's
+   main flow runs them. A one-line comment above a signature only where its
+   name and types don't say what it is for. Routes are listed as method and
+   path in a `text` block under their file.
 3. **Storage** — every table, KV store, R2 prefix and browser store it touches,
    with lifetimes.
 4. **Flows** — the paths through the code, as numbered steps. A diagram only
    where the ordering is the hard part.
-5. **Invariants** — rules that must hold, stated so a reviewer can check a diff
+5. **User-facing strings** — every string the area shows a user: titles,
+   labels, descriptions, placeholders, prompts sent to Onshape, toasts, tips,
+   and errors written for the user. A table of each string, word for word,
+   with where it appears. Strings built from values show the values as
+   `{name}`.
+6. **Invariants** — rules that must hold, stated so a reviewer can check a diff
    against them. This is the section drift is measured by.
-6. **Failure and recovery** — what goes wrong, and what puts it right.
-7. **Decisions** — choices that look wrong or have a tempting alternative, each
+7. **Failure and recovery** — what goes wrong, and what puts it right.
+8. **Decisions** — choices that look wrong or have a tempting alternative, each
    with its reason. New decisions are added here rather than in a separate log.
 
 Write the way `AGENTS.md` asks of comments: what is true now, plainly, without
