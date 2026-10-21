@@ -1,6 +1,6 @@
 /**
  * The assembly, as Quick fastener sees it: each part occurrence with where it
- * sits and the Part Studio edit it's from, and the scans' holes and circles
+ * sits and the Part Studio edit it's from, and the scans' holes and circular edges
  * moved into the assembly's coordinates. Pure.
  */
 import { type ElementPath } from "../../lib/onshape/path";
@@ -12,12 +12,12 @@ import { type StudioLocation } from "./catalog";
 import { SelectedEntityType, type SelectedEntity } from "./contract";
 import { transformDirection, transformPoint, type Vec3 } from "./geometry";
 import {
-    type AssemblyCircle,
+    type AssemblyCircularEdge,
     type AssemblyHole,
     type PlacedScrew
 } from "./planner";
 import {
-    type ScannedCircle,
+    type ScannedCircularEdge,
     type ScannedHole,
     type StudioSelection,
     type StudioSource
@@ -215,40 +215,47 @@ export function selectionsByStudio(
 }
 
 /**
- * The circles a studio's scan found for the entities picked in it, one per
+ * The circular edges a studio's scan found for the entities picked in it, one per
  * occurrence each was picked in, moved into the assembly.
  */
-export function toAssemblyCircles(
-    scanned: ScannedCircle[],
+export function toAssemblyCircularEdges(
+    scanned: ScannedCircularEdge[],
     entities: SelectedEntity[],
     occurrences: Map<string, PartOccurrence>
-): AssemblyCircle[] {
-    const circles: AssemblyCircle[] = [];
+): AssemblyCircularEdge[] {
+    const circularEdges: AssemblyCircularEdge[] = [];
     for (const entity of entities) {
         const occurrence = occurrences.get(pathKey(entity.occurrencePath));
         if (!occurrence) {
             continue;
         }
-        const matching = scanned.filter((circle) =>
+        const matching = scanned.filter((circularEdge) =>
             entity.entityType === SelectedEntityType.EDGE
-                ? circle.id === entity.entityId && circle.faceId === undefined
-                : circle.faceId === entity.entityId
+                ? circularEdge.id === entity.entityId &&
+                  circularEdge.faceId === undefined
+                : circularEdge.faceId === entity.entityId
         );
-        for (const circle of matching) {
-            if (circle.partId !== occurrence.partId) {
+        for (const circularEdge of matching) {
+            if (circularEdge.partId !== occurrence.partId) {
                 continue;
             }
-            circles.push({
-                key: `${pathKey(occurrence.path)}|${circle.id}`,
+            circularEdges.push({
+                key: `${pathKey(occurrence.path)}|${circularEdge.id}`,
                 occurrencePath: occurrence.path,
-                edgeId: circle.id,
-                center: transformPoint(occurrence.transform, circle.center),
-                normal: transformDirection(occurrence.transform, circle.normal),
-                radius: circle.radius
+                edgeId: circularEdge.id,
+                center: transformPoint(
+                    occurrence.transform,
+                    circularEdge.center
+                ),
+                normal: transformDirection(
+                    occurrence.transform,
+                    circularEdge.normal
+                ),
+                radius: circularEdge.radius
             });
         }
     }
-    return circles;
+    return circularEdges;
 }
 
 /** A part's holes, moved into the assembly. */
@@ -276,18 +283,18 @@ export function toAssemblyHoles(
     });
 }
 
-/** Circles, less those keyed in `excluded`, each once. */
+/** Circular edges, less those keyed in `excluded`, each once. */
 export function withoutExcluded(
-    circles: AssemblyCircle[],
-    excluded: AssemblyCircle[]
-): AssemblyCircle[] {
-    const left = new Set(excluded.map((circle) => circle.key));
+    circularEdges: AssemblyCircularEdge[],
+    excluded: AssemblyCircularEdge[]
+): AssemblyCircularEdge[] {
+    const left = new Set(excluded.map((circularEdge) => circularEdge.key));
     const seen = new Set<string>();
-    return circles.filter((circle) => {
-        if (left.has(circle.key) || seen.has(circle.key)) {
+    return circularEdges.filter((circularEdge) => {
+        if (left.has(circularEdge.key) || seen.has(circularEdge.key)) {
             return false;
         }
-        seen.add(circle.key);
+        seen.add(circularEdge.key);
         return true;
     });
 }

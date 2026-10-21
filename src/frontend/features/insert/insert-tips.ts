@@ -13,7 +13,7 @@ import { useFastenPicks } from "./fasten-picks";
 /** An insert this soon after opening didn't need anything from the menu. */
 export const QUICK_INSERT_WINDOW_MS = 1500;
 
-/** Somebody still fastening without circles after this many has a reason to. */
+/** Somebody still fastening without circular edges after this many has a reason to. */
 const MAX_FASTEN_CIRCULAR_EDGES_TIPS = 3;
 
 /** Half the preview's timeout, to catch someone mid-spinner. */
@@ -28,7 +28,7 @@ export function showQuickInsertTip(): void {
 }
 
 /**
- * For an insert and fasten with no circles selected, until somebody has
+ * For an insert and fasten with no circular edges selected, until somebody has
  * fastened to some. The caller skips it when it has shown another tip.
  */
 export function useFastenCircularEdgesTip(): (fasten: boolean) => void {

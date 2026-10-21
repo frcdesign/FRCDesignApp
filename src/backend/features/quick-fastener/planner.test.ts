@@ -10,7 +10,7 @@ import {
     StopCondition
 } from "./contract";
 import {
-    type AssemblyCircle,
+    type AssemblyCircularEdge,
     type AssemblyHole,
     planHoles,
     type PlacedScrew
@@ -18,7 +18,7 @@ import {
 
 const INCH = 0.0254;
 
-/** Holes along -Z from the origin, as plates stack under a circle on top: depths in inches. */
+/** Holes along -Z from the origin, as plates stack under a circular edge on top: depths in inches. */
 function hole(
     part: string,
     top: number,
@@ -44,7 +44,7 @@ function hole(
     };
 }
 
-const CIRCLE: AssemblyCircle = {
+const CIRCULAR_EDGE: AssemblyCircularEdge = {
     key: "top|edge",
     occurrencePath: ["top"],
     edgeId: "top-top",
@@ -76,7 +76,7 @@ function plan(
     extra: Partial<FastenerOptions> = {},
     placed: PlacedScrew[] = []
 ) {
-    const [only] = planHoles([CIRCLE], holes, placed, options(extra));
+    const [only] = planHoles([CIRCULAR_EDGE], holes, placed, options(extra));
     return only;
 }
 
@@ -243,7 +243,7 @@ describe("planHoles", () => {
         );
     });
 
-    it("refuses a circle with no hole under it, or too small a hole", () => {
+    it("refuses a circular edge with no hole under it, or too small a hole", () => {
         expect(plan([hole("other", 0.5, 1, 0.201)]).planned.status).toBe(
             HoleStatus.NO_FIT
         );

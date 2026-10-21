@@ -97,13 +97,13 @@ export enum HoleEnd {
 }
 
 export interface PlannedHole {
-    /** The circle's occurrence path and edge id, joined. */
+    /** The circular edge's occurrence path and edge id, joined. */
     key: string;
     status: HoleStatus;
     /** Why it can't be fastened, in words, when it can't. */
     reason?: string;
     end?: HoleEnd;
-    /** Metres, from the circle to where the stack ends. */
+    /** Metres, from the circular edge to where the stack ends. */
     depth?: number;
     screw?: ScrewChoice;
     startWasher?: WasherChoice;

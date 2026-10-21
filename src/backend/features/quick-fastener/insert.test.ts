@@ -8,7 +8,7 @@ const INCH = 0.0254;
 const WASHER = { vendor: "GENERIC", size: "NO_10_32", type: "OD_1_2_X_0_049" };
 
 const PLAN: HolePlan = {
-    circle: {
+    circularEdge: {
         key: "plate|E",
         occurrencePath: ["plate"],
         edgeId: "E",

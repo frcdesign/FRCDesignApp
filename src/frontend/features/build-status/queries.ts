@@ -161,7 +161,7 @@ export function useToggleInsertAndFastenMutation(insertableId: string) {
     });
 }
 
-/** Records whether an insertable may replicate onto several circles. */
+/** Records whether an insertable may replicate onto several circular edges. */
 export function useToggleReplicateMutation(insertableId: string) {
     const libraryId = useLibraryId();
     const key = useBuildStatusKey();

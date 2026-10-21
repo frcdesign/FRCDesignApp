@@ -503,10 +503,10 @@ describe("insertable routes", () => {
         entityType: "EDGE"
     }));
 
-    /** What `gather` finds for the picks: one circle per edge, with these radii in metres. */
+    /** What `gather` finds for the picks: each edge, with these radii in metres. */
     function mockGather(radii: Record<string, number>) {
         return vi.spyOn(Gather, "gather").mockResolvedValue({
-            circles: Object.entries(radii).map(([edgeId, radius]) => ({
+            circularEdges: Object.entries(radii).map(([edgeId, radius]) => ({
                 key: `base|${edgeId}`,
                 occurrencePath: ["base"],
                 edgeId,

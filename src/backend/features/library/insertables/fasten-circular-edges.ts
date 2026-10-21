@@ -12,7 +12,7 @@ import {
 } from "../../../lib/onshape/objects/assembly-features";
 import { type OnshapeInsertInstancesResponse } from "../../../lib/onshape/types";
 import { tolerantEquals } from "../../configurations/input-parser";
-import { type AssemblyCircle } from "../../quick-fastener/planner";
+import { type AssemblyCircularEdge } from "../../quick-fastener/planner";
 
 interface FastenToCircularEdgesArgs {
     name: string;
@@ -23,7 +23,7 @@ interface FastenToCircularEdgesArgs {
     /** The inserted part's own connector, in the instance at `instancePath`. */
     fastenQuery: (instancePath: string[]) => object;
     /** From `gather`, in the order picked. */
-    edges: AssemblyCircle[];
+    edges: AssemblyCircularEdge[];
     replicate: boolean;
 }
 
@@ -88,8 +88,10 @@ export function getInstancePath(
 }
 
 /** In the order picked, each diameter where it first appears. */
-export function groupByDiameter(edges: AssemblyCircle[]): AssemblyCircle[][] {
-    const groups: AssemblyCircle[][] = [];
+export function groupByDiameter(
+    edges: AssemblyCircularEdge[]
+): AssemblyCircularEdge[][] {
+    const groups: AssemblyCircularEdge[][] = [];
     for (const edge of edges) {
         const group = groups.find((candidate) =>
             tolerantEquals(
@@ -106,7 +108,7 @@ export function groupByDiameter(edges: AssemblyCircle[]): AssemblyCircle[][] {
     return groups;
 }
 
-function toEdgeReference(edge: AssemblyCircle): EdgeReference {
+function toEdgeReference(edge: AssemblyCircularEdge): EdgeReference {
     return { deterministicId: edge.edgeId, path: edge.occurrencePath };
 }
 

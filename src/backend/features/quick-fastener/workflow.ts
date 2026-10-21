@@ -128,7 +128,7 @@ async function runSteps(ctx: RunContext, request: QuickFastenerIn) {
                 request.excluded
             );
             return planHoles(
-                gathered.circles,
+                gathered.circularEdges,
                 gathered.holes,
                 gathered.placed,
                 request.options

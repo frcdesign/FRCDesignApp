@@ -497,7 +497,7 @@ insertableRoutes.post(
                       body.targets,
                       body.excluded
                   )
-              ).circles
+              ).circularEdges
             : [];
         if (fastensToPicks && edges.length === 0) {
             throw handledError(

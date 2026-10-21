@@ -1,8 +1,8 @@
 /**
  * Picks the fastener for each hole: pure, from the assembly's holes and the
- * circles picked, both in the assembly's coordinates.
+ * circular edges picked, both in the assembly's coordinates.
  *
- * A hole is followed from its circle into the parts, through every hole on the
+ * A hole is followed from its circular edge into the parts, through every hole on the
  * same axis, until it ends: in threads (tapped), at the bottom of a hole
  * (blind), or out the far side (through, where a nut goes). It stops at the
  * maximum length, or at the first gap wider than the maximum gap.
@@ -56,8 +56,8 @@ export interface AssemblyHole {
     edges: { id: string; at: number }[];
 }
 
-/** A circle picked to fasten, in the assembly. */
-export interface AssemblyCircle {
+/** A circular edge picked to fasten, in the assembly. */
+export interface AssemblyCircularEdge {
     key: string;
     occurrencePath: string[];
     edgeId: string;
@@ -82,12 +82,12 @@ export interface MateEdge {
 /** A hole's plan, with where its parts go. */
 export interface HolePlan {
     planned: PlannedHole;
-    circle: AssemblyCircle;
+    circularEdge: AssemblyCircularEdge;
     /** Where the nut seats, out the far side, and the edge it's fastened to. */
     exit?: { point: Vec3; edge: MateEdge };
 }
 
-/** A hole met along the axis, measured along it from the circle. */
+/** A hole met along the axis, measured along it from the circular edge. */
 interface Segment {
     hole: AssemblyHole;
     near: number;
@@ -111,27 +111,29 @@ const MIN_ENGAGEMENT_DIAMETERS = 1;
 const TAP_DRILL_RATIO = 0.03;
 
 export function planHoles(
-    circles: AssemblyCircle[],
+    circularEdges: AssemblyCircularEdge[],
     holes: AssemblyHole[],
     placed: PlacedScrew[],
     options: FastenerOptions
 ): HolePlan[] {
-    return circles.map((circle) => planHole(circle, holes, placed, options));
+    return circularEdges.map((circularEdge) =>
+        planHole(circularEdge, holes, placed, options)
+    );
 }
 
 function planHole(
-    circle: AssemblyCircle,
+    circularEdge: AssemblyCircularEdge,
     holes: AssemblyHole[],
     placed: PlacedScrew[],
     options: FastenerOptions
 ): HolePlan {
     const plan = (planned: Omit<PlannedHole, "key">): HolePlan => ({
-        planned: { key: circle.key, ...planned },
-        circle
+        planned: { key: circularEdge.key, ...planned },
+        circularEdge
     });
-    const into = scale(circle.normal, -1);
+    const into = scale(circularEdge.normal, -1);
 
-    if (placed.some((screw) => isInHole(screw, circle, into))) {
+    if (placed.some((screw) => isInHole(screw, circularEdge, into))) {
         return plan({ status: HoleStatus.FASTENED });
     }
 
@@ -144,7 +146,7 @@ function planHole(
         });
     }
 
-    const segments = alongAxis(circle, into, holes);
+    const segments = alongAxis(circularEdge, into, holes);
     // A flat head's countersink is above its first hole
     const allowance = head.countersunk ? head.height : 0;
     const first = segments.find(
@@ -155,7 +157,7 @@ function planHole(
     if (!first) {
         return plan({
             status: HoleStatus.NO_FIT,
-            reason: "No hole goes into the part from this circle."
+            reason: "No hole goes into the part from this circular edge."
         });
     }
     if (2 * first.hole.radius < size.majorDiameter - LINEAR_TOLERANCE) {
@@ -195,14 +197,14 @@ function planHole(
     }
     return {
         planned: {
-            key: circle.key,
+            key: circularEdge.key,
             ...planned,
             nut,
             ...(washers.end ? { endWasher: washers.end } : {})
         },
-        circle,
+        circularEdge,
         exit: {
-            point: add(circle.center, scale(into, stack.depth)),
+            point: add(circularEdge.center, scale(into, stack.depth)),
             edge: {
                 occurrencePath: stack.last.hole.occurrencePath,
                 edgeId: exitEdge.id
@@ -213,30 +215,32 @@ function planHole(
 
 function isInHole(
     screw: PlacedScrew,
-    circle: AssemblyCircle,
+    circularEdge: AssemblyCircularEdge,
     into: Vec3
 ): boolean {
     return (
         isParallel(screw.axis, into) &&
-        distanceToLine(screw.origin, circle.center, into) < LINEAR_TOLERANCE &&
-        // At the circle, or seated on a washer above it
-        Math.abs(dot(screw.origin, into) - dot(circle.center, into)) <=
+        distanceToLine(screw.origin, circularEdge.center, into) <
+            LINEAR_TOLERANCE &&
+        // At the circular edge, or seated on a washer above it
+        Math.abs(dot(screw.origin, into) - dot(circularEdge.center, into)) <=
             MAX_WASHER_THICKNESS + LINEAR_TOLERANCE
     );
 }
 
-/** Every hole on the circle's axis, as it lies along it, nearest first. */
+/** Every hole on the circular edge's axis, as it lies along it, nearest first. */
 function alongAxis(
-    circle: AssemblyCircle,
+    circularEdge: AssemblyCircularEdge,
     into: Vec3,
     holes: AssemblyHole[]
 ): Segment[] {
-    const t = (point: Vec3) => dot(point, into) - dot(circle.center, into);
+    const t = (point: Vec3) =>
+        dot(point, into) - dot(circularEdge.center, into);
     const segments: Segment[] = [];
     for (const hole of holes) {
         if (
             !isParallel(hole.direction, into) ||
-            distanceToLine(circle.center, hole.origin, hole.direction) >=
+            distanceToLine(circularEdge.center, hole.origin, hole.direction) >=
                 LINEAR_TOLERANCE
         ) {
             continue;
@@ -290,7 +294,7 @@ function stopLimits(options: FastenerOptions): {
 
 interface Stack {
     end: HoleEnd;
-    /** From the circle to where it ends: the far side, or the bottom of the hole. */
+    /** From the circular edge to where it ends: the far side, or the bottom of the hole. */
     depth: number;
     /** Where threads (or the blind hole the screw ends in) start. */
     engagementStart: number;
@@ -411,7 +415,7 @@ function pickScrew(
     if (made.length === 0) {
         return "The vendor doesn't make this head in this size.";
     }
-    // Where its tip is, for each length: a flat head's top is flush with the circle
+    // Where its tip is, for each length: a flat head's top is flush with the circular edge
     const tip = (length: number) => length - washers.startThickness;
     const lengths =
         options.mode === FastenerMode.PRESET

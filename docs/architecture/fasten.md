@@ -83,7 +83,9 @@ async function fastenToCircularEdges(
     targetPath: ElementPath,
     args: FastenToCircularEdgesArgs
 ): Promise<void>;
-function groupByDiameter(edges: AssemblyCircle[]): AssemblyCircle[][];
+function groupByDiameter(
+    edges: AssemblyCircularEdge[]
+): AssemblyCircularEdge[][];
 ```
 
 `src/backend/lib/onshape/objects/assembly-features.ts` and
@@ -163,7 +165,7 @@ function checkInsertableSettings(input: InsertableSettingsInput): BuildIssue[];
    `isConsistentPick` refuses edges as faces, or faces as edges.
 2. With picks, the route calls `gather` first, which scans each Part Studio
    holding a pick (cached) and answers the picked circular edges in the
-   assembly with their radii: each picked edge that is a circle, or every
+   assembly with their radii: each picked edge that is circular, or every
    circular edge of each picked face, less the skipped holes. None found
    answers 400 and inserts nothing.
 3. It inserts the part at the insert location, then:
@@ -254,7 +256,7 @@ function checkInsertableSettings(input: InsertableSettingsInput): BuildIssue[];
   the assembly for the user to fix.
 - **The scan fails in a Part Studio**: the request errors and nothing is
   inserted; see [quick-fastener.md](./quick-fastener.md).
-- **A pick isn't circular**: the scan finds no circle for it and it is left
+- **A pick isn't circular**: the scan finds no circular edge for it and it is left
   out; with nothing left, the request answers 400.
 
 ## Decisions
@@ -262,8 +264,8 @@ function checkInsertableSettings(input: InsertableSettingsInput): BuildIssue[];
 - **One way to pick, shared with Quick fastener.** The app listens to
   Onshape's selection and lets a focused query list take what's new, rather
   than holding a `requestSelection` open, which a highlight cancels. Onshape
-  doesn't limit picks to circles; the list refuses other kinds, and the scan
-  drops edges that aren't circles.
+  doesn't limit picks to circular edges; the list refuses other kinds, and the scan
+  drops edges that aren't circular.
 - **Preselections seed the list.** What was selected before the menu opened is
   taken as the starting picks, and the list stays focused, so selecting in
   Onshape and then inserting needs no click in the panel.
@@ -274,7 +276,7 @@ function checkInsertableSettings(input: InsertableSettingsInput): BuildIssue[];
 - **Always a new Replicate.** An insert never edits a Replicate already in the
   assembly; adding edges to an existing one is the user's to do in Onshape.
 - **Radii from the scan.** Onshape's selection messages carry no geometry, so
-  the circles and their radii come from Quick fastener's hole scan, which also
+  the circular edges and their radii come from Quick fastener's hole scan, which also
   turns a face into its holes.
 - **Replicate is the editor's call.** Insert and fasten suits any part with a
   mate connector, including ones whose orientation matters, which a Replicate

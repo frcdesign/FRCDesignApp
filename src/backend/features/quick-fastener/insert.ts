@@ -56,19 +56,19 @@ function thickness(washer: WasherChoice | undefined): number {
 
 /**
  * Where every part of each ready hole goes. A screw and the washer under it
- * sit on the circle, pointing out of the part; a nut and its washer on the far
+ * sit on the circular edge, pointing out of the part; a nut and its washer on the far
  * side, pointing the other way, each part on top of the one under it.
  */
 export function placements(plans: HolePlan[]): PartPlacement[] {
     const parts: PartPlacement[] = [];
-    for (const { planned, circle, exit } of plans) {
+    for (const { planned, circularEdge, exit } of plans) {
         if (planned.status !== HoleStatus.READY || !planned.screw) {
             continue;
         }
-        const out = circle.normal;
+        const out = circularEdge.normal;
         const entry: MateEdge = {
-            occurrencePath: circle.occurrencePath,
-            edgeId: circle.edgeId
+            occurrencePath: circularEdge.occurrencePath,
+            edgeId: circularEdge.edgeId
         };
         let screwSeat: PartSeat = { edge: entry };
         if (planned.startWasher) {
@@ -76,7 +76,7 @@ export function placements(plans: HolePlan[]): PartPlacement[] {
             parts.push({
                 kind: FastenerKind.WASHER,
                 configuration: washerConfiguration(planned.startWasher),
-                transform: frameTransform(circle.center, out),
+                transform: frameTransform(circularEdge.center, out),
                 seat: { edge: entry },
                 name: "Quick fastener washer"
             });
@@ -85,7 +85,10 @@ export function placements(plans: HolePlan[]): PartPlacement[] {
             kind: FastenerKind.SCREW,
             configuration: screwConfiguration(planned.screw),
             transform: frameTransform(
-                add(circle.center, scale(out, thickness(planned.startWasher))),
+                add(
+                    circularEdge.center,
+                    scale(out, thickness(planned.startWasher))
+                ),
                 out
             ),
             seat: screwSeat,
@@ -223,7 +226,7 @@ export function washerSource(
     };
 }
 
-/** A washer's top edge: the circle of its hole farthest up its Z axis, where what sits on it seats. */
+/** A washer's top edge: the circular edge of its hole farthest up its Z axis, where what sits on it seats. */
 export function washerTopEdge(parts: ScannedParts): string | undefined {
     const edges = Object.values(parts).flatMap((part) =>
         part.holes.flatMap((hole) =>

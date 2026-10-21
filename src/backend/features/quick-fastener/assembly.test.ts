@@ -5,7 +5,7 @@ import {
     partOccurrences,
     placedScrews,
     selectionsByStudio,
-    toAssemblyCircles,
+    toAssemblyCircularEdges,
     toAssemblyHoles,
     withoutExcluded
 } from "./assembly";
@@ -97,7 +97,7 @@ describe("partOccurrences", () => {
         });
     });
 
-    it("moves holes and picked circles into the assembly", () => {
+    it("moves holes and picked circular edges into the assembly", () => {
         const [hole] = toAssemblyHoles(
             [
                 {
@@ -132,7 +132,7 @@ describe("partOccurrences", () => {
                 ["doc|e|emv|studio|default", { edges: ["E1"], faces: [] }]
             ])
         );
-        const [circle] = toAssemblyCircles(
+        const [circularEdge] = toAssemblyCircularEdges(
             [
                 {
                     id: "E1",
@@ -145,8 +145,8 @@ describe("partOccurrences", () => {
             picked,
             byPath
         );
-        expect(circle.key).toBe("plate|E1");
-        expect(circle.center).toEqual([0, 0, 1]);
+        expect(circularEdge.key).toBe("plate|E1");
+        expect(circularEdge.center).toEqual([0, 0, 1]);
     });
 
     it("finds the screws already placed", () => {
@@ -160,8 +160,8 @@ describe("partOccurrences", () => {
 });
 
 describe("withoutExcluded", () => {
-    it("drops excluded circles and duplicates", () => {
-        const circle = (key: string) => ({
+    it("drops excluded circular edges and duplicates", () => {
+        const circularEdge = (key: string) => ({
             key,
             occurrencePath: [],
             edgeId: key,
@@ -171,8 +171,8 @@ describe("withoutExcluded", () => {
         });
         expect(
             withoutExcluded(
-                [circle("a"), circle("b"), circle("a")],
-                [circle("b")]
+                [circularEdge("a"), circularEdge("b"), circularEdge("a")],
+                [circularEdge("b")]
             ).map((each) => each.key)
         ).toEqual(["a"]);
     });

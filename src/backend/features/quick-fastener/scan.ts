@@ -30,7 +30,7 @@ const holeSchema = z.object({
     edges: z.array(z.object({ id: z.string(), at: z.number() }))
 });
 
-const circleSchema = z.object({
+const circularEdgeSchema = z.object({
     id: z.string(),
     partId: z.string(),
     center: vec3,
@@ -46,12 +46,13 @@ const partsSchema = z.record(
 
 const scanSchema = z.object({
     parts: partsSchema,
-    circles: z.array(circleSchema)
+    // The scan's own key, from robot-code's FeatureScript.
+    circles: z.array(circularEdgeSchema)
 });
 
 /** In the Part Studio's coordinates, in metres. */
 export type ScannedHole = z.infer<typeof holeSchema>;
-export type ScannedCircle = z.infer<typeof circleSchema>;
+export type ScannedCircularEdge = z.infer<typeof circularEdgeSchema>;
 export type ScannedParts = z.infer<typeof partsSchema>;
 export type StudioScan = z.infer<typeof scanSchema>;
 

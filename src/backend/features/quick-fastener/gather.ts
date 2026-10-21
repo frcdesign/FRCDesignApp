@@ -13,7 +13,7 @@ import {
     pathKey,
     placedScrews,
     selectionsByStudio,
-    toAssemblyCircles,
+    toAssemblyCircularEdges,
     toAssemblyHoles,
     withoutExcluded,
     type PartOccurrence
@@ -21,7 +21,7 @@ import {
 import { FastenerKind, getStudioLocation } from "./catalog";
 import { type SelectedEntity } from "./contract";
 import {
-    type AssemblyCircle,
+    type AssemblyCircularEdge,
     type AssemblyHole,
     type PlacedScrew
 } from "./planner";
@@ -31,7 +31,7 @@ import { scanStudio, type StudioScan } from "./scan";
 const SCAN_CONCURRENCY = 6;
 
 export interface Gathered {
-    circles: AssemblyCircle[];
+    circularEdges: AssemblyCircularEdge[];
     holes: AssemblyHole[];
     placed: PlacedScrew[];
 }
@@ -126,9 +126,9 @@ export async function gather(
             occurrence
         )
     );
-    const circlesOf = (entities: SelectedEntity[]) =>
+    const circularEdgesOf = (entities: SelectedEntity[]) =>
         [...selections.keys()].flatMap((key) =>
-            toAssemblyCircles(
+            toAssemblyCircularEdges(
                 scans.get(key)?.circles ?? [],
                 entities.filter(
                     (entity) =>
@@ -140,7 +140,10 @@ export async function gather(
         );
 
     return {
-        circles: withoutExcluded(circlesOf(targets), circlesOf(excluded)),
+        circularEdges: withoutExcluded(
+            circularEdgesOf(targets),
+            circularEdgesOf(excluded)
+        ),
         holes,
         placed: placedScrews(occurrences, getStudioLocation(FastenerKind.SCREW))
     };
