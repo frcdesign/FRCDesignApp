@@ -1,7 +1,8 @@
 /**
  * Copies Quick fastener's catalog in from robot-code, pinned to a ref (a
  * release tag, or a commit): the manifest `fs gen` writes from
- * `featurescripts/quickFastener/quickFastenerTables.py` there.
+ * `featurescripts/fasteners/fastenerTables.py` there: FRCDesign's library
+ * fasteners, which Quick fastener inserts.
  *
  *     npm run sync:quick-fastener -- <ref>
  *     npm run sync:quick-fastener -- <ref> --from ../robot-code   # a local clone
@@ -16,7 +17,7 @@ import { execFileSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
 
 const REPO = "robot-education/robot-code";
-const MANIFEST = "featurescripts/quickFastener/quickFastener.gen.json";
+const MANIFEST = "featurescripts/fasteners/fasteners.gen.json";
 const OUT = "src/backend/features/quick-fastener";
 
 async function readManifest(ref, from) {

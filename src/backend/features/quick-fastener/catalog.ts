@@ -1,5 +1,5 @@
 /**
- * Quick fastener's parts, as robot-code's `quickFastenerTables.py` defines them
+ * Quick fastener's parts, as robot-code's `fastenerTables.py` defines them
  * (synced into `catalog.gen.ts`): what the planner sizes them by. The Part
  * Studios they're inserted from are in `studios.ts`. Lengths are metres.
  */

@@ -11,6 +11,12 @@ it.
 It inserts only standard fasteners: the lengths and parts the catalog says each
 vendor makes. It has no FTC fasteners yet.
 
+Its screws, washers and nuts are FRCDesign's library fasteners: the same Part
+Studios someone inserts from the library's Fasteners group. Each studio's
+feature takes flat enums with no conditions, each wired to a configuration
+input of the same options, and the configuration's visibility conditions show
+only what's made.
+
 ## Code map
 
 | Path                                                                        | Role                                                                                          |
@@ -47,7 +53,7 @@ vendor makes. It has no FTC fasteners yet.
 | `src/frontend/routes/app/quick-fastener.tsx`                                | The route; a notice outside an assembly                                                       |
 
 robot-code (`robot-education/robot-code`) owns everything the catalog says:
-`featurescripts/quickFastener/quickFastenerTables.py` generates the features'
+`featurescripts/fasteners/fastenerTables.py` generates the features'
 FeatureScript data, the Part Studios' configurations, and the manifest synced
 here, and `quickFastenerHoleScan.fs` is the hole scan. It releases the features
 to FRCDesign's Fasteners library document, whose Part Studios use them
@@ -162,7 +168,7 @@ skipped.
        every circular edge of a face), into the assembly; drops the skipped
        ones.
     5. `planHoles`, for each circle, with the chosen screw's size and head:
-        1. A Quick fastener screw already on its axis, seated there:
+        1. A library screw already on its axis, seated there:
            **fastened**.
         2. Every hole on the axis, nearest first. The first must start at the
            circle (or within a flat head's countersink of it), and be at least

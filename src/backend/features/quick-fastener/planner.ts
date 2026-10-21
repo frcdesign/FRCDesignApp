@@ -64,7 +64,7 @@ export interface AssemblyCircle {
     radius: number;
 }
 
-/** A Quick fastener screw already in the assembly: its origin and Z axis. */
+/** A library screw already in the assembly, from Quick fastener or not: its origin and Z axis. */
 export interface PlacedScrew {
     origin: Vec3;
     axis: Vec3;

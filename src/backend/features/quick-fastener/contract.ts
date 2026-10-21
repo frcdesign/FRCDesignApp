@@ -74,7 +74,7 @@ export interface QuickFastenerIn {
 
 export enum HoleStatus {
     READY = "ready",
-    /** A Quick fastener screw is already in it. */
+    /** A library screw is already in it. */
     FASTENED = "fastened",
     /** Nothing in the catalog fits, or reaches far enough within the maximum length. */
     NO_FIT = "no-fit"
