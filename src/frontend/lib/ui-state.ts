@@ -34,6 +34,10 @@ interface UiState {
     vendorFilters: Partial<Record<LibraryId, Vendor[]>>;
     searchQuery: string;
     fasten: boolean;
+    /** Fastening to several circles replicates one instance onto the rest. */
+    replicate: boolean;
+    /** How many times an insert and fasten has offered the circles tip; see `insert-tips`. */
+    fastenCirclesTipCount: number;
     /** The access level to view the app as; absent means the granted default. */
     accessLevel?: AccessLevel;
     /** So a relaunch can reopen the insert menu. */
@@ -54,7 +58,9 @@ export const useUiState = create<UiState>()(
             quickActionTipCount: 0,
             vendorFilters: {},
             searchQuery: "",
-            fasten: true
+            fasten: true,
+            replicate: false,
+            fastenCirclesTipCount: 0
         }),
         { name: "uiState" }
     )

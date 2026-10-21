@@ -487,6 +487,135 @@ describe("insertable routes", () => {
         expect(await loggedInsert()).toMatchObject({ fasten: false });
     });
 
+    function fastenToCircles(body: Record<string, unknown>) {
+        return createTestApp().request(
+            `/api/add-to-assembly/insertable/${TEST_ASSEMBLY_ID}`,
+            jsonRequest("POST", { targetPath, fasten: true, ...body }),
+            env
+        );
+    }
+
+    const CIRCLES = [
+        { selectionId: "JH1", occurrencePath: ["base"] },
+        { selectionId: "JH2", occurrencePath: ["base"] },
+        { selectionId: "JH3", occurrencePath: [] }
+    ];
+
+    /** Feature types in the order they were added. */
+    function addedFeatureTypes(spy: { mock: { calls: unknown[][] } }) {
+        return spy.mock.calls.map(
+            (call) => (call[2] as { featureType: string }).featureType
+        );
+    }
+
+    it("fastens one inserted instance to each circle", async () => {
+        await seedFastenable();
+        const addFeature = vi
+            .spyOn(AssemblyEndpoints, "addAssemblyFeature")
+            .mockResolvedValue({ feature: { featureId: "f1" } });
+
+        const res = await fastenToCircles({ circles: CIRCLES });
+        expect(res.status).toBe(200);
+        const body: InsertOut = await res.json();
+        expect(body).toEqual({ fastenedCount: 3 });
+
+        expect(AssemblyEndpoints.addElementToAssembly).toHaveBeenCalledTimes(3);
+        expect(addedFeatureTypes(addFeature)).toEqual(["mate", "mate", "mate"]);
+
+        const mate = JSON.stringify(addFeature.mock.calls[1][2]);
+        expect(mate).toContain('"implicit":true');
+        expect(mate).toContain('"inferenceType":"CENTER"');
+        expect(mate).toContain('qTransient(\\"JH2\\")');
+        expect(mate).toContain('"path":["base"]');
+        expect(await loggedInsert()).toMatchObject({ fasten: true });
+    });
+
+    it("replicates one instance onto the other circles", async () => {
+        await seedFastenable();
+        const addFeature = vi
+            .spyOn(AssemblyEndpoints, "addAssemblyFeature")
+            .mockResolvedValue({
+                feature: { featureId: "f1" },
+                featureState: { featureStatus: "OK" }
+            });
+
+        const res = await fastenToCircles({
+            circles: CIRCLES,
+            replicate: true
+        });
+        expect(res.status).toBe(200);
+
+        expect(AssemblyEndpoints.addElementToAssembly).toHaveBeenCalledTimes(1);
+        expect(addedFeatureTypes(addFeature)).toEqual(["mate", "replicate"]);
+        const replicate = JSON.stringify(addFeature.mock.calls[1][2]);
+        expect(replicate).toContain("JH3");
+        expect(replicate).not.toContain("JH1");
+    });
+
+    it("removes a replicate that fails, and fastens an instance per circle", async () => {
+        await seedFastenable();
+        const addFeature = vi
+            .spyOn(AssemblyEndpoints, "addAssemblyFeature")
+            .mockResolvedValueOnce({ feature: { featureId: "mate" } })
+            .mockResolvedValueOnce({
+                feature: { featureId: "broken" },
+                featureState: { featureStatus: "ERROR" }
+            })
+            .mockResolvedValue({ feature: { featureId: "f" } });
+        const deleteFeature = vi
+            .spyOn(AssemblyEndpoints, "deleteAssemblyFeature")
+            .mockResolvedValue();
+
+        const res = await fastenToCircles({
+            circles: CIRCLES,
+            replicate: true
+        });
+        expect(res.status).toBe(200);
+
+        expect(deleteFeature).toHaveBeenCalledWith(
+            MOCK_ONSHAPE_API,
+            targetPath,
+            "broken"
+        );
+        expect(addedFeatureTypes(addFeature)).toEqual([
+            "mate",
+            "replicate",
+            "mate",
+            "mate"
+        ]);
+        expect(AssemblyEndpoints.addElementToAssembly).toHaveBeenCalledTimes(3);
+    });
+
+    it("fastens an instance per circle when Onshape refuses the replicate", async () => {
+        await seedFastenable();
+        const addFeature = vi
+            .spyOn(AssemblyEndpoints, "addAssemblyFeature")
+            .mockResolvedValueOnce({ feature: { featureId: "mate" } })
+            .mockRejectedValueOnce(new Error("bad feature"))
+            .mockResolvedValue({ feature: { featureId: "f" } });
+
+        const res = await fastenToCircles({
+            circles: CIRCLES,
+            replicate: true
+        });
+        expect(res.status).toBe(200);
+        expect(addedFeatureTypes(addFeature)).toEqual([
+            "mate",
+            "replicate",
+            "mate",
+            "mate"
+        ]);
+    });
+
+    it("refuses a selection id that would break the query", async () => {
+        await seedFastenable();
+        const res = await fastenToCircles({
+            circles: [{ selectionId: 'JH1");', occurrencePath: [] }]
+        });
+        expect(res.status).toBe(400);
+        expect(AssemblyEndpoints.addElementToAssembly).not.toHaveBeenCalled();
+    });
+
     it("POST /index-configurations indexes and forces the flag on", async () => {
         await seedPartStudio(db);
         vi.spyOn(PartsEndpoints, "getParts").mockResolvedValue([

@@ -14,6 +14,7 @@ import { useAppModal } from "../../../components/open-app-modal";
 import {
     QUICK_INSERT_WINDOW_MS,
     showQuickInsertTip,
+    useFastenCirclesTip,
     useSignInPreviewTip,
     useThumbnailWaitTip
 } from "../insert-tips";
@@ -42,6 +43,7 @@ import { useTargetElementType } from "../insert-hooks";
 import { InsertSource } from "@backend/features/analytics/usage";
 import { InsertLocationStatus } from "../../insert-location/components/insert-location-status";
 import { InfoCheckbox } from "../../../components/info-checkbox";
+import { FastenCirclesStatus } from "./fasten-circles-status";
 
 interface InsertMenuContentProps {
     insertable: InsertableOut;
@@ -253,6 +255,7 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
         source
     });
     const fasten = useUiState((state) => state.fasten);
+    const showFastenCirclesTip = useFastenCirclesTip();
 
     const isLoadingConfiguration = useIsFetchingConfiguration(
         insertable.id,
@@ -266,9 +269,18 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
         insertMutation.mutate(canFasten && fasten);
         if (canShowQuickInsertTip) {
             showQuickInsertTip();
+        } else {
+            showFastenCirclesTip(canFasten && fasten);
         }
         onInsert();
-    }, [insertMutation, onInsert, canFasten, fasten, canShowQuickInsertTip]);
+    }, [
+        insertMutation,
+        onInsert,
+        canFasten,
+        fasten,
+        canShowQuickInsertTip,
+        showFastenCirclesTip
+    ]);
 
     if (!targetElementType) {
         return null;
@@ -277,6 +289,7 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
     return (
         <Group gap="sm" align="center">
             <InsertLocationStatus />
+            {canFasten && fasten && <FastenCirclesStatus />}
             {canFasten && (
                 <InfoCheckbox
                     label="Fasten"

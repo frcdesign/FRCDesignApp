@@ -18,7 +18,7 @@ import {
 } from "../../auth/guards";
 import { insertables, configurations } from "../../../db/schema";
 import { bumpLibraryVersion, rebuildSearchDb } from "../db";
-import { type InsertOut } from "../contract";
+import { type InsertOut, MAX_FASTEN_CIRCLES } from "../contract";
 import type { LibraryId } from "../library-id";
 import { toElementPath, INSTANCE_TYPES } from "../../../lib/onshape/path";
 import {
@@ -47,8 +47,11 @@ import { encodeConfiguration } from "../../configurations/utils";
 import { fastenMate } from "../../../lib/onshape/objects/assembly-features";
 import { parseFastenInfo } from "../../load/parse-fasten";
 import { getFastenQuery } from "./fasten-query";
+import { fastenToCircles, getInstancePath } from "./fasten-circles";
 import { getInsertLocationTransform } from "../../insert-location/parse";
 import { addBuildIssue, clearBuildIssue } from "../../build-checker/issues";
+import { markHintSeen } from "../../hints/store";
+import { Hint } from "../../hints/contract";
 
 export const insertableRoutes = getApp();
 
@@ -270,10 +273,20 @@ const addToPartStudioBody = insertBody.extend({
     useMateConnector: z.boolean().default(false)
 });
 
+const circleSchema = z.object({
+    // Spliced into a FeatureScript query string.
+    selectionId: z.string().regex(/^[^"\\]+$/),
+    occurrencePath: z.array(z.string()).default([])
+});
+
 const addToAssemblyBody = insertBody.extend({
     fasten: z.boolean().default(false),
     /** The insert location marker's instance id, when the assembly has one. */
-    insertLocationId: z.string().optional()
+    insertLocationId: z.string().optional(),
+    /** Where to fasten; none leaves the mate open for the caller to finish. */
+    circles: z.array(circleSchema).max(MAX_FASTEN_CIRCLES).default([]),
+    /** With several circles, one instance replicated onto the rest. */
+    replicate: z.boolean().default(false)
 });
 
 /** POST /api/add-to-part-studio/insertable/:insertableId */
@@ -420,17 +433,19 @@ insertableRoutes.post(
               )
             : undefined;
 
-        const result = await addElementToAssembly(
-            onshapeApi,
-            targetPath,
-            sourcePath,
-            row.elementType,
-            {
-                configuration,
-                partTypes,
-                transform
-            }
-        );
+        const insert = () =>
+            addElementToAssembly(
+                onshapeApi,
+                targetPath,
+                sourcePath,
+                row.elementType,
+                {
+                    configuration,
+                    partTypes,
+                    transform
+                }
+            );
+        const result = await insert();
 
         // Every path below records the insert exactly once.
         const track = (fasten: boolean) =>
@@ -461,25 +476,37 @@ insertableRoutes.post(
             );
         }
 
-        const instancePath: string[] =
-            result.insertInstanceResponses?.[0]?.occurrences?.[0]?.path ?? [];
-
-        const mate = fastenMate(row.name, [
-            getFastenQuery(row.elementType, instancePath, fastenInfo)
-        ]);
+        const fastenQuery = (instancePath: string[]) =>
+            getFastenQuery(row.elementType, instancePath, fastenInfo);
 
         try {
+            if (body.circles.length > 0) {
+                await fastenToCircles(onshapeApi, targetPath, {
+                    name: row.name,
+                    inserted: result,
+                    insert,
+                    fastenQuery,
+                    circles: body.circles,
+                    replicate: body.replicate
+                });
+                await track(true);
+                await markHintSeen(c, Hint.FASTENED_TO_CIRCLES);
+                return c.json({
+                    fastenedCount: body.circles.length
+                } satisfies InsertOut);
+            }
+
             const fastenResult = await addAssemblyFeature(
                 onshapeApi,
                 targetPath,
-                mate
+                fastenMate(row.name, [fastenQuery(getInstancePath(result))])
             );
             await track(true);
             return c.json({
                 featureId: fastenResult.feature.featureId
             } satisfies InsertOut);
         } catch (error) {
-            // Only the mate failed; the insert is still in the assembly.
+            // The first insert is in the assembly whatever failed after it.
             await track(false);
             throw error;
         }

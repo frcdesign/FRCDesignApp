@@ -40,7 +40,8 @@ team, plus one owner set by configuration.
   chose and its synced members (`isTeamAdmin` per member).
 - **KV** `seen-hints:` — by user id, the features (`Hint`) whose blue dot and
   **New** badge the user no longer needs, recorded by the request that used the
-  feature (`markHintSeen`): starting a push or pull, adding an insert location.
+  feature (`markHintSeen`): starting a push or pull, adding an insert location,
+  fastening an insert to circles.
   Kept until deleted; losing it only shows a dot again.
 - **localStorage** (`ui-state`): `accessLevel`, the level the app is viewed as.
 

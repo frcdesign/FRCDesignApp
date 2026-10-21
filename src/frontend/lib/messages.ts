@@ -3,6 +3,10 @@
 import { type ElementPath } from "@backend/lib/onshape/path";
 import { useEffect } from "react";
 import { useOnshapeServer, useTargetElement } from "./onshape-params";
+import {
+    type OnshapeSelection,
+    setOnshapeSelections
+} from "./onshape-selection";
 
 export function useMessageListener() {
     // Nothing to message unless embedded in an Onshape document.
@@ -20,9 +24,14 @@ export function useMessageListener() {
             if (server !== event.origin) {
                 return;
             }
-            const { messageName } = event.data as Partial<Message>;
-            if (!messageName) {
+            const data = event.data as Partial<ReceivedMessage>;
+            if (!data.messageName) {
                 return;
+            }
+            // Sent unprompted once the app has initialized, and in answer to a
+            // selection request.
+            if (Array.isArray(data.selections)) {
+                setOnshapeSelections(data.selections);
             }
         };
 
@@ -35,6 +44,39 @@ export function useMessageListener() {
 
 function sendInitMessage(elementPath: ElementPath) {
     sendMessage(elementPath, { messageName: MessageType.APPLICATION_INIT });
+}
+
+/** A blue bubble at the top of the Onshape window. */
+export function sendShowMessageBubbleMessage(
+    elementPath: ElementPath,
+    message: string
+) {
+    sendMessage(elementPath, {
+        messageName: MessageType.SHOW_MESSAGE_BUBBLE,
+        message
+    });
+}
+
+/**
+ * Limits what can be picked in the Onshape window to circular edges. Unbounded,
+ * so it stays pending until {@link sendStopRequestMessage} ends it.
+ */
+export function sendRequestCircleSelectionMessage(
+    elementPath: ElementPath,
+    messageId: string
+) {
+    sendMessage(elementPath, {
+        messageName: MessageType.REQUEST_SELECTION,
+        messageId,
+        entityTypeSpecifier: ["EDGE"],
+        selectionTypeSpecifier: ["GEOMETRY"],
+        geometryTypeSpecifier: ["CIRCLE"]
+    });
+}
+
+/** Ends the pending request, e.g. the one {@link sendRequestCircleSelectionMessage} opened. */
+export function sendStopRequestMessage(elementPath: ElementPath) {
+    sendMessage(elementPath, { messageName: MessageType.STOP_REQUEST });
 }
 
 export function sendOpenFeatureMessage(
@@ -75,6 +117,12 @@ interface Message {
     messageName: MessageType;
     /** Whatever that message carries; Onshape names the fields, not us. */
     [key: string]: MessageType | string | number | boolean | object | undefined;
+}
+
+/** What Onshape posts to the app; only the fields we read. */
+interface ReceivedMessage {
+    messageName: string;
+    selections?: OnshapeSelection[];
 }
 
 function sendMessage(elementPath: ElementPath, message: Message) {

@@ -309,6 +309,10 @@ export interface OnshapeInsertInstancesResponse {
 /** POST /assemblies|partstudios/.../features response (the subset we read). */
 export interface OnshapeCreatedFeature {
     feature: { featureId: string };
+    /** Onshape adds a feature that fails to regenerate, and says so here. */
+    featureState?: {
+        featureStatus?: "OK" | "INFO" | "WARNING" | "ERROR" | "UNKNOWN";
+    };
 }
 
 // === parts (GET /parts/d/{did}/{wvm}/{wvmid}/e/{eid}) ===

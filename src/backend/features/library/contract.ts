@@ -41,9 +41,21 @@ export interface GroupOut {
 export type Insertables = Record<string, InsertableOut>;
 export type Groups = Record<string, GroupOut>;
 
-/** The feature to open: the derive in a part studio, the fasten mate in an assembly. */
+/** A circular edge picked in the Onshape window, as Onshape's selection reports it. */
+export interface CircleSelection {
+    selectionId: string;
+    /** The instance the edge belongs to. */
+    occurrencePath: string[];
+}
+
+/** Each circle past the first costs an insert and a mate unless replicated. */
+export const MAX_FASTEN_CIRCLES = 24;
+
 export interface InsertOut {
+    /** The feature to open: the derive, or a fasten mate left for the caller to finish. */
     featureId?: string;
+    /** How many circles the part was fastened to; absent when it was fastened to none. */
+    fastenedCount?: number;
 }
 
 export interface LibraryOut {

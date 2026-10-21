@@ -136,3 +136,14 @@ export function addAssemblyFeature(
         { body: { feature } }
     );
 }
+
+export function deleteAssemblyFeature(
+    client: OnshapeApi,
+    assemblyPath: ElementPath,
+    featureId: string
+): Promise<void> {
+    assertWorkspace(assemblyPath);
+    return client.deleteNone(
+        `/assemblies${toElementApiPath(assemblyPath)}/features/featureid/${featureId}`
+    );
+}

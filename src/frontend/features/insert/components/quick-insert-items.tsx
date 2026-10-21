@@ -12,6 +12,7 @@ import {
     useTargetElementType
 } from "../insert-hooks";
 import { useInsertMutation } from "../queries";
+import { useFastenCirclesTip } from "../insert-tips";
 
 interface QuickInsertItemsProps {
     insertable: InsertableOut;
@@ -33,6 +34,7 @@ export function QuickInsertItems(props: QuickInsertItemsProps): ReactNode {
         insertable.elementType
     );
     const targetElementType = useTargetElementType();
+    const showFastenCirclesTip = useFastenCirclesTip();
 
     const handleClick = useCallback(
         (fasten: boolean) => {
@@ -41,8 +43,9 @@ export function QuickInsertItems(props: QuickInsertItemsProps): ReactNode {
                 return;
             }
             insertMutation.mutate(fasten);
+            showFastenCirclesTip(fasten);
         },
-        [isAssemblyInPartStudio, insertMutation]
+        [isAssemblyInPartStudio, insertMutation, showFastenCirclesTip]
     );
 
     const supportsFasten =

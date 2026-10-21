@@ -28,6 +28,11 @@ import {
 } from "../../lib/query-keys";
 import { toInsertablePath } from "../../lib/api-paths";
 import { useInsertLocationId } from "../insert-location/queries";
+import { getUiState } from "../../lib/ui-state";
+import { plural } from "../../lib/plural";
+import { Hint } from "@backend/features/hints/contract";
+import { markHintSeen } from "../hints/queries";
+import { clearSelectedCircles, getSelectedCircles } from "./circle-selection";
 
 interface InsertArgs {
     /** Whether the part is favorited — see `source` for where the insert began. */
@@ -114,7 +119,14 @@ export function useInsertMutation(
         return elementType === ElementType.ASSEMBLY
             ? {
                   endpoint: "/add-to-assembly",
-                  body: { ...common, fasten, insertLocationId }
+                  body: {
+                      ...common,
+                      fasten,
+                      insertLocationId,
+                      // Read at the click, since Onshape reports picks as they happen.
+                      circles: fasten ? getSelectedCircles() : [],
+                      replicate: getUiState().replicate
+                  }
               }
             : {
                   endpoint: "/add-to-part-studio",
@@ -143,6 +155,15 @@ export function useInsertMutation(
         onSuccess: (result) => {
             if (target && result.featureId !== undefined) {
                 sendOpenFeatureMessage(target, result.featureId);
+            }
+            if (result.fastenedCount !== undefined) {
+                clearSelectedCircles();
+                markHintSeen(Hint.FASTENED_TO_CIRCLES);
+                showSuccessToast(
+                    `Successfully inserted ${insertable.name} and fastened it to ${plural(result.fastenedCount, "circle")}.`,
+                    toastId
+                );
+                return;
             }
             // In an assembly, the only feature an insert builds is the mate.
             const fastened =
