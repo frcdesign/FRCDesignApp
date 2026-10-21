@@ -2,6 +2,7 @@
 import { useEffect, useRef } from "react";
 import { type PushMessage, PushType } from "@backend/features/push/contract";
 import { workspaceKey } from "@backend/features/version-manager/contract";
+import { assemblyKey } from "@backend/features/quick-fastener/contract";
 import { hasEditorAccess } from "@backend/features/auth/access-level";
 import { useAccessData } from "../features/auth/access-level";
 import { isRenderOf } from "../features/thumbnails/render-wait";
@@ -11,14 +12,19 @@ import {
     subscribePushConnection,
     subscribePushes
 } from "./push-socket";
-import { useTargetWorkspace } from "./onshape-params";
+import { useTargetAssembly, useTargetWorkspace } from "./onshape-params";
 import { queryClient } from "./query-client";
-import { jobStatusQueryKey, versionJobQueryKey } from "./query-keys";
+import {
+    fastenerJobQueryKey,
+    jobStatusQueryKey,
+    versionJobQueryKey
+} from "./query-keys";
 import { useRefreshLibrary } from "./refresh";
 
 export function usePushSync(): void {
     const libraryId = useLibraryId();
     const workspace = useTargetWorkspace();
+    const assembly = useTargetAssembly();
     const refreshLibrary = useRefreshLibrary();
     const { signedIn, currentAccessLevel } = useAccessData();
     // Non-editors would otherwise show spinners for work they can't see.
@@ -57,6 +63,17 @@ export function usePushSync(): void {
                         });
                     }
                     break;
+                case PushType.FASTENER_JOB:
+                    // Tagged to this workspace, which has other assemblies' runs too
+                    if (
+                        assembly &&
+                        message.assemblyKey === assemblyKey(assembly)
+                    ) {
+                        void queryClient.invalidateQueries({
+                            queryKey: fastenerJobQueryKey(assembly)
+                        });
+                    }
+                    break;
                 case PushType.THUMBNAIL:
                     // Rows that took a miss; anything waiting on the render hears the push itself.
                     void queryClient.refetchQueries({
@@ -74,7 +91,7 @@ export function usePushSync(): void {
             }
         };
         return subscribePushes(apply);
-    }, [libraryId, refreshLibrary, showsJobs, workspace]);
+    }, [libraryId, refreshLibrary, showsJobs, workspace, assembly]);
 
     // Pushes during the outage are lost, so a reconnect refetches.
     useEffect(
@@ -90,9 +107,14 @@ export function usePushSync(): void {
                             queryKey: versionJobQueryKey(workspace)
                         });
                     }
+                    if (assembly) {
+                        void queryClient.invalidateQueries({
+                            queryKey: fastenerJobQueryKey(assembly)
+                        });
+                    }
                 }
                 hasConnected.current = true;
             }),
-        [refreshLibrary, workspace]
+        [refreshLibrary, workspace, assembly]
     );
 }

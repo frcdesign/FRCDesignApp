@@ -1,17 +1,14 @@
 /**
- * Puts each planned hole's parts into the assembly: all of them in one insert,
- * each placed where it goes, then one fasten mate per part, from its mate
- * connector to the hole's edge it sits on.
+ * Putting planned holes' parts into the assembly: where each goes, what it's
+ * fastened to, and the Onshape bodies that insert and fasten it. A screw or
+ * nut on a washer is fastened to the washer's top edge, so any washer fits;
+ * anything else to the hole's own edge.
  */
 import { HttpStatus } from "http-status-ts";
 import { handledError } from "../../lib/api-error";
 import { kvStore } from "../../lib/kv-store";
 import { type OnshapeApi } from "../../lib/onshape/client";
-import {
-    addAssemblyFeature,
-    getAssembly,
-    insertTransformedInstances
-} from "../../lib/onshape/endpoints/assemblies";
+import { getAssembly } from "../../lib/onshape/endpoints/assemblies";
 import { PartType } from "../../lib/onshape/endpoints/documents";
 import {
     edgeCenterQuery,
@@ -21,110 +18,111 @@ import {
 import { type ElementPath } from "../../lib/onshape/path";
 import { encodeConfiguration } from "../configurations/utils";
 import {
-    catalog,
     FastenerKind,
     type FastenerConfiguration,
-    getSeatWasher,
+    getStudioLocation,
+    getWasher,
     nutConfiguration,
     screwConfiguration,
     type StudioLocation,
+    type WasherChoice,
     washerConfiguration
 } from "./catalog";
 import { HoleStatus } from "./contract";
 import { add, frameTransform, scale, type Vec3 } from "./geometry";
 import { type HolePlan, type MateEdge } from "./planner";
+import { scanStudio, type ScannedParts, type StudioSource } from "./scan";
 
-/** One part to insert: from which studio, configured how, placed where, and fastened to which edge. */
+/** What a part is fastened to: an edge in the assembly, or the top of a washer placed with it. */
+export type PartSeat = { edge: MateEdge } | { washer: number };
+
+/** One part to insert: from which studio, configured how, placed where, and fastened to what. */
 export interface PartPlacement {
     kind: FastenerKind;
     configuration: FastenerConfiguration;
     transform: number[];
-    edge: MateEdge;
+    seat: PartSeat;
     name: string;
 }
 
 /** A released studio's mate connector, by its version: a version's never changes. */
 const mateConnectorIds = kvStore<string>("quick-fastener-mate-connector");
 
-function seatThickness(vendor: string, size: string, washer: boolean): number {
-    return washer ? (getSeatWasher(vendor, size)?.thickness ?? 0) : 0;
+function thickness(washer: WasherChoice | undefined): number {
+    return washer
+        ? (getWasher(washer.vendor, washer.size, washer.type)?.thickness ?? 0)
+        : 0;
 }
 
 /**
  * Where every part of each ready hole goes. A screw and the washer under it
  * sit on the circle, pointing out of the part; a nut and its washer on the far
- * side, pointing the other way. A seated part's mate connector is below its
- * origin by its washer, so its origin is above the edge by as much.
+ * side, pointing the other way, each part on top of the one under it.
  */
 export function placements(plans: HolePlan[]): PartPlacement[] {
-    return plans.flatMap((plan) => {
-        const { planned, circle, exit } = plan;
+    const parts: PartPlacement[] = [];
+    for (const { planned, circle, exit } of plans) {
         if (planned.status !== HoleStatus.READY || !planned.screw) {
-            return [];
+            continue;
         }
         const out = circle.normal;
-        const seated = (point: Vec3, zAxis: Vec3, thickness: number) =>
-            frameTransform(add(point, scale(zAxis, thickness)), zAxis);
         const entry: MateEdge = {
             occurrencePath: circle.occurrencePath,
             edgeId: circle.edgeId
         };
-        const { screw } = planned;
-        const parts: PartPlacement[] = [
-            {
-                kind: FastenerKind.SCREW,
-                configuration: screwConfiguration(screw),
-                transform: seated(
-                    circle.center,
-                    out,
-                    seatThickness(screw.vendor, screw.size, screw.washer)
-                ),
-                edge: entry,
-                name: "Quick fastener screw"
-            }
-        ];
-        if (planned.headWasher) {
+        let screwSeat: PartSeat = { edge: entry };
+        if (planned.startWasher) {
+            screwSeat = { washer: parts.length };
             parts.push({
                 kind: FastenerKind.WASHER,
-                configuration: washerConfiguration(planned.headWasher),
+                configuration: washerConfiguration(planned.startWasher),
                 transform: frameTransform(circle.center, out),
-                edge: entry,
+                seat: { edge: entry },
                 name: "Quick fastener washer"
             });
         }
-        if (planned.nut && exit) {
-            const back = scale(out, -1);
-            parts.push({
-                kind: FastenerKind.NUT,
-                configuration: nutConfiguration(planned.nut),
-                transform: seated(
-                    exit.point,
-                    back,
-                    seatThickness(
-                        planned.nut.vendor,
-                        planned.nut.size,
-                        planned.nut.washer
-                    )
-                ),
-                edge: exit.edge,
-                name: "Quick fastener nut"
-            });
-            if (planned.nutWasher) {
-                parts.push({
-                    kind: FastenerKind.WASHER,
-                    configuration: washerConfiguration(planned.nutWasher),
-                    transform: frameTransform(exit.point, back),
-                    edge: exit.edge,
-                    name: "Quick fastener washer"
-                });
-            }
+        parts.push({
+            kind: FastenerKind.SCREW,
+            configuration: screwConfiguration(planned.screw),
+            transform: frameTransform(
+                add(circle.center, scale(out, thickness(planned.startWasher))),
+                out
+            ),
+            seat: screwSeat,
+            name: "Quick fastener screw"
+        });
+        if (!planned.nut || !exit) {
+            continue;
         }
-        return parts;
-    });
+        const back = scale(out, -1);
+        let nutSeat: PartSeat = { edge: exit.edge };
+        if (planned.endWasher) {
+            nutSeat = { washer: parts.length };
+            parts.push({
+                kind: FastenerKind.WASHER,
+                configuration: washerConfiguration(planned.endWasher),
+                transform: frameTransform(exit.point, back),
+                seat: { edge: exit.edge },
+                name: "Quick fastener washer"
+            });
+        }
+        const nutAt: Vec3 = add(
+            exit.point,
+            scale(back, thickness(planned.endWasher))
+        );
+        parts.push({
+            kind: FastenerKind.NUT,
+            configuration: nutConfiguration(planned.nut),
+            transform: frameTransform(nutAt, back),
+            seat: nutSeat,
+            name: "Quick fastener nut"
+        });
+    }
+    return parts;
 }
 
-function studioLocation(kind: FastenerKind): StudioLocation {
-    const location = catalog.studios[kind].location;
+export function studioLocation(kind: FastenerKind): StudioLocation {
+    const location = getStudioLocation(kind);
     if (!location) {
         throw handledError(
             "Quick fastener's parts aren't published yet.",
@@ -134,18 +132,40 @@ function studioLocation(kind: FastenerKind): StudioLocation {
     return location;
 }
 
+/** `transformedinstances`' groups: one per part, each landed where it goes. */
+export function insertGroups(
+    parts: PartPlacement[]
+): { instances: object[]; transform: number[] }[] {
+    return parts.map((part) => {
+        const location = studioLocation(part.kind);
+        return {
+            instances: [
+                {
+                    documentId: location.documentId,
+                    versionId: location.versionId,
+                    elementId: location.elementId,
+                    configuration: encodeConfiguration(part.configuration),
+                    isWholePartStudio: true,
+                    includePartTypes: [PartType.PARTS]
+                }
+            ],
+            transform: part.transform
+        };
+    });
+}
+
 function locationKey(location: StudioLocation): string {
     return `${location.documentId}|${location.versionId}|${location.elementId}`;
 }
 
 /** Each studio's mate connector, as the assembly names it; read from the assembly once per release. */
-async function mateConnectorIdsFor(
+export async function mateConnectorIdsFor(
     client: OnshapeApi,
     kv: KVNamespace,
     assembly: ElementPath,
     kinds: FastenerKind[]
-): Promise<Map<FastenerKind, string>> {
-    const ids = new Map<FastenerKind, string>();
+): Promise<Partial<Record<FastenerKind, string>>> {
+    const ids: Partial<Record<FastenerKind, string>> = {};
     const missing: FastenerKind[] = [];
     for (const kind of kinds) {
         const cached = await mateConnectorIds.get(
@@ -153,7 +173,7 @@ async function mateConnectorIdsFor(
             locationKey(studioLocation(kind))
         );
         if (cached) {
-            ids.set(kind, cached);
+            ids[kind] = cached;
         } else {
             missing.push(kind);
         }
@@ -166,14 +186,13 @@ async function mateConnectorIdsFor(
     });
     for (const kind of missing) {
         const location = studioLocation(kind);
-        const part = definition.parts.find(
+        const id = definition.parts.find(
             (each) =>
                 each.documentId === location.documentId &&
                 each.elementId === location.elementId &&
                 each.documentVersion === location.versionId &&
                 (each.mateConnectors?.length ?? 0) > 0
-        );
-        const id = part?.mateConnectors?.[0]?.featureId;
+        )?.mateConnectors?.[0]?.featureId;
         if (!id) {
             throw handledError(
                 "The inserted fastener has no mate connector to fasten.",
@@ -181,63 +200,94 @@ async function mateConnectorIdsFor(
             );
         }
         await mateConnectorIds.put(kv, locationKey(location), id);
-        ids.set(kind, id);
+        ids[kind] = id;
     }
     return ids;
 }
 
-/** Inserts and fastens every ready hole's parts; returns how many parts went in. */
-export async function insertFasteners(
+/** The washer studio at its release, in one configuration: what its top edge is read from. */
+export function washerSource(
+    configuration: FastenerConfiguration
+): StudioSource {
+    const location = studioLocation(FastenerKind.WASHER);
+    const encoded = encodeConfiguration(configuration);
+    return {
+        path: {
+            documentId: location.documentId,
+            instanceType: "v",
+            instanceId: location.versionId,
+            elementId: location.elementId
+        },
+        configuration: encoded,
+        key: `${location.documentId}|v|${location.versionId}|${location.elementId}|${encoded}`
+    };
+}
+
+/** A washer's top edge: the circle of its hole farthest up its Z axis, where what sits on it seats. */
+export function washerTopEdge(parts: ScannedParts): string | undefined {
+    const edges = Object.values(parts).flatMap((part) =>
+        part.holes.flatMap((hole) =>
+            hole.edges.map((edge) => ({
+                id: edge.id,
+                z: hole.origin[2] + hole.direction[2] * edge.at
+            }))
+        )
+    );
+    return edges.sort((a, b) => b.z - a.z)[0]?.id;
+}
+
+/** Each placed washer's top edge, by its index in the placements; one scan per configuration, cached. */
+export async function washerTopEdges(
     client: OnshapeApi,
     kv: KVNamespace,
-    assembly: ElementPath,
-    plans: HolePlan[]
-): Promise<number> {
-    const parts = placements(plans);
-    if (parts.length === 0) {
-        return 0;
-    }
-    const response = await insertTransformedInstances(
-        client,
-        assembly,
-        parts.map((part) => {
-            const location = studioLocation(part.kind);
-            return {
-                instances: [
-                    {
-                        documentId: location.documentId,
-                        versionId: location.versionId,
-                        elementId: location.elementId,
-                        configuration: encodeConfiguration(part.configuration),
-                        isWholePartStudio: true,
-                        includePartTypes: [PartType.PARTS]
-                    }
-                ],
-                transform: part.transform
-            };
-        })
-    );
-    const paths = (response.insertInstanceResponses ?? []).map(
-        (each) => each.occurrences?.[0]?.path
-    );
-
-    const kinds = [...new Set(parts.map((part) => part.kind))];
-    const connectors = await mateConnectorIdsFor(client, kv, assembly, kinds);
-    // One at a time: each mate changes the assembly the next is added to
+    parts: PartPlacement[]
+): Promise<Record<number, string>> {
+    const byConfiguration = new Map<string, string | undefined>();
+    const edges: Record<number, string> = {};
     for (const [index, part] of parts.entries()) {
-        const path = paths[index];
-        const connector = connectors.get(part.kind);
-        if (!path || !connector) {
+        if (part.kind !== FastenerKind.WASHER) {
             continue;
         }
-        await addAssemblyFeature(
-            client,
-            assembly,
-            fastenMate(part.name, [
-                partStudioMateConnectorQuery(connector, path),
-                edgeCenterQuery(part.edge.occurrencePath, part.edge.edgeId)
-            ])
-        );
+        const source = washerSource(part.configuration);
+        if (!byConfiguration.has(source.key)) {
+            const scan = await scanStudio(client, kv, source, {
+                edges: [],
+                faces: []
+            });
+            byConfiguration.set(source.key, washerTopEdge(scan.parts));
+        }
+        const edge = byConfiguration.get(source.key);
+        if (edge) {
+            edges[index] = edge;
+        }
     }
-    return parts.length;
+    return edges;
+}
+
+/** The fasten mate holding one inserted part where it sits; undefined when what it sits on can't be named. */
+export function partMate(
+    part: PartPlacement,
+    path: string[],
+    connectorId: string,
+    paths: (string[] | undefined)[],
+    washerEdges: Record<number, string>
+): object | undefined {
+    let seat: object;
+    if ("edge" in part.seat) {
+        seat = edgeCenterQuery(
+            part.seat.edge.occurrencePath,
+            part.seat.edge.edgeId
+        );
+    } else {
+        const washerPath = paths[part.seat.washer];
+        const edge = washerEdges[part.seat.washer];
+        if (!washerPath || !edge) {
+            return undefined;
+        }
+        seat = edgeCenterQuery(washerPath, edge);
+    }
+    return fastenMate(part.name, [
+        partStudioMateConnectorQuery(connectorId, path),
+        seat
+    ]);
 }

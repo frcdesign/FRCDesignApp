@@ -18,7 +18,7 @@ import {
     withoutExcluded,
     type PartOccurrence
 } from "./assembly";
-import { catalog } from "./catalog";
+import { FastenerKind, getStudioLocation } from "./catalog";
 import { type SelectedEntity } from "./contract";
 import {
     type AssemblyCircle,
@@ -37,8 +37,8 @@ export interface Gathered {
 }
 
 function isFastener(occurrence: PartOccurrence): boolean {
-    return Object.values(catalog.studios).some((studio) =>
-        isFromStudio(occurrence, studio.location)
+    return Object.values(FastenerKind).some((kind) =>
+        isFromStudio(occurrence, getStudioLocation(kind))
     );
 }
 
@@ -142,7 +142,7 @@ export async function gather(
     return {
         circles: withoutExcluded(circlesOf(targets), circlesOf(excluded)),
         holes,
-        placed: placedScrews(occurrences, catalog.studios.screw.location)
+        placed: placedScrews(occurrences, getStudioLocation(FastenerKind.SCREW))
     };
 }
 

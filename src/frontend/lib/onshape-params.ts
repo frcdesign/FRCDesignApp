@@ -11,6 +11,7 @@ import {
     toTargetWorkspace
 } from "./onshape-launch";
 import { type WorkspacePath } from "@backend/features/version-manager/contract";
+import { ElementType } from "@backend/lib/onshape/element-type";
 import { toOnshapeOrigin } from "./url";
 
 /** Per tab, since each browser tab is a different Onshape document. */
@@ -44,6 +45,12 @@ export function useTargetElement(): TargetElement | undefined {
         }))
     );
     return useMemo(() => toTargetElement(launch), [launch]);
+}
+
+/** The assembly the panel was opened in; nothing elsewhere. */
+export function useTargetAssembly(): TargetElement | undefined {
+    const target = useTargetElement();
+    return target?.elementType === ElementType.ASSEMBLY ? target : undefined;
 }
 
 /** The workspace the panel was opened in; nothing when it was opened outside one. */

@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { Program } from "./catalog";
 import {
+    DEFAULT_MAX_GAP,
     DEFAULT_MAX_LENGTH,
     FastenerMode,
     type FastenerOptions,
     HoleEnd,
-    HoleStatus
+    HoleStatus,
+    StopCondition
 } from "./contract";
 import {
     type AssemblyCircle,
@@ -56,12 +58,15 @@ function options(extra: Partial<FastenerOptions> = {}): FastenerOptions {
         program: Program.FRC,
         mode: FastenerMode.AUTOMATIC,
         vendor: "GENERIC",
+        size: "NO_10_32",
         head: "BUTTON",
-        headWasher: false,
+        startWasher: false,
+        endWasher: false,
+        washerType: "OD_1_2_X_0_049",
         nutType: "NYLOCK",
-        nutWasher: false,
+        stop: StopCondition.MAX_LENGTH,
         maxLength: DEFAULT_MAX_LENGTH,
-        upToNext: false,
+        maxGap: DEFAULT_MAX_GAP,
         ...extra
     };
 }
@@ -91,14 +96,12 @@ describe("planHoles", () => {
             vendor: "GENERIC",
             size: "NO_10_32",
             head: "BUTTON",
-            length: "IN_0_875",
-            washer: false
+            length: "IN_0_875"
         });
         expect(planned.nut).toEqual({
             vendor: "GENERIC",
             size: "NO_10_32",
-            type: "NYLOCK",
-            washer: false
+            type: "NYLOCK"
         });
         expect(exit?.edge).toEqual({
             occurrencePath: ["bottom"],
@@ -107,28 +110,43 @@ describe("planHoles", () => {
         expect(exit?.point[2]).toBeCloseTo(-0.5 * INCH);
     });
 
-    it("counts washers under the head and the nut", () => {
+    it("counts the start and end washers chosen", () => {
         const { planned } = plan(TWO_PLATES, {
-            headWasher: true,
-            nutWasher: true
+            startWasher: true,
+            endWasher: true
         });
-        // Two 0.049 in. seat washers more: 0.8965 in.
+        // Two 0.049 in. washers more: 0.8965 in.
         expect(planned.screw?.length).toBe("IN_1");
-        expect(planned.screw?.washer).toBe(true);
         const washer = {
             vendor: "GENERIC",
             size: "NO_10_32",
             type: "OD_1_2_X_0_049"
         };
-        expect(planned.headWasher).toEqual(washer);
-        expect(planned.nutWasher).toEqual(washer);
-        expect(planned.nut?.washer).toBe(true);
+        expect(planned.startWasher).toEqual(washer);
+        expect(planned.endWasher).toEqual(washer);
     });
 
-    it("leaves the nut off without a nut type", () => {
-        const { planned, exit } = plan(TWO_PLATES, { nutType: undefined });
+    it("takes washers from the screw's vendor, where it makes them", () => {
+        const { planned } = plan(TWO_PLATES, {
+            vendor: "MCMASTER",
+            startWasher: true,
+            washerType: "OD_7_16_X_0_03"
+        });
+        expect(planned.startWasher).toEqual({
+            vendor: "MCMASTER",
+            size: "NO_10_32",
+            type: "OD_7_16_X_0_03"
+        });
+    });
+
+    it("leaves the nut and its washer off without a nut type", () => {
+        const { planned, exit } = plan(TWO_PLATES, {
+            nutType: undefined,
+            endWasher: true
+        });
         expect(planned.screw?.length).toBe("IN_0_5");
         expect(planned.nut).toBeUndefined();
+        expect(planned.endWasher).toBeUndefined();
         expect(exit).toBeUndefined();
     });
 
@@ -143,17 +161,24 @@ describe("planHoles", () => {
         expect(planned.screw?.length).toBe("IN_1_125");
     });
 
-    it("sizes by a Hole feature's threads", () => {
-        const { planned } = plan([
-            hole("top", 0, 0.25, 0.266),
-            hole("block", 0.25, 1, 0.201, {
-                threaded: true,
-                majorDiameter: 0.25 * INCH
-            })
-        ]);
+    it("ends in a Hole feature's threads of its size", () => {
+        const { planned } = plan(
+            [
+                hole("top", 0, 0.25, 0.266),
+                hole("block", 0.25, 1, 0.201, {
+                    threaded: true,
+                    majorDiameter: 0.25 * INCH
+                })
+            ],
+            { size: "QUARTER_20" }
+        );
         expect(planned.end).toBe(HoleEnd.TAPPED);
-        expect(planned.screw?.size).toBe("QUARTER_20");
         expect(planned.screw?.length).toBe("IN_1");
+    });
+
+    it("isn't fooled by a clearance hole the size of a bigger screw's tap drill", () => {
+        // 0.201 in. is #10's free clearance and 1/4-20's tap drill
+        expect(plan(TWO_PLATES).planned.end).toBe(HoleEnd.THROUGH);
     });
 
     it("ends at the bottom of a blind hole", () => {
@@ -167,22 +192,42 @@ describe("planHoles", () => {
         expect(planned.screw?.length).toBe("IN_0_625");
     });
 
-    it("bridges a gap, or stops at it up to next", () => {
-        const gapped = [
+    describe("stopping", () => {
+        const gapped = (gap: number) => [
             hole("top", 0, 0.25, 0.201),
-            hole("far", 0.5, 0.75, 0.201)
+            hole("far", 0.25 + gap, 0.5 + gap, 0.201)
         ];
-        expect(plan(gapped).planned.depth).toBeCloseTo(0.75 * INCH);
-        expect(plan(gapped, { upToNext: true }).planned.depth).toBeCloseTo(
-            0.25 * INCH
-        );
-    });
 
-    it("stops at the maximum length", () => {
-        const deep = [hole("top", 0, 2, 0.201), hole("bottom", 2, 3, 0.201)];
-        const { planned } = plan(deep);
-        expect(planned.status).toBe(HoleStatus.NO_FIT);
-        expect(planned.reason).toMatch(/maximum length/);
+        it("reaches across any gap up to the maximum length", () => {
+            expect(plan(gapped(0.25)).planned.depth).toBeCloseTo(0.75 * INCH);
+            // The far plate starts past 0.4 in.
+            const short = plan(gapped(0.25), {
+                maxLength: 0.4 * INCH,
+                nutType: undefined
+            });
+            expect(short.planned.depth).toBeCloseTo(0.25 * INCH);
+            expect(short.planned.screw?.length).toBe("IN_0_25");
+        });
+
+        it("respects a gap wider than the maximum gap, and ignores a narrower one", () => {
+            const respect = { stop: StopCondition.RESPECT_GAPS };
+            expect(plan(gapped(0.25), respect).planned.depth).toBeCloseTo(
+                0.25 * INCH
+            );
+            expect(plan(gapped(0.02), respect).planned.depth).toBeCloseTo(
+                0.52 * INCH
+            );
+        });
+
+        it("says no screw reaches past the maximum length", () => {
+            const deep = [
+                hole("top", 0, 2, 0.201),
+                hole("bottom", 2, 3, 0.201)
+            ];
+            const { planned } = plan(deep);
+            expect(planned.status).toBe(HoleStatus.NO_FIT);
+            expect(planned.reason).toMatch(/maximum length/);
+        });
     });
 
     it("leaves a hole alone that already has a screw", () => {
@@ -198,54 +243,35 @@ describe("planHoles", () => {
         );
     });
 
-    it("refuses a circle with no hole under it", () => {
+    it("refuses a circle with no hole under it, or too small a hole", () => {
         expect(plan([hole("other", 0.5, 1, 0.201)]).planned.status).toBe(
             HoleStatus.NO_FIT
         );
+        const small = plan([hole("top", 0, 0.25, 0.15)]);
+        expect(small.planned.status).toBe(HoleStatus.NO_FIT);
+        expect(small.planned.reason).toMatch(/too small for a #10-32/);
     });
 
     it("puts a preset screw where it fits", () => {
-        const preset = {
-            mode: FastenerMode.PRESET,
-            size: "NO_10_32",
-            length: "IN_1_5"
-        };
+        const preset = { mode: FastenerMode.PRESET, length: "IN_1_5" };
         expect(plan(TWO_PLATES, preset).planned.screw?.length).toBe("IN_1_5");
-        expect(plan([hole("top", 0, 0.25, 0.15)], preset).planned.status).toBe(
-            HoleStatus.NO_FIT
-        );
     });
 
     it("lets a flat head's hole start below its countersink, with no washer under it", () => {
         const { planned } = plan(
             [hole("top", 0.12, 0.25, 0.201), hole("bottom", 0.25, 0.5, 0.201)],
-            { head: "FLAT", headWasher: true }
+            { head: "FLAT", startWasher: true }
         );
         expect(planned.status).toBe(HoleStatus.READY);
-        expect(planned.screw?.washer).toBe(false);
-        expect(planned.headWasher).toBeUndefined();
+        expect(planned.startWasher).toBeUndefined();
     });
 
     it("only offers what the vendor makes, with Generic's nuts where it makes none", () => {
         const { planned } = plan(TWO_PLATES, { vendor: "REV" });
         expect(planned.screw?.vendor).toBe("REV");
         expect(planned.nut?.vendor).toBe("GENERIC");
-        // REV only makes #10-32, too small for a 1/4-20 clearance hole
-        expect(
-            plan([hole("top", 0, 0.25, 0.266)], { vendor: "REV" }).planned
-                .status
-        ).toBe(HoleStatus.NO_FIT);
         expect(
             plan(TWO_PLATES, { vendor: "WCP", head: "FLAT" }).planned.status
         ).toBe(HoleStatus.NO_FIT);
-    });
-
-    it("picks the largest screw a clearance hole fits", () => {
-        expect(plan([hole("top", 0, 0.25, 0.266)]).planned.screw?.size).toBe(
-            "QUARTER_20"
-        );
-        expect(plan([hole("top", 0, 0.25, 0.177)]).planned.screw?.size).toBe(
-            "NO_8_32"
-        );
     });
 });

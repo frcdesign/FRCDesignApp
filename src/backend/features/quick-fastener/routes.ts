@@ -1,20 +1,24 @@
 import { HttpStatus } from "http-status-ts";
 import { z } from "zod";
 import { handledError } from "../../lib/api-error";
-import { type AppContext, getApp } from "../../lib/context";
+import { cacheMiddleware } from "../../lib/cache";
+import { getApp } from "../../lib/context";
 import { validate } from "../../lib/validate";
 import { requireSignInMiddleware } from "../auth/guards";
-import { getCatalog, Program } from "./catalog";
+import { getSessionId } from "../auth/session";
+import { FastenerKind, getCatalog, Program } from "./catalog";
 import {
+    FastenerJobState,
     FastenerMode,
-    type QuickFastenerIn,
-    type QuickFastenerInsertOut,
-    type QuickFastenerPlan,
-    SelectedEntityType
+    FastenerTaskAction,
+    FastenerTaskState,
+    type FastenerJobStatus,
+    SelectedEntityType,
+    SelectionMode,
+    StopCondition
 } from "./contract";
-import { gather } from "./gather";
-import { insertFasteners } from "./insert";
-import { planHoles } from "./planner";
+import { studioLocation } from "./insert";
+import { getJobStatus, reportJob } from "./jobs";
 import { DETERMINISTIC_ID } from "./scan";
 
 export const quickFastenerRoutes = getApp();
@@ -22,8 +26,9 @@ export const quickFastenerRoutes = getApp();
 /** More than anyone picks by hand; each is scanned and fastened. */
 const MAX_SELECTIONS = 200;
 
-/** Inches: the longest standard screw. */
+/** Inches: the longest standard screw, and a gap wider than any worth ignoring. */
 const MAX_LENGTH_LIMIT = 10 * 0.0254;
+const MAX_GAP_LIMIT = 1 * 0.0254;
 
 const entitySchema = z.object({
     occurrencePath: z.array(z.string().min(1)).min(1),
@@ -31,84 +36,109 @@ const entitySchema = z.object({
     entityType: z.enum(SelectedEntityType)
 });
 
-const bodySchema = z.object({
-    /** An assembly in a workspace: fasteners are only ever added to one. */
-    assembly: z.object({
-        documentId: z.string().min(1),
-        instanceId: z.string().min(1),
-        instanceType: z.literal("w"),
-        elementId: z.string().min(1)
-    }),
-    targets: z.array(entitySchema).min(1).max(MAX_SELECTIONS),
-    excluded: z.array(entitySchema).max(MAX_SELECTIONS).default([]),
-    options: z.object({
-        program: z.enum(Program),
-        mode: z.enum(FastenerMode),
-        vendor: z.string().min(1),
-        head: z.string().min(1),
-        size: z.string().optional(),
-        length: z.string().optional(),
-        headWasher: z.boolean(),
-        nutType: z.string().optional(),
-        nutWasher: z.boolean(),
-        maxLength: z.number().positive().max(MAX_LENGTH_LIMIT),
-        upToNext: z.boolean()
-    })
+/** An assembly in a workspace: fasteners are only ever added to one. */
+const assemblySchema = z.object({
+    documentId: z.string().min(1),
+    instanceId: z.string().min(1),
+    instanceType: z.literal("w"),
+    elementId: z.string().min(1)
 });
 
-async function plan(c: AppContext, body: QuickFastenerIn) {
-    if (!getCatalog(body.options.program)) {
-        throw handledError(
-            "Quick fastener doesn't have FTC fasteners yet.",
-            HttpStatus.BAD_REQUEST
-        );
-    }
-    const client = await c.var.getOnshapeApi();
-    const gathered = await gather(
-        client,
-        c.env.KV,
-        body.assembly,
-        body.targets,
-        body.excluded
+const insertBody = z
+    .object({
+        assembly: assemblySchema,
+        selectionMode: z.enum(SelectionMode),
+        targets: z.array(entitySchema).min(1).max(MAX_SELECTIONS),
+        excluded: z.array(entitySchema).max(MAX_SELECTIONS).default([]),
+        options: z.object({
+            program: z.enum(Program),
+            mode: z.enum(FastenerMode),
+            vendor: z.string().min(1),
+            size: z.string().min(1),
+            head: z.string().min(1),
+            length: z.string().optional(),
+            startWasher: z.boolean(),
+            endWasher: z.boolean(),
+            washerType: z.string().optional(),
+            nutType: z.string().optional(),
+            stop: z.enum(StopCondition),
+            maxLength: z.number().positive().max(MAX_LENGTH_LIMIT),
+            maxGap: z.number().min(0).max(MAX_GAP_LIMIT)
+        })
+    })
+    .refine(
+        (body) =>
+            body.selectionMode === SelectionMode.FACES
+                ? body.targets.every(
+                      (each) => each.entityType === SelectedEntityType.FACE
+                  ) &&
+                  body.excluded.every(
+                      (each) => each.entityType === SelectedEntityType.EDGE
+                  )
+                : body.targets.every(
+                      (each) => each.entityType === SelectedEntityType.EDGE
+                  ) && body.excluded.length === 0,
+        "Faces fasten every hole in them, less the edges excluded; locations are edges alone."
     );
-    return {
-        client,
-        plans: planHoles(
-            gathered.circles,
-            gathered.holes,
-            gathered.placed,
-            body.options
-        )
-    };
-}
 
-/** POST /api/quick-fastener/plan — the fastener each picked hole would get. */
-quickFastenerRoutes.post(
-    "/quick-fastener/plan",
-    requireSignInMiddleware,
-    validate("json", bodySchema),
-    async (c) => {
-        const { plans } = await plan(c, c.req.valid("json"));
-        return c.json({
-            holes: plans.map((each) => each.planned)
-        } satisfies QuickFastenerPlan);
-    }
-);
+const assemblyQuery = z.object({
+    documentId: z.string().min(1),
+    instanceId: z.string().min(1),
+    elementId: z.string().min(1)
+});
 
-/** POST /api/quick-fastener/insert — plans again, then inserts and fastens every hole that's ready. */
+/** POST /api/quick-fastener/insert — starts a run fastening the picked holes. */
 quickFastenerRoutes.post(
     "/quick-fastener/insert",
     requireSignInMiddleware,
-    validate("json", bodySchema),
+    validate("json", insertBody),
     async (c) => {
-        const body = c.req.valid("json");
-        const { client, plans } = await plan(c, body);
-        const inserted = await insertFasteners(
-            client,
-            c.env.KV,
-            body.assembly,
-            plans
+        const request = c.req.valid("json");
+        if (!getCatalog(request.options.program)) {
+            throw handledError(
+                "Quick fastener doesn't have FTC fasteners yet.",
+                HttpStatus.BAD_REQUEST
+            );
+        }
+        // Refused before a run starts, rather than by its insert step
+        for (const kind of Object.values(FastenerKind)) {
+            studioLocation(kind);
+        }
+        const current = await getJobStatus(c.env, request.assembly);
+        if (current.state === FastenerJobState.RUNNING) {
+            throw handledError(
+                "Fasteners are already being inserted in this assembly.",
+                HttpStatus.CONFLICT
+            );
+        }
+
+        const run = await c.env.QUICK_FASTENER_WORKFLOW.create({
+            params: { sessionId: getSessionId(c), request }
+        });
+        const status: FastenerJobStatus = {
+            state: FastenerJobState.RUNNING,
+            jobId: run.id,
+            tasks: Object.values(FastenerTaskAction).map((action) => ({
+                action,
+                state: FastenerTaskState.PENDING
+            })),
+            result: { inserted: 0, fastened: 0 }
+        };
+        await reportJob(c.env, request.assembly, status);
+        return c.json(status);
+    }
+);
+
+/** GET /api/quick-fastener/job?documentId=&instanceId=&elementId= — the run this assembly last started. */
+quickFastenerRoutes.get(
+    "/quick-fastener/job",
+    requireSignInMiddleware,
+    cacheMiddleware(),
+    validate("query", assemblyQuery),
+    async (c) => {
+        const query = c.req.valid("query");
+        return c.json(
+            await getJobStatus(c.env, { ...query, instanceType: "w" })
         );
-        return c.json({ inserted } satisfies QuickFastenerInsertOut);
     }
 );

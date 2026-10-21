@@ -1,4 +1,4 @@
-/** Quick fastener's choices: their defaults, keeping them consistent as they change, and how a plan reads. */
+/** Quick fastener's choices: their defaults, keeping them consistent as they change, and how a hole's plan reads. */
 import {
     GENERIC,
     getHead,
@@ -8,15 +8,18 @@ import {
     getScrewSizes,
     getScrewVendors,
     getSize,
+    getWashers,
     Program
 } from "@backend/features/quick-fastener/catalog";
 import {
+    DEFAULT_MAX_GAP,
     DEFAULT_MAX_LENGTH,
     FastenerMode,
     type FastenerOptions,
     HoleEnd,
     HoleStatus,
-    type PlannedHole
+    type PlannedHole,
+    StopCondition
 } from "@backend/features/quick-fastener/contract";
 
 const DEFAULT_SIZE = "NO_10_32";
@@ -25,19 +28,20 @@ const DEFAULT_LENGTH = "IN_0_5";
 const DEFAULT_NUT = "NYLOCK";
 
 export function defaultOptions(): FastenerOptions {
-    return {
+    return consistentOptions({
         program: Program.FRC,
         mode: FastenerMode.AUTOMATIC,
         vendor: GENERIC,
-        head: DEFAULT_HEAD,
         size: DEFAULT_SIZE,
+        head: DEFAULT_HEAD,
         length: DEFAULT_LENGTH,
-        headWasher: false,
+        startWasher: false,
+        endWasher: false,
         nutType: DEFAULT_NUT,
-        nutWasher: false,
+        stop: StopCondition.MAX_LENGTH,
         maxLength: DEFAULT_MAX_LENGTH,
-        upToNext: false
-    };
+        maxGap: DEFAULT_MAX_GAP
+    });
 }
 
 /** `wanted` when it's one of `ids`, else the first. */
@@ -47,8 +51,9 @@ function pick(ids: string[], wanted: string | undefined): string | undefined {
 
 /**
  * Options with every choice one the catalog makes, given the ones before it:
- * a vendor's sizes, the heads it makes in them, and the lengths of those. The
- * choice that changed is kept where it can be, and later ones follow it.
+ * a vendor's sizes, the heads it makes in them, their lengths, and the washers
+ * and nuts made in the size. The choice that changed is kept where it can be,
+ * and later ones follow it.
  */
 export function consistentOptions(options: FastenerOptions): FastenerOptions {
     const vendor =
@@ -56,39 +61,42 @@ export function consistentOptions(options: FastenerOptions): FastenerOptions {
             getScrewVendors().map((each) => each.id),
             options.vendor
         ) ?? GENERIC;
-    const size = pick(
-        getScrewSizes(vendor).map((each) => each.id),
-        options.size
+    const size =
+        pick(
+            getScrewSizes(vendor).map((each) => each.id),
+            options.size
+        ) ?? DEFAULT_SIZE;
+    const head =
+        pick(
+            getScrewHeads(vendor, size).map((each) => each.id),
+            options.head
+        ) ?? DEFAULT_HEAD;
+    const length = pick(
+        getLengths(vendor, size, head).map((each) => each.id),
+        options.length
     );
-    const heads = getScrewHeads(
-        vendor,
-        options.mode === FastenerMode.PRESET ? size : undefined
-    ).map((each) => each.id);
-    const head = pick(heads, options.head) ?? DEFAULT_HEAD;
-    const length =
-        size === undefined
-            ? undefined
-            : pick(
-                  getLengths(vendor, size, head).map((each) => each.id),
-                  options.length
-              );
-    const nutTypes = getNutTypes(
-        options.mode === FastenerMode.PRESET ? size : undefined
-    ).map((each) => each.id);
+    const washerType = pick(
+        getWashers(vendor, size).map((each) => each.type),
+        options.washerType
+    );
     const nutType =
         options.nutType === undefined
             ? undefined
-            : pick(nutTypes, options.nutType);
+            : pick(
+                  getNutTypes(size).map((each) => each.id),
+                  options.nutType
+              );
     return {
         ...options,
         vendor,
-        head,
         size,
+        head,
         length,
+        washerType,
         nutType,
         // A washer can't go under a flat head, which sits in its countersink
-        headWasher: options.headWasher && !isCountersunk(head),
-        nutWasher: nutType !== undefined && options.nutWasher
+        startWasher: options.startWasher && !isCountersunk(head),
+        endWasher: nutType !== undefined && options.endWasher
     };
 }
 
@@ -104,7 +112,7 @@ const END_NAMES: Record<HoleEnd, string> = {
     [HoleEnd.BLIND]: "into a blind hole"
 };
 
-/** e.g. `#10-32 x 7/8 in. Button head, Nylock nut`. */
+/** e.g. `#10-32 x 7/8 in. Button head, Nylock nut`; or why the hole got nothing. */
 export function describePlan(planned: PlannedHole): string {
     if (planned.status === HoleStatus.FASTENED) {
         return "Already fastened";

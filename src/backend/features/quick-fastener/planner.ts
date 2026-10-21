@@ -1,11 +1,11 @@
 /**
  * Picks the fastener for each hole: pure, from the assembly's holes and the
- * circles selected, both in the assembly's coordinates.
+ * circles picked, both in the assembly's coordinates.
  *
  * A hole is followed from its circle into the parts, through every hole on the
  * same axis, until it ends: in threads (tapped), at the bottom of a hole
- * (blind), or out the far side (through, where a nut goes). Up to next stops
- * at the first gap between parts instead of bridging it.
+ * (blind), or out the far side (through, where a nut goes). It stops at the
+ * maximum length, or at the first gap wider than the maximum gap.
  */
 import {
     catalog,
@@ -14,19 +14,20 @@ import {
     getLengths,
     getNut,
     getNutVendor,
-    getScrewSizes,
-    getSeatWasher,
     getSize,
+    getWasher,
+    getWasherVendor,
     type NutChoice,
     type ScrewChoice,
-    seatWasherChoice
+    type WasherChoice
 } from "./catalog";
 import {
     FastenerMode,
     type FastenerOptions,
     HoleEnd,
     HoleStatus,
-    type PlannedHole
+    type PlannedHole,
+    StopCondition
 } from "./contract";
 import {
     add,
@@ -106,9 +107,6 @@ const THREADS_PAST_NUT = 2;
 /** A screw goes at least this many diameters into threads, or as far as they go. */
 const MIN_ENGAGEMENT_DIAMETERS = 1;
 
-/** A clearance hole is at most this much bigger than its screw: past it, the next size up fits. */
-const MAX_CLEARANCE_RATIO = 1.35;
-
 /** How close a hole is to a size's tap drill to be taken for a tapped hole drawn without threads. */
 const TAP_DRILL_RATIO = 0.03;
 
@@ -137,11 +135,21 @@ function planHole(
         return plan({ status: HoleStatus.FASTENED });
     }
 
+    const size = getSize(options.size);
+    const head = getHead(options.head)?.sizes[options.size];
+    if (!size || !head) {
+        return plan({
+            status: HoleStatus.NO_FIT,
+            reason: "The head isn't made in this size."
+        });
+    }
+
     const segments = alongAxis(circle, into, holes);
-    const firstAllowance = isCountersunk(options) ? maxHeadHeight(options) : 0;
+    // A flat head's countersink is above its first hole
+    const allowance = head.countersunk ? head.height : 0;
     const first = segments.find(
         (segment) =>
-            segment.near <= firstAllowance + LINEAR_TOLERANCE &&
+            segment.near <= allowance + LINEAR_TOLERANCE &&
             segment.far > LINEAR_TOLERANCE
     );
     if (!first) {
@@ -150,42 +158,30 @@ function planHole(
             reason: "No hole goes into the part from this circle."
         });
     }
-
-    const size = pickSize(options, first, segments);
-    if (!size) {
+    if (2 * first.hole.radius < size.majorDiameter - LINEAR_TOLERANCE) {
         return plan({
             status: HoleStatus.NO_FIT,
-            reason:
-                options.mode === FastenerMode.PRESET
-                    ? "The screw doesn't fit through this hole."
-                    : "No screw in the catalog fits this hole."
+            reason: `The hole is too small for a ${size.name} screw.`
         });
     }
 
     const stack = followStack(segments, first, size, options);
     const end = stack.end;
-    const screw = pickScrew(options, size, stack);
+    const washers = chooseWashers(options, head.countersunk, end);
+    const screw = pickScrew(options, size, stack, washers);
     if (typeof screw === "string") {
         return plan({ status: HoleStatus.NO_FIT, reason: screw, end });
     }
-
-    const headWasher = screw.washer
-        ? seatWasherChoice(screw.vendor, size.id)
-        : undefined;
     const planned: Omit<PlannedHole, "key"> = {
         status: HoleStatus.READY,
         end,
         depth: stack.depth,
         screw,
-        ...(headWasher ? { headWasher } : {})
+        ...(washers.start ? { startWasher: washers.start } : {})
     };
 
-    const nutVendor = getNutVendor(options.vendor);
-    if (
-        end !== HoleEnd.THROUGH ||
-        !options.nutType ||
-        !getNut(nutVendor, size.id, options.nutType)
-    ) {
+    const nut = nutChoice(options, end);
+    if (!nut) {
         return plan(planned);
     }
     const exitEdge = stack.last.edges.find(
@@ -197,21 +193,12 @@ function planHole(
             reason: "No edge on the far side to fasten a nut to."
         });
     }
-    const nut: NutChoice = {
-        vendor: nutVendor,
-        size: size.id,
-        type: options.nutType,
-        washer: options.nutWasher
-    };
-    const nutWasherChoice = options.nutWasher
-        ? seatWasherChoice(nutVendor, size.id)
-        : undefined;
     return {
         planned: {
             key: circle.key,
             ...planned,
             nut,
-            ...(nutWasherChoice ? { nutWasher: nutWasherChoice } : {})
+            ...(washers.end ? { endWasher: washers.end } : {})
         },
         circle,
         exit: {
@@ -270,79 +257,35 @@ function alongAxis(
     return segments.sort((a, b) => a.near - b.near);
 }
 
-function isCountersunk(options: FastenerOptions): boolean {
-    const head = getHead(options.head);
-    return Object.values(head?.sizes ?? {}).some((each) => each.countersunk);
-}
-
-/** A flat head's countersink is above its first hole, so the hole may start this far down. */
-function maxHeadHeight(options: FastenerOptions): number {
-    const head = getHead(options.head);
-    return Math.max(
-        0,
-        ...Object.values(head?.sizes ?? {}).map((each) => each.height)
-    );
-}
-
-/** The size whose tap drill this hole is: a tapped hole drawn without threads. */
-function tappedSize(
-    segment: Segment,
-    sizes: CatalogSize[]
-): CatalogSize | undefined {
-    const diameter = 2 * segment.hole.radius;
+/** Whether a hole is tapped for a size: a Hole feature's threads, or a hole drawn at its tap drill. */
+function isTappedFor(segment: Segment, size: CatalogSize): boolean {
     if (segment.hole.threaded && segment.hole.majorDiameter !== undefined) {
-        const major = segment.hole.majorDiameter;
-        return sizes.find(
-            (size) => Math.abs(size.majorDiameter - major) < LINEAR_TOLERANCE
+        return (
+            Math.abs(segment.hole.majorDiameter - size.majorDiameter) <
+            LINEAR_TOLERANCE
         );
     }
-    return sizes.find(
-        (size) =>
-            Math.abs(diameter - size.tapDrillDiameter) <=
-            size.tapDrillDiameter * TAP_DRILL_RATIO
+    return (
+        Math.abs(2 * segment.hole.radius - size.tapDrillDiameter) <=
+        size.tapDrillDiameter * TAP_DRILL_RATIO
     );
 }
 
-function pickSize(
-    options: FastenerOptions,
-    first: Segment,
-    segments: Segment[]
-): CatalogSize | undefined {
-    const diameter = 2 * first.hole.radius;
-    const fits = (size: CatalogSize) =>
-        size.majorDiameter <= diameter + LINEAR_TOLERANCE;
+/** The longest screw the vendor makes in the size and head: the farthest any stack is followed. */
+function longestLength(options: FastenerOptions): number {
+    const lengths = getLengths(options.vendor, options.size, options.head);
+    return lengths.length > 0 ? lengths[lengths.length - 1].length : 0;
+}
 
-    if (options.mode === FastenerMode.PRESET) {
-        const size = options.size ? getSize(options.size) : undefined;
-        return size && fits(size) ? size : undefined;
+/** The deepest a stack is followed, and the widest gap it reaches across. */
+function stopLimits(options: FastenerOptions): {
+    reach: number;
+    gap: number;
+} {
+    if (options.stop === StopCondition.RESPECT_GAPS) {
+        return { reach: longestLength(options), gap: options.maxGap };
     }
-
-    // The sizes the vendor makes this head in
-    const sizes = getScrewSizes(options.vendor).filter(
-        (size) => getLengths(options.vendor, size.id, options.head).length > 0
-    );
-    // A tapped hole further on decides the size: one that fits through the clearance hole, and is narrower than it
-    const fitting = sizes.filter(fits);
-    for (const segment of segments) {
-        if (
-            segment === first ||
-            segment.near < first.far - LINEAR_TOLERANCE ||
-            segment.hole.radius >= first.hole.radius - LINEAR_TOLERANCE
-        ) {
-            continue;
-        }
-        const tapped = tappedSize(segment, fitting);
-        if (tapped) {
-            return tapped;
-        }
-    }
-    return sizes
-        .filter(
-            (size) =>
-                fits(size) &&
-                diameter <= size.majorDiameter * MAX_CLEARANCE_RATIO
-        )
-        .sort((a, b) => b.majorDiameter - a.majorDiameter)[0];
+    return { reach: options.maxLength, gap: Infinity };
 }
 
 interface Stack {
@@ -361,6 +304,7 @@ function followStack(
     size: CatalogSize,
     options: FastenerOptions
 ): Stack {
+    const limits = stopLimits(options);
     let reach = first.far;
     let last = first;
     if (first.closedFar) {
@@ -375,13 +319,16 @@ function followStack(
         if (segment === first || segment.far <= reach + LINEAR_TOLERANCE) {
             continue;
         }
-        const isGap = segment.near > reach + LINEAR_TOLERANCE;
-        if (isGap && (options.upToNext || segment.near > options.maxLength)) {
+        const gap = segment.near - reach;
+        if (
+            gap > limits.gap + LINEAR_TOLERANCE ||
+            segment.near > limits.reach
+        ) {
             break;
         }
         const isThreaded =
             2 * segment.hole.radius < size.majorDiameter &&
-            tappedSize(segment, [size])?.id === size.id;
+            isTappedFor(segment, size);
         if (isThreaded) {
             return {
                 end: HoleEnd.TAPPED,
@@ -400,56 +347,97 @@ function followStack(
         }
         reach = segment.far;
         last = segment;
-        if (reach > options.maxLength) {
+        if (reach > limits.reach) {
             break;
         }
     }
     return { end: HoleEnd.THROUGH, depth: reach, engagementStart: reach, last };
 }
 
+interface Washers {
+    start?: WasherChoice;
+    end?: WasherChoice;
+    startThickness: number;
+    endThickness: number;
+}
+
+/** The chosen washer under the head, and under the nut when there is one. */
+function chooseWashers(
+    options: FastenerOptions,
+    countersunk: boolean,
+    end: HoleEnd
+): Washers {
+    const vendor = getWasherVendor(options.vendor, options.size);
+    const washer = options.washerType
+        ? getWasher(vendor, options.size, options.washerType)
+        : undefined;
+    const choice = washer
+        ? { vendor, size: options.size, type: washer.type }
+        : undefined;
+    // A washer can't go under a flat head, which sits in its countersink
+    const underHead = options.startWasher && !countersunk ? choice : undefined;
+    const underNut =
+        options.endWasher && nutChoice(options, end) ? choice : undefined;
+    return {
+        start: underHead,
+        end: underNut,
+        startThickness: underHead ? (washer?.thickness ?? 0) : 0,
+        endThickness: underNut ? (washer?.thickness ?? 0) : 0
+    };
+}
+
+/** A nut, where the screw comes out the far side and one is wanted. */
+function nutChoice(
+    options: FastenerOptions,
+    end: HoleEnd
+): NutChoice | undefined {
+    if (end !== HoleEnd.THROUGH || !options.nutType) {
+        return undefined;
+    }
+    const vendor = getNutVendor(options.vendor);
+    return getNut(vendor, options.size, options.nutType)
+        ? { vendor, size: options.size, type: options.nutType }
+        : undefined;
+}
+
 /** The screw for a stack, or why there's none. */
 function pickScrew(
     options: FastenerOptions,
     size: CatalogSize,
-    stack: Stack
+    stack: Stack,
+    washers: Washers
 ): ScrewChoice | string {
-    const head = getHead(options.head)?.sizes[size.id];
     const made = getLengths(options.vendor, size.id, options.head);
-    if (!head || made.length === 0) {
+    if (made.length === 0) {
         return "The vendor doesn't make this head in this size.";
     }
-    // A washer can't go under a flat head, which sits in its countersink
-    const washer = options.headWasher && !head.countersunk;
-    const seatThickness = (vendor: string) =>
-        getSeatWasher(vendor, size.id)?.thickness ?? 0;
     // Where its tip is, for each length: a flat head's top is flush with the circle
-    const tip = (length: number) =>
-        length - (washer ? seatThickness(options.vendor) : 0);
-
+    const tip = (length: number) => length - washers.startThickness;
     const lengths =
         options.mode === FastenerMode.PRESET
             ? made.filter((each) => each.id === options.length)
             : made.filter(
-                  (each) => each.length <= options.maxLength + LINEAR_TOLERANCE
+                  (each) =>
+                      options.stop !== StopCondition.MAX_LENGTH ||
+                      each.length <= options.maxLength + LINEAR_TOLERANCE
               );
     const choose = (lengthId: string): ScrewChoice => ({
         vendor: options.vendor,
         size: size.id,
         head: options.head,
-        length: lengthId,
-        washer
+        length: lengthId
     });
 
     if (stack.end === HoleEnd.THROUGH) {
-        const nutVendor = getNutVendor(options.vendor);
-        const nut = options.nutType
-            ? getNut(nutVendor, size.id, options.nutType)
-            : undefined;
+        const nut = nutChoice(options, stack.end);
+        const nutHeight = nut
+            ? (getNut(nut.vendor, nut.size, nut.type)?.height ?? 0)
+            : 0;
         const needed =
             stack.depth +
             (nut
-                ? (options.nutWasher ? seatThickness(nutVendor) : 0) +
-                  nut.height +
+                ? washers.endThickness +
+                  nutHeight +
                   THREADS_PAST_NUT * size.pitch
                 : 0);
         if (options.mode === FastenerMode.PRESET) {
@@ -460,9 +448,12 @@ function pickScrew(
         const shortest = lengths.find(
             (each) => tip(each.length) >= needed - LINEAR_TOLERANCE
         );
-        return shortest
-            ? choose(shortest.id)
-            : "No screw reaches through within the maximum length.";
+        if (shortest) {
+            return choose(shortest.id);
+        }
+        return options.stop === StopCondition.MAX_LENGTH
+            ? "No screw reaches through within the maximum length."
+            : "No screw is long enough to reach through.";
     }
 
     // Into threads, or the bottom of a blind hole: as far in as fits, short of the bottom

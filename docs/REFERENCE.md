@@ -59,8 +59,9 @@ Cloudflare Workflows run long background jobs that survive past a request and re
 | `RELOAD_LIBRARY_WORKFLOW`   | `ReloadLibraryWorkflow`   | Reloads a library's groups, or the few named, one reload per library at a time |
 | `RENDER_THUMBNAIL_WORKFLOW` | `RenderThumbnailWorkflow` | Waits out one configuration's render and stores both sizes in R2               |
 | `VERSION_MANAGER_WORKFLOW`  | `VersionManagerWorkflow`  | Runs one push or pull between linked workspaces                                |
+| `QUICK_FASTENER_WORKFLOW`   | `QuickFastenerWorkflow`   | Indexes an assembly's picked holes, inserts their fasteners and mates them     |
 
-Loads, their job tracking, webhooks and version approval are in [architecture/loading.md](./architecture/loading.md); renders in [architecture/thumbnails.md](./architecture/thumbnails.md); pushes and pulls between linked workspaces in [architecture/version-manager.md](./architecture/version-manager.md).
+Loads, their job tracking, webhooks and version approval are in [architecture/loading.md](./architecture/loading.md); renders in [architecture/thumbnails.md](./architecture/thumbnails.md); pushes and pulls between linked workspaces in [architecture/version-manager.md](./architecture/version-manager.md); fastener runs in [architecture/quick-fastener.md](./architecture/quick-fastener.md).
 
 ### Pushes
 

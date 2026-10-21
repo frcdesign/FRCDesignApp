@@ -129,6 +129,13 @@ export function getCatalog(program: Program): Catalog | undefined {
     return program === Program.FRC ? catalog : undefined;
 }
 
+/** Where a kind's studio is released; undefined until its Part Studio is made. */
+export function getStudioLocation(
+    kind: FastenerKind
+): StudioLocation | undefined {
+    return catalog.studios[kind].location ?? undefined;
+}
+
 export function getSize(sizeId: string): CatalogSize | undefined {
     return catalog.sizes.find((size) => size.id === sizeId);
 }
@@ -214,22 +221,34 @@ export function getNutTypes(size?: string): { id: string; name: string }[] {
     );
 }
 
-/** The washer a screw or nut of a vendor and size sits on. */
-export function getSeatWasher(
-    vendor: string,
-    size: string
-): CatalogWasher | undefined {
-    const seat = catalog.seatWashers.find(
-        (each) => each.vendor === vendor && each.size === size
+/** The vendor whose washers go with a screw vendor's in a size: its own, else Generic's. */
+export function getWasherVendor(screwVendor: string, size: string): string {
+    return catalog.washers.some(
+        (washer) => washer.vendor === screwVendor && washer.size === size
+    )
+        ? screwVendor
+        : GENERIC;
+}
+
+/** The washers to choose from for a screw vendor's screws of a size. */
+export function getWashers(screwVendor: string, size: string): CatalogWasher[] {
+    const vendor = getWasherVendor(screwVendor, size);
+    return catalog.washers.filter(
+        (washer) => washer.vendor === vendor && washer.size === size
     );
-    return seat
-        ? catalog.washers.find(
-              (washer) =>
-                  washer.vendor === seat.washerVendor &&
-                  washer.size === size &&
-                  washer.type === seat.washerType
-          )
-        : undefined;
+}
+
+export function getWasher(
+    vendor: string,
+    size: string,
+    type: string
+): CatalogWasher | undefined {
+    return catalog.washers.find(
+        (washer) =>
+            washer.vendor === vendor &&
+            washer.size === size &&
+            washer.type === type
+    );
 }
 
 /** Each input's option (or `"true"`/`"false"`), keyed by input id: the configuration a studio is inserted with. */
@@ -240,8 +259,6 @@ export interface ScrewChoice {
     size: string;
     head: string;
     length: string;
-    /** Sits on its seat washer. */
-    washer: boolean;
 }
 
 export interface WasherChoice {
@@ -254,17 +271,16 @@ export interface NutChoice {
     vendor: string;
     size: string;
     type: string;
-    /** Sits on its seat washer. */
-    washer: boolean;
 }
 
+// A screw's and nut's Washer stays off: each is fastened to the washer's own edge, whichever washer it is.
 export function screwConfiguration(screw: ScrewChoice): FastenerConfiguration {
     return {
         vendor: screw.vendor,
         size: screw.size,
         head: screw.head,
         length: screw.length,
-        washer: String(screw.washer)
+        washer: "false"
     };
 }
 
@@ -279,17 +295,6 @@ export function nutConfiguration(nut: NutChoice): FastenerConfiguration {
         vendor: nut.vendor,
         size: nut.size,
         type: nut.type,
-        washer: String(nut.washer)
+        washer: "false"
     };
-}
-
-/** The washer a seated part sits on, as a choice to insert. */
-export function seatWasherChoice(
-    vendor: string,
-    size: string
-): WasherChoice | undefined {
-    const washer = getSeatWasher(vendor, size);
-    return washer
-        ? { vendor: washer.vendor, size, type: washer.type }
-        : undefined;
 }

@@ -69,6 +69,11 @@
             "name": "version-manager-workflow",
             "binding": "VERSION_MANAGER_WORKFLOW",
             "class_name": "VersionManagerWorkflow"
+        },
+        {
+            "name": "quick-fastener-workflow",
+            "binding": "QUICK_FASTENER_WORKFLOW",
+            "class_name": "QuickFastenerWorkflow"
         }
     ],
     // Inherited by every environment. v2 swaps the thumbnail render queue,
@@ -156,6 +161,11 @@
                     "name": "version-manager-workflow-cert",
                     "binding": "VERSION_MANAGER_WORKFLOW",
                     "class_name": "VersionManagerWorkflow"
+                },
+                {
+                    "name": "quick-fastener-workflow-cert",
+                    "binding": "QUICK_FASTENER_WORKFLOW",
+                    "class_name": "QuickFastenerWorkflow"
                 }
             ],
             "durable_objects": {
@@ -216,6 +226,11 @@
                     "name": "version-manager-workflow-prod",
                     "binding": "VERSION_MANAGER_WORKFLOW",
                     "class_name": "VersionManagerWorkflow"
+                },
+                {
+                    "name": "quick-fastener-workflow-prod",
+                    "binding": "QUICK_FASTENER_WORKFLOW",
+                    "class_name": "QuickFastenerWorkflow"
                 }
             ],
             "durable_objects": {

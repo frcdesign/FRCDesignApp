@@ -13,27 +13,33 @@ vendor makes. It has no FTC fasteners yet.
 
 ## Code map
 
-| Path                                                                        | Role                                                                                     |
-| --------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| `scripts/sync-quick-fastener.js`                                            | `npm run sync:quick-fastener`: copies robot-code's manifest in at a pinned commit        |
-| `src/backend/features/quick-fastener/catalog.gen.ts`                        | The synced catalog: studios, vendors, sizes, heads, screws, nuts, washers, seat washers  |
-| `src/backend/features/quick-fastener/hole-scan.gen.ts`                      | The synced hole scan: the FeatureScript lambda evaluated in each Part Studio             |
-| `src/backend/features/quick-fastener/catalog.ts`                            | The catalog's types and lookups, and each studio's configuration; client-safe            |
-| `src/backend/features/quick-fastener/contract.ts`                           | `FastenerOptions`, `QuickFastenerIn`, `PlannedHole`, `HoleStatus`, `HoleEnd`             |
-| `src/backend/features/quick-fastener/geometry.ts`                           | Vectors, Onshape's 4×4 transforms, `LINEAR_TOLERANCE`                                    |
-| `src/backend/features/quick-fastener/scan.ts`                               | `scanStudio`: evaluates the hole scan, decodes it, caches it                             |
-| `src/backend/features/quick-fastener/assembly.ts`                           | Part occurrences and what pins each one's Part Studio; holes and circles in the assembly |
-| `src/backend/features/quick-fastener/gather.ts`                             | `gather`: reads the assembly and scans every Part Studio it needs                        |
-| `src/backend/features/quick-fastener/planner.ts`                            | `planHoles`: the fastener for each hole; pure                                            |
-| `src/backend/features/quick-fastener/insert.ts`                             | `placements` and `insertFasteners`: inserting and fastening each hole's parts            |
-| `src/backend/features/quick-fastener/routes.ts`                             | The two routes below                                                                     |
-| `src/frontend/lib/selection.ts`                                             | Onshape's SELECTION messages, and the one query list taking picks                        |
-| `src/frontend/components/query-list.tsx`                                    | `QueryList`: Onshape's query parameter, for entities picked in the Onshape window        |
-| `src/frontend/features/quick-fastener/options.ts`                           | Default options, `consistentOptions`, `describePlan`                                     |
-| `src/frontend/features/quick-fastener/store.ts`                             | The page's options (kept) and picks (not)                                                |
-| `src/frontend/features/quick-fastener/components/quick-fastener-panel.tsx`  | The page: what to fasten, with what, preview and insert                                  |
-| `src/frontend/features/quick-fastener/components/fastener-options-form.tsx` | The options                                                                              |
-| `src/frontend/routes/app/quick-fastener.tsx`                                | The route; a notice outside an assembly                                                  |
+| Path                                                                        | Role                                                                                         |
+| --------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `scripts/sync-quick-fastener.js`                                            | `npm run sync:quick-fastener`: copies robot-code's manifest in at a pinned commit            |
+| `src/backend/features/quick-fastener/catalog.gen.ts`                        | The synced catalog: studios, vendors, sizes, heads, screws, nuts, washers, seat washers      |
+| `src/backend/features/quick-fastener/hole-scan.gen.ts`                      | The synced hole scan: the FeatureScript lambda evaluated in each Part Studio                 |
+| `src/backend/features/quick-fastener/catalog.ts`                            | The catalog's types and lookups, and each studio's configuration; client-safe                |
+| `src/backend/features/quick-fastener/contract.ts`                           | `FastenerOptions`, `QuickFastenerIn`, `PlannedHole`, `FastenerJobStatus` and the run's steps |
+| `src/backend/features/quick-fastener/geometry.ts`                           | Vectors, Onshape's 4×4 transforms, `LINEAR_TOLERANCE`                                        |
+| `src/backend/features/quick-fastener/scan.ts`                               | `scanStudio`: evaluates the hole scan, decodes it, caches it                                 |
+| `src/backend/features/quick-fastener/assembly.ts`                           | Part occurrences and what pins each one's Part Studio; holes and circles in the assembly     |
+| `src/backend/features/quick-fastener/gather.ts`                             | `gather`: reads the assembly and scans every Part Studio it needs                            |
+| `src/backend/features/quick-fastener/planner.ts`                            | `planHoles`: the fastener for each hole; pure                                                |
+| `src/backend/features/quick-fastener/insert.ts`                             | `placements`, the insert's groups, each part's fasten mate, washers' top edges               |
+| `src/backend/features/quick-fastener/workflow.ts`                           | `QuickFastenerWorkflow`: a run, step by step                                                 |
+| `src/backend/features/quick-fastener/jobs.ts`                               | `reportJob` and `getJobStatus`: the run an assembly last started                             |
+| `src/backend/features/quick-fastener/failures.ts`                           | A failed step or run, in the user's words; which writes are retried                          |
+| `src/backend/features/quick-fastener/routes.ts`                             | The two routes below                                                                         |
+| `src/frontend/lib/selection.ts`                                             | Onshape's SELECTION messages, and the one query list taking picks                            |
+| `src/frontend/components/query-list.tsx`                                    | `QueryList`: Onshape's query parameter, for entities picked in the Onshape window            |
+| `src/frontend/features/quick-fastener/options.ts`                           | Default options, `consistentOptions`, `describePlan`                                         |
+| `src/frontend/features/quick-fastener/store.ts`                             | The page's options and selection mode (kept) and picks (not)                                 |
+| `src/frontend/features/quick-fastener/components/quick-fastener-panel.tsx`  | The page: the last run, the options, what to fasten, and Insert                              |
+| `src/frontend/features/quick-fastener/components/fastener-options-form.tsx` | The options                                                                                  |
+| `src/frontend/features/quick-fastener/components/last-run-callout.tsx`      | The run's step while it goes, then how it went                                               |
+| `src/frontend/features/quick-fastener/components/job-details.tsx`           | The run's steps and each hole's plan                                                         |
+| `src/frontend/features/quick-fastener/job-toasts.ts`                        | `useFastenerJobToasts`: a toast when a run finishes, from anywhere in the app                |
+| `src/frontend/routes/app/quick-fastener.tsx`                                | The route; a notice outside an assembly                                                      |
 
 robot-code (`robot-education/robot-code`) owns everything the catalog says:
 `featurescripts/quickFastener/quickFastenerTables.py` generates the features'
@@ -52,8 +58,16 @@ workspace, and `{documentId}|m|{documentMicroversionId}|…` otherwise.
 the mate connector feature id a released studio's part has in an assembly,
 with no expiry.
 
-**Browser** `quickFastener` in `localStorage` — the options. What's picked is
-held only while the page is open.
+**KV** `fastener-job:{documentId}|{instanceId}|{elementId}` — the run an
+assembly last started (`FastenerJobStatus`), for six hours: `RUNNING` with its
+workflow run id and each step's state, then how it ended, with each hole's
+plan once indexed.
+
+**Workflow** `QUICK_FASTENER_WORKFLOW` (`QuickFastenerWorkflow`) — one instance
+per run, given the caller's session id and the request.
+
+**Browser** `quickFastener` in `localStorage` — the options and the selection
+mode. What's picked is held only while the page is open.
 
 ## Flows
 
@@ -68,48 +82,103 @@ held only while the page is open.
 3. Hovering a row lights its entity up (`requestSelectionHighlight`), and
    leaving it stops the request.
 
-### Planning — `POST /api/quick-fastener/plan`
+### Picking what to fasten
 
-1. Reads the assembly definition, and, when any part is from the assembly's own
-   workspace, its Part Studios' microversions (one listing).
-2. Walks each occurrence into subassemblies to its part instance, and pins its
-   Part Studio (`partOccurrences`).
-3. Scans each distinct pinned Part Studio once, six at a time: from the cache
-   unless something is picked in it, by evaluating the hole scan otherwise,
-   with the picked edges and faces as `qTransient` queries. Fasteners of the
-   catalog's own studios and standard content aren't scanned.
-4. Moves every part's holes, and the picked circles (an edge's own, or every
-   circular edge of a face), into the assembly; drops the skipped ones.
-5. `planHoles`, for each circle:
-    1. A Quick fastener screw already on its axis, seated there: **fastened**.
-    2. Every hole on the axis, nearest first. The first must start at the circle
-       (or within a flat head's countersink of it).
-    3. Size: a tapped hole further on that a size fitting the clearance hole
-       taps, else the largest size the clearance hole fits, at most 1.35 times
-       its diameter; preset, the chosen size, if it fits.
-    4. Follow the holes: into a tapped hole of that size (threads, or a hole at
-       its tap drill), to the bottom of a blind hole, or out the far side.
-       Bridges gaps, unless up to next, and stops past the maximum length.
-    5. Length, from the vendor's standard lengths for that size and head: the
-       shortest reaching through the stack, its washers, its nut and two threads
-       past it; or the longest that engages a diameter of thread (or all there
-       is) short of a blind hole's bottom by a thread. Preset, the chosen length,
-       if it does.
-    6. A nut only out the far side, and only with a nut type; from the screw's
-       vendor if it makes nuts, else Generic, mated to the far side's edge.
-6. Answers each hole's plan.
+The panel's selection mode decides what the picks are:
 
-### Inserting — `POST /api/quick-fastener/insert`
+- **Faces** — every circular edge of each face is a hole to fasten; _Holes to
+  skip_ takes the edges of holes in them to leave out.
+- **Locations** — each picked circular edge is a hole to fasten; nothing is
+  skipped.
 
-1. Plans again, as above.
-2. Places each ready hole's parts (`placements`): the screw and its washer on
-   the circle, the nut and its washer on the far side, turned over; a seated
-   part above its edge by its seat washer.
-3. Inserts them all in one `transformedinstances` call, from each studio's
-   released version, with its configuration.
-4. Reads each studio's mate connector id from the assembly, once per release.
-5. Adds one fasten mate per part, one at a time: its mate connector to the
-   center of the edge it sits on.
+`insertBody` in `routes.ts` refuses a body whose picks don't match its mode.
+Changing the mode clears the picks.
+
+### Starting a run — `POST /api/quick-fastener/insert`
+
+1. Answers 400 for FTC, 503 when the studios aren't released, and 409 while a
+   run in the same assembly is still going (`getJobStatus`).
+2. Creates a `QuickFastenerWorkflow` run with the caller's session id, stores
+   it as `RUNNING` with every step pending, pushes, and answers that status.
+   Picks are cleared on the page; the run goes on whether or not anyone stays.
+
+### A run — `QuickFastenerWorkflow`
+
+Each step reports itself started (`report-{action}`), then makes its Onshape
+calls, each in a Workflow step of its own. A read is retried when its failure
+is transient (`isTransient`); a write only when Onshape refused it with 429
+before doing anything (`isRateLimited`), so a retry never inserts or mates
+twice. A step that fails is recorded with why, and the steps after it are
+skipped.
+
+1. **Index holes** (`index`):
+    1. Reads the assembly definition, and, when any part is from the
+       assembly's own workspace, its Part Studios' microversions (one
+       listing).
+    2. Walks each occurrence into subassemblies to its part instance, and pins
+       its Part Studio (`partOccurrences`).
+    3. Scans each distinct pinned Part Studio once, six at a time: from the
+       cache unless something is picked in it, by evaluating the hole scan
+       otherwise, with the picked edges and faces as `qTransient` queries.
+       Fasteners of the catalog's own studios and standard content aren't
+       scanned.
+    4. Moves every part's holes, and the picked circles (an edge's own, or
+       every circular edge of a face), into the assembly; drops the skipped
+       ones.
+    5. `planHoles`, for each circle, with the chosen size and head:
+        1. A Quick fastener screw already on its axis, seated there:
+           **fastened**.
+        2. Every hole on the axis, nearest first. The first must start at the
+           circle (or within a flat head's countersink of it), and be at least
+           the size's major diameter across.
+        3. Follow the holes (`followStack`): into a hole tapped for the size
+           (threads, or a hole at its tap drill narrower than the screw), to
+           the bottom of a blind hole, or out the far side. **Max length**
+           reaches across any gap and stops past the maximum length; **Respect
+           gaps** stops at the first gap wider than the maximum gap, and past
+           the vendor's longest screw.
+        4. Washers (`chooseWashers`): the chosen washer type, from the screw's
+           vendor when it makes washers in the size, else Generic. A start
+           washer never goes under a flat head; an end washer only under a
+           nut.
+        5. Length, from the vendor's standard lengths for the size and head
+           (within the maximum length under **Max length**): the shortest
+           reaching through the stack, its washers, its nut and two threads
+           past it; or the longest that engages a diameter of thread (or all
+           there is) short of a blind hole's bottom by a thread. Preset, the
+           chosen length.
+        6. A nut only out the far side, and only with a nut type; from the
+           screw's vendor if it makes nuts, else Generic.
+    6. Stores each hole's plan with the status.
+2. **Insert parts** (`insert`): places each ready hole's parts
+   (`placements`) — the start washer on the circle and the screw on it, the
+   end washer on the far side and the nut on it, turned over — and inserts
+   them all in one `transformedinstances` call, from each studio's released
+   version, with its configuration. Skipped when no hole is ready.
+3. **Fasten parts**:
+    1. Reads each studio's mate connector id from the assembly, once per
+       release (`mate-connectors`).
+    2. Scans the washer studio in each configuration placed, for its top edge
+       (`washerTopEdge`): its hole's circle farthest up its Z axis
+       (`washer-edges`).
+    3. Adds one fasten mate per part, one at a time (`mate-{n}`): its mate
+       connector to the center of what it sits on — a washer's top edge when
+       it sits on a washer, else the hole's own edge.
+4. **Finish** (`finish-job`): stores `COMPLETE` or `FAILED`, with how many
+   parts were inserted and fastened, and when.
+
+### Reporting
+
+`reportJob` stores the status and pushes `FASTENER_JOB` with the assembly's
+key, tagged with its workspace. A page on that assembly refetches
+`GET /api/quick-fastener/job`, and does on reconnecting too. A stored
+`RUNNING` is checked against its workflow run: once that has ended without
+reporting, the running step reads failed and the rest skipped.
+
+The page shows the run in a callout above the options — its step while it goes,
+saying the page can be left, then how it went — with a Details modal listing
+the steps and each hole's plan. `useFastenerJobToasts`, in the app shell, shows
+a toast when a run watched going finishes, from any tab of the app.
 
 ## Invariants
 
@@ -117,25 +186,31 @@ held only while the page is open.
   here.
 - Only standard fasteners are inserted: a length, nut or washer the catalog
   says its vendor makes.
-- A screw's and nut's Washer input only moves its mate connector, by its
-  vendor's seat washer, and the washer inserted under it is that seat washer.
-  So every part is fastened to a hole's own edge, with no offset.
+- A screw or nut on a washer is fastened to the inserted washer's top edge,
+  and anything else to a hole's own edge, so no mate has an offset and any
+  washer fits. The app always inserts screws and nuts with their Washer input
+  off.
 - A scan is keyed by something that never changes, so a cached scan is never
   stale and nothing invalidates it.
 - Fasteners are only ever inserted into an assembly in a workspace.
-- The plan inserted is the server's own, made in the insert request.
-- Onshape decides who may insert: the routes need a session, and the insert
-  is the caller's own Onshape call.
+- The plan inserted is the run's own, made in its index step; the client
+  never sends one.
+- One run at a time in an assembly.
+- A write is retried only after a 429, so no part is inserted or mated twice.
+- Onshape decides who may insert: the routes need a session, and every call
+  a run makes is under the caller's own session.
 
 ## Failure and recovery
 
-| Failure                              | Result                                     | Recovery                                     |
-| ------------------------------------ | ------------------------------------------ | -------------------------------------------- |
-| The studios aren't released          | Insert answers 503                         | Fill robot-code's `LOCATIONS`, sync          |
-| The hole scan fails in a Part Studio | The request fails, naming Onshape's notice | Fix the Part Studio, or skip what's in it    |
-| No hole, or nothing fits             | That hole's plan is **no fit**, with why   | Change the options or the hole               |
-| A mate fails partway                 | The parts so far stay, some unmated        | Mate the rest by hand, or undo and run again |
-| Onshape rate-limits                  | The request fails with the rate limit      | Run it again                                 |
+| Failure                              | Result                                                    | Recovery                                     |
+| ------------------------------------ | --------------------------------------------------------- | -------------------------------------------- |
+| The studios aren't released          | Insert answers 503                                        | Fill robot-code's `LOCATIONS`, sync          |
+| The hole scan fails in a Part Studio | Index fails, naming Onshape's notice; the rest is skipped | Fix the Part Studio, or skip what's in it    |
+| No hole, or nothing fits             | That hole's plan is **no fit**, with why                  | Change the options or the hole               |
+| The insert fails                     | Nothing is inserted; fastening is skipped                 | Run it again                                 |
+| A mate fails partway                 | The parts so far stay, some unmated                       | Mate the rest by hand, or undo and run again |
+| Onshape rate-limits                  | The step retries, then fails as above                     | Run it again                                 |
+| The run dies without reporting       | The job reads failed once the run has ended               | Run it again                                 |
 
 ## Decisions
 
@@ -151,9 +226,17 @@ held only while the page is open.
 - **The panel listens instead of requesting.** Onshape sends every selection
   change once the app has said it's ready, so a focused list takes what's new
   rather than holding a `requestSelection` open, which a highlight would cancel.
-- **Mate connectors move, mates don't offset.** Mate offsets aren't in
-  Onshape's API reference, and a washer's thickness belongs to the catalog, so
-  the studio carries it.
+- **Washers are mated to, not offset for.** Mate offsets aren't in Onshape's
+  API reference. Fastening a screw or nut to the washer under it puts it at
+  the washer's thickness whichever washer was chosen, where moving the mate
+  connector by a seat washer would fit only that one.
+- **A run, not a request, and no preview.** Indexing a large assembly and
+  mating each part takes many Onshape calls, longer than anyone should wait on
+  a panel; a workflow keeps going when the panel closes, and its stored status
+  says what each hole got. Its plan is the preview.
+- **The size is chosen, even in automatic mode.** A clearance hole fits more
+  than one size, and a hole at 0.201" is both #10's clearance and 1/4-20's tap
+  drill; the person knows which they meant. Automatic picks the length.
 - **Every scan is sent the picked ids, not a `queries` body.** The lambda is
   wrapped to build its queries from `qTransient`, whose form std documents.
 

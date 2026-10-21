@@ -38,12 +38,12 @@ describe("consistentOptions", () => {
         const options = consistentOptions({
             ...defaultOptions(),
             head: "FLAT",
-            headWasher: true,
+            startWasher: true,
             nutType: undefined,
-            nutWasher: true
+            endWasher: true
         });
-        expect(options.headWasher).toBe(false);
-        expect(options.nutWasher).toBe(false);
+        expect(options.startWasher).toBe(false);
+        expect(options.endWasher).toBe(false);
     });
 });
 
@@ -58,14 +58,12 @@ describe("describePlan", () => {
                     vendor: "GENERIC",
                     size: "NO_10_32",
                     head: "BUTTON",
-                    length: "IN_0_875",
-                    washer: false
+                    length: "IN_0_875"
                 },
                 nut: {
                     vendor: "GENERIC",
                     size: "NO_10_32",
-                    type: "NYLOCK",
-                    washer: false
+                    type: "NYLOCK"
                 }
             })
         ).toBe("#10-32 x 7/8 in. Button head, Nylock nut");

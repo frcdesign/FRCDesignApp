@@ -146,15 +146,16 @@ One `ClientRelay` Durable Object holds every client's WebSocket
 (`GET /api/push?library=<id>`), hibernating so idle sockets cost nothing, and
 tags each with the library it shows.
 
-| Message       | Sent by                                              | To                       | The client                                                     |
-| ------------- | ---------------------------------------------------- | ------------------------ | -------------------------------------------------------------- |
-| `jobs`        | A reload asked for, claiming, progressing, finishing | That library's sockets   | Sets the job status query (editors only)                       |
-| `library`     | A load that wrote, a shell group, an admin team sync | That library's sockets   | `refreshLibrary()`, which moves to the new cache version       |
-| `thumbnail`   | Each stored render size                              | Every socket             | Refetches rows that missed that render; wakes a waiting render |
-| `version-job` | A push or pull starting, and the workflow ending it  | That workspace's sockets | Sets the run's status query                                    |
+| Message        | Sent by                                              | To                       | The client                                                     |
+| -------------- | ---------------------------------------------------- | ------------------------ | -------------------------------------------------------------- |
+| `jobs`         | A reload asked for, claiming, progressing, finishing | That library's sockets   | Sets the job status query (editors only)                       |
+| `library`      | A load that wrote, a shell group, an admin team sync | That library's sockets   | `refreshLibrary()`, which moves to the new cache version       |
+| `thumbnail`    | Each stored render size                              | Every socket             | Refetches rows that missed that render; wakes a waiting render |
+| `version-job`  | A push or pull starting, and the workflow ending it  | That workspace's sockets | Sets the run's status query                                    |
+| `fastener-job` | A fastener run starting, each step, and its end      | That workspace's sockets | Refetches the run's status, if it's this page's assembly       |
 
 A socket is tagged with the library it shows and, where Onshape launched the app
-in one, the workspace it was launched in — which is what a `version-job` reaches.
+in one, the workspace it was launched in — which is what a `version-job` or `fastener-job` reaches.
 
 A push says only what changed; the client refetches under its own access, so
 nothing private travels over it. A failed send is logged, not thrown. A client

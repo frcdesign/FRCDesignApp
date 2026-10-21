@@ -165,10 +165,10 @@ export function pathKey(path: string[]): string {
 /** Whether an occurrence is one of Quick fastener's own parts, from any release of a studio. */
 export function isFromStudio(
     occurrence: PartOccurrence,
-    location: StudioLocation | null
+    location: StudioLocation | undefined
 ): boolean {
     return (
-        location !== null &&
+        location !== undefined &&
         occurrence.documentId === location.documentId &&
         occurrence.elementId === location.elementId
     );
@@ -177,7 +177,7 @@ export function isFromStudio(
 /** The screws already placed: each one's origin and axis in the assembly. */
 export function placedScrews(
     occurrences: PartOccurrence[],
-    screwStudio: StudioLocation | null
+    screwStudio: StudioLocation | undefined
 ): PlacedScrew[] {
     return occurrences
         .filter((occurrence) => isFromStudio(occurrence, screwStudio))

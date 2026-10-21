@@ -41,6 +41,19 @@ export function pushVersionJob(
     return broadcast(env, { type: PushType.VERSION_JOB, workspaceKey });
 }
 
+/** Tells whoever is in an assembly's workspace that the Quick fastener run in it moved on. */
+export function pushFastenerJob(
+    env: AppBindings,
+    workspaceKey: string,
+    assemblyKey: string
+): Promise<void> {
+    return broadcast(env, {
+        type: PushType.FASTENER_JOB,
+        workspaceKey,
+        assemblyKey
+    });
+}
+
 export function pushThumbnailRendered(
     env: AppBindings,
     thumbnail: Omit<ThumbnailPush, "type">
