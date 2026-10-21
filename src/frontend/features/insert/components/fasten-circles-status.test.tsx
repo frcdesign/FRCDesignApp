@@ -66,9 +66,9 @@ describe("FastenCirclesStatus", () => {
         ]);
         await openCard();
 
-        expect(screen.getByText("2 circles selected")).toBeTruthy();
-        expect(screen.getByText("Circle 2")).toBeTruthy();
-        expect(screen.queryByText("Circle 3")).toBeNull();
+        expect(screen.getByText("2 circular edges selected")).toBeTruthy();
+        expect(screen.getByText("Edge 2")).toBeTruthy();
+        expect(screen.queryByText("Edge 3")).toBeNull();
     });
 
     it("offers to replicate only a part an editor allowed to", async () => {
@@ -77,7 +77,7 @@ describe("FastenCirclesStatus", () => {
         expect(screen.queryByLabelText("Replicate")).toBeNull();
         expect(
             screen.getByText(
-                "A part will be inserted and fastened to each selected circle."
+                "A part will be inserted and fastened to each selected edge."
             )
         ).toBeTruthy();
     });
@@ -95,7 +95,7 @@ describe("FastenCirclesStatus", () => {
         const postMessage = vi.spyOn(window.parent, "postMessage");
         const user = await openCard();
 
-        await user.click(screen.getByText("Click to select circles"));
+        await user.click(screen.getByText("Click to select circular edges"));
         expect(sentMessages(postMessage)).toEqual([
             "showMessageBubble",
             "requestSelection"
@@ -103,7 +103,9 @@ describe("FastenCirclesStatus", () => {
         expect(postMessage.mock.calls[1][0]).toMatchObject({
             geometryTypeSpecifier: ["CIRCLE"]
         });
-        expect(screen.getByText("Select circles in Onshape")).toBeTruthy();
+        expect(
+            screen.getByText("Select circular edges in Onshape")
+        ).toBeTruthy();
 
         fireEvent.pointerDown(document.body);
         expect(sentMessages(postMessage).at(-1)).toBe("stopRequest");
@@ -111,7 +113,7 @@ describe("FastenCirclesStatus", () => {
 
     it("says how to fasten when nothing is selected", async () => {
         await openCard();
-        expect(screen.getByText("No circles selected")).toBeTruthy();
+        expect(screen.getByText("No circular edges selected")).toBeTruthy();
     });
 });
 

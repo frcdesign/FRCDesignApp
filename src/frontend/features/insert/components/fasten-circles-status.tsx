@@ -8,7 +8,7 @@ import {
     Stack,
     Text
 } from "@mantine/core";
-import { CircleDashedIcon } from "@phosphor-icons/react";
+import { NutIcon } from "@phosphor-icons/react";
 import { type CircleSelection } from "@backend/features/library/contract";
 import { Hint } from "@backend/features/hints/contract";
 import { AppHoverCard } from "../../../components/app-hover-card";
@@ -47,7 +47,7 @@ export function FastenCirclesStatus(
 
     const found = circles.length > 0;
     const isNew = !found && !hasFastened;
-    const status = found ? Status.SUCCESS : Status.INFO;
+    const status = found ? Status.SUCCESS : Status.ERROR;
     const canReplicate = supportsReplicate && circles.length > 1;
 
     return (
@@ -58,7 +58,7 @@ export function FastenCirclesStatus(
                 <Center my="auto">
                     <NewIndicator shown={isNew} offset={2}>
                         <BadgedIcon
-                            icon={CircleDashedIcon}
+                            icon={NutIcon}
                             status={status}
                             // Still selecting after the card closes.
                             color={
@@ -79,8 +79,8 @@ export function FastenCirclesStatus(
                     title={
                         <Group gap="xs">
                             {found
-                                ? `${plural(circles.length, "circle")} selected`
-                                : "No circles selected"}
+                                ? `${plural(circles.length, "circular edge")} selected`
+                                : "No circular edges selected"}
                             {isNew && <NewBadge />}
                         </Group>
                     }
@@ -96,7 +96,7 @@ export function FastenCirclesStatus(
                 {canReplicate && (
                     <InfoCheckbox
                         label="Replicate"
-                        info="Insert one part per circle size and replicate it onto the other circles that size, rather than inserting a part for each."
+                        info="Insert one part per edge diameter and replicate it onto the other edges of that diameter, rather than inserting a part for each."
                         checked={replicate}
                         onChange={(checked) =>
                             updateUiState({ replicate: checked })
@@ -110,14 +110,14 @@ export function FastenCirclesStatus(
 
 function describeFasten(count: number, replicate: boolean): string {
     if (count === 0) {
-        return "Select circles in Onshape to fasten the part to them, or finish the fasten mate after inserting.";
+        return "Select edges to automatically fasten this part to.";
     }
     if (count === 1) {
-        return "The part will be fastened to the selected circle.";
+        return "The part will be fastened to the selected edge.";
     }
     return replicate
-        ? "One part will be fastened per circle size and replicated onto the other circles that size."
-        : "A part will be inserted and fastened to each selected circle.";
+        ? "One part will be fastened per edge diameter and replicated onto the other edges of that diameter."
+        : "A part will be inserted and fastened to each selected edge.";
 }
 
 interface CircleSelectionFieldProps {
@@ -142,8 +142,8 @@ function CircleSelectionField(props: CircleSelectionFieldProps): ReactNode {
             {circles.length === 0 ? (
                 <Text size="sm" c="dimmed">
                     {isSelecting
-                        ? "Select circles in Onshape"
-                        : "Click to select circles"}
+                        ? "Select circular edges in Onshape"
+                        : "Click to select circular edges"}
                 </Text>
             ) : (
                 <Group gap={4}>
@@ -152,7 +152,7 @@ function CircleSelectionField(props: CircleSelectionFieldProps): ReactNode {
                             key={`${circle.occurrencePath.join("/")}:${circle.selectionId}`}
                             variant="light"
                         >
-                            Circle {index + 1}
+                            Edge {index + 1}
                         </Badge>
                     ))}
                 </Group>

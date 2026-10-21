@@ -161,7 +161,7 @@ export function useInsertMutation(
                 clearSelectedCircles();
                 markHintSeen(Hint.FASTENED_TO_CIRCLES);
                 showSuccessToast(
-                    `Successfully inserted ${insertable.name} and fastened it to ${plural(result.fastenedCount, "circle")}.`,
+                    `Successfully inserted ${insertable.name} and fastened it to ${plural(result.fastenedCount, "circular edge")}.`,
                     toastId
                 );
                 return;

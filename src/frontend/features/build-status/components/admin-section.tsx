@@ -92,8 +92,8 @@ function ReplicateSwitch(props: ReplicateSwitchProps): ReactNode {
             label="Replicate"
             description={
                 supportsReplicate === undefined
-                    ? "Undecided: allow for parts that sit the same way on every circle"
-                    : "Allows replicating onto several circles"
+                    ? "Undecided: allow for parts that sit the same way on every edge"
+                    : "Allows replicating onto several circular edges"
             }
             checked={supportsReplicate === true}
             indeterminate={supportsReplicate === undefined}

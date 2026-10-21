@@ -77,7 +77,7 @@ export function useCircleSelectionRequest(): void {
         if (!target || !isSelecting) {
             return;
         }
-        sendShowMessageBubbleMessage(target, "Select circles to use.");
+        sendShowMessageBubbleMessage(target, "Select circular edges to use.");
         sendRequestCircleSelectionMessage(target, SELECTION_REQUEST_ID);
 
         const endOnClickElsewhere = (event: PointerEvent) => {

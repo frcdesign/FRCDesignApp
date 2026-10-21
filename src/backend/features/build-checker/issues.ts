@@ -148,7 +148,7 @@ export function getIssueDescription(issue: BuildIssue): string | undefined {
         case BuildIssueType.NOT_LOADED:
             return "Use Reload if it doesn't start loading.";
         case BuildIssueType.REPLICATE_UNDECIDED:
-            return "Allow replicate for parts that sit the same way on every circle, like bolts, and not for parts with an orientation.";
+            return "Allow replicate for parts that sit the same way on every circular edge, like bolts, and not for parts with an orientation.";
         default:
             return undefined;
     }
