@@ -54,20 +54,27 @@
     ],
     "workflows": [
         {
-            "name": "load-document-workflow",
-            "binding": "LOAD_DOCUMENT_WORKFLOW",
-            "class_name": "LoadDocumentWorkflow"
+            "name": "reload-library-workflow",
+            "binding": "RELOAD_LIBRARY_WORKFLOW",
+            "class_name": "ReloadLibraryWorkflow",
+            // A forced reload of a large library runs every group's steps in one instance.
+            "limits": { "steps": 25000 }
         },
         {
             "name": "render-thumbnail-workflow",
             "binding": "RENDER_THUMBNAIL_WORKFLOW",
             "class_name": "RenderThumbnailWorkflow"
+        },
+        {
+            "name": "version-manager-workflow",
+            "binding": "VERSION_MANAGER_WORKFLOW",
+            "class_name": "VersionManagerWorkflow"
         }
     ],
     // Inherited by every environment. v2 swaps the thumbnail render queue,
     // replaced by RenderThumbnailWorkflow, for the push hub.
     "durable_objects": {
-        "bindings": [{ "name": "PUSH_HUB", "class_name": "PushHub" }]
+        "bindings": [{ "name": "CLIENT_RELAY", "class_name": "ClientRelay" }]
     },
     "migrations": [
         {
@@ -78,6 +85,10 @@
             "tag": "v2",
             "deleted_classes": ["ThumbnailRenderer"],
             "new_sqlite_classes": ["PushHub"]
+        },
+        {
+            "tag": "v3",
+            "renamed_classes": [{ "from": "PushHub", "to": "ClientRelay" }]
         }
     ],
     /**
@@ -130,18 +141,27 @@
             ],
             "workflows": [
                 {
-                    "name": "load-document-workflow-cert",
-                    "binding": "LOAD_DOCUMENT_WORKFLOW",
-                    "class_name": "LoadDocumentWorkflow"
+                    "name": "reload-library-workflow-cert",
+                    "binding": "RELOAD_LIBRARY_WORKFLOW",
+                    "class_name": "ReloadLibraryWorkflow",
+                    // A forced reload of a large library runs every group's steps in one instance.
+                    "limits": { "steps": 25000 }
                 },
                 {
                     "name": "render-thumbnail-workflow-cert",
                     "binding": "RENDER_THUMBNAIL_WORKFLOW",
                     "class_name": "RenderThumbnailWorkflow"
+                },
+                {
+                    "name": "version-manager-workflow-cert",
+                    "binding": "VERSION_MANAGER_WORKFLOW",
+                    "class_name": "VersionManagerWorkflow"
                 }
             ],
             "durable_objects": {
-                "bindings": [{ "name": "PUSH_HUB", "class_name": "PushHub" }]
+                "bindings": [
+                    { "name": "CLIENT_RELAY", "class_name": "ClientRelay" }
+                ]
             },
             "vars": {
                 "OWNER_USER_ID": "5eace32713a966103efd2aa0",
@@ -181,18 +201,27 @@
             ],
             "workflows": [
                 {
-                    "name": "load-document-workflow-prod",
-                    "binding": "LOAD_DOCUMENT_WORKFLOW",
-                    "class_name": "LoadDocumentWorkflow"
+                    "name": "reload-library-workflow-prod",
+                    "binding": "RELOAD_LIBRARY_WORKFLOW",
+                    "class_name": "ReloadLibraryWorkflow",
+                    // A forced reload of a large library runs every group's steps in one instance.
+                    "limits": { "steps": 25000 }
                 },
                 {
                     "name": "render-thumbnail-workflow-prod",
                     "binding": "RENDER_THUMBNAIL_WORKFLOW",
                     "class_name": "RenderThumbnailWorkflow"
+                },
+                {
+                    "name": "version-manager-workflow-prod",
+                    "binding": "VERSION_MANAGER_WORKFLOW",
+                    "class_name": "VersionManagerWorkflow"
                 }
             ],
             "durable_objects": {
-                "bindings": [{ "name": "PUSH_HUB", "class_name": "PushHub" }]
+                "bindings": [
+                    { "name": "CLIENT_RELAY", "class_name": "ClientRelay" }
+                ]
             },
             "vars": {
                 "OWNER_USER_ID": "5eace32713a966103efd2aa0",

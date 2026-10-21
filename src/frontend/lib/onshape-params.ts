@@ -7,8 +7,10 @@ import {
     LAUNCH_KEYS,
     type OnshapeLaunch,
     type TargetElement,
-    toTargetElement
+    toTargetElement,
+    toTargetWorkspace
 } from "./onshape-launch";
+import { type WorkspacePath } from "@backend/features/version-manager/contract";
 import { toOnshapeOrigin } from "./url";
 
 /** Per tab, since each browser tab is a different Onshape document. */
@@ -42,6 +44,18 @@ export function useTargetElement(): TargetElement | undefined {
         }))
     );
     return useMemo(() => toTargetElement(launch), [launch]);
+}
+
+/** The workspace the panel was opened in; nothing when it was opened outside one. */
+export function useTargetWorkspace(): WorkspacePath | undefined {
+    const launch = useOnshapeLaunch(
+        useShallow((state) => ({
+            documentId: state.documentId,
+            instanceId: state.instanceId,
+            instanceType: state.instanceType
+        }))
+    );
+    return useMemo(() => toTargetWorkspace(launch), [launch]);
 }
 
 /** A signed-in caller opening the app directly isn't. */

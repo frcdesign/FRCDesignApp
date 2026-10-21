@@ -24,6 +24,12 @@ interface UiState {
     groupId?: string;
     isFavoritesOpen: boolean;
     isLibraryOpen: boolean;
+    /** The version manager's two sections, which open like the home page's. */
+    isParentsOpen: boolean;
+    isChildrenOpen: boolean;
+    /** How many times the version manager has offered its quick-action tip;
+     * see `version-manager-tips`. */
+    quickActionTipCount: number;
     /** Per library; a library with no entry has every vendor active. */
     vendorFilters: Partial<Record<LibraryId, Vendor[]>>;
     searchQuery: string;
@@ -43,6 +49,9 @@ export const useUiState = create<UiState>()(
             theme: Theme.DARK,
             isFavoritesOpen: false,
             isLibraryOpen: true,
+            isParentsOpen: true,
+            isChildrenOpen: true,
+            quickActionTipCount: 0,
             vendorFilters: {},
             searchQuery: "",
             fasten: true

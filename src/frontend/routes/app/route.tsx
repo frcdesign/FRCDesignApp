@@ -25,6 +25,7 @@ import { ProgramSelect } from "../../features/library/components/program-select"
 import { SectionLoading } from "../../components/app-notice";
 import { useMessageListener } from "../../lib/messages";
 import { usePushSync } from "../../lib/push-sync";
+import { useVersionJobToasts } from "../../features/version-manager/job-toasts";
 import { RootAppError } from "../../components/root-error";
 
 export const Route = createFileRoute("/app")({
@@ -58,6 +59,7 @@ function App() {
 
     useMessageListener();
     usePushSync();
+    useVersionJobToasts();
 
     return (
         <AppShell header={{ height: headerHeight || 56 }}>

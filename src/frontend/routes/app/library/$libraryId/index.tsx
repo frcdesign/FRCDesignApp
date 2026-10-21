@@ -1,6 +1,7 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
-import { Accordion, Badge } from "@mantine/core";
+import { AppSection, AppSections } from "../../../../components/app-section";
 import { AppTitle } from "../../../../components/app-title";
+import { LibraryStatusBadge } from "../../../../components/library-status-badge";
 import { BooksIcon, MagnifyingGlassIcon } from "@phosphor-icons/react";
 import { IconSize, PrimaryColor } from "../../../../lib/style-constants";
 import { ReactNode, useState } from "react";
@@ -18,16 +19,10 @@ import { RequireAccessLevel } from "../../../../features/auth/access-level";
 import { AddGroupButton } from "../../../../features/library/components/add-group-menu";
 import { FavoritesList } from "../../../../features/favorites/components/favorites-list";
 import { useLibraryQuery } from "../../../../features/library/queries";
-import {
-    getLibraryName,
-    getLibraryStatus,
-    useLibraryId
-} from "../../../../lib/library";
+import { getLibraryName, useLibraryId } from "../../../../lib/library";
 import { useShallow } from "zustand/react/shallow";
 import { updateUiState, useUiState } from "../../../../lib/ui-state";
 import { useVendorFilters } from "../../../../features/settings/components/vendor-filters";
-import styles from "../../../../lib/styles.module.css";
-import classes from "./index.module.css";
 
 export const Route = createFileRoute("/app/library/$libraryId/")({
     component: HomeList,
@@ -40,8 +35,11 @@ export const Route = createFileRoute("/app/library/$libraryId/")({
 /** One accordion section: what it shows, and where its open state lives. */
 interface Section {
     value: string;
+    /** Names the section, and titles it where `title` is left out. */
+    name: string;
     icon: ReactNode;
-    title: ReactNode;
+    /** A title of its own, for a section whose header carries more than a name. */
+    title?: ReactNode;
     panel: ReactNode;
     opened: boolean;
     setOpened: (opened: boolean) => void;
@@ -64,8 +62,8 @@ function useHomeSections(): Section[] {
     // Shown signed out too, where the panel says what signing in would add.
     const favorites: Section = {
         value: "favorites",
+        name: "Favorites",
         icon: <FavoriteIcon size={IconSize.MEDIUM} />,
-        title: <AppTitle title="Favorites" />,
         panel: <FavoritesList />,
         opened: isFavoritesOpen,
         setOpened: (opened) => updateUiState({ isFavoritesOpen: opened })
@@ -73,13 +71,13 @@ function useHomeSections(): Section[] {
 
     const search: Section = {
         value: "search",
+        name: "Search Results",
         icon: (
             <MagnifyingGlassIcon
                 size={IconSize.MEDIUM}
                 color={PrimaryColor.FILLED}
             />
         ),
-        title: <AppTitle title="Search Results" />,
         panel: (
             <SearchResults
                 query={searchQuery}
@@ -93,6 +91,7 @@ function useHomeSections(): Section[] {
 
     const library: Section = {
         value: "library",
+        name: getLibraryName(libraryId),
         icon: <BooksIcon size={IconSize.MEDIUM} color={PrimaryColor.FILLED} />,
         title: <LibraryTitle libraryId={libraryId} />,
         panel: <LibraryList />,
@@ -118,34 +117,24 @@ function SectionAccordion(props: SectionAccordionProps): ReactNode {
     };
 
     return (
-        <Accordion
-            multiple
-            variant="unstyled"
-            value={sections
+        <AppSections
+            opened={sections
                 .filter((section) => section.opened)
                 .map((section) => section.value)}
             onChange={handleChange}
-            // On the control, so a collapsed section still has a divider.
-            classNames={{
-                control: `${classes.control} ${styles.sectionHeader} ${styles.dividerBottom}`,
-                item: classes.item,
-                label: classes.label,
-                content: `${classes.content} ${styles.dividerBottom}`,
-                icon: styles.titleIcon
-            }}
         >
             {sections.map((section) => (
-                <Accordion.Item key={section.value} value={section.value}>
-                    <Accordion.Control
-                        icon={section.icon}
-                        className="interactive"
-                    >
-                        {section.title}
-                    </Accordion.Control>
-                    <Accordion.Panel>{section.panel}</Accordion.Panel>
-                </Accordion.Item>
+                <AppSection
+                    key={section.value}
+                    value={section.value}
+                    name={section.name}
+                    title={section.title}
+                    icon={section.icon}
+                >
+                    {section.panel}
+                </AppSection>
             ))}
-        </Accordion>
+        </AppSections>
     );
 }
 
@@ -166,17 +155,10 @@ interface LibraryTitleProps {
 
 function LibraryTitle(props: LibraryTitleProps): ReactNode {
     const { libraryId } = props;
-    const status = getLibraryStatus(libraryId);
     return (
         <AppTitle
             title={getLibraryName(libraryId)}
-            rightSection={
-                status && (
-                    <Badge size="sm" variant="light">
-                        {status}
-                    </Badge>
-                )
-            }
+            rightSection={<LibraryStatusBadge libraryId={libraryId} />}
         />
     );
 }

@@ -10,8 +10,7 @@ import { type LibraryOut } from "@backend/features/library/contract";
 import {
     type ApproveVersionsOut,
     type JobStatus,
-    type ReloadOut,
-    type VersionApprovalOut
+    type ReloadOut
 } from "@backend/features/load/contract";
 import { hasEditorAccess } from "@backend/features/auth/access-level";
 import { LibraryId } from "@backend/features/library/library-id";
@@ -21,8 +20,7 @@ import { useLibraryId } from "../../lib/library";
 import {
     jobStatusQueryKey,
     libraryDataQueryKey,
-    libraryVersionQueryKey,
-    versionApprovalQueryKey
+    libraryVersionQueryKey
 } from "../../lib/query-keys";
 import { queryClient } from "../../lib/query-client";
 import { getQueryUpdater } from "../../lib/query-cache";
@@ -34,7 +32,10 @@ import {
 } from "../../lib/notifications";
 import { getAppErrorHandler, appError } from "../../lib/errors";
 import { modals } from "@mantine/modals";
-import { parseOnshapeDocumentId } from "../../lib/url";
+import {
+    INVALID_DOCUMENT_URL,
+    parseOnshapeDocumentId
+} from "../../lib/onshape-url";
 import { useRefreshLibrary } from "../../lib/refresh";
 
 export function getLibraryQuery(libraryId: LibraryId, cacheVersion: number) {
@@ -115,7 +116,7 @@ export function useIsGroupAwaitingApproval(groupId: string): boolean {
     return useJobStatus().awaitingApprovalGroupIds.includes(groupId);
 }
 
-/** How many documents have a new version waiting for an admin's approval. */
+/** How many documents have a new version waiting for an editor's approval. */
 export function useAwaitingApprovalCount(): number {
     return useJobStatus().awaitingApprovalGroupIds.length;
 }
@@ -180,40 +181,10 @@ export function useReloadMutation(all: boolean) {
             apiPost("/reload" + toLibraryPath(libraryId), {
                 body: { forceReload: all }
             }),
-        onError: getAppErrorHandler("Failed to reload documents!"),
+        onError: getAppErrorHandler("Failed to reload documents."),
         onSuccess: (data) => {
             showInfoToast(`Reloading ${data.documents} documents...`);
         }
-    });
-}
-
-export function useVersionApprovalQuery() {
-    const libraryId = useLibraryId();
-    return useQuery({
-        queryKey: versionApprovalQueryKey(libraryId),
-        queryFn: () =>
-            apiGet<VersionApprovalOut>(
-                "/version-approval" + toLibraryPath(libraryId)
-            )
-    });
-}
-
-/** Turning it off lets the held versions through. */
-export function useSetVersionApprovalMutation() {
-    const libraryId = useLibraryId();
-    return useMutation({
-        mutationKey: ["version-approval", libraryId],
-        mutationFn: (enabled: boolean) =>
-            apiPost<VersionApprovalOut>(
-                "/version-approval" + toLibraryPath(libraryId),
-                { body: { enabled } }
-            ),
-        onError: getAppErrorHandler("Failed to change version approval!"),
-        onSuccess: (approval) =>
-            queryClient.setQueryData(
-                versionApprovalQueryKey(libraryId),
-                approval
-            )
     });
 }
 
@@ -225,7 +196,7 @@ export function useApproveVersionsMutation() {
             apiPost<ApproveVersionsOut>(
                 "/approve-versions" + toLibraryPath(libraryId)
             ),
-        onError: getAppErrorHandler("Failed to approve versions!"),
+        onError: getAppErrorHandler("Failed to approve versions."),
         onSuccess: (data) => {
             showInfoToast(`Loading ${data.documents} approved documents...`);
         }
@@ -240,7 +211,7 @@ export function useAddGroupMutation(selectedGroupId?: string) {
         mutationFn: async (url: string) => {
             const newDocumentId = parseOnshapeDocumentId(url);
             if (!newDocumentId) {
-                throw appError("Failed to parse url.");
+                throw appError(INVALID_DOCUMENT_URL);
             }
             showLoadingToast("Adding document...", "add-group");
             modals.closeAll();

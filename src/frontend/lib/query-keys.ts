@@ -11,10 +11,6 @@ export function adminTeamQueryKey(libraryId: LibraryId) {
     return ["admin-team", libraryId];
 }
 
-export function versionApprovalQueryKey(libraryId: LibraryId) {
-    return ["version-approval", libraryId];
-}
-
 export function configurationQueryKey(
     insertableId: string,
     microversionId: string
@@ -92,4 +88,21 @@ export function renderQueryKey(url: string) {
 /** Bytes already stored, which a row and its hover card read. */
 export function storedThumbnailQueryKey(url: string | undefined) {
     return ["storage-thumbnail", url];
+}
+
+/**
+ * The version manager's queries, keyed by the workspace they are about and kept
+ * outside the library prefix: a library reload moves nothing here.
+ */
+export function workspaceLinksQueryKey(workspace: InstancePath | undefined) {
+    return ["workspace-links", workspace];
+}
+
+export function versionJobQueryKey(workspace: InstancePath | undefined) {
+    return ["version-job", workspace];
+}
+
+/** The name a push would give the version it cuts here, read from Onshape. */
+export function nextVersionNameQueryKey(workspace: InstancePath | undefined) {
+    return ["next-version-name", workspace];
 }

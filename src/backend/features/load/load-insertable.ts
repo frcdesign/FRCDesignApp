@@ -89,7 +89,8 @@ export async function loadInsertable(
                   uploadThumbnails(
                       ctx.env.BLOB,
                       await getOnshapeApiFromContext(ctx),
-                      target.thumbnailPath,
+                      target.elementPath,
+                      target.elementWorkspacePath,
                       target.microversionId
                   )
           )

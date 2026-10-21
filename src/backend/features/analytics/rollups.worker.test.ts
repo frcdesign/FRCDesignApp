@@ -18,6 +18,7 @@ import { toSelection } from "../configurations/selection";
 import { InsertSource } from "./usage";
 import { rollupWrites } from "./rollups";
 import {
+    dailyAppOpens,
     dailyConfigurationMetrics,
     dailyInsertableMetrics,
     dailyInsertableUsers,
@@ -25,17 +26,29 @@ import {
     dailySourceMetrics,
     dailyTargetMetrics,
     dailyUserActivity,
+    dailyVersionMetrics,
     events,
     insertableStats,
     userStats
 } from "./schema";
-import { trackAppOpen, trackInsert, type InsertEvent } from "./tracking";
+import {
+    trackAppOpen,
+    trackInsert,
+    trackVersionRun,
+    type InsertEvent
+} from "./tracking";
+import {
+    PushScopeKind,
+    VersionJobKind,
+    VersionJobState
+} from "../version-manager/contract";
 
 const db = getDb(env.DB);
 const SIZE_PARAMETERS = [enumParam("size", ["small", "large"])];
 
 /** Every table the rollups write, read whole so a replay can be compared. */
 const ROLLUPS = [
+    dailyAppOpens,
     dailyMetrics,
     dailySourceMetrics,
     dailyTargetMetrics,
@@ -43,6 +56,7 @@ const ROLLUPS = [
     dailyInsertableMetrics,
     dailyInsertableUsers,
     dailyConfigurationMetrics,
+    dailyVersionMetrics,
     insertableStats,
     userStats
 ];
@@ -95,7 +109,7 @@ describe("rollupWrites", () => {
         const clock = vi.spyOn(Date, "now");
 
         clock.mockReturnValue(start);
-        await trackAppOpen(fakeContext(), TEST_LIBRARY_ID);
+        await trackAppOpen(fakeContext());
         await trackInsert(
             fakeContext(),
             insertEvent({
@@ -118,6 +132,15 @@ describe("rollupWrites", () => {
             })
         );
         await trackInsert(fakeContext("someone-2"), insertEvent());
+        await trackVersionRun(env, {
+            userId: TEST_USER_ID,
+            kind: VersionJobKind.PUSH,
+            scope: PushScopeKind.CHILDREN,
+            status: {
+                state: VersionJobState.COMPLETE,
+                result: { createdVersions: 1, updatedElements: 5 }
+            }
+        });
         clock.mockRestore();
 
         const live = await readRollups();

@@ -1,11 +1,11 @@
 import { Center, EmptyState, Loader } from "@mantine/core";
-import { XIcon } from "@phosphor-icons/react";
-import { IconSize, StatusColor } from "../lib/style-constants";
+import { Status } from "../lib/status";
+import { IconSize } from "../lib/style-constants";
 import { ReactNode } from "react";
-import { AppIcon } from "./app-icon";
+import { StatusIcon } from "./status-icon";
 
 const ERROR_ICON = (
-    <AppIcon icon={XIcon} size={IconSize.PAGE} color={StatusColor.ERROR} />
+    <StatusIcon status={Status.ERROR} size={IconSize.PAGE} raised={false} />
 );
 
 const CONTACT_DEVELOPERS =
@@ -19,20 +19,33 @@ interface NoticeProps {
     icon?: ReactNode;
     action?: ReactNode;
     className?: string;
+    /** Left puts the icon beside the text rather than above it. @default center */
+    align?: "center" | "left";
+    /** Room above and below; tighter inside a card than on a page. @default 24 */
+    py?: number;
 }
 
 /** What content is replaced by when it is empty, loading or failed. */
 export function SectionNotice(props: NoticeProps): ReactNode {
-    const { title, description, icon = ERROR_ICON, action, className } = props;
+    const {
+        title,
+        description,
+        icon = ERROR_ICON,
+        action,
+        className,
+        align,
+        py = 24
+    } = props;
     return (
         <EmptyState
             icon={icon}
             title={title}
             description={description}
             size="sm"
+            align={align}
             className={className}
-            pt={24}
-            pb={24}
+            pt={py}
+            pb={py}
             // What a sticky section header checks for, to not stick over one.
             data-notice
         >
@@ -73,6 +86,11 @@ export function PageNotice(props: PageNoticeProps): ReactNode {
             <SectionNotice {...notice} />
         </Center>
     );
+}
+
+/** {@link SectionLoading} for a whole page. */
+export function PageLoading(props: SectionLoadingProps): ReactNode {
+    return <PageNotice title={props.title} icon={<Loader />} />;
 }
 
 /** {@link SectionError} for a whole page. */

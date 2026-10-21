@@ -15,6 +15,7 @@ export function emptyTargets(): InsertTargets {
 /** Lifetime counts, either overall or scoped to one library. */
 export interface AnalyticsTotals {
     inserts: number;
+    /** App-wide only; zero for a library. */
     appOpens: number;
     uniqueUsers: number;
     /** Subsets of `inserts`; divide by it for the percentages. */
@@ -37,6 +38,7 @@ export interface DailyInsertPoint {
 export interface DailyMetricPoint {
     day: string;
     inserts: number;
+    /** App-wide, as `AnalyticsTotals.appOpens`. */
     appOpens: number;
     /** Distinct users active that day; not summable across days. */
     activeUsers: number;
@@ -97,14 +99,12 @@ export interface PeriodComparison {
     baselineShort: string;
 }
 
-/** The measures reported both as a trailing window and season over season. */
-export type GrowthMeasure = "inserts" | "activeUsers" | "appOpens";
-
+/** Season to date against the same stretch of the season before. */
 export interface GrowthOut {
-    /** Trailing windows, which are meaningful from the first month. */
-    recent: Record<GrowthMeasure, PeriodComparison>;
-    /** Season to date against the same stretch of the season before. */
-    season: Record<GrowthMeasure, PeriodComparison>;
+    inserts: PeriodComparison;
+    activeUsers: PeriodComparison;
+    /** Absent for a library: an app open belongs to none. */
+    appOpens?: PeriodComparison;
 }
 
 export interface LibrarySummaryOut {
@@ -117,14 +117,29 @@ export interface LibrarySummaryOut {
     to: string;
 }
 
+/** What the version manager has done, and how much is linked to do it with. */
+export interface VersionManagerTotals {
+    /** Pushes and pulls together. */
+    runs: number;
+    /** Runs with a step that failed, partway or entirely. */
+    runsWithFailures: number;
+    /** Tabs whose references the app repointed. */
+    updatedElements: number;
+    createdVersions: number;
+    /** Current, not over the range: a link is state, not an event. */
+    links: number;
+}
+
 export interface AnalyticsOverviewOut {
-    /** Lifetime totals, shown as context beneath each tile's range value. */
+    /** Over the requested range, for the headline cards. */
     totals: AnalyticsTotals;
     libraries: LibrarySummary[];
     /** Per-library daily inserts, for the inserts tile's split-out detail. */
     series: DailyInsertPoint[];
     metricSeries: DailyMetricPoint[];
     sources: InsertSourceUsage[];
+    /** Over the range, but for `links`. */
+    versionManager: VersionManagerTotals;
     from: string;
     to: string;
     growth: GrowthOut;

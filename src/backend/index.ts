@@ -1,7 +1,8 @@
 /** Workflow and Durable Object classes must be exported here for wrangler.jsonc's `class_name`s to resolve. */
-export { LoadDocumentWorkflow } from "./features/load/workflows";
+export { ReloadLibraryWorkflow } from "./features/load/workflows";
 export { RenderThumbnailWorkflow } from "./features/thumbnails/render-workflow";
-export { PushHub } from "./features/push/push-hub";
+export { ClientRelay } from "./features/push/client-relay";
+export { VersionManagerWorkflow } from "./features/version-manager/workflow";
 import { createApp } from "./app";
 import { productionAuth } from "./features/auth/request-auth";
 import type { AppBindings } from "./lib/context";

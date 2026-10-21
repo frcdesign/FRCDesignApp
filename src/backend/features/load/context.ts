@@ -9,12 +9,12 @@ import type { LibraryId } from "../library/library-id";
 import type { ElementPath, InstancePath } from "../../lib/onshape/path";
 
 /**
- * Bounded by Onshape's rate limit: at 40 a load hit 429s it never recovered
- * from. 15 is what worked before, not a measured limit.
+ * Onshape calls in flight across a whole reload, every group sharing it.
+ * Chosen, not measured: a 429 waits out its `Retry-After`.
  */
-export const LOAD_CONCURRENCY = 15;
+export const LOAD_CONCURRENCY = 30;
 
-/** Separate from probing, since a thumbnail step holds its slot through minutes of retries. */
+/** Separate from probing, so a thumbnail step's retries never hold a probe's slot. */
 const THUMBNAIL_CONCURRENCY = 10;
 
 /** The runtime plumbing a load runs against. */
@@ -24,7 +24,7 @@ export interface LoadContext {
     /** Whoever asked for the load; absent for a webhook's. */
     sessionId?: string;
     step: WorkflowStep;
-    /** Bounds concurrent Onshape probing across the whole run. */
+    /** Bounds concurrent Onshape probing across the whole reload. */
     limit: Limiter;
     thumbnailLimit: Limiter;
     /** Resolved once a run needs it; see {@link getOnshapeApiFromContext}. */
@@ -80,21 +80,18 @@ export interface GroupTarget {
     versionPath: InstancePath;
     /** When Onshape cut `versionPath`'s version. */
     versionCreatedAt: Date;
+    /** The document's own workspace, where a thumbnail the version won't give up is read. */
+    workspacePath: InstancePath;
     name: string;
     /** The tab the document renders its thumbnail from, when one is set. */
     thumbnailElementId?: string;
 }
 
-/** Only a group that loads gets a thumbnail workspace; see `loadGroup`. */
-export interface LoadingGroup extends GroupTarget {
-    /** See `thumbnails/workspace.ts`. */
-    thumbnailPath: InstancePath;
-}
-
 /** An insertable a load reads, and what the document's tab listing told us. */
 export interface InsertableTarget {
     insertableId: string;
-    thumbnailPath: ElementPath;
+    /** The same tab in the document's workspace; see `GroupTarget.workspacePath`. */
+    elementWorkspacePath: ElementPath;
     libraryId: LibraryId;
     groupId: string;
     elementPath: ElementPath;

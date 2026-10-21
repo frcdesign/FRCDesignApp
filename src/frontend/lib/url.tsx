@@ -58,17 +58,6 @@ export function makeUrl(
     return url;
 }
 
-/** Accepts a document link as well as one to a workspace or tab. */
-export function parseOnshapeDocumentId(urlString: string): string | undefined {
-    // Example pathname: /documents/{documentId}/w/{workspaceId}/e/{elementId}
-    const url = URL.parse(urlString);
-    if (!url) {
-        return undefined;
-    }
-    const [, documents, documentId] = url.pathname.split("/");
-    return documents === "documents" && documentId ? documentId : undefined;
-}
-
 export function openUrlInNewTab(url: string) {
     window.open(url, "_blank");
 }

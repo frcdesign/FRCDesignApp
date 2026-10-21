@@ -128,7 +128,7 @@ describe("nameSpans", () => {
 describe("tokenize", () => {
     it("reads each field the way that field is written", () => {
         expect(tokenize("TTB-0016-5/32", "partNumbers")).toContain("0016");
-        expect(tokenize("TTB-0016-5/32", "partNames")).not.toContain("0016");
+        expect(tokenize("TTB-0016-5/32", "name")).not.toContain("0016");
     });
 });
 

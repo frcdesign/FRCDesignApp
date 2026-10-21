@@ -1,0 +1,31 @@
+/*
+ * The page's text color, where Mantine brightens a control to white or black.
+ * Stuck on the whole row, buttons and chevron included, until the next header
+ * pushes it off; the scroll container's padding clears the navbar.
+ */
+.header {
+    color: var(--mantine-color-text);
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--mantine-color-body);
+}
+
+/* A header stuck over a short notice only half-covers it on the way out. */
+.item:has([data-notice]) .header {
+    position: static;
+}
+
+/* Its own padding would outgrow the header's height. */
+.label {
+    padding-block: 0;
+}
+
+.content {
+    padding: 0;
+}
+
+/* `AppSection` draws its own at the end of the row. */
+.chevron {
+    display: none;
+}

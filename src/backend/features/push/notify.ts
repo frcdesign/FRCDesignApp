@@ -3,14 +3,14 @@ import type { AppBindings } from "../../lib/context";
 import type { LibraryId } from "../library/library-id";
 import type { JobStatus } from "../load/contract";
 import { type PushMessage, PushType, type ThumbnailPush } from "./contract";
-import { getPushHub } from "./push-hub";
+import { getClientRelay } from "./client-relay";
 
 async function broadcast(
     env: AppBindings,
     message: PushMessage
 ): Promise<void> {
     try {
-        await getPushHub(env).broadcast(message);
+        await getClientRelay(env).broadcast(message);
     } catch (error) {
         console.error(`Failed to push ${message.type}`, error);
     }
@@ -31,6 +31,14 @@ export function pushLibraryChanged(
     libraryId: LibraryId
 ): Promise<void> {
     return broadcast(env, { type: PushType.LIBRARY, libraryId });
+}
+
+/** Tells whoever is in a workspace that the push or pull it runs moved on. */
+export function pushVersionJob(
+    env: AppBindings,
+    workspaceKey: string
+): Promise<void> {
+    return broadcast(env, { type: PushType.VERSION_JOB, workspaceKey });
 }
 
 export function pushThumbnailRendered(

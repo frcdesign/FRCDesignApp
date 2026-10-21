@@ -6,6 +6,8 @@ export interface KvStore<T> {
     get(kv: KVNamespace, id: string): Promise<T | undefined>;
     put(kv: KVNamespace, id: string, value: T): Promise<void>;
     delete(kv: KVNamespace, id: string): Promise<void>;
+    /** The ids starting with `idPrefix`. KV's listing lags writes by up to a minute. */
+    list(kv: KVNamespace, idPrefix: string): Promise<string[]>;
 }
 
 interface KvStoreOptions {
@@ -34,6 +36,18 @@ export function kvStore<T>(
         },
         delete(kv, id) {
             return kv.delete(key(id));
+        },
+        async list(kv, idPrefix) {
+            const ids: string[] = [];
+            let cursor: string | undefined;
+            do {
+                const page = await kv.list({ prefix: key(idPrefix), cursor });
+                ids.push(
+                    ...page.keys.map((each) => each.name.slice(key("").length))
+                );
+                cursor = page.list_complete ? undefined : page.cursor;
+            } while (cursor);
+            return ids;
         }
     };
 }

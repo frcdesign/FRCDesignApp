@@ -27,7 +27,9 @@ export enum BuildIssueType {
     CONFIGURATION_MULTIPLE_PARTS = "configuration-multiple-parts",
     UNSTABLE_COMPOSITE = "unstable-composite",
     INSERTABLES_FAILED = "insertables-failed",
-    LOAD_FAILED = "load-failed"
+    LOAD_FAILED = "load-failed",
+    /** A document added but not yet loaded, until its first load saves it. */
+    NOT_LOADED = "not-loaded"
 }
 
 interface BuildIssueOf<T extends BuildIssueType> {
@@ -60,7 +62,8 @@ export type BuildIssue =
     | ConfigurationBuildIssueOf<BuildIssueType.CONFIGURATION_MULTIPLE_PARTS>
     | ConfigurationBuildIssueOf<BuildIssueType.UNSTABLE_COMPOSITE>
     | BuildIssueOf<BuildIssueType.INSERTABLES_FAILED>
-    | BuildIssueOf<BuildIssueType.LOAD_FAILED>;
+    | BuildIssueOf<BuildIssueType.LOAD_FAILED>
+    | BuildIssueOf<BuildIssueType.NOT_LOADED>;
 
 /** The card links to the first; the rest are counted. */
 export function toConfigurationIssue(
@@ -119,6 +122,8 @@ export function getIssueTitle(issue: BuildIssue): string {
             return "Some elements failed to load";
         case BuildIssueType.LOAD_FAILED:
             return "Document failed to load";
+        case BuildIssueType.NOT_LOADED:
+            return "Document not loaded yet";
     }
 }
 
@@ -135,6 +140,8 @@ export function getIssueDescription(issue: BuildIssue): string | undefined {
             return `Elements with ${AUTO_INDEX_THRESHOLD}+ configurations must be enabled manually.`;
         case BuildIssueType.UNSTABLE_COMPOSITE:
             return "The default configuration has one, so every configuration should.";
+        case BuildIssueType.NOT_LOADED:
+            return "Use Reload if it doesn't start loading.";
         default:
             return undefined;
     }
@@ -155,6 +162,7 @@ export function getIssueSeverity(issue: BuildIssue): BuildIssueSeverity {
         case BuildIssueType.NO_THUMBNAIL_TAB:
         case BuildIssueType.CONFIGURATION_LIMIT_EXCEEDED:
         case BuildIssueType.MANUAL_INDEXING_REQUIRED:
+        case BuildIssueType.NOT_LOADED:
             return BuildIssueSeverity.WARNING;
         case BuildIssueType.NO_VENDORS:
             return BuildIssueSeverity.INFO;

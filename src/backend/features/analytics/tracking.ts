@@ -1,11 +1,24 @@
 import type { BatchItem } from "drizzle-orm/batch";
 import { runInBackground } from "../../lib/background";
-import { type AppContext } from "../../lib/context";
-import { getDb } from "../../db/client";
+import { type AppBindings, type AppContext } from "../../lib/context";
+import { getDb, type Db } from "../../db/client";
 import { events, type LoggedEvent } from "./schema";
-import { NOT_AN_INSERT, type EventCore } from "./logged-event";
+import {
+    NOT_AN_INSERT,
+    NOT_A_VERSION_RUN,
+    type EventCore
+} from "./logged-event";
 import { rollupWrites } from "./rollups";
 import { EVENT_SCHEMA_VERSION, EventType, InsertSource } from "./usage";
+import {
+    failedTaskCount,
+    jobOutcome,
+    VersionJobOutcome,
+    type PullScopeKind,
+    type VersionJobKind,
+    type PushScopeKind,
+    type VersionJobStatus
+} from "../version-manager/contract";
 import { type LibraryId } from "../library/library-id";
 import { type ElementPath } from "../../lib/onshape/path";
 import { ElementType } from "../../lib/onshape/element-type";
@@ -39,9 +52,14 @@ export interface InsertEvent {
 export function trackInsert(c: AppContext, event: InsertEvent): Promise<void> {
     return runInBackground(c, "record an insert", async () =>
         record(
-            c,
+            getDb(c.env.DB),
             {
-                ...(await core(c, EventType.INSERT, event.libraryId)),
+                ...eventCore(
+                    EventType.INSERT,
+                    event.libraryId,
+                    await c.var.getUserId()
+                ),
+                ...NOT_A_VERSION_RUN,
                 ...event.path,
                 insertableId: event.insertableId,
                 targetElementType: event.targetElementType,
@@ -56,17 +74,15 @@ export function trackInsert(c: AppContext, event: InsertEvent): Promise<void> {
     );
 }
 
-/** As `trackInsert`. */
-export function trackAppOpen(
-    c: AppContext,
-    libraryId: LibraryId
-): Promise<void> {
+/** As `trackInsert`, for a launch from Onshape. */
+export function trackAppOpen(c: AppContext): Promise<void> {
     return runInBackground(c, "record an app open", async () =>
         record(
-            c,
+            getDb(c.env.DB),
             {
-                ...(await core(c, EventType.APP_OPEN, libraryId)),
-                ...NOT_AN_INSERT
+                ...eventCore(EventType.APP_OPEN, null, await c.var.getUserId()),
+                ...NOT_AN_INSERT,
+                ...NOT_A_VERSION_RUN
             },
             []
         )
@@ -83,11 +99,11 @@ function appliedSelection(
 }
 
 /** What every logged event carries; its kind fills in the rest. */
-async function core(
-    c: AppContext,
+function eventCore(
     type: EventType,
-    libraryId: LibraryId
-): Promise<EventCore> {
+    libraryId: LibraryId | null,
+    userId: string
+): EventCore {
     const now = Date.now();
     return {
         id: crypto.randomUUID(),
@@ -95,18 +111,49 @@ async function core(
         createdAt: new Date(now),
         day: toDayKey(now),
         libraryId,
-        userId: await c.var.getUserId(),
+        userId,
         schemaVersion: EVENT_SCHEMA_VERSION
     };
 }
 
+/** A finished push or pull; see `features/version-manager`. */
+export interface VersionRunEvent {
+    userId: string;
+    kind: VersionJobKind;
+    scope: PushScopeKind | PullScopeKind;
+    /** How it ended. */
+    status: VersionJobStatus;
+}
+
+/** Recorded by the workflow once the run has ended, however it ended. */
+export async function trackVersionRun(
+    env: AppBindings,
+    event: VersionRunEvent
+): Promise<void> {
+    const { status } = event;
+    await record(
+        getDb(env.DB),
+        {
+            ...eventCore(EventType.VERSION_RUN, null, event.userId),
+            ...NOT_AN_INSERT,
+            versionKind: event.kind,
+            versionScope: event.scope,
+            versionUpdateOnly: status.updateOnly ?? false,
+            versionOutcome: jobOutcome(status) ?? VersionJobOutcome.FAILED,
+            failedSteps: failedTaskCount(status),
+            createdVersions: status.result?.createdVersions ?? 0,
+            updatedElements: status.result?.updatedElements ?? 0
+        },
+        []
+    );
+}
+
 /** Batched so neither half lands without the other. */
 async function record(
-    c: AppContext,
+    db: Db,
     event: LoggedEvent,
     parameters: ConfigurationParameter[]
 ): Promise<void> {
-    const db = getDb(c.env.DB);
     const writes: BatchItem<"sqlite">[] = [
         db.insert(events).values(event),
         ...rollupWrites(db, event, parameters)

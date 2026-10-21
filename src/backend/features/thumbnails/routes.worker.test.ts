@@ -2,7 +2,7 @@ import { env } from "cloudflare:workers";
 import { introspectWorkflow } from "cloudflare:test";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
-    TEST_GROUP_ID,
+    TEST_PART_STUDIO_PATH,
     TEST_PART_STUDIO_ID,
     createTestApp,
     jsonRequest,
@@ -11,8 +11,11 @@ import {
 } from "../../../__test_utils__";
 import * as ThumbnailEndpoints from "../../lib/onshape/endpoints/thumbnails";
 import { getDb } from "../../db/client";
-import { groups } from "../../db/schema";
-import { eq } from "drizzle-orm";
+import { configurations } from "../../db/schema";
+import {
+    enumParam,
+    quantityParam
+} from "../../../__test_utils__/configuration-fixtures";
 import { type RenderOut, RenderStatus, ThumbnailSize } from "./contract";
 import {
     parseThumbnailKey,
@@ -20,7 +23,10 @@ import {
     thumbnailKey,
     thumbnailUrl
 } from "./keys";
-import { DEFAULT_CONFIGURATION_KEY } from "../configurations/contract";
+import {
+    DEFAULT_CONFIGURATION_KEY,
+    type PartialSelection
+} from "../configurations/contract";
 
 const SIZE = ThumbnailSize.LARGE;
 const MICROVERSION = "mv-1";
@@ -260,10 +266,10 @@ describe("rendering a configuration's thumbnail", () => {
     afterEach(() => vi.restoreAllMocks());
 
     async function render(
-        configurationKey = CANONICAL_CONFIGURATION,
+        selection: PartialSelection = { size: "l" },
         signedIn = true
     ): Promise<Response> {
-        const init = jsonRequest("POST", { configurationKey });
+        const init = jsonRequest("POST", { selection });
         if (signedIn) {
             init.headers = {
                 ...init.headers,
@@ -306,10 +312,13 @@ describe("rendering a configuration's thumbnail", () => {
     beforeEach(async () => {
         await resetDb(db);
         await seedPartStudio(db);
-        await db
-            .update(groups)
-            .set({ thumbnailWorkspaceId: "w-branch" })
-            .where(eq(groups.id, TEST_GROUP_ID));
+        await db.insert(configurations).values({
+            insertableId: TEST_PART_STUDIO_ID,
+            parameters: [
+                enumParam("size", ["s", "l", "other"]),
+                quantityParam("length")
+            ]
+        });
     });
 
     it("starts one render, however often it is asked", async () => {
@@ -330,21 +339,50 @@ describe("rendering a configuration's thumbnail", () => {
 
         const started = await startedDuring(async () => {
             await render();
-            await render("size=other");
+            await render({ size: "other" });
         });
 
         expect(started).toBe(2);
     });
 
-    it("renders from the group's thumbnail workspace", async () => {
+    it("resolves the render on the insertable's version", async () => {
         const thumbnailId = mockThumbnailId();
 
         await startedDuring(() => render());
 
-        expect(thumbnailId.mock.calls[0][1]).toMatchObject({
-            instanceId: "w-branch",
-            instanceType: "w"
+        expect(thumbnailId.mock.calls[0][1]).toEqual(TEST_PART_STUDIO_PATH);
+    });
+
+    // Onshape names a render by the value it computes from what was typed.
+    it("asks Onshape for the selection as entered, stored under its key", async () => {
+        const thumbnailId = mockThumbnailId();
+
+        const started = await startedDuring(() =>
+            render({ length: "2.25 in", size: "s" })
+        );
+
+        expect(started).toBe(1);
+        expect(thumbnailId.mock.calls[0][2]).toEqual({ length: "2.25 in" });
+    });
+
+    // The insert menu settles a selection before naming its key; so must this.
+    it("settles the selection as the insert menu does", async () => {
+        mockThumbnailId();
+
+        const started = await startedDuring(async () => {
+            // No such option: settled, it is the default, which has no render.
+            expect((await render({ size: "gone" })).status).toBe(400);
         });
+        expect(started).toBe(0);
+    });
+
+    it("refuses a selection that is the element's default", async () => {
+        mockThumbnailId();
+
+        const started = await startedDuring(async () => {
+            expect((await render({ size: "s" })).status).toBe(400);
+        });
+        expect(started).toBe(0);
     });
 
     // The client words "still rendering" and "never will" differently.
@@ -359,24 +397,11 @@ describe("rendering a configuration's thumbnail", () => {
         expect(started).toBe(0);
     });
 
-    it("starts nothing for a group with no thumbnail workspace yet", async () => {
-        await db
-            .update(groups)
-            .set({ thumbnailWorkspaceId: null })
-            .where(eq(groups.id, TEST_GROUP_ID));
-        mockThumbnailId();
-
-        const started = await startedDuring(() => render());
-        expect(started).toBe(0);
-    });
-
     it("refuses a caller with no session to render under", async () => {
         const thumbnailId = mockThumbnailId();
 
         const started = await startedDuring(async () => {
-            expect((await render(CANONICAL_CONFIGURATION, false)).ok).toBe(
-                false
-            );
+            expect((await render({ size: "l" }, false)).ok).toBe(false);
         });
 
         expect(started).toBe(0);

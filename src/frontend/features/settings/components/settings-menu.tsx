@@ -1,6 +1,6 @@
 import { Box, Button, Select, Stack } from "@mantine/core";
 import { ArrowLeftIcon, SignOutIcon } from "@phosphor-icons/react";
-import { useMatch } from "@tanstack/react-router";
+import { useIsDashboard } from "../../dashboard/dashboard-nav";
 import {
     SETTING_CONTROL_WIDTH,
     StatusColor
@@ -26,7 +26,7 @@ import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
 import { SETUP_URL } from "../../../lib/url";
 import { useLibraryId } from "../../../lib/library";
 import { ReloadButton } from "../../library/components/reload-button";
-import { VersionApprovalSettings } from "../../library/components/version-approval";
+import { HeldVersionsSetting } from "../../library/components/version-approval";
 import { RefreshAdminTeamButton } from "../../admin-team/components/refresh-admin-team-button";
 import { AdminTeamSetting } from "../../admin-team/components/admin-team-setting";
 
@@ -158,10 +158,6 @@ function standaloneUrl(tabId: AppTab): string {
     return new URL(getTabPath(tabId), window.location.origin).href;
 }
 
-function useIsDashboard(): boolean {
-    return useMatch({ from: "/dashboard", shouldThrow: false }) !== undefined;
-}
-
 interface OpenAppButtonProps {
     tabId: AppTab;
 }
@@ -185,7 +181,7 @@ function AdminSettings(): ReactNode {
         <Stack gap="sm">
             {/* Always show the access level select so admins can change access level if needed */}
             <AccessLevelSelect />
-            <RequireAccessLevel accessLevel={AccessLevel.ADMIN}>
+            <RequireAccessLevel>
                 <InputRow label="Outdated documents">
                     <ReloadButton />
                 </InputRow>
@@ -195,8 +191,8 @@ function AdminSettings(): ReactNode {
                     <ReloadButton all />
                 </InputRow>
             </RequireAccessLevel>
-            <RequireAccessLevel accessLevel={AccessLevel.ADMIN}>
-                <VersionApprovalSettings />
+            <RequireAccessLevel>
+                <HeldVersionsSetting />
             </RequireAccessLevel>
             <AdminTeamSetting />
             <RequireAccessLevel accessLevel={AccessLevel.ADMIN}>

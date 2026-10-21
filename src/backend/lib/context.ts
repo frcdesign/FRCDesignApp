@@ -1,7 +1,8 @@
 import { type Context, type MiddlewareHandler, Hono } from "hono";
-import type { LoadDocumentParams } from "../features/load/jobs";
+import type { ReloadParams } from "../features/load/jobs";
 import type { RenderThumbnailParams } from "../features/thumbnails/render-workflow";
-import type { PushHub } from "../features/push/push-hub";
+import type { ClientRelay } from "../features/push/client-relay";
+import type { VersionJobParams } from "../features/version-manager/workflow";
 import { type AccessLevel } from "../features/auth/access-level";
 import type { LibraryId } from "../features/library/library-id";
 import { type OAuthApi } from "./onshape/client";
@@ -13,11 +14,13 @@ export interface AppBindings {
     /** Thumbnails and search indexes; prefixes keep them apart. */
     BLOB: R2Bucket;
     /** One instance per group being loaded at a time; see `load/jobs.ts`. */
-    LOAD_DOCUMENT_WORKFLOW: Workflow<LoadDocumentParams>;
+    RELOAD_LIBRARY_WORKFLOW: Workflow<ReloadParams>;
     /** One instance per configuration being rendered; see `requestRender`. */
     RENDER_THUMBNAIL_WORKFLOW: Workflow<RenderThumbnailParams>;
+    /** Pushes and pulls, which are chains of Onshape writes; see the workflow. */
+    VERSION_MANAGER_WORKFLOW: Workflow<VersionJobParams>;
     /** Relays pushes to open clients; see `features/push`. */
-    PUSH_HUB: DurableObjectNamespace<PushHub>;
+    CLIENT_RELAY: DurableObjectNamespace<ClientRelay>;
     /** Where the app is served, without a trailing slash; see `wrangler.jsonc`. */
     APP_URL: string;
     /** The Onshape user id granted `AccessLevel.OWNER`; unset grants nobody. */

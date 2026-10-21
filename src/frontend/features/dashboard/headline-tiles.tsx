@@ -11,12 +11,13 @@ import { toSparkSeries } from "./series";
 import { StatTile } from "./stat-tiles";
 
 interface HeadlineTilesProps {
-    /** Over the selected window, or lifetime where there is no picker. */
+    /** Over the selected window. */
     totals: AnalyticsTotals;
-    growth: GrowthOut;
+    /** Season change; only meaningful on All time. */
+    growth?: GrowthOut;
     /** Daily points over the selected window, for the sparklines. */
     series: DailyMetricPoint[];
-    /** Opens follow whichever library was selected, so app level only. */
+    /** App level only. */
     withOpens?: boolean;
 }
 
@@ -26,7 +27,6 @@ export function HeadlineTiles({
     series,
     withOpens = false
 }: HeadlineTilesProps): ReactNode {
-    const { season } = growth;
     const perUser =
         totals.uniqueUsers === 0 ? 0 : totals.inserts / totals.uniqueUsers;
     const spark = toSparkSeries(series);
@@ -36,27 +36,27 @@ export function HeadlineTiles({
             <StatTile
                 label="Total uses"
                 value={totals.inserts}
-                change={season.inserts}
+                change={growth?.inserts}
                 spark={spark.inserts}
             />
             <StatTile
                 label="Total users"
                 value={totals.uniqueUsers}
-                change={season.activeUsers}
+                change={growth?.activeUsers}
                 spark={spark.activeUsers}
             />
             <StatTile
                 label="Uses per user"
                 value={perUser}
                 format={formatRate}
-                change={perUnit(season.inserts, season.activeUsers)}
+                change={growth && perUnit(growth.inserts, growth.activeUsers)}
                 spark={spark.usesPerUser}
             />
             {withOpens && (
                 <StatTile
                     label="App sessions"
                     value={totals.appOpens}
-                    change={season.appOpens}
+                    change={growth?.appOpens}
                     spark={spark.appOpens}
                 />
             )}

@@ -4,8 +4,8 @@ import { getTabPath, isLibraryTab, UtilityTab } from "./app-tab";
 
 describe("app tabs", () => {
     it("gives each kind of tab its own path", () => {
-        expect(getTabPath(LibraryId.FTC_DESIGN_LIB)).toBe(
-            "/app/library/ftc-design-lib"
+        expect(getTabPath(LibraryId.CONFIG_LIB)).toBe(
+            "/app/library/config-lib"
         );
         expect(getTabPath(UtilityTab.VERSION_MANAGER)).toBe(
             "/app/version-manager"

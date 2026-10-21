@@ -9,7 +9,7 @@ import { isSignedIn } from "./request-auth";
 async function requireSignIn(c: AppContext): Promise<void> {
     if (!(await isSignedIn(c))) {
         throw signInRequiredError(
-            "You must be signed in to Onshape to use this functionality"
+            "You must be signed in to Onshape to use this functionality."
         );
     }
 }
@@ -36,8 +36,8 @@ function requireLibraryAccess(
         if (!isWithinAccessLevel(level, accessLevel)) {
             throw forbiddenError(
                 level === AccessLevel.ADMIN
-                    ? "You must be an admin of the library's admin team to use this functionality"
-                    : "You must be on the library's admin team to use this functionality"
+                    ? "You must be an admin of the library's admin team to use this functionality."
+                    : "You must be on the library's admin team to use this functionality."
             );
         }
         await next();
@@ -53,7 +53,7 @@ export async function requireOwner(c: AppContext): Promise<void> {
     await requireSignIn(c);
     const level = await c.var.getAccessLevel(DEFAULT_LIBRARY);
     if (level !== AccessLevel.OWNER) {
-        throw forbiddenError("Only the owner can use this functionality");
+        throw forbiddenError("Only the owner can use this functionality.");
     }
 }
 

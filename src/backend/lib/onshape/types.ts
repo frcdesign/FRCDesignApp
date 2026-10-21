@@ -197,6 +197,8 @@ export interface OnshapeWorkspaceInfo {
 /** A folder (group) node in the document contents tree. */
 export interface OnshapeElementGroup {
     btType: OnshapeFolderEntryType.GROUP;
+    /** The folder's name; the root folder's is not one anybody sees. */
+    groupName?: string;
     /** Child folders and element references, in display order. */
     groups: OnshapeFolderEntry[];
 }
@@ -353,4 +355,47 @@ interface OnshapePartStudioFeature {
 /** GET /partstudios/d/{did}/{wvm}/{wvmid}/e/{eid}/features (the subset we read). */
 export interface OnshapeFeatureListResponse {
     features: OnshapePartStudioFeature[];
+}
+
+// === external references (GET /documents/d/{did}/w/{wid}/externalreferences) ===
+
+/**
+ * One external instance a tab references: the document and version it lives in,
+ * and which of that instance's tabs are referenced.
+ */
+export interface OnshapeExternalReference {
+    documentId: string;
+    /** The referenced instance's id. Always a version: references are to versions. */
+    id: string;
+    /** Onshape's own verdict on whether a newer version exists. */
+    isOutOfDate: boolean;
+    referencedElements: string[];
+}
+
+/**
+ * GET /documents/d/{did}/w/{wid}/externalreferences (the subset we read).
+ * Undocumented (absent from the OpenAPI spec); shape unverified.
+ */
+export interface OnshapeExternalReferences {
+    /** Keyed by the referencing tab's element id. */
+    elementExternalReferences?: Record<string, OnshapeExternalReference[]>;
+    /** The newest version of each referenced document. */
+    latestVersions?: { documentId: string; id: string }[];
+}
+
+// === insertables (GET /documents/d/{did}/{wv}/{wvid}/insertables) ===
+
+/** GET /documents/d/{did}/{wv}/{wvid}/insertables (the subset we read). */
+/** One thing that can be inserted from an instance (the subset we read). */
+interface OnshapeInsertable {
+    predictableThumbnailId?: string;
+}
+
+export interface OnshapeInsertables {
+    items?: OnshapeInsertable[];
+    /**
+     * Edits made in the workspace that its latest version does not carry.
+     * Absent for a version, which is a snapshot and cannot have moved on.
+     */
+    changesSinceVersionSave?: number;
 }

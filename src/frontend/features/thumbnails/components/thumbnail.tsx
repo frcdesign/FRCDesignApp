@@ -1,7 +1,7 @@
 import { skipToken, useQuery } from "@tanstack/react-query";
 import { loadImage } from "../../../lib/api-client";
 import { isInvalidConfiguration, loadRenderedImage } from "../render-wait";
-import { startRender } from "../queries";
+import { type RenderSource, startRender } from "../queries";
 import {
     renderQueryKey,
     storedThumbnailQueryKey
@@ -16,10 +16,11 @@ import { Box, Card, Center, Loader } from "@mantine/core";
 import { AppHoverCard } from "../../../components/app-hover-card";
 import { QuestionIcon } from "@phosphor-icons/react";
 
-import { PropsWithChildren, ReactNode } from "react";
+import { PropsWithChildren, ReactNode, useState } from "react";
 import {
     type ConfigurationKey,
-    DEFAULT_CONFIGURATION_KEY
+    DEFAULT_CONFIGURATION_KEY,
+    type PartialSelection
 } from "@backend/features/configurations/contract";
 import { thumbnailUrl } from "@backend/features/thumbnails/keys";
 import { SectionNotice } from "../../../components/app-notice";
@@ -58,7 +59,7 @@ interface ThumbnailTarget {
     /** Empty means the element default. */
     configurationKey: ConfigurationKey;
     /** Starts a render on a miss. Only set where the user picked the configuration, so a search doesn't start one per row. */
-    insertableId?: string;
+    renderSource?: RenderSource;
 }
 
 interface CardThumbnailProps {
@@ -86,11 +87,8 @@ export function CardThumbnail(props: CardThumbnailProps): ReactNode {
         configuredTarget ? stored : undefined;
 
     // Only a row that can start the render waits for one.
-    const insertableId = configuredTarget?.insertableId;
-    const render =
-        configuredTarget && insertableId
-            ? () => startRender(insertableId, configuredTarget.configurationKey)
-            : undefined;
+    const renderSource = configuredTarget?.renderSource;
+    const render = renderSource ? () => startRender(renderSource) : undefined;
 
     return (
         <AppHoverCard
@@ -136,6 +134,9 @@ interface ThumbnailProps {
 function Thumbnail(props: ThumbnailProps): ReactNode {
     const { url, fallbackUrl, heightAndWidth, spinnerSize, startRender } =
         props;
+    // The one url the element itself has rejected; kept rather than a flag, so
+    // a new url is tried afresh without an effect to clear anything.
+    const [brokenUrl, setBrokenUrl] = useState<string>();
 
     const imageQuery = useQuery({
         queryKey: storedThumbnailQueryKey(url),
@@ -158,13 +159,21 @@ function Thumbnail(props: ThumbnailProps): ReactNode {
     });
 
     const shownUrl = imageQuery.data ?? fallbackQuery.data;
+    const isBroken = shownUrl !== undefined && shownUrl === brokenUrl;
 
     let content;
-    if (shownUrl !== undefined) {
+    if (shownUrl !== undefined && !isBroken) {
         content = (
-            <img src={shownUrl} {...heightAndWidth} style={FIT_INSIDE_BOX} />
+            <img
+                src={shownUrl}
+                {...heightAndWidth}
+                style={FIT_INSIDE_BOX}
+                // Bytes that are gone, or a url the browser was refused: the
+                // placeholder, rather than the broken-image glyph.
+                onError={() => setBrokenUrl(shownUrl)}
+            />
         );
-    } else if (url === undefined || imageQuery.isError) {
+    } else if (url === undefined || imageQuery.isError || isBroken) {
         content = <QuestionIcon size={spinnerSize} />;
     } else {
         content = <Loader size={spinnerSize} />;
@@ -189,8 +198,10 @@ export function PreviewImageCard(props: PreviewImageProps): ReactNode {
 
 interface PreviewImageProps {
     path: ElementPath;
-    /** The selection to preview; Onshape applies defaults for what it omits. */
+    /** Names the stored render; derived from `selection`. */
     configurationKey: ConfigurationKey;
+    /** What a render is asked for with, as entered. */
+    selection: PartialSelection;
     /** Part of the thumbnail key, so an updated document renders again. */
     microversionId: string;
     /** What the render resolves the element from. */
@@ -206,7 +217,8 @@ const PREVIEW_SPINNER_SIZE = 36;
 
 /** The first ask starts the render; later asks start nothing more. */
 function usePreviewThumbnail(props: PreviewImageProps, enabled: boolean) {
-    const { path, insertableId, microversionId, configurationKey } = props;
+    const { path, insertableId, microversionId, configurationKey, selection } =
+        props;
     const url = thumbnailUrl({
         elementId: path.elementId,
         microversionId,
@@ -219,7 +231,7 @@ function usePreviewThumbnail(props: PreviewImageProps, enabled: boolean) {
         queryFn: ({ signal }) =>
             loadRenderedImage(
                 url,
-                () => startRender(insertableId, configurationKey),
+                () => startRender({ insertableId, selection }),
                 signal
             ),
         // Keeps the previous render up while this one is waited on.

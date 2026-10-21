@@ -12,11 +12,12 @@ import { DashboardState } from "../../features/dashboard/dashboard-state";
 import { InsertsByLibraryCard } from "../../features/dashboard/inserts-chart";
 import { InsertSourceBreakdown } from "../../features/dashboard/insert-mix";
 import { RangePreset, toDayRange } from "../../features/dashboard/range";
-import { RecentSection } from "../../features/dashboard/growth-section";
+import { useRangePreset } from "../../features/dashboard/range-control";
 import { HeadlineTiles } from "../../features/dashboard/headline-tiles";
 import { METRICS } from "../../features/dashboard/metrics";
 import { Section } from "../../components/section";
 import { UsageTreemap } from "../../features/dashboard/usage-treemap";
+import { VersionManagerTiles } from "../../features/dashboard/version-manager-tiles";
 import { TrendTile } from "../../features/dashboard/trend-tile";
 
 export const Route = createFileRoute("/dashboard/")({
@@ -33,30 +34,31 @@ function useAllParts(range: DayRange) {
 }
 
 function DashboardOverview(): ReactNode {
-    // No range picker: each section names its own window.
-    const range = toDayRange(RangePreset.ALL);
+    const preset = useRangePreset();
+    const range = toDayRange(preset);
     const query = useQuery(getOverviewQuery(range));
     const allParts = useAllParts(range);
 
     if (!query.data) {
         return <DashboardState query={query} />;
     }
-    const { totals, series, metricSeries, sources, growth } = query.data;
+    const { totals, series, metricSeries, sources, versionManager, growth } =
+        query.data;
 
     return (
         <Stack gap="xl">
             <Section title="Overall">
                 <HeadlineTiles
                     totals={totals}
-                    growth={growth}
+                    growth={preset === RangePreset.ALL ? growth : undefined}
                     series={metricSeries}
                     withOpens
                 />
             </Section>
 
-            <RecentSection growth={growth} series={metricSeries} />
-
             <InsertsByLibraryCard series={series} />
+
+            <VersionManagerTiles totals={versionManager} />
 
             <Section title="How people use the app">
                 <Card>

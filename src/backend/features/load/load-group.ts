@@ -3,7 +3,6 @@ import type { BatchItem } from "drizzle-orm/batch";
 import { type Db, getDb } from "../../db/client";
 import { chunkForInArray } from "../../db/chunk";
 import { ElementType } from "../../lib/onshape/element-type";
-import type { DocumentPath } from "../../lib/onshape/path";
 import type { ThumbnailUrls } from "../thumbnails/contract";
 import {
     addBuildIssue,
@@ -19,19 +18,18 @@ import type {
     OnshapeElement
 } from "../../lib/onshape/types";
 import { checkGroup } from "../build-checker/checks";
-import { parseInsertableTabs } from "./parse-document-contents";
+import {
+    documentThumbnailElement,
+    parseInsertableTabs,
+    withoutDeprecated
+} from "./parse-document-contents";
 import { loadInsertable } from "./load-insertable";
 import {
     type GroupTarget,
     type InsertableTarget,
     type LoadContext,
-    type LoadingGroup,
     getOnshapeApiFromContext
 } from "./context";
-import {
-    deleteStaleThumbnailWorkspaces,
-    syncThumbnailWorkspace
-} from "../thumbnails/workspace";
 import { ONSHAPE_STEP_RETRIES, uploadThumbnailsStep } from "./steps";
 import { deleteStaleThumbnails } from "../thumbnails/reconcile";
 
@@ -53,34 +51,22 @@ interface ParsedGroup {
     versionId?: string;
     /** Moves with `versionId`, so the row's date is always that version's. */
     versionCreatedAt?: Date;
-    /** Moves with `versionId`, which it holds. */
-    thumbnailWorkspaceId?: string;
 }
 
 export async function loadGroup(
     ctx: LoadContext,
-    group: GroupTarget,
+    target: GroupTarget,
     forceReload: boolean
 ): Promise<GroupLoadResult> {
-    const { groupId, versionPath } = group;
+    const { groupId, versionPath } = target;
 
-    // Here rather than when resolving, so a skipped group branches nothing.
-    const thumbnailPath = await ctx.step.do(
-        `thumbnail-workspace-${groupId}`,
-        { retries: ONSHAPE_STEP_RETRIES },
-        async () =>
-            syncThumbnailWorkspace(
-                await getOnshapeApiFromContext(ctx),
-                versionPath
-            )
-    );
-    const target: LoadingGroup = { ...group, thumbnailPath };
-
-    const contents = await ctx.step.do(
-        `document-contents-${groupId}`,
-        { retries: ONSHAPE_STEP_RETRIES },
-        async () =>
-            getContents(await getOnshapeApiFromContext(ctx), versionPath)
+    const contents = withoutDeprecated(
+        await ctx.step.do(
+            `document-contents-${groupId}`,
+            { retries: ONSHAPE_STEP_RETRIES },
+            async () =>
+                getContents(await getOnshapeApiFromContext(ctx), versionPath)
+        )
     );
     const insertableTabs = parseInsertableTabs(contents);
     const storedInsertables = await ctx.step.do(
@@ -143,44 +129,11 @@ export async function loadGroup(
             );
         });
 
-    // Only once the row names the kept workspace. A leftover is clutter, not
-    // breakage, so this is never fatal.
-    if (failedInsertableIds.length === 0) {
-        await ctx.step
-            .do(`delete-stale-workspaces-${groupId}`, async () =>
-                deleteStaleThumbnailWorkspaces(
-                    await getOnshapeApiFromContext(ctx),
-                    versionPath,
-                    await namedWorkspaces(getDb(ctx.env.DB), versionPath)
-                )
-            )
-            .catch((error: unknown) => {
-                console.error(
-                    `Failed to delete stale thumbnail workspaces of ${groupId}`,
-                    error
-                );
-            });
-    }
-
     return {
         loadedElements: insertablesToLoad.length - failedInsertableIds.length,
         deletedElements: removedInsertableIds.length,
         failedElements: failedInsertableIds.length
     };
-}
-
-/** The thumbnail workspaces the document's groups name, in every library. */
-async function namedWorkspaces(
-    db: Db,
-    document: DocumentPath
-): Promise<Set<string>> {
-    const rows = await db
-        .select({ workspaceId: groups.thumbnailWorkspaceId })
-        .from(groups)
-        .where(eq(groups.documentId, document.documentId));
-    return new Set(
-        rows.flatMap((row) => (row.workspaceId ? [row.workspaceId] : []))
-    );
 }
 
 /**
@@ -211,14 +164,17 @@ async function loadInsertables(
 
 async function loadDocumentThumbnail(
     ctx: LoadContext,
-    target: LoadingGroup,
+    target: GroupTarget,
     contents: OnshapeDocumentContents
 ): Promise<ThumbnailUrls | null> {
-    const { groupId, thumbnailPath } = target;
+    const { groupId, versionPath, workspacePath } = target;
 
     // Not fatal: `checkGroup` flags a missing thumbnail, and failing here would
     // lose the group's insertables.
-    const element = documentThumbnailElement(target, contents);
+    const element = documentThumbnailElement(
+        contents,
+        target.thumbnailElementId
+    );
     if (!element) {
         return null;
     }
@@ -230,21 +186,11 @@ async function loadDocumentThumbnail(
             uploadThumbnails(
                 ctx.env.BLOB,
                 await getOnshapeApiFromContext(ctx),
-                { ...thumbnailPath, elementId: element.id },
+                { ...versionPath, elementId: element.id },
+                { ...workspacePath, elementId: element.id },
                 element.microversionId
             )
     );
-}
-
-/** The element the document designates, or its first. */
-function documentThumbnailElement(
-    target: GroupTarget,
-    contents: OnshapeDocumentContents
-): OnshapeElement | undefined {
-    const designated = target.thumbnailElementId;
-    return designated
-        ? contents.elements.find((element) => element.id === designated)
-        : contents.elements[0];
 }
 
 interface SaveGroupInput {
@@ -259,7 +205,7 @@ interface SaveGroupInput {
 
 async function saveGroup(
     db: Db,
-    target: LoadingGroup,
+    target: GroupTarget,
     input: SaveGroupInput
 ): Promise<void> {
     const { thumbnailUrls, removedInsertableIds } = input;
@@ -281,7 +227,6 @@ async function saveGroup(
     if (!hasFailedInsertables) {
         parsed.versionId = target.versionPath.instanceId;
         parsed.versionCreatedAt = target.versionCreatedAt;
-        parsed.thumbnailWorkspaceId = target.thumbnailPath.instanceId;
     }
 
     const writes: BatchItem<"sqlite">[] = [
@@ -382,7 +327,7 @@ async function fetchStoredInsertables(
  * microversion, so the tab would otherwise look unchanged.
  */
 export function selectInsertablesToLoad(
-    target: LoadingGroup,
+    target: GroupTarget,
     insertableTabs: OnshapeElement[],
     stored: StoredInsertable[],
     forceReload: boolean
@@ -409,7 +354,10 @@ export function selectInsertablesToLoad(
             groupId: target.groupId,
             elementPath: { ...target.versionPath, elementId: tab.id },
             versionCreatedAt: target.versionCreatedAt,
-            thumbnailPath: { ...target.thumbnailPath, elementId: tab.id },
+            elementWorkspacePath: {
+                ...target.workspacePath,
+                elementId: tab.id
+            },
             // OnshapeElementType and the app ElementType share these values.
             elementType: tab.elementType as unknown as ElementType,
             name: tab.name,

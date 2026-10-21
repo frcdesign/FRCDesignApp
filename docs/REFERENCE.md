@@ -36,6 +36,7 @@ KV holds what may expire or be lost. Every key belongs to a `kvStore` (`src/back
 
 - `session:` — a signed-in session's access and refresh tokens and user id, keyed by the opaque id in the `frc-design-app-session` cookie, for 30 days (`features/auth/session.ts`). A sign-in in flight keeps nothing here: its state and return path are the whole of the ten-minute `frc-design-app-login` cookie (`features/auth/login.ts`).
 - `background-session:` — the latest session ids of the owner and each admin team member, so a load nobody is signed in behind can run as one of them.
+- `library-reload:`, `library-reload-queued:` — the reload holding each library, and those waiting for their turn or for approval ([architecture/loading.md](./architecture/loading.md)).
 - `unit-info:` — a workspace's units, for a week. On a miss the route asks Onshape and registers a transient `updateworkspaceunits` webhook, whose delivery drops the entry. Onshape cleans transient webhooks up after a while without events, so nothing records or removes them, and the expiry covers one it drops quietly. Onshape doesn't sign webhooks registered through the API, so the url names the workspace plainly: a forged delivery only costs a refetch (`features/webhooks/transient.ts`).
 
 ### R2 — Blob Storage (`c.env.BLOB`)
@@ -53,16 +54,17 @@ Every thumbnail the app shows is served from R2, never fetched from Onshape per 
 
 Cloudflare Workflows run long background jobs that survive past a request and resume after a failure:
 
-| Binding                     | Class                     | What it does                                                                  |
-| --------------------------- | ------------------------- | ----------------------------------------------------------------------------- |
-| `LOAD_DOCUMENT_WORKFLOW`    | `LoadDocumentWorkflow`    | Loads one group's document when its version moved on (or always, when forced) |
-| `RENDER_THUMBNAIL_WORKFLOW` | `RenderThumbnailWorkflow` | Waits out one configuration's render and stores both sizes in R2              |
+| Binding                     | Class                     | What it does                                                                   |
+| --------------------------- | ------------------------- | ------------------------------------------------------------------------------ |
+| `RELOAD_LIBRARY_WORKFLOW`   | `ReloadLibraryWorkflow`   | Reloads a library's groups, or the few named, one reload per library at a time |
+| `RENDER_THUMBNAIL_WORKFLOW` | `RenderThumbnailWorkflow` | Waits out one configuration's render and stores both sizes in R2               |
+| `VERSION_MANAGER_WORKFLOW`  | `VersionManagerWorkflow`  | Runs one push or pull between linked workspaces                                |
 
-Loads, their job tracking, webhooks and version approval are in [architecture/loading.md](./architecture/loading.md); renders in [architecture/thumbnails.md](./architecture/thumbnails.md).
+Loads, their job tracking, webhooks and version approval are in [architecture/loading.md](./architecture/loading.md); renders in [architecture/thumbnails.md](./architecture/thumbnails.md); pushes and pulls between linked workspaces in [architecture/version-manager.md](./architecture/version-manager.md).
 
 ### Pushes
 
-The server pushes to open clients over a WebSocket held by the `PushHub` Durable Object (`src/backend/features/push/`): jobs starting and finishing, a library's new version, and a configuration's render landing. Nothing polls: a client that reconnects asks again for what it may have missed.
+The server pushes to open clients over a WebSocket held by the `ClientRelay` Durable Object (`src/backend/features/push/`): jobs starting and finishing, a library's new version, and a configuration's render landing. Nothing polls: a client that reconnects asks again for what it may have missed.
 
 ### Assets — Static File Serving (`c.env.ASSETS`)
 
@@ -97,7 +99,7 @@ owns, `lib/` for cross-cutting plumbing, and a small set of files at the root.
 
 ### `src/backend/`
 
-- `index.ts` — Worker entry point; exports the default app, the two Workflow classes and the `PushHub` Durable Object
+- `index.ts` — Worker entry point; exports the default app, the two Workflow classes and the `ClientRelay` Durable Object
 - `app.ts` — composition root, and nothing else: binds the caller onto each request, mounts every feature's routes, and installs the error handler
 - `db/` — `client.ts` (the Drizzle client) and `schema.ts` (table definitions)
 - `lib/` — request plumbing shared by every feature: `context.ts` (bindings, typed context, and the caller binding), `cache.ts` (cache-control middleware), `api-error.ts` and `errors.ts` (the one shape every failed response takes), `validate.ts`, `route-params.ts`, `query-params.ts`
@@ -113,8 +115,9 @@ owns, `lib/` for cross-cutting plumbing, and a small set of files at the root.
     - `thumbnails/` — rendering and R2 storage (`store.ts`), its Workflow, the routes, and the key and URL scheme the client shares
     - `build-checker/` — build issues, the checks that raise them, and the build-status endpoint
     - `webhooks/` — the per-document webhook that loads new versions, and transient ones for caches
-    - `push/` — the `PushHub` Durable Object and what it pushes
+    - `push/` — the `ClientRelay` Durable Object and what it pushes
     - `admin-team/` — each library's admin team, set by the owner and synced from Onshape
+    - `version-manager/` — links between Onshape workspaces and the pushes and pulls along them; see [architecture/version-manager.md](./architecture/version-manager.md)
     - `favorites/`, `search/`, `analytics/`, `insert-location/`
 
 ### `src/frontend/`

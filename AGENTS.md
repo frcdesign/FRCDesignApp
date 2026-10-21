@@ -84,8 +84,9 @@ pure types and functions, no Worker-only imports — or it lands in the client
 bundle.
 
 D1 tables live in `db/schema.ts`, except a feature's own: tracking's are in
-`features/analytics/schema.ts`, since nothing outside analytics reads them and
-they hold no foreign key into the rest. `drizzle.config.ts` lists every schema
+`features/analytics/schema.ts` and workspace links in
+`features/version-manager/schema.ts`, since nothing outside those features reads
+them and they hold no foreign key into the rest. `drizzle.config.ts` lists every schema
 file, so a new one has to be added there or its tables generate no migration.
 
 KV is for what may expire or be lost: sessions, and caches that save Onshape
@@ -111,7 +112,7 @@ is the only place either is built:
   (base units, hidden parameters left out), so selections rendering the same
   part share a render. `DEFAULT_CONFIGURATION_KEY` (the empty string) overrides
   nothing. Never store a key in place of the selection it came from, and never
-  send one to Onshape as a configuration outside thumbnails.
+  send one to Onshape as a configuration, not even for a thumbnail.
 
 `docs/architecture/configurations.md` covers the rest of the area.
 
@@ -124,7 +125,7 @@ wants a function in `selection.ts`, not a new shape.
 
 `docs/architecture/` holds one document per feature area, indexed in its
 `README.md`: thumbnails, configurations, loading, favorites, auth (with access
-levels and environment variables), search, and analytics. Each states the area's flows, storage,
+levels and environment variables), search, analytics, and the version manager. Each states the area's flows, storage,
 **invariants**, failure modes and decisions. Read the area's document before
 changing it, and check the change against its invariants.
 

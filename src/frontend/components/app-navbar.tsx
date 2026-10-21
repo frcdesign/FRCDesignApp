@@ -4,12 +4,16 @@ import {
     Divider,
     Group,
     Input,
+    Menu,
     Stack,
-    Tabs,
     TextInput
 } from "@mantine/core";
 import {
+    BooksIcon,
+    CaretDownIcon,
     GearIcon,
+    GitBranchIcon,
+    type Icon,
     MagnifyingGlassIcon,
     MoonIcon,
     SunIcon
@@ -17,32 +21,49 @@ import {
 import {
     IconSize,
     NAVBAR_DIVIDER_COLOR,
-    NAVBAR_ROW_HEIGHT
+    NAVBAR_ROW_HEIGHT,
+    StatusColor
 } from "../lib/style-constants";
+import styles from "../lib/styles.module.css";
 import {
     PropsWithChildren,
     ReactNode,
-    RefObject,
     useEffect,
     useRef,
     useState
 } from "react";
 import { useDebouncedCallback } from "@mantine/hooks";
+import { useSelectAllOnFocus } from "../lib/select-all";
 
 import { AppBrand } from "./app-brand";
+import { AppIcon } from "./app-icon";
+import { NewBadge, NewIndicator } from "./new-feature";
+import { LibraryStatusBadge } from "./library-status-badge";
+import { MenuSection } from "./app-menu";
 import { openSettingsMenu } from "../features/settings/open-settings-menu";
 import { VendorMenu } from "../features/settings/components/vendor-filters";
 import { getUiState, Theme, updateUiState, useUiState } from "../lib/ui-state";
-import { getLibraryName, useLibraryId } from "../lib/library";
-import { APP_TABS, getTabName, useNavigateToTab } from "../lib/tabs";
-import { useAccessData } from "../features/auth/access-level";
+import {
+    getLibraryName,
+    getLibraryProgram,
+    useLibraryId
+} from "../lib/library";
+import { useNeedsSignIn } from "../features/auth/access-level";
 import { startSignIn } from "../features/auth/sign-in";
-import { LibraryId } from "@backend/features/library/library-id";
-import { type AppTab } from "../lib/app-tab";
-import { queryClient } from "../lib/query-client";
 import { getLibraryVersionQuery } from "../features/library/queries";
+import { LibraryId } from "@backend/features/library/library-id";
+import { AppColor, getLibraryColor, toShade } from "../theme";
+import { queryClient } from "../lib/query-client";
 import { InsertLocationStatus } from "../features/insert-location/components/insert-location-status";
-import styles from "../lib/styles.module.css";
+import {
+    useIsVersionManager,
+    useIsVersionManagerNew
+} from "../features/version-manager/navigation";
+import { useTargetWorkspace } from "../lib/onshape-params";
+import { type AppTab, UtilityTab } from "../lib/app-tab";
+import { getTabName, useNavigateToTab } from "../lib/tabs";
+import { useRefreshVersionManagerMutation } from "../features/version-manager/queries";
+import { RefreshButton } from "./refresh-button";
 
 /** Stretched so a full-height child's underline lands on the row's border. */
 export function NavbarRow(props: PropsWithChildren): ReactNode {
@@ -69,29 +90,38 @@ export function NavbarRow(props: PropsWithChildren): ReactNode {
     );
 }
 
+/** The page picker with the brand and settings, over search and its filters. */
 export function AppNavbar(): ReactNode {
+    // Search and its filters belong to a library, and the version manager is
+    // not one; its page fills the room they leave.
+    const isVersionManager = useIsVersionManager();
+
     return (
         <Stack gap={0}>
             <NavbarRow>
-                <AppTabs />
-                <Group gap="xs" ml="auto">
-                    <InsertLocationStatus />
+                <PagePicker />
+                <Group gap="xs" ml="auto" className={styles.noShrink}>
+                    {/* Inserting is the library's; the version manager inserts nothing. */}
+                    {!isVersionManager && <InsertLocationStatus />}
                     <SignInButton />
+                    {isVersionManager && <VersionManagerRefreshButton />}
                     <SettingsControls />
                 </Group>
             </NavbarRow>
-            <Group gap="xs" px="sm" h={NAVBAR_ROW_HEIGHT}>
-                <SearchBar />
-                <VendorMenu />
-            </Group>
+            {!isVersionManager && (
+                <Group gap="xs" px="sm" h={NAVBAR_ROW_HEIGHT}>
+                    <SearchBar />
+                    <VendorMenu />
+                </Group>
+            )}
         </Stack>
     );
 }
 
 function SignInButton(): ReactNode {
-    const { signedIn, isPending } = useAccessData();
+    const needsSignIn = useNeedsSignIn();
     // Otherwise the button flashes on every load for someone signed in.
-    if (isPending || signedIn) return null;
+    if (!needsSignIn) return null;
 
     return (
         <Button variant="outline" size="sm" my="auto" onClick={startSignIn}>
@@ -100,10 +130,79 @@ function SignInButton(): ReactNode {
     );
 }
 
-/** Switches tabs; the url is what actually selects one. */
-function AppTabs(): ReactNode {
-    const currentTabId = useLibraryId();
+/** What the menu files the pages that are not a library under. */
+const UTILITIES_GROUP = "Utilities";
+
+/** One of the app's top-level pages, as the page picker lists it. */
+interface AppPage {
+    tab: AppTab;
+    /** The heading the menu lists it under: its program, or the utilities. */
+    group: string;
+    /** A book for a library. */
+    icon: Icon;
+    /** The color the page themes the app in, which its icon and badge take. */
+    color: string;
+    badge?: ReactNode;
+    /** Worth pointing out behind the closed menu. */
+    isNew?: boolean;
+}
+
+function useAppPages(): AppPage[] {
+    const targetWorkspace = useTargetWorkspace();
+    const isVersionManager = useIsVersionManager();
+    const isNew = useIsVersionManagerNew();
+
+    const libraries = Object.values(LibraryId).map((libraryId) => ({
+        tab: libraryId,
+        group: getLibraryProgram(libraryId),
+        icon: BooksIcon,
+        color: getLibraryColor(libraryId),
+        badge: (
+            <LibraryStatusBadge
+                libraryId={libraryId}
+                color={getLibraryColor(libraryId)}
+            />
+        )
+    }));
+
+    // Listed while it is showing even without a workspace, so the picker never
+    // names a page it does not offer.
+    if (!targetWorkspace && !isVersionManager) {
+        return libraries;
+    }
+    return [
+        ...libraries,
+        {
+            tab: UtilityTab.VERSION_MANAGER,
+            group: UTILITIES_GROUP,
+            icon: GitBranchIcon,
+            color: AppColor.VERSION_MANAGER,
+            badge: isNew ? <NewBadge /> : undefined,
+            isNew
+        }
+    ];
+}
+
+/** The pages under their headings, each heading where its first page comes. */
+function groupPages(pages: AppPage[]): [string, AppPage[]][] {
+    const groups = new Map<string, AppPage[]>();
+    for (const page of pages) {
+        groups.set(page.group, [...(groups.get(page.group) ?? []), page]);
+    }
+    return [...groups];
+}
+
+/** The app's top-level pages, as a dropdown naming the one showing. */
+function PagePicker(): ReactNode {
+    const pages = useAppPages();
+    const currentLibraryId = useLibraryId();
+    const isVersionManager = useIsVersionManager();
     const navigateToTab = useNavigateToTab();
+
+    const current: AppTab = isVersionManager
+        ? UtilityTab.VERSION_MANAGER
+        : currentLibraryId;
+    const currentPage = pages.find((page) => page.tab === current);
 
     // Warm the versions on hover, so picking one has nothing left to wait for.
     const prefetchVersions = () => {
@@ -112,45 +211,72 @@ function AppTabs(): ReactNode {
         }
     };
 
+    const selectPage = (tab: AppTab) => {
+        updateUiState({ tabId: tab });
+        navigateToTab(tab);
+    };
+
     return (
-        <Tabs
-            value={currentTabId}
-            onMouseEnter={prefetchVersions}
-            onChange={(value) => {
-                if (!value || value === currentTabId) {
-                    return;
-                }
-                const tabId = value as AppTab;
-                // Only decides where `/` resumes next time; the url is the source of truth.
-                updateUiState({ tabId });
-                navigateToTab(tabId);
-            }}
-            styles={{
-                // The row draws the line under the tabs.
-                root: { "--tab-border-color": "transparent", minWidth: 0 },
-                // Scroll rather than wrap onto a second row in a narrow panel.
-                list: {
-                    // So the underline lands on the row's border.
-                    height: "100%",
-                    flexWrap: "nowrap",
-                    overflowX: "auto",
-                    scrollbarWidth: "none"
-                },
-                // Overlaps the row's border, so the active indicator replaces it.
-                tab: {
-                    marginBottom: -1,
-                    paddingInline: "var(--mantine-spacing-sm)"
-                }
-            }}
-        >
-            <Tabs.List>
-                {APP_TABS.map((tabId) => (
-                    <Tabs.Tab key={tabId} value={tabId}>
-                        {getTabName(tabId)}
-                    </Tabs.Tab>
+        <Menu position="bottom-start">
+            {/* The dot wraps the target: the menu hands its props to the
+                button, and the wrapper is what the row centres. */}
+            <NewIndicator
+                shown={pages.some((page) => page.isNew)}
+                my="auto"
+                className={styles.noShrink}
+            >
+                <Menu.Target>
+                    <Button
+                        variant="subtle"
+                        color={StatusColor.NEUTRAL}
+                        px="xs"
+                        onMouseEnter={prefetchVersions}
+                        leftSection={
+                            currentPage && (
+                                <AppIcon
+                                    icon={currentPage.icon}
+                                    size={IconSize.MEDIUM}
+                                    color={toShade(currentPage.color)}
+                                />
+                            )
+                        }
+                        rightSection={<CaretDownIcon size={IconSize.SMALL} />}
+                    >
+                        {getTabName(current)}
+                    </Button>
+                </Menu.Target>
+            </NewIndicator>
+            <Menu.Dropdown>
+                {groupPages(pages).map(([group, grouped]) => (
+                    <MenuSection key={group} label={group}>
+                        {grouped.map((page) => (
+                            <Menu.Item
+                                key={page.tab}
+                                disabled={page.tab === current}
+                                leftSection={
+                                    <NewIndicator
+                                        shown={page.isNew ?? false}
+                                        offset={-1}
+                                    >
+                                        <AppIcon
+                                            icon={page.icon}
+                                            size={IconSize.MEDIUM}
+                                            color={toShade(page.color)}
+                                        />
+                                    </NewIndicator>
+                                }
+                                onClick={() => selectPage(page.tab)}
+                            >
+                                <Group gap="xs">
+                                    {getTabName(page.tab)}
+                                    {page.badge}
+                                </Group>
+                            </Menu.Item>
+                        ))}
+                    </MenuSection>
                 ))}
-            </Tabs.List>
-        </Tabs>
+            </Menu.Dropdown>
+        </Menu>
     );
 }
 
@@ -161,6 +287,18 @@ export function SettingsControls(): ReactNode {
             <ThemeToggle />
             <SettingsButton />
         </Group>
+    );
+}
+
+/** Reads the linked documents again, past what the server cached of them. */
+function VersionManagerRefreshButton(): ReactNode {
+    const workspace = useTargetWorkspace();
+    const refresh = useRefreshVersionManagerMutation(workspace);
+    return (
+        <RefreshButton
+            loading={refresh.isPending}
+            onClick={() => refresh.mutate()}
+        />
     );
 }
 
@@ -199,20 +337,11 @@ function SettingsButton() {
     );
 }
 
-function selectAllInputText(ref: RefObject<HTMLInputElement | null>) {
-    const input = ref.current;
-    if (!input) {
-        return;
-    }
-    const length = input.value.length;
-    input.setSelectionRange(0, length);
-}
-
 const SEARCH_DEBOUNCE_MS = 200;
 
 function SearchBar() {
     const ref = useRef<HTMLInputElement>(null);
-    const wasFocused = useRef(false);
+    const selectAll = useSelectAllOnFocus();
     const libraryId = useLibraryId();
     // Local state, so a keystroke re-renders only the input.
     const [query, setQuery] = useState(() => getUiState().searchQuery ?? "");
@@ -226,7 +355,7 @@ function SearchBar() {
 
     // `autoFocus` fires before the ref attaches, so onFocus can't select.
     useEffect(() => {
-        selectAllInputText(ref);
+        ref.current?.select();
     }, []);
 
     const clearButton = query ? (
@@ -250,19 +379,7 @@ function SearchBar() {
             placeholder={`Search ${getLibraryName(libraryId)}...`}
             ref={ref}
             value={query}
-            onFocus={() => {
-                selectAllInputText(ref);
-            }}
-            // The mouseup of the click that focuses the input would collapse the
-            // select-all; later clicks place the caret normally.
-            onMouseDown={() => {
-                wasFocused.current = document.activeElement === ref.current;
-            }}
-            onMouseUp={(event) => {
-                if (!wasFocused.current) {
-                    event.preventDefault();
-                }
-            }}
+            {...selectAll}
             onChange={(event) => {
                 const value = event.currentTarget.value;
                 setQuery(value);

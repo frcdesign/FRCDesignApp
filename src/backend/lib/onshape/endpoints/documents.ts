@@ -1,6 +1,18 @@
 import { OnshapeApi } from "../client";
-import { DocumentPath, InstancePath, toInstanceApiPath } from "../path";
-import { OnshapeDocumentContents, OnshapeDocumentInfo } from "../types";
+import {
+    DocumentPath,
+    ElementPath,
+    InstancePath,
+    toElementApiObject,
+    toElementApiPath,
+    toInstanceApiPath
+} from "../path";
+import {
+    OnshapeDocumentContents,
+    OnshapeDocumentInfo,
+    OnshapeExternalReferences,
+    OnshapeInsertables
+} from "../types";
 
 /** Describes possible part types. */
 export enum PartType {
@@ -40,5 +52,71 @@ export function getUnitInfo(
 ): Promise<OnshapeUnitInfo> {
     return onshapeApi.get(
         `/documents${toInstanceApiPath(instancePath)}/unitinfo`
+    );
+}
+
+/**
+ * `GET /documents/d/{did}/{wv}/{wvid}/insertables`
+ *
+ * What can be inserted from an instance, and how far a workspace has moved
+ * since its last version. Every `include` flag defaults to false, so a caller
+ * after the counters alone passes no query at all and Onshape enumerates
+ * nothing.
+ */
+export function getInsertables(
+    client: OnshapeApi,
+    instancePath: InstancePath,
+    query: Record<string, string | boolean> = {}
+): Promise<OnshapeInsertables> {
+    return client.get(
+        `/documents${toInstanceApiPath(instancePath)}/insertables`,
+        { query }
+    );
+}
+
+/**
+ * `GET /documents/d/{did}/w/{wid}/externalreferences`
+ *
+ * Every version of another document this workspace's tabs reference, and the
+ * latest version of each of those documents. Undocumented (absent from the
+ * OpenAPI spec); shape unverified.
+ */
+export function getExternalReferences(
+    client: OnshapeApi,
+    instancePath: InstancePath
+): Promise<OnshapeExternalReferences> {
+    return client.get(
+        `/documents${toInstanceApiPath(instancePath)}/externalreferences`
+    );
+}
+
+/** Repoints a reference from one path to another; both name the same tab. */
+export interface ReferenceUpdate {
+    fromReference: ElementPath;
+    toReference: ElementPath;
+}
+
+/**
+ * `POST /elements/d/{did}/w/{wid}/e/{eid}/updatereferences`
+ *
+ * Repoints the references one tab makes, each from the element path it points
+ * at now to the one it should. Requires write on the tab's document, and link
+ * on each document being referenced.
+ */
+export function updateReferences(
+    client: OnshapeApi,
+    elementPath: ElementPath,
+    referenceUpdates: ReferenceUpdate[]
+): Promise<void> {
+    return client.postNone(
+        `/elements${toElementApiPath(elementPath)}/updatereferences`,
+        {
+            body: {
+                referenceUpdates: referenceUpdates.map((update) => ({
+                    fromReference: toElementApiObject(update.fromReference),
+                    toReference: toElementApiObject(update.toReference)
+                }))
+            }
+        }
     );
 }

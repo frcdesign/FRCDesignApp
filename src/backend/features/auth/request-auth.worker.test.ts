@@ -84,7 +84,7 @@ describe("access from a library's admin team", () => {
         const db = getDb(env.DB);
         await resetDb(db);
         await seedLibrary(db, LibraryId.FRC_DESIGN_LIB);
-        await seedLibrary(db, LibraryId.FTC_DESIGN_LIB);
+        await seedLibrary(db, LibraryId.CONFIG_LIB);
         await db
             .update(libraries)
             .set({
@@ -142,13 +142,13 @@ describe("access from a library's admin team", () => {
 
     // Access is per library now: one library's team edits that library alone.
     it("grants nothing in a library whose team the user is not on", async () => {
-        expect(
-            await accessLevelOf("team-admin", LibraryId.FTC_DESIGN_LIB)
-        ).toBe(AccessLevel.USER);
+        expect(await accessLevelOf("team-admin", LibraryId.CONFIG_LIB)).toBe(
+            AccessLevel.USER
+        );
     });
 
     it("gives the owner every library", async () => {
-        expect(await accessLevelOf(OWNER, LibraryId.FTC_DESIGN_LIB)).toBe(
+        expect(await accessLevelOf(OWNER, LibraryId.CONFIG_LIB)).toBe(
             AccessLevel.OWNER
         );
     });

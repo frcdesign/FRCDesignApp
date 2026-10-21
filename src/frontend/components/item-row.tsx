@@ -1,5 +1,5 @@
 import { Group, Stack, Table, Text } from "@mantine/core";
-import { PropsWithChildren, ReactNode } from "react";
+import { type MouseEvent, PropsWithChildren, ReactNode } from "react";
 import { meaningfulPartNumber } from "@backend/features/configurations/part-number";
 import { StatusColor } from "../lib/style-constants";
 import { AppContextMenu, MenuButton } from "./app-menu";
@@ -17,7 +17,6 @@ export interface RowMatch {
     /** The vendor's page for the part number, when one can be derived. */
     url?: string;
     partNumberPositions?: Position[];
-    partNamePositions?: Position[];
 }
 
 interface CardTitleProps {
@@ -28,8 +27,16 @@ interface CardTitleProps {
     match?: RowMatch;
     /** Dims the text, for a row that cannot be acted on. */
     disabled?: boolean;
-    /** Optional build-status badge rendered after the title. */
-    buildStatusBadge?: ReactNode;
+    /** Colors the title, for a row whose name is itself a problem. */
+    titleColor?: string;
+    /** A badge after the title: a build status, a count of pending changes. */
+    badge?: ReactNode;
+    /**
+     * The caller's own second line, in place of the part name and number — for
+     * a row whose subject is not a part, like a linked workspace. It styles
+     * itself, the line under a part being the only one this component knows.
+     */
+    subtitle?: ReactNode;
 }
 
 export function CardTitle(props: CardTitleProps): ReactNode {
@@ -37,7 +44,9 @@ export function CardTitle(props: CardTitleProps): ReactNode {
         match,
         title,
         thumbnail,
-        buildStatusBadge,
+        badge,
+        subtitle,
+        titleColor,
         disabled = false
     } = props;
 
@@ -50,7 +59,7 @@ export function CardTitle(props: CardTitleProps): ReactNode {
                 <Text
                     truncate
                     title={title}
-                    c={disabled ? "dimmed" : undefined}
+                    c={titleColor ?? (disabled ? "dimmed" : undefined)}
                 >
                     <HighlightedText
                         text={title}
@@ -59,9 +68,12 @@ export function CardTitle(props: CardTitleProps): ReactNode {
                 </Text>
                 {/* The line under the title, so it sits beside it in the stack
                     rather than inside the paragraph the title renders as. */}
-                {match && <PartNameAndNumber title={title} match={match} />}
+                {subtitle ??
+                    (match && (
+                        <PartNameAndNumber title={title} match={match} />
+                    ))}
             </Stack>
-            {buildStatusBadge}
+            {badge}
         </Group>
     );
 }
@@ -87,10 +99,7 @@ function PartNameAndNumber(props: PartNameAndNumberProps): ReactNode {
         <Group gap={4} miw={0} fz="xs" lh="xs" c={StatusColor.DIMMED}>
             {partName && (
                 <Text truncate title={partName} inherit miw={0}>
-                    <HighlightedText
-                        text={partName}
-                        positions={match.partNamePositions}
-                    />
+                    {partName}
                 </Text>
             )}
             {partName && partNumber && <Text inherit>·</Text>}
@@ -124,7 +133,8 @@ interface ItemRowProps {
     left: ReactNode;
     /** Menu items shown on right-click and (when shown) via the "more" button. */
     menuItems: ReactNode;
-    onClick?: () => void;
+    /** Given the event, so a row can offer a modified click of its own. */
+    onClick?: (event: MouseEvent<HTMLTableRowElement>) => void;
     /** Extra right-aligned controls (e.g. a favorite button or an arrow). */
     rightSection?: ReactNode;
     /** Shows the explicit "..." button that opens the same menu. */

@@ -15,6 +15,8 @@ import {
 } from "./contract";
 import { findInsertLocation } from "./parse";
 import { toMarkerPoint } from "./placement";
+import { markHintSeen } from "../hints/store";
+import { Hint } from "../hints/contract";
 
 export const insertLocationRoutes = getApp();
 
@@ -75,6 +77,7 @@ insertLocationRoutes.post(
             inserted.insertInstanceResponses?.[0]?.occurrences?.[0]?.path[0] ??
             (await findInsertLocation(onshapeApi, targetPath));
 
+        await markHintSeen(c, Hint.ADDED_INSERT_LOCATION);
         return c.json({ instanceId } satisfies InsertLocationOut);
     }
 );

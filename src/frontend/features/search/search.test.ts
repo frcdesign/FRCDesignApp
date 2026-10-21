@@ -132,17 +132,6 @@ describe("doSearch configuration matching", () => {
         ]
     });
 
-    it("picks the configuration a term of the query names", () => {
-        const { hits } = search(searchDb, "maxspline 24t");
-        expect(hits[0].values).toEqual({ teeth: "24" });
-        expect(hits[0].partNumber).toBe("WCP-1235");
-    });
-
-    it("picks it from the distinguishing term alone", () => {
-        const { hits } = search(searchDb, "36t");
-        expect(hits[0].values).toEqual({ teeth: "36" });
-    });
-
     it("keeps the default when no term distinguishes a configuration", () => {
         const { hits } = search(searchDb, "maxspline gear");
         expect(hits[0].values).toEqual({});
@@ -155,7 +144,11 @@ describe("doSearch configuration matching", () => {
         expect(hits[0].partNumber).toBe("WCP-1234");
     });
 
-    it("lets a part number typed in full outrank a looser name match", () => {
+    it("does not read a configuration's part name", () => {
+        expect(search(searchDb, "36t").hits).toEqual([]);
+    });
+
+    it("picks the configuration whose part number was typed", () => {
         const { hits } = search(searchDb, "WCP-1236");
         expect(hits[0].values).toEqual({ teeth: "36" });
     });
@@ -210,42 +203,9 @@ describe("doSearch inch sizes", () => {
     });
 });
 
-// Every part number has a segment starting with 1; the name's size decides.
-describe("doSearch size matching", () => {
-    const searchDb = buildSearchDb(library("Hex Standoff"), {
-        i1: [
-            record("TTB-0016-025", { length: "0.25 in" }, '0.25" Hex Standoff'),
-            record("TTB-0016-050", { length: "0.5 in" }, '0.5" Hex Standoff'),
-            record("TTB-0016-100", { length: "1 in" }, '1" Hex Standoff')
-        ]
-    });
-
-    it.each(["1", '1"', "1 standoff"])(
-        "picks the 1 inch configuration for %s",
-        (query) => {
-            const { hits } = search(searchDb, query);
-            expect(hits[0].partName).toBe('1" Hex Standoff');
-            expect(hits[0].values).toEqual({ length: "1 in" });
-        }
-    );
-
-    it("still picks the smaller size when that is what was asked for", () => {
-        const { hits } = search(searchDb, ".25 standoff");
-        expect(hits[0].partName).toBe('0.25" Hex Standoff');
-    });
-
-    // Nothing in the query distinguishes one, so the default still leads.
-    it("keeps the default when no size is named", () => {
-        const { hits } = search(searchDb, "hex standoff");
-        expect(hits[0].partName).toBe('0.25" Hex Standoff');
-    });
-});
-
 // The library writes one size as .196, .2 and .19.
 describe("doSearch measurements", () => {
-    const searchDb = buildSearchDb(library("MotionX Hub"), {
-        i1: [record("WCP-1", {}, ".196 ID x SplineXL OD")]
-    });
+    const searchDb = buildSearchDb(library(".196 ID x SplineXL OD Hub"));
 
     it.each([".196", ".19", ".2", "0.19"])("finds the part by %s", (query) => {
         expect(search(searchDb, query).hits[0]?.id).toBe("i1");
@@ -427,50 +387,13 @@ describe("doSearch highlighting", () => {
             ).toBe("WCP-0101");
         });
 
-        it("underlines the typed prefix of the part name", () => {
-            const hit = hitFor("bear");
-            expect(
-                highlighted(hit.partName!, hit.partNamePositions ?? [])
-            ).toBe("Bear");
-        });
-
         // A title match shows the default record, but nothing in it matched.
         it("underlines nothing when only the title matched", () => {
             const hit = hitFor("bracket");
             expect(
                 highlighted(hit.partNumber!, hit.partNumberPositions ?? [])
             ).toBe("");
-            expect(
-                highlighted(hit.partName!, hit.partNamePositions ?? [])
-            ).toBe("");
         });
-    });
-});
-
-describe("doSearch name matching", () => {
-    const recordsMap: Record<string, ConfigurationRecord[]> = {
-        i1: [
-            record("217-2600", { length: "short" }, "1/2 Bearing"),
-            record("217-2601", { length: "long" }, "3/4 Bearing")
-        ]
-    };
-
-    it("matches a part name, returning its number, name, and configuration", () => {
-        const searchDb = buildSearchDb(library(), recordsMap);
-        const { hits } = search(searchDb, "3/4 bearing");
-        expect(hits).toHaveLength(1);
-        expect(hits[0].partName).toBe("3/4 Bearing");
-        expect(hits[0].partNumber).toBe("217-2601");
-        expect(hits[0].values).toEqual({ length: "long" });
-    });
-
-    it("finds a fractional name by its decimal forms (.5, 0.5, 1/2)", () => {
-        const searchDb = buildSearchDb(library(), recordsMap);
-        for (const query of [".5", "0.5", "1/2"]) {
-            const { hits } = search(searchDb, query);
-            const hit = hits.find((h) => h.id === "i1");
-            expect(hit?.partName).toBe("1/2 Bearing");
-        }
     });
 });
 
@@ -502,10 +425,6 @@ describe("doSearch without configuration matching", () => {
 
     it("does not match a configuration's part number", () => {
         expect(titleOnly("WCP-1235").hits).toHaveLength(0);
-    });
-
-    it("does not match a configuration only its name distinguishes", () => {
-        expect(titleOnly("24t").hits).toHaveLength(0);
     });
 
     it("still shows the default record on a name match", () => {

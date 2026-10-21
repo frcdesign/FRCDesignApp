@@ -1,4 +1,9 @@
+import { useMatch } from "@tanstack/react-router";
 import { LibraryId } from "@backend/features/library/library-id";
+
+export function useIsDashboard(): boolean {
+    return useMatch({ from: "/dashboard", shouldThrow: false }) !== undefined;
+}
 
 /** The dashboards reachable from the navbar. */
 export type DashboardKey = "app" | "library" | "unused" | "part";

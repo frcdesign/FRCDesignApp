@@ -30,92 +30,82 @@ describe("reloading a library", () => {
     beforeEach(async () => {
         await resetDb(db);
         await seedGroup(db, "frc", LibraryId.FRC_DESIGN_LIB);
-        await seedGroup(db, "ftc", LibraryId.FTC_DESIGN_LIB);
+        await seedGroup(db, "ftc", LibraryId.CONFIG_LIB);
     });
     afterEach(() => vi.restoreAllMocks());
 
     it("reloads the library's outdated documents for an admin", async () => {
-        const load = vi.spyOn(Jobs, "requestLoads").mockResolvedValue();
+        const load = vi.spyOn(Jobs, "requestReload").mockResolvedValue();
+        vi.spyOn(Jobs, "approveHeldReloads").mockResolvedValue(0);
 
         const res = await reload(AccessLevel.ADMIN, false);
 
         expect(await res.json()).toEqual({ documents: 1 });
-        expect(load.mock.calls[0][1]).toEqual([
-            expect.objectContaining({
-                groupId: "frc",
-                sessionId: "s",
-                forceReload: false
-            })
-        ]);
+        expect(load.mock.calls[0][1]).toEqual({
+            libraryId: LibraryId.FRC_DESIGN_LIB,
+            groupIds: ["frc"],
+            sessionId: "s",
+            forceReload: false,
+            held: false
+        });
     });
 
     it("reloads every document for the owner", async () => {
-        const load = vi.spyOn(Jobs, "requestLoads").mockResolvedValue();
+        const load = vi.spyOn(Jobs, "requestReload").mockResolvedValue();
+        vi.spyOn(Jobs, "approveHeldReloads").mockResolvedValue(0);
 
         await reload(AccessLevel.OWNER, true);
 
-        expect(load.mock.calls[0][1]).toEqual([
-            expect.objectContaining({ groupId: "frc", forceReload: true })
-        ]);
-    });
-
-    it("keeps reloading every document to the owner", async () => {
-        expect((await reload(AccessLevel.ADMIN, true)).status).toBe(403);
-    });
-
-    it("turns away an editor", async () => {
-        expect((await reload(AccessLevel.EDITOR, false)).status).toBe(403);
-    });
-});
-
-describe("approving versions", () => {
-    const APPROVAL_PATH = `/api/version-approval/library/${LibraryId.FRC_DESIGN_LIB}`;
-
-    function call(method: "GET" | "POST", path: string, body?: object) {
-        const init = body ? jsonRequest(method, body) : { method };
-        return createTestApp({ accessLevel: AccessLevel.ADMIN }).request(
-            path,
-            {
-                ...init,
-                headers: {
-                    ...("headers" in init ? init.headers : {}),
-                    Cookie: "frc-design-app-session=s"
-                }
-            },
-            env
-        );
-    }
-
-    beforeEach(async () => {
-        await resetDb(db);
-        await seedGroup(db, "frc", LibraryId.FRC_DESIGN_LIB);
-    });
-    afterEach(() => vi.restoreAllMocks());
-
-    it("is off until an admin turns it on", async () => {
-        expect(await (await call("GET", APPROVAL_PATH)).json()).toEqual({
-            enabled: false
-        });
-        await call("POST", APPROVAL_PATH, { enabled: true });
-        expect(await (await call("GET", APPROVAL_PATH)).json()).toEqual({
-            enabled: true
+        expect(load.mock.calls[0][1]).toMatchObject({
+            groupIds: ["frc"],
+            forceReload: true
         });
     });
 
-    it("lets held versions through when turned off", async () => {
-        const approve = vi.spyOn(Jobs, "approveHeldLoads").mockResolvedValue(2);
-        await call("POST", APPROVAL_PATH, { enabled: false });
+    // It loads whatever is new, so a held version has nothing left to wait for.
+    it("lets the held versions through", async () => {
+        vi.spyOn(Jobs, "requestReload").mockResolvedValue();
+        const approve = vi
+            .spyOn(Jobs, "approveHeldReloads")
+            .mockResolvedValue(1);
+
+        await reload(AccessLevel.ADMIN, false);
+
         expect(approve).toHaveBeenCalledWith(
             expect.anything(),
             LibraryId.FRC_DESIGN_LIB
         );
     });
 
+    it("keeps reloading every document to the owner", async () => {
+        expect((await reload(AccessLevel.ADMIN, true)).status).toBe(403);
+        expect((await reload(AccessLevel.EDITOR, true)).status).toBe(403);
+    });
+
+    // Held and failed documents show to editors, so they can act on them.
+    it("reloads for an editor", async () => {
+        vi.spyOn(Jobs, "requestReload").mockResolvedValue();
+        vi.spyOn(Jobs, "approveHeldReloads").mockResolvedValue(0);
+        expect((await reload(AccessLevel.EDITOR, false)).status).toBe(200);
+    });
+
+    it("turns away somebody who only views", async () => {
+        expect((await reload(AccessLevel.USER, false)).status).toBe(403);
+    });
+});
+
+describe("approving versions", () => {
+    beforeEach(() => resetDb(db));
+    afterEach(() => vi.restoreAllMocks());
+
     it("approves every held version", async () => {
-        vi.spyOn(Jobs, "approveHeldLoads").mockResolvedValue(2);
-        const res = await call(
-            "POST",
-            `/api/approve-versions/library/${LibraryId.FRC_DESIGN_LIB}`
+        vi.spyOn(Jobs, "approveHeldReloads").mockResolvedValue(2);
+        const res = await createTestApp({
+            accessLevel: AccessLevel.EDITOR
+        }).request(
+            `/api/approve-versions/library/${LibraryId.FRC_DESIGN_LIB}`,
+            { method: "POST", headers: { Cookie: "frc-design-app-session=s" } },
+            env
         );
         expect(await res.json()).toEqual({ documents: 2 });
     });

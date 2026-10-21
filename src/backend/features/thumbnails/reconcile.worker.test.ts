@@ -118,11 +118,11 @@ describe("deleteStaleThumbnails", () => {
 
     // Another library can load the same document.
     it("keeps what another library's insertable still names", async () => {
-        await seedGroup(db, "g-ftc", LibraryId.FTC_DESIGN_LIB);
+        await seedGroup(db, "g-ftc", LibraryId.CONFIG_LIB);
         await seedInsertable(db, {
             id: "ftc-insertable",
             groupId: "g-ftc",
-            libraryId: LibraryId.FTC_DESIGN_LIB,
+            libraryId: LibraryId.CONFIG_LIB,
             elementId: ELEMENT,
             microversionId: LIVE_MICROVERSION
         });

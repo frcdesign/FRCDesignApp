@@ -233,7 +233,7 @@ describe("POST /group", () => {
             id: "doc-new",
             name: "New Doc"
         });
-        const loadSpy = vi.spyOn(Jobs, "requestLoads").mockResolvedValue();
+        const loadSpy = vi.spyOn(Jobs, "requestReload").mockResolvedValue();
 
         const res = await createTestApp().request(
             `/api/group/library/${TEST_LIBRARY_ID}`,
@@ -255,14 +255,13 @@ describe("POST /group", () => {
             `doc-${TEST_GROUP_ID}`,
             "doc-new"
         ]);
-        expect(loadSpy).toHaveBeenCalledWith(expect.anything(), [
-            {
-                libraryId: TEST_LIBRARY_ID,
-                groupId: rows[1].id,
-                sessionId: "test-session",
-                forceReload: false
-            }
-        ]);
+        expect(loadSpy).toHaveBeenCalledWith(expect.anything(), {
+            libraryId: TEST_LIBRARY_ID,
+            groupIds: [rows[1].id],
+            sessionId: "test-session",
+            forceReload: false,
+            held: false
+        });
     });
 
     it("422s when the document was already added", async () => {
@@ -271,7 +270,7 @@ describe("POST /group", () => {
             id: "doc-test-group",
             name: "Dup"
         });
-        const loadSpy = vi.spyOn(Jobs, "requestLoads");
+        const loadSpy = vi.spyOn(Jobs, "requestReload");
 
         const res = await createTestApp().request(
             `/api/group/library/${TEST_LIBRARY_ID}`,

@@ -14,14 +14,15 @@ interface __BaseEnv_Env {
 	OAUTH_CLIENT_ID: string;
 	OAUTH_CLIENT_SECRET: string;
 	VITE_ACCESS_LEVEL_OVERRIDE: string;
-	PUSH_HUB: DurableObjectNamespace<import("./src/backend/index").PushHub>;
-	LOAD_DOCUMENT_WORKFLOW: Workflow<Parameters<import("./src/backend/index").LoadDocumentWorkflow['run']>[0]['payload']>;
+	CLIENT_RELAY: DurableObjectNamespace<import("./src/backend/index").ClientRelay>;
+	RELOAD_LIBRARY_WORKFLOW: Workflow<Parameters<import("./src/backend/index").ReloadLibraryWorkflow['run']>[0]['payload']>;
 	RENDER_THUMBNAIL_WORKFLOW: Workflow<Parameters<import("./src/backend/index").RenderThumbnailWorkflow['run']>[0]['payload']>;
+	VERSION_MANAGER_WORKFLOW: Workflow<Parameters<import("./src/backend/index").VersionManagerWorkflow['run']>[0]['payload']>;
 }
 declare namespace Cloudflare {
 	interface GlobalProps {
 		mainModule: typeof import("./src/backend/index");
-		durableNamespaces: "PushHub";
+		durableNamespaces: "ClientRelay";
 	}
 	interface CertEnv {
 		KV: KVNamespace;
@@ -36,9 +37,10 @@ declare namespace Cloudflare {
 		OAUTH_CLIENT_ID: string;
 		OAUTH_CLIENT_SECRET: string;
 		VITE_ACCESS_LEVEL_OVERRIDE: string;
-		PUSH_HUB: DurableObjectNamespace<import("./src/backend/index").PushHub>;
-		LOAD_DOCUMENT_WORKFLOW: Workflow<Parameters<import("./src/backend/index").LoadDocumentWorkflow['run']>[0]['payload']>;
+		CLIENT_RELAY: DurableObjectNamespace<import("./src/backend/index").ClientRelay>;
+		RELOAD_LIBRARY_WORKFLOW: Workflow<Parameters<import("./src/backend/index").ReloadLibraryWorkflow['run']>[0]['payload']>;
 		RENDER_THUMBNAIL_WORKFLOW: Workflow<Parameters<import("./src/backend/index").RenderThumbnailWorkflow['run']>[0]['payload']>;
+		VERSION_MANAGER_WORKFLOW: Workflow<Parameters<import("./src/backend/index").VersionManagerWorkflow['run']>[0]['payload']>;
 	}
 	interface ProductionEnv {
 		KV: KVNamespace;
@@ -53,9 +55,10 @@ declare namespace Cloudflare {
 		OAUTH_CLIENT_ID: string;
 		OAUTH_CLIENT_SECRET: string;
 		VITE_ACCESS_LEVEL_OVERRIDE: string;
-		PUSH_HUB: DurableObjectNamespace<import("./src/backend/index").PushHub>;
-		LOAD_DOCUMENT_WORKFLOW: Workflow<Parameters<import("./src/backend/index").LoadDocumentWorkflow['run']>[0]['payload']>;
+		CLIENT_RELAY: DurableObjectNamespace<import("./src/backend/index").ClientRelay>;
+		RELOAD_LIBRARY_WORKFLOW: Workflow<Parameters<import("./src/backend/index").ReloadLibraryWorkflow['run']>[0]['payload']>;
 		RENDER_THUMBNAIL_WORKFLOW: Workflow<Parameters<import("./src/backend/index").RenderThumbnailWorkflow['run']>[0]['payload']>;
+		VERSION_MANAGER_WORKFLOW: Workflow<Parameters<import("./src/backend/index").VersionManagerWorkflow['run']>[0]['payload']>;
 	}
 	interface Env extends __BaseEnv_Env {}
 }

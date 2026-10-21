@@ -1,4 +1,4 @@
-import type { WorkflowBackoff } from "cloudflare:workers";
+import type { WorkflowBackoff, WorkflowStep } from "cloudflare:workers";
 import { readRetryAfterSeconds } from "../../lib/onshape/client";
 import { type ThumbnailUrls } from "../thumbnails/contract";
 import type { LoadContext } from "./context";
@@ -52,17 +52,13 @@ export const ONSHAPE_STEP_RETRIES = {
     backoff: CONSTANT_BACKOFF
 };
 
-/** A freshly branched workspace takes minutes to render: about 16 minutes in all. */
-const THUMBNAIL_RETRY_SECONDS = [30, 60, 120, 240, 240, 240];
-
-function thumbnailRetryDelay(input: RetryDelayInput): `${number} seconds` {
-    const scheduled = THUMBNAIL_RETRY_SECONDS.at(input.ctx.attempt - 1) ?? 240;
-    return rateLimitDelay(input.error) ?? `${scheduled} seconds`;
-}
-
+/**
+ * Three retries, honoring a rate limit. An element's thumbnail is rendered on
+ * save, so this only covers Onshape still writing one out just after it.
+ */
 const THUMBNAIL_RETRIES = {
-    limit: THUMBNAIL_RETRY_SECONDS.length,
-    delay: thumbnailRetryDelay,
+    limit: 3,
+    delay: onshapeRetryDelay,
     backoff: CONSTANT_BACKOFF
 };
 
@@ -82,4 +78,23 @@ export async function uploadThumbnailsStep(
     } catch {
         return null;
     }
+}
+
+/**
+ * The same steps under names of their own, so one reload can run a group's
+ * steps for each of its groups. Step names identify a step's stored result.
+ */
+export function prefixSteps(step: WorkflowStep, prefix: string): WorkflowStep {
+    return {
+        do: (name: string, ...rest: unknown[]) =>
+            (step.do as (name: string, ...rest: unknown[]) => unknown)(
+                `${prefix}${name}`,
+                ...rest
+            ),
+        sleep: (name, duration) => step.sleep(`${prefix}${name}`, duration),
+        sleepUntil: (name, timestamp) =>
+            step.sleepUntil(`${prefix}${name}`, timestamp),
+        waitForEvent: (name, options) =>
+            step.waitForEvent(`${prefix}${name}`, options)
+    } as WorkflowStep;
 }

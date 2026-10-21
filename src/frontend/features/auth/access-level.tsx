@@ -21,7 +21,8 @@ const DEFAULT_ACCESS_LEVEL =
 /** Granted as well as viewed, or the clamp would drop a dev override while pending. */
 const DEFAULT_ACCESS_DATA: AccessData = {
     maxAccessLevel: DEFAULT_ACCESS_LEVEL,
-    signedIn: false
+    signedIn: false,
+    seenHints: []
 };
 
 /** Access to one library: its admin team is what grants more than a user's. */
@@ -60,6 +61,16 @@ export function useAccessData(): ResolvedAccessData {
 export function useIsSignedIn(): boolean {
     const accessData = useAccessData();
     return accessData.signedIn;
+}
+
+/**
+ * Whether the caller has no Onshape session to work with, and so is offered one.
+ * Pending reads as signed in: nothing is offered until the answer arrives, and
+ * inside Onshape's panel signed in is the answer.
+ */
+export function useNeedsSignIn(): boolean {
+    const { signedIn, isPending } = useAccessData();
+    return !signedIn && !isPending;
 }
 
 interface RequireAccessLevelProps extends PropsWithChildren {

@@ -1,12 +1,13 @@
 import { HttpStatus } from "http-status-ts";
 import {
-    createSearchParams,
+    toQueryString,
     type QueryOptions,
     type PostOptions
 } from "../query-params";
 
+// The same in every environment.
 const ONSHAPE_API_BASE_PATH = "https://cad.onshape.com";
-const ONSHAPE_API_VERSION = 16;
+const ONSHAPE_API_VERSION = 17;
 
 function getBaseUrl(): string {
     return `${ONSHAPE_API_BASE_PATH}/api/v${ONSHAPE_API_VERSION}`;
@@ -63,7 +64,12 @@ export abstract class OnshapeApi {
         init: RequestInit
     ): Promise<Response>;
 
-    async get(path: string, options?: QueryOptions): Promise<any> {
+    /**
+     * Onshape's responses are not typed, so the caller says what it expects
+     * rather than an `any` spreading out of every call. One that says nothing
+     * gets `unknown`, which the compiler makes it narrow before reading.
+     */
+    async get<T = unknown>(path: string, options?: QueryOptions): Promise<T> {
         const res = await this._call("GET", path, options);
         return res.json();
     }
@@ -82,7 +88,8 @@ export abstract class OnshapeApi {
         return res.arrayBuffer();
     }
 
-    async post(path: string, options?: PostOptions): Promise<any> {
+    /** See {@link OnshapeApi.get} for what the type parameter claims. */
+    async post<T = unknown>(path: string, options?: PostOptions): Promise<T> {
         const res = await this._call("POST", path, options, options?.body);
         return res.json();
     }
@@ -91,7 +98,11 @@ export abstract class OnshapeApi {
         await this._call("POST", path, options, options?.body);
     }
 
-    async delete(path: string, options?: QueryOptions): Promise<any> {
+    /** See {@link OnshapeApi.get} for what the type parameter claims. */
+    async delete<T = unknown>(
+        path: string,
+        options?: QueryOptions
+    ): Promise<T> {
         const res = await this._call("DELETE", path, options);
         return res.json();
     }
@@ -106,8 +117,7 @@ export abstract class OnshapeApi {
         options?: QueryOptions,
         body?: unknown
     ): Promise<Response> {
-        const params = createSearchParams(options?.query);
-        const url = `${this._baseUrl}${path}?${params.toString()}`;
+        const url = `${this._baseUrl}${path}?${toQueryString(options?.query)}`;
         const headers = options?.accept
             ? new Headers({ Accept: options.accept })
             : undefined;

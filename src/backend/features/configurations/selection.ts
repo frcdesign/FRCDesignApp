@@ -135,18 +135,35 @@ export function onshapeOverrides(
 }
 
 /**
- * Selections that render the same part get the same key, so derivation
- * variables are left out.
+ * What a render sends Onshape, as entered: Onshape names its renders by the
+ * value it computes, which differs in the last bit between `2.25 in` and
+ * `0.05715 m`. Derivation variables are left out, since each insert's is unique.
  */
+export function renderOverrides(
+    selection: Selection,
+    parameters: ConfigurationParameter[]
+): Selection {
+    const overrides = onshapeOverrides(selection, parameters);
+    const values: Selection = {};
+    for (const parameter of parameters) {
+        const value = overrides[parameter.id];
+        if (value !== undefined && !isDerivationVariable(parameter)) {
+            values[parameter.id] = value;
+        }
+    }
+    return values;
+}
+
+/** Selections that render the same part get the same key. */
 export function toKey(
     selection: Selection,
     parameters: ConfigurationParameter[]
 ): ConfigurationKey {
-    const overrides = onshapeOverrides(selection, parameters);
+    const overrides = renderOverrides(selection, parameters);
     const canonical: Selection = {};
     for (const parameter of parameters) {
         const value = overrides[parameter.id];
-        if (value !== undefined && !isDerivationVariable(parameter)) {
+        if (value !== undefined) {
             canonical[parameter.id] = canonicalValue(parameter, value);
         }
     }

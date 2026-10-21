@@ -6,7 +6,7 @@ import { Notifications } from "@mantine/notifications";
 import { ReactNode, useMemo } from "react";
 import { DEFAULT_LIBRARY } from "@backend/features/library/library-id";
 import { queryClient } from "../lib/query-client";
-import { createAppTheme } from "../theme";
+import { createAppTheme, useAppColor } from "../theme";
 import { useUiState } from "../lib/ui-state";
 import { NotFoundError, RootCrash } from "../components/root-error";
 
@@ -23,11 +23,9 @@ function RootComponent(): ReactNode {
     const params = useParams({ strict: false });
     const tabId = useUiState((state) => state.tabId);
     const colorScheme = useUiState((state) => state.theme);
+    const color = useAppColor(params.libraryId ?? tabId ?? DEFAULT_LIBRARY);
 
-    const theme = useMemo(
-        () => createAppTheme(params.libraryId ?? tabId ?? DEFAULT_LIBRARY),
-        [params.libraryId, tabId]
-    );
+    const theme = useMemo(() => createAppTheme(color), [color]);
 
     return (
         <QueryClientProvider client={queryClient}>

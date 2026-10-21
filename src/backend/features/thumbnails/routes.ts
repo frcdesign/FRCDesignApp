@@ -62,7 +62,7 @@ thumbnailRoutes.get(
     }
 );
 
-const renderBody = z.object({ configurationKey: z.string().min(1) });
+const renderBody = z.object({ selection: z.record(z.string(), z.string()) });
 
 /**
  * POST /api/render-thumbnail/insertable/:insertableId: starts rendering a
@@ -74,10 +74,10 @@ thumbnailRoutes.post(
     requireSignInMiddleware,
     validate("json", renderBody),
     async (c) => {
-        const { configurationKey } = c.req.valid("json");
+        const { selection } = c.req.valid("json");
         const status = await requestRender(c, {
             insertableId: getInsertableParam(c),
-            configurationKey
+            selection
         });
         return c.json({ status } satisfies RenderOut);
     }

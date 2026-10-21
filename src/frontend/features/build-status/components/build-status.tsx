@@ -13,7 +13,7 @@ import {
     HourglassIcon
 } from "@phosphor-icons/react";
 import { ReactNode } from "react";
-import { formatDaysAgo } from "../../../lib/format-time";
+import { formatShortTimeAgo } from "../../../lib/format-time";
 import {
     BuildIssue,
     getMaxSeverity
@@ -132,6 +132,7 @@ function BuildStatusHoverCard({
         <AppHoverCard
             position="right"
             arrowSize={20}
+            interactive
             target={
                 loading ? (
                     <Loader size={IconSize.SMALL} />
@@ -139,7 +140,7 @@ function BuildStatusHoverCard({
                     // Only editors see hidden insertables, so its checks don't matter yet.
                     <AppIcon icon={EyeSlashIcon} color={StatusColor.WARNING} />
                 ) : (
-                    <IssueIcon severity={maxSeverity} />
+                    <IssueIcon severity={maxSeverity} raised={false} />
                 )
             }
         >
@@ -199,7 +200,7 @@ function VersionAge(props: VersionAgeProps): ReactNode {
     const loading = useIsGroupLoading(groupId);
     if (loading) {
         return (
-            <Tooltip label="Being loaded from Onshape in the background">
+            <Tooltip label="Being loaded from Onshape in the background.">
                 <Loader size="xs" className={styles.noShrink} />
             </Tooltip>
         );
@@ -213,7 +214,9 @@ function VersionAge(props: VersionAgeProps): ReactNode {
         >
             <GitBranchIcon size={IconSize.TINY} />
             <Text size="xs">
-                {versionCreatedAt ? formatDaysAgo(versionCreatedAt) : "Unknown"}
+                {versionCreatedAt
+                    ? formatShortTimeAgo(versionCreatedAt)
+                    : "Unknown"}
             </Text>
         </Group>
     );

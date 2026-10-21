@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { createTestApp } from "../../../__test_utils__";
 import { LibraryId } from "../library/library-id";
 import { PUSH_ROUTE, type PushMessage, PushType } from "./contract";
-import { getPushHub } from "./push-hub";
+import { getClientRelay } from "./client-relay";
 
 /** A client connected for `libraryId`, collecting what it is sent. */
 async function connect(libraryId: LibraryId) {
@@ -36,13 +36,13 @@ describe("the push hub", () => {
 
     it("sends a library's messages to its viewers alone", async () => {
         const frc = await connect(LibraryId.FRC_DESIGN_LIB);
-        const ftc = await connect(LibraryId.FTC_DESIGN_LIB);
+        const ftc = await connect(LibraryId.CONFIG_LIB);
         const message: PushMessage = {
             type: PushType.LIBRARY,
             libraryId: LibraryId.FRC_DESIGN_LIB
         };
 
-        await getPushHub(env).broadcast(message);
+        await getClientRelay(env).broadcast(message);
         await settle();
 
         expect(frc.received).toEqual([message]);
@@ -53,7 +53,7 @@ describe("the push hub", () => {
 
     it("sends a message for no library to everyone", async () => {
         const frc = await connect(LibraryId.FRC_DESIGN_LIB);
-        const ftc = await connect(LibraryId.FTC_DESIGN_LIB);
+        const ftc = await connect(LibraryId.CONFIG_LIB);
 
         const message: PushMessage = {
             type: PushType.THUMBNAIL,
@@ -61,7 +61,7 @@ describe("the push hub", () => {
             microversionId: "mv1",
             configurationKey: ""
         };
-        await getPushHub(env).broadcast(message);
+        await getClientRelay(env).broadcast(message);
         await settle();
 
         expect(frc.received).toEqual([message]);

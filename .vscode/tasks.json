@@ -46,7 +46,8 @@
       "problemMatcher": [],
       "presentation": {
         "echo": true,
-        "reveal": "always",
+        // Only on failure, so the dev server's output stays in front.
+        "reveal": "silent",
         "focus": false,
         "panel": "dedicated",
         "clear": true

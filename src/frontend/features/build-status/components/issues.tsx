@@ -1,12 +1,6 @@
 import { ExternalLink } from "../../../components/external-link";
-import { Badge, Group, Stack, Text, Tooltip } from "@mantine/core";
-import {
-    ArrowSquareOutIcon,
-    CheckIcon,
-    InfoIcon,
-    WarningIcon,
-    WarningOctagonIcon
-} from "@phosphor-icons/react";
+import { Badge, Group, Stack, Text } from "@mantine/core";
+import { ArrowSquareOutIcon } from "@phosphor-icons/react";
 import { ReactNode, useMemo } from "react";
 import {
     addBuildIssue,
@@ -28,7 +22,13 @@ import {
     InsertableBuildStatus
 } from "@backend/features/build-checker/contract";
 import { IconSize, StatusColor } from "../../../lib/style-constants";
-import { AppIcon, type AppIconProps } from "../../../components/app-icon";
+import { AppIcon } from "../../../components/app-icon";
+import {
+    StatusIcon,
+    type StatusIconProps
+} from "../../../components/status-icon";
+import { Status, STATUS_COLOR, statusWash } from "../../../lib/status";
+import { InfoTooltip } from "../../../components/info-tooltip";
 import { SectionHeader } from "./sections";
 import { useOnshapeOrigin } from "../../../lib/onshape-params";
 import styles from "../../../lib/styles.module.css";
@@ -46,7 +46,11 @@ export function useGroupBuildIssues(
         // A group that never loaded has nothing to unhide.
         if (
             hasUnhidden ||
-            hasBuildIssue(groupStatus.buildIssues, BuildIssueType.LOAD_FAILED)
+            hasBuildIssue(
+                groupStatus.buildIssues,
+                BuildIssueType.LOAD_FAILED,
+                BuildIssueType.NOT_LOADED
+            )
         ) {
             return groupStatus.buildIssues;
         }
@@ -56,42 +60,28 @@ export function useGroupBuildIssues(
     }, [groupStatus, insertableStatuses]);
 }
 
-interface IssueIconProps extends Omit<AppIconProps, "icon" | "color"> {
+interface IssueIconProps extends Omit<StatusIconProps, "status"> {
     /** The severity to render; absent when every check passes. */
     severity?: BuildIssueSeverity;
 }
 
-/** The icon each severity is drawn as; `ok` is a build with nothing to say. */
-const SEVERITY_ICONS = {
-    [BuildIssueSeverity.ERROR]: WarningOctagonIcon,
-    [BuildIssueSeverity.WARNING]: WarningIcon,
-    [BuildIssueSeverity.INFO]: InfoIcon,
-    ok: CheckIcon
-};
-
-/** The color a severity is spoken in; none is a build with nothing to say. */
-function severityColor(severity?: BuildIssueSeverity): StatusColor {
+/** The status a severity is drawn as; none is a build with nothing to say. */
+function severityStatus(severity?: BuildIssueSeverity): Status {
     switch (severity) {
         case BuildIssueSeverity.ERROR:
-            return StatusColor.ERROR;
+            return Status.ERROR;
         case BuildIssueSeverity.WARNING:
-            return StatusColor.WARNING;
+            return Status.WARNING;
         case BuildIssueSeverity.INFO:
-            return StatusColor.INFO;
+            return Status.INFO;
         case undefined:
-            return StatusColor.SUCCESS;
+            return Status.SUCCESS;
     }
 }
 
-/** Renders the icon for a build-issue severity in its severity color. */
+/** The {@link StatusIcon} for a build-issue severity. */
 export function IssueIcon({ severity, ...others }: IssueIconProps): ReactNode {
-    return (
-        <AppIcon
-            icon={SEVERITY_ICONS[severity ?? "ok"]}
-            color={severityColor(severity)}
-            {...others}
-        />
-    );
+    return <StatusIcon status={severityStatus(severity)} {...others} />;
 }
 
 interface SeverityBadgesProps {
@@ -105,7 +95,13 @@ export function SeverityBadges(props: SeverityBadgesProps): ReactNode {
         return (
             <Badge
                 color={StatusColor.SUCCESS}
-                leftSection={<CheckIcon size={IconSize.TINY} />}
+                leftSection={
+                    <StatusIcon
+                        status={Status.SUCCESS}
+                        size={IconSize.TINY}
+                        raised={false}
+                    />
+                }
             >
                 All checks pass
             </Badge>
@@ -137,14 +133,10 @@ export function SeverityBadges(props: SeverityBadgesProps): ReactNode {
     );
 }
 
-/** The badge color and singular noun for each severity. */
-const SEVERITY_BADGE: Record<
-    BuildIssueSeverity,
-    { color: string; noun: string }
-> = {
-    [BuildIssueSeverity.ERROR]: { color: "red", noun: "error" },
-    [BuildIssueSeverity.WARNING]: { color: "yellow", noun: "warning" },
-    [BuildIssueSeverity.INFO]: { color: "blue", noun: "info" }
+const SEVERITY_NOUN: Record<BuildIssueSeverity, string> = {
+    [BuildIssueSeverity.ERROR]: "error",
+    [BuildIssueSeverity.WARNING]: "warning",
+    [BuildIssueSeverity.INFO]: "info"
 };
 
 interface CountBadgeProps {
@@ -154,7 +146,8 @@ interface CountBadgeProps {
 
 function CountBadge(props: CountBadgeProps): ReactNode {
     const { severity, count } = props;
-    const { color, noun } = SEVERITY_BADGE[severity];
+    const color = STATUS_COLOR[severityStatus(severity)];
+    const noun = SEVERITY_NOUN[severity];
     // Don't pluralize info, e.g. "2 infos" reads wrong.
     const plural = severity !== BuildIssueSeverity.INFO && count > 1 ? "s" : "";
     return <Badge color={color}>{`${count} ${noun}${plural}`}</Badge>;
@@ -250,7 +243,7 @@ interface IssueCalloutProps {
 function IssueCallout(props: IssueCalloutProps): ReactNode {
     const { issue, url } = props;
     const severity = getIssueSeverity(issue);
-    const background = severityBackground(severity);
+    const background = statusWash(severityStatus(severity));
 
     if (!url) {
         return (
@@ -287,22 +280,17 @@ function IssueText(props: IssueTextProps): ReactNode {
         <>
             <Text flex={1}>{getIssueTitle(issue)}</Text>
             {description && (
-                <Tooltip label={description} multiline maw={260}>
-                    <AppIcon
-                        icon={InfoIcon}
-                        color={StatusColor.DIMMED}
-                        className={styles.noShrink}
-                        style={CALLOUT_ICON_NUDGE}
-                    />
-                </Tooltip>
+                <InfoTooltip
+                    label={description}
+                    color={
+                        STATUS_COLOR[severityStatus(getIssueSeverity(issue))]
+                    }
+                    className={styles.noShrink}
+                    style={CALLOUT_ICON_NUDGE}
+                />
             )}
         </>
     );
-}
-
-/** The light background tint for a build-issue callout. */
-function severityBackground(severity: BuildIssueSeverity): string {
-    return `var(--mantine-color-${severityColor(severity)}-light)`;
 }
 
 interface CalloutIconProps {
@@ -318,6 +306,7 @@ function CalloutIcon(props: CalloutIconProps): ReactNode {
             severity={props.severity}
             className={styles.noShrink}
             style={CALLOUT_ICON_NUDGE}
+            raised={false}
         />
     );
 }

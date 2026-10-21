@@ -18,7 +18,6 @@ account's API allocation. There are three kinds:
 | ----------------------------------------------------------- | --------------------------------------------------------------------------- |
 | `src/backend/features/thumbnails/keys.ts`                   | R2 keys and app urls; shared with the client so both build the same url     |
 | `src/backend/features/thumbnails/store.ts`                  | `putThumbnail`, `uploadThumbnails` (both sizes of an insertable's default)  |
-| `src/backend/features/thumbnails/workspace.ts`              | The per-version thumbnail workspace: `syncThumbnailWorkspace`, cleanup      |
 | `src/backend/features/thumbnails/routes.ts`                 | Serving stored thumbnails, starting a render, **Reload thumbnail**          |
 | `src/backend/features/thumbnails/render.ts`                 | `requestRender`: starts one configuration's render, at most once            |
 | `src/backend/features/thumbnails/render-workflow.ts`        | `RenderThumbnailWorkflow`: waits out Onshape's render and stores both sizes |
@@ -42,48 +41,22 @@ and is stored with an immutable one-year cache header. Nothing expires on a
 timer; see cleanup below.
 
 **D1**: `insertables.small_thumbnail_url` / `large_thumbnail_url` and the same on
-`groups` hold the app urls of the default thumbnails. `groups.thumbnail_workspace_id`
-records the group's thumbnail workspace.
-
-**Onshape**: one workspace per document version named
-`FRCDesignApp Thumbnails (DO NOT EDIT)`, whose description names the version.
+`groups` hold the app urls of the default thumbnails.
 
 ## Flows
-
-### The thumbnail workspace
-
-Onshape sometimes never renders thumbnails in a version, and the document's own
-workspace moves on from the version we loaded. So every thumbnail is read from a
-workspace of ours branched off the loaded version.
-
-1. A load of a new version calls `syncThumbnailWorkspace`, which finds our
-   workspace whose description names that version, or branches one. Every group
-   of the document and every retried step find the same one.
-2. The group row records it (`thumbnail_workspace_id`).
-3. After the group saves, `deleteStaleThumbnailWorkspaces` deletes every
-   workspace of ours that no group of the document, in any library, names. A
-   group elsewhere can be pinned to an older version, held for approval, and
-   still read from its own.
-
-Deleting waits for the save because until then the group row still names the
-old workspace and the old version's microversions: configuration renders asked
-for meanwhile read from it, and a load that fails part-way keeps the old
-version, so its workspace is kept too. Onshape can't move a workspace to
-another version, so a new version always means a new branch.
-
-A fresh branch has no rendered thumbnails for a few minutes.
 
 ### Insertable and group thumbnails, during a load
 
 1. `loadInsertable` (see [loading.md](./loading.md)) calls `uploadThumbnails` for
-   the insertable's tab in the thumbnail workspace, keyed by the **version's**
-   microversion. A part studio with no parts is skipped.
-2. `uploadThumbnails` fetches each size that is not already stored and throws
-   while Onshape has not rendered it.
+   the insertable's tab, keyed by the version's microversion. A part studio with
+   no parts is skipped.
+2. `uploadThumbnails` fetches each size that is not already stored, from the
+   version first and the document's own workspace when the version won't give
+   one up, and throws when neither does.
 3. The step runs under its own limiter (`THUMBNAIL_CONCURRENCY`) with
-   `THUMBNAIL_RETRIES` (`src/backend/features/load/steps.ts`): retries after 30
-   seconds, 1, 2, 4, 4 and 4 minutes, about 16 minutes in all. Exhausted, it
-   records `THUMBNAIL_FAILED` and the load carries on.
+   `THUMBNAIL_RETRIES` (`src/backend/features/load/steps.ts`): three retries,
+   10, 20 and 40 seconds apart. Exhausted, it records `THUMBNAIL_FAILED` and the
+   load carries on.
 4. The group's thumbnail comes from the document's designated thumbnail tab, or
    its first tab without one (`NO_THUMBNAIL_TAB`).
 
@@ -103,21 +76,29 @@ can wait for it: the insert menu's preview and favorite rows. Search rows never
 start one, so a cold search cannot start a render per row.
 
 1. The client calls `POST /api/render-thumbnail/insertable/:insertableId` with
-   the configuration key. It must be signed in: the render calls Onshape as the
-   caller.
-2. `requestRender` reads the insertable's element, current microversion and its
-   group's thumbnail workspace. A group without one starts nothing (it gets one
-   on its next load).
-3. It asks Onshape for the configuration's thumbnail id through the insertables
-   endpoint, in the workspace. None answers `no-part`, which the client shows as
-   a configuration that failed to regenerate; otherwise it answers `rendering`.
-4. The instance id is `render-` plus a SHA-256 of
+   the selection as entered. It must be signed in: the render calls Onshape as
+   the caller.
+2. `requestRender` makes the selection whole against the insertable's
+   parameters and settles it as the insert menu does (`normalizeSelection`),
+   then derives its key itself: the key matches the one the menu shows, and a
+   caller can't store one configuration's picture under another's key. The
+   element's default is refused with a 400.
+3. It asks the insertables endpoint, on the insertable's version, for the
+   configuration's `predictableThumbnailId`, sending `renderOverrides`: the
+   values as entered, escaped once (`encodeQueryConfiguration`). No insertables
+   answers `no-part`, which the client shows as a configuration that failed to
+   regenerate; otherwise it answers `rendering`.
+4. The instance id is `version-render-` plus a SHA-256 of
    `elementId/microversionId/configurationKey`, so every request for one render
    finds the same instance. A running instance is left alone; a finished one is
    restarted, and returns at once if its bytes are already stored.
-5. `RenderThumbnailWorkflow` fetches both sizes by thumbnail id, each retried
-   every five seconds for about a minute (`RENDER_RETRIES`), and stores each as
-   it lands.
+5. `RenderThumbnailWorkflow` fetches the sizes by thumbnail id one at a time,
+   the preview's first: the first ask starts Onshape's render and it answers 404
+   until done, and asking for another meanwhile abandons it. Each size is retried
+   every two seconds for about a minute (`RENDER_RETRIES`), and stored as it
+   lands. It asks under the requester's session while that works, then an
+   admin's of the insertable's library: a restart reruns with the first
+   requester's.
 6. Each stored size pushes a `thumbnail` message (`src/backend/features/push/`).
 
 On the client, `loadRenderedImage` fetches; on the first miss it starts the
@@ -129,9 +110,12 @@ meanwhile.
 
 Editors can refetch one insertable's or group's thumbnail from its menu
 (`POST /api/reload-thumbnail/library/:libraryId`, naming the group or insertable
-in the body). It deletes the stored pair, fetches again from
-the thumbnail workspace (syncing it first), clears `THUMBNAIL_FAILED` and bumps
-the library version. Onshape still rendering answers 503.
+in the body). It fetches again as a load does (the version, then the
+document's workspace), overwriting each stored size only once its new image is
+in hand, clears `THUMBNAIL_FAILED` and bumps the library version. Onshape still
+rendering answers 503 and leaves what was stored. A group's tab is picked as a
+load picks it (`documentThumbnailElement`, deprecated tabs left out), and a
+group that has never loaded is refused.
 
 ### Cleanup
 
@@ -144,28 +128,77 @@ reload also deletes every configuration render of the document
 
 ### Onshape calls
 
-| Flow              | Call                                                                                                          | Retries                             |
-| ----------------- | ------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
-| Load, reload      | `GET /thumbnails/d/{did}/w/{thumbnail wid}/e/{eid}/s/{size}`, per size                                        | `THUMBNAIL_RETRIES`; none on reload |
-| Render request    | `GET /documents/d/{did}/w/{thumbnail wid}/insertables?elementId=&configuration=` for `predictableThumbnailId` | none: the route answers             |
-| Render workflow   | `GET /thumbnails/{thumbnailId}/s/{size}`, per size                                                            | `RENDER_RETRIES`                    |
-| Workspace sync    | `GET`/`POST /documents/d/{did}/workspaces`                                                                    | `ONSHAPE_STEP_RETRIES` in a load    |
-| Workspace cleanup | `DELETE /documents/d/{did}/workspaces/{wid}`                                                                  | none; failure is logged             |
+| Flow            | Call                                                                                                | Retries                             |
+| --------------- | --------------------------------------------------------------------------------------------------- | ----------------------------------- |
+| Load, reload    | `GET /thumbnails/d/{did}/v/{vid}/e/{eid}/s/{size}`, then `/w/{wid}/` on failure, per size           | `THUMBNAIL_RETRIES`; none on reload |
+| Render request  | `GET /documents/d/{did}/v/{vid}/insertables?elementId=&configuration=` for `predictableThumbnailId` | none: the route answers             |
+| Render workflow | `GET /thumbnails/{thumbnailId}/s/{size}`, one size at a time                                        | `RENDER_RETRIES`                    |
 
 A render workflow calls Onshape as the session that requested it
 (`getOnshapeApiFromSessionId`), so a render outlives the request but not a
 revoked session.
 
+### When a thumbnail isn't there yet
+
+How long the app keeps trying in each situation, and what the person sees
+meanwhile and when it gives up. Every call to Onshape gives up after 60 s, and
+a rate limit waits however long Onshape asks.
+
+**A library loads a document.** Each part's default picture is read from the
+version, or from the document's own workspace when the version has none. A
+load tries four times over about 70 s (`THUMBNAIL_RETRIES`), and then moves on
+without it. The part shows a question mark in the library, and editors see
+"Thumbnail failed to render" in its build status until a **Reload thumbnail**
+or the next version's load.
+
+**Someone browses the library, a group, search results or favorites.** Each row
+shows a picture we already have. If it won't load, the row asks once more after
+a second, then shows a question mark. A search result that matched a
+configuration shows that configuration's picture if someone has rendered it,
+and the part's default otherwise; it never starts a render, so a search can't
+start one per row.
+
+**Someone picks a configuration in the insert menu.** The preview keeps the
+previous picture up with a small spinner while the new one renders.
+
+- The server asks Onshape for it, large size first, every 2 s for about a
+  minute (`RENDER_RETRIES`).
+- The menu swaps the picture in the moment the server says it has landed, and
+  gives up a minute after it started waiting (`RENDER_TIMEOUT_MS`).
+- After 15 s of waiting inside Onshape, a tip says the part can be inserted
+  anyway. It closes after 8 s.
+- On giving up, the preview says "The thumbnail could not be loaded." A
+  configuration that produces no part says "Part failed to regenerate." at once.
+- Picking the configuration again tries again.
+
+**A favorite was saved with a configuration.** Its row starts the same render,
+showing the part's default until it lands. The row's small picture is rendered
+after the large one, so it can arrive after the row has stopped waiting; the
+row still picks it up when the server says it landed.
+
+**An editor reloads a thumbnail.** One attempt, no retry. A toast says
+"Reloading thumbnail..." until the answer, then "Thumbnail reloaded." If
+Onshape has nothing yet it says "Onshape has not rendered this thumbnail yet.
+Try again in a few minutes.", and any other failure "Failed to reload
+thumbnail. Onshape may not have one yet."
+
+**The app loses its connection to the server's updates.** It reconnects after
+1 s, then waits twice as long each time, up to 30 s. A render that lands while
+it is disconnected is still picked up by the insert menu when its minute is up.
+
 ## Invariants
 
-- A stored object is never overwritten: its key contains the microversion, so a
-  changed element lands on new keys.
+- A stored object is overwritten only by **Reload thumbnail**, and only with a
+  new image in hand: its key contains the microversion, so a changed element
+  lands on new keys.
 - A configuration url never serves the insertable's default, and a miss is never
   cached.
 - Serving never starts a render; only `POST /api/render-thumbnail/...` does, for
   a signed-in caller, and at most one instance runs per key.
-- Thumbnails are read from the thumbnail workspace only, never from the version
-  or the document's own workspace.
+- Configuration renders are resolved and fetched on the version. Element and
+  group thumbnails are read from the version, and from the document's own
+  workspace only when the version won't give one up.
+- A render workflow asks Onshape for one size at a time.
 - Configuration thumbnails are named by `ConfigurationKey`, and keys are used for
   nothing else (see [configurations.md](./configurations.md)).
 - Cleanup keeps anything younger than `STALE_THUMBNAIL_GRACE_MS` (one hour): a
@@ -173,26 +206,30 @@ revoked session.
 
 ## Failure and recovery
 
-| Failure                                            | Result                                        | Recovery                                                      |
-| -------------------------------------------------- | --------------------------------------------- | ------------------------------------------------------------- |
-| Onshape never renders an insertable within ~16 min | `THUMBNAIL_FAILED` on the insertable or group | **Reload thumbnail**, or the next version's load              |
-| A configuration never renders within ~1 min        | Client keeps showing the default              | Picking it again restarts the finished instance               |
-| A bad configuration render was stored              | Wrong picture, immutably cached               | Owner's **Reload all documents** drops the document's renders |
-| A load crashes between storing and saving          | Orphaned objects                              | Next cleanup, after the grace period                          |
+| Failure                                             | Result                                        | Recovery                                                      |
+| --------------------------------------------------- | --------------------------------------------- | ------------------------------------------------------------- |
+| Neither instance gives up an insertable's thumbnail | `THUMBNAIL_FAILED` on the insertable or group | **Reload thumbnail**, or the next version's load              |
+| A configuration never renders within ~1 min         | Client keeps showing the default              | Picking it again restarts the finished instance               |
+| A bad configuration render was stored               | Wrong picture, immutably cached               | Owner's **Reload all documents** drops the document's renders |
+| A load crashes between storing and saving           | Orphaned objects                              | Next cleanup, after the grace period                          |
 
 ## Decisions
 
-- **A workspace per version, not the version.** Onshape does not reliably render
-  thumbnails in versions. Branching per version, rather than reusing one
-  workspace, keeps the rendered content identical to what was loaded.
-- **Keyed by the version's microversion though read from the workspace.** The
-  workspace is branched from that version, so its content renders the same, and
-  the version's microversion is what the rows already hold.
-- **Renders by thumbnail id.** The id Onshape reports for an insertable in a
-  configuration is fetched through `/thumbnails/{id}`; the documented
-  configured-thumbnail endpoint and its strictness flags returned wrong or
-  default images.
+- **The version, falling back to the document's workspace.** The version is
+  what the library shows, but Onshape's version form of the element thumbnail
+  endpoint is unreliable and its workspace form isn't. Stored under the
+  version's microversion either way, since that is what the rows hold.
+- **Renders by thumbnail id, on the version.** The id insertables reports for a
+  configuration is fetched through `/thumbnails/{id}`, whose first ask starts
+  the render. The documented configured-thumbnail endpoint (`/ac/`) returned
+  the default image, and in a workspace insertables reports one id for every
+  configuration.
+- **One size at a time, in a workflow per configuration.** Asking Onshape for a
+  second render abandons the first (observed, not documented), so a workflow
+  never asks for both sizes at once. Two configurations rendering for one user
+  at the same moment can still disturb each other; the insert menu renders one
+  at a time.
 - **No R2 lifecycle rule.** Renders are meant to last; cleanup deletes what is
   orphaned instead of expiring what might still be shown.
 
-_Last reviewed: 2026-09-27_
+_Last reviewed: 2026-10-04_

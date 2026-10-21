@@ -4,17 +4,15 @@ import {
     type ComboboxProps,
     Loader,
     Select,
-    TextInput,
-    Tooltip
+    TextInput
 } from "@mantine/core";
-import { InfoIcon } from "@phosphor-icons/react";
-import { AppIcon } from "../../../components/app-icon";
-import { StatusColor } from "../../../lib/style-constants";
+import { InfoTooltip } from "../../../components/info-tooltip";
 import {
     type Dispatch,
     ReactNode,
     useCallback,
     useEffect,
+    useLayoutEffect,
     useMemo,
     useRef,
     useState
@@ -361,12 +359,7 @@ function StringInput(props: ParameterProps<StringParameter>): ReactNode {
                     value={value ?? parameter.default}
                     readOnly
                     rightSection={
-                        <Tooltip label={DERIVATION_VARIABLE_NOTE}>
-                            <AppIcon
-                                icon={InfoIcon}
-                                color={StatusColor.DIMMED}
-                            />
-                        </Tooltip>
+                        <InfoTooltip label={DERIVATION_VARIABLE_NOTE} />
                     }
                 />
             </ParameterCells>
@@ -402,6 +395,14 @@ function QuantityInput(props: ParameterProps<QuantityParameter>): ReactNode {
     const [box, setBox] = useState(() =>
         evaluateExpression(value ?? parameter.default, evaluateOptions)
     );
+
+    // After focus swaps the display for the expression, since changing the
+    // value drops a selection made before it.
+    useLayoutEffect(() => {
+        if (focused) {
+            inputRef.current?.select();
+        }
+    }, [focused]);
 
     // A value this box didn't submit came from elsewhere, such as a favorite.
     const [emitted, setEmitted] = useState(value);
@@ -440,10 +441,7 @@ function QuantityInput(props: ParameterProps<QuantityParameter>): ReactNode {
                         event.preventDefault();
                     }
                 }}
-                onFocus={(event) => {
-                    setFocused(true);
-                    event.currentTarget.select();
-                }}
+                onFocus={() => setFocused(true)}
                 onBlur={handleSubmit}
                 onKeyDown={(event) => {
                     // blur() submits; calling handleSubmit too ran it twice.

@@ -19,9 +19,9 @@ export function insertableTarget(
         libraryId: TEST_LIBRARY_ID,
         groupId: TEST_GROUP_ID,
         elementPath: TEST_PART_STUDIO_PATH,
-        thumbnailPath: {
+        elementWorkspacePath: {
             ...TEST_PART_STUDIO_PATH,
-            instanceId: "w-thumbnails",
+            instanceId: "w-1",
             instanceType: "w"
         },
         versionCreatedAt: TEST_VERSION_CREATED_AT,

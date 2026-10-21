@@ -3,11 +3,13 @@
  * payload names: the token is all that keeps others from triggering this.
  */
 import { eq } from "drizzle-orm";
-import { type AppBindings, getApp } from "../../lib/context";
+import { type AppBindings, type AppContext, getApp } from "../../lib/context";
+import type { InstancePath } from "../../lib/onshape/path";
 import { forbiddenError } from "../../lib/api-error";
 import { getDb } from "../../db/client";
-import { groups, libraries, WebhookSubject } from "../../db/schema";
-import { requestLoads } from "../load/jobs";
+import { groups, WebhookSubject } from "../../db/schema";
+import type { LibraryId } from "../library/library-id";
+import { requestReload } from "../load/jobs";
 import {
     findWebhookByToken,
     forgetWebhook,
@@ -15,8 +17,13 @@ import {
     WebhookEvent
 } from "./registration";
 import { runInBackground } from "../../lib/background";
-import { readUnitsDelivery, UNITS_WEBHOOK_ROUTE } from "./transient";
+import {
+    LINKED_WORKSPACE_WEBHOOK_ROUTE,
+    readWorkspaceDelivery,
+    UNITS_WEBHOOK_ROUTE
+} from "./transient";
 import { forgetUnitInfo } from "../configurations/units";
+import { forgetWorkspace } from "../version-manager/workspace-cache";
 
 export const webhookRoutes = getApp();
 
@@ -55,42 +62,60 @@ webhookRoutes.post(WEBHOOK_ROUTE, async (c) => {
     return c.json({});
 });
 
+/**
+ * A transient webhook's delivery: a change to the workspace it watches, which
+ * drops what is cached of it. Registration and pings only want a 200.
+ */
+function forgetOnChange(
+    forget: (kv: KVNamespace, workspace: InstancePath) => Promise<void>
+) {
+    return async (c: AppContext) => {
+        const workspace = readWorkspaceDelivery(c.req.query());
+        if (!workspace) {
+            throw forbiddenError("Unrecognized webhook");
+        }
+        const { event } = await c.req.json<WebhookNotification>();
+        if (!event.startsWith("webhook.")) {
+            await forget(c.env.KV, workspace);
+        }
+        return c.json({});
+    };
+}
+
 /** POST /api/webhooks/units?documentId=&workspaceId= */
-webhookRoutes.post(UNITS_WEBHOOK_ROUTE, async (c) => {
-    const workspace = readUnitsDelivery(c.req.query());
-    if (!workspace) {
-        throw forbiddenError("Unrecognized webhook");
-    }
-    // Registration and pings only want a 200; any other event is the change.
-    const { event } = await c.req.json<WebhookNotification>();
-    if (!event.startsWith("webhook.")) {
-        await forgetUnitInfo(c.env.KV, workspace);
-    }
-    return c.json({});
-});
+webhookRoutes.post(UNITS_WEBHOOK_ROUTE, forgetOnChange(forgetUnitInfo));
+
+/** POST /api/webhooks/linked-workspace?documentId=&workspaceId= */
+webhookRoutes.post(
+    LINKED_WORKSPACE_WEBHOOK_ROUTE,
+    forgetOnChange(forgetWorkspace)
+);
 
 /**
- * Nobody is signed in behind a webhook, so each load finds an admin's session.
- * A library that approves versions holds the load until an admin does.
+ * A new version is held until an editor approves it, or for a week. Nobody is
+ * signed in behind a webhook, so each reload finds an admin's session.
  */
 async function reloadDocument(
     env: AppBindings,
     documentId: string
 ): Promise<void> {
     const documentGroups = await getDb(env.DB)
-        .select({
-            groupId: groups.id,
-            libraryId: groups.libraryId,
-            awaitApproval: libraries.approveVersions
-        })
+        .select({ groupId: groups.id, libraryId: groups.libraryId })
         .from(groups)
-        .innerJoin(libraries, eq(libraries.id, groups.libraryId))
         .where(eq(groups.documentId, documentId));
-    await requestLoads(
-        env,
-        documentGroups.map((group) => ({
-            ...group,
-            forceReload: false
-        }))
-    );
+    const byLibrary = new Map<LibraryId, string[]>();
+    for (const { groupId, libraryId } of documentGroups) {
+        byLibrary.set(libraryId, [
+            ...(byLibrary.get(libraryId) ?? []),
+            groupId
+        ]);
+    }
+    for (const [libraryId, groupIds] of byLibrary) {
+        await requestReload(env, {
+            libraryId,
+            groupIds,
+            forceReload: false,
+            held: true
+        });
+    }
 }

@@ -26,7 +26,7 @@ export function useSetAdminTeamMutation() {
             apiPost<AdminTeamOut>("/admin-team" + toLibraryPath(libraryId), {
                 body: { teamId }
             }),
-        onError: getAppErrorHandler("Failed to set the admin team!"),
+        onError: getAppErrorHandler("Failed to set the admin team."),
         onSuccess: (team) => {
             queryClient.setQueryData(adminTeamQueryKey(libraryId), team);
             showSuccessToast(
@@ -47,7 +47,7 @@ export function useRefreshAdminTeamMutation() {
             apiPost<AdminTeamOut>(
                 "/admin-team/refresh" + toLibraryPath(libraryId)
             ),
-        onError: getAppErrorHandler("Failed to refresh the admin team!"),
+        onError: getAppErrorHandler("Failed to refresh the admin team."),
         onSuccess: (team) => {
             queryClient.setQueryData(adminTeamQueryKey(libraryId), team);
             showSuccessToast(

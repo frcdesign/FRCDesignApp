@@ -1,210 +1,251 @@
 import { env } from "cloudflare:workers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { eq } from "drizzle-orm";
 import { TEST_LIBRARY_ID, resetDb, seedGroup } from "../../../__test_utils__";
 import { getDb } from "../../db/client";
-import { groups, loadJobs } from "../../db/schema";
-import { eq } from "drizzle-orm";
+import { groups } from "../../db/schema";
 import { BuildIssueType } from "../build-checker/issues";
 import * as LibraryDb from "../library/db";
 import {
     APPROVE_EVENT,
-    approveHeldLoads,
-    finishLoad,
+    approveHeldReloads,
+    claimLibrary,
+    finishReload,
     getJobStatus,
-    setAwaitingApproval,
-    requestLoads,
-    type LoadDocumentParams
+    releaseHold,
+    reportProgress,
+    requestReload,
+    type ReloadParams
 } from "./jobs";
 
 const db = getDb(env.DB);
 
-function params(groupId: string, forceReload = false): LoadDocumentParams {
+function params(groupIds: string[], held = false): ReloadParams {
     return {
         libraryId: TEST_LIBRARY_ID,
-        groupId,
+        groupIds,
         sessionId: "session",
-        forceReload
+        forceReload: false,
+        held
     };
 }
 
-/** Every instance reports `status`, as far as the jobs can tell. Returns their controls. */
-function instancesAre(status: InstanceStatus["status"]) {
-    const instance = {
-        status: () => Promise.resolve({ status }),
-        sendEvent: vi.fn().mockResolvedValue(undefined),
-        terminate: vi.fn().mockResolvedValue(undefined)
-    };
-    vi.spyOn(env.LOAD_DOCUMENT_WORKFLOW, "get").mockResolvedValue(
-        instance as never
+/** Which reloads Workflows reports running; the rest have ended. */
+function running(...instanceIds: string[]) {
+    const sendEvent = vi.fn().mockResolvedValue(undefined);
+    vi.spyOn(env.RELOAD_LIBRARY_WORKFLOW, "get").mockImplementation((id) =>
+        Promise.resolve({
+            status: () =>
+                Promise.resolve({
+                    status: instanceIds.includes(id) ? "running" : "complete"
+                }),
+            sendEvent
+        } as never)
     );
-    return instance;
+    return { sendEvent };
 }
 
-const job = (groupId: string) =>
-    db
-        .select()
-        .from(loadJobs)
-        .all()
-        .then((rows) => rows.find((row) => row.groupId === groupId));
+/** The ids `requestReload` gave the reloads it started, in order. */
+function stubCreate() {
+    return vi
+        .spyOn(env.RELOAD_LIBRARY_WORKFLOW, "create")
+        .mockResolvedValue({} as never);
+}
 
-describe("document loads", () => {
+const createdIds = (create: ReturnType<typeof stubCreate>) =>
+    create.mock.calls.map((call) => call[0]?.id ?? "");
+
+async function clearKv() {
+    const { keys } = await env.KV.list();
+    await Promise.all(keys.map((key) => env.KV.delete(key.name)));
+}
+
+const issuesOf = async (groupId: string) =>
+    (await db.select().from(groups).where(eq(groups.id, groupId)).get())
+        ?.buildIssues;
+
+describe("library reloads", () => {
     beforeEach(async () => {
         await resetDb(db);
+        await clearKv();
         await seedGroup(db, "a");
         await seedGroup(db, "b");
     });
     afterEach(() => vi.restoreAllMocks());
 
-    it("starts a load per group, all in one batch", async () => {
-        const create = vi
-            .spyOn(env.LOAD_DOCUMENT_WORKFLOW, "createBatch")
-            .mockResolvedValue([]);
+    it("shows the groups loading as soon as the reload is asked for", async () => {
+        const create = stubCreate();
 
-        await requestLoads(env, [params("a"), params("b")]);
+        await requestReload(env, params(["a", "b"]));
 
-        expect(create).toHaveBeenCalledOnce();
-        const started = create.mock.calls[0][0];
-        expect(started.map((start) => start.params?.groupId)).toEqual([
-            "a",
-            "b"
-        ]);
-        expect((await job("a"))?.instanceId).toBe(started[0].id);
-        instancesAre("running");
+        expect(create).toHaveBeenCalledWith({
+            id: expect.any(String),
+            params: params(["a", "b"])
+        });
         expect(await getJobStatus(env, TEST_LIBRARY_ID)).toEqual({
             loadingGroupIds: ["a", "b"],
             awaitingApprovalGroupIds: []
         });
     });
 
-    // Two loads writing one group's rows at once would interleave.
-    it("replaces the group's running load, which it stops", async () => {
-        const create = vi
-            .spyOn(env.LOAD_DOCUMENT_WORKFLOW, "createBatch")
-            .mockResolvedValue([]);
-        await requestLoads(env, [params("a")]);
-        const { terminate } = instancesAre("running");
-
-        await requestLoads(env, [params("a")]);
-
-        expect(terminate).toHaveBeenCalledOnce();
-        const replacement = create.mock.calls[1][0][0];
-        expect((await job("a"))?.instanceId).toBe(replacement.id);
+    it("lets one reload hold a library while it runs", async () => {
+        running("first");
+        expect(await claimLibrary(env, params(["a"]), "first")).toBeDefined();
+        expect(
+            await claimLibrary(env, params(["b"]), "second")
+        ).toBeUndefined();
     });
 
-    it("keeps a replaced load's force", async () => {
-        const create = vi
-            .spyOn(env.LOAD_DOCUMENT_WORKFLOW, "createBatch")
-            .mockResolvedValue([]);
-        await requestLoads(env, [params("a", true)]);
-        instancesAre("running");
-
-        await requestLoads(env, [params("a", false)]);
-
-        expect(create.mock.calls[1][0][0].params).toMatchObject({
-            forceReload: true
+    it("takes over from a reload that died, failing what it hadn't finished", async () => {
+        running("second");
+        const dead = await claimLibrary(env, params(["a", "b"]), "first");
+        await reportProgress(env, TEST_LIBRARY_ID, {
+            ...dead!,
+            loadingGroupIds: ["b"]
         });
-        expect(await job("a")).toMatchObject({ forceReload: true });
+
+        expect(await claimLibrary(env, params(["a"]), "second")).toBeDefined();
+
+        expect(await issuesOf("a")).toEqual([]);
+        expect(await issuesOf("b")).toEqual([
+            { type: BuildIssueType.LOAD_FAILED }
+        ]);
     });
 
-    it("replaces the row of a load that crashed, and flags its group", async () => {
-        const create = vi
-            .spyOn(env.LOAD_DOCUMENT_WORKFLOW, "createBatch")
-            .mockResolvedValue([]);
-        await requestLoads(env, [params("a")]);
-        instancesAre("errored");
+    it("counts down the groups as the reload finishes them", async () => {
+        running("first");
+        const claim = await claimLibrary(env, params(["a", "b"]), "first");
+        await reportProgress(env, TEST_LIBRARY_ID, {
+            ...claim!,
+            loadingGroupIds: ["b"]
+        });
 
-        await requestLoads(env, [params("a")]);
-
-        expect(create).toHaveBeenCalledTimes(2);
-        const group = await db
-            .select({ buildIssues: groups.buildIssues })
-            .from(groups)
-            .where(eq(groups.id, "a"))
-            .get();
-        expect(group?.buildIssues).toContainEqual({
-            type: BuildIssueType.LOAD_FAILED
+        expect(await getJobStatus(env, TEST_LIBRARY_ID)).toEqual({
+            loadingGroupIds: ["b"],
+            awaitingApprovalGroupIds: []
         });
     });
 
-    describe("approval", () => {
-        const held = { ...params("a"), awaitApproval: true };
+    it("rebuilds search once it wrote, and frees the library", async () => {
+        running("first", "second");
+        const rebuild = vi.spyOn(LibraryDb, "rebuildSearchDb");
+        await claimLibrary(env, params(["a"]), "first");
 
-        beforeEach(async () => {
-            vi.spyOn(
-                env.LOAD_DOCUMENT_WORKFLOW,
-                "createBatch"
-            ).mockResolvedValue([]);
-            await requestLoads(env, [held]);
-            await setAwaitingApproval(env, held, true);
-        });
+        await finishReload(env, TEST_LIBRARY_ID, "first", true);
 
-        it("reports a held load apart from the running ones", async () => {
-            instancesAre("waiting");
+        expect(rebuild).toHaveBeenCalledOnce();
+        expect(await claimLibrary(env, params(["b"]), "second")).toBeDefined();
+    });
+
+    it("leaves search alone when nothing changed", async () => {
+        const rebuild = vi.spyOn(LibraryDb, "rebuildSearchDb");
+        await finishReload(env, TEST_LIBRARY_ID, "first", false);
+        expect(rebuild).not.toHaveBeenCalled();
+    });
+
+    it("never frees a library another reload took", async () => {
+        running("first", "second");
+        await claimLibrary(env, params(["a"]), "second");
+
+        await finishReload(env, TEST_LIBRARY_ID, "first", false);
+
+        expect(await claimLibrary(env, params(["b"]), "third")).toBeUndefined();
+    });
+
+    describe("held versions", () => {
+        it("lists a held reload as awaiting approval", async () => {
+            stubCreate();
+            await requestReload(env, params(["a"], true));
+
             expect(await getJobStatus(env, TEST_LIBRARY_ID)).toEqual({
                 loadingGroupIds: [],
                 awaitingApprovalGroupIds: ["a"]
             });
         });
 
-        it("lets every held load through", async () => {
-            const { sendEvent } = instancesAre("waiting");
+        it("approves every held reload, counting its groups", async () => {
+            const create = stubCreate();
+            await requestReload(env, params(["a"], true));
+            await requestReload(env, params(["a", "b"], true));
+            await requestReload(env, params(["b"]));
+            const { sendEvent } = running(...createdIds(create));
 
-            expect(await approveHeldLoads(env, TEST_LIBRARY_ID)).toBe(1);
-
+            expect(await approveHeldReloads(env, TEST_LIBRARY_ID)).toBe(2);
+            expect(sendEvent).toHaveBeenCalledTimes(2);
             expect(sendEvent).toHaveBeenCalledWith({
                 type: APPROVE_EVENT,
                 payload: {}
             });
+        });
+
+        it("loads once released, waiting its turn", async () => {
+            const create = stubCreate();
+            await requestReload(env, params(["a"], true));
+            const [id] = createdIds(create);
+            running(id);
+
+            await releaseHold(env, params(["a"], true), id);
+
             expect(await getJobStatus(env, TEST_LIBRARY_ID)).toEqual({
                 loadingGroupIds: ["a"],
                 awaitingApprovalGroupIds: []
             });
         });
-
-        it("replaces a held load with one someone asked for outright", async () => {
-            instancesAre("waiting");
-            await requestLoads(env, [params("a")]);
-            expect(await job("a")).toMatchObject({ awaitingApproval: false });
-        });
     });
 
-    describe("finishing", () => {
-        beforeEach(() => {
-            vi.spyOn(
-                env.LOAD_DOCUMENT_WORKFLOW,
-                "createBatch"
-            ).mockResolvedValue([]);
-        });
+    describe("status", () => {
+        it("drops a waiting reload that has since ended", async () => {
+            stubCreate();
+            await requestReload(env, params(["a"]));
+            running();
 
-        it("leaves the group to the load that replaced it", async () => {
-            await requestLoads(env, [params("a")]);
-            const replaced = (await job("a"))?.instanceId ?? "";
-            instancesAre("running");
-            await requestLoads(env, [params("a")]);
-
-            await finishLoad(env, params("a"), replaced, false);
-
-            expect((await job("a"))?.instanceId).not.toBe(replaced);
-        });
-
-        // Each load publishes what it wrote, standing alone.
-        it("rebuilds search for a load that changed its group", async () => {
-            const rebuild = vi
-                .spyOn(LibraryDb, "rebuildSearchDb")
-                .mockResolvedValue("");
-            await requestLoads(env, [params("a"), params("b")]);
-            const instanceOf = async (groupId: string) =>
-                (await job(groupId))?.instanceId ?? "";
-
-            await finishLoad(env, params("a"), await instanceOf("a"), true);
-            expect(rebuild).toHaveBeenCalledOnce();
-
-            await finishLoad(env, params("b"), await instanceOf("b"), false);
-            expect(rebuild).toHaveBeenCalledOnce();
             expect(await getJobStatus(env, TEST_LIBRARY_ID)).toEqual({
                 loadingGroupIds: [],
                 awaitingApprovalGroupIds: []
             });
+        });
+
+        // A held reload dropped on a blip would wait out its week unapproved.
+        it("keeps a reload Workflows can't be asked about", async () => {
+            const create = stubCreate();
+            await requestReload(env, params(["a"], true));
+            vi.spyOn(env.RELOAD_LIBRARY_WORKFLOW, "get").mockRejectedValue(
+                new Error("unavailable")
+            );
+            vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+            expect(
+                (await getJobStatus(env, TEST_LIBRARY_ID))
+                    .awaitingApprovalGroupIds
+            ).toEqual(["a"]);
+            expect(createdIds(create)).toHaveLength(1);
+        });
+
+        it("leaves no mark when the reload can't be started", async () => {
+            vi.spyOn(env.RELOAD_LIBRARY_WORKFLOW, "create").mockRejectedValue(
+                new Error("down")
+            );
+
+            await expect(requestReload(env, params(["a"]))).rejects.toThrow();
+
+            expect(await getJobStatus(env, TEST_LIBRARY_ID)).toEqual({
+                loadingGroupIds: [],
+                awaitingApprovalGroupIds: []
+            });
+        });
+
+        it("fails the groups a dead holder hadn't finished", async () => {
+            running("first");
+            await claimLibrary(env, params(["a"]), "first");
+            running();
+
+            expect(await getJobStatus(env, TEST_LIBRARY_ID)).toEqual({
+                loadingGroupIds: [],
+                awaitingApprovalGroupIds: []
+            });
+            expect(await issuesOf("a")).toEqual([
+                { type: BuildIssueType.LOAD_FAILED }
+            ]);
         });
     });
 });
