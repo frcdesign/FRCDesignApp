@@ -1,5 +1,5 @@
 /**
- * The hole scan: robot-code's `quickFastenerHoleScan`, evaluated in a Part
+ * The hole scan: robot-code's `fastenerHoleScan`, evaluated in a Part
  * Studio, decoded, and cached by what it was evaluated at. A version, a
  * document microversion and a tab's microversion never change, so neither does
  * a scan keyed by one: nothing invalidates the cache, it only grows keys.
