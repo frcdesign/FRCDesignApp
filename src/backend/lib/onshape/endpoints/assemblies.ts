@@ -109,18 +109,21 @@ function insertInstance(
     instance: Record<string, unknown>,
     transform?: number[]
 ): Promise<OnshapeInsertInstancesResponse> {
+    return insertTransformedInstances(client, assemblyPath, [
+        { instances: [instance], transform: transform ?? IDENTITY_TRANSFORM }
+    ]);
+}
+
+/** Instances, each group landed by its transform; the response answers the groups in order. */
+export function insertTransformedInstances(
+    client: OnshapeApi,
+    assemblyPath: ElementPath,
+    transformGroups: { instances: object[]; transform: number[] }[]
+): Promise<OnshapeInsertInstancesResponse> {
+    assertWorkspace(assemblyPath);
     return client.post(
         `/assemblies${toElementApiPath(assemblyPath)}/transformedinstances`,
-        {
-            body: {
-                transformGroups: [
-                    {
-                        instances: [instance],
-                        transform: transform ?? IDENTITY_TRANSFORM
-                    }
-                ]
-            }
-        }
+        { body: { transformGroups } }
     );
 }
 

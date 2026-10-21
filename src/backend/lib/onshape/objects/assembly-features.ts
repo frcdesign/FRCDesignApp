@@ -26,6 +26,16 @@ export function featureOccurrenceQuery(
     };
 }
 
+/** The implicit mate connector at the center of a circular edge, of a part in the assembly. */
+export function edgeCenterQuery(path: string[], edgeId: string): object {
+    return {
+        btType: "BTMInferenceQueryWithOccurrence-1083",
+        inferenceType: "CENTER",
+        path,
+        deterministicIds: [edgeId]
+    };
+}
+
 function queryParameter(
     parameterId: string,
     queries: Iterable<object>

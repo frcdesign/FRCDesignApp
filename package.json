@@ -20,6 +20,7 @@
         "test": "vitest run",
         "check:migrations": "node --disable-warning=ExperimentalWarning scripts/check-migrations.js",
         "check:docs": "node scripts/check-docs.js",
+        "sync:quick-fastener": "node scripts/sync-quick-fastener.js",
         "test:watch": "vitest",
         "prepare": "husky"
     },
