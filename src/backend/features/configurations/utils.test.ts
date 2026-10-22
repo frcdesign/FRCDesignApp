@@ -15,7 +15,10 @@ import {
 } from "./contract";
 import { LogicalOp } from "./enums";
 import { Vendor } from "../library/vendors";
-import { enumParam } from "../../../__test_utils__/configuration-fixtures";
+import {
+    alwaysShown,
+    enumParam
+} from "../../../__test_utils__/configuration-fixtures";
 
 describe("configuration text", () => {
     it("encodes the empty configuration as the empty string", () => {
@@ -177,7 +180,8 @@ describe("getVisibleOptions", () => {
                     id: "style",
                     value: "heavy"
                 }
-            }
+            },
+            alwaysShown(["s1", "s2"])
         ]
     });
     const params: ConfigurationParameter[] = [size, style];
@@ -187,10 +191,30 @@ describe("getVisibleOptions", () => {
         expect(getVisibleOptions(plain, {}, [plain])).toHaveLength(2);
     });
 
-    // The panel drops an enum with no options left.
-    it("keeps the options no condition names", () => {
+    it("offers only what a holding condition names", () => {
         const visible = getVisibleOptions(size, { style: "light" }, params);
         expect(visible.map((option) => option.id)).toEqual(["s1", "s2"]);
+    });
+
+    // As Onshape does; the panel drops an enum with no options left.
+    it("hides an option no condition names, once there are any", () => {
+        const unruled = enumParam("unruled", ["a", "b"], {
+            optionConditions: [
+                {
+                    type: OptionVisibilityType.LIST,
+                    controlledOptions: ["b"],
+                    condition: {
+                        type: VisibilityType.EQUAL,
+                        id: "style",
+                        value: "heavy"
+                    }
+                }
+            ]
+        });
+        const withStyle = [unruled, style];
+        expect(
+            getVisibleOptions(unruled, { style: "light" }, withStyle)
+        ).toEqual([]);
     });
 
     it("adds the restricted options once their condition holds", () => {
@@ -224,7 +248,8 @@ describe("getVisibleOptions", () => {
                         id: "style",
                         value: "light"
                     }
-                }
+                },
+                alwaysShown(["a"])
             ]
         });
         const withStyle = [either, style];
