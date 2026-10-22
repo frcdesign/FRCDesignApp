@@ -54,7 +54,7 @@ describe("generatedConfiguration", () => {
     it("is the default's part, every other configuration's, and their vendors", () => {
         const generated = generatedConfiguration(screw, screw.parameters);
         expect(generated.partMetadata.name).toBe(
-            "#10-32 x 1/2 in. Button Head Screw"
+            "#10-32 x 1/2 in Button Head Screw"
         );
         // The default is the element's own part, not one of its records
         expect(

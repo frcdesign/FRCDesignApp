@@ -169,10 +169,10 @@ describe("QuickFastenerPanel", () => {
         expect(screen.getByLabelText("Finish")).toBeTruthy();
         expect(screen.queryByLabelText("Fully threaded")).toBeNull();
 
-        await choose("Length", "2 in.");
+        await choose("Length", "2 in");
         expect(screen.getByLabelText("Fully threaded")).toBeTruthy();
 
-        await choose("Length", "1/2 in.");
+        await choose("Length", "1/2 in");
         expect(screen.queryByLabelText("Fully threaded")).toBeNull();
     });
 
@@ -204,7 +204,7 @@ describe("QuickFastenerPanel", () => {
         expect(screen.queryByLabelText("Max length")).toBeNull();
         expect(screen.getByLabelText("Max gap to ignore")).toBeTruthy();
 
-        await choose("Length", "1/2 in.");
+        await choose("Length", "1/2 in");
         expect(useQuickFastenerStore.getState().mode).toBe(FastenerMode.PRESET);
         expect(screen.queryByLabelText("Stop condition")).toBeNull();
     });

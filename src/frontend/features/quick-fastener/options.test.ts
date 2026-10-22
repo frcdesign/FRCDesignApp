@@ -133,7 +133,7 @@ describe("describePlan", () => {
                 },
                 nut: { vendor: GENERIC, size: "NO_10_32", type: "NYLOCK" }
             })
-        ).toBe("#10-32 x 7/8 in. Button head, Nylock nut");
+        ).toBe("#10-32 x 7/8 in Button head, Nylock nut");
     });
 
     it("says why a hole gets nothing", () => {

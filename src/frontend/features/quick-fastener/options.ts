@@ -169,7 +169,7 @@ const END_NAMES: Record<HoleEnd, string> = {
     [HoleEnd.BLIND]: "into a blind hole"
 };
 
-/** e.g. `#10-32 x 7/8 in. Button head, Nylock nut`; or why the hole got nothing. */
+/** e.g. `#10-32 x 7/8 in Button head, Nylock nut`; or why the hole got nothing. */
 export function describePlan(planned: PlannedHole): string {
     if (planned.status === HoleStatus.FASTENED) {
         return "Already fastened";

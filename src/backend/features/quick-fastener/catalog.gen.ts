@@ -1,4 +1,4 @@
-/* Synced from robot-education/robot-code@b0662250bad058786adfe72059d5879329b1c112 by `npm run sync:generated-parts` -- DO NOT EDIT */
+/* Synced from robot-education/robot-code@c5510154e73551f6fe9613a049794b42b67b0160 by `npm run sync:generated-parts` -- DO NOT EDIT */
 
 export const CATALOG = {
     source: "featurescripts/fasteners/fastenerTables.py",
@@ -175,163 +175,163 @@ export const CATALOG = {
             lengths: [
                 {
                     id: "IN_0_09375",
-                    name: "3/32 in.",
+                    name: "3/32 in",
                     length: 0.00238125,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_125",
-                    name: "1/8 in.",
+                    name: "1/8 in",
                     length: 0.003175,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_15625",
-                    name: "5/32 in.",
+                    name: "5/32 in",
                     length: 0.00396875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_1875",
-                    name: "3/16 in.",
+                    name: "3/16 in",
                     length: 0.0047625,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_25",
-                    name: "1/4 in.",
+                    name: "1/4 in",
                     length: 0.00635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_3125",
-                    name: "5/16 in.",
+                    name: "5/16 in",
                     length: 0.0079375,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
-                    name: "3/8 in.",
+                    name: "3/8 in",
                     length: 0.009525,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_4375",
-                    name: "7/16 in.",
+                    name: "7/16 in",
                     length: 0.0111125,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
-                    name: "1/2 in.",
+                    name: "1/2 in",
                     length: 0.0127,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5625",
-                    name: "9/16 in.",
+                    name: "9/16 in",
                     length: 0.0142875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
-                    name: "5/8 in.",
+                    name: "5/8 in",
                     length: 0.015875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
-                    name: "3/4 in.",
+                    name: "3/4 in",
                     length: 0.01905,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_875",
-                    name: "7/8 in.",
+                    name: "7/8 in",
                     length: 0.022225,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
-                    name: "1 in.",
+                    name: "1 in",
                     length: 0.0254,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_125",
-                    name: "1-1/8 in.",
+                    name: "1-1/8 in",
                     length: 0.028575,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
-                    name: "1-1/4 in.",
+                    name: "1-1/4 in",
                     length: 0.03175,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_375",
-                    name: "1-3/8 in.",
+                    name: "1-3/8 in",
                     length: 0.034925,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
-                    name: "1-1/2 in.",
+                    name: "1-1/2 in",
                     length: 0.0381,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_625",
-                    name: "1-5/8 in.",
+                    name: "1-5/8 in",
                     length: 0.041275,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_75",
-                    name: "1-3/4 in.",
+                    name: "1-3/4 in",
                     length: 0.04445,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2",
-                    name: "2 in.",
+                    name: "2 in",
                     length: 0.0508,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_25",
-                    name: "2-1/4 in.",
+                    name: "2-1/4 in",
                     length: 0.05715,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_5",
-                    name: "2-1/2 in.",
+                    name: "2-1/2 in",
                     length: 0.0635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_75",
-                    name: "2-3/4 in.",
+                    name: "2-3/4 in",
                     length: 0.06985,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_3",
-                    name: "3 in.",
+                    name: "3 in",
                     length: 0.0762,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_3_5",
-                    name: "3-1/2 in.",
+                    name: "3-1/2 in",
                     length: 0.0889,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_4",
-                    name: "4 in.",
+                    name: "4 in",
                     length: 0.1016,
                     fullThreadChoice: false
                 }
@@ -345,91 +345,91 @@ export const CATALOG = {
             lengths: [
                 {
                     id: "IN_0_125",
-                    name: "1/8 in.",
+                    name: "1/8 in",
                     length: 0.003175,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_1875",
-                    name: "3/16 in.",
+                    name: "3/16 in",
                     length: 0.0047625,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_25",
-                    name: "1/4 in.",
+                    name: "1/4 in",
                     length: 0.00635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_3125",
-                    name: "5/16 in.",
+                    name: "5/16 in",
                     length: 0.0079375,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
-                    name: "3/8 in.",
+                    name: "3/8 in",
                     length: 0.009525,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_4375",
-                    name: "7/16 in.",
+                    name: "7/16 in",
                     length: 0.0111125,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
-                    name: "1/2 in.",
+                    name: "1/2 in",
                     length: 0.0127,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5625",
-                    name: "9/16 in.",
+                    name: "9/16 in",
                     length: 0.0142875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
-                    name: "5/8 in.",
+                    name: "5/8 in",
                     length: 0.015875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
-                    name: "3/4 in.",
+                    name: "3/4 in",
                     length: 0.01905,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_875",
-                    name: "7/8 in.",
+                    name: "7/8 in",
                     length: 0.022225,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
-                    name: "1 in.",
+                    name: "1 in",
                     length: 0.0254,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
-                    name: "1-1/4 in.",
+                    name: "1-1/4 in",
                     length: 0.03175,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
-                    name: "1-1/2 in.",
+                    name: "1-1/2 in",
                     length: 0.0381,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2",
-                    name: "2 in.",
+                    name: "2 in",
                     length: 0.0508,
                     fullThreadChoice: false
                 }
@@ -443,97 +443,97 @@ export const CATALOG = {
             lengths: [
                 {
                     id: "IN_0_125",
-                    name: "1/8 in.",
+                    name: "1/8 in",
                     length: 0.003175,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_15625",
-                    name: "5/32 in.",
+                    name: "5/32 in",
                     length: 0.00396875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_1875",
-                    name: "3/16 in.",
+                    name: "3/16 in",
                     length: 0.0047625,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_25",
-                    name: "1/4 in.",
+                    name: "1/4 in",
                     length: 0.00635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_3125",
-                    name: "5/16 in.",
+                    name: "5/16 in",
                     length: 0.0079375,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
-                    name: "3/8 in.",
+                    name: "3/8 in",
                     length: 0.009525,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_4375",
-                    name: "7/16 in.",
+                    name: "7/16 in",
                     length: 0.0111125,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
-                    name: "1/2 in.",
+                    name: "1/2 in",
                     length: 0.0127,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5625",
-                    name: "9/16 in.",
+                    name: "9/16 in",
                     length: 0.0142875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
-                    name: "5/8 in.",
+                    name: "5/8 in",
                     length: 0.015875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
-                    name: "3/4 in.",
+                    name: "3/4 in",
                     length: 0.01905,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_875",
-                    name: "7/8 in.",
+                    name: "7/8 in",
                     length: 0.022225,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
-                    name: "1 in.",
+                    name: "1 in",
                     length: 0.0254,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_125",
-                    name: "1-1/8 in.",
+                    name: "1-1/8 in",
                     length: 0.028575,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
-                    name: "1-1/4 in.",
+                    name: "1-1/4 in",
                     length: 0.03175,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
-                    name: "1-1/2 in.",
+                    name: "1-1/2 in",
                     length: 0.0381,
                     fullThreadChoice: false
                 }
@@ -547,169 +547,169 @@ export const CATALOG = {
             lengths: [
                 {
                     id: "IN_0_09375",
-                    name: "3/32 in.",
+                    name: "3/32 in",
                     length: 0.00238125,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_125",
-                    name: "1/8 in.",
+                    name: "1/8 in",
                     length: 0.003175,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_15625",
-                    name: "5/32 in.",
+                    name: "5/32 in",
                     length: 0.00396875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_1875",
-                    name: "3/16 in.",
+                    name: "3/16 in",
                     length: 0.0047625,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_25",
-                    name: "1/4 in.",
+                    name: "1/4 in",
                     length: 0.00635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_3125",
-                    name: "5/16 in.",
+                    name: "5/16 in",
                     length: 0.0079375,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
-                    name: "3/8 in.",
+                    name: "3/8 in",
                     length: 0.009525,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_4375",
-                    name: "7/16 in.",
+                    name: "7/16 in",
                     length: 0.0111125,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
-                    name: "1/2 in.",
+                    name: "1/2 in",
                     length: 0.0127,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5625",
-                    name: "9/16 in.",
+                    name: "9/16 in",
                     length: 0.0142875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
-                    name: "5/8 in.",
+                    name: "5/8 in",
                     length: 0.015875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
-                    name: "3/4 in.",
+                    name: "3/4 in",
                     length: 0.01905,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_875",
-                    name: "7/8 in.",
+                    name: "7/8 in",
                     length: 0.022225,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
-                    name: "1 in.",
+                    name: "1 in",
                     length: 0.0254,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_125",
-                    name: "1-1/8 in.",
+                    name: "1-1/8 in",
                     length: 0.028575,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
-                    name: "1-1/4 in.",
+                    name: "1-1/4 in",
                     length: 0.03175,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_375",
-                    name: "1-3/8 in.",
+                    name: "1-3/8 in",
                     length: 0.034925,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
-                    name: "1-1/2 in.",
+                    name: "1-1/2 in",
                     length: 0.0381,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_625",
-                    name: "1-5/8 in.",
+                    name: "1-5/8 in",
                     length: 0.041275,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_75",
-                    name: "1-3/4 in.",
+                    name: "1-3/4 in",
                     length: 0.04445,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_875",
-                    name: "1-7/8 in.",
+                    name: "1-7/8 in",
                     length: 0.047625,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2",
-                    name: "2 in.",
+                    name: "2 in",
                     length: 0.0508,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_125",
-                    name: "2-1/8 in.",
+                    name: "2-1/8 in",
                     length: 0.053975,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_25",
-                    name: "2-1/4 in.",
+                    name: "2-1/4 in",
                     length: 0.05715,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_5",
-                    name: "2-1/2 in.",
+                    name: "2-1/2 in",
                     length: 0.0635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_75",
-                    name: "2-3/4 in.",
+                    name: "2-3/4 in",
                     length: 0.06985,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_3",
-                    name: "3 in.",
+                    name: "3 in",
                     length: 0.0762,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_3_5",
-                    name: "3-1/2 in.",
+                    name: "3-1/2 in",
                     length: 0.0889,
                     fullThreadChoice: false
                 }
@@ -723,85 +723,85 @@ export const CATALOG = {
             lengths: [
                 {
                     id: "IN_0_125",
-                    name: "1/8 in.",
+                    name: "1/8 in",
                     length: 0.003175,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_1875",
-                    name: "3/16 in.",
+                    name: "3/16 in",
                     length: 0.0047625,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_25",
-                    name: "1/4 in.",
+                    name: "1/4 in",
                     length: 0.00635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_3125",
-                    name: "5/16 in.",
+                    name: "5/16 in",
                     length: 0.0079375,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
-                    name: "3/8 in.",
+                    name: "3/8 in",
                     length: 0.009525,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_4375",
-                    name: "7/16 in.",
+                    name: "7/16 in",
                     length: 0.0111125,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
-                    name: "1/2 in.",
+                    name: "1/2 in",
                     length: 0.0127,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5625",
-                    name: "9/16 in.",
+                    name: "9/16 in",
                     length: 0.0142875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
-                    name: "5/8 in.",
+                    name: "5/8 in",
                     length: 0.015875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
-                    name: "3/4 in.",
+                    name: "3/4 in",
                     length: 0.01905,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_875",
-                    name: "7/8 in.",
+                    name: "7/8 in",
                     length: 0.022225,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
-                    name: "1 in.",
+                    name: "1 in",
                     length: 0.0254,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_125",
-                    name: "1-1/8 in.",
+                    name: "1-1/8 in",
                     length: 0.028575,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
-                    name: "1-1/4 in.",
+                    name: "1-1/4 in",
                     length: 0.03175,
                     fullThreadChoice: false
                 }
@@ -815,97 +815,97 @@ export const CATALOG = {
             lengths: [
                 {
                     id: "IN_0_125",
-                    name: "1/8 in.",
+                    name: "1/8 in",
                     length: 0.003175,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_15625",
-                    name: "5/32 in.",
+                    name: "5/32 in",
                     length: 0.00396875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_1875",
-                    name: "3/16 in.",
+                    name: "3/16 in",
                     length: 0.0047625,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_25",
-                    name: "1/4 in.",
+                    name: "1/4 in",
                     length: 0.00635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_3125",
-                    name: "5/16 in.",
+                    name: "5/16 in",
                     length: 0.0079375,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
-                    name: "3/8 in.",
+                    name: "3/8 in",
                     length: 0.009525,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_4375",
-                    name: "7/16 in.",
+                    name: "7/16 in",
                     length: 0.0111125,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
-                    name: "1/2 in.",
+                    name: "1/2 in",
                     length: 0.0127,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5625",
-                    name: "9/16 in.",
+                    name: "9/16 in",
                     length: 0.0142875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
-                    name: "5/8 in.",
+                    name: "5/8 in",
                     length: 0.015875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
-                    name: "3/4 in.",
+                    name: "3/4 in",
                     length: 0.01905,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_875",
-                    name: "7/8 in.",
+                    name: "7/8 in",
                     length: 0.022225,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
-                    name: "1 in.",
+                    name: "1 in",
                     length: 0.0254,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
-                    name: "1-1/4 in.",
+                    name: "1-1/4 in",
                     length: 0.03175,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
-                    name: "1-1/2 in.",
+                    name: "1-1/2 in",
                     length: 0.0381,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_75",
-                    name: "1-3/4 in.",
+                    name: "1-3/4 in",
                     length: 0.04445,
                     fullThreadChoice: false
                 }
@@ -919,199 +919,199 @@ export const CATALOG = {
             lengths: [
                 {
                     id: "IN_0_09375",
-                    name: "3/32 in.",
+                    name: "3/32 in",
                     length: 0.00238125,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_125",
-                    name: "1/8 in.",
+                    name: "1/8 in",
                     length: 0.003175,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_15625",
-                    name: "5/32 in.",
+                    name: "5/32 in",
                     length: 0.00396875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_1875",
-                    name: "3/16 in.",
+                    name: "3/16 in",
                     length: 0.0047625,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_25",
-                    name: "1/4 in.",
+                    name: "1/4 in",
                     length: 0.00635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_3125",
-                    name: "5/16 in.",
+                    name: "5/16 in",
                     length: 0.0079375,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
-                    name: "3/8 in.",
+                    name: "3/8 in",
                     length: 0.009525,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_4375",
-                    name: "7/16 in.",
+                    name: "7/16 in",
                     length: 0.0111125,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
-                    name: "1/2 in.",
+                    name: "1/2 in",
                     length: 0.0127,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5625",
-                    name: "9/16 in.",
+                    name: "9/16 in",
                     length: 0.0142875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
-                    name: "5/8 in.",
+                    name: "5/8 in",
                     length: 0.015875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_6875",
-                    name: "11/16 in.",
+                    name: "11/16 in",
                     length: 0.0174625,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
-                    name: "3/4 in.",
+                    name: "3/4 in",
                     length: 0.01905,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_875",
-                    name: "7/8 in.",
+                    name: "7/8 in",
                     length: 0.022225,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
-                    name: "1 in.",
+                    name: "1 in",
                     length: 0.0254,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_125",
-                    name: "1-1/8 in.",
+                    name: "1-1/8 in",
                     length: 0.028575,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
-                    name: "1-1/4 in.",
+                    name: "1-1/4 in",
                     length: 0.03175,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_375",
-                    name: "1-3/8 in.",
+                    name: "1-3/8 in",
                     length: 0.034925,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
-                    name: "1-1/2 in.",
+                    name: "1-1/2 in",
                     length: 0.0381,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_625",
-                    name: "1-5/8 in.",
+                    name: "1-5/8 in",
                     length: 0.041275,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_75",
-                    name: "1-3/4 in.",
+                    name: "1-3/4 in",
                     length: 0.04445,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_875",
-                    name: "1-7/8 in.",
+                    name: "1-7/8 in",
                     length: 0.047625,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2",
-                    name: "2 in.",
+                    name: "2 in",
                     length: 0.0508,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_25",
-                    name: "2-1/4 in.",
+                    name: "2-1/4 in",
                     length: 0.05715,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_5",
-                    name: "2-1/2 in.",
+                    name: "2-1/2 in",
                     length: 0.0635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_75",
-                    name: "2-3/4 in.",
+                    name: "2-3/4 in",
                     length: 0.06985,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_3",
-                    name: "3 in.",
+                    name: "3 in",
                     length: 0.0762,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_3_25",
-                    name: "3-1/4 in.",
+                    name: "3-1/4 in",
                     length: 0.08255,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_3_5",
-                    name: "3-1/2 in.",
+                    name: "3-1/2 in",
                     length: 0.0889,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_3_75",
-                    name: "3-3/4 in.",
+                    name: "3-3/4 in",
                     length: 0.09525,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_4",
-                    name: "4 in.",
+                    name: "4 in",
                     length: 0.1016,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_4_5",
-                    name: "4-1/2 in.",
+                    name: "4-1/2 in",
                     length: 0.1143,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_5",
-                    name: "5 in.",
+                    name: "5 in",
                     length: 0.127,
                     fullThreadChoice: false
                 }
@@ -1125,133 +1125,133 @@ export const CATALOG = {
             lengths: [
                 {
                     id: "IN_0_125",
-                    name: "1/8 in.",
+                    name: "1/8 in",
                     length: 0.003175,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_15625",
-                    name: "5/32 in.",
+                    name: "5/32 in",
                     length: 0.00396875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_1875",
-                    name: "3/16 in.",
+                    name: "3/16 in",
                     length: 0.0047625,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_25",
-                    name: "1/4 in.",
+                    name: "1/4 in",
                     length: 0.00635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_3125",
-                    name: "5/16 in.",
+                    name: "5/16 in",
                     length: 0.0079375,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
-                    name: "3/8 in.",
+                    name: "3/8 in",
                     length: 0.009525,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_4375",
-                    name: "7/16 in.",
+                    name: "7/16 in",
                     length: 0.0111125,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
-                    name: "1/2 in.",
+                    name: "1/2 in",
                     length: 0.0127,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5625",
-                    name: "9/16 in.",
+                    name: "9/16 in",
                     length: 0.0142875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
-                    name: "5/8 in.",
+                    name: "5/8 in",
                     length: 0.015875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
-                    name: "3/4 in.",
+                    name: "3/4 in",
                     length: 0.01905,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_875",
-                    name: "7/8 in.",
+                    name: "7/8 in",
                     length: 0.022225,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
-                    name: "1 in.",
+                    name: "1 in",
                     length: 0.0254,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_125",
-                    name: "1-1/8 in.",
+                    name: "1-1/8 in",
                     length: 0.028575,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
-                    name: "1-1/4 in.",
+                    name: "1-1/4 in",
                     length: 0.03175,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_375",
-                    name: "1-3/8 in.",
+                    name: "1-3/8 in",
                     length: 0.034925,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
-                    name: "1-1/2 in.",
+                    name: "1-1/2 in",
                     length: 0.0381,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_75",
-                    name: "1-3/4 in.",
+                    name: "1-3/4 in",
                     length: 0.04445,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2",
-                    name: "2 in.",
+                    name: "2 in",
                     length: 0.0508,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_25",
-                    name: "2-1/4 in.",
+                    name: "2-1/4 in",
                     length: 0.05715,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_5",
-                    name: "2-1/2 in.",
+                    name: "2-1/2 in",
                     length: 0.0635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_3",
-                    name: "3 in.",
+                    name: "3 in",
                     length: 0.0762,
                     fullThreadChoice: false
                 }
@@ -1265,133 +1265,133 @@ export const CATALOG = {
             lengths: [
                 {
                     id: "IN_0_15625",
-                    name: "5/32 in.",
+                    name: "5/32 in",
                     length: 0.00396875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_1875",
-                    name: "3/16 in.",
+                    name: "3/16 in",
                     length: 0.0047625,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_25",
-                    name: "1/4 in.",
+                    name: "1/4 in",
                     length: 0.00635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_3125",
-                    name: "5/16 in.",
+                    name: "5/16 in",
                     length: 0.0079375,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
-                    name: "3/8 in.",
+                    name: "3/8 in",
                     length: 0.009525,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_4375",
-                    name: "7/16 in.",
+                    name: "7/16 in",
                     length: 0.0111125,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
-                    name: "1/2 in.",
+                    name: "1/2 in",
                     length: 0.0127,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5625",
-                    name: "9/16 in.",
+                    name: "9/16 in",
                     length: 0.0142875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
-                    name: "5/8 in.",
+                    name: "5/8 in",
                     length: 0.015875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
-                    name: "3/4 in.",
+                    name: "3/4 in",
                     length: 0.01905,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_875",
-                    name: "7/8 in.",
+                    name: "7/8 in",
                     length: 0.022225,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
-                    name: "1 in.",
+                    name: "1 in",
                     length: 0.0254,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_125",
-                    name: "1-1/8 in.",
+                    name: "1-1/8 in",
                     length: 0.028575,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
-                    name: "1-1/4 in.",
+                    name: "1-1/4 in",
                     length: 0.03175,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_375",
-                    name: "1-3/8 in.",
+                    name: "1-3/8 in",
                     length: 0.034925,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
-                    name: "1-1/2 in.",
+                    name: "1-1/2 in",
                     length: 0.0381,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_625",
-                    name: "1-5/8 in.",
+                    name: "1-5/8 in",
                     length: 0.041275,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_75",
-                    name: "1-3/4 in.",
+                    name: "1-3/4 in",
                     length: 0.04445,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2",
-                    name: "2 in.",
+                    name: "2 in",
                     length: 0.0508,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_25",
-                    name: "2-1/4 in.",
+                    name: "2-1/4 in",
                     length: 0.05715,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_5",
-                    name: "2-1/2 in.",
+                    name: "2-1/2 in",
                     length: 0.0635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_3",
-                    name: "3 in.",
+                    name: "3 in",
                     length: 0.0762,
                     fullThreadChoice: false
                 }
@@ -1405,211 +1405,211 @@ export const CATALOG = {
             lengths: [
                 {
                     id: "IN_0_15625",
-                    name: "5/32 in.",
+                    name: "5/32 in",
                     length: 0.00396875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_1875",
-                    name: "3/16 in.",
+                    name: "3/16 in",
                     length: 0.0047625,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_25",
-                    name: "1/4 in.",
+                    name: "1/4 in",
                     length: 0.00635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_3125",
-                    name: "5/16 in.",
+                    name: "5/16 in",
                     length: 0.0079375,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
-                    name: "3/8 in.",
+                    name: "3/8 in",
                     length: 0.009525,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_4375",
-                    name: "7/16 in.",
+                    name: "7/16 in",
                     length: 0.0111125,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
-                    name: "1/2 in.",
+                    name: "1/2 in",
                     length: 0.0127,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5625",
-                    name: "9/16 in.",
+                    name: "9/16 in",
                     length: 0.0142875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
-                    name: "5/8 in.",
+                    name: "5/8 in",
                     length: 0.015875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_6875",
-                    name: "11/16 in.",
+                    name: "11/16 in",
                     length: 0.0174625,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
-                    name: "3/4 in.",
+                    name: "3/4 in",
                     length: 0.01905,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_875",
-                    name: "7/8 in.",
+                    name: "7/8 in",
                     length: 0.022225,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
-                    name: "1 in.",
+                    name: "1 in",
                     length: 0.0254,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_125",
-                    name: "1-1/8 in.",
+                    name: "1-1/8 in",
                     length: 0.028575,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
-                    name: "1-1/4 in.",
+                    name: "1-1/4 in",
                     length: 0.03175,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_375",
-                    name: "1-3/8 in.",
+                    name: "1-3/8 in",
                     length: 0.034925,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
-                    name: "1-1/2 in.",
+                    name: "1-1/2 in",
                     length: 0.0381,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_625",
-                    name: "1-5/8 in.",
+                    name: "1-5/8 in",
                     length: 0.041275,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_75",
-                    name: "1-3/4 in.",
+                    name: "1-3/4 in",
                     length: 0.04445,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_875",
-                    name: "1-7/8 in.",
+                    name: "1-7/8 in",
                     length: 0.047625,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2",
-                    name: "2 in.",
+                    name: "2 in",
                     length: 0.0508,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_25",
-                    name: "2-1/4 in.",
+                    name: "2-1/4 in",
                     length: 0.05715,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_5",
-                    name: "2-1/2 in.",
+                    name: "2-1/2 in",
                     length: 0.0635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_75",
-                    name: "2-3/4 in.",
+                    name: "2-3/4 in",
                     length: 0.06985,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_3",
-                    name: "3 in.",
+                    name: "3 in",
                     length: 0.0762,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_3_25",
-                    name: "3-1/4 in.",
+                    name: "3-1/4 in",
                     length: 0.08255,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_3_5",
-                    name: "3-1/2 in.",
+                    name: "3-1/2 in",
                     length: 0.0889,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_3_75",
-                    name: "3-3/4 in.",
+                    name: "3-3/4 in",
                     length: 0.09525,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_4",
-                    name: "4 in.",
+                    name: "4 in",
                     length: 0.1016,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_4_5",
-                    name: "4-1/2 in.",
+                    name: "4-1/2 in",
                     length: 0.1143,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_5",
-                    name: "5 in.",
+                    name: "5 in",
                     length: 0.127,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_5_5",
-                    name: "5-1/2 in.",
+                    name: "5-1/2 in",
                     length: 0.1397,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_6",
-                    name: "6 in.",
+                    name: "6 in",
                     length: 0.1524,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_6_5",
-                    name: "6-1/2 in.",
+                    name: "6-1/2 in",
                     length: 0.1651,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_7",
-                    name: "7 in.",
+                    name: "7 in",
                     length: 0.1778,
                     fullThreadChoice: false
                 }
@@ -1623,145 +1623,145 @@ export const CATALOG = {
             lengths: [
                 {
                     id: "IN_0_125",
-                    name: "1/8 in.",
+                    name: "1/8 in",
                     length: 0.003175,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_1875",
-                    name: "3/16 in.",
+                    name: "3/16 in",
                     length: 0.0047625,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_25",
-                    name: "1/4 in.",
+                    name: "1/4 in",
                     length: 0.00635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_3125",
-                    name: "5/16 in.",
+                    name: "5/16 in",
                     length: 0.0079375,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
-                    name: "3/8 in.",
+                    name: "3/8 in",
                     length: 0.009525,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_4375",
-                    name: "7/16 in.",
+                    name: "7/16 in",
                     length: 0.0111125,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
-                    name: "1/2 in.",
+                    name: "1/2 in",
                     length: 0.0127,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5625",
-                    name: "9/16 in.",
+                    name: "9/16 in",
                     length: 0.0142875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
-                    name: "5/8 in.",
+                    name: "5/8 in",
                     length: 0.015875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
-                    name: "3/4 in.",
+                    name: "3/4 in",
                     length: 0.01905,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_875",
-                    name: "7/8 in.",
+                    name: "7/8 in",
                     length: 0.022225,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
-                    name: "1 in.",
+                    name: "1 in",
                     length: 0.0254,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_125",
-                    name: "1-1/8 in.",
+                    name: "1-1/8 in",
                     length: 0.028575,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
-                    name: "1-1/4 in.",
+                    name: "1-1/4 in",
                     length: 0.03175,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_375",
-                    name: "1-3/8 in.",
+                    name: "1-3/8 in",
                     length: 0.034925,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
-                    name: "1-1/2 in.",
+                    name: "1-1/2 in",
                     length: 0.0381,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_625",
-                    name: "1-5/8 in.",
+                    name: "1-5/8 in",
                     length: 0.041275,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_75",
-                    name: "1-3/4 in.",
+                    name: "1-3/4 in",
                     length: 0.04445,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2",
-                    name: "2 in.",
+                    name: "2 in",
                     length: 0.0508,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_25",
-                    name: "2-1/4 in.",
+                    name: "2-1/4 in",
                     length: 0.05715,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_5",
-                    name: "2-1/2 in.",
+                    name: "2-1/2 in",
                     length: 0.0635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_75",
-                    name: "2-3/4 in.",
+                    name: "2-3/4 in",
                     length: 0.06985,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_3",
-                    name: "3 in.",
+                    name: "3 in",
                     length: 0.0762,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_4_75",
-                    name: "4-3/4 in.",
+                    name: "4-3/4 in",
                     length: 0.12065,
                     fullThreadChoice: false
                 }
@@ -1775,139 +1775,139 @@ export const CATALOG = {
             lengths: [
                 {
                     id: "IN_0_1875",
-                    name: "3/16 in.",
+                    name: "3/16 in",
                     length: 0.0047625,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_25",
-                    name: "1/4 in.",
+                    name: "1/4 in",
                     length: 0.00635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_3125",
-                    name: "5/16 in.",
+                    name: "5/16 in",
                     length: 0.0079375,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
-                    name: "3/8 in.",
+                    name: "3/8 in",
                     length: 0.009525,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_4375",
-                    name: "7/16 in.",
+                    name: "7/16 in",
                     length: 0.0111125,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
-                    name: "1/2 in.",
+                    name: "1/2 in",
                     length: 0.0127,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5625",
-                    name: "9/16 in.",
+                    name: "9/16 in",
                     length: 0.0142875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
-                    name: "5/8 in.",
+                    name: "5/8 in",
                     length: 0.015875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
-                    name: "3/4 in.",
+                    name: "3/4 in",
                     length: 0.01905,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_875",
-                    name: "7/8 in.",
+                    name: "7/8 in",
                     length: 0.022225,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
-                    name: "1 in.",
+                    name: "1 in",
                     length: 0.0254,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_125",
-                    name: "1-1/8 in.",
+                    name: "1-1/8 in",
                     length: 0.028575,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
-                    name: "1-1/4 in.",
+                    name: "1-1/4 in",
                     length: 0.03175,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_375",
-                    name: "1-3/8 in.",
+                    name: "1-3/8 in",
                     length: 0.034925,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
-                    name: "1-1/2 in.",
+                    name: "1-1/2 in",
                     length: 0.0381,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_625",
-                    name: "1-5/8 in.",
+                    name: "1-5/8 in",
                     length: 0.041275,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_75",
-                    name: "1-3/4 in.",
+                    name: "1-3/4 in",
                     length: 0.04445,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2",
-                    name: "2 in.",
+                    name: "2 in",
                     length: 0.0508,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_25",
-                    name: "2-1/4 in.",
+                    name: "2-1/4 in",
                     length: 0.05715,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_5",
-                    name: "2-1/2 in.",
+                    name: "2-1/2 in",
                     length: 0.0635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_3",
-                    name: "3 in.",
+                    name: "3 in",
                     length: 0.0762,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_3_5",
-                    name: "3-1/2 in.",
+                    name: "3-1/2 in",
                     length: 0.0889,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_4",
-                    name: "4 in.",
+                    name: "4 in",
                     length: 0.1016,
                     fullThreadChoice: false
                 }
@@ -1921,265 +1921,265 @@ export const CATALOG = {
             lengths: [
                 {
                     id: "IN_0_25",
-                    name: "1/4 in.",
+                    name: "1/4 in",
                     length: 0.00635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_3125",
-                    name: "5/16 in.",
+                    name: "5/16 in",
                     length: 0.0079375,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
-                    name: "3/8 in.",
+                    name: "3/8 in",
                     length: 0.009525,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_4375",
-                    name: "7/16 in.",
+                    name: "7/16 in",
                     length: 0.0111125,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
-                    name: "1/2 in.",
+                    name: "1/2 in",
                     length: 0.0127,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5625",
-                    name: "9/16 in.",
+                    name: "9/16 in",
                     length: 0.0142875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
-                    name: "5/8 in.",
+                    name: "5/8 in",
                     length: 0.015875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_6875",
-                    name: "11/16 in.",
+                    name: "11/16 in",
                     length: 0.0174625,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
-                    name: "3/4 in.",
+                    name: "3/4 in",
                     length: 0.01905,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_875",
-                    name: "7/8 in.",
+                    name: "7/8 in",
                     length: 0.022225,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
-                    name: "1 in.",
+                    name: "1 in",
                     length: 0.0254,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_125",
-                    name: "1-1/8 in.",
+                    name: "1-1/8 in",
                     length: 0.028575,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
-                    name: "1-1/4 in.",
+                    name: "1-1/4 in",
                     length: 0.03175,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_375",
-                    name: "1-3/8 in.",
+                    name: "1-3/8 in",
                     length: 0.034925,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
-                    name: "1-1/2 in.",
+                    name: "1-1/2 in",
                     length: 0.0381,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_625",
-                    name: "1-5/8 in.",
+                    name: "1-5/8 in",
                     length: 0.041275,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_75",
-                    name: "1-3/4 in.",
+                    name: "1-3/4 in",
                     length: 0.04445,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_875",
-                    name: "1-7/8 in.",
+                    name: "1-7/8 in",
                     length: 0.047625,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2",
-                    name: "2 in.",
+                    name: "2 in",
                     length: 0.0508,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_25",
-                    name: "2-1/4 in.",
+                    name: "2-1/4 in",
                     length: 0.05715,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_375",
-                    name: "2-3/8 in.",
+                    name: "2-3/8 in",
                     length: 0.060325,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_5",
-                    name: "2-1/2 in.",
+                    name: "2-1/2 in",
                     length: 0.0635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_625",
-                    name: "2-5/8 in.",
+                    name: "2-5/8 in",
                     length: 0.066675,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_75",
-                    name: "2-3/4 in.",
+                    name: "2-3/4 in",
                     length: 0.06985,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_3",
-                    name: "3 in.",
+                    name: "3 in",
                     length: 0.0762,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_3_25",
-                    name: "3-1/4 in.",
+                    name: "3-1/4 in",
                     length: 0.08255,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_3_5",
-                    name: "3-1/2 in.",
+                    name: "3-1/2 in",
                     length: 0.0889,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_3_75",
-                    name: "3-3/4 in.",
+                    name: "3-3/4 in",
                     length: 0.09525,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_4",
-                    name: "4 in.",
+                    name: "4 in",
                     length: 0.1016,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_4_25",
-                    name: "4-1/4 in.",
+                    name: "4-1/4 in",
                     length: 0.10795,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_4_5",
-                    name: "4-1/2 in.",
+                    name: "4-1/2 in",
                     length: 0.1143,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_5",
-                    name: "5 in.",
+                    name: "5 in",
                     length: 0.127,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_5_25",
-                    name: "5-1/4 in.",
+                    name: "5-1/4 in",
                     length: 0.13335,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_5_5",
-                    name: "5-1/2 in.",
+                    name: "5-1/2 in",
                     length: 0.1397,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_5_75",
-                    name: "5-3/4 in.",
+                    name: "5-3/4 in",
                     length: 0.14605,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_6",
-                    name: "6 in.",
+                    name: "6 in",
                     length: 0.1524,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_6_25",
-                    name: "6-1/4 in.",
+                    name: "6-1/4 in",
                     length: 0.15875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_6_5",
-                    name: "6-1/2 in.",
+                    name: "6-1/2 in",
                     length: 0.1651,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_7",
-                    name: "7 in.",
+                    name: "7 in",
                     length: 0.1778,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_7_5",
-                    name: "7-1/2 in.",
+                    name: "7-1/2 in",
                     length: 0.1905,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_8",
-                    name: "8 in.",
+                    name: "8 in",
                     length: 0.2032,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_8_5",
-                    name: "8-1/2 in.",
+                    name: "8-1/2 in",
                     length: 0.2159,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_9",
-                    name: "9 in.",
+                    name: "9 in",
                     length: 0.2286,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_10",
-                    name: "10 in.",
+                    name: "10 in",
                     length: 0.254,
                     fullThreadChoice: false
                 }
@@ -2193,151 +2193,151 @@ export const CATALOG = {
             lengths: [
                 {
                     id: "IN_0_1875",
-                    name: "3/16 in.",
+                    name: "3/16 in",
                     length: 0.0047625,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_25",
-                    name: "1/4 in.",
+                    name: "1/4 in",
                     length: 0.00635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_3125",
-                    name: "5/16 in.",
+                    name: "5/16 in",
                     length: 0.0079375,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
-                    name: "3/8 in.",
+                    name: "3/8 in",
                     length: 0.009525,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_4375",
-                    name: "7/16 in.",
+                    name: "7/16 in",
                     length: 0.0111125,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
-                    name: "1/2 in.",
+                    name: "1/2 in",
                     length: 0.0127,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5625",
-                    name: "9/16 in.",
+                    name: "9/16 in",
                     length: 0.0142875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
-                    name: "5/8 in.",
+                    name: "5/8 in",
                     length: 0.015875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
-                    name: "3/4 in.",
+                    name: "3/4 in",
                     length: 0.01905,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_875",
-                    name: "7/8 in.",
+                    name: "7/8 in",
                     length: 0.022225,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
-                    name: "1 in.",
+                    name: "1 in",
                     length: 0.0254,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_125",
-                    name: "1-1/8 in.",
+                    name: "1-1/8 in",
                     length: 0.028575,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
-                    name: "1-1/4 in.",
+                    name: "1-1/4 in",
                     length: 0.03175,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_375",
-                    name: "1-3/8 in.",
+                    name: "1-3/8 in",
                     length: 0.034925,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
-                    name: "1-1/2 in.",
+                    name: "1-1/2 in",
                     length: 0.0381,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_625",
-                    name: "1-5/8 in.",
+                    name: "1-5/8 in",
                     length: 0.041275,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_75",
-                    name: "1-3/4 in.",
+                    name: "1-3/4 in",
                     length: 0.04445,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2",
-                    name: "2 in.",
+                    name: "2 in",
                     length: 0.0508,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_25",
-                    name: "2-1/4 in.",
+                    name: "2-1/4 in",
                     length: 0.05715,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_5",
-                    name: "2-1/2 in.",
+                    name: "2-1/2 in",
                     length: 0.0635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_75",
-                    name: "2-3/4 in.",
+                    name: "2-3/4 in",
                     length: 0.06985,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_3",
-                    name: "3 in.",
+                    name: "3 in",
                     length: 0.0762,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_3_25",
-                    name: "3-1/4 in.",
+                    name: "3-1/4 in",
                     length: 0.08255,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_3_5",
-                    name: "3-1/2 in.",
+                    name: "3-1/2 in",
                     length: 0.0889,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_4",
-                    name: "4 in.",
+                    name: "4 in",
                     length: 0.1016,
                     fullThreadChoice: false
                 }
@@ -2351,151 +2351,151 @@ export const CATALOG = {
             lengths: [
                 {
                     id: "IN_0_25",
-                    name: "1/4 in.",
+                    name: "1/4 in",
                     length: 0.00635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
-                    name: "3/8 in.",
+                    name: "3/8 in",
                     length: 0.009525,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_4375",
-                    name: "7/16 in.",
+                    name: "7/16 in",
                     length: 0.0111125,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
-                    name: "1/2 in.",
+                    name: "1/2 in",
                     length: 0.0127,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5625",
-                    name: "9/16 in.",
+                    name: "9/16 in",
                     length: 0.0142875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
-                    name: "5/8 in.",
+                    name: "5/8 in",
                     length: 0.015875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
-                    name: "3/4 in.",
+                    name: "3/4 in",
                     length: 0.01905,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_875",
-                    name: "7/8 in.",
+                    name: "7/8 in",
                     length: 0.022225,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
-                    name: "1 in.",
+                    name: "1 in",
                     length: 0.0254,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_125",
-                    name: "1-1/8 in.",
+                    name: "1-1/8 in",
                     length: 0.028575,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
-                    name: "1-1/4 in.",
+                    name: "1-1/4 in",
                     length: 0.03175,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_375",
-                    name: "1-3/8 in.",
+                    name: "1-3/8 in",
                     length: 0.034925,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
-                    name: "1-1/2 in.",
+                    name: "1-1/2 in",
                     length: 0.0381,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_625",
-                    name: "1-5/8 in.",
+                    name: "1-5/8 in",
                     length: 0.041275,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_75",
-                    name: "1-3/4 in.",
+                    name: "1-3/4 in",
                     length: 0.04445,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2",
-                    name: "2 in.",
+                    name: "2 in",
                     length: 0.0508,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_25",
-                    name: "2-1/4 in.",
+                    name: "2-1/4 in",
                     length: 0.05715,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_5",
-                    name: "2-1/2 in.",
+                    name: "2-1/2 in",
                     length: 0.0635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_75",
-                    name: "2-3/4 in.",
+                    name: "2-3/4 in",
                     length: 0.06985,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_3",
-                    name: "3 in.",
+                    name: "3 in",
                     length: 0.0762,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_3_25",
-                    name: "3-1/4 in.",
+                    name: "3-1/4 in",
                     length: 0.08255,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_3_5",
-                    name: "3-1/2 in.",
+                    name: "3-1/2 in",
                     length: 0.0889,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_4",
-                    name: "4 in.",
+                    name: "4 in",
                     length: 0.1016,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_5",
-                    name: "5 in.",
+                    name: "5 in",
                     length: 0.127,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_6",
-                    name: "6 in.",
+                    name: "6 in",
                     length: 0.1524,
                     fullThreadChoice: false
                 }
@@ -2509,163 +2509,163 @@ export const CATALOG = {
             lengths: [
                 {
                     id: "IN_0_09375",
-                    name: "3/32 in.",
+                    name: "3/32 in",
                     length: 0.00238125,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_125",
-                    name: "1/8 in.",
+                    name: "1/8 in",
                     length: 0.003175,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_15625",
-                    name: "5/32 in.",
+                    name: "5/32 in",
                     length: 0.00396875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_1875",
-                    name: "3/16 in.",
+                    name: "3/16 in",
                     length: 0.0047625,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_25",
-                    name: "1/4 in.",
+                    name: "1/4 in",
                     length: 0.00635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_3125",
-                    name: "5/16 in.",
+                    name: "5/16 in",
                     length: 0.0079375,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
-                    name: "3/8 in.",
+                    name: "3/8 in",
                     length: 0.009525,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_4375",
-                    name: "7/16 in.",
+                    name: "7/16 in",
                     length: 0.0111125,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
-                    name: "1/2 in.",
+                    name: "1/2 in",
                     length: 0.0127,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5625",
-                    name: "9/16 in.",
+                    name: "9/16 in",
                     length: 0.0142875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
-                    name: "5/8 in.",
+                    name: "5/8 in",
                     length: 0.015875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
-                    name: "3/4 in.",
+                    name: "3/4 in",
                     length: 0.01905,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_875",
-                    name: "7/8 in.",
+                    name: "7/8 in",
                     length: 0.022225,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
-                    name: "1 in.",
+                    name: "1 in",
                     length: 0.0254,
                     fullThreadChoice: true
                 },
                 {
                     id: "IN_1_125",
-                    name: "1-1/8 in.",
+                    name: "1-1/8 in",
                     length: 0.028575,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
-                    name: "1-1/4 in.",
+                    name: "1-1/4 in",
                     length: 0.03175,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_375",
-                    name: "1-3/8 in.",
+                    name: "1-3/8 in",
                     length: 0.034925,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
-                    name: "1-1/2 in.",
+                    name: "1-1/2 in",
                     length: 0.0381,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_625",
-                    name: "1-5/8 in.",
+                    name: "1-5/8 in",
                     length: 0.041275,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_75",
-                    name: "1-3/4 in.",
+                    name: "1-3/4 in",
                     length: 0.04445,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2",
-                    name: "2 in.",
+                    name: "2 in",
                     length: 0.0508,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_25",
-                    name: "2-1/4 in.",
+                    name: "2-1/4 in",
                     length: 0.05715,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_5",
-                    name: "2-1/2 in.",
+                    name: "2-1/2 in",
                     length: 0.0635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_75",
-                    name: "2-3/4 in.",
+                    name: "2-3/4 in",
                     length: 0.06985,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_3",
-                    name: "3 in.",
+                    name: "3 in",
                     length: 0.0762,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_3_5",
-                    name: "3-1/2 in.",
+                    name: "3-1/2 in",
                     length: 0.0889,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_4",
-                    name: "4 in.",
+                    name: "4 in",
                     length: 0.1016,
                     fullThreadChoice: false
                 }
@@ -2679,85 +2679,85 @@ export const CATALOG = {
             lengths: [
                 {
                     id: "IN_0_125",
-                    name: "1/8 in.",
+                    name: "1/8 in",
                     length: 0.003175,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_1875",
-                    name: "3/16 in.",
+                    name: "3/16 in",
                     length: 0.0047625,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_25",
-                    name: "1/4 in.",
+                    name: "1/4 in",
                     length: 0.00635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_3125",
-                    name: "5/16 in.",
+                    name: "5/16 in",
                     length: 0.0079375,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
-                    name: "3/8 in.",
+                    name: "3/8 in",
                     length: 0.009525,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_4375",
-                    name: "7/16 in.",
+                    name: "7/16 in",
                     length: 0.0111125,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
-                    name: "1/2 in.",
+                    name: "1/2 in",
                     length: 0.0127,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
-                    name: "5/8 in.",
+                    name: "5/8 in",
                     length: 0.015875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
-                    name: "3/4 in.",
+                    name: "3/4 in",
                     length: 0.01905,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_875",
-                    name: "7/8 in.",
+                    name: "7/8 in",
                     length: 0.022225,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
-                    name: "1 in.",
+                    name: "1 in",
                     length: 0.0254,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
-                    name: "1-1/4 in.",
+                    name: "1-1/4 in",
                     length: 0.03175,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
-                    name: "1-1/2 in.",
+                    name: "1-1/2 in",
                     length: 0.0381,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2",
-                    name: "2 in.",
+                    name: "2 in",
                     length: 0.0508,
                     fullThreadChoice: false
                 }
@@ -2771,91 +2771,91 @@ export const CATALOG = {
             lengths: [
                 {
                     id: "IN_0_125",
-                    name: "1/8 in.",
+                    name: "1/8 in",
                     length: 0.003175,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_1875",
-                    name: "3/16 in.",
+                    name: "3/16 in",
                     length: 0.0047625,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_25",
-                    name: "1/4 in.",
+                    name: "1/4 in",
                     length: 0.00635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_3125",
-                    name: "5/16 in.",
+                    name: "5/16 in",
                     length: 0.0079375,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
-                    name: "3/8 in.",
+                    name: "3/8 in",
                     length: 0.009525,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_4375",
-                    name: "7/16 in.",
+                    name: "7/16 in",
                     length: 0.0111125,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
-                    name: "1/2 in.",
+                    name: "1/2 in",
                     length: 0.0127,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5625",
-                    name: "9/16 in.",
+                    name: "9/16 in",
                     length: 0.0142875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
-                    name: "5/8 in.",
+                    name: "5/8 in",
                     length: 0.015875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
-                    name: "3/4 in.",
+                    name: "3/4 in",
                     length: 0.01905,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_875",
-                    name: "7/8 in.",
+                    name: "7/8 in",
                     length: 0.022225,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
-                    name: "1 in.",
+                    name: "1 in",
                     length: 0.0254,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
-                    name: "1-1/4 in.",
+                    name: "1-1/4 in",
                     length: 0.03175,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
-                    name: "1-1/2 in.",
+                    name: "1-1/2 in",
                     length: 0.0381,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2",
-                    name: "2 in.",
+                    name: "2 in",
                     length: 0.0508,
                     fullThreadChoice: false
                 }
@@ -2869,49 +2869,49 @@ export const CATALOG = {
             lengths: [
                 {
                     id: "IN_0_125",
-                    name: "1/8 in.",
+                    name: "1/8 in",
                     length: 0.003175,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_1875",
-                    name: "3/16 in.",
+                    name: "3/16 in",
                     length: 0.0047625,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_25",
-                    name: "1/4 in.",
+                    name: "1/4 in",
                     length: 0.00635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
-                    name: "3/8 in.",
+                    name: "3/8 in",
                     length: 0.009525,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_4375",
-                    name: "7/16 in.",
+                    name: "7/16 in",
                     length: 0.0111125,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
-                    name: "1/2 in.",
+                    name: "1/2 in",
                     length: 0.0127,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
-                    name: "5/8 in.",
+                    name: "5/8 in",
                     length: 0.015875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
-                    name: "3/4 in.",
+                    name: "3/4 in",
                     length: 0.01905,
                     fullThreadChoice: false
                 }
@@ -2925,97 +2925,97 @@ export const CATALOG = {
             lengths: [
                 {
                     id: "IN_0_125",
-                    name: "1/8 in.",
+                    name: "1/8 in",
                     length: 0.003175,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_15625",
-                    name: "5/32 in.",
+                    name: "5/32 in",
                     length: 0.00396875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_1875",
-                    name: "3/16 in.",
+                    name: "3/16 in",
                     length: 0.0047625,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_25",
-                    name: "1/4 in.",
+                    name: "1/4 in",
                     length: 0.00635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_3125",
-                    name: "5/16 in.",
+                    name: "5/16 in",
                     length: 0.0079375,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
-                    name: "3/8 in.",
+                    name: "3/8 in",
                     length: 0.009525,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_4375",
-                    name: "7/16 in.",
+                    name: "7/16 in",
                     length: 0.0111125,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
-                    name: "1/2 in.",
+                    name: "1/2 in",
                     length: 0.0127,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5625",
-                    name: "9/16 in.",
+                    name: "9/16 in",
                     length: 0.0142875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
-                    name: "5/8 in.",
+                    name: "5/8 in",
                     length: 0.015875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
-                    name: "3/4 in.",
+                    name: "3/4 in",
                     length: 0.01905,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_875",
-                    name: "7/8 in.",
+                    name: "7/8 in",
                     length: 0.022225,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
-                    name: "1 in.",
+                    name: "1 in",
                     length: 0.0254,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_125",
-                    name: "1-1/8 in.",
+                    name: "1-1/8 in",
                     length: 0.028575,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
-                    name: "1-1/4 in.",
+                    name: "1-1/4 in",
                     length: 0.03175,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
-                    name: "1-1/2 in.",
+                    name: "1-1/2 in",
                     length: 0.0381,
                     fullThreadChoice: false
                 }
@@ -3029,43 +3029,43 @@ export const CATALOG = {
             lengths: [
                 {
                     id: "IN_0_1875",
-                    name: "3/16 in.",
+                    name: "3/16 in",
                     length: 0.0047625,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_25",
-                    name: "1/4 in.",
+                    name: "1/4 in",
                     length: 0.00635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_3125",
-                    name: "5/16 in.",
+                    name: "5/16 in",
                     length: 0.0079375,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
-                    name: "3/8 in.",
+                    name: "3/8 in",
                     length: 0.009525,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
-                    name: "1/2 in.",
+                    name: "1/2 in",
                     length: 0.0127,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
-                    name: "5/8 in.",
+                    name: "5/8 in",
                     length: 0.015875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
-                    name: "3/4 in.",
+                    name: "3/4 in",
                     length: 0.01905,
                     fullThreadChoice: false
                 }
@@ -3079,163 +3079,163 @@ export const CATALOG = {
             lengths: [
                 {
                     id: "IN_0_09375",
-                    name: "3/32 in.",
+                    name: "3/32 in",
                     length: 0.00238125,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_125",
-                    name: "1/8 in.",
+                    name: "1/8 in",
                     length: 0.003175,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_15625",
-                    name: "5/32 in.",
+                    name: "5/32 in",
                     length: 0.00396875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_1875",
-                    name: "3/16 in.",
+                    name: "3/16 in",
                     length: 0.0047625,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_25",
-                    name: "1/4 in.",
+                    name: "1/4 in",
                     length: 0.00635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_3125",
-                    name: "5/16 in.",
+                    name: "5/16 in",
                     length: 0.0079375,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
-                    name: "3/8 in.",
+                    name: "3/8 in",
                     length: 0.009525,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_4375",
-                    name: "7/16 in.",
+                    name: "7/16 in",
                     length: 0.0111125,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
-                    name: "1/2 in.",
+                    name: "1/2 in",
                     length: 0.0127,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5625",
-                    name: "9/16 in.",
+                    name: "9/16 in",
                     length: 0.0142875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
-                    name: "5/8 in.",
+                    name: "5/8 in",
                     length: 0.015875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
-                    name: "3/4 in.",
+                    name: "3/4 in",
                     length: 0.01905,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_875",
-                    name: "7/8 in.",
+                    name: "7/8 in",
                     length: 0.022225,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
-                    name: "1 in.",
+                    name: "1 in",
                     length: 0.0254,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_125",
-                    name: "1-1/8 in.",
+                    name: "1-1/8 in",
                     length: 0.028575,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
-                    name: "1-1/4 in.",
+                    name: "1-1/4 in",
                     length: 0.03175,
                     fullThreadChoice: true
                 },
                 {
                     id: "IN_1_375",
-                    name: "1-3/8 in.",
+                    name: "1-3/8 in",
                     length: 0.034925,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
-                    name: "1-1/2 in.",
+                    name: "1-1/2 in",
                     length: 0.0381,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_625",
-                    name: "1-5/8 in.",
+                    name: "1-5/8 in",
                     length: 0.041275,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_75",
-                    name: "1-3/4 in.",
+                    name: "1-3/4 in",
                     length: 0.04445,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_875",
-                    name: "1-7/8 in.",
+                    name: "1-7/8 in",
                     length: 0.047625,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2",
-                    name: "2 in.",
+                    name: "2 in",
                     length: 0.0508,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_25",
-                    name: "2-1/4 in.",
+                    name: "2-1/4 in",
                     length: 0.05715,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_5",
-                    name: "2-1/2 in.",
+                    name: "2-1/2 in",
                     length: 0.0635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_75",
-                    name: "2-3/4 in.",
+                    name: "2-3/4 in",
                     length: 0.06985,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_3",
-                    name: "3 in.",
+                    name: "3 in",
                     length: 0.0762,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_3_5",
-                    name: "3-1/2 in.",
+                    name: "3-1/2 in",
                     length: 0.0889,
                     fullThreadChoice: false
                 }
@@ -3249,85 +3249,85 @@ export const CATALOG = {
             lengths: [
                 {
                     id: "IN_0_125",
-                    name: "1/8 in.",
+                    name: "1/8 in",
                     length: 0.003175,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_1875",
-                    name: "3/16 in.",
+                    name: "3/16 in",
                     length: 0.0047625,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_25",
-                    name: "1/4 in.",
+                    name: "1/4 in",
                     length: 0.00635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_3125",
-                    name: "5/16 in.",
+                    name: "5/16 in",
                     length: 0.0079375,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
-                    name: "3/8 in.",
+                    name: "3/8 in",
                     length: 0.009525,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_4375",
-                    name: "7/16 in.",
+                    name: "7/16 in",
                     length: 0.0111125,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
-                    name: "1/2 in.",
+                    name: "1/2 in",
                     length: 0.0127,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
-                    name: "5/8 in.",
+                    name: "5/8 in",
                     length: 0.015875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
-                    name: "3/4 in.",
+                    name: "3/4 in",
                     length: 0.01905,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_875",
-                    name: "7/8 in.",
+                    name: "7/8 in",
                     length: 0.022225,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_125",
-                    name: "1-1/8 in.",
+                    name: "1-1/8 in",
                     length: 0.028575,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
-                    name: "1-1/4 in.",
+                    name: "1-1/4 in",
                     length: 0.03175,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
-                    name: "1-1/2 in.",
+                    name: "1-1/2 in",
                     length: 0.0381,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_875",
-                    name: "1-7/8 in.",
+                    name: "1-7/8 in",
                     length: 0.047625,
                     fullThreadChoice: false
                 }
@@ -3341,85 +3341,85 @@ export const CATALOG = {
             lengths: [
                 {
                     id: "IN_0_125",
-                    name: "1/8 in.",
+                    name: "1/8 in",
                     length: 0.003175,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_1875",
-                    name: "3/16 in.",
+                    name: "3/16 in",
                     length: 0.0047625,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_25",
-                    name: "1/4 in.",
+                    name: "1/4 in",
                     length: 0.00635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_3125",
-                    name: "5/16 in.",
+                    name: "5/16 in",
                     length: 0.0079375,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
-                    name: "3/8 in.",
+                    name: "3/8 in",
                     length: 0.009525,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_4375",
-                    name: "7/16 in.",
+                    name: "7/16 in",
                     length: 0.0111125,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
-                    name: "1/2 in.",
+                    name: "1/2 in",
                     length: 0.0127,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5625",
-                    name: "9/16 in.",
+                    name: "9/16 in",
                     length: 0.0142875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
-                    name: "5/8 in.",
+                    name: "5/8 in",
                     length: 0.015875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
-                    name: "3/4 in.",
+                    name: "3/4 in",
                     length: 0.01905,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_875",
-                    name: "7/8 in.",
+                    name: "7/8 in",
                     length: 0.022225,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
-                    name: "1 in.",
+                    name: "1 in",
                     length: 0.0254,
                     fullThreadChoice: true
                 },
                 {
                     id: "IN_1_125",
-                    name: "1-1/8 in.",
+                    name: "1-1/8 in",
                     length: 0.028575,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
-                    name: "1-1/4 in.",
+                    name: "1-1/4 in",
                     length: 0.03175,
                     fullThreadChoice: false
                 }
@@ -3433,49 +3433,49 @@ export const CATALOG = {
             lengths: [
                 {
                     id: "IN_0_125",
-                    name: "1/8 in.",
+                    name: "1/8 in",
                     length: 0.003175,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_1875",
-                    name: "3/16 in.",
+                    name: "3/16 in",
                     length: 0.0047625,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_25",
-                    name: "1/4 in.",
+                    name: "1/4 in",
                     length: 0.00635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
-                    name: "3/8 in.",
+                    name: "3/8 in",
                     length: 0.009525,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_4375",
-                    name: "7/16 in.",
+                    name: "7/16 in",
                     length: 0.0111125,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
-                    name: "1/2 in.",
+                    name: "1/2 in",
                     length: 0.0127,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
-                    name: "5/8 in.",
+                    name: "5/8 in",
                     length: 0.015875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
-                    name: "3/4 in.",
+                    name: "3/4 in",
                     length: 0.01905,
                     fullThreadChoice: false
                 }
@@ -3489,97 +3489,97 @@ export const CATALOG = {
             lengths: [
                 {
                     id: "IN_0_125",
-                    name: "1/8 in.",
+                    name: "1/8 in",
                     length: 0.003175,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_15625",
-                    name: "5/32 in.",
+                    name: "5/32 in",
                     length: 0.00396875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_1875",
-                    name: "3/16 in.",
+                    name: "3/16 in",
                     length: 0.0047625,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_25",
-                    name: "1/4 in.",
+                    name: "1/4 in",
                     length: 0.00635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_3125",
-                    name: "5/16 in.",
+                    name: "5/16 in",
                     length: 0.0079375,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
-                    name: "3/8 in.",
+                    name: "3/8 in",
                     length: 0.009525,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_4375",
-                    name: "7/16 in.",
+                    name: "7/16 in",
                     length: 0.0111125,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
-                    name: "1/2 in.",
+                    name: "1/2 in",
                     length: 0.0127,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5625",
-                    name: "9/16 in.",
+                    name: "9/16 in",
                     length: 0.0142875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
-                    name: "5/8 in.",
+                    name: "5/8 in",
                     length: 0.015875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
-                    name: "3/4 in.",
+                    name: "3/4 in",
                     length: 0.01905,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_875",
-                    name: "7/8 in.",
+                    name: "7/8 in",
                     length: 0.022225,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
-                    name: "1 in.",
+                    name: "1 in",
                     length: 0.0254,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
-                    name: "1-1/4 in.",
+                    name: "1-1/4 in",
                     length: 0.03175,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
-                    name: "1-1/2 in.",
+                    name: "1-1/2 in",
                     length: 0.0381,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_75",
-                    name: "1-3/4 in.",
+                    name: "1-3/4 in",
                     length: 0.04445,
                     fullThreadChoice: false
                 }
@@ -3593,43 +3593,43 @@ export const CATALOG = {
             lengths: [
                 {
                     id: "IN_0_1875",
-                    name: "3/16 in.",
+                    name: "3/16 in",
                     length: 0.0047625,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_25",
-                    name: "1/4 in.",
+                    name: "1/4 in",
                     length: 0.00635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_3125",
-                    name: "5/16 in.",
+                    name: "5/16 in",
                     length: 0.0079375,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
-                    name: "3/8 in.",
+                    name: "3/8 in",
                     length: 0.009525,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
-                    name: "1/2 in.",
+                    name: "1/2 in",
                     length: 0.0127,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
-                    name: "5/8 in.",
+                    name: "5/8 in",
                     length: 0.015875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
-                    name: "3/4 in.",
+                    name: "3/4 in",
                     length: 0.01905,
                     fullThreadChoice: false
                 }
@@ -3643,199 +3643,199 @@ export const CATALOG = {
             lengths: [
                 {
                     id: "IN_0_09375",
-                    name: "3/32 in.",
+                    name: "3/32 in",
                     length: 0.00238125,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_125",
-                    name: "1/8 in.",
+                    name: "1/8 in",
                     length: 0.003175,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_15625",
-                    name: "5/32 in.",
+                    name: "5/32 in",
                     length: 0.00396875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_1875",
-                    name: "3/16 in.",
+                    name: "3/16 in",
                     length: 0.0047625,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_25",
-                    name: "1/4 in.",
+                    name: "1/4 in",
                     length: 0.00635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_3125",
-                    name: "5/16 in.",
+                    name: "5/16 in",
                     length: 0.0079375,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
-                    name: "3/8 in.",
+                    name: "3/8 in",
                     length: 0.009525,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_4375",
-                    name: "7/16 in.",
+                    name: "7/16 in",
                     length: 0.0111125,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
-                    name: "1/2 in.",
+                    name: "1/2 in",
                     length: 0.0127,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5625",
-                    name: "9/16 in.",
+                    name: "9/16 in",
                     length: 0.0142875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
-                    name: "5/8 in.",
+                    name: "5/8 in",
                     length: 0.015875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_6875",
-                    name: "11/16 in.",
+                    name: "11/16 in",
                     length: 0.0174625,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
-                    name: "3/4 in.",
+                    name: "3/4 in",
                     length: 0.01905,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_875",
-                    name: "7/8 in.",
+                    name: "7/8 in",
                     length: 0.022225,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
-                    name: "1 in.",
+                    name: "1 in",
                     length: 0.0254,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_125",
-                    name: "1-1/8 in.",
+                    name: "1-1/8 in",
                     length: 0.028575,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
-                    name: "1-1/4 in.",
+                    name: "1-1/4 in",
                     length: 0.03175,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_375",
-                    name: "1-3/8 in.",
+                    name: "1-3/8 in",
                     length: 0.034925,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
-                    name: "1-1/2 in.",
+                    name: "1-1/2 in",
                     length: 0.0381,
                     fullThreadChoice: true
                 },
                 {
                     id: "IN_1_625",
-                    name: "1-5/8 in.",
+                    name: "1-5/8 in",
                     length: 0.041275,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_75",
-                    name: "1-3/4 in.",
+                    name: "1-3/4 in",
                     length: 0.04445,
                     fullThreadChoice: true
                 },
                 {
                     id: "IN_1_875",
-                    name: "1-7/8 in.",
+                    name: "1-7/8 in",
                     length: 0.047625,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2",
-                    name: "2 in.",
+                    name: "2 in",
                     length: 0.0508,
                     fullThreadChoice: true
                 },
                 {
                     id: "IN_2_25",
-                    name: "2-1/4 in.",
+                    name: "2-1/4 in",
                     length: 0.05715,
                     fullThreadChoice: true
                 },
                 {
                     id: "IN_2_5",
-                    name: "2-1/2 in.",
+                    name: "2-1/2 in",
                     length: 0.0635,
                     fullThreadChoice: true
                 },
                 {
                     id: "IN_2_75",
-                    name: "2-3/4 in.",
+                    name: "2-3/4 in",
                     length: 0.06985,
                     fullThreadChoice: true
                 },
                 {
                     id: "IN_3",
-                    name: "3 in.",
+                    name: "3 in",
                     length: 0.0762,
                     fullThreadChoice: true
                 },
                 {
                     id: "IN_3_25",
-                    name: "3-1/4 in.",
+                    name: "3-1/4 in",
                     length: 0.08255,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_3_5",
-                    name: "3-1/2 in.",
+                    name: "3-1/2 in",
                     length: 0.0889,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_3_75",
-                    name: "3-3/4 in.",
+                    name: "3-3/4 in",
                     length: 0.09525,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_4",
-                    name: "4 in.",
+                    name: "4 in",
                     length: 0.1016,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_4_5",
-                    name: "4-1/2 in.",
+                    name: "4-1/2 in",
                     length: 0.1143,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_5",
-                    name: "5 in.",
+                    name: "5 in",
                     length: 0.127,
                     fullThreadChoice: false
                 }
@@ -3849,103 +3849,103 @@ export const CATALOG = {
             lengths: [
                 {
                     id: "IN_0_125",
-                    name: "1/8 in.",
+                    name: "1/8 in",
                     length: 0.003175,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_1875",
-                    name: "3/16 in.",
+                    name: "3/16 in",
                     length: 0.0047625,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_25",
-                    name: "1/4 in.",
+                    name: "1/4 in",
                     length: 0.00635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_3125",
-                    name: "5/16 in.",
+                    name: "5/16 in",
                     length: 0.0079375,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
-                    name: "3/8 in.",
+                    name: "3/8 in",
                     length: 0.009525,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_4375",
-                    name: "7/16 in.",
+                    name: "7/16 in",
                     length: 0.0111125,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
-                    name: "1/2 in.",
+                    name: "1/2 in",
                     length: 0.0127,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5625",
-                    name: "9/16 in.",
+                    name: "9/16 in",
                     length: 0.0142875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
-                    name: "5/8 in.",
+                    name: "5/8 in",
                     length: 0.015875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
-                    name: "3/4 in.",
+                    name: "3/4 in",
                     length: 0.01905,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_875",
-                    name: "7/8 in.",
+                    name: "7/8 in",
                     length: 0.022225,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
-                    name: "1 in.",
+                    name: "1 in",
                     length: 0.0254,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_125",
-                    name: "1-1/8 in.",
+                    name: "1-1/8 in",
                     length: 0.028575,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
-                    name: "1-1/4 in.",
+                    name: "1-1/4 in",
                     length: 0.03175,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
-                    name: "1-1/2 in.",
+                    name: "1-1/2 in",
                     length: 0.0381,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_75",
-                    name: "1-3/4 in.",
+                    name: "1-3/4 in",
                     length: 0.04445,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_5",
-                    name: "2-1/2 in.",
+                    name: "2-1/2 in",
                     length: 0.0635,
                     fullThreadChoice: false
                 }
@@ -3959,133 +3959,133 @@ export const CATALOG = {
             lengths: [
                 {
                     id: "IN_0_125",
-                    name: "1/8 in.",
+                    name: "1/8 in",
                     length: 0.003175,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_15625",
-                    name: "5/32 in.",
+                    name: "5/32 in",
                     length: 0.00396875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_1875",
-                    name: "3/16 in.",
+                    name: "3/16 in",
                     length: 0.0047625,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_25",
-                    name: "1/4 in.",
+                    name: "1/4 in",
                     length: 0.00635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_3125",
-                    name: "5/16 in.",
+                    name: "5/16 in",
                     length: 0.0079375,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
-                    name: "3/8 in.",
+                    name: "3/8 in",
                     length: 0.009525,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_4375",
-                    name: "7/16 in.",
+                    name: "7/16 in",
                     length: 0.0111125,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
-                    name: "1/2 in.",
+                    name: "1/2 in",
                     length: 0.0127,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5625",
-                    name: "9/16 in.",
+                    name: "9/16 in",
                     length: 0.0142875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
-                    name: "5/8 in.",
+                    name: "5/8 in",
                     length: 0.015875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
-                    name: "3/4 in.",
+                    name: "3/4 in",
                     length: 0.01905,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_875",
-                    name: "7/8 in.",
+                    name: "7/8 in",
                     length: 0.022225,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
-                    name: "1 in.",
+                    name: "1 in",
                     length: 0.0254,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_125",
-                    name: "1-1/8 in.",
+                    name: "1-1/8 in",
                     length: 0.028575,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
-                    name: "1-1/4 in.",
+                    name: "1-1/4 in",
                     length: 0.03175,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_375",
-                    name: "1-3/8 in.",
+                    name: "1-3/8 in",
                     length: 0.034925,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
-                    name: "1-1/2 in.",
+                    name: "1-1/2 in",
                     length: 0.0381,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_75",
-                    name: "1-3/4 in.",
+                    name: "1-3/4 in",
                     length: 0.04445,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2",
-                    name: "2 in.",
+                    name: "2 in",
                     length: 0.0508,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_25",
-                    name: "2-1/4 in.",
+                    name: "2-1/4 in",
                     length: 0.05715,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_5",
-                    name: "2-1/2 in.",
+                    name: "2-1/2 in",
                     length: 0.0635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_3",
-                    name: "3 in.",
+                    name: "3 in",
                     length: 0.0762,
                     fullThreadChoice: false
                 }
@@ -4099,67 +4099,67 @@ export const CATALOG = {
             lengths: [
                 {
                     id: "IN_0_1875",
-                    name: "3/16 in.",
+                    name: "3/16 in",
                     length: 0.0047625,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_25",
-                    name: "1/4 in.",
+                    name: "1/4 in",
                     length: 0.00635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_3125",
-                    name: "5/16 in.",
+                    name: "5/16 in",
                     length: 0.0079375,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
-                    name: "3/8 in.",
+                    name: "3/8 in",
                     length: 0.009525,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_4375",
-                    name: "7/16 in.",
+                    name: "7/16 in",
                     length: 0.0111125,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
-                    name: "1/2 in.",
+                    name: "1/2 in",
                     length: 0.0127,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
-                    name: "5/8 in.",
+                    name: "5/8 in",
                     length: 0.015875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
-                    name: "3/4 in.",
+                    name: "3/4 in",
                     length: 0.01905,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_875",
-                    name: "7/8 in.",
+                    name: "7/8 in",
                     length: 0.022225,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
-                    name: "1 in.",
+                    name: "1 in",
                     length: 0.0254,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
-                    name: "1-1/2 in.",
+                    name: "1-1/2 in",
                     length: 0.0381,
                     fullThreadChoice: false
                 }
@@ -4173,133 +4173,133 @@ export const CATALOG = {
             lengths: [
                 {
                     id: "IN_0_15625",
-                    name: "5/32 in.",
+                    name: "5/32 in",
                     length: 0.00396875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_1875",
-                    name: "3/16 in.",
+                    name: "3/16 in",
                     length: 0.0047625,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_25",
-                    name: "1/4 in.",
+                    name: "1/4 in",
                     length: 0.00635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_3125",
-                    name: "5/16 in.",
+                    name: "5/16 in",
                     length: 0.0079375,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
-                    name: "3/8 in.",
+                    name: "3/8 in",
                     length: 0.009525,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_4375",
-                    name: "7/16 in.",
+                    name: "7/16 in",
                     length: 0.0111125,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
-                    name: "1/2 in.",
+                    name: "1/2 in",
                     length: 0.0127,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5625",
-                    name: "9/16 in.",
+                    name: "9/16 in",
                     length: 0.0142875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
-                    name: "5/8 in.",
+                    name: "5/8 in",
                     length: 0.015875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
-                    name: "3/4 in.",
+                    name: "3/4 in",
                     length: 0.01905,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_875",
-                    name: "7/8 in.",
+                    name: "7/8 in",
                     length: 0.022225,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
-                    name: "1 in.",
+                    name: "1 in",
                     length: 0.0254,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_125",
-                    name: "1-1/8 in.",
+                    name: "1-1/8 in",
                     length: 0.028575,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
-                    name: "1-1/4 in.",
+                    name: "1-1/4 in",
                     length: 0.03175,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_375",
-                    name: "1-3/8 in.",
+                    name: "1-3/8 in",
                     length: 0.034925,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
-                    name: "1-1/2 in.",
+                    name: "1-1/2 in",
                     length: 0.0381,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_625",
-                    name: "1-5/8 in.",
+                    name: "1-5/8 in",
                     length: 0.041275,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_75",
-                    name: "1-3/4 in.",
+                    name: "1-3/4 in",
                     length: 0.04445,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2",
-                    name: "2 in.",
+                    name: "2 in",
                     length: 0.0508,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_25",
-                    name: "2-1/4 in.",
+                    name: "2-1/4 in",
                     length: 0.05715,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_5",
-                    name: "2-1/2 in.",
+                    name: "2-1/2 in",
                     length: 0.0635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_3",
-                    name: "3 in.",
+                    name: "3 in",
                     length: 0.0762,
                     fullThreadChoice: false
                 }
@@ -4313,61 +4313,61 @@ export const CATALOG = {
             lengths: [
                 {
                     id: "IN_0_25",
-                    name: "1/4 in.",
+                    name: "1/4 in",
                     length: 0.00635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_3125",
-                    name: "5/16 in.",
+                    name: "5/16 in",
                     length: 0.0079375,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
-                    name: "3/8 in.",
+                    name: "3/8 in",
                     length: 0.009525,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
-                    name: "1/2 in.",
+                    name: "1/2 in",
                     length: 0.0127,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
-                    name: "5/8 in.",
+                    name: "5/8 in",
                     length: 0.015875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
-                    name: "3/4 in.",
+                    name: "3/4 in",
                     length: 0.01905,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_875",
-                    name: "7/8 in.",
+                    name: "7/8 in",
                     length: 0.022225,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
-                    name: "1 in.",
+                    name: "1 in",
                     length: 0.0254,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
-                    name: "1-1/4 in.",
+                    name: "1-1/4 in",
                     length: 0.03175,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
-                    name: "1-1/2 in.",
+                    name: "1-1/2 in",
                     length: 0.0381,
                     fullThreadChoice: false
                 }
@@ -4381,205 +4381,205 @@ export const CATALOG = {
             lengths: [
                 {
                     id: "IN_0_15625",
-                    name: "5/32 in.",
+                    name: "5/32 in",
                     length: 0.00396875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_1875",
-                    name: "3/16 in.",
+                    name: "3/16 in",
                     length: 0.0047625,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_25",
-                    name: "1/4 in.",
+                    name: "1/4 in",
                     length: 0.00635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_3125",
-                    name: "5/16 in.",
+                    name: "5/16 in",
                     length: 0.0079375,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
-                    name: "3/8 in.",
+                    name: "3/8 in",
                     length: 0.009525,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_4375",
-                    name: "7/16 in.",
+                    name: "7/16 in",
                     length: 0.0111125,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
-                    name: "1/2 in.",
+                    name: "1/2 in",
                     length: 0.0127,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5625",
-                    name: "9/16 in.",
+                    name: "9/16 in",
                     length: 0.0142875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
-                    name: "5/8 in.",
+                    name: "5/8 in",
                     length: 0.015875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_6875",
-                    name: "11/16 in.",
+                    name: "11/16 in",
                     length: 0.0174625,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
-                    name: "3/4 in.",
+                    name: "3/4 in",
                     length: 0.01905,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_875",
-                    name: "7/8 in.",
+                    name: "7/8 in",
                     length: 0.022225,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
-                    name: "1 in.",
+                    name: "1 in",
                     length: 0.0254,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_125",
-                    name: "1-1/8 in.",
+                    name: "1-1/8 in",
                     length: 0.028575,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
-                    name: "1-1/4 in.",
+                    name: "1-1/4 in",
                     length: 0.03175,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_375",
-                    name: "1-3/8 in.",
+                    name: "1-3/8 in",
                     length: 0.034925,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
-                    name: "1-1/2 in.",
+                    name: "1-1/2 in",
                     length: 0.0381,
                     fullThreadChoice: true
                 },
                 {
                     id: "IN_1_625",
-                    name: "1-5/8 in.",
+                    name: "1-5/8 in",
                     length: 0.041275,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_75",
-                    name: "1-3/4 in.",
+                    name: "1-3/4 in",
                     length: 0.04445,
                     fullThreadChoice: true
                 },
                 {
                     id: "IN_1_875",
-                    name: "1-7/8 in.",
+                    name: "1-7/8 in",
                     length: 0.047625,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2",
-                    name: "2 in.",
+                    name: "2 in",
                     length: 0.0508,
                     fullThreadChoice: true
                 },
                 {
                     id: "IN_2_25",
-                    name: "2-1/4 in.",
+                    name: "2-1/4 in",
                     length: 0.05715,
                     fullThreadChoice: true
                 },
                 {
                     id: "IN_2_5",
-                    name: "2-1/2 in.",
+                    name: "2-1/2 in",
                     length: 0.0635,
                     fullThreadChoice: true
                 },
                 {
                     id: "IN_2_75",
-                    name: "2-3/4 in.",
+                    name: "2-3/4 in",
                     length: 0.06985,
                     fullThreadChoice: true
                 },
                 {
                     id: "IN_3",
-                    name: "3 in.",
+                    name: "3 in",
                     length: 0.0762,
                     fullThreadChoice: true
                 },
                 {
                     id: "IN_3_5",
-                    name: "3-1/2 in.",
+                    name: "3-1/2 in",
                     length: 0.0889,
                     fullThreadChoice: true
                 },
                 {
                     id: "IN_3_75",
-                    name: "3-3/4 in.",
+                    name: "3-3/4 in",
                     length: 0.09525,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_4",
-                    name: "4 in.",
+                    name: "4 in",
                     length: 0.1016,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_4_5",
-                    name: "4-1/2 in.",
+                    name: "4-1/2 in",
                     length: 0.1143,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_5",
-                    name: "5 in.",
+                    name: "5 in",
                     length: 0.127,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_5_5",
-                    name: "5-1/2 in.",
+                    name: "5-1/2 in",
                     length: 0.1397,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_6",
-                    name: "6 in.",
+                    name: "6 in",
                     length: 0.1524,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_6_5",
-                    name: "6-1/2 in.",
+                    name: "6-1/2 in",
                     length: 0.1651,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_7",
-                    name: "7 in.",
+                    name: "7 in",
                     length: 0.1778,
                     fullThreadChoice: false
                 }
@@ -4593,133 +4593,133 @@ export const CATALOG = {
             lengths: [
                 {
                     id: "IN_0_1875",
-                    name: "3/16 in.",
+                    name: "3/16 in",
                     length: 0.0047625,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_25",
-                    name: "1/4 in.",
+                    name: "1/4 in",
                     length: 0.00635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_3125",
-                    name: "5/16 in.",
+                    name: "5/16 in",
                     length: 0.0079375,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
-                    name: "3/8 in.",
+                    name: "3/8 in",
                     length: 0.009525,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_4375",
-                    name: "7/16 in.",
+                    name: "7/16 in",
                     length: 0.0111125,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
-                    name: "1/2 in.",
+                    name: "1/2 in",
                     length: 0.0127,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5625",
-                    name: "9/16 in.",
+                    name: "9/16 in",
                     length: 0.0142875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
-                    name: "5/8 in.",
+                    name: "5/8 in",
                     length: 0.015875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
-                    name: "3/4 in.",
+                    name: "3/4 in",
                     length: 0.01905,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_875",
-                    name: "7/8 in.",
+                    name: "7/8 in",
                     length: 0.022225,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
-                    name: "1 in.",
+                    name: "1 in",
                     length: 0.0254,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
-                    name: "1-1/4 in.",
+                    name: "1-1/4 in",
                     length: 0.03175,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_375",
-                    name: "1-3/8 in.",
+                    name: "1-3/8 in",
                     length: 0.034925,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
-                    name: "1-1/2 in.",
+                    name: "1-1/2 in",
                     length: 0.0381,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_75",
-                    name: "1-3/4 in.",
+                    name: "1-3/4 in",
                     length: 0.04445,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2",
-                    name: "2 in.",
+                    name: "2 in",
                     length: 0.0508,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_25",
-                    name: "2-1/4 in.",
+                    name: "2-1/4 in",
                     length: 0.05715,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_5",
-                    name: "2-1/2 in.",
+                    name: "2-1/2 in",
                     length: 0.0635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_75",
-                    name: "2-3/4 in.",
+                    name: "2-3/4 in",
                     length: 0.06985,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_3",
-                    name: "3 in.",
+                    name: "3 in",
                     length: 0.0762,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_3_5",
-                    name: "3-1/2 in.",
+                    name: "3-1/2 in",
                     length: 0.0889,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_4",
-                    name: "4 in.",
+                    name: "4 in",
                     length: 0.1016,
                     fullThreadChoice: false
                 }
@@ -4733,133 +4733,133 @@ export const CATALOG = {
             lengths: [
                 {
                     id: "IN_0_125",
-                    name: "1/8 in.",
+                    name: "1/8 in",
                     length: 0.003175,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_1875",
-                    name: "3/16 in.",
+                    name: "3/16 in",
                     length: 0.0047625,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_25",
-                    name: "1/4 in.",
+                    name: "1/4 in",
                     length: 0.00635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_3125",
-                    name: "5/16 in.",
+                    name: "5/16 in",
                     length: 0.0079375,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
-                    name: "3/8 in.",
+                    name: "3/8 in",
                     length: 0.009525,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_4375",
-                    name: "7/16 in.",
+                    name: "7/16 in",
                     length: 0.0111125,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
-                    name: "1/2 in.",
+                    name: "1/2 in",
                     length: 0.0127,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5625",
-                    name: "9/16 in.",
+                    name: "9/16 in",
                     length: 0.0142875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
-                    name: "5/8 in.",
+                    name: "5/8 in",
                     length: 0.015875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
-                    name: "3/4 in.",
+                    name: "3/4 in",
                     length: 0.01905,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_875",
-                    name: "7/8 in.",
+                    name: "7/8 in",
                     length: 0.022225,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
-                    name: "1 in.",
+                    name: "1 in",
                     length: 0.0254,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_125",
-                    name: "1-1/8 in.",
+                    name: "1-1/8 in",
                     length: 0.028575,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
-                    name: "1-1/4 in.",
+                    name: "1-1/4 in",
                     length: 0.03175,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_375",
-                    name: "1-3/8 in.",
+                    name: "1-3/8 in",
                     length: 0.034925,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
-                    name: "1-1/2 in.",
+                    name: "1-1/2 in",
                     length: 0.0381,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_625",
-                    name: "1-5/8 in.",
+                    name: "1-5/8 in",
                     length: 0.041275,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_75",
-                    name: "1-3/4 in.",
+                    name: "1-3/4 in",
                     length: 0.04445,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2",
-                    name: "2 in.",
+                    name: "2 in",
                     length: 0.0508,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_25",
-                    name: "2-1/4 in.",
+                    name: "2-1/4 in",
                     length: 0.05715,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_5",
-                    name: "2-1/2 in.",
+                    name: "2-1/2 in",
                     length: 0.0635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_3",
-                    name: "3 in.",
+                    name: "3 in",
                     length: 0.0762,
                     fullThreadChoice: false
                 }
@@ -4873,73 +4873,73 @@ export const CATALOG = {
             lengths: [
                 {
                     id: "IN_0_25",
-                    name: "1/4 in.",
+                    name: "1/4 in",
                     length: 0.00635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_3125",
-                    name: "5/16 in.",
+                    name: "5/16 in",
                     length: 0.0079375,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
-                    name: "3/8 in.",
+                    name: "3/8 in",
                     length: 0.009525,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_4375",
-                    name: "7/16 in.",
+                    name: "7/16 in",
                     length: 0.0111125,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
-                    name: "1/2 in.",
+                    name: "1/2 in",
                     length: 0.0127,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
-                    name: "5/8 in.",
+                    name: "5/8 in",
                     length: 0.015875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
-                    name: "3/4 in.",
+                    name: "3/4 in",
                     length: 0.01905,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_875",
-                    name: "7/8 in.",
+                    name: "7/8 in",
                     length: 0.022225,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
-                    name: "1 in.",
+                    name: "1 in",
                     length: 0.0254,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
-                    name: "1-1/4 in.",
+                    name: "1-1/4 in",
                     length: 0.03175,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
-                    name: "1-1/2 in.",
+                    name: "1-1/2 in",
                     length: 0.0381,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2",
-                    name: "2 in.",
+                    name: "2 in",
                     length: 0.0508,
                     fullThreadChoice: false
                 }
@@ -4953,139 +4953,139 @@ export const CATALOG = {
             lengths: [
                 {
                     id: "IN_0_1875",
-                    name: "3/16 in.",
+                    name: "3/16 in",
                     length: 0.0047625,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_25",
-                    name: "1/4 in.",
+                    name: "1/4 in",
                     length: 0.00635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_3125",
-                    name: "5/16 in.",
+                    name: "5/16 in",
                     length: 0.0079375,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
-                    name: "3/8 in.",
+                    name: "3/8 in",
                     length: 0.009525,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_4375",
-                    name: "7/16 in.",
+                    name: "7/16 in",
                     length: 0.0111125,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
-                    name: "1/2 in.",
+                    name: "1/2 in",
                     length: 0.0127,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5625",
-                    name: "9/16 in.",
+                    name: "9/16 in",
                     length: 0.0142875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
-                    name: "5/8 in.",
+                    name: "5/8 in",
                     length: 0.015875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
-                    name: "3/4 in.",
+                    name: "3/4 in",
                     length: 0.01905,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_875",
-                    name: "7/8 in.",
+                    name: "7/8 in",
                     length: 0.022225,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
-                    name: "1 in.",
+                    name: "1 in",
                     length: 0.0254,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_125",
-                    name: "1-1/8 in.",
+                    name: "1-1/8 in",
                     length: 0.028575,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
-                    name: "1-1/4 in.",
+                    name: "1-1/4 in",
                     length: 0.03175,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_375",
-                    name: "1-3/8 in.",
+                    name: "1-3/8 in",
                     length: 0.034925,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
-                    name: "1-1/2 in.",
+                    name: "1-1/2 in",
                     length: 0.0381,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_625",
-                    name: "1-5/8 in.",
+                    name: "1-5/8 in",
                     length: 0.041275,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_75",
-                    name: "1-3/4 in.",
+                    name: "1-3/4 in",
                     length: 0.04445,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2",
-                    name: "2 in.",
+                    name: "2 in",
                     length: 0.0508,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_25",
-                    name: "2-1/4 in.",
+                    name: "2-1/4 in",
                     length: 0.05715,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_5",
-                    name: "2-1/2 in.",
+                    name: "2-1/2 in",
                     length: 0.0635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_3",
-                    name: "3 in.",
+                    name: "3 in",
                     length: 0.0762,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_3_5",
-                    name: "3-1/2 in.",
+                    name: "3-1/2 in",
                     length: 0.0889,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_4",
-                    name: "4 in.",
+                    name: "4 in",
                     length: 0.1016,
                     fullThreadChoice: false
                 }
@@ -5099,67 +5099,67 @@ export const CATALOG = {
             lengths: [
                 {
                     id: "IN_0_25",
-                    name: "1/4 in.",
+                    name: "1/4 in",
                     length: 0.00635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_3125",
-                    name: "5/16 in.",
+                    name: "5/16 in",
                     length: 0.0079375,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
-                    name: "3/8 in.",
+                    name: "3/8 in",
                     length: 0.009525,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
-                    name: "1/2 in.",
+                    name: "1/2 in",
                     length: 0.0127,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
-                    name: "5/8 in.",
+                    name: "5/8 in",
                     length: 0.015875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
-                    name: "3/4 in.",
+                    name: "3/4 in",
                     length: 0.01905,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_875",
-                    name: "7/8 in.",
+                    name: "7/8 in",
                     length: 0.022225,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
-                    name: "1 in.",
+                    name: "1 in",
                     length: 0.0254,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
-                    name: "1-1/4 in.",
+                    name: "1-1/4 in",
                     length: 0.03175,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
-                    name: "1-1/2 in.",
+                    name: "1-1/2 in",
                     length: 0.0381,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2",
-                    name: "2 in.",
+                    name: "2 in",
                     length: 0.0508,
                     fullThreadChoice: false
                 }
@@ -5173,265 +5173,265 @@ export const CATALOG = {
             lengths: [
                 {
                     id: "IN_0_25",
-                    name: "1/4 in.",
+                    name: "1/4 in",
                     length: 0.00635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_3125",
-                    name: "5/16 in.",
+                    name: "5/16 in",
                     length: 0.0079375,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
-                    name: "3/8 in.",
+                    name: "3/8 in",
                     length: 0.009525,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_4375",
-                    name: "7/16 in.",
+                    name: "7/16 in",
                     length: 0.0111125,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
-                    name: "1/2 in.",
+                    name: "1/2 in",
                     length: 0.0127,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5625",
-                    name: "9/16 in.",
+                    name: "9/16 in",
                     length: 0.0142875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
-                    name: "5/8 in.",
+                    name: "5/8 in",
                     length: 0.015875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_6875",
-                    name: "11/16 in.",
+                    name: "11/16 in",
                     length: 0.0174625,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
-                    name: "3/4 in.",
+                    name: "3/4 in",
                     length: 0.01905,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_875",
-                    name: "7/8 in.",
+                    name: "7/8 in",
                     length: 0.022225,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
-                    name: "1 in.",
+                    name: "1 in",
                     length: 0.0254,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_125",
-                    name: "1-1/8 in.",
+                    name: "1-1/8 in",
                     length: 0.028575,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
-                    name: "1-1/4 in.",
+                    name: "1-1/4 in",
                     length: 0.03175,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_375",
-                    name: "1-3/8 in.",
+                    name: "1-3/8 in",
                     length: 0.034925,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
-                    name: "1-1/2 in.",
+                    name: "1-1/2 in",
                     length: 0.0381,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_625",
-                    name: "1-5/8 in.",
+                    name: "1-5/8 in",
                     length: 0.041275,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_75",
-                    name: "1-3/4 in.",
+                    name: "1-3/4 in",
                     length: 0.04445,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_875",
-                    name: "1-7/8 in.",
+                    name: "1-7/8 in",
                     length: 0.047625,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2",
-                    name: "2 in.",
+                    name: "2 in",
                     length: 0.0508,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_25",
-                    name: "2-1/4 in.",
+                    name: "2-1/4 in",
                     length: 0.05715,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_375",
-                    name: "2-3/8 in.",
+                    name: "2-3/8 in",
                     length: 0.060325,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_5",
-                    name: "2-1/2 in.",
+                    name: "2-1/2 in",
                     length: 0.0635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_625",
-                    name: "2-5/8 in.",
+                    name: "2-5/8 in",
                     length: 0.066675,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_75",
-                    name: "2-3/4 in.",
+                    name: "2-3/4 in",
                     length: 0.06985,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_3",
-                    name: "3 in.",
+                    name: "3 in",
                     length: 0.0762,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_3_25",
-                    name: "3-1/4 in.",
+                    name: "3-1/4 in",
                     length: 0.08255,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_3_5",
-                    name: "3-1/2 in.",
+                    name: "3-1/2 in",
                     length: 0.0889,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_3_75",
-                    name: "3-3/4 in.",
+                    name: "3-3/4 in",
                     length: 0.09525,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_4",
-                    name: "4 in.",
+                    name: "4 in",
                     length: 0.1016,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_4_25",
-                    name: "4-1/4 in.",
+                    name: "4-1/4 in",
                     length: 0.10795,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_4_5",
-                    name: "4-1/2 in.",
+                    name: "4-1/2 in",
                     length: 0.1143,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_5",
-                    name: "5 in.",
+                    name: "5 in",
                     length: 0.127,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_5_25",
-                    name: "5-1/4 in.",
+                    name: "5-1/4 in",
                     length: 0.13335,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_5_5",
-                    name: "5-1/2 in.",
+                    name: "5-1/2 in",
                     length: 0.1397,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_5_75",
-                    name: "5-3/4 in.",
+                    name: "5-3/4 in",
                     length: 0.14605,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_6",
-                    name: "6 in.",
+                    name: "6 in",
                     length: 0.1524,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_6_25",
-                    name: "6-1/4 in.",
+                    name: "6-1/4 in",
                     length: 0.15875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_6_5",
-                    name: "6-1/2 in.",
+                    name: "6-1/2 in",
                     length: 0.1651,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_7",
-                    name: "7 in.",
+                    name: "7 in",
                     length: 0.1778,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_7_5",
-                    name: "7-1/2 in.",
+                    name: "7-1/2 in",
                     length: 0.1905,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_8",
-                    name: "8 in.",
+                    name: "8 in",
                     length: 0.2032,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_8_5",
-                    name: "8-1/2 in.",
+                    name: "8-1/2 in",
                     length: 0.2159,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_9",
-                    name: "9 in.",
+                    name: "9 in",
                     length: 0.2286,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_10",
-                    name: "10 in.",
+                    name: "10 in",
                     length: 0.254,
                     fullThreadChoice: false
                 }
@@ -5445,175 +5445,175 @@ export const CATALOG = {
             lengths: [
                 {
                     id: "IN_0_25",
-                    name: "1/4 in.",
+                    name: "1/4 in",
                     length: 0.00635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
-                    name: "3/8 in.",
+                    name: "3/8 in",
                     length: 0.009525,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_4375",
-                    name: "7/16 in.",
+                    name: "7/16 in",
                     length: 0.0111125,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
-                    name: "1/2 in.",
+                    name: "1/2 in",
                     length: 0.0127,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5625",
-                    name: "9/16 in.",
+                    name: "9/16 in",
                     length: 0.0142875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
-                    name: "5/8 in.",
+                    name: "5/8 in",
                     length: 0.015875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
-                    name: "3/4 in.",
+                    name: "3/4 in",
                     length: 0.01905,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_875",
-                    name: "7/8 in.",
+                    name: "7/8 in",
                     length: 0.022225,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
-                    name: "1 in.",
+                    name: "1 in",
                     length: 0.0254,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_125",
-                    name: "1-1/8 in.",
+                    name: "1-1/8 in",
                     length: 0.028575,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
-                    name: "1-1/4 in.",
+                    name: "1-1/4 in",
                     length: 0.03175,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_375",
-                    name: "1-3/8 in.",
+                    name: "1-3/8 in",
                     length: 0.034925,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
-                    name: "1-1/2 in.",
+                    name: "1-1/2 in",
                     length: 0.0381,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_625",
-                    name: "1-5/8 in.",
+                    name: "1-5/8 in",
                     length: 0.041275,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_75",
-                    name: "1-3/4 in.",
+                    name: "1-3/4 in",
                     length: 0.04445,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_875",
-                    name: "1-7/8 in.",
+                    name: "1-7/8 in",
                     length: 0.047625,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2",
-                    name: "2 in.",
+                    name: "2 in",
                     length: 0.0508,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_25",
-                    name: "2-1/4 in.",
+                    name: "2-1/4 in",
                     length: 0.05715,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_5",
-                    name: "2-1/2 in.",
+                    name: "2-1/2 in",
                     length: 0.0635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_75",
-                    name: "2-3/4 in.",
+                    name: "2-3/4 in",
                     length: 0.06985,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_3",
-                    name: "3 in.",
+                    name: "3 in",
                     length: 0.0762,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_3_25",
-                    name: "3-1/4 in.",
+                    name: "3-1/4 in",
                     length: 0.08255,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_3_5",
-                    name: "3-1/2 in.",
+                    name: "3-1/2 in",
                     length: 0.0889,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_3_75",
-                    name: "3-3/4 in.",
+                    name: "3-3/4 in",
                     length: 0.09525,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_4",
-                    name: "4 in.",
+                    name: "4 in",
                     length: 0.1016,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_4_5",
-                    name: "4-1/2 in.",
+                    name: "4-1/2 in",
                     length: 0.1143,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_5",
-                    name: "5 in.",
+                    name: "5 in",
                     length: 0.127,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_5_5",
-                    name: "5-1/2 in.",
+                    name: "5-1/2 in",
                     length: 0.1397,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_6",
-                    name: "6 in.",
+                    name: "6 in",
                     length: 0.1524,
                     fullThreadChoice: false
                 }
@@ -5627,151 +5627,151 @@ export const CATALOG = {
             lengths: [
                 {
                     id: "IN_0_1875",
-                    name: "3/16 in.",
+                    name: "3/16 in",
                     length: 0.0047625,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_25",
-                    name: "1/4 in.",
+                    name: "1/4 in",
                     length: 0.00635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_3125",
-                    name: "5/16 in.",
+                    name: "5/16 in",
                     length: 0.0079375,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
-                    name: "3/8 in.",
+                    name: "3/8 in",
                     length: 0.009525,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_4375",
-                    name: "7/16 in.",
+                    name: "7/16 in",
                     length: 0.0111125,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
-                    name: "1/2 in.",
+                    name: "1/2 in",
                     length: 0.0127,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5625",
-                    name: "9/16 in.",
+                    name: "9/16 in",
                     length: 0.0142875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
-                    name: "5/8 in.",
+                    name: "5/8 in",
                     length: 0.015875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
-                    name: "3/4 in.",
+                    name: "3/4 in",
                     length: 0.01905,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_875",
-                    name: "7/8 in.",
+                    name: "7/8 in",
                     length: 0.022225,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
-                    name: "1 in.",
+                    name: "1 in",
                     length: 0.0254,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_125",
-                    name: "1-1/8 in.",
+                    name: "1-1/8 in",
                     length: 0.028575,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
-                    name: "1-1/4 in.",
+                    name: "1-1/4 in",
                     length: 0.03175,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_375",
-                    name: "1-3/8 in.",
+                    name: "1-3/8 in",
                     length: 0.034925,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
-                    name: "1-1/2 in.",
+                    name: "1-1/2 in",
                     length: 0.0381,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_625",
-                    name: "1-5/8 in.",
+                    name: "1-5/8 in",
                     length: 0.041275,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_75",
-                    name: "1-3/4 in.",
+                    name: "1-3/4 in",
                     length: 0.04445,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2",
-                    name: "2 in.",
+                    name: "2 in",
                     length: 0.0508,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_25",
-                    name: "2-1/4 in.",
+                    name: "2-1/4 in",
                     length: 0.05715,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_5",
-                    name: "2-1/2 in.",
+                    name: "2-1/2 in",
                     length: 0.0635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_75",
-                    name: "2-3/4 in.",
+                    name: "2-3/4 in",
                     length: 0.06985,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_3",
-                    name: "3 in.",
+                    name: "3 in",
                     length: 0.0762,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_3_25",
-                    name: "3-1/4 in.",
+                    name: "3-1/4 in",
                     length: 0.08255,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_3_5",
-                    name: "3-1/2 in.",
+                    name: "3-1/2 in",
                     length: 0.0889,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_4",
-                    name: "4 in.",
+                    name: "4 in",
                     length: 0.1016,
                     fullThreadChoice: false
                 }
@@ -5785,85 +5785,85 @@ export const CATALOG = {
             lengths: [
                 {
                     id: "IN_0_25",
-                    name: "1/4 in.",
+                    name: "1/4 in",
                     length: 0.00635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_3125",
-                    name: "5/16 in.",
+                    name: "5/16 in",
                     length: 0.0079375,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
-                    name: "3/8 in.",
+                    name: "3/8 in",
                     length: 0.009525,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
-                    name: "1/2 in.",
+                    name: "1/2 in",
                     length: 0.0127,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
-                    name: "5/8 in.",
+                    name: "5/8 in",
                     length: 0.015875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
-                    name: "3/4 in.",
+                    name: "3/4 in",
                     length: 0.01905,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_875",
-                    name: "7/8 in.",
+                    name: "7/8 in",
                     length: 0.022225,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
-                    name: "1 in.",
+                    name: "1 in",
                     length: 0.0254,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
-                    name: "1-1/4 in.",
+                    name: "1-1/4 in",
                     length: 0.03175,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
-                    name: "1-1/2 in.",
+                    name: "1-1/2 in",
                     length: 0.0381,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_75",
-                    name: "1-3/4 in.",
+                    name: "1-3/4 in",
                     length: 0.04445,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2",
-                    name: "2 in.",
+                    name: "2 in",
                     length: 0.0508,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_5",
-                    name: "2-1/2 in.",
+                    name: "2-1/2 in",
                     length: 0.0635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_3",
-                    name: "3 in.",
+                    name: "3 in",
                     length: 0.0762,
                     fullThreadChoice: false
                 }
@@ -5877,151 +5877,151 @@ export const CATALOG = {
             lengths: [
                 {
                     id: "IN_0_25",
-                    name: "1/4 in.",
+                    name: "1/4 in",
                     length: 0.00635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
-                    name: "3/8 in.",
+                    name: "3/8 in",
                     length: 0.009525,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_4375",
-                    name: "7/16 in.",
+                    name: "7/16 in",
                     length: 0.0111125,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
-                    name: "1/2 in.",
+                    name: "1/2 in",
                     length: 0.0127,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5625",
-                    name: "9/16 in.",
+                    name: "9/16 in",
                     length: 0.0142875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
-                    name: "5/8 in.",
+                    name: "5/8 in",
                     length: 0.015875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
-                    name: "3/4 in.",
+                    name: "3/4 in",
                     length: 0.01905,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_875",
-                    name: "7/8 in.",
+                    name: "7/8 in",
                     length: 0.022225,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
-                    name: "1 in.",
+                    name: "1 in",
                     length: 0.0254,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_125",
-                    name: "1-1/8 in.",
+                    name: "1-1/8 in",
                     length: 0.028575,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
-                    name: "1-1/4 in.",
+                    name: "1-1/4 in",
                     length: 0.03175,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_375",
-                    name: "1-3/8 in.",
+                    name: "1-3/8 in",
                     length: 0.034925,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
-                    name: "1-1/2 in.",
+                    name: "1-1/2 in",
                     length: 0.0381,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_625",
-                    name: "1-5/8 in.",
+                    name: "1-5/8 in",
                     length: 0.041275,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_75",
-                    name: "1-3/4 in.",
+                    name: "1-3/4 in",
                     length: 0.04445,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2",
-                    name: "2 in.",
+                    name: "2 in",
                     length: 0.0508,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_25",
-                    name: "2-1/4 in.",
+                    name: "2-1/4 in",
                     length: 0.05715,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_5",
-                    name: "2-1/2 in.",
+                    name: "2-1/2 in",
                     length: 0.0635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_75",
-                    name: "2-3/4 in.",
+                    name: "2-3/4 in",
                     length: 0.06985,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_3",
-                    name: "3 in.",
+                    name: "3 in",
                     length: 0.0762,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_3_25",
-                    name: "3-1/4 in.",
+                    name: "3-1/4 in",
                     length: 0.08255,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_3_5",
-                    name: "3-1/2 in.",
+                    name: "3-1/2 in",
                     length: 0.0889,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_4",
-                    name: "4 in.",
+                    name: "4 in",
                     length: 0.1016,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_5",
-                    name: "5 in.",
+                    name: "5 in",
                     length: 0.127,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_6",
-                    name: "6 in.",
+                    name: "6 in",
                     length: 0.1524,
                     fullThreadChoice: false
                 }
@@ -6035,103 +6035,103 @@ export const CATALOG = {
             lengths: [
                 {
                     id: "IN_0_375",
-                    name: "3/8 in.",
+                    name: "3/8 in",
                     length: 0.009525,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
-                    name: "1/2 in.",
+                    name: "1/2 in",
                     length: 0.0127,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
-                    name: "5/8 in.",
+                    name: "5/8 in",
                     length: 0.015875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
-                    name: "3/4 in.",
+                    name: "3/4 in",
                     length: 0.01905,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_875",
-                    name: "7/8 in.",
+                    name: "7/8 in",
                     length: 0.022225,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
-                    name: "1 in.",
+                    name: "1 in",
                     length: 0.0254,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_125",
-                    name: "1-1/8 in.",
+                    name: "1-1/8 in",
                     length: 0.028575,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
-                    name: "1-1/4 in.",
+                    name: "1-1/4 in",
                     length: 0.03175,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
-                    name: "1-1/2 in.",
+                    name: "1-1/2 in",
                     length: 0.0381,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_75",
-                    name: "1-3/4 in.",
+                    name: "1-3/4 in",
                     length: 0.04445,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2",
-                    name: "2 in.",
+                    name: "2 in",
                     length: 0.0508,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_25",
-                    name: "2-1/4 in.",
+                    name: "2-1/4 in",
                     length: 0.05715,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_5",
-                    name: "2-1/2 in.",
+                    name: "2-1/2 in",
                     length: 0.0635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_75",
-                    name: "2-3/4 in.",
+                    name: "2-3/4 in",
                     length: 0.06985,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_3",
-                    name: "3 in.",
+                    name: "3 in",
                     length: 0.0762,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_3_5",
-                    name: "3-1/2 in.",
+                    name: "3-1/2 in",
                     length: 0.0889,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_4",
-                    name: "4 in.",
+                    name: "4 in",
                     length: 0.1016,
                     fullThreadChoice: false
                 }
@@ -6145,103 +6145,103 @@ export const CATALOG = {
             lengths: [
                 {
                     id: "IN_0_25",
-                    name: "1/4 in.",
+                    name: "1/4 in",
                     length: 0.00635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_3125",
-                    name: "5/16 in.",
+                    name: "5/16 in",
                     length: 0.0079375,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
-                    name: "3/8 in.",
+                    name: "3/8 in",
                     length: 0.009525,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
-                    name: "1/2 in.",
+                    name: "1/2 in",
                     length: 0.0127,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
-                    name: "5/8 in.",
+                    name: "5/8 in",
                     length: 0.015875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
-                    name: "3/4 in.",
+                    name: "3/4 in",
                     length: 0.01905,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
-                    name: "1 in.",
+                    name: "1 in",
                     length: 0.0254,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
-                    name: "1-1/4 in.",
+                    name: "1-1/4 in",
                     length: 0.03175,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
-                    name: "1-1/2 in.",
+                    name: "1-1/2 in",
                     length: 0.0381,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_75",
-                    name: "1-3/4 in.",
+                    name: "1-3/4 in",
                     length: 0.04445,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2",
-                    name: "2 in.",
+                    name: "2 in",
                     length: 0.0508,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_25",
-                    name: "2-1/4 in.",
+                    name: "2-1/4 in",
                     length: 0.05715,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_5",
-                    name: "2-1/2 in.",
+                    name: "2-1/2 in",
                     length: 0.0635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_75",
-                    name: "2-3/4 in.",
+                    name: "2-3/4 in",
                     length: 0.06985,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_3",
-                    name: "3 in.",
+                    name: "3 in",
                     length: 0.0762,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_3_5",
-                    name: "3-1/2 in.",
+                    name: "3-1/2 in",
                     length: 0.0889,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_4",
-                    name: "4 in.",
+                    name: "4 in",
                     length: 0.1016,
                     fullThreadChoice: false
                 }
@@ -6255,97 +6255,97 @@ export const CATALOG = {
             lengths: [
                 {
                     id: "IN_0_25",
-                    name: "1/4 in.",
+                    name: "1/4 in",
                     length: 0.00635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_3125",
-                    name: "5/16 in.",
+                    name: "5/16 in",
                     length: 0.0079375,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
-                    name: "3/8 in.",
+                    name: "3/8 in",
                     length: 0.009525,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
-                    name: "1/2 in.",
+                    name: "1/2 in",
                     length: 0.0127,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
-                    name: "5/8 in.",
+                    name: "5/8 in",
                     length: 0.015875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
-                    name: "3/4 in.",
+                    name: "3/4 in",
                     length: 0.01905,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
-                    name: "1 in.",
+                    name: "1 in",
                     length: 0.0254,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
-                    name: "1-1/4 in.",
+                    name: "1-1/4 in",
                     length: 0.03175,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
-                    name: "1-1/2 in.",
+                    name: "1-1/2 in",
                     length: 0.0381,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_625",
-                    name: "1-5/8 in.",
+                    name: "1-5/8 in",
                     length: 0.041275,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_75",
-                    name: "1-3/4 in.",
+                    name: "1-3/4 in",
                     length: 0.04445,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2",
-                    name: "2 in.",
+                    name: "2 in",
                     length: 0.0508,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_25",
-                    name: "2-1/4 in.",
+                    name: "2-1/4 in",
                     length: 0.05715,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_5",
-                    name: "2-1/2 in.",
+                    name: "2-1/2 in",
                     length: 0.0635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_75",
-                    name: "2-3/4 in.",
+                    name: "2-3/4 in",
                     length: 0.06985,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_3",
-                    name: "3 in.",
+                    name: "3 in",
                     length: 0.0762,
                     fullThreadChoice: false
                 }
@@ -6359,13 +6359,13 @@ export const CATALOG = {
             lengths: [
                 {
                     id: "IN_0_375",
-                    name: "3/8 in.",
+                    name: "3/8 in",
                     length: 0.009525,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
-                    name: "1/2 in.",
+                    name: "1/2 in",
                     length: 0.0127,
                     fullThreadChoice: false
                 }
@@ -6379,7 +6379,7 @@ export const CATALOG = {
             lengths: [
                 {
                     id: "IN_0_5",
-                    name: "1/2 in.",
+                    name: "1/2 in",
                     length: 0.0127,
                     fullThreadChoice: false
                 }
@@ -6393,7 +6393,7 @@ export const CATALOG = {
             lengths: [
                 {
                     id: "IN_1",
-                    name: "1 in.",
+                    name: "1 in",
                     length: 0.0254,
                     fullThreadChoice: false
                 }
@@ -6407,13 +6407,13 @@ export const CATALOG = {
             lengths: [
                 {
                     id: "IN_0_25",
-                    name: "1/4 in.",
+                    name: "1/4 in",
                     length: 0.00635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
-                    name: "1/2 in.",
+                    name: "1/2 in",
                     length: 0.0127,
                     fullThreadChoice: false
                 }
@@ -6427,79 +6427,79 @@ export const CATALOG = {
             lengths: [
                 {
                     id: "IN_0_25",
-                    name: "1/4 in.",
+                    name: "1/4 in",
                     length: 0.00635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
-                    name: "3/8 in.",
+                    name: "3/8 in",
                     length: 0.009525,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
-                    name: "1/2 in.",
+                    name: "1/2 in",
                     length: 0.0127,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
-                    name: "1 in.",
+                    name: "1 in",
                     length: 0.0254,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
-                    name: "1-1/2 in.",
+                    name: "1-1/2 in",
                     length: 0.0381,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_75",
-                    name: "1-3/4 in.",
+                    name: "1-3/4 in",
                     length: 0.04445,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2",
-                    name: "2 in.",
+                    name: "2 in",
                     length: 0.0508,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_5",
-                    name: "2-1/2 in.",
+                    name: "2-1/2 in",
                     length: 0.0635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_3",
-                    name: "3 in.",
+                    name: "3 in",
                     length: 0.0762,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_3_5",
-                    name: "3-1/2 in.",
+                    name: "3-1/2 in",
                     length: 0.0889,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_4",
-                    name: "4 in.",
+                    name: "4 in",
                     length: 0.1016,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_4_5",
-                    name: "4-1/2 in.",
+                    name: "4-1/2 in",
                     length: 0.1143,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_5",
-                    name: "5 in.",
+                    name: "5 in",
                     length: 0.127,
                     fullThreadChoice: false
                 }
@@ -6513,91 +6513,91 @@ export const CATALOG = {
             lengths: [
                 {
                     id: "IN_0_25",
-                    name: "1/4 in.",
+                    name: "1/4 in",
                     length: 0.00635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
-                    name: "3/8 in.",
+                    name: "3/8 in",
                     length: 0.009525,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
-                    name: "1/2 in.",
+                    name: "1/2 in",
                     length: 0.0127,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
-                    name: "3/4 in.",
+                    name: "3/4 in",
                     length: 0.01905,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_875",
-                    name: "7/8 in.",
+                    name: "7/8 in",
                     length: 0.022225,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
-                    name: "1 in.",
+                    name: "1 in",
                     length: 0.0254,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
-                    name: "1-1/4 in.",
+                    name: "1-1/4 in",
                     length: 0.03175,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
-                    name: "1-1/2 in.",
+                    name: "1-1/2 in",
                     length: 0.0381,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_75",
-                    name: "1-3/4 in.",
+                    name: "1-3/4 in",
                     length: 0.04445,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2",
-                    name: "2 in.",
+                    name: "2 in",
                     length: 0.0508,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_25",
-                    name: "2-1/4 in.",
+                    name: "2-1/4 in",
                     length: 0.05715,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_5",
-                    name: "2-1/2 in.",
+                    name: "2-1/2 in",
                     length: 0.0635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_75",
-                    name: "2-3/4 in.",
+                    name: "2-3/4 in",
                     length: 0.06985,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_3",
-                    name: "3 in.",
+                    name: "3 in",
                     length: 0.0762,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_4_75",
-                    name: "4-3/4 in.",
+                    name: "4-3/4 in",
                     length: 0.12065,
                     fullThreadChoice: false
                 }
@@ -6611,19 +6611,19 @@ export const CATALOG = {
             lengths: [
                 {
                     id: "IN_0_25",
-                    name: "1/4 in.",
+                    name: "1/4 in",
                     length: 0.00635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
-                    name: "3/8 in.",
+                    name: "3/8 in",
                     length: 0.009525,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
-                    name: "1/2 in.",
+                    name: "1/2 in",
                     length: 0.0127,
                     fullThreadChoice: false
                 }
@@ -6637,13 +6637,13 @@ export const CATALOG = {
             lengths: [
                 {
                     id: "IN_0_375",
-                    name: "3/8 in.",
+                    name: "3/8 in",
                     length: 0.009525,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
-                    name: "1/2 in.",
+                    name: "1/2 in",
                     length: 0.0127,
                     fullThreadChoice: false
                 }
@@ -6657,7 +6657,7 @@ export const CATALOG = {
             lengths: [
                 {
                     id: "IN_0_25",
-                    name: "1/4 in.",
+                    name: "1/4 in",
                     length: 0.00635,
                     fullThreadChoice: false
                 }
@@ -6671,7 +6671,7 @@ export const CATALOG = {
             lengths: [
                 {
                     id: "IN_0_375",
-                    name: "3/8 in.",
+                    name: "3/8 in",
                     length: 0.009525,
                     fullThreadChoice: false
                 }
@@ -6685,7 +6685,7 @@ export const CATALOG = {
             lengths: [
                 {
                     id: "IN_2_125",
-                    name: "2-1/8 in.",
+                    name: "2-1/8 in",
                     length: 0.053975,
                     fullThreadChoice: false
                 }
@@ -6699,7 +6699,7 @@ export const CATALOG = {
             lengths: [
                 {
                     id: "IN_0_625",
-                    name: "5/8 in.",
+                    name: "5/8 in",
                     length: 0.015875,
                     fullThreadChoice: false
                 }
@@ -6713,7 +6713,7 @@ export const CATALOG = {
             lengths: [
                 {
                     id: "IN_0_5",
-                    name: "1/2 in.",
+                    name: "1/2 in",
                     length: 0.0127,
                     fullThreadChoice: false
                 }
@@ -6727,115 +6727,115 @@ export const CATALOG = {
             lengths: [
                 {
                     id: "IN_0_25",
-                    name: "1/4 in.",
+                    name: "1/4 in",
                     length: 0.00635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
-                    name: "3/8 in.",
+                    name: "3/8 in",
                     length: 0.009525,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
-                    name: "1/2 in.",
+                    name: "1/2 in",
                     length: 0.0127,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
-                    name: "5/8 in.",
+                    name: "5/8 in",
                     length: 0.015875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
-                    name: "3/4 in.",
+                    name: "3/4 in",
                     length: 0.01905,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_875",
-                    name: "7/8 in.",
+                    name: "7/8 in",
                     length: 0.022225,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
-                    name: "1 in.",
+                    name: "1 in",
                     length: 0.0254,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_125",
-                    name: "1-1/8 in.",
+                    name: "1-1/8 in",
                     length: 0.028575,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
-                    name: "1-1/4 in.",
+                    name: "1-1/4 in",
                     length: 0.03175,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_375",
-                    name: "1-3/8 in.",
+                    name: "1-3/8 in",
                     length: 0.034925,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
-                    name: "1-1/2 in.",
+                    name: "1-1/2 in",
                     length: 0.0381,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_75",
-                    name: "1-3/4 in.",
+                    name: "1-3/4 in",
                     length: 0.04445,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2",
-                    name: "2 in.",
+                    name: "2 in",
                     length: 0.0508,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_25",
-                    name: "2-1/4 in.",
+                    name: "2-1/4 in",
                     length: 0.05715,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_5",
-                    name: "2-1/2 in.",
+                    name: "2-1/2 in",
                     length: 0.0635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_75",
-                    name: "2-3/4 in.",
+                    name: "2-3/4 in",
                     length: 0.06985,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_3",
-                    name: "3 in.",
+                    name: "3 in",
                     length: 0.0762,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_3_25",
-                    name: "3-1/4 in.",
+                    name: "3-1/4 in",
                     length: 0.08255,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_3_5",
-                    name: "3-1/2 in.",
+                    name: "3-1/2 in",
                     length: 0.0889,
                     fullThreadChoice: false
                 }
@@ -6849,49 +6849,49 @@ export const CATALOG = {
             lengths: [
                 {
                     id: "IN_0_375",
-                    name: "3/8 in.",
+                    name: "3/8 in",
                     length: 0.009525,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
-                    name: "1/2 in.",
+                    name: "1/2 in",
                     length: 0.0127,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
-                    name: "5/8 in.",
+                    name: "5/8 in",
                     length: 0.015875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
-                    name: "3/4 in.",
+                    name: "3/4 in",
                     length: 0.01905,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
-                    name: "1 in.",
+                    name: "1 in",
                     length: 0.0254,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
-                    name: "1-1/4 in.",
+                    name: "1-1/4 in",
                     length: 0.03175,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
-                    name: "1-1/2 in.",
+                    name: "1-1/2 in",
                     length: 0.0381,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_75",
-                    name: "1-3/4 in.",
+                    name: "1-3/4 in",
                     length: 0.04445,
                     fullThreadChoice: false
                 }
@@ -6905,37 +6905,37 @@ export const CATALOG = {
             lengths: [
                 {
                     id: "IN_0_5",
-                    name: "1/2 in.",
+                    name: "1/2 in",
                     length: 0.0127,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
-                    name: "5/8 in.",
+                    name: "5/8 in",
                     length: 0.015875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
-                    name: "3/4 in.",
+                    name: "3/4 in",
                     length: 0.01905,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
-                    name: "1 in.",
+                    name: "1 in",
                     length: 0.0254,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
-                    name: "1-1/2 in.",
+                    name: "1-1/2 in",
                     length: 0.0381,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2",
-                    name: "2 in.",
+                    name: "2 in",
                     length: 0.0508,
                     fullThreadChoice: false
                 }
@@ -6949,49 +6949,49 @@ export const CATALOG = {
             lengths: [
                 {
                     id: "IN_0_625",
-                    name: "5/8 in.",
+                    name: "5/8 in",
                     length: 0.015875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
-                    name: "1 in.",
+                    name: "1 in",
                     length: 0.0254,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
-                    name: "1-1/2 in.",
+                    name: "1-1/2 in",
                     length: 0.0381,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_75",
-                    name: "1-3/4 in.",
+                    name: "1-3/4 in",
                     length: 0.04445,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2",
-                    name: "2 in.",
+                    name: "2 in",
                     length: 0.0508,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_5",
-                    name: "2-1/2 in.",
+                    name: "2-1/2 in",
                     length: 0.0635,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_3",
-                    name: "3 in.",
+                    name: "3 in",
                     length: 0.0762,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_3_25",
-                    name: "3-1/4 in.",
+                    name: "3-1/4 in",
                     length: 0.08255,
                     fullThreadChoice: false
                 }
@@ -7005,55 +7005,55 @@ export const CATALOG = {
             lengths: [
                 {
                     id: "IN_0_375",
-                    name: "3/8 in.",
+                    name: "3/8 in",
                     length: 0.009525,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
-                    name: "1/2 in.",
+                    name: "1/2 in",
                     length: 0.0127,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
-                    name: "5/8 in.",
+                    name: "5/8 in",
                     length: 0.015875,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
-                    name: "1 in.",
+                    name: "1 in",
                     length: 0.0254,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
-                    name: "1-1/4 in.",
+                    name: "1-1/4 in",
                     length: 0.03175,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
-                    name: "1-1/2 in.",
+                    name: "1-1/2 in",
                     length: 0.0381,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_1_75",
-                    name: "1-3/4 in.",
+                    name: "1-3/4 in",
                     length: 0.04445,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2",
-                    name: "2 in.",
+                    name: "2 in",
                     length: 0.0508,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2_5",
-                    name: "2-1/2 in.",
+                    name: "2-1/2 in",
                     length: 0.0635,
                     fullThreadChoice: false
                 }
@@ -7067,7 +7067,7 @@ export const CATALOG = {
             lengths: [
                 {
                     id: "IN_0_75",
-                    name: "3/4 in.",
+                    name: "3/4 in",
                     length: 0.01905,
                     fullThreadChoice: false
                 }
@@ -7081,13 +7081,13 @@ export const CATALOG = {
             lengths: [
                 {
                     id: "IN_0_75",
-                    name: "3/4 in.",
+                    name: "3/4 in",
                     length: 0.01905,
                     fullThreadChoice: false
                 },
                 {
                     id: "IN_2",
-                    name: "2 in.",
+                    name: "2 in",
                     length: 0.0508,
                     fullThreadChoice: false
                 }
@@ -7439,7 +7439,7 @@ export const CATALOG = {
             vendor: "GENERIC",
             size: "NO_4_40",
             type: "OD_5_16_X_0_032",
-            name: "5/16 in. OD x 0.032 in.",
+            name: "5/16 in OD x 0.032 in",
             innerDiameter: 0.003175,
             outerDiameter: 0.0079375,
             thickness: 0.0008128,
@@ -7449,7 +7449,7 @@ export const CATALOG = {
             vendor: "GENERIC",
             size: "NO_6_32",
             type: "OD_3_8_X_0_049",
-            name: "3/8 in. OD x 0.049 in.",
+            name: "3/8 in OD x 0.049 in",
             innerDiameter: 0.0039624,
             outerDiameter: 0.009525,
             thickness: 0.0012446,
@@ -7459,7 +7459,7 @@ export const CATALOG = {
             vendor: "GENERIC",
             size: "NO_8_32",
             type: "OD_7_16_X_0_049",
-            name: "7/16 in. OD x 0.049 in.",
+            name: "7/16 in OD x 0.049 in",
             innerDiameter: 0.0047752,
             outerDiameter: 0.0111125,
             thickness: 0.0012446,
@@ -7469,7 +7469,7 @@ export const CATALOG = {
             vendor: "GENERIC",
             size: "NO_10_32",
             type: "OD_1_2_X_0_049",
-            name: "1/2 in. OD x 0.049 in.",
+            name: "1/2 in OD x 0.049 in",
             innerDiameter: 0.0055626,
             outerDiameter: 0.0127,
             thickness: 0.0012446,
@@ -7479,7 +7479,7 @@ export const CATALOG = {
             vendor: "GENERIC",
             size: "QUARTER_20",
             type: "OD_5_8_X_0_065",
-            name: "5/8 in. OD x 0.065 in.",
+            name: "5/8 in OD x 0.065 in",
             innerDiameter: 0.0071374,
             outerDiameter: 0.015875,
             thickness: 0.001651,
@@ -7489,7 +7489,7 @@ export const CATALOG = {
             vendor: "MCMASTER",
             size: "NO_4_40",
             type: "OD_5_16_X_0_03",
-            name: "5/16 in. OD x 0.03 in.",
+            name: "5/16 in OD x 0.03 in",
             innerDiameter: 0.003175,
             outerDiameter: 0.0079375,
             thickness: 0.000762,
@@ -7499,7 +7499,7 @@ export const CATALOG = {
             vendor: "MCMASTER",
             size: "NO_6_32",
             type: "OD_5_16_X_0_03",
-            name: "5/16 in. OD x 0.03 in.",
+            name: "5/16 in OD x 0.03 in",
             innerDiameter: 0.0039624,
             outerDiameter: 0.0079375,
             thickness: 0.000762,
@@ -7509,7 +7509,7 @@ export const CATALOG = {
             vendor: "MCMASTER",
             size: "NO_6_32",
             type: "OD_3_8_X_0_03",
-            name: "3/8 in. OD x 0.03 in.",
+            name: "3/8 in OD x 0.03 in",
             innerDiameter: 0.0039624,
             outerDiameter: 0.009525,
             thickness: 0.000762,
@@ -7519,7 +7519,7 @@ export const CATALOG = {
             vendor: "MCMASTER",
             size: "NO_8_32",
             type: "OD_3_8_X_0_03",
-            name: "3/8 in. OD x 0.03 in.",
+            name: "3/8 in OD x 0.03 in",
             innerDiameter: 0.0047752,
             outerDiameter: 0.009525,
             thickness: 0.000762,
@@ -7529,7 +7529,7 @@ export const CATALOG = {
             vendor: "MCMASTER",
             size: "NO_10_32",
             type: "OD_7_16_X_0_03",
-            name: "7/16 in. OD x 0.03 in.",
+            name: "7/16 in OD x 0.03 in",
             innerDiameter: 0.0055626,
             outerDiameter: 0.0111125,
             thickness: 0.000762,
@@ -7539,7 +7539,7 @@ export const CATALOG = {
             vendor: "MCMASTER",
             size: "NO_10_32",
             type: "OD_1_2_X_0_04",
-            name: "1/2 in. OD x 0.04 in.",
+            name: "1/2 in OD x 0.04 in",
             innerDiameter: 0.0055626,
             outerDiameter: 0.0127,
             thickness: 0.001016,
@@ -7549,7 +7549,7 @@ export const CATALOG = {
             vendor: "MCMASTER",
             size: "QUARTER_20",
             type: "OD_5_8_X_0_05",
-            name: "5/8 in. OD x 0.05 in.",
+            name: "5/8 in OD x 0.05 in",
             innerDiameter: 0.0071374,
             outerDiameter: 0.015875,
             thickness: 0.00127,
@@ -7559,7 +7559,7 @@ export const CATALOG = {
             vendor: "WCP",
             size: "NO_10_32",
             type: "OD_3_8_X_0_012",
-            name: "3/8 in. OD x 0.012 in.",
+            name: "3/8 in OD x 0.012 in",
             innerDiameter: 0.0055626,
             outerDiameter: 0.009525,
             thickness: 0.0003048,
@@ -7569,7 +7569,7 @@ export const CATALOG = {
             vendor: "WCP",
             size: "NO_10_32",
             type: "OD_3_8_X_0_031",
-            name: "3/8 in. OD x 0.031 in.",
+            name: "3/8 in OD x 0.031 in",
             innerDiameter: 0.0055626,
             outerDiameter: 0.009525,
             thickness: 0.0007874,
@@ -7579,7 +7579,7 @@ export const CATALOG = {
             vendor: "WCP",
             size: "NO_10_32",
             type: "OD_5_8_X_0_031",
-            name: "5/8 in. OD x 0.031 in.",
+            name: "5/8 in OD x 0.031 in",
             innerDiameter: 0.0055626,
             outerDiameter: 0.015875,
             thickness: 0.0007874,
@@ -7589,7 +7589,7 @@ export const CATALOG = {
             vendor: "WCP",
             size: "QUARTER_20",
             type: "OD_3_8_X_0_012",
-            name: "3/8 in. OD x 0.012 in.",
+            name: "3/8 in OD x 0.012 in",
             innerDiameter: 0.0071374,
             outerDiameter: 0.009525,
             thickness: 0.0003048,
@@ -7599,7 +7599,7 @@ export const CATALOG = {
             vendor: "WCP",
             size: "QUARTER_20",
             type: "OD_3_8_X_0_031",
-            name: "3/8 in. OD x 0.031 in.",
+            name: "3/8 in OD x 0.031 in",
             innerDiameter: 0.0071374,
             outerDiameter: 0.009525,
             thickness: 0.0007874,
