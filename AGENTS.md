@@ -121,6 +121,15 @@ default" — goes through `canonicalValue`/`canonicalValues`, never through a ke
 Don't add a third form: if something needs a different view of a selection, it
 wants a function in `selection.ts`, not a new shape.
 
+# Onshape API calls
+
+Ask before anything that calls Onshape, and run it only once the user says yes,
+every time: the Onshape FeatureScript MCP's tools, a load or anything else run
+against a real Onshape session, and robot-code's `fs` commands that talk to
+Onshape. Each call spends the user's Onshape API allocation, and a write to a
+library document can't be undone. Tests mock Onshape and need no asking. When
+the user runs a command themselves, say exactly what to run.
+
 # Architecture docs
 
 `docs/architecture/` holds one document per feature area, indexed in its

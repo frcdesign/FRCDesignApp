@@ -33,8 +33,8 @@ Parts modeled by hand aren't generated, whatever their configuration.
 
 robot-code owns each set's definition: for the fasteners,
 `featurescripts/fasteners/fastenerTables.py`, which writes the FeatureScript's
-tables, each Part Studio's configuration (`fs configure-studio`) and the
-manifest (`fasteners.gen.json`) from one list of records, one per configuration
+tables, each Part Studio's configuration and the manifest
+(`fasteners.gen.json`) from one list of records, one per configuration
 the configuration offers (`ConfiguredStudio.combinations()`). Its features set
 exactly the properties the records name. An input hidden where only its default
 is made (the screw's Variant, the washer's Finish) is left out of a record
@@ -85,10 +85,13 @@ is fasten info when it's on.
 1. Change the definition in robot-code, which writes the FeatureScript's tables
    from the records; its tests check the records against the configurations
    offered.
-2. Release the FeatureScript to the library document (`fs release`, which goes
-   to the library's document by `[tool.fs.libraries]`), configure each Part
-   Studio from the definition (`fs configure-studio`), and version the library
-   document; record each studio's location in the definition.
+2. Release it (`fs release fasteners`): robot-code points the library
+   document's Feature Studio at a new backend version, builds each Part Studio
+   there from the definition (creating its tab if it's missing, writing its
+   configuration, and inserting or updating its feature), versions the library
+   document, and records where each studio is (`fastenerTables.studios.json`),
+   which the manifest's locations come from. Nothing is made by hand. Commit
+   what it wrote.
 3. Sync the commit here and deploy.
 4. Load the group. A load that runs before the deploy fails the changed tabs
    (step 3 of loading) rather than store parts the generator didn't name, so the
@@ -113,10 +116,10 @@ shows it in place of the indexing switches.
 
 ## Failure and recovery
 
-| Failure                                         | Result                                                 | Recovery                                                                     |
-| ----------------------------------------------- | ------------------------------------------------------ | ---------------------------------------------------------------------------- |
-| The tab's configuration isn't the generated one | `GENERATED_PART_MISMATCH`; it keeps its last good load | Configure the studio (`fs configure-studio`), or sync the generator's commit |
-| A studio's location isn't synced yet            | It loads as a hand-modeled tab, probed and capped      | Record its location in robot-code and sync                                   |
+| Failure                                         | Result                                                 | Recovery                                                                   |
+| ----------------------------------------------- | ------------------------------------------------------ | -------------------------------------------------------------------------- |
+| The tab's configuration isn't the generated one | `GENERATED_PART_MISMATCH`; it keeps its last good load | Release the fasteners again (`fs release`), or sync the generator's commit |
+| A studio's location isn't synced yet            | It loads as a hand-modeled tab, probed and capped      | Sync the commit with the release's recorded locations                      |
 
 ## Decisions
 

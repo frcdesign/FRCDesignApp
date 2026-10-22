@@ -275,7 +275,7 @@ a toast when a run watched going finishes, from any tab of the app.
 
 | Failure                              | Result                                                       | Recovery                                           |
 | ------------------------------------ | ------------------------------------------------------------ | -------------------------------------------------- |
-| The studios aren't released          | Insert answers 503                                           | Fill robot-code's `LOCATIONS`, sync                |
+| The studios aren't released          | Insert answers 503                                           | Release them in robot-code, sync                   |
 | The hole scan fails in a Part Studio | Index fails, naming Onshape's notice; the rest is skipped    | Fix the Part Studio, or skip what's in it          |
 | No hole, or nothing fits             | That hole's plan is **no fit**, with why                     | Change the options or the hole                     |
 | The insert fails                     | Nothing is inserted; fastening is skipped                    | Run it again                                       |
