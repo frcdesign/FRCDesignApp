@@ -10,10 +10,9 @@
  * Writes, so a change to a generated part is a diff here:
  *
  * - `src/backend/features/generated-parts/studios.gen.ts`: each studio's
- *   configuration, as Onshape answers it, and where it's released; the client
- *   imports it.
- * - `src/backend/features/generated-parts/records.gen.ts`: each studio's part
- *   per configuration, which a load indexes; the server's alone.
+ *   configuration, as Onshape answers it, and where it's released, which Quick
+ *   fastener inserts; the client imports it. A library load reads its records
+ *   from the manifest released beside the Part Studios instead.
  * - Under `src/backend/features/quick-fastener/`, from the fasteners' manifest:
  *   `catalog.gen.ts` (the parts' dimensions, which it plans with),
  *   `heads.gen.ts` (the countersunk heads, for the client) and
@@ -74,14 +73,12 @@ async function main() {
     const header = `/* Synced from ${source} by \`npm run sync:generated-parts\` -- DO NOT EDIT */\n`;
 
     const studios = [];
-    const records = {};
     let fasteners;
     for (const [set, path] of Object.entries(SETS)) {
         const manifest = JSON.parse(await readManifest(path, ref, from));
         for (const [key, studio] of Object.entries(manifest.studios)) {
-            const { records: studioRecords, ...rest } = studio;
+            const { records: _records, ...rest } = studio;
             studios.push({ set, key, ...rest });
-            records[`${set}/${key}`] = studioRecords;
         }
         if (set === "fasteners") {
             fasteners = manifest;
@@ -92,10 +89,6 @@ async function main() {
     writeFileSync(
         `${OUT}/studios.gen.ts`,
         `${header}\nexport const GENERATED_SOURCE = ${JSON.stringify(source)};\n\nexport const GENERATED_STUDIOS = ${JSON.stringify(studios)};\n`
-    );
-    writeFileSync(
-        `${OUT}/records.gen.ts`,
-        `${header}\nexport const GENERATED_RECORDS = ${JSON.stringify(records)};\n`
     );
 
     const { holeScan, studios: _studios, ...catalog } = fasteners;

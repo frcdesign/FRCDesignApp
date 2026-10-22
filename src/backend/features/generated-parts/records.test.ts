@@ -4,79 +4,97 @@ import {
     ParameterType
 } from "../configurations/contract";
 import { Vendor } from "../library/vendors";
+import { NUT_MANIFEST } from "../../../__test_utils__/generated-fixtures";
 import { describeMismatch, generatedConfiguration } from "./records";
-import { getGeneratedStudio } from "./studios";
+import { releasedStudio, toGeneratedStudio } from "./manifest";
 
-const screw = getGeneratedStudio("fasteners", "screw")!;
+const released = releasedStudio(NUT_MANIFEST, {
+    set: "fasteners",
+    key: "nut",
+    manifestElementId: "manifest"
+});
+const nut = toGeneratedStudio(released);
 
-function withLength(
-    change: (length: ConfigurationParameter) => ConfigurationParameter
+function withType(
+    change: (type: ConfigurationParameter) => ConfigurationParameter
 ): ConfigurationParameter[] {
-    return screw.parameters.map((parameter) =>
-        parameter.id === "length" ? change(parameter) : parameter
+    return nut.parameters.map((parameter) =>
+        parameter.id === "type" ? change(parameter) : parameter
     );
 }
 
 describe("describeMismatch", () => {
     it("accepts the generated configuration", () => {
-        expect(describeMismatch(screw, screw.parameters)).toBeUndefined();
+        expect(
+            describeMismatch(nut, nut.parameters, released.records)
+        ).toBeUndefined();
     });
 
     it("accepts conditions Onshape spells differently but which show the same", () => {
-        const reordered = withLength((length) =>
-            length.type === ParameterType.ENUM
+        const reordered = withType((type) =>
+            type.type === ParameterType.ENUM
                 ? {
-                      ...length,
-                      optionConditions: [...length.optionConditions].reverse()
+                      ...type,
+                      optionConditions: [...type.optionConditions].reverse()
                   }
-                : length
+                : type
         );
-        expect(describeMismatch(screw, reordered)).toBeUndefined();
+        expect(
+            describeMismatch(nut, reordered, released.records)
+        ).toBeUndefined();
     });
 
     it("refuses another default, or options shown where nothing is made", () => {
         expect(
             describeMismatch(
-                screw,
-                withLength((length) => ({ ...length, default: "IN_1" }))
+                nut,
+                withType((type) => ({ ...type, default: "HEX" })),
+                released.records
             )
         ).toMatch(/inputs/);
-        const unconditioned = withLength((length) =>
-            length.type === ParameterType.ENUM
-                ? { ...length, optionConditions: [] }
-                : length
+        const unconditioned = withType((type) =>
+            type.type === ParameterType.ENUM
+                ? { ...type, optionConditions: [] }
+                : type
         );
-        expect(describeMismatch(screw, unconditioned)).toMatch(/offers/);
+        expect(describeMismatch(nut, unconditioned, released.records)).toMatch(
+            /offers/
+        );
+    });
+
+    it("refuses parts the configuration doesn't offer", () => {
+        expect(
+            describeMismatch(nut, nut.parameters, released.records.slice(1))
+        ).toMatch(/offers/);
     });
 });
 
 describe("generatedConfiguration", () => {
     it("is the default's part, every other configuration's, and their vendors", () => {
-        const generated = generatedConfiguration(screw, screw.parameters);
-        expect(generated.partMetadata.name).toBe(
-            "#10-32 x 1/2 in Button Head Screw"
+        const generated = generatedConfiguration(
+            nut,
+            nut.parameters,
+            released.records
         );
+        expect(generated.partMetadata.name).toBe("#10-32 Nylock Nut");
         // The default is the element's own part, not one of its records
         expect(
             generated.records.some(
                 (record) =>
                     record.values.vendor === "GENERIC" &&
                     record.values.size === "NO_10_32" &&
-                    record.values.head === "BUTTON" &&
-                    record.values.length === "IN_0_5"
+                    record.values.type === "NYLOCK"
             )
         ).toBe(false);
-        expect(generated.vendors).toEqual(
-            expect.arrayContaining([
-                Vendor.MCM,
-                Vendor.REV,
-                Vendor.WCP,
-                Vendor.AM
-            ])
-        );
+        expect(generated.records).toHaveLength(released.records.length - 1);
+        expect(generated.vendors).toEqual([Vendor.MCM]);
         expect(
-            generated.records.find((record) => record.partNumber === "WCP-0135")
-                ?.description
-        ).toBe("https://wcproducts.com/products/wcp-0135");
+            generated.records.find(
+                (record) =>
+                    record.values.vendor === "MCMASTER" &&
+                    record.values.size === "NO_10_32" &&
+                    record.values.type === "NYLOCK"
+            )?.partNumber
+        ).toBe("90631A411");
     });
 });

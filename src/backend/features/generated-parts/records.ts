@@ -1,7 +1,7 @@
 /**
- * The generated studios' parts, one per configuration (synced into
- * `records.gen.ts`): what a load indexes in place of asking Onshape about each
- * configuration. The server's alone, since the client never needs them.
+ * The generated studios' parts, one per configuration, from the manifest
+ * released beside them (see `manifest.ts`): what a load indexes in place of
+ * asking Onshape about each configuration.
  */
 import { enumerateConfigurations } from "../configurations/combinations";
 import {
@@ -13,22 +13,8 @@ import {
 } from "../configurations/contract";
 import { sameSelection, toSelection } from "../configurations/selection";
 import { parseVendor, type Vendor } from "../library/vendors";
+import { type GeneratedRecord } from "./manifest";
 import { type GeneratedStudio } from "./studios";
-import { GENERATED_RECORDS } from "./records.gen";
-
-/** A part as robot-code names it: what its feature sets as its properties. */
-interface SyncedRecord {
-    values: Record<string, string>;
-    name: string;
-    /** The Vendor property; Generic parts have none. */
-    vendor?: string;
-    partNumber?: string;
-    /** Where to buy it, which the feature sets as its description. */
-    url?: string;
-    material: string;
-}
-
-const RECORDS = GENERATED_RECORDS as unknown as Record<string, SyncedRecord[]>;
 
 /** What a load stores for a generated studio, as it would from probing. */
 export interface GeneratedConfiguration {
@@ -46,7 +32,8 @@ export interface GeneratedConfiguration {
  */
 export class GeneratedPartMismatchError extends Error {}
 
-function toRecord(record: SyncedRecord): ConfigurationRecord {
+// A record's url is where to buy it, which its feature sets as its description
+function toRecord(record: GeneratedRecord): ConfigurationRecord {
     return {
         values: record.values,
         name: record.name,
@@ -71,7 +58,8 @@ function key(values: PartialSelection): string {
  */
 export function describeMismatch(
     studio: GeneratedStudio,
-    parameters: ConfigurationParameter[]
+    parameters: ConfigurationParameter[],
+    records: GeneratedRecord[]
 ): string | undefined {
     const shape = (each: ConfigurationParameter[]) =>
         JSON.stringify(
@@ -89,7 +77,6 @@ export function describeMismatch(
     if (shape(parameters) !== shape(studio.parameters)) {
         return "Its configuration's inputs aren't the generated ones.";
     }
-    const records = RECORDS[`${studio.set}/${studio.key}`] ?? [];
     const { configurations, capped } = enumerateConfigurations(
         parameters,
         [],
@@ -109,18 +96,17 @@ export function describeMismatch(
 /** A generated studio's parts, once its tab's parameters are checked against it. */
 export function generatedConfiguration(
     studio: GeneratedStudio,
-    parameters: ConfigurationParameter[]
+    parameters: ConfigurationParameter[],
+    generatedRecords: GeneratedRecord[]
 ): GeneratedConfiguration {
-    const mismatch = describeMismatch(studio, parameters);
+    const mismatch = describeMismatch(studio, parameters, generatedRecords);
     if (mismatch) {
         throw new GeneratedPartMismatchError(
             `${studio.set}/${studio.key}: ${mismatch}`
         );
     }
     const defaults = toSelection({}, parameters);
-    const records = (RECORDS[`${studio.set}/${studio.key}`] ?? []).map(
-        toRecord
-    );
+    const records = generatedRecords.map(toRecord);
     const defaultRecord = records.find((record) =>
         sameSelection(toSelection(record.values, parameters), defaults)
     );

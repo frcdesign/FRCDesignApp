@@ -1,3 +1,4 @@
+import { NonRetryableError } from "cloudflare:workflows";
 import { eq } from "drizzle-orm";
 import { type Db, getDb } from "../../db/client";
 import {
@@ -22,7 +23,15 @@ import { getConfiguration } from "../../lib/onshape/endpoints/configurations";
 import { getParts } from "../../lib/onshape/endpoints/parts";
 import { checkInsertable } from "../build-checker/checks";
 import { generatedConfiguration } from "../generated-parts/records";
-import { findGeneratedStudio } from "../generated-parts/studios";
+import {
+    GeneratedManifestError,
+    type GeneratedTab,
+    parseManifest,
+    releasedStudio,
+    type ReleasedStudio,
+    toGeneratedStudio
+} from "../generated-parts/manifest";
+import { getBlobText } from "../../lib/onshape/endpoints/blob-elements";
 import { parseOnshapeConfiguration } from "./parse-configuration";
 import { parseVendors } from "./parse-vendors";
 import { parseFastenInfo } from "./parse-fasten";
@@ -134,11 +143,14 @@ async function probeInsertable(
     const parameters = await parseConfigurationStep(ctx, target);
 
     // Its records are robot-code's, which a mismatch throws over rather than probe
-    const studio = findGeneratedStudio(
-        elementPath.documentId,
-        elementPath.elementId
-    );
-    const generated = studio && generatedConfiguration(studio, parameters);
+    const released = target.generated
+        ? await readReleasedStudioStep(ctx, target, target.generated)
+        : undefined;
+    const studio = released && toGeneratedStudio(released);
+    const generated =
+        released &&
+        studio &&
+        generatedConfiguration(studio, parameters, released.records);
 
     const vendors = generated
         ? generated.vendors
@@ -187,6 +199,45 @@ async function probeInsertable(
             ...indexing.buildIssues
         )
     };
+}
+
+/** Its studio's part of the manifest released beside it, as a step returns at most 1 MiB. */
+function readReleasedStudioStep(
+    ctx: LoadContext,
+    target: InsertableTarget,
+    generated: GeneratedTab
+): Promise<ReleasedStudio> {
+    return ctx.step.do(
+        `generated-${target.insertableId}`,
+        { retries: ONSHAPE_STEP_RETRIES },
+        async () => {
+            const text = await getBlobText(
+                await getOnshapeApiFromContext(ctx),
+                {
+                    ...target.elementPath,
+                    elementId: generated.manifestElementId
+                }
+            );
+            return nonRetryable(() =>
+                releasedStudio(
+                    parseManifest(text, `${generated.set}'s manifest`),
+                    generated
+                )
+            );
+        }
+    );
+}
+
+/** Runs `read` in a step, failing it at once on a manifest it can't read, which every retry would read the same. */
+export function nonRetryable<T>(read: () => T): T {
+    try {
+        return read();
+    } catch (error) {
+        if (error instanceof GeneratedManifestError) {
+            throw new NonRetryableError(error.message);
+        }
+        throw error;
+    }
 }
 
 /** A new insertable has no row, so it gets the defaults the save writes. */

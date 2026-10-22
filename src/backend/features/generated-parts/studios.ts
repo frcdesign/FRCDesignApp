@@ -1,7 +1,9 @@
 /**
- * The Part Studios robot-code generates from FeatureScript (synced into
- * `studios.gen.ts`): each one's configuration parameters, parsed as any
- * element's are, and where it's released. A leaf module: the client reads it.
+ * The Part Studios robot-code generates from FeatureScript, as synced into
+ * `studios.gen.ts` for Quick fastener: each one's configuration parameters,
+ * parsed as any element's are, and where it's released. A load reads a
+ * library's from the manifest released beside them instead (`manifest.ts`). A
+ * leaf module: the client reads it.
  */
 import { type ConfigurationParameter } from "../configurations/contract";
 import { parseOnshapeConfiguration } from "../load/parse-configuration";
@@ -56,16 +58,4 @@ export function getGeneratedStudio(
     key: string
 ): GeneratedStudio | undefined {
     return STUDIOS.find((studio) => studio.set === set && studio.key === key);
-}
-
-/** The generated studio a library tab is, by its element; undefined for any other tab. */
-export function findGeneratedStudio(
-    documentId: string,
-    elementId: string
-): GeneratedStudio | undefined {
-    return STUDIOS.find(
-        (studio) =>
-            studio.location?.documentId === documentId &&
-            studio.location.elementId === elementId
-    );
 }

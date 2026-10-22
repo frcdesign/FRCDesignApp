@@ -160,6 +160,21 @@ describe("selectInsertablesToLoad", () => {
         expect(toLoad[0].insertableId).toBe("row-e1");
     });
 
+    it("marks the tabs a released manifest names as generated", () => {
+        const nut = { set: "fasteners", key: "nut", manifestElementId: "m" };
+        const targets = selectInsertablesToLoad(
+            GROUP,
+            [tab("e-nut"), tab("e-other")],
+            [],
+            false,
+            { "e-nut": nut }
+        );
+        expect(targets.map((target) => target.generated)).toEqual([
+            nut,
+            undefined
+        ]);
+    });
+
     it("seeds sortOrder from the tab position", () => {
         const toLoad = select([tab("e1"), tab("e2")], [], false);
         expect(

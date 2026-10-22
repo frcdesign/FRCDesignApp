@@ -6,4 +6,3 @@ worker-configuration.d.ts
 onshape-api-reference
 # Synced by `npm run sync:generated-parts` on one line each, which prettier would spread over tens of thousands.
 src/backend/features/generated-parts/studios.gen.ts
-src/backend/features/generated-parts/records.gen.ts

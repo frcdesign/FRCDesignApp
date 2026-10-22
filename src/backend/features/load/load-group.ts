@@ -23,8 +23,16 @@ import {
     parseInsertableTabs,
     withoutDeprecated
 } from "./parse-document-contents";
-import { loadInsertable } from "./load-insertable";
+import { loadInsertable, nonRetryable } from "./load-insertable";
 import { GeneratedPartMismatchError } from "../generated-parts/records";
+import {
+    findManifestTabs,
+    generatedTabs,
+    type GeneratedTab,
+    parseManifest,
+    setOf
+} from "../generated-parts/manifest";
+import { getBlobText } from "../../lib/onshape/endpoints/blob-elements";
 import {
     type GroupTarget,
     type InsertableTarget,
@@ -75,6 +83,8 @@ export async function loadGroup(
         () => fetchStoredInsertables(ctx, groupId)
     );
 
+    const generatedTabs = await readGeneratedTabsStep(ctx, target, contents);
+
     // Wrap in a step so new UUIDs are deterministic
     const insertablesToLoad = await ctx.step.do(
         `select-insertables-${groupId}`,
@@ -84,7 +94,8 @@ export async function loadGroup(
                     target,
                     insertableTabs,
                     storedInsertables,
-                    forceReload
+                    forceReload,
+                    generatedTabs
                 )
             )
     );
@@ -355,11 +366,50 @@ async function fetchStoredInsertables(
  * New tabs, changed ones, and ones the last load failed on: a failure writes no
  * microversion, so the tab would otherwise look unchanged.
  */
+/**
+ * Which tabs the version's released manifests name, by element id: read once
+ * for the group, as each generated tab reads its own part of its manifest.
+ */
+async function readGeneratedTabsStep(
+    ctx: LoadContext,
+    target: GroupTarget,
+    contents: OnshapeDocumentContents
+): Promise<Record<string, GeneratedTab>> {
+    const manifestTabs = findManifestTabs(contents.elements);
+    if (manifestTabs.length === 0) {
+        return {};
+    }
+    return ctx.step.do(
+        `generated-tabs-${target.groupId}`,
+        { retries: ONSHAPE_STEP_RETRIES },
+        async () => {
+            const api = await getOnshapeApiFromContext(ctx);
+            const tabs: Record<string, GeneratedTab> = {};
+            for (const tab of manifestTabs) {
+                const text = await getBlobText(api, {
+                    ...target.versionPath,
+                    elementId: tab.id
+                });
+                Object.assign(
+                    tabs,
+                    generatedTabs(
+                        nonRetryable(() => parseManifest(text, tab.name)),
+                        setOf(tab),
+                        tab.id
+                    )
+                );
+            }
+            return tabs;
+        }
+    );
+}
+
 export function selectInsertablesToLoad(
     target: GroupTarget,
     insertableTabs: OnshapeElement[],
     stored: StoredInsertable[],
-    forceReload: boolean
+    forceReload: boolean,
+    generated: Record<string, GeneratedTab> = {}
 ): InsertableTarget[] {
     const storedByElementId = new Map(
         stored.map((row) => [row.elementId, row])
@@ -391,7 +441,8 @@ export function selectInsertablesToLoad(
             elementType: tab.elementType as unknown as ElementType,
             name: tab.name,
             microversionId: tab.microversionId,
-            sortOrder
+            sortOrder,
+            generated: generated[tab.id]
         });
     });
     return insertableTargets;

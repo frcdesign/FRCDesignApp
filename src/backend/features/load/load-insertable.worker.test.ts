@@ -27,9 +27,9 @@ import { LOAD_CONCURRENCY, type LoadContext } from "./context";
 import { createLimiter } from "../../lib/limiter";
 import * as LoadContextModule from "./context";
 import { loadInsertable, saveInsertable } from "./load-insertable";
-import * as GeneratedStudios from "../generated-parts/studios";
 import { GeneratedPartMismatchError } from "../generated-parts/records";
-import { GENERATED_STUDIOS } from "../generated-parts/studios.gen";
+import * as BlobEndpoints from "../../lib/onshape/endpoints/blob-elements";
+import { NUT_MANIFEST } from "../../../__test_utils__/generated-fixtures";
 import { Vendor } from "../library/vendors";
 import {
     type OnshapeConfigurationResponse,
@@ -256,16 +256,21 @@ describe("loadInsertable", () => {
 });
 
 describe("loadInsertable, for a generated studio", () => {
-    // The nut studio's configuration, as robot-code writes it to the Part Studio
-    const synced = GENERATED_STUDIOS.find(
-        (studio) => studio.set === "fasteners" && studio.key === "nut"
-    );
     // Onshape answers with its configuration as robot-code sent it
     const nutConfiguration = () =>
         ({
-            ...structuredClone(synced!.configuration),
+            ...structuredClone(NUT_MANIFEST.studios.nut.configuration),
             btType: "BTConfigurationResponse-2019"
         }) as unknown as OnshapeConfigurationResponse;
+    // The manifest released beside it says it's the nut studio
+    const generatedTarget = () =>
+        insertableTarget({
+            generated: {
+                set: "fasteners",
+                key: "nut",
+                manifestElementId: "manifest"
+            }
+        });
 
     beforeEach(async () => {
         await resetDb(db);
@@ -281,8 +286,8 @@ describe("loadInsertable, for a generated studio", () => {
         vi.spyOn(PartsEndpoints, "getParts").mockResolvedValue([
             { partId: "p1" }
         ]);
-        vi.spyOn(GeneratedStudios, "findGeneratedStudio").mockReturnValue(
-            GeneratedStudios.getGeneratedStudio("fasteners", "nut")
+        vi.spyOn(BlobEndpoints, "getBlobText").mockResolvedValue(
+            JSON.stringify(NUT_MANIFEST)
         );
     });
 
@@ -293,8 +298,13 @@ describe("loadInsertable, for a generated studio", () => {
             nutConfiguration()
         );
 
-        await loadInsertable(ctx(), insertableTarget());
+        await loadInsertable(ctx(), generatedTarget());
 
+        // Its manifest read from the version it's loaded at
+        expect(BlobEndpoints.getBlobText).toHaveBeenCalledWith(
+            MOCK_ONSHAPE_API,
+            { ...TEST_PART_STUDIO_PATH, elementId: "manifest" }
+        );
         const row = await readInsertable();
         expect(row?.generatedStudio).toBe("fasteners/nut");
         expect(row?.partMetadata?.name).toBe("#10-32 Nylock Nut");
@@ -332,7 +342,7 @@ describe("loadInsertable, for a generated studio", () => {
         );
 
         await expect(
-            loadInsertable(ctx(), insertableTarget())
+            loadInsertable(ctx(), generatedTarget())
         ).rejects.toBeInstanceOf(GeneratedPartMismatchError);
         expect(await readInsertable()).toBeUndefined();
     });

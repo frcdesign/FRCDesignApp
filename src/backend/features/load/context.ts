@@ -7,6 +7,7 @@ import type { OAuthApi } from "../../lib/onshape/client";
 import type { ElementType } from "../../lib/onshape/element-type";
 import type { LibraryId } from "../library/library-id";
 import type { ElementPath, InstancePath } from "../../lib/onshape/path";
+import type { GeneratedTab } from "../generated-parts/manifest";
 
 /**
  * Onshape calls in flight across a whole reload, every group sharing it.
@@ -101,4 +102,6 @@ export interface InsertableTarget {
     name: string;
     microversionId: string;
     sortOrder: number;
+    /** The generated studio a released manifest in its version says it is. */
+    generated?: GeneratedTab;
 }
