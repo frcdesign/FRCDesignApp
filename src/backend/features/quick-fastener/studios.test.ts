@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ParameterType } from "../configurations/contract";
+import { getVisibleOptions } from "../configurations/utils";
 import {
     FastenerKind,
     GENERIC,
@@ -34,8 +35,30 @@ describe("STUDIO_PARAMETERS", () => {
         const [, , , , length, fullyThreaded] = parameters;
         expect(length.type).toBe(ParameterType.ENUM);
         expect(length.default).toBe("IN_0_5");
-        expect(fullyThreaded.type).toBe(ParameterType.BOOLEAN);
-        expect(fullyThreaded.condition).toBeDefined();
+        expect(fullyThreaded.type).toBe(ParameterType.ENUM);
+    });
+
+    it("offers Fully threaded only where a length is sold both ways", () => {
+        const parameters = STUDIO_PARAMETERS[FastenerKind.SCREW];
+        const fullyThreaded = parameters[5];
+        if (fullyThreaded.type !== ParameterType.ENUM) {
+            throw new Error("Fully threaded is a List of false and true");
+        }
+        const shown = (length: string, size: string) =>
+            getVisibleOptions(
+                fullyThreaded,
+                {
+                    vendor: "MCMASTER",
+                    size,
+                    head: "SOCKET",
+                    finish: "BLACK",
+                    length
+                },
+                parameters
+            ).map((option) => option.id);
+        expect(shown("IN_2", "NO_8_32")).toEqual(["false", "true"]);
+        // Sold one way, so it has nothing to show, and is hidden
+        expect(shown("IN_0_5", "NO_8_32")).toEqual([]);
     });
 });
 
