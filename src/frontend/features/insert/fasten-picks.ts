@@ -44,24 +44,15 @@ export function acceptsTarget(
 }
 
 /**
- * Picks up what was selected before the menu opened, and keeps the targets
- * list taking picks while it is open. A change of mode starts over, since
- * picks of one kind mean nothing as the other.
+ * Keeps the targets list taking picks while the menu is open. A change of
+ * mode starts over, since picks of one kind mean nothing as the other.
  */
 export function useFastenPicksFromSelection(mode: SelectionMode): void {
     useEffect(() => {
-        const accepts = acceptsTarget(mode);
-        const { targets } = useFastenPicks.getState();
-        if (!targets.every(accepts)) {
+        if (!useFastenPicks.getState().targets.every(acceptsTarget(mode))) {
             clearFastenPicks();
         }
-        if (useFastenPicks.getState().targets.length === 0) {
-            setFastenTargets(
-                useOnshapeSelection.getState().current.filter(accepts)
-            );
-        }
-        const selection = useOnshapeSelection.getState();
-        selection.focus(FASTEN_TARGETS_LIST);
+        useOnshapeSelection.getState().focus(FASTEN_TARGETS_LIST);
         return () => {
             if (isFastenList(useOnshapeSelection.getState().focused)) {
                 useOnshapeSelection.getState().focus(undefined);

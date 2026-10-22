@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { FastenerKind } from "./studios";
 import { HoleEnd, HoleStatus } from "./contract";
-import { partMate, placements, replicateGroups, washerTopEdge } from "./insert";
+import {
+    PartStack,
+    partMate,
+    placements,
+    replicateGroups,
+    stackMatch,
+    washerTopEdge
+} from "./insert";
 import { type HolePlan } from "./planner";
 
 const INCH = 0.0254;
@@ -35,7 +42,8 @@ const PLAN: HolePlan = {
     },
     exit: {
         point: [0, 0, -0.5 * INCH],
-        edge: { occurrencePath: ["bottom"], edgeId: "B" }
+        edge: { occurrencePath: ["bottom"], edgeId: "B" },
+        radius: 0.0025
     }
 };
 
@@ -58,6 +66,12 @@ describe("placements", () => {
             edge: { occurrencePath: ["bottom"], edgeId: "B" }
         });
         expect(nut.seat).toEqual({ washer: 2 });
+        expect(parts.map((part) => part.stack)).toEqual([
+            PartStack.SCREW,
+            PartStack.SCREW,
+            PartStack.NUT,
+            PartStack.NUT
+        ]);
     });
 
     it("places the screw on its washer pointing out, and the nut on the far side turned over", () => {
@@ -109,11 +123,44 @@ describe("replicateGroups", () => {
             at("b", { depth: 0.75 * INCH }),
             at("c"),
             at("d", { status: HoleStatus.FASTENED }),
-            at("e", { nutWasher: undefined })
+            at("e", { nutWasher: undefined }),
+            { ...at("f"), exit: { ...PLAN.exit!, radius: 0.004 } }
         ]);
         expect(
             groups.map((group) => group.map((plan) => plan.planned.key))
-        ).toEqual([["a", "c"], ["b"], ["e"]]);
+        ).toEqual([["a", "c"], ["b"], ["e"], ["f"]]);
+    });
+});
+
+describe("stackMatch", () => {
+    const hole = (key: string): HolePlan => ({
+        ...PLAN,
+        circularEdge: { ...PLAN.circularEdge, key, edgeId: key },
+        planned: { ...PLAN.planned, key },
+        exit: {
+            ...PLAN.exit!,
+            edge: { occurrencePath: ["bottom"], edgeId: `${key}-far` }
+        }
+    });
+    const group = [hole("a"), hole("b"), hole("c")];
+    const all = group.map((plan) => plan.circularEdge);
+
+    it("puts the screw's stack on the rest's circular edges", () => {
+        expect(stackMatch(group, PartStack.SCREW, all)).toEqual({
+            edges: [
+                { deterministicId: "b", path: ["plate"] },
+                { deterministicId: "c", path: ["plate"] }
+            ]
+        });
+    });
+
+    it("puts the nut's stack on the rest's far edges", () => {
+        expect(stackMatch(group, PartStack.NUT, all)).toEqual({
+            edges: [
+                { deterministicId: "b-far", path: ["bottom"] },
+                { deterministicId: "c-far", path: ["bottom"] }
+            ]
+        });
     });
 });
 

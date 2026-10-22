@@ -59,7 +59,7 @@ const insertButton = () =>
 
 beforeEach(() => {
     vi.spyOn(window.parent, "postMessage").mockImplementation(vi.fn());
-    useOnshapeSelection.setState({ current: [], focused: undefined });
+    useOnshapeSelection.setState({ focused: undefined });
     useQuickFastenerStore.setState({
         ...defaultChoices(),
         targets: [],

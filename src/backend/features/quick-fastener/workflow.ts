@@ -35,14 +35,16 @@ import {
     insertGroups,
     mateConnectorIdsFor,
     type PartPlacement,
+    PartStack,
     partMate,
     placements,
     replicateGroups,
+    stackMatch,
     washerTopEdges
 } from "./insert";
 import { reportJob } from "./jobs";
 import { planHoles } from "./planner";
-import { addReplicate, replicateMatch } from "./replicate";
+import { addReplicate } from "./replicate";
 
 export interface FastenerJobParams {
     /** Whose Onshape session the run borrows; see the load workflow. */
@@ -183,37 +185,44 @@ async function runSteps(ctx: RunContext, request: QuickFastenerIn) {
             if (rest.length === 0) {
                 continue;
             }
-            const seedParts = [...parts.entries()].filter(
-                ([, part]) => part.hole === seed.planned.key
-            );
-            // The mate holding the seed's stack on its hole, which each copy is placed as
-            const seated = seedParts.find(
-                ([, part]) =>
-                    "edge" in part.seat &&
-                    part.seat.edge.edgeId === seed.circularEdge.edgeId
-            );
-            const mateFeatureId = seated ? mates[seated[0]] : null;
-            const instancePaths = seedParts.map(([each]) => paths[each]);
-            if (
-                !mateFeatureId ||
-                !instancePaths.every((path): path is string[] => path !== null)
-            ) {
-                throw runFailure(
-                    "A hole's parts weren't all inserted and fastened, so they can't be replicated."
+            for (const stack of Object.values(PartStack)) {
+                const seedParts = [...parts.entries()].filter(
+                    ([, part]) =>
+                        part.hole === seed.planned.key && part.stack === stack
+                );
+                if (seedParts.length === 0) {
+                    continue;
+                }
+                // The mate holding the stack on its edge, which each copy is placed as
+                const seated = seedParts.find(
+                    ([, part]) => "edge" in part.seat
+                );
+                const mateFeatureId = seated ? mates[seated[0]] : null;
+                const instancePaths = seedParts.map(([each]) => paths[each]);
+                if (
+                    !mateFeatureId ||
+                    !instancePaths.every(
+                        (path): path is string[] => path !== null
+                    )
+                ) {
+                    throw runFailure(
+                        "A hole's parts weren't all inserted and fastened, so they can't be replicated."
+                    );
+                }
+                await run(
+                    `replicate-${index}-${stack}`,
+                    isRateLimited,
+                    async (client) => {
+                        await addReplicate(client, request.assembly, {
+                            name: "Quick fastener replicate",
+                            instancePaths,
+                            mateFeatureId,
+                            match: stackMatch(group, stack, all)
+                        });
+                        return true;
+                    }
                 );
             }
-            await run(`replicate-${index}`, isRateLimited, async (client) => {
-                await addReplicate(client, request.assembly, {
-                    name: "Quick fastener replicate",
-                    instancePaths,
-                    mateFeatureId,
-                    match: replicateMatch(
-                        group.map((plan) => plan.circularEdge),
-                        all
-                    )
-                });
-                return true;
-            });
             ctx.result.replicated += rest.length;
         }
     });

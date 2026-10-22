@@ -1,7 +1,7 @@
 /**
- * What's selected in the Onshape window, from its SELECTION messages, and the
- * one query list taking picks from it. Onshape sends the whole selection each
- * time it changes; a focused list takes what's newly in it.
+ * Picks in the Onshape window, from its SELECTION messages, and the one query
+ * list taking them. Once the app sends `applicationInit`, Onshape streams each
+ * pick as it's made, not the whole selection; a focused list takes each one.
  */
 import { create } from "zustand";
 import {
@@ -80,10 +80,9 @@ export function parseSelections(data: unknown): OnshapeSelection[] {
 type PickHandler = (picked: OnshapeSelection[]) => void;
 
 interface SelectionState {
-    current: OnshapeSelection[];
     /** The query list taking picks; none takes them when absent. */
     focused?: string;
-    receive: (selections: OnshapeSelection[]) => void;
+    receive: (picked: OnshapeSelection[]) => void;
     focus: (listId: string | undefined) => void;
 }
 
@@ -98,14 +97,8 @@ export function onPick(listId: string, handler: PickHandler): () => void {
 }
 
 export const useOnshapeSelection = create<SelectionState>()((set, get) => ({
-    current: [],
-    receive: (selections) => {
-        const { current, focused } = get();
-        const before = new Set(current.map(selectionKey));
-        const picked = selections.filter(
-            (selection) => !before.has(selectionKey(selection))
-        );
-        set({ current: selections });
+    receive: (picked) => {
+        const { focused } = get();
         if (focused && picked.length > 0) {
             handlers.get(focused)?.(picked);
         }

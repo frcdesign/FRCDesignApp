@@ -1,8 +1,8 @@
 /**
  * Putting planned holes' parts into the assembly: where each goes, what it's
- * fastened to, and the Onshape bodies that insert and fasten it. A screw or
- * nut on a washer is fastened to the washer's top edge, so any washer fits;
- * anything else to the hole's own edge.
+ * fastened to, and the Onshape bodies that insert and fasten it. A washer is
+ * fastened to the hole's edge and its screw or nut to the washer's top edge,
+ * so any washer fits and each stack holds together for a Replicate.
  */
 import { HttpStatus } from "http-status-ts";
 import { handledError } from "../../lib/api-error";
@@ -13,7 +13,8 @@ import { PartType } from "../../lib/onshape/endpoints/documents";
 import {
     type EdgeReference,
     fastenMateToCircularEdge,
-    partStudioMateConnectorQuery
+    partStudioMateConnectorQuery,
+    type ReplicateMatch
 } from "../../lib/onshape/objects/assembly-features";
 import { type ElementPath } from "../../lib/onshape/path";
 import { type Selection } from "../configurations/contract";
@@ -21,7 +22,11 @@ import { encodeConfiguration } from "../configurations/utils";
 import { getWasher } from "./catalog";
 import { HoleStatus } from "./contract";
 import { add, frameTransform, scale, type Vec3 } from "./geometry";
-import { type HolePlan, type MateEdge } from "./planner";
+import {
+    type AssemblyCircularEdge,
+    type HolePlan,
+    type MateEdge
+} from "./planner";
 import { scanStudio, type ScannedParts, type StudioSource } from "./scan";
 import {
     FastenerKind,
@@ -31,16 +36,25 @@ import {
 } from "./studios";
 import { tolerantEquals } from "../configurations/input-parser";
 import { type StudioLocation } from "../generated-parts/studios";
-import { sameRadius } from "./replicate";
+import { replicateMatch, sameRadius } from "./replicate";
 
 /** What a part is fastened to: an edge in the assembly, or the top of a washer placed with it. */
 export type PartSeat = { edge: MateEdge } | { washer: number };
+
+/** The parts on one side of a hole, which a Replicate copies together. */
+export enum PartStack {
+    /** The screw and the washer under its head, on the hole's circular edge. */
+    SCREW = "screw",
+    /** The nut and its washer, on the far side's edge. */
+    NUT = "nut"
+}
 
 /** One part to insert: from which studio, configured how, placed where, and fastened to what. */
 export interface PartPlacement {
     kind: FastenerKind;
     /** The hole it's in, by its plan's key. */
     hole: string;
+    stack: PartStack;
     /** The studio's overrides of its defaults. */
     configuration: Selection;
     transform: number[];
@@ -79,6 +93,7 @@ export function placements(plans: HolePlan[]): PartPlacement[] {
             parts.push({
                 kind: FastenerKind.WASHER,
                 hole: planned.key,
+                stack: PartStack.SCREW,
                 configuration: studioConfiguration(
                     FastenerKind.WASHER,
                     planned.screwWasher
@@ -91,6 +106,7 @@ export function placements(plans: HolePlan[]): PartPlacement[] {
         parts.push({
             kind: FastenerKind.SCREW,
             hole: planned.key,
+            stack: PartStack.SCREW,
             configuration: studioConfiguration(
                 FastenerKind.SCREW,
                 planned.screw
@@ -115,6 +131,7 @@ export function placements(plans: HolePlan[]): PartPlacement[] {
             parts.push({
                 kind: FastenerKind.WASHER,
                 hole: planned.key,
+                stack: PartStack.NUT,
                 configuration: studioConfiguration(
                     FastenerKind.WASHER,
                     planned.nutWasher
@@ -131,6 +148,7 @@ export function placements(plans: HolePlan[]): PartPlacement[] {
         parts.push({
             kind: FastenerKind.NUT,
             hole: planned.key,
+            stack: PartStack.NUT,
             configuration: studioConfiguration(FastenerKind.NUT, planned.nut),
             transform: frameTransform(nutAt, back),
             seat: nutSeat,
@@ -149,6 +167,10 @@ function isAlike(a: HolePlan, b: HolePlan): boolean {
     return (
         parts(a) === parts(b) &&
         sameRadius(a.circularEdge, b.circularEdge) &&
+        tolerantEquals(
+            { value: a.exit?.radius ?? 0, type: "length" },
+            { value: b.exit?.radius ?? 0, type: "length" }
+        ) &&
         // A nut sits as far down the screw in each
         tolerantEquals(
             { value: a.planned.depth ?? 0, type: "length" },
@@ -175,6 +197,36 @@ export function replicateGroups(plans: HolePlan[]): HolePlan[][] {
         }
     }
     return groups;
+}
+
+/**
+ * What a Replicate of the group's first hole's stack onto the rest matches:
+ * the screw's, the circular edges picked; the nut's, the far side's edges,
+ * one by one, since no face of them was picked.
+ */
+export function stackMatch(
+    group: HolePlan[],
+    stack: PartStack,
+    all: AssemblyCircularEdge[]
+): ReplicateMatch {
+    if (stack === PartStack.SCREW) {
+        return replicateMatch(
+            group.map((plan) => plan.circularEdge),
+            all
+        );
+    }
+    return {
+        edges: group.slice(1).flatMap((plan) =>
+            plan.exit
+                ? [
+                      {
+                          deterministicId: plan.exit.edge.edgeId,
+                          path: plan.exit.edge.occurrencePath
+                      }
+                  ]
+                : []
+        )
+    };
 }
 
 export function studioLocation(kind: FastenerKind): StudioLocation {

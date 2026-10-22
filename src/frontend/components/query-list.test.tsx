@@ -33,16 +33,18 @@ const edge = (id: string): OnshapeSelection => ({
     occurrencePath: ["plate"]
 });
 
-/** As Onshape does: the whole selection, each time it changes. */
-function select(...selections: OnshapeSelection[]) {
-    act(() => useOnshapeSelection.getState().receive(selections));
+/** As Onshape streams them: each pick as it's made. */
+function select(...picked: OnshapeSelection[]) {
+    for (const pick of picked) {
+        act(() => useOnshapeSelection.getState().receive([pick]));
+    }
 }
 
 let messages: unknown[];
 
 beforeEach(() => {
     messages = [];
-    useOnshapeSelection.setState({ current: [], focused: undefined });
+    useOnshapeSelection.setState({ focused: undefined });
     useOnshapeLaunch.setState({
         documentId: "doc",
         instanceId: "ws",
@@ -58,7 +60,7 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks());
 
 describe("QueryList", () => {
-    it("takes nothing until it's focused, then what's newly picked", async () => {
+    it("takes nothing until it's focused, then each pick once", async () => {
         renderWithProviders(<Harness />);
         select(edge("A"));
         expect(screen.getByText("Click to select")).toBeTruthy();
@@ -72,8 +74,7 @@ describe("QueryList", () => {
             })
         );
 
-        // A is still selected from before; only B is new
-        select(edge("A"), edge("B"));
+        select(edge("B"), edge("B"));
         expect(screen.getByText("Edge 1")).toBeTruthy();
         expect(screen.queryByText("Edge 2")).toBeNull();
     });

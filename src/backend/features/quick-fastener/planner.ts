@@ -83,7 +83,7 @@ export interface HolePlan {
     planned: PlannedHole;
     circularEdge: AssemblyCircularEdge;
     /** Where the nut seats, out the far side, and the edge it's fastened to. */
-    exit?: { point: Vec3; edge: MateEdge };
+    exit?: { point: Vec3; edge: MateEdge; radius: number };
 }
 
 /** A hole met along the axis, measured along it from the circular edge. */
@@ -207,7 +207,8 @@ function planHole(
             edge: {
                 occurrencePath: stack.last.hole.occurrencePath,
                 edgeId: exitEdge.id
-            }
+            },
+            radius: stack.last.hole.radius
         }
     };
 }

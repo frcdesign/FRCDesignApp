@@ -18,7 +18,7 @@ Where to start reading, in the order a fasten runs.
 shared with Quick fastener
 
 ```ts
-// Onshape's whole selection, and the one focused list it hands new picks to.
+// The one focused list, and handing it each pick Onshape streams.
 const useOnshapeSelection: UseBoundStore<StoreApi<SelectionState>>;
 function toSelectedEntities(selections: OnshapeSelection[]): SelectedEntity[];
 function QueryList(props: QueryListProps): ReactNode;
@@ -28,7 +28,7 @@ function QueryList(props: QueryListProps): ReactNode;
 
 ```ts
 const useFastenPicks: UseBoundStore<StoreApi<FastenPicksState>>;
-// Seeds the targets from what's already selected and focuses their list.
+// Focuses the targets' list while the menu is open.
 function useFastenPicksFromSelection(mode: SelectionMode): void;
 function clearFastenPicks(): void;
 ```
@@ -161,20 +161,20 @@ function checkInsertableSettings(input: InsertableSettingsInput): BuildIssue[];
 
 ### Picking
 
-1. Once the app sends `applicationInit`, Onshape posts the whole selection each
-   time it changes, and `useOnshapeSelection` hands what's new to the focused
-   `QueryList`, as in Quick fastener.
+1. Once the app sends `applicationInit`, Onshape streams each pick as it's
+   made, and `useOnshapeSelection` hands it to the focused `QueryList`, as in
+   Quick fastener.
 2. With **Fasten** ticked in an assembly, the insert menu shows the cursor icon
    beside the insert location's: a red stop sign with nothing picked, a check
-   with something. `useFastenPicksFromSelection` seeds the targets from what
-   was already selected in Onshape, of the kind the mode takes, and focuses
-   their list, so anything picked while the menu is open joins it.
+   with something. `useFastenPicksFromSelection` focuses the targets' list, so
+   anything picked while the menu is open joins it; what was picked before it
+   opened isn't known.
 3. The card holds the mode (**Circular edges** or **Faces**), the targets'
    query list, and in faces mode **Holes to skip**. It stays mounted while
    hidden (`keepMounted`), so its lists take picks with the card closed, and
    the icon turns the primary colour while one of them is focused. Hovering a
    row lights its entity up; clicking a list shows its prompt in Onshape.
-4. Changing the mode clears the picks and seeds again.
+4. Changing the mode clears the picks.
 
 ### Inserting
 
@@ -285,14 +285,15 @@ function checkInsertableSettings(input: InsertableSettingsInput): BuildIssue[];
 
 ## Decisions
 
-- **One way to pick, shared with Quick fastener.** The app listens to
-  Onshape's selection and lets a focused query list take what's new, rather
-  than holding a `requestSelection` open, which a highlight cancels. Onshape
-  doesn't limit picks to circular edges; the list refuses other kinds, and the scan
-  drops edges that aren't circular.
-- **Preselections seed the list.** What was selected before the menu opened is
-  taken as the starting picks, and the list stays focused, so selecting in
-  Onshape and then inserting needs no click in the panel.
+- **One way to pick, shared with Quick fastener.** The app listens to the
+  picks Onshape streams and lets a focused query list take them.
+  `requestSelection` only limits what the graphics window lets be picked, and
+  a highlight cancels it, so none is sent: the list refuses other kinds, and
+  the scan drops edges that aren't circular.
+- **The list stays focused.** The targets' list is focused while the menu is
+  open, so picking in Onshape and then inserting needs no click in the panel.
+  Each message names only the latest pick, so what was picked before the menu
+  opened can't be taken.
 - **Replicate is copied from Onshape.** Onshape's feature specs omit
   Replicate, so `replicateFeature` is shaped as Onshape answers a Replicate
   matching edges on a face; the individual edges' `INDIVIDUAL` scope is

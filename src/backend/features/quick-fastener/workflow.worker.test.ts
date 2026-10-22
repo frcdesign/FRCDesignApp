@@ -233,7 +233,8 @@ describe("QuickFastenerWorkflow", () => {
             },
             exit: {
                 point: [0, 0, -0.5 * INCH],
-                edge: { occurrencePath: ["bottom"], edgeId: `${key}-far` }
+                edge: { occurrencePath: ["bottom"], edgeId: `${key}-far` },
+                radius: (0.201 * INCH) / 2
             }
         });
         const REPLICATING = {
@@ -248,7 +249,7 @@ describe("QuickFastenerWorkflow", () => {
             ]);
         });
 
-        it("gives the first of alike holes parts, and replicates them onto the rest", async () => {
+        it("gives the first of alike holes parts, and replicates each stack onto the rest", async () => {
             const status = await run("replicated", REPLICATING);
 
             expect(status.tasks?.map((task) => task.action)).toEqual([
@@ -263,12 +264,16 @@ describe("QuickFastenerWorkflow", () => {
                 fastened: 2,
                 replicated: 1
             });
-            const replicate = mates[2];
-            expect(replicate).toContain('"featureType":"replicate"');
-            expect(replicate).toContain('"parameterId":"targetEdges"');
-            expect(replicate).toContain('"deterministicIds":["b"]');
-            expect(replicate).toContain(
-                '{"btType":"BTMIndividualOccurrenceQuery-626","path":["part0"]}'
+            const [screws, nuts] = mates.slice(2);
+            expect(screws).toContain('"featureType":"replicate"');
+            expect(screws).toContain('"parameterId":"targetEdges"');
+            expect(screws).toContain('"deterministicIds":["b"]');
+            expect(screws).toContain(
+                '"seedInstances","queries":[{"btType":"BTMIndividualOccurrenceQuery-626","path":["part0"]}]'
+            );
+            expect(nuts).toContain('"deterministicIds":["b-far"]');
+            expect(nuts).toContain(
+                '"seedInstances","queries":[{"btType":"BTMIndividualOccurrenceQuery-626","path":["part1"]}]'
             );
             expect(fastenerJobOutcome(status)).toBe(FastenerJobOutcome.SUCCESS);
         });

@@ -27,9 +27,11 @@ const face = (selectionId: string): OnshapeSelection => ({
     occurrencePath: ["base"]
 });
 
-/** As the message listener hands Onshape's whole selection over. */
-function selectInOnshape(...selections: OnshapeSelection[]) {
-    act(() => useOnshapeSelection.getState().receive(selections));
+/** As the message listener hands each pick Onshape streams over. */
+function selectInOnshape(...picked: OnshapeSelection[]) {
+    for (const pick of picked) {
+        act(() => useOnshapeSelection.getState().receive([pick]));
+    }
 }
 
 function renderStatus(supportsReplicate = false) {
@@ -64,12 +66,12 @@ describe("FastenCircularEdgesStatus", () => {
     afterEach(() => {
         vi.restoreAllMocks();
         clearFastenPicks();
-        useOnshapeSelection.setState({ current: [], focused: undefined });
+        useOnshapeSelection.setState({ focused: undefined });
     });
 
-    it("starts from the circular edges already selected, leaving out faces", async () => {
-        selectInOnshape(edge("JH1"), face("JF1"), edge("JH2"));
+    it("takes the circular edges picked, leaving out faces", async () => {
         renderStatus();
+        selectInOnshape(edge("JH1"), face("JF1"), edge("JH2"));
         await openCard();
 
         expect(screen.getByText("2 circular edges selected")).toBeTruthy();
@@ -79,8 +81,7 @@ describe("FastenCircularEdgesStatus", () => {
 
     it("keeps taking picks with the card closed", () => {
         renderStatus();
-        selectInOnshape(edge("JH1"));
-        selectInOnshape(edge("JH1"), edge("JH2"));
+        selectInOnshape(edge("JH1"), edge("JH1"), edge("JH2"));
 
         expect(useFastenPicks.getState().targets).toEqual([
             edge("JH1"),
@@ -89,9 +90,9 @@ describe("FastenCircularEdgesStatus", () => {
     });
 
     it("picks faces, and the edges of holes to skip, in faces mode", async () => {
-        selectInOnshape(face("JF1"), edge("JH1"));
         updateUiState({ fastenSelectionMode: SelectionMode.FACES });
         renderStatus();
+        selectInOnshape(face("JF1"), edge("JH1"));
         await openCard();
 
         expect(screen.getByText("1 face selected")).toBeTruthy();
@@ -99,8 +100,8 @@ describe("FastenCircularEdgesStatus", () => {
     });
 
     it("offers to replicate only a part an editor allowed to", async () => {
-        selectInOnshape(edge("JH1"), edge("JH2"));
         renderStatus();
+        selectInOnshape(edge("JH1"), edge("JH2"));
         await openCard();
         expect(screen.queryByLabelText("Replicate")).toBeNull();
         expect(
@@ -111,12 +112,12 @@ describe("FastenCircularEdgesStatus", () => {
     });
 
     it("offers to replicate once there is more than one circular edge", async () => {
-        selectInOnshape(edge("JH1"));
         renderStatus(true);
+        selectInOnshape(edge("JH1"));
         await openCard();
         expect(screen.queryByLabelText("Replicate")).toBeNull();
 
-        selectInOnshape(edge("JH1"), edge("JH2"));
+        selectInOnshape(edge("JH2"));
         expect(screen.getByLabelText("Replicate")).toBeTruthy();
     });
 
