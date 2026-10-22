@@ -95,7 +95,7 @@ is fasten info when it's on.
    document, and records where each studio is (`fastenerTables.studios.json`),
    which the manifest's locations come from. Nothing is made by hand. Commit
    what it wrote. The fasteners are a part set in robot-code
-   (`[tool.fs.parts.fasteners]`, its `docs/parts.md`), released apart from its
+   (`[tool.fs.parts.fasteners]`; see its part sets doc), released apart from its
    user-facing FeatureScript.
 4. Sync the commit here and deploy.
 5. Load the group. A load that runs before the deploy fails the changed tabs
