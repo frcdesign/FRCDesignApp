@@ -37,7 +37,7 @@ tables, each Part Studio's configuration and the manifest
 (`fasteners.gen.json`) from one list of records, one per configuration
 the configuration offers (`ConfiguredStudio.combinations()`). Its features set
 exactly the properties the records name. An input hidden where only its default
-is made (the screw's Variant, the washer's Finish) is left out of a record
+is made (the screw's Fully threaded, the washer's Finish) is left out of a record
 there, as `enumerateConfigurations` leaves it unset.
 
 ## Storage

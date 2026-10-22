@@ -1,4 +1,4 @@
-/* Synced from robot-education/robot-code@ec4e72a9204b44531648de9cc9a9ca8498395c08 by `npm run sync:generated-parts` -- DO NOT EDIT */
+/* Synced from robot-education/robot-code@7674062a93d5de0f436b9b8a8fa20447c75a1a08 by `npm run sync:generated-parts` -- DO NOT EDIT */
 
 export const CATALOG = {
     source: "featurescripts/fasteners/fastenerTables.py",
@@ -171,168 +171,169 @@ export const CATALOG = {
             vendor: "GENERIC",
             size: "NO_4_40",
             head: "SOCKET",
+            finish: "BLACK",
             lengths: [
                 {
                     id: "IN_0_09375",
                     name: "3/32 in.",
                     length: 0.00238125,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_125",
                     name: "1/8 in.",
                     length: 0.003175,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_15625",
                     name: "5/32 in.",
                     length: 0.00396875,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_1875",
                     name: "3/16 in.",
                     length: 0.0047625,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_25",
                     name: "1/4 in.",
                     length: 0.00635,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_3125",
                     name: "5/16 in.",
                     length: 0.0079375,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
                     name: "3/8 in.",
                     length: 0.009525,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_4375",
                     name: "7/16 in.",
                     length: 0.0111125,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
                     name: "1/2 in.",
                     length: 0.0127,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5625",
                     name: "9/16 in.",
                     length: 0.0142875,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
                     name: "5/8 in.",
                     length: 0.015875,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
                     name: "3/4 in.",
                     length: 0.01905,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_875",
                     name: "7/8 in.",
                     length: 0.022225,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
                     name: "1 in.",
                     length: 0.0254,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_125",
                     name: "1-1/8 in.",
                     length: 0.028575,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
                     name: "1-1/4 in.",
                     length: 0.03175,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_375",
                     name: "1-3/8 in.",
                     length: 0.034925,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
                     name: "1-1/2 in.",
                     length: 0.0381,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_625",
                     name: "1-5/8 in.",
                     length: 0.041275,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_75",
                     name: "1-3/4 in.",
                     length: 0.04445,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2",
                     name: "2 in.",
                     length: 0.0508,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2_25",
                     name: "2-1/4 in.",
                     length: 0.05715,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2_5",
                     name: "2-1/2 in.",
                     length: 0.0635,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2_75",
                     name: "2-3/4 in.",
                     length: 0.06985,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_3",
                     name: "3 in.",
                     length: 0.0762,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_3_5",
                     name: "3-1/2 in.",
                     length: 0.0889,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_4",
                     name: "4 in.",
                     length: 0.1016,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 }
             ]
         },
@@ -340,96 +341,97 @@ export const CATALOG = {
             vendor: "GENERIC",
             size: "NO_4_40",
             head: "BUTTON",
+            finish: "BLACK",
             lengths: [
                 {
                     id: "IN_0_125",
                     name: "1/8 in.",
                     length: 0.003175,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_1875",
                     name: "3/16 in.",
                     length: 0.0047625,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_25",
                     name: "1/4 in.",
                     length: 0.00635,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_3125",
                     name: "5/16 in.",
                     length: 0.0079375,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
                     name: "3/8 in.",
                     length: 0.009525,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_4375",
                     name: "7/16 in.",
                     length: 0.0111125,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
                     name: "1/2 in.",
                     length: 0.0127,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5625",
                     name: "9/16 in.",
                     length: 0.0142875,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
                     name: "5/8 in.",
                     length: 0.015875,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
                     name: "3/4 in.",
                     length: 0.01905,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_875",
                     name: "7/8 in.",
                     length: 0.022225,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
                     name: "1 in.",
                     length: 0.0254,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
                     name: "1-1/4 in.",
                     length: 0.03175,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
                     name: "1-1/2 in.",
                     length: 0.0381,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2",
                     name: "2 in.",
                     length: 0.0508,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 }
             ]
         },
@@ -437,102 +439,103 @@ export const CATALOG = {
             vendor: "GENERIC",
             size: "NO_4_40",
             head: "FLAT",
+            finish: "BLACK",
             lengths: [
                 {
                     id: "IN_0_125",
                     name: "1/8 in.",
                     length: 0.003175,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_15625",
                     name: "5/32 in.",
                     length: 0.00396875,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_1875",
                     name: "3/16 in.",
                     length: 0.0047625,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_25",
                     name: "1/4 in.",
                     length: 0.00635,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_3125",
                     name: "5/16 in.",
                     length: 0.0079375,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
                     name: "3/8 in.",
                     length: 0.009525,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_4375",
                     name: "7/16 in.",
                     length: 0.0111125,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
                     name: "1/2 in.",
                     length: 0.0127,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5625",
                     name: "9/16 in.",
                     length: 0.0142875,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
                     name: "5/8 in.",
                     length: 0.015875,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
                     name: "3/4 in.",
                     length: 0.01905,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_875",
                     name: "7/8 in.",
                     length: 0.022225,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
                     name: "1 in.",
                     length: 0.0254,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_125",
                     name: "1-1/8 in.",
                     length: 0.028575,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
                     name: "1-1/4 in.",
                     length: 0.03175,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
                     name: "1-1/2 in.",
                     length: 0.0381,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 }
             ]
         },
@@ -540,174 +543,175 @@ export const CATALOG = {
             vendor: "GENERIC",
             size: "NO_6_32",
             head: "SOCKET",
+            finish: "BLACK",
             lengths: [
                 {
                     id: "IN_0_09375",
                     name: "3/32 in.",
                     length: 0.00238125,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_125",
                     name: "1/8 in.",
                     length: 0.003175,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_15625",
                     name: "5/32 in.",
                     length: 0.00396875,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_1875",
                     name: "3/16 in.",
                     length: 0.0047625,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_25",
                     name: "1/4 in.",
                     length: 0.00635,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_3125",
                     name: "5/16 in.",
                     length: 0.0079375,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
                     name: "3/8 in.",
                     length: 0.009525,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_4375",
                     name: "7/16 in.",
                     length: 0.0111125,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
                     name: "1/2 in.",
                     length: 0.0127,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5625",
                     name: "9/16 in.",
                     length: 0.0142875,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
                     name: "5/8 in.",
                     length: 0.015875,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
                     name: "3/4 in.",
                     length: 0.01905,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_875",
                     name: "7/8 in.",
                     length: 0.022225,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
                     name: "1 in.",
                     length: 0.0254,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_125",
                     name: "1-1/8 in.",
                     length: 0.028575,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
                     name: "1-1/4 in.",
                     length: 0.03175,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_375",
                     name: "1-3/8 in.",
                     length: 0.034925,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
                     name: "1-1/2 in.",
                     length: 0.0381,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_625",
                     name: "1-5/8 in.",
                     length: 0.041275,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_75",
                     name: "1-3/4 in.",
                     length: 0.04445,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_875",
                     name: "1-7/8 in.",
                     length: 0.047625,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2",
                     name: "2 in.",
                     length: 0.0508,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2_125",
                     name: "2-1/8 in.",
                     length: 0.053975,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2_25",
                     name: "2-1/4 in.",
                     length: 0.05715,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2_5",
                     name: "2-1/2 in.",
                     length: 0.0635,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2_75",
                     name: "2-3/4 in.",
                     length: 0.06985,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_3",
                     name: "3 in.",
                     length: 0.0762,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_3_5",
                     name: "3-1/2 in.",
                     length: 0.0889,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 }
             ]
         },
@@ -715,90 +719,91 @@ export const CATALOG = {
             vendor: "GENERIC",
             size: "NO_6_32",
             head: "BUTTON",
+            finish: "BLACK",
             lengths: [
                 {
                     id: "IN_0_125",
                     name: "1/8 in.",
                     length: 0.003175,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_1875",
                     name: "3/16 in.",
                     length: 0.0047625,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_25",
                     name: "1/4 in.",
                     length: 0.00635,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_3125",
                     name: "5/16 in.",
                     length: 0.0079375,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
                     name: "3/8 in.",
                     length: 0.009525,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_4375",
                     name: "7/16 in.",
                     length: 0.0111125,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
                     name: "1/2 in.",
                     length: 0.0127,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5625",
                     name: "9/16 in.",
                     length: 0.0142875,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
                     name: "5/8 in.",
                     length: 0.015875,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
                     name: "3/4 in.",
                     length: 0.01905,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_875",
                     name: "7/8 in.",
                     length: 0.022225,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
                     name: "1 in.",
                     length: 0.0254,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_125",
                     name: "1-1/8 in.",
                     length: 0.028575,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
                     name: "1-1/4 in.",
                     length: 0.03175,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 }
             ]
         },
@@ -806,102 +811,103 @@ export const CATALOG = {
             vendor: "GENERIC",
             size: "NO_6_32",
             head: "FLAT",
+            finish: "BLACK",
             lengths: [
                 {
                     id: "IN_0_125",
                     name: "1/8 in.",
                     length: 0.003175,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_15625",
                     name: "5/32 in.",
                     length: 0.00396875,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_1875",
                     name: "3/16 in.",
                     length: 0.0047625,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_25",
                     name: "1/4 in.",
                     length: 0.00635,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_3125",
                     name: "5/16 in.",
                     length: 0.0079375,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
                     name: "3/8 in.",
                     length: 0.009525,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_4375",
                     name: "7/16 in.",
                     length: 0.0111125,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
                     name: "1/2 in.",
                     length: 0.0127,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5625",
                     name: "9/16 in.",
                     length: 0.0142875,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
                     name: "5/8 in.",
                     length: 0.015875,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
                     name: "3/4 in.",
                     length: 0.01905,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_875",
                     name: "7/8 in.",
                     length: 0.022225,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
                     name: "1 in.",
                     length: 0.0254,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
                     name: "1-1/4 in.",
                     length: 0.03175,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
                     name: "1-1/2 in.",
                     length: 0.0381,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_75",
                     name: "1-3/4 in.",
                     length: 0.04445,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 }
             ]
         },
@@ -909,204 +915,205 @@ export const CATALOG = {
             vendor: "GENERIC",
             size: "NO_8_32",
             head: "SOCKET",
+            finish: "BLACK",
             lengths: [
                 {
                     id: "IN_0_09375",
                     name: "3/32 in.",
                     length: 0.00238125,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_125",
                     name: "1/8 in.",
                     length: 0.003175,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_15625",
                     name: "5/32 in.",
                     length: 0.00396875,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_1875",
                     name: "3/16 in.",
                     length: 0.0047625,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_25",
                     name: "1/4 in.",
                     length: 0.00635,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_3125",
                     name: "5/16 in.",
                     length: 0.0079375,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
                     name: "3/8 in.",
                     length: 0.009525,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_4375",
                     name: "7/16 in.",
                     length: 0.0111125,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
                     name: "1/2 in.",
                     length: 0.0127,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5625",
                     name: "9/16 in.",
                     length: 0.0142875,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
                     name: "5/8 in.",
                     length: 0.015875,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_6875",
                     name: "11/16 in.",
                     length: 0.0174625,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
                     name: "3/4 in.",
                     length: 0.01905,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_875",
                     name: "7/8 in.",
                     length: 0.022225,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
                     name: "1 in.",
                     length: 0.0254,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_125",
                     name: "1-1/8 in.",
                     length: 0.028575,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
                     name: "1-1/4 in.",
                     length: 0.03175,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_375",
                     name: "1-3/8 in.",
                     length: 0.034925,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
                     name: "1-1/2 in.",
                     length: 0.0381,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_625",
                     name: "1-5/8 in.",
                     length: 0.041275,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_75",
                     name: "1-3/4 in.",
                     length: 0.04445,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_875",
                     name: "1-7/8 in.",
                     length: 0.047625,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2",
                     name: "2 in.",
                     length: 0.0508,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2_25",
                     name: "2-1/4 in.",
                     length: 0.05715,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2_5",
                     name: "2-1/2 in.",
                     length: 0.0635,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2_75",
                     name: "2-3/4 in.",
                     length: 0.06985,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_3",
                     name: "3 in.",
                     length: 0.0762,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_3_25",
                     name: "3-1/4 in.",
                     length: 0.08255,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_3_5",
                     name: "3-1/2 in.",
                     length: 0.0889,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_3_75",
                     name: "3-3/4 in.",
                     length: 0.09525,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_4",
                     name: "4 in.",
                     length: 0.1016,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_4_5",
                     name: "4-1/2 in.",
                     length: 0.1143,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_5",
                     name: "5 in.",
                     length: 0.127,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 }
             ]
         },
@@ -1114,138 +1121,139 @@ export const CATALOG = {
             vendor: "GENERIC",
             size: "NO_8_32",
             head: "BUTTON",
+            finish: "BLACK",
             lengths: [
                 {
                     id: "IN_0_125",
                     name: "1/8 in.",
                     length: 0.003175,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_15625",
                     name: "5/32 in.",
                     length: 0.00396875,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_1875",
                     name: "3/16 in.",
                     length: 0.0047625,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_25",
                     name: "1/4 in.",
                     length: 0.00635,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_3125",
                     name: "5/16 in.",
                     length: 0.0079375,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
                     name: "3/8 in.",
                     length: 0.009525,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_4375",
                     name: "7/16 in.",
                     length: 0.0111125,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
                     name: "1/2 in.",
                     length: 0.0127,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5625",
                     name: "9/16 in.",
                     length: 0.0142875,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
                     name: "5/8 in.",
                     length: 0.015875,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
                     name: "3/4 in.",
                     length: 0.01905,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_875",
                     name: "7/8 in.",
                     length: 0.022225,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
                     name: "1 in.",
                     length: 0.0254,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_125",
                     name: "1-1/8 in.",
                     length: 0.028575,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
                     name: "1-1/4 in.",
                     length: 0.03175,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_375",
                     name: "1-3/8 in.",
                     length: 0.034925,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
                     name: "1-1/2 in.",
                     length: 0.0381,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_75",
                     name: "1-3/4 in.",
                     length: 0.04445,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2",
                     name: "2 in.",
                     length: 0.0508,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2_25",
                     name: "2-1/4 in.",
                     length: 0.05715,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2_5",
                     name: "2-1/2 in.",
                     length: 0.0635,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_3",
                     name: "3 in.",
                     length: 0.0762,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 }
             ]
         },
@@ -1253,138 +1261,139 @@ export const CATALOG = {
             vendor: "GENERIC",
             size: "NO_8_32",
             head: "FLAT",
+            finish: "BLACK",
             lengths: [
                 {
                     id: "IN_0_15625",
                     name: "5/32 in.",
                     length: 0.00396875,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_1875",
                     name: "3/16 in.",
                     length: 0.0047625,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_25",
                     name: "1/4 in.",
                     length: 0.00635,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_3125",
                     name: "5/16 in.",
                     length: 0.0079375,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
                     name: "3/8 in.",
                     length: 0.009525,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_4375",
                     name: "7/16 in.",
                     length: 0.0111125,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
                     name: "1/2 in.",
                     length: 0.0127,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5625",
                     name: "9/16 in.",
                     length: 0.0142875,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
                     name: "5/8 in.",
                     length: 0.015875,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
                     name: "3/4 in.",
                     length: 0.01905,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_875",
                     name: "7/8 in.",
                     length: 0.022225,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
                     name: "1 in.",
                     length: 0.0254,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_125",
                     name: "1-1/8 in.",
                     length: 0.028575,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
                     name: "1-1/4 in.",
                     length: 0.03175,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_375",
                     name: "1-3/8 in.",
                     length: 0.034925,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
                     name: "1-1/2 in.",
                     length: 0.0381,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_625",
                     name: "1-5/8 in.",
                     length: 0.041275,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_75",
                     name: "1-3/4 in.",
                     length: 0.04445,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2",
                     name: "2 in.",
                     length: 0.0508,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2_25",
                     name: "2-1/4 in.",
                     length: 0.05715,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2_5",
                     name: "2-1/2 in.",
                     length: 0.0635,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_3",
                     name: "3 in.",
                     length: 0.0762,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 }
             ]
         },
@@ -1392,216 +1401,217 @@ export const CATALOG = {
             vendor: "GENERIC",
             size: "NO_10_32",
             head: "SOCKET",
+            finish: "BLACK",
             lengths: [
                 {
                     id: "IN_0_15625",
                     name: "5/32 in.",
                     length: 0.00396875,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_1875",
                     name: "3/16 in.",
                     length: 0.0047625,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_25",
                     name: "1/4 in.",
                     length: 0.00635,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_3125",
                     name: "5/16 in.",
                     length: 0.0079375,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
                     name: "3/8 in.",
                     length: 0.009525,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_4375",
                     name: "7/16 in.",
                     length: 0.0111125,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
                     name: "1/2 in.",
                     length: 0.0127,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5625",
                     name: "9/16 in.",
                     length: 0.0142875,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
                     name: "5/8 in.",
                     length: 0.015875,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_6875",
                     name: "11/16 in.",
                     length: 0.0174625,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
                     name: "3/4 in.",
                     length: 0.01905,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_875",
                     name: "7/8 in.",
                     length: 0.022225,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
                     name: "1 in.",
                     length: 0.0254,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_125",
                     name: "1-1/8 in.",
                     length: 0.028575,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
                     name: "1-1/4 in.",
                     length: 0.03175,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_375",
                     name: "1-3/8 in.",
                     length: 0.034925,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
                     name: "1-1/2 in.",
                     length: 0.0381,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_625",
                     name: "1-5/8 in.",
                     length: 0.041275,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_75",
                     name: "1-3/4 in.",
                     length: 0.04445,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_875",
                     name: "1-7/8 in.",
                     length: 0.047625,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2",
                     name: "2 in.",
                     length: 0.0508,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2_25",
                     name: "2-1/4 in.",
                     length: 0.05715,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2_5",
                     name: "2-1/2 in.",
                     length: 0.0635,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2_75",
                     name: "2-3/4 in.",
                     length: 0.06985,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_3",
                     name: "3 in.",
                     length: 0.0762,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_3_25",
                     name: "3-1/4 in.",
                     length: 0.08255,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_3_5",
                     name: "3-1/2 in.",
                     length: 0.0889,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_3_75",
                     name: "3-3/4 in.",
                     length: 0.09525,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_4",
                     name: "4 in.",
                     length: 0.1016,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_4_5",
                     name: "4-1/2 in.",
                     length: 0.1143,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_5",
                     name: "5 in.",
                     length: 0.127,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_5_5",
                     name: "5-1/2 in.",
                     length: 0.1397,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_6",
                     name: "6 in.",
                     length: 0.1524,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_6_5",
                     name: "6-1/2 in.",
                     length: 0.1651,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_7",
                     name: "7 in.",
                     length: 0.1778,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 }
             ]
         },
@@ -1609,150 +1619,151 @@ export const CATALOG = {
             vendor: "GENERIC",
             size: "NO_10_32",
             head: "BUTTON",
+            finish: "BLACK",
             lengths: [
                 {
                     id: "IN_0_125",
                     name: "1/8 in.",
                     length: 0.003175,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_1875",
                     name: "3/16 in.",
                     length: 0.0047625,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_25",
                     name: "1/4 in.",
                     length: 0.00635,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_3125",
                     name: "5/16 in.",
                     length: 0.0079375,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
                     name: "3/8 in.",
                     length: 0.009525,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_4375",
                     name: "7/16 in.",
                     length: 0.0111125,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
                     name: "1/2 in.",
                     length: 0.0127,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5625",
                     name: "9/16 in.",
                     length: 0.0142875,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
                     name: "5/8 in.",
                     length: 0.015875,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
                     name: "3/4 in.",
                     length: 0.01905,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_875",
                     name: "7/8 in.",
                     length: 0.022225,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
                     name: "1 in.",
                     length: 0.0254,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_125",
                     name: "1-1/8 in.",
                     length: 0.028575,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
                     name: "1-1/4 in.",
                     length: 0.03175,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_375",
                     name: "1-3/8 in.",
                     length: 0.034925,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
                     name: "1-1/2 in.",
                     length: 0.0381,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_625",
                     name: "1-5/8 in.",
                     length: 0.041275,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_75",
                     name: "1-3/4 in.",
                     length: 0.04445,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2",
                     name: "2 in.",
                     length: 0.0508,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2_25",
                     name: "2-1/4 in.",
                     length: 0.05715,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2_5",
                     name: "2-1/2 in.",
                     length: 0.0635,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2_75",
                     name: "2-3/4 in.",
                     length: 0.06985,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_3",
                     name: "3 in.",
                     length: 0.0762,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_4_75",
                     name: "4-3/4 in.",
                     length: 0.12065,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 }
             ]
         },
@@ -1760,144 +1771,145 @@ export const CATALOG = {
             vendor: "GENERIC",
             size: "NO_10_32",
             head: "FLAT",
+            finish: "BLACK",
             lengths: [
                 {
                     id: "IN_0_1875",
                     name: "3/16 in.",
                     length: 0.0047625,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_25",
                     name: "1/4 in.",
                     length: 0.00635,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_3125",
                     name: "5/16 in.",
                     length: 0.0079375,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
                     name: "3/8 in.",
                     length: 0.009525,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_4375",
                     name: "7/16 in.",
                     length: 0.0111125,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
                     name: "1/2 in.",
                     length: 0.0127,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5625",
                     name: "9/16 in.",
                     length: 0.0142875,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
                     name: "5/8 in.",
                     length: 0.015875,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
                     name: "3/4 in.",
                     length: 0.01905,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_875",
                     name: "7/8 in.",
                     length: 0.022225,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
                     name: "1 in.",
                     length: 0.0254,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_125",
                     name: "1-1/8 in.",
                     length: 0.028575,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
                     name: "1-1/4 in.",
                     length: 0.03175,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_375",
                     name: "1-3/8 in.",
                     length: 0.034925,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
                     name: "1-1/2 in.",
                     length: 0.0381,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_625",
                     name: "1-5/8 in.",
                     length: 0.041275,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_75",
                     name: "1-3/4 in.",
                     length: 0.04445,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2",
                     name: "2 in.",
                     length: 0.0508,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2_25",
                     name: "2-1/4 in.",
                     length: 0.05715,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2_5",
                     name: "2-1/2 in.",
                     length: 0.0635,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_3",
                     name: "3 in.",
                     length: 0.0762,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_3_5",
                     name: "3-1/2 in.",
                     length: 0.0889,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_4",
                     name: "4 in.",
                     length: 0.1016,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 }
             ]
         },
@@ -1905,270 +1917,271 @@ export const CATALOG = {
             vendor: "GENERIC",
             size: "QUARTER_20",
             head: "SOCKET",
+            finish: "BLACK",
             lengths: [
                 {
                     id: "IN_0_25",
                     name: "1/4 in.",
                     length: 0.00635,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_3125",
                     name: "5/16 in.",
                     length: 0.0079375,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
                     name: "3/8 in.",
                     length: 0.009525,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_4375",
                     name: "7/16 in.",
                     length: 0.0111125,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
                     name: "1/2 in.",
                     length: 0.0127,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5625",
                     name: "9/16 in.",
                     length: 0.0142875,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
                     name: "5/8 in.",
                     length: 0.015875,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_6875",
                     name: "11/16 in.",
                     length: 0.0174625,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
                     name: "3/4 in.",
                     length: 0.01905,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_875",
                     name: "7/8 in.",
                     length: 0.022225,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
                     name: "1 in.",
                     length: 0.0254,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_125",
                     name: "1-1/8 in.",
                     length: 0.028575,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
                     name: "1-1/4 in.",
                     length: 0.03175,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_375",
                     name: "1-3/8 in.",
                     length: 0.034925,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
                     name: "1-1/2 in.",
                     length: 0.0381,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_625",
                     name: "1-5/8 in.",
                     length: 0.041275,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_75",
                     name: "1-3/4 in.",
                     length: 0.04445,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_875",
                     name: "1-7/8 in.",
                     length: 0.047625,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2",
                     name: "2 in.",
                     length: 0.0508,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2_25",
                     name: "2-1/4 in.",
                     length: 0.05715,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2_375",
                     name: "2-3/8 in.",
                     length: 0.060325,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2_5",
                     name: "2-1/2 in.",
                     length: 0.0635,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2_625",
                     name: "2-5/8 in.",
                     length: 0.066675,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2_75",
                     name: "2-3/4 in.",
                     length: 0.06985,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_3",
                     name: "3 in.",
                     length: 0.0762,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_3_25",
                     name: "3-1/4 in.",
                     length: 0.08255,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_3_5",
                     name: "3-1/2 in.",
                     length: 0.0889,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_3_75",
                     name: "3-3/4 in.",
                     length: 0.09525,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_4",
                     name: "4 in.",
                     length: 0.1016,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_4_25",
                     name: "4-1/4 in.",
                     length: 0.10795,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_4_5",
                     name: "4-1/2 in.",
                     length: 0.1143,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_5",
                     name: "5 in.",
                     length: 0.127,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_5_25",
                     name: "5-1/4 in.",
                     length: 0.13335,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_5_5",
                     name: "5-1/2 in.",
                     length: 0.1397,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_5_75",
                     name: "5-3/4 in.",
                     length: 0.14605,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_6",
                     name: "6 in.",
                     length: 0.1524,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_6_25",
                     name: "6-1/4 in.",
                     length: 0.15875,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_6_5",
                     name: "6-1/2 in.",
                     length: 0.1651,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_7",
                     name: "7 in.",
                     length: 0.1778,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_7_5",
                     name: "7-1/2 in.",
                     length: 0.1905,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_8",
                     name: "8 in.",
                     length: 0.2032,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_8_5",
                     name: "8-1/2 in.",
                     length: 0.2159,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_9",
                     name: "9 in.",
                     length: 0.2286,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_10",
                     name: "10 in.",
                     length: 0.254,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 }
             ]
         },
@@ -2176,156 +2189,157 @@ export const CATALOG = {
             vendor: "GENERIC",
             size: "QUARTER_20",
             head: "BUTTON",
+            finish: "BLACK",
             lengths: [
                 {
                     id: "IN_0_1875",
                     name: "3/16 in.",
                     length: 0.0047625,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_25",
                     name: "1/4 in.",
                     length: 0.00635,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_3125",
                     name: "5/16 in.",
                     length: 0.0079375,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
                     name: "3/8 in.",
                     length: 0.009525,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_4375",
                     name: "7/16 in.",
                     length: 0.0111125,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
                     name: "1/2 in.",
                     length: 0.0127,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5625",
                     name: "9/16 in.",
                     length: 0.0142875,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
                     name: "5/8 in.",
                     length: 0.015875,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
                     name: "3/4 in.",
                     length: 0.01905,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_875",
                     name: "7/8 in.",
                     length: 0.022225,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
                     name: "1 in.",
                     length: 0.0254,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_125",
                     name: "1-1/8 in.",
                     length: 0.028575,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
                     name: "1-1/4 in.",
                     length: 0.03175,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_375",
                     name: "1-3/8 in.",
                     length: 0.034925,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
                     name: "1-1/2 in.",
                     length: 0.0381,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_625",
                     name: "1-5/8 in.",
                     length: 0.041275,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_75",
                     name: "1-3/4 in.",
                     length: 0.04445,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2",
                     name: "2 in.",
                     length: 0.0508,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2_25",
                     name: "2-1/4 in.",
                     length: 0.05715,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2_5",
                     name: "2-1/2 in.",
                     length: 0.0635,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2_75",
                     name: "2-3/4 in.",
                     length: 0.06985,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_3",
                     name: "3 in.",
                     length: 0.0762,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_3_25",
                     name: "3-1/4 in.",
                     length: 0.08255,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_3_5",
                     name: "3-1/2 in.",
                     length: 0.0889,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_4",
                     name: "4 in.",
                     length: 0.1016,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 }
             ]
         },
@@ -2333,156 +2347,157 @@ export const CATALOG = {
             vendor: "GENERIC",
             size: "QUARTER_20",
             head: "FLAT",
+            finish: "BLACK",
             lengths: [
                 {
                     id: "IN_0_25",
                     name: "1/4 in.",
                     length: 0.00635,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
                     name: "3/8 in.",
                     length: 0.009525,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_4375",
                     name: "7/16 in.",
                     length: 0.0111125,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
                     name: "1/2 in.",
                     length: 0.0127,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5625",
                     name: "9/16 in.",
                     length: 0.0142875,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
                     name: "5/8 in.",
                     length: 0.015875,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
                     name: "3/4 in.",
                     length: 0.01905,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_875",
                     name: "7/8 in.",
                     length: 0.022225,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
                     name: "1 in.",
                     length: 0.0254,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_125",
                     name: "1-1/8 in.",
                     length: 0.028575,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
                     name: "1-1/4 in.",
                     length: 0.03175,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_375",
                     name: "1-3/8 in.",
                     length: 0.034925,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
                     name: "1-1/2 in.",
                     length: 0.0381,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_625",
                     name: "1-5/8 in.",
                     length: 0.041275,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_75",
                     name: "1-3/4 in.",
                     length: 0.04445,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2",
                     name: "2 in.",
                     length: 0.0508,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2_25",
                     name: "2-1/4 in.",
                     length: 0.05715,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2_5",
                     name: "2-1/2 in.",
                     length: 0.0635,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2_75",
                     name: "2-3/4 in.",
                     length: 0.06985,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_3",
                     name: "3 in.",
                     length: 0.0762,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_3_25",
                     name: "3-1/4 in.",
                     length: 0.08255,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_3_5",
                     name: "3-1/2 in.",
                     length: 0.0889,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_4",
                     name: "4 in.",
                     length: 0.1016,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_5",
                     name: "5 in.",
                     length: 0.127,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_6",
                     name: "6 in.",
                     length: 0.1524,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 }
             ]
         },
@@ -2490,168 +2505,261 @@ export const CATALOG = {
             vendor: "MCMASTER",
             size: "NO_4_40",
             head: "SOCKET",
+            finish: "BLACK",
             lengths: [
                 {
                     id: "IN_0_09375",
                     name: "3/32 in.",
                     length: 0.00238125,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_125",
                     name: "1/8 in.",
                     length: 0.003175,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_15625",
                     name: "5/32 in.",
                     length: 0.00396875,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_1875",
                     name: "3/16 in.",
                     length: 0.0047625,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_25",
                     name: "1/4 in.",
                     length: 0.00635,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_3125",
                     name: "5/16 in.",
                     length: 0.0079375,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
                     name: "3/8 in.",
                     length: 0.009525,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_4375",
                     name: "7/16 in.",
                     length: 0.0111125,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
                     name: "1/2 in.",
                     length: 0.0127,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5625",
                     name: "9/16 in.",
                     length: 0.0142875,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
                     name: "5/8 in.",
                     length: 0.015875,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
                     name: "3/4 in.",
                     length: 0.01905,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_875",
                     name: "7/8 in.",
                     length: 0.022225,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
                     name: "1 in.",
                     length: 0.0254,
-                    variants: ["STANDARD", "FULL_THREAD", "ZINC_PLATED"]
+                    fullThreadChoice: true
                 },
                 {
                     id: "IN_1_125",
                     name: "1-1/8 in.",
                     length: 0.028575,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
                     name: "1-1/4 in.",
                     length: 0.03175,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_375",
                     name: "1-3/8 in.",
                     length: 0.034925,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
                     name: "1-1/2 in.",
                     length: 0.0381,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_625",
                     name: "1-5/8 in.",
                     length: 0.041275,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_75",
                     name: "1-3/4 in.",
                     length: 0.04445,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2",
                     name: "2 in.",
                     length: 0.0508,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2_25",
                     name: "2-1/4 in.",
                     length: 0.05715,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2_5",
                     name: "2-1/2 in.",
                     length: 0.0635,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2_75",
                     name: "2-3/4 in.",
                     length: 0.06985,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_3",
                     name: "3 in.",
                     length: 0.0762,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_3_5",
                     name: "3-1/2 in.",
                     length: 0.0889,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_4",
                     name: "4 in.",
                     length: 0.1016,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
+                }
+            ]
+        },
+        {
+            vendor: "MCMASTER",
+            size: "NO_4_40",
+            head: "SOCKET",
+            finish: "ZINC_PLATED",
+            lengths: [
+                {
+                    id: "IN_0_125",
+                    name: "1/8 in.",
+                    length: 0.003175,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_1875",
+                    name: "3/16 in.",
+                    length: 0.0047625,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_25",
+                    name: "1/4 in.",
+                    length: 0.00635,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_3125",
+                    name: "5/16 in.",
+                    length: 0.0079375,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_375",
+                    name: "3/8 in.",
+                    length: 0.009525,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_4375",
+                    name: "7/16 in.",
+                    length: 0.0111125,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_5",
+                    name: "1/2 in.",
+                    length: 0.0127,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_625",
+                    name: "5/8 in.",
+                    length: 0.015875,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_75",
+                    name: "3/4 in.",
+                    length: 0.01905,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_875",
+                    name: "7/8 in.",
+                    length: 0.022225,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_1",
+                    name: "1 in.",
+                    length: 0.0254,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_1_25",
+                    name: "1-1/4 in.",
+                    length: 0.03175,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_1_5",
+                    name: "1-1/2 in.",
+                    length: 0.0381,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_2",
+                    name: "2 in.",
+                    length: 0.0508,
+                    fullThreadChoice: false
                 }
             ]
         },
@@ -2659,96 +2767,153 @@ export const CATALOG = {
             vendor: "MCMASTER",
             size: "NO_4_40",
             head: "BUTTON",
+            finish: "BLACK",
             lengths: [
                 {
                     id: "IN_0_125",
                     name: "1/8 in.",
                     length: 0.003175,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_1875",
                     name: "3/16 in.",
                     length: 0.0047625,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_25",
                     name: "1/4 in.",
                     length: 0.00635,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_3125",
                     name: "5/16 in.",
                     length: 0.0079375,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
                     name: "3/8 in.",
                     length: 0.009525,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_4375",
                     name: "7/16 in.",
                     length: 0.0111125,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
                     name: "1/2 in.",
                     length: 0.0127,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5625",
                     name: "9/16 in.",
                     length: 0.0142875,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
                     name: "5/8 in.",
                     length: 0.015875,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
                     name: "3/4 in.",
                     length: 0.01905,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_875",
                     name: "7/8 in.",
                     length: 0.022225,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
                     name: "1 in.",
                     length: 0.0254,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
                     name: "1-1/4 in.",
                     length: 0.03175,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
                     name: "1-1/2 in.",
                     length: 0.0381,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2",
                     name: "2 in.",
                     length: 0.0508,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
+                }
+            ]
+        },
+        {
+            vendor: "MCMASTER",
+            size: "NO_4_40",
+            head: "BUTTON",
+            finish: "ZINC_PLATED",
+            lengths: [
+                {
+                    id: "IN_0_125",
+                    name: "1/8 in.",
+                    length: 0.003175,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_1875",
+                    name: "3/16 in.",
+                    length: 0.0047625,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_25",
+                    name: "1/4 in.",
+                    length: 0.00635,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_375",
+                    name: "3/8 in.",
+                    length: 0.009525,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_4375",
+                    name: "7/16 in.",
+                    length: 0.0111125,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_5",
+                    name: "1/2 in.",
+                    length: 0.0127,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_625",
+                    name: "5/8 in.",
+                    length: 0.015875,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_75",
+                    name: "3/4 in.",
+                    length: 0.01905,
+                    fullThreadChoice: false
                 }
             ]
         },
@@ -2756,102 +2921,153 @@ export const CATALOG = {
             vendor: "MCMASTER",
             size: "NO_4_40",
             head: "FLAT",
+            finish: "BLACK",
             lengths: [
                 {
                     id: "IN_0_125",
                     name: "1/8 in.",
                     length: 0.003175,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_15625",
                     name: "5/32 in.",
                     length: 0.00396875,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_1875",
                     name: "3/16 in.",
                     length: 0.0047625,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_25",
                     name: "1/4 in.",
                     length: 0.00635,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_3125",
                     name: "5/16 in.",
                     length: 0.0079375,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
                     name: "3/8 in.",
                     length: 0.009525,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_4375",
                     name: "7/16 in.",
                     length: 0.0111125,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
                     name: "1/2 in.",
                     length: 0.0127,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5625",
                     name: "9/16 in.",
                     length: 0.0142875,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
                     name: "5/8 in.",
                     length: 0.015875,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
                     name: "3/4 in.",
                     length: 0.01905,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_875",
                     name: "7/8 in.",
                     length: 0.022225,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
                     name: "1 in.",
                     length: 0.0254,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_125",
                     name: "1-1/8 in.",
                     length: 0.028575,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
                     name: "1-1/4 in.",
                     length: 0.03175,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
                     name: "1-1/2 in.",
                     length: 0.0381,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
+                }
+            ]
+        },
+        {
+            vendor: "MCMASTER",
+            size: "NO_4_40",
+            head: "FLAT",
+            finish: "ZINC_PLATED",
+            lengths: [
+                {
+                    id: "IN_0_1875",
+                    name: "3/16 in.",
+                    length: 0.0047625,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_25",
+                    name: "1/4 in.",
+                    length: 0.00635,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_3125",
+                    name: "5/16 in.",
+                    length: 0.0079375,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_375",
+                    name: "3/8 in.",
+                    length: 0.009525,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_5",
+                    name: "1/2 in.",
+                    length: 0.0127,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_625",
+                    name: "5/8 in.",
+                    length: 0.015875,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_75",
+                    name: "3/4 in.",
+                    length: 0.01905,
+                    fullThreadChoice: false
                 }
             ]
         },
@@ -2859,168 +3075,261 @@ export const CATALOG = {
             vendor: "MCMASTER",
             size: "NO_6_32",
             head: "SOCKET",
+            finish: "BLACK",
             lengths: [
                 {
                     id: "IN_0_09375",
                     name: "3/32 in.",
                     length: 0.00238125,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_125",
                     name: "1/8 in.",
                     length: 0.003175,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_15625",
                     name: "5/32 in.",
                     length: 0.00396875,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_1875",
                     name: "3/16 in.",
                     length: 0.0047625,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_25",
                     name: "1/4 in.",
                     length: 0.00635,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_3125",
                     name: "5/16 in.",
                     length: 0.0079375,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
                     name: "3/8 in.",
                     length: 0.009525,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_4375",
                     name: "7/16 in.",
                     length: 0.0111125,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
                     name: "1/2 in.",
                     length: 0.0127,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5625",
                     name: "9/16 in.",
                     length: 0.0142875,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
                     name: "5/8 in.",
                     length: 0.015875,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
                     name: "3/4 in.",
                     length: 0.01905,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_875",
                     name: "7/8 in.",
                     length: 0.022225,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
                     name: "1 in.",
                     length: 0.0254,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_125",
                     name: "1-1/8 in.",
                     length: 0.028575,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
                     name: "1-1/4 in.",
                     length: 0.03175,
-                    variants: ["STANDARD", "FULL_THREAD", "ZINC_PLATED"]
+                    fullThreadChoice: true
                 },
                 {
                     id: "IN_1_375",
                     name: "1-3/8 in.",
                     length: 0.034925,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
                     name: "1-1/2 in.",
                     length: 0.0381,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_625",
                     name: "1-5/8 in.",
                     length: 0.041275,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_75",
                     name: "1-3/4 in.",
                     length: 0.04445,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_875",
                     name: "1-7/8 in.",
                     length: 0.047625,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2",
                     name: "2 in.",
                     length: 0.0508,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2_25",
                     name: "2-1/4 in.",
                     length: 0.05715,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2_5",
                     name: "2-1/2 in.",
                     length: 0.0635,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2_75",
                     name: "2-3/4 in.",
                     length: 0.06985,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_3",
                     name: "3 in.",
                     length: 0.0762,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_3_5",
                     name: "3-1/2 in.",
                     length: 0.0889,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
+                }
+            ]
+        },
+        {
+            vendor: "MCMASTER",
+            size: "NO_6_32",
+            head: "SOCKET",
+            finish: "ZINC_PLATED",
+            lengths: [
+                {
+                    id: "IN_0_125",
+                    name: "1/8 in.",
+                    length: 0.003175,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_1875",
+                    name: "3/16 in.",
+                    length: 0.0047625,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_25",
+                    name: "1/4 in.",
+                    length: 0.00635,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_3125",
+                    name: "5/16 in.",
+                    length: 0.0079375,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_375",
+                    name: "3/8 in.",
+                    length: 0.009525,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_4375",
+                    name: "7/16 in.",
+                    length: 0.0111125,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_5",
+                    name: "1/2 in.",
+                    length: 0.0127,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_625",
+                    name: "5/8 in.",
+                    length: 0.015875,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_75",
+                    name: "3/4 in.",
+                    length: 0.01905,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_875",
+                    name: "7/8 in.",
+                    length: 0.022225,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_1_125",
+                    name: "1-1/8 in.",
+                    length: 0.028575,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_1_25",
+                    name: "1-1/4 in.",
+                    length: 0.03175,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_1_5",
+                    name: "1-1/2 in.",
+                    length: 0.0381,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_1_875",
+                    name: "1-7/8 in.",
+                    length: 0.047625,
+                    fullThreadChoice: false
                 }
             ]
         },
@@ -3028,90 +3337,147 @@ export const CATALOG = {
             vendor: "MCMASTER",
             size: "NO_6_32",
             head: "BUTTON",
+            finish: "BLACK",
             lengths: [
                 {
                     id: "IN_0_125",
                     name: "1/8 in.",
                     length: 0.003175,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_1875",
                     name: "3/16 in.",
                     length: 0.0047625,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_25",
                     name: "1/4 in.",
                     length: 0.00635,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_3125",
                     name: "5/16 in.",
                     length: 0.0079375,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
                     name: "3/8 in.",
                     length: 0.009525,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_4375",
                     name: "7/16 in.",
                     length: 0.0111125,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
                     name: "1/2 in.",
                     length: 0.0127,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5625",
                     name: "9/16 in.",
                     length: 0.0142875,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
                     name: "5/8 in.",
                     length: 0.015875,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
                     name: "3/4 in.",
                     length: 0.01905,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_875",
                     name: "7/8 in.",
                     length: 0.022225,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
                     name: "1 in.",
                     length: 0.0254,
-                    variants: ["STANDARD", "FULL_THREAD"]
+                    fullThreadChoice: true
                 },
                 {
                     id: "IN_1_125",
                     name: "1-1/8 in.",
                     length: 0.028575,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
                     name: "1-1/4 in.",
                     length: 0.03175,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
+                }
+            ]
+        },
+        {
+            vendor: "MCMASTER",
+            size: "NO_6_32",
+            head: "BUTTON",
+            finish: "ZINC_PLATED",
+            lengths: [
+                {
+                    id: "IN_0_125",
+                    name: "1/8 in.",
+                    length: 0.003175,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_1875",
+                    name: "3/16 in.",
+                    length: 0.0047625,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_25",
+                    name: "1/4 in.",
+                    length: 0.00635,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_375",
+                    name: "3/8 in.",
+                    length: 0.009525,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_4375",
+                    name: "7/16 in.",
+                    length: 0.0111125,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_5",
+                    name: "1/2 in.",
+                    length: 0.0127,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_625",
+                    name: "5/8 in.",
+                    length: 0.015875,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_75",
+                    name: "3/4 in.",
+                    length: 0.01905,
+                    fullThreadChoice: false
                 }
             ]
         },
@@ -3119,102 +3485,153 @@ export const CATALOG = {
             vendor: "MCMASTER",
             size: "NO_6_32",
             head: "FLAT",
+            finish: "BLACK",
             lengths: [
                 {
                     id: "IN_0_125",
                     name: "1/8 in.",
                     length: 0.003175,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_15625",
                     name: "5/32 in.",
                     length: 0.00396875,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_1875",
                     name: "3/16 in.",
                     length: 0.0047625,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_25",
                     name: "1/4 in.",
                     length: 0.00635,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_3125",
                     name: "5/16 in.",
                     length: 0.0079375,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
                     name: "3/8 in.",
                     length: 0.009525,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_4375",
                     name: "7/16 in.",
                     length: 0.0111125,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
                     name: "1/2 in.",
                     length: 0.0127,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5625",
                     name: "9/16 in.",
                     length: 0.0142875,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
                     name: "5/8 in.",
                     length: 0.015875,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
                     name: "3/4 in.",
                     length: 0.01905,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_875",
                     name: "7/8 in.",
                     length: 0.022225,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
                     name: "1 in.",
                     length: 0.0254,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
                     name: "1-1/4 in.",
                     length: 0.03175,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
                     name: "1-1/2 in.",
                     length: 0.0381,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_75",
                     name: "1-3/4 in.",
                     length: 0.04445,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
+                }
+            ]
+        },
+        {
+            vendor: "MCMASTER",
+            size: "NO_6_32",
+            head: "FLAT",
+            finish: "ZINC_PLATED",
+            lengths: [
+                {
+                    id: "IN_0_1875",
+                    name: "3/16 in.",
+                    length: 0.0047625,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_25",
+                    name: "1/4 in.",
+                    length: 0.00635,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_3125",
+                    name: "5/16 in.",
+                    length: 0.0079375,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_375",
+                    name: "3/8 in.",
+                    length: 0.009525,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_5",
+                    name: "1/2 in.",
+                    length: 0.0127,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_625",
+                    name: "5/8 in.",
+                    length: 0.015875,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_75",
+                    name: "3/4 in.",
+                    length: 0.01905,
+                    fullThreadChoice: false
                 }
             ]
         },
@@ -3222,204 +3639,315 @@ export const CATALOG = {
             vendor: "MCMASTER",
             size: "NO_8_32",
             head: "SOCKET",
+            finish: "BLACK",
             lengths: [
                 {
                     id: "IN_0_09375",
                     name: "3/32 in.",
                     length: 0.00238125,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_125",
                     name: "1/8 in.",
                     length: 0.003175,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_15625",
                     name: "5/32 in.",
                     length: 0.00396875,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_1875",
                     name: "3/16 in.",
                     length: 0.0047625,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_25",
                     name: "1/4 in.",
                     length: 0.00635,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_3125",
                     name: "5/16 in.",
                     length: 0.0079375,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
                     name: "3/8 in.",
                     length: 0.009525,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_4375",
                     name: "7/16 in.",
                     length: 0.0111125,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
                     name: "1/2 in.",
                     length: 0.0127,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5625",
                     name: "9/16 in.",
                     length: 0.0142875,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
                     name: "5/8 in.",
                     length: 0.015875,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_6875",
                     name: "11/16 in.",
                     length: 0.0174625,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
                     name: "3/4 in.",
                     length: 0.01905,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_875",
                     name: "7/8 in.",
                     length: 0.022225,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
                     name: "1 in.",
                     length: 0.0254,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_125",
                     name: "1-1/8 in.",
                     length: 0.028575,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
                     name: "1-1/4 in.",
                     length: 0.03175,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_375",
                     name: "1-3/8 in.",
                     length: 0.034925,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
                     name: "1-1/2 in.",
                     length: 0.0381,
-                    variants: ["STANDARD", "FULL_THREAD", "ZINC_PLATED"]
+                    fullThreadChoice: true
                 },
                 {
                     id: "IN_1_625",
                     name: "1-5/8 in.",
                     length: 0.041275,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_75",
                     name: "1-3/4 in.",
                     length: 0.04445,
-                    variants: ["STANDARD", "FULL_THREAD", "ZINC_PLATED"]
+                    fullThreadChoice: true
                 },
                 {
                     id: "IN_1_875",
                     name: "1-7/8 in.",
                     length: 0.047625,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2",
                     name: "2 in.",
                     length: 0.0508,
-                    variants: ["STANDARD", "FULL_THREAD"]
+                    fullThreadChoice: true
                 },
                 {
                     id: "IN_2_25",
                     name: "2-1/4 in.",
                     length: 0.05715,
-                    variants: ["STANDARD", "FULL_THREAD"]
+                    fullThreadChoice: true
                 },
                 {
                     id: "IN_2_5",
                     name: "2-1/2 in.",
                     length: 0.0635,
-                    variants: ["STANDARD", "FULL_THREAD", "ZINC_PLATED"]
+                    fullThreadChoice: true
                 },
                 {
                     id: "IN_2_75",
                     name: "2-3/4 in.",
                     length: 0.06985,
-                    variants: ["STANDARD", "FULL_THREAD"]
+                    fullThreadChoice: true
                 },
                 {
                     id: "IN_3",
                     name: "3 in.",
                     length: 0.0762,
-                    variants: ["STANDARD", "FULL_THREAD"]
+                    fullThreadChoice: true
                 },
                 {
                     id: "IN_3_25",
                     name: "3-1/4 in.",
                     length: 0.08255,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_3_5",
                     name: "3-1/2 in.",
                     length: 0.0889,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_3_75",
                     name: "3-3/4 in.",
                     length: 0.09525,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_4",
                     name: "4 in.",
                     length: 0.1016,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_4_5",
                     name: "4-1/2 in.",
                     length: 0.1143,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_5",
                     name: "5 in.",
                     length: 0.127,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
+                }
+            ]
+        },
+        {
+            vendor: "MCMASTER",
+            size: "NO_8_32",
+            head: "SOCKET",
+            finish: "ZINC_PLATED",
+            lengths: [
+                {
+                    id: "IN_0_125",
+                    name: "1/8 in.",
+                    length: 0.003175,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_1875",
+                    name: "3/16 in.",
+                    length: 0.0047625,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_25",
+                    name: "1/4 in.",
+                    length: 0.00635,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_3125",
+                    name: "5/16 in.",
+                    length: 0.0079375,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_375",
+                    name: "3/8 in.",
+                    length: 0.009525,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_4375",
+                    name: "7/16 in.",
+                    length: 0.0111125,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_5",
+                    name: "1/2 in.",
+                    length: 0.0127,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_5625",
+                    name: "9/16 in.",
+                    length: 0.0142875,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_625",
+                    name: "5/8 in.",
+                    length: 0.015875,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_75",
+                    name: "3/4 in.",
+                    length: 0.01905,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_875",
+                    name: "7/8 in.",
+                    length: 0.022225,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_1",
+                    name: "1 in.",
+                    length: 0.0254,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_1_125",
+                    name: "1-1/8 in.",
+                    length: 0.028575,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_1_25",
+                    name: "1-1/4 in.",
+                    length: 0.03175,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_1_5",
+                    name: "1-1/2 in.",
+                    length: 0.0381,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_1_75",
+                    name: "1-3/4 in.",
+                    length: 0.04445,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_2_5",
+                    name: "2-1/2 in.",
+                    length: 0.0635,
+                    fullThreadChoice: false
                 }
             ]
         },
@@ -3427,138 +3955,213 @@ export const CATALOG = {
             vendor: "MCMASTER",
             size: "NO_8_32",
             head: "BUTTON",
+            finish: "BLACK",
             lengths: [
                 {
                     id: "IN_0_125",
                     name: "1/8 in.",
                     length: 0.003175,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_15625",
                     name: "5/32 in.",
                     length: 0.00396875,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_1875",
                     name: "3/16 in.",
                     length: 0.0047625,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_25",
                     name: "1/4 in.",
                     length: 0.00635,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_3125",
                     name: "5/16 in.",
                     length: 0.0079375,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
                     name: "3/8 in.",
                     length: 0.009525,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_4375",
                     name: "7/16 in.",
                     length: 0.0111125,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
                     name: "1/2 in.",
                     length: 0.0127,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5625",
                     name: "9/16 in.",
                     length: 0.0142875,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
                     name: "5/8 in.",
                     length: 0.015875,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
                     name: "3/4 in.",
                     length: 0.01905,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_875",
                     name: "7/8 in.",
                     length: 0.022225,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
                     name: "1 in.",
                     length: 0.0254,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_125",
                     name: "1-1/8 in.",
                     length: 0.028575,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
                     name: "1-1/4 in.",
                     length: 0.03175,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_375",
                     name: "1-3/8 in.",
                     length: 0.034925,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
                     name: "1-1/2 in.",
                     length: 0.0381,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_75",
                     name: "1-3/4 in.",
                     length: 0.04445,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2",
                     name: "2 in.",
                     length: 0.0508,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2_25",
                     name: "2-1/4 in.",
                     length: 0.05715,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2_5",
                     name: "2-1/2 in.",
                     length: 0.0635,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_3",
                     name: "3 in.",
                     length: 0.0762,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
+                }
+            ]
+        },
+        {
+            vendor: "MCMASTER",
+            size: "NO_8_32",
+            head: "BUTTON",
+            finish: "ZINC_PLATED",
+            lengths: [
+                {
+                    id: "IN_0_1875",
+                    name: "3/16 in.",
+                    length: 0.0047625,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_25",
+                    name: "1/4 in.",
+                    length: 0.00635,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_3125",
+                    name: "5/16 in.",
+                    length: 0.0079375,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_375",
+                    name: "3/8 in.",
+                    length: 0.009525,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_4375",
+                    name: "7/16 in.",
+                    length: 0.0111125,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_5",
+                    name: "1/2 in.",
+                    length: 0.0127,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_625",
+                    name: "5/8 in.",
+                    length: 0.015875,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_75",
+                    name: "3/4 in.",
+                    length: 0.01905,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_875",
+                    name: "7/8 in.",
+                    length: 0.022225,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_1",
+                    name: "1 in.",
+                    length: 0.0254,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_1_5",
+                    name: "1-1/2 in.",
+                    length: 0.0381,
+                    fullThreadChoice: false
                 }
             ]
         },
@@ -3566,138 +4169,207 @@ export const CATALOG = {
             vendor: "MCMASTER",
             size: "NO_8_32",
             head: "FLAT",
+            finish: "BLACK",
             lengths: [
                 {
                     id: "IN_0_15625",
                     name: "5/32 in.",
                     length: 0.00396875,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_1875",
                     name: "3/16 in.",
                     length: 0.0047625,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_25",
                     name: "1/4 in.",
                     length: 0.00635,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_3125",
                     name: "5/16 in.",
                     length: 0.0079375,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
                     name: "3/8 in.",
                     length: 0.009525,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_4375",
                     name: "7/16 in.",
                     length: 0.0111125,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
                     name: "1/2 in.",
                     length: 0.0127,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5625",
                     name: "9/16 in.",
                     length: 0.0142875,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
                     name: "5/8 in.",
                     length: 0.015875,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
                     name: "3/4 in.",
                     length: 0.01905,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_875",
                     name: "7/8 in.",
                     length: 0.022225,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
                     name: "1 in.",
                     length: 0.0254,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_125",
                     name: "1-1/8 in.",
                     length: 0.028575,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
                     name: "1-1/4 in.",
                     length: 0.03175,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_375",
                     name: "1-3/8 in.",
                     length: 0.034925,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
                     name: "1-1/2 in.",
                     length: 0.0381,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_625",
                     name: "1-5/8 in.",
                     length: 0.041275,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_75",
                     name: "1-3/4 in.",
                     length: 0.04445,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2",
                     name: "2 in.",
                     length: 0.0508,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2_25",
                     name: "2-1/4 in.",
                     length: 0.05715,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2_5",
                     name: "2-1/2 in.",
                     length: 0.0635,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_3",
                     name: "3 in.",
                     length: 0.0762,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
+                }
+            ]
+        },
+        {
+            vendor: "MCMASTER",
+            size: "NO_8_32",
+            head: "FLAT",
+            finish: "ZINC_PLATED",
+            lengths: [
+                {
+                    id: "IN_0_25",
+                    name: "1/4 in.",
+                    length: 0.00635,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_3125",
+                    name: "5/16 in.",
+                    length: 0.0079375,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_375",
+                    name: "3/8 in.",
+                    length: 0.009525,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_5",
+                    name: "1/2 in.",
+                    length: 0.0127,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_625",
+                    name: "5/8 in.",
+                    length: 0.015875,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_75",
+                    name: "3/4 in.",
+                    length: 0.01905,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_875",
+                    name: "7/8 in.",
+                    length: 0.022225,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_1",
+                    name: "1 in.",
+                    length: 0.0254,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_1_25",
+                    name: "1-1/4 in.",
+                    length: 0.03175,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_1_5",
+                    name: "1-1/2 in.",
+                    length: 0.0381,
+                    fullThreadChoice: false
                 }
             ]
         },
@@ -3705,210 +4377,351 @@ export const CATALOG = {
             vendor: "MCMASTER",
             size: "NO_10_32",
             head: "SOCKET",
+            finish: "BLACK",
             lengths: [
                 {
                     id: "IN_0_15625",
                     name: "5/32 in.",
                     length: 0.00396875,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_1875",
                     name: "3/16 in.",
                     length: 0.0047625,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_25",
                     name: "1/4 in.",
                     length: 0.00635,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_3125",
                     name: "5/16 in.",
                     length: 0.0079375,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
                     name: "3/8 in.",
                     length: 0.009525,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_4375",
                     name: "7/16 in.",
                     length: 0.0111125,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
                     name: "1/2 in.",
                     length: 0.0127,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5625",
                     name: "9/16 in.",
                     length: 0.0142875,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
                     name: "5/8 in.",
                     length: 0.015875,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_6875",
                     name: "11/16 in.",
                     length: 0.0174625,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
                     name: "3/4 in.",
                     length: 0.01905,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_875",
                     name: "7/8 in.",
                     length: 0.022225,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
                     name: "1 in.",
                     length: 0.0254,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_125",
                     name: "1-1/8 in.",
                     length: 0.028575,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
                     name: "1-1/4 in.",
                     length: 0.03175,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_375",
                     name: "1-3/8 in.",
                     length: 0.034925,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
                     name: "1-1/2 in.",
                     length: 0.0381,
-                    variants: ["STANDARD", "FULL_THREAD", "ZINC_PLATED"]
+                    fullThreadChoice: true
                 },
                 {
                     id: "IN_1_625",
                     name: "1-5/8 in.",
                     length: 0.041275,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_75",
                     name: "1-3/4 in.",
                     length: 0.04445,
-                    variants: ["STANDARD", "FULL_THREAD", "ZINC_PLATED"]
+                    fullThreadChoice: true
                 },
                 {
                     id: "IN_1_875",
                     name: "1-7/8 in.",
                     length: 0.047625,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2",
                     name: "2 in.",
                     length: 0.0508,
-                    variants: ["STANDARD", "FULL_THREAD", "ZINC_PLATED"]
+                    fullThreadChoice: true
                 },
                 {
                     id: "IN_2_25",
                     name: "2-1/4 in.",
                     length: 0.05715,
-                    variants: ["STANDARD", "FULL_THREAD", "ZINC_PLATED"]
+                    fullThreadChoice: true
                 },
                 {
                     id: "IN_2_5",
                     name: "2-1/2 in.",
                     length: 0.0635,
-                    variants: ["STANDARD", "FULL_THREAD", "ZINC_PLATED"]
+                    fullThreadChoice: true
                 },
                 {
                     id: "IN_2_75",
                     name: "2-3/4 in.",
                     length: 0.06985,
-                    variants: ["STANDARD", "FULL_THREAD", "ZINC_PLATED"]
+                    fullThreadChoice: true
                 },
                 {
                     id: "IN_3",
                     name: "3 in.",
                     length: 0.0762,
-                    variants: ["STANDARD", "FULL_THREAD", "ZINC_PLATED"]
+                    fullThreadChoice: true
                 },
                 {
                     id: "IN_3_5",
                     name: "3-1/2 in.",
                     length: 0.0889,
-                    variants: ["STANDARD", "FULL_THREAD", "ZINC_PLATED"]
+                    fullThreadChoice: true
                 },
                 {
                     id: "IN_3_75",
                     name: "3-3/4 in.",
                     length: 0.09525,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_4",
                     name: "4 in.",
                     length: 0.1016,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_4_5",
                     name: "4-1/2 in.",
                     length: 0.1143,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_5",
                     name: "5 in.",
                     length: 0.127,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_5_5",
                     name: "5-1/2 in.",
                     length: 0.1397,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_6",
                     name: "6 in.",
                     length: 0.1524,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_6_5",
                     name: "6-1/2 in.",
                     length: 0.1651,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_7",
                     name: "7 in.",
                     length: 0.1778,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
+                }
+            ]
+        },
+        {
+            vendor: "MCMASTER",
+            size: "NO_10_32",
+            head: "SOCKET",
+            finish: "ZINC_PLATED",
+            lengths: [
+                {
+                    id: "IN_0_1875",
+                    name: "3/16 in.",
+                    length: 0.0047625,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_25",
+                    name: "1/4 in.",
+                    length: 0.00635,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_3125",
+                    name: "5/16 in.",
+                    length: 0.0079375,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_375",
+                    name: "3/8 in.",
+                    length: 0.009525,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_4375",
+                    name: "7/16 in.",
+                    length: 0.0111125,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_5",
+                    name: "1/2 in.",
+                    length: 0.0127,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_5625",
+                    name: "9/16 in.",
+                    length: 0.0142875,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_625",
+                    name: "5/8 in.",
+                    length: 0.015875,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_75",
+                    name: "3/4 in.",
+                    length: 0.01905,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_875",
+                    name: "7/8 in.",
+                    length: 0.022225,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_1",
+                    name: "1 in.",
+                    length: 0.0254,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_1_25",
+                    name: "1-1/4 in.",
+                    length: 0.03175,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_1_375",
+                    name: "1-3/8 in.",
+                    length: 0.034925,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_1_5",
+                    name: "1-1/2 in.",
+                    length: 0.0381,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_1_75",
+                    name: "1-3/4 in.",
+                    length: 0.04445,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_2",
+                    name: "2 in.",
+                    length: 0.0508,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_2_25",
+                    name: "2-1/4 in.",
+                    length: 0.05715,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_2_5",
+                    name: "2-1/2 in.",
+                    length: 0.0635,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_2_75",
+                    name: "2-3/4 in.",
+                    length: 0.06985,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_3",
+                    name: "3 in.",
+                    length: 0.0762,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_3_5",
+                    name: "3-1/2 in.",
+                    length: 0.0889,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_4",
+                    name: "4 in.",
+                    length: 0.1016,
+                    fullThreadChoice: false
                 }
             ]
         },
@@ -3916,138 +4729,219 @@ export const CATALOG = {
             vendor: "MCMASTER",
             size: "NO_10_32",
             head: "BUTTON",
+            finish: "BLACK",
             lengths: [
                 {
                     id: "IN_0_125",
                     name: "1/8 in.",
                     length: 0.003175,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_1875",
                     name: "3/16 in.",
                     length: 0.0047625,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_25",
                     name: "1/4 in.",
                     length: 0.00635,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_3125",
                     name: "5/16 in.",
                     length: 0.0079375,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
                     name: "3/8 in.",
                     length: 0.009525,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_4375",
                     name: "7/16 in.",
                     length: 0.0111125,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
                     name: "1/2 in.",
                     length: 0.0127,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5625",
                     name: "9/16 in.",
                     length: 0.0142875,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
                     name: "5/8 in.",
                     length: 0.015875,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
                     name: "3/4 in.",
                     length: 0.01905,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_875",
                     name: "7/8 in.",
                     length: 0.022225,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
                     name: "1 in.",
                     length: 0.0254,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_125",
                     name: "1-1/8 in.",
                     length: 0.028575,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
                     name: "1-1/4 in.",
                     length: 0.03175,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_375",
                     name: "1-3/8 in.",
                     length: 0.034925,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
                     name: "1-1/2 in.",
                     length: 0.0381,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_625",
                     name: "1-5/8 in.",
                     length: 0.041275,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_75",
                     name: "1-3/4 in.",
                     length: 0.04445,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2",
                     name: "2 in.",
                     length: 0.0508,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2_25",
                     name: "2-1/4 in.",
                     length: 0.05715,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2_5",
                     name: "2-1/2 in.",
                     length: 0.0635,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_3",
                     name: "3 in.",
                     length: 0.0762,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
+                }
+            ]
+        },
+        {
+            vendor: "MCMASTER",
+            size: "NO_10_32",
+            head: "BUTTON",
+            finish: "ZINC_PLATED",
+            lengths: [
+                {
+                    id: "IN_0_25",
+                    name: "1/4 in.",
+                    length: 0.00635,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_3125",
+                    name: "5/16 in.",
+                    length: 0.0079375,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_375",
+                    name: "3/8 in.",
+                    length: 0.009525,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_4375",
+                    name: "7/16 in.",
+                    length: 0.0111125,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_5",
+                    name: "1/2 in.",
+                    length: 0.0127,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_625",
+                    name: "5/8 in.",
+                    length: 0.015875,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_75",
+                    name: "3/4 in.",
+                    length: 0.01905,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_875",
+                    name: "7/8 in.",
+                    length: 0.022225,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_1",
+                    name: "1 in.",
+                    length: 0.0254,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_1_25",
+                    name: "1-1/4 in.",
+                    length: 0.03175,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_1_5",
+                    name: "1-1/2 in.",
+                    length: 0.0381,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_2",
+                    name: "2 in.",
+                    length: 0.0508,
+                    fullThreadChoice: false
                 }
             ]
         },
@@ -4055,144 +4949,219 @@ export const CATALOG = {
             vendor: "MCMASTER",
             size: "NO_10_32",
             head: "FLAT",
+            finish: "BLACK",
             lengths: [
                 {
                     id: "IN_0_1875",
                     name: "3/16 in.",
                     length: 0.0047625,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_25",
                     name: "1/4 in.",
                     length: 0.00635,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_3125",
                     name: "5/16 in.",
                     length: 0.0079375,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
                     name: "3/8 in.",
                     length: 0.009525,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_4375",
                     name: "7/16 in.",
                     length: 0.0111125,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
                     name: "1/2 in.",
                     length: 0.0127,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5625",
                     name: "9/16 in.",
                     length: 0.0142875,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
                     name: "5/8 in.",
                     length: 0.015875,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
                     name: "3/4 in.",
                     length: 0.01905,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_875",
                     name: "7/8 in.",
                     length: 0.022225,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
                     name: "1 in.",
                     length: 0.0254,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_125",
                     name: "1-1/8 in.",
                     length: 0.028575,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
                     name: "1-1/4 in.",
                     length: 0.03175,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_375",
                     name: "1-3/8 in.",
                     length: 0.034925,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
                     name: "1-1/2 in.",
                     length: 0.0381,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_625",
                     name: "1-5/8 in.",
                     length: 0.041275,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_75",
                     name: "1-3/4 in.",
                     length: 0.04445,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2",
                     name: "2 in.",
                     length: 0.0508,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2_25",
                     name: "2-1/4 in.",
                     length: 0.05715,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2_5",
                     name: "2-1/2 in.",
                     length: 0.0635,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_3",
                     name: "3 in.",
                     length: 0.0762,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_3_5",
                     name: "3-1/2 in.",
                     length: 0.0889,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_4",
                     name: "4 in.",
                     length: 0.1016,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
+                }
+            ]
+        },
+        {
+            vendor: "MCMASTER",
+            size: "NO_10_32",
+            head: "FLAT",
+            finish: "ZINC_PLATED",
+            lengths: [
+                {
+                    id: "IN_0_25",
+                    name: "1/4 in.",
+                    length: 0.00635,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_3125",
+                    name: "5/16 in.",
+                    length: 0.0079375,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_375",
+                    name: "3/8 in.",
+                    length: 0.009525,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_5",
+                    name: "1/2 in.",
+                    length: 0.0127,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_625",
+                    name: "5/8 in.",
+                    length: 0.015875,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_75",
+                    name: "3/4 in.",
+                    length: 0.01905,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_875",
+                    name: "7/8 in.",
+                    length: 0.022225,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_1",
+                    name: "1 in.",
+                    length: 0.0254,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_1_25",
+                    name: "1-1/4 in.",
+                    length: 0.03175,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_1_5",
+                    name: "1-1/2 in.",
+                    length: 0.0381,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_2",
+                    name: "2 in.",
+                    length: 0.0508,
+                    fullThreadChoice: false
                 }
             ]
         },
@@ -4200,270 +5169,453 @@ export const CATALOG = {
             vendor: "MCMASTER",
             size: "QUARTER_20",
             head: "SOCKET",
+            finish: "BLACK",
             lengths: [
                 {
                     id: "IN_0_25",
                     name: "1/4 in.",
                     length: 0.00635,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_3125",
                     name: "5/16 in.",
                     length: 0.0079375,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
                     name: "3/8 in.",
                     length: 0.009525,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_4375",
                     name: "7/16 in.",
                     length: 0.0111125,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
                     name: "1/2 in.",
                     length: 0.0127,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5625",
                     name: "9/16 in.",
                     length: 0.0142875,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
                     name: "5/8 in.",
                     length: 0.015875,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_6875",
                     name: "11/16 in.",
                     length: 0.0174625,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
                     name: "3/4 in.",
                     length: 0.01905,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_875",
                     name: "7/8 in.",
                     length: 0.022225,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
                     name: "1 in.",
                     length: 0.0254,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_125",
                     name: "1-1/8 in.",
                     length: 0.028575,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
                     name: "1-1/4 in.",
                     length: 0.03175,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_375",
                     name: "1-3/8 in.",
                     length: 0.034925,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
                     name: "1-1/2 in.",
                     length: 0.0381,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_625",
                     name: "1-5/8 in.",
                     length: 0.041275,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_75",
                     name: "1-3/4 in.",
                     length: 0.04445,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_875",
                     name: "1-7/8 in.",
                     length: 0.047625,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2",
                     name: "2 in.",
                     length: 0.0508,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2_25",
                     name: "2-1/4 in.",
                     length: 0.05715,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2_375",
                     name: "2-3/8 in.",
                     length: 0.060325,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2_5",
                     name: "2-1/2 in.",
                     length: 0.0635,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2_625",
                     name: "2-5/8 in.",
                     length: 0.066675,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2_75",
                     name: "2-3/4 in.",
                     length: 0.06985,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_3",
                     name: "3 in.",
                     length: 0.0762,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_3_25",
                     name: "3-1/4 in.",
                     length: 0.08255,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_3_5",
                     name: "3-1/2 in.",
                     length: 0.0889,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_3_75",
                     name: "3-3/4 in.",
                     length: 0.09525,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_4",
                     name: "4 in.",
                     length: 0.1016,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_4_25",
                     name: "4-1/4 in.",
                     length: 0.10795,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_4_5",
                     name: "4-1/2 in.",
                     length: 0.1143,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_5",
                     name: "5 in.",
                     length: 0.127,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_5_25",
                     name: "5-1/4 in.",
                     length: 0.13335,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_5_5",
                     name: "5-1/2 in.",
                     length: 0.1397,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_5_75",
                     name: "5-3/4 in.",
                     length: 0.14605,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_6",
                     name: "6 in.",
                     length: 0.1524,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_6_25",
                     name: "6-1/4 in.",
                     length: 0.15875,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_6_5",
                     name: "6-1/2 in.",
                     length: 0.1651,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_7",
                     name: "7 in.",
                     length: 0.1778,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_7_5",
                     name: "7-1/2 in.",
                     length: 0.1905,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_8",
                     name: "8 in.",
                     length: 0.2032,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_8_5",
                     name: "8-1/2 in.",
                     length: 0.2159,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_9",
                     name: "9 in.",
                     length: 0.2286,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_10",
                     name: "10 in.",
                     length: 0.254,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
+                }
+            ]
+        },
+        {
+            vendor: "MCMASTER",
+            size: "QUARTER_20",
+            head: "SOCKET",
+            finish: "ZINC_PLATED",
+            lengths: [
+                {
+                    id: "IN_0_25",
+                    name: "1/4 in.",
+                    length: 0.00635,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_375",
+                    name: "3/8 in.",
+                    length: 0.009525,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_4375",
+                    name: "7/16 in.",
+                    length: 0.0111125,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_5",
+                    name: "1/2 in.",
+                    length: 0.0127,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_5625",
+                    name: "9/16 in.",
+                    length: 0.0142875,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_625",
+                    name: "5/8 in.",
+                    length: 0.015875,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_75",
+                    name: "3/4 in.",
+                    length: 0.01905,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_875",
+                    name: "7/8 in.",
+                    length: 0.022225,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_1",
+                    name: "1 in.",
+                    length: 0.0254,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_1_125",
+                    name: "1-1/8 in.",
+                    length: 0.028575,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_1_25",
+                    name: "1-1/4 in.",
+                    length: 0.03175,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_1_375",
+                    name: "1-3/8 in.",
+                    length: 0.034925,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_1_5",
+                    name: "1-1/2 in.",
+                    length: 0.0381,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_1_625",
+                    name: "1-5/8 in.",
+                    length: 0.041275,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_1_75",
+                    name: "1-3/4 in.",
+                    length: 0.04445,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_1_875",
+                    name: "1-7/8 in.",
+                    length: 0.047625,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_2",
+                    name: "2 in.",
+                    length: 0.0508,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_2_25",
+                    name: "2-1/4 in.",
+                    length: 0.05715,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_2_5",
+                    name: "2-1/2 in.",
+                    length: 0.0635,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_2_75",
+                    name: "2-3/4 in.",
+                    length: 0.06985,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_3",
+                    name: "3 in.",
+                    length: 0.0762,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_3_25",
+                    name: "3-1/4 in.",
+                    length: 0.08255,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_3_5",
+                    name: "3-1/2 in.",
+                    length: 0.0889,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_3_75",
+                    name: "3-3/4 in.",
+                    length: 0.09525,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_4",
+                    name: "4 in.",
+                    length: 0.1016,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_4_5",
+                    name: "4-1/2 in.",
+                    length: 0.1143,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_5",
+                    name: "5 in.",
+                    length: 0.127,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_5_5",
+                    name: "5-1/2 in.",
+                    length: 0.1397,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_6",
+                    name: "6 in.",
+                    length: 0.1524,
+                    fullThreadChoice: false
                 }
             ]
         },
@@ -4471,156 +5623,249 @@ export const CATALOG = {
             vendor: "MCMASTER",
             size: "QUARTER_20",
             head: "BUTTON",
+            finish: "BLACK",
             lengths: [
                 {
                     id: "IN_0_1875",
                     name: "3/16 in.",
                     length: 0.0047625,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_25",
                     name: "1/4 in.",
                     length: 0.00635,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_3125",
                     name: "5/16 in.",
                     length: 0.0079375,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
                     name: "3/8 in.",
                     length: 0.009525,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_4375",
                     name: "7/16 in.",
                     length: 0.0111125,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
                     name: "1/2 in.",
                     length: 0.0127,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5625",
                     name: "9/16 in.",
                     length: 0.0142875,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
                     name: "5/8 in.",
                     length: 0.015875,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
                     name: "3/4 in.",
                     length: 0.01905,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_875",
                     name: "7/8 in.",
                     length: 0.022225,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
                     name: "1 in.",
                     length: 0.0254,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_125",
                     name: "1-1/8 in.",
                     length: 0.028575,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
                     name: "1-1/4 in.",
                     length: 0.03175,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_375",
                     name: "1-3/8 in.",
                     length: 0.034925,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
                     name: "1-1/2 in.",
                     length: 0.0381,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_625",
                     name: "1-5/8 in.",
                     length: 0.041275,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_75",
                     name: "1-3/4 in.",
                     length: 0.04445,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2",
                     name: "2 in.",
                     length: 0.0508,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2_25",
                     name: "2-1/4 in.",
                     length: 0.05715,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2_5",
                     name: "2-1/2 in.",
                     length: 0.0635,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2_75",
                     name: "2-3/4 in.",
                     length: 0.06985,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_3",
                     name: "3 in.",
                     length: 0.0762,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_3_25",
                     name: "3-1/4 in.",
                     length: 0.08255,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_3_5",
                     name: "3-1/2 in.",
                     length: 0.0889,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_4",
                     name: "4 in.",
                     length: 0.1016,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
+                }
+            ]
+        },
+        {
+            vendor: "MCMASTER",
+            size: "QUARTER_20",
+            head: "BUTTON",
+            finish: "ZINC_PLATED",
+            lengths: [
+                {
+                    id: "IN_0_25",
+                    name: "1/4 in.",
+                    length: 0.00635,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_3125",
+                    name: "5/16 in.",
+                    length: 0.0079375,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_375",
+                    name: "3/8 in.",
+                    length: 0.009525,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_5",
+                    name: "1/2 in.",
+                    length: 0.0127,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_625",
+                    name: "5/8 in.",
+                    length: 0.015875,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_75",
+                    name: "3/4 in.",
+                    length: 0.01905,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_875",
+                    name: "7/8 in.",
+                    length: 0.022225,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_1",
+                    name: "1 in.",
+                    length: 0.0254,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_1_25",
+                    name: "1-1/4 in.",
+                    length: 0.03175,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_1_5",
+                    name: "1-1/2 in.",
+                    length: 0.0381,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_1_75",
+                    name: "1-3/4 in.",
+                    length: 0.04445,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_2",
+                    name: "2 in.",
+                    length: 0.0508,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_2_5",
+                    name: "2-1/2 in.",
+                    length: 0.0635,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_3",
+                    name: "3 in.",
+                    length: 0.0762,
+                    fullThreadChoice: false
                 }
             ]
         },
@@ -4628,156 +5873,267 @@ export const CATALOG = {
             vendor: "MCMASTER",
             size: "QUARTER_20",
             head: "FLAT",
+            finish: "BLACK",
             lengths: [
                 {
                     id: "IN_0_25",
                     name: "1/4 in.",
                     length: 0.00635,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
                     name: "3/8 in.",
                     length: 0.009525,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_4375",
                     name: "7/16 in.",
                     length: 0.0111125,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
                     name: "1/2 in.",
                     length: 0.0127,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5625",
                     name: "9/16 in.",
                     length: 0.0142875,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
                     name: "5/8 in.",
                     length: 0.015875,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
                     name: "3/4 in.",
                     length: 0.01905,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_875",
                     name: "7/8 in.",
                     length: 0.022225,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
                     name: "1 in.",
                     length: 0.0254,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_125",
                     name: "1-1/8 in.",
                     length: 0.028575,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
                     name: "1-1/4 in.",
                     length: 0.03175,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_375",
                     name: "1-3/8 in.",
                     length: 0.034925,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
                     name: "1-1/2 in.",
                     length: 0.0381,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_625",
                     name: "1-5/8 in.",
                     length: 0.041275,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_75",
                     name: "1-3/4 in.",
                     length: 0.04445,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2",
                     name: "2 in.",
                     length: 0.0508,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2_25",
                     name: "2-1/4 in.",
                     length: 0.05715,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2_5",
                     name: "2-1/2 in.",
                     length: 0.0635,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2_75",
                     name: "2-3/4 in.",
                     length: 0.06985,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_3",
                     name: "3 in.",
                     length: 0.0762,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_3_25",
                     name: "3-1/4 in.",
                     length: 0.08255,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_3_5",
                     name: "3-1/2 in.",
                     length: 0.0889,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_4",
                     name: "4 in.",
                     length: 0.1016,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_5",
                     name: "5 in.",
                     length: 0.127,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_6",
                     name: "6 in.",
                     length: 0.1524,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
+                }
+            ]
+        },
+        {
+            vendor: "MCMASTER",
+            size: "QUARTER_20",
+            head: "FLAT",
+            finish: "ZINC_PLATED",
+            lengths: [
+                {
+                    id: "IN_0_375",
+                    name: "3/8 in.",
+                    length: 0.009525,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_5",
+                    name: "1/2 in.",
+                    length: 0.0127,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_625",
+                    name: "5/8 in.",
+                    length: 0.015875,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_75",
+                    name: "3/4 in.",
+                    length: 0.01905,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_875",
+                    name: "7/8 in.",
+                    length: 0.022225,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_1",
+                    name: "1 in.",
+                    length: 0.0254,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_1_125",
+                    name: "1-1/8 in.",
+                    length: 0.028575,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_1_25",
+                    name: "1-1/4 in.",
+                    length: 0.03175,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_1_5",
+                    name: "1-1/2 in.",
+                    length: 0.0381,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_1_75",
+                    name: "1-3/4 in.",
+                    length: 0.04445,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_2",
+                    name: "2 in.",
+                    length: 0.0508,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_2_25",
+                    name: "2-1/4 in.",
+                    length: 0.05715,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_2_5",
+                    name: "2-1/2 in.",
+                    length: 0.0635,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_2_75",
+                    name: "2-3/4 in.",
+                    length: 0.06985,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_3",
+                    name: "3 in.",
+                    length: 0.0762,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_3_5",
+                    name: "3-1/2 in.",
+                    length: 0.0889,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_4",
+                    name: "4 in.",
+                    length: 0.1016,
+                    fullThreadChoice: false
                 }
             ]
         },
@@ -4785,108 +6141,109 @@ export const CATALOG = {
             vendor: "REV",
             size: "NO_10_32",
             head: "SOCKET",
+            finish: "BLACK",
             lengths: [
                 {
                     id: "IN_0_25",
                     name: "1/4 in.",
                     length: 0.00635,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_3125",
                     name: "5/16 in.",
                     length: 0.0079375,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
                     name: "3/8 in.",
                     length: 0.009525,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
                     name: "1/2 in.",
                     length: 0.0127,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
                     name: "5/8 in.",
                     length: 0.015875,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
                     name: "3/4 in.",
                     length: 0.01905,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
                     name: "1 in.",
                     length: 0.0254,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
                     name: "1-1/4 in.",
                     length: 0.03175,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
                     name: "1-1/2 in.",
                     length: 0.0381,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_75",
                     name: "1-3/4 in.",
                     length: 0.04445,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2",
                     name: "2 in.",
                     length: 0.0508,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2_25",
                     name: "2-1/4 in.",
                     length: 0.05715,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2_5",
                     name: "2-1/2 in.",
                     length: 0.0635,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2_75",
                     name: "2-3/4 in.",
                     length: 0.06985,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_3",
                     name: "3 in.",
                     length: 0.0762,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_3_5",
                     name: "3-1/2 in.",
                     length: 0.0889,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_4",
                     name: "4 in.",
                     length: 0.1016,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 }
             ]
         },
@@ -4894,102 +6251,123 @@ export const CATALOG = {
             vendor: "REV",
             size: "NO_10_32",
             head: "BUTTON",
+            finish: "BLACK",
             lengths: [
                 {
                     id: "IN_0_25",
                     name: "1/4 in.",
                     length: 0.00635,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_3125",
                     name: "5/16 in.",
                     length: 0.0079375,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
                     name: "3/8 in.",
                     length: 0.009525,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
                     name: "1/2 in.",
                     length: 0.0127,
-                    variants: ["STANDARD", "ZINC_PLATED"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
                     name: "5/8 in.",
                     length: 0.015875,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
                     name: "3/4 in.",
                     length: 0.01905,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
                     name: "1 in.",
                     length: 0.0254,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
                     name: "1-1/4 in.",
                     length: 0.03175,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
                     name: "1-1/2 in.",
                     length: 0.0381,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_625",
                     name: "1-5/8 in.",
                     length: 0.041275,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_75",
                     name: "1-3/4 in.",
                     length: 0.04445,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2",
                     name: "2 in.",
                     length: 0.0508,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2_25",
                     name: "2-1/4 in.",
                     length: 0.05715,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2_5",
                     name: "2-1/2 in.",
                     length: 0.0635,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2_75",
                     name: "2-3/4 in.",
                     length: 0.06985,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_3",
                     name: "3 in.",
                     length: 0.0762,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
+                }
+            ]
+        },
+        {
+            vendor: "REV",
+            size: "NO_10_32",
+            head: "BUTTON",
+            finish: "ZINC_PLATED",
+            lengths: [
+                {
+                    id: "IN_0_375",
+                    name: "3/8 in.",
+                    length: 0.009525,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_5",
+                    name: "1/2 in.",
+                    length: 0.0127,
+                    fullThreadChoice: false
                 }
             ]
         },
@@ -4997,12 +6375,13 @@ export const CATALOG = {
             vendor: "REV",
             size: "NO_10_32",
             head: "FLAT",
+            finish: "ZINC_PLATED",
             lengths: [
                 {
                     id: "IN_0_5",
                     name: "1/2 in.",
                     length: 0.0127,
-                    variants: ["ZINC_PLATED"]
+                    fullThreadChoice: false
                 }
             ]
         },
@@ -5010,24 +6389,25 @@ export const CATALOG = {
             vendor: "WCP",
             size: "NO_4_40",
             head: "BUTTON",
+            finish: "BLACK",
             lengths: [
                 {
                     id: "IN_0_25",
                     name: "1/4 in.",
                     length: 0.00635,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
                     name: "3/8 in.",
                     length: 0.009525,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
                     name: "3/4 in.",
                     length: 0.01905,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 }
             ]
         },
@@ -5035,12 +6415,13 @@ export const CATALOG = {
             vendor: "WCP",
             size: "NO_6_32",
             head: "BUTTON",
+            finish: "BLACK",
             lengths: [
                 {
                     id: "IN_0_25",
                     name: "1/4 in.",
                     length: 0.00635,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 }
             ]
         },
@@ -5048,12 +6429,13 @@ export const CATALOG = {
             vendor: "WCP",
             size: "NO_8_32",
             head: "SOCKET",
+            finish: "BLACK",
             lengths: [
                 {
                     id: "IN_1",
                     name: "1 in.",
                     length: 0.0254,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 }
             ]
         },
@@ -5061,18 +6443,19 @@ export const CATALOG = {
             vendor: "WCP",
             size: "NO_8_32",
             head: "BUTTON",
+            finish: "BLACK",
             lengths: [
                 {
                     id: "IN_0_25",
                     name: "1/4 in.",
                     length: 0.00635,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
                     name: "1/2 in.",
                     length: 0.0127,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 }
             ]
         },
@@ -5080,84 +6463,85 @@ export const CATALOG = {
             vendor: "WCP",
             size: "NO_10_32",
             head: "SOCKET",
+            finish: "BLACK",
             lengths: [
                 {
                     id: "IN_0_25",
                     name: "1/4 in.",
                     length: 0.00635,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
                     name: "3/8 in.",
                     length: 0.009525,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
                     name: "1/2 in.",
                     length: 0.0127,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
                     name: "1 in.",
                     length: 0.0254,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
                     name: "1-1/2 in.",
                     length: 0.0381,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_75",
                     name: "1-3/4 in.",
                     length: 0.04445,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2",
                     name: "2 in.",
                     length: 0.0508,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2_5",
                     name: "2-1/2 in.",
                     length: 0.0635,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_3",
                     name: "3 in.",
                     length: 0.0762,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_3_5",
                     name: "3-1/2 in.",
                     length: 0.0889,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_4",
                     name: "4 in.",
                     length: 0.1016,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_4_5",
                     name: "4-1/2 in.",
                     length: 0.1143,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_5",
                     name: "5 in.",
                     length: 0.127,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 }
             ]
         },
@@ -5165,96 +6549,123 @@ export const CATALOG = {
             vendor: "WCP",
             size: "NO_10_32",
             head: "BUTTON",
+            finish: "BLACK",
             lengths: [
                 {
                     id: "IN_0_25",
                     name: "1/4 in.",
                     length: 0.00635,
-                    variants: ["STANDARD", "ALUMINUM"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
                     name: "3/8 in.",
                     length: 0.009525,
-                    variants: ["STANDARD", "ALUMINUM"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
                     name: "1/2 in.",
                     length: 0.0127,
-                    variants: ["STANDARD", "ALUMINUM"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
                     name: "3/4 in.",
                     length: 0.01905,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_875",
                     name: "7/8 in.",
                     length: 0.022225,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
                     name: "1 in.",
                     length: 0.0254,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
                     name: "1-1/4 in.",
                     length: 0.03175,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
                     name: "1-1/2 in.",
                     length: 0.0381,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_75",
                     name: "1-3/4 in.",
                     length: 0.04445,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2",
                     name: "2 in.",
                     length: 0.0508,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2_25",
                     name: "2-1/4 in.",
                     length: 0.05715,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2_5",
                     name: "2-1/2 in.",
                     length: 0.0635,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2_75",
                     name: "2-3/4 in.",
                     length: 0.06985,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_3",
                     name: "3 in.",
                     length: 0.0762,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_4_75",
                     name: "4-3/4 in.",
                     length: 0.12065,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
+                }
+            ]
+        },
+        {
+            vendor: "WCP",
+            size: "NO_10_32",
+            head: "BUTTON",
+            finish: "ALUMINUM",
+            lengths: [
+                {
+                    id: "IN_0_25",
+                    name: "1/4 in.",
+                    length: 0.00635,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_375",
+                    name: "3/8 in.",
+                    length: 0.009525,
+                    fullThreadChoice: false
+                },
+                {
+                    id: "IN_0_5",
+                    name: "1/2 in.",
+                    length: 0.0127,
+                    fullThreadChoice: false
                 }
             ]
         },
@@ -5262,18 +6673,19 @@ export const CATALOG = {
             vendor: "ANDYMARK",
             size: "NO_4_40",
             head: "SOCKET",
+            finish: "BLACK",
             lengths: [
                 {
                     id: "IN_0_375",
                     name: "3/8 in.",
                     length: 0.009525,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
                     name: "1/2 in.",
                     length: 0.0127,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 }
             ]
         },
@@ -5281,12 +6693,13 @@ export const CATALOG = {
             vendor: "ANDYMARK",
             size: "NO_4_40",
             head: "BUTTON",
+            finish: "BLACK",
             lengths: [
                 {
                     id: "IN_0_25",
                     name: "1/4 in.",
                     length: 0.00635,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 }
             ]
         },
@@ -5294,12 +6707,13 @@ export const CATALOG = {
             vendor: "ANDYMARK",
             size: "NO_4_40",
             head: "FLAT",
+            finish: "BLACK",
             lengths: [
                 {
                     id: "IN_0_375",
                     name: "3/8 in.",
                     length: 0.009525,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 }
             ]
         },
@@ -5307,12 +6721,13 @@ export const CATALOG = {
             vendor: "ANDYMARK",
             size: "NO_6_32",
             head: "SOCKET",
+            finish: "BLACK",
             lengths: [
                 {
                     id: "IN_2_125",
                     name: "2-1/8 in.",
                     length: 0.053975,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 }
             ]
         },
@@ -5320,12 +6735,13 @@ export const CATALOG = {
             vendor: "ANDYMARK",
             size: "NO_6_32",
             head: "FLAT",
+            finish: "BLACK",
             lengths: [
                 {
                     id: "IN_0_625",
                     name: "5/8 in.",
                     length: 0.015875,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 }
             ]
         },
@@ -5333,12 +6749,13 @@ export const CATALOG = {
             vendor: "ANDYMARK",
             size: "NO_8_32",
             head: "BUTTON",
+            finish: "BLACK",
             lengths: [
                 {
                     id: "IN_0_5",
                     name: "1/2 in.",
                     length: 0.0127,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 }
             ]
         },
@@ -5346,120 +6763,121 @@ export const CATALOG = {
             vendor: "ANDYMARK",
             size: "NO_10_32",
             head: "SOCKET",
+            finish: "BLACK",
             lengths: [
                 {
                     id: "IN_0_25",
                     name: "1/4 in.",
                     length: 0.00635,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_375",
                     name: "3/8 in.",
                     length: 0.009525,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
                     name: "1/2 in.",
                     length: 0.0127,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
                     name: "5/8 in.",
                     length: 0.015875,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
                     name: "3/4 in.",
                     length: 0.01905,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_875",
                     name: "7/8 in.",
                     length: 0.022225,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
                     name: "1 in.",
                     length: 0.0254,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_125",
                     name: "1-1/8 in.",
                     length: 0.028575,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
                     name: "1-1/4 in.",
                     length: 0.03175,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_375",
                     name: "1-3/8 in.",
                     length: 0.034925,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
                     name: "1-1/2 in.",
                     length: 0.0381,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_75",
                     name: "1-3/4 in.",
                     length: 0.04445,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2",
                     name: "2 in.",
                     length: 0.0508,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2_25",
                     name: "2-1/4 in.",
                     length: 0.05715,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2_5",
                     name: "2-1/2 in.",
                     length: 0.0635,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2_75",
                     name: "2-3/4 in.",
                     length: 0.06985,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_3",
                     name: "3 in.",
                     length: 0.0762,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_3_25",
                     name: "3-1/4 in.",
                     length: 0.08255,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_3_5",
                     name: "3-1/2 in.",
                     length: 0.0889,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 }
             ]
         },
@@ -5467,54 +6885,55 @@ export const CATALOG = {
             vendor: "ANDYMARK",
             size: "NO_10_32",
             head: "BUTTON",
+            finish: "BLACK",
             lengths: [
                 {
                     id: "IN_0_375",
                     name: "3/8 in.",
                     length: 0.009525,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
                     name: "1/2 in.",
                     length: 0.0127,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
                     name: "5/8 in.",
                     length: 0.015875,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
                     name: "3/4 in.",
                     length: 0.01905,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
                     name: "1 in.",
                     length: 0.0254,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
                     name: "1-1/4 in.",
                     length: 0.03175,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
                     name: "1-1/2 in.",
                     length: 0.0381,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_75",
                     name: "1-3/4 in.",
                     length: 0.04445,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 }
             ]
         },
@@ -5522,42 +6941,43 @@ export const CATALOG = {
             vendor: "ANDYMARK",
             size: "NO_10_32",
             head: "FLAT",
+            finish: "BLACK",
             lengths: [
                 {
                     id: "IN_0_5",
                     name: "1/2 in.",
                     length: 0.0127,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
                     name: "5/8 in.",
                     length: 0.015875,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
                     name: "3/4 in.",
                     length: 0.01905,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
                     name: "1 in.",
                     length: 0.0254,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
                     name: "1-1/2 in.",
                     length: 0.0381,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2",
                     name: "2 in.",
                     length: 0.0508,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 }
             ]
         },
@@ -5565,54 +6985,55 @@ export const CATALOG = {
             vendor: "ANDYMARK",
             size: "QUARTER_20",
             head: "SOCKET",
+            finish: "BLACK",
             lengths: [
                 {
                     id: "IN_0_625",
                     name: "5/8 in.",
                     length: 0.015875,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
                     name: "1 in.",
                     length: 0.0254,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
                     name: "1-1/2 in.",
                     length: 0.0381,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_75",
                     name: "1-3/4 in.",
                     length: 0.04445,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2",
                     name: "2 in.",
                     length: 0.0508,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2_5",
                     name: "2-1/2 in.",
                     length: 0.0635,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_3",
                     name: "3 in.",
                     length: 0.0762,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_3_25",
                     name: "3-1/4 in.",
                     length: 0.08255,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 }
             ]
         },
@@ -5620,66 +7041,67 @@ export const CATALOG = {
             vendor: "ANDYMARK",
             size: "QUARTER_20",
             head: "BUTTON",
+            finish: "BLACK",
             lengths: [
                 {
                     id: "IN_0_375",
                     name: "3/8 in.",
                     length: 0.009525,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_5",
                     name: "1/2 in.",
                     length: 0.0127,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_625",
                     name: "5/8 in.",
                     length: 0.015875,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_0_75",
                     name: "3/4 in.",
                     length: 0.01905,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1",
                     name: "1 in.",
                     length: 0.0254,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_25",
                     name: "1-1/4 in.",
                     length: 0.03175,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_5",
                     name: "1-1/2 in.",
                     length: 0.0381,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_1_75",
                     name: "1-3/4 in.",
                     length: 0.04445,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2",
                     name: "2 in.",
                     length: 0.0508,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2_5",
                     name: "2-1/2 in.",
                     length: 0.0635,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 }
             ]
         },
@@ -5687,18 +7109,19 @@ export const CATALOG = {
             vendor: "ANDYMARK",
             size: "QUARTER_20",
             head: "FLAT",
+            finish: "BLACK",
             lengths: [
                 {
                     id: "IN_0_75",
                     name: "3/4 in.",
                     length: 0.01905,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 },
                 {
                     id: "IN_2",
                     name: "2 in.",
                     length: 0.0508,
-                    variants: ["STANDARD"]
+                    fullThreadChoice: false
                 }
             ]
         }

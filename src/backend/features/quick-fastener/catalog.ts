@@ -45,15 +45,16 @@ export interface CatalogLength {
     id: string;
     name: string;
     length: number;
-    /** The screw variants made in it, the standard first where it's made. */
-    variants: string[];
+    /** Whether it's sold fully threaded as well as partly, so the studio asks which. */
+    fullThreadChoice: boolean;
 }
 
-/** The lengths a vendor makes a size and head in, shortest first. */
+/** The lengths a vendor makes a size and head in, in a finish, shortest first. */
 export interface CatalogScrew {
     vendor: string;
     size: string;
     head: string;
+    finish: string;
     lengths: CatalogLength[];
 }
 
@@ -101,23 +102,21 @@ export function getHead(headId: string): CatalogHead | undefined {
     return catalog.heads.find((head) => head.id === headId);
 }
 
-/** The lengths a vendor makes a size and head in, in a variant; none when it doesn't make them. */
+/** The lengths a vendor makes a size and head in, in a finish; none when it doesn't make them. */
 export function getLengths(
     vendor: string,
     size: string,
     head: string,
-    variant: string
+    finish: string
 ): CatalogLength[] {
     return (
-        catalog.screws
-            .find(
-                (screw) =>
-                    screw.vendor === vendor &&
-                    screw.size === size &&
-                    screw.head === head
-            )
-            ?.lengths.filter((length) => length.variants.includes(variant)) ??
-        []
+        catalog.screws.find(
+            (screw) =>
+                screw.vendor === vendor &&
+                screw.size === size &&
+                screw.head === head &&
+                screw.finish === finish
+        )?.lengths ?? []
     );
 }
 

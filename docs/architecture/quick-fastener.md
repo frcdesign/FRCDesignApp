@@ -109,11 +109,10 @@ The panel is a `ParameterGrid` of the configuration dialog's own inputs
 (`ParameterInput`), in groups as Onshape's feature dialogs group them:
 
 1. **Selections**: _Select by_ (Faces or Circular edges), and its query lists.
-2. **Fastener**: Program, then the screw studio's Vendor, Size and Head, its
-   Length with **Automatic** first (a length is preset mode, Automatic picks
-   one per hole), and, beside a preset length the vendor sells in more than
-   its standard line, its Variant (another finish, or fully threaded). Then
-   **Replicate**, off by default.
+2. **Fastener**: Program, then the screw studio's Vendor, Size, Head and
+   Finish, its Length with **Automatic** first (a length is preset mode,
+   Automatic picks one per hole), and, beside a preset length sold both ways,
+   its Fully threaded. Then **Replicate**, off by default.
 3. **Add screw washer**, **Add nut** and **Add nut washer**, each a group its
    checkbox shows: the washer or nut studio's parameters but its Size, which
    is the screw's. Its Vendor offers those making it in that size, and is left
@@ -191,14 +190,14 @@ skipped.
         4. Washers (`chooseWashers`): the screw washer chosen, never under a
            flat head; the nut washer only under a nut.
         5. Length, from the lengths the vendor makes the size and head in, in
-           the standard variant (`getLengths`; within the maximum length under
-           **Max length**): the shortest
+           the finish chosen (`getLengths`; within the maximum length under
+           **Max length**), partly threaded: the shortest
            reaching through the stack, its washers, its nut and two threads
            past it; or, into threads or a blind hole, the longest reaching no
            farther than the maximum thread depth past where they start and a
            thread short of a blind hole's bottom, that still engages a
            diameter of thread (or all there is, or the maximum thread depth).
-           Preset, the chosen length in the chosen variant, short of the
+           Preset, the chosen length, fully threaded if chosen, short of the
            bottom.
         6. The nut chosen, only out the far side.
     6. Stores each hole's plan with the status.
@@ -322,9 +321,9 @@ a toast when a run watched going finishes, from any tab of the app.
   Replicate and mate code, so one fix there fixes both.
 - **No fallbacks.** Onshape refusing a write fails its step with Onshape's
   message rather than being worked around.
-- **An automatic screw is the standard one.** A variant is only shown for a
-  length, as the screw studio offers it, so automatic sizing has no variant to
-  honour; it picks from the vendor's standard line.
+- **An automatic screw is partly threaded.** The screw studio asks Fully
+  threaded only of a length, so automatic sizing has nothing to ask it of;
+  its finish, chosen before the length, it keeps.
 - **The size is chosen, even in automatic mode.** A clearance hole fits more
   than one size, and a hole at 0.201" is both #10's clearance and 1/4-20's tap
   drill; the person knows which they meant. Automatic picks the length.

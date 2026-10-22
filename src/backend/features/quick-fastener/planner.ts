@@ -25,7 +25,7 @@ import {
     type PlannedHole,
     StopCondition
 } from "./contract";
-import { type PartChoice, type ScrewChoice, STANDARD_VARIANT } from "./studios";
+import { type PartChoice, type ScrewChoice } from "./studios";
 import {
     add,
     distanceToLine,
@@ -277,7 +277,7 @@ function isTappedFor(segment: Segment, size: CatalogSize): boolean {
 /** The longest screw the vendor makes in the size and head: the farthest any stack is followed. */
 function longestLength(options: FastenerOptions): number {
     const { vendor, size, head } = options.screw;
-    const lengths = getLengths(vendor, size, head, screwVariant(options));
+    const lengths = getLengths(vendor, size, head, options.screw.finish);
     return lengths.length > 0 ? lengths[lengths.length - 1].length : 0;
 }
 
@@ -396,13 +396,6 @@ function nutChoice(
     return end === HoleEnd.THROUGH ? options.nut : undefined;
 }
 
-/** A preset's variant is chosen with its length; an automatic screw is the standard one. */
-function screwVariant(options: FastenerOptions): string {
-    return options.mode === FastenerMode.PRESET
-        ? options.screw.variant
-        : STANDARD_VARIANT;
-}
-
 /** The screw for a stack, or why there's none. */
 function pickScrew(
     options: FastenerOptions,
@@ -410,12 +403,11 @@ function pickScrew(
     stack: Stack,
     washers: Washers
 ): ScrewChoice | string {
-    const variant = screwVariant(options);
     const made = getLengths(
         options.screw.vendor,
         size.id,
         options.screw.head,
-        variant
+        options.screw.finish
     );
     if (made.length === 0) {
         return "The vendor doesn't make this head in this size.";
@@ -434,8 +426,13 @@ function pickScrew(
         vendor: options.screw.vendor,
         size: size.id,
         head: options.screw.head,
+        finish: options.screw.finish,
         length: lengthId,
-        variant
+        // A preset's is chosen with its length; an automatic screw is partly threaded, the standard
+        fullyThreaded:
+            options.mode === FastenerMode.PRESET
+                ? options.screw.fullyThreaded
+                : "false"
     });
 
     if (stack.end === HoleEnd.THROUGH) {

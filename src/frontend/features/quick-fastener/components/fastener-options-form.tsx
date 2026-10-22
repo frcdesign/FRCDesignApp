@@ -122,8 +122,9 @@ interface ScrewInputsProps {
 }
 
 /**
- * The screw studio's inputs, its Length with Automatic first. Variant shows
- * only beside a preset length, since an automatic screw is the standard one.
+ * The screw studio's inputs, its Length with Automatic first. Fully threaded
+ * shows only beside a preset length, since an automatic screw is partly
+ * threaded, the standard.
  */
 function ScrewInputs(props: ScrewInputsProps): ReactNode {
     const { settled } = props;
@@ -159,7 +160,7 @@ function ScrewInputs(props: ScrewInputsProps): ReactNode {
                     );
                 }
                 if (
-                    parameter.id === StudioInput.VARIANT &&
+                    parameter.id === StudioInput.FULLY_THREADED &&
                     settled.mode === FastenerMode.AUTOMATIC
                 ) {
                     return null;

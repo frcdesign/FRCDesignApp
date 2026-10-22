@@ -15,22 +15,27 @@ const SCREW = {
     vendor: GENERIC,
     size: "NO_10_32",
     head: "BUTTON",
+    finish: "BLACK",
     length: "IN_0_5",
-    variant: "STANDARD"
+    fullyThreaded: "false"
 };
 
 describe("STUDIO_PARAMETERS", () => {
     it("parses each studio's configuration as Onshape answers it", () => {
-        const [vendor, size, head, length] =
-            STUDIO_PARAMETERS[FastenerKind.SCREW];
-        expect([vendor.id, size.id, head.id, length.id]).toEqual([
+        const parameters = STUDIO_PARAMETERS[FastenerKind.SCREW];
+        expect(parameters.map((parameter) => parameter.id)).toEqual([
             "vendor",
             "size",
             "head",
-            "length"
+            "finish",
+            "length",
+            "fullyThreaded"
         ]);
+        const [, , , , length, fullyThreaded] = parameters;
         expect(length.type).toBe(ParameterType.ENUM);
         expect(length.default).toBe("IN_0_5");
+        expect(fullyThreaded.type).toBe(ParameterType.BOOLEAN);
+        expect(fullyThreaded.condition).toBeDefined();
     });
 });
 

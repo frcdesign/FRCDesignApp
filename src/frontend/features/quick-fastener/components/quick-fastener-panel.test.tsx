@@ -161,16 +161,19 @@ describe("QuickFastenerPanel", () => {
         expect(screen.getAllByLabelText("Vendor")).toHaveLength(2);
     });
 
-    it("offers a screw's variants only beside a preset length its vendor sells them in", async () => {
-        useQuickFastenerStore.setState({ screw: { vendor: "MCMASTER" } });
+    it("asks for a screw's finish before its length, and whether it's fully threaded only beside a preset length sold both ways", async () => {
+        useQuickFastenerStore.setState({
+            screw: { vendor: "MCMASTER", size: "NO_8_32", head: "SOCKET" }
+        });
         renderWithProviders(<QuickFastenerPanel assembly={ASSEMBLY} />);
-        expect(screen.queryByLabelText("Variant")).toBeNull();
+        expect(screen.getByLabelText("Finish")).toBeTruthy();
+        expect(screen.queryByLabelText("Fully threaded")).toBeNull();
+
+        await choose("Length", "2 in.");
+        expect(screen.getByLabelText("Fully threaded")).toBeTruthy();
 
         await choose("Length", "1/2 in.");
-        expect(screen.getByLabelText("Variant")).toBeTruthy();
-
-        await choose("Length", "1/8 in.");
-        expect(screen.queryByLabelText("Variant")).toBeNull();
+        expect(screen.queryByLabelText("Fully threaded")).toBeNull();
     });
 
     it("sends whether to replicate alike holes", async () => {

@@ -42,8 +42,9 @@ const screwSchema = z.object({
     vendor: optionId,
     size: optionId,
     head: optionId,
+    finish: optionId,
     length: optionId,
-    variant: optionId
+    fullyThreaded: z.enum(["true", "false"])
 });
 
 /** A washer or nut. */

@@ -80,8 +80,9 @@ function options(extra: ExtraOptions = {}): FastenerOptions {
             vendor: "GENERIC",
             size: "NO_10_32",
             head: "BUTTON",
+            finish: "BLACK",
             length: "IN_0_5",
-            variant: "STANDARD",
+            fullyThreaded: "false",
             ...screw
         },
         nut: NYLOCK,
@@ -119,8 +120,9 @@ describe("planHoles", () => {
             vendor: "GENERIC",
             size: "NO_10_32",
             head: "BUTTON",
+            finish: "BLACK",
             length: "IN_0_875",
-            variant: "STANDARD"
+            fullyThreaded: "false"
         });
         expect(planned.nut).toEqual({
             vendor: "GENERIC",
@@ -295,15 +297,34 @@ describe("planHoles", () => {
         expect(plan(TWO_PLATES, preset).planned.screw?.length).toBe("IN_1_5");
     });
 
-    it("keeps a preset screw's variant, and sizes an automatic one from the standard line", () => {
-        const zinc = { vendor: "MCMASTER", variant: "ZINC_PLATED" };
-        const preset = plan(TWO_PLATES, {
-            mode: FastenerMode.PRESET,
-            screw: { ...zinc, length: "IN_1" }
+    it("sizes an automatic screw in its finish, partly threaded", () => {
+        const { planned } = plan(TWO_PLATES, {
+            screw: {
+                vendor: "MCMASTER",
+                finish: "ZINC_PLATED",
+                fullyThreaded: "true"
+            }
         });
-        expect(preset.planned.screw?.variant).toBe("ZINC_PLATED");
-        const automatic = plan(TWO_PLATES, { screw: zinc });
-        expect(automatic.planned.screw?.variant).toBe("STANDARD");
+        expect(planned.screw).toMatchObject({
+            finish: "ZINC_PLATED",
+            fullyThreaded: "false"
+        });
+    });
+
+    it("keeps a preset screw fully threaded where it's sold so", () => {
+        const { planned } = plan(TWO_PLATES, {
+            mode: FastenerMode.PRESET,
+            screw: {
+                vendor: "MCMASTER",
+                head: "SOCKET",
+                length: "IN_2",
+                fullyThreaded: "true"
+            }
+        });
+        expect(planned.screw).toMatchObject({
+            length: "IN_2",
+            fullyThreaded: "true"
+        });
     });
 
     it("lets a flat head's hole start below its countersink, with no washer under it", () => {
