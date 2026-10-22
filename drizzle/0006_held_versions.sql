@@ -1,1 +1,0 @@
-ALTER TABLE `groups` ADD `held_at` integer;

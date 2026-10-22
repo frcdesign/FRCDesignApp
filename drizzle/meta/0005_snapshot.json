@@ -230,6 +230,13 @@
                     "primaryKey": false,
                     "notNull": false,
                     "autoincrement": false
+                },
+                "held_at": {
+                    "name": "held_at",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": false,
+                    "autoincrement": false
                 }
             },
             "indexes": {

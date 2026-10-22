@@ -73,6 +73,7 @@ DROP TABLE `events`;--> statement-breakpoint
 ALTER TABLE `__new_events` RENAME TO `events`;--> statement-breakpoint
 PRAGMA foreign_keys=ON;--> statement-breakpoint
 CREATE INDEX `events_day_idx` ON `events` (`day`);--> statement-breakpoint
+ALTER TABLE `groups` ADD `held_at` integer;--> statement-breakpoint
 ALTER TABLE `insertables` ADD `excluded_parameter_ids` text DEFAULT '[]' NOT NULL;--> statement-breakpoint
 ALTER TABLE `libraries` ADD `admin_team_id` text;--> statement-breakpoint
 ALTER TABLE `libraries` ADD `admin_team` text DEFAULT '[]' NOT NULL;--> statement-breakpoint
