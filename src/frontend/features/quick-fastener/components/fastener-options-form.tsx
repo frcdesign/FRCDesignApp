@@ -114,7 +114,10 @@ interface ScrewInputsProps {
     settled: SettledChoices;
 }
 
-/** The screw studio's Vendor, Size and Head, and its Length with Automatic first. */
+/**
+ * The screw studio's inputs, its Length with Automatic first. Variant shows
+ * only beside a preset length, since an automatic screw is the standard one.
+ */
 function ScrewInputs(props: ScrewInputsProps): ReactNode {
     const { settled } = props;
     const setScrew = useQuickFastenerStore((state) => state.setScrew);
@@ -134,9 +137,27 @@ function ScrewInputs(props: ScrewInputsProps): ReactNode {
 
     return (
         <>
-            {parameters
-                .filter((parameter) => parameter.id !== StudioInput.LENGTH)
-                .map((parameter) => (
+            {parameters.map((parameter) => {
+                if (parameter.id === StudioInput.LENGTH) {
+                    return (
+                        <ParameterInput
+                            key={parameter.id}
+                            inputId="screw-length"
+                            parameter={lengthParameter()}
+                            value={lengthValue(settled.mode, settled.screw)}
+                            selection={selection}
+                            parameters={parameters}
+                            onValueChange={setLength}
+                        />
+                    );
+                }
+                if (
+                    parameter.id === StudioInput.VARIANT &&
+                    settled.mode === FastenerMode.AUTOMATIC
+                ) {
+                    return null;
+                }
+                return (
                     <ParameterInput
                         key={parameter.id}
                         inputId={`screw-${parameter.id}`}
@@ -148,15 +169,8 @@ function ScrewInputs(props: ScrewInputsProps): ReactNode {
                             value !== undefined && setScrew(parameter.id, value)
                         }
                     />
-                ))}
-            <ParameterInput
-                inputId="screw-length"
-                parameter={lengthParameter()}
-                value={lengthValue(settled.mode, settled.screw)}
-                selection={selection}
-                parameters={parameters}
-                onValueChange={setLength}
-            />
+                );
+            })}
         </>
     );
 }

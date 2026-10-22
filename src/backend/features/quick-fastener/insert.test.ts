@@ -25,7 +25,8 @@ const PLAN: HolePlan = {
             vendor: "GENERIC",
             size: "NO_10_32",
             head: "BUTTON",
-            length: "IN_1"
+            length: "IN_1",
+            variant: "STANDARD"
         },
         screwWasher: WASHER,
         nut: { vendor: "GENERIC", size: "NO_10_32", type: "NYLOCK" },

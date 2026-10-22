@@ -63,13 +63,20 @@ export function isCountersunk(head: string): boolean {
 /** The vendor offering every standard length, without part numbers. */
 export const GENERIC = "GENERIC";
 
+/** A screw as its vendor's standard line makes it: the variant an automatic screw is. */
+export const STANDARD_VARIANT = "STANDARD";
+
 /** The studios' parameter ids, which robot-code names its inputs. */
 export enum StudioInput {
     VENDOR = "vendor",
     SIZE = "size",
     HEAD = "head",
     LENGTH = "length",
-    TYPE = "type"
+    /** A screw beyond the standard: another finish, or fully threaded; hidden where only the standard is made. */
+    VARIANT = "variant",
+    TYPE = "type",
+    /** A washer's, hidden where only black is made. */
+    FINISH = "finish"
 }
 
 export interface ScrewChoice {
@@ -77,13 +84,15 @@ export interface ScrewChoice {
     size: string;
     head: string;
     length: string;
+    variant: string;
 }
 
-/** A washer or a nut: its vendor, the screw's size, and its type. */
+/** A washer or a nut: its vendor, the screw's size, and its type, and a washer's finish. */
 export interface PartChoice {
     vendor: string;
     size: string;
     type: string;
+    finish?: string;
 }
 
 export function getParameter(

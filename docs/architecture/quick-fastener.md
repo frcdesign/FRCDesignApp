@@ -106,14 +106,16 @@ The panel is a `ParameterGrid` of the configuration dialog's own inputs
 (`ParameterInput`), in groups as Onshape's feature dialogs group them:
 
 1. **Selections**: _Select by_ (Faces or Circular edges), and its query lists.
-2. **Fastener**: Program, then the screw studio's Vendor, Size and Head, and
-   its Length with **Automatic** first: a length is preset mode, Automatic
-   picks one per hole.
+2. **Fastener**: Program, then the screw studio's Vendor, Size and Head, its
+   Length with **Automatic** first (a length is preset mode, Automatic picks
+   one per hole), and, beside a preset length the vendor sells in more than
+   its standard line, its Variant (another finish, or fully threaded).
 3. **Add screw washer**, **Add nut** and **Add nut washer**, each a group its
    checkbox shows: the washer or nut studio's parameters but its Size, which
    is the screw's. Its Vendor offers those making it in that size, and is left
-   out under a Generic screw, whose parts are Generic. The screw washer is
-   gone under a countersunk head, and the nut washer without a nut.
+   out under a Generic screw, whose parts are Generic. A washer's Finish shows
+   where its vendor sells more than black. The screw washer is gone under a
+   countersunk head, and the nut washer without a nut.
 4. Automatic only: _Stop condition_ (**Max length** with its length, or
    **First gap** with the widest gap to ignore), and _Max thread depth_.
 
@@ -184,14 +186,16 @@ skipped.
            the vendor's longest screw.
         4. Washers (`chooseWashers`): the screw washer chosen, never under a
            flat head; the nut washer only under a nut.
-        5. Length, from the vendor's standard lengths for the size and head
-           (within the maximum length under **Max length**): the shortest
+        5. Length, from the lengths the vendor makes the size and head in, in
+           the standard variant (`getLengths`; within the maximum length under
+           **Max length**): the shortest
            reaching through the stack, its washers, its nut and two threads
            past it; or, into threads or a blind hole, the longest reaching no
            farther than the maximum thread depth past where they start and a
            thread short of a blind hole's bottom, that still engages a
            diameter of thread (or all there is, or the maximum thread depth).
-           Preset, the chosen length, short of the bottom.
+           Preset, the chosen length in the chosen variant, short of the
+           bottom.
         6. The nut chosen, only out the far side.
     6. Stores each hole's plan with the status.
 2. **Insert parts** (`insert`): places each ready hole's parts
@@ -291,6 +295,9 @@ a toast when a run watched going finishes, from any tab of the app.
 - **Each part has its own vendor.** Not every vendor sells washers or nuts, and
   someone using one vendor's screws may buy another's nuts. Under a Generic
   screw the parts are Generic, and their Vendor isn't asked.
+- **An automatic screw is the standard one.** A variant is only shown for a
+  length, as the screw studio offers it, so automatic sizing has no variant to
+  honour; it picks from the vendor's standard line.
 - **The size is chosen, even in automatic mode.** A clearance hole fits more
   than one size, and a hole at 0.201" is both #10's clearance and 1/4-20's tap
   drill; the person knows which they meant. Automatic picks the length.

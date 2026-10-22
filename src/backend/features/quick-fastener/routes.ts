@@ -43,14 +43,16 @@ const screwSchema = z.object({
     vendor: optionId,
     size: optionId,
     head: optionId,
-    length: optionId
+    length: optionId,
+    variant: optionId
 });
 
 /** A washer or nut. */
 const partSchema = z.object({
     vendor: optionId,
     size: optionId,
-    type: optionId
+    type: optionId,
+    finish: optionId.optional()
 });
 
 function isEveryPartMade(options: {

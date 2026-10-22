@@ -30,8 +30,10 @@ const QUICK_FASTENER = "src/backend/features/quick-fastener";
 
 async function readManifest(path, ref, from) {
     if (from) {
+        // A manifest is megabytes, past execFileSync's default 1 MB
         return execFileSync("git", ["-C", from, "show", `${ref}:${path}`], {
-            encoding: "utf8"
+            encoding: "utf8",
+            maxBuffer: 64 * 1024 * 1024
         });
     }
     const url = `https://raw.githubusercontent.com/${REPO}/${ref}/${path}`;

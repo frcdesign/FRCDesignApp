@@ -15,7 +15,8 @@ const SCREW = {
     vendor: GENERIC,
     size: "NO_10_32",
     head: "BUTTON",
-    length: "IN_0_5"
+    length: "IN_0_5",
+    variant: "STANDARD"
 };
 
 describe("STUDIO_PARAMETERS", () => {

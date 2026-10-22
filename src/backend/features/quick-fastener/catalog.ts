@@ -41,10 +41,12 @@ export interface CatalogHead {
     >;
 }
 
-export interface CatalogLength extends Stocked {
+export interface CatalogLength {
     id: string;
     name: string;
     length: number;
+    /** The screw variants made in it, the standard first where it's made. */
+    variants: string[];
 }
 
 /** The lengths a vendor makes a size and head in, shortest first. */
@@ -63,7 +65,7 @@ export interface CatalogNut extends Stocked {
     height: number;
 }
 
-export interface CatalogWasher extends Stocked {
+export interface CatalogWasher {
     vendor: string;
     size: string;
     type: string;
@@ -71,6 +73,8 @@ export interface CatalogWasher extends Stocked {
     innerDiameter: number;
     outerDiameter: number;
     thickness: number;
+    /** The finishes it's made in, which don't change its size. */
+    finishes: string[];
 }
 
 export interface Catalog {
@@ -97,19 +101,23 @@ export function getHead(headId: string): CatalogHead | undefined {
     return catalog.heads.find((head) => head.id === headId);
 }
 
-/** The lengths a vendor makes a size and head in; none when it doesn't make them. */
+/** The lengths a vendor makes a size and head in, in a variant; none when it doesn't make them. */
 export function getLengths(
     vendor: string,
     size: string,
-    head: string
+    head: string,
+    variant: string
 ): CatalogLength[] {
     return (
-        catalog.screws.find(
-            (screw) =>
-                screw.vendor === vendor &&
-                screw.size === size &&
-                screw.head === head
-        )?.lengths ?? []
+        catalog.screws
+            .find(
+                (screw) =>
+                    screw.vendor === vendor &&
+                    screw.size === size &&
+                    screw.head === head
+            )
+            ?.lengths.filter((length) => length.variants.includes(variant)) ??
+        []
     );
 }
 

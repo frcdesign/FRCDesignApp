@@ -127,7 +127,8 @@ describe("describePlan", () => {
                     vendor: GENERIC,
                     size: "NO_10_32",
                     head: "BUTTON",
-                    length: "IN_0_875"
+                    length: "IN_0_875",
+                    variant: "STANDARD"
                 },
                 nut: { vendor: GENERIC, size: "NO_10_32", type: "NYLOCK" }
             })

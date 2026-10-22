@@ -31,6 +31,7 @@ import {
     type ScrewChoice,
     settlePart,
     settleScrew,
+    STANDARD_VARIANT,
     StudioInput
 } from "@backend/features/quick-fastener/studios";
 import { FORM_PARAMETERS, FormInput, formParameter } from "./parameters";
@@ -178,8 +179,12 @@ export function describePlan(planned: PlannedHole): string {
     const { screw } = planned;
     const name = (input: StudioInput, value: string) =>
         optionName(FastenerKind.SCREW, input, value);
+    const variant =
+        screw.variant === STANDARD_VARIANT
+            ? ""
+            : ` (${name(StudioInput.VARIANT, screw.variant)})`;
     const parts = [
-        `${name(StudioInput.SIZE, screw.size)} x ${name(StudioInput.LENGTH, screw.length)} ${name(StudioInput.HEAD, screw.head)}`
+        `${name(StudioInput.SIZE, screw.size)} x ${name(StudioInput.LENGTH, screw.length)} ${name(StudioInput.HEAD, screw.head)}${variant}`
     ];
     if (planned.nut) {
         parts.push(

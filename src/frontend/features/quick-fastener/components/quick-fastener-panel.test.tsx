@@ -161,6 +161,18 @@ describe("QuickFastenerPanel", () => {
         expect(screen.getAllByLabelText("Vendor")).toHaveLength(2);
     });
 
+    it("offers a screw's variants only beside a preset length its vendor sells them in", async () => {
+        useQuickFastenerStore.setState({ screw: { vendor: "MCMASTER" } });
+        renderWithProviders(<QuickFastenerPanel assembly={ASSEMBLY} />);
+        expect(screen.queryByLabelText("Variant")).toBeNull();
+
+        await choose("Length", "1/2 in.");
+        expect(screen.getByLabelText("Variant")).toBeTruthy();
+
+        await choose("Length", "1/8 in.");
+        expect(screen.queryByLabelText("Variant")).toBeNull();
+    });
+
     it("has no screw washer under a flat head", () => {
         useQuickFastenerStore.setState({ screw: { head: "FLAT" } });
         renderWithProviders(<QuickFastenerPanel assembly={ASSEMBLY} />);
