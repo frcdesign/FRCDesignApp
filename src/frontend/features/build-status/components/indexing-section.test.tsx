@@ -58,6 +58,20 @@ describe("indexing section", () => {
         mocks.setExcluded.mockReset();
     });
 
+    it("has no switches for a generated part, which indexes every configuration", () => {
+        renderWithProviders(
+            <IndexingSection
+                insertableId="i"
+                status={{
+                    ...status([enumParam("size", ["s", "l"])]),
+                    generatedStudio: "fasteners/screw"
+                }}
+            />
+        );
+        expect(screen.getByText(/indexed from its FeatureScript/)).toBeTruthy();
+        expect(screen.queryAllByRole("switch")).toHaveLength(0);
+    });
+
     it("counts the configurations its indexed parameters make", () => {
         renderWithProviders(
             <IndexingSection

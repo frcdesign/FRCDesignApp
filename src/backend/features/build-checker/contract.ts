@@ -28,6 +28,8 @@ export interface InsertableBuildStatus {
     indexConfigurations: boolean;
     /** Parameters an admin left out of indexing. */
     excludedParameterIds: string[];
+    /** The generated studio it is (`fasteners/screw`), which indexes every configuration itself. */
+    generatedStudio?: string;
     vendors: Vendor[];
     configuration?: ConfigurationBuildStatus;
     /** When Onshape cut the version this insertable is pinned to (epoch ms). */

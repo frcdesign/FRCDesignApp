@@ -71,6 +71,7 @@ function library(name = "Bracket"): LibraryOut {
                 supportsReplicate: false,
                 elementType: ElementType.PART_STUDIO,
                 isConfigurable: false,
+                isGenerated: false,
                 vendors: []
             }
         }

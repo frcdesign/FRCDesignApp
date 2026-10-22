@@ -5,7 +5,7 @@ import {
     ASSEMBLY,
     BODY
 } from "../../../__test_utils__/quick-fastener-fixtures";
-import * as Catalog from "./catalog";
+import * as Studios from "./studios";
 import { Program } from "./catalog";
 import {
     FastenerJobState,
@@ -34,7 +34,7 @@ function post(path: string, body: unknown) {
 }
 
 function publish() {
-    vi.spyOn(Catalog, "getStudioLocation").mockImplementation((kind) => ({
+    vi.spyOn(Studios, "getStudioLocation").mockImplementation((kind) => ({
         documentId: "lib",
         versionId: "libv",
         elementId: `${kind}Studio`
@@ -104,6 +104,42 @@ describe("POST /api/quick-fastener/insert", () => {
             options: { ...BODY.options, program: Program.FTC }
         });
         expect(res.status).toBe(400);
+    });
+
+    it("refuses a part its vendor doesn't make, or a nut washer without a nut", async () => {
+        publish();
+        const insert = (options: object) =>
+            post("/quick-fastener/insert", {
+                ...BODY,
+                options: { ...BODY.options, ...options }
+            });
+        // REV makes no nuts, and a nut is in the screw's size
+        expect(
+            (
+                await insert({
+                    nut: { vendor: "REV", size: "NO_10_32", type: "NYLOCK" }
+                })
+            ).status
+        ).toBe(400);
+        expect(
+            (
+                await insert({
+                    nut: { vendor: "GENERIC", size: "NO_8_32", type: "NYLOCK" }
+                })
+            ).status
+        ).toBe(400);
+        expect(
+            (
+                await insert({
+                    nut: undefined,
+                    nutWasher: {
+                        vendor: "GENERIC",
+                        size: "NO_10_32",
+                        type: "OD_1_2_X_0_049"
+                    }
+                })
+            ).status
+        ).toBe(400);
     });
 
     it("takes faces with edges to skip, or edges alone", async () => {

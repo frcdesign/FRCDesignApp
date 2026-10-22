@@ -106,7 +106,8 @@ export async function getLibraryOut(
             smallThumbnailUrl: ins.smallThumbnailUrl ?? undefined,
             largeThumbnailUrl: ins.largeThumbnailUrl ?? undefined,
             isConfigurable: configurableIds.has(ins.id),
-            vendors: ins.vendors
+            vendors: ins.vendors,
+            isGenerated: ins.generatedStudio !== null
         } satisfies InsertableOut;
     }
 

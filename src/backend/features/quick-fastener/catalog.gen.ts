@@ -1,498 +1,7 @@
-/* Synced from robot-education/robot-code@92623ef7cb81f3a30481cf9e1e1792267e8e12c3 (featurescripts/quickFastener/quickFastener.gen.json) by `npm run sync:quick-fastener` -- DO NOT EDIT */
-
-export const CATALOG_SOURCE =
-    "robot-education/robot-code@92623ef7cb81f3a30481cf9e1e1792267e8e12c3";
+/* Synced from robot-education/robot-code@8706ebce47110c14129e0f2981a870f0034f0ee4 by `npm run sync:generated-parts` -- DO NOT EDIT */
 
 export const CATALOG = {
-    source: "featurescripts/quickFastener/quickFastenerTables.py",
-    studios: {
-        screw: {
-            feature: "quickFastenerScrew",
-            inputs: [
-                {
-                    id: "vendor",
-                    name: "Vendor",
-                    kind: "list",
-                    default: "GENERIC",
-                    options: [
-                        {
-                            id: "GENERIC",
-                            name: "Generic"
-                        },
-                        {
-                            id: "MCMASTER",
-                            name: "McMaster-Carr"
-                        },
-                        {
-                            id: "REV",
-                            name: "REV"
-                        },
-                        {
-                            id: "WCP",
-                            name: "WCP"
-                        }
-                    ]
-                },
-                {
-                    id: "size",
-                    name: "Size",
-                    kind: "list",
-                    default: "NO_10_32",
-                    options: [
-                        {
-                            id: "NO_4_40",
-                            name: "#4-40"
-                        },
-                        {
-                            id: "NO_6_32",
-                            name: "#6-32"
-                        },
-                        {
-                            id: "NO_8_32",
-                            name: "#8-32"
-                        },
-                        {
-                            id: "NO_10_32",
-                            name: "#10-32"
-                        },
-                        {
-                            id: "QUARTER_20",
-                            name: "1/4-20"
-                        }
-                    ]
-                },
-                {
-                    id: "head",
-                    name: "Head",
-                    kind: "list",
-                    default: "BUTTON",
-                    options: [
-                        {
-                            id: "SOCKET",
-                            name: "Socket head"
-                        },
-                        {
-                            id: "BUTTON",
-                            name: "Button head"
-                        },
-                        {
-                            id: "FLAT",
-                            name: "Flat head"
-                        }
-                    ]
-                },
-                {
-                    id: "length",
-                    name: "Length",
-                    kind: "list",
-                    default: "IN_0_5",
-                    options: [
-                        {
-                            id: "IN_0_09375",
-                            name: "3/32 in."
-                        },
-                        {
-                            id: "IN_0_125",
-                            name: "1/8 in."
-                        },
-                        {
-                            id: "IN_0_15625",
-                            name: "5/32 in."
-                        },
-                        {
-                            id: "IN_0_1875",
-                            name: "3/16 in."
-                        },
-                        {
-                            id: "IN_0_25",
-                            name: "1/4 in."
-                        },
-                        {
-                            id: "IN_0_3125",
-                            name: "5/16 in."
-                        },
-                        {
-                            id: "IN_0_375",
-                            name: "3/8 in."
-                        },
-                        {
-                            id: "IN_0_4375",
-                            name: "7/16 in."
-                        },
-                        {
-                            id: "IN_0_5",
-                            name: "1/2 in."
-                        },
-                        {
-                            id: "IN_0_5625",
-                            name: "9/16 in."
-                        },
-                        {
-                            id: "IN_0_625",
-                            name: "5/8 in."
-                        },
-                        {
-                            id: "IN_0_6875",
-                            name: "11/16 in."
-                        },
-                        {
-                            id: "IN_0_75",
-                            name: "3/4 in."
-                        },
-                        {
-                            id: "IN_0_875",
-                            name: "7/8 in."
-                        },
-                        {
-                            id: "IN_1",
-                            name: "1 in."
-                        },
-                        {
-                            id: "IN_1_125",
-                            name: "1-1/8 in."
-                        },
-                        {
-                            id: "IN_1_25",
-                            name: "1-1/4 in."
-                        },
-                        {
-                            id: "IN_1_375",
-                            name: "1-3/8 in."
-                        },
-                        {
-                            id: "IN_1_5",
-                            name: "1-1/2 in."
-                        },
-                        {
-                            id: "IN_1_625",
-                            name: "1-5/8 in."
-                        },
-                        {
-                            id: "IN_1_75",
-                            name: "1-3/4 in."
-                        },
-                        {
-                            id: "IN_1_875",
-                            name: "1-7/8 in."
-                        },
-                        {
-                            id: "IN_2",
-                            name: "2 in."
-                        },
-                        {
-                            id: "IN_2_25",
-                            name: "2-1/4 in."
-                        },
-                        {
-                            id: "IN_2_375",
-                            name: "2-3/8 in."
-                        },
-                        {
-                            id: "IN_2_5",
-                            name: "2-1/2 in."
-                        },
-                        {
-                            id: "IN_2_625",
-                            name: "2-5/8 in."
-                        },
-                        {
-                            id: "IN_2_75",
-                            name: "2-3/4 in."
-                        },
-                        {
-                            id: "IN_3",
-                            name: "3 in."
-                        },
-                        {
-                            id: "IN_3_25",
-                            name: "3-1/4 in."
-                        },
-                        {
-                            id: "IN_3_5",
-                            name: "3-1/2 in."
-                        },
-                        {
-                            id: "IN_3_75",
-                            name: "3-3/4 in."
-                        },
-                        {
-                            id: "IN_4",
-                            name: "4 in."
-                        },
-                        {
-                            id: "IN_4_25",
-                            name: "4-1/4 in."
-                        },
-                        {
-                            id: "IN_4_5",
-                            name: "4-1/2 in."
-                        },
-                        {
-                            id: "IN_4_75",
-                            name: "4-3/4 in."
-                        },
-                        {
-                            id: "IN_5",
-                            name: "5 in."
-                        },
-                        {
-                            id: "IN_5_25",
-                            name: "5-1/4 in."
-                        },
-                        {
-                            id: "IN_5_5",
-                            name: "5-1/2 in."
-                        },
-                        {
-                            id: "IN_5_75",
-                            name: "5-3/4 in."
-                        },
-                        {
-                            id: "IN_6",
-                            name: "6 in."
-                        },
-                        {
-                            id: "IN_6_25",
-                            name: "6-1/4 in."
-                        },
-                        {
-                            id: "IN_6_5",
-                            name: "6-1/2 in."
-                        },
-                        {
-                            id: "IN_7",
-                            name: "7 in."
-                        },
-                        {
-                            id: "IN_7_5",
-                            name: "7-1/2 in."
-                        },
-                        {
-                            id: "IN_8",
-                            name: "8 in."
-                        },
-                        {
-                            id: "IN_8_5",
-                            name: "8-1/2 in."
-                        },
-                        {
-                            id: "IN_9",
-                            name: "9 in."
-                        },
-                        {
-                            id: "IN_10",
-                            name: "10 in."
-                        }
-                    ]
-                },
-                {
-                    id: "washer",
-                    name: "Washer",
-                    kind: "boolean",
-                    default: "false"
-                }
-            ],
-            location: null
-        },
-        nut: {
-            feature: "quickFastenerNut",
-            inputs: [
-                {
-                    id: "vendor",
-                    name: "Vendor",
-                    kind: "list",
-                    default: "GENERIC",
-                    options: [
-                        {
-                            id: "GENERIC",
-                            name: "Generic"
-                        },
-                        {
-                            id: "MCMASTER",
-                            name: "McMaster-Carr"
-                        }
-                    ]
-                },
-                {
-                    id: "size",
-                    name: "Size",
-                    kind: "list",
-                    default: "NO_10_32",
-                    options: [
-                        {
-                            id: "NO_4_40",
-                            name: "#4-40"
-                        },
-                        {
-                            id: "NO_6_32",
-                            name: "#6-32"
-                        },
-                        {
-                            id: "NO_8_32",
-                            name: "#8-32"
-                        },
-                        {
-                            id: "NO_10_32",
-                            name: "#10-32"
-                        },
-                        {
-                            id: "QUARTER_20",
-                            name: "1/4-20"
-                        }
-                    ]
-                },
-                {
-                    id: "type",
-                    name: "Type",
-                    kind: "list",
-                    default: "NYLOCK",
-                    options: [
-                        {
-                            id: "NYLOCK",
-                            name: "Nylock"
-                        },
-                        {
-                            id: "THIN_NYLOCK",
-                            name: "Thin nylock"
-                        },
-                        {
-                            id: "HEX",
-                            name: "Hex"
-                        },
-                        {
-                            id: "THIN_HEX",
-                            name: "Thin hex"
-                        },
-                        {
-                            id: "SQUARE",
-                            name: "Square"
-                        }
-                    ]
-                },
-                {
-                    id: "washer",
-                    name: "Washer",
-                    kind: "boolean",
-                    default: "false"
-                }
-            ],
-            location: null
-        },
-        washer: {
-            feature: "quickFastenerWasher",
-            inputs: [
-                {
-                    id: "vendor",
-                    name: "Vendor",
-                    kind: "list",
-                    default: "GENERIC",
-                    options: [
-                        {
-                            id: "GENERIC",
-                            name: "Generic"
-                        },
-                        {
-                            id: "MCMASTER",
-                            name: "McMaster-Carr"
-                        },
-                        {
-                            id: "WCP",
-                            name: "WCP"
-                        }
-                    ]
-                },
-                {
-                    id: "size",
-                    name: "Size",
-                    kind: "list",
-                    default: "NO_10_32",
-                    options: [
-                        {
-                            id: "NO_4_40",
-                            name: "#4-40"
-                        },
-                        {
-                            id: "NO_6_32",
-                            name: "#6-32"
-                        },
-                        {
-                            id: "NO_8_32",
-                            name: "#8-32"
-                        },
-                        {
-                            id: "NO_10_32",
-                            name: "#10-32"
-                        },
-                        {
-                            id: "QUARTER_20",
-                            name: "1/4-20"
-                        }
-                    ]
-                },
-                {
-                    id: "type",
-                    name: "Type",
-                    kind: "list",
-                    default: "OD_1_2_X_0_049",
-                    options: [
-                        {
-                            id: "OD_5_16_X_0_03",
-                            name: "5/16 in. OD x 0.03 in."
-                        },
-                        {
-                            id: "OD_5_16_X_0_032",
-                            name: "5/16 in. OD x 0.032 in."
-                        },
-                        {
-                            id: "OD_3_8_X_0_012",
-                            name: "3/8 in. OD x 0.012 in."
-                        },
-                        {
-                            id: "OD_3_8_X_0_03",
-                            name: "3/8 in. OD x 0.03 in."
-                        },
-                        {
-                            id: "OD_3_8_X_0_031",
-                            name: "3/8 in. OD x 0.031 in."
-                        },
-                        {
-                            id: "OD_3_8_X_0_049",
-                            name: "3/8 in. OD x 0.049 in."
-                        },
-                        {
-                            id: "OD_7_16_X_0_03",
-                            name: "7/16 in. OD x 0.03 in."
-                        },
-                        {
-                            id: "OD_7_16_X_0_049",
-                            name: "7/16 in. OD x 0.049 in."
-                        },
-                        {
-                            id: "OD_1_2_X_0_04",
-                            name: "1/2 in. OD x 0.04 in."
-                        },
-                        {
-                            id: "OD_1_2_X_0_049",
-                            name: "1/2 in. OD x 0.049 in."
-                        },
-                        {
-                            id: "OD_5_8_X_0_031",
-                            name: "5/8 in. OD x 0.031 in."
-                        },
-                        {
-                            id: "OD_5_8_X_0_05",
-                            name: "5/8 in. OD x 0.05 in."
-                        },
-                        {
-                            id: "OD_5_8_X_0_065",
-                            name: "5/8 in. OD x 0.065 in."
-                        }
-                    ]
-                }
-            ],
-            location: null
-        }
-    },
+    source: "featurescripts/fasteners/fastenerTables.py",
     vendors: [
         {
             id: "GENERIC",
@@ -509,6 +18,10 @@ export const CATALOG = {
         {
             id: "WCP",
             name: "WCP"
+        },
+        {
+            id: "ANDYMARK",
+            name: "AndyMark"
         }
     ],
     sizes: [
@@ -1079,6 +592,11 @@ export const CATALOG = {
                     id: "IN_2",
                     name: "2 in.",
                     length: 0.0508
+                },
+                {
+                    id: "IN_2_125",
+                    name: "2-1/8 in.",
+                    length: 0.053975
                 },
                 {
                     id: "IN_2_25",
@@ -1806,6 +1324,11 @@ export const CATALOG = {
                     id: "IN_3",
                     name: "3 in.",
                     length: 0.0762
+                },
+                {
+                    id: "IN_3_25",
+                    name: "3-1/4 in.",
+                    length: 0.08255
                 },
                 {
                     id: "IN_3_5",
@@ -5501,6 +5024,83 @@ export const CATALOG = {
         },
         {
             vendor: "WCP",
+            size: "NO_4_40",
+            head: "BUTTON",
+            lengths: [
+                {
+                    id: "IN_0_25",
+                    name: "1/4 in.",
+                    length: 0.00635,
+                    partNumber: "WCP-2354",
+                    url: "https://wcproducts.com/products/wcp-2354"
+                },
+                {
+                    id: "IN_0_375",
+                    name: "3/8 in.",
+                    length: 0.009525,
+                    partNumber: "WCP-2355",
+                    url: "https://wcproducts.com/products/wcp-2355"
+                },
+                {
+                    id: "IN_0_75",
+                    name: "3/4 in.",
+                    length: 0.01905,
+                    partNumber: "WCP-2356",
+                    url: "https://wcproducts.com/products/wcp-2356"
+                }
+            ]
+        },
+        {
+            vendor: "WCP",
+            size: "NO_6_32",
+            head: "BUTTON",
+            lengths: [
+                {
+                    id: "IN_0_25",
+                    name: "1/4 in.",
+                    length: 0.00635,
+                    partNumber: "WCP-2353",
+                    url: "https://wcproducts.com/products/wcp-2353"
+                }
+            ]
+        },
+        {
+            vendor: "WCP",
+            size: "NO_8_32",
+            head: "SOCKET",
+            lengths: [
+                {
+                    id: "IN_1",
+                    name: "1 in.",
+                    length: 0.0254,
+                    partNumber: "WCP-2249",
+                    url: "https://wcproducts.com/products/wcp-2249"
+                }
+            ]
+        },
+        {
+            vendor: "WCP",
+            size: "NO_8_32",
+            head: "BUTTON",
+            lengths: [
+                {
+                    id: "IN_0_25",
+                    name: "1/4 in.",
+                    length: 0.00635,
+                    partNumber: "WCP-1548",
+                    url: "https://wcproducts.com/products/wcp-1548"
+                },
+                {
+                    id: "IN_0_5",
+                    name: "1/2 in.",
+                    length: 0.0127,
+                    partNumber: "WCP-0250",
+                    url: "https://wcproducts.com/products/wcp-0250"
+                }
+            ]
+        },
+        {
+            vendor: "WCP",
             size: "NO_10_32",
             head: "SOCKET",
             lengths: [
@@ -5627,8 +5227,8 @@ export const CATALOG = {
                     id: "IN_0_75",
                     name: "3/4 in.",
                     length: 0.01905,
-                    partNumber: "WCP-0254",
-                    url: "https://wcproducts.com/products/wcp-0254"
+                    partNumber: "WCP-0135",
+                    url: "https://wcproducts.com/products/wcp-0135"
                 },
                 {
                     id: "IN_0_875",
@@ -5706,6 +5306,510 @@ export const CATALOG = {
                     length: 0.12065,
                     partNumber: "WCP-1656",
                     url: "https://wcproducts.com/products/wcp-1656"
+                }
+            ]
+        },
+        {
+            vendor: "ANDYMARK",
+            size: "NO_4_40",
+            head: "SOCKET",
+            lengths: [
+                {
+                    id: "IN_0_375",
+                    name: "3/8 in.",
+                    length: 0.009525,
+                    partNumber: "am-1032",
+                    url: "https://andymark.com/products/4-40-x-0-375-in-socket-head-cap-screw-1"
+                },
+                {
+                    id: "IN_0_5",
+                    name: "1/2 in.",
+                    length: 0.0127,
+                    partNumber: "am-1136",
+                    url: "https://andymark.com/products/4-40-x-0-5-in-socket-head-cap-screw"
+                }
+            ]
+        },
+        {
+            vendor: "ANDYMARK",
+            size: "NO_4_40",
+            head: "BUTTON",
+            lengths: [
+                {
+                    id: "IN_0_25",
+                    name: "1/4 in.",
+                    length: 0.00635,
+                    partNumber: "am-1679",
+                    url: "https://andymark.com/products/4-40-x-0-25-in-button-head-cap-screw-with-nylon-patch"
+                }
+            ]
+        },
+        {
+            vendor: "ANDYMARK",
+            size: "NO_4_40",
+            head: "FLAT",
+            lengths: [
+                {
+                    id: "IN_0_375",
+                    name: "3/8 in.",
+                    length: 0.009525,
+                    partNumber: "am-1586",
+                    url: "https://andymark.com/products/4-40-x-0-375-in-flat-head-cap-screw-with-nylon-patch"
+                }
+            ]
+        },
+        {
+            vendor: "ANDYMARK",
+            size: "NO_6_32",
+            head: "SOCKET",
+            lengths: [
+                {
+                    id: "IN_2_125",
+                    name: "2-1/8 in.",
+                    length: 0.053975,
+                    partNumber: "am-1657",
+                    url: "https://andymark.com/products/6-32-x-2-125-in-socket-head-cap-screw"
+                }
+            ]
+        },
+        {
+            vendor: "ANDYMARK",
+            size: "NO_6_32",
+            head: "FLAT",
+            lengths: [
+                {
+                    id: "IN_0_625",
+                    name: "5/8 in.",
+                    length: 0.015875,
+                    partNumber: "am-1570",
+                    url: "https://andymark.com/products/6-32-x-0-625-in-flat-head-socket-cap-screw"
+                }
+            ]
+        },
+        {
+            vendor: "ANDYMARK",
+            size: "NO_8_32",
+            head: "BUTTON",
+            lengths: [
+                {
+                    id: "IN_0_5",
+                    name: "1/2 in.",
+                    length: 0.0127,
+                    partNumber: "am-1691",
+                    url: "https://andymark.com/products/8-32-x-0-5-in-button-head-cap-screw-with-nylon-patch"
+                }
+            ]
+        },
+        {
+            vendor: "ANDYMARK",
+            size: "NO_10_32",
+            head: "SOCKET",
+            lengths: [
+                {
+                    id: "IN_0_25",
+                    name: "1/4 in.",
+                    length: 0.00635,
+                    partNumber: "am-1771",
+                    url: "https://andymark.com/products/10-32-x-250-in-socket-head-cap-screw-with-nylon-thread-lock-patch"
+                },
+                {
+                    id: "IN_0_375",
+                    name: "3/8 in.",
+                    length: 0.009525,
+                    partNumber: "am-1359",
+                    url: "https://andymark.com/products/10-32-x-0-375-in-socket-head-cap-screw-1"
+                },
+                {
+                    id: "IN_0_5",
+                    name: "1/2 in.",
+                    length: 0.0127,
+                    partNumber: "am-1002",
+                    url: "https://andymark.com/products/10-32-x-0-5-in-socket-head-cap-screw-1"
+                },
+                {
+                    id: "IN_0_625",
+                    name: "5/8 in.",
+                    length: 0.015875,
+                    partNumber: "am-1007",
+                    url: "https://andymark.com/products/10-32-x-0-625-in-socket-head-cap-screw-1"
+                },
+                {
+                    id: "IN_0_75",
+                    name: "3/4 in.",
+                    length: 0.01905,
+                    partNumber: "am-1047",
+                    url: "https://andymark.com/products/10-32-x-0-75-in-socket-head-cap-screw"
+                },
+                {
+                    id: "IN_0_875",
+                    name: "7/8 in.",
+                    length: 0.022225,
+                    partNumber: "am-1753",
+                    url: "https://andymark.com/products/10-32-x-0-875-in-socket-head-cap-screw"
+                },
+                {
+                    id: "IN_1",
+                    name: "1 in.",
+                    length: 0.0254,
+                    partNumber: "am-1056",
+                    url: "https://andymark.com/products/10-32-x-1-in-socket-head-cap-screw-1"
+                },
+                {
+                    id: "IN_1_125",
+                    name: "1-1/8 in.",
+                    length: 0.028575,
+                    partNumber: "am-1013",
+                    url: "https://andymark.com/products/10-32-x-1-125-in-socket-head-cap-screw-1"
+                },
+                {
+                    id: "IN_1_25",
+                    name: "1-1/4 in.",
+                    length: 0.03175,
+                    partNumber: "am-1041",
+                    url: "https://andymark.com/products/10-32-x-1-25-in-socket-head-cap-screw-1"
+                },
+                {
+                    id: "IN_1_375",
+                    name: "1-3/8 in.",
+                    length: 0.034925,
+                    partNumber: "am-1154",
+                    url: "https://andymark.com/products/10-32-x-1-375-in-socket-head-cap-screw"
+                },
+                {
+                    id: "IN_1_5",
+                    name: "1-1/2 in.",
+                    length: 0.0381,
+                    partNumber: "am-1014",
+                    url: "https://andymark.com/products/10-32-x-1-5-in-socket-head-cap-screw"
+                },
+                {
+                    id: "IN_1_75",
+                    name: "1-3/4 in.",
+                    length: 0.04445,
+                    partNumber: "am-1048",
+                    url: "https://andymark.com/products/10-32-x-1-75-in-socket-head-cap-screw-1"
+                },
+                {
+                    id: "IN_2",
+                    name: "2 in.",
+                    length: 0.0508,
+                    partNumber: "am-1049",
+                    url: "https://andymark.com/products/10-32-x-2-in-socket-head-cap-screw-1"
+                },
+                {
+                    id: "IN_2_25",
+                    name: "2-1/4 in.",
+                    length: 0.05715,
+                    partNumber: "am-1156",
+                    url: "https://andymark.com/products/10-32-x-2-25-in-socket-head-cap-screw-2"
+                },
+                {
+                    id: "IN_2_5",
+                    name: "2-1/2 in.",
+                    length: 0.0635,
+                    partNumber: "am-1024",
+                    url: "https://andymark.com/products/10-32-x-2-5-in-socket-head-cap-screw-1"
+                },
+                {
+                    id: "IN_2_75",
+                    name: "2-3/4 in.",
+                    length: 0.06985,
+                    partNumber: "am-1397",
+                    url: "https://andymark.com/products/10-32-x-2-75-in-socket-head-cap-screw"
+                },
+                {
+                    id: "IN_3",
+                    name: "3 in.",
+                    length: 0.0762,
+                    partNumber: "am-1522",
+                    url: "https://andymark.com/products/10-32-x-3-in-socket-head-cap-screw"
+                },
+                {
+                    id: "IN_3_25",
+                    name: "3-1/4 in.",
+                    length: 0.08255,
+                    partNumber: "am-1258",
+                    url: "https://andymark.com/products/10-32-x-3-25-in-socket-head-cap-screw-1"
+                },
+                {
+                    id: "IN_3_5",
+                    name: "3-1/2 in.",
+                    length: 0.0889,
+                    partNumber: "am-1402",
+                    url: "https://andymark.com/products/10-32-x-3-5-in-socket-head-cap-screw"
+                }
+            ]
+        },
+        {
+            vendor: "ANDYMARK",
+            size: "NO_10_32",
+            head: "BUTTON",
+            lengths: [
+                {
+                    id: "IN_0_375",
+                    name: "3/8 in.",
+                    length: 0.009525,
+                    partNumber: "am-1588",
+                    url: "https://andymark.com/products/10-32-x-3-8-in-button-head-cap-screw-with-nylon-patch"
+                },
+                {
+                    id: "IN_0_5",
+                    name: "1/2 in.",
+                    length: 0.0127,
+                    partNumber: "am-1512",
+                    url: "https://andymark.com/products/10-32-x-0-5-in-button-head-cap-screw"
+                },
+                {
+                    id: "IN_0_625",
+                    name: "5/8 in.",
+                    length: 0.015875,
+                    partNumber: "am-1549",
+                    url: "https://andymark.com/products/10-32-x-0-625-in-button-head-cap-screw-with-nylon-patch"
+                },
+                {
+                    id: "IN_0_75",
+                    name: "3/4 in.",
+                    length: 0.01905,
+                    partNumber: "am-1524",
+                    url: "https://andymark.com/products/10-32-x-0-75-in-hex-drive-button-head-cap-screw"
+                },
+                {
+                    id: "IN_1",
+                    name: "1 in.",
+                    length: 0.0254,
+                    partNumber: "am-1396",
+                    url: "https://andymark.com/products/10-32-x-1-in-button-head-cap-screw-1"
+                },
+                {
+                    id: "IN_1_25",
+                    name: "1-1/4 in.",
+                    length: 0.03175,
+                    partNumber: "am-1260",
+                    url: "https://andymark.com/products/10-32-x-1-25-in-button-head-cap-screw"
+                },
+                {
+                    id: "IN_1_5",
+                    name: "1-1/2 in.",
+                    length: 0.0381,
+                    partNumber: "am-1730",
+                    url: "https://andymark.com/products/10-32-x-1-5-in-button-head-cap-screw"
+                },
+                {
+                    id: "IN_1_75",
+                    name: "1-3/4 in.",
+                    length: 0.04445,
+                    partNumber: "am-1584",
+                    url: "https://andymark.com/products/10-32-x-1-75-in-button-head-cap-screw"
+                }
+            ]
+        },
+        {
+            vendor: "ANDYMARK",
+            size: "NO_10_32",
+            head: "FLAT",
+            lengths: [
+                {
+                    id: "IN_0_5",
+                    name: "1/2 in.",
+                    length: 0.0127,
+                    partNumber: "am-1404",
+                    url: "https://andymark.com/products/10-32-x-0-5-in-flat-head-cap-screw"
+                },
+                {
+                    id: "IN_0_625",
+                    name: "5/8 in.",
+                    length: 0.015875,
+                    partNumber: "am-1252",
+                    url: "https://andymark.com/products/10-32-x-0-625-in-flat-head-cap-screw"
+                },
+                {
+                    id: "IN_0_75",
+                    name: "3/4 in.",
+                    length: 0.01905,
+                    partNumber: "am-1170",
+                    url: "https://andymark.com/products/10-32-x-0-75-in-flat-head-cap-screw"
+                },
+                {
+                    id: "IN_1",
+                    name: "1 in.",
+                    length: 0.0254,
+                    partNumber: "am-1324",
+                    url: "https://andymark.com/products/10-32-x-1-in-flat-head-cap-screw-1"
+                },
+                {
+                    id: "IN_1_5",
+                    name: "1-1/2 in.",
+                    length: 0.0381,
+                    partNumber: "am-1756",
+                    url: "https://andymark.com/products/10-32-x-1-500-in-flat-head-cap-screw"
+                },
+                {
+                    id: "IN_2",
+                    name: "2 in.",
+                    length: 0.0508,
+                    partNumber: "am-1383",
+                    url: "https://andymark.com/products/10-32-x-2-in-flat-head-cap-screw-black-oxide"
+                }
+            ]
+        },
+        {
+            vendor: "ANDYMARK",
+            size: "QUARTER_20",
+            head: "SOCKET",
+            lengths: [
+                {
+                    id: "IN_0_625",
+                    name: "5/8 in.",
+                    length: 0.015875,
+                    partNumber: "am-1053",
+                    url: "https://andymark.com/products/1-4-20-x-0-625-in-hex-drive-socket-head-cap-screw"
+                },
+                {
+                    id: "IN_1",
+                    name: "1 in.",
+                    length: 0.0254,
+                    partNumber: "am-1341",
+                    url: "https://andymark.com/products/1-4-20-x-1-in-socket-head-cap-screw"
+                },
+                {
+                    id: "IN_1_5",
+                    name: "1-1/2 in.",
+                    length: 0.0381,
+                    partNumber: "am-1131",
+                    url: "https://andymark.com/products/1-4-20-x-1-5-in-socket-head-cap-screw"
+                },
+                {
+                    id: "IN_1_75",
+                    name: "1-3/4 in.",
+                    length: 0.04445,
+                    partNumber: "am-1058",
+                    url: "https://andymark.com/products/1-4-20-x-1-75-in-hex-drive-socket-head-cap-screw"
+                },
+                {
+                    id: "IN_2",
+                    name: "2 in.",
+                    length: 0.0508,
+                    partNumber: "am-1012",
+                    url: "https://andymark.com/products/1-4-20-x-2-in-socket-head-cap-screw"
+                },
+                {
+                    id: "IN_2_5",
+                    name: "2-1/2 in.",
+                    length: 0.0635,
+                    partNumber: "am-1031",
+                    url: "https://andymark.com/products/1-4-20-x-2-5-in-hex-drive-socket-head-cap-screw"
+                },
+                {
+                    id: "IN_3",
+                    name: "3 in.",
+                    length: 0.0762,
+                    partNumber: "am-1030",
+                    url: "https://andymark.com/products/1-4-20-x-3-in-socket-head-cap-screw-1"
+                },
+                {
+                    id: "IN_3_25",
+                    name: "3-1/4 in.",
+                    length: 0.08255,
+                    partNumber: "am-3338",
+                    url: "https://andymark.com/products/1-4-20-x-3-25-in-socket-head-cap-screw"
+                }
+            ]
+        },
+        {
+            vendor: "ANDYMARK",
+            size: "QUARTER_20",
+            head: "BUTTON",
+            lengths: [
+                {
+                    id: "IN_0_375",
+                    name: "3/8 in.",
+                    length: 0.009525,
+                    partNumber: "am-1520",
+                    url: "https://andymark.com/products/1-4-20-x-0-375-in-button-head-cap-screw"
+                },
+                {
+                    id: "IN_0_5",
+                    name: "1/2 in.",
+                    length: 0.0127,
+                    partNumber: "am-1039",
+                    url: "https://andymark.com/products/1-4-20-x-0-5-in-button-head-cap-screw"
+                },
+                {
+                    id: "IN_0_625",
+                    name: "5/8 in.",
+                    length: 0.015875,
+                    partNumber: "am-1681",
+                    url: "https://andymark.com/products/1-4-20-x-0-625-in-button-head-cap-screw"
+                },
+                {
+                    id: "IN_0_75",
+                    name: "3/4 in.",
+                    length: 0.01905,
+                    partNumber: "am-1754",
+                    url: "https://andymark.com/products/screw-bhcs-1-4-20-x-750-zinc"
+                },
+                {
+                    id: "IN_1",
+                    name: "1 in.",
+                    length: 0.0254,
+                    partNumber: "am-1525",
+                    url: "https://andymark.com/products/1-4-20-x-1-in-button-head-cap-screw"
+                },
+                {
+                    id: "IN_1_25",
+                    name: "1-1/4 in.",
+                    length: 0.03175,
+                    partNumber: "am-1183",
+                    url: "https://andymark.com/products/1-4-20-x-1-25-in-button-head-cap-screw"
+                },
+                {
+                    id: "IN_1_5",
+                    name: "1-1/2 in.",
+                    length: 0.0381,
+                    partNumber: "am-1118",
+                    url: "https://andymark.com/products/1-4-20-x-1-5-in-button-head-cap-screw"
+                },
+                {
+                    id: "IN_1_75",
+                    name: "1-3/4 in.",
+                    length: 0.04445,
+                    partNumber: "am-1420",
+                    url: "https://andymark.com/products/1-4-20-x-1-75-in-button-head-cap-screw"
+                },
+                {
+                    id: "IN_2",
+                    name: "2 in.",
+                    length: 0.0508,
+                    partNumber: "am-1655",
+                    url: "https://andymark.com/products/1-4-20-x-2-in-button-head-cap-screw"
+                },
+                {
+                    id: "IN_2_5",
+                    name: "2-1/2 in.",
+                    length: 0.0635,
+                    partNumber: "am-1695",
+                    url: "https://andymark.com/products/1-4-20-x-2-5-in-button-head-cap-screw"
+                }
+            ]
+        },
+        {
+            vendor: "ANDYMARK",
+            size: "QUARTER_20",
+            head: "FLAT",
+            lengths: [
+                {
+                    id: "IN_0_75",
+                    name: "3/4 in.",
+                    length: 0.01905,
+                    partNumber: "am-1672",
+                    url: "https://andymark.com/products/1-4-20-x-0-75-in-flat-head-cap-screw"
+                },
+                {
+                    id: "IN_2",
+                    name: "2 in.",
+                    length: 0.0508,
+                    partNumber: "am-1707",
+                    url: "https://andymark.com/products/1-4-20-x-2-in-flat-head-cap-screw"
                 }
             ]
         }
@@ -6216,128 +6320,6 @@ export const CATALOG = {
             thickness: 0.0007874,
             partNumber: "WCP-0198",
             url: "https://wcproducts.com/products/wcp-0198"
-        }
-    ],
-    seatWashers: [
-        {
-            vendor: "GENERIC",
-            size: "NO_4_40",
-            washerVendor: "GENERIC",
-            washerType: "OD_5_16_X_0_032"
-        },
-        {
-            vendor: "GENERIC",
-            size: "NO_6_32",
-            washerVendor: "GENERIC",
-            washerType: "OD_3_8_X_0_049"
-        },
-        {
-            vendor: "GENERIC",
-            size: "NO_8_32",
-            washerVendor: "GENERIC",
-            washerType: "OD_7_16_X_0_049"
-        },
-        {
-            vendor: "GENERIC",
-            size: "NO_10_32",
-            washerVendor: "GENERIC",
-            washerType: "OD_1_2_X_0_049"
-        },
-        {
-            vendor: "GENERIC",
-            size: "QUARTER_20",
-            washerVendor: "GENERIC",
-            washerType: "OD_5_8_X_0_065"
-        },
-        {
-            vendor: "MCMASTER",
-            size: "NO_4_40",
-            washerVendor: "MCMASTER",
-            washerType: "OD_5_16_X_0_03"
-        },
-        {
-            vendor: "MCMASTER",
-            size: "NO_6_32",
-            washerVendor: "MCMASTER",
-            washerType: "OD_3_8_X_0_03"
-        },
-        {
-            vendor: "MCMASTER",
-            size: "NO_8_32",
-            washerVendor: "MCMASTER",
-            washerType: "OD_3_8_X_0_03"
-        },
-        {
-            vendor: "MCMASTER",
-            size: "NO_10_32",
-            washerVendor: "MCMASTER",
-            washerType: "OD_1_2_X_0_04"
-        },
-        {
-            vendor: "MCMASTER",
-            size: "QUARTER_20",
-            washerVendor: "MCMASTER",
-            washerType: "OD_5_8_X_0_05"
-        },
-        {
-            vendor: "REV",
-            size: "NO_4_40",
-            washerVendor: "GENERIC",
-            washerType: "OD_5_16_X_0_032"
-        },
-        {
-            vendor: "REV",
-            size: "NO_6_32",
-            washerVendor: "GENERIC",
-            washerType: "OD_3_8_X_0_049"
-        },
-        {
-            vendor: "REV",
-            size: "NO_8_32",
-            washerVendor: "GENERIC",
-            washerType: "OD_7_16_X_0_049"
-        },
-        {
-            vendor: "REV",
-            size: "NO_10_32",
-            washerVendor: "GENERIC",
-            washerType: "OD_1_2_X_0_049"
-        },
-        {
-            vendor: "REV",
-            size: "QUARTER_20",
-            washerVendor: "GENERIC",
-            washerType: "OD_5_8_X_0_065"
-        },
-        {
-            vendor: "WCP",
-            size: "NO_4_40",
-            washerVendor: "GENERIC",
-            washerType: "OD_5_16_X_0_032"
-        },
-        {
-            vendor: "WCP",
-            size: "NO_6_32",
-            washerVendor: "GENERIC",
-            washerType: "OD_3_8_X_0_049"
-        },
-        {
-            vendor: "WCP",
-            size: "NO_8_32",
-            washerVendor: "GENERIC",
-            washerType: "OD_7_16_X_0_049"
-        },
-        {
-            vendor: "WCP",
-            size: "NO_10_32",
-            washerVendor: "WCP",
-            washerType: "OD_3_8_X_0_031"
-        },
-        {
-            vendor: "WCP",
-            size: "QUARTER_20",
-            washerVendor: "WCP",
-            washerType: "OD_3_8_X_0_031"
         }
     ]
 };

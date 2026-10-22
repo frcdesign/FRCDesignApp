@@ -198,6 +198,7 @@ async function reindex(
             buildIssues: insertables.buildIssues,
             indexConfigurations: insertables.indexConfigurations,
             excludedParameterIds: insertables.excludedParameterIds,
+            generatedStudio: insertables.generatedStudio,
             parameters: configurations.parameters
         })
         .from(insertables)
@@ -209,6 +210,13 @@ async function reindex(
         .get();
     if (!row) {
         throw internalError("Insertable not found", HttpStatus.NOT_FOUND);
+    }
+    // Every configuration is indexed from its generator, whatever the settings
+    if (row.generatedStudio !== null) {
+        throw handledError(
+            "A generated part's indexing isn't configurable.",
+            HttpStatus.BAD_REQUEST
+        );
     }
     const parameters = row.parameters ?? [];
     const settings: IndexingSettings = {

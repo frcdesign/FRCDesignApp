@@ -13,8 +13,10 @@ import * as Assemblies from "../../lib/onshape/endpoints/assemblies";
 import * as Documents from "../../lib/onshape/endpoints/documents";
 import * as PartStudios from "../../lib/onshape/endpoints/part-studios";
 import { OnshapeApiError, type OAuthApi } from "../../lib/onshape/client";
-import * as Catalog from "./catalog";
-import { FastenerKind } from "./catalog";
+import * as Studios from "./studios";
+import { FastenerKind } from "./studios";
+
+const WASHER = { vendor: "GENERIC", size: "NO_10_32", type: "OD_1_2_X_0_049" };
 import {
     FastenerJobOutcome,
     fastenerJobOutcome,
@@ -80,7 +82,7 @@ beforeEach(async () => {
             await env.KV.delete(key.name);
         }
     }
-    vi.spyOn(Catalog, "getStudioLocation").mockImplementation((kind) => ({
+    vi.spyOn(Studios, "getStudioLocation").mockImplementation((kind) => ({
         documentId: "lib",
         versionId: "libv",
         elementId: `${kind}Studio`
@@ -164,9 +166,8 @@ describe("QuickFastenerWorkflow", () => {
                 ...BODY,
                 options: {
                     ...BODY.options,
-                    startWasher: true,
-                    endWasher: true,
-                    washerType: "OD_1_2_X_0_049"
+                    screwWasher: WASHER,
+                    nutWasher: WASHER
                 }
             }
         });

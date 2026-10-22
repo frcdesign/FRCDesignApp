@@ -1,0 +1,1 @@
+ALTER TABLE `insertables` ADD `generated_studio` text;

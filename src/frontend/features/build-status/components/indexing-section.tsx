@@ -49,6 +49,21 @@ export function IndexingSection(props: IndexingSectionProps): ReactNode {
         isIndexedParameter(parameter)
     );
 
+    if (status.generatedStudio) {
+        return (
+            <>
+                <Divider />
+                <Stack gap="sm">
+                    <SectionHeader>Indexing</SectionHeader>
+                    <Text size="sm" c={StatusColor.DIMMED}>
+                        Every configuration is indexed from its FeatureScript (
+                        {status.generatedStudio}), whatever its count.
+                    </Text>
+                </Stack>
+            </>
+        );
+    }
+
     return (
         <>
             <Divider />

@@ -120,6 +120,7 @@ owns, `lib/` for cross-cutting plumbing, and a small set of files at the root.
     - `admin-team/` — each library's admin team, set by the owner and synced from Onshape
     - `version-manager/` — links between Onshape workspaces and the pushes and pulls along them; see [architecture/version-manager.md](./architecture/version-manager.md)
     - `quick-fastener/` — sizing and inserting fasteners in an assembly's holes, from robot-code's synced catalog; see [architecture/quick-fastener.md](./architecture/quick-fastener.md)
+    - `generated-parts/` — library parts FeatureScript generates, whose records robot-code writes and loads index; see [architecture/generated-parts.md](./architecture/generated-parts.md)
     - `favorites/`, `search/`, `analytics/`, `insert-location/`
 
 ### `src/frontend/`

@@ -27,6 +27,14 @@ import { LOAD_CONCURRENCY, type LoadContext } from "./context";
 import { createLimiter } from "../../lib/limiter";
 import * as LoadContextModule from "./context";
 import { loadInsertable, saveInsertable } from "./load-insertable";
+import * as GeneratedStudios from "../generated-parts/studios";
+import { GeneratedPartMismatchError } from "../generated-parts/records";
+import { GENERATED_STUDIOS } from "../generated-parts/studios.gen";
+import { Vendor } from "../library/vendors";
+import {
+    type OnshapeConfigurationResponse,
+    OnshapeParameterType
+} from "../../lib/onshape/types";
 
 const db = getDb(env.DB);
 
@@ -244,5 +252,88 @@ describe("loadInsertable", () => {
         expect(row?.buildIssues.map((issue) => issue.type)).not.toContain(
             BuildIssueType.THUMBNAIL_FAILED
         );
+    });
+});
+
+describe("loadInsertable, for a generated studio", () => {
+    // The nut studio's configuration, as robot-code writes it to the Part Studio
+    const synced = GENERATED_STUDIOS.find(
+        (studio) => studio.set === "fasteners" && studio.key === "nut"
+    );
+    // Onshape answers with its configuration as robot-code sent it
+    const nutConfiguration = () =>
+        ({
+            ...structuredClone(synced!.configuration),
+            btType: "BTConfigurationResponse-2019"
+        }) as unknown as OnshapeConfigurationResponse;
+
+    beforeEach(async () => {
+        await resetDb(db);
+        await seedGroup(db);
+        vi.spyOn(
+            LoadContextModule,
+            "getOnshapeApiFromContext"
+        ).mockResolvedValue(MOCK_ONSHAPE_API);
+        vi.spyOn(ThumbnailStore, "uploadThumbnails").mockResolvedValue({
+            small: "small",
+            large: "large"
+        });
+        vi.spyOn(PartsEndpoints, "getParts").mockResolvedValue([
+            { partId: "p1" }
+        ]);
+        vi.spyOn(GeneratedStudios, "findGeneratedStudio").mockReturnValue(
+            GeneratedStudios.getGeneratedStudio("fasteners", "nut")
+        );
+    });
+
+    afterEach(() => vi.restoreAllMocks());
+
+    it("indexes every configuration from the generator, without probing one", async () => {
+        vi.spyOn(ConfigurationEndpoints, "getConfiguration").mockResolvedValue(
+            nutConfiguration()
+        );
+
+        await loadInsertable(ctx(), insertableTarget());
+
+        const row = await readInsertable();
+        expect(row?.generatedStudio).toBe("fasteners/nut");
+        expect(row?.partMetadata?.name).toBe("#10-32 Nylock Nut");
+        expect(row?.vendors).toContain(Vendor.MCM);
+        const stored = await db
+            .select()
+            .from(configurations)
+            .where(eq(configurations.insertableId, TEST_PART_STUDIO_ID))
+            .get();
+        const mcmaster = stored?.records.find(
+            (each) =>
+                each.values.vendor === "MCMASTER" &&
+                each.values.size === "NO_10_32" &&
+                each.values.type === "NYLOCK"
+        );
+        expect(mcmaster).toMatchObject({
+            name: "#10-32 Nylock Nut",
+            partNumber: "90631A411",
+            vendor: "McMaster-Carr"
+        });
+        // Only the default parts, for the thumbnail and its composite check
+        expect(PartsEndpoints.getParts).toHaveBeenCalledTimes(1);
+    });
+
+    it("fails, keeping nothing, when the tab isn't configured as generated", async () => {
+        const configuration = nutConfiguration();
+        const type = configuration.configurationParameters.find(
+            (parameter) => parameter.parameterId === "type"
+        );
+        if (type?.btType === OnshapeParameterType.ENUM) {
+            type.options = type.options.slice(1);
+        }
+        vi.spyOn(ConfigurationEndpoints, "getConfiguration").mockResolvedValue(
+            configuration
+        );
+
+        await expect(
+            loadInsertable(ctx(), insertableTarget())
+        ).rejects.toBeInstanceOf(GeneratedPartMismatchError);
+        expect(await readInsertable()).toBeUndefined();
     });
 });

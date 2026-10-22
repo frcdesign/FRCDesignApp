@@ -116,7 +116,9 @@ the reload's limiters:
 
 `loadInsertable`: probes the tab under the limiter (configuration, parts, fasten
 info, vendors, and a record per indexed combination), fetches its thumbnail
-under the thumbnail limiter, runs the insertable checks, and saves the row.
+under the thumbnail limiter, runs the insertable checks, and saves the row. A
+generated tab's vendors and records are robot-code's instead, and a tab
+configured otherwise fails (see [generated-parts.md](./generated-parts.md)).
 
 `finishReload` always runs, success or not: when anything was written it
 rebuilds the search index, then bumps the library version and pushes; then it

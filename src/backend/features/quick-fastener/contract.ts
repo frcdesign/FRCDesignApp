@@ -1,11 +1,7 @@
 /** What Quick fastener's routes take and answer. A leaf module: the client imports it. */
 import { type ElementPath } from "../../lib/onshape/path";
-import {
-    type NutChoice,
-    type Program,
-    type ScrewChoice,
-    type WasherChoice
-} from "./catalog";
+import { type Program } from "./catalog";
+import { type PartChoice, type ScrewChoice } from "./studios";
 
 export enum FastenerMode {
     /** Long enough for each hole, from what it goes through. */
@@ -19,34 +15,32 @@ export enum StopCondition {
     /** Through every hole on the axis, gaps and all, up to the maximum length. */
     MAX_LENGTH = "max-length",
     /** At the first gap between parts wider than the maximum gap. */
-    RESPECT_GAPS = "respect-gaps"
+    FIRST_GAP = "first-gap"
 }
 
 /** Inches, so the defaults read as the round numbers they are. */
 export const DEFAULT_MAX_LENGTH = 3 * 0.0254;
 export const DEFAULT_MAX_GAP = 0.03125 * 0.0254;
+export const DEFAULT_MAX_THREAD_DEPTH = 0.5 * 0.0254;
 
 export interface FastenerOptions {
     program: Program;
     mode: FastenerMode;
-    vendor: string;
-    size: string;
-    head: string;
-    /** Preset only: a length the vendor makes `size` and `head` in. */
-    length?: string;
-    /** A washer under each head. */
-    startWasher: boolean;
-    /** A washer under each nut. */
-    endWasher: boolean;
-    /** The washers' type, of those made in `size`. */
-    washerType?: string;
-    /** No nuts when absent. One goes only where the screw comes out the far side. */
-    nutType?: string;
+    /** Its length is the preset's, and automatic picks one in its place. */
+    screw: ScrewChoice;
+    /** Under the head; none when absent. */
+    screwWasher?: PartChoice;
+    /** Where the screw comes out the far side; none when absent. */
+    nut?: PartChoice;
+    /** Under the nut; only with one. */
+    nutWasher?: PartChoice;
     stop: StopCondition;
     /** Metres; what `StopCondition.MAX_LENGTH` stops at. */
     maxLength: number;
-    /** Metres; the widest gap `StopCondition.RESPECT_GAPS` reaches across. */
+    /** Metres; the widest gap `StopCondition.FIRST_GAP` reaches across. */
     maxGap: number;
+    /** Metres; the farthest an automatic screw goes past where threads, or a blind hole, start. */
+    maxThreadDepth: number;
 }
 
 /** What the picks are: faces to fasten every hole in, or the holes' own edges. */
@@ -80,7 +74,7 @@ export interface QuickFastenerIn {
 
 export enum HoleStatus {
     READY = "ready",
-    /** A Quick fastener screw is already in it. */
+    /** A library screw is already in it. */
     FASTENED = "fastened",
     /** Nothing in the catalog fits, or reaches far enough within the maximum length. */
     NO_FIT = "no-fit"
@@ -106,9 +100,9 @@ export interface PlannedHole {
     /** Metres, from the circular edge to where the stack ends. */
     depth?: number;
     screw?: ScrewChoice;
-    startWasher?: WasherChoice;
-    endWasher?: WasherChoice;
-    nut?: NutChoice;
+    screwWasher?: PartChoice;
+    nut?: PartChoice;
+    nutWasher?: PartChoice;
 }
 
 /** The assembly a run fastens in, as its status is keyed. */

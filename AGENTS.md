@@ -126,7 +126,7 @@ wants a function in `selection.ts`, not a new shape.
 `docs/architecture/` holds one document per feature area, indexed in its
 `README.md`: thumbnails, configurations, loading, favorites, insert and fasten,
 auth (with access levels and environment variables), search, analytics, the
-version manager, and quick fastener. Each states the area's flows, storage,
+version manager, quick fastener, and generated parts. Each states the area's flows, storage,
 **invariants**, failure modes and decisions. Read the area's document before
 changing it, and check the change against its invariants.
 

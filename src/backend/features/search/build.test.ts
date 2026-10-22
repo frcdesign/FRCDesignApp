@@ -137,6 +137,7 @@ function library(name: string, vendors: Vendor[] = []): LibraryOut {
                 supportsReplicate: false,
                 elementType: ElementType.PART_STUDIO,
                 isConfigurable: false,
+                isGenerated: false,
                 vendors
             }
         }
