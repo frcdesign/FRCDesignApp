@@ -55,9 +55,10 @@ only what's made.
 robot-code (`robot-education/robot-code`) owns everything the catalog says:
 `featurescripts/fasteners/fastenerTables.py` generates the features'
 FeatureScript data, the Part Studios' configurations, and the manifest synced
-here, and `fastenerHoleScan.fs` is the hole scan. It releases the features
-to FRCDesign's Fasteners library document, whose Part Studios use them
-(`[tool.fs.libraries.fasteners]`), not to its public frontend document. The
+here, and `fastenerHoleScan.fs` is the hole scan. The fasteners are a part
+set (`[tool.fs.parts.fasteners]`): `fs parts release` releases them into
+FRCDesign's Fasteners library document, Part Studios and all, not to its
+public frontend document. The
 studios are generated parts, synced by `npm run sync:generated-parts` (see
 [generated-parts.md](./generated-parts.md)), which also writes this area's
 `catalog.gen.ts`, `heads.gen.ts` and `hole-scan.gen.ts` from the fasteners'

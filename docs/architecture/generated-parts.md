@@ -85,15 +85,20 @@ is fasten info when it's on.
 1. Change the definition in robot-code, which writes the FeatureScript's tables
    from the records; its tests check the records against the configurations
    offered.
-2. Release it (`fs release fasteners`): robot-code points the library
+2. Push it to robot-code's backend document and try it there:
+   `fs parts test fasteners` builds each Part Studio as `<Part> (TEST)` from
+   the FeatureScript as pushed.
+3. Release it (`fs parts release fasteners`): robot-code points the library
    document's Feature Studio at a new backend version, builds each Part Studio
    there from the definition (creating its tab if it's missing, writing its
    configuration, and inserting or updating its feature), versions the library
    document, and records where each studio is (`fastenerTables.studios.json`),
    which the manifest's locations come from. Nothing is made by hand. Commit
-   what it wrote.
-3. Sync the commit here and deploy.
-4. Load the group. A load that runs before the deploy fails the changed tabs
+   what it wrote. The fasteners are a part set in robot-code
+   (`[tool.fs.parts.fasteners]`, its `docs/parts.md`), released apart from its
+   user-facing FeatureScript.
+4. Sync the commit here and deploy.
+5. Load the group. A load that runs before the deploy fails the changed tabs
    (step 3 of loading) rather than store parts the generator didn't name, so the
    library shows the last good version until the app has the new records.
 
@@ -116,10 +121,10 @@ shows it in place of the indexing switches.
 
 ## Failure and recovery
 
-| Failure                                         | Result                                                 | Recovery                                                                   |
-| ----------------------------------------------- | ------------------------------------------------------ | -------------------------------------------------------------------------- |
-| The tab's configuration isn't the generated one | `GENERATED_PART_MISMATCH`; it keeps its last good load | Release the fasteners again (`fs release`), or sync the generator's commit |
-| A studio's location isn't synced yet            | It loads as a hand-modeled tab, probed and capped      | Sync the commit with the release's recorded locations                      |
+| Failure                                         | Result                                                 | Recovery                                                                         |
+| ----------------------------------------------- | ------------------------------------------------------ | -------------------------------------------------------------------------------- |
+| The tab's configuration isn't the generated one | `GENERATED_PART_MISMATCH`; it keeps its last good load | Release the fasteners again (`fs parts release`), or sync the generator's commit |
+| A studio's location isn't synced yet            | It loads as a hand-modeled tab, probed and capped      | Sync the commit with the release's recorded locations                            |
 
 ## Decisions
 
