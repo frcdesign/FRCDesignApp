@@ -25,7 +25,11 @@ import {
     pendingTasks,
     type QuickFastenerIn
 } from "./contract";
-import { describeRunFailure, describeStepFailure } from "./failures";
+import {
+    describeRunFailure,
+    describeStepFailure,
+    runFailure
+} from "./failures";
 import { gather } from "./gather";
 import {
     insertGroups,
@@ -38,7 +42,7 @@ import {
 } from "./insert";
 import { reportJob } from "./jobs";
 import { planHoles } from "./planner";
-import { addReplicate, replicateMatches } from "./replicate";
+import { addReplicate, replicateMatch } from "./replicate";
 
 export interface FastenerJobParams {
     /** Whose Onshape session the run borrows; see the load workflow. */
@@ -190,43 +194,27 @@ async function runSteps(ctx: RunContext, request: QuickFastenerIn) {
             );
             const mateFeatureId = seated ? mates[seated[0]] : null;
             const instancePaths = seedParts.map(([each]) => paths[each]);
-            const isPlaced = (path: string[] | null): path is string[] =>
-                path !== null;
-            if (mateFeatureId && instancePaths.every(isPlaced)) {
-                const added = await run(
-                    `replicate-${index}`,
-                    isRateLimited,
-                    (client) =>
-                        addReplicate(client, request.assembly, {
-                            name: "Quick fastener replicate",
-                            instancePaths,
-                            mateFeatureId,
-                            matches: replicateMatches(
-                                group.map((plan) => plan.circularEdge),
-                                all
-                            )
-                        })
+            if (
+                !mateFeatureId ||
+                !instancePaths.every((path): path is string[] => path !== null)
+            ) {
+                throw runFailure(
+                    "A hole's parts weren't all inserted and fastened, so they can't be replicated."
                 );
-                if (added) {
-                    ctx.result.replicated += rest.length;
-                    continue;
-                }
             }
-            // Refused: the rest of the group gets parts of its own
-            const restParts = placements(rest);
-            const restPaths = await insertParts(
-                ctx,
-                run,
-                `replicate-${index}-`,
-                restParts
-            );
-            await fastenParts(
-                ctx,
-                run,
-                `replicate-${index}-`,
-                restParts,
-                restPaths
-            );
+            await run(`replicate-${index}`, isRateLimited, async (client) => {
+                await addReplicate(client, request.assembly, {
+                    name: "Quick fastener replicate",
+                    instancePaths,
+                    mateFeatureId,
+                    match: replicateMatch(
+                        group.map((plan) => plan.circularEdge),
+                        all
+                    )
+                });
+                return true;
+            });
+            ctx.result.replicated += rest.length;
         }
     });
 }

@@ -1,11 +1,11 @@
 /**
  * Replicates, shared by insert and fasten and Quick fastener: what a seed's
- * Replicate matches, and adding one, matching faces where it can.
+ * Replicate matches, and adding one.
  */
-import {
-    OnshapeRateLimitError,
-    type OnshapeApi
-} from "../../lib/onshape/client";
+import { HttpStatus } from "http-status-ts";
+import { handledError } from "../../lib/api-error";
+import { type OnshapeApi } from "../../lib/onshape/client";
+import { onshapeStatus } from "../../lib/onshape/failures";
 import { addAssemblyFeature } from "../../lib/onshape/endpoints/assemblies";
 import {
     type EdgeReference,
@@ -33,18 +33,18 @@ export function toEdgeReference(edge: AssemblyCircularEdge): EdgeReference {
 }
 
 /**
- * What a Replicate of the group's first edge onto the rest matches, in the
- * order to try: its faces, when the group is every edge of the seed's size on
- * whole picked faces (of all the edges gathered), then its edges.
+ * What a Replicate of the group's first edge onto the rest matches: its faces,
+ * when the group is every edge of the seed's size on whole picked faces (of
+ * all the edges gathered), else its edges.
  */
-export function replicateMatches(
+export function replicateMatch(
     group: AssemblyCircularEdge[],
     all: AssemblyCircularEdge[]
-): ReplicateMatch[] {
+): ReplicateMatch {
     const [seed, ...rest] = group;
     const byEdges: ReplicateMatch = { edges: rest.map(toEdgeReference) };
     if (group.some((edge) => edge.face === undefined)) {
-        return [byEdges];
+        return byEdges;
     }
     const onFace = (edge: AssemblyCircularEdge, face: AssemblyCircularEdge) =>
         edge.face === face.face &&
@@ -61,15 +61,14 @@ export function replicateMatches(
             !faces.some((face) => onFace(edge, face))
     );
     if (!isWhole) {
-        return [byEdges];
+        return byEdges;
     }
-    const byFaces: ReplicateMatch = {
+    return {
         faces: faces.map((edge) => ({
             deterministicId: edge.face ?? "",
             path: edge.occurrencePath
         }))
     };
-    return [byFaces, byEdges];
 }
 
 export interface ReplicateArgs {
@@ -78,38 +77,34 @@ export interface ReplicateArgs {
     instancePaths: string[][];
     /** The mate placing the seed, which each copy is placed as. */
     mateFeatureId: string;
-    matches: ReplicateMatch[];
+    match: ReplicateMatch;
 }
 
-/**
- * Adds a Replicate with the first match Onshape takes; false when it refuses
- * them all, for the caller to place the rest one by one.
- */
+/** Adds a Replicate; Onshape refusing it is an error in the user's words, with Onshape's own. */
 export async function addReplicate(
     onshapeApi: OnshapeApi,
     assembly: ElementPath,
     args: ReplicateArgs
-): Promise<boolean> {
-    for (const match of args.matches) {
-        try {
-            await addAssemblyFeature(
-                onshapeApi,
-                assembly,
-                replicateFeature(
-                    args.name,
-                    args.instancePaths,
-                    args.mateFeatureId,
-                    match
-                )
-            );
-            return true;
-        } catch (error) {
-            // Another try would only spend more of the same allocation
-            if (error instanceof OnshapeRateLimitError) {
-                throw error;
-            }
-            console.warn("Onshape refused a replicate", error);
+): Promise<void> {
+    try {
+        await addAssemblyFeature(
+            onshapeApi,
+            assembly,
+            replicateFeature(
+                args.name,
+                args.instancePaths,
+                args.mateFeatureId,
+                args.match
+            )
+        );
+    } catch (error) {
+        if (onshapeStatus(error) !== HttpStatus.BAD_REQUEST) {
+            throw error;
         }
+        const message = error instanceof Error ? error.message : String(error);
+        throw handledError(
+            `Onshape refused the Replicate (${message}).`,
+            HttpStatus.BAD_GATEWAY
+        );
     }
-    return false;
 }

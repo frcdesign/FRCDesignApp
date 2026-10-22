@@ -7,7 +7,7 @@ import { type OnshapeInsertInstancesResponse } from "../../../lib/onshape/types"
 import { type AssemblyCircularEdge } from "../../quick-fastener/planner";
 import {
     addReplicate,
-    replicateMatches,
+    replicateMatch,
     sameRadius,
     toEdgeReference
 } from "../../quick-fastener/replicate";
@@ -16,7 +16,7 @@ interface FastenToCircularEdgesArgs {
     name: string;
     /** The instance already inserted, which takes the first edge. */
     inserted: OnshapeInsertInstancesResponse;
-    /** Inserts one more instance, for an edge no replicate covers. */
+    /** Inserts one more instance, for an edge no Replicate covers. */
     insert: () => Promise<OnshapeInsertInstancesResponse>;
     /** The inserted part's own connector, in the instance at `instancePath`. */
     fastenQuery: (instancePath: string[]) => object;
@@ -27,8 +27,9 @@ interface FastenToCircularEdgesArgs {
 
 /**
  * A Replicate only matches edges the diameter of its seed's, so with
- * `replicate` each diameter gets its own fastened instance and Replicate.
- * Inserts nothing for the first edge; the caller has already.
+ * `replicate` each diameter gets its own fastened instance and Replicate;
+ * without, each edge gets an instance. Inserts nothing for the first edge;
+ * the caller has already.
  */
 export async function fastenToCircularEdges(
     onshapeApi: OnshapeApi,
@@ -56,29 +57,13 @@ export async function fastenToCircularEdges(
             )
         );
 
-        if (
-            rest.length > 0 &&
-            (await addReplicate(onshapeApi, targetPath, {
+        if (rest.length > 0) {
+            await addReplicate(onshapeApi, targetPath, {
                 name: `Replicate ${name}`,
                 instancePaths: [instancePath],
                 mateFeatureId: mate.feature.featureId,
-                matches: replicateMatches(group, args.edges)
-            }))
-        ) {
-            continue;
-        }
-
-        for (const edge of rest) {
-            const next = await insert();
-            await addAssemblyFeature(
-                onshapeApi,
-                targetPath,
-                fastenMateToCircularEdge(
-                    name,
-                    fastenQuery(getInstancePath(next)),
-                    toEdgeReference(edge)
-                )
-            );
+                match: replicateMatch(group, args.edges)
+            });
         }
     }
 }

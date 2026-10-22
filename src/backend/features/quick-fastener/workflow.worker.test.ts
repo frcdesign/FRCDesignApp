@@ -264,7 +264,7 @@ describe("QuickFastenerWorkflow", () => {
             });
             const replicate = mates[2];
             expect(replicate).toContain('"featureType":"replicate"');
-            expect(replicate).toContain('"value":"INDIVIDUAL_EDGES"');
+            expect(replicate).toContain('"parameterId":"targetEdges"');
             expect(replicate).toContain('"deterministicIds":["b"]');
             expect(replicate).toContain(
                 '{"btType":"BTMIndividualOccurrenceQuery-626","path":["part0"]}'
@@ -272,13 +272,16 @@ describe("QuickFastenerWorkflow", () => {
             expect(fastenerJobOutcome(status)).toBe(FastenerJobOutcome.SUCCESS);
         });
 
-        it("gives the rest parts of their own when Onshape refuses the replicate", async () => {
+        it("fails the step, in Onshape's words, when Onshape refuses the replicate", async () => {
             vi.mocked(Assemblies.addAssemblyFeature).mockImplementation(
                 (_client, _path, feature) => {
                     const json = JSON.stringify(feature);
                     if (json.includes('"featureType":"replicate"')) {
                         return Promise.reject(
-                            new OnshapeApiError("Onshape API error 400", 400)
+                            new OnshapeApiError(
+                                "Onshape API error 400: bad feature",
+                                400
+                            )
                         );
                     }
                     mates.push(json);
@@ -287,13 +290,21 @@ describe("QuickFastenerWorkflow", () => {
             );
             const status = await run("refused", REPLICATING);
 
+            expect(status.tasks?.map((task) => task.state)).toEqual([
+                FastenerTaskState.DONE,
+                FastenerTaskState.DONE,
+                FastenerTaskState.DONE,
+                FastenerTaskState.FAILED
+            ]);
+            expect(status.tasks?.[3].reason).toBe(
+                "Onshape refused the Replicate (Onshape API error 400: bad feature)."
+            );
             expect(status.result).toEqual({
-                inserted: 4,
-                fastened: 4,
+                inserted: 2,
+                fastened: 2,
                 replicated: 0
             });
-            expect(mates[2]).toContain('"deterministicIds":["b"]');
-            expect(fastenerJobOutcome(status)).toBe(FastenerJobOutcome.SUCCESS);
+            expect(fastenerJobOutcome(status)).toBe(FastenerJobOutcome.PARTIAL);
         });
     });
 

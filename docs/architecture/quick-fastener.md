@@ -33,7 +33,7 @@ only what's made.
 | `src/backend/features/quick-fastener/gather.ts`                             | `gather`: reads the assembly and scans every Part Studio it needs                                 |
 | `src/backend/features/quick-fastener/planner.ts`                            | `planHoles`: the fastener for each hole; pure                                                     |
 | `src/backend/features/quick-fastener/insert.ts`                             | `placements`, `replicateGroups`, the insert's groups, each part's fasten mate, washers' top edges |
-| `src/backend/features/quick-fastener/replicate.ts`                          | `replicateMatches`, `addReplicate`: Replicates, shared with insert and fasten                     |
+| `src/backend/features/quick-fastener/replicate.ts`                          | `replicateMatch`, `addReplicate`: Replicates, shared with insert and fasten                       |
 | `src/backend/features/quick-fastener/workflow.ts`                           | `QuickFastenerWorkflow`: a run, step by step                                                      |
 | `src/backend/features/quick-fastener/jobs.ts`                               | `reportJob` and `getJobStatus`: the run an assembly last started                                  |
 | `src/backend/features/quick-fastener/failures.ts`                           | A failed step or run, in the user's words, on `runFailures`                                       |
@@ -225,9 +225,9 @@ skipped.
    parts onto the rest, placed as the mate holding its bottom part on its
    hole (`addReplicate`). It matches the faces the group's edges are on when
    the group is every edge of its size on whole picked faces (none skipped,
-   none planned otherwise), and the edges otherwise (`replicateMatches`). If
-   Onshape refuses both, the rest of the group gets parts of its own, inserted
-   and fastened as above (`replicate-{n}-insert`, `replicate-{n}-mate-{m}`).
+   none planned otherwise), and the edges otherwise (`replicateMatch`).
+   Onshape refusing one fails the step, with Onshape's message, and the
+   groups after it aren't replicated.
 5. **Finish** (`finish-job`): stores `COMPLETE` or `FAILED`, with how many
    parts were inserted and fastened, how many holes a Replicate filled, and
    when.
@@ -273,17 +273,17 @@ a toast when a run watched going finishes, from any tab of the app.
 
 ## Failure and recovery
 
-| Failure                              | Result                                                    | Recovery                                     |
-| ------------------------------------ | --------------------------------------------------------- | -------------------------------------------- |
-| The studios aren't released          | Insert answers 503                                        | Fill robot-code's `LOCATIONS`, sync          |
-| The hole scan fails in a Part Studio | Index fails, naming Onshape's notice; the rest is skipped | Fix the Part Studio, or skip what's in it    |
-| No hole, or nothing fits             | That hole's plan is **no fit**, with why                  | Change the options or the hole               |
-| The insert fails                     | Nothing is inserted; fastening is skipped                 | Run it again                                 |
-| A mate fails partway                 | The parts so far stay, some unmated                       | Mate the rest by hand, or undo and run again |
-| Onshape refuses a Replicate          | That group's other holes get parts of their own           | None needed                                  |
-| A Replicate fails to regenerate      | It stays in the assembly, with its error                  | Fix or delete it in Onshape                  |
-| Onshape rate-limits                  | The step retries, then fails as above                     | Run it again                                 |
-| The run dies without reporting       | The job reads failed once the run has ended               | Run it again                                 |
+| Failure                              | Result                                                       | Recovery                                           |
+| ------------------------------------ | ------------------------------------------------------------ | -------------------------------------------------- |
+| The studios aren't released          | Insert answers 503                                           | Fill robot-code's `LOCATIONS`, sync                |
+| The hole scan fails in a Part Studio | Index fails, naming Onshape's notice; the rest is skipped    | Fix the Part Studio, or skip what's in it          |
+| No hole, or nothing fits             | That hole's plan is **no fit**, with why                     | Change the options or the hole                     |
+| The insert fails                     | Nothing is inserted; fastening is skipped                    | Run it again                                       |
+| A mate fails partway                 | The parts so far stay, some unmated                          | Mate the rest by hand, or undo and run again       |
+| Onshape refuses a Replicate          | Replicate fails, saying why; the holes it was for stay empty | Run without Replicate, or report Onshape's message |
+| A Replicate fails to regenerate      | It stays in the assembly, with its error                     | Fix or delete it in Onshape                        |
+| Onshape rate-limits                  | The step retries, then fails as above                        | Run it again                                       |
+| The run dies without reporting       | The job reads failed once the run has ended                  | Run it again                                       |
 
 ## Decisions
 
@@ -316,10 +316,12 @@ a toast when a run watched going finishes, from any tab of the app.
 - **Each part has its own vendor.** Not every vendor sells washers or nuts, and
   someone using one vendor's screws may buy another's nuts. Under a Generic
   screw the parts are Generic, and their Vendor isn't asked.
-- **Replicate is off by default.** Onshape publishes no spec for Replicate, so
-  its parameter ids (`replicateFeature`) are unverified; a refused one falls
-  back to parts in every hole. It shares insert and fasten's Replicate and
-  mate code, so one fix there fixes both.
+- **Replicate is off by default.** Onshape publishes no spec for Replicate;
+  `replicateFeature` is copied from a Replicate matching edges on a face, and
+  matching individual edges is unconfirmed. It shares insert and fasten's
+  Replicate and mate code, so one fix there fixes both.
+- **No fallbacks.** Onshape refusing a write fails its step with Onshape's
+  message rather than being worked around.
 - **An automatic screw is the standard one.** A variant is only shown for a
   length, as the screw studio offers it, so automatic sizing has no variant to
   honour; it picks from the vendor's standard line.

@@ -30,3 +30,8 @@ export function describeStepFailure(
 
 /** Why a step, or the whole run, failed. */
 export const describeRunFailure = failures.describe;
+
+/** A failure met outside any Onshape call, in the user's words. */
+export function runFailure(message: string): Error {
+    return new Error(failures.word(message));
+}

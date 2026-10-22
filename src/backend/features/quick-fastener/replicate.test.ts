@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { type AssemblyCircularEdge } from "./planner";
-import { replicateMatches } from "./replicate";
+import { replicateMatch } from "./replicate";
 
 function edge(
     key: string,
@@ -18,29 +18,28 @@ function edge(
     };
 }
 
-describe("replicateMatches", () => {
-    it("matches a whole face's edges of the seed's size, then the edges themselves", () => {
+describe("replicateMatch", () => {
+    it("matches a whole face's edges of the seed's size", () => {
         const group = [edge("a", 1, "F"), edge("b", 1, "F")];
         const all = [...group, edge("c", 2, "F")];
-        expect(replicateMatches(group, all)).toEqual([
-            { faces: [{ deterministicId: "F", path: ["plate"] }] },
-            { edges: [{ deterministicId: "b", path: ["plate"] }] }
-        ]);
+        expect(replicateMatch(group, all)).toEqual({
+            faces: [{ deterministicId: "F", path: ["plate"] }]
+        });
     });
 
     it("matches edges alone where a face has an edge of the size the group leaves out", () => {
         // `c` is already fastened, or planned differently
         const group = [edge("a", 1, "F"), edge("b", 1, "F")];
         const all = [...group, edge("c", 1, "F")];
-        expect(replicateMatches(group, all)).toEqual([
-            { edges: [{ deterministicId: "b", path: ["plate"] }] }
-        ]);
+        expect(replicateMatch(group, all)).toEqual({
+            edges: [{ deterministicId: "b", path: ["plate"] }]
+        });
     });
 
     it("matches edges alone for edges picked one by one, or on a face with a hole skipped", () => {
         const group = [edge("a", 1, "F"), edge("b", 1)];
-        expect(replicateMatches(group, group)).toEqual([
-            { edges: [{ deterministicId: "b", path: ["plate"] }] }
-        ]);
+        expect(replicateMatch(group, group)).toEqual({
+            edges: [{ deterministicId: "b", path: ["plate"] }]
+        });
     });
 });

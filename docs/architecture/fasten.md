@@ -91,17 +91,17 @@ function groupByDiameter(
 `src/backend/features/quick-fastener/replicate.ts`, shared with Quick fastener
 
 ```ts
-// Its faces, when the group is every edge of its size on whole picked faces, then its edges.
-function replicateMatches(
+// Its faces, when the group is every edge of its size on whole picked faces, else its edges.
+function replicateMatch(
     group: AssemblyCircularEdge[],
     all: AssemblyCircularEdge[]
-): ReplicateMatch[];
-// The first match Onshape takes; false when it refuses them all.
+): ReplicateMatch;
+// Onshape refusing it is an error in the user's words, with Onshape's own.
 async function addReplicate(
     onshapeApi: OnshapeApi,
     assembly: ElementPath,
     args: ReplicateArgs
-): Promise<boolean>;
+): Promise<void>;
 ```
 
 `src/backend/lib/onshape/objects/assembly-features.ts`, shared with Quick
@@ -201,8 +201,7 @@ function checkInsertableSettings(input: InsertableSettingsInput): BuildIssue[];
       group's faces ("Match edges on face") when every edge of the group's
       size on them is in it, which holds for a face picked with no hole
       skipped, and so follows the face as holes are added; otherwise it
-      matches the edges one by one (`replicateMatches`). If Onshape refuses
-      both, its group falls back to one instance per edge.
+      matches the edges one by one (`replicateMatch`).
 
     Either way it answers `fastenedCount` and records
     `Hint.FASTENED_TO_CIRCULAR_EDGES`.
@@ -250,6 +249,7 @@ function checkInsertableSettings(input: InsertableSettingsInput): BuildIssue[];
 | "Faces fasten every hole in them, less the edges excluded; circular edges are fastened alone."                                     | Validation error, inconsistent picks                    |
 | "{name} does not support insert and fasten."                                                                                       | Error toast                                             |
 | "Tip: select circular edges in Onshape before you insert and fasten, and the part is fastened to each of them."                    | Tip toast                                               |
+| "Onshape refused the Replicate ({Onshape's message})."                                                                             | Error toast                                             |
 | "Replicate not decided"                                                                                                            | Build check title                                       |
 | "Allow replicate for parts that sit the same way on every circular edge, like bolts, and not for parts with an orientation."       | Build check description                                 |
 | "Replicate"                                                                                                                        | Editor switch label                                     |
@@ -274,10 +274,10 @@ function checkInsertableSettings(input: InsertableSettingsInput): BuildIssue[];
 
 - **A mate fails**: the request errors, and whatever was inserted before it
   stays in the assembly, as in the Onshape UI.
-- **Onshape refuses a Replicate**: logged, tried again matching edges where
-  it matched faces, then replaced by one instance per edge. A rate limit is rethrown instead, since the fallback would spend more
-  of the same allocation. One Onshape accepts but fails to regenerate stays in
-  the assembly for the user to fix.
+- **Onshape refuses a Replicate**: the request errors with Onshape's own
+  message, and the instance and mate before it stay in the assembly, as for
+  a mate. One Onshape accepts but fails to regenerate stays in the assembly
+  for the user to fix.
 - **The scan fails in a Part Studio**: the request errors and nothing is
   inserted; see [quick-fastener.md](./quick-fastener.md).
 - **A pick isn't circular**: the scan finds no circular edge for it and it is left
@@ -293,10 +293,12 @@ function checkInsertableSettings(input: InsertableSettingsInput): BuildIssue[];
 - **Preselections seed the list.** What was selected before the menu opened is
   taken as the starting picks, and the list stays focused, so selecting in
   Onshape and then inserting needs no click in the panel.
-- **Replicate is guessed.** Onshape's feature specs omit Replicate, so the
-  parameter ids in `replicateFeature`, and its match scopes' values, are
-  unverified; the per-edge fallback keeps the insert correct either way.
-  Replicate is off by default for that reason.
+- **Replicate is copied from Onshape.** Onshape's feature specs omit
+  Replicate, so `replicateFeature` is shaped as Onshape answers a Replicate
+  matching edges on a face; the individual edges' `INDIVIDUAL` scope is
+  unconfirmed. Replicate is off by default until both are seen working.
+- **No fallbacks.** Onshape refusing a Replicate, or any other write, is an
+  error the user sees, not something worked around with other features.
 - **Faces, not planes.** Of Onshape's three ways to match, picked faces map to
   "Match edges on face"; "Match edges on plane" is never used.
 - **Always a new Replicate.** An insert never edits a Replicate already in the

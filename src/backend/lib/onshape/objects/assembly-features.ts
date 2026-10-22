@@ -149,11 +149,19 @@ export type ReplicateMatch =
     | { edges: EdgeReference[] }
     | { faces: FaceReference[] };
 
+function enumParameter(
+    parameterId: string,
+    enumName: string,
+    value: string
+): object {
+    return { btType: "BTMParameterEnum-145", parameterId, enumName, value };
+}
+
 /**
  * Copies fastened instances onto more circular edges, each placed as the
  * mate places the seed, so every edge must be the diameter of the seed's.
- * Onshape publishes no spec for Replicate, so these parameter ids are
- * unverified.
+ * Shaped as Onshape answers a Replicate matching edges on a face; the
+ * individual edges' `INDIVIDUAL` scope is unconfirmed.
  */
 export function replicateFeature(
     name: string,
@@ -161,30 +169,42 @@ export function replicateFeature(
     mateFeatureId: string,
     match: ReplicateMatch
 ): object {
-    const [scope, entities] =
+    const target =
         "edges" in match
-            ? ["INDIVIDUAL_EDGES", match.edges]
-            : ["EDGES_ON_FACE", match.faces];
+            ? [
+                  enumParameter(
+                      "edgeTargetType",
+                      "Edge match scope",
+                      "INDIVIDUAL"
+                  ),
+                  queryParameter("targetEdges", match.edges.map(entityQuery))
+              ]
+            : [
+                  enumParameter(
+                      "edgeTargetType",
+                      "Edge match scope",
+                      "SAME_FACE"
+                  ),
+                  queryParameter(
+                      "targetBoundingFaces",
+                      match.faces.map(entityQuery)
+                  )
+              ];
     return {
         btType: "BTMAssemblyReplicateFeature-1351",
         featureType: "replicate",
         name,
         parameters: [
             queryParameter(
-                "instances",
+                "seedInstances",
                 instancePaths.map((path) => ({
                     btType: "BTMIndividualOccurrenceQuery-626",
                     path
                 }))
             ),
-            queryParameter("mate", [featureOccurrenceQuery(mateFeatureId)]),
-            {
-                btType: "BTMParameterEnum-145",
-                parameterId: "matchScope",
-                value: scope,
-                enumName: "Match scope"
-            },
-            queryParameter("matches", entities.map(entityQuery))
+            queryParameter("seedMate", [featureOccurrenceQuery(mateFeatureId)]),
+            enumParameter("seedEntityType", "Seed geometry type", "EDGE"),
+            ...target
         ]
     };
 }

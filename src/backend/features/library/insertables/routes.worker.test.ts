@@ -29,7 +29,10 @@ import * as PartStudioEndpoints from "../../../lib/onshape/endpoints/part-studio
 import * as AssemblyEndpoints from "../../../lib/onshape/endpoints/assemblies";
 import * as PartsEndpoints from "../../../lib/onshape/endpoints/parts";
 import * as Gather from "../../quick-fastener/gather";
-import { OnshapeRateLimitError } from "../../../lib/onshape/client";
+import {
+    OnshapeApiError,
+    OnshapeRateLimitError
+} from "../../../lib/onshape/client";
 import { OnshapeFailure } from "../../../lib/onshape/failures";
 import { AUTO_INDEX_THRESHOLD } from "../../configurations/combinations";
 import {
@@ -635,26 +638,25 @@ describe("insertable routes", () => {
         expect(addedFeatureTypes(addFeature)).toEqual(["mate", "mate", "mate"]);
     });
 
-    it("fastens an instance per edge when Onshape refuses the replicate", async () => {
+    it("answers Onshape refusing the replicate, with nothing more inserted", async () => {
         await seedFastenable(true);
         mockGather({ JH1: 1, JH2: 1, JH3: 1 });
         const addFeature = vi
             .spyOn(AssemblyEndpoints, "addAssemblyFeature")
             .mockResolvedValueOnce({ feature: { featureId: "mate" } })
-            .mockRejectedValueOnce(new Error("bad feature"))
-            .mockResolvedValue({ feature: { featureId: "f" } });
+            .mockRejectedValueOnce(
+                new OnshapeApiError("Onshape API error 400: bad feature", 400)
+            );
 
         const res = await fastenToPicks({
             targets: EDGE_PICKS,
             replicate: true
         });
-        expect(res.status).toBe(200);
-        expect(addedFeatureTypes(addFeature)).toEqual([
-            "mate",
-            "replicate",
-            "mate",
-            "mate"
-        ]);
+        expect(res.status).toBe(502);
+        expect((await res.json()).message).toBe(
+            "Onshape refused the Replicate (Onshape API error 400: bad feature)."
+        );
+        expect(addedFeatureTypes(addFeature)).toEqual(["mate", "replicate"]);
     });
 
     it("POST /toggle-replicate records the editor's decision", async () => {
