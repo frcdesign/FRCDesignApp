@@ -173,6 +173,19 @@ describe("QuickFastenerPanel", () => {
         expect(screen.queryByLabelText("Variant")).toBeNull();
     });
 
+    it("sends whether to replicate alike holes", async () => {
+        useQuickFastenerStore.setState({ targets: [face("F")] });
+        renderWithProviders(<QuickFastenerPanel assembly={ASSEMBLY} />);
+        await userEvent.click(screen.getByLabelText("Replicate"));
+        await userEvent.click(insertButton());
+
+        expect(apiPost).toHaveBeenCalledWith("/quick-fastener/insert", {
+            body: expect.objectContaining({
+                options: expect.objectContaining({ replicate: true })
+            })
+        });
+    });
+
     it("has no screw washer under a flat head", () => {
         useQuickFastenerStore.setState({ screw: { head: "FLAT" } });
         renderWithProviders(<QuickFastenerPanel assembly={ASSEMBLY} />);

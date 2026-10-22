@@ -9,7 +9,8 @@ const failures = runFailures("Quick fastener stopped: ");
 const ACTION_FAILURE = {
     [FastenerTaskAction.INDEX]: "Couldn't read the assembly's holes.",
     [FastenerTaskAction.INSERT]: "Couldn't insert the fasteners.",
-    [FastenerTaskAction.FASTEN]: "Couldn't fasten the inserted parts."
+    [FastenerTaskAction.FASTEN]: "Couldn't fasten the inserted parts.",
+    [FastenerTaskAction.REPLICATE]: "Couldn't replicate the inserted parts."
 } as const;
 
 /** Why a step failed, as the message of the error it leaves its step with. */

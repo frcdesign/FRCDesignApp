@@ -11,8 +11,8 @@ import { type OnshapeApi } from "../../lib/onshape/client";
 import { getAssembly } from "../../lib/onshape/endpoints/assemblies";
 import { PartType } from "../../lib/onshape/endpoints/documents";
 import {
-    edgeCenterQuery,
-    fastenMate,
+    type EdgeReference,
+    fastenMateToCircularEdge,
     partStudioMateConnectorQuery
 } from "../../lib/onshape/objects/assembly-features";
 import { type ElementPath } from "../../lib/onshape/path";
@@ -29,7 +29,9 @@ import {
     type PartChoice,
     studioConfiguration
 } from "./studios";
+import { tolerantEquals } from "../configurations/input-parser";
 import { type StudioLocation } from "../generated-parts/studios";
+import { sameRadius } from "./replicate";
 
 /** What a part is fastened to: an edge in the assembly, or the top of a washer placed with it. */
 export type PartSeat = { edge: MateEdge } | { washer: number };
@@ -37,6 +39,8 @@ export type PartSeat = { edge: MateEdge } | { washer: number };
 /** One part to insert: from which studio, configured how, placed where, and fastened to what. */
 export interface PartPlacement {
     kind: FastenerKind;
+    /** The hole it's in, by its plan's key. */
+    hole: string;
     /** The studio's overrides of its defaults. */
     configuration: Selection;
     transform: number[];
@@ -74,6 +78,7 @@ export function placements(plans: HolePlan[]): PartPlacement[] {
             screwSeat = { washer: parts.length };
             parts.push({
                 kind: FastenerKind.WASHER,
+                hole: planned.key,
                 configuration: studioConfiguration(
                     FastenerKind.WASHER,
                     planned.screwWasher
@@ -85,6 +90,7 @@ export function placements(plans: HolePlan[]): PartPlacement[] {
         }
         parts.push({
             kind: FastenerKind.SCREW,
+            hole: planned.key,
             configuration: studioConfiguration(
                 FastenerKind.SCREW,
                 planned.screw
@@ -108,6 +114,7 @@ export function placements(plans: HolePlan[]): PartPlacement[] {
             nutSeat = { washer: parts.length };
             parts.push({
                 kind: FastenerKind.WASHER,
+                hole: planned.key,
                 configuration: studioConfiguration(
                     FastenerKind.WASHER,
                     planned.nutWasher
@@ -123,6 +130,7 @@ export function placements(plans: HolePlan[]): PartPlacement[] {
         );
         parts.push({
             kind: FastenerKind.NUT,
+            hole: planned.key,
             configuration: studioConfiguration(FastenerKind.NUT, planned.nut),
             transform: frameTransform(nutAt, back),
             seat: nutSeat,
@@ -130,6 +138,43 @@ export function placements(plans: HolePlan[]): PartPlacement[] {
         });
     }
     return parts;
+}
+
+/** Whether two ready holes get the same parts placed the same way: a Replicate of one fills the other. */
+function isAlike(a: HolePlan, b: HolePlan): boolean {
+    const parts = (plan: HolePlan) => {
+        const { screw, screwWasher, nut, nutWasher, end } = plan.planned;
+        return JSON.stringify({ screw, screwWasher, nut, nutWasher, end });
+    };
+    return (
+        parts(a) === parts(b) &&
+        sameRadius(a.circularEdge, b.circularEdge) &&
+        // A nut sits as far down the screw in each
+        tolerantEquals(
+            { value: a.planned.depth ?? 0, type: "length" },
+            { value: b.planned.depth ?? 0, type: "length" }
+        )
+    );
+}
+
+/**
+ * The ready holes in groups a Replicate can fill: alike holes together, each
+ * group in the order found, its first hole the one given parts.
+ */
+export function replicateGroups(plans: HolePlan[]): HolePlan[][] {
+    const groups: HolePlan[][] = [];
+    for (const plan of plans) {
+        if (plan.planned.status !== HoleStatus.READY) {
+            continue;
+        }
+        const group = groups.find((candidate) => isAlike(candidate[0], plan));
+        if (group) {
+            group.push(plan);
+        } else {
+            groups.push([plan]);
+        }
+    }
+    return groups;
 }
 
 export function studioLocation(kind: FastenerKind): StudioLocation {
@@ -281,22 +326,23 @@ export function partMate(
     paths: (string[] | undefined)[],
     washerEdges: Record<number, string>
 ): object | undefined {
-    let seat: object;
+    let seat: EdgeReference;
     if ("edge" in part.seat) {
-        seat = edgeCenterQuery(
-            part.seat.edge.occurrencePath,
-            part.seat.edge.edgeId
-        );
+        seat = {
+            deterministicId: part.seat.edge.edgeId,
+            path: part.seat.edge.occurrencePath
+        };
     } else {
         const washerPath = paths[part.seat.washer];
         const edge = washerEdges[part.seat.washer];
         if (!washerPath || !edge) {
             return undefined;
         }
-        seat = edgeCenterQuery(washerPath, edge);
+        seat = { deterministicId: edge, path: washerPath };
     }
-    return fastenMate(part.name, [
+    return fastenMateToCircularEdge(
+        part.name,
         partStudioMateConnectorQuery(connectorId, path),
         seat
-    ]);
+    );
 }

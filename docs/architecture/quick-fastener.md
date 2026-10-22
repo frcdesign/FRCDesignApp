@@ -19,37 +19,38 @@ only what's made.
 
 ## Code map
 
-| Path                                                                        | Role                                                                                            |
-| --------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `src/backend/features/quick-fastener/heads.gen.ts`                          | The synced countersunk heads, for the client                                                    |
-| `src/backend/features/quick-fastener/catalog.gen.ts`                        | The synced catalog: the parts' dimensions, which it plans with                                  |
-| `src/backend/features/quick-fastener/hole-scan.gen.ts`                      | The synced hole scan: the FeatureScript lambda evaluated in each Part Studio                    |
-| `src/backend/features/quick-fastener/studios.ts`                            | The fasteners' parameters and locations, from `generated-parts/`; settling parts; client-safe   |
-| `src/backend/features/quick-fastener/catalog.ts`                            | The parts' dimensions, which the planner sizes by; the server's alone                           |
-| `src/backend/features/quick-fastener/contract.ts`                           | `FastenerOptions`, `QuickFastenerIn`, `PlannedHole`, `FastenerJobStatus` and the run's steps    |
-| `src/backend/features/quick-fastener/geometry.ts`                           | Vectors, Onshape's 4×4 transforms, `LINEAR_TOLERANCE`                                           |
-| `src/backend/features/quick-fastener/scan.ts`                               | `scanStudio`: evaluates the hole scan, decodes it, caches it                                    |
-| `src/backend/features/quick-fastener/assembly.ts`                           | Part occurrences and what pins each one's Part Studio; holes and circular edges in the assembly |
-| `src/backend/features/quick-fastener/gather.ts`                             | `gather`: reads the assembly and scans every Part Studio it needs                               |
-| `src/backend/features/quick-fastener/planner.ts`                            | `planHoles`: the fastener for each hole; pure                                                   |
-| `src/backend/features/quick-fastener/insert.ts`                             | `placements`, the insert's groups, each part's fasten mate, washers' top edges                  |
-| `src/backend/features/quick-fastener/workflow.ts`                           | `QuickFastenerWorkflow`: a run, step by step                                                    |
-| `src/backend/features/quick-fastener/jobs.ts`                               | `reportJob` and `getJobStatus`: the run an assembly last started                                |
-| `src/backend/features/quick-fastener/failures.ts`                           | A failed step or run, in the user's words, on `runFailures`                                     |
-| `src/backend/features/quick-fastener/routes.ts`                             | The two routes below                                                                            |
-| `src/frontend/lib/selection.ts`                                             | Onshape's SELECTION messages, and the one query list taking picks                               |
-| `src/frontend/components/query-list.tsx`                                    | `QueryList`: Onshape's query parameter, for entities picked in the Onshape window               |
-| `src/frontend/components/parameter-input.tsx`                               | The configuration dialog's inputs, which the form is made of                                    |
-| `src/frontend/features/quick-fastener/parameters.ts`                        | Quick fastener's own parameters, and the screw's Length with Automatic                          |
-| `src/frontend/features/quick-fastener/options.ts`                           | `settleChoices`, `fastenerOptions`, `describePlan`                                              |
-| `src/frontend/features/quick-fastener/store.ts`                             | The page's choices (kept) and picks (not)                                                       |
-| `src/frontend/features/quick-fastener/components/quick-fastener-panel.tsx`  | The page: the last run, the options, what to fasten, and Insert                                 |
-| `src/frontend/features/quick-fastener/components/fastener-options-form.tsx` | The Fastener group, a group per washer and the nut, and the stop condition                      |
-| `src/frontend/features/quick-fastener/components/parameter-group.tsx`       | `ParameterGroup`: Onshape's parameter groups, opened or driven by a checkbox                    |
-| `src/frontend/features/quick-fastener/components/last-run-callout.tsx`      | The run's step while it goes, then how it went                                                  |
-| `src/frontend/features/quick-fastener/components/job-details.tsx`           | The run's steps and each hole's plan                                                            |
-| `src/frontend/features/quick-fastener/job-toasts.ts`                        | `useFastenerJobToasts`: a toast when a run finishes, from anywhere in the app                   |
-| `src/frontend/routes/app/quick-fastener.tsx`                                | The route; a notice outside an assembly                                                         |
+| Path                                                                        | Role                                                                                              |
+| --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `src/backend/features/quick-fastener/heads.gen.ts`                          | The synced countersunk heads, for the client                                                      |
+| `src/backend/features/quick-fastener/catalog.gen.ts`                        | The synced catalog: the parts' dimensions, which it plans with                                    |
+| `src/backend/features/quick-fastener/hole-scan.gen.ts`                      | The synced hole scan: the FeatureScript lambda evaluated in each Part Studio                      |
+| `src/backend/features/quick-fastener/studios.ts`                            | The fasteners' parameters and locations, from `generated-parts/`; settling parts; client-safe     |
+| `src/backend/features/quick-fastener/catalog.ts`                            | The parts' dimensions, which the planner sizes by; the server's alone                             |
+| `src/backend/features/quick-fastener/contract.ts`                           | `FastenerOptions`, `QuickFastenerIn`, `PlannedHole`, `FastenerJobStatus` and the run's steps      |
+| `src/backend/features/quick-fastener/geometry.ts`                           | Vectors, Onshape's 4×4 transforms, `LINEAR_TOLERANCE`                                             |
+| `src/backend/features/quick-fastener/scan.ts`                               | `scanStudio`: evaluates the hole scan, decodes it, caches it                                      |
+| `src/backend/features/quick-fastener/assembly.ts`                           | Part occurrences and what pins each one's Part Studio; holes and circular edges in the assembly   |
+| `src/backend/features/quick-fastener/gather.ts`                             | `gather`: reads the assembly and scans every Part Studio it needs                                 |
+| `src/backend/features/quick-fastener/planner.ts`                            | `planHoles`: the fastener for each hole; pure                                                     |
+| `src/backend/features/quick-fastener/insert.ts`                             | `placements`, `replicateGroups`, the insert's groups, each part's fasten mate, washers' top edges |
+| `src/backend/features/quick-fastener/replicate.ts`                          | `replicateMatches`, `addReplicate`: Replicates, shared with insert and fasten                     |
+| `src/backend/features/quick-fastener/workflow.ts`                           | `QuickFastenerWorkflow`: a run, step by step                                                      |
+| `src/backend/features/quick-fastener/jobs.ts`                               | `reportJob` and `getJobStatus`: the run an assembly last started                                  |
+| `src/backend/features/quick-fastener/failures.ts`                           | A failed step or run, in the user's words, on `runFailures`                                       |
+| `src/backend/features/quick-fastener/routes.ts`                             | The two routes below                                                                              |
+| `src/frontend/lib/selection.ts`                                             | Onshape's SELECTION messages, and the one query list taking picks                                 |
+| `src/frontend/components/query-list.tsx`                                    | `QueryList`: Onshape's query parameter, for entities picked in the Onshape window                 |
+| `src/frontend/components/parameter-input.tsx`                               | The configuration dialog's inputs, which the form is made of                                      |
+| `src/frontend/features/quick-fastener/parameters.ts`                        | Quick fastener's own parameters, and the screw's Length with Automatic                            |
+| `src/frontend/features/quick-fastener/options.ts`                           | `settleChoices`, `fastenerOptions`, `describePlan`                                                |
+| `src/frontend/features/quick-fastener/store.ts`                             | The page's choices (kept) and picks (not)                                                         |
+| `src/frontend/features/quick-fastener/components/quick-fastener-panel.tsx`  | The page: the last run, the options, what to fasten, and Insert                                   |
+| `src/frontend/features/quick-fastener/components/fastener-options-form.tsx` | The Fastener group, a group per washer and the nut, and the stop condition                        |
+| `src/frontend/features/quick-fastener/components/parameter-group.tsx`       | `ParameterGroup`: Onshape's parameter groups, opened or driven by a checkbox                      |
+| `src/frontend/features/quick-fastener/components/last-run-callout.tsx`      | The run's step while it goes, then how it went                                                    |
+| `src/frontend/features/quick-fastener/components/job-details.tsx`           | The run's steps and each hole's plan                                                              |
+| `src/frontend/features/quick-fastener/job-toasts.ts`                        | `useFastenerJobToasts`: a toast when a run finishes, from anywhere in the app                     |
+| `src/frontend/routes/app/quick-fastener.tsx`                                | The route; a notice outside an assembly                                                           |
 
 robot-code (`robot-education/robot-code`) owns everything the catalog says:
 `featurescripts/fasteners/fastenerTables.py` generates the features'
@@ -97,8 +98,10 @@ page is open.
    shows its prompt in Onshape's bubble. Each later SELECTION hands the focused
    list what's new in it; the list keeps the edges and faces, and repeats its
    prompt for anything else.
-3. Hovering a row lights its entity up (`requestSelectionHighlight`), and
-   leaving it stops the request.
+3. Hovering a row lights its entity up (`requestSelectionHighlight`, each with
+   its own message id), and leaving it stops the request. Onshape's answers
+   to a highlight are logged at debug level, since whether it painted anything
+   in an assembly is unconfirmed.
 
 ### The form
 
@@ -109,7 +112,8 @@ The panel is a `ParameterGrid` of the configuration dialog's own inputs
 2. **Fastener**: Program, then the screw studio's Vendor, Size and Head, its
    Length with **Automatic** first (a length is preset mode, Automatic picks
    one per hole), and, beside a preset length the vendor sells in more than
-   its standard line, its Variant (another finish, or fully threaded).
+   its standard line, its Variant (another finish, or fully threaded). Then
+   **Replicate**, off by default.
 3. **Add screw washer**, **Add nut** and **Add nut washer**, each a group its
    checkbox shows: the washer or nut studio's parameters but its Size, which
    is the screw's. Its Vendor offers those making it in that size, and is left
@@ -202,7 +206,10 @@ skipped.
    (`placements`) — the start washer on the circular edge and the screw on it, the
    end washer on the far side and the nut on it, turned over — and inserts
    them all in one `transformedinstances` call, from each studio's released
-   version, with its configuration. Skipped when no hole is ready.
+   version, with its configuration. Skipped when no hole is ready. With
+   **Replicate**, the ready holes are grouped first (`replicateGroups`): holes
+   given the same parts, as deep, through edges of the same size, in the order
+   found. Only each group's first hole gets parts here.
 3. **Fasten parts**:
     1. Reads each studio's mate connector id from the assembly, once per
        release (`mate-connectors`).
@@ -210,10 +217,20 @@ skipped.
        (`washerTopEdge`): its hole's circular edge farthest up its Z axis
        (`washer-edges`).
     3. Adds one fasten mate per part, one at a time (`mate-{n}`): its mate
-       connector to the center of what it sits on — a washer's top edge when
-       it sits on a washer, else the hole's own edge.
-4. **Finish** (`finish-job`): stores `COMPLETE` or `FAILED`, with how many
-   parts were inserted and fastened, and when.
+       connector to an implicit connector at the center of what it sits on —
+       a washer's top edge when it sits on a washer, else the hole's own edge
+       (`fastenMateToCircularEdge`, as insert and fasten mates).
+4. **Replicate parts**, only with **Replicate**: for each group of more than
+   one hole, one at a time (`replicate-{n}`), a Replicate of the first hole's
+   parts onto the rest, placed as the mate holding its bottom part on its
+   hole (`addReplicate`). It matches the faces the group's edges are on when
+   the group is every edge of its size on whole picked faces (none skipped,
+   none planned otherwise), and the edges otherwise (`replicateMatches`). If
+   Onshape refuses both, the rest of the group gets parts of its own, inserted
+   and fastened as above (`replicate-{n}-insert`, `replicate-{n}-mate-{m}`).
+5. **Finish** (`finish-job`): stores `COMPLETE` or `FAILED`, with how many
+   parts were inserted and fastened, how many holes a Replicate filled, and
+   when.
 
 ### Reporting
 
@@ -248,6 +265,8 @@ a toast when a run watched going finishes, from any tab of the app.
 - The plan inserted is the run's own, made in its index step; the client
   never sends one.
 - One run at a time in an assembly.
+- A Replicate only fills holes alike its first one's: the same parts, as deep,
+  through an edge of the same size, so each copy sits as the parts it copies.
 - A write is retried only after a 429, so no part is inserted or mated twice.
 - Onshape decides who may insert: the routes need a session, and every call
   a run makes is under the caller's own session.
@@ -261,6 +280,8 @@ a toast when a run watched going finishes, from any tab of the app.
 | No hole, or nothing fits             | That hole's plan is **no fit**, with why                  | Change the options or the hole               |
 | The insert fails                     | Nothing is inserted; fastening is skipped                 | Run it again                                 |
 | A mate fails partway                 | The parts so far stay, some unmated                       | Mate the rest by hand, or undo and run again |
+| Onshape refuses a Replicate          | That group's other holes get parts of their own           | None needed                                  |
+| A Replicate fails to regenerate      | It stays in the assembly, with its error                  | Fix or delete it in Onshape                  |
 | Onshape rate-limits                  | The step retries, then fails as above                     | Run it again                                 |
 | The run dies without reporting       | The job reads failed once the run has ended               | Run it again                                 |
 
@@ -295,6 +316,10 @@ a toast when a run watched going finishes, from any tab of the app.
 - **Each part has its own vendor.** Not every vendor sells washers or nuts, and
   someone using one vendor's screws may buy another's nuts. Under a Generic
   screw the parts are Generic, and their Vendor isn't asked.
+- **Replicate is off by default.** Onshape publishes no spec for Replicate, so
+  its parameter ids (`replicateFeature`) are unverified; a refused one falls
+  back to parts in every hole. It shares insert and fasten's Replicate and
+  mate code, so one fix there fixes both.
 - **An automatic screw is the standard one.** A variant is only shown for a
   length, as the screw studio offers it, so automatic sizing has no variant to
   honour; it picks from the vendor's standard line.

@@ -62,6 +62,8 @@ export interface AssemblyCircularEdge {
     /** Unit, out of the part: a fastener goes in against it. */
     normal: Vec3;
     radius: number;
+    /** The picked face it's on, when no hole of that face is skipped: a Replicate can match the face. */
+    face?: string;
 }
 
 /** A library screw already in the assembly, from Quick fastener or not: its origin and Z axis. */

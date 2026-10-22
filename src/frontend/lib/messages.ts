@@ -26,6 +26,9 @@ export function useMessageListener() {
                 useOnshapeSelection
                     .getState()
                     .receive(parseSelections(event.data));
+            } else if (isHighlightAnswer(event.data)) {
+                // Whether Onshape took a highlight is otherwise invisible; see `sendHighlightMessage`
+                console.debug("Onshape answered a highlight", event.data);
             }
         };
 
@@ -53,8 +56,19 @@ export function sendOpenFeatureMessage(
 /** What Onshape sends whenever the selection in its window changes, once the app has said it's ready. */
 const INBOUND_SELECTION = "SELECTION";
 
-/** Onshape wants every request identified; one highlight is up at a time. */
-const HIGHLIGHT_ID = "highlight-selection";
+/** Onshape wants each request identified uniquely; one highlight is up at a time. */
+const HIGHLIGHT_PREFIX = "highlight-selection-";
+let highlights = 0;
+
+function isHighlightAnswer(data: unknown): boolean {
+    const { messageId, stoppedMessageId } = data as {
+        messageId?: unknown;
+        stoppedMessageId?: unknown;
+    };
+    return [messageId, stoppedMessageId].some(
+        (id) => typeof id === "string" && id.startsWith(HIGHLIGHT_PREFIX)
+    );
+}
 
 /** Something picked in the assembly, as Onshape names it. */
 export interface HighlightedEntity {
@@ -65,8 +79,9 @@ export interface HighlightedEntity {
 
 /**
  * Lights entities up in the Onshape window until {@link sendStopRequestMessage}.
- * Untried in an assembly with entities: a mate connector's body never lit
- * (see below), and this is the documented shape for an entity.
+ * Unconfirmed in an assembly: Onshape documents this shape for a Part Studio
+ * entity, without `occurrencePath`, and a mate connector's body never lit (see
+ * below). Its answers are logged at debug level.
  */
 export function sendHighlightMessage(
     elementPath: ElementPath,
@@ -74,7 +89,7 @@ export function sendHighlightMessage(
 ) {
     sendMessage(elementPath, {
         messageName: MessageType.REQUEST_HIGHLIGHT_SELECTION,
-        messageId: HIGHLIGHT_ID,
+        messageId: `${HIGHLIGHT_PREFIX}${++highlights}`,
         selections: entities.map((entity) => ({
             selectionType: "ENTITY",
             entityType: entity.entityType,

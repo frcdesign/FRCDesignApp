@@ -10,9 +10,8 @@ import { getCatalog, Program } from "./catalog";
 import {
     FastenerJobState,
     FastenerMode,
-    FastenerTaskAction,
-    FastenerTaskState,
     type FastenerJobStatus,
+    pendingTasks,
     SelectionMode,
     StopCondition
 } from "./contract";
@@ -87,7 +86,8 @@ const optionsSchema = z
         stop: z.enum(StopCondition),
         maxLength: z.number().positive().max(MAX_LENGTH_LIMIT),
         maxGap: z.number().min(0).max(MAX_GAP_LIMIT),
-        maxThreadDepth: z.number().positive().max(MAX_LENGTH_LIMIT)
+        maxThreadDepth: z.number().positive().max(MAX_LENGTH_LIMIT),
+        replicate: z.boolean()
     })
     .refine(
         isEveryPartMade,
@@ -153,11 +153,8 @@ quickFastenerRoutes.post(
         const status: FastenerJobStatus = {
             state: FastenerJobState.RUNNING,
             jobId: run.id,
-            tasks: Object.values(FastenerTaskAction).map((action) => ({
-                action,
-                state: FastenerTaskState.PENDING
-            })),
-            result: { inserted: 0, fastened: 0 }
+            tasks: pendingTasks(request.options),
+            result: { inserted: 0, fastened: 0, replicated: 0 }
         };
         await reportJob(c.env, request.assembly, status);
         return c.json(status);

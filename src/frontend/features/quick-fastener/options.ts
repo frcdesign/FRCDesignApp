@@ -154,7 +154,8 @@ export function fastenerOptions(settled: SettledChoices): FastenerOptions {
         stop: form[FormInput.STOP] as StopCondition,
         maxLength: metres(form, FormInput.MAX_LENGTH),
         maxGap: metres(form, FormInput.MAX_GAP),
-        maxThreadDepth: metres(form, FormInput.MAX_THREAD_DEPTH)
+        maxThreadDepth: metres(form, FormInput.MAX_THREAD_DEPTH),
+        replicate: form[FormInput.REPLICATE] === "true"
     };
 }
 

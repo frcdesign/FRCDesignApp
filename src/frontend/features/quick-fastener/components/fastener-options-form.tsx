@@ -57,8 +57,9 @@ interface FastenerOptionsFormProps {
 }
 
 /**
- * Which fastener goes in each hole, in a `ParameterGrid`: the screw, a group
- * for each washer and the nut, then, sized automatically, where it stops.
+ * Which fastener goes in each hole, in a `ParameterGrid`: the screw and
+ * whether alike holes are replicated, a group for each washer and the nut,
+ * then, sized automatically, where it stops.
  */
 export function FastenerOptionsForm(
     props: FastenerOptionsFormProps
@@ -77,7 +78,13 @@ export function FastenerOptionsForm(
                         </Text>
                     </FullWidthRow>
                 ) : (
-                    <ScrewInputs settled={settled} />
+                    <>
+                        <ScrewInputs settled={settled} />
+                        <FormInputRow
+                            id={FormInput.REPLICATE}
+                            settled={settled}
+                        />
+                    </>
                 )}
             </ParameterGroup>
             {!isFtc && (

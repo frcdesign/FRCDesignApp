@@ -13,6 +13,7 @@ import * as Assemblies from "../../lib/onshape/endpoints/assemblies";
 import * as Documents from "../../lib/onshape/endpoints/documents";
 import * as PartStudios from "../../lib/onshape/endpoints/part-studios";
 import { OnshapeApiError, type OAuthApi } from "../../lib/onshape/client";
+import * as Planner from "./planner";
 import * as Studios from "./studios";
 import { FastenerKind } from "./studios";
 
@@ -22,6 +23,7 @@ import {
     fastenerJobOutcome,
     FastenerJobState,
     FastenerTaskState,
+    HoleEnd,
     HoleStatus,
     type FastenerJobStatus
 } from "./contract";
@@ -183,19 +185,116 @@ describe("QuickFastenerWorkflow", () => {
             screw: { length: "IN_1" }
         });
         // Washer, screw, washer, nut
-        expect(status.result).toEqual({ inserted: 4, fastened: 4 });
+        expect(status.result).toEqual({
+            inserted: 4,
+            fastened: 4,
+            replicated: 0
+        });
         expect(fastenerJobOutcome(status)).toBe(FastenerJobOutcome.SUCCESS);
 
         expect(mates[0]).toContain('"deterministicIds":["TOP-top"]');
         // The screw on the first washer's top edge
         expect(mates[1]).toContain('"featureId":"screwMC"');
         expect(mates[1]).toContain(
-            '"path":["part0"],"deterministicIds":["W-top"]'
+            '"deterministicIds":["W-top"],"path":["part0"]'
         );
         expect(mates[2]).toContain('"deterministicIds":["BOTTOM-bottom"]');
         expect(mates[3]).toContain(
-            '"path":["part2"],"deterministicIds":["W-top"]'
+            '"deterministicIds":["W-top"],"path":["part2"]'
         );
+    });
+
+    describe("replicating", () => {
+        const INCH = 0.0254;
+        /** Two alike holes through the top plate, `a` and `b`. */
+        const alike = (key: string): Planner.HolePlan => ({
+            circularEdge: {
+                key,
+                occurrencePath: ["top"],
+                edgeId: key,
+                center: [0, 0, 0],
+                normal: [0, 0, 1],
+                radius: (0.201 * INCH) / 2
+            },
+            planned: {
+                key,
+                status: HoleStatus.READY,
+                end: HoleEnd.THROUGH,
+                depth: 0.5 * INCH,
+                screw: {
+                    vendor: "GENERIC",
+                    size: "NO_10_32",
+                    head: "BUTTON",
+                    length: "IN_1",
+                    variant: "STANDARD"
+                },
+                nut: { vendor: "GENERIC", size: "NO_10_32", type: "NYLOCK" }
+            },
+            exit: {
+                point: [0, 0, -0.5 * INCH],
+                edge: { occurrencePath: ["bottom"], edgeId: `${key}-far` }
+            }
+        });
+        const REPLICATING = {
+            sessionId: "session",
+            request: { ...BODY, options: { ...BODY.options, replicate: true } }
+        };
+
+        beforeEach(() => {
+            vi.spyOn(Planner, "planHoles").mockReturnValue([
+                alike("a"),
+                alike("b")
+            ]);
+        });
+
+        it("gives the first of alike holes parts, and replicates them onto the rest", async () => {
+            const status = await run("replicated", REPLICATING);
+
+            expect(status.tasks?.map((task) => task.action)).toEqual([
+                "index",
+                "insert",
+                "fasten",
+                "replicate"
+            ]);
+            // A screw and a nut in `a`
+            expect(status.result).toEqual({
+                inserted: 2,
+                fastened: 2,
+                replicated: 1
+            });
+            const replicate = mates[2];
+            expect(replicate).toContain('"featureType":"replicate"');
+            expect(replicate).toContain('"value":"INDIVIDUAL_EDGES"');
+            expect(replicate).toContain('"deterministicIds":["b"]');
+            expect(replicate).toContain(
+                '{"btType":"BTMIndividualOccurrenceQuery-626","path":["part0"]}'
+            );
+            expect(fastenerJobOutcome(status)).toBe(FastenerJobOutcome.SUCCESS);
+        });
+
+        it("gives the rest parts of their own when Onshape refuses the replicate", async () => {
+            vi.mocked(Assemblies.addAssemblyFeature).mockImplementation(
+                (_client, _path, feature) => {
+                    const json = JSON.stringify(feature);
+                    if (json.includes('"featureType":"replicate"')) {
+                        return Promise.reject(
+                            new OnshapeApiError("Onshape API error 400", 400)
+                        );
+                    }
+                    mates.push(json);
+                    return Promise.resolve({ feature: { featureId: "mate" } });
+                }
+            );
+            const status = await run("refused", REPLICATING);
+
+            expect(status.result).toEqual({
+                inserted: 4,
+                fastened: 4,
+                replicated: 0
+            });
+            expect(mates[2]).toContain('"deterministicIds":["b"]');
+            expect(fastenerJobOutcome(status)).toBe(FastenerJobOutcome.SUCCESS);
+        });
     });
 
     it("stops before inserting when Onshape refuses to read the assembly", async () => {

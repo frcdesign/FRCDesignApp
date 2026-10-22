@@ -26,16 +26,6 @@ export function featureOccurrenceQuery(
     };
 }
 
-/** The implicit mate connector at the center of a circular edge, of a part in the assembly. */
-export function edgeCenterQuery(path: string[], edgeId: string): object {
-    return {
-        btType: "BTMInferenceQueryWithOccurrence-1083",
-        inferenceType: "CENTER",
-        path,
-        deterministicIds: [edgeId]
-    };
-}
-
 function queryParameter(
     parameterId: string,
     queries: Iterable<object>
@@ -80,24 +70,30 @@ export function fastenMate(
 /** A mate names its implicit connector by this, and Onshape assigns the real id. */
 const PLACEHOLDER_FEATURE_ID = "0".repeat(17);
 
-/** An edge picked in the Onshape window, in the instance at `path`. */
-export interface EdgeReference {
-    /** The id Onshape's selection reports, which is the edge's deterministic id. */
+/** An edge or face in the assembly: its deterministic id, in the part occurrence at `path`. */
+export interface EntityReference {
+    /** The id Onshape's selection reports, which is the entity's deterministic id. */
     deterministicId: string;
     path: string[];
 }
 
-function edgeQueryString(edge: EdgeReference): string {
-    return `query=qTransient("${edge.deterministicId}");`;
+/** A circular edge, which a fastener's axis runs through the center of. */
+export type EdgeReference = EntityReference;
+
+/** A face, whose circular edges a Replicate can match. */
+export type FaceReference = EntityReference;
+
+function entityQueryString(entity: EntityReference): string {
+    return `query=qTransient("${entity.deterministicId}");`;
 }
 
-/** The edge itself, as a Replicate's matches name it. */
-function edgeQuery(edge: EdgeReference): object {
+/** The entity itself, as a Replicate's matches name it. */
+function entityQuery(entity: EntityReference): object {
     return {
         btType: "BTMIndividualQueryWithOccurrence-811",
-        entityQuery: edgeQueryString(edge),
-        deterministicIds: [edge.deterministicId],
-        path: edge.path
+        entityQuery: entityQueryString(entity),
+        deterministicIds: [entity.deterministicId],
+        path: entity.path
     };
 }
 
@@ -106,7 +102,7 @@ function circularEdgeCenterQuery(edge: EdgeReference): object {
     return {
         btType: "BTMInferenceQueryWithOccurrence-1083",
         inferenceType: "CENTER",
-        entityQuery: edgeQueryString(edge),
+        entityQuery: entityQueryString(edge),
         deterministicIds: [edge.deterministicId],
         path: edge.path
     };
@@ -145,35 +141,50 @@ export function fastenMateToCircularEdge(
 }
 
 /**
- * Copies a fastened instance onto more circular edges, matching each by the
- * seed's mate, so every edge must be the diameter of the seed's. Onshape publishes no spec for Replicate, so these parameter ids are
+ * What a Replicate copies onto: Onshape's "Match individual edges", or "Match
+ * edges on face", which takes every edge of a face matching the seed's and
+ * follows the face as it changes. Its "Match edges on plane" isn't used.
+ */
+export type ReplicateMatch =
+    | { edges: EdgeReference[] }
+    | { faces: FaceReference[] };
+
+/**
+ * Copies fastened instances onto more circular edges, each placed as the
+ * mate places the seed, so every edge must be the diameter of the seed's.
+ * Onshape publishes no spec for Replicate, so these parameter ids are
  * unverified.
  */
 export function replicateFeature(
     name: string,
-    instancePath: string[],
+    instancePaths: string[][],
     mateFeatureId: string,
-    edges: EdgeReference[]
+    match: ReplicateMatch
 ): object {
+    const [scope, entities] =
+        "edges" in match
+            ? ["INDIVIDUAL_EDGES", match.edges]
+            : ["EDGES_ON_FACE", match.faces];
     return {
         btType: "BTMAssemblyReplicateFeature-1351",
         featureType: "replicate",
         name,
         parameters: [
-            queryParameter("instances", [
-                {
+            queryParameter(
+                "instances",
+                instancePaths.map((path) => ({
                     btType: "BTMIndividualOccurrenceQuery-626",
-                    path: instancePath
-                }
-            ]),
+                    path
+                }))
+            ),
             queryParameter("mate", [featureOccurrenceQuery(mateFeatureId)]),
             {
                 btType: "BTMParameterEnum-145",
                 parameterId: "matchScope",
-                value: "INDIVIDUAL_EDGES",
+                value: scope,
                 enumName: "Match scope"
             },
-            queryParameter("matches", edges.map(edgeQuery))
+            queryParameter("matches", entities.map(entityQuery))
         ]
     };
 }

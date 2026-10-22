@@ -89,6 +89,7 @@ function options(extra: ExtraOptions = {}): FastenerOptions {
         maxLength: DEFAULT_MAX_LENGTH,
         maxGap: DEFAULT_MAX_GAP,
         maxThreadDepth: DEFAULT_MAX_THREAD_DEPTH,
+        replicate: false,
         ...rest
     };
 }

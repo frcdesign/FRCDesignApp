@@ -4,6 +4,7 @@
  * decides what shows, so a hidden choice keeps its value for when it's back.
  */
 import {
+    type BooleanParameter,
     type ConfigurationParameter,
     type EnumParameter,
     ParameterType,
@@ -30,7 +31,8 @@ export enum FormInput {
     STOP = "stop",
     MAX_LENGTH = "maxLength",
     MAX_GAP = "maxGap",
-    MAX_THREAD_DEPTH = "maxThreadDepth"
+    MAX_THREAD_DEPTH = "maxThreadDepth",
+    REPLICATE = "replicate"
 }
 
 function enumParameter(
@@ -67,7 +69,16 @@ function inchParameter(
     return { ...quantity, default: quantityDefault(quantity) };
 }
 
+/** Off by default: Onshape publishes no spec for Replicate, so it's unverified. */
+const REPLICATE_PARAMETER: BooleanParameter = {
+    type: ParameterType.BOOLEAN,
+    id: FormInput.REPLICATE,
+    name: "Replicate",
+    default: "false"
+};
+
 export const FORM_PARAMETERS: ConfigurationParameter[] = [
+    REPLICATE_PARAMETER,
     enumParameter(FormInput.SELECT_BY, "Select by", [
         { id: SelectionMode.FACES, name: "Faces" },
         { id: SelectionMode.LOCATIONS, name: "Circular edges" }

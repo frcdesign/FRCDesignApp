@@ -88,20 +88,38 @@ function groupByDiameter(
 ): AssemblyCircularEdge[][];
 ```
 
-`src/backend/lib/onshape/objects/assembly-features.ts` and
-`src/backend/features/library/insertables/fasten-query.ts`
+`src/backend/features/quick-fastener/replicate.ts`, shared with Quick fastener
 
 ```ts
+// Its faces, when the group is every edge of its size on whole picked faces, then its edges.
+function replicateMatches(
+    group: AssemblyCircularEdge[],
+    all: AssemblyCircularEdge[]
+): ReplicateMatch[];
+// The first match Onshape takes; false when it refuses them all.
+async function addReplicate(
+    onshapeApi: OnshapeApi,
+    assembly: ElementPath,
+    args: ReplicateArgs
+): Promise<boolean>;
+```
+
+`src/backend/lib/onshape/objects/assembly-features.ts`, shared with Quick
+fastener, and `src/backend/features/library/insertables/fasten-query.ts`
+
+```ts
+// Every fasten mate to a circular edge, Quick fastener's included.
 function fastenMateToCircularEdge(
     name: string,
     query: object,
     edge: EdgeReference
 ): object;
+type ReplicateMatch = { edges: EdgeReference[] } | { faces: FaceReference[] };
 function replicateFeature(
     name: string,
-    instancePath: string[],
+    instancePaths: string[][],
     mateFeatureId: string,
-    edges: EdgeReference[]
+    match: ReplicateMatch
 ): object;
 // The inserted part's own connector, as a query on its instance.
 function getFastenQuery(
@@ -179,8 +197,12 @@ function checkInsertableSettings(input: InsertableSettingsInput): BuildIssue[];
     - **Replicated**: with Replicate and a part allowed it, `groupByDiameter`
       groups the edges by radius in the order found. Each group gets one
       instance, the inserted one first, mated to its first edge, and a
-      Replicate onto the rest of the group. If Onshape refuses a Replicate its
-      group falls back to one instance per edge.
+      Replicate onto the rest of the group (`addReplicate`). It matches the
+      group's faces ("Match edges on face") when every edge of the group's
+      size on them is in it, which holds for a face picked with no hole
+      skipped, and so follows the face as holes are added; otherwise it
+      matches the edges one by one (`replicateMatches`). If Onshape refuses
+      both, its group falls back to one instance per edge.
 
     Either way it answers `fastenedCount` and records
     `Hint.FASTENED_TO_CIRCULAR_EDGES`.
@@ -242,7 +264,9 @@ function checkInsertableSettings(input: InsertableSettingsInput): BuildIssue[];
 - Nothing replicates unless `supports_replicate` is true: the client hides the
   option, and the route ignores `replicate` for any other part.
 - Every edge a Replicate targets has the radius of its seed's edge, within
-  Onshape's length tolerance (`tolerantEquals`); Onshape matches no other.
+  Onshape's length tolerance (`sameRadius`); Onshape matches no other.
+- A Replicate matches a face only when every edge of its seed's size on that
+  face is in its group: a face with a hole skipped is matched edge by edge.
 - Mates and inserts are added one at a time: Onshape rejects a feature-list edit
   that races another.
 
@@ -250,8 +274,8 @@ function checkInsertableSettings(input: InsertableSettingsInput): BuildIssue[];
 
 - **A mate fails**: the request errors, and whatever was inserted before it
   stays in the assembly, as in the Onshape UI.
-- **Onshape refuses a Replicate**: logged, and replaced by one instance per
-  edge. A rate limit is rethrown instead, since the fallback would spend more
+- **Onshape refuses a Replicate**: logged, tried again matching edges where
+  it matched faces, then replaced by one instance per edge. A rate limit is rethrown instead, since the fallback would spend more
   of the same allocation. One Onshape accepts but fails to regenerate stays in
   the assembly for the user to fix.
 - **The scan fails in a Part Studio**: the request errors and nothing is
@@ -270,9 +294,11 @@ function checkInsertableSettings(input: InsertableSettingsInput): BuildIssue[];
   taken as the starting picks, and the list stays focused, so selecting in
   Onshape and then inserting needs no click in the panel.
 - **Replicate is guessed.** Onshape's feature specs omit Replicate, so the
-  parameter ids in `replicateFeature` are unverified; the per-edge fallback
-  keeps the insert correct either way. Replicate is off by default for that
-  reason.
+  parameter ids in `replicateFeature`, and its match scopes' values, are
+  unverified; the per-edge fallback keeps the insert correct either way.
+  Replicate is off by default for that reason.
+- **Faces, not planes.** Of Onshape's three ways to match, picked faces map to
+  "Match edges on face"; "Match edges on plane" is never used.
 - **Always a new Replicate.** An insert never edits a Replicate already in the
   assembly; adding edges to an existing one is the user's to do in Onshape.
 - **Radii from the scan.** Onshape's selection messages carry no geometry, so
@@ -283,9 +309,9 @@ function checkInsertableSettings(input: InsertableSettingsInput): BuildIssue[];
   can place wrongly. Existing parts were never assessed, so null means
   undecided and raises a warning rather than defaulting either way.
 - **Implicit connector ids.** A mate names its implicit connector by a
-  placeholder id that Onshape replaces on creation, which is undocumented.
-  Quick fastener puts `edgeCenterQuery` in the mate's query list directly
-  instead; neither is confirmed in Onshape yet, and whichever works should
-  become the one both use.
+  placeholder id that Onshape replaces on creation, which is undocumented but
+  is how Onshape itself stores a mate to an inferred point. It's unconfirmed
+  in Onshape; insert and fasten and Quick fastener both build their mates with
+  `fastenMateToCircularEdge`, so they work or fail together.
 
 _Last reviewed: 2026-10-21_

@@ -41,6 +41,8 @@ export interface FastenerOptions {
     maxGap: number;
     /** Metres; the farthest an automatic screw goes past where threads, or a blind hole, start. */
     maxThreadDepth: number;
+    /** One stack of parts per alike holes, with a Replicate onto the rest, rather than a stack in each. */
+    replicate: boolean;
 }
 
 /** What the picks are: faces to fasten every hole in, or the holes' own edges. */
@@ -114,7 +116,9 @@ export function assemblyKey(assembly: ElementPath): string {
 export enum FastenerTaskAction {
     INDEX = "index",
     INSERT = "insert",
-    FASTEN = "fasten"
+    FASTEN = "fasten",
+    /** Only with `FastenerOptions.replicate`. */
+    REPLICATE = "replicate"
 }
 
 export enum FastenerTaskState {
@@ -133,6 +137,16 @@ export interface FastenerTask {
     reason?: string;
 }
 
+/** A run's steps, none started. */
+export function pendingTasks(options: FastenerOptions): FastenerTask[] {
+    return Object.values(FastenerTaskAction)
+        .filter(
+            (action) =>
+                action !== FastenerTaskAction.REPLICATE || options.replicate
+        )
+        .map((action) => ({ action, state: FastenerTaskState.PENDING }));
+}
+
 export enum FastenerJobState {
     /** No run has been started in this assembly, or the last one aged out. */
     NONE = "none",
@@ -147,6 +161,8 @@ export interface FastenerJobResult {
     inserted: number;
     /** Parts fastened to where they sit. */
     fastened: number;
+    /** Holes a Replicate filled, rather than parts inserted in each. */
+    replicated: number;
 }
 
 export interface FastenerJobStatus {

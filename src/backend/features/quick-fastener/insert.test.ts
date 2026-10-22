@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { FastenerKind } from "./studios";
 import { HoleEnd, HoleStatus } from "./contract";
-import { partMate, placements, washerTopEdge } from "./insert";
+import { partMate, placements, replicateGroups, washerTopEdge } from "./insert";
 import { type HolePlan } from "./planner";
 
 const INCH = 0.0254;
@@ -95,6 +95,27 @@ describe("placements", () => {
     });
 });
 
+describe("replicateGroups", () => {
+    const at = (key: string, change: Partial<HolePlan["planned"]> = {}) => ({
+        ...PLAN,
+        circularEdge: { ...PLAN.circularEdge, key, edgeId: key },
+        planned: { ...PLAN.planned, key, ...change }
+    });
+
+    it("groups ready holes given the same parts as deep, the first found first", () => {
+        const groups = replicateGroups([
+            at("a"),
+            at("b", { depth: 0.75 * INCH }),
+            at("c"),
+            at("d", { status: HoleStatus.FASTENED }),
+            at("e", { nutWasher: undefined })
+        ]);
+        expect(
+            groups.map((group) => group.map((plan) => plan.planned.key))
+        ).toEqual([["a", "c"], ["b"], ["e"]]);
+    });
+});
+
 describe("partMate", () => {
     const parts = placements([PLAN]);
     const paths = [["w1"], ["s1"], ["w2"], ["n1"]];
@@ -104,7 +125,7 @@ describe("partMate", () => {
             partMate(parts[1], ["s1"], "screwMC", paths, { 0: "TOP" })
         );
         expect(mate).toContain('"featureId":"screwMC"');
-        expect(mate).toContain('"path":["w1"],"deterministicIds":["TOP"]');
+        expect(mate).toContain('"deterministicIds":["TOP"],"path":["w1"]');
     });
 
     it("fastens nothing it can't find the washer's edge for", () => {

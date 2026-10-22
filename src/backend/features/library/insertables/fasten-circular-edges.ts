@@ -1,18 +1,16 @@
 /** Fastens inserted instances to circular edges picked in the target assembly. */
-import {
-    type OnshapeApi,
-    OnshapeRateLimitError
-} from "../../../lib/onshape/client";
+import { type OnshapeApi } from "../../../lib/onshape/client";
 import { type ElementPath } from "../../../lib/onshape/path";
 import { addAssemblyFeature } from "../../../lib/onshape/endpoints/assemblies";
-import {
-    type EdgeReference,
-    fastenMateToCircularEdge,
-    replicateFeature
-} from "../../../lib/onshape/objects/assembly-features";
+import { fastenMateToCircularEdge } from "../../../lib/onshape/objects/assembly-features";
 import { type OnshapeInsertInstancesResponse } from "../../../lib/onshape/types";
-import { tolerantEquals } from "../../configurations/input-parser";
 import { type AssemblyCircularEdge } from "../../quick-fastener/planner";
+import {
+    addReplicate,
+    replicateMatches,
+    sameRadius,
+    toEdgeReference
+} from "../../quick-fastener/replicate";
 
 interface FastenToCircularEdgesArgs {
     name: string;
@@ -45,22 +43,26 @@ export async function fastenToCircularEdges(
     // Serially: each is a feature-list edit, and Onshape rejects one that races another.
     let seed: OnshapeInsertInstancesResponse | undefined = inserted;
     for (const group of groups) {
-        const [first, ...rest] = group.map(toEdgeReference);
+        const [first, ...rest] = group;
         const instancePath = getInstancePath(seed ?? (await insert()));
         seed = undefined;
         const mate = await addAssemblyFeature(
             onshapeApi,
             targetPath,
-            fastenMateToCircularEdge(name, fastenQuery(instancePath), first)
+            fastenMateToCircularEdge(
+                name,
+                fastenQuery(instancePath),
+                toEdgeReference(first)
+            )
         );
 
         if (
             rest.length > 0 &&
-            (await tryReplicate(onshapeApi, targetPath, {
-                name,
-                instancePath,
+            (await addReplicate(onshapeApi, targetPath, {
+                name: `Replicate ${name}`,
+                instancePaths: [instancePath],
                 mateFeatureId: mate.feature.featureId,
-                edges: rest
+                matches: replicateMatches(group, args.edges)
             }))
         ) {
             continue;
@@ -74,7 +76,7 @@ export async function fastenToCircularEdges(
                 fastenMateToCircularEdge(
                     name,
                     fastenQuery(getInstancePath(next)),
-                    edge
+                    toEdgeReference(edge)
                 )
             );
         }
@@ -94,10 +96,7 @@ export function groupByDiameter(
     const groups: AssemblyCircularEdge[][] = [];
     for (const edge of edges) {
         const group = groups.find((candidate) =>
-            tolerantEquals(
-                { value: candidate[0].radius, type: "length" },
-                { value: edge.radius, type: "length" }
-            )
+            sameRadius(candidate[0], edge)
         );
         if (group) {
             group.push(edge);
@@ -106,40 +105,4 @@ export function groupByDiameter(
         }
     }
     return groups;
-}
-
-function toEdgeReference(edge: AssemblyCircularEdge): EdgeReference {
-    return { deterministicId: edge.edgeId, path: edge.occurrencePath };
-}
-
-interface ReplicateArgs {
-    name: string;
-    instancePath: string[];
-    mateFeatureId: string;
-    edges: EdgeReference[];
-}
-
-/** False when Onshape refuses it; the caller fastens one instance per edge instead. */
-async function tryReplicate(
-    onshapeApi: OnshapeApi,
-    targetPath: ElementPath,
-    args: ReplicateArgs
-): Promise<boolean> {
-    const feature = replicateFeature(
-        `Replicate ${args.name}`,
-        args.instancePath,
-        args.mateFeatureId,
-        args.edges
-    );
-    try {
-        await addAssemblyFeature(onshapeApi, targetPath, feature);
-        return true;
-    } catch (error) {
-        // A fallback would only spend more of the same allocation.
-        if (error instanceof OnshapeRateLimitError) {
-            throw error;
-        }
-        console.warn("Onshape refused a replicate", error);
-        return false;
-    }
 }

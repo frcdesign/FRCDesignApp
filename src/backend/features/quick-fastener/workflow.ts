@@ -22,6 +22,7 @@ import {
     type FastenerJobStatus,
     type FastenerTask,
     type PlannedHole,
+    pendingTasks,
     type QuickFastenerIn
 } from "./contract";
 import { describeRunFailure, describeStepFailure } from "./failures";
@@ -29,12 +30,15 @@ import { gather } from "./gather";
 import {
     insertGroups,
     mateConnectorIdsFor,
+    type PartPlacement,
     partMate,
     placements,
+    replicateGroups,
     washerTopEdges
 } from "./insert";
 import { reportJob } from "./jobs";
 import { planHoles } from "./planner";
+import { addReplicate, replicateMatches } from "./replicate";
 
 export interface FastenerJobParams {
     /** Whose Onshape session the run borrows; see the load workflow. */
@@ -75,16 +79,14 @@ export class QuickFastenerWorkflow extends WorkflowEntrypoint<
         step: WorkflowStep
     ): Promise<FastenerJobResult> {
         const { sessionId, request } = event.payload;
-        const tasks: FastenerTask[] = Object.values(FastenerTaskAction).map(
-            (action) => ({ action, state: FastenerTaskState.PENDING })
-        );
+        const tasks: FastenerTask[] = pendingTasks(request.options);
         const ctx: RunContext = {
             env: this.env,
             step,
             sessionId,
             assembly: request.assembly,
             tasks,
-            result: { inserted: 0, fastened: 0 },
+            result: { inserted: 0, fastened: 0, replicated: 0 },
             status: (state) => ({
                 state,
                 jobId: event.instanceId,
@@ -137,61 +139,172 @@ async function runSteps(ctx: RunContext, request: QuickFastenerIn) {
     }
     ctx.holes = plans.map((plan) => plan.planned);
 
-    const parts = placements(plans);
+    // With Replicate, only each group's first hole gets parts at first
+    const groups = request.options.replicate ? replicateGroups(plans) : [];
+    const later = new Set(
+        groups.flatMap((group) =>
+            group.slice(1).map((plan) => plan.planned.key)
+        )
+    );
+    const parts = placements(
+        plans.filter((plan) => !later.has(plan.planned.key))
+    );
     if (parts.length === 0) {
         skipRest(ctx);
         return;
     }
     const paths = await runTask(ctx, FastenerTaskAction.INSERT, (run) =>
-        run("insert", isRateLimited, async (client) => {
-            const response = await insertTransformedInstances(
-                client,
-                request.assembly,
-                insertGroups(parts)
-            );
-            return (response.insertInstanceResponses ?? []).map(
-                (each) => each.occurrences?.[0]?.path ?? null
-            );
-        })
+        insertParts(ctx, run, "", parts)
     );
     if (!paths) {
         skipRest(ctx);
         return;
     }
-    ctx.result.inserted = paths.filter((path) => path !== null).length;
 
-    await runTask(ctx, FastenerTaskAction.FASTEN, async (run) => {
-        const kinds = [...new Set(parts.map((part) => part.kind))];
-        const connectors = await run("mate-connectors", isTransient, (client) =>
-            mateConnectorIdsFor(client, ctx.env.KV, request.assembly, kinds)
-        );
-        const washerEdges = await run("washer-edges", isTransient, (client) =>
-            washerTopEdges(client, ctx.env.KV, parts)
-        );
-        const insertedPaths = paths.map((path) => path ?? undefined);
-        for (const [index, part] of parts.entries()) {
-            const path = insertedPaths[index];
-            const connector = connectors[part.kind];
-            const mate =
-                path && connector
-                    ? partMate(
-                          part,
-                          path,
-                          connector,
-                          insertedPaths,
-                          washerEdges
-                      )
-                    : undefined;
-            if (!mate) {
+    const mates = await runTask(ctx, FastenerTaskAction.FASTEN, (run) =>
+        fastenParts(ctx, run, "", parts, paths)
+    );
+    if (!mates) {
+        skipRest(ctx);
+        return;
+    }
+
+    if (!request.options.replicate) {
+        return;
+    }
+    const all = plans.map((plan) => plan.circularEdge);
+    await runTask(ctx, FastenerTaskAction.REPLICATE, async (run) => {
+        for (const [index, group] of groups.entries()) {
+            const [seed, ...rest] = group;
+            if (rest.length === 0) {
                 continue;
             }
-            await run(`mate-${index}`, isRateLimited, async (client) => {
-                await addAssemblyFeature(client, request.assembly, mate);
-                return true;
-            });
-            ctx.result.fastened++;
+            const seedParts = [...parts.entries()].filter(
+                ([, part]) => part.hole === seed.planned.key
+            );
+            // The mate holding the seed's stack on its hole, which each copy is placed as
+            const seated = seedParts.find(
+                ([, part]) =>
+                    "edge" in part.seat &&
+                    part.seat.edge.edgeId === seed.circularEdge.edgeId
+            );
+            const mateFeatureId = seated ? mates[seated[0]] : null;
+            const instancePaths = seedParts.map(([each]) => paths[each]);
+            const isPlaced = (path: string[] | null): path is string[] =>
+                path !== null;
+            if (mateFeatureId && instancePaths.every(isPlaced)) {
+                const added = await run(
+                    `replicate-${index}`,
+                    isRateLimited,
+                    (client) =>
+                        addReplicate(client, request.assembly, {
+                            name: "Quick fastener replicate",
+                            instancePaths,
+                            mateFeatureId,
+                            matches: replicateMatches(
+                                group.map((plan) => plan.circularEdge),
+                                all
+                            )
+                        })
+                );
+                if (added) {
+                    ctx.result.replicated += rest.length;
+                    continue;
+                }
+            }
+            // Refused: the rest of the group gets parts of its own
+            const restParts = placements(rest);
+            const restPaths = await insertParts(
+                ctx,
+                run,
+                `replicate-${index}-`,
+                restParts
+            );
+            await fastenParts(
+                ctx,
+                run,
+                `replicate-${index}-`,
+                restParts,
+                restPaths
+            );
         }
     });
+}
+
+/** Inserts parts in one call: each one's occurrence path, or null where Onshape answered none. */
+async function insertParts(
+    ctx: RunContext,
+    run: StepRunner,
+    prefix: string,
+    parts: PartPlacement[]
+): Promise<(string[] | null)[]> {
+    const paths = await run(
+        `${prefix}insert`,
+        isRateLimited,
+        async (client) => {
+            const response = await insertTransformedInstances(
+                client,
+                ctx.assembly,
+                insertGroups(parts)
+            );
+            return (response.insertInstanceResponses ?? []).map(
+                (each) => each.occurrences?.[0]?.path ?? null
+            );
+        }
+    );
+    ctx.result.inserted += paths.filter((path) => path !== null).length;
+    return paths;
+}
+
+/** Fastens each inserted part where it sits: each one's mate feature id, or null where it has none. */
+async function fastenParts(
+    ctx: RunContext,
+    run: StepRunner,
+    prefix: string,
+    parts: PartPlacement[],
+    paths: (string[] | null)[]
+): Promise<(string | null)[]> {
+    const kinds = [...new Set(parts.map((part) => part.kind))];
+    const connectors = await run(
+        `${prefix}mate-connectors`,
+        isTransient,
+        (client) => mateConnectorIdsFor(client, ctx.env.KV, ctx.assembly, kinds)
+    );
+    const washerEdges = await run(
+        `${prefix}washer-edges`,
+        isTransient,
+        (client) => washerTopEdges(client, ctx.env.KV, parts)
+    );
+    const insertedPaths = paths.map((path) => path ?? undefined);
+    const mates: (string | null)[] = [];
+    for (const [index, part] of parts.entries()) {
+        const path = insertedPaths[index];
+        const connector = connectors[part.kind];
+        const mate =
+            path && connector
+                ? partMate(part, path, connector, insertedPaths, washerEdges)
+                : undefined;
+        if (!mate) {
+            mates.push(null);
+            continue;
+        }
+        mates.push(
+            await run(
+                `${prefix}mate-${index}`,
+                isRateLimited,
+                async (client) => {
+                    const added = await addAssemblyFeature(
+                        client,
+                        ctx.assembly,
+                        mate
+                    );
+                    return added.feature.featureId;
+                }
+            )
+        );
+        ctx.result.fastened++;
+    }
+    return mates;
 }
 
 function skipRest(ctx: RunContext): void {
