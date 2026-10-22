@@ -30,6 +30,7 @@ import {
     type LoadContext,
     getOnshapeApiFromContext
 } from "./context";
+import { releaseHold } from "./holds";
 import { ONSHAPE_STEP_RETRIES, uploadThumbnailsStep } from "./steps";
 import { deleteStaleThumbnails } from "../thumbnails/reconcile";
 
@@ -241,7 +242,8 @@ async function saveGroup(
                     versionId: target.versionPath.instanceId,
                     versionCreatedAt: target.versionCreatedAt
                 })
-                .where(eq(insertables.groupId, target.groupId))
+                .where(eq(insertables.groupId, target.groupId)),
+            releaseHold(db, target.groupId, target.readAt)
         );
     }
     for (const { insertableId, sortOrder } of input.movedInsertables) {

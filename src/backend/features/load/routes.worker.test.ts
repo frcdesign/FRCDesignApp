@@ -10,6 +10,7 @@ import { getDb } from "../../db/client";
 import { AccessLevel } from "../auth/access-level";
 import { LibraryId } from "../library/library-id";
 import * as Jobs from "./jobs";
+import * as Holds from "./holds";
 
 const db = getDb(env.DB);
 const PATH = `/api/reload/library/${LibraryId.FRC_DESIGN_LIB}`;
@@ -36,7 +37,6 @@ describe("reloading a library", () => {
 
     it("reloads the library's outdated documents for an admin", async () => {
         const load = vi.spyOn(Jobs, "requestReload").mockResolvedValue();
-        vi.spyOn(Jobs, "approveHeldReloads").mockResolvedValue(0);
 
         const res = await reload(AccessLevel.ADMIN, false);
 
@@ -45,14 +45,12 @@ describe("reloading a library", () => {
             libraryId: LibraryId.FRC_DESIGN_LIB,
             groupIds: ["frc"],
             sessionId: "s",
-            forceReload: false,
-            held: false
+            forceReload: false
         });
     });
 
     it("reloads every document for the owner", async () => {
         const load = vi.spyOn(Jobs, "requestReload").mockResolvedValue();
-        vi.spyOn(Jobs, "approveHeldReloads").mockResolvedValue(0);
 
         await reload(AccessLevel.OWNER, true);
 
@@ -60,21 +58,6 @@ describe("reloading a library", () => {
             groupIds: ["frc"],
             forceReload: true
         });
-    });
-
-    // It loads whatever is new, so a held version has nothing left to wait for.
-    it("lets the held versions through", async () => {
-        vi.spyOn(Jobs, "requestReload").mockResolvedValue();
-        const approve = vi
-            .spyOn(Jobs, "approveHeldReloads")
-            .mockResolvedValue(1);
-
-        await reload(AccessLevel.ADMIN, false);
-
-        expect(approve).toHaveBeenCalledWith(
-            expect.anything(),
-            LibraryId.FRC_DESIGN_LIB
-        );
     });
 
     it("keeps reloading every document to the owner", async () => {
@@ -85,7 +68,6 @@ describe("reloading a library", () => {
     // Held and failed documents show to editors, so they can act on them.
     it("reloads for an editor", async () => {
         vi.spyOn(Jobs, "requestReload").mockResolvedValue();
-        vi.spyOn(Jobs, "approveHeldReloads").mockResolvedValue(0);
         expect((await reload(AccessLevel.EDITOR, false)).status).toBe(200);
     });
 
@@ -98,8 +80,10 @@ describe("approving versions", () => {
     beforeEach(() => resetDb(db));
     afterEach(() => vi.restoreAllMocks());
 
-    it("approves every held version", async () => {
-        vi.spyOn(Jobs, "approveHeldReloads").mockResolvedValue(2);
+    it("approves every held version, as the approver", async () => {
+        const approve = vi
+            .spyOn(Holds, "approveHeldVersions")
+            .mockResolvedValue(2);
         const res = await createTestApp({
             accessLevel: AccessLevel.EDITOR
         }).request(
@@ -108,5 +92,10 @@ describe("approving versions", () => {
             env
         );
         expect(await res.json()).toEqual({ documents: 2 });
+        expect(approve).toHaveBeenCalledWith(
+            expect.anything(),
+            LibraryId.FRC_DESIGN_LIB,
+            "s"
+        );
     });
 });

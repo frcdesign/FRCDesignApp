@@ -3,7 +3,7 @@ import {
     type WorkflowEvent,
     type WorkflowStep
 } from "cloudflare:workers";
-import { eq } from "drizzle-orm";
+import { eq, isNotNull } from "drizzle-orm";
 import type { AppBindings } from "../../lib/context";
 import { getDb } from "../../db/client";
 import type { LibraryId } from "../library/library-id";
@@ -36,11 +36,8 @@ import {
     getOnshapeApiFromContext
 } from "./context";
 import {
-    APPROVAL_TIMEOUT,
-    APPROVE_EVENT,
     claimLibrary,
     finishReload,
-    releaseHold,
     reportProgress,
     TURN_INTERVAL,
     type ReloadParams,
@@ -48,15 +45,15 @@ import {
 } from "./jobs";
 import { pushLibraryChanged } from "../push/notify";
 import { flagFailedLoads } from "./flag";
+import { releaseHold } from "./holds";
 import { loadGroup } from "./load-group";
 import { ONSHAPE_STEP_RETRIES, prefixSteps } from "./steps";
 import { ensureWebhook } from "../webhooks/registration";
 
 /**
  * Reloads a library's groups, all of them or the few it is given. One holds a
- * library at a time; another waits its turn. A webhook's waits for approval
- * first. Every group shares the run's Onshape budget, and the search index is
- * rebuilt once, at the end.
+ * library at a time; another waits its turn. Every group shares the run's
+ * Onshape budget, and the search index is rebuilt once, at the end.
  */
 export class ReloadLibraryWorkflow extends WorkflowEntrypoint<
     AppBindings,
@@ -68,9 +65,6 @@ export class ReloadLibraryWorkflow extends WorkflowEntrypoint<
     ): Promise<void> {
         const params = event.payload;
         const instanceId = event.instanceId;
-        if (params.held) {
-            await waitForApproval(this.env, step, params, instanceId);
-        }
 
         let claim: RunningReload | undefined;
         for (let turn = 0; !claim; turn++) {
@@ -99,24 +93,6 @@ export class ReloadLibraryWorkflow extends WorkflowEntrypoint<
             );
         }
     }
-}
-
-/** Loads anyway once nobody has approved it for `APPROVAL_TIMEOUT`. */
-async function waitForApproval(
-    env: AppBindings,
-    step: WorkflowStep,
-    params: ReloadParams,
-    instanceId: string
-): Promise<void> {
-    try {
-        await step.waitForEvent("approval", {
-            type: APPROVE_EVENT,
-            timeout: APPROVAL_TIMEOUT
-        });
-    } catch {
-        // Timed out.
-    }
-    await step.do("release-hold", () => releaseHold(env, params, instanceId));
 }
 
 /** Every group at once; their Onshape calls share the run's limiter. */
@@ -159,7 +135,9 @@ async function loadDocument(
             .select({
                 documentId: groups.documentId,
                 versionId: groups.versionId,
-                buildIssues: groups.buildIssues
+                buildIssues: groups.buildIssues,
+                // A boolean: step results are persisted, and a Date isn't.
+                isHeld: isNotNull(groups.heldAt).mapWith(Boolean)
             })
             .from(groups)
             .where(eq(groups.id, groupId))
@@ -183,7 +161,17 @@ async function loadDocument(
             !forceReload &&
             !hasFailedLoad(stored.buildIssues)
         ) {
-            changed = false;
+            // Held by a webhook that arrived after the version it names was loaded.
+            changed =
+                stored.isHeld &&
+                (await ctx.step.do("release-hold", async () => {
+                    const released = await releaseHold(
+                        getDb(ctx.env.DB),
+                        groupId,
+                        target.readAt
+                    );
+                    return released.length > 0;
+                }));
         } else {
             await loadGroup(ctx, target, forceReload);
         }
@@ -246,10 +234,15 @@ async function resolveGroupTarget(
     const version = await ctx.step.do(
         "version",
         { retries: ONSHAPE_STEP_RETRIES },
-        async () =>
-            getLatestVersion(await getOnshapeApiFromContext(ctx), {
-                documentId
-            })
+        async () => {
+            // Taken before the read: a hold set earlier names a version the read sees.
+            const readAt = Date.now();
+            const latest = await getLatestVersion(
+                await getOnshapeApiFromContext(ctx),
+                { documentId }
+            );
+            return { ...latest, readAt };
+        }
     );
 
     const versionPath: InstancePath = {
@@ -267,6 +260,7 @@ async function resolveGroupTarget(
         groupId: ids.groupId,
         versionPath,
         versionCreatedAt: new Date(version.createdAt),
+        readAt: version.readAt,
         workspacePath,
         name: document.name,
         thumbnailElementId: document.documentThumbnailElementId

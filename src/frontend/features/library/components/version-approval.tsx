@@ -2,14 +2,12 @@ import { Button } from "@mantine/core";
 import { CheckIcon } from "@phosphor-icons/react";
 import { type ReactNode } from "react";
 import { InputRow } from "../../../components/input-row";
-import {
-    useApproveVersionsMutation,
-    useAwaitingApprovalCount
-} from "../queries";
+import { useApproveVersionsMutation } from "../queries";
+import { useHeldGroupCount } from "../../build-status/queries";
 
-/** New versions wait here until approved, or for a week. */
+/** New versions wait here until an editor approves them. */
 export function HeldVersionsSetting(): ReactNode {
-    const count = useAwaitingApprovalCount();
+    const count = useHeldGroupCount();
     const mutation = useApproveVersionsMutation();
     return (
         <InputRow label="Held versions">

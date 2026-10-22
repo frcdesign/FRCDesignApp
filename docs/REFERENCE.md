@@ -36,7 +36,7 @@ KV holds what may expire or be lost. Every key belongs to a `kvStore` (`src/back
 
 - `session:` — a signed-in session's access and refresh tokens and user id, keyed by the opaque id in the `frc-design-app-session` cookie, for 30 days (`features/auth/session.ts`). A sign-in in flight keeps nothing here: its state and return path are the whole of the ten-minute `frc-design-app-login` cookie (`features/auth/login.ts`).
 - `background-session:` — the latest session ids of the owner and each admin team member, so a load nobody is signed in behind can run as one of them.
-- `library-reload:`, `library-reload-queued:` — the reload holding each library, and those waiting for their turn or for approval ([architecture/loading.md](./architecture/loading.md)).
+- `library-reload:`, `library-reload-queued:` — the reload holding each library, and those waiting for their turn ([architecture/loading.md](./architecture/loading.md)).
 - `unit-info:` — a workspace's units, for a week. On a miss the route asks Onshape and registers a transient `updateworkspaceunits` webhook, whose delivery drops the entry. Onshape cleans transient webhooks up after a while without events, so nothing records or removes them, and the expiry covers one it drops quietly. Onshape doesn't sign webhooks registered through the API, so the url names the workspace plainly: a forged delivery only costs a refetch (`features/webhooks/transient.ts`).
 
 ### R2 — Blob Storage (`c.env.BLOB`)
@@ -114,7 +114,7 @@ owns, `lib/` for cross-cutting plumbing, and a small set of files at the root.
     An element's own part number and material live on `insertables.part_metadata`; a `configurations` row exists exactly when the element has parameters to configure.
     - `thumbnails/` — rendering and R2 storage (`store.ts`), its Workflow, the routes, and the key and URL scheme the client shares
     - `build-checker/` — build issues, the checks that raise them, and the build-status endpoint
-    - `webhooks/` — the per-document webhook that loads new versions, and transient ones for caches
+    - `webhooks/` — the per-document webhook that holds new versions, and transient ones for caches
     - `push/` — the `ClientRelay` Durable Object and what it pushes
     - `admin-team/` — each library's admin team, set by the owner and synced from Onshape
     - `version-manager/` — links between Onshape workspaces and the pushes and pulls along them; see [architecture/version-manager.md](./architecture/version-manager.md)

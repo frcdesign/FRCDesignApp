@@ -9,11 +9,14 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("../queries", () => ({
-    useAwaitingApprovalCount: () => mocks.held,
     useApproveVersionsMutation: () => ({
         mutate: mocks.approve,
         isPending: false
     })
+}));
+
+vi.mock("../../build-status/queries", () => ({
+    useHeldGroupCount: () => mocks.held
 }));
 
 const { HeldVersionsSetting } = await import("./version-approval");

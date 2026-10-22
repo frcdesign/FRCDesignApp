@@ -49,6 +49,13 @@ export function useBuildStatusQuery() {
     return useQuery(getBuildStatusQuery(libraryId, cacheVersion));
 }
 
+/** How many documents have a new version waiting for an editor's approval. */
+export function useHeldGroupCount(): number {
+    const { data } = useBuildStatusQuery();
+    return Object.values(data?.groups ?? {}).filter((group) => group.isHeld)
+        .length;
+}
+
 export function useSetVisibilityMutation(
     insertableIds: string[],
     isVisible: boolean

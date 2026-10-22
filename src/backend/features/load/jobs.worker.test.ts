@@ -7,12 +7,9 @@ import { groups } from "../../db/schema";
 import { BuildIssueType } from "../build-checker/issues";
 import * as LibraryDb from "../library/db";
 import {
-    APPROVE_EVENT,
-    approveHeldReloads,
     claimLibrary,
     finishReload,
     getJobStatus,
-    releaseHold,
     reportProgress,
     requestReload,
     type ReloadParams
@@ -20,40 +17,33 @@ import {
 
 const db = getDb(env.DB);
 
-function params(groupIds: string[], held = false): ReloadParams {
+function params(groupIds: string[]): ReloadParams {
     return {
         libraryId: TEST_LIBRARY_ID,
         groupIds,
         sessionId: "session",
-        forceReload: false,
-        held
+        forceReload: false
     };
 }
 
 /** Which reloads Workflows reports running; the rest have ended. */
 function running(...instanceIds: string[]) {
-    const sendEvent = vi.fn().mockResolvedValue(undefined);
     vi.spyOn(env.RELOAD_LIBRARY_WORKFLOW, "get").mockImplementation((id) =>
         Promise.resolve({
             status: () =>
                 Promise.resolve({
                     status: instanceIds.includes(id) ? "running" : "complete"
-                }),
-            sendEvent
+                })
         } as never)
     );
-    return { sendEvent };
 }
 
-/** The ids `requestReload` gave the reloads it started, in order. */
+/** Lets `requestReload` start a reload without running it. */
 function stubCreate() {
     return vi
         .spyOn(env.RELOAD_LIBRARY_WORKFLOW, "create")
         .mockResolvedValue({} as never);
 }
-
-const createdIds = (create: ReturnType<typeof stubCreate>) =>
-    create.mock.calls.map((call) => call[0]?.id ?? "");
 
 async function clearKv() {
     const { keys } = await env.KV.list();
@@ -83,8 +73,7 @@ describe("library reloads", () => {
             params: params(["a", "b"])
         });
         expect(await getJobStatus(env, TEST_LIBRARY_ID)).toEqual({
-            loadingGroupIds: ["a", "b"],
-            awaitingApprovalGroupIds: []
+            loadingGroupIds: ["a", "b"]
         });
     });
 
@@ -121,8 +110,7 @@ describe("library reloads", () => {
         });
 
         expect(await getJobStatus(env, TEST_LIBRARY_ID)).toEqual({
-            loadingGroupIds: ["b"],
-            awaitingApprovalGroupIds: []
+            loadingGroupIds: ["b"]
         });
     });
 
@@ -152,47 +140,6 @@ describe("library reloads", () => {
         expect(await claimLibrary(env, params(["b"]), "third")).toBeUndefined();
     });
 
-    describe("held versions", () => {
-        it("lists a held reload as awaiting approval", async () => {
-            stubCreate();
-            await requestReload(env, params(["a"], true));
-
-            expect(await getJobStatus(env, TEST_LIBRARY_ID)).toEqual({
-                loadingGroupIds: [],
-                awaitingApprovalGroupIds: ["a"]
-            });
-        });
-
-        it("approves every held reload, counting its groups", async () => {
-            const create = stubCreate();
-            await requestReload(env, params(["a"], true));
-            await requestReload(env, params(["a", "b"], true));
-            await requestReload(env, params(["b"]));
-            const { sendEvent } = running(...createdIds(create));
-
-            expect(await approveHeldReloads(env, TEST_LIBRARY_ID)).toBe(2);
-            expect(sendEvent).toHaveBeenCalledTimes(2);
-            expect(sendEvent).toHaveBeenCalledWith({
-                type: APPROVE_EVENT,
-                payload: {}
-            });
-        });
-
-        it("loads once released, waiting its turn", async () => {
-            const create = stubCreate();
-            await requestReload(env, params(["a"], true));
-            const [id] = createdIds(create);
-            running(id);
-
-            await releaseHold(env, params(["a"], true), id);
-
-            expect(await getJobStatus(env, TEST_LIBRARY_ID)).toEqual({
-                loadingGroupIds: ["a"],
-                awaitingApprovalGroupIds: []
-            });
-        });
-    });
-
     describe("status", () => {
         it("drops a waiting reload that has since ended", async () => {
             stubCreate();
@@ -200,25 +147,21 @@ describe("library reloads", () => {
             running();
 
             expect(await getJobStatus(env, TEST_LIBRARY_ID)).toEqual({
-                loadingGroupIds: [],
-                awaitingApprovalGroupIds: []
+                loadingGroupIds: []
             });
         });
 
-        // A held reload dropped on a blip would wait out its week unapproved.
         it("keeps a reload Workflows can't be asked about", async () => {
-            const create = stubCreate();
-            await requestReload(env, params(["a"], true));
+            stubCreate();
+            await requestReload(env, params(["a"]));
             vi.spyOn(env.RELOAD_LIBRARY_WORKFLOW, "get").mockRejectedValue(
                 new Error("unavailable")
             );
             vi.spyOn(console, "warn").mockImplementation(() => undefined);
 
-            expect(
-                (await getJobStatus(env, TEST_LIBRARY_ID))
-                    .awaitingApprovalGroupIds
-            ).toEqual(["a"]);
-            expect(createdIds(create)).toHaveLength(1);
+            expect(await getJobStatus(env, TEST_LIBRARY_ID)).toEqual({
+                loadingGroupIds: ["a"]
+            });
         });
 
         it("leaves no mark when the reload can't be started", async () => {
@@ -229,8 +172,7 @@ describe("library reloads", () => {
             await expect(requestReload(env, params(["a"]))).rejects.toThrow();
 
             expect(await getJobStatus(env, TEST_LIBRARY_ID)).toEqual({
-                loadingGroupIds: [],
-                awaitingApprovalGroupIds: []
+                loadingGroupIds: []
             });
         });
 
@@ -240,8 +182,7 @@ describe("library reloads", () => {
             running();
 
             expect(await getJobStatus(env, TEST_LIBRARY_ID)).toEqual({
-                loadingGroupIds: [],
-                awaitingApprovalGroupIds: []
+                loadingGroupIds: []
             });
             expect(await issuesOf("a")).toEqual([
                 { type: BuildIssueType.LOAD_FAILED }

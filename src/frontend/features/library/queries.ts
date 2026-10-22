@@ -90,10 +90,7 @@ function getJobStatusQuery(libraryId: LibraryId, canAsk: boolean) {
     });
 }
 
-const NO_JOBS: JobStatus = {
-    loadingGroupIds: [],
-    awaitingApprovalGroupIds: []
-};
+const NO_JOBS: JobStatus = { loadingGroupIds: [] };
 
 /** Empty for callers who aren't editors with an Onshape session. */
 function useJobStatus(): JobStatus {
@@ -110,15 +107,6 @@ function useJobStatus(): JobStatus {
 
 function useLoadingGroupIds(): string[] {
     return useJobStatus().loadingGroupIds;
-}
-
-export function useIsGroupAwaitingApproval(groupId: string): boolean {
-    return useJobStatus().awaitingApprovalGroupIds.includes(groupId);
-}
-
-/** How many documents have a new version waiting for an editor's approval. */
-export function useAwaitingApprovalCount(): number {
-    return useJobStatus().awaitingApprovalGroupIds.length;
 }
 
 /** Whether this group is loading, which its row and its parts show. */

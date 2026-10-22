@@ -83,7 +83,6 @@ the status.
 | Load steps calling Onshape      | `ONSHAPE_STEP_RETRIES`             | 5 retries after 10, 20, 40, 80, 160 s; a 429 waits its `Retry-After` plus 0–20 s of jitter |
 | Load thumbnail steps            | `THUMBNAIL_RETRIES`                | 3 retries after 10, 20, 40 s; a 429 as above                                               |
 | Configuration renders           | `RENDER_RETRIES`                   | 30 retries every 2 s; a 429 waits its `Retry-After` plus jitter                            |
-| A held reload                   | `APPROVAL_TIMEOUT`                 | Waits a week for approval, then loads                                                      |
 | A reload waiting its turn       | `TURN_INTERVAL`                    | Checks the library again every 30 s                                                        |
 | Client queries                  | `queryClient` default              | 2 retries, none for an `AppError` that isn't `internal`                                    |
 | Stored thumbnails on the client | `STORED_RETRIES`                   | 1 retry                                                                                    |
