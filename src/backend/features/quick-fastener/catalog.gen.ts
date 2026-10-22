@@ -1,4 +1,4 @@
-/* Synced from robot-education/robot-code@7674062a93d5de0f436b9b8a8fa20447c75a1a08 by `npm run sync:generated-parts` -- DO NOT EDIT */
+/* Synced from robot-education/robot-code@82d1f00da7f14d3b93adb327ffd97875b2a756ca by `npm run sync:generated-parts` -- DO NOT EDIT */
 
 export const CATALOG = {
     source: "featurescripts/fasteners/fastenerTables.py",
@@ -6387,46 +6387,6 @@ export const CATALOG = {
         },
         {
             vendor: "WCP",
-            size: "NO_4_40",
-            head: "BUTTON",
-            finish: "BLACK",
-            lengths: [
-                {
-                    id: "IN_0_25",
-                    name: "1/4 in.",
-                    length: 0.00635,
-                    fullThreadChoice: false
-                },
-                {
-                    id: "IN_0_375",
-                    name: "3/8 in.",
-                    length: 0.009525,
-                    fullThreadChoice: false
-                },
-                {
-                    id: "IN_0_75",
-                    name: "3/4 in.",
-                    length: 0.01905,
-                    fullThreadChoice: false
-                }
-            ]
-        },
-        {
-            vendor: "WCP",
-            size: "NO_6_32",
-            head: "BUTTON",
-            finish: "BLACK",
-            lengths: [
-                {
-                    id: "IN_0_25",
-                    name: "1/4 in.",
-                    length: 0.00635,
-                    fullThreadChoice: false
-                }
-            ]
-        },
-        {
-            vendor: "WCP",
             size: "NO_8_32",
             head: "SOCKET",
             finish: "BLACK",
@@ -7062,12 +7022,6 @@ export const CATALOG = {
                     fullThreadChoice: false
                 },
                 {
-                    id: "IN_0_75",
-                    name: "3/4 in.",
-                    length: 0.01905,
-                    fullThreadChoice: false
-                },
-                {
                     id: "IN_1",
                     name: "1 in.",
                     length: 0.0254,
@@ -7101,6 +7055,20 @@ export const CATALOG = {
                     id: "IN_2_5",
                     name: "2-1/2 in.",
                     length: 0.0635,
+                    fullThreadChoice: false
+                }
+            ]
+        },
+        {
+            vendor: "ANDYMARK",
+            size: "QUARTER_20",
+            head: "BUTTON",
+            finish: "ZINC_PLATED",
+            lengths: [
+                {
+                    id: "IN_0_75",
+                    name: "3/4 in.",
+                    length: 0.01905,
                     fullThreadChoice: false
                 }
             ]
