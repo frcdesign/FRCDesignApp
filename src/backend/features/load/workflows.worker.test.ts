@@ -15,7 +15,7 @@ import {
 } from "../../../__test_utils__";
 import { createShellGroup, type ShellGroup } from "./workflows";
 import { flagFailedLoads } from "./flag";
-import { APPROVE_EVENT, getJobStatus, type ReloadParams } from "./jobs";
+import { getJobStatus, type ReloadParams } from "./jobs";
 import * as Context from "./context";
 import * as LoadGroup from "./load-group";
 import * as LibraryDb from "../library/db";
@@ -105,8 +105,7 @@ describe("createShellGroup", () => {
 const RELOAD: ReloadParams = {
     libraryId: TEST_LIBRARY_ID,
     groupIds: ["a", "b"],
-    forceReload: false,
-    held: false
+    forceReload: false
 };
 
 /** Runs a reload to its end. */
@@ -174,23 +173,50 @@ describe("ReloadLibraryWorkflow", () => {
         expect(loaded.sort()).toEqual(["a", "b"]);
         expect(rebuild).toHaveBeenCalledOnce();
         expect(await getJobStatus(env, TEST_LIBRARY_ID)).toEqual({
-            loadingGroupIds: [],
-            awaitingApprovalGroupIds: []
+            loadingGroupIds: []
         });
     });
 
-    it("loads a held version once it is approved", async () => {
-        await runReload("approved", { ...RELOAD, held: true }, (m) =>
-            m.mockEvent({ type: APPROVE_EVENT, payload: {} })
-        );
-        expect(loaded.sort()).toEqual(["a", "b"]);
+    // The webhook came after the version it names had already been loaded.
+    it("releases the hold of a group whose version is current", async () => {
+        vi.spyOn(VersionEndpoints, "getLatestVersion").mockResolvedValue({
+            id: "inst-1",
+            name: "V1",
+            createdAt: new Date().toISOString()
+        });
+        await db
+            .update(groups)
+            .set({ heldAt: new Date(Date.now() - 1000) })
+            .where(eq(groups.id, "a"));
+        const rebuild = vi.spyOn(LibraryDb, "rebuildSearchDb");
+        const startVersion = await readVersion();
+
+        await runReload("current", RELOAD);
+
+        expect(loaded).toEqual([]);
+        const held = await db
+            .select({ heldAt: groups.heldAt })
+            .from(groups)
+            .where(eq(groups.id, "a"))
+            .get();
+        expect(held?.heldAt).toBeNull();
+        // So the build status, cached under the version, drops the hold.
+        expect(rebuild).toHaveBeenCalledOnce();
+        expect(await readVersion()).toBeGreaterThan(startVersion ?? 0);
     });
 
-    it("loads a held version anyway once nobody approves it", async () => {
-        await runReload("unapproved", { ...RELOAD, held: true }, (m) =>
-            m.forceEventTimeout({ name: "approval" })
-        );
-        expect(loaded.sort()).toEqual(["a", "b"]);
+    it("leaves the library alone when nothing changed", async () => {
+        vi.spyOn(VersionEndpoints, "getLatestVersion").mockResolvedValue({
+            id: "inst-1",
+            name: "V1",
+            createdAt: new Date().toISOString()
+        });
+        const rebuild = vi.spyOn(LibraryDb, "rebuildSearchDb");
+
+        await runReload("unchanged", RELOAD);
+
+        expect(loaded).toEqual([]);
+        expect(rebuild).not.toHaveBeenCalled();
     });
 
     it("waits its turn behind a reload already holding the library", async () => {

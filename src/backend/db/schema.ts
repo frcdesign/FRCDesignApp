@@ -86,7 +86,9 @@ export const groups = sqliteTable(
         sortOrder: integer("sort_order").notNull().default(0),
         ...thumbnailUrls(),
         buildIssues: buildIssues(),
-        lastLoadedAt: lastLoadedAt()
+        lastLoadedAt: lastLoadedAt(),
+        // When a webhook last reported a version not yet loaded; null when none is held.
+        heldAt: integer("held_at", { mode: "timestamp_ms" })
     },
     (t) => [unique().on(t.documentId, t.libraryId)]
 );

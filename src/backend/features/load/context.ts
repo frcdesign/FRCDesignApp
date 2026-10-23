@@ -80,6 +80,8 @@ export interface GroupTarget {
     versionPath: InstancePath;
     /** When Onshape cut `versionPath`'s version. */
     versionCreatedAt: Date;
+    /** When the latest version was read, in ms; a hold set before it is covered. */
+    readAt: number;
     /** The document's own workspace, where a thumbnail the version won't give up is read. */
     workspacePath: InstancePath;
     name: string;

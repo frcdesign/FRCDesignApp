@@ -206,8 +206,8 @@ describe("GET /job-status", () => {
     afterEach(() => vi.restoreAllMocks());
 
     it.each<JobStatus>([
-        { loadingGroupIds: [TEST_GROUP_ID], awaitingApprovalGroupIds: [] },
-        { loadingGroupIds: [], awaitingApprovalGroupIds: [TEST_GROUP_ID] }
+        { loadingGroupIds: [TEST_GROUP_ID] },
+        { loadingGroupIds: [] }
     ])("reports $loadingGroupIds loading", async (status) => {
         vi.spyOn(Jobs, "getJobStatus").mockResolvedValue(status);
 
@@ -259,8 +259,7 @@ describe("POST /group", () => {
             libraryId: TEST_LIBRARY_ID,
             groupIds: [rows[1].id],
             sessionId: "test-session",
-            forceReload: false,
-            held: false
+            forceReload: false
         });
     });
 

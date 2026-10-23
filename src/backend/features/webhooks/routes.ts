@@ -2,14 +2,11 @@
  * Acts on the subject the url's token was registered for, never on what the
  * payload names: the token is all that keeps others from triggering this.
  */
-import { eq } from "drizzle-orm";
-import { type AppBindings, type AppContext, getApp } from "../../lib/context";
+import { type AppContext, getApp } from "../../lib/context";
 import type { InstancePath } from "../../lib/onshape/path";
 import { forbiddenError } from "../../lib/api-error";
-import { getDb } from "../../db/client";
-import { groups, WebhookSubject } from "../../db/schema";
-import type { LibraryId } from "../library/library-id";
-import { requestReload } from "../load/jobs";
+import { WebhookSubject } from "../../db/schema";
+import { holdNewVersion } from "../load/holds";
 import {
     findWebhookByToken,
     forgetWebhook,
@@ -50,7 +47,7 @@ webhookRoutes.post(WEBHOOK_ROUTE, async (c) => {
         switch (event) {
             case WebhookEvent.CREATE_VERSION:
                 if (subject === WebhookSubject.DOCUMENT) {
-                    await reloadDocument(c.env, subjectId);
+                    await holdNewVersion(c.env, subjectId);
                 }
                 break;
             case WebhookEvent.UNREGISTER:
@@ -90,32 +87,3 @@ webhookRoutes.post(
     LINKED_WORKSPACE_WEBHOOK_ROUTE,
     forgetOnChange(forgetWorkspace)
 );
-
-/**
- * A new version is held until an editor approves it, or for a week. Nobody is
- * signed in behind a webhook, so each reload finds an admin's session.
- */
-async function reloadDocument(
-    env: AppBindings,
-    documentId: string
-): Promise<void> {
-    const documentGroups = await getDb(env.DB)
-        .select({ groupId: groups.id, libraryId: groups.libraryId })
-        .from(groups)
-        .where(eq(groups.documentId, documentId));
-    const byLibrary = new Map<LibraryId, string[]>();
-    for (const { groupId, libraryId } of documentGroups) {
-        byLibrary.set(libraryId, [
-            ...(byLibrary.get(libraryId) ?? []),
-            groupId
-        ]);
-    }
-    for (const [libraryId, groupIds] of byLibrary) {
-        await requestReload(env, {
-            libraryId,
-            groupIds,
-            forceReload: false,
-            held: true
-        });
-    }
-}

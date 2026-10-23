@@ -31,7 +31,8 @@ buildStatusRoutes.get(
                     buildIssues: groups.buildIssues,
                     sortAlphabetically: groups.sortAlphabetically,
                     sortOrder: groups.sortOrder,
-                    versionCreatedAt: groups.versionCreatedAt
+                    versionCreatedAt: groups.versionCreatedAt,
+                    heldAt: groups.heldAt
                 })
                 .from(groups)
                 .where(eq(groups.libraryId, libraryId))
@@ -90,7 +91,8 @@ buildStatusRoutes.get(
                 buildIssues: group.buildIssues,
                 sortAlphabetically: group.sortAlphabetically,
                 insertableOrder: groupInsertables.map((ins) => ins.id),
-                versionCreatedAt: group.versionCreatedAt?.getTime()
+                versionCreatedAt: group.versionCreatedAt?.getTime(),
+                isHeld: group.heldAt !== null
             };
         }
 

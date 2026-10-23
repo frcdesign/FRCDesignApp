@@ -28,10 +28,7 @@ import { AppIcon } from "../../../components/app-icon";
 import { AppHoverCard } from "../../../components/app-hover-card";
 import { RequireAccessLevel } from "../../auth/access-level";
 import { useBuildStatusQuery } from "../queries";
-import {
-    useIsGroupAwaitingApproval,
-    useIsGroupLoading
-} from "../../library/queries";
+import { useIsGroupLoading } from "../../library/queries";
 import {
     BuildChecksSection,
     type ConfigurationTarget,
@@ -306,7 +303,7 @@ export function GroupStatusBadge(props: GroupStatusBadgeProps): ReactNode {
                     }
                 />
             )}
-            <AwaitingApprovalBadge groupId={groupId} />
+            {groupStatus?.isHeld && <AwaitingApprovalBadge groupId={groupId} />}
         </>
     );
 }
@@ -315,9 +312,10 @@ interface AwaitingApprovalBadgeProps {
     groupId: string;
 }
 
+/** Hidden once the approved load starts. */
 function AwaitingApprovalBadge(props: AwaitingApprovalBadgeProps): ReactNode {
-    const awaiting = useIsGroupAwaitingApproval(props.groupId);
-    if (!awaiting) return null;
+    const isLoading = useIsGroupLoading(props.groupId);
+    if (isLoading) return null;
     return (
         <Badge
             color={StatusColor.WARNING}

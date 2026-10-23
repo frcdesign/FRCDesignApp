@@ -21,8 +21,6 @@ export interface ReloadParams {
     sessionId?: string;
     /** Reloads groups whose version has not changed, too. */
     forceReload: boolean;
-    /** A webhook's new version, which waits for an editor's approval first. */
-    held: boolean;
 }
 
 /** The reload holding a library, and the groups it has still to finish. */
@@ -32,35 +30,25 @@ export interface RunningReload {
     loadingGroupIds: string[];
 }
 
-/** A reload waiting for its turn, or for approval. */
+/** A reload waiting for its turn. */
 interface QueuedReload {
     groupIds: string[];
-    held: boolean;
 }
 
-/** A backstop for a reload that died holding the library; a read finds it sooner. */
-const RUNNING_TTL_SECONDS = 24 * 60 * 60;
-
-/** Outlasts `APPROVAL_TIMEOUT`, so a held reload is listed until it runs. */
-const QUEUED_TTL_SECONDS = 8 * 24 * 60 * 60;
+/** A backstop for a reload that died with a mark; a read finds it sooner. */
+const MARK_TTL_SECONDS = 24 * 60 * 60;
 
 const running = kvStore<RunningReload>("library-reload", {
-    ttlSeconds: RUNNING_TTL_SECONDS
+    ttlSeconds: MARK_TTL_SECONDS
 });
 
 /** Keyed `{libraryId}:{instanceId}`, so each reload writes only its own. */
 const queued = kvStore<QueuedReload>("library-reload-queued", {
-    ttlSeconds: QUEUED_TTL_SECONDS
+    ttlSeconds: MARK_TTL_SECONDS
 });
 
 const queuedId = (libraryId: LibraryId, instanceId: string) =>
     `${libraryId}:${instanceId}`;
-
-/** What a held reload waits for; see `approveHeldReloads`. */
-export const APPROVE_EVENT = "approve-version";
-
-/** A version nobody approves in this long loads anyway. */
-export const APPROVAL_TIMEOUT = "7 days";
 
 /** How often a reload waiting for its turn checks the library again. */
 export const TURN_INTERVAL = "30 seconds";
@@ -76,8 +64,7 @@ export async function requestReload(
     const id = crypto.randomUUID();
     // Before the instance exists, so the status shows it from the start.
     await queued.put(env.KV, queuedId(params.libraryId, id), {
-        groupIds: params.groupIds,
-        held: params.held
+        groupIds: params.groupIds
     });
     try {
         await env.RELOAD_LIBRARY_WORKFLOW.create({ id, params });
@@ -142,20 +129,6 @@ export async function claimLibrary(
     return claim;
 }
 
-/** Approved or timed out: still waiting for its turn, but no longer held. */
-export async function releaseHold(
-    env: AppBindings,
-    params: ReloadParams,
-    instanceId: string
-): Promise<void> {
-    const id = queuedId(params.libraryId, instanceId);
-    const reload = await queued.get(env.KV, id);
-    if (reload) {
-        await queued.put(env.KV, id, { ...reload, held: false });
-    }
-    await publishJobStatus(env, params.libraryId);
-}
-
 /**
  * Records the groups the reload has still to finish. Only the holder writes
  * the claim, so this overwrites rather than reads.
@@ -210,45 +183,18 @@ async function readQueued(
     );
 }
 
-/** Lets every held reload of the library through. Returns how many groups they hold. */
-export async function approveHeldReloads(
-    env: AppBindings,
-    libraryId: LibraryId
-): Promise<number> {
-    const held = (await readQueued(env, libraryId)).filter(
-        (each) => each.reload.held
-    );
-    await Promise.all(
-        held.map(async ({ instanceId }) => {
-            try {
-                const instance =
-                    await env.RELOAD_LIBRARY_WORKFLOW.get(instanceId);
-                // An event sent before the reload reaches its wait is kept for it.
-                await instance.sendEvent({ type: APPROVE_EVENT, payload: {} });
-            } catch (error) {
-                console.error(`Failed to approve reload ${instanceId}`, error);
-            }
-        })
-    );
-    return new Set(held.flatMap((each) => each.reload.groupIds)).size;
-}
-
-/** The groups loading or held, from the marks. */
+/** The groups loading or waiting to, from the marks. */
 function toStatus(
     current: RunningReload | undefined,
     waiting: { reload: QueuedReload }[]
 ): JobStatus {
     const loading = new Set(current?.loadingGroupIds ?? []);
-    const held = new Set<string>();
     for (const { reload } of waiting) {
         for (const groupId of reload.groupIds) {
-            (reload.held ? held : loading).add(groupId);
+            loading.add(groupId);
         }
     }
-    return {
-        loadingGroupIds: [...loading],
-        awaitingApprovalGroupIds: [...held].filter((id) => !loading.has(id))
-    };
+    return { loadingGroupIds: [...loading] };
 }
 
 async function publishJobStatus(

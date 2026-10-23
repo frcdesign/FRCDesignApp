@@ -14,6 +14,8 @@ export interface GroupBuildStatus {
     insertableOrder: string[];
     /** When Onshape cut the version this group is pinned to (epoch ms). */
     versionCreatedAt?: number;
+    /** A new version waits for an editor's approval. */
+    isHeld: boolean;
 }
 
 export interface InsertableBuildStatus {

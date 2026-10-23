@@ -17,7 +17,7 @@ team, plus one owner set by configuration.
 | `src/backend/features/auth/request-auth.ts`                 | `productionAuth`: resolves the caller, their Onshape client and level   |
 | `src/backend/features/auth/access-level.ts`                 | `AccessLevel` and its ordering; shared with the client                  |
 | `src/backend/features/auth/guards.ts`                       | Route middleware: sign-in, editor, admin, owner                         |
-| `src/backend/features/auth/background-sessions.ts`          | Sessions a load with no requester can borrow                            |
+| `src/backend/features/auth/background-sessions.ts`          | Sessions a load can borrow when its requester's fails                   |
 | `src/backend/features/auth/company.ts`, `cookie-options.ts` | Enterprise company matching; cross-site cookie settings                 |
 | `src/backend/features/auth/routes.ts`                       | `/auth/sign-in`, `/auth/callback`, `/auth/sign-out`, `/api/access-data` |
 | `src/backend/features/hints/store.ts`                       | Which features' dots a user has seen, carried by `/api/access-data`     |
@@ -139,13 +139,13 @@ declared in `wrangler.jsonc` per environment and typed in `AppBindings`. Run
 
 ## Failure and recovery
 
-| Failure                                   | Result                                   | Recovery                                 |
-| ----------------------------------------- | ---------------------------------------- | ---------------------------------------- |
-| Access token expired                      | Refreshed on the next call               | Automatic                                |
-| Refresh token revoked or expired          | Treated as signed out                    | Sign in again                            |
-| Enterprise session opening a personal doc | `/init` sends the caller through sign-in | Automatic, once                          |
-| Team membership changed in Onshape        | Stale access until synced                | **Refresh** beside the admin team        |
-| No saved background session               | Webhook loads fail                       | The owner or a team member opens the app |
+| Failure                                   | Result                                        | Recovery                                 |
+| ----------------------------------------- | --------------------------------------------- | ---------------------------------------- |
+| Access token expired                      | Refreshed on the next call                    | Automatic                                |
+| Refresh token revoked or expired          | Treated as signed out                         | Sign in again                            |
+| Enterprise session opening a personal doc | `/init` sends the caller through sign-in      | Automatic, once                          |
+| Team membership changed in Onshape        | Stale access until synced                     | **Refresh** beside the admin team        |
+| No saved background session               | A load whose requester's session lapses fails | The owner or a team member opens the app |
 
 ## Decisions
 

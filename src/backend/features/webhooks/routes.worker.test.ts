@@ -2,15 +2,15 @@ import { env } from "cloudflare:workers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
     TEST_GROUP_ID,
-    TEST_LIBRARY_ID,
     createTestApp,
     jsonRequest,
     resetDb,
     seedGroup
 } from "../../../__test_utils__";
 import { getDb } from "../../db/client";
-import { onshapeWebhooks, WebhookSubject } from "../../db/schema";
+import { groups, onshapeWebhooks, WebhookSubject } from "../../db/schema";
 import * as Jobs from "../load/jobs";
+import * as Holds from "../load/holds";
 import { WebhookEvent } from "./registration";
 
 const db = getDb(env.DB);
@@ -49,7 +49,7 @@ describe("receiving a webhook", () => {
     // Onshape deactivates a webhook whose deliveries error.
     it("answers 200 even when handling the delivery fails", async () => {
         const token = await registered(WebhookSubject.DOCUMENT, DOCUMENT);
-        vi.spyOn(Jobs, "requestReload").mockRejectedValue(new Error("down"));
+        vi.spyOn(Holds, "holdNewVersion").mockRejectedValue(new Error("down"));
         vi.spyOn(console, "error").mockImplementation(() => undefined);
 
         const res = await deliver(
@@ -66,23 +66,28 @@ describe("receiving a webhook", () => {
         expect(res.status).toBe(200);
     });
 
-    // Nobody is signed in behind a webhook, so the reload finds a session itself.
-    it("holds a reload of the document's groups for approval, with no session", async () => {
+    it("holds the document's groups for approval, loading nothing", async () => {
         const token = await registered(WebhookSubject.DOCUMENT, DOCUMENT);
-        const load = vi.spyOn(Jobs, "requestReload").mockResolvedValue();
+        await seedGroup(db, "other");
+        const load = vi.spyOn(Jobs, "requestReload");
 
         await deliver(
             // What the payload names is not trusted; the token's subject is.
-            { event: WebhookEvent.CREATE_VERSION, documentId: "elsewhere" },
+            { event: WebhookEvent.CREATE_VERSION, documentId: "doc-other" },
             token
         );
 
-        expect(load).toHaveBeenCalledWith(expect.anything(), {
-            libraryId: TEST_LIBRARY_ID,
-            groupIds: [TEST_GROUP_ID],
-            forceReload: false,
-            held: true
-        });
+        const rows = await db
+            .select({ id: groups.id, heldAt: groups.heldAt })
+            .from(groups)
+            .all();
+        expect(rows).toEqual(
+            expect.arrayContaining([
+                { id: TEST_GROUP_ID, heldAt: expect.any(Date) },
+                { id: "other", heldAt: null }
+            ])
+        );
+        expect(load).not.toHaveBeenCalled();
     });
 
     // So the next load of the document registers a new one.

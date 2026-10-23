@@ -50,6 +50,7 @@ const GROUP: GroupTarget = {
         instanceType: "v"
     },
     versionCreatedAt: TEST_VERSION_CREATED_AT,
+    readAt: 0,
     workspacePath: {
         documentId: "doc-1",
         instanceId: "w-1",
@@ -226,6 +227,9 @@ const db = getDb(env.DB);
 /** The version "v-2" was cut, which is the date the load should record. */
 const LOADED_VERSION_CREATED_AT = new Date("2026-02-03T04:05:06Z");
 
+/** When the load read "v-2" as the latest version. */
+const LOADED_READ_AT = new Date("2026-02-04T00:00:00Z");
+
 /** The group seeds start at version "inst-1"; the load moves them to "v-2". */
 const LOADED_TARGET: GroupTarget = {
     libraryId: TEST_LIBRARY_ID,
@@ -237,6 +241,7 @@ const LOADED_TARGET: GroupTarget = {
         instanceType: "v"
     },
     versionCreatedAt: LOADED_VERSION_CREATED_AT,
+    readAt: LOADED_READ_AT.getTime(),
     workspacePath: {
         documentId: `doc-${TEST_GROUP_ID}`,
         instanceId: "w-main",
@@ -340,6 +345,31 @@ describe("loadGroup", () => {
             type: BuildIssueType.NOT_LOADED
         });
     });
+
+    it.each([
+        { heldAt: new Date(LOADED_READ_AT.getTime() - 1), released: true },
+        // A webhook after the read may name a version the load never saw.
+        { heldAt: new Date(LOADED_READ_AT.getTime() + 1), released: false }
+    ])(
+        "releases a hold set before it read the version: $released",
+        async ({ heldAt, released }) => {
+            await db
+                .update(groups)
+                .set({ heldAt })
+                .where(eq(groups.id, TEST_GROUP_ID));
+            mockContents([tab("e1")]);
+            vi.spyOn(
+                ConfigurationEndpoints,
+                "getConfiguration"
+            ).mockResolvedValue(NO_CONFIGURATION);
+
+            await loadGroup(CTX, LOADED_TARGET, false);
+
+            expect((await readGroup())?.heldAt).toEqual(
+                released ? null : heldAt
+            );
+        }
+    );
 
     it("reads each thumbnail from the version, then the document's workspace", async () => {
         mockContents([tab("e1"), tab("e2")]);

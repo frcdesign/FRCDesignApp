@@ -215,8 +215,7 @@ groupRoutes.post(
             libraryId,
             groupIds: [groupId],
             sessionId,
-            forceReload: false,
-            held: false
+            forceReload: false
         });
 
         return c.json({ name: documentName });
