@@ -51,7 +51,7 @@ import {
     fastenToCircularEdges,
     getInstancePath
 } from "./fasten-circular-edges";
-import { gather } from "../../quick-fastener/gather";
+import { indexHoles } from "../../quick-fastener/index-holes";
 import { SelectionMode } from "../../quick-fastener/contract";
 import {
     entitySchema,
@@ -500,7 +500,7 @@ insertableRoutes.post(
             body.fasten && row.fastenInfo !== null && body.targets.length > 0;
         const edges = fastensToPicks
             ? (
-                  await gather(
+                  await indexHoles(
                       onshapeApi,
                       c.env.KV,
                       targetPath,

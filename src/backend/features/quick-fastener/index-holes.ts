@@ -1,4 +1,4 @@
-/** Reads an assembly and scans its Part Studios: everything the planner needs. */
+/** Indexes an assembly's holes: reads it and scans its Part Studios for everything the planner needs. */
 import { createLimiter } from "../../lib/limiter";
 import { type OnshapeApi } from "../../lib/onshape/client";
 import { getAssembly } from "../../lib/onshape/endpoints/assemblies";
@@ -30,7 +30,7 @@ import { scanStudio, type StudioScan } from "./scan";
 /** Part Studios evaluated at once: each is one Onshape call, and an assembly can have dozens. */
 const SCAN_CONCURRENCY = 6;
 
-export interface Gathered {
+export interface IndexedHoles {
     circularEdges: AssemblyCircularEdge[];
     holes: AssemblyHole[];
     placed: PlacedScrew[];
@@ -65,13 +65,13 @@ async function localMicroversions(
     );
 }
 
-export async function gather(
+export async function indexHoles(
     client: OnshapeApi,
     kv: KVNamespace,
     assembly: ElementPath,
     targets: SelectedEntity[],
     excluded: SelectedEntity[]
-): Promise<Gathered> {
+): Promise<IndexedHoles> {
     const definition = await getAssembly(client, assembly, {
         excludeSuppressed: true
     });

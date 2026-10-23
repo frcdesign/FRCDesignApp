@@ -114,19 +114,19 @@ class QuickFastenerWorkflow extends WorkflowEntrypoint<
 > {}
 ```
 
-`src/backend/features/quick-fastener/gather.ts`,
+`src/backend/features/quick-fastener/index-holes.ts`,
 `src/backend/features/quick-fastener/assembly.ts` and
 `src/backend/features/quick-fastener/scan.ts`
 
 ```ts
 // Reads the assembly and scans every Part Studio it needs.
-async function gather(
+async function indexHoles(
     client: OnshapeApi,
     kv: KVNamespace,
     assembly: ElementPath,
     targets: SelectedEntity[],
     excluded: SelectedEntity[]
-): Promise<Gathered>;
+): Promise<IndexedHoles>;
 // Every part occurrence, through subassemblies, with the edit it's from.
 function partOccurrences(
     definition: OnshapeAssemblyDefinition,

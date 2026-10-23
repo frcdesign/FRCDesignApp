@@ -30,7 +30,7 @@ import {
     describeStepFailure,
     runFailure
 } from "./failures";
-import { gather } from "./gather";
+import { indexHoles } from "./index-holes";
 import {
     insertGroups,
     mateConnectorIdsFor,
@@ -124,7 +124,7 @@ export class QuickFastenerWorkflow extends WorkflowEntrypoint<
 async function runSteps(ctx: RunContext, request: QuickFastenerIn) {
     const plans = await runTask(ctx, FastenerTaskAction.INDEX, (run) =>
         run("index", isTransient, async (client) => {
-            const gathered = await gather(
+            const indexed = await indexHoles(
                 client,
                 ctx.env.KV,
                 request.assembly,
@@ -132,9 +132,9 @@ async function runSteps(ctx: RunContext, request: QuickFastenerIn) {
                 request.excluded
             );
             return planHoles(
-                gathered.circularEdges,
-                gathered.holes,
-                gathered.placed,
+                indexed.circularEdges,
+                indexed.holes,
+                indexed.placed,
                 request.options
             );
         })

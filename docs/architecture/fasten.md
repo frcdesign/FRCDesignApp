@@ -59,19 +59,19 @@ POST /api/toggle-replicate/library/:libraryId/insertable/:insertableId
 ```
 
 `src/backend/features/quick-fastener/picked.ts` and
-`src/backend/features/quick-fastener/gather.ts`, shared with Quick fastener
+`src/backend/features/quick-fastener/index-holes.ts`, shared with Quick fastener
 
 ```ts
 const entitySchema: ZodObject<...>;
 function isConsistentPick(body: PickedEntities): boolean;
 // The picked circular edges, in the assembly, with their radii.
-async function gather(
+async function indexHoles(
     client: OnshapeApi,
     kv: KVNamespace,
     assembly: ElementPath,
     targets: SelectedEntity[],
     excluded: SelectedEntity[]
-): Promise<Gathered>;
+): Promise<IndexedHoles>;
 ```
 
 `src/backend/features/library/insertables/fasten-circular-edges.ts`
@@ -178,7 +178,7 @@ function checkInsertableSettings(input: InsertableSettingsInput): BuildIssue[];
 1. `useInsertMutation` reads the picks, the mode and the Replicate preference
    at the click, and sends them with `fasten` to `POST /add-to-assembly`.
    `isConsistentPick` refuses edges as faces, or faces as edges.
-2. With picks, the route calls `gather` first, which scans each Part Studio
+2. With picks, the route calls `indexHoles` first, which scans each Part Studio
    holding a pick (cached) and answers the picked circular edges in the
    assembly with their radii: each picked edge that is circular, or every
    circular edge of each picked face, less the skipped holes. None found

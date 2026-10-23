@@ -19,7 +19,7 @@ interface FastenToCircularEdgesArgs {
     insert: () => Promise<OnshapeInsertInstancesResponse>;
     /** The inserted part's own connector, in the instance at `instancePath`. */
     fastenQuery: (instancePath: string[]) => object;
-    /** From `gather`, in the order picked. */
+    /** From `indexHoles`, in the order picked. */
     edges: AssemblyCircularEdge[];
     replicate: boolean;
 }

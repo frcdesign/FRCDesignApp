@@ -28,7 +28,7 @@ import { getDb } from "../../../db/client";
 import * as PartStudioEndpoints from "../../../lib/onshape/endpoints/part-studios";
 import * as AssemblyEndpoints from "../../../lib/onshape/endpoints/assemblies";
 import * as PartsEndpoints from "../../../lib/onshape/endpoints/parts";
-import * as Gather from "../../quick-fastener/gather";
+import * as IndexHoles from "../../quick-fastener/index-holes";
 import {
     OnshapeApiError,
     OnshapeRateLimitError
@@ -507,9 +507,9 @@ describe("insertable routes", () => {
         entityType: "EDGE"
     }));
 
-    /** What `gather` finds for the picks: each edge, with these radii in metres. */
-    function mockGather(radii: Record<string, number>) {
-        return vi.spyOn(Gather, "gather").mockResolvedValue({
+    /** What `indexHoles` finds for the picks: each edge, with these radii in metres. */
+    function mockIndexHoles(radii: Record<string, number>) {
+        return vi.spyOn(IndexHoles, "indexHoles").mockResolvedValue({
             circularEdges: Object.entries(radii).map(([edgeId, radius]) => ({
                 key: `base|${edgeId}`,
                 occurrencePath: ["base"],
@@ -532,7 +532,11 @@ describe("insertable routes", () => {
 
     it("fastens one inserted instance to each circular edge", async () => {
         await seedFastenable();
-        const gather = mockGather({ JH1: 0.0025, JH2: 0.0025, JH3: 0.004 });
+        const indexHoles = mockIndexHoles({
+            JH1: 0.0025,
+            JH2: 0.0025,
+            JH3: 0.004
+        });
         const addFeature = vi
             .spyOn(AssemblyEndpoints, "addAssemblyFeature")
             .mockResolvedValue({ feature: { featureId: "f1" } });
@@ -542,7 +546,7 @@ describe("insertable routes", () => {
         const body: InsertOut = await res.json();
         expect(body).toEqual({ fastenedCount: 3 });
 
-        expect(gather.mock.calls[0][3]).toEqual(EDGE_PICKS);
+        expect(indexHoles.mock.calls[0][3]).toEqual(EDGE_PICKS);
         expect(AssemblyEndpoints.addElementToAssembly).toHaveBeenCalledTimes(3);
         expect(addedFeatureTypes(addFeature)).toEqual(["mate", "mate", "mate"]);
 
@@ -556,7 +560,7 @@ describe("insertable routes", () => {
 
     it("passes faces and the edges to skip through to the scan", async () => {
         await seedFastenable();
-        const gather = mockGather({ JH1: 0.0025 });
+        const indexHoles = mockIndexHoles({ JH1: 0.0025 });
         vi.spyOn(AssemblyEndpoints, "addAssemblyFeature").mockResolvedValue({
             feature: { featureId: "f1" }
         });
@@ -572,7 +576,7 @@ describe("insertable routes", () => {
             excluded: [EDGE_PICKS[1]]
         });
         expect(res.status).toBe(200);
-        expect(gather.mock.calls[0].slice(3)).toEqual([
+        expect(indexHoles.mock.calls[0].slice(3)).toEqual([
             [face],
             [EDGE_PICKS[1]]
         ]);
@@ -589,7 +593,7 @@ describe("insertable routes", () => {
 
     it("inserts nothing when no circular edge is found in the picks", async () => {
         await seedFastenable();
-        mockGather({});
+        mockIndexHoles({});
 
         const res = await fastenToPicks({ targets: EDGE_PICKS });
         expect(res.status).toBe(400);
@@ -598,7 +602,7 @@ describe("insertable routes", () => {
 
     it("fastens and replicates once per edge size, onto each edge alone", async () => {
         await seedFastenable(true);
-        mockGather({ JH1: 0.0025, JH2: 0.004, JH3: 0.0025000000001 });
+        mockIndexHoles({ JH1: 0.0025, JH2: 0.004, JH3: 0.0025000000001 });
         const addFeature = vi
             .spyOn(AssemblyEndpoints, "addAssemblyFeature")
             .mockResolvedValue({ feature: { featureId: "f1" } });
@@ -626,7 +630,7 @@ describe("insertable routes", () => {
 
     it("fastens an instance per edge for a part not allowed to replicate", async () => {
         await seedFastenable();
-        mockGather({ JH1: 1, JH2: 1, JH3: 1 });
+        mockIndexHoles({ JH1: 1, JH2: 1, JH3: 1 });
         const addFeature = vi
             .spyOn(AssemblyEndpoints, "addAssemblyFeature")
             .mockResolvedValue({ feature: { featureId: "f1" } });
@@ -641,7 +645,7 @@ describe("insertable routes", () => {
 
     it("answers Onshape refusing the replicate, with nothing more inserted", async () => {
         await seedFastenable(true);
-        mockGather({ JH1: 1, JH2: 1, JH3: 1 });
+        mockIndexHoles({ JH1: 1, JH2: 1, JH3: 1 });
         const addFeature = vi
             .spyOn(AssemblyEndpoints, "addAssemblyFeature")
             .mockResolvedValueOnce({ feature: { featureId: "mate" } })
