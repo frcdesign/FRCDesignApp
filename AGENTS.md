@@ -147,8 +147,8 @@ Update the document in the same commit when a change:
 - adds, renames or removes an environment variable or binding;
 - changes who may do something (a guard);
 - moves or renames a file a document names (`npm run check:docs` fails on these);
-- adds, rewords or removes a string the user sees, or a function its code map
-  lists;
+- adds, rewords or removes a string the user sees, or a function, interface,
+  type or enum its code map lists;
 - breaks or replaces an invariant. That is a design change: say so in the
   commit message, rewrite the invariant, and add the reason under **Decisions**.
 

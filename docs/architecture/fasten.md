@@ -22,6 +22,37 @@ shared with Quick fastener
 const useOnshapeSelection: UseBoundStore<StoreApi<SelectionState>>;
 function toSelectedEntities(selections: OnshapeSelection[]): SelectedEntity[];
 function QueryList(props: QueryListProps): ReactNode;
+
+interface SelectionState {
+    /** The query list taking picks; none takes them when absent. */
+    focused?: string;
+    receive: (picked: OnshapeSelection[]) => void;
+    focus: (listId: string | undefined) => void;
+}
+
+interface OnshapeSelection {
+    entityType: string;
+    /** Its deterministic id in the Part Studio it's from. */
+    selectionId: string;
+    /** The part occurrence it's on, from the assembly down. */
+    occurrencePath: string[];
+}
+
+interface QueryListProps {
+    /** Unique on the page: which list takes picks. */
+    id: string;
+    label: string;
+    /** What to pick, shown while it's focused, and when something else is picked. */
+    prompt: string;
+    entities: OnshapeSelection[];
+    onChange: (entities: OnshapeSelection[]) => void;
+    /** Which picks it takes; the rest are refused. */
+    accepts: (entity: OnshapeSelection) => boolean;
+    /** A row's name; its kind and number by default. */
+    describe?: (entity: OnshapeSelection, index: number) => string;
+    /** Beside a row's name: a status, say. */
+    rowSection?: (entity: OnshapeSelection) => ReactNode;
+}
 ```
 
 `src/frontend/features/insert/fasten-picks.ts`
@@ -31,6 +62,12 @@ const useFastenPicks: UseBoundStore<StoreApi<FastenPicksState>>;
 // Focuses the targets' list while the menu is open.
 function useFastenPicksFromSelection(mode: SelectionMode): void;
 function clearFastenPicks(): void;
+
+interface FastenPicksState {
+    targets: OnshapeSelection[];
+    /** Edges of holes in the faces to leave out; faces only. */
+    excluded: OnshapeSelection[];
+}
 ```
 
 `src/frontend/features/insert/components/fasten-circular-edges-status.tsx`,
@@ -49,6 +86,18 @@ function useInsertMutation(
     insertArgs: InsertArgs
 );
 function useFastenCircularEdgesTip(): (fasten: boolean) => void;
+
+interface FastenCircularEdgesStatusProps {
+    /** Whether an editor allowed the part to replicate. */
+    supportsReplicate: boolean;
+}
+
+interface InsertArgs {
+    /** Whether the part is favorited — see `source` for where the insert began. */
+    isFavorite: boolean;
+    source: InsertSource;
+    isQuickInsert?: boolean;
+}
 ```
 
 `src/backend/features/library/insertables/routes.ts`
@@ -58,8 +107,10 @@ POST /api/add-to-assembly/insertable/:insertableId    inserts, then fastens
 POST /api/toggle-replicate/library/:libraryId/insertable/:insertableId
 ```
 
-`src/backend/features/quick-fastener/picked.ts` and
-`src/backend/features/quick-fastener/index-holes.ts`, shared with Quick fastener
+`src/backend/features/quick-fastener/picked.ts`,
+`src/backend/features/quick-fastener/index-holes.ts`,
+`src/backend/features/quick-fastener/contract.ts` and
+`src/backend/features/quick-fastener/planner.ts`, shared with Quick fastener
 
 ```ts
 const entitySchema: ZodObject<...>;
@@ -72,6 +123,66 @@ async function indexHoles(
     targets: SelectedEntity[],
     excluded: SelectedEntity[]
 ): Promise<IndexedHoles>;
+
+interface SelectedEntity {
+    occurrencePath: string[];
+    /** Its deterministic id in the Part Studio it's from. */
+    entityId: string;
+    entityType: SelectedEntityType;
+}
+
+enum SelectedEntityType {
+    EDGE = "EDGE",
+    FACE = "FACE"
+}
+
+enum SelectionMode {
+    FACES = "faces",
+    LOCATIONS = "locations"
+}
+
+interface PickedEntities {
+    selectionMode: SelectionMode;
+    targets: z.infer<typeof entitySchema>[];
+    excluded: z.infer<typeof entitySchema>[];
+}
+
+interface IndexedHoles {
+    circularEdges: AssemblyCircularEdge[];
+    holes: AssemblyHole[];
+    placed: PlacedScrew[];
+}
+
+interface AssemblyCircularEdge {
+    key: string;
+    occurrencePath: string[];
+    edgeId: string;
+    center: Vec3;
+    /** Unit, out of the part: a fastener goes in against it. */
+    normal: Vec3;
+    radius: number;
+}
+
+interface AssemblyHole {
+    occurrencePath: string[];
+    origin: Vec3;
+    /** Unit. */
+    direction: Vec3;
+    radius: number;
+    /** Along `direction` from `origin`. */
+    start: number;
+    end: number;
+    closedAtStart: boolean;
+    closedAtEnd: boolean;
+    threaded: boolean;
+    majorDiameter?: number;
+    edges: { id: string; at: number }[];
+}
+
+interface PlacedScrew {
+    origin: Vec3;
+    axis: Vec3;
+}
 ```
 
 `src/backend/features/library/insertables/fasten-circular-edges.ts`
@@ -84,6 +195,19 @@ async function fastenToCircularEdges(
     args: FastenToCircularEdgesArgs
 ): Promise<void>;
 function groupBySize(edges: AssemblyCircularEdge[]): AssemblyCircularEdge[][];
+
+interface FastenToCircularEdgesArgs {
+    name: string;
+    /** The instance already inserted, which takes the first edge. */
+    inserted: OnshapeInsertInstancesResponse;
+    /** Inserts one more instance, for an edge no Replicate covers. */
+    insert: () => Promise<OnshapeInsertInstancesResponse>;
+    /** The inserted part's own connector, in the instance at `instancePath`. */
+    fastenQuery: (instancePath: string[]) => object;
+    /** From `indexHoles`, in the order picked. */
+    edges: AssemblyCircularEdge[];
+    replicate: boolean;
+}
 ```
 
 `src/backend/features/quick-fastener/replicate.ts`, shared with Quick fastener
@@ -95,6 +219,16 @@ async function addReplicate(
     assembly: ElementPath,
     args: ReplicateArgs
 ): Promise<void>;
+
+interface ReplicateArgs {
+    name: string;
+    /** The seed's instances, each copied onto every match. */
+    instancePaths: string[][];
+    /** The mate placing the seed, which each copy is placed as. */
+    mateFeatureId: string;
+    /** Each the size of the seed mate's edge. */
+    edges: EdgeReference[];
+}
 ```
 
 `src/backend/lib/onshape/objects/assembly-features.ts`, shared with Quick
@@ -120,9 +254,18 @@ function getFastenQuery(
     path: string[],
     fastenInfo: FastenInfo
 ): object;
+
+type EdgeReference = EntityReference;
+
+interface EntityReference {
+    /** The id Onshape's selection reports, which is the entity's deterministic id. */
+    deterministicId: string;
+    path: string[];
+}
 ```
 
-`src/backend/features/load/parse-fasten.ts` and
+`src/backend/features/load/parse-fasten.ts`,
+`src/backend/features/library/insertables/fasten.ts` and
 `src/backend/features/build-checker/checks.ts`
 
 ```ts
@@ -136,6 +279,24 @@ async function parseFastenInfo(
 ): Promise<FastenInfo>;
 // The Replicate not decided warning.
 function checkInsertableSettings(input: InsertableSettingsInput): BuildIssue[];
+
+interface FastenInfo {
+    mateConnectorId: string;
+    mateLocation: MateLocation;
+    path: string[];
+}
+
+enum MateLocation {
+    Feature = "Feature",
+    Part = "Part",
+    Subassembly = "Subassembly"
+}
+
+interface InsertableSettingsInput {
+    supportsFasten: boolean;
+    /** Undefined until an editor decides. */
+    supportsReplicate?: boolean;
+}
 ```
 
 ## Storage

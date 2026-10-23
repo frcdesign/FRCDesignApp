@@ -33,7 +33,12 @@ would be empty:
    blocks grouped under the file paths they live in, in the order the area's
    main flow runs them. A one-line comment above a signature only where its
    name and types don't say what it is for. Routes are listed as method and
-   path in a `text` block under their file.
+   path in a `text` block under their file. Below the signatures, in the block
+   of the files that define them, the interfaces, types and enums they take
+   and return, and those those refer to, as the code declares them, field
+   comments included, so the map reads without opening the code. A type
+   defined outside the listed files (a library's, Onshape's, another area's)
+   is named, not copied.
 3. **Storage** — every table, KV store, R2 prefix and browser store it touches,
    with lifetimes.
 4. **Flows** — the paths through the code, as numbered steps. A diagram only

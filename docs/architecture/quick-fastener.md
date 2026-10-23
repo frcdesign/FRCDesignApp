@@ -44,6 +44,39 @@ const useOnshapeSelection: UseBoundStore<StoreApi<SelectionState>>;
 function onPick(listId: string, handler: PickHandler): () => void;
 // Onshape's query parameter, for entities picked in the Onshape window.
 function QueryList(props: QueryListProps): ReactNode;
+
+interface OnshapeSelection {
+    entityType: string;
+    /** Its deterministic id in the Part Studio it's from. */
+    selectionId: string;
+    /** The part occurrence it's on, from the assembly down. */
+    occurrencePath: string[];
+}
+
+interface SelectionState {
+    /** The query list taking picks; none takes them when absent. */
+    focused?: string;
+    receive: (picked: OnshapeSelection[]) => void;
+    focus: (listId: string | undefined) => void;
+}
+
+type PickHandler = (picked: OnshapeSelection[]) => void;
+
+interface QueryListProps {
+    /** Unique on the page: which list takes picks. */
+    id: string;
+    label: string;
+    /** What to pick, shown while it's focused, and when something else is picked. */
+    prompt: string;
+    entities: OnshapeSelection[];
+    onChange: (entities: OnshapeSelection[]) => void;
+    /** Which picks it takes; the rest are refused. */
+    accepts: (entity: OnshapeSelection) => boolean;
+    /** A row's name; its kind and number by default. */
+    describe?: (entity: OnshapeSelection, index: number) => string;
+    /** Beside a row's name: a status, say. */
+    rowSection?: (entity: OnshapeSelection) => ReactNode;
+}
 ```
 
 `src/frontend/features/quick-fastener/parameters.ts`,
@@ -60,6 +93,53 @@ const useQuickFastenerStore: UseBoundStore<StoreApi<QuickFastenerState>>;
 function settleChoices(choices: Choices): SettledChoices;
 // The run's options, its quantities in metres.
 function fastenerOptions(settled: SettledChoices): FastenerOptions;
+
+interface QuickFastenerState extends Choices {
+    targets: OnshapeSelection[];
+    excluded: OnshapeSelection[];
+    setForm: (id: FormInput, value: string) => void;
+    setMode: (mode: FastenerMode) => void;
+    setScrew: (id: string, value: string) => void;
+    setPart: (part: Part, id: string, value: string) => void;
+    setAdded: (part: Part, added: boolean) => void;
+    setTargets: (targets: OnshapeSelection[]) => void;
+    setExcluded: (excluded: OnshapeSelection[]) => void;
+}
+
+interface Choices {
+    /** Quick fastener's own parameters. */
+    form: PartialSelection;
+    mode: FastenerMode;
+    screw: PartialSelection;
+    parts: Record<Part, PartialSelection>;
+    added: Record<Part, boolean>;
+}
+
+interface SettledChoices {
+    form: Selection;
+    mode: FastenerMode;
+    screw: ScrewChoice;
+    /** Undefined where nobody makes the part in the screw's size. */
+    parts: Record<Part, PartChoice | undefined>;
+    /** Which parts go in: added, made in the size, and allowed by the rest. */
+    added: Record<Part, boolean>;
+}
+
+enum FormInput {
+    SELECT_BY = "selectBy",
+    PROGRAM = "program",
+    STOP = "stop",
+    MAX_LENGTH = "maxLength",
+    MAX_GAP = "maxGap",
+    MAX_THREAD_DEPTH = "maxThreadDepth",
+    REPLICATE = "replicate"
+}
+
+enum Part {
+    SCREW_WASHER = "screwWasher",
+    NUT = "nut",
+    NUT_WASHER = "nutWasher"
+}
 ```
 
 `src/frontend/features/quick-fastener/components/quick-fastener-panel.tsx`,
@@ -74,6 +154,25 @@ function QuickFastenerPanel(props: QuickFastenerPanelProps): ReactNode;
 function FastenerOptionsForm(props: FastenerOptionsFormProps): ReactNode;
 // Onshape's parameter groups, opened or driven by a checkbox.
 function ParameterGroup(props: ParameterGroupProps): ReactNode;
+
+interface QuickFastenerPanelProps {
+    assembly: ElementPath;
+}
+
+interface FastenerOptionsFormProps {
+    settled: SettledChoices;
+}
+
+interface ParameterGroupProps {
+    title: string;
+    /**
+     * A checkbox in its header, which shows its rows while ticked, as
+     * Onshape's boolean-driven groups do; without one, it opens and closes.
+     */
+    checked?: boolean;
+    onCheckedChange?: (checked: boolean) => void;
+    children?: ReactNode;
+}
 ```
 
 `src/frontend/features/quick-fastener/queries.ts`
@@ -102,6 +201,162 @@ async function getJobStatus(
     assembly: ElementPath
 ): Promise<FastenerJobStatus>;
 function pendingTasks(options: FastenerOptions): FastenerTask[];
+
+interface FastenerOptions {
+    program: Program;
+    mode: FastenerMode;
+    /** Its length is the preset's, and automatic picks one in its place. */
+    screw: ScrewChoice;
+    /** Under the head; none when absent. */
+    screwWasher?: PartChoice;
+    /** Where the screw comes out the far side; none when absent. */
+    nut?: PartChoice;
+    /** Under the nut; only with one. */
+    nutWasher?: PartChoice;
+    stop: StopCondition;
+    /** Metres; what `StopCondition.MAX_LENGTH` stops at. */
+    maxLength: number;
+    /** Metres; the widest gap `StopCondition.FIRST_GAP` reaches across. */
+    maxGap: number;
+    /** Metres; the farthest an automatic screw goes past where threads, or a blind hole, start. */
+    maxThreadDepth: number;
+    /** One stack of parts per alike holes, with a Replicate onto the rest, rather than a stack in each. */
+    replicate: boolean;
+}
+
+enum FastenerMode {
+    /** Long enough for each hole, from what it goes through. */
+    AUTOMATIC = "automatic",
+    /** One length, wherever it's put. */
+    PRESET = "preset"
+}
+
+enum StopCondition {
+    /** Through every hole on the axis, gaps and all, up to the maximum length. */
+    MAX_LENGTH = "max-length",
+    /** At the first gap between parts wider than the maximum gap. */
+    FIRST_GAP = "first-gap"
+}
+
+interface FastenerJobStatus {
+    state: FastenerJobState;
+    jobId?: string;
+    tasks?: FastenerTask[];
+    /** Each hole picked, and what it got or why it got nothing, once indexed. */
+    holes?: PlannedHole[];
+    result?: FastenerJobResult;
+    /** Why the whole run stopped, when it did. Written for the user. */
+    error?: string;
+    /** When it ended, in epoch milliseconds. */
+    finishedAt?: number;
+}
+
+interface FastenerTask {
+    action: FastenerTaskAction;
+    state: FastenerTaskState;
+    /** Why it failed, written for the user. */
+    reason?: string;
+}
+
+enum FastenerJobState {
+    /** No run has been started in this assembly, or the last one aged out. */
+    NONE = "none",
+    RUNNING = "running",
+    COMPLETE = "complete",
+    FAILED = "failed"
+}
+
+interface PlannedHole {
+    /** The circular edge's occurrence path and edge id, joined. */
+    key: string;
+    status: HoleStatus;
+    /** Why it can't be fastened, in words, when it can't. */
+    reason?: string;
+    end?: HoleEnd;
+    /** Metres, from the circular edge to where the stack ends. */
+    depth?: number;
+    screw?: ScrewChoice;
+    screwWasher?: PartChoice;
+    nut?: PartChoice;
+    nutWasher?: PartChoice;
+}
+
+interface FastenerJobResult {
+    /** Parts inserted. */
+    inserted: number;
+    /** Parts fastened to where they sit. */
+    fastened: number;
+    /** Holes a Replicate filled, rather than parts inserted in each. */
+    replicated: number;
+}
+
+enum FastenerTaskAction {
+    INDEX = "index",
+    INSERT = "insert",
+    FASTEN = "fasten",
+    /** Only with `FastenerOptions.replicate`. */
+    REPLICATE = "replicate"
+}
+
+enum FastenerTaskState {
+    PENDING = "pending",
+    RUNNING = "running",
+    DONE = "done",
+    FAILED = "failed",
+    /** Not tried, since an earlier step failed or left it nothing to do. */
+    SKIPPED = "skipped"
+}
+
+enum HoleStatus {
+    READY = "ready",
+    /** A library screw is already in it. */
+    FASTENED = "fastened",
+    /** Nothing in the catalog fits, or reaches far enough within the maximum length. */
+    NO_FIT = "no-fit"
+}
+
+enum HoleEnd {
+    /** Out the far side, where a nut goes. */
+    THROUGH = "through",
+    /** In threads. */
+    TAPPED = "tapped",
+    /** At the bottom of a hole without threads. */
+    BLIND = "blind"
+}
+
+interface QuickFastenerIn {
+    assembly: ElementPath;
+    selectionMode: SelectionMode;
+    /** Faces to fasten every hole in, or the holes' edges, by `selectionMode`. */
+    targets: SelectedEntity[];
+    /** The edges of holes in `targets` to leave out; faces only. */
+    excluded: SelectedEntity[];
+    options: FastenerOptions;
+}
+
+enum SelectionMode {
+    FACES = "faces",
+    LOCATIONS = "locations"
+}
+
+interface SelectedEntity {
+    occurrencePath: string[];
+    /** Its deterministic id in the Part Studio it's from. */
+    entityId: string;
+    entityType: SelectedEntityType;
+}
+
+enum SelectedEntityType {
+    EDGE = "EDGE",
+    FACE = "FACE"
+}
+
+enum FastenerJobOutcome {
+    SUCCESS = "success",
+    /** Some holes or parts weren't done, after something was. */
+    PARTIAL = "partial",
+    FAILED = "failed"
+}
 ```
 
 `src/backend/features/quick-fastener/workflow.ts`
@@ -112,6 +367,12 @@ class QuickFastenerWorkflow extends WorkflowEntrypoint<
     AppBindings,
     FastenerJobParams
 > {}
+
+interface FastenerJobParams {
+    /** Whose Onshape session the run borrows; see the load workflow. */
+    sessionId: string;
+    request: QuickFastenerIn;
+}
 ```
 
 `src/backend/features/quick-fastener/index-holes.ts`,
@@ -146,6 +407,40 @@ async function scanStudio(
     source: StudioSource,
     selection: StudioSelection
 ): Promise<StudioScan>;
+
+interface IndexedHoles {
+    circularEdges: AssemblyCircularEdge[];
+    holes: AssemblyHole[];
+    placed: PlacedScrew[];
+}
+
+type ElementMicroversions = Map<string, string>;
+
+interface PartOccurrence {
+    path: string[];
+    transform: number[];
+    partId: string;
+    documentId: string;
+    elementId: string;
+    isStandardContent: boolean;
+    source: StudioSource;
+}
+
+interface StudioSource {
+    /** A version, a document microversion, or a workspace with `elementMicroversionId`. */
+    path: ElementPath;
+    configuration?: string;
+    elementMicroversionId?: string;
+    /** What pins it: the same key is always the same geometry. */
+    key: string;
+}
+
+interface StudioSelection {
+    edges: string[];
+    faces: string[];
+}
+
+type StudioScan = z.infer<typeof scanSchema>;
 ```
 
 `src/backend/features/quick-fastener/planner.ts`,
@@ -171,6 +466,84 @@ function studioConfiguration(
     kind: FastenerKind,
     choice: ScrewChoice | PartChoice
 ): Selection;
+
+interface ScrewChoice {
+    vendor: string;
+    size: string;
+    head: string;
+    finish: string;
+    length: string;
+    fullyThreaded: string;
+}
+
+interface PartChoice {
+    vendor: string;
+    size: string;
+    type: string;
+    finish?: string;
+}
+
+enum Program {
+    FRC = "frc",
+    FTC = "ftc"
+}
+
+interface AssemblyCircularEdge {
+    key: string;
+    occurrencePath: string[];
+    edgeId: string;
+    center: Vec3;
+    /** Unit, out of the part: a fastener goes in against it. */
+    normal: Vec3;
+    radius: number;
+}
+
+interface AssemblyHole {
+    occurrencePath: string[];
+    origin: Vec3;
+    /** Unit. */
+    direction: Vec3;
+    radius: number;
+    /** Along `direction` from `origin`. */
+    start: number;
+    end: number;
+    closedAtStart: boolean;
+    closedAtEnd: boolean;
+    threaded: boolean;
+    majorDiameter?: number;
+    edges: { id: string; at: number }[];
+}
+
+interface PlacedScrew {
+    origin: Vec3;
+    axis: Vec3;
+}
+
+interface HolePlan {
+    planned: PlannedHole;
+    circularEdge: AssemblyCircularEdge;
+    /** Where the nut seats, out the far side, and the edge it's fastened to. */
+    exit?: { point: Vec3; edge: MateEdge; radius: number };
+}
+
+interface CatalogLength {
+    id: string;
+    name: string;
+    length: number;
+    /** Whether it's sold fully threaded as well as partly, so the studio asks which. */
+    fullThreadChoice: boolean;
+}
+
+enum FastenerKind {
+    SCREW = "screw",
+    WASHER = "washer",
+    NUT = "nut"
+}
+
+interface MateEdge {
+    occurrencePath: string[];
+    edgeId: string;
+}
 ```
 
 `src/backend/features/quick-fastener/insert.ts`
@@ -204,6 +577,27 @@ function partMate(
 ): object | undefined;
 // The screw stack goes on the rest's circular edges; the nut stack, their far edges.
 function stackTargets(group: HolePlan[], stack: PartStack): EdgeReference[];
+
+interface PartPlacement {
+    kind: FastenerKind;
+    /** The hole it's in, by its plan's key. */
+    hole: string;
+    stack: PartStack;
+    /** The studio's overrides of its defaults. */
+    configuration: Selection;
+    transform: number[];
+    seat: PartSeat;
+    name: string;
+}
+
+enum PartStack {
+    /** The screw and the washer under its head, on the hole's circular edge. */
+    SCREW = "screw",
+    /** The nut and its washer, on the far side's edge. */
+    NUT = "nut"
+}
+
+type PartSeat = { edge: MateEdge } | { washer: number };
 ```
 
 `src/backend/features/quick-fastener/replicate.ts` and
@@ -221,6 +615,24 @@ function fastenMateToCircularEdge(
     query: object,
     edge: EdgeReference
 ): object;
+
+type EdgeReference = EntityReference;
+
+interface EntityReference {
+    /** The id Onshape's selection reports, which is the entity's deterministic id. */
+    deterministicId: string;
+    path: string[];
+}
+
+interface ReplicateArgs {
+    name: string;
+    /** The seed's instances, each copied onto every match. */
+    instancePaths: string[][];
+    /** The mate placing the seed, which each copy is placed as. */
+    mateFeatureId: string;
+    /** Each the size of the seed mate's edge. */
+    edges: EdgeReference[];
+}
 ```
 
 `src/backend/features/quick-fastener/failures.ts`
@@ -251,6 +663,14 @@ function LastRunCallout(props: LastRunCalloutProps): ReactNode;
 function JobDetails(props: JobDetailsProps): ReactNode;
 // A toast when a run finishes, from anywhere in the app.
 function useFastenerJobToasts(): void;
+
+interface LastRunCalloutProps {
+    assembly: ElementPath;
+}
+
+interface JobDetailsProps {
+    assembly: ElementPath;
+}
 ```
 
 `src/frontend/routes/app/quick-fastener.tsx` is the route, with a notice
