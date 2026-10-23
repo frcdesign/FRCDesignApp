@@ -1,4 +1,4 @@
-/* Synced from robot-education/robot-code@20a5d8bf6b5cb208caee7b5e9e90aff6b6390d1d by `npm run sync:generated-parts` -- DO NOT EDIT */
+/* Synced from robot-education/robot-code@22a6ccd745cf1b8ac5ff7ca7ac640ef514d07278 by `npm run sync:generated-parts` -- DO NOT EDIT */
 
 export const CATALOG = {
     source: "featurescripts/fasteners/fastenerTables.py",
@@ -7150,7 +7150,7 @@ export const CATALOG = {
             size: "NO_6_32",
             type: "NYLOCK",
             acrossFlats: 0.0079375,
-            height: 0.0043688
+            height: 0.004365625
         },
         {
             vendor: "GENERIC",
@@ -7164,14 +7164,14 @@ export const CATALOG = {
             size: "NO_6_32",
             type: "HEX",
             acrossFlats: 0.0079375,
-            height: 0.0027686
+            height: 0.002778125
         },
         {
             vendor: "GENERIC",
             size: "NO_6_32",
             type: "THIN_HEX",
-            acrossFlats: 0.0079375,
-            height: 0.0019812
+            acrossFlats: 0.00635,
+            height: 0.00238125
         },
         {
             vendor: "GENERIC",
@@ -7206,14 +7206,14 @@ export const CATALOG = {
             size: "NO_10_32",
             type: "NYLOCK",
             acrossFlats: 0.009525,
-            height: 0.0059944
+            height: 0.005953125
         },
         {
             vendor: "GENERIC",
             size: "NO_10_32",
             type: "THIN_NYLOCK",
             acrossFlats: 0.009525,
-            height: 0.0039624
+            height: 0.004365625
         },
         {
             vendor: "GENERIC",
@@ -7255,7 +7255,7 @@ export const CATALOG = {
             size: "QUARTER_20",
             type: "SQUARE",
             acrossFlats: 0.0111125,
-            height: 0.0055626
+            height: 0.00555625
         },
         {
             vendor: "MCMASTER",
@@ -7298,7 +7298,7 @@ export const CATALOG = {
             size: "NO_6_32",
             type: "NYLOCK",
             acrossFlats: 0.0079375,
-            height: 0.0043688,
+            height: 0.004365625,
             partNumber: "90631A007"
         },
         {
@@ -7314,15 +7314,15 @@ export const CATALOG = {
             size: "NO_6_32",
             type: "HEX",
             acrossFlats: 0.0079375,
-            height: 0.0027686,
+            height: 0.002778125,
             partNumber: "90480A007"
         },
         {
             vendor: "MCMASTER",
             size: "NO_6_32",
             type: "THIN_HEX",
-            acrossFlats: 0.0079375,
-            height: 0.0019812,
+            acrossFlats: 0.00635,
+            height: 0.00238125,
             partNumber: "90760A007"
         },
         {
@@ -7366,7 +7366,7 @@ export const CATALOG = {
             size: "NO_10_32",
             type: "NYLOCK",
             acrossFlats: 0.009525,
-            height: 0.0059944,
+            height: 0.005953125,
             partNumber: "90631A411",
             url: "https://www.mcmaster.com/90631A411/"
         },
@@ -7375,7 +7375,7 @@ export const CATALOG = {
             size: "NO_10_32",
             type: "THIN_NYLOCK",
             acrossFlats: 0.009525,
-            height: 0.0039624,
+            height: 0.004365625,
             partNumber: "90633A411",
             url: "https://www.mcmaster.com/90633A411/"
         },
@@ -7429,7 +7429,7 @@ export const CATALOG = {
             size: "QUARTER_20",
             type: "SQUARE",
             acrossFlats: 0.0111125,
-            height: 0.0055626,
+            height: 0.00555625,
             partNumber: "90043A029",
             url: "https://www.mcmaster.com/90043A029/"
         }
