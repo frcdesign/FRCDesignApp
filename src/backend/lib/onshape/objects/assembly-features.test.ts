@@ -2,10 +2,10 @@ import { describe, expect, it } from "vitest";
 import { replicateFeature } from "./assembly-features";
 
 describe("replicateFeature", () => {
-    it("matches edges on faces as Onshape answers a Replicate doing so", () => {
-        const feature = replicateFeature("Replicate", [["seed"]], "mate", {
-            faces: [{ deterministicId: "JNO", path: ["plate"] }]
-        }) as { featureType: string; parameters: object[] };
+    it("matches individual edges", () => {
+        const feature = replicateFeature("Replicate", [["seed"]], "mate", [
+            { deterministicId: "JNO", path: ["plate"] }
+        ]) as { featureType: string; parameters: object[] };
 
         expect(feature.featureType).toBe("replicate");
         expect(feature.parameters).toEqual([
@@ -33,10 +33,10 @@ describe("replicateFeature", () => {
             }),
             expect.objectContaining({
                 parameterId: "edgeTargetType",
-                value: "SAME_FACE"
+                value: "INDIVIDUAL"
             }),
             expect.objectContaining({
-                parameterId: "targetBoundingFaces",
+                parameterId: "targetEdges",
                 queries: [
                     expect.objectContaining({
                         btType: "BTMIndividualQueryWithOccurrence-811",

@@ -33,4 +33,4 @@ export function isConsistentPick(body: PickedEntities): boolean {
 }
 
 export const INCONSISTENT_PICK_MESSAGE =
-    "Faces fasten every hole in them, less the edges excluded; circular edges are fastened alone.";
+    "Select either faces or circular edges to fasten to, not both.";

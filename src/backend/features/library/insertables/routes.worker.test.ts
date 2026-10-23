@@ -596,7 +596,7 @@ describe("insertable routes", () => {
         expect(AssemblyEndpoints.addElementToAssembly).not.toHaveBeenCalled();
     });
 
-    it("fastens and replicates once per edge diameter", async () => {
+    it("fastens and replicates once per edge size, onto each edge alone", async () => {
         await seedFastenable(true);
         mockGather({ JH1: 0.0025, JH2: 0.004, JH3: 0.0025000000001 });
         const addFeature = vi
@@ -618,6 +618,7 @@ describe("insertable routes", () => {
         const features = addFeature.mock.calls.map((call) =>
             JSON.stringify(call[2])
         );
+        expect(features[1]).toContain('"parameterId":"targetEdges"');
         expect(features[1]).toContain("JH3");
         expect(features[1]).not.toContain("JH1");
         expect(features[2]).toContain("JH2");

@@ -46,7 +46,7 @@ export function useFastenCircularEdgesTip(): (fasten: boolean) => void {
             }
             updateUiState({ fastenCircularEdgesTipCount: shown + 1 });
             showTipToast(
-                "Tip: select circular edges in Onshape before you insert and fasten, and the part is fastened to each of them.",
+                "Tip: You can select circular edges in Onshape before you insert and fasten to automatically fasten to each one.",
                 "fasten-circular-edges-tip"
             );
         },

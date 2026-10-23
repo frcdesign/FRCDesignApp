@@ -7,7 +7,6 @@ import { type OnshapeInsertInstancesResponse } from "../../../lib/onshape/types"
 import { type AssemblyCircularEdge } from "../../quick-fastener/planner";
 import {
     addReplicate,
-    replicateMatch,
     sameRadius,
     toEdgeReference
 } from "../../quick-fastener/replicate";
@@ -26,9 +25,9 @@ interface FastenToCircularEdgesArgs {
 }
 
 /**
- * A Replicate only matches edges the diameter of its seed's, so with
- * `replicate` each diameter gets its own fastened instance and Replicate;
- * without, each edge gets an instance. Inserts nothing for the first edge;
+ * A Replicate only matches edges the size of its seed's, so with `replicate`
+ * each size gets its own fastened instance and Replicate; without, each edge
+ * gets an instance. Inserts nothing for the first edge;
  * the caller has already.
  */
 export async function fastenToCircularEdges(
@@ -38,7 +37,7 @@ export async function fastenToCircularEdges(
 ): Promise<void> {
     const { name, inserted, insert, fastenQuery, replicate } = args;
     const groups = replicate
-        ? groupByDiameter(args.edges)
+        ? groupBySize(args.edges)
         : args.edges.map((edge) => [edge]);
 
     // Serially: each is a feature-list edit, and Onshape rejects one that races another.
@@ -62,7 +61,7 @@ export async function fastenToCircularEdges(
                 name: `Replicate ${name}`,
                 instancePaths: [instancePath],
                 mateFeatureId: mate.feature.featureId,
-                match: replicateMatch(group, args.edges)
+                edges: rest.map(toEdgeReference)
             });
         }
     }
@@ -74,8 +73,8 @@ export function getInstancePath(
     return inserted.insertInstanceResponses?.[0]?.occurrences?.[0]?.path ?? [];
 }
 
-/** In the order picked, each diameter where it first appears. */
-export function groupByDiameter(
+/** In the order picked, each size where it first appears. */
+export function groupBySize(
     edges: AssemblyCircularEdge[]
 ): AssemblyCircularEdge[][] {
     const groups: AssemblyCircularEdge[][] = [];

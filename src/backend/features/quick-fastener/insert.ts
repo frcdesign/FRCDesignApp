@@ -13,8 +13,7 @@ import { PartType } from "../../lib/onshape/endpoints/documents";
 import {
     type EdgeReference,
     fastenMateToCircularEdge,
-    partStudioMateConnectorQuery,
-    type ReplicateMatch
+    partStudioMateConnectorQuery
 } from "../../lib/onshape/objects/assembly-features";
 import { type ElementPath } from "../../lib/onshape/path";
 import { type Selection } from "../configurations/contract";
@@ -22,11 +21,7 @@ import { encodeConfiguration } from "../configurations/utils";
 import { getWasher } from "./catalog";
 import { HoleStatus } from "./contract";
 import { add, frameTransform, scale, type Vec3 } from "./geometry";
-import {
-    type AssemblyCircularEdge,
-    type HolePlan,
-    type MateEdge
-} from "./planner";
+import { type HolePlan, type MateEdge } from "./planner";
 import { scanStudio, type ScannedParts, type StudioSource } from "./scan";
 import {
     FastenerKind,
@@ -36,7 +31,7 @@ import {
 } from "./studios";
 import { tolerantEquals } from "../configurations/input-parser";
 import { type StudioLocation } from "../generated-parts/studios";
-import { replicateMatch, sameRadius } from "./replicate";
+import { sameRadius, toEdgeReference } from "./replicate";
 
 /** What a part is fastened to: an edge in the assembly, or the top of a washer placed with it. */
 export type PartSeat = { edge: MateEdge } | { washer: number };
@@ -199,34 +194,25 @@ export function replicateGroups(plans: HolePlan[]): HolePlan[][] {
     return groups;
 }
 
-/**
- * What a Replicate of the group's first hole's stack onto the rest matches:
- * the screw's, the circular edges picked; the nut's, the far side's edges,
- * one by one, since no face of them was picked.
- */
-export function stackMatch(
+/** Where a Replicate of the group's first hole's stack goes: the rest's circular edges, or their far edges. */
+export function stackTargets(
     group: HolePlan[],
-    stack: PartStack,
-    all: AssemblyCircularEdge[]
-): ReplicateMatch {
+    stack: PartStack
+): EdgeReference[] {
+    const rest = group.slice(1);
     if (stack === PartStack.SCREW) {
-        return replicateMatch(
-            group.map((plan) => plan.circularEdge),
-            all
-        );
+        return rest.map((plan) => toEdgeReference(plan.circularEdge));
     }
-    return {
-        edges: group.slice(1).flatMap((plan) =>
-            plan.exit
-                ? [
-                      {
-                          deterministicId: plan.exit.edge.edgeId,
-                          path: plan.exit.edge.occurrencePath
-                      }
-                  ]
-                : []
-        )
-    };
+    return rest.flatMap((plan) =>
+        plan.exit
+            ? [
+                  {
+                      deterministicId: plan.exit.edge.edgeId,
+                      path: plan.exit.edge.occurrencePath
+                  }
+              ]
+            : []
+    );
 }
 
 export function studioLocation(kind: FastenerKind): StudioLocation {

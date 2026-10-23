@@ -202,12 +202,8 @@ function partMate(
     paths: (string[] | undefined)[],
     washerEdges: Record<number, string>
 ): object | undefined;
-// The screw stack's matches are the picked edges; the nut stack's, the far edges.
-function stackMatch(
-    group: HolePlan[],
-    stack: PartStack,
-    all: AssemblyCircularEdge[]
-): ReplicateMatch;
+// The screw stack goes on the rest's circular edges; the nut stack, their far edges.
+function stackTargets(group: HolePlan[], stack: PartStack): EdgeReference[];
 ```
 
 `src/backend/features/quick-fastener/replicate.ts` and
@@ -215,10 +211,6 @@ function stackMatch(
 fasten
 
 ```ts
-function replicateMatch(
-    group: AssemblyCircularEdge[],
-    all: AssemblyCircularEdge[]
-): ReplicateMatch;
 async function addReplicate(
     onshapeApi: OnshapeApi,
     assembly: ElementPath,
@@ -422,11 +414,9 @@ skipped.
    one hole, one at a time, a Replicate per stack of the first hole's parts
    (`replicate-{n}-screw`, then `replicate-{n}-nut`), each seeded with the
    stack's parts and placed as the mate holding its bottom part on its edge
-   (`addReplicate`). The screw stack's matches the faces the group's circular
-   edges are on when the group is every edge of its size on whole picked faces
-   (none skipped, none planned otherwise), and the edges otherwise
-   (`replicateMatch`); the nut stack's matches the group's far edges one by
-   one (`stackMatch`). Onshape refusing one fails the step, with Onshape's
+   (`addReplicate`). Each matches individual edges (`stackTargets`): the
+   screw stack's, the rest of the group's circular edges; the nut stack's,
+   their far edges. Onshape refusing one fails the step, with Onshape's
    message, and the Replicates after it aren't added.
 5. **Finish** (`finish-job`): stores `COMPLETE` or `FAILED`, with how many parts
    were inserted and fastened, how many holes its Replicates filled, and when.
@@ -593,8 +583,9 @@ app.
   someone using one vendor's screws may buy another's nuts. Under a Generic
   screw the parts are Generic, and their Vendor isn't asked.
 - **Replicate is off by default.** Onshape publishes no spec for Replicate;
-  `replicateFeature` is copied from a Replicate matching edges on a face, and
-  matching individual edges is unconfirmed. It shares insert and fasten's
+  `replicateFeature` is copied from a Replicate matching edges on a face, with
+  the individual edges' scope, which is unconfirmed. Every Replicate matches
+  individual edges, never a face, as insert and fasten's do. It shares insert and fasten's
   Replicate and mate code, so one fix there fixes both.
 - **No fallbacks.** Onshape refusing a write fails its step with Onshape's
   message rather than being worked around.

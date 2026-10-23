@@ -176,24 +176,4 @@ describe("withoutExcluded", () => {
             ).map((each) => each.key)
         ).toEqual(["a"]);
     });
-
-    it("leaves a face whole only while none of its holes is skipped", () => {
-        const onFace = (key: string, face: string) => ({
-            key,
-            occurrencePath: ["plate"],
-            edgeId: key,
-            center: [0, 0, 0] as [number, number, number],
-            normal: [0, 0, 1] as [number, number, number],
-            radius: 1,
-            face
-        });
-        const left = withoutExcluded(
-            [onFace("a", "F"), onFace("b", "F"), onFace("c", "G")],
-            [onFace("b", "F")]
-        );
-        expect(left.map((each) => [each.key, each.face])).toEqual([
-            ["a", undefined],
-            ["c", "G"]
-        ]);
-    });
 });

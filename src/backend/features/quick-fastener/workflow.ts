@@ -39,7 +39,7 @@ import {
     partMate,
     placements,
     replicateGroups,
-    stackMatch,
+    stackTargets,
     washerTopEdges
 } from "./insert";
 import { reportJob } from "./jobs";
@@ -178,7 +178,6 @@ async function runSteps(ctx: RunContext, request: QuickFastenerIn) {
     if (!request.options.replicate) {
         return;
     }
-    const all = plans.map((plan) => plan.circularEdge);
     await runTask(ctx, FastenerTaskAction.REPLICATE, async (run) => {
         for (const [index, group] of groups.entries()) {
             const [seed, ...rest] = group;
@@ -217,7 +216,7 @@ async function runSteps(ctx: RunContext, request: QuickFastenerIn) {
                             name: "Quick fastener replicate",
                             instancePaths,
                             mateFeatureId,
-                            match: stackMatch(group, stack, all)
+                            edges: stackTargets(group, stack)
                         });
                         return true;
                     }

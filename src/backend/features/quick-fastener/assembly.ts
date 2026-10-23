@@ -251,10 +251,7 @@ export function toAssemblyCircularEdges(
                     occurrence.transform,
                     circularEdge.normal
                 ),
-                radius: circularEdge.radius,
-                ...(entity.entityType === SelectedEntityType.FACE && {
-                    face: entity.entityId
-                })
+                radius: circularEdge.radius
             });
         }
     }
@@ -286,36 +283,18 @@ export function toAssemblyHoles(
     });
 }
 
-function faceKey(circularEdge: AssemblyCircularEdge): string | undefined {
-    return circularEdge.face === undefined
-        ? undefined
-        : `${pathKey(circularEdge.occurrencePath)}|${circularEdge.face}`;
-}
-
-/**
- * Circular edges, less those keyed in `excluded`, each once. A face missing
- * one isn't whole any more, so its edges lose their `face`.
- */
+/** Circular edges, less those keyed in `excluded`, each once. */
 export function withoutExcluded(
     circularEdges: AssemblyCircularEdge[],
     excluded: AssemblyCircularEdge[]
 ): AssemblyCircularEdge[] {
     const left = new Set(excluded.map((circularEdge) => circularEdge.key));
-    const partial = new Set(
-        circularEdges
-            .filter((circularEdge) => left.has(circularEdge.key))
-            .map(faceKey)
-    );
     const seen = new Set<string>();
-    return circularEdges.flatMap((circularEdge) => {
+    return circularEdges.filter((circularEdge) => {
         if (left.has(circularEdge.key) || seen.has(circularEdge.key)) {
-            return [];
+            return false;
         }
         seen.add(circularEdge.key);
-        return [
-            partial.has(faceKey(circularEdge))
-                ? { ...circularEdge, face: undefined }
-                : circularEdge
-        ];
+        return true;
     });
 }

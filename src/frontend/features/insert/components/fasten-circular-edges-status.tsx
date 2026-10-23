@@ -141,7 +141,7 @@ export function FastenCircularEdgesStatus(
                 {canReplicate && (
                     <InfoCheckbox
                         label="Replicate"
-                        info="Insert one part per hole diameter and replicate it onto the other holes of that diameter, rather than inserting a part for each."
+                        info="Insert one part and replicate it onto the other holes, rather than inserting a part for each."
                         checked={replicate}
                         onChange={(checked) =>
                             updateUiState({ replicate: checked })
@@ -163,7 +163,7 @@ function describeFasten(
             return "Select faces to automatically fasten this part to every hole in them.";
         }
         return replicate
-            ? "One part will be fastened per hole diameter and replicated onto the other holes of that diameter."
+            ? "A part will be fastened to a hole and replicated onto every other hole in the selected faces."
             : "A part will be inserted and fastened to every hole in the selected faces.";
     }
     if (count === 0) {
@@ -173,6 +173,6 @@ function describeFasten(
         return "The part will be fastened to the selected edge.";
     }
     return replicate
-        ? "One part will be fastened per edge diameter and replicated onto the other edges of that diameter."
+        ? "A part will be fastened to an edge and replicated onto the rest."
         : "A part will be inserted and fastened to each selected edge.";
 }

@@ -77,25 +77,18 @@ async function gather(
 `src/backend/features/library/insertables/fasten-circular-edges.ts`
 
 ```ts
-// One instance per edge, or per diameter with a Replicate onto the rest.
+// One instance per edge, or per edge size with a Replicate onto the rest.
 async function fastenToCircularEdges(
     onshapeApi: OnshapeApi,
     targetPath: ElementPath,
     args: FastenToCircularEdgesArgs
 ): Promise<void>;
-function groupByDiameter(
-    edges: AssemblyCircularEdge[]
-): AssemblyCircularEdge[][];
+function groupBySize(edges: AssemblyCircularEdge[]): AssemblyCircularEdge[][];
 ```
 
 `src/backend/features/quick-fastener/replicate.ts`, shared with Quick fastener
 
 ```ts
-// Its faces, when the group is every edge of its size on whole picked faces, else its edges.
-function replicateMatch(
-    group: AssemblyCircularEdge[],
-    all: AssemblyCircularEdge[]
-): ReplicateMatch;
 // Onshape refusing it is an error in the user's words, with Onshape's own.
 async function addReplicate(
     onshapeApi: OnshapeApi,
@@ -114,12 +107,12 @@ function fastenMateToCircularEdge(
     query: object,
     edge: EdgeReference
 ): object;
-type ReplicateMatch = { edges: EdgeReference[] } | { faces: FaceReference[] };
+// Onshape's "Match individual edges".
 function replicateFeature(
     name: string,
     instancePaths: string[][],
     mateFeatureId: string,
-    match: ReplicateMatch
+    edges: EdgeReference[]
 ): object;
 // The inserted part's own connector, as a query on its instance.
 function getFastenQuery(
@@ -198,14 +191,11 @@ function checkInsertableSettings(input: InsertableSettingsInput): BuildIssue[];
       edge, serially. Each mate is the part's connector followed by an implicit
       connector the mate owns, at the edge's centre, so the edge's part stays
       put.
-    - **Replicated**: with Replicate and a part allowed it, `groupByDiameter`
+    - **Replicated**: with Replicate and a part allowed it, `groupBySize`
       groups the edges by radius in the order found. Each group gets one
       instance, the inserted one first, mated to its first edge, and a
-      Replicate onto the rest of the group (`addReplicate`). It matches the
-      group's faces ("Match edges on face") when every edge of the group's
-      size on them is in it, which holds for a face picked with no hole
-      skipped, and so follows the face as holes are added; otherwise it
-      matches the edges one by one (`replicateMatch`).
+      Replicate onto the rest of the group's edges, each matched on its own
+      (`addReplicate`), whether they were picked or came from a face.
 
     Either way it answers `fastenedCount` and records
     `Hint.FASTENED_TO_CIRCULAR_EDGES`.
@@ -227,37 +217,37 @@ function checkInsertableSettings(input: InsertableSettingsInput): BuildIssue[];
 
 ## User-facing strings
 
-| String                                                                                                                             | Where                                                   |
-| ---------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
-| "{n} circular edges selected" / "{n} faces selected"                                                                               | Card title, with picks                                  |
-| "No circular edges selected" / "No faces selected"                                                                                 | Card title, without                                     |
-| "New"                                                                                                                              | Badge beside the title until the hint is seen           |
-| "Select edges to automatically fasten this part to."                                                                               | Card description, circular edges, none picked           |
-| "The part will be fastened to the selected edge."                                                                                  | Card description, one edge                              |
-| "A part will be inserted and fastened to each selected edge."                                                                      | Card description, several edges                         |
-| "One part will be fastened per edge diameter and replicated onto the other edges of that diameter."                                | Card description, several edges, Replicate              |
-| "Select faces to automatically fasten this part to every hole in them."                                                            | Card description, faces, none picked                    |
-| "A part will be inserted and fastened to every hole in the selected faces."                                                        | Card description, faces                                 |
-| "One part will be fastened per hole diameter and replicated onto the other holes of that diameter."                                | Card description, faces, Replicate                      |
-| "Circular edges" / "Faces"                                                                                                         | Mode, and the targets list's label                      |
-| "Holes to skip"                                                                                                                    | Second list's label, faces                              |
-| "Select circular edges to fasten this part to."                                                                                    | Targets list's prompt, in Onshape's bubble and the list |
-| "Select faces to fasten this part to every hole in."                                                                               | Targets list's prompt, faces                            |
-| "Select the edges of holes to leave out."                                                                                          | Holes to skip's prompt                                  |
-| "Click to select"                                                                                                                  | An empty list, not focused (`QueryList`)                |
-| "Replicate"                                                                                                                        | Checkbox                                                |
-| "Insert one part per hole diameter and replicate it onto the other holes of that diameter, rather than inserting a part for each." | Replicate's info tooltip                                |
-| "Successfully inserted {name} and fastened it to {n} circular edges."                                                              | Success toast, with picks                               |
-| "Successfully inserted {name} and created a Fasten mate."                                                                          | Success toast, without                                  |
-| "No circular edges were found in what was selected."                                                                               | Error toast, picks with no circular edge                |
-| "Faces fasten every hole in them, less the edges excluded; circular edges are fastened alone."                                     | Validation error, inconsistent picks                    |
-| "{name} does not support insert and fasten."                                                                                       | Error toast                                             |
-| "Tip: select circular edges in Onshape before you insert and fasten, and the part is fastened to each of them."                    | Tip toast                                               |
-| "Onshape refused the Replicate ({Onshape's message})."                                                                             | Error toast                                             |
-| "Replicate not decided"                                                                                                            | Build check title                                       |
-| "Allow replicate for parts that sit the same way on every circular edge, like bolts, and not for parts with an orientation."       | Build check description                                 |
-| "Replicate"                                                                                                                        | Editor switch label                                     |
-| "Undecided: allow for parts that sit the same way on every edge" / "Allows replicating onto several circular edges"                | Editor switch description, undecided / decided          |
+| String                                                                                                                       | Where                                                   |
+| ---------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| "{n} circular edges selected" / "{n} faces selected"                                                                         | Card title, with picks                                  |
+| "No circular edges selected" / "No faces selected"                                                                           | Card title, without                                     |
+| "New"                                                                                                                        | Badge beside the title until the hint is seen           |
+| "Select edges to automatically fasten this part to."                                                                         | Card description, circular edges, none picked           |
+| "The part will be fastened to the selected edge."                                                                            | Card description, one edge                              |
+| "A part will be inserted and fastened to each selected edge."                                                                | Card description, several edges                         |
+| "A part will be fastened to an edge and replicated onto the rest."                                                           | Card description, several edges, Replicate              |
+| "Select faces to automatically fasten this part to every hole in them."                                                      | Card description, faces, none picked                    |
+| "A part will be inserted and fastened to every hole in the selected faces."                                                  | Card description, faces                                 |
+| "A part will be fastened to a hole and replicated onto every other hole in the selected faces."                              | Card description, faces, Replicate                      |
+| "Circular edges" / "Faces"                                                                                                   | Mode, and the targets list's label                      |
+| "Holes to skip"                                                                                                              | Second list's label, faces                              |
+| "Select circular edges to fasten this part to."                                                                              | Targets list's prompt, in Onshape's bubble and the list |
+| "Select faces to fasten this part to every hole in."                                                                         | Targets list's prompt, faces                            |
+| "Select the edges of holes to leave out."                                                                                    | Holes to skip's prompt                                  |
+| "Click to select"                                                                                                            | An empty list, not focused (`QueryList`)                |
+| "Replicate"                                                                                                                  | Checkbox                                                |
+| "Insert one part and replicate it onto the other holes, rather than inserting a part for each."                              | Replicate's info tooltip                                |
+| "Successfully inserted {name} and fastened it to {n} circular edges."                                                        | Success toast, with picks                               |
+| "Successfully inserted {name} and created a Fasten mate."                                                                    | Success toast, without                                  |
+| "No circular edges were found in what was selected."                                                                         | Error toast, picks with no circular edge                |
+| "Select either faces or circular edges to fasten to, not both."                                                              | Validation error, inconsistent picks                    |
+| "{name} does not support insert and fasten."                                                                                 | Error toast                                             |
+| "Tip: You can select circular edges in Onshape before you insert and fasten to automatically fasten to each one."            | Tip toast                                               |
+| "Onshape refused the Replicate ({Onshape's message})."                                                                       | Error toast                                             |
+| "Replicate not decided"                                                                                                      | Build check title                                       |
+| "Allow replicate for parts that sit the same way on every circular edge, like bolts, and not for parts with an orientation." | Build check description                                 |
+| "Replicate"                                                                                                                  | Editor switch label                                     |
+| "Undecided: allow for parts that sit the same way on every edge" / "Allows replicating onto several circular edges"          | Editor switch description, undecided / decided          |
 
 ## Invariants
 
@@ -269,8 +259,7 @@ function checkInsertableSettings(input: InsertableSettingsInput): BuildIssue[];
   option, and the route ignores `replicate` for any other part.
 - Every edge a Replicate targets has the radius of its seed's edge, within
   Onshape's length tolerance (`sameRadius`); Onshape matches no other.
-- A Replicate matches a face only when every edge of its seed's size on that
-  face is in its group: a face with a hole skipped is matched edge by edge.
+- A Replicate matches individual edges, never a face or a plane.
 - Mates and inserts are added one at a time: Onshape rejects a feature-list edit
   that races another.
 
@@ -300,12 +289,14 @@ function checkInsertableSettings(input: InsertableSettingsInput): BuildIssue[];
   opened can't be taken.
 - **Replicate is copied from Onshape.** Onshape's feature specs omit
   Replicate, so `replicateFeature` is shaped as Onshape answers a Replicate
-  matching edges on a face; the individual edges' `INDIVIDUAL` scope is
-  unconfirmed. Replicate is off by default until both are seen working.
+  matching edges on a face, with the individual edges' `INDIVIDUAL` scope,
+  which is unconfirmed. Replicate is off by default until it's seen working.
 - **No fallbacks.** Onshape refusing a Replicate, or any other write, is an
   error the user sees, not something worked around with other features.
-- **Faces, not planes.** Of Onshape's three ways to match, picked faces map to
-  "Match edges on face"; "Match edges on plane" is never used.
+- **Individual edges only.** Of Onshape's three ways to match, only "Match
+  individual edges" is used, even for a picked face whose every hole is in the
+  group. One way to build a Replicate is simpler to get right than three; a
+  face's Replicate would follow holes added later, which this gives up.
 - **Always a new Replicate.** An insert never edits a Replicate already in the
   assembly; adding edges to an existing one is the user's to do in Onshape.
 - **Radii from the scan.** Onshape's selection messages carry no geometry, so
