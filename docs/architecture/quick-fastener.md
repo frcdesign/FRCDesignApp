@@ -305,20 +305,25 @@ The panel is a `ParameterGrid` of the configuration dialog's own inputs
    its Fully threaded. Then **Replicate**, off by default.
 3. **Add screw washer**, **Add nut** and **Add nut washer**, each a group its
    checkbox shows: the washer or nut studio's parameters but its Size, which is
-   the screw's. Its Vendor offers those making it in that size, and is left out
-   under a Generic screw, whose parts are Generic. A washer's Finish shows where
-   its vendor sells more than black. The screw washer is gone under a
+   the screw's. A washer's Vendor offers those making it in that size, and is
+   left out under a Generic screw, whose washers are Generic; a nut has none,
+   since one vendor makes them all. Like every studio input, a washer's Type and
+   Finish show only where there's a choice. The screw washer is gone under a
    countersunk head, and the nut washer without a nut.
 4. Automatic only: _Stop condition_ (**Max length** with its length, or **First
    gap** with the widest gap to ignore), and _Max thread depth_.
 
 The studios' parameters are their configurations as Onshape answers them,
 parsed by `parseOnshapeConfiguration`, so their options show as the Part
-Studios show them. What's stored is settled on every read (`settleChoices`):
-each studio's selection through `normalizeSelection`, and each part into the
-screw's size from a vendor making it (`settlePart`: the one chosen, else the
-screw's, else Generic). Changing the screw's vendor moves every part to it,
-where it makes them.
+Studios show them. A studio shows an input only where it offers more than one
+option, and leaves out one with a single option anywhere (the nut's Vendor).
+What's stored is settled on every read (`settleChoices`): each studio's
+selection through `normalizeSelection`, then each hidden or left-out input set
+to the one value made there, from the catalog, as the feature resolves it
+(`settle` in `studios.ts`); and each part into the screw's size from a vendor
+making it (`settlePart`: the one chosen, else the screw's, else Generic, else
+the first making it). Changing the screw's vendor moves every part to it, where
+it makes them.
 
 ### Picking what to fasten
 
@@ -580,8 +585,12 @@ app.
   parameters are `ConfigurationParameter`s too, but without conditions: the
   form decides what shows, so a hidden choice keeps its value.
 - **Each part has its own vendor.** Not every vendor sells washers or nuts, and
-  someone using one vendor's screws may buy another's nuts. Under a Generic
-  screw the parts are Generic, and their Vendor isn't asked.
+  someone using one vendor's screws may buy another's washers. Under a Generic
+  screw the washers are Generic, and their Vendor isn't asked.
+- **A hidden input is resolved from the catalog.** Onshape keeps a hidden input
+  at whatever it last held, and `normalizeSelection` sets it to its default,
+  which the vendor may not make; the feature takes the one value made there, and
+  so does `settle`. Inserts send only the inputs shown (`onshapeOverrides`).
 - **Replicate is off by default.** Onshape publishes no spec for Replicate;
   `replicateFeature` is copied from a Replicate matching edges on a face, with
   the individual edges' scope, which is unconfirmed. Every Replicate matches

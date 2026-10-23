@@ -62,7 +62,7 @@ const WASHER: PartChoice = {
 };
 
 const NYLOCK: PartChoice = {
-    vendor: "GENERIC",
+    vendor: "MCMASTER",
     size: "NO_10_32",
     type: "NYLOCK"
 };
@@ -125,7 +125,7 @@ describe("planHoles", () => {
             fullyThreaded: "false"
         });
         expect(planned.nut).toEqual({
-            vendor: "GENERIC",
+            vendor: "MCMASTER",
             size: "NO_10_32",
             type: "NYLOCK"
         });

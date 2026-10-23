@@ -131,7 +131,7 @@ export const BODY: QuickFastenerIn = {
             length: "IN_0_5",
             fullyThreaded: "false"
         },
-        nut: { vendor: "GENERIC", size: "NO_10_32", type: "NYLOCK" },
+        nut: { vendor: "MCMASTER", size: "NO_10_32", type: "NYLOCK" },
         stop: StopCondition.MAX_LENGTH,
         maxLength: DEFAULT_MAX_LENGTH,
         maxGap: DEFAULT_MAX_GAP,

@@ -29,7 +29,7 @@ const PLAN: HolePlan = {
         end: HoleEnd.THROUGH,
         depth: 0.5 * INCH,
         screw: {
-            vendor: "GENERIC",
+            vendor: "MCMASTER",
             size: "NO_10_32",
             head: "BUTTON",
             finish: "BLACK",
@@ -37,7 +37,7 @@ const PLAN: HolePlan = {
             fullyThreaded: "false"
         },
         screwWasher: WASHER,
-        nut: { vendor: "GENERIC", size: "NO_10_32", type: "NYLOCK" },
+        nut: { vendor: "MCMASTER", size: "NO_10_32", type: "NYLOCK" },
         nutWasher: WASHER
     },
     exit: {

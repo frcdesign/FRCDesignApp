@@ -1,4 +1,4 @@
-/* Synced from robot-education/robot-code@22a6ccd745cf1b8ac5ff7ca7ac640ef514d07278 by `npm run sync:generated-parts` -- DO NOT EDIT */
+/* Synced from robot-education/robot-code@4343824d20cdd1dae387d59bdf5919dc2b9c222f by `npm run sync:generated-parts` -- DO NOT EDIT */
 
 export const CATALOG = {
     source: "featurescripts/fasteners/fastenerTables.py",
@@ -7118,146 +7118,6 @@ export const CATALOG = {
     ],
     nuts: [
         {
-            vendor: "GENERIC",
-            size: "NO_4_40",
-            type: "NYLOCK",
-            acrossFlats: 0.00635,
-            height: 0.0035814
-        },
-        {
-            vendor: "GENERIC",
-            size: "NO_4_40",
-            type: "THIN_NYLOCK",
-            acrossFlats: 0.00635,
-            height: 0.0027686
-        },
-        {
-            vendor: "GENERIC",
-            size: "NO_4_40",
-            type: "HEX",
-            acrossFlats: 0.00635,
-            height: 0.0023876
-        },
-        {
-            vendor: "GENERIC",
-            size: "NO_4_40",
-            type: "THIN_HEX",
-            acrossFlats: 0.00635,
-            height: 0.0016002
-        },
-        {
-            vendor: "GENERIC",
-            size: "NO_6_32",
-            type: "NYLOCK",
-            acrossFlats: 0.0079375,
-            height: 0.004365625
-        },
-        {
-            vendor: "GENERIC",
-            size: "NO_6_32",
-            type: "THIN_NYLOCK",
-            acrossFlats: 0.0079375,
-            height: 0.003175
-        },
-        {
-            vendor: "GENERIC",
-            size: "NO_6_32",
-            type: "HEX",
-            acrossFlats: 0.0079375,
-            height: 0.002778125
-        },
-        {
-            vendor: "GENERIC",
-            size: "NO_6_32",
-            type: "THIN_HEX",
-            acrossFlats: 0.00635,
-            height: 0.00238125
-        },
-        {
-            vendor: "GENERIC",
-            size: "NO_8_32",
-            type: "NYLOCK",
-            acrossFlats: 0.00873125,
-            height: 0.0051562
-        },
-        {
-            vendor: "GENERIC",
-            size: "NO_8_32",
-            type: "THIN_NYLOCK",
-            acrossFlats: 0.00873125,
-            height: 0.0035814
-        },
-        {
-            vendor: "GENERIC",
-            size: "NO_8_32",
-            type: "HEX",
-            acrossFlats: 0.00873125,
-            height: 0.003175
-        },
-        {
-            vendor: "GENERIC",
-            size: "NO_8_32",
-            type: "SQUARE",
-            acrossFlats: 0.00873125,
-            height: 0.003175
-        },
-        {
-            vendor: "GENERIC",
-            size: "NO_10_32",
-            type: "NYLOCK",
-            acrossFlats: 0.009525,
-            height: 0.005953125
-        },
-        {
-            vendor: "GENERIC",
-            size: "NO_10_32",
-            type: "THIN_NYLOCK",
-            acrossFlats: 0.009525,
-            height: 0.004365625
-        },
-        {
-            vendor: "GENERIC",
-            size: "NO_10_32",
-            type: "HEX",
-            acrossFlats: 0.009525,
-            height: 0.003175
-        },
-        {
-            vendor: "GENERIC",
-            size: "NO_10_32",
-            type: "SQUARE",
-            acrossFlats: 0.009525,
-            height: 0.003175
-        },
-        {
-            vendor: "GENERIC",
-            size: "QUARTER_20",
-            type: "NYLOCK",
-            acrossFlats: 0.0111125,
-            height: 0.0079248
-        },
-        {
-            vendor: "GENERIC",
-            size: "QUARTER_20",
-            type: "THIN_NYLOCK",
-            acrossFlats: 0.0111125,
-            height: 0.0051562
-        },
-        {
-            vendor: "GENERIC",
-            size: "QUARTER_20",
-            type: "HEX",
-            acrossFlats: 0.0111125,
-            height: 0.0055626
-        },
-        {
-            vendor: "GENERIC",
-            size: "QUARTER_20",
-            type: "SQUARE",
-            acrossFlats: 0.0111125,
-            height: 0.00555625
-        },
-        {
             vendor: "MCMASTER",
             size: "NO_4_40",
             type: "NYLOCK",
@@ -7604,6 +7464,66 @@ export const CATALOG = {
             outerDiameter: 0.009525,
             thickness: 0.0007874,
             finishes: ["BLACK"]
+        },
+        {
+            vendor: "ANDYMARK",
+            size: "NO_6_32",
+            type: "OD_5_8_X_0_031",
+            name: "5/8 in OD x 0.031 in",
+            innerDiameter: 0.0039624,
+            outerDiameter: 0.015875,
+            thickness: 0.0007874,
+            finishes: ["STAINLESS"]
+        },
+        {
+            vendor: "ANDYMARK",
+            size: "NO_10_32",
+            type: "OD_3_4_X_0_062",
+            name: "3/4 in OD x 0.062 in",
+            innerDiameter: 0.0055626,
+            outerDiameter: 0.01905,
+            thickness: 0.0015748,
+            finishes: ["ZINC_PLATED"]
+        },
+        {
+            vendor: "ANDYMARK",
+            size: "NO_10_32",
+            type: "OD_1_X_0_062",
+            name: "1 in OD x 0.062 in",
+            innerDiameter: 0.0055626,
+            outerDiameter: 0.0254,
+            thickness: 0.0015748,
+            finishes: ["ZINC_PLATED"]
+        },
+        {
+            vendor: "ANDYMARK",
+            size: "QUARTER_20",
+            type: "OD_5_8_X_0_063",
+            name: "5/8 in OD x 0.063 in",
+            innerDiameter: 0.0071374,
+            outerDiameter: 0.015875,
+            thickness: 0.0016002,
+            finishes: ["ZINC_PLATED"]
+        },
+        {
+            vendor: "ANDYMARK",
+            size: "QUARTER_20",
+            type: "OD_1_X_0_062",
+            name: "1 in OD x 0.062 in",
+            innerDiameter: 0.0071374,
+            outerDiameter: 0.0254,
+            thickness: 0.0015748,
+            finishes: ["ZINC_PLATED"]
+        },
+        {
+            vendor: "ANDYMARK",
+            size: "QUARTER_20",
+            type: "OD_3_X_0_06",
+            name: "3 in OD x 0.06 in",
+            innerDiameter: 0.0064008,
+            outerDiameter: 0.0762,
+            thickness: 0.001524,
+            finishes: ["ZINC_PLATED"]
         }
     ]
 };

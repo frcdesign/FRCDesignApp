@@ -124,7 +124,7 @@ describe("POST /api/quick-fastener/insert", () => {
         expect(
             (
                 await insert({
-                    nut: { vendor: "GENERIC", size: "NO_8_32", type: "NYLOCK" }
+                    nut: { vendor: "MCMASTER", size: "NO_8_32", type: "NYLOCK" }
                 })
             ).status
         ).toBe(400);

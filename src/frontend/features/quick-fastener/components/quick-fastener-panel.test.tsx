@@ -103,7 +103,11 @@ describe("QuickFastenerPanel", () => {
                 excluded: [],
                 options: expect.objectContaining({
                     mode: FastenerMode.AUTOMATIC,
-                    nut: { vendor: "GENERIC", size: "NO_10_32", type: "NYLOCK" }
+                    nut: {
+                        vendor: "MCMASTER",
+                        size: "NO_10_32",
+                        type: "NYLOCK"
+                    }
                 })
             })
         });
@@ -151,14 +155,22 @@ describe("QuickFastenerPanel", () => {
         ).toBeNull();
     });
 
-    it("asks for the parts' vendors only under a vendor's screw", async () => {
+    it("asks for a washer's vendor only under a vendor's screw, and never a nut's", async () => {
         renderWithProviders(<QuickFastenerPanel assembly={ASSEMBLY} />);
+        // The screw's; McMaster-Carr makes every nut
         expect(screen.getAllByLabelText("Vendor")).toHaveLength(1);
 
-        await choose("Vendor", "McMaster-Carr");
-
-        // The nut's
+        await userEvent.click(
+            screen.getByRole("checkbox", { name: "Add screw washer" })
+        );
         expect(screen.getAllByLabelText("Vendor")).toHaveLength(2);
+
+        // The screw's, then a Generic washer under a Generic screw
+        await userEvent.click(screen.getAllByLabelText("Vendor")[0]);
+        await userEvent.click(
+            await screen.findByRole("option", { name: "Generic" })
+        );
+        expect(screen.getAllByLabelText("Vendor")).toHaveLength(1);
     });
 
     it("asks for a screw's finish before its length, and whether it's fully threaded only beside a preset length sold both ways", async () => {

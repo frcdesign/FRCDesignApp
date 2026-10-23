@@ -229,7 +229,7 @@ describe("QuickFastenerWorkflow", () => {
                     length: "IN_1",
                     fullyThreaded: "false"
                 },
-                nut: { vendor: "GENERIC", size: "NO_10_32", type: "NYLOCK" }
+                nut: { vendor: "MCMASTER", size: "NO_10_32", type: "NYLOCK" }
             },
             exit: {
                 point: [0, 0, -0.5 * INCH],

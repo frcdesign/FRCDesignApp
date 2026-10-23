@@ -28,15 +28,15 @@ function choices(extra: Partial<Choices> = {}): Choices {
 }
 
 describe("settleChoices", () => {
-    it("makes the defaults whole: a Generic #10-32 button head with a Generic nylock", () => {
+    it("makes the defaults whole: a McMaster-Carr #10-32 button head with its nylock", () => {
         const options = fastenerOptions(settleChoices(choices()));
         expect(options.screw).toMatchObject({
-            vendor: GENERIC,
+            vendor: "MCMASTER",
             size: "NO_10_32",
             head: "BUTTON"
         });
         expect(options.nut).toEqual({
-            vendor: GENERIC,
+            vendor: "MCMASTER",
             size: "NO_10_32",
             type: "NYLOCK"
         });
@@ -77,8 +77,9 @@ describe("settleChoices", () => {
             size: "QUARTER_20"
         });
         expect(washer && isMade(FastenerKind.WASHER, washer)).toBe(true);
+        // McMaster-Carr makes every nut
         expect(settled.parts[Part.NUT]).toMatchObject({
-            vendor: GENERIC,
+            vendor: "MCMASTER",
             size: "QUARTER_20"
         });
     });
@@ -131,7 +132,7 @@ describe("describePlan", () => {
                     length: "IN_0_875",
                     fullyThreaded: "false"
                 },
-                nut: { vendor: GENERIC, size: "NO_10_32", type: "NYLOCK" }
+                nut: { vendor: "MCMASTER", size: "NO_10_32", type: "NYLOCK" }
             })
         ).toBe("#10-32 x 7/8 in Button head, Nylock nut");
     });

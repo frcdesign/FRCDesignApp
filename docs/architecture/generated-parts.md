@@ -41,9 +41,10 @@ the configuration offers (`ConfiguredStudio.combinations()`). Each release
 writes that manifest into the document it releases to, as a file tab named
 `<set>.parts.json` (`fasteners.parts.json`), with each studio's tab there
 (`elementId`) and its configuration and records. Its features set
-exactly the properties the records name. An input hidden where only its default
-is made (the screw's Fully threaded, the washer's Finish) is left out of a record
-there, as `enumerateConfigurations` leaves it unset.
+exactly the properties the records name. An input shows only where more than
+one of its options is made, and is left out of a record where it's hidden, as
+`enumerateConfigurations` leaves it unset; one with a single option anywhere
+(the nut's Vendor) isn't in the configuration at all.
 
 ## Storage
 
