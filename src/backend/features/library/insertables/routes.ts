@@ -99,7 +99,8 @@ insertableRoutes.post(
                 documentId: insertables.documentId,
                 versionId: insertables.versionId,
                 elementId: insertables.elementId,
-                elementType: insertables.elementType
+                elementType: insertables.elementType,
+                generatedStudio: insertables.generatedStudio
             })
             .from(insertables)
             .where(inLibrary(libraryId, insertableId))
@@ -112,7 +113,8 @@ insertableRoutes.post(
             fastenInfo = await parseFastenInfo(
                 await c.var.getOnshapeApi(),
                 toElementPath(row),
-                row.elementType
+                row.elementType,
+                row.generatedStudio !== null
             );
         }
 

@@ -7,6 +7,25 @@ import {
 } from "./parse-fasten";
 
 describe("parseFastenInfoFromPartStudio", () => {
+    it("takes a generated studio's feature, which makes its mate connector", () => {
+        const rawFeatureList = {
+            features: [
+                {
+                    featureType: "fastenerNut",
+                    featureId: "nut-id",
+                    name: "Nut",
+                    suppressed: false
+                }
+            ]
+        };
+        expect(() => parseFastenInfoFromPartStudio(rawFeatureList)).toThrow();
+        expect(parseFastenInfoFromPartStudio(rawFeatureList, true)).toEqual({
+            mateConnectorId: "nut-id",
+            mateLocation: MateLocation.Feature,
+            path: []
+        });
+    });
+
     it("returns Feature location with empty path when mate connector is found", () => {
         const rawFeatureList = {
             features: [

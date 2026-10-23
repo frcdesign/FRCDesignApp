@@ -98,7 +98,9 @@ them: a library load reads the released manifest.
    No configuration is probed, and `decideIndexing` isn't consulted.
 
 The default parts are still read (for the thumbnail and the composite check), as
-is fasten info when it's on. A tab is loaded when its microversion changes, as
+is fasten info when it's on. Insert and fasten is on for a generated tab from its
+first load, which an editor can turn off; its mate connector is the one its
+studio's only feature, the set's, makes (`parseFastenInfoFromPartStudio`). A tab is loaded when its microversion changes, as
 any is; a release rebuilds every studio, which changes each.
 
 ### Changing a generated part
@@ -142,6 +144,8 @@ shows it in place of the indexing switches.
   (400), and the load ignores its stored settings.
 - The generator's records and the FeatureScript's properties are written from
   the same definition, so what the library indexes is what the part says.
+- A generated studio holds one feature, the set's, which makes exactly one mate
+  connector: insert and fasten names it by that feature's id.
 
 ## Failure and recovery
 

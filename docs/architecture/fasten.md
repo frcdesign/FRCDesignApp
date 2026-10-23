@@ -133,11 +133,13 @@ function getFastenQuery(
 `src/backend/features/build-checker/checks.ts`
 
 ```ts
-// Finds the mate connector an insertable fastens by, at load or toggle.
+// Finds the mate connector an insertable fastens by, at load or toggle: a
+// mate connector feature, or a generated studio's own feature.
 async function parseFastenInfo(
     onshapeApi: OnshapeApi,
     elementPath: ElementPath,
-    elementType: ElementType
+    elementType: ElementType,
+    isGenerated = false
 ): Promise<FastenInfo>;
 // The Replicate not decided warning.
 function checkInsertableSettings(input: InsertableSettingsInput): BuildIssue[];
@@ -146,7 +148,9 @@ function checkInsertableSettings(input: InsertableSettingsInput): BuildIssue[];
 ## Storage
 
 - **D1** `insertables.supports_fasten` and `fasten_info` (`FastenInfo`): set
-  by a load or the toggle, cleared when fasten is turned off.
+  by a load or the toggle, cleared when fasten is turned off. A new row is off,
+  except a generated tab's, which is on (see
+  [generated-parts.md](./generated-parts.md)).
 - **D1** `insertables.supports_replicate`: whether an editor allows the part to
   replicate; null until one decides. Reloads keep it.
 - **KV** `quick-fastener-scan:` — each Part Studio's scan, shared with Quick

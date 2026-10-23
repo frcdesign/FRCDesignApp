@@ -21,6 +21,7 @@ import {
 } from "../../../__test_utils__/insertable-fixtures";
 import * as ConfigurationEndpoints from "../../lib/onshape/endpoints/configurations";
 import * as PartsEndpoints from "../../lib/onshape/endpoints/parts";
+import * as PartStudioEndpoints from "../../lib/onshape/endpoints/part-studios";
 import * as ThumbnailStore from "../thumbnails/store";
 import { BuildIssueType } from "../build-checker/issues";
 import { LOAD_CONCURRENCY, type LoadContext } from "./context";
@@ -31,6 +32,7 @@ import { GeneratedPartMismatchError } from "../generated-parts/records";
 import * as BlobEndpoints from "../../lib/onshape/endpoints/blob-elements";
 import { NUT_MANIFEST } from "../../../__test_utils__/generated-fixtures";
 import { Vendor } from "../library/vendors";
+import { MateLocation } from "../library/insertables/fasten";
 import {
     type OnshapeConfigurationResponse,
     OnshapeParameterType
@@ -289,6 +291,17 @@ describe("loadInsertable, for a generated studio", () => {
         vi.spyOn(BlobEndpoints, "getBlobText").mockResolvedValue(
             JSON.stringify(NUT_MANIFEST)
         );
+        // Its only feature, which makes its mate connector
+        vi.spyOn(PartStudioEndpoints, "getFeatures").mockResolvedValue({
+            features: [
+                {
+                    featureType: "fastenerNut",
+                    featureId: "nut-feature",
+                    name: "Nut",
+                    suppressed: false
+                }
+            ]
+        });
     });
 
     afterEach(() => vi.restoreAllMocks());
@@ -309,6 +322,12 @@ describe("loadInsertable, for a generated studio", () => {
         expect(row?.generatedStudio).toBe("fasteners/nut");
         expect(row?.partMetadata?.name).toBe("#10-32 Nylock Nut");
         expect(row?.vendors).toContain(Vendor.MCM);
+        expect(row?.supportsFasten).toBe(true);
+        expect(row?.fastenInfo).toEqual({
+            mateConnectorId: "nut-feature",
+            mateLocation: MateLocation.Feature,
+            path: []
+        });
         const stored = await db
             .select()
             .from(configurations)

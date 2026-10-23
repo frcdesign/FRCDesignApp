@@ -14,11 +14,12 @@ import {
 export async function parseFastenInfo(
     onshapeApi: OnshapeApi,
     elementPath: ElementPath,
-    elementType: ElementType
+    elementType: ElementType,
+    isGenerated = false
 ): Promise<FastenInfo> {
     if (elementType === ElementType.PART_STUDIO) {
         const rawFeatureList = await getFeatures(onshapeApi, elementPath);
-        return parseFastenInfoFromPartStudio(rawFeatureList);
+        return parseFastenInfoFromPartStudio(rawFeatureList, isGenerated);
     } else {
         const rawAssemblyInfo = await getAssembly(onshapeApi, elementPath, {
             includeMateConnectors: true,
@@ -49,12 +50,14 @@ function searchFeatures(
     return undefined;
 }
 
+/** A generated studio's only feature is its set's, which makes the one mate connector. */
 export function parseFastenInfoFromPartStudio(
-    rawFeatureList: OnshapeFeatureListResponse
+    rawFeatureList: OnshapeFeatureListResponse,
+    isGenerated = false
 ): FastenInfo {
     for (const feature of rawFeatureList.features) {
         if (feature.suppressed) continue;
-        if (feature.featureType === "mateConnector") {
+        if (isGenerated || feature.featureType === "mateConnector") {
             return {
                 mateConnectorId: feature.featureId,
                 mateLocation: MateLocation.Feature,

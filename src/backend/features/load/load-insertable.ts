@@ -138,7 +138,7 @@ async function probeInsertable(
 ): Promise<ProbedInsertable> {
     const { insertableId, elementPath } = target;
 
-    const flags = await readFlagsStep(ctx, insertableId);
+    const flags = await readFlagsStep(ctx, target);
 
     const parameters = await parseConfigurationStep(ctx, target);
 
@@ -243,7 +243,7 @@ export function nonRetryable<T>(read: () => T): T {
 /** A new insertable has no row, so it gets the defaults the save writes. */
 function readFlagsStep(
     ctx: LoadContext,
-    insertableId: string
+    { insertableId, generated }: InsertableTarget
 ): Promise<InsertableFlags> {
     return ctx.step.do(`flags-${insertableId}`, async () => {
         const row = await getDb(ctx.env.DB)
@@ -257,7 +257,7 @@ function readFlagsStep(
             .get();
         return (
             row ?? {
-                supportsFasten: false,
+                supportsFasten: generated !== undefined,
                 indexConfigurations: false,
                 excludedParameterIds: []
             }
@@ -317,7 +317,7 @@ function readPartsStep(
 
 function parseFastenInfoStep(
     ctx: LoadContext,
-    { insertableId, elementPath, elementType }: InsertableTarget
+    { insertableId, elementPath, elementType, generated }: InsertableTarget
 ): Promise<FastenInfo> {
     return ctx.step.do(
         `fasten-${insertableId}`,
@@ -326,7 +326,8 @@ function parseFastenInfoStep(
             parseFastenInfo(
                 await getOnshapeApiFromContext(ctx),
                 elementPath,
-                elementType
+                elementType,
+                generated !== undefined
             )
     );
 }
@@ -369,7 +370,8 @@ export async function saveInsertable(
             sortOrder: target.sortOrder,
             // Only on insert, so an existing row keeps the user's choices.
             isVisible: false,
-            supportsFasten: false,
+            // A generated studio's feature makes a mate connector to fasten by
+            supportsFasten: target.generated !== undefined,
             indexConfigurations: false,
             ...reloaded
         })
