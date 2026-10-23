@@ -138,6 +138,8 @@ describe("QuickFastenerPanel", () => {
     });
 
     it("shows a part's rows while it's ticked, and a nut washer only with a nut", async () => {
+        // Generic makes one washer in each size, so its Type would be hidden
+        useQuickFastenerStore.setState({ screw: { vendor: "MCMASTER" } });
         renderWithProviders(<QuickFastenerPanel assembly={ASSEMBLY} />);
         // The nut's Type; the screw washer isn't ticked
         expect(screen.getAllByLabelText("Type")).toHaveLength(1);
@@ -157,20 +159,14 @@ describe("QuickFastenerPanel", () => {
 
     it("asks for a washer's vendor only under a vendor's screw, and never a nut's", async () => {
         renderWithProviders(<QuickFastenerPanel assembly={ASSEMBLY} />);
-        // The screw's; McMaster-Carr makes every nut
-        expect(screen.getAllByLabelText("Vendor")).toHaveLength(1);
-
         await userEvent.click(
             screen.getByRole("checkbox", { name: "Add screw washer" })
         );
-        expect(screen.getAllByLabelText("Vendor")).toHaveLength(2);
-
-        // The screw's, then a Generic washer under a Generic screw
-        await userEvent.click(screen.getAllByLabelText("Vendor")[0]);
-        await userEvent.click(
-            await screen.findByRole("option", { name: "Generic" })
-        );
+        // The screw's: the default screw is Generic, and McMaster-Carr makes every nut
         expect(screen.getAllByLabelText("Vendor")).toHaveLength(1);
+
+        await choose("Vendor", "McMaster-Carr");
+        expect(screen.getAllByLabelText("Vendor")).toHaveLength(2);
     });
 
     it("asks for a screw's finish before its length, and whether it's fully threaded only beside a preset length sold both ways", async () => {

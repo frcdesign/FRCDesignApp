@@ -29,7 +29,7 @@ const PLAN: HolePlan = {
         end: HoleEnd.THROUGH,
         depth: 0.5 * INCH,
         screw: {
-            vendor: "MCMASTER",
+            vendor: "GENERIC",
             size: "NO_10_32",
             head: "BUTTON",
             finish: "BLACK",

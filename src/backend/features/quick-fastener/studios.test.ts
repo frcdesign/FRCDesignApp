@@ -33,7 +33,7 @@ describe("STUDIO_PARAMETERS", () => {
             "fullyThreaded"
         ]);
         const [vendor, , , , length, fullyThreaded] = parameters;
-        expect(vendor.default).toBe("MCMASTER");
+        expect(vendor.default).toBe(GENERIC);
         expect(length.type).toBe(ParameterType.ENUM);
         expect(length.default).toBe("IN_0_375");
         expect(fullyThreaded.type).toBe(ParameterType.ENUM);
@@ -150,7 +150,6 @@ describe("studioConfiguration", () => {
         expect(
             studioConfiguration(FastenerKind.SCREW, {
                 ...SCREW,
-                vendor: "MCMASTER",
                 length: "IN_1"
             })
         ).toEqual({ length: "IN_1" });

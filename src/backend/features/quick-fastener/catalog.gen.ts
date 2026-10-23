@@ -1,4 +1,4 @@
-/* Synced from robot-education/robot-code@4343824d20cdd1dae387d59bdf5919dc2b9c222f by `npm run sync:generated-parts` -- DO NOT EDIT */
+/* Synced from robot-education/robot-code@03b874d4d9e5912c6a17737ce3a7cb7c21fce528 by `npm run sync:generated-parts` -- DO NOT EDIT */
 
 export const CATALOG = {
     source: "featurescripts/fasteners/fastenerTables.py",

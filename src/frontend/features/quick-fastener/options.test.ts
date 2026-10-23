@@ -28,10 +28,10 @@ function choices(extra: Partial<Choices> = {}): Choices {
 }
 
 describe("settleChoices", () => {
-    it("makes the defaults whole: a McMaster-Carr #10-32 button head with its nylock", () => {
+    it("makes the defaults whole: a Generic #10-32 button head with McMaster-Carr's nylock", () => {
         const options = fastenerOptions(settleChoices(choices()));
         expect(options.screw).toMatchObject({
-            vendor: "MCMASTER",
+            vendor: GENERIC,
             size: "NO_10_32",
             head: "BUTTON"
         });
