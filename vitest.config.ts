@@ -10,8 +10,7 @@ import { alias } from "./vite.config";
 process.env.CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV = "false";
 
 /**
- * Only tests that need bindings pay for a Workers runtime and a migrated D1
- * per file, which costs far more than the tests themselves; they say so by
+ * Only tests that need bindings run in the Workers runtime; they say so by
  * their name. Everything else runs in Node.
  */
 const WORKER_TESTS = "src/backend/**/*.worker.test.ts";
@@ -39,7 +38,9 @@ export default defineConfig({
                 }
             },
             {
-                // Real, per-test isolated D1/R2/KV bindings from wrangler.jsonc.
+                // Real D1/R2/KV bindings from wrangler.jsonc. Isolating each file
+                // reloads the Worker's modules, about 5 s a file, so files share
+                // them, and reset-storage.ts empties storage before each.
                 resolve: { alias },
                 plugins: [
                     cloudflareTest(async () => {
@@ -47,7 +48,7 @@ export default defineConfig({
                         return {
                             wrangler: { configPath: "./wrangler.jsonc" },
                             miniflare: {
-                                // Test-only binding consumed by apply-migrations.ts.
+                                // Test-only binding consumed by reset-storage.ts.
                                 bindings: { TEST_MIGRATIONS: migrations }
                             }
                         };
@@ -56,7 +57,8 @@ export default defineConfig({
                 test: {
                     name: "backend",
                     include: [WORKER_TESTS],
-                    setupFiles: ["./src/__test_utils__/apply-migrations.ts"]
+                    isolate: false,
+                    setupFiles: ["./src/__test_utils__/reset-storage.ts"]
                 }
             }
         ]

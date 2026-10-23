@@ -1,6 +1,7 @@
 import { env } from "cloudflare:workers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createTestApp, jsonRequest } from "../../../__test_utils__";
+import { resetStorage } from "../../../__test_utils__/storage";
 import { getDb } from "../../db/client";
 import * as Permissions from "../../lib/onshape/endpoints/permissions";
 import { OnshapePermission } from "../../lib/onshape/endpoints/permissions";
@@ -17,7 +18,6 @@ import { getSeenHints } from "../hints/store";
 import * as Jobs from "./jobs";
 import * as WorkspaceCache from "./workspace-cache";
 import { addLink } from "./links";
-import { workspaceLinks } from "./schema";
 
 const db = getDb(env.DB);
 const app = createTestApp();
@@ -70,8 +70,9 @@ const toInput = (workspace: WorkspacePath) => ({
     instanceId: workspace.instanceId
 });
 
+// A test's runs would refuse the next one's, as going from the same workspace
 beforeEach(async () => {
-    await db.delete(workspaceLinks);
+    await resetStorage();
     await addLink(db, ROOT, CHILD);
 });
 

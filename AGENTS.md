@@ -167,10 +167,18 @@ the code and fixing what disagrees, bump its **Last reviewed** date.
 
 # Tests
 
-`npm test` runs two Vitest projects. A backend test that needs bindings (D1,
-R2, KV, Workflows) is named `*.worker.test.ts` and runs in the Workers runtime
-against a freshly migrated D1; that setup costs far more than most tests, so
-everything else — pure backend logic and the frontend — runs in Node.
+`npm test` runs three Vitest projects, and should stay under a minute. A
+backend test that needs bindings (D1, R2, KV, Workflows) is named
+`*.worker.test.ts` and runs in the Workers runtime (the `backend` project);
+everything else — pure backend logic (`node`) and components (`dom`) — runs in
+Node. Run one project with `npm run test:node`, `test:dom` or `test:backend`,
+or a few files by path: `npx vitest run src/backend/features/auth`.
+
+Worker test files share the runtime's modules and storage, which
+`__test_utils__/reset-storage.ts` empties before each file, as a freshly
+migrated D1. A test that needs an empty store before each test calls
+`resetStorage()` from `__test_utils__/storage.ts` in its `beforeEach`. Tests
+must pass in any order: `npx vitest run --sequence.shuffle` checks.
 
 Component tests are `*.test.tsx` and run in jsdom (the `dom` project).
 `renderWithProviders` in `__test_utils__/render.tsx` renders the way the app
