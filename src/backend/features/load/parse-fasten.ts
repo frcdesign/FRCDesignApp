@@ -3,6 +3,7 @@ import { FastenInfo, MateLocation } from "../library/insertables/fasten";
 import { type ElementPath } from "../../lib/onshape/path";
 import { getAssembly } from "../../lib/onshape/endpoints/assemblies";
 import { getFeatures } from "../../lib/onshape/endpoints/part-studios";
+import { generatedFeatureTypes } from "../generated-parts/studios";
 
 import { OnshapeApi } from "../../lib/onshape/client";
 import {
@@ -14,12 +15,11 @@ import {
 export async function parseFastenInfo(
     onshapeApi: OnshapeApi,
     elementPath: ElementPath,
-    elementType: ElementType,
-    isGenerated = false
+    elementType: ElementType
 ): Promise<FastenInfo> {
     if (elementType === ElementType.PART_STUDIO) {
         const rawFeatureList = await getFeatures(onshapeApi, elementPath);
-        return parseFastenInfoFromPartStudio(rawFeatureList, isGenerated);
+        return parseFastenInfoFromPartStudio(rawFeatureList);
     } else {
         const rawAssemblyInfo = await getAssembly(onshapeApi, elementPath, {
             includeMateConnectors: true,
@@ -50,14 +50,22 @@ function searchFeatures(
     return undefined;
 }
 
-/** A generated studio's only feature is its set's, which makes the one mate connector. */
+/**
+ * Features making one mate connector: Onshape's own, and each generated
+ * studio's, whose connector a fasten query names by the feature's id, as it
+ * takes no index into what a feature made.
+ */
+const CONNECTOR_FEATURE_TYPES = new Set([
+    "mateConnector",
+    ...generatedFeatureTypes()
+]);
+
 export function parseFastenInfoFromPartStudio(
-    rawFeatureList: OnshapeFeatureListResponse,
-    isGenerated = false
+    rawFeatureList: OnshapeFeatureListResponse
 ): FastenInfo {
     for (const feature of rawFeatureList.features) {
         if (feature.suppressed) continue;
-        if (isGenerated || feature.featureType === "mateConnector") {
+        if (CONNECTOR_FEATURE_TYPES.has(feature.featureType)) {
             return {
                 mateConnectorId: feature.featureId,
                 mateLocation: MateLocation.Feature,

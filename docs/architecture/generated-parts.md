@@ -100,8 +100,12 @@ them: a library load reads the released manifest.
 
 The default parts are still read (for the thumbnail and the composite check), as
 is fasten info when it's on. Insert and fasten is on for a generated tab from its
-first load, which an editor can turn off; its mate connector is the one its
-studio's only feature, the set's, makes (`parseFastenInfoFromPartStudio`). A tab is loaded when its microversion changes, as
+first load, which an editor can turn off. Its mate connector is the one its
+feature makes, found by the feature's type, which every generated studio's
+feature is known by (`generatedFeatureTypes`), and named by the feature's id:
+Onshape's mate connector query takes a feature id and no index into what the
+feature made (`parseFastenInfoFromPartStudio`). robot-code checks that each
+generated feature makes exactly one. A tab is loaded when its microversion changes, as
 any is; a release rebuilds every studio, which changes each.
 
 ### Changing a generated part

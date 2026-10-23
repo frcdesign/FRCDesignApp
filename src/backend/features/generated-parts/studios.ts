@@ -53,6 +53,11 @@ const STUDIOS: GeneratedStudio[] = (
     })
 }));
 
+/** Every generated studio's feature, by the constant robot-code exports it as. */
+export function generatedFeatureTypes(): string[] {
+    return [...new Set(STUDIOS.map((studio) => studio.feature))];
+}
+
 export function getGeneratedStudio(
     set: string,
     key: string

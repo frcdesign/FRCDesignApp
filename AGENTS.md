@@ -174,7 +174,9 @@ everything else — pure backend logic (`node`) and components (`dom`) — runs 
 Node. Run one project with `npm run test:node`, `test:dom` or `test:backend`,
 or a few files by path: `npx vitest run src/backend/features/auth`.
 
-Worker test files share the runtime's modules and storage, which
+Test files in a project share their modules, which is most of the suite's
+speed, so a file restores what it changes: mocks, timers, stores and
+subscriptions. Worker test files share storage too, which
 `__test_utils__/reset-storage.ts` empties before each file, as a freshly
 migrated D1. A test that needs an empty store before each test calls
 `resetStorage()` from `__test_utils__/storage.ts` in its `beforeEach`. Tests

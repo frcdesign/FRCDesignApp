@@ -23,6 +23,8 @@ export default defineConfig({
                 test: {
                     name: "node",
                     environment: "node",
+                    // Reloading every module for each file costs more than the tests
+                    isolate: false,
                     include: ["src/**/*.test.ts"],
                     exclude: [WORKER_TESTS]
                 }
@@ -33,6 +35,7 @@ export default defineConfig({
                 test: {
                     name: "dom",
                     environment: "jsdom",
+                    isolate: false,
                     include: ["src/frontend/**/*.test.tsx"],
                     setupFiles: ["./src/__test_utils__/dom-setup.ts"]
                 }

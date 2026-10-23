@@ -317,7 +317,7 @@ function readPartsStep(
 
 function parseFastenInfoStep(
     ctx: LoadContext,
-    { insertableId, elementPath, elementType, generated }: InsertableTarget
+    { insertableId, elementPath, elementType }: InsertableTarget
 ): Promise<FastenInfo> {
     return ctx.step.do(
         `fasten-${insertableId}`,
@@ -326,8 +326,7 @@ function parseFastenInfoStep(
             parseFastenInfo(
                 await getOnshapeApiFromContext(ctx),
                 elementPath,
-                elementType,
-                generated !== undefined
+                elementType
             )
     );
 }

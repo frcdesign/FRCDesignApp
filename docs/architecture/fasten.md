@@ -269,13 +269,13 @@ interface EntityReference {
 `src/backend/features/build-checker/checks.ts`
 
 ```ts
-// Finds the mate connector an insertable fastens by, at load or toggle: a
-// mate connector feature, or a generated studio's own feature.
+// Finds the mate connector an insertable fastens by, at load or toggle: the
+// first unsuppressed feature that makes one, Onshape's or a generated
+// studio's, which a fasten query names by its feature id.
 async function parseFastenInfo(
     onshapeApi: OnshapeApi,
     elementPath: ElementPath,
-    elementType: ElementType,
-    isGenerated = false
+    elementType: ElementType
 ): Promise<FastenInfo>;
 // The Replicate not decided warning.
 function checkInsertableSettings(input: InsertableSettingsInput): BuildIssue[];

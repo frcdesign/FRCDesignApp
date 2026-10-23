@@ -5,11 +5,24 @@ import {
     parseFastenInfoFromPartStudio,
     parseFastenInfoFromAssembly
 } from "./parse-fasten";
+import { generatedFeatureTypes } from "../generated-parts/studios";
 
 describe("parseFastenInfoFromPartStudio", () => {
-    it("takes a generated studio's feature, which makes its mate connector", () => {
+    it("takes a generated feature, which makes its mate connector, wherever it is", () => {
         const rawFeatureList = {
             features: [
+                {
+                    featureType: "newSketch",
+                    featureId: "sketch-id",
+                    name: "Sketch 1",
+                    suppressed: false
+                },
+                {
+                    featureType: "fastenerNut",
+                    featureId: "suppressed-id",
+                    name: "Nut",
+                    suppressed: true
+                },
                 {
                     featureType: "fastenerNut",
                     featureId: "nut-id",
@@ -18,12 +31,50 @@ describe("parseFastenInfoFromPartStudio", () => {
                 }
             ]
         };
-        expect(() => parseFastenInfoFromPartStudio(rawFeatureList)).toThrow();
-        expect(parseFastenInfoFromPartStudio(rawFeatureList, true)).toEqual({
+        expect(parseFastenInfoFromPartStudio(rawFeatureList)).toEqual({
             mateConnectorId: "nut-id",
             mateLocation: MateLocation.Feature,
             path: []
         });
+    });
+
+    it("takes every generated studio's feature", () => {
+        for (const featureType of generatedFeatureTypes()) {
+            expect(
+                parseFastenInfoFromPartStudio({
+                    features: [
+                        {
+                            featureType,
+                            featureId: "id",
+                            name: featureType,
+                            suppressed: false
+                        }
+                    ]
+                }).mateConnectorId
+            ).toBe("id");
+        }
+        expect(generatedFeatureTypes()).toEqual(
+            expect.arrayContaining([
+                "fastenerScrew",
+                "fastenerWasher",
+                "fastenerNut"
+            ])
+        );
+    });
+
+    it("refuses a custom feature it doesn't know makes a mate connector", () => {
+        expect(() =>
+            parseFastenInfoFromPartStudio({
+                features: [
+                    {
+                        featureType: "robotFrame",
+                        featureId: "frame-id",
+                        name: "Frame",
+                        suppressed: false
+                    }
+                ]
+            })
+        ).toThrow();
     });
 
     it("returns Feature location with empty path when mate connector is found", () => {
