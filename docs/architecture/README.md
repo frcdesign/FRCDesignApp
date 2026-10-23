@@ -2,8 +2,18 @@
 
 One document per feature area, describing how it works **now**: what it owns,
 where it stores things, how its flows run, and the rules that must keep holding.
-They are the reference for reviewing a change against the design, and for
-noticing when the code has drifted from it.
+
+**These documents are what a reviewer reviews.** The architecture is decided
+here, by people: an area's purpose, contracts and types, storage, flows,
+user-facing strings, invariants and decisions. The implementation is left to
+Claude, held to these documents by their invariants, the tests and CI. So:
+
+- A change to the design shows in a document's diff, in the same pull request
+  as the code. Review that diff as the change.
+- Read the code against the document's invariants and code map, not line by
+  line: whether it does what the document says, not how it's written.
+- A pull request that changes behavior with no document diff, or a document
+  that no longer says what the code does, is the thing to send back.
 
 | Document                                   | Covers                                                                             |
 | ------------------------------------------ | ---------------------------------------------------------------------------------- |
