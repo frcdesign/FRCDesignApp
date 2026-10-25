@@ -1,16 +1,8 @@
 import { env } from "cloudflare:workers";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { createTestApp, jsonRequest } from "../../../__test_utils__";
-import * as AssemblyEndpoints from "../../lib/onshape/endpoints/assemblies";
 import { type AccessData } from "../auth/access-level";
 import { Hint } from "./contract";
-
-const targetPath = {
-    documentId: "doc-target",
-    instanceType: "w",
-    instanceId: "w-target",
-    elementId: "target-element"
-};
 
 async function seenHints(
     app: ReturnType<typeof createTestApp>
@@ -24,46 +16,47 @@ async function seenHints(
     return data.seenHints;
 }
 
+async function markSeen(
+    app: ReturnType<typeof createTestApp>,
+    hint: string
+): Promise<Response> {
+    return await app.request(
+        "/api/seen-hints",
+        jsonRequest("POST", { hint }),
+        env
+    );
+}
+
 beforeEach(async () => {
     await env.KV.delete("seen-hints:test-user");
 });
 
-afterEach(() => vi.restoreAllMocks());
-
 describe("hints", () => {
-    it("are recorded by the request that used the feature, and carried with access", async () => {
-        vi.spyOn(AssemblyEndpoints, "getAssembly").mockResolvedValue({
-            rootAssembly: { features: [], instances: [], occurrences: [] },
-            parts: [],
-            subAssemblies: []
-        });
-        vi.spyOn(AssemblyEndpoints, "getAssemblyBoundingBox").mockRejectedValue(
-            new Error("no geometry")
-        );
-        vi.spyOn(AssemblyEndpoints, "addFeatureToAssembly").mockResolvedValue({
-            insertInstanceResponses: [{ occurrences: [{ path: ["marker"] }] }]
-        });
+    it("are recorded once seen, and carried with access", async () => {
         const app = createTestApp();
         expect(await seenHints(app)).toEqual([]);
 
-        const added = await app.request(
-            "/api/insert-location",
-            jsonRequest("POST", { targetPath }),
-            env
-        );
-        expect(added.status).toBe(200);
+        for (let i = 0; i < 2; i++) {
+            const seen = await markSeen(app, Hint.OPENED_INSERT_LOCATION);
+            expect(seen.status).toBe(200);
+        }
 
-        expect(await seenHints(app)).toEqual([Hint.ADDED_INSERT_LOCATION]);
+        expect(await seenHints(app)).toEqual([Hint.OPENED_INSERT_LOCATION]);
         // Another computer is the same user.
         expect(await seenHints(createTestApp())).toEqual([
-            Hint.ADDED_INSERT_LOCATION
+            Hint.OPENED_INSERT_LOCATION
         ]);
+    });
+
+    it("refuses a hint it does not know", async () => {
+        const res = await markSeen(createTestApp(), "not-a-hint");
+        expect(res.status).toBe(400);
     });
 
     it("are none while signed out", async () => {
         await env.KV.put(
             "seen-hints:test-user",
-            JSON.stringify([Hint.USED_VERSION_MANAGER])
+            JSON.stringify([Hint.OPENED_VERSION_MANAGER])
         );
         expect(await seenHints(createTestApp({ signedIn: false }))).toEqual([]);
     });

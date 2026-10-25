@@ -20,8 +20,6 @@ import {
     workspaceLinksQueryKey
 } from "../../lib/query-keys";
 import { useIsSignedIn } from "../auth/access-level";
-import { Hint } from "@backend/features/hints/contract";
-import { markHintSeen } from "../hints/queries";
 import { documentLabel } from "./document-label";
 
 /** A GET about the workspace; idle without one, or signed out. */
@@ -101,7 +99,6 @@ export function useAddLinkMutation(workspace: WorkspacePath) {
                 body: { workspace, linked, direction }
             }),
         onSuccess: async (linked) => {
-            markHintSeen(Hint.USED_VERSION_MANAGER);
             showSuccessToast(`Successfully linked ${linkedName(linked)}.`);
             await refreshLinks(workspace);
         },
@@ -200,7 +197,6 @@ export function usePullReferencesMutation(workspace: WorkspacePath) {
 
 /** Shows the run going straight away, before the socket says so. */
 function adoptJob(workspace: WorkspacePath, started: VersionJobStatus): void {
-    markHintSeen(Hint.USED_VERSION_MANAGER);
     // The socket can have brought this run's first progress already.
     queryClient.setQueryData<VersionJobStatus>(
         versionJobQueryKey(workspace),

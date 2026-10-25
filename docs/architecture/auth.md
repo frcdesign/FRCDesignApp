@@ -9,23 +9,24 @@ team, plus one owner set by configuration.
 
 ## Code map
 
-| Path                                                        | Role                                                                    |
-| ----------------------------------------------------------- | ----------------------------------------------------------------------- |
-| `src/backend/features/auth/onshape-oauth.ts`                | The OAuth handshake: authorize url, code exchange, token shape          |
-| `src/backend/features/auth/login.ts`                        | A sign-in in flight, held in its own short cookie                       |
-| `src/backend/features/auth/session.ts`                      | The session cookie and its KV record                                    |
-| `src/backend/features/auth/request-auth.ts`                 | `productionAuth`: resolves the caller, their Onshape client and level   |
-| `src/backend/features/auth/access-level.ts`                 | `AccessLevel` and its ordering; shared with the client                  |
-| `src/backend/features/auth/guards.ts`                       | Route middleware: sign-in, editor, admin, owner                         |
-| `src/backend/features/auth/background-sessions.ts`          | Sessions a load can borrow when its requester's fails                   |
-| `src/backend/features/auth/company.ts`, `cookie-options.ts` | Enterprise company matching; cross-site cookie settings                 |
-| `src/backend/features/auth/routes.ts`                       | `/auth/sign-in`, `/auth/callback`, `/auth/sign-out`, `/api/access-data` |
-| `src/backend/features/hints/store.ts`                       | Which features' dots a user has seen, carried by `/api/access-data`     |
-| `src/backend/features/admin-team/`                          | The owner sets a library's admin team; members are synced from Onshape  |
-| `src/backend/features/entry/routes.ts`                      | `/init`, where Onshape launches the app                                 |
-| `src/backend/lib/context.ts`                                | `AppBindings` (every binding and variable) and `bindAuth`               |
-| `src/frontend/features/auth/access-level.tsx`               | `useAccessData`: the server's level and the level the app is viewed as  |
-| `wrangler.jsonc`                                            | Per-environment vars and bindings                                       |
+| Path                                                        | Role                                                                       |
+| ----------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `src/backend/features/auth/onshape-oauth.ts`                | The OAuth handshake: authorize url, code exchange, token shape             |
+| `src/backend/features/auth/login.ts`                        | A sign-in in flight, held in its own short cookie                          |
+| `src/backend/features/auth/session.ts`                      | The session cookie and its KV record                                       |
+| `src/backend/features/auth/request-auth.ts`                 | `productionAuth`: resolves the caller, their Onshape client and level      |
+| `src/backend/features/auth/access-level.ts`                 | `AccessLevel` and its ordering; shared with the client                     |
+| `src/backend/features/auth/guards.ts`                       | Route middleware: sign-in, editor, admin, owner                            |
+| `src/backend/features/auth/background-sessions.ts`          | Sessions a load can borrow when its requester's fails                      |
+| `src/backend/features/auth/company.ts`, `cookie-options.ts` | Enterprise company matching; cross-site cookie settings                    |
+| `src/backend/features/auth/routes.ts`                       | `/auth/sign-in`, `/auth/callback`, `/auth/sign-out`, `/api/access-data`    |
+| `src/backend/features/hints/store.ts`                       | Which features' dots a user has seen, carried by `/api/access-data`        |
+| `src/backend/features/hints/routes.ts`                      | `POST /api/seen-hints`, sent by `useMarkHintSeen` once a feature is opened |
+| `src/backend/features/admin-team/`                          | The owner sets a library's admin team; members are synced from Onshape     |
+| `src/backend/features/entry/routes.ts`                      | `/init`, where Onshape launches the app                                    |
+| `src/backend/lib/context.ts`                                | `AppBindings` (every binding and variable) and `bindAuth`                  |
+| `src/frontend/features/auth/access-level.tsx`               | `useAccessData`: the server's level and the level the app is viewed as     |
+| `wrangler.jsonc`                                            | Per-environment vars and bindings                                          |
 
 ## Storage
 
@@ -39,8 +40,9 @@ team, plus one owner set by configuration.
   the dev override's user.
   chose and its synced members (`isTeamAdmin` per member).
 - **KV** `seen-hints:` — by user id, the features (`Hint`) whose blue dot and
-  **New** badge the user no longer needs, recorded by the request that used the
-  feature (`markHintSeen`): starting a push or pull, adding an insert location.
+  **New** badge the user no longer needs, recorded by `POST /api/seen-hints`
+  once the feature has been opened: the version manager's page on showing, the
+  insert location's card on closing. Signed out, the dot goes for the session only.
   Kept until deleted; losing it only shows a dot again.
 - **localStorage** (`ui-state`): `accessLevel`, the level the app is viewed as.
 

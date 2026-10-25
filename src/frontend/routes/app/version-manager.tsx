@@ -1,5 +1,5 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import { type ReactNode } from "react";
+import { type ReactNode, useEffect } from "react";
 import {
     LinkDirection,
     type LinkedWorkspace,
@@ -33,6 +33,8 @@ import { LastRunCallout } from "../../features/version-manager/components/last-r
 import { useWorkspaceLinksQuery } from "../../features/version-manager/queries";
 import { useNeedsSignIn } from "../../features/auth/access-level";
 import { startSignIn } from "../../features/auth/sign-in";
+import { useMarkHintSeen } from "../../features/hints/queries";
+import { Hint } from "@backend/features/hints/contract";
 
 export const Route = createFileRoute("/app/version-manager")({
     component: VersionManagerPage,
@@ -56,6 +58,9 @@ export const Route = createFileRoute("/app/version-manager")({
 function VersionManagerPage(): ReactNode {
     const workspace = useTargetWorkspace();
     const needsSignIn = useNeedsSignIn();
+    const markOpened = useMarkHintSeen(Hint.OPENED_VERSION_MANAGER);
+
+    useEffect(markOpened, [markOpened]);
 
     if (!workspace) {
         // What renders on the way out, `beforeLoad` having redirected.

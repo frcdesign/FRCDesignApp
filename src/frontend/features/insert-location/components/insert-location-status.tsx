@@ -9,7 +9,7 @@ import { Status } from "../../../lib/status";
 import { AppHoverCard } from "../../../components/app-hover-card";
 import { NewBadge, NewIndicator } from "../../../components/new-feature";
 import { Hint } from "@backend/features/hints/contract";
-import { useHasSeenHint } from "../../hints/queries";
+import { useHasSeenHint, useMarkHintSeen } from "../../hints/queries";
 import {
     useAddInsertLocationMutation,
     useInsertLocationQuery,
@@ -44,9 +44,10 @@ function InsertLocationHoverCard(
     props: InsertLocationHoverCardProps
 ): ReactNode {
     const { target, instanceId } = props;
-    const hasAdded = useHasSeenHint(Hint.ADDED_INSERT_LOCATION);
+    const hasOpened = useHasSeenHint(Hint.OPENED_INSERT_LOCATION);
+    const markOpened = useMarkHintSeen(Hint.OPENED_INSERT_LOCATION);
     const found = instanceId !== undefined;
-    const isNew = !found && !hasAdded;
+    const isNew = !found && !hasOpened;
 
     const status = found ? Status.SUCCESS : Status.WARNING;
 
@@ -54,6 +55,8 @@ function InsertLocationHoverCard(
         <AppHoverCard
             position="bottom-end"
             interactive
+            // On close, so the card's own badge is there to read while open.
+            onClose={markOpened}
             target={
                 <Center my="auto">
                     <NewIndicator shown={isNew} offset={2}>

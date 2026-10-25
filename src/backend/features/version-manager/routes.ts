@@ -60,8 +60,6 @@ import {
     toLinkedWorkspace
 } from "./links";
 import { describeWorkspace, forgetWorkspace } from "./workspace-cache";
-import { markHintSeen } from "../hints/store";
-import { Hint } from "../hints/contract";
 
 export const versionManagerRoutes = getApp();
 
@@ -279,7 +277,6 @@ versionManagerRoutes.post(
                 ? [linked, workspace]
                 : [workspace, linked];
         await addLink(db, parent, child);
-        await markHintSeen(c, Hint.USED_VERSION_MANAGER);
 
         const out: AddLinkOut = await describeWorkspace(
             c,
@@ -483,7 +480,6 @@ versionManagerRoutes.post(
             targets
         });
 
-        await markHintSeen(c, Hint.USED_VERSION_MANAGER);
         return c.json(status);
     }
 );
@@ -704,7 +700,6 @@ versionManagerRoutes.post(
             targets
         });
 
-        await markHintSeen(c, Hint.USED_VERSION_MANAGER);
         return c.json(status);
     }
 );

@@ -14,9 +14,8 @@ export async function getSeenHints(
 }
 
 /**
- * Records a hint as seen, after the response: a side effect of the request that
- * used the feature. Read before written, so a repeat costs no write; two marks
- * racing can drop one, which only shows a dot again.
+ * Records a hint as seen, after the response. Read before written, so a repeat
+ * costs no write; two marks racing can drop one, which only shows a dot again.
  */
 export function markHintSeen(c: AppContext, hint: Hint): Promise<void> {
     return runInBackground(c, "record a seen hint", async () => {

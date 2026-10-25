@@ -258,10 +258,12 @@ function PagePicker(): ReactNode {
                                         shown={page.isNew ?? false}
                                         offset={-1}
                                     >
+                                        {/* Inline, it sits on a line of text above the label's center */}
                                         <AppIcon
                                             icon={page.icon}
                                             size={IconSize.MEDIUM}
                                             color={toShade(page.color)}
+                                            style={{ display: "block" }}
                                         />
                                     </NewIndicator>
                                 }
