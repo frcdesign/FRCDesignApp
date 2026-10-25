@@ -21,14 +21,13 @@ export function useMessageListener() {
             if (server !== event.origin) {
                 return;
             }
-            const { messageName } = event.data as { messageName?: string };
-            if (messageName === INBOUND_SELECTION) {
+            if (isHighlightAnswer(event.data)) {
+                // Whether Onshape took a highlight is otherwise invisible; see `sendHighlightMessage`
+                console.debug("Onshape answered a highlight", event.data);
+            } else if (carriesSelections(event.data)) {
                 useOnshapeSelection
                     .getState()
                     .receive(parseSelections(event.data));
-            } else if (isHighlightAnswer(event.data)) {
-                // Whether Onshape took a highlight is otherwise invisible; see `sendHighlightMessage`
-                console.debug("Onshape answered a highlight", event.data);
             }
         };
 
@@ -53,8 +52,21 @@ export function sendOpenFeatureMessage(
     });
 }
 
-/** What Onshape sends whenever the selection in its window changes, once the app has said it's ready. */
-const INBOUND_SELECTION = "SELECTION";
+/**
+ * Picks arrive as SELECTION messages, and, while a selection request is
+ * pending, in its answers, which Onshape doesn't document.
+ */
+function carriesSelections(data: unknown): boolean {
+    const { messageName, messageId } = data as {
+        messageName?: unknown;
+        messageId?: unknown;
+    };
+    return (
+        messageName === "SELECTION" ||
+        (typeof messageId === "string" &&
+            messageId.startsWith(SELECTION_PREFIX))
+    );
+}
 
 /** Onshape wants each request identified uniquely; one highlight is up at a time. */
 const HIGHLIGHT_PREFIX = "highlight-selection-";
@@ -121,11 +133,13 @@ export const CIRCULAR_EDGES: SelectionFilter = {
     geometryTypeSpecifier: ["CIRCLE"]
 };
 
-export const FACES: SelectionFilter = {
+export const PLANAR_FACES: SelectionFilter = {
     entityTypeSpecifier: ["FACE"],
-    selectionTypeSpecifier: ["GEOMETRY"]
+    selectionTypeSpecifier: ["GEOMETRY"],
+    geometryTypeSpecifier: ["PLANE"]
 };
 
+const SELECTION_PREFIX = "selection-";
 let selectionRequests = 0;
 
 /**
@@ -139,7 +153,7 @@ export function sendSelectionRequest(
 ) {
     sendMessage(elementPath, {
         messageName: MessageType.REQUEST_SELECTION,
-        messageId: `selection-${++selectionRequests}`,
+        messageId: `${SELECTION_PREFIX}${++selectionRequests}`,
         ...filter
     });
 }

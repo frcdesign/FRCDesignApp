@@ -3,7 +3,7 @@ import { act, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { renderWithProviders } from "../../__test_utils__/render";
-import { CIRCULAR_EDGES, FACES } from "../lib/messages";
+import { CIRCULAR_EDGES, PLANAR_FACES } from "../lib/messages";
 import { useOnshapeLaunch } from "../lib/onshape-params";
 import {
     parseSelections,
@@ -100,7 +100,7 @@ describe("QueryList", () => {
                     entities={[]}
                     onChange={() => undefined}
                     accepts={() => true}
-                    filter={FACES}
+                    filter={PLANAR_FACES}
                 />
             </>
         );

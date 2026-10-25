@@ -21,12 +21,10 @@ import { ParameterInput } from "../../../components/parameter-input";
 import { StatusColor } from "../../../lib/style-constants";
 import { Part, PART_KIND, type SettledChoices } from "../options";
 import {
-    AUTOMATIC_LENGTH,
     FORM_PARAMETERS,
     FormInput,
     formParameter,
-    lengthParameter,
-    lengthValue
+    SIZING_PARAMETER
 } from "../parameters";
 import { useQuickFastenerStore } from "../store";
 import { FullWidthRow, ParameterGroup } from "./parameter-group";
@@ -114,9 +112,9 @@ interface ScrewInputsProps {
 }
 
 /**
- * The screw studio's inputs, its Length with Automatic first. Fully threaded
- * shows only beside a preset length, since an automatic screw is partly
- * threaded, the standard.
+ * The screw studio's inputs, with Sizing in place of its Length, which shows
+ * only when sized by hand. So does Fully threaded, since an automatic screw is
+ * partly threaded, the standard.
  */
 function ScrewInputs(props: ScrewInputsProps): ReactNode {
     const { settled } = props;
@@ -126,38 +124,32 @@ function ScrewInputs(props: ScrewInputsProps): ReactNode {
     const { parameters } = settled.set.studios[FastenerKind.SCREW];
     const selection: Selection = { ...settled.screw };
 
-    const setLength = (value: string | undefined) => {
-        if (value === undefined || value === AUTOMATIC_LENGTH) {
-            setMode(FastenerMode.AUTOMATIC);
-            return;
-        }
-        setMode(FastenerMode.PRESET);
-        setScrew(StudioInput.LENGTH, value);
-    };
-
     return (
         <>
             {parameters.map((parameter) => {
-                if (parameter.id === StudioInput.LENGTH) {
-                    return (
-                        <ParameterInput
-                            key={parameter.id}
-                            inputId="screw-length"
-                            parameter={lengthParameter(settled.set)}
-                            value={lengthValue(settled.mode, settled.screw)}
-                            selection={selection}
-                            parameters={parameters}
-                            onValueChange={setLength}
-                        />
-                    );
-                }
+                const sizing = parameter.id === StudioInput.LENGTH && (
+                    <ParameterInput
+                        key={SIZING_PARAMETER.id}
+                        inputId="screw-sizing"
+                        parameter={SIZING_PARAMETER}
+                        value={settled.mode}
+                        selection={{ [SIZING_PARAMETER.id]: settled.mode }}
+                        parameters={[SIZING_PARAMETER]}
+                        onValueChange={(value) =>
+                            value !== undefined &&
+                            setMode(value as FastenerMode)
+                        }
+                    />
+                );
                 if (
-                    parameter.id === StudioInput.FULLY_THREADED &&
+                    (parameter.id === StudioInput.LENGTH ||
+                        parameter.id === StudioInput.FULLY_THREADED) &&
                     settled.mode === FastenerMode.AUTOMATIC
                 ) {
-                    return null;
+                    return sizing;
                 }
-                return (
+                return [
+                    sizing,
                     <ParameterInput
                         key={parameter.id}
                         inputId={`screw-${parameter.id}`}
@@ -169,7 +161,7 @@ function ScrewInputs(props: ScrewInputsProps): ReactNode {
                             value !== undefined && setScrew(parameter.id, value)
                         }
                     />
-                );
+                ];
             })}
         </>
     );

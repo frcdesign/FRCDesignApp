@@ -333,7 +333,7 @@ interface InsertableSettingsInput {
    with something. `useFastenPicksFromSelection` focuses the targets' list, so
    anything picked while the menu is open joins it; what was picked before it
    opened isn't known.
-3. The card holds the mode (**Circular edges** or **Faces**), the targets'
+3. The card holds the mode (**Circular edges** or planar **Faces**), the targets'
    query list, and in faces mode **Holes to skip**. It stays mounted while
    hidden (`keepMounted`), so its lists take picks with the card closed, and
    the icon turns the primary colour while one of them is focused. A focused

@@ -3,7 +3,7 @@ import { useEffect } from "react";
 import { create } from "zustand";
 import {
     CIRCULAR_EDGES,
-    FACES,
+    PLANAR_FACES,
     type SelectionFilter
 } from "../../lib/messages";
 import { SelectionMode } from "@backend/features/quick-fastener/contract";
@@ -43,7 +43,7 @@ export function clearFastenPicks(): void {
 }
 
 export function targetFilter(mode: SelectionMode): SelectionFilter {
-    return mode === SelectionMode.FACES ? FACES : CIRCULAR_EDGES;
+    return mode === SelectionMode.FACES ? PLANAR_FACES : CIRCULAR_EDGES;
 }
 
 export function acceptsTarget(

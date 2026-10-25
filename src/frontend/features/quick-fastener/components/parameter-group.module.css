@@ -10,6 +10,11 @@
     min-height: var(--input-height-sm, rem(36px));
 }
 
+/* Its rows may all be hidden by their conditions, and an empty row would still take a gap */
+.body:empty {
+    display: none;
+}
+
 .body {
     grid-column: 1 / -1;
     display: grid;

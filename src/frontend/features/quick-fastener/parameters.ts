@@ -6,10 +6,8 @@
 import {
     type ConfigurationParameter,
     type EnumParameter,
-    OptionVisibilityType,
     ParameterType,
-    type QuantityParameter,
-    VisibilityType
+    type QuantityParameter
 } from "@backend/features/configurations/contract";
 import { QuantityType, Unit } from "@backend/features/configurations/enums";
 import { quantityDefault } from "@backend/features/configurations/selection";
@@ -19,13 +17,6 @@ import {
     SelectionMode,
     StopCondition
 } from "@backend/features/quick-fastener/contract";
-import {
-    FastenerKind,
-    type FastenerSet,
-    getParameter,
-    type ScrewChoice,
-    StudioInput
-} from "@backend/features/quick-fastener/studios";
 
 export enum FormInput {
     SELECT_BY = "selectBy",
@@ -72,8 +63,8 @@ function inchParameter(
 
 export const FORM_PARAMETERS: ConfigurationParameter[] = [
     enumParameter(FormInput.SELECT_BY, "Select by", [
-        { id: SelectionMode.FACES, name: "Faces" },
-        { id: SelectionMode.LOCATIONS, name: "Circular edges" }
+        { id: SelectionMode.LOCATIONS, name: "Circular edges" },
+        { id: SelectionMode.FACES, name: "Faces" }
     ]),
     enumParameter(FormInput.PROGRAM, "Program", [
         { id: Program.FRC, name: "FRC" },
@@ -108,42 +99,15 @@ export function formParameter(id: FormInput): ConfigurationParameter {
     return parameter;
 }
 
-/** The Length option meaning "pick one for each hole". */
-export const AUTOMATIC_LENGTH = "AUTOMATIC";
-
-/**
- * The screw's Length with Automatic first: picking a length is preset mode,
- * and Automatic is automatic. Its other options are the studio's, shown as
- * the studio shows them.
- */
-export function lengthParameter(set: FastenerSet): EnumParameter {
-    const length = getParameter(set, FastenerKind.SCREW, StudioInput.LENGTH);
-    if (!length) {
-        throw new Error("The screw studio has no Length");
-    }
-    // An option no rule controls is hidden once there are rules
-    const optionConditions = length.optionConditions.length
-        ? [
-              ...length.optionConditions,
-              {
-                  type: OptionVisibilityType.LIST as const,
-                  controlledOptions: [AUTOMATIC_LENGTH],
-                  condition: { type: VisibilityType.ALWAYS_SHOWN as const }
-              }
-          ]
-        : [];
-    return {
-        ...length,
-        default: AUTOMATIC_LENGTH,
-        options: [
-            { id: AUTOMATIC_LENGTH, name: "Automatic" },
-            ...length.options
-        ],
-        optionConditions
-    };
-}
-
-/** The Length option a mode and screw show as. */
-export function lengthValue(mode: FastenerMode, screw: ScrewChoice): string {
-    return mode === FastenerMode.AUTOMATIC ? AUTOMATIC_LENGTH : screw.length;
-}
+/** Whether the screw's length is picked for each hole or chosen once. */
+export const SIZING_PARAMETER: EnumParameter = {
+    type: ParameterType.ENUM,
+    id: "sizing",
+    name: "Sizing",
+    default: FastenerMode.AUTOMATIC,
+    options: [
+        { id: FastenerMode.AUTOMATIC, name: "Automatic" },
+        { id: FastenerMode.PRESET, name: "Manual" }
+    ],
+    optionConditions: []
+};

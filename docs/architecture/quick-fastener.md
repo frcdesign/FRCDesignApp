@@ -89,8 +89,8 @@ interface QueryListProps {
 
 ```ts
 const FORM_PARAMETERS: ConfigurationParameter[];
-// The screw's Length, with Automatic first.
-function lengthParameter(set: FastenerSet): EnumParameter;
+// Sizing: Automatic (a length per hole) or Manual (the screw's Length).
+const SIZING_PARAMETER: EnumParameter;
 // The choices as entered (kept) and the picks (not).
 const useQuickFastenerStore: UseBoundStore<StoreApi<QuickFastenerState>>;
 // Every studio's selection normalized, and each part into the screw's size.
@@ -809,8 +809,10 @@ vectors, Onshape's 4×4 transforms and `LINEAR_TOLERANCE`.
 ### Picking
 
 1. Once the app sends `applicationInit`, Onshape streams a `SELECTION` message
-   for each pick as it's made, not the whole selection; `parseSelections` keeps
-   its entities.
+   for each pick as it's made, not the whole selection; while a selection
+   request is pending, picks arrive in its answers instead, which carry its
+   message id. `parseSelections` keeps either's entities; a highlight's answers
+   are never taken as picks.
 2. Clicking a `QueryList` focuses it (one at a time, `useOnshapeSelection`) and
    shows its prompt in Onshape's bubble. Each pick goes to the focused list,
    which keeps the edges and faces it doesn't hold yet, and repeats its prompt
@@ -819,7 +821,8 @@ vectors, Onshape's 4×4 transforms and `LINEAR_TOLERANCE`.
    (`sendSelectionRequest`), which limits what the Onshape window lets be
    picked: `CIRCULAR_EDGES` (`entityTypeSpecifier: ["EDGE"]`,
    `selectionTypeSpecifier: ["GEOMETRY"]`, `geometryTypeSpecifier: ["CIRCLE"]`)
-   or `FACES`. Onshape documents other field names, which it ignores. Losing
+   or `PLANAR_FACES` (`["FACE"]`, `["GEOMETRY"]`, `["PLANE"]`). Onshape
+   documents other field names, which it ignores. Losing
    focus or unmounting sends `stopRequest`.
 4. Hovering a row lights its entity up (`requestSelectionHighlight`, each with
    its own message id). A highlight cancels the selection request, so leaving
@@ -837,20 +840,21 @@ The panel is a `ParameterGrid` of the configuration dialog's own inputs
 (`ParameterInput`), in groups under plain headings (`ParameterGroup`):
 
 1. **Fastener**: Program, then the screw studio's Vendor, Size, Head and
-   Finish, its Length with **Automatic** first (a length is preset mode,
-   Automatic picks one per hole, and always shows), and, beside a preset
-   length sold both ways, its Fully threaded.
+   Finish, then _Sizing_ in place of its Length: **Automatic** (the default)
+   picks a length for each hole, and **Manual** shows the studio's Length, and,
+   beside a length sold both ways, its Fully threaded.
 2. **Add screw washer**, **Add nut** and **Add nut washer**, each a group its
    checkbox shows: the washer or nut studio's parameters but its Size, which is
    the screw's. A washer's Vendor offers those making it in that size, and is
    left out under a Generic screw, whose washers are Generic; a nut has none,
    since one vendor makes them all. Like every studio input, a washer's Type and
-   Finish show only where there's a choice. The screw washer is gone under a
-   countersunk head, and the nut washer without a nut.
+   Finish show only where there's a choice, so a Generic washer, one in each
+   size, shows its checkbox alone. The screw washer is gone under a countersunk
+   head, and the nut washer without a nut.
 3. Automatic only: _Stop condition_ (**Max length** with its length, or **First
    gap** with the widest gap to ignore), and _Max thread depth_.
-4. **Selections**, last: _Select by_ (Faces or Circular edges), and its query
-   lists.
+4. **Selections**, last: _Select by_ (Circular edges, the default, or Faces),
+   and its query lists.
 
 The studios' parameters are their configurations as Onshape answers them,
 parsed by `parseOnshapeConfiguration`, so their options show as the Part
@@ -868,10 +872,10 @@ it makes them.
 
 _Select by_ decides what the picks are:
 
-- **Faces** — every circular edge of each face is a hole to fasten; _Holes to
-  skip_ takes the edges of holes in them to leave out.
 - **Circular edges** — each picked circular edge is a hole to fasten; nothing
   is skipped.
+- **Faces** — every circular edge of each planar face is a hole to fasten;
+  _Holes to skip_ takes the edges of holes in them to leave out.
 
 `insertBody` in `routes.ts` refuses a body whose picks don't match its mode,
 and a part its studio doesn't make (`isMade`) or not in the screw's size.
@@ -995,7 +999,7 @@ app.
 | "Couldn't load the fasteners."                                                                                                   | In place of the panel, the read failed                     |
 | "No fasteners are loaded yet." / "Quick Fastener uses the fasteners in FRCDesignLib's Fasteners group, once they're loaded."     | In place of the panel, none loaded                         |
 | "Selections"                                                                                                                     | Heading, last                                              |
-| "Select by" / "Faces" / "Circular edges"                                                                                         | Selection mode, its options                                |
+| "Select by" / "Circular edges" / "Faces"                                                                                         | Selection mode, its options                                |
 | "Faces"                                                                                                                          | Targets list's label, faces                                |
 | "Select faces to fasten every hole in."                                                                                          | Targets list's prompt, faces, in Onshape's bubble and list |
 | "Holes to skip"                                                                                                                  | Second list's label, faces                                 |
@@ -1007,7 +1011,7 @@ app.
 | "Fastener"                                                                                                                       | Heading                                                    |
 | "Program" / "FRC" / "FTC"                                                                                                        | Program, its options                                       |
 | "FTC fasteners aren't available yet."                                                                                            | In place of the Fastener group's inputs, FTC               |
-| "Automatic"                                                                                                                      | The screw's Length, first option                           |
+| "Sizing" / "Automatic" / "Manual"                                                                                                | How the screw's length is chosen, its options              |
 | "Add screw washer" / "Add nut" / "Add nut washer"                                                                                | Group titles, each a checkbox                              |
 | "Stop condition" / "Max length" / "First gap"                                                                                    | Stop condition, its options                                |
 | "Max length" / "Max gap to ignore" / "Max thread depth"                                                                          | Length inputs                                              |
@@ -1115,7 +1119,8 @@ app.
   tab's microversion when only that other tab changes; this is untried in
   Onshape.
 - **The panel listens to the stream.** Onshape streams every pick once the app
-  has sent `applicationInit`. A focused list also holds a `requestSelection`,
+  has sent `applicationInit`, and in a pending selection request's answers. A
+  focused list also holds a `requestSelection`,
   which only limits what the Onshape window lets be picked, in the form Onshape
   answers to (array specifiers per level) rather than the one it documents; a
   highlight cancels it, so leaving a hovered row asks again. A list still
@@ -1158,6 +1163,9 @@ app.
 - **An automatic screw is partly threaded.** The screw studio asks Fully
   threaded only of a length, so automatic sizing has nothing to ask it of; its
   finish, chosen before the length, it keeps.
+- **Sizing is its own input.** Automatic and Manual are a choice of their own
+  beside the screw's Length, so switching back is in sight whatever length is
+  chosen.
 - **The size is chosen, even in automatic mode.** A clearance hole fits more
   than one size, and a hole at 0.201" is both #10's clearance and 1/4-20's tap
   drill; the person knows which they meant. Automatic picks the length.

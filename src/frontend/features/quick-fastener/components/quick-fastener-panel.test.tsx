@@ -94,20 +94,21 @@ describe("QuickFastenerPanel", () => {
         expect(screen.queryByRole("button", { name: "Insert" })).toBeNull();
     });
 
-    it("picks faces, with holes to skip, or locations alone", async () => {
+    it("picks circular edges by default, or faces with holes to skip", async () => {
         renderPanel();
-        expect(screen.getByText("Holes to skip")).toBeTruthy();
-
-        await choose("Select by", "Circular edges");
-
-        expect(screen.queryByText("Holes to skip")).toBeNull();
         expect(
             screen.getByText("Circular edges", { selector: "p" })
         ).toBeTruthy();
+        expect(screen.queryByText("Holes to skip")).toBeNull();
+
+        await choose("Select by", "Faces");
+
+        expect(screen.getByText("Holes to skip")).toBeTruthy();
     });
 
     it("inserts what's picked with the parts chosen, then clears the picks", async () => {
         renderPanel();
+        await choose("Select by", "Faces");
         expect(insertButton().disabled).toBe(true);
 
         await userEvent.click(screen.getAllByText("Click to select")[0]);
@@ -190,8 +191,24 @@ describe("QuickFastenerPanel", () => {
         expect(screen.getAllByLabelText("Vendor")).toHaveLength(2);
     });
 
-    it("asks for a screw's finish before its length, and whether it's fully threaded only beside a preset length sold both ways", async () => {
+    it("sizes a screw automatically until switched to manual, then asks its length", async () => {
+        renderPanel();
+        expect(screen.queryByLabelText("Length")).toBeNull();
+
+        await choose("Sizing", "Manual");
+        expect(useQuickFastenerStore.getState().mode).toBe(FastenerMode.PRESET);
+        expect(screen.getByLabelText("Length")).toBeTruthy();
+
+        await choose("Sizing", "Automatic");
+        expect(useQuickFastenerStore.getState().mode).toBe(
+            FastenerMode.AUTOMATIC
+        );
+        expect(screen.queryByLabelText("Length")).toBeNull();
+    });
+
+    it("asks for a screw's finish before its length, and whether it's fully threaded only beside a manual length sold both ways", async () => {
         useQuickFastenerStore.setState({
+            mode: FastenerMode.PRESET,
             screw: { vendor: "MCMASTER", size: "NO_8_32", head: "SOCKET" }
         });
         renderPanel();
@@ -220,7 +237,7 @@ describe("QuickFastenerPanel", () => {
         expect(screen.queryByText("Add screw washer")).toBeNull();
     });
 
-    it("stops an automatic screw by the condition chosen, and a preset one not at all", async () => {
+    it("stops an automatic screw by the condition chosen, and a manual one not at all", async () => {
         renderPanel();
         expect(screen.getByLabelText("Max length")).toBeTruthy();
         expect(screen.getByLabelText("Max thread depth")).toBeTruthy();
@@ -229,8 +246,7 @@ describe("QuickFastenerPanel", () => {
         expect(screen.queryByLabelText("Max length")).toBeNull();
         expect(screen.getByLabelText("Max gap to ignore")).toBeTruthy();
 
-        await choose("Length", "1/2 in");
-        expect(useQuickFastenerStore.getState().mode).toBe(FastenerMode.PRESET);
+        await choose("Sizing", "Manual");
         expect(screen.queryByLabelText("Stop condition")).toBeNull();
     });
 });

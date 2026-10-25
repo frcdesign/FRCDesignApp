@@ -20,7 +20,7 @@ import { IconSize } from "../../../lib/style-constants";
 import { ParameterGrid } from "../../../components/parameter-input";
 import { QueryList } from "../../../components/query-list";
 import { isEdge, isFace, toSelectedEntities } from "../../../lib/selection";
-import { CIRCULAR_EDGES, FACES } from "../../../lib/messages";
+import { CIRCULAR_EDGES, PLANAR_FACES } from "../../../lib/messages";
 import { fastenerOptions, selectionMode, settleChoices } from "../options";
 import { FormInput } from "../parameters";
 import {
@@ -125,7 +125,7 @@ function QuickFastenerForm(props: QuickFastenerFormProps): ReactNode {
                                     entities={targets}
                                     onChange={setTargets}
                                     accepts={isFace}
-                                    filter={FACES}
+                                    filter={PLANAR_FACES}
                                 />
                             </FullWidthRow>
                             <FullWidthRow>
