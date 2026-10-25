@@ -1,5 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { handledError, internalError } from "../../../lib/api-error";
+import { getFastenerSet } from "../../quick-fastener/fastener-set";
+import { generatedFeatureTypes } from "../../generated-parts/store";
 import { validate } from "../../../lib/validate";
 import { HttpStatus } from "http-status-ts";
 import z from "zod";
@@ -112,7 +114,8 @@ insertableRoutes.post(
             fastenInfo = await parseFastenInfo(
                 await c.var.getOnshapeApi(),
                 toElementPath(row),
-                row.elementType
+                row.elementType,
+                await generatedFeatureTypes(db)
             );
         }
 
@@ -503,7 +506,8 @@ insertableRoutes.post(
                       c.env.KV,
                       targetPath,
                       body.targets,
-                      body.excluded
+                      body.excluded,
+                      await getFastenerSet(getDb(c.env.DB))
                   )
               ).circularEdges
             : [];

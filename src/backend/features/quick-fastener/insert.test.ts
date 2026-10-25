@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { FastenerKind } from "./studios";
+import { FASTENER_SET } from "../../../__test_utils__/fastener-set";
 import { HoleEnd, HoleStatus } from "./contract";
 import {
     PartStack,
@@ -48,7 +49,7 @@ const PLAN: HolePlan = {
 };
 
 describe("placements", () => {
-    const parts = placements([PLAN]);
+    const parts = placements(FASTENER_SET, [PLAN]);
 
     it("stacks each part on the one under it", () => {
         expect(parts.map((part) => part.kind)).toEqual([
@@ -85,7 +86,7 @@ describe("placements", () => {
     });
 
     it("seats parts on the hole's edges without washers", () => {
-        const bare = placements([
+        const bare = placements(FASTENER_SET, [
             {
                 ...PLAN,
                 planned: {
@@ -103,7 +104,7 @@ describe("placements", () => {
 
     it("places nothing for a hole that isn't ready", () => {
         expect(
-            placements([
+            placements(FASTENER_SET, [
                 { ...PLAN, planned: { key: "x", status: HoleStatus.NO_FIT } }
             ])
         ).toEqual([]);
@@ -160,7 +161,7 @@ describe("stackTargets", () => {
 });
 
 describe("partMate", () => {
-    const parts = placements([PLAN]);
+    const parts = placements(FASTENER_SET, [PLAN]);
     const paths = [["w1"], ["s1"], ["w2"], ["n1"]];
 
     it("fastens a part on a washer to the washer's top edge", () => {

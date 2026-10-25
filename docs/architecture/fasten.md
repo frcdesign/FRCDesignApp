@@ -123,7 +123,9 @@ async function indexHoles(
     kv: KVNamespace,
     assembly: ElementPath,
     targets: SelectedEntity[],
-    excluded: SelectedEntity[]
+    excluded: SelectedEntity[],
+    // The loaded fasteners, which have no holes to fasten through
+    fasteners: FastenerSet | undefined
 ): Promise<IndexedHoles>;
 
 interface SelectedEntity {
@@ -277,7 +279,9 @@ interface EntityReference {
 async function parseFastenInfo(
     onshapeApi: OnshapeApi,
     elementPath: ElementPath,
-    elementType: ElementType
+    elementType: ElementType,
+    // Every loaded set's studio features (`generatedFeatureTypes`)
+    generatedFeatures: string[]
 ): Promise<FastenInfo>;
 // The Replicate not decided warning.
 function checkInsertableSettings(input: InsertableSettingsInput): BuildIssue[];

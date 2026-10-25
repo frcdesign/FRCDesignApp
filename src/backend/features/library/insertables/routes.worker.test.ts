@@ -576,7 +576,7 @@ describe("insertable routes", () => {
             excluded: [EDGE_PICKS[1]]
         });
         expect(res.status).toBe(200);
-        expect(indexHoles.mock.calls[0].slice(3)).toEqual([
+        expect(indexHoles.mock.calls[0].slice(3, 5)).toEqual([
             [face],
             [EDGE_PICKS[1]]
         ]);

@@ -57,6 +57,13 @@
             "when": 1792627068887,
             "tag": "0007_supports_replicate",
             "breakpoints": true
+        },
+        {
+            "idx": 8,
+            "version": "6",
+            "when": 1792952954668,
+            "tag": "0008_generated_sets",
+            "breakpoints": true
         }
     ]
 }

@@ -1,5 +1,6 @@
 import { NonRetryableError } from "cloudflare:workflows";
 import { eq } from "drizzle-orm";
+import { generatedFeatureTypes } from "../generated-parts/store";
 import { type Db, getDb } from "../../db/client";
 import {
     type Configuration,
@@ -157,7 +158,7 @@ async function probeInsertable(
         : parseVendors(target.name, parameters);
 
     const fastenInfo = flags.supportsFasten
-        ? await parseFastenInfoStep(ctx, target)
+        ? await parseFastenInfoStep(ctx, target, released?.feature)
         : null;
 
     const parts = await readPartsStep(ctx, target);
@@ -315,9 +316,11 @@ function readPartsStep(
     );
 }
 
+/** `ownFeature`: a generated studio's feature, which its own load knows before any set naming it is stored. */
 function parseFastenInfoStep(
     ctx: LoadContext,
-    { insertableId, elementPath, elementType }: InsertableTarget
+    { insertableId, elementPath, elementType }: InsertableTarget,
+    ownFeature: string | undefined
 ): Promise<FastenInfo> {
     return ctx.step.do(
         `fasten-${insertableId}`,
@@ -326,7 +329,11 @@ function parseFastenInfoStep(
             parseFastenInfo(
                 await getOnshapeApiFromContext(ctx),
                 elementPath,
-                elementType
+                elementType,
+                [
+                    ...(await generatedFeatureTypes(getDb(ctx.env.DB))),
+                    ...(ownFeature ? [ownFeature] : [])
+                ]
             )
     );
 }

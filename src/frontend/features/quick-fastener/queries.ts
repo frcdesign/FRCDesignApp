@@ -3,12 +3,25 @@ import {
     type FastenerJobStatus,
     type QuickFastenerIn
 } from "@backend/features/quick-fastener/contract";
+import { type FastenerSet } from "@backend/features/quick-fastener/studios";
 import { type ElementPath } from "@backend/lib/onshape/path";
 import { apiGet, apiPost } from "../../lib/api-client";
 import { getAppErrorHandler } from "../../lib/errors";
 import { queryClient } from "../../lib/query-client";
-import { fastenerJobQueryKey } from "../../lib/query-keys";
+import {
+    FASTENER_SET_QUERY_KEY,
+    fastenerJobQueryKey
+} from "../../lib/query-keys";
 import { useIsSignedIn } from "../auth/access-level";
+
+/** The fasteners the library loaded, which change only when it reloads them; null before it loads them. */
+export function useFastenerSetQuery() {
+    return useQuery<FastenerSet | null>({
+        queryKey: FASTENER_SET_QUERY_KEY,
+        queryFn: () => apiGet("/quick-fastener/parts"),
+        staleTime: 10 * 60 * 1000
+    });
+}
 
 /** The run this assembly last started; a push says when it moves on. */
 export function useFastenerJobQuery(assembly: ElementPath | undefined) {

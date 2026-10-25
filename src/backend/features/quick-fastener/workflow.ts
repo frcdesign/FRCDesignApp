@@ -13,6 +13,7 @@ import {
 import { type ElementPath } from "../../lib/onshape/path";
 import { getOnshapeApiFromSessionId } from "../auth/request-auth";
 import { ONSHAPE_STEP_RETRIES } from "../load/steps";
+import { getDb } from "../../db/client";
 import { isRateLimited, isTransient } from "../../lib/onshape/failures";
 import {
     FastenerJobState,
@@ -30,6 +31,8 @@ import {
     describeStepFailure,
     runFailure
 } from "./failures";
+import { getFastenerSet } from "./fastener-set";
+import { type FastenerSet } from "./studios";
 import { indexHoles } from "./index-holes";
 import {
     insertGroups,
@@ -122,6 +125,14 @@ export class QuickFastenerWorkflow extends WorkflowEntrypoint<
 }
 
 async function runSteps(ctx: RunContext, request: QuickFastenerIn) {
+    // As loaded when the run started, though the library reloads during it
+    const set = await ctx.step.do(
+        "fastener-set",
+        async () => (await getFastenerSet(getDb(ctx.env.DB))) ?? null
+    );
+    if (!set) {
+        throw runFailure("Quick fastener's parts aren't published yet.");
+    }
     const plans = await runTask(ctx, FastenerTaskAction.INDEX, (run) =>
         run("index", isTransient, async (client) => {
             const indexed = await indexHoles(
@@ -129,13 +140,15 @@ async function runSteps(ctx: RunContext, request: QuickFastenerIn) {
                 ctx.env.KV,
                 request.assembly,
                 request.targets,
-                request.excluded
+                request.excluded,
+                set
             );
             return planHoles(
                 indexed.circularEdges,
                 indexed.holes,
                 indexed.placed,
-                request.options
+                request.options,
+                set.catalog
             );
         })
     );
@@ -153,6 +166,7 @@ async function runSteps(ctx: RunContext, request: QuickFastenerIn) {
         )
     );
     const parts = placements(
+        set,
         plans.filter((plan) => !later.has(plan.planned.key))
     );
     if (parts.length === 0) {
@@ -160,7 +174,7 @@ async function runSteps(ctx: RunContext, request: QuickFastenerIn) {
         return;
     }
     const paths = await runTask(ctx, FastenerTaskAction.INSERT, (run) =>
-        insertParts(ctx, run, "", parts)
+        insertParts(ctx, set, run, "", parts)
     );
     if (!paths) {
         skipRest(ctx);
@@ -168,7 +182,7 @@ async function runSteps(ctx: RunContext, request: QuickFastenerIn) {
     }
 
     const mates = await runTask(ctx, FastenerTaskAction.FASTEN, (run) =>
-        fastenParts(ctx, run, "", parts, paths)
+        fastenParts(ctx, set, run, "", parts, paths)
     );
     if (!mates) {
         skipRest(ctx);
@@ -231,6 +245,7 @@ async function runSteps(ctx: RunContext, request: QuickFastenerIn) {
 /** Inserts parts in one call: each one's occurrence path, or null where Onshape answered none. */
 async function insertParts(
     ctx: RunContext,
+    set: FastenerSet,
     run: StepRunner,
     prefix: string,
     parts: PartPlacement[]
@@ -242,7 +257,7 @@ async function insertParts(
             const response = await insertTransformedInstances(
                 client,
                 ctx.assembly,
-                insertGroups(parts)
+                insertGroups(set, parts)
             );
             return (response.insertInstanceResponses ?? []).map(
                 (each) => each.occurrences?.[0]?.path ?? null
@@ -256,6 +271,7 @@ async function insertParts(
 /** Fastens each inserted part where it sits: each one's mate feature id, or null where it has none. */
 async function fastenParts(
     ctx: RunContext,
+    set: FastenerSet,
     run: StepRunner,
     prefix: string,
     parts: PartPlacement[],
@@ -265,12 +281,13 @@ async function fastenParts(
     const connectors = await run(
         `${prefix}mate-connectors`,
         isTransient,
-        (client) => mateConnectorIdsFor(client, ctx.env.KV, ctx.assembly, kinds)
+        (client) =>
+            mateConnectorIdsFor(client, ctx.env.KV, ctx.assembly, set, kinds)
     );
     const washerEdges = await run(
         `${prefix}washer-edges`,
         isTransient,
-        (client) => washerTopEdges(client, ctx.env.KV, parts)
+        (client) => washerTopEdges(client, ctx.env.KV, set, parts)
     );
     const insertedPaths = paths.map((path) => path ?? undefined);
     const mates: (string | null)[] = [];

@@ -1,11 +1,12 @@
 import { env } from "cloudflare:workers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import * as FastenerSets from "./fastener-set";
+import { FASTENER_SET } from "../../../__test_utils__/fastener-set";
 import { createTestApp, jsonRequest } from "../../../__test_utils__";
 import {
     ASSEMBLY,
     BODY
 } from "../../../__test_utils__/quick-fastener-fixtures";
-import * as Studios from "./studios";
 import { Program } from "./catalog";
 import {
     FastenerJobState,
@@ -34,11 +35,7 @@ function post(path: string, body: unknown) {
 }
 
 function publish() {
-    vi.spyOn(Studios, "getStudioLocation").mockImplementation((kind) => ({
-        documentId: "lib",
-        versionId: "libv",
-        elementId: `${kind}Studio`
-    }));
+    vi.spyOn(FastenerSets, "getFastenerSet").mockResolvedValue(FASTENER_SET);
 }
 
 beforeEach(async () => {
@@ -181,5 +178,15 @@ describe("POST /api/quick-fastener/insert", () => {
                 })
             ).status
         ).toBe(400);
+    });
+});
+
+describe("GET /api/quick-fastener/parts", () => {
+    it("serves the fasteners the library loaded, and null before it loads them", async () => {
+        const read = async () =>
+            (await app.request("/api/quick-fastener/parts", {}, env)).json();
+        expect(await read()).toBeNull();
+        publish();
+        expect(await read()).toEqual(FASTENER_SET);
     });
 });

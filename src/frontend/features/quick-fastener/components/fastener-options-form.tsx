@@ -15,7 +15,6 @@ import {
     GENERIC,
     isCountersunk,
     partVendors,
-    STUDIO_PARAMETERS,
     StudioInput
 } from "@backend/features/quick-fastener/studios";
 import { ParameterInput } from "../../../components/parameter-input";
@@ -82,7 +81,7 @@ export function FastenerOptionsForm(
             </ParameterGroup>
             {!isFtc && (
                 <>
-                    {!isCountersunk(settled.screw.head) && (
+                    {!isCountersunk(settled.set, settled.screw.head) && (
                         <PartGroup
                             part={Part.SCREW_WASHER}
                             title="Add screw washer"
@@ -124,7 +123,7 @@ function ScrewInputs(props: ScrewInputsProps): ReactNode {
     const setScrew = useQuickFastenerStore((state) => state.setScrew);
     const setMode = useQuickFastenerStore((state) => state.setMode);
 
-    const parameters = STUDIO_PARAMETERS[FastenerKind.SCREW];
+    const { parameters } = settled.set.studios[FastenerKind.SCREW];
     const selection: Selection = { ...settled.screw };
 
     const setLength = (value: string | undefined) => {
@@ -144,7 +143,7 @@ function ScrewInputs(props: ScrewInputsProps): ReactNode {
                         <ParameterInput
                             key={parameter.id}
                             inputId="screw-length"
-                            parameter={lengthParameter()}
+                            parameter={lengthParameter(settled.set)}
                             value={lengthValue(settled.mode, settled.screw)}
                             selection={selection}
                             parameters={parameters}
@@ -198,7 +197,7 @@ function PartGroup(props: PartGroupProps): ReactNode {
         return null;
     }
     const kind = PART_KIND[part];
-    const parameters = STUDIO_PARAMETERS[kind];
+    const { parameters } = settled.set.studios[kind];
     const selection: Selection = { ...choice };
     const shown = parameters.flatMap((parameter): ConfigurationParameter[] => {
         if (parameter.id === StudioInput.SIZE) {
@@ -213,7 +212,7 @@ function PartGroup(props: PartGroupProps): ReactNode {
         ) {
             return [];
         }
-        const vendors = partVendors(kind, settled.screw.size);
+        const vendors = partVendors(settled.set, kind, settled.screw.size);
         return [
             {
                 ...parameter,

@@ -9,7 +9,7 @@
  * no deeper into threads than the maximum thread depth.
  */
 import {
-    catalog,
+    type Catalog,
     type CatalogSize,
     getHead,
     getLengths,
@@ -94,9 +94,10 @@ interface Segment {
     edges: { id: string; t: number }[];
 }
 
-const MAX_WASHER_THICKNESS = Math.max(
-    ...catalog.washers.map((washer) => washer.thickness)
-);
+/** The run's options, with the catalog the parts come from. */
+interface PlanOptions extends FastenerOptions {
+    catalog: Catalog;
+}
 
 /** Two threads past a nut, so it's fully engaged. */
 const THREADS_PAST_NUT = 2;
@@ -111,10 +112,11 @@ export function planHoles(
     circularEdges: AssemblyCircularEdge[],
     holes: AssemblyHole[],
     placed: PlacedScrew[],
-    options: FastenerOptions
+    options: FastenerOptions,
+    catalog: Catalog
 ): HolePlan[] {
     return circularEdges.map((circularEdge) =>
-        planHole(circularEdge, holes, placed, options)
+        planHole(circularEdge, holes, placed, { ...options, catalog })
     );
 }
 
@@ -122,7 +124,7 @@ function planHole(
     circularEdge: AssemblyCircularEdge,
     holes: AssemblyHole[],
     placed: PlacedScrew[],
-    options: FastenerOptions
+    options: PlanOptions
 ): HolePlan {
     const plan = (planned: Omit<PlannedHole, "key">): HolePlan => ({
         planned: { key: circularEdge.key, ...planned },
@@ -130,12 +132,19 @@ function planHole(
     });
     const into = scale(circularEdge.normal, -1);
 
-    if (placed.some((screw) => isInHole(screw, circularEdge, into))) {
+    const maxWasher = Math.max(
+        ...options.catalog.washers.map((washer) => washer.thickness)
+    );
+    if (
+        placed.some((screw) => isInHole(screw, circularEdge, into, maxWasher))
+    ) {
         return plan({ status: HoleStatus.FASTENED });
     }
 
-    const size = getSize(options.screw.size);
-    const head = getHead(options.screw.head)?.sizes[options.screw.size];
+    const size = getSize(options.catalog, options.screw.size);
+    const head = getHead(options.catalog, options.screw.head)?.sizes[
+        options.screw.size
+    ];
     if (!size || !head) {
         return plan({
             status: HoleStatus.NO_FIT,
@@ -214,7 +223,8 @@ function planHole(
 function isInHole(
     screw: PlacedScrew,
     circularEdge: AssemblyCircularEdge,
-    into: Vec3
+    into: Vec3,
+    maxWasherThickness: number
 ): boolean {
     return (
         isParallel(screw.axis, into) &&
@@ -222,7 +232,7 @@ function isInHole(
             LINEAR_TOLERANCE &&
         // At the circular edge, or seated on a washer above it
         Math.abs(dot(screw.origin, into) - dot(circularEdge.center, into)) <=
-            MAX_WASHER_THICKNESS + LINEAR_TOLERANCE
+            maxWasherThickness + LINEAR_TOLERANCE
     );
 }
 
@@ -274,14 +284,20 @@ function isTappedFor(segment: Segment, size: CatalogSize): boolean {
 }
 
 /** The longest screw the vendor makes in the size and head: the farthest any stack is followed. */
-function longestLength(options: FastenerOptions): number {
+function longestLength(options: PlanOptions): number {
     const { vendor, size, head } = options.screw;
-    const lengths = getLengths(vendor, size, head, options.screw.finish);
+    const lengths = getLengths(
+        options.catalog,
+        vendor,
+        size,
+        head,
+        options.screw.finish
+    );
     return lengths.length > 0 ? lengths[lengths.length - 1].length : 0;
 }
 
 /** The deepest a stack is followed, and the widest gap it reaches across. */
-function stopLimits(options: FastenerOptions): {
+function stopLimits(options: PlanOptions): {
     reach: number;
     gap: number;
 } {
@@ -305,7 +321,7 @@ function followStack(
     segments: Segment[],
     first: Segment,
     size: CatalogSize,
-    options: FastenerOptions
+    options: PlanOptions
 ): Stack {
     const limits = stopLimits(options);
     let reach = first.far;
@@ -364,15 +380,16 @@ interface Washers {
     endThickness: number;
 }
 
-function thickness(washer: PartChoice | undefined): number {
+function thickness(catalog: Catalog, washer: PartChoice | undefined): number {
     return washer
-        ? (getWasher(washer.vendor, washer.size, washer.type)?.thickness ?? 0)
+        ? (getWasher(catalog, washer.vendor, washer.size, washer.type)
+              ?.thickness ?? 0)
         : 0;
 }
 
 /** The screw washer, unless under a flat head, and the nut washer, when there's a nut. */
 function chooseWashers(
-    options: FastenerOptions,
+    options: PlanOptions,
     countersunk: boolean,
     end: HoleEnd
 ): Washers {
@@ -382,27 +399,25 @@ function chooseWashers(
     return {
         start,
         end: nutEnd,
-        startThickness: thickness(start),
-        endThickness: thickness(nutEnd)
+        startThickness: thickness(options.catalog, start),
+        endThickness: thickness(options.catalog, nutEnd)
     };
 }
 
 /** The nut, where the screw comes out the far side and one is wanted. */
-function nutChoice(
-    options: FastenerOptions,
-    end: HoleEnd
-): PartChoice | undefined {
+function nutChoice(options: PlanOptions, end: HoleEnd): PartChoice | undefined {
     return end === HoleEnd.THROUGH ? options.nut : undefined;
 }
 
 /** The screw for a stack, or why there's none. */
 function pickScrew(
-    options: FastenerOptions,
+    options: PlanOptions,
     size: CatalogSize,
     stack: Stack,
     washers: Washers
 ): ScrewChoice | string {
     const made = getLengths(
+        options.catalog,
         options.screw.vendor,
         size.id,
         options.screw.head,
@@ -437,7 +452,8 @@ function pickScrew(
     if (stack.end === HoleEnd.THROUGH) {
         const nut = nutChoice(options, stack.end);
         const nutHeight = nut
-            ? (getNut(nut.vendor, nut.size, nut.type)?.height ?? 0)
+            ? (getNut(options.catalog, nut.vendor, nut.size, nut.type)
+                  ?.height ?? 0)
             : 0;
         const needed =
             stack.depth +

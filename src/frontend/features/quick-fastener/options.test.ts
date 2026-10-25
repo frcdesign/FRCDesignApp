@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { FASTENER_SET } from "../../../__test_utils__/fastener-set";
 import {
     DEFAULT_MAX_GAP,
     DEFAULT_MAX_LENGTH,
@@ -29,7 +30,7 @@ function choices(extra: Partial<Choices> = {}): Choices {
 
 describe("settleChoices", () => {
     it("makes the defaults whole: a Generic #10-32 button head with McMaster-Carr's nylock", () => {
-        const options = fastenerOptions(settleChoices(choices()));
+        const options = fastenerOptions(settleChoices(FASTENER_SET, choices()));
         expect(options.screw).toMatchObject({
             vendor: GENERIC,
             size: "NO_10_32",
@@ -46,11 +47,14 @@ describe("settleChoices", () => {
         expect(options.maxLength).toBeCloseTo(DEFAULT_MAX_LENGTH);
         expect(options.maxGap).toBeCloseTo(DEFAULT_MAX_GAP);
         expect(options.maxThreadDepth).toBeCloseTo(DEFAULT_MAX_THREAD_DEPTH);
-        expect(isMade(FastenerKind.SCREW, options.screw)).toBe(true);
+        expect(isMade(FASTENER_SET, FastenerKind.SCREW, options.screw)).toBe(
+            true
+        );
     });
 
     it("follows the screw: WCP makes no flat heads, and only #10-32", () => {
         const settled = settleChoices(
+            FASTENER_SET,
             choices({
                 screw: { vendor: "WCP", head: "FLAT", size: "QUARTER_20" }
             })
@@ -61,6 +65,7 @@ describe("settleChoices", () => {
 
     it("puts each part in the screw's size, from a vendor making it there", () => {
         const settled = settleChoices(
+            FASTENER_SET,
             choices({
                 screw: { vendor: "MCMASTER", size: "QUARTER_20" },
                 parts: {
@@ -76,7 +81,9 @@ describe("settleChoices", () => {
             vendor: "MCMASTER",
             size: "QUARTER_20"
         });
-        expect(washer && isMade(FastenerKind.WASHER, washer)).toBe(true);
+        expect(
+            washer && isMade(FASTENER_SET, FastenerKind.WASHER, washer)
+        ).toBe(true);
         // McMaster-Carr makes every nut
         expect(settled.parts[Part.NUT]).toMatchObject({
             vendor: "MCMASTER",
@@ -86,6 +93,7 @@ describe("settleChoices", () => {
 
     it("leaves the screw washer out under a flat head, and the nut washer without a nut", () => {
         const settled = settleChoices(
+            FASTENER_SET,
             choices({
                 screw: { head: "FLAT" },
                 added: {
@@ -104,6 +112,7 @@ describe("settleChoices", () => {
     it("sends the quantities typed, in metres", () => {
         const options = fastenerOptions(
             settleChoices(
+                FASTENER_SET,
                 choices({
                     form: {
                         [FormInput.STOP]: StopCondition.FIRST_GAP,
@@ -120,7 +129,7 @@ describe("settleChoices", () => {
 describe("describePlan", () => {
     it("names the screw and its nut", () => {
         expect(
-            describePlan({
+            describePlan(FASTENER_SET, {
                 key: "k",
                 status: HoleStatus.READY,
                 end: HoleEnd.THROUGH,
@@ -139,7 +148,7 @@ describe("describePlan", () => {
 
     it("says why a hole gets nothing", () => {
         expect(
-            describePlan({
+            describePlan(FASTENER_SET, {
                 key: "k",
                 status: HoleStatus.NO_FIT,
                 reason: "No screw fits."

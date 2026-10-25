@@ -1,9 +1,10 @@
 /**
- * Quick fastener's parts, as robot-code's `fastenerTables.py` defines them
- * (synced into `catalog.gen.ts`): what the planner sizes them by. The Part
- * Studios they're inserted from are in `studios.ts`. Lengths are metres.
+ * Quick fastener's parts, as robot-code's `fastenerTables.py` defines them and
+ * a library loads them from the manifest released beside the studios: what the
+ * planner sizes them by. The Part Studios they're inserted from are in
+ * `studios.ts`. Lengths are metres.
  */
-import { CATALOG } from "./catalog.gen";
+import { z } from "zod";
 
 /** FTC's fasteners aren't in the catalog yet. */
 export enum Program {
@@ -88,22 +89,92 @@ export interface Catalog {
     washers: CatalogWasher[];
 }
 
-export const catalog: Catalog = CATALOG;
+const named = z.object({ id: z.string(), name: z.string() });
+const stocked = {
+    partNumber: z.string().optional(),
+    url: z.string().optional()
+};
 
-export function getCatalog(program: Program): Catalog | undefined {
-    return program === Program.FRC ? catalog : undefined;
-}
+/** A released manifest's catalog, which a load stores beside the set's studios. */
+export const catalogSchema = z.object({
+    vendors: z.array(named),
+    sizes: z.array(
+        named.extend({
+            majorDiameter: z.number(),
+            pitch: z.number(),
+            tapDrillDiameter: z.number(),
+            closeClearanceDiameter: z.number(),
+            freeClearanceDiameter: z.number()
+        })
+    ),
+    heads: z.array(
+        named.extend({
+            sizes: z.record(
+                z.string(),
+                z.object({
+                    diameter: z.number(),
+                    height: z.number(),
+                    countersunk: z.boolean()
+                })
+            )
+        })
+    ),
+    screws: z.array(
+        z.object({
+            vendor: z.string(),
+            size: z.string(),
+            head: z.string(),
+            finish: z.string(),
+            lengths: z.array(
+                named.extend({
+                    length: z.number(),
+                    fullThreadChoice: z.boolean()
+                })
+            )
+        })
+    ),
+    nutTypes: z.array(named),
+    nuts: z.array(
+        z.object({
+            vendor: z.string(),
+            size: z.string(),
+            type: z.string(),
+            acrossFlats: z.number(),
+            height: z.number(),
+            ...stocked
+        })
+    ),
+    washers: z.array(
+        z.object({
+            vendor: z.string(),
+            size: z.string(),
+            type: z.string(),
+            name: z.string(),
+            innerDiameter: z.number(),
+            outerDiameter: z.number(),
+            thickness: z.number(),
+            finishes: z.array(z.string())
+        })
+    )
+}) satisfies z.ZodType<Catalog>;
 
-export function getSize(sizeId: string): CatalogSize | undefined {
+export function getSize(
+    catalog: Catalog,
+    sizeId: string
+): CatalogSize | undefined {
     return catalog.sizes.find((size) => size.id === sizeId);
 }
 
-export function getHead(headId: string): CatalogHead | undefined {
+export function getHead(
+    catalog: Catalog,
+    headId: string
+): CatalogHead | undefined {
     return catalog.heads.find((head) => head.id === headId);
 }
 
 /** The lengths a vendor makes a size and head in, in a finish; none when it doesn't make them. */
 export function getLengths(
+    catalog: Catalog,
     vendor: string,
     size: string,
     head: string,
@@ -121,6 +192,7 @@ export function getLengths(
 }
 
 export function getNut(
+    catalog: Catalog,
     vendor: string,
     size: string,
     type: string
@@ -131,6 +203,7 @@ export function getNut(
 }
 
 export function getWasher(
+    catalog: Catalog,
     vendor: string,
     size: string,
     type: string

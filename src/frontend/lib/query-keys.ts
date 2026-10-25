@@ -109,6 +109,8 @@ export function nextVersionNameQueryKey(workspace: InstancePath | undefined) {
 }
 
 /** By the assembly's key, so a launch's extra fields don't make a second entry. */
+export const FASTENER_SET_QUERY_KEY = ["fastener-set"];
+
 export function fastenerJobQueryKey(assembly: ElementPath | undefined) {
     return ["fastener-job", assembly && assemblyKey(assembly)];
 }

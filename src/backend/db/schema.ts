@@ -165,6 +165,31 @@ export const configurations = sqliteTable("configurations", {
         .default([])
 });
 
+/**
+ * A generated set's released manifest less its studios, as the last load of
+ * the group releasing it read it: what Quick fastener sizes fasteners by. The
+ * studios themselves are the group's insertables.
+ */
+export const generatedSets = sqliteTable(
+    "generated_sets",
+    {
+        libraryId: libraryId().references(() => libraries.id),
+        // As the manifest's tab names it, `fasteners`
+        set: text("set").notNull(),
+        groupId: text("group_id")
+            .notNull()
+            .references(() => groups.id, { onDelete: "cascade" }),
+        versionId: text("version_id").notNull(),
+        // Each studio's feature, by its key
+        features: text("features", { mode: "json" })
+            .$type<Record<string, string>>()
+            .notNull(),
+        // Checked against its set's schema where it's read
+        catalog: text("catalog", { mode: "json" }).$type<unknown>().notNull()
+    },
+    (t) => [primaryKey({ columns: [t.libraryId, t.set] })]
+);
+
 export const users = sqliteTable("users", {
     id: text("id").primaryKey(),
     // Unused, but SQLite can't drop a column in a foreign key, and D1 won't

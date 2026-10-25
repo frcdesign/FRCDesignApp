@@ -18,14 +18,14 @@ import {
 import { type ElementPath } from "../../lib/onshape/path";
 import { type Selection } from "../configurations/contract";
 import { encodeConfiguration } from "../configurations/utils";
-import { getWasher } from "./catalog";
+import { type Catalog, getWasher } from "./catalog";
 import { HoleStatus } from "./contract";
 import { add, frameTransform, scale, type Vec3 } from "./geometry";
 import { type HolePlan, type MateEdge } from "./planner";
 import { scanStudio, type ScannedParts, type StudioSource } from "./scan";
 import {
     FastenerKind,
-    getStudioLocation,
+    type FastenerSet,
     type PartChoice,
     studioConfiguration
 } from "./studios";
@@ -60,9 +60,10 @@ export interface PartPlacement {
 /** A released studio's mate connector, by its version: a version's never changes. */
 const mateConnectorIds = kvStore<string>("quick-fastener-mate-connector");
 
-function thickness(washer: PartChoice | undefined): number {
+function thickness(catalog: Catalog, washer: PartChoice | undefined): number {
     return washer
-        ? (getWasher(washer.vendor, washer.size, washer.type)?.thickness ?? 0)
+        ? (getWasher(catalog, washer.vendor, washer.size, washer.type)
+              ?.thickness ?? 0)
         : 0;
 }
 
@@ -71,7 +72,10 @@ function thickness(washer: PartChoice | undefined): number {
  * sit on the circular edge, pointing out of the part; a nut and its washer on the far
  * side, pointing the other way, each part on top of the one under it.
  */
-export function placements(plans: HolePlan[]): PartPlacement[] {
+export function placements(
+    set: FastenerSet,
+    plans: HolePlan[]
+): PartPlacement[] {
     const parts: PartPlacement[] = [];
     for (const { planned, circularEdge, exit } of plans) {
         if (planned.status !== HoleStatus.READY || !planned.screw) {
@@ -90,6 +94,7 @@ export function placements(plans: HolePlan[]): PartPlacement[] {
                 hole: planned.key,
                 stack: PartStack.SCREW,
                 configuration: studioConfiguration(
+                    set,
                     FastenerKind.WASHER,
                     planned.screwWasher
                 ),
@@ -103,13 +108,14 @@ export function placements(plans: HolePlan[]): PartPlacement[] {
             hole: planned.key,
             stack: PartStack.SCREW,
             configuration: studioConfiguration(
+                set,
                 FastenerKind.SCREW,
                 planned.screw
             ),
             transform: frameTransform(
                 add(
                     circularEdge.center,
-                    scale(out, thickness(planned.screwWasher))
+                    scale(out, thickness(set.catalog, planned.screwWasher))
                 ),
                 out
             ),
@@ -128,6 +134,7 @@ export function placements(plans: HolePlan[]): PartPlacement[] {
                 hole: planned.key,
                 stack: PartStack.NUT,
                 configuration: studioConfiguration(
+                    set,
                     FastenerKind.WASHER,
                     planned.nutWasher
                 ),
@@ -138,13 +145,17 @@ export function placements(plans: HolePlan[]): PartPlacement[] {
         }
         const nutAt: Vec3 = add(
             exit.point,
-            scale(back, thickness(planned.nutWasher))
+            scale(back, thickness(set.catalog, planned.nutWasher))
         );
         parts.push({
             kind: FastenerKind.NUT,
             hole: planned.key,
             stack: PartStack.NUT,
-            configuration: studioConfiguration(FastenerKind.NUT, planned.nut),
+            configuration: studioConfiguration(
+                set,
+                FastenerKind.NUT,
+                planned.nut
+            ),
             transform: frameTransform(nutAt, back),
             seat: nutSeat,
             name: "Quick fastener nut"
@@ -215,23 +226,13 @@ export function stackTargets(
     );
 }
 
-export function studioLocation(kind: FastenerKind): StudioLocation {
-    const location = getStudioLocation(kind);
-    if (!location) {
-        throw handledError(
-            "Quick fastener's parts aren't published yet.",
-            HttpStatus.SERVICE_UNAVAILABLE
-        );
-    }
-    return location;
-}
-
 /** `transformedinstances`' groups: one per part, each landed where it goes. */
 export function insertGroups(
+    set: FastenerSet,
     parts: PartPlacement[]
 ): { instances: object[]; transform: number[] }[] {
     return parts.map((part) => {
-        const location = studioLocation(part.kind);
+        const { location } = set.studios[part.kind];
         return {
             instances: [
                 {
@@ -257,6 +258,7 @@ export async function mateConnectorIdsFor(
     client: OnshapeApi,
     kv: KVNamespace,
     assembly: ElementPath,
+    set: FastenerSet,
     kinds: FastenerKind[]
 ): Promise<Partial<Record<FastenerKind, string>>> {
     const ids: Partial<Record<FastenerKind, string>> = {};
@@ -264,7 +266,7 @@ export async function mateConnectorIdsFor(
     for (const kind of kinds) {
         const cached = await mateConnectorIds.get(
             kv,
-            locationKey(studioLocation(kind))
+            locationKey(set.studios[kind].location)
         );
         if (cached) {
             ids[kind] = cached;
@@ -279,7 +281,7 @@ export async function mateConnectorIdsFor(
         includeMateConnectors: true
     });
     for (const kind of missing) {
-        const location = studioLocation(kind);
+        const { location } = set.studios[kind];
         const id = definition.parts.find(
             (each) =>
                 each.documentId === location.documentId &&
@@ -300,8 +302,11 @@ export async function mateConnectorIdsFor(
 }
 
 /** The washer studio at its release, in one configuration: what its top edge is read from. */
-export function washerSource(configuration: Selection): StudioSource {
-    const location = studioLocation(FastenerKind.WASHER);
+export function washerSource(
+    set: FastenerSet,
+    configuration: Selection
+): StudioSource {
+    const { location } = set.studios[FastenerKind.WASHER];
     const encoded = encodeConfiguration(configuration);
     return {
         path: {
@@ -332,6 +337,7 @@ export function washerTopEdge(parts: ScannedParts): string | undefined {
 export async function washerTopEdges(
     client: OnshapeApi,
     kv: KVNamespace,
+    set: FastenerSet,
     parts: PartPlacement[]
 ): Promise<Record<number, string>> {
     const byConfiguration = new Map<string, string | undefined>();
@@ -340,7 +346,7 @@ export async function washerTopEdges(
         if (part.kind !== FastenerKind.WASHER) {
             continue;
         }
-        const source = washerSource(part.configuration);
+        const source = washerSource(set, part.configuration);
         if (!byConfiguration.has(source.key)) {
             const scan = await scanStudio(client, kv, source, {
                 edges: [],

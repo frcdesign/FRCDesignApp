@@ -18,7 +18,7 @@ import {
     withoutExcluded,
     type PartOccurrence
 } from "./assembly";
-import { FastenerKind, getStudioLocation } from "./studios";
+import { FastenerKind, type FastenerSet } from "./studios";
 import { type SelectedEntity } from "./contract";
 import {
     type AssemblyCircularEdge,
@@ -36,9 +36,12 @@ export interface IndexedHoles {
     placed: PlacedScrew[];
 }
 
-function isFastener(occurrence: PartOccurrence): boolean {
+function isFastener(
+    occurrence: PartOccurrence,
+    fasteners: FastenerSet | undefined
+): boolean {
     return Object.values(FastenerKind).some((kind) =>
-        isFromStudio(occurrence, getStudioLocation(kind))
+        isFromStudio(occurrence, fasteners?.studios[kind].location)
     );
 }
 
@@ -70,7 +73,9 @@ export async function indexHoles(
     kv: KVNamespace,
     assembly: ElementPath,
     targets: SelectedEntity[],
-    excluded: SelectedEntity[]
+    excluded: SelectedEntity[],
+    // Fasteners already placed, which have no holes to fasten through; none before the library loads them
+    fasteners: FastenerSet | undefined
 ): Promise<IndexedHoles> {
     const definition = await getAssembly(client, assembly, {
         excludeSuppressed: true
@@ -94,7 +99,8 @@ export async function indexHoles(
 
     // Fasteners and standard content have no holes to fasten through
     const scanned = occurrences.filter(
-        (occurrence) => !occurrence.isStandardContent && !isFastener(occurrence)
+        (occurrence) =>
+            !occurrence.isStandardContent && !isFastener(occurrence, fasteners)
     );
     const selections = selectionsByStudio([...targets, ...excluded], byPath);
     const sources = new Map(
@@ -145,7 +151,10 @@ export async function indexHoles(
             circularEdgesOf(excluded)
         ),
         holes,
-        placed: placedScrews(occurrences, getStudioLocation(FastenerKind.SCREW))
+        placed: placedScrews(
+            occurrences,
+            fasteners?.studios[FastenerKind.SCREW].location
+        )
     };
 }
 

@@ -1,5 +1,7 @@
 import { env } from "cloudflare:workers";
 import { introspectWorkflowInstance } from "cloudflare:test";
+import * as FastenerSets from "./fastener-set";
+import { FASTENER_SET } from "../../../__test_utils__/fastener-set";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
     ASSEMBLY,
@@ -14,7 +16,6 @@ import * as Documents from "../../lib/onshape/endpoints/documents";
 import * as PartStudios from "../../lib/onshape/endpoints/part-studios";
 import { OnshapeApiError, type OAuthApi } from "../../lib/onshape/client";
 import * as Planner from "./planner";
-import * as Studios from "./studios";
 import { FastenerKind } from "./studios";
 
 const WASHER = { vendor: "GENERIC", size: "NO_10_32", type: "OD_1_2_X_0_049" };
@@ -84,11 +85,7 @@ beforeEach(async () => {
             await env.KV.delete(key.name);
         }
     }
-    vi.spyOn(Studios, "getStudioLocation").mockImplementation((kind) => ({
-        documentId: "lib",
-        versionId: "libv",
-        elementId: `${kind}Studio`
-    }));
+    vi.spyOn(FastenerSets, "getFastenerSet").mockResolvedValue(FASTENER_SET);
     mates = [];
     vi.spyOn(RequestAuth, "getOnshapeApiFromSessionId").mockResolvedValue(
         {} as OAuthApi

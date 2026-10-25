@@ -7,14 +7,27 @@ import {
     type QuickFastenerIn,
     SelectionMode
 } from "@backend/features/quick-fastener/contract";
+import { type FastenerSet } from "@backend/features/quick-fastener/studios";
 import { type ElementPath } from "@backend/lib/onshape/path";
+import {
+    SectionError,
+    SectionLoading,
+    SectionNotice
+} from "../../../components/app-notice";
+import { StatusIcon } from "../../../components/status-icon";
+import { Status } from "../../../lib/status";
+import { IconSize } from "../../../lib/style-constants";
 import { ParameterGrid } from "../../../components/parameter-input";
 import { QueryList } from "../../../components/query-list";
 import { isEdge, isFace, toSelectedEntities } from "../../../lib/selection";
 import { CIRCULAR_EDGES, FACES } from "../../../lib/messages";
 import { fastenerOptions, selectionMode, settleChoices } from "../options";
 import { FormInput } from "../parameters";
-import { useFastenerJobQuery, useInsertMutation } from "../queries";
+import {
+    useFastenerJobQuery,
+    useFastenerSetQuery,
+    useInsertMutation
+} from "../queries";
 import { useQuickFastenerStore } from "../store";
 import { FastenerOptionsForm, FormInputRow } from "./fastener-options-form";
 import { LastRunCallout } from "./last-run-callout";
@@ -24,9 +37,39 @@ interface QuickFastenerPanelProps {
     assembly: ElementPath;
 }
 
-/** How the last run went, what to fasten with, and what to fasten. */
+/** The form, once the fasteners the library loaded are read. */
 export function QuickFastenerPanel(props: QuickFastenerPanelProps): ReactNode {
     const { assembly } = props;
+    const { data: set, isPending, isError } = useFastenerSetQuery();
+
+    if (isPending) {
+        return <SectionLoading title="Loading fasteners..." />;
+    }
+    if (isError) {
+        return <SectionError title="Couldn't load the fasteners." />;
+    }
+    if (!set) {
+        return (
+            <SectionNotice
+                icon={
+                    <StatusIcon status={Status.WARNING} size={IconSize.PAGE} />
+                }
+                title="No fasteners are loaded yet."
+                description="Quick Fastener uses the fasteners in FRCDesignLib's Fasteners group, once they're loaded."
+            />
+        );
+    }
+    return <QuickFastenerForm assembly={assembly} set={set} />;
+}
+
+interface QuickFastenerFormProps {
+    assembly: ElementPath;
+    set: FastenerSet;
+}
+
+/** How the last run went, what to fasten with, and what to fasten. */
+function QuickFastenerForm(props: QuickFastenerFormProps): ReactNode {
+    const { assembly, set } = props;
     const choices = useQuickFastenerStore(
         useShallow((state) => ({
             form: state.form,
@@ -43,7 +86,7 @@ export function QuickFastenerPanel(props: QuickFastenerPanelProps): ReactNode {
     const { data: job } = useFastenerJobQuery(assembly);
     const insertMutation = useInsertMutation(assembly);
 
-    const settled = useMemo(() => settleChoices(choices), [choices]);
+    const settled = useMemo(() => settleChoices(set, choices), [set, choices]);
     const mode = selectionMode(settled);
     const isFaces = mode === SelectionMode.FACES;
     const isRunning = job?.state === FastenerJobState.RUNNING;

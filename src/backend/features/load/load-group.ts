@@ -30,9 +30,11 @@ import {
     generatedTabs,
     type GeneratedTab,
     parseManifest,
+    releasedCatalog,
     setOf
 } from "../generated-parts/manifest";
 import { getBlobText } from "../../lib/onshape/endpoints/blob-elements";
+import { saveGeneratedSet } from "../generated-parts/store";
 import {
     type GroupTarget,
     type InsertableTarget,
@@ -390,14 +392,20 @@ async function readGeneratedTabsStep(
                     ...target.versionPath,
                     elementId: tab.id
                 });
+                const manifest = nonRetryable(() =>
+                    parseManifest(text, tab.name)
+                );
                 Object.assign(
                     tabs,
-                    generatedTabs(
-                        nonRetryable(() => parseManifest(text, tab.name)),
-                        setOf(tab),
-                        tab.id
-                    )
+                    generatedTabs(manifest, setOf(tab), tab.id)
                 );
+                await saveGeneratedSet(getDb(ctx.env.DB), {
+                    libraryId: target.libraryId,
+                    set: setOf(tab),
+                    groupId: target.groupId,
+                    versionId: target.versionPath.instanceId,
+                    ...releasedCatalog(manifest)
+                });
             }
             return tabs;
         }

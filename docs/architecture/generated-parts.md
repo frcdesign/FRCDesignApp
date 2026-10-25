@@ -20,18 +20,18 @@ Parts modeled by hand aren't generated, whatever their configuration.
 
 ## Code map
 
-| Path                                                                 | Role                                                                                          |
-| -------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| `scripts/sync-generated-parts.js`                                    | `npm run sync:generated-parts`: copies robot-code's manifests in at a pinned commit           |
-| `src/backend/features/generated-parts/manifest.ts`                   | The released manifest: `findManifestTabs`, `parseManifest`, `generatedTabs`, `releasedStudio` |
-| `src/backend/features/generated-parts/records.ts`                    | `generatedConfiguration`, `describeMismatch`, `GeneratedPartMismatchError`; the server's      |
-| `src/backend/lib/onshape/endpoints/blob-elements.ts`                 | `getBlobText`: a file tab's contents                                                          |
-| `src/backend/features/load/load-group.ts`                            | `readGeneratedTabsStep`: which tabs the version's manifests name                              |
-| `src/backend/features/load/load-insertable.ts`                       | `probeInsertable`: a generated tab's records come from `generatedConfiguration`               |
-| `src/backend/features/generated-parts/studios.gen.ts`                | The synced studios, for Quick fastener: each one's configuration, and where it's released     |
-| `src/backend/features/generated-parts/studios.ts`                    | `GENERATED_STUDIOS` parsed by `parseOnshapeConfiguration`, `getGeneratedStudio`; client-safe  |
-| `src/frontend/features/library/components/generated-badge.tsx`       | `GeneratedBadge`: the library card's FeatureScript mark                                       |
-| `src/frontend/features/build-status/components/indexing-section.tsx` | Says a generated part indexes every configuration, in place of the indexing switches          |
+| Path                                                                 | Role                                                                                                             |
+| -------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `scripts/sync-generated-parts.js`                                    | `npm run sync:generated-parts`: the hole scan and a test fixture, at a pinned commit                             |
+| `src/backend/features/generated-parts/manifest.ts`                   | The released manifest: `findManifestTabs`, `parseManifest`, `generatedTabs`, `releasedStudio`, `releasedCatalog` |
+| `src/backend/features/generated-parts/store.ts`                      | `saveGeneratedSet`, `getGeneratedSet`, `generatedFeatureTypes`: the stored catalogs                              |
+| `src/backend/features/generated-parts/records.ts`                    | `generatedConfiguration`, `describeMismatch`, `GeneratedPartMismatchError`; the server's                         |
+| `src/backend/lib/onshape/endpoints/blob-elements.ts`                 | `getBlobText`: a file tab's contents                                                                             |
+| `src/backend/features/load/load-group.ts`                            | `readGeneratedTabsStep`: which tabs the version's manifests name, storing each's catalog                         |
+| `src/backend/features/load/load-insertable.ts`                       | `probeInsertable`: a generated tab's records come from `generatedConfiguration`                                  |
+| `src/backend/features/generated-parts/studios.ts`                    | `GeneratedStudio`, `StudioLocation`; client-safe                                                                 |
+| `src/frontend/features/library/components/generated-badge.tsx`       | `GeneratedBadge`: the library card's FeatureScript mark                                                          |
+| `src/frontend/features/build-status/components/indexing-section.tsx` | Says a generated part indexes every configuration, in place of the indexing switches                             |
 
 robot-code owns each set's definition: for the fasteners,
 `featurescripts/fasteners/fastenerTables.py`, which writes the FeatureScript's
@@ -55,17 +55,24 @@ load.
 The records themselves are stored as any indexed insertable's are: the
 default's in `insertables.part_metadata`, the rest in `configurations.records`.
 
-The manifest isn't stored: a load reads it from the version it loads, in Onshape.
+**D1** `generated_sets` — one row per library and set: the manifest less its
+studios (`catalog`, checked against its set's schema where it's read, such as
+Quick fastener's `catalogSchema`), each studio's feature by key (`features`),
+and the group and version it was read from. Replaced by each load of the group
+releasing it; deleted with the group. The rest of the manifest isn't stored: a
+load reads it from the version it loads, in Onshape.
 
 ## Flows
 
 ### Syncing
 
-`npm run sync:generated-parts -- <ref> [--from ../robot-code]` reads each set's
-manifest at a robot-code commit and writes `studios.gen.ts`, on one line
-(prettier would spread it over tens of thousands), and Quick fastener's own
-files (see [quick-fastener.md](./quick-fastener.md)). Only Quick fastener reads
-them: a library load reads the released manifest.
+`npm run sync:generated-parts -- <ref> [--from ../robot-code]` reads the
+fasteners' manifest at a robot-code commit and writes what the app builds
+against: Quick fastener's hole scan (`hole-scan.gen.ts`), FeatureScript whose
+answer the app parses, and `src/__test_utils__/fasteners-manifest.gen.ts`, the
+manifest less its records on one line, which tests build a `FastenerSet` from.
+Nothing the app serves comes from it: the parts and their catalog come from
+the released manifest a library loads.
 
 ### Loading a generated tab
 
@@ -74,10 +81,12 @@ them: a library load reads the released manifest.
 1. `findManifestTabs` finds the version's file tabs named `*.parts.json`. With
    none, no tab is generated, and the load goes on as for any document.
 2. `readGeneratedTabsStep` downloads each (`getBlobText`, one call each), checks
-   it (`parseManifest`), and keeps only which tab is which set's studio
-   (`generatedTabs`): a step returns at most 1 MiB, which a whole manifest can
-   pass. A manifest it can't read fails the group's load at once
-   (`NonRetryableError`), rather than retrying what reads the same every time.
+   it (`parseManifest`), stores its catalog and studio features in
+   `generated_sets` (`releasedCatalog`, `saveGeneratedSet`), and returns only
+   which tab is which set's studio (`generatedTabs`): a step returns at most 1
+   MiB, which a whole manifest can pass. A manifest it can't read fails the
+   group's load at once (`NonRetryableError`), rather than retrying what reads
+   the same every time.
 3. Each such tab's `InsertableTarget` carries its `generated` set and key.
 
 `probeInsertable`, after reading the tab's configuration (one Onshape call):
@@ -101,8 +110,9 @@ them: a library load reads the released manifest.
 The default parts are still read (for the thumbnail and the composite check), as
 is fasten info when it's on. Insert and fasten is on for a generated tab from its
 first load, which an editor can turn off. Its mate connector is the one its
-feature makes, found by the feature's type, which every generated studio's
-feature is known by (`generatedFeatureTypes`), and named by the feature's id:
+feature makes, found by the feature's type, which every stored set names
+(`generatedFeatureTypes`) and the tab's own studio does before any is stored,
+and named by the feature's id:
 Onshape's mate connector query takes a feature id and no index into what the
 feature made (`parseFastenInfoFromPartStudio`). robot-code checks that each
 generated feature makes exactly one. A tab is loaded when its microversion changes, as
@@ -128,9 +138,10 @@ any is; a release rebuilds every studio, which changes each.
    studio is (`fastenerTables.studios.json`). Nothing is made by hand. The
    fasteners are a part set in robot-code (`[tool.fs.parts.fasteners]`; see its
    part sets doc), released apart from its user-facing FeatureScript.
-5. Load the group: its new version's manifest is read with it, so no sync or
-   deploy comes between. Quick fastener still inserts the synced studios, so
-   sync the release's commit here and deploy for it.
+5. Load the group: its new version's manifest is read with it, and Quick
+   fastener reads the stored catalog and the loaded studios, so no sync or
+   deploy comes between. Only a change to the hole scan, which the app parses,
+   needs a sync and a deploy.
 
 ### Indicator
 
@@ -151,16 +162,19 @@ shows it in place of the indexing switches.
   the same definition, so what the library indexes is what the part says.
 - A generated studio holds one feature, the set's, which makes exactly one mate
   connector: insert and fasten names it by that feature's id.
+- A set's stored catalog is the one released in the version its group last
+  loaded; what reads it (Quick fastener) reads nothing else of the set but the
+  loaded studios.
 
 ## Failure and recovery
 
-| Failure                                         | Result                                                 | Recovery                                                      |
-| ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------- |
-| The tab's configuration isn't the generated one | `GENERATED_PART_MISMATCH`; it keeps its last good load | Release the fasteners again (`fs parts fasteners --release`)  |
-| A manifest isn't JSON, or isn't a manifest      | The group's load fails, `LOAD_FAILED` on the group     | Release the set again                                         |
-| A manifest names a tab but has no studio for it | That tab's load fails                                  | Release the set again                                         |
-| A studio's part of a manifest passes 1 MiB      | That tab's step fails                                  | Split what the step returns (configuration and records apart) |
-| Quick fastener's studio location isn't synced   | Quick fastener can't insert it                         | Sync the commit with the release's recorded locations         |
+| Failure                                              | Result                                                           | Recovery                                                      |
+| ---------------------------------------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------- |
+| The tab's configuration isn't the generated one      | `GENERATED_PART_MISMATCH`; it keeps its last good load           | Release the fasteners again (`fs parts fasteners --release`)  |
+| A manifest isn't JSON, or isn't a manifest           | The group's load fails, `LOAD_FAILED` on the group               | Release the set again                                         |
+| A manifest names a tab but has no studio for it      | That tab's load fails                                            | Release the set again                                         |
+| A studio's part of a manifest passes 1 MiB           | That tab's step fails                                            | Split what the step returns (configuration and records apart) |
+| A set's catalog isn't what its reader's schema takes | Its reader treats the set as not loaded (Quick fastener says so) | Release the set, and the app, together                        |
 
 ## Decisions
 
@@ -179,5 +193,9 @@ shows it in place of the indexing switches.
   from that version, they can't disagree with the tabs, a release needs no app
   deploy, a document released to for testing loads like any, and a new part set
   needs no app change.
+- **The catalog is stored at load, not synced.** What Quick fastener offers is
+  what the library loaded, so a release reaches it with the group's next load
+  rather than a deploy. The hole scan stays synced: the app parses its answer,
+  so it changes with the app.
 
 _Last reviewed: 2026-10-22_

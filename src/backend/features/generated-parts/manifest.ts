@@ -126,6 +126,29 @@ export function releasedStudio(
     };
 }
 
+/** What a load keeps of a manifest beyond its studios' tabs: each studio's feature, and the rest of it. */
+export interface ReleasedCatalog {
+    features: Record<string, string>;
+    catalog: Record<string, unknown>;
+}
+
+export function releasedCatalog(
+    manifest: z.infer<typeof manifestSchema>
+): ReleasedCatalog {
+    const { studios, ...rest } = manifest;
+    const catalog: Record<string, unknown> = { ...rest };
+    delete catalog.source;
+    return {
+        features: Object.fromEntries(
+            Object.entries(studios).map(([key, studio]) => [
+                key,
+                studio.feature
+            ])
+        ),
+        catalog
+    };
+}
+
 /** A released studio as the records check reads it. */
 export function toGeneratedStudio(studio: ReleasedStudio): GeneratedStudio {
     return {

@@ -6,7 +6,8 @@ import { getApp } from "../../lib/context";
 import { validate } from "../../lib/validate";
 import { requireSignInMiddleware } from "../auth/guards";
 import { getSessionId } from "../auth/session";
-import { getCatalog, Program } from "./catalog";
+import { type Db, getDb } from "../../db/client";
+import { Program } from "./catalog";
 import {
     FastenerJobState,
     FastenerMode,
@@ -15,7 +16,7 @@ import {
     SelectionMode,
     StopCondition
 } from "./contract";
-import { studioLocation } from "./insert";
+import { getFastenerSet } from "./fastener-set";
 import { getJobStatus, reportJob } from "./jobs";
 import {
     entitySchema,
@@ -25,6 +26,7 @@ import {
 } from "./picked";
 import {
     FastenerKind,
+    type FastenerSet,
     isMade,
     type PartChoice,
     type ScrewChoice
@@ -55,23 +57,26 @@ const partSchema = z.object({
     finish: optionId.optional()
 });
 
-function isEveryPartMade(options: {
-    screw: ScrewChoice;
-    screwWasher?: PartChoice;
-    nut?: PartChoice;
-    nutWasher?: PartChoice;
-}): boolean {
+function isEveryPartMade(
+    set: FastenerSet,
+    options: {
+        screw: ScrewChoice;
+        screwWasher?: PartChoice;
+        nut?: PartChoice;
+        nutWasher?: PartChoice;
+    }
+): boolean {
     const parts: [FastenerKind, PartChoice | undefined][] = [
         [FastenerKind.WASHER, options.screwWasher],
         [FastenerKind.NUT, options.nut],
         [FastenerKind.WASHER, options.nutWasher]
     ];
     return (
-        isMade(FastenerKind.SCREW, options.screw) &&
+        isMade(set, FastenerKind.SCREW, options.screw) &&
         parts.every(
             ([kind, part]) =>
                 !part ||
-                (part.size === options.screw.size && isMade(kind, part))
+                (part.size === options.screw.size && isMade(set, kind, part))
         )
     );
 }
@@ -89,10 +94,6 @@ const optionsSchema = z
         maxGap: z.number().min(0).max(MAX_GAP_LIMIT),
         maxThreadDepth: z.number().positive().max(MAX_LENGTH_LIMIT)
     })
-    .refine(
-        isEveryPartMade,
-        "Every part must be one its vendor makes, in the screw's size."
-    )
     .refine(
         (options) => !options.nutWasher || options.nut,
         "A nut washer goes under a nut."
@@ -129,15 +130,19 @@ quickFastenerRoutes.post(
     validate("json", insertBody),
     async (c) => {
         const request = c.req.valid("json");
-        if (!getCatalog(request.options.program)) {
+        if (request.options.program !== Program.FRC) {
             throw handledError(
                 "Quick fastener doesn't have FTC fasteners yet.",
                 HttpStatus.BAD_REQUEST
             );
         }
         // Refused before a run starts, rather than by its insert step
-        for (const kind of Object.values(FastenerKind)) {
-            studioLocation(kind);
+        const set = await requireFastenerSet(getDb(c.env.DB));
+        if (!isEveryPartMade(set, request.options)) {
+            throw handledError(
+                "Every part must be one its vendor makes, in the screw's size.",
+                HttpStatus.BAD_REQUEST
+            );
         }
         const current = await getJobStatus(c.env, request.assembly);
         if (current.state === FastenerJobState.RUNNING) {
@@ -159,6 +164,22 @@ quickFastenerRoutes.post(
         await reportJob(c.env, request.assembly, status);
         return c.json(status);
     }
+);
+
+async function requireFastenerSet(db: Db): Promise<FastenerSet> {
+    const set = await getFastenerSet(db);
+    if (!set) {
+        throw handledError(
+            "Quick fastener's parts aren't published yet.",
+            HttpStatus.SERVICE_UNAVAILABLE
+        );
+    }
+    return set;
+}
+
+/** GET /api/quick-fastener/parts — the fasteners the library loaded, their catalog and studios; null before it loads them. */
+quickFastenerRoutes.get("/quick-fastener/parts", async (c) =>
+    c.json((await getFastenerSet(getDb(c.env.DB))) ?? null)
 );
 
 /** GET /api/quick-fastener/job?documentId=&instanceId=&elementId= — the run this assembly last started. */

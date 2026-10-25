@@ -27,7 +27,7 @@ import {
     TASK_LABEL
 } from "../job-report";
 import { describePlan } from "../options";
-import { useFastenerJobQuery } from "../queries";
+import { useFastenerJobQuery, useFastenerSetQuery } from "../queries";
 
 const HOLE_STATUS: Record<HoleStatus, Status> = {
     [HoleStatus.READY]: Status.SUCCESS,
@@ -174,6 +174,7 @@ interface HoleListProps {
 
 function HoleList(props: HoleListProps): ReactNode {
     const { holes } = props;
+    const { data: set } = useFastenerSetQuery();
     if (holes.length === 0) {
         return (
             <Text size="sm" c={StatusColor.DIMMED}>
@@ -191,7 +192,7 @@ function HoleList(props: HoleListProps): ReactNode {
                         size={IconSize.SMALL}
                     />
                     <Text size="sm" truncate>
-                        {describePlan(hole)}
+                        {describePlan(set ?? undefined, hole)}
                     </Text>
                 </Group>
             ))}

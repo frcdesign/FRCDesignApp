@@ -11,6 +11,8 @@ import {
 import * as DocumentEndpoints from "../../lib/onshape/endpoints/documents";
 import * as ConfigurationEndpoints from "../../lib/onshape/endpoints/configurations";
 import * as PartsEndpoints from "../../lib/onshape/endpoints/parts";
+import * as BlobEndpoints from "../../lib/onshape/endpoints/blob-elements";
+import { getGeneratedSet } from "../generated-parts/store";
 import * as ThumbnailStore from "../thumbnails/store";
 import { getDb } from "../../db/client";
 import { groups, insertables } from "../../db/schema";
@@ -337,6 +339,48 @@ describe("loadGroup", () => {
         for (const row of rows) {
             expect(row.versionCreatedAt).toEqual(LOADED_VERSION_CREATED_AT);
         }
+    });
+
+    it("stores a released manifest's catalog, which Quick fastener sizes fasteners by", async () => {
+        mockContents([
+            tab("e1"),
+            {
+                id: "manifest",
+                name: "fasteners.parts.json",
+                elementType: OnshapeElementType.BLOB,
+                microversionId: "mv-1"
+            }
+        ]);
+        vi.spyOn(ConfigurationEndpoints, "getConfiguration").mockResolvedValue(
+            NO_CONFIGURATION
+        );
+        vi.spyOn(BlobEndpoints, "getBlobText").mockResolvedValue(
+            JSON.stringify({
+                source: "robot-code",
+                studios: {
+                    nut: {
+                        feature: "fastenerNut",
+                        elementId: "elsewhere",
+                        configuration: { configurationParameters: [] },
+                        records: []
+                    }
+                },
+                sizes: [{ id: "NO_10_32" }]
+            })
+        );
+
+        await loadGroup(CTX, LOADED_TARGET, false);
+
+        expect(await getGeneratedSet(db, TEST_LIBRARY_ID, "fasteners")).toEqual(
+            {
+                libraryId: TEST_LIBRARY_ID,
+                set: "fasteners",
+                groupId: TEST_GROUP_ID,
+                versionId: "v-2",
+                features: { nut: "fastenerNut" },
+                catalog: { sizes: [{ id: "NO_10_32" }] }
+            }
+        );
     });
 
     it("clears a new group's not-loaded issue once it saves", async () => {

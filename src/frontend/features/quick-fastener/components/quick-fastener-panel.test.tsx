@@ -13,7 +13,11 @@ import {
     renderWithProviders
 } from "../../../../__test_utils__/render";
 import { apiPost } from "../../../lib/api-client";
-import { fastenerJobQueryKey } from "../../../lib/query-keys";
+import {
+    FASTENER_SET_QUERY_KEY,
+    fastenerJobQueryKey
+} from "../../../lib/query-keys";
+import { FASTENER_SET } from "../../../../__test_utils__/fastener-set";
 import {
     useOnshapeSelection,
     type OnshapeSelection
@@ -54,6 +58,15 @@ async function choose(label: string, option: string) {
     await userEvent.click(await screen.findByRole("option", { name: option }));
 }
 
+/** As the app renders it, the library having loaded the fasteners. */
+function renderPanel(queryClient = createTestQueryClient()) {
+    queryClient.setQueryData(FASTENER_SET_QUERY_KEY, FASTENER_SET);
+    return renderWithProviders(
+        <QuickFastenerPanel assembly={ASSEMBLY} />,
+        queryClient
+    );
+}
+
 const insertButton = () =>
     screen.getByRole<HTMLButtonElement>("button", { name: "Insert" });
 
@@ -70,8 +83,19 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks());
 
 describe("QuickFastenerPanel", () => {
+    it("says so until the library has loaded the fasteners", () => {
+        const queryClient = createTestQueryClient();
+        queryClient.setQueryData(FASTENER_SET_QUERY_KEY, null);
+        renderWithProviders(
+            <QuickFastenerPanel assembly={ASSEMBLY} />,
+            queryClient
+        );
+        expect(screen.getByText("No fasteners are loaded yet.")).toBeTruthy();
+        expect(screen.queryByRole("button", { name: "Insert" })).toBeNull();
+    });
+
     it("picks faces, with holes to skip, or locations alone", async () => {
-        renderWithProviders(<QuickFastenerPanel assembly={ASSEMBLY} />);
+        renderPanel();
         expect(screen.getByText("Holes to skip")).toBeTruthy();
 
         await choose("Select by", "Circular edges");
@@ -83,7 +107,7 @@ describe("QuickFastenerPanel", () => {
     });
 
     it("inserts what's picked with the parts chosen, then clears the picks", async () => {
-        renderWithProviders(<QuickFastenerPanel assembly={ASSEMBLY} />);
+        renderPanel();
         expect(insertButton().disabled).toBe(true);
 
         await userEvent.click(screen.getAllByText("Click to select")[0]);
@@ -126,10 +150,7 @@ describe("QuickFastenerPanel", () => {
                 }
             ]
         });
-        renderWithProviders(
-            <QuickFastenerPanel assembly={ASSEMBLY} />,
-            queryClient
-        );
+        renderPanel(queryClient);
 
         expect(
             screen.getByText("Indexing holes... You can leave this page.")
@@ -140,7 +161,7 @@ describe("QuickFastenerPanel", () => {
     it("shows a part's rows while it's ticked, and a nut washer only with a nut", async () => {
         // Generic makes one washer in each size, so its Type would be hidden
         useQuickFastenerStore.setState({ screw: { vendor: "MCMASTER" } });
-        renderWithProviders(<QuickFastenerPanel assembly={ASSEMBLY} />);
+        renderPanel();
         // The nut's Type; the screw washer isn't ticked
         expect(screen.getAllByLabelText("Type")).toHaveLength(1);
 
@@ -158,7 +179,7 @@ describe("QuickFastenerPanel", () => {
     });
 
     it("asks for a washer's vendor only under a vendor's screw, and never a nut's", async () => {
-        renderWithProviders(<QuickFastenerPanel assembly={ASSEMBLY} />);
+        renderPanel();
         await userEvent.click(
             screen.getByRole("checkbox", { name: "Add screw washer" })
         );
@@ -173,7 +194,7 @@ describe("QuickFastenerPanel", () => {
         useQuickFastenerStore.setState({
             screw: { vendor: "MCMASTER", size: "NO_8_32", head: "SOCKET" }
         });
-        renderWithProviders(<QuickFastenerPanel assembly={ASSEMBLY} />);
+        renderPanel();
         expect(screen.getByLabelText("Finish")).toBeTruthy();
         expect(screen.queryByLabelText("Fully threaded")).toBeNull();
 
@@ -185,7 +206,7 @@ describe("QuickFastenerPanel", () => {
     });
 
     it("asks what to fasten with before what to fasten, and nothing of replicating", () => {
-        renderWithProviders(<QuickFastenerPanel assembly={ASSEMBLY} />);
+        renderPanel();
         const headings = screen
             .getAllByRole("heading")
             .map((heading) => heading.textContent);
@@ -195,12 +216,12 @@ describe("QuickFastenerPanel", () => {
 
     it("has no screw washer under a flat head", () => {
         useQuickFastenerStore.setState({ screw: { head: "FLAT" } });
-        renderWithProviders(<QuickFastenerPanel assembly={ASSEMBLY} />);
+        renderPanel();
         expect(screen.queryByText("Add screw washer")).toBeNull();
     });
 
     it("stops an automatic screw by the condition chosen, and a preset one not at all", async () => {
-        renderWithProviders(<QuickFastenerPanel assembly={ASSEMBLY} />);
+        renderPanel();
         expect(screen.getByLabelText("Max length")).toBeTruthy();
         expect(screen.getByLabelText("Max thread depth")).toBeTruthy();
 

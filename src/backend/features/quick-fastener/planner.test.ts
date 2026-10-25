@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { Program } from "./catalog";
+import { FASTENER_SET } from "../../../__test_utils__/fastener-set";
 import {
     DEFAULT_MAX_GAP,
     DEFAULT_MAX_LENGTH,
@@ -99,7 +100,13 @@ function plan(
     extra: ExtraOptions = {},
     placed: PlacedScrew[] = []
 ) {
-    const [only] = planHoles([CIRCULAR_EDGE], holes, placed, options(extra));
+    const [only] = planHoles(
+        [CIRCULAR_EDGE],
+        holes,
+        placed,
+        options(extra),
+        FASTENER_SET.catalog
+    );
     return only;
 }
 

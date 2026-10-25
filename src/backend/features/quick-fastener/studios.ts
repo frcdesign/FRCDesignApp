@@ -1,8 +1,8 @@
 /**
- * Quick fastener's view of the library fasteners, which robot-code generates
- * (see `generated-parts/`): each kind's parameters and where it's released,
- * and settling a screw, washer or nut onto what the studios make. A leaf
- * module: the client builds its options from these.
+ * Quick fastener's view of the library fasteners, as the library loaded them
+ * (`FastenerSet`): each kind's parameters and where it's released, and
+ * settling a screw, washer or nut onto what the studios make. A leaf module:
+ * the client builds its options from these.
  *
  * A studio shows an input only where it offers a choice, and leaves one with
  * a single option anywhere out (the nut's vendor), so a choice's hidden and
@@ -21,12 +21,8 @@ import {
     sameSelection,
     toSelection
 } from "../configurations/selection";
-import { catalog } from "./catalog";
-import {
-    getGeneratedStudio,
-    type StudioLocation
-} from "../generated-parts/studios";
-import { COUNTERSUNK_HEADS } from "./heads.gen";
+import { type StudioLocation } from "../generated-parts/studios";
+import { type Catalog } from "./catalog";
 
 export enum FastenerKind {
     SCREW = "screw",
@@ -35,33 +31,23 @@ export enum FastenerKind {
 }
 
 /** The generated set the fasteners are in. */
-const FASTENERS = "fasteners";
+export const FASTENERS = "fasteners";
 
-function parameters(kind: FastenerKind): ConfigurationParameter[] {
-    const studio = getGeneratedStudio(FASTENERS, kind);
-    if (!studio) {
-        throw new Error(`No generated ${FASTENERS} studio ${kind}`);
-    }
-    return studio.parameters;
+export interface FastenerStudio {
+    parameters: ConfigurationParameter[];
+    location: StudioLocation;
 }
 
-export const STUDIO_PARAMETERS: Record<FastenerKind, ConfigurationParameter[]> =
-    {
-        [FastenerKind.SCREW]: parameters(FastenerKind.SCREW),
-        [FastenerKind.WASHER]: parameters(FastenerKind.WASHER),
-        [FastenerKind.NUT]: parameters(FastenerKind.NUT)
-    };
-
-/** Where a kind's studio is released; undefined until its Part Studio is made. */
-export function getStudioLocation(
-    kind: FastenerKind
-): StudioLocation | undefined {
-    return getGeneratedStudio(FASTENERS, kind)?.location;
+/** The fasteners a library loaded: its manifest's catalog, and each kind's studio. */
+export interface FastenerSet {
+    catalog: Catalog;
+    studios: Record<FastenerKind, FastenerStudio>;
 }
 
 /** Whether a head sits in a countersink, where no washer goes under it. */
-export function isCountersunk(head: string): boolean {
-    return COUNTERSUNK_HEADS.includes(head);
+export function isCountersunk(set: FastenerSet, head: string): boolean {
+    const sizes = set.catalog.heads.find((each) => each.id === head)?.sizes;
+    return Object.values(sizes ?? {}).some((size) => size.countersunk);
 }
 
 /** The vendor offering every standard length, without part numbers. */
@@ -83,9 +69,14 @@ export enum StudioInput {
     FINISH = "finish"
 }
 
+interface Made {
+    inputs: StudioInput[];
+    parts: string[][];
+}
+
 /** What each kind's feature looks a part up by, in order, and every part made. */
-const MADE: Record<FastenerKind, { inputs: StudioInput[]; parts: string[][] }> =
-    {
+function madeParts(catalog: Catalog): Record<FastenerKind, Made> {
+    return {
         [FastenerKind.SCREW]: {
             inputs: [
                 StudioInput.VENDOR,
@@ -125,13 +116,30 @@ const MADE: Record<FastenerKind, { inputs: StudioInput[]; parts: string[][] }> =
             parts: catalog.nuts.map((nut) => [nut.vendor, nut.size, nut.type])
         }
     };
+}
+
+// Settling runs on every render of the form
+const madeByCatalog = new WeakMap<Catalog, Record<FastenerKind, Made>>();
+
+function made(set: FastenerSet, kind: FastenerKind): Made {
+    let found = madeByCatalog.get(set.catalog);
+    if (!found) {
+        found = madeParts(set.catalog);
+        madeByCatalog.set(set.catalog, found);
+    }
+    return found[kind];
+}
 
 /**
  * Each value that isn't made, where only one is, set to that one: as the
  * feature looks a part up, since a hidden input keeps whatever it last held.
  */
-function resolveMade(kind: FastenerKind, values: Selection): Selection {
-    const { inputs, parts } = MADE[kind];
+function resolveMade(
+    set: FastenerSet,
+    kind: FastenerKind,
+    values: Selection
+): Selection {
+    const { inputs, parts } = made(set, kind);
     const resolved = { ...values };
     let matching = parts;
     inputs.forEach((input, index) => {
@@ -145,13 +153,17 @@ function resolveMade(kind: FastenerKind, values: Selection): Selection {
 }
 
 /** A choice as its studio allows it: each value one shown with those before it, and the rest the one made. */
-function settle(kind: FastenerKind, choice: PartialSelection): Selection {
-    const parameters = STUDIO_PARAMETERS[kind];
+function settle(
+    set: FastenerSet,
+    kind: FastenerKind,
+    choice: PartialSelection
+): Selection {
+    const { parameters } = set.studios[kind];
     const values: Selection = {};
-    for (const input of MADE[kind].inputs) {
+    for (const input of made(set, kind).inputs) {
         values[input] = choice[input] ?? "";
     }
-    return resolveMade(kind, {
+    return resolveMade(set, kind, {
         ...values,
         ...normalizeSelection(toSelection(choice, parameters), parameters)
     });
@@ -175,40 +187,49 @@ export interface PartChoice {
 }
 
 export function getParameter(
+    set: FastenerSet,
     kind: FastenerKind,
     id: StudioInput
 ): EnumParameter | undefined {
-    const parameter = STUDIO_PARAMETERS[kind].find((each) => each.id === id);
+    const parameter = set.studios[kind].parameters.find(
+        (each) => each.id === id
+    );
     return parameter?.type === ParameterType.ENUM ? parameter : undefined;
 }
 
 /** An option's name, e.g. `#10-32` for a size; its id when it has none. */
 export function optionName(
+    set: FastenerSet,
     kind: FastenerKind,
     id: StudioInput,
     value: string
 ): string {
     return (
-        getParameter(kind, id)?.options.find((option) => option.id === value)
-            ?.name ?? value
+        getParameter(set, kind, id)?.options.find(
+            (option) => option.id === value
+        )?.name ?? value
     );
 }
 
 /** A screw as its studio allows it: each choice one shown with those before it. */
-export function settleScrew(choice: PartialSelection): ScrewChoice {
-    return settle(FastenerKind.SCREW, choice) as unknown as ScrewChoice;
+export function settleScrew(
+    set: FastenerSet,
+    choice: PartialSelection
+): ScrewChoice {
+    return settle(set, FastenerKind.SCREW, choice) as unknown as ScrewChoice;
 }
 
 /** Whether a studio makes a choice, as it's settled. */
 export function isMade(
+    set: FastenerSet,
     kind: FastenerKind,
     choice: ScrewChoice | PartChoice
 ): boolean {
     const values: PartialSelection = { ...choice };
-    const { inputs, parts } = MADE[kind];
+    const { inputs, parts } = made(set, kind);
     const part = inputs.map((input) => values[input]);
     return (
-        sameSelection(values, settle(kind, values)) &&
+        sameSelection(values, settle(set, kind, values)) &&
         parts.some((each) =>
             each.every((value, index) => value === part[index])
         )
@@ -216,7 +237,12 @@ export function isMade(
 }
 
 /** The vendors making a washer or nut in a size, in the catalog's order. */
-export function partVendors(kind: FastenerKind, size: string): string[] {
+export function partVendors(
+    set: FastenerSet,
+    kind: FastenerKind,
+    size: string
+): string[] {
+    const { catalog } = set;
     const parts = kind === FastenerKind.NUT ? catalog.nuts : catalog.washers;
     return catalog.vendors
         .map((vendor) => vendor.id)
@@ -232,11 +258,12 @@ export function partVendors(kind: FastenerKind, size: string): string[] {
  * Undefined when nobody makes it in the size.
  */
 export function settlePart(
+    set: FastenerSet,
     kind: FastenerKind,
     choice: PartialSelection,
     screw: Pick<ScrewChoice, "vendor" | "size">
 ): PartChoice | undefined {
-    const vendors = partVendors(kind, screw.size);
+    const vendors = partVendors(set, kind, screw.size);
     const vendor =
         screw.vendor === GENERIC
             ? [GENERIC]
@@ -247,7 +274,7 @@ export function settlePart(
     if (picked === undefined) {
         return undefined;
     }
-    return settle(kind, {
+    return settle(set, kind, {
         ...choice,
         [StudioInput.VENDOR]: picked,
         [StudioInput.SIZE]: screw.size
@@ -256,9 +283,10 @@ export function settlePart(
 
 /** What a studio is inserted with: the choice's overrides of its defaults. */
 export function studioConfiguration(
+    set: FastenerSet,
     kind: FastenerKind,
     choice: ScrewChoice | PartChoice
 ): Selection {
-    const parameters = STUDIO_PARAMETERS[kind];
+    const { parameters } = set.studios[kind];
     return onshapeOverrides(toSelection({ ...choice }, parameters), parameters);
 }

@@ -25,6 +25,7 @@ import {
 } from "@backend/features/quick-fastener/contract";
 import {
     FastenerKind,
+    type FastenerSet,
     isCountersunk,
     optionName,
     type PartChoice,
@@ -79,6 +80,8 @@ export function defaultChoices(): Choices {
 
 /** The choices made whole: every value one its parameter shows. */
 export interface SettledChoices {
+    /** What they were settled onto. */
+    set: FastenerSet;
     form: Selection;
     mode: FastenerMode;
     screw: ScrewChoice;
@@ -88,24 +91,30 @@ export interface SettledChoices {
     added: Record<Part, boolean>;
 }
 
-export function settleChoices(choices: Choices): SettledChoices {
+export function settleChoices(
+    set: FastenerSet,
+    choices: Choices
+): SettledChoices {
     const form = normalizeSelection(
         toSelection(choices.form, FORM_PARAMETERS),
         FORM_PARAMETERS
     );
-    const screw = settleScrew(choices.screw);
+    const screw = settleScrew(set, choices.screw);
     const parts = {
         [Part.SCREW_WASHER]: settlePart(
+            set,
             FastenerKind.WASHER,
             choices.parts[Part.SCREW_WASHER],
             screw
         ),
         [Part.NUT]: settlePart(
+            set,
             FastenerKind.NUT,
             choices.parts[Part.NUT],
             screw
         ),
         [Part.NUT_WASHER]: settlePart(
+            set,
             FastenerKind.WASHER,
             choices.parts[Part.NUT_WASHER],
             screw
@@ -113,6 +122,7 @@ export function settleChoices(choices: Choices): SettledChoices {
     };
     const nut = choices.added[Part.NUT] && parts[Part.NUT] !== undefined;
     return {
+        set,
         form,
         mode: choices.mode,
         screw,
@@ -121,7 +131,7 @@ export function settleChoices(choices: Choices): SettledChoices {
             // A washer can't go under a flat head, which sits in its countersink
             [Part.SCREW_WASHER]:
                 choices.added[Part.SCREW_WASHER] &&
-                !isCountersunk(screw.head) &&
+                !isCountersunk(set, screw.head) &&
                 parts[Part.SCREW_WASHER] !== undefined,
             [Part.NUT]: nut,
             [Part.NUT_WASHER]:
@@ -168,8 +178,14 @@ const END_NAMES: Record<HoleEnd, string> = {
     [HoleEnd.BLIND]: "into a blind hole"
 };
 
-/** e.g. `#10-32 x 7/8 in Button head, Nylock nut`; or why the hole got nothing. */
-export function describePlan(planned: PlannedHole): string {
+/**
+ * e.g. `#10-32 x 7/8 in Button head, Nylock nut`; or why the hole got nothing.
+ * Options are named by their ids until the set has loaded.
+ */
+export function describePlan(
+    set: FastenerSet | undefined,
+    planned: PlannedHole
+): string {
     if (planned.status === HoleStatus.FASTENED) {
         return "Already fastened";
     }
@@ -177,8 +193,10 @@ export function describePlan(planned: PlannedHole): string {
         return planned.reason ?? "Can't be fastened";
     }
     const { screw } = planned;
+    const named = (kind: FastenerKind, input: StudioInput, value: string) =>
+        set ? optionName(set, kind, input, value) : value;
     const name = (input: StudioInput, value: string) =>
-        optionName(FastenerKind.SCREW, input, value);
+        named(FastenerKind.SCREW, input, value);
     const beyondStandard = [
         ...(screw.finish === STANDARD_FINISH
             ? []
@@ -192,7 +210,7 @@ export function describePlan(planned: PlannedHole): string {
     ];
     if (planned.nut) {
         parts.push(
-            `${optionName(FastenerKind.NUT, StudioInput.TYPE, planned.nut.type)} nut`
+            `${named(FastenerKind.NUT, StudioInput.TYPE, planned.nut.type)} nut`
         );
     } else if (planned.end) {
         parts.push(END_NAMES[planned.end]);

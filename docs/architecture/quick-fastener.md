@@ -19,14 +19,16 @@ only what's made.
 
 robot-code (`robot-education/robot-code`) owns everything the catalog says:
 `featurescripts/fasteners/fastenerTables.py` generates the features'
-FeatureScript data, the Part Studios' configurations, and the manifest synced
-here, and `fastenerHoleScan.fs` is the hole scan. The fasteners are a part set
-(`[tool.fs.parts.fasteners]`): `fs parts fasteners --release` releases them
-into FRCDesign's Fasteners library document, Part Studios and all, not to its
-public frontend document. The studios are generated parts, synced by
-`npm run sync:generated-parts` (see [generated-parts.md](./generated-parts.md)),
-which also writes this area's `catalog.gen.ts`, `heads.gen.ts` and
-`hole-scan.gen.ts` from the fasteners' manifest.
+FeatureScript data, the Part Studios' configurations, and the manifest released
+beside them, and `fastenerHoleScan.fs` is the hole scan. The fasteners are a
+part set (`[tool.fs.parts.fasteners]`): `fs parts fasteners --release` releases
+them into FRCDesign's Fasteners library document, Part Studios and all, not to
+its public frontend document. They're generated parts (see
+[generated-parts.md](./generated-parts.md)): loading FRCDesignLib's Fasteners
+group stores the manifest's catalog and loads each studio, and Quick fastener
+reads both (`FastenerSet`). Only the hole scan is synced into the app
+(`hole-scan.gen.ts`, by `npm run sync:generated-parts`), since the app parses
+its answer.
 
 ## Code map
 
@@ -88,11 +90,11 @@ interface QueryListProps {
 ```ts
 const FORM_PARAMETERS: ConfigurationParameter[];
 // The screw's Length, with Automatic first.
-function lengthParameter(): EnumParameter;
+function lengthParameter(set: FastenerSet): EnumParameter;
 // The choices as entered (kept) and the picks (not).
 const useQuickFastenerStore: UseBoundStore<StoreApi<QuickFastenerState>>;
 // Every studio's selection normalized, and each part into the screw's size.
-function settleChoices(choices: Choices): SettledChoices;
+function settleChoices(set: FastenerSet, choices: Choices): SettledChoices;
 // The run's options, its quantities in metres.
 function fastenerOptions(settled: SettledChoices): FastenerOptions;
 
@@ -118,6 +120,8 @@ interface Choices {
 }
 
 interface SettledChoices {
+    /** What they were settled onto. */
+    set: FastenerSet;
     form: Selection;
     mode: FastenerMode;
     screw: ScrewChoice;
@@ -176,6 +180,8 @@ interface ParameterGroupProps {
 `src/frontend/features/quick-fastener/queries.ts`
 
 ```ts
+// The fasteners the library loaded; null before it loads them.
+function useFastenerSetQuery();
 function useInsertMutation(assembly: ElementPath);
 function useFastenerJobQuery(assembly: ElementPath | undefined);
 ```
@@ -183,6 +189,7 @@ function useFastenerJobQuery(assembly: ElementPath | undefined);
 `src/backend/features/quick-fastener/routes.ts`, `jobs.ts` and `contract.ts`
 
 ```text
+GET  /api/quick-fastener/parts     the fasteners the library loaded, or null
 POST /api/quick-fastener/insert    starts a run fastening the picked holes
 GET  /api/quick-fastener/job?documentId=&instanceId=&elementId=    the run this assembly last started
 ```
@@ -382,7 +389,8 @@ async function indexHoles(
     kv: KVNamespace,
     assembly: ElementPath,
     targets: SelectedEntity[],
-    excluded: SelectedEntity[]
+    excluded: SelectedEntity[],
+    fasteners: FastenerSet | undefined
 ): Promise<IndexedHoles>;
 // Every part occurrence, through subassemblies, with the edit it's from.
 function partOccurrences(
@@ -439,26 +447,38 @@ interface StudioSelection {
 type StudioScan = z.infer<typeof scanSchema>;
 ```
 
+`src/backend/features/quick-fastener/fastener-set.ts`,
 `src/backend/features/quick-fastener/planner.ts`,
 `src/backend/features/quick-fastener/catalog.ts` and
 `src/backend/features/quick-fastener/studios.ts`
 
 ```ts
+// The catalog FRCDesignLib's last load stored and each kind's loaded studio;
+// undefined until there are both, or when the catalog isn't one this reads.
+async function getFastenerSet(
+    db: Db,
+    libraryId: LibraryId = FASTENER_LIBRARY
+): Promise<FastenerSet | undefined>;
 // The fastener for each hole; pure.
 function planHoles(
     circularEdges: AssemblyCircularEdge[],
     holes: AssemblyHole[],
     placed: PlacedScrew[],
-    options: FastenerOptions
+    options: FastenerOptions,
+    catalog: Catalog
 ): HolePlan[];
 function getLengths(
+    catalog: Catalog,
     vendor: string,
     size: string,
     head: string,
     finish: string
 ): CatalogLength[];
+// Each studio input settled onto what's made: hidden and fixed ones from the catalog.
+function settleScrew(set: FastenerSet, choice: PartialSelection): ScrewChoice;
 // A part's overrides of its studio's defaults, as inserted.
 function studioConfiguration(
+    set: FastenerSet,
     kind: FastenerKind,
     choice: ScrewChoice | PartChoice
 ): Selection;
@@ -540,16 +560,94 @@ interface MateEdge {
     occurrencePath: string[];
     edgeId: string;
 }
+
+interface FastenerSet {
+    catalog: Catalog;
+    studios: Record<FastenerKind, FastenerStudio>;
+}
+
+interface Catalog {
+    vendors: CatalogVendor[];
+    sizes: CatalogSize[];
+    heads: CatalogHead[];
+    screws: CatalogScrew[];
+    nutTypes: { id: string; name: string }[];
+    nuts: CatalogNut[];
+    washers: CatalogWasher[];
+}
+
+interface FastenerStudio {
+    parameters: ConfigurationParameter[];
+    location: StudioLocation;
+}
+
+interface CatalogVendor {
+    id: string;
+    name: string;
+}
+
+interface CatalogSize {
+    id: string;
+    name: string;
+    majorDiameter: number;
+    pitch: number;
+    tapDrillDiameter: number;
+    closeClearanceDiameter: number;
+    freeClearanceDiameter: number;
+}
+
+interface CatalogHead {
+    id: string;
+    name: string;
+    sizes: Record<
+        string,
+        { diameter: number; height: number; countersunk: boolean }
+    >;
+}
+
+interface CatalogScrew {
+    vendor: string;
+    size: string;
+    head: string;
+    finish: string;
+    lengths: CatalogLength[];
+}
+
+interface CatalogNut extends Stocked {
+    vendor: string;
+    size: string;
+    type: string;
+    acrossFlats: number;
+    height: number;
+}
+
+interface CatalogWasher {
+    vendor: string;
+    size: string;
+    type: string;
+    name: string;
+    innerDiameter: number;
+    outerDiameter: number;
+    thickness: number;
+    /** The finishes it's made in, which don't change its size. */
+    finishes: string[];
+}
+
+interface Stocked {
+    partNumber?: string;
+    url?: string;
+}
 ```
 
 `src/backend/features/quick-fastener/insert.ts`
 
 ```ts
 // Each ready hole's parts, in two stacks, each part on the one under it.
-function placements(plans: HolePlan[]): PartPlacement[];
+function placements(set: FastenerSet, plans: HolePlan[]): PartPlacement[];
 // Alike holes together, each group's first the one given parts.
 function replicateGroups(plans: HolePlan[]): HolePlan[][];
 function insertGroups(
+    set: FastenerSet,
     parts: PartPlacement[]
 ): { instances: object[]; transform: number[] }[];
 // Each studio's mate connector, read from the assembly once per release.
@@ -557,11 +655,13 @@ async function mateConnectorIdsFor(
     client: OnshapeApi,
     kv: KVNamespace,
     assembly: ElementPath,
+    set: FastenerSet,
     kinds: FastenerKind[]
 ): Promise<Partial<Record<FastenerKind, string>>>;
 async function washerTopEdges(
     client: OnshapeApi,
     kv: KVNamespace,
+    set: FastenerSet,
     parts: PartPlacement[]
 ): Promise<Record<number, string>>;
 function partMate(
@@ -654,7 +754,10 @@ function jobHeadline(
     outcome: FastenerJobOutcome
 ): string;
 // e.g. `#10-32 x 7/8 in Button head, Nylock nut`; or why the hole got nothing.
-function describePlan(planned: PlannedHole): string;
+function describePlan(
+    set: FastenerSet | undefined,
+    planned: PlannedHole
+): string;
 function LastRunCallout(props: LastRunCalloutProps): ReactNode;
 function JobDetails(props: JobDetailsProps): ReactNode;
 // A toast when a run finishes, from anywhere in the app.
@@ -675,6 +778,10 @@ vectors, Onshape's 4×4 transforms and `LINEAR_TOLERANCE`.
 
 ## Storage
 
+- **D1** `generated_sets` (`fasteners` in FRCDesignLib) and the Fasteners
+  group's insertables — the catalog and each kind's studio (its parameters and
+  where it's released), as the group's last load stored them; read, never
+  written, here (see [generated-parts.md](./generated-parts.md)).
 - **KV** `quick-fastener-scan:{key}` — a Part Studio's holes, by part id, for a
   month. The key is what pins the Part Studio's geometry and its configuration
   (`toStudioSource`): `{documentId}|v|{versionId}|…` for a part from a version,
@@ -718,6 +825,10 @@ vectors, Onshape's 4×4 transforms and `LINEAR_TOLERANCE`.
    debug level.
 
 ### The form
+
+The panel first reads the fasteners the library loaded (`useFastenerSetQuery`,
+`GET /api/quick-fastener/parts`). Until FRCDesignLib's Fasteners group has
+loaded them it says so, and offers nothing to insert.
 
 The panel is a `ParameterGrid` of the configuration dialog's own inputs
 (`ParameterInput`), in groups under plain headings (`ParameterGroup`):
@@ -765,8 +876,10 @@ Changing the mode clears the picks.
 
 ### Starting a run — `POST /api/quick-fastener/insert`
 
-1. Answers 400 for FTC, 503 when the studios aren't released, and 409 while a
-   run in the same assembly is still going (`getJobStatus`).
+1. Answers 400 for FTC, 503 when no fasteners are loaded (`getFastenerSet`),
+   400 for a part the loaded catalog doesn't make in the screw's size
+   (`isMade`), and 409 while a run in the same assembly is still going
+   (`getJobStatus`).
 2. Creates a `QuickFastenerWorkflow` run with the caller's session id, stores
    it as `RUNNING` with every step pending, pushes, and answers that status.
    Picks are cleared on the page; the run goes on whether or not anyone stays.
@@ -780,6 +893,8 @@ before doing anything (`isRateLimited`), so a retry never inserts or mates
 twice. A step that fails is recorded with why, and the steps after it are
 skipped.
 
+0. Reads the loaded fasteners once (`fastener-set`), which the rest of the run
+   uses even if the library reloads them meanwhile; with none, the run fails.
 1. **Index holes** (`index`):
     1. Reads the assembly definition, and, when any part is from the assembly's
        own workspace, its Part Studios' microversions (one listing).
@@ -873,6 +988,9 @@ app.
 | "Quick Fastener puts screws, washers and nuts in the holes of an assembly's parts. Open it from an assembly's panel."            | Route notice description, outside an assembly              |
 | "Sign in to fasten parts" / "Sign in"                                                                                            | Route notice title and button, signed out                  |
 | "Quick Fastener reads your assembly's holes and inserts fasteners into it."                                                      | Route notice description, signed out                       |
+| "Loading fasteners..."                                                                                                           | In place of the panel, while the fasteners are read        |
+| "Couldn't load the fasteners."                                                                                                   | In place of the panel, the read failed                     |
+| "No fasteners are loaded yet." / "Quick Fastener uses the fasteners in FRCDesignLib's Fasteners group, once they're loaded."     | In place of the panel, none loaded                         |
 | "Selections"                                                                                                                     | Heading, last                                              |
 | "Select by" / "Faces" / "Circular edges"                                                                                         | Selection mode, its options                                |
 | "Faces"                                                                                                                          | Targets list's label, faces                                |
@@ -931,8 +1049,9 @@ app.
 
 ## Invariants
 
-- The catalog is robot-code's, synced at a pinned commit; it's never edited
-  here.
+- The catalog and studios are the ones FRCDesignLib last loaded from
+  robot-code's released manifest; nothing here edits them, and a run reads
+  them once, at its start.
 - Only standard fasteners are inserted: a length, nut or washer the catalog says
   its vendor makes.
 - A hole's parts are two stacks, each held together by its own mates: a washer
@@ -965,7 +1084,7 @@ app.
 
 | Failure                              | Result                                                                                                       | Recovery                                              |
 | ------------------------------------ | ------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------- |
-| The studios aren't released          | Insert answers 503                                                                                           | Release them in robot-code, sync                      |
+| No fasteners are loaded              | The panel says so; insert answers 503                                                                        | Release them in robot-code, load the Fasteners group  |
 | The hole scan fails in a Part Studio | Index fails, naming Onshape's notice; the rest is skipped                                                    | Fix the Part Studio, or skip what's in it             |
 | No hole, or nothing fits             | That hole's plan is **no fit**, with why                                                                     | Change the options or the hole                        |
 | The insert fails                     | Nothing is inserted; fastening is skipped                                                                    | Run it again                                          |
@@ -977,9 +1096,12 @@ app.
 
 ## Decisions
 
-- **Two repos, one generated file between them.** robot-code holds the
-  FeatureScript and its tooling; this repo pins its manifest. Inserting needs a
-  released Onshape version anyway, so a monorepo would still need the pin.
+- **The fasteners come from the loaded library.** robot-code holds the
+  FeatureScript and its tooling, and releases a manifest beside the Part
+  Studios; the library's load stores its catalog with the studios, so what
+  Quick fastener offers is what FRCDesignLib has loaded, and a release reaches
+  it without a deploy. Only the hole scan is pinned here, since the app parses
+  its answer.
 - **Immutable keys, no webhooks.** A version, a document microversion and a
   tab's microversion each name geometry that can't change, so a scan keyed by
   one is cached for good, and the assembly's own reading says which key is
@@ -987,9 +1109,11 @@ app.
   tab's microversion when only that other tab changes; this is untried in
   Onshape.
 - **The panel listens to the stream.** Onshape streams every pick once the app
-  has sent `applicationInit`; `requestSelection` only limits what the graphics
-  window lets be picked, and a highlight cancels it. The panel sends none, so a
-  focused list refuses kinds it doesn't take itself.
+  has sent `applicationInit`. A focused list also holds a `requestSelection`,
+  which only limits what the Onshape window lets be picked, in the form Onshape
+  answers to (array specifiers per level) rather than the one it documents; a
+  highlight cancels it, so leaving a hovered row asks again. A list still
+  refuses kinds it doesn't take.
 - **Washers are mated to, not offset for.** Mate offsets aren't in Onshape's
   API reference. Fastening a screw or nut to the washer under it puts it at the
   washer's thickness whichever washer was chosen, where moving the mate

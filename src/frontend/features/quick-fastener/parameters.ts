@@ -21,6 +21,7 @@ import {
 } from "@backend/features/quick-fastener/contract";
 import {
     FastenerKind,
+    type FastenerSet,
     getParameter,
     type ScrewChoice,
     StudioInput
@@ -115,8 +116,8 @@ export const AUTOMATIC_LENGTH = "AUTOMATIC";
  * and Automatic is automatic. Its other options are the studio's, shown as
  * the studio shows them.
  */
-export function lengthParameter(): EnumParameter {
-    const length = getParameter(FastenerKind.SCREW, StudioInput.LENGTH);
+export function lengthParameter(set: FastenerSet): EnumParameter {
+    const length = getParameter(set, FastenerKind.SCREW, StudioInput.LENGTH);
     if (!length) {
         throw new Error("The screw studio has no Length");
     }

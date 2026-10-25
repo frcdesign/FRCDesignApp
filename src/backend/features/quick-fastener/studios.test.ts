@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ParameterType } from "../configurations/contract";
+import { FASTENER_SET } from "../../../__test_utils__/fastener-set";
 import { getVisibleOptions } from "../configurations/utils";
 import {
     FastenerKind,
@@ -8,7 +9,6 @@ import {
     partVendors,
     settlePart,
     settleScrew,
-    STUDIO_PARAMETERS,
     studioConfiguration
 } from "./studios";
 
@@ -23,7 +23,7 @@ const SCREW = {
 
 describe("STUDIO_PARAMETERS", () => {
     it("parses each studio's configuration as Onshape answers it", () => {
-        const parameters = STUDIO_PARAMETERS[FastenerKind.SCREW];
+        const parameters = FASTENER_SET.studios[FastenerKind.SCREW].parameters;
         expect(parameters.map((parameter) => parameter.id)).toEqual([
             "vendor",
             "size",
@@ -39,12 +39,14 @@ describe("STUDIO_PARAMETERS", () => {
         expect(fullyThreaded.type).toBe(ParameterType.ENUM);
         // McMaster-Carr makes every nut, so the nut's studio has no vendor
         expect(
-            STUDIO_PARAMETERS[FastenerKind.NUT].map((parameter) => parameter.id)
+            FASTENER_SET.studios[FastenerKind.NUT].parameters.map(
+                (parameter) => parameter.id
+            )
         ).toEqual(["size", "type"]);
     });
 
     it("offers Fully threaded only where a length is sold both ways", () => {
-        const parameters = STUDIO_PARAMETERS[FastenerKind.SCREW];
+        const parameters = FASTENER_SET.studios[FastenerKind.SCREW].parameters;
         const fullyThreaded = parameters[5];
         if (fullyThreaded.type !== ParameterType.ENUM) {
             throw new Error("Fully threaded is a List of false and true");
@@ -69,9 +71,9 @@ describe("STUDIO_PARAMETERS", () => {
 
 describe("settleScrew", () => {
     it("keeps a screw the vendor makes, and moves one it doesn't onto what it does", () => {
-        expect(settleScrew(SCREW)).toEqual(SCREW);
+        expect(settleScrew(FASTENER_SET, SCREW)).toEqual(SCREW);
         // WCP makes no flat heads, and only #10-32
-        const wcp = settleScrew({
+        const wcp = settleScrew(FASTENER_SET, {
             ...SCREW,
             vendor: "WCP",
             size: "QUARTER_20",
@@ -79,7 +81,7 @@ describe("settleScrew", () => {
         });
         expect(wcp.size).toBe("NO_10_32");
         expect(wcp.head).not.toBe("FLAT");
-        expect(isMade(FastenerKind.SCREW, wcp)).toBe(true);
+        expect(isMade(FASTENER_SET, FastenerKind.SCREW, wcp)).toBe(true);
     });
 });
 
@@ -87,6 +89,7 @@ describe("settlePart", () => {
     it("is Generic under a Generic screw, whatever was chosen", () => {
         expect(
             settlePart(
+                FASTENER_SET,
                 FastenerKind.WASHER,
                 { vendor: "MCMASTER", type: "OD_7_16_X_0_03" },
                 SCREW
@@ -102,53 +105,71 @@ describe("settlePart", () => {
     it("keeps the vendor chosen under another vendor's screw, where it makes the part", () => {
         const rev = { vendor: "REV", size: "NO_10_32" };
         expect(
-            settlePart(FastenerKind.WASHER, { vendor: "WCP" }, rev)?.vendor
+            settlePart(
+                FASTENER_SET,
+                FastenerKind.WASHER,
+                { vendor: "WCP" },
+                rev
+            )?.vendor
         ).toBe("WCP");
         // REV makes no washers, so Generic's
-        expect(settlePart(FastenerKind.WASHER, {}, rev)?.vendor).toBe(GENERIC);
+        expect(
+            settlePart(FASTENER_SET, FastenerKind.WASHER, {}, rev)?.vendor
+        ).toBe(GENERIC);
     });
 
     it("takes a nut from the one vendor making nuts, whatever was chosen", () => {
         expect(
-            settlePart(FastenerKind.NUT, { vendor: GENERIC }, SCREW)
+            settlePart(
+                FASTENER_SET,
+                FastenerKind.NUT,
+                { vendor: GENERIC },
+                SCREW
+            )
         ).toEqual({ vendor: "MCMASTER", size: "NO_10_32", type: "NYLOCK" });
     });
 
     it("resolves a hidden input to the one option made", () => {
         // WCP's #10 washers are black alone, so its Finish is hidden at the default, stainless
         const washer = settlePart(
+            FASTENER_SET,
             FastenerKind.WASHER,
             { type: "OD_3_8_X_0_031" },
             { vendor: "WCP", size: "NO_10_32" }
         );
         expect(washer?.finish).toBe("BLACK");
-        expect(washer && isMade(FastenerKind.WASHER, washer)).toBe(true);
+        expect(
+            washer && isMade(FASTENER_SET, FastenerKind.WASHER, washer)
+        ).toBe(true);
     });
 
     it("takes the screw's size, and a type made in it", () => {
         const washer = settlePart(
+            FASTENER_SET,
             FastenerKind.WASHER,
             { type: "OD_1_2_X_0_049" },
             { vendor: "MCMASTER", size: "QUARTER_20" }
         );
         expect(washer?.size).toBe("QUARTER_20");
-        expect(washer && isMade(FastenerKind.WASHER, washer)).toBe(true);
+        expect(
+            washer && isMade(FASTENER_SET, FastenerKind.WASHER, washer)
+        ).toBe(true);
     });
 
     it("offers only the vendors making the part in the size", () => {
-        expect(partVendors(FastenerKind.NUT, "NO_10_32")).toEqual(["MCMASTER"]);
-        expect(partVendors(FastenerKind.WASHER, "NO_6_32")).toEqual([
-            GENERIC,
-            "MCMASTER",
-            "ANDYMARK"
-        ]);
+        expect(partVendors(FASTENER_SET, FastenerKind.NUT, "NO_10_32")).toEqual(
+            ["MCMASTER"]
+        );
+        expect(
+            partVendors(FASTENER_SET, FastenerKind.WASHER, "NO_6_32")
+        ).toEqual([GENERIC, "MCMASTER", "ANDYMARK"]);
     });
 });
 
 describe("studioConfiguration", () => {
     it("sends what differs from the studio's defaults", () => {
         expect(
-            studioConfiguration(FastenerKind.SCREW, {
+            studioConfiguration(FASTENER_SET, FastenerKind.SCREW, {
                 ...SCREW,
                 length: "IN_1"
             })

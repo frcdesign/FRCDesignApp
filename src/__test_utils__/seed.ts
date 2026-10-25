@@ -2,6 +2,7 @@ import { type Db } from "@backend/db/client";
 import {
     configurations,
     favorites,
+    generatedSets,
     groups,
     insertables,
     libraries,
@@ -74,6 +75,7 @@ export async function resetDb(db: Db): Promise<void> {
         db.delete(favorites),
         db.delete(configurations),
         db.delete(insertables),
+        db.delete(generatedSets),
         db.delete(groups),
         db.delete(users),
         db.delete(libraries),

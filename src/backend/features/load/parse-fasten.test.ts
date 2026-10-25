@@ -5,7 +5,9 @@ import {
     parseFastenInfoFromPartStudio,
     parseFastenInfoFromAssembly
 } from "./parse-fasten";
-import { generatedFeatureTypes } from "../generated-parts/studios";
+
+/** As the loaded generated sets name their studios' features. */
+const GENERATED = ["fastenerScrew", "fastenerWasher", "fastenerNut"];
 
 describe("parseFastenInfoFromPartStudio", () => {
     it("takes a generated feature, which makes its mate connector, wherever it is", () => {
@@ -31,35 +33,35 @@ describe("parseFastenInfoFromPartStudio", () => {
                 }
             ]
         };
-        expect(parseFastenInfoFromPartStudio(rawFeatureList)).toEqual({
+        // Unknown until a set naming it is loaded
+        expect(() => parseFastenInfoFromPartStudio(rawFeatureList)).toThrow();
+        expect(
+            parseFastenInfoFromPartStudio(rawFeatureList, GENERATED)
+        ).toEqual({
             mateConnectorId: "nut-id",
             mateLocation: MateLocation.Feature,
             path: []
         });
     });
 
-    it("takes every generated studio's feature", () => {
-        for (const featureType of generatedFeatureTypes()) {
+    it("takes each loaded set's features", () => {
+        for (const featureType of GENERATED) {
             expect(
-                parseFastenInfoFromPartStudio({
-                    features: [
-                        {
-                            featureType,
-                            featureId: "id",
-                            name: featureType,
-                            suppressed: false
-                        }
-                    ]
-                }).mateConnectorId
+                parseFastenInfoFromPartStudio(
+                    {
+                        features: [
+                            {
+                                featureType,
+                                featureId: "id",
+                                name: featureType,
+                                suppressed: false
+                            }
+                        ]
+                    },
+                    GENERATED
+                ).mateConnectorId
             ).toBe("id");
         }
-        expect(generatedFeatureTypes()).toEqual(
-            expect.arrayContaining([
-                "fastenerScrew",
-                "fastenerWasher",
-                "fastenerNut"
-            ])
-        );
     });
 
     it("refuses a custom feature it doesn't know makes a mate connector", () => {

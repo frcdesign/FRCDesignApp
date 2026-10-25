@@ -1,31 +1,28 @@
 /**
- * Copies the generated parts' manifests in from robot-code, pinned to a ref (a
- * release tag, or a commit): what `fs gen` writes for each set of FeatureScript-
- * generated Part Studios there, such as the fasteners'
- * (`featurescripts/fasteners/fastenerTables.py`).
+ * Copies what the app builds against in from robot-code, pinned to a ref (a
+ * release tag, or a commit): what `fs gen` writes for the fasteners
+ * (`featurescripts/fasteners/fastenerTables.py`). The fasteners' catalog and
+ * studios themselves come from the manifest a library loads, not from here.
  *
  *     npm run sync:generated-parts -- <ref>
  *     npm run sync:generated-parts -- <ref> --from ../robot-code   # a local clone
  *
- * Writes, so a change to a generated part is a diff here:
+ * Writes, so a change is a diff here:
  *
- * - `src/backend/features/generated-parts/studios.gen.ts`: each studio's
- *   configuration, as Onshape answers it, and where it's released, which Quick
- *   fastener inserts; the client imports it. A library load reads its records
- *   from the manifest released beside the Part Studios instead.
- * - Under `src/backend/features/quick-fastener/`, from the fasteners' manifest:
- *   `catalog.gen.ts` (the parts' dimensions, which it plans with),
- *   `heads.gen.ts` (the countersunk heads, for the client) and
- *   `hole-scan.gen.ts` (the FeatureScript the server evaluates).
+ * - `src/backend/features/quick-fastener/hole-scan.gen.ts`: the FeatureScript
+ *   the server evaluates to read holes, whose answer the app parses, so it
+ *   ships with the app.
+ * - `src/__test_utils__/fasteners-manifest.gen.ts`: the fasteners' manifest
+ *   less its records, on one line, which tests build a `FastenerSet` from.
  */
 import { execFileSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
 
 const REPO = "robot-education/robot-code";
 /** Each set of generated studios, by the name its studios are keyed under. */
-const SETS = { fasteners: "featurescripts/fasteners/fasteners.gen.json" };
-const OUT = "src/backend/features/generated-parts";
+const MANIFEST = "featurescripts/fasteners/fasteners.gen.json";
 const QUICK_FASTENER = "src/backend/features/quick-fastener";
+const FIXTURE = "src/__test_utils__/fasteners-manifest.gen.ts";
 
 async function readManifest(path, ref, from) {
     if (from) {
@@ -52,15 +49,6 @@ function resolveCommit(ref, from) {
     }).trim();
 }
 
-/** A washer can't go under these, which sit in their countersinks. */
-function countersunkHeads(catalog) {
-    return catalog.heads
-        .filter((head) =>
-            Object.values(head.sizes).some((size) => size.countersunk)
-        )
-        .map((head) => head.id);
-}
-
 async function main() {
     const [ref, flag, from] = process.argv.slice(2);
     if (!ref || (flag && flag !== "--from") || (flag && !from)) {
@@ -72,33 +60,17 @@ async function main() {
     const source = `${REPO}@${resolveCommit(ref, from)}`;
     const header = `/* Synced from ${source} by \`npm run sync:generated-parts\` -- DO NOT EDIT */\n`;
 
-    const studios = [];
-    let fasteners;
-    for (const [set, path] of Object.entries(SETS)) {
-        const manifest = JSON.parse(await readManifest(path, ref, from));
-        for (const [key, studio] of Object.entries(manifest.studios)) {
-            const { records: _records, ...rest } = studio;
-            studios.push({ set, key, ...rest });
-        }
-        if (set === "fasteners") {
-            fasteners = manifest;
-        }
-    }
-
-    // One line each: prettier would spread them over tens of thousands
-    writeFileSync(
-        `${OUT}/studios.gen.ts`,
-        `${header}\nexport const GENERATED_SOURCE = ${JSON.stringify(source)};\n\nexport const GENERATED_STUDIOS = ${JSON.stringify(studios)};\n`
-    );
-
-    const { holeScan, studios: _studios, ...catalog } = fasteners;
-    writeFileSync(
-        `${QUICK_FASTENER}/catalog.gen.ts`,
-        `${header}\nexport const CATALOG = ${JSON.stringify(catalog, null, 4)};\n`
+    const manifest = JSON.parse(await readManifest(MANIFEST, ref, from));
+    const { holeScan, ...rest } = manifest;
+    const studios = Object.fromEntries(
+        Object.entries(rest.studios).map(([key, studio]) => {
+            const { records: _records, ...withoutRecords } = studio;
+            return [key, withoutRecords];
+        })
     );
     writeFileSync(
-        `${QUICK_FASTENER}/heads.gen.ts`,
-        `${header}\nexport const COUNTERSUNK_HEADS = ${JSON.stringify(countersunkHeads(catalog))};\n`
+        FIXTURE,
+        `${header}\nexport const FASTENERS_MANIFEST = ${JSON.stringify({ ...rest, source, studios })};\n`
     );
     writeFileSync(
         `${QUICK_FASTENER}/hole-scan.gen.ts`,
@@ -106,13 +78,7 @@ async function main() {
     );
     execFileSync(
         "npx",
-        [
-            "prettier",
-            "--write",
-            `${QUICK_FASTENER}/catalog.gen.ts`,
-            `${QUICK_FASTENER}/heads.gen.ts`,
-            `${QUICK_FASTENER}/hole-scan.gen.ts`
-        ],
+        ["prettier", "--write", `${QUICK_FASTENER}/hole-scan.gen.ts`],
         { stdio: "ignore" }
     );
     console.log(`Synced the generated parts from ${source}.`);

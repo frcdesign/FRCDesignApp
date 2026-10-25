@@ -5,4 +5,4 @@ src/frontend/routeTree.gen.ts
 worker-configuration.d.ts
 onshape-api-reference
 # Synced by `npm run sync:generated-parts` on one line each, which prettier would spread over tens of thousands.
-src/backend/features/generated-parts/studios.gen.ts
+src/__test_utils__/fasteners-manifest.gen.ts
