@@ -20,15 +20,15 @@ only what's made.
 robot-code (`robot-education/robot-code`) owns everything the catalog says:
 `featurescripts/fasteners/fastenerTables.py` generates the features'
 FeatureScript data, the Part Studios' configurations, and the manifest released
-beside them, and `fastenerHoleScan.fs` is the hole scan. The fasteners are a
+beside them. The fasteners are a
 part set (`[tool.fs.parts.fasteners]`): `fs parts fasteners --release` releases
 them into FRCDesign's Fasteners library document, Part Studios and all, not to
 its public frontend document. They're generated parts (see
 [generated-parts.md](./generated-parts.md)): loading FRCDesignLib's Fasteners
 group stores the manifest's catalog and loads each studio, and Quick fastener
-reads both (`FastenerSet`). Only the hole scan is synced into the app
-(`hole-scan.gen.ts`, by `npm run sync:generated-parts`), since the app parses
-its answer.
+reads both (`FastenerSet`). The hole scan is the app's own
+(`src/backend/features/quick-fastener/hole-scan.fs`), beside the code that
+parses its answer.
 
 ## Code map
 
@@ -379,8 +379,9 @@ interface FastenerJobParams {
 ```
 
 `src/backend/features/quick-fastener/index-holes.ts`,
-`src/backend/features/quick-fastener/assembly.ts` and
-`src/backend/features/quick-fastener/scan.ts`
+`src/backend/features/quick-fastener/assembly.ts`,
+`src/backend/features/quick-fastener/scan.ts` and
+`src/backend/features/quick-fastener/hole-scan.fs`
 
 ```ts
 // Reads the assembly and scans every Part Studio it needs.
@@ -404,6 +405,8 @@ function toStudioSource(
     assembly: ElementPath,
     microversions: ElementMicroversions
 ): StudioSource | undefined;
+// hole-scan.fs's fastenerHoleScan body, as the lambda Onshape evaluates.
+function holeScanLambda(source: string): string;
 // From the cache when nothing is picked in it, else by evaluating the scan.
 async function scanStudio(
     client: OnshapeApi,
@@ -1100,8 +1103,11 @@ app.
   FeatureScript and its tooling, and releases a manifest beside the Part
   Studios; the library's load stores its catalog with the studios, so what
   Quick fastener offers is what FRCDesignLib has loaded, and a release reaches
-  it without a deploy. Only the hole scan is pinned here, since the app parses
-  its answer.
+  it without a deploy.
+- **The hole scan lives in the app.** The app evaluates it and parses its
+  answer, so the FeatureScript sits beside its parser (`hole-scan.fs`, imported
+  as text), and a change to either is one commit, reviewed and deployed
+  together.
 - **Immutable keys, no webhooks.** A version, a document microversion and a
   tab's microversion each name geometry that can't change, so a scan keyed by
   one is cached for good, and the assembly's own reading says which key is

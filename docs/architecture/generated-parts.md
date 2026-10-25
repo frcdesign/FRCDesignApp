@@ -22,7 +22,7 @@ Parts modeled by hand aren't generated, whatever their configuration.
 
 | Path                                                                 | Role                                                                                                             |
 | -------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `scripts/sync-generated-parts.js`                                    | `npm run sync:generated-parts`: the hole scan and a test fixture, at a pinned commit                             |
+| `scripts/sync-generated-parts.js`                                    | `npm run sync:generated-parts`: a test fixture, at a pinned commit                                               |
 | `src/backend/features/generated-parts/manifest.ts`                   | The released manifest: `findManifestTabs`, `parseManifest`, `generatedTabs`, `releasedStudio`, `releasedCatalog` |
 | `src/backend/features/generated-parts/store.ts`                      | `saveGeneratedSet`, `getGeneratedSet`, `generatedFeatureTypes`: the stored catalogs                              |
 | `src/backend/features/generated-parts/records.ts`                    | `generatedConfiguration`, `describeMismatch`, `GeneratedPartMismatchError`; the server's                         |
@@ -67,12 +67,11 @@ load reads it from the version it loads, in Onshape.
 ### Syncing
 
 `npm run sync:generated-parts -- <ref> [--from ../robot-code]` reads the
-fasteners' manifest at a robot-code commit and writes what the app builds
-against: Quick fastener's hole scan (`hole-scan.gen.ts`), FeatureScript whose
-answer the app parses, and `src/__test_utils__/fasteners-manifest.gen.ts`, the
-manifest less its records on one line, which tests build a `FastenerSet` from.
-Nothing the app serves comes from it: the parts and their catalog come from
-the released manifest a library loads.
+fasteners' manifest at a robot-code commit and writes
+`src/__test_utils__/fasteners-manifest.gen.ts`, the manifest less its records
+on one line, which tests build a `FastenerSet` from. Nothing the app serves
+comes from it: the parts and their catalog come from the released manifest a
+library loads.
 
 ### Loading a generated tab
 
@@ -140,8 +139,7 @@ any is; a release rebuilds every studio, which changes each.
    part sets doc), released apart from its user-facing FeatureScript.
 5. Load the group: its new version's manifest is read with it, and Quick
    fastener reads the stored catalog and the loaded studios, so no sync or
-   deploy comes between. Only a change to the hole scan, which the app parses,
-   needs a sync and a deploy.
+   deploy comes between.
 
 ### Indicator
 
@@ -195,7 +193,8 @@ shows it in place of the indexing switches.
   needs no app change.
 - **The catalog is stored at load, not synced.** What Quick fastener offers is
   what the library loaded, so a release reaches it with the group's next load
-  rather than a deploy. The hole scan stays synced: the app parses its answer,
-  so it changes with the app.
+  rather than a deploy. Nothing robot-code releases is compiled into the app:
+  Quick fastener's hole scan is the app's own FeatureScript, beside its
+  parser.
 
 _Last reviewed: 2026-10-22_

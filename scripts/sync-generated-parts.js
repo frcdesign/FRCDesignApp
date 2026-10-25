@@ -1,19 +1,14 @@
 /**
- * Copies what the app builds against in from robot-code, pinned to a ref (a
- * release tag, or a commit): what `fs gen` writes for the fasteners
- * (`featurescripts/fasteners/fastenerTables.py`). The fasteners' catalog and
- * studios themselves come from the manifest a library loads, not from here.
+ * Copies the fasteners' manifest in from robot-code, pinned to a ref (a release
+ * tag, or a commit), as a test fixture: what `fs gen` writes for them
+ * (`featurescripts/fasteners/fastenerTables.py`). The app itself reads the
+ * manifest a library loads, never this.
  *
  *     npm run sync:generated-parts -- <ref>
  *     npm run sync:generated-parts -- <ref> --from ../robot-code   # a local clone
  *
- * Writes, so a change is a diff here:
- *
- * - `src/backend/features/quick-fastener/hole-scan.gen.ts`: the FeatureScript
- *   the server evaluates to read holes, whose answer the app parses, so it
- *   ships with the app.
- * - `src/__test_utils__/fasteners-manifest.gen.ts`: the fasteners' manifest
- *   less its records, on one line, which tests build a `FastenerSet` from.
+ * Writes `src/__test_utils__/fasteners-manifest.gen.ts`: the manifest less its
+ * records, on one line, which tests build a `FastenerSet` from.
  */
 import { execFileSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
@@ -21,7 +16,6 @@ import { writeFileSync } from "node:fs";
 const REPO = "robot-education/robot-code";
 /** Each set of generated studios, by the name its studios are keyed under. */
 const MANIFEST = "featurescripts/fasteners/fasteners.gen.json";
-const QUICK_FASTENER = "src/backend/features/quick-fastener";
 const FIXTURE = "src/__test_utils__/fasteners-manifest.gen.ts";
 
 async function readManifest(path, ref, from) {
@@ -61,25 +55,15 @@ async function main() {
     const header = `/* Synced from ${source} by \`npm run sync:generated-parts\` -- DO NOT EDIT */\n`;
 
     const manifest = JSON.parse(await readManifest(MANIFEST, ref, from));
-    const { holeScan, ...rest } = manifest;
     const studios = Object.fromEntries(
-        Object.entries(rest.studios).map(([key, studio]) => {
+        Object.entries(manifest.studios).map(([key, studio]) => {
             const { records: _records, ...withoutRecords } = studio;
             return [key, withoutRecords];
         })
     );
     writeFileSync(
         FIXTURE,
-        `${header}\nexport const FASTENERS_MANIFEST = ${JSON.stringify({ ...rest, source, studios })};\n`
-    );
-    writeFileSync(
-        `${QUICK_FASTENER}/hole-scan.gen.ts`,
-        `${header}\nexport const HOLE_SCAN = ${JSON.stringify(holeScan)};\n`
-    );
-    execFileSync(
-        "npx",
-        ["prettier", "--write", `${QUICK_FASTENER}/hole-scan.gen.ts`],
-        { stdio: "ignore" }
+        `${header}\nexport const FASTENERS_MANIFEST = ${JSON.stringify({ ...manifest, source, studios })};\n`
     );
     console.log(`Synced the generated parts from ${source}.`);
 }

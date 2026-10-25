@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
     decodeFeatureScriptValue,
     DETERMINISTIC_ID,
+    holeScanLambda,
     parseStudioScan,
     scanScript
 } from "./scan";
@@ -83,5 +84,23 @@ describe("scanScript", () => {
     it("only takes ids that can't break out of a string", () => {
         expect(DETERMINISTIC_ID.test("JKB")).toBe(true);
         expect(DETERMINISTIC_ID.test('J"); evil(')).toBe(false);
+    });
+});
+
+describe("holeScanLambda", () => {
+    it("is hole-scan.fs's function body, as a lambda", () => {
+        const script = scanScript({ edges: [], faces: [] });
+        expect(script).toContain(
+            "const scan = function(context is Context, queries is map)\n{\n"
+        );
+        expect(script).toContain(
+            'return { "parts" : parts, "circles" : circles };'
+        );
+    });
+
+    it("needs the function's signature", () => {
+        expect(() => holeScanLambda("export function other() {}\n")).toThrow(
+            "fastenerHoleScan"
+        );
     });
 });

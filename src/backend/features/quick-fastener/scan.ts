@@ -1,5 +1,5 @@
 /**
- * The hole scan: robot-code's `fastenerHoleScan`, evaluated in a Part
+ * The hole scan: `hole-scan.fs`'s `fastenerHoleScan`, evaluated in a Part
  * Studio, decoded, and cached by what it was evaluated at. A version, a
  * document microversion and a tab's microversion never change, so neither does
  * a scan keyed by one: nothing invalidates the cache, it only grows keys.
@@ -12,7 +12,7 @@ import { type OnshapeApi } from "../../lib/onshape/client";
 import { evaluateFeatureScript } from "../../lib/onshape/endpoints/part-studios";
 import { type ElementPath } from "../../lib/onshape/path";
 import { type OnshapeFeatureScriptValue } from "../../lib/onshape/types";
-import { HOLE_SCAN } from "./hole-scan.gen";
+import HOLE_SCAN_SOURCE from "./hole-scan.fs?raw";
 
 const vec3 = z.tuple([z.number(), z.number(), z.number()]);
 
@@ -82,6 +82,26 @@ export const holeScans = kvStore<ScannedParts>("quick-fastener-scan", {
 
 /** Deterministic ids are letters, digits and a few marks; anything else can't reach the script. */
 export const DETERMINISTIC_ID = /^[A-Za-z0-9_.+/-]+$/;
+
+const SIGNATURE =
+    /export function fastenerHoleScan\(context is Context, queries is map\) returns map\n\{\n([\s\S]*?)\n\}\n/;
+
+/**
+ * `fastenerHoleScan`'s body, as the lambda Onshape's FeatureScript evaluation
+ * takes: only std's common.fs is in scope there, so the function uses nothing
+ * else and keeps its helpers inside it.
+ */
+export function holeScanLambda(source: string): string {
+    const body = SIGNATURE.exec(source)?.[1];
+    if (body === undefined) {
+        throw new Error(
+            "hole-scan.fs has no fastenerHoleScan(context is Context, queries is map)"
+        );
+    }
+    return `function(context is Context, queries is map)\n{\n${body}\n}`;
+}
+
+const HOLE_SCAN = holeScanLambda(HOLE_SCAN_SOURCE);
 
 /** The scan, called with the picked entities as queries. */
 export function scanScript(selection: StudioSelection): string {
