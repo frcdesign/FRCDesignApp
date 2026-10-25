@@ -5,15 +5,29 @@ import { useEffect } from "react";
 import { useOnshapeServer, useTargetElement } from "./onshape-params";
 import { parseSelections, useOnshapeSelection } from "./selection";
 
+declare global {
+    interface Window {
+        /** Posts a message to Onshape, addressed to the launching element; from the browser console. */
+        sendToOnshape?: (message: Record<string, unknown>) => void;
+    }
+}
+
 export function useMessageListener() {
     // Nothing to message unless embedded in an Onshape document.
     const target = useTargetElement();
     const server = useOnshapeServer();
 
     useEffect(() => {
-        if (target) {
-            sendInitMessage(target);
+        if (!target) {
+            return;
         }
+        sendInitMessage(target);
+        // For trying messages Onshape doesn't document, from the browser console
+        window.sendToOnshape = (message) =>
+            sendMessage(target, message as unknown as Message);
+        return () => {
+            delete window.sendToOnshape;
+        };
     }, [target]);
 
     useEffect(() => {
@@ -22,7 +36,7 @@ export function useMessageListener() {
                 return;
             }
             // What Onshape sends about selection is undocumented; this is how to see it
-            console.debug("Onshape message", event.data);
+            console.debug("Received from Onshape", event.data);
             if (
                 !isHighlightAnswer(event.data) &&
                 carriesSelections(event.data)
@@ -209,5 +223,6 @@ function sendMessage(elementPath: ElementPath, message: Message) {
         workspaceId: elementPath.instanceId,
         elementId: elementPath.elementId
     };
+    console.debug("Sent to Onshape", messageToSend);
     window.parent.postMessage(messageToSend, "*");
 }

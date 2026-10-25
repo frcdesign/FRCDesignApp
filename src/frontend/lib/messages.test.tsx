@@ -55,6 +55,38 @@ describe("useMessageListener", () => {
         expect(picked).toHaveBeenCalledOnce();
     });
 
+    it("lets the console send a message, addressed to the launching element", () => {
+        const posted = vi
+            .spyOn(window.parent, "postMessage")
+            .mockImplementation(vi.fn());
+        useOnshapeLaunch.setState({
+            documentId: "doc",
+            instanceId: "ws",
+            instanceType: "w",
+            elementId: "asm",
+            elementType: "ASSEMBLY" as never
+        });
+        renderHook(() => useMessageListener());
+        window.sendToOnshape?.({ messageName: "stopRequest" });
+        expect(posted).toHaveBeenLastCalledWith(
+            {
+                messageName: "stopRequest",
+                documentId: "doc",
+                workspaceId: "ws",
+                elementId: "asm"
+            },
+            "*"
+        );
+        posted.mockRestore();
+        useOnshapeLaunch.setState({
+            documentId: undefined,
+            instanceId: undefined,
+            instanceType: undefined,
+            elementId: undefined,
+            elementType: undefined
+        });
+    });
+
     it("takes nothing from a highlight's answer", () => {
         post({ messageId: "highlight-selection-1", selections: [edge] });
         expect(picked).not.toHaveBeenCalled();

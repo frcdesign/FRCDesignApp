@@ -812,8 +812,10 @@ vectors, Onshape's 4×4 transforms and `LINEAR_TOLERANCE`.
    for each pick as it's made, not the whole selection; while a selection
    request is pending, picks arrive in its answers instead, which carry its
    message id. `parseSelections` keeps either's entities; a highlight's answers
-   are never taken as picks. Every message from Onshape is logged at debug
-   level, since none of this is documented.
+   are never taken as picks. None of this is documented, so every message to
+   and from Onshape is logged at debug level ("Sent to Onshape", "Received from
+   Onshape"), and `window.sendToOnshape(message)` sends one by hand from the
+   browser console, addressed to the launching element.
 2. Clicking a `QueryList` focuses it (one at a time, `useOnshapeSelection`) and
    shows its prompt in Onshape's bubble. Each pick goes to the focused list,
    which keeps the edges and faces it doesn't hold yet, and repeats its prompt
