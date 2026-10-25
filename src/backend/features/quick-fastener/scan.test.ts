@@ -34,6 +34,33 @@ describe("decodeFeatureScriptValue", () => {
             )
         ).toEqual({ a: [1, 2], b: true, c: undefined });
     });
+
+    it("reads types by their full Java names, as the evaluation answers", () => {
+        const fsvalue = "com.belmonttech.serialize.fsvalue.";
+        expect(
+            decodeFeatureScriptValue({
+                btType: `${fsvalue}BTFSValueMap`,
+                value: [
+                    {
+                        btType: `${fsvalue}BTFSValueMapEntry`,
+                        key: {
+                            btType: `${fsvalue}BTFSValueString`,
+                            value: "a"
+                        },
+                        value: {
+                            btType: `${fsvalue}BTFSValueArray`,
+                            value: [
+                                {
+                                    btType: `${fsvalue}BTFSValueNumber`,
+                                    value: 1
+                                }
+                            ]
+                        }
+                    }
+                ]
+            })
+        ).toEqual({ a: [1] });
+    });
 });
 
 describe("parseStudioScan", () => {

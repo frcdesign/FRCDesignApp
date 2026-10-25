@@ -129,7 +129,8 @@ export function decodeFeatureScriptValue(
     if (!value) {
         return undefined;
     }
-    const kind = value.btType.split("-")[0];
+    // Onshape names the type either way: `BTFSValueMap-2062`, or `com.belmonttech.serialize.fsvalue.BTFSValueMap`
+    const kind = value.btType.split("-")[0].split(".").at(-1);
     switch (kind) {
         case "BTFSValueMap": {
             const entries = (value.value ?? []) as {

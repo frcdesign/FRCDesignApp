@@ -19,6 +19,8 @@ import {
 } from "../lib/messages";
 import { useTargetElement } from "../lib/onshape-params";
 import {
+    focusedPicks,
+    holdPicks,
     onPick,
     selectionKey,
     useOnshapeSelection,
@@ -59,9 +61,12 @@ function defaultName(entity: OnshapeSelection, index: number): string {
 
 /**
  * Onshape's query parameter, for entities picked in the Onshape window. Click
- * it to focus it, which lights its picks up, and new picks of the kind it takes
- * are added to it; hover a row to light its entity up alone, and remove one
- * with its button.
+ * it to focus it, and new picks of the kind it takes are added to it; hover a
+ * row to light its entity up alone, and remove one with its button.
+ *
+ * A selection request and a highlight can't be pending together: a highlight
+ * cancels the request, and a request clears the highlight. So the filter is
+ * asked for on focus, and a highlight lasts until the list is clicked again.
  */
 export function QueryList(props: QueryListProps): ReactNode {
     const {
@@ -77,7 +82,6 @@ export function QueryList(props: QueryListProps): ReactNode {
     } = props;
     const target = useTargetElement();
     const isFocused = useOnshapeSelection((state) => state.focused === id);
-    const restores = useOnshapeSelection((state) => state.restores);
     const [refused, setRefused] = useState(false);
 
     useEffect(
@@ -96,21 +100,37 @@ export function QueryList(props: QueryListProps): ReactNode {
         [id, entities, onChange, accepts]
     );
 
-    // A highlight cancels the request, so it's asked for after lighting the picks up
+    useEffect(() => holdPicks(id, entities), [id, entities]);
+
     useEffect(() => {
         if (!target || !isFocused) {
             return;
         }
-        sendHighlightMessage(target, entities.map(toHighlighted));
         sendSelectionRequest(target, filter);
         return () => sendStopRequestMessage(target);
-    }, [target, isFocused, filter, entities, restores]);
+    }, [target, isFocused, filter]);
 
     const focus = () => {
         useOnshapeSelection.getState().focus(id);
         setRefused(false);
-        if (target) {
-            sendMessageBubble(target, prompt);
+        if (!target) {
+            return;
+        }
+        sendMessageBubble(target, prompt);
+        // Already focused, the request was cancelled by a highlight since
+        if (isFocused) {
+            sendSelectionRequest(target, filter);
+        }
+    };
+
+    const showPicks = (picks: OnshapeSelection[] | undefined) => {
+        if (!target) {
+            return;
+        }
+        if (picks) {
+            sendHighlightMessage(target, picks.map(toHighlighted));
+        } else {
+            clearHighlight(target);
         }
     };
 
@@ -121,22 +141,14 @@ export function QueryList(props: QueryListProps): ReactNode {
     };
 
     // Back to the focused list's picks, whichever list the row was in
-    const unhighlight = () => {
-        const selection = useOnshapeSelection.getState();
-        if (selection.focused) {
-            selection.restore();
-        } else if (target) {
-            clearHighlight(target);
-        }
-    };
+    const unhighlight = () => showPicks(focusedPicks());
 
     const remove = (entity: OnshapeSelection) => {
-        unhighlight();
-        onChange(
-            entities.filter(
-                (each) => selectionKey(each) !== selectionKey(entity)
-            )
+        const rest = entities.filter(
+            (each) => selectionKey(each) !== selectionKey(entity)
         );
+        showPicks(isFocused ? rest : focusedPicks());
+        onChange(rest);
     };
 
     return (

@@ -82,11 +82,8 @@ type PickHandler = (picked: OnshapeSelection[]) => void;
 interface SelectionState {
     /** The query list taking picks; none takes them when absent. */
     focused?: string;
-    /** Bumped to have the focused list light its picks up again, after a row's highlight. */
-    restores: number;
     receive: (picked: OnshapeSelection[]) => void;
     focus: (listId: string | undefined) => void;
-    restore: () => void;
 }
 
 /** Each mounted query list's handler, by its id; not state, since nothing renders from it. */
@@ -99,14 +96,31 @@ export function onPick(listId: string, handler: PickHandler): () => void {
     };
 }
 
+/** Each mounted query list's picks, so a row of any list can light the focused list's up again. */
+const picksByList = new Map<string, OnshapeSelection[]>();
+
+export function holdPicks(
+    listId: string,
+    picks: OnshapeSelection[]
+): () => void {
+    picksByList.set(listId, picks);
+    return () => {
+        picksByList.delete(listId);
+    };
+}
+
+/** The focused list's picks; undefined with no list focused. */
+export function focusedPicks(): OnshapeSelection[] | undefined {
+    const { focused } = useOnshapeSelection.getState();
+    return focused === undefined ? undefined : picksByList.get(focused);
+}
+
 export const useOnshapeSelection = create<SelectionState>()((set, get) => ({
-    restores: 0,
     receive: (picked) => {
         const { focused } = get();
         if (focused && picked.length > 0) {
             handlers.get(focused)?.(picked);
         }
     },
-    focus: (listId) => set({ focused: listId }),
-    restore: () => set((state) => ({ restores: state.restores + 1 }))
+    focus: (listId) => set({ focused: listId })
 }));

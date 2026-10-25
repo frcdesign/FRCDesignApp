@@ -423,7 +423,7 @@ export interface OnshapeInsertables {
 
 // === FeatureScript (POST /partstudios/.../featurescript) ===
 
-/** A FeatureScript value, typed by its `btType` (`BTFSValueMap-2062`, `BTFSValueNumber-772`, ...). */
+/** A FeatureScript value, typed by its `btType` (`BTFSValueMap-2062`, or `com.belmonttech.serialize.fsvalue.BTFSValueMap`, ...). */
 export interface OnshapeFeatureScriptValue {
     btType: string;
     value?: unknown;

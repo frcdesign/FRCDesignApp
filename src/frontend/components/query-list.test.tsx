@@ -127,10 +127,9 @@ describe("QueryList", () => {
         expect(names).toEqual([
             "showMessageBubble",
             "stopRequest",
-            "requestSelectionHighlight",
             "requestSelection"
         ]);
-        expect(messages[3]).toMatchObject({
+        expect(messages[2]).toMatchObject({
             entityTypeSpecifier: ["FACE"],
             geometryTypeSpecifier: ["PLANE"]
         });
@@ -166,14 +165,19 @@ describe("QueryList", () => {
         );
     });
 
-    it("lights its picks up while focused, and again once the mouse leaves a row", async () => {
+    it("sends nothing as picks arrive, which Onshape already shows", async () => {
+        renderWithProviders(<Harness />);
+        await userEvent.click(screen.getByText("Click to select"));
+
+        messages = [];
+        select(edge("A"), edge("B"));
+        expect(messages).toEqual([]);
+    });
+
+    it("lights its picks up once the mouse leaves a row, and limits picks again when clicked", async () => {
         renderWithProviders(<Harness />);
         await userEvent.click(screen.getByText("Click to select"));
         select(edge("A"), edge("B"));
-        expect(messages.at(-2)).toMatchObject({
-            messageName: "requestSelectionHighlight",
-            selections: [{ selectionId: "A" }, { selectionId: "B" }]
-        });
         const row = screen.getByText("Edge 1").parentElement!;
         await userEvent.hover(row);
         expect(messages.at(-1)).toMatchObject({
@@ -184,19 +188,23 @@ describe("QueryList", () => {
         messages = [];
         await userEvent.unhover(row);
         expect(messages).toEqual([
-            expect.objectContaining({ messageName: "stopRequest" }),
             expect.objectContaining({
                 messageName: "requestSelectionHighlight",
                 selections: [
                     expect.objectContaining({ selectionId: "A" }),
                     expect.objectContaining({ selectionId: "B" })
                 ]
-            }),
+            })
+        ]);
+
+        messages = [];
+        await userEvent.click(screen.getByText("Edge 2"));
+        expect(messages).toContainEqual(
             expect.objectContaining({
                 messageName: "requestSelection",
                 entityTypeSpecifier: ["EDGE"]
             })
-        ]);
+        );
     });
 
     it("lights the focused list's picks up again after a row of another list", async () => {
