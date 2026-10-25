@@ -12,8 +12,6 @@ import {
     VersionJobState,
     type WorkspacePath
 } from "./contract";
-import { Hint } from "../hints/contract";
-import { getSeenHints } from "../hints/store";
 import * as Jobs from "./jobs";
 import * as WorkspaceCache from "./workspace-cache";
 import { addLink } from "./links";
@@ -50,7 +48,7 @@ function post(path: string, body: unknown) {
     return app.request(`/api${path}`, jsonRequest("POST", body), env);
 }
 
-/** As `post`, under a session, which is what records a seen hint. */
+/** As `post`, under a session, which a started run carries. */
 function postSignedIn(path: string, body: unknown) {
     return app.request(
         `/api${path}`,
@@ -192,14 +190,13 @@ describe("version manager routes", () => {
         });
     });
 
-    it("names what it linked, which stops the page being pointed out", async () => {
+    it("names what it linked", async () => {
         grant({ root: ALL, other: ALL });
-        await env.KV.delete("seen-hints:test-user");
         vi.spyOn(WorkspaceCache, "describeWorkspace").mockResolvedValue({
             documentName: "Gearbox",
             workspaceName: "Main"
         });
-        const res = await postSignedIn("/workspace-links", {
+        const res = await post("/workspace-links", {
             workspace: toInput(ROOT),
             linked: toInput(ws("other")),
             direction: LinkDirection.CHILD
@@ -209,9 +206,6 @@ describe("version manager routes", () => {
             documentName: "Gearbox",
             workspaceName: "Main"
         });
-        expect(await getSeenHints(env.KV, "test-user")).toEqual([
-            Hint.USED_VERSION_MANAGER
-        ]);
     });
 
     it("forgets what is cached of each linked workspace on a refresh", async () => {
@@ -224,28 +218,5 @@ describe("version manager routes", () => {
         });
         expect(res.status).toBe(200);
         expect(forget.mock.calls.map((call) => call[1])).toEqual([ROOT]);
-    });
-
-    it("records a started run, which stops the page being pointed out", async () => {
-        grant({ root: ALL, child: ALL });
-        await env.KV.delete("seen-hints:test-user");
-        vi.spyOn(env.VERSION_MANAGER_WORKFLOW, "create").mockResolvedValue({
-            id: "started"
-        } as WorkflowInstance);
-        const res = await app.request(
-            "/api/push-version",
-            {
-                ...jsonRequest("POST", { workspace: toInput(ROOT) }),
-                headers: {
-                    "Content-Type": "application/json",
-                    Cookie: "frc-design-app-session=session"
-                }
-            },
-            env
-        );
-        expect(res.status).toBe(200);
-        expect(await getSeenHints(env.KV, "test-user")).toEqual([
-            Hint.USED_VERSION_MANAGER
-        ]);
     });
 });

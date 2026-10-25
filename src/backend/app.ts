@@ -14,6 +14,7 @@ import { webhookRoutes } from "./features/webhooks/routes";
 import { pushRoutes } from "./features/push/routes";
 import { adminTeamRoutes } from "./features/admin-team/routes";
 import { loadRoutes } from "./features/load/routes";
+import { hintRoutes } from "./features/hints/routes";
 import { logger } from "hono/logger";
 import { cacheMiddleware } from "./lib/cache";
 import { bindAuth, getApp, type AuthResolver } from "./lib/context";
@@ -35,7 +36,8 @@ const apiRoutes = [
     pushRoutes,
     adminTeamRoutes,
     loadRoutes,
-    versionManagerRoutes
+    versionManagerRoutes,
+    hintRoutes
 ];
 
 export function createApp(resolveAuth: AuthResolver) {

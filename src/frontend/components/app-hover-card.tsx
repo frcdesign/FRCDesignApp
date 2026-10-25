@@ -8,7 +8,12 @@ import {
 
 interface AppHoverCardProps extends Pick<
     HoverCardProps,
-    "position" | "arrowSize" | "openDelay" | "closeDelay" | "interactive"
+    | "position"
+    | "arrowSize"
+    | "openDelay"
+    | "closeDelay"
+    | "interactive"
+    | "onClose"
 > {
     /** What is hovered or tapped. Wrapped, so it need not take a ref. */
     target: ReactNode;

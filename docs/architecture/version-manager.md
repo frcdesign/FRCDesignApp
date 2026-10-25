@@ -79,10 +79,10 @@ parent's badge reflects the version just cut.
 ### Finding the page
 
 The page picker marks the version manager with a dot and a **New** badge for
-somebody who has a workspace to act on and has never linked a document or
-started a push or pull (`useIsVersionManagerNew`). Either is recorded against
-the user in KV as a side effect of the route that does it (`Hint.USED_VERSION_MANAGER`, see
-[auth.md](./auth.md)), so the dot stays gone on every computer they use.
+somebody who has a workspace to act on and has never opened the page
+(`useIsVersionManagerNew`). Opening it records `Hint.OPENED_VERSION_MANAGER`
+against the user in KV (`useMarkHintSeen`, see [auth.md](./auth.md)), so the
+dot stays gone on every computer they use.
 
 ### Showing the page
 
