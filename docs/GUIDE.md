@@ -254,6 +254,8 @@ This creates a new `.sql` file in `drizzle/`. A **migration** is a versioned SQL
 
 Always commit the generated migration file alongside your schema change. The migration is what actually updates the production database on deploy — the TypeScript schema in `schema.ts` drives Drizzle's type inference, but the SQL migration is what Cloudflare D1 applies.
 
+A branch adds **one** migration. If you change the schema again on the same branch, fold the change into that migration instead of generating a second one: delete the branch's `.sql` file, its snapshot in `drizzle/meta/` and its entry in `drizzle/meta/_journal.json`, run `npx drizzle-kit generate --name <feature>` again, and carry over anything you wrote into it by hand. Then check it with `npm run check:migrations`. Never edit a migration another branch added, or one already applied to cert or production.
+
 > **Note:** While the app is under active development, migrations may be periodically squashed (merged into a single file) to keep the `drizzle/` directory manageable. If this happens, the local D1 database will need to be reset and re-migrated from scratch.
 
 ### 3. Apply it locally

@@ -1,7 +1,7 @@
 {
     "version": "6",
     "dialect": "sqlite",
-    "id": "d34c6659-67f7-499d-836b-c5a7e9c4d7ec",
+    "id": "1a2cb2eb-5b59-4050-99d5-69ab6146f1c8",
     "prevId": "78216f0c-ffe1-4fad-8e20-20bec253eb8b",
     "tables": {
         "configurations": {
@@ -138,6 +138,82 @@
                 }
             },
             "compositePrimaryKeys": {},
+            "uniqueConstraints": {},
+            "checkConstraints": {}
+        },
+        "generated_sets": {
+            "name": "generated_sets",
+            "columns": {
+                "library_id": {
+                    "name": "library_id",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                },
+                "set": {
+                    "name": "set",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                },
+                "group_id": {
+                    "name": "group_id",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                },
+                "version_id": {
+                    "name": "version_id",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                },
+                "features": {
+                    "name": "features",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                },
+                "catalog": {
+                    "name": "catalog",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                }
+            },
+            "indexes": {},
+            "foreignKeys": {
+                "generated_sets_library_id_libraries_id_fk": {
+                    "name": "generated_sets_library_id_libraries_id_fk",
+                    "tableFrom": "generated_sets",
+                    "tableTo": "libraries",
+                    "columnsFrom": ["library_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "no action",
+                    "onUpdate": "no action"
+                },
+                "generated_sets_group_id_groups_id_fk": {
+                    "name": "generated_sets_group_id_groups_id_fk",
+                    "tableFrom": "generated_sets",
+                    "tableTo": "groups",
+                    "columnsFrom": ["group_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "cascade",
+                    "onUpdate": "no action"
+                }
+            },
+            "compositePrimaryKeys": {
+                "generated_sets_library_id_set_pk": {
+                    "columns": ["library_id", "set"],
+                    "name": "generated_sets_library_id_set_pk"
+                }
+            },
             "uniqueConstraints": {},
             "checkConstraints": {}
         },
@@ -336,6 +412,13 @@
                     "notNull": true,
                     "autoincrement": false,
                     "default": false
+                },
+                "supports_replicate": {
+                    "name": "supports_replicate",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": false,
+                    "autoincrement": false
                 },
                 "index_configurations": {
                     "name": "index_configurations",

@@ -1,1 +1,0 @@
-ALTER TABLE `insertables` ADD `supports_replicate` integer;

@@ -1,3 +1,7 @@
+ALTER TABLE `insertables` ADD `generated_studio` text;
+--> statement-breakpoint
+ALTER TABLE `insertables` ADD `supports_replicate` integer;
+--> statement-breakpoint
 CREATE TABLE `generated_sets` (
 	`library_id` text NOT NULL,
 	`set` text NOT NULL,

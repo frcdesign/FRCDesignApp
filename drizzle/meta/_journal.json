@@ -48,21 +48,7 @@
             "idx": 6,
             "version": "6",
             "when": 1792623242197,
-            "tag": "0006_insertable_generated_studio",
-            "breakpoints": true
-        },
-        {
-            "idx": 7,
-            "version": "6",
-            "when": 1792627068887,
-            "tag": "0007_supports_replicate",
-            "breakpoints": true
-        },
-        {
-            "idx": 8,
-            "version": "6",
-            "when": 1792952954668,
-            "tag": "0008_generated_sets",
+            "tag": "0006_generated_parts",
             "breakpoints": true
         }
     ]
