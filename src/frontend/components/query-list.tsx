@@ -14,6 +14,7 @@ import {
     sendMessageBubble,
     sendSelectionRequest,
     sendStopRequestMessage,
+    type HighlightedEntity,
     type SelectionFilter
 } from "../lib/messages";
 import { useTargetElement } from "../lib/onshape-params";
@@ -43,6 +44,14 @@ interface QueryListProps {
     rowSection?: (entity: OnshapeSelection) => ReactNode;
 }
 
+function toHighlighted(entity: OnshapeSelection): HighlightedEntity {
+    return {
+        entityType: entity.entityType,
+        selectionId: entity.selectionId,
+        occurrencePath: entity.occurrencePath
+    };
+}
+
 function defaultName(entity: OnshapeSelection, index: number): string {
     const kind = entity.entityType.toLowerCase();
     return `${kind.charAt(0).toUpperCase()}${kind.slice(1)} ${index + 1}`;
@@ -50,8 +59,9 @@ function defaultName(entity: OnshapeSelection, index: number): string {
 
 /**
  * Onshape's query parameter, for entities picked in the Onshape window. Click
- * it to focus it, and new picks of the kind it takes are added to it; hover a
- * row to light its entity up, and remove one with its button.
+ * it to focus it, which lights its picks up, and new picks of the kind it takes
+ * are added to it; hover a row to light its entity up alone, and remove one
+ * with its button.
  */
 export function QueryList(props: QueryListProps): ReactNode {
     const {
@@ -67,6 +77,7 @@ export function QueryList(props: QueryListProps): ReactNode {
     } = props;
     const target = useTargetElement();
     const isFocused = useOnshapeSelection((state) => state.focused === id);
+    const restores = useOnshapeSelection((state) => state.restores);
     const [refused, setRefused] = useState(false);
 
     useEffect(
@@ -85,14 +96,15 @@ export function QueryList(props: QueryListProps): ReactNode {
         [id, entities, onChange, accepts]
     );
 
-    // A highlight cancels the request, so leaving a row asks again
+    // A highlight cancels the request, so it's asked for after lighting the picks up
     useEffect(() => {
         if (!target || !isFocused) {
             return;
         }
+        sendHighlightMessage(target, entities.map(toHighlighted));
         sendSelectionRequest(target, filter);
         return () => sendStopRequestMessage(target);
-    }, [target, isFocused, filter]);
+    }, [target, isFocused, filter, entities, restores]);
 
     const focus = () => {
         useOnshapeSelection.getState().focus(id);
@@ -104,23 +116,17 @@ export function QueryList(props: QueryListProps): ReactNode {
 
     const highlight = (entity: OnshapeSelection) => {
         if (target) {
-            sendHighlightMessage(target, [
-                {
-                    entityType: entity.entityType,
-                    selectionId: entity.selectionId,
-                    occurrencePath: entity.occurrencePath
-                }
-            ]);
+            sendHighlightMessage(target, [toHighlighted(entity)]);
         }
     };
 
+    // Back to the focused list's picks, whichever list the row was in
     const unhighlight = () => {
-        if (!target) {
-            return;
-        }
-        clearHighlight(target);
-        if (isFocused) {
-            sendSelectionRequest(target, filter);
+        const selection = useOnshapeSelection.getState();
+        if (selection.focused) {
+            selection.restore();
+        } else if (target) {
+            clearHighlight(target);
         }
     };
 

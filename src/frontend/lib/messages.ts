@@ -21,10 +21,12 @@ export function useMessageListener() {
             if (server !== event.origin) {
                 return;
             }
-            if (isHighlightAnswer(event.data)) {
-                // Whether Onshape took a highlight is otherwise invisible; see `sendHighlightMessage`
-                console.debug("Onshape answered a highlight", event.data);
-            } else if (carriesSelections(event.data)) {
+            // What Onshape sends about selection is undocumented; this is how to see it
+            console.debug("Onshape message", event.data);
+            if (
+                !isHighlightAnswer(event.data) &&
+                carriesSelections(event.data)
+            ) {
                 useOnshapeSelection
                     .getState()
                     .receive(parseSelections(event.data));
@@ -90,10 +92,9 @@ export interface HighlightedEntity {
 }
 
 /**
- * Lights entities up in the Onshape window until {@link sendStopRequestMessage}.
- * Unconfirmed in an assembly: Onshape documents this shape for a Part Studio
- * entity, without `occurrencePath`, and a mate connector's body never lit (see
- * below). Its answers are logged at debug level.
+ * Makes `entities` what the Onshape window shows selected, in place of what it
+ * showed. Onshape documents this shape for a Part Studio entity, without
+ * `occurrencePath`; a mate connector's body never lit (see below).
  */
 export function sendHighlightMessage(
     elementPath: ElementPath,

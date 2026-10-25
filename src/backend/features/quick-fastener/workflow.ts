@@ -357,6 +357,8 @@ async function runTask<T>(
                 if (retryable(error)) {
                     throw error;
                 }
+                // The job reports it in our words, so this is the only record of Onshape's
+                console.error(`Quick fastener step ${name} failed`, error);
                 throw new NonRetryableError(describeStepFailure(error, action));
             }
         });

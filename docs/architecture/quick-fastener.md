@@ -812,23 +812,27 @@ vectors, Onshape's 4×4 transforms and `LINEAR_TOLERANCE`.
    for each pick as it's made, not the whole selection; while a selection
    request is pending, picks arrive in its answers instead, which carry its
    message id. `parseSelections` keeps either's entities; a highlight's answers
-   are never taken as picks.
+   are never taken as picks. Every message from Onshape is logged at debug
+   level, since none of this is documented.
 2. Clicking a `QueryList` focuses it (one at a time, `useOnshapeSelection`) and
    shows its prompt in Onshape's bubble. Each pick goes to the focused list,
    which keeps the edges and faces it doesn't hold yet, and repeats its prompt
    for anything else. With no list focused, picks are dropped.
-3. While focused, a list holds a `requestSelection` with its `filter`
+3. While focused, a list lights its picks up (`requestSelectionHighlight`,
+   which makes them what the Onshape window shows selected), then holds a
+   `requestSelection` with its `filter`
    (`sendSelectionRequest`), which limits what the Onshape window lets be
    picked: `CIRCULAR_EDGES` (`entityTypeSpecifier: ["EDGE"]`,
    `selectionTypeSpecifier: ["GEOMETRY"]`, `geometryTypeSpecifier: ["CIRCLE"]`)
    or `PLANAR_FACES` (`["FACE"]`, `["GEOMETRY"]`, `["PLANE"]`). Onshape
-   documents other field names, which it ignores. Losing
-   focus or unmounting sends `stopRequest`.
-4. Hovering a row lights its entity up (`requestSelectionHighlight`, each with
+   documents other field names, which it ignores. Each change to its picks
+   does both again. Losing focus or unmounting sends `stopRequest`.
+4. Hovering a row, in any list, lights its entity up alone (each highlight with
    its own message id). A highlight cancels the selection request, so leaving
-   the row lights nothing (`clearHighlight`) and, while the list is focused,
-   asks for its filter again. Onshape's answers to a highlight are logged at
-   debug level.
+   the row has the focused list light its picks up and ask for its filter again
+   (`restore`); with no list focused, it lights nothing (`clearHighlight`).
+5. Deselecting in the Onshape window leaves a list as it is: what Onshape sends
+   for a deselection is unknown.
 
 ### The form
 
@@ -1123,7 +1127,9 @@ app.
   focused list also holds a `requestSelection`,
   which only limits what the Onshape window lets be picked, in the form Onshape
   answers to (array specifiers per level) rather than the one it documents; a
-  highlight cancels it, so leaving a hovered row asks again. A list still
+  highlight cancels it, so leaving a hovered row asks again. A highlight
+  replaces what the Onshape window shows selected, so the focused list shows
+  all its picks, and a hovered row shows its own alone. A list still
   refuses kinds it doesn't take.
 - **Washers are mated to, not offset for.** Mate offsets aren't in Onshape's
   API reference. Fastening a screw or nut to the washer under it puts it at the

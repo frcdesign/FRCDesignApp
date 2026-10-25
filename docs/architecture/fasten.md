@@ -451,8 +451,8 @@ interface InsertableSettingsInput {
   picks Onshape streams and lets a focused query list take them. A focused list
   also holds a `requestSelection` limiting the Onshape window to its kind, in
   the form Onshape answers to rather than the one it documents (see Quick
-  fastener's picking flow); a highlight cancels it, so leaving a hovered row
-  asks again. The list still refuses other kinds, and the scan drops edges that
+  fastener's picking flow), and lights its picks up; a hovered row lights its
+  own up alone, and leaving it lights the focused list's again. The list still refuses other kinds, and the scan drops edges that
   aren't circular.
 - **The list stays focused.** The targets' list is focused while the menu is
   open, so picking in Onshape and then inserting needs no click in the panel.

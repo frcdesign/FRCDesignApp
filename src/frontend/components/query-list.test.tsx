@@ -127,9 +127,13 @@ describe("QueryList", () => {
         expect(names).toEqual([
             "showMessageBubble",
             "stopRequest",
+            "requestSelectionHighlight",
             "requestSelection"
         ]);
-        expect(messages[2]).toMatchObject({ entityTypeSpecifier: ["FACE"] });
+        expect(messages[3]).toMatchObject({
+            entityTypeSpecifier: ["FACE"],
+            geometryTypeSpecifier: ["PLANE"]
+        });
     });
 
     it("lights a row's entity up while hovered, and removes it", async () => {
@@ -162,10 +166,94 @@ describe("QueryList", () => {
         );
     });
 
-    it("lights nothing once the mouse leaves, and limits picks again", async () => {
+    it("lights its picks up while focused, and again once the mouse leaves a row", async () => {
         renderWithProviders(<Harness />);
         await userEvent.click(screen.getByText("Click to select"));
+        select(edge("A"), edge("B"));
+        expect(messages.at(-2)).toMatchObject({
+            messageName: "requestSelectionHighlight",
+            selections: [{ selectionId: "A" }, { selectionId: "B" }]
+        });
+        const row = screen.getByText("Edge 1").parentElement!;
+        await userEvent.hover(row);
+        expect(messages.at(-1)).toMatchObject({
+            messageName: "requestSelectionHighlight",
+            selections: [{ selectionId: "A" }]
+        });
+
+        messages = [];
+        await userEvent.unhover(row);
+        expect(messages).toEqual([
+            expect.objectContaining({ messageName: "stopRequest" }),
+            expect.objectContaining({
+                messageName: "requestSelectionHighlight",
+                selections: [
+                    expect.objectContaining({ selectionId: "A" }),
+                    expect.objectContaining({ selectionId: "B" })
+                ]
+            }),
+            expect.objectContaining({
+                messageName: "requestSelection",
+                entityTypeSpecifier: ["EDGE"]
+            })
+        ]);
+    });
+
+    it("lights the focused list's picks up again after a row of another list", async () => {
+        function Other() {
+            const [entities, setEntities] = useState(() => [edge("X")]);
+            return (
+                <QueryList
+                    id="other"
+                    label="Other"
+                    prompt="Other"
+                    entities={entities}
+                    onChange={setEntities}
+                    accepts={() => true}
+                    filter={CIRCULAR_EDGES}
+                />
+            );
+        }
+        renderWithProviders(
+            <>
+                <Harness />
+                <Other />
+            </>
+        );
+        await userEvent.click(screen.getByText("Click to select"));
         select(edge("A"));
+        const other = screen.getByText("Edge 1", {
+            selector: "p",
+            ignore: "[data-focused] *"
+        }).parentElement!;
+        await userEvent.hover(other);
+
+        messages = [];
+        await userEvent.unhover(other);
+        expect(messages).toContainEqual(
+            expect.objectContaining({
+                messageName: "requestSelectionHighlight",
+                selections: [expect.objectContaining({ selectionId: "A" })]
+            })
+        );
+    });
+
+    it("lights nothing once the mouse leaves a row with no list focused", async () => {
+        function Unfocused() {
+            const [entities, setEntities] = useState(() => [edge("A")]);
+            return (
+                <QueryList
+                    id="holes"
+                    label="Holes"
+                    prompt={PROMPT}
+                    entities={entities}
+                    onChange={setEntities}
+                    accepts={() => true}
+                    filter={CIRCULAR_EDGES}
+                />
+            );
+        }
+        renderWithProviders(<Unfocused />);
         const row = screen.getByText("Edge 1").parentElement!;
         await userEvent.hover(row);
 
@@ -175,10 +263,6 @@ describe("QueryList", () => {
             expect.objectContaining({
                 messageName: "requestSelectionHighlight",
                 selections: []
-            }),
-            expect.objectContaining({
-                messageName: "requestSelection",
-                entityTypeSpecifier: ["EDGE"]
             })
         ]);
     });
