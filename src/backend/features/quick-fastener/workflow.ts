@@ -85,7 +85,7 @@ export class QuickFastenerWorkflow extends WorkflowEntrypoint<
         step: WorkflowStep
     ): Promise<FastenerJobResult> {
         const { sessionId, request } = event.payload;
-        const tasks: FastenerTask[] = pendingTasks(request.options);
+        const tasks: FastenerTask[] = pendingTasks();
         const ctx: RunContext = {
             env: this.env,
             step,
@@ -145,8 +145,8 @@ async function runSteps(ctx: RunContext, request: QuickFastenerIn) {
     }
     ctx.holes = plans.map((plan) => plan.planned);
 
-    // With Replicate, only each group's first hole gets parts at first
-    const groups = request.options.replicate ? replicateGroups(plans) : [];
+    // Only each group's first hole gets parts; a Replicate puts them on the rest
+    const groups = replicateGroups(plans);
     const later = new Set(
         groups.flatMap((group) =>
             group.slice(1).map((plan) => plan.planned.key)
@@ -175,7 +175,8 @@ async function runSteps(ctx: RunContext, request: QuickFastenerIn) {
         return;
     }
 
-    if (!request.options.replicate) {
+    if (groups.every((group) => group.length < 2)) {
+        skipRest(ctx);
         return;
     }
     await runTask(ctx, FastenerTaskAction.REPLICATE, async (run) => {

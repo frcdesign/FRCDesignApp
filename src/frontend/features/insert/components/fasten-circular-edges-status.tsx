@@ -19,10 +19,12 @@ import { Status } from "../../../lib/status";
 import { IconSize, PrimaryColor } from "../../../lib/style-constants";
 import { plural } from "../../../lib/plural";
 import { isEdge, useOnshapeSelection } from "../../../lib/selection";
+import { CIRCULAR_EDGES } from "../../../lib/messages";
 import { updateUiState, useUiState } from "../../../lib/ui-state";
 import { useHasSeenHint } from "../../hints/queries";
 import {
     acceptsTarget,
+    targetFilter,
     FASTEN_EXCLUDED_LIST,
     FASTEN_TARGETS_LIST,
     isFastenList,
@@ -127,6 +129,7 @@ export function FastenCircularEdgesStatus(
                     entities={targets}
                     onChange={setFastenTargets}
                     accepts={acceptsTarget(mode)}
+                    filter={targetFilter(mode)}
                 />
                 {isFaces && (
                     <QueryList
@@ -136,6 +139,7 @@ export function FastenCircularEdgesStatus(
                         entities={excluded}
                         onChange={setFastenExcluded}
                         accepts={isEdge}
+                        filter={CIRCULAR_EDGES}
                     />
                 )}
                 {canReplicate && (

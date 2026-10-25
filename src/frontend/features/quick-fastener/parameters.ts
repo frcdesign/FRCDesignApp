@@ -4,11 +4,12 @@
  * decides what shows, so a hidden choice keeps its value for when it's back.
  */
 import {
-    type BooleanParameter,
     type ConfigurationParameter,
     type EnumParameter,
+    OptionVisibilityType,
     ParameterType,
-    type QuantityParameter
+    type QuantityParameter,
+    VisibilityType
 } from "@backend/features/configurations/contract";
 import { QuantityType, Unit } from "@backend/features/configurations/enums";
 import { quantityDefault } from "@backend/features/configurations/selection";
@@ -31,8 +32,7 @@ export enum FormInput {
     STOP = "stop",
     MAX_LENGTH = "maxLength",
     MAX_GAP = "maxGap",
-    MAX_THREAD_DEPTH = "maxThreadDepth",
-    REPLICATE = "replicate"
+    MAX_THREAD_DEPTH = "maxThreadDepth"
 }
 
 function enumParameter(
@@ -69,16 +69,7 @@ function inchParameter(
     return { ...quantity, default: quantityDefault(quantity) };
 }
 
-/** Off by default: Onshape publishes no spec for Replicate, so it's unverified. */
-const REPLICATE_PARAMETER: BooleanParameter = {
-    type: ParameterType.BOOLEAN,
-    id: FormInput.REPLICATE,
-    name: "Replicate",
-    default: "false"
-};
-
 export const FORM_PARAMETERS: ConfigurationParameter[] = [
-    REPLICATE_PARAMETER,
     enumParameter(FormInput.SELECT_BY, "Select by", [
         { id: SelectionMode.FACES, name: "Faces" },
         { id: SelectionMode.LOCATIONS, name: "Circular edges" }
@@ -129,13 +120,25 @@ export function lengthParameter(): EnumParameter {
     if (!length) {
         throw new Error("The screw studio has no Length");
     }
+    // An option no rule controls is hidden once there are rules
+    const optionConditions = length.optionConditions.length
+        ? [
+              ...length.optionConditions,
+              {
+                  type: OptionVisibilityType.LIST as const,
+                  controlledOptions: [AUTOMATIC_LENGTH],
+                  condition: { type: VisibilityType.ALWAYS_SHOWN as const }
+              }
+          ]
+        : [];
     return {
         ...length,
         default: AUTOMATIC_LENGTH,
         options: [
             { id: AUTOMATIC_LENGTH, name: "Automatic" },
             ...length.options
-        ]
+        ],
+        optionConditions
     };
 }
 

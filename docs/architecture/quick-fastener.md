@@ -72,6 +72,8 @@ interface QueryListProps {
     onChange: (entities: OnshapeSelection[]) => void;
     /** Which picks it takes; the rest are refused. */
     accepts: (entity: OnshapeSelection) => boolean;
+    /** What the Onshape window lets be picked while it's focused. */
+    filter: SelectionFilter;
     /** A row's name; its kind and number by default. */
     describe?: (entity: OnshapeSelection, index: number) => string;
     /** Beside a row's name: a status, say. */
@@ -131,8 +133,7 @@ enum FormInput {
     STOP = "stop",
     MAX_LENGTH = "maxLength",
     MAX_GAP = "maxGap",
-    MAX_THREAD_DEPTH = "maxThreadDepth",
-    REPLICATE = "replicate"
+    MAX_THREAD_DEPTH = "maxThreadDepth"
 }
 
 enum Part {
@@ -165,10 +166,7 @@ interface FastenerOptionsFormProps {
 
 interface ParameterGroupProps {
     title: string;
-    /**
-     * A checkbox in its header, which shows its rows while ticked, as
-     * Onshape's boolean-driven groups do; without one, it opens and closes.
-     */
+    /** A checkbox in its header, which shows its rows while ticked. */
     checked?: boolean;
     onCheckedChange?: (checked: boolean) => void;
     children?: ReactNode;
@@ -200,7 +198,7 @@ async function getJobStatus(
     env: AppBindings,
     assembly: ElementPath
 ): Promise<FastenerJobStatus>;
-function pendingTasks(options: FastenerOptions): FastenerTask[];
+function pendingTasks(): FastenerTask[];
 
 interface FastenerOptions {
     program: Program;
@@ -220,8 +218,6 @@ interface FastenerOptions {
     maxGap: number;
     /** Metres; the farthest an automatic screw goes past where threads, or a blind hole, start. */
     maxThreadDepth: number;
-    /** One stack of parts per alike holes, with a Replicate onto the rest, rather than a stack in each. */
-    replicate: boolean;
 }
 
 enum FastenerMode {
@@ -294,7 +290,7 @@ enum FastenerTaskAction {
     INDEX = "index",
     INSERT = "insert",
     FASTEN = "fasten",
-    /** Only with `FastenerOptions.replicate`. */
+    /** Skipped when no two holes are alike. */
     REPLICATE = "replicate"
 }
 
@@ -709,29 +705,38 @@ vectors, Onshape's 4×4 transforms and `LINEAR_TOLERANCE`.
    shows its prompt in Onshape's bubble. Each pick goes to the focused list,
    which keeps the edges and faces it doesn't hold yet, and repeats its prompt
    for anything else. With no list focused, picks are dropped.
-3. Hovering a row lights its entity up (`requestSelectionHighlight`, each with
-   its own message id), and leaving it stops the request. Onshape's answers to
-   a highlight are logged at debug level.
+3. While focused, a list holds a `requestSelection` with its `filter`
+   (`sendSelectionRequest`), which limits what the Onshape window lets be
+   picked: `CIRCULAR_EDGES` (`entityTypeSpecifier: ["EDGE"]`,
+   `selectionTypeSpecifier: ["GEOMETRY"]`, `geometryTypeSpecifier: ["CIRCLE"]`)
+   or `FACES`. Onshape documents other field names, which it ignores. Losing
+   focus or unmounting sends `stopRequest`.
+4. Hovering a row lights its entity up (`requestSelectionHighlight`, each with
+   its own message id). A highlight cancels the selection request, so leaving
+   the row lights nothing (`clearHighlight`) and, while the list is focused,
+   asks for its filter again. Onshape's answers to a highlight are logged at
+   debug level.
 
 ### The form
 
 The panel is a `ParameterGrid` of the configuration dialog's own inputs
-(`ParameterInput`), in groups as Onshape's feature dialogs group them:
+(`ParameterInput`), in groups under plain headings (`ParameterGroup`):
 
-1. **Selections**: _Select by_ (Faces or Circular edges), and its query lists.
-2. **Fastener**: Program, then the screw studio's Vendor, Size, Head and
+1. **Fastener**: Program, then the screw studio's Vendor, Size, Head and
    Finish, its Length with **Automatic** first (a length is preset mode,
-   Automatic picks one per hole), and, beside a preset length sold both ways,
-   its Fully threaded. Then **Replicate**, off by default.
-3. **Add screw washer**, **Add nut** and **Add nut washer**, each a group its
+   Automatic picks one per hole, and always shows), and, beside a preset
+   length sold both ways, its Fully threaded.
+2. **Add screw washer**, **Add nut** and **Add nut washer**, each a group its
    checkbox shows: the washer or nut studio's parameters but its Size, which is
    the screw's. A washer's Vendor offers those making it in that size, and is
    left out under a Generic screw, whose washers are Generic; a nut has none,
    since one vendor makes them all. Like every studio input, a washer's Type and
    Finish show only where there's a choice. The screw washer is gone under a
    countersunk head, and the nut washer without a nut.
-4. Automatic only: _Stop condition_ (**Max length** with its length, or **First
+3. Automatic only: _Stop condition_ (**Max length** with its length, or **First
    gap** with the widest gap to ignore), and _Max thread depth_.
+4. **Selections**, last: _Select by_ (Faces or Circular edges), and its query
+   lists.
 
 The studios' parameters are their configurations as Onshape answers them,
 parsed by `parseOnshapeConfiguration`, so their options show as the Part
@@ -819,7 +824,7 @@ skipped.
    the nut washer on the far side's edge and the nut on it, turned over — and
    inserts them all in one `transformedinstances` call, from each studio's
    released version, with its configuration. Skipped when no hole is ready.
-   With **Replicate**, the ready holes are grouped first (`replicateGroups`):
+   The ready holes are grouped first (`replicateGroups`):
    holes given the same parts, as deep, through circular edges of the same
    size and out far edges of the same size, in the order found. Only each
    group's first hole gets parts here.
@@ -835,7 +840,7 @@ skipped.
        fastened to its stack's hole edge, and the screw or nut on it to the
        washer's top edge; without a washer, the screw or nut is fastened to the
        hole edge itself.
-4. **Replicate parts**, only with **Replicate**: for each group of more than
+4. **Replicate parts**, skipped when no two holes are alike: for each group of more than
    one hole, one at a time, a Replicate per stack of the first hole's parts
    (`replicate-{n}-screw`, then `replicate-{n}-nut`), each seeded with the
    stack's parts and placed as the mate holding its bottom part on its edge
@@ -868,7 +873,7 @@ app.
 | "Quick Fastener puts screws, washers and nuts in the holes of an assembly's parts. Open it from an assembly's panel."            | Route notice description, outside an assembly              |
 | "Sign in to fasten parts" / "Sign in"                                                                                            | Route notice title and button, signed out                  |
 | "Quick Fastener reads your assembly's holes and inserts fasteners into it."                                                      | Route notice description, signed out                       |
-| "Selections"                                                                                                                     | Group title                                                |
+| "Selections"                                                                                                                     | Heading, last                                              |
 | "Select by" / "Faces" / "Circular edges"                                                                                         | Selection mode, its options                                |
 | "Faces"                                                                                                                          | Targets list's label, faces                                |
 | "Select faces to fasten every hole in."                                                                                          | Targets list's prompt, faces, in Onshape's bubble and list |
@@ -878,11 +883,10 @@ app.
 | "Select the circular edges of holes to fasten."                                                                                  | Targets list's prompt, circular edges                      |
 | "Click to select"                                                                                                                | An empty list, not focused (`QueryList`)                   |
 | "{Kind} {n}", e.g. "Edge 1"                                                                                                      | A list's row                                               |
-| "Fastener"                                                                                                                       | Group title                                                |
+| "Fastener"                                                                                                                       | Heading                                                    |
 | "Program" / "FRC" / "FTC"                                                                                                        | Program, its options                                       |
 | "FTC fasteners aren't available yet."                                                                                            | In place of the Fastener group's inputs, FTC               |
 | "Automatic"                                                                                                                      | The screw's Length, first option                           |
-| "Replicate"                                                                                                                      | Checkbox                                                   |
 | "Add screw washer" / "Add nut" / "Add nut washer"                                                                                | Group titles, each a checkbox                              |
 | "Stop condition" / "Max length" / "First gap"                                                                                    | Stop condition, its options                                |
 | "Max length" / "Max gap to ignore" / "Max thread depth"                                                                          | Length inputs                                              |
@@ -959,17 +963,17 @@ app.
 
 ## Failure and recovery
 
-| Failure                              | Result                                                                                                       | Recovery                                           |
-| ------------------------------------ | ------------------------------------------------------------------------------------------------------------ | -------------------------------------------------- |
-| The studios aren't released          | Insert answers 503                                                                                           | Release them in robot-code, sync                   |
-| The hole scan fails in a Part Studio | Index fails, naming Onshape's notice; the rest is skipped                                                    | Fix the Part Studio, or skip what's in it          |
-| No hole, or nothing fits             | That hole's plan is **no fit**, with why                                                                     | Change the options or the hole                     |
-| The insert fails                     | Nothing is inserted; fastening is skipped                                                                    | Run it again                                       |
-| A mate fails partway                 | The parts so far stay, some unmated                                                                          | Mate the rest by hand, or undo and run again       |
-| Onshape refuses a Replicate          | Replicate fails, saying why; the holes it and those after it were for stay empty, or hold only a screw stack | Run without Replicate, or report Onshape's message |
-| A Replicate fails to regenerate      | It stays in the assembly, with its error                                                                     | Fix or delete it in Onshape                        |
-| Onshape rate-limits                  | The step retries, then fails as above                                                                        | Run it again                                       |
-| The run dies without reporting       | The job reads failed once the run has ended                                                                  | Run it again                                       |
+| Failure                              | Result                                                                                                       | Recovery                                              |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------- |
+| The studios aren't released          | Insert answers 503                                                                                           | Release them in robot-code, sync                      |
+| The hole scan fails in a Part Studio | Index fails, naming Onshape's notice; the rest is skipped                                                    | Fix the Part Studio, or skip what's in it             |
+| No hole, or nothing fits             | That hole's plan is **no fit**, with why                                                                     | Change the options or the hole                        |
+| The insert fails                     | Nothing is inserted; fastening is skipped                                                                    | Run it again                                          |
+| A mate fails partway                 | The parts so far stay, some unmated                                                                          | Mate the rest by hand, or undo and run again          |
+| Onshape refuses a Replicate          | Replicate fails, saying why; the holes it and those after it were for stay empty, or hold only a screw stack | Fasten the rest by hand, and report Onshape's message |
+| A Replicate fails to regenerate      | It stays in the assembly, with its error                                                                     | Fix or delete it in Onshape                           |
+| Onshape rate-limits                  | The step retries, then fails as above                                                                        | Run it again                                          |
+| The run dies without reporting       | The job reads failed once the run has ended                                                                  | Run it again                                          |
 
 ## Decisions
 
@@ -1011,11 +1015,14 @@ app.
   at whatever it last held, and `normalizeSelection` sets it to its default,
   which the vendor may not make; the feature takes the one value made there, and
   so does `settle`. Inserts send only the inputs shown (`onshapeOverrides`).
-- **Replicate is off by default.** Onshape publishes no spec for Replicate;
-  `replicateFeature` is copied from a Replicate matching edges on a face, with
-  the individual edges' scope, which is unconfirmed. Every Replicate matches
-  individual edges, never a face, as insert and fasten's do. It shares insert and fasten's
-  Replicate and mate code, so one fix there fixes both.
+- **Alike holes are always replicated, with no option.** One set of parts and
+  a Replicate per stack does what a set per hole would, in fewer inserts and
+  mates. Onshape publishes no spec for Replicate: `replicateFeature` is copied
+  from a Replicate matching edges on a face, with the individual edges' scope,
+  which is unconfirmed, so a refused Replicate fails the run's last step with
+  Onshape's message. Every Replicate matches individual edges, never a face, as
+  insert and fasten's do, and shares its Replicate and mate code, so one fix
+  there fixes both.
 - **No fallbacks.** Onshape refusing a write fails its step with Onshape's
   message rather than being worked around.
 - **An automatic screw is partly threaded.** The screw studio asks Fully

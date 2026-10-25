@@ -175,10 +175,12 @@ describe("QuickFastenerWorkflow", () => {
         });
 
         expect(status.state).toBe(FastenerJobState.COMPLETE);
+        // One hole: nothing to replicate
         expect(status.tasks?.map((task) => task.state)).toEqual([
             FastenerTaskState.DONE,
             FastenerTaskState.DONE,
-            FastenerTaskState.DONE
+            FastenerTaskState.DONE,
+            FastenerTaskState.SKIPPED
         ]);
         expect(status.holes?.[0]).toMatchObject({
             status: HoleStatus.READY,
@@ -239,7 +241,7 @@ describe("QuickFastenerWorkflow", () => {
         });
         const REPLICATING = {
             sessionId: "session",
-            request: { ...BODY, options: { ...BODY.options, replicate: true } }
+            request: BODY
         };
 
         beforeEach(() => {
@@ -324,6 +326,7 @@ describe("QuickFastenerWorkflow", () => {
         });
         expect(status.tasks?.map((task) => task.state)).toEqual([
             FastenerTaskState.FAILED,
+            FastenerTaskState.SKIPPED,
             FastenerTaskState.SKIPPED,
             FastenerTaskState.SKIPPED
         ]);

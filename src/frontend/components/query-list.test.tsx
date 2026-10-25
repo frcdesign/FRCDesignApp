@@ -3,6 +3,7 @@ import { act, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { renderWithProviders } from "../../__test_utils__/render";
+import { CIRCULAR_EDGES, FACES } from "../lib/messages";
 import { useOnshapeLaunch } from "../lib/onshape-params";
 import {
     parseSelections,
@@ -23,6 +24,7 @@ function Harness() {
             entities={entities}
             onChange={setEntities}
             accepts={(entity) => entity.entityType === "EDGE"}
+            filter={CIRCULAR_EDGES}
         />
     );
 }
@@ -87,6 +89,49 @@ describe("QueryList", () => {
         expect(screen.queryByText("Face 1")).toBeNull();
     });
 
+    it("limits picks in the Onshape window to its kind while it's focused", async () => {
+        renderWithProviders(
+            <>
+                <Harness />
+                <QueryList
+                    id="faces"
+                    label="Faces"
+                    prompt="Select faces."
+                    entities={[]}
+                    onChange={() => undefined}
+                    accepts={() => true}
+                    filter={FACES}
+                />
+            </>
+        );
+        expect(messages).not.toContainEqual(
+            expect.objectContaining({ messageName: "requestSelection" })
+        );
+        const [edges, faces] = screen.getAllByText("Click to select");
+
+        await userEvent.click(edges);
+        expect(messages).toContainEqual(
+            expect.objectContaining({
+                messageName: "requestSelection",
+                entityTypeSpecifier: ["EDGE"],
+                selectionTypeSpecifier: ["GEOMETRY"],
+                geometryTypeSpecifier: ["CIRCLE"]
+            })
+        );
+
+        messages = [];
+        await userEvent.click(faces);
+        const names = messages.map(
+            (message) => (message as { messageName: string }).messageName
+        );
+        expect(names).toEqual([
+            "showMessageBubble",
+            "stopRequest",
+            "requestSelection"
+        ]);
+        expect(messages[2]).toMatchObject({ entityTypeSpecifier: ["FACE"] });
+    });
+
     it("lights a row's entity up while hovered, and removes it", async () => {
         renderWithProviders(<Harness />);
         await userEvent.click(screen.getByText("Click to select"));
@@ -110,8 +155,32 @@ describe("QueryList", () => {
         await userEvent.click(within(row).getByRole("button"));
         expect(screen.queryByText("Edge 1")).toBeNull();
         expect(messages).toContainEqual(
-            expect.objectContaining({ messageName: "stopRequest" })
+            expect.objectContaining({
+                messageName: "requestSelectionHighlight",
+                selections: []
+            })
         );
+    });
+
+    it("lights nothing once the mouse leaves, and limits picks again", async () => {
+        renderWithProviders(<Harness />);
+        await userEvent.click(screen.getByText("Click to select"));
+        select(edge("A"));
+        const row = screen.getByText("Edge 1").parentElement!;
+        await userEvent.hover(row);
+
+        messages = [];
+        await userEvent.unhover(row);
+        expect(messages).toEqual([
+            expect.objectContaining({
+                messageName: "requestSelectionHighlight",
+                selections: []
+            }),
+            expect.objectContaining({
+                messageName: "requestSelection",
+                entityTypeSpecifier: ["EDGE"]
+            })
+        ]);
     });
 
     it("hands picks to one list at a time", async () => {
@@ -125,6 +194,7 @@ describe("QueryList", () => {
                     entities={[]}
                     onChange={() => undefined}
                     accepts={() => true}
+                    filter={CIRCULAR_EDGES}
                 />
             </>
         );

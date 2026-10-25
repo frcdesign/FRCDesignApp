@@ -1,27 +1,24 @@
-import { Checkbox, Group, Text, UnstyledButton } from "@mantine/core";
-import { CaretDownIcon } from "@phosphor-icons/react";
-import { type ReactNode, useState } from "react";
-import { FontWeight, IconSize } from "../../../lib/style-constants";
+import { Checkbox, Text, Title } from "@mantine/core";
+import { type ReactNode } from "react";
+import { FontWeight } from "../../../lib/style-constants";
 import classes from "./parameter-group.module.css";
 
 interface ParameterGroupProps {
     title: string;
-    /**
-     * A checkbox in its header, which shows its rows while ticked, as
-     * Onshape's boolean-driven groups do; without one, it opens and closes.
-     */
+    /** A checkbox in its header, which shows its rows while ticked. */
     checked?: boolean;
     onCheckedChange?: (checked: boolean) => void;
     children?: ReactNode;
 }
 
-/** A group of rows in a `ParameterGrid`, as Onshape's feature dialogs group parameters. */
+/**
+ * A titled group of rows in a `ParameterGrid`. A part's group is headed by
+ * its checkbox, and shows its rows while ticked.
+ */
 export function ParameterGroup(props: ParameterGroupProps): ReactNode {
     const { title, checked, onCheckedChange, children } = props;
-    const [open, setOpen] = useState(true);
-
     const isDriven = checked !== undefined;
-    const shown = isDriven ? checked : open;
+    const shown = isDriven ? checked : true;
 
     return (
         <>
@@ -35,20 +32,7 @@ export function ParameterGroup(props: ParameterGroupProps): ReactNode {
                         }
                     />
                 ) : (
-                    <UnstyledButton onClick={() => setOpen(!open)}>
-                        <Group gap={6}>
-                            <CaretDownIcon
-                                size={IconSize.SMALL}
-                                style={{
-                                    transform: open
-                                        ? undefined
-                                        : "rotate(-90deg)",
-                                    transition: "transform 200ms ease"
-                                }}
-                            />
-                            <Text fw={FontWeight.SEMI_BOLD}>{title}</Text>
-                        </Group>
-                    </UnstyledButton>
+                    <Title order={5}>{title}</Title>
                 )}
             </div>
             {shown && children && (

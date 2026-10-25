@@ -184,17 +184,13 @@ describe("QuickFastenerPanel", () => {
         expect(screen.queryByLabelText("Fully threaded")).toBeNull();
     });
 
-    it("sends whether to replicate alike holes", async () => {
-        useQuickFastenerStore.setState({ targets: [face("F")] });
+    it("asks what to fasten with before what to fasten, and nothing of replicating", () => {
         renderWithProviders(<QuickFastenerPanel assembly={ASSEMBLY} />);
-        await userEvent.click(screen.getByLabelText("Replicate"));
-        await userEvent.click(insertButton());
-
-        expect(apiPost).toHaveBeenCalledWith("/quick-fastener/insert", {
-            body: expect.objectContaining({
-                options: expect.objectContaining({ replicate: true })
-            })
-        });
+        const headings = screen
+            .getAllByRole("heading")
+            .map((heading) => heading.textContent);
+        expect(headings).toEqual(["Fastener", "Selections"]);
+        expect(screen.queryByLabelText("Replicate")).toBeNull();
     });
 
     it("has no screw washer under a flat head", () => {

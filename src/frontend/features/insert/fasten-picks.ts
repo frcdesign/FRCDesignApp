@@ -1,6 +1,11 @@
 /** What an insert and fasten mates to: circular edges, or faces less holes to skip, picked in the Onshape window. */
 import { useEffect } from "react";
 import { create } from "zustand";
+import {
+    CIRCULAR_EDGES,
+    FACES,
+    type SelectionFilter
+} from "../../lib/messages";
 import { SelectionMode } from "@backend/features/quick-fastener/contract";
 import {
     isEdge,
@@ -35,6 +40,10 @@ export function setFastenExcluded(excluded: OnshapeSelection[]): void {
 /** Once fastened to, so the next insert doesn't land on the same edges. */
 export function clearFastenPicks(): void {
     useFastenPicks.setState({ targets: [], excluded: [] });
+}
+
+export function targetFilter(mode: SelectionMode): SelectionFilter {
+    return mode === SelectionMode.FACES ? FACES : CIRCULAR_EDGES;
 }
 
 export function acceptsTarget(

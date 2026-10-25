@@ -78,6 +78,7 @@ describe("POST /api/quick-fastener/insert", () => {
         expect(status.tasks?.map((task) => task.state)).toEqual([
             FastenerTaskState.PENDING,
             FastenerTaskState.PENDING,
+            FastenerTaskState.PENDING,
             FastenerTaskState.PENDING
         ]);
     });

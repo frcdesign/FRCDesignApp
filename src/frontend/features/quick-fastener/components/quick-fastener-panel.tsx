@@ -11,6 +11,7 @@ import { type ElementPath } from "@backend/lib/onshape/path";
 import { ParameterGrid } from "../../../components/parameter-input";
 import { QueryList } from "../../../components/query-list";
 import { isEdge, isFace, toSelectedEntities } from "../../../lib/selection";
+import { CIRCULAR_EDGES, FACES } from "../../../lib/messages";
 import { fastenerOptions, selectionMode, settleChoices } from "../options";
 import { FormInput } from "../parameters";
 import { useFastenerJobQuery, useInsertMutation } from "../queries";
@@ -23,7 +24,7 @@ interface QuickFastenerPanelProps {
     assembly: ElementPath;
 }
 
-/** How the last run went, what to fasten, and with what. */
+/** How the last run went, what to fasten with, and what to fasten. */
 export function QuickFastenerPanel(props: QuickFastenerPanelProps): ReactNode {
     const { assembly } = props;
     const choices = useQuickFastenerStore(
@@ -68,6 +69,7 @@ export function QuickFastenerPanel(props: QuickFastenerPanelProps): ReactNode {
         <Stack gap="md" p="md">
             <LastRunCallout assembly={assembly} />
             <ParameterGrid>
+                <FastenerOptionsForm settled={settled} />
                 <ParameterGroup title="Selections">
                     <FormInputRow id={FormInput.SELECT_BY} settled={settled} />
                     {isFaces ? (
@@ -80,6 +82,7 @@ export function QuickFastenerPanel(props: QuickFastenerPanelProps): ReactNode {
                                     entities={targets}
                                     onChange={setTargets}
                                     accepts={isFace}
+                                    filter={FACES}
                                 />
                             </FullWidthRow>
                             <FullWidthRow>
@@ -90,6 +93,7 @@ export function QuickFastenerPanel(props: QuickFastenerPanelProps): ReactNode {
                                     entities={excluded}
                                     onChange={setExcluded}
                                     accepts={isEdge}
+                                    filter={CIRCULAR_EDGES}
                                 />
                             </FullWidthRow>
                         </>
@@ -102,11 +106,11 @@ export function QuickFastenerPanel(props: QuickFastenerPanelProps): ReactNode {
                                 entities={targets}
                                 onChange={setTargets}
                                 accepts={isEdge}
+                                filter={CIRCULAR_EDGES}
                             />
                         </FullWidthRow>
                     )}
                 </ParameterGroup>
-                <FastenerOptionsForm settled={settled} />
             </ParameterGrid>
             <Button
                 disabled={

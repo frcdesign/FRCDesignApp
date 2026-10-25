@@ -99,7 +99,52 @@ export function sendHighlightMessage(
     });
 }
 
-/** Ends whatever request is pending, which is how a highlight is taken back. */
+/** Lights nothing, taking back what {@link sendHighlightMessage} lit. */
+export function clearHighlight(elementPath: ElementPath) {
+    sendHighlightMessage(elementPath, []);
+}
+
+/**
+ * What the Onshape window lets be picked while a request is pending, as
+ * `requestSelection` takes it: an array of one specifier at each level. Onshape
+ * documents other field names, which it ignores.
+ */
+export interface SelectionFilter {
+    entityTypeSpecifier: string[];
+    selectionTypeSpecifier: string[];
+    geometryTypeSpecifier?: string[];
+}
+
+export const CIRCULAR_EDGES: SelectionFilter = {
+    entityTypeSpecifier: ["EDGE"],
+    selectionTypeSpecifier: ["GEOMETRY"],
+    geometryTypeSpecifier: ["CIRCLE"]
+};
+
+export const FACES: SelectionFilter = {
+    entityTypeSpecifier: ["FACE"],
+    selectionTypeSpecifier: ["GEOMETRY"]
+};
+
+let selectionRequests = 0;
+
+/**
+ * Limits picks in the Onshape window to `filter` until {@link sendStopRequestMessage}.
+ * Picks still arrive as SELECTION messages; the request only limits what the
+ * window lets be picked.
+ */
+export function sendSelectionRequest(
+    elementPath: ElementPath,
+    filter: SelectionFilter
+) {
+    sendMessage(elementPath, {
+        messageName: MessageType.REQUEST_SELECTION,
+        messageId: `selection-${++selectionRequests}`,
+        ...filter
+    });
+}
+
+/** Ends whatever request is pending: a selection filter, or a highlight. */
 export function sendStopRequestMessage(elementPath: ElementPath) {
     sendMessage(elementPath, { messageName: MessageType.STOP_REQUEST });
 }

@@ -9,9 +9,12 @@ import {
 import { XIcon } from "@phosphor-icons/react";
 import { useEffect, useState, type ReactNode } from "react";
 import {
+    clearHighlight,
     sendHighlightMessage,
     sendMessageBubble,
-    sendStopRequestMessage
+    sendSelectionRequest,
+    sendStopRequestMessage,
+    type SelectionFilter
 } from "../lib/messages";
 import { useTargetElement } from "../lib/onshape-params";
 import {
@@ -32,6 +35,8 @@ interface QueryListProps {
     onChange: (entities: OnshapeSelection[]) => void;
     /** Which picks it takes; the rest are refused. */
     accepts: (entity: OnshapeSelection) => boolean;
+    /** What the Onshape window lets be picked while it's focused. */
+    filter: SelectionFilter;
     /** A row's name; its kind and number by default. */
     describe?: (entity: OnshapeSelection, index: number) => string;
     /** Beside a row's name: a status, say. */
@@ -56,6 +61,7 @@ export function QueryList(props: QueryListProps): ReactNode {
         entities,
         onChange,
         accepts,
+        filter,
         describe = defaultName,
         rowSection
     } = props;
@@ -79,6 +85,15 @@ export function QueryList(props: QueryListProps): ReactNode {
         [id, entities, onChange, accepts]
     );
 
+    // A highlight cancels the request, so leaving a row asks again
+    useEffect(() => {
+        if (!target || !isFocused) {
+            return;
+        }
+        sendSelectionRequest(target, filter);
+        return () => sendStopRequestMessage(target);
+    }, [target, isFocused, filter]);
+
     const focus = () => {
         useOnshapeSelection.getState().focus(id);
         setRefused(false);
@@ -100,8 +115,12 @@ export function QueryList(props: QueryListProps): ReactNode {
     };
 
     const unhighlight = () => {
-        if (target) {
-            sendStopRequestMessage(target);
+        if (!target) {
+            return;
+        }
+        clearHighlight(target);
+        if (isFocused) {
+            sendSelectionRequest(target, filter);
         }
     };
 

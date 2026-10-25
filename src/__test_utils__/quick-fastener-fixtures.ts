@@ -135,7 +135,6 @@ export const BODY: QuickFastenerIn = {
         stop: StopCondition.MAX_LENGTH,
         maxLength: DEFAULT_MAX_LENGTH,
         maxGap: DEFAULT_MAX_GAP,
-        replicate: false,
         maxThreadDepth: DEFAULT_MAX_THREAD_DEPTH
     }
 };

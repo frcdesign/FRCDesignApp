@@ -48,6 +48,8 @@ interface QueryListProps {
     onChange: (entities: OnshapeSelection[]) => void;
     /** Which picks it takes; the rest are refused. */
     accepts: (entity: OnshapeSelection) => boolean;
+    /** What the Onshape window lets be picked while it's focused. */
+    filter: SelectionFilter;
     /** A row's name; its kind and number by default. */
     describe?: (entity: OnshapeSelection, index: number) => string;
     /** Beside a row's name: a status, say. */
@@ -330,8 +332,10 @@ interface InsertableSettingsInput {
 3. The card holds the mode (**Circular edges** or **Faces**), the targets'
    query list, and in faces mode **Holes to skip**. It stays mounted while
    hidden (`keepMounted`), so its lists take picks with the card closed, and
-   the icon turns the primary colour while one of them is focused. Hovering a
-   row lights its entity up; clicking a list shows its prompt in Onshape.
+   the icon turns the primary colour while one of them is focused. A focused
+   list limits what the Onshape window lets be picked to its kind, as in Quick
+   fastener. Hovering a row lights its entity up; clicking a list shows its
+   prompt in Onshape.
 4. Changing the mode clears the picks.
 
 ### Inserting
@@ -440,10 +444,12 @@ interface InsertableSettingsInput {
 ## Decisions
 
 - **One way to pick, shared with Quick fastener.** The app listens to the
-  picks Onshape streams and lets a focused query list take them.
-  `requestSelection` only limits what the graphics window lets be picked, and
-  a highlight cancels it, so none is sent: the list refuses other kinds, and
-  the scan drops edges that aren't circular.
+  picks Onshape streams and lets a focused query list take them. A focused list
+  also holds a `requestSelection` limiting the Onshape window to its kind, in
+  the form Onshape answers to rather than the one it documents (see Quick
+  fastener's picking flow); a highlight cancels it, so leaving a hovered row
+  asks again. The list still refuses other kinds, and the scan drops edges that
+  aren't circular.
 - **The list stays focused.** The targets' list is focused while the menu is
   open, so picking in Onshape and then inserting needs no click in the panel.
   Each message names only the latest pick, so what was picked before the menu

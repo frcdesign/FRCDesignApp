@@ -16,6 +16,4 @@
     grid-template-columns: subgrid;
     gap: var(--mantine-spacing-sm);
     align-items: start;
-    padding-left: var(--mantine-spacing-sm);
-    border-left: rem(2px) solid var(--mantine-color-default-border);
 }
