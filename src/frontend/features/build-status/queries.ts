@@ -6,7 +6,7 @@ import {
 } from "@tanstack/react-query";
 import { apiGet, apiPost } from "../../lib/api-client";
 import { modals } from "@mantine/modals";
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import {
     showInfoToast,
     showLoadingToast,
@@ -16,7 +16,17 @@ import { getAppErrorHandler } from "../../lib/errors";
 import { patchQuery } from "../../lib/query-cache";
 import { useRefreshLibrary } from "../../lib/refresh";
 import { toInsertablePath, toLibraryPath } from "../../lib/api-paths";
-import { type LibraryBuildStatus } from "@backend/features/build-checker/contract";
+import {
+    type GroupBuildStatus,
+    type InsertableBuildStatus,
+    type LibraryBuildStatus
+} from "@backend/features/build-checker/contract";
+import {
+    addBuildIssue,
+    type BuildIssue,
+    BuildIssueType,
+    hasBuildIssue
+} from "@backend/features/build-checker/issues";
 import { LibraryId } from "@backend/features/library/library-id";
 import { useLibraryId } from "../../lib/library";
 import { useCacheVersion } from "../library/queries";
@@ -54,6 +64,33 @@ export function useHeldGroupCount(): number {
     const { data } = useBuildStatusQuery();
     return Object.values(data?.groups ?? {}).filter((group) => group.isHeld)
         .length;
+}
+
+/** Adds the live "no unhidden insertables" check, which needs visibility. */
+export function useGroupBuildIssues(
+    groupStatus: GroupBuildStatus | undefined,
+    insertableStatuses: Record<string, InsertableBuildStatus> | undefined
+): BuildIssue[] {
+    return useMemo(() => {
+        if (!groupStatus) return [];
+        const hasUnhidden = groupStatus.insertableOrder.some(
+            (id) => insertableStatuses?.[id]?.isVisible
+        );
+        // A group that never loaded has nothing to unhide.
+        if (
+            hasUnhidden ||
+            hasBuildIssue(
+                groupStatus.buildIssues,
+                BuildIssueType.LOAD_FAILED,
+                BuildIssueType.NOT_LOADED
+            )
+        ) {
+            return groupStatus.buildIssues;
+        }
+        return addBuildIssue(groupStatus.buildIssues, {
+            type: BuildIssueType.NO_UNHIDDEN_INSERTABLES
+        });
+    }, [groupStatus, insertableStatuses]);
 }
 
 export function useSetVisibilityMutation(

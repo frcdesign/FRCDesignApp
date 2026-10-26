@@ -17,10 +17,13 @@ import { DashboardState } from "../../../../features/dashboard/dashboard-state";
 import { HealthTiles } from "../../../../features/dashboard/health-report";
 import { InsertsOverTimeCard } from "../../../../features/dashboard/inserts-chart";
 import { PartsTable } from "../../../../features/dashboard/parts-table";
-import { RangePreset, toDayRange } from "../../../../features/dashboard/range";
 import { getLibraryName } from "../../../../lib/library";
 import { useCacheVersion } from "../../../../features/library/queries";
-import { useRangePreset } from "../../../../features/dashboard/range-control";
+import {
+    RangePreset,
+    toDayRange,
+    useRangePreset
+} from "../../../../features/dashboard/range";
 import { UsageTreemap } from "../../../../features/dashboard/usage-treemap";
 import { HeadlineTiles } from "../../../../features/dashboard/headline-tiles";
 import { SectionCard } from "../../../../components/section";

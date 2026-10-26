@@ -35,9 +35,6 @@ export default defineConfig([
             // so lint is the only thing that fails a build on one.
             "@typescript-eslint/no-deprecated": "error",
 
-            // TanStack Router files must export both component and route config object
-            "react-refresh/only-export-components": "off",
-
             // `!x || x.y` is the preferred style in this codebase over optional chaining
             "@typescript-eslint/prefer-optional-chain": "off",
 
@@ -64,6 +61,12 @@ export default defineConfig([
         // is the comparison being asked for, not a mistake.
         files: ["**/*.{ts,tsx}"],
         rules: { "@typescript-eslint/no-unsafe-enum-comparison": "off" }
+    },
+    {
+        // A route file exports only `Route` and keeps its components local;
+        // the TanStack Router plugin splits those out and refreshes them itself.
+        files: ["src/frontend/routes/**/*.tsx"],
+        rules: { "react-refresh/only-export-components": "off" }
     },
     {
         // Vitest's asymmetric matchers are typed `any`, so an object built

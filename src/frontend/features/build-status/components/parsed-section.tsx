@@ -8,8 +8,8 @@ import {
     Tooltip
 } from "@mantine/core";
 import {
-    ParameterRoleLabel,
-    ROLE_ICONS
+    ParameterRoleIcon,
+    ParameterRoleLabel
 } from "../../../components/parameter-role";
 import { ReactNode } from "react";
 import { InsertableBuildStatus } from "@backend/features/build-checker/contract";
@@ -23,8 +23,8 @@ import {
     IconSize,
     StatusColor
 } from "../../../lib/style-constants";
-import { AppIcon } from "../../../components/app-icon";
 import { SectionHeader } from "./sections";
+import { getParameterTypeLabel } from "../parameter-type-label";
 import styles from "../../../lib/styles.module.css";
 
 interface InsertableParsedSectionProps {
@@ -118,8 +118,8 @@ function RoleIcon(props: RoleIconProps): ReactNode {
             }
             events={{ hover: true, focus: true, touch: true }}
         >
-            <AppIcon
-                icon={ROLE_ICONS[role]}
+            <ParameterRoleIcon
+                role={role}
                 size={IconSize.SMALL}
                 color={StatusColor.DIMMED}
                 className={styles.noShrink}
@@ -156,20 +156,6 @@ function ParameterTypeBadge(props: ParameterTypeBadgeProps): ReactNode {
             {badge}
         </Tooltip>
     );
-}
-
-/** The short label for a parameter's type, shown as a badge. */
-export function getParameterTypeLabel(type: ParameterType): string {
-    switch (type) {
-        case ParameterType.ENUM:
-            return "Enum";
-        case ParameterType.BOOLEAN:
-            return "Boolean";
-        case ParameterType.QUANTITY:
-            return "Quantity";
-        case ParameterType.STRING:
-            return "Text";
-    }
 }
 
 interface VendorBadgesProps {

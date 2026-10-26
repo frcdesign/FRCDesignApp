@@ -15,11 +15,11 @@ import { type AppTab, getTabPath } from "../../../lib/app-tab";
 import { InputRow } from "../../../components/input-row";
 import { OpenUrlButton } from "../../../components/open-url-button";
 import { Section } from "../../../components/section";
+import { useAccessData } from "../../auth/access-level";
 import {
     RequireAccessLevel,
-    RequireSignIn,
-    useAccessData
-} from "../../auth/access-level";
+    RequireSignIn
+} from "../../auth/components/require-access";
 import { startSignOut } from "../../auth/sign-out";
 import { updateUiState } from "../../../lib/ui-state";
 import { useIsConnectedToOnshape } from "../../../lib/onshape-params";

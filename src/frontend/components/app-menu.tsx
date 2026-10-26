@@ -2,7 +2,7 @@ import { PropsWithChildren, ReactNode } from "react";
 import { FloatingPosition, Menu, ActionIcon } from "@mantine/core";
 import { DotsThreeIcon } from "@phosphor-icons/react";
 import { IconSize } from "../lib/style-constants";
-import { RequireAccessLevel } from "../features/auth/access-level";
+import { RequireAccessLevel } from "../features/auth/components/require-access";
 import classes from "./app-menu.module.css";
 
 interface AppContextMenuProps {

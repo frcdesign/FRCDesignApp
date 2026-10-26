@@ -23,11 +23,11 @@ import { useOnshapeLaunch, useTargetWorkspace } from "../../lib/onshape-params";
 import {
     DirectionIcon,
     DirectionInfo,
-    DIRECTION_COPY,
     LinkedWorkspaceSection,
-    SectionActions,
-    useLinkActions
+    SectionActions
 } from "../../features/version-manager/components/linked-workspace-section";
+import { DIRECTION_COPY } from "../../features/version-manager/direction-copy";
+import { useLinkActions } from "../../features/version-manager/link-actions";
 import { VersionManagerZeroState } from "../../features/version-manager/components/version-manager-zero-state";
 import { LastRunCallout } from "../../features/version-manager/components/last-run-callout";
 import { useWorkspaceLinksQuery } from "../../features/version-manager/queries";

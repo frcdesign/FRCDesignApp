@@ -31,7 +31,7 @@ import { useSearchDbQuery } from "../../search/queries";
 import { AppIcon } from "../../../components/app-icon";
 import { FavoriteIcon } from "./favorite-button";
 import { startSignIn } from "../../auth/sign-in";
-import { useVendorFilters } from "../../settings/components/vendor-filters";
+import { useVendorFilters } from "../../settings/vendor-filters";
 
 /** Unlike DocumentList, this list can be searched directly. */
 export function FavoritesList(): ReactNode {

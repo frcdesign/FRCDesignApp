@@ -5,7 +5,7 @@ import type {
     DailyMetricPoint,
     GrowthOut
 } from "@backend/features/analytics/contract";
-import { formatRate } from "./change-indicator";
+import { formatRate } from "./format";
 import { perUnit } from "./derived";
 import { toSparkSeries } from "./series";
 import { StatTile } from "./stat-tiles";

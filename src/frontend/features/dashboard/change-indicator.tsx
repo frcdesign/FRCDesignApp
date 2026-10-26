@@ -56,11 +56,6 @@ export function ChangeIndicator({
     );
 }
 
-/** One decimal, because a rate rounded to a whole number loses the change. */
-export function formatRate(value: number): string {
-    return value.toFixed(1);
-}
-
 /** Sits where the chip does, so it is kept as short; `explain` has the rest. */
 function shortReason(comparison: PeriodComparison): string {
     switch (comparison.unavailable) {

@@ -1,7 +1,8 @@
 import { modals } from "@mantine/modals";
 import { randomId } from "@mantine/hooks";
 import { createContext, type ReactNode, use, useMemo } from "react";
-import { APP_MODAL_CLASSES, AppModalContent } from "./app-modal";
+import { AppModalContent } from "./app-modal";
+import { APP_MODAL_CLASSES } from "./app-modal-classes";
 
 interface OpenAppModalProps {
     title: ReactNode;

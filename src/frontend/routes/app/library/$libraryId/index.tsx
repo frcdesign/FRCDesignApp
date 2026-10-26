@@ -15,14 +15,14 @@ import {
     SectionLoading,
     SectionError
 } from "../../../../components/app-notice";
-import { RequireAccessLevel } from "../../../../features/auth/access-level";
+import { RequireAccessLevel } from "../../../../features/auth/components/require-access";
 import { AddGroupButton } from "../../../../features/library/components/add-group-menu";
 import { FavoritesList } from "../../../../features/favorites/components/favorites-list";
 import { useLibraryQuery } from "../../../../features/library/queries";
 import { getLibraryName, useLibraryId } from "../../../../lib/library";
 import { useShallow } from "zustand/react/shallow";
 import { updateUiState, useUiState } from "../../../../lib/ui-state";
-import { useVendorFilters } from "../../../../features/settings/components/vendor-filters";
+import { useVendorFilters } from "../../../../features/settings/vendor-filters";
 
 export const Route = createFileRoute("/app/library/$libraryId/")({
     component: HomeList,

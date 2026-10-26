@@ -14,6 +14,11 @@ export function formatPercent(value: number): string {
     return `${value.toFixed(1)}%`;
 }
 
+/** One decimal, because a rate rounded to a whole number loses the change. */
+export function formatRate(value: number): string {
+    return value.toFixed(1);
+}
+
 /** An absent total reads the same as zero. */
 export function formatFraction(
     part: number,
