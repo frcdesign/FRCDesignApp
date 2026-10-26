@@ -929,8 +929,10 @@ Each step reports itself started (`report-{action}`), then makes its Onshape
 calls, each in a Workflow step of its own. A read is retried when its failure
 is transient (`isTransient`); a write only when Onshape refused it with 429
 before doing anything (`isRateLimited`), so a retry never inserts or mates
-twice. A step that fails is recorded with why, and the steps after it are
-skipped.
+twice. The app's own errors (`ApiError`), such as an inserted part with no mate
+connector, are never retried, whatever status they carry. Each retry is logged
+as a warning, and a step that fails for good is logged with Onshape's error,
+recorded with why, and the steps after it are skipped.
 
 0. Reads the loaded fasteners once (`fastener-set`), which the rest of the run
    uses even if the library reloads them meanwhile; with none, the run fails.

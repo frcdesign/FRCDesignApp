@@ -4,6 +4,7 @@ import {
     type WorkflowStep
 } from "cloudflare:workers";
 import { NonRetryableError } from "cloudflare:workflows";
+import { ApiError } from "../../lib/api-error";
 import type { AppBindings } from "../../lib/context";
 import type { OnshapeApi } from "../../lib/onshape/client";
 import {
@@ -358,7 +359,12 @@ async function runTask<T>(
                     await getOnshapeApiFromSessionId(ctx.env.KV, ctx.sessionId)
                 );
             } catch (error) {
-                if (retryable(error)) {
+                // Our own errors carry a status too, but say the same thing every time
+                if (!(error instanceof ApiError) && retryable(error)) {
+                    console.warn(
+                        `Quick fastener step ${name} will retry`,
+                        error
+                    );
                     throw error;
                 }
                 // The job reports it in our words, so this is the only record of Onshape's

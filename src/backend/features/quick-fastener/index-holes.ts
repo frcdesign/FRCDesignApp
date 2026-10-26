@@ -157,6 +157,22 @@ export async function indexHoles(
             return [];
         }
         const isFound = byPath.has(pathKey(target.occurrencePath));
+        if (!isFound) {
+            // How Onshape describes an instance we can't walk through is the only record of why
+            console.warn("Quick fastener couldn't resolve a pick", {
+                path: target.occurrencePath,
+                instances: instances.filter((instance) =>
+                    target.occurrencePath.includes(instance.id)
+                ),
+                subAssemblies: definition.subAssemblies.map((sub) => ({
+                    documentId: sub.documentId,
+                    elementId: sub.elementId,
+                    configuration: sub.configuration,
+                    fullConfiguration: sub.fullConfiguration,
+                    documentMicroversion: sub.documentMicroversion
+                }))
+            });
+        }
         return [
             {
                 key: `${pathKey(target.occurrencePath)}|${target.entityId}`,

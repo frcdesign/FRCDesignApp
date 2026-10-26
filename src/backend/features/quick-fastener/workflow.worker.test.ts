@@ -30,6 +30,7 @@ import {
     type FastenerJobStatus
 } from "./contract";
 import { getJobStatus } from "./jobs";
+import { resetStorage } from "../../../__test_utils__/storage";
 import type { FastenerJobParams } from "./workflow";
 
 /** Runs the workflow to its end and answers what it stored. */
@@ -348,6 +349,36 @@ describe("QuickFastenerWorkflow", () => {
             });
             expect(fastenerJobOutcome(status)).toBe(FastenerJobOutcome.PARTIAL);
         });
+    });
+
+    it("fails fastening at once when the inserted part has no mate connector", async () => {
+        // Nothing cached from another test's run
+        await resetStorage();
+        vi.mocked(Assemblies.getAssembly).mockImplementation(
+            (_client, _path, options) =>
+                Promise.resolve(
+                    options?.includeMateConnectors
+                        ? { ...DEFINITION, parts: [] }
+                        : DEFINITION
+                )
+        );
+        const status = await run("no-connector", {
+            sessionId: "session",
+            request: BODY
+        });
+
+        expect(status.tasks?.[2]).toMatchObject({
+            state: FastenerTaskState.FAILED,
+            reason: "The inserted fastener has no mate connector to fasten."
+        });
+        // Asked once: our own error says the same thing every time
+        expect(
+            vi
+                .mocked(Assemblies.getAssembly)
+                .mock.calls.filter(
+                    ([, , options]) => options?.includeMateConnectors
+                )
+        ).toHaveLength(1);
     });
 
     it("stops before inserting when Onshape refuses to read the assembly", async () => {
