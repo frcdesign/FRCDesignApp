@@ -175,4 +175,14 @@ describe("studioConfiguration", () => {
             })
         ).toEqual({ length: "IN_1" });
     });
+
+    it("sends a configuration even at the studio's defaults, which Onshape needs to insert", () => {
+        const nut = settlePart(FASTENER_SET, FastenerKind.NUT, {}, SCREW);
+        expect(nut).toBeDefined();
+        expect(
+            Object.keys(
+                studioConfiguration(FASTENER_SET, FastenerKind.NUT, nut!)
+            )
+        ).not.toHaveLength(0);
+    });
 });

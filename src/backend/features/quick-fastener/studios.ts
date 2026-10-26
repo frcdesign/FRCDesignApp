@@ -17,7 +17,7 @@ import {
 } from "../configurations/contract";
 import {
     normalizeSelection,
-    onshapeOverrides,
+    partStudioInsertOverrides,
     sameSelection,
     toSelection
 } from "../configurations/selection";
@@ -271,12 +271,15 @@ export function settlePart(
     }) as unknown as PartChoice;
 }
 
-/** What a studio is inserted with: the choice's overrides of its defaults. */
+/** What a studio is inserted with: the choice's overrides of its defaults, never none. */
 export function studioConfiguration(
     set: FastenerSet,
     kind: FastenerKind,
     choice: ScrewChoice | PartChoice
 ): Selection {
     const { parameters } = set.studios[kind];
-    return onshapeOverrides(toSelection({ ...choice }, parameters), parameters);
+    return partStudioInsertOverrides(
+        toSelection({ ...choice }, parameters),
+        parameters
+    );
 }

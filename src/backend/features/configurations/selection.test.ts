@@ -13,6 +13,7 @@ import {
     formatValue,
     normalizeSelection,
     onshapeOverrides,
+    partStudioInsertOverrides,
     toKey,
     toSelection,
     toStoredSelection,
@@ -139,6 +140,21 @@ describe("onshapeOverrides", () => {
         expect(
             onshapeOverrides(select({ length: "25.4 mm" }), parameters)
         ).toEqual({});
+    });
+});
+
+describe("partStudioInsertOverrides", () => {
+    it("sends the overrides when there are any", () => {
+        expect(
+            partStudioInsertOverrides(select({ size: "l" }), parameters)
+        ).toEqual({ size: "l" });
+    });
+
+    // Onshape won't insert a Part Studio from an empty configuration
+    it("names the first parameter at the defaults", () => {
+        expect(partStudioInsertOverrides(select({}), parameters)).toEqual({
+            size: "s"
+        });
     });
 });
 

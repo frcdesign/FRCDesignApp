@@ -135,6 +135,23 @@ export function onshapeOverrides(
 }
 
 /**
+ * A Part Studio's overrides as an insert sends them. Onshape won't insert a
+ * Part Studio from an empty configuration, so at the defaults the first
+ * parameter is named at its default.
+ */
+export function partStudioInsertOverrides(
+    selection: Selection,
+    parameters: ConfigurationParameter[]
+): Selection {
+    const overrides = onshapeOverrides(selection, parameters);
+    const [first] = parameters;
+    if (Object.keys(overrides).length > 0 || !first) {
+        return overrides;
+    }
+    return { [first.id]: selection[first.id] };
+}
+
+/**
  * What a render sends Onshape, as entered: Onshape names its renders by the
  * value it computes, which differs in the last bit between `2.25 in` and
  * `0.05715 m`. Derivation variables are left out, since each insert's is unique.

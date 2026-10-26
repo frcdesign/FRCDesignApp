@@ -289,10 +289,11 @@ async function insertParts(
             );
             if (inserted.length !== parts.length || inserted.includes(null)) {
                 // Which part Onshape answered no occurrence for, and how it answered
-                console.error("Quick fastener insert answered no path", {
-                    parts: parts.map((part) => part.name),
-                    response
-                });
+                console.error(
+                    "Quick fastener insert answered no path",
+                    parts.map((part) => part.name),
+                    JSON.stringify(response)
+                );
             }
             return inserted;
         }

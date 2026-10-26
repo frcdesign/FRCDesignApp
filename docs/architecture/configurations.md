@@ -124,7 +124,8 @@ robot-code's records, whatever its count, and its indexing isn't configurable
 5. On insert, the server makes the selection whole (`toSelection`) and sends
    only the overrides (`onshapeOverrides`). Onshape refuses a part studio's
    empty configuration (an assembly's is fine), so a part studio left on its
-   defaults is sent its first parameter at its default.
+   defaults is sent its first parameter at its default
+   (`partStudioInsertOverrides`, which Quick fastener's inserts use too).
 
 ### Search
 

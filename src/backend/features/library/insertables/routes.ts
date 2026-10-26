@@ -44,7 +44,11 @@ import {
     addAssemblyFeature
 } from "../../../lib/onshape/endpoints/assemblies";
 import { PartType } from "../../../lib/onshape/endpoints/documents";
-import { onshapeOverrides, toSelection } from "../../configurations/selection";
+import {
+    onshapeOverrides,
+    partStudioInsertOverrides,
+    toSelection
+} from "../../configurations/selection";
 import { encodeConfiguration } from "../../configurations/utils";
 import { fastenMate } from "../../../lib/onshape/objects/assembly-features";
 import { parseFastenInfo } from "../../load/parse-fasten";
@@ -473,22 +477,13 @@ insertableRoutes.post(
         );
 
         // Only the overrides: a whole selection can exceed what Onshape accepts.
-        let configuration = selection
-            ? encodeConfiguration(onshapeOverrides(selection, parameters))
-            : undefined;
-
-        // Onshape won't insert a part studio from an empty configuration (an assembly
-        // is fine), so name one parameter at its default.
-        if (
+        const configuration =
             selection &&
-            configuration === "" &&
-            row.elementType === ElementType.PART_STUDIO
-        ) {
-            const [first] = parameters;
-            configuration = encodeConfiguration({
-                [first.id]: selection[first.id]
-            });
-        }
+            encodeConfiguration(
+                row.elementType === ElementType.PART_STUDIO
+                    ? partStudioInsertOverrides(selection, parameters)
+                    : onshapeOverrides(selection, parameters)
+            );
 
         // Resolved here, since the marker moves whenever someone drags it.
         const transform = body.insertLocationId

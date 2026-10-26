@@ -1100,7 +1100,8 @@ is logged to the console.
   so each copy sits as the stack it copies.
 - The form's studio parameters are the studios' own configurations, parsed as
   any configuration is, and a part is inserted with its selection's overrides
-  (`studioConfiguration`, through `onshapeOverrides`): the client and the Part
+  (`studioConfiguration`, through `partStudioInsertOverrides`, never empty,
+  which Onshape won't insert a Part Studio from): the client and the Part
   Studio can't disagree on what's offered.
 - Every part is in the screw's size.
 - A scan is keyed by something that never changes, so a cached scan is never
@@ -1183,7 +1184,8 @@ is logged to the console.
 - **A hidden input is resolved from the catalog.** Onshape keeps a hidden input
   at whatever it last held, and `normalizeSelection` sets it to its default,
   which the vendor may not make; the feature takes the one value made there, and
-  so does `settle`. Inserts send only the inputs shown (`onshapeOverrides`).
+  so does `settle`. Inserts send only the inputs shown, or at the defaults the
+  first (`partStudioInsertOverrides`).
 - **Alike holes are always replicated, with no option.** One set of parts and
   a Replicate per stack does what a set per hole would, in fewer inserts and
   mates. Onshape publishes no spec for Replicate: `replicateFeature` is copied
