@@ -53,6 +53,17 @@ export const ONSHAPE_STEP_RETRIES = {
 };
 
 /**
+ * One retry, soon, honoring a rate limit: for calls Onshape answers at once,
+ * waiting on no background work, so one failing twice will keep failing.
+ */
+export const ONSHAPE_QUICK_RETRIES = {
+    limit: 1,
+    delay: (input: RetryDelayInput): `${number} seconds` =>
+        rateLimitDelay(input.error) ?? "2 seconds",
+    backoff: CONSTANT_BACKOFF
+};
+
+/**
  * Three retries, honoring a rate limit. An element's thumbnail is rendered on
  * save, so this only covers Onshape still writing one out just after it.
  */

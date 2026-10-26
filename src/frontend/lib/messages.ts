@@ -107,8 +107,8 @@ export interface HighlightedEntity {
  * Makes `entities` what the Onshape window shows selected, in place of what it
  * showed. Onshape documents this shape for a Part Studio entity, without
  * `occurrencePath`; a mate connector's body never lit (see below). It carries
- * `filter` as a selection request does; whether Onshape keeps picks limited by
- * it, rather than cancelling the request, is untried.
+ * `filter`'s entity types in the field Onshape documents for a selection
+ * request; whether a highlight keeps picks limited by it is untried.
  */
 export function sendHighlightMessage(
     elementPath: ElementPath,
@@ -119,7 +119,7 @@ export function sendHighlightMessage(
     sendMessage(elementPath, {
         messageName: MessageType.REQUEST_HIGHLIGHT_SELECTION,
         messageId: `${HIGHLIGHT_PREFIX}${++highlights}`,
-        ...filter,
+        ...(filter && { entityTypeSpecifier: filter.entityTypeSpecifier }),
         selections: entities.map((entity) => ({
             selectionType: "ENTITY",
             entityType: entity.entityType,
