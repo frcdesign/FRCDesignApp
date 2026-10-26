@@ -195,9 +195,10 @@ describe("QueryList", () => {
         expect(messages.at(-1)).toMatchObject({
             messageName: "requestSelectionHighlight",
             selections: [{ selectionId: "A" }],
-            entityTypeSpecifier: ["EDGE"]
+            selectionType: "GEOMETRY",
+            entityType: "EDGE",
+            geometryType: "CIRCLE"
         });
-        expect(messages.at(-1)).not.toHaveProperty("geometryTypeSpecifier");
 
         messages = [];
         await userEvent.unhover(row);

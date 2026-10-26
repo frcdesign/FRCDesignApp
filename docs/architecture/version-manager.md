@@ -214,8 +214,9 @@ alone.
 Each step runs through `runTask` in `workflow.ts`, which reports it started, then
 makes each Onshape call in its own retried Workflow step. A failure that could
 go differently next time — a rate limit, a 408 or 5xx, or a request that never
-got an answer (`isTransient`) — is retried from the top of that step; tabs
-already moved need nothing the second time. Any other fails the step at once,
+got an answer (`isTransient`) — is retried once from the top of that step, two
+seconds later (`ONSHAPE_STEP_RETRIES`); tabs already moved need nothing the
+second time. Any other fails the step at once,
 as a `NonRetryableError` worded by `describeStepFailure` from its status and the
 call that failed ("Couldn't update this document's references."). Onshape's own
 messages are never shown: they are written for developers.

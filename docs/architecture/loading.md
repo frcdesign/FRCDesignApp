@@ -219,7 +219,7 @@ like any other.
 
 | Failure                                     | Result                                                 | Recovery                                                                                      |
 | ------------------------------------------- | ------------------------------------------------------ | --------------------------------------------------------------------------------------------- |
-| An Onshape step fails                       | Retried with backoff, honoring `Retry-After`           | Automatic; exhausted, the group or tab is flagged                                             |
+| An Onshape step fails                       | Retried once after 2 s, honoring `Retry-After`         | Automatic; exhausted, the group or tab is flagged                                             |
 | A tab fails                                 | `LOAD_FAILED` on it, `INSERTABLES_FAILED` on the group | **Reload**                                                                                    |
 | A new document's load never starts          | The shell group keeps `NOT_LOADED`                     | **Reload**                                                                                    |
 | A reload dies holding the library           | Its claim is left behind                               | The next reload or job-status read takes over and flags what it hadn't finished `LOAD_FAILED` |

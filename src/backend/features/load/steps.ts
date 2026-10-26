@@ -35,33 +35,25 @@ export function rateLimitDelay(error: Error): `${number} seconds` | undefined {
     return `${retryAfterSeconds + jitter} seconds`;
 }
 
-/** Honors `Retry-After` on a 429; exponential otherwise. */
-function onshapeRetryDelay(input: RetryDelayInput): `${number} seconds` {
-    const rateLimited = rateLimitDelay(input.error);
-    if (rateLimited) {
-        return rateLimited;
-    }
-    const seconds = Math.min(10 * 2 ** (input.ctx.attempt - 1), 300);
-    return `${seconds} seconds`;
-}
-
-/** For every step that calls Onshape, so a 429's `Retry-After` is honored. */
-export const ONSHAPE_STEP_RETRIES = {
-    limit: 5,
-    delay: onshapeRetryDelay,
-    backoff: CONSTANT_BACKOFF
-};
-
 /**
- * One retry, soon, honoring a rate limit: for calls Onshape answers at once,
+ * For every step that calls Onshape, but those waiting on its thumbnails: one
+ * retry, soon, after a 429's `Retry-After`. Onshape answers these at once,
  * waiting on no background work, so one failing twice will keep failing.
  */
-export const ONSHAPE_QUICK_RETRIES = {
+export const ONSHAPE_STEP_RETRIES = {
     limit: 1,
     delay: (input: RetryDelayInput): `${number} seconds` =>
         rateLimitDelay(input.error) ?? "2 seconds",
     backoff: CONSTANT_BACKOFF
 };
+
+/** Honors `Retry-After` on a 429; doubling from 10 s otherwise. */
+function thumbnailRetryDelay(input: RetryDelayInput): `${number} seconds` {
+    return (
+        rateLimitDelay(input.error) ??
+        `${10 * 2 ** (input.ctx.attempt - 1)} seconds`
+    );
+}
 
 /**
  * Three retries, honoring a rate limit. An element's thumbnail is rendered on
@@ -69,7 +61,7 @@ export const ONSHAPE_QUICK_RETRIES = {
  */
 const THUMBNAIL_RETRIES = {
     limit: 3,
-    delay: onshapeRetryDelay,
+    delay: thumbnailRetryDelay,
     backoff: CONSTANT_BACKOFF
 };
 

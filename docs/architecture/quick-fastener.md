@@ -858,10 +858,10 @@ vectors, Onshape's 4×4 transforms and `LINEAR_TOLERANCE`.
    alone; leaving the rows lights the focused list's picks up (`focusedList`),
    or nothing with no list focused. Removing a row lights the rest up. A
    highlight without a filter cancels the selection request, and a request
-   clears the highlight, so each highlight carries the focused list's entity
-   types too, in the field Onshape documents for a selection request
-   (`entityTypeSpecifier`); whether a highlight keeps picks limited by it is
-   untried. Clicking a
+   clears the highlight, so each highlight carries the focused list's filter
+   too, as single values in the fields Onshape documents for each selection
+   (`selectionType`, `entityType`, `geometryType`); whether a highlight keeps
+   picks limited by them is untried. Clicking a
    focused list asks for its filter again.
 
 ### The form
@@ -930,7 +930,7 @@ Changing the mode clears the picks.
 Each step reports itself started (`report-{action}`), then makes its Onshape
 calls, each in a Workflow step of its own. Each call is one Onshape answers at
 once, so it's retried once, two seconds later (after `Retry-After` on a 429;
-`ONSHAPE_QUICK_RETRIES`), then fails. A read is retried when its failure is
+`ONSHAPE_STEP_RETRIES`), then fails. A read is retried when its failure is
 transient (`isTransient`); a write only when Onshape refused it with 429 before
 doing anything (`isRateLimited`), so a retry never inserts or mates twice. The app's own errors (`ApiError`), such as an inserted part with no mate
 connector, are never retried, whatever status they carry. Each retry is logged
@@ -1165,8 +1165,8 @@ app.
   lets be picked, in the form Onshape answers to (array specifiers per level)
   rather than the one it documents. A highlight replaces what the window shows
   selected, and a request clears it, so a highlight carries the focused
-  list's entity types as Onshape documents them for a request, to keep picks
-  limited while a row or the focused list's picks are lit. A list still refuses kinds it doesn't take.
+  list's filter in the single-value fields Onshape documents for a
+  selection, to keep picks limited while a row or the focused list's picks are lit. A list still refuses kinds it doesn't take.
 - **Washers are mated to, not offset for.** Mate offsets aren't in Onshape's
   API reference. Fastening a screw or nut to the washer under it puts it at the
   washer's thickness whichever washer was chosen, where moving the mate

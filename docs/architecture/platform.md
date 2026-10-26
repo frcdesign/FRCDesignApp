@@ -97,19 +97,18 @@ If it keeps happening, contact the FRCDesignApp developers."
 
 ## Retries and timeouts
 
-| Where                           | Setting                            | Policy                                                                                     |
-| ------------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------ |
-| Any Onshape request             | `REQUEST_TIMEOUT_MS`               | Aborts after 60 s                                                                          |
-| Load steps calling Onshape      | `ONSHAPE_STEP_RETRIES`             | 5 retries after 10, 20, 40, 80, 160 s; a 429 waits its `Retry-After` plus 0–20 s of jitter |
-| Load thumbnail steps            | `THUMBNAIL_RETRIES`                | 3 retries after 10, 20, 40 s; a 429 as above                                               |
-| Quick fastener steps            | `ONSHAPE_QUICK_RETRIES`            | 1 retry after 2 s; a 429 as above. Never for the app's own errors                          |
-| Configuration renders           | `RENDER_RETRIES`                   | 30 retries every 2 s; a 429 waits its `Retry-After` plus jitter                            |
-| A held reload                   | `APPROVAL_TIMEOUT`                 | Waits a week for approval, then loads                                                      |
-| A reload waiting its turn       | `TURN_INTERVAL`                    | Checks the library again every 30 s                                                        |
-| Client queries                  | `queryClient` default              | 2 retries, none for an `AppError` that isn't `internal`                                    |
-| Stored thumbnails on the client | `STORED_RETRIES`                   | 1 retry                                                                                    |
-| Waiting on a render             | `RENDER_TIMEOUT_MS`                | Gives up after 60 s without the image                                                      |
-| Push socket                     | `FIRST_RETRY_MS` → `LAST_RETRY_MS` | Reconnects after 1 s, doubling to 30 s                                                     |
+| Where                           | Setting                            | Policy                                                                 |
+| ------------------------------- | ---------------------------------- | ---------------------------------------------------------------------- |
+| Any Onshape request             | `REQUEST_TIMEOUT_MS`               | Aborts after 60 s                                                      |
+| Steps calling Onshape           | `ONSHAPE_STEP_RETRIES`             | 1 retry after 2 s; a 429 waits its `Retry-After` plus 0–20 s of jitter |
+| Load thumbnail steps            | `THUMBNAIL_RETRIES`                | 3 retries after 10, 20, 40 s; a 429 as above                           |
+| Configuration renders           | `RENDER_RETRIES`                   | 30 retries every 2 s; a 429 waits its `Retry-After` plus jitter        |
+| A held reload                   | `APPROVAL_TIMEOUT`                 | Waits a week for approval, then loads                                  |
+| A reload waiting its turn       | `TURN_INTERVAL`                    | Checks the library again every 30 s                                    |
+| Client queries                  | `queryClient` default              | 2 retries, none for an `AppError` that isn't `internal`                |
+| Stored thumbnails on the client | `STORED_RETRIES`                   | 1 retry                                                                |
+| Waiting on a render             | `RENDER_TIMEOUT_MS`                | Gives up after 60 s without the image                                  |
+| Push socket                     | `FIRST_RETRY_MS` → `LAST_RETRY_MS` | Reconnects after 1 s, doubling to 30 s                                 |
 
 Workflows multiply a retry's delay by its backoff curve, so every policy returns
 its own delay from a function and sets `backoff: "constant"`.
@@ -209,6 +208,11 @@ that reconnects refreshes the library, since pushes during the outage are lost.
 - **Retries at the step, not the request.** A workflow step's retry is durable
   and visible; a retry inside `fetch` would hide attempts inside one step's
   timeout.
+- **One quick retry.** A step's Onshape calls are ones Onshape answers at
+  once, waiting on no background work, so a second failure won't be followed
+  by a success: one retry two seconds on, then the step fails and says why,
+  rather than backing off for minutes. Thumbnails, which Onshape renders in
+  the background, keep their own longer policy.
 - **One push hub.** Pushes are few and small; one instance keeps fan-out simple.
 - **Errors by kind, not status.** The client decides wording from `kind`, so a
   status can change without changing what the user reads.

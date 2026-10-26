@@ -13,7 +13,7 @@ import {
 } from "../../lib/onshape/endpoints/assemblies";
 import { type ElementPath } from "../../lib/onshape/path";
 import { getOnshapeApiFromSessionId } from "../auth/request-auth";
-import { ONSHAPE_QUICK_RETRIES } from "../load/steps";
+import { ONSHAPE_STEP_RETRIES } from "../load/steps";
 import { getDb } from "../../db/client";
 import { isRateLimited, isTransient } from "../../lib/onshape/failures";
 import {
@@ -353,7 +353,7 @@ async function runTask<T>(
     );
 
     const run: StepRunner = (name, retryable, callback) =>
-        ctx.step.do(name, { retries: ONSHAPE_QUICK_RETRIES }, async () => {
+        ctx.step.do(name, { retries: ONSHAPE_STEP_RETRIES }, async () => {
             try {
                 return await callback(
                     await getOnshapeApiFromSessionId(ctx.env.KV, ctx.sessionId)
