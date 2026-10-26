@@ -18,10 +18,11 @@ import {
 } from "../lib/messages";
 import { useTargetElement } from "../lib/onshape-params";
 import {
-    expectSelection,
     focusedPicks,
     holdPicks,
+    holdResume,
     onPick,
+    resumeFocused,
     selectionKey,
     useOnshapeSelection,
     without,
@@ -108,6 +109,21 @@ export function QueryList(props: QueryListProps): ReactNode {
 
     useEffect(() => holdPicks(id, entities), [id, entities]);
 
+    // The same request, under its own id, that a highlight ended
+    useEffect(
+        () =>
+            holdResume(id, () => {
+                if (target && selectionRequest.current) {
+                    sendSelectionRequest(
+                        target,
+                        filter,
+                        selectionRequest.current
+                    );
+                }
+            }),
+        [id, target, filter]
+    );
+
     useEffect(() => {
         if (!target || !isFocused) {
             return;
@@ -144,12 +160,12 @@ export function QueryList(props: QueryListProps): ReactNode {
 
     const highlight = (entity: OnshapeSelection) => show([entity]);
 
-    // Ends the highlight, back to the selection request and what was picked under it
+    // Ends the highlight, then starts the focused list's selection request again
     const unhighlight = () => {
         if (target && highlightRequest.current) {
-            expectSelection(focusedPicks());
             sendStopRequestMessage(target, highlightRequest.current);
             highlightRequest.current = undefined;
+            resumeFocused();
         }
     };
 

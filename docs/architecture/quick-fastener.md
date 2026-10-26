@@ -848,11 +848,10 @@ vectors, Onshape's 4×4 transforms and `LINEAR_TOLERANCE`.
    (`requestSelectionHighlight`, which makes it what the Onshape window shows
    selected, each with its own message id). Moving between rows lights each
    alone; leaving the rows sends `stopRequest` with the highlight's
-   `messageId` to end it, rather than asking for the filter again, since a
-   request clears what the window shows. What the window shows then isn't
-   taken as picks: the app expects the focused list's picks
-   (`focusedPicks`). Whether the selection request is pending again once the
-   highlight stops is untried. Removing a row lights the rest up. Clicking a focused
+   `messageId` to end it, then sends the focused list's `requestSelection`
+   again under its original `messageId` (`resumeFocused`), so picks are
+   limited again. That request's clearing of the window isn't taken as picks
+   (`expectCleared`). Removing a row lights the rest up. Clicking a focused
    list asks for its filter again.
 
 ### The form
@@ -1157,7 +1156,7 @@ app.
   lets be picked, in the form Onshape answers to (array specifiers per level)
   rather than the one it documents. A highlight replaces what the window shows
   selected, and a request clears it, so a hover ends its highlight with a stop
-  instead of asking for the filter again. A highlight carrying the filter, in
+  naming it, then starts the focused list's request again under its own id. A highlight carrying the filter, in
   Onshape's documented fields for a selection, was tried and doesn't limit
   picks. A list still refuses kinds it doesn't take.
 - **Washers are mated to, not offset for.** Mate offsets aren't in Onshape's

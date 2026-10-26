@@ -189,9 +189,10 @@ describe("QueryList", () => {
         expect(messages).toEqual([]);
     });
 
-    it("ends a row's highlight with a stop once the mouse leaves, keeping its picks", async () => {
+    it("ends a row's highlight with a stop once the mouse leaves, then starts its selection request again", async () => {
         renderWithProviders(<Harness />);
         await userEvent.click(screen.getByText("Holes"));
+        const request = (messages.at(-1) as { messageId: string }).messageId;
         select(edge("A"), edge("B"));
         const row = screen.getByText("Edge 1").parentElement!;
         await userEvent.hover(row);
@@ -205,10 +206,15 @@ describe("QueryList", () => {
         messages = [];
         await userEvent.unhover(row);
         expect(messages).toEqual([
-            expect.objectContaining({ messageName: "stopRequest", messageId })
+            expect.objectContaining({ messageName: "stopRequest", messageId }),
+            expect.objectContaining({
+                messageName: "requestSelection",
+                messageId: request,
+                geometryTypeSpecifier: ["CIRCLE"]
+            })
         ]);
 
-        // What Onshape shows once the highlight ends isn't a pick
+        // What Onshape shows once the request starts again isn't a pick
         act(() => useOnshapeSelection.getState().receive([]));
         act(() =>
             useOnshapeSelection.getState().receive([edge("A"), edge("B")])
@@ -238,6 +244,7 @@ describe("QueryList", () => {
             </>
         );
         await userEvent.click(screen.getByText("Holes"));
+        const request = (messages.at(-1) as { messageId: string }).messageId;
         select(edge("A"));
         const other = screen.getByText("Edge 1", {
             selector: "p",
@@ -247,8 +254,13 @@ describe("QueryList", () => {
 
         messages = [];
         await userEvent.unhover(other);
+        // The focused list's request, not the hovered one's
         expect(messages).toEqual([
-            expect.objectContaining({ messageName: "stopRequest" })
+            expect.objectContaining({ messageName: "stopRequest" }),
+            expect.objectContaining({
+                messageName: "requestSelection",
+                messageId: request
+            })
         ]);
     });
 

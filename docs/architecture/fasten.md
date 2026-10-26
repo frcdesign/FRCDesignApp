@@ -459,7 +459,8 @@ interface InsertableSettingsInput {
   also holds a `requestSelection` limiting the Onshape window to its kind, in
   the form Onshape answers to rather than the one it documents (see Quick
   fastener's picking flow); a hovered row lights its own entity up alone, and
-  leaving it ends that highlight with a stop. The list still refuses other
+  leaving it ends that highlight with a stop and starts the focused list's
+  request again. The list still refuses other
   kinds, and the scan drops edges that
   aren't circular.
 - **The list stays focused.** The targets' list is focused while the menu is
