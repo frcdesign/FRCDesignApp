@@ -111,11 +111,12 @@ export interface HighlightedEntity {
 export function sendHighlightMessage(
     elementPath: ElementPath,
     entities: HighlightedEntity[]
-) {
+): string {
     expectSelection(entities);
+    const messageId = `${HIGHLIGHT_PREFIX}${++highlights}`;
     sendMessage(elementPath, {
         messageName: MessageType.REQUEST_HIGHLIGHT_SELECTION,
-        messageId: `${HIGHLIGHT_PREFIX}${++highlights}`,
+        messageId,
         selections: entities.map((entity) => ({
             selectionType: "ENTITY",
             entityType: entity.entityType,
@@ -123,6 +124,7 @@ export function sendHighlightMessage(
             occurrencePath: entity.occurrencePath
         }))
     });
+    return messageId;
 }
 
 /**
@@ -158,18 +160,26 @@ let selectionRequests = 0;
 export function sendSelectionRequest(
     elementPath: ElementPath,
     filter: SelectionFilter
-) {
+): string {
     expectCleared();
+    const messageId = `${SELECTION_PREFIX}${++selectionRequests}`;
     sendMessage(elementPath, {
         messageName: MessageType.REQUEST_SELECTION,
-        messageId: `${SELECTION_PREFIX}${++selectionRequests}`,
+        messageId,
         ...filter
     });
+    return messageId;
 }
 
-/** Ends whatever request is pending: a selection filter, or a highlight. */
-export function sendStopRequestMessage(elementPath: ElementPath) {
-    sendMessage(elementPath, { messageName: MessageType.STOP_REQUEST });
+/** Ends the request `messageId` names: a selection filter, or a highlight. */
+export function sendStopRequestMessage(
+    elementPath: ElementPath,
+    messageId: string
+) {
+    sendMessage(elementPath, {
+        messageName: MessageType.STOP_REQUEST,
+        messageId
+    });
 }
 
 /** Onshape's blue bubble at the top of the panel. */

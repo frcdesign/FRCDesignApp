@@ -842,16 +842,17 @@ vectors, Onshape's 4×4 transforms and `LINEAR_TOLERANCE`.
    window's selection, and Onshape shows what's picked under it, so nothing is
    sent as picks arrive. **Clear** empties the list and asks for the filter
    again, clearing the window too. Losing focus or unmounting sends
-   `stopRequest`.
+   `stopRequest`. Every stop names the request it ends by its `messageId`,
+   which Onshape answers as `stoppedRequestId`.
 4. Hovering a row, in any list, lights its entity up alone
    (`requestSelectionHighlight`, which makes it what the Onshape window shows
    selected, each with its own message id). Moving between rows lights each
-   alone; leaving the rows sends `stopRequest` to end the highlight, rather
-   than asking for the filter again, since a request clears what the window
-   shows. What the window shows then isn't taken as picks: the app expects
-   the focused list's picks (`focusedPicks`). Which request a bare
-   `stopRequest` ends, while a highlight and a selection request are both
-   pending, is untried. Removing a row lights the rest up. Clicking a focused
+   alone; leaving the rows sends `stopRequest` with the highlight's
+   `messageId` to end it, rather than asking for the filter again, since a
+   request clears what the window shows. What the window shows then isn't
+   taken as picks: the app expects the focused list's picks
+   (`focusedPicks`). Whether the selection request is pending again once the
+   highlight stops is untried. Removing a row lights the rest up. Clicking a focused
    list asks for its filter again.
 
 ### The form

@@ -7,7 +7,7 @@ import {
     UnstyledButton
 } from "@mantine/core";
 import { XIcon } from "@phosphor-icons/react";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
     sendHighlightMessage,
     sendMessageBubble,
@@ -84,6 +84,9 @@ export function QueryList(props: QueryListProps): ReactNode {
     } = props;
     const target = useTargetElement();
     const isFocused = useOnshapeSelection((state) => state.focused === id);
+    // Each stop names the request it ends
+    const selectionRequest = useRef<string>(undefined);
+    const highlightRequest = useRef<string>(undefined);
     const [refused, setRefused] = useState(false);
 
     useEffect(
@@ -109,8 +112,12 @@ export function QueryList(props: QueryListProps): ReactNode {
         if (!target || !isFocused) {
             return;
         }
-        sendSelectionRequest(target, filter);
-        return () => sendStopRequestMessage(target);
+        selectionRequest.current = sendSelectionRequest(target, filter);
+        return () => {
+            if (selectionRequest.current) {
+                sendStopRequestMessage(target, selectionRequest.current);
+            }
+        };
     }, [target, isFocused, filter]);
 
     const focus = () => {
@@ -122,13 +129,16 @@ export function QueryList(props: QueryListProps): ReactNode {
         sendMessageBubble(target, prompt);
         // Already focused, the request was cancelled by a highlight since
         if (isFocused) {
-            sendSelectionRequest(target, filter);
+            selectionRequest.current = sendSelectionRequest(target, filter);
         }
     };
 
     const show = (picks: OnshapeSelection[]) => {
         if (target) {
-            sendHighlightMessage(target, picks.map(toHighlighted));
+            highlightRequest.current = sendHighlightMessage(
+                target,
+                picks.map(toHighlighted)
+            );
         }
     };
 
@@ -136,9 +146,10 @@ export function QueryList(props: QueryListProps): ReactNode {
 
     // Ends the highlight, back to the selection request and what was picked under it
     const unhighlight = () => {
-        if (target) {
+        if (target && highlightRequest.current) {
             expectSelection(focusedPicks());
-            sendStopRequestMessage(target);
+            sendStopRequestMessage(target, highlightRequest.current);
+            highlightRequest.current = undefined;
         }
     };
 
@@ -152,7 +163,7 @@ export function QueryList(props: QueryListProps): ReactNode {
     const clear = () => {
         onChange([]);
         if (target && isFocused) {
-            sendSelectionRequest(target, filter);
+            selectionRequest.current = sendSelectionRequest(target, filter);
         }
     };
 

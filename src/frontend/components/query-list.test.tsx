@@ -130,6 +130,7 @@ describe("QueryList", () => {
                 geometryTypeSpecifier: ["CIRCLE"]
             })
         );
+        const { messageId } = messages.at(-1) as { messageId: string };
 
         messages = [];
         await userEvent.click(faces);
@@ -141,6 +142,8 @@ describe("QueryList", () => {
             "stopRequest",
             "requestSelection"
         ]);
+        // The edges' request, by its id
+        expect(messages[1]).toMatchObject({ messageId });
         expect(messages[2]).toMatchObject({
             entityTypeSpecifier: ["FACE"],
             geometryTypeSpecifier: ["PLANE"]
@@ -197,11 +200,12 @@ describe("QueryList", () => {
             selections: [{ selectionId: "A" }]
         });
         expect(messages.at(-1)).not.toHaveProperty("geometryType");
+        const { messageId } = messages.at(-1) as { messageId: string };
 
         messages = [];
         await userEvent.unhover(row);
         expect(messages).toEqual([
-            expect.objectContaining({ messageName: "stopRequest" })
+            expect.objectContaining({ messageName: "stopRequest", messageId })
         ]);
 
         // What Onshape shows once the highlight ends isn't a pick
