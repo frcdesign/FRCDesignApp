@@ -11,7 +11,14 @@ import {
     fastenMateToCircularEdge,
     partStudioMateConnectorQuery
 } from "../../lib/onshape/objects/assembly-features";
+import { type Db } from "../../db/client";
 import { type Selection } from "../configurations/contract";
+import { toSelection } from "../configurations/selection";
+import {
+    partName,
+    readStoredParts,
+    type StoredParts
+} from "../library/insertables/part-name";
 import { encodeConfiguration } from "../configurations/utils";
 import { type Catalog, getWasher } from "./catalog";
 import { HoleStatus } from "./contract";
@@ -56,6 +63,33 @@ function thickness(catalog: Catalog, washer: PartChoice | undefined): number {
         ? (getWasher(catalog, washer.vendor, washer.size, washer.type)
               ?.thickness ?? 0)
         : 0;
+}
+
+/** Each part named as its studio's records name its configuration, which its mates and Replicate take. */
+export async function namePlacements(
+    db: Db,
+    set: FastenerSet,
+    parts: PartPlacement[]
+): Promise<PartPlacement[]> {
+    const stored = new Map<FastenerKind, StoredParts | undefined>();
+    for (const kind of new Set(parts.map((part) => part.kind))) {
+        stored.set(
+            kind,
+            await readStoredParts(db, set.studios[kind].insertableId)
+        );
+    }
+    return parts.map((part) => {
+        const studio = stored.get(part.kind);
+        return studio
+            ? {
+                  ...part,
+                  name: partName(
+                      studio,
+                      toSelection(part.configuration, studio.parameters)
+                  )
+              }
+            : part;
+    });
 }
 
 /**

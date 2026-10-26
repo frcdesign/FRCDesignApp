@@ -595,6 +595,8 @@ interface Catalog {
 }
 
 interface FastenerStudio {
+    /** Its tab, loaded as an insertable, whose records name what it makes. */
+    insertableId: string;
     parameters: ConfigurationParameter[];
     location: StudioLocation;
     /** What a fasten mate names its mate connector by, as the studio's load found it. */
@@ -972,7 +974,9 @@ recorded with why, and the steps after it are skipped.
    The ready holes are grouped first (`replicateGroups`):
    holes given the same parts, as deep, through circular edges of the same
    size and out far edges of the same size, in the order found. Only each
-   group's first hole gets parts here.
+   group's first hole gets parts here. Each part is named as its studio's
+   records name its configuration (`namePlacements`, `part-names`), which its
+   mate and its stack's Replicate take.
 3. **Fasten parts**:
     1. Takes each studio's mate connector id from its load
        (`FastenerStudio.mateConnectorId`, the insertable's fasten info); with
@@ -990,10 +994,11 @@ recorded with why, and the steps after it are skipped.
    one hole, one at a time, a Replicate per stack of the first hole's parts
    (`replicate-{n}-screw`, then `replicate-{n}-nut`), each seeded with the
    stack's parts and placed as the mate holding its bottom part on its edge
-   (`addReplicate`). Each matches individual edges (`stackTargets`): the
-   screw stack's, the rest of the group's circular edges; the nut stack's,
-   their far edges. Onshape refusing one fails the step, with Onshape's
-   message, and the Replicates after it aren't added.
+   (`addReplicate`), named after the stack's screw or nut. Each matches
+   individual edges (`stackTargets`): the screw stack's, the rest of the
+   group's circular edges; the nut stack's, their far edges. Onshape refusing
+   one fails the step, in our words, with Onshape's message logged, and the
+   Replicates after it aren't added.
 5. **Finish** (`finish-job`): stores `COMPLETE` or `FAILED`, with how many parts
    were inserted and fastened, how many holes its Replicates filled, and when.
 

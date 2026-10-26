@@ -202,6 +202,7 @@ async function fastenToCircularEdges(
 function groupBySize(edges: AssemblyCircularEdge[]): AssemblyCircularEdge[][];
 
 interface FastenToCircularEdgesArgs {
+    /** The part's, which its mates and Replicates are named. */
     name: string;
     /** The instance already inserted, which takes the first edge. */
     inserted: OnshapeInsertInstancesResponse;
@@ -218,7 +219,7 @@ interface FastenToCircularEdgesArgs {
 `src/backend/features/quick-fastener/replicate.ts`, shared with Quick fastener
 
 ```ts
-// Onshape refusing it is an error in the user's words, with Onshape's own.
+// Onshape refusing it is an error in the user's words; Onshape's own is logged.
 async function addReplicate(
     onshapeApi: OnshapeApi,
     assembly: ElementPath,
@@ -359,7 +360,10 @@ interface InsertableSettingsInput {
    assembly with their radii: each picked edge that is circular, or every
    circular edge of each picked face, less the skipped holes. None found
    answers 400 and inserts nothing.
-3. It inserts the part at the insert location, then:
+3. It inserts the part at the insert location, then names its mates and
+   Replicates after the part: its configuration's indexed record's name, the
+   element's own part's at the defaults, else the tab's (`partName`,
+   `readStoredParts`):
     - **No picks**: adds a fasten mate naming only the part's connector, and
       answers its `featureId`; the client opens the mate dialog to finish it.
     - **One instance each**: `fastenToCircularEdges` mates the inserted

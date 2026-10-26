@@ -33,13 +33,14 @@ import {
     runFailure
 } from "./failures";
 import { getFastenerSet } from "./fastener-set";
-import { type FastenerSet } from "./studios";
+import { FastenerKind, type FastenerSet } from "./studios";
 import { indexHoles } from "./index-holes";
 import {
     insertGroups,
     type PartPlacement,
     PartStack,
     partMate,
+    namePlacements,
     placements,
     replicateGroups,
     stackTargets,
@@ -169,9 +170,16 @@ async function runSteps(ctx: RunContext, request: QuickFastenerIn) {
             group.slice(1).map((plan) => plan.planned.key)
         )
     );
-    const parts = placements(
-        set,
-        plans.filter((plan) => !later.has(plan.planned.key))
+    // Named as the studios' records name each configuration, for its mates and Replicate
+    const parts = await ctx.step.do("part-names", () =>
+        namePlacements(
+            getDb(ctx.env.DB),
+            set,
+            placements(
+                set,
+                plans.filter((plan) => !later.has(plan.planned.key))
+            )
+        )
     );
     if (parts.length === 0) {
         skipRest(ctx);
@@ -227,12 +235,17 @@ async function runSteps(ctx: RunContext, request: QuickFastenerIn) {
                         "A hole's parts weren't all inserted and fastened, so they can't be replicated."
                     );
                 }
+                // Named after the screw or nut, rather than a washer under it
+                const [, named] =
+                    seedParts.find(
+                        ([, part]) => part.kind !== FastenerKind.WASHER
+                    ) ?? seedParts[0];
                 await run(
                     `replicate-${index}-${stack}`,
                     isRateLimited,
                     async (client) => {
                         await addReplicate(client, request.assembly, {
-                            name: "Quick fastener replicate",
+                            name: named.name,
                             instancePaths,
                             mateFeatureId,
                             edges: stackTargets(group, stack)

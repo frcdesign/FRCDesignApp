@@ -31,6 +31,7 @@ export async function getFastenerSet(
     }
     const rows = await db
         .select({
+            insertableId: insertables.id,
             generatedStudio: insertables.generatedStudio,
             documentId: insertables.documentId,
             versionId: insertables.versionId,
@@ -56,6 +57,7 @@ export async function getFastenerSet(
             continue;
         }
         studios[kind] = {
+            insertableId: row.insertableId,
             parameters: row.parameters ?? [],
             location: {
                 documentId: row.documentId,

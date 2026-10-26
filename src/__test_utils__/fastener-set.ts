@@ -15,6 +15,7 @@ export const FASTENERS_VERSION = { documentId: "lib", versionId: "libv" };
 function studio(kind: FastenerKind): FastenerStudio {
     const { configuration } = FASTENERS_MANIFEST.studios[kind];
     return {
+        insertableId: `${kind}-row`,
         parameters: parseOnshapeConfiguration({
             ...(configuration as unknown as Omit<
                 OnshapeConfigurationResponse,

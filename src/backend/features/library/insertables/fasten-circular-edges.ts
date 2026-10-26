@@ -58,7 +58,7 @@ export async function fastenToCircularEdges(
 
         if (rest.length > 0) {
             await addReplicate(onshapeApi, targetPath, {
-                name: `Replicate ${name}`,
+                name,
                 instancePaths: [instancePath],
                 mateFeatureId: mate.feature.featureId,
                 edges: rest.map(toEdgeReference)

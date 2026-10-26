@@ -49,6 +49,7 @@ import { encodeConfiguration } from "../../configurations/utils";
 import { fastenMate } from "../../../lib/onshape/objects/assembly-features";
 import { parseFastenInfo } from "../../load/parse-fasten";
 import { getFastenQuery } from "./fasten-query";
+import { partName, readStoredParts } from "./part-name";
 import {
     fastenToCircularEdges,
     getInstancePath
@@ -547,11 +548,14 @@ insertableRoutes.post(
 
         const fastenQuery = (instancePath: string[]) =>
             getFastenQuery(row.elementType, instancePath, fastenInfo);
+        // Mates and Replicates named after the part, as its configuration names it
+        const stored = await readStoredParts(db, insertableId);
+        const name = stored ? partName(stored, selection) : row.name;
 
         try {
             if (edges.length > 0) {
                 await fastenToCircularEdges(onshapeApi, targetPath, {
-                    name: row.name,
+                    name,
                     inserted: result,
                     insert,
                     fastenQuery,
@@ -568,7 +572,7 @@ insertableRoutes.post(
             const fastenResult = await addAssemblyFeature(
                 onshapeApi,
                 targetPath,
-                fastenMate(row.name, [fastenQuery(getInstancePath(result))])
+                fastenMate(name, [fastenQuery(getInstancePath(result))])
             );
             await track(true);
             return c.json({
