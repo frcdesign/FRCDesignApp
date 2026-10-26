@@ -472,7 +472,9 @@ interface InsertableSettingsInput {
   picked before the menu opened isn't taken.
 - **Replicate is copied from Onshape.** Onshape's feature specs omit
   Replicate, so `replicateFeature` is shaped as Onshape answers a Replicate of
-  picked edges: the `SAME_EDGE` scope, with the edges in `targetEdges`.
+  picked edges, every parameter included: the `SAME_EDGE` scope, with the
+  edges in `targetEdges` and the other scopes' lists empty. Each one added is
+  logged with what Onshape answered.
   Replicate is off by default for a part modeled by hand.
 - **No fallbacks.** Onshape refusing a Replicate, or any other write, is an
   error the user sees, not something worked around with other features.

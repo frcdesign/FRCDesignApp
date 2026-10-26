@@ -40,22 +40,25 @@ export interface ReplicateArgs {
     edges: EdgeReference[];
 }
 
-/** Adds a Replicate; Onshape refusing it is an error in the user's words, with Onshape's own. */
+/** Adds a Replicate; Onshape refusing it is an error in the user's words, and Onshape's own is logged. */
 export async function addReplicate(
     onshapeApi: OnshapeApi,
     assembly: ElementPath,
     args: ReplicateArgs
 ): Promise<void> {
+    const feature = replicateFeature(
+        args.name,
+        args.instancePaths,
+        args.mateFeatureId,
+        args.edges
+    );
     try {
-        await addAssemblyFeature(
-            onshapeApi,
-            assembly,
-            replicateFeature(
-                args.name,
-                args.instancePaths,
-                args.mateFeatureId,
-                args.edges
-            )
+        const added = await addAssemblyFeature(onshapeApi, assembly, feature);
+        // Onshape has answered 200 and kept no Replicate; what it was sent and answered says why
+        console.log(
+            "Replicate added",
+            JSON.stringify(feature),
+            JSON.stringify(added)
         );
     } catch (error) {
         if (onshapeStatus(error) !== HttpStatus.BAD_REQUEST) {

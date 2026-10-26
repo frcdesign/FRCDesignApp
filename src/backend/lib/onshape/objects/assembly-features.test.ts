@@ -32,8 +32,32 @@ describe("replicateFeature", () => {
                 value: "EDGE"
             }),
             expect.objectContaining({
+                parameterId: "faceTargetType",
+                value: "SAME_OCCURRENCE"
+            }),
+            expect.objectContaining({
+                parameterId: "targetInstances",
+                queries: []
+            }),
+            expect.objectContaining({
+                parameterId: "targetFeatures",
+                queries: []
+            }),
+            expect.objectContaining({
+                parameterId: "targetFaces",
+                queries: []
+            }),
+            expect.objectContaining({
                 parameterId: "edgeTargetType",
                 value: "SAME_EDGE"
+            }),
+            expect.objectContaining({
+                parameterId: "targetBoundingFaces",
+                queries: []
+            }),
+            expect.objectContaining({
+                parameterId: "targetPlanes",
+                queries: []
             }),
             expect.objectContaining({
                 parameterId: "targetEdges",
