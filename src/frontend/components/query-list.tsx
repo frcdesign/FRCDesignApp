@@ -9,7 +9,6 @@ import {
 import { XIcon } from "@phosphor-icons/react";
 import { useEffect, useState, type ReactNode } from "react";
 import {
-    clearHighlight,
     sendHighlightMessage,
     sendMessageBubble,
     sendSelectionRequest,
@@ -19,8 +18,8 @@ import {
 } from "../lib/messages";
 import { useTargetElement } from "../lib/onshape-params";
 import {
-    focusedPicks,
-    holdPicks,
+    focusedList,
+    holdList,
     onPick,
     selectionKey,
     useOnshapeSelection,
@@ -103,7 +102,10 @@ export function QueryList(props: QueryListProps): ReactNode {
         [id, entities, onChange, accepts]
     );
 
-    useEffect(() => holdPicks(id, entities), [id, entities]);
+    useEffect(
+        () => holdList(id, { picks: entities, filter }),
+        [id, entities, filter]
+    );
 
     useEffect(() => {
         if (!target || !isFocused) {
@@ -126,29 +128,25 @@ export function QueryList(props: QueryListProps): ReactNode {
         }
     };
 
-    const showPicks = (picks: OnshapeSelection[] | undefined) => {
-        if (!target) {
-            return;
-        }
-        if (picks) {
-            sendHighlightMessage(target, picks.map(toHighlighted));
-        } else {
-            clearHighlight(target);
+    // Each highlight keeps picks limited to the focused list's kind
+    const show = (picks: OnshapeSelection[]) => {
+        if (target) {
+            sendHighlightMessage(
+                target,
+                picks.map(toHighlighted),
+                focusedList()?.filter
+            );
         }
     };
 
-    const highlight = (entity: OnshapeSelection) => {
-        if (target) {
-            sendHighlightMessage(target, [toHighlighted(entity)]);
-        }
-    };
+    const highlight = (entity: OnshapeSelection) => show([entity]);
 
     // Back to the focused list's picks, whichever list the rows were in
-    const unhighlight = () => showPicks(focusedPicks());
+    const unhighlight = () => show(focusedList()?.picks ?? []);
 
     const remove = (entity: OnshapeSelection) => {
         const rest = without(entities, [entity]);
-        showPicks(isFocused ? rest : focusedPicks());
+        show(isFocused ? rest : (focusedList()?.picks ?? []));
         onChange(rest);
     };
 

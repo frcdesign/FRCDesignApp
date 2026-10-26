@@ -194,7 +194,9 @@ describe("QueryList", () => {
         await userEvent.hover(row);
         expect(messages.at(-1)).toMatchObject({
             messageName: "requestSelectionHighlight",
-            selections: [{ selectionId: "A" }]
+            selections: [{ selectionId: "A" }],
+            entityTypeSpecifier: ["EDGE"],
+            geometryTypeSpecifier: ["CIRCLE"]
         });
 
         messages = [];

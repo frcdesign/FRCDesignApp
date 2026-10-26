@@ -5,6 +5,7 @@
  * and drops what was deselected.
  */
 import { create } from "zustand";
+import { type SelectionFilter } from "./messages";
 import {
     type SelectedEntity,
     SelectedEntityType
@@ -143,23 +144,25 @@ export function onPick(listId: string, handler: PickHandler): () => void {
     };
 }
 
-/** Each mounted query list's picks, so a row of any list can light the focused list's up again. */
-const picksByList = new Map<string, OnshapeSelection[]>();
+/** A mounted query list's picks and filter, which a row of any list lights up and limits by. */
+export interface HeldList {
+    picks: OnshapeSelection[];
+    filter: SelectionFilter;
+}
 
-export function holdPicks(
-    listId: string,
-    picks: OnshapeSelection[]
-): () => void {
-    picksByList.set(listId, picks);
+const lists = new Map<string, HeldList>();
+
+export function holdList(listId: string, list: HeldList): () => void {
+    lists.set(listId, list);
     return () => {
-        picksByList.delete(listId);
+        lists.delete(listId);
     };
 }
 
-/** The focused list's picks; undefined with no list focused. */
-export function focusedPicks(): OnshapeSelection[] | undefined {
+/** The focused list's picks and filter; undefined with no list focused. */
+export function focusedList(): HeldList | undefined {
     const { focused } = useOnshapeSelection.getState();
-    return focused === undefined ? undefined : picksByList.get(focused);
+    return focused === undefined ? undefined : lists.get(focused);
 }
 
 export const useOnshapeSelection = create<SelectionState>()((set, get) => ({

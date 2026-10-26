@@ -12,9 +12,25 @@ import {
 
 /**
  * What carries the window's whole selection each time it changes: SELECTION,
- * and while a selection request is pending, its answers instead.
+ * and while a request is pending, its answers instead, when they have one.
  */
-const SELECTION_MESSAGES = new Set(["SELECTION", "REQUESTED_SELECTION"]);
+const SELECTION_MESSAGES = new Set([
+    "SELECTION",
+    "REQUESTED_SELECTION",
+    "REQUESTED_SELECTION_HIGHLIGHT"
+]);
+
+function carriesSelection(data: unknown): boolean {
+    const { messageName, selections } = data as {
+        messageName?: unknown;
+        selections?: unknown;
+    };
+    return (
+        typeof messageName === "string" &&
+        SELECTION_MESSAGES.has(messageName) &&
+        Array.isArray(selections)
+    );
+}
 
 declare global {
     interface Window {
@@ -48,11 +64,7 @@ export function useMessageListener() {
             }
             // What Onshape sends about selection is undocumented; this is how to see it
             console.debug("Received from Onshape", event.data);
-            const { messageName } = event.data as { messageName?: unknown };
-            if (
-                typeof messageName === "string" &&
-                SELECTION_MESSAGES.has(messageName)
-            ) {
+            if (carriesSelection(event.data)) {
                 useOnshapeSelection
                     .getState()
                     .receive(parseSelections(event.data));
@@ -94,16 +106,20 @@ export interface HighlightedEntity {
 /**
  * Makes `entities` what the Onshape window shows selected, in place of what it
  * showed. Onshape documents this shape for a Part Studio entity, without
- * `occurrencePath`; a mate connector's body never lit (see below).
+ * `occurrencePath`; a mate connector's body never lit (see below). It carries
+ * `filter` as a selection request does; whether Onshape keeps picks limited by
+ * it, rather than cancelling the request, is untried.
  */
 export function sendHighlightMessage(
     elementPath: ElementPath,
-    entities: HighlightedEntity[]
+    entities: HighlightedEntity[],
+    filter?: SelectionFilter
 ) {
     expectSelection(entities);
     sendMessage(elementPath, {
         messageName: MessageType.REQUEST_HIGHLIGHT_SELECTION,
         messageId: `${HIGHLIGHT_PREFIX}${++highlights}`,
+        ...filter,
         selections: entities.map((entity) => ({
             selectionType: "ENTITY",
             entityType: entity.entityType,
@@ -111,11 +127,6 @@ export function sendHighlightMessage(
             occurrencePath: entity.occurrencePath
         }))
     });
-}
-
-/** Lights nothing, taking back what {@link sendHighlightMessage} lit. */
-export function clearHighlight(elementPath: ElementPath) {
-    sendHighlightMessage(elementPath, []);
 }
 
 /**

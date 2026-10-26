@@ -825,7 +825,8 @@ vectors, Onshape's 4×4 transforms and `LINEAR_TOLERANCE`.
 
 1. Once the app sends `applicationInit`, Onshape sends the window's whole
    selection each time it changes: in a `SELECTION` message, or, while a
-   selection request is pending, in its `REQUESTED_SELECTION` answers instead.
+   request is pending, in its answers instead (`REQUESTED_SELECTION`, and
+   `REQUESTED_SELECTION_HIGHLIGHT` when one carries `selections`).
    `parseSelections` keeps its entities, and `receive` hands the focused list
    what was added and what was removed since the last. A
    highlight or a selection request changes the window's selection too, and
@@ -854,11 +855,12 @@ vectors, Onshape's 4×4 transforms and `LINEAR_TOLERANCE`.
 4. Hovering a row, in any list, lights its entity up alone
    (`requestSelectionHighlight`, which makes it what the Onshape window shows
    selected, each with its own message id). Moving between rows lights each
-   alone; leaving the rows lights the focused list's picks up (`focusedPicks`),
-   or nothing with no list focused (`clearHighlight`). Removing a row lights the
-   rest up. A highlight cancels the selection request, and a
-   request clears the highlight, so the picks stay lit and the filter stays off
-   until the list is clicked again, which asks for it again.
+   alone; leaving the rows lights the focused list's picks up (`focusedList`),
+   or nothing with no list focused. Removing a row lights the rest up. A
+   highlight without a filter cancels the selection request, and a request
+   clears the highlight, so each highlight carries the focused list's filter
+   too; whether Onshape keeps picks limited by it is untried. Clicking a
+   focused list asks for its filter again.
 
 ### The form
 
@@ -1154,14 +1156,12 @@ app.
   selection each time it changes once the app has sent `applicationInit`, so a
   focused list takes what was added and drops what was deselected, and ignores
   what its own highlights and requests made the window select. A focused list
-  also holds a `requestSelection`,
-  which only limits what the Onshape window lets be picked, in the form Onshape
-  answers to (array specifiers per level) rather than the one it documents; a
-  highlight cancels it. A highlight replaces what the Onshape window shows
-  selected, and a request clears it, so the two can't be up together: leaving
-  a hovered row shows the focused list's picks, and clicking the list limits
-  picks again. A list still
-  refuses kinds it doesn't take.
+  also holds a `requestSelection`, which only limits what the Onshape window
+  lets be picked, in the form Onshape answers to (array specifiers per level)
+  rather than the one it documents. A highlight replaces what the window shows
+  selected, and a request clears it, so a highlight carries the same filter
+  as a request, to keep picks limited while a row or the focused list's picks
+  are lit. A list still refuses kinds it doesn't take.
 - **Washers are mated to, not offset for.** Mate offsets aren't in Onshape's
   API reference. Fastening a screw or nut to the washer under it puts it at the
   washer's thickness whichever washer was chosen, where moving the mate

@@ -77,13 +77,21 @@ describe("useMessageListener", () => {
         expect(picked).toHaveBeenLastCalledWith({ added: [], removed: picks });
     });
 
-    it("takes nothing from a highlight's answer", () => {
-        post({
-            messageName: "REQUESTED_SELECTION_HIGHLIGHT",
-            messageId: "highlight-selection-1",
-            selections: [edge]
-        });
+    it("follows a highlight's answers too, past what it lit up", () => {
+        const answer = (rest: object) =>
+            post({
+                messageName: "REQUESTED_SELECTION_HIGHLIGHT",
+                messageId: "highlight-selection-1",
+                status: { statusCode: "PENDING" },
+                ...rest
+            });
+        expectSelection(picks);
+        answer({});
+        answer({ selections: [edge] });
         expect(picked).not.toHaveBeenCalled();
+
+        answer({ selections: [] });
+        expect(picked).toHaveBeenCalledWith({ added: [], removed: picks });
     });
 
     it("lets the console send a message, addressed to the launching element", () => {
