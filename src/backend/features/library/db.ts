@@ -1,6 +1,5 @@
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, sql } from "drizzle-orm";
 import { type Db } from "../../db/client";
-import { increment } from "../../db/updates";
 import {
     libraries,
     groups,
@@ -157,16 +156,24 @@ export async function ensureLibrary(
     await db.insert(libraries).values({ id: libraryId }).onConflictDoNothing();
 }
 
+/**
+ * The time, or one past the last version if that's later: a version never
+ * repeats, even after a database is reset or restored, since each library
+ * response is cached for a year under it.
+ */
 export async function bumpLibraryVersion(
     db: Db,
     libraryId: LibraryId
 ): Promise<void> {
+    const now = Date.now();
     await db
         .insert(libraries)
-        .values({ id: libraryId, cacheVersion: 1 })
+        .values({ id: libraryId, cacheVersion: now })
         .onConflictDoUpdate({
             target: libraries.id,
-            set: { cacheVersion: increment(libraries.cacheVersion) }
+            set: {
+                cacheVersion: sql`max(${libraries.cacheVersion} + 1, ${now})`
+            }
         });
 }
 

@@ -39,7 +39,11 @@ stopped. One reload holds a library at a time.
   `groups.version_id` is the version loaded; a shell group holds
   `PLACEHOLDER_VERSION_ID` until its first load.
 - `libraries.cache_version` — bumped by every load that wrote; every library
-  response is cached under it.
+  response is cached under it, for a year. A bump moves it to the time in
+  milliseconds, or one past it if that's later (`bumpLibraryVersion`), so it
+  never repeats after a database is reset, restored or replaced by a cert dump,
+  where a counter starting over would serve a browser another database's
+  cached library.
 - `onshape_webhooks` — one row per document: its webhook id and delivery token.
 
 **R2**: `search-index/` — each library's serialized search index, rebuilt by
