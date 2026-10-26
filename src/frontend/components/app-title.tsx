@@ -8,8 +8,7 @@ import {
     Tooltip
 } from "@mantine/core";
 import { CheckIcon, CopyIcon } from "@phosphor-icons/react";
-import { type ReactNode, useEffect } from "react";
-import { useAppModal } from "./open-app-modal";
+import { type ReactNode } from "react";
 import type { SearchRecord } from "@backend/features/configurations/contract";
 import { FontWeight, IconSize, StatusColor } from "../lib/style-constants";
 import { meaningfulPartNumber } from "@backend/features/configurations/part-number";
@@ -65,7 +64,7 @@ export function AppTitle(props: AppTitleProps): ReactNode {
     );
 }
 
-interface MenuTitleProps {
+export interface MenuTitleProps {
     name: string;
     /** The configuration in view, which names the part the element resolves to. */
     record?: SearchRecord;
@@ -86,22 +85,6 @@ export function MenuTitle(props: MenuTitleProps): ReactNode {
             }
         />
     );
-}
-
-interface UseMenuTitleProps extends Omit<MenuTitleProps, "name"> {
-    /** Undefined until known, which leaves the title the opener set. */
-    name: string | undefined;
-}
-
-/** Updates the modal's header, which belongs to the modal rather than the content. */
-export function useMenuTitle(props: UseMenuTitleProps): void {
-    const { name, record, icon } = props;
-    const { setTitle } = useAppModal();
-    useEffect(() => {
-        if (name !== undefined) {
-            setTitle(<MenuTitle name={name} record={record} icon={icon} />);
-        }
-    }, [setTitle, name, record, icon]);
 }
 
 /** The xs line box the subtitle row is otherwise sized by, floored. */

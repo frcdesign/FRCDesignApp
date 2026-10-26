@@ -2,14 +2,7 @@ import { Box, Group, type MantineSpacing, Modal, Stack } from "@mantine/core";
 import { PropsWithChildren, ReactNode } from "react";
 import styles from "../lib/styles.module.css";
 import classes from "./app-modal.module.css";
-
-/** The framing both halves of the app's modals draw. */
-export const APP_MODAL_CLASSES = {
-    content: classes.content,
-    header: `${classes.header} ${styles.frame}`,
-    title: classes.title,
-    body: classes.body
-};
+import { APP_MODAL_CLASSES } from "./app-modal-classes";
 
 /**
  * What every modal's content sits in, so its body can scroll. The focus trap

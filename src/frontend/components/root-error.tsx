@@ -1,4 +1,4 @@
-import { RequireAccessLevel } from "../features/auth/access-level";
+import { RequireAccessLevel } from "../features/auth/components/require-access";
 import { PageNotice, PageError } from "./app-notice";
 import { ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";

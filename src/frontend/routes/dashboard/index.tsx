@@ -11,8 +11,11 @@ import {
 import { DashboardState } from "../../features/dashboard/dashboard-state";
 import { InsertsByLibraryCard } from "../../features/dashboard/inserts-chart";
 import { InsertSourceBreakdown } from "../../features/dashboard/insert-mix";
-import { RangePreset, toDayRange } from "../../features/dashboard/range";
-import { useRangePreset } from "../../features/dashboard/range-control";
+import {
+    RangePreset,
+    toDayRange,
+    useRangePreset
+} from "../../features/dashboard/range";
 import { HeadlineTiles } from "../../features/dashboard/headline-tiles";
 import { METRICS } from "../../features/dashboard/metrics";
 import { Section } from "../../components/section";

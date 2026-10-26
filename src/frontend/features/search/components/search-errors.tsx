@@ -7,10 +7,8 @@ import {
 import { IconSize, StatusColor } from "../../../lib/style-constants";
 import { ReactNode } from "react";
 import { Callout, CalloutButton } from "../../../components/callout";
-import {
-    ClearFiltersButton,
-    useClearVendorFilters
-} from "../../settings/components/vendor-filters";
+import { ClearFiltersButton } from "../../settings/components/vendor-filters";
+import { useClearVendorFilters } from "../../settings/vendor-filters";
 import { FilterResult } from "../search";
 
 /** What a narrowed-down list is called to the user. */

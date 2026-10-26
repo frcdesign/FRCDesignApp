@@ -27,7 +27,7 @@ import { openCannotDeriveAssemblyAlert } from "../../../components/alerts";
 import { useIsAssemblyInPartStudio } from "../../insert/insert-hooks";
 import { openInsertMenu } from "../../insert/open-insert-menu";
 import { useFavorite } from "../../favorites/queries";
-import { RequireSignIn } from "../../auth/access-level";
+import { RequireSignIn } from "../../auth/components/require-access";
 import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
 import { InsertSource } from "@backend/features/analytics/usage";
 

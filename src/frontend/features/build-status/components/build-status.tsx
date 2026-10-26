@@ -26,15 +26,14 @@ import {
 } from "../../../lib/style-constants";
 import { AppIcon } from "../../../components/app-icon";
 import { AppHoverCard } from "../../../components/app-hover-card";
-import { RequireAccessLevel } from "../../auth/access-level";
-import { useBuildStatusQuery } from "../queries";
+import { RequireAccessLevel } from "../../auth/components/require-access";
+import { useBuildStatusQuery, useGroupBuildIssues } from "../queries";
 import { useIsGroupLoading } from "../../library/queries";
 import {
     BuildChecksSection,
     type ConfigurationTarget,
     IssueIcon,
-    SeverityBadges,
-    useGroupBuildIssues
+    SeverityBadges
 } from "./issues";
 import {
     ConfigurationSection,

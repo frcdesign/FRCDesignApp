@@ -18,12 +18,7 @@ import {
 } from "@phosphor-icons/react";
 import { type MouseEvent, type ReactNode } from "react";
 import {
-    isSameWorkspace,
     LinkDirection,
-    PullScopeKind,
-    PushScopeKind,
-    VersionJobKind,
-    VersionJobState,
     workspaceThumbnailUrl,
     type LinkedWorkspace,
     type VersionJobStatus,
@@ -43,49 +38,19 @@ import {
 import { makeUrl, openUrlInNewTab } from "../../../lib/url";
 import styles from "../../../lib/styles.module.css";
 import { useOnshapeOrigin } from "../../../lib/onshape-params";
-import {
-    openPullReferencesModal,
-    openPushVersionModal
-} from "../open-version-modals";
-import { quickClickName, retireQuickActionTip } from "../version-manager-tips";
+import { quickClickName } from "../version-manager-tips";
 import { plural } from "../../../lib/plural";
 import { runningHeadline } from "../job-report";
-import {
-    useMoveLinkMutation,
-    usePullReferencesMutation,
-    usePushVersionMutation,
-    useRemoveLinkMutation,
-    useVersionJobQuery
-} from "../queries";
+import { useMoveLinkMutation, useRemoveLinkMutation } from "../queries";
 import { AddLinkRow } from "./add-link-input";
 import { documentLabel } from "../document-label";
-
-/** What each direction is called and does, kept in one place. */
-export const DIRECTION_COPY = {
-    [LinkDirection.PARENT]: {
-        title: "Parents",
-        quickAction: "Quick pull",
-        description: "Documents you can pull changes from.",
-        empty: "No linked parents"
-    },
-    [LinkDirection.CHILD]: {
-        title: "Children",
-        quickAction: "Quick push",
-        description: "Documents you can push changes to.",
-        empty: "No linked children"
-    }
-} as const;
+import { DIRECTION_COPY } from "../direction-copy";
+import { type LinkActions } from "../link-actions";
 
 /** The other side of the list a link is in, which is where a move sends it. */
 const OTHER_DIRECTION = {
     [LinkDirection.PARENT]: LinkDirection.CHILD,
     [LinkDirection.CHILD]: LinkDirection.PARENT
-} as const;
-
-/** The kind of run each direction's actions start. */
-const DIRECTION_KIND = {
-    [LinkDirection.PARENT]: VersionJobKind.PULL,
-    [LinkDirection.CHILD]: VersionJobKind.PUSH
 } as const;
 
 interface DirectionIconProps {
@@ -139,116 +104,6 @@ function RunningIndicator(props: RunningIndicatorProps): ReactNode {
             </Center>
         </Tooltip>
     );
-}
-
-/**
- * Everything a section and its rows can run, held once per direction so the
- * header outside the accordion panel and the rows inside it share a run.
- */
-interface LinkActions {
-    /** The run going from this workspace, whichever direction it is. */
-    running: VersionJobStatus | undefined;
-    /** Whether that run is this direction's and aimed at exactly `linked`. */
-    isRunningFor: (linked: LinkedWorkspace) => boolean;
-    /** Whether it is this direction's and aimed at the whole section. */
-    isRunningForAll: boolean;
-    /** Opens one link's form. A whole direction has none: one name cannot
-     * stand for the several versions it cuts. */
-    openOne: (linked: LinkedWorkspace) => void;
-    /** Runs it under the defaults the form would have shown. */
-    quickAll: (recursive: boolean) => void;
-    quickOne: (linked: LinkedWorkspace, recursive: boolean) => void;
-    /** Moves one link's references onto versions that exist, cutting none. */
-    updateOne: (linked: LinkedWorkspace) => void;
-    /**
-     * The same for every child; for parents, every out-of-date reference,
-     * linked or not.
-     */
-    updateAll: () => void;
-}
-
-/** Updating all reaches every out-of-date reference, linked or not. */
-function wholePullKind(
-    recursive: boolean,
-    updateOnly: boolean
-): Exclude<PullScopeKind, PullScopeKind.ONE> {
-    if (updateOnly) {
-        return PullScopeKind.ALL;
-    }
-    return recursive ? PullScopeKind.ANCESTORS : PullScopeKind.PARENTS;
-}
-
-export function useLinkActions(
-    workspace: WorkspacePath,
-    direction: LinkDirection
-): LinkActions {
-    const pull = usePullReferencesMutation(workspace);
-    const push = usePushVersionMutation(workspace);
-    const { data: status } = useVersionJobQuery(workspace);
-    const isChild = direction === LinkDirection.CHILD;
-
-    const running =
-        status?.state === VersionJobState.RUNNING ? status : undefined;
-    const ownTargets =
-        running?.kind === DIRECTION_KIND[direction]
-            ? (running.targets ?? [])
-            : undefined;
-
-    /** A push for children, a pull for parents; `each` absent for the whole section. */
-    const start = (
-        each: LinkedWorkspace | undefined,
-        { recursive = false, updateOnly = false } = {}
-    ) => {
-        if (isChild) {
-            push.mutate({
-                scope: each
-                    ? {
-                          kind: PushScopeKind.ONE,
-                          workspace: each.workspace,
-                          recursive
-                      }
-                    : {
-                          kind: recursive
-                              ? PushScopeKind.DESCENDANTS
-                              : PushScopeKind.CHILDREN
-                      },
-                updateOnly
-            });
-            return;
-        }
-        pull.mutate({
-            scope: each
-                ? {
-                      kind: PullScopeKind.ONE,
-                      workspace: each.workspace,
-                      recursive
-                  }
-                : { kind: wholePullKind(recursive, updateOnly) },
-            updateOnly
-        });
-    };
-
-    const quick = (each: LinkedWorkspace | undefined, recursive: boolean) => {
-        // They have found the shortcut, so the form stops pointing at it.
-        retireQuickActionTip();
-        start(each, { recursive });
-    };
-
-    return {
-        running,
-        isRunningFor: (each) =>
-            ownTargets?.length === 1 &&
-            isSameWorkspace(ownTargets[0].workspace, each.workspace),
-        isRunningForAll: ownTargets !== undefined && ownTargets.length !== 1,
-        openOne: (each) =>
-            isChild
-                ? openPushVersionModal(workspace, each)
-                : openPullReferencesModal(workspace, each),
-        quickAll: (recursive) => quick(undefined, recursive),
-        quickOne: (each, recursive) => quick(each, recursive),
-        updateOne: (each) => start(each, { updateOnly: true }),
-        updateAll: () => start(undefined, { updateOnly: true })
-    };
 }
 
 interface SectionActionsProps {

@@ -21,7 +21,7 @@ import {
 } from "../queries";
 import { ControlRow, SectionHeader, SwitchRow } from "./sections";
 import { IssueIcon } from "./issues";
-import { getParameterTypeLabel } from "./parsed-section";
+import { getParameterTypeLabel } from "../parameter-type-label";
 import styles from "../../../lib/styles.module.css";
 
 interface IndexingSectionProps {

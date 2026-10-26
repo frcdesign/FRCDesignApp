@@ -27,10 +27,8 @@ import {
     SectionError,
     PageNotice
 } from "../../../../../components/app-notice";
-import {
-    ClearFiltersButton,
-    useVendorFilters
-} from "../../../../../features/settings/components/vendor-filters";
+import { ClearFiltersButton } from "../../../../../features/settings/components/vendor-filters";
+import { useVendorFilters } from "../../../../../features/settings/vendor-filters";
 import { useLibraryQuery } from "../../../../../features/library/queries";
 import { useLibraryId } from "../../../../../lib/library";
 import { updateUiState, useUiState } from "../../../../../lib/ui-state";

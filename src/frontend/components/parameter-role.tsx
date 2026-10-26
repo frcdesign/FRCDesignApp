@@ -9,6 +9,7 @@ import {
 import { ReactNode } from "react";
 import { ParameterRole } from "@backend/features/configurations/contract";
 import { IconSize } from "../lib/style-constants";
+import { AppIcon, type AppIconProps } from "./app-icon";
 
 const ROLE_LABELS: Record<ParameterRole, string> = {
     [ParameterRole.DERIVATION_VARIABLE]: "Derivation variable",
@@ -17,12 +18,21 @@ const ROLE_LABELS: Record<ParameterRole, string> = {
     [ParameterRole.TESSELLATION]: "Tessellation quality"
 };
 
-export const ROLE_ICONS: Record<ParameterRole, Icon> = {
+const ROLE_ICONS: Record<ParameterRole, Icon> = {
     [ParameterRole.DERIVATION_VARIABLE]: GitForkIcon,
     [ParameterRole.COLOR]: PaletteIcon,
     [ParameterRole.COLOR_CHANNEL]: SwatchesIcon,
     [ParameterRole.TESSELLATION]: PolygonIcon
 };
+
+interface ParameterRoleIconProps extends Omit<AppIconProps, "icon"> {
+    role: ParameterRole;
+}
+
+export function ParameterRoleIcon(props: ParameterRoleIconProps): ReactNode {
+    const { role, ...others } = props;
+    return <AppIcon icon={ROLE_ICONS[role]} {...others} />;
+}
 
 interface ParameterRoleLabelProps {
     role: ParameterRole;

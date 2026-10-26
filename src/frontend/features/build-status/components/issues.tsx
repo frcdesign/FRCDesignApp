@@ -1,26 +1,19 @@
 import { ExternalLink } from "../../../components/external-link";
 import { Badge, Group, Stack, Text } from "@mantine/core";
 import { ArrowSquareOutIcon } from "@phosphor-icons/react";
-import { ReactNode, useMemo } from "react";
+import { ReactNode } from "react";
 import {
-    addBuildIssue,
     BuildIssue,
     BuildIssueSeverity,
-    BuildIssueType,
     getIssueConfiguration,
     getIssueDescription,
     getIssueSeverity,
-    getIssueTitle,
-    hasBuildIssue
+    getIssueTitle
 } from "@backend/features/build-checker/issues";
 import { ConfigurationParameter } from "@backend/features/configurations/contract";
 import { toSelection } from "@backend/features/configurations/selection";
 import { ElementPath } from "@backend/lib/onshape/path";
 import { makeUrl } from "../../../lib/url";
-import {
-    GroupBuildStatus,
-    InsertableBuildStatus
-} from "@backend/features/build-checker/contract";
 import { IconSize, StatusColor } from "../../../lib/style-constants";
 import { AppIcon } from "../../../components/app-icon";
 import {
@@ -32,33 +25,6 @@ import { InfoTooltip } from "../../../components/info-tooltip";
 import { SectionHeader } from "./sections";
 import { useOnshapeOrigin } from "../../../lib/onshape-params";
 import styles from "../../../lib/styles.module.css";
-
-/** Adds the live "no unhidden insertables" check, which needs visibility. */
-export function useGroupBuildIssues(
-    groupStatus: GroupBuildStatus | undefined,
-    insertableStatuses: Record<string, InsertableBuildStatus> | undefined
-): BuildIssue[] {
-    return useMemo(() => {
-        if (!groupStatus) return [];
-        const hasUnhidden = groupStatus.insertableOrder.some(
-            (id) => insertableStatuses?.[id]?.isVisible
-        );
-        // A group that never loaded has nothing to unhide.
-        if (
-            hasUnhidden ||
-            hasBuildIssue(
-                groupStatus.buildIssues,
-                BuildIssueType.LOAD_FAILED,
-                BuildIssueType.NOT_LOADED
-            )
-        ) {
-            return groupStatus.buildIssues;
-        }
-        return addBuildIssue(groupStatus.buildIssues, {
-            type: BuildIssueType.NO_UNHIDDEN_INSERTABLES
-        });
-    }, [groupStatus, insertableStatuses]);
-}
 
 interface IssueIconProps extends Omit<StatusIconProps, "status"> {
     /** The severity to render; absent when every check passes. */

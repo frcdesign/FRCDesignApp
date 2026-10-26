@@ -25,7 +25,8 @@ team, plus one owner set by configuration.
 | `src/backend/features/admin-team/`                          | The owner sets a library's admin team; members are synced from Onshape     |
 | `src/backend/features/entry/routes.ts`                      | `/init`, where Onshape launches the app                                    |
 | `src/backend/lib/context.ts`                                | `AppBindings` (every binding and variable) and `bindAuth`                  |
-| `src/frontend/features/auth/access-level.tsx`               | `useAccessData`: the server's level and the level the app is viewed as     |
+| `src/frontend/features/auth/access-level.ts`                | `useAccessData`: the server's level and the level the app is viewed as     |
+| `src/frontend/features/auth/components/require-access.tsx`  | `RequireAccessLevel`, `RequireSignIn`: render children only past the guard |
 | `wrangler.jsonc`                                            | Per-environment vars and bindings                                          |
 
 ## Storage

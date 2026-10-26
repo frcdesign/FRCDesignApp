@@ -1,3 +1,4 @@
+import { useSearch } from "@tanstack/react-router";
 import {
     addDays,
     toReportingDay,
@@ -25,6 +26,12 @@ export const RANGE_PRESETS: Record<
 };
 
 export const DEFAULT_RANGE_PRESET = RangePreset.ALL;
+
+/** Reads the active range preset from the URL. */
+export function useRangePreset(): RangePreset {
+    const search = useSearch({ from: "/dashboard" });
+    return search.range ?? DEFAULT_RANGE_PRESET;
+}
 
 export function isRangePreset(value: unknown): value is RangePreset {
     return typeof value === "string" && value in RANGE_PRESETS;

@@ -38,7 +38,8 @@ it.
 | `src/backend/features/version-manager/workspace-cache.ts`                       | A linked workspace's names and pending-change count, cached                      |
 | `src/backend/features/version-manager/routes.ts`                                | Every route below                                                                |
 | `src/frontend/features/version-manager/queries.ts`                              | The queries and mutations                                                        |
-| `src/frontend/features/version-manager/components/linked-workspace-section.tsx` | A direction's list, its rows, and everything they can run                        |
+| `src/frontend/features/version-manager/components/linked-workspace-section.tsx` | A direction's list and its rows                                                  |
+| `src/frontend/features/version-manager/link-actions.ts`                         | `useLinkActions`: everything a direction's section and rows can run              |
 | `src/frontend/features/version-manager/job-report.ts`                           | How a run is going or went, in words                                             |
 | `src/frontend/features/version-manager/components/last-run-callout.tsx`         | The last run, going or finished, as a callout at the top of the page             |
 | `src/frontend/features/version-manager/components/job-details.tsx`              | The run's steps as they complete, in the Details modal                           |

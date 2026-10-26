@@ -24,7 +24,7 @@ import {
 import { useFavoritesQuery, useSetFavoriteOrderMutation } from "../queries";
 import { SearchHit } from "../../search/search";
 import { InsertSource } from "@backend/features/analytics/usage";
-import { useVendorFilters } from "../../settings/components/vendor-filters";
+import { useVendorFilters } from "../../settings/vendor-filters";
 
 interface FavoriteCardProps {
     insertable: InsertableOut;

@@ -9,7 +9,7 @@ import {
     AppModalFooter,
     AppModalTop
 } from "../../../components/app-modal";
-import { useMenuTitle } from "../../../components/app-title";
+import { MenuTitle, type MenuTitleProps } from "../../../components/app-title";
 import { useAppModal } from "../../../components/open-app-modal";
 import {
     QUICK_INSERT_WINDOW_MS,
@@ -37,11 +37,27 @@ import {
 } from "@backend/features/configurations/contract";
 import { useFavorite } from "../../favorites/queries";
 import { updateUiState, useUiState } from "../../../lib/ui-state";
-import { RequireSignIn } from "../../auth/access-level";
+import { RequireSignIn } from "../../auth/components/require-access";
 import { useTargetElementType } from "../insert-hooks";
 import { InsertSource } from "@backend/features/analytics/usage";
 import { InsertLocationStatus } from "../../insert-location/components/insert-location-status";
 import { InfoCheckbox } from "../../../components/info-checkbox";
+
+interface UseMenuTitleProps extends Omit<MenuTitleProps, "name"> {
+    /** Undefined until known, which leaves the title the opener set. */
+    name: string | undefined;
+}
+
+/** Updates the modal's header, which belongs to the modal rather than the content. */
+function useMenuTitle(props: UseMenuTitleProps): void {
+    const { name, record, icon } = props;
+    const { setTitle } = useAppModal();
+    useEffect(() => {
+        if (name !== undefined) {
+            setTitle(<MenuTitle name={name} record={record} icon={icon} />);
+        }
+    }, [setTitle, name, record, icon]);
+}
 
 interface InsertMenuContentProps {
     insertable: InsertableOut;

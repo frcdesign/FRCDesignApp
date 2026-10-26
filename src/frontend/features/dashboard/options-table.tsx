@@ -10,7 +10,8 @@ import { StatusColor } from "../../lib/style-constants";
 import { formatCount, formatFraction } from "./format";
 import { ImplicitDefaultBadge } from "./implicit-default";
 import { AppBreadcrumbs } from "../../components/breadcrumbs";
-import { TablePagination, usePagedRows } from "./table-pagination";
+import { usePagedRows } from "./paged-rows";
+import { TablePagination } from "./table-pagination";
 
 /** Below this the part and parameter names wrap into each other. */
 const MIN_TABLE_WIDTH = 760;

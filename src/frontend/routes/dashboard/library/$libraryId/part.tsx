@@ -21,8 +21,10 @@ import {
 } from "../../../../features/dashboard/dashboard-queries";
 import { DashboardState } from "../../../../features/dashboard/dashboard-state";
 import { PartsTable } from "../../../../features/dashboard/parts-table";
-import { toDayRange } from "../../../../features/dashboard/range";
-import { useRangePreset } from "../../../../features/dashboard/range-control";
+import {
+    toDayRange,
+    useRangePreset
+} from "../../../../features/dashboard/range";
 import {
     formatCount,
     formatFraction

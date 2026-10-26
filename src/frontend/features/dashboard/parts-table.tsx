@@ -18,7 +18,8 @@ import {
     type SortColumn,
     type SortState
 } from "./parts-sort";
-import { TablePagination, usePagedRows } from "./table-pagination";
+import { usePagedRows } from "./paged-rows";
+import { TablePagination } from "./table-pagination";
 
 /** Small enough to sit in a row without stretching it. */
 const ROW_SPARKLINE = { h: 24, w: 80 };
