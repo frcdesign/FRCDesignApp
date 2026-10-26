@@ -28,6 +28,7 @@ export type GeneratedRecord = z.infer<typeof recordSchema>;
 
 const studioSchema = z.object({
     feature: z.string(),
+    mateConnector: z.string().optional(),
     elementId: z.string(),
     configuration: z
         .object({ configurationParameters: z.array(z.unknown()) })
@@ -47,10 +48,21 @@ export interface GeneratedTab {
 }
 
 /** One studio of a released manifest, as small as a step can return. */
+/**
+ * A generated studio's feature type, and the id it gives the mate connector it
+ * makes, under its own: a fasten mate names that `<featureId>.<mateConnector>`,
+ * and Onshape's API shows no mate connector a feature makes.
+ */
+export interface GeneratedFeature {
+    type: string;
+    mateConnector?: string;
+}
+
 export interface ReleasedStudio {
     set: string;
     key: string;
     feature: string;
+    mateConnector?: string;
     /** As robot-code sends it to Onshape, as an update call. */
     configuration: Omit<OnshapeConfigurationResponse, "btType">;
     records: GeneratedRecord[];
@@ -118,6 +130,7 @@ export function releasedStudio(
         set: tab.set,
         key: tab.key,
         feature: studio.feature,
+        mateConnector: studio.mateConnector,
         configuration: studio.configuration as unknown as Omit<
             OnshapeConfigurationResponse,
             "btType"
@@ -128,7 +141,7 @@ export function releasedStudio(
 
 /** What a load keeps of a manifest beyond its studios' tabs: each studio's feature, and the rest of it. */
 export interface ReleasedCatalog {
-    features: Record<string, string>;
+    features: Record<string, GeneratedFeature>;
     catalog: Record<string, unknown>;
 }
 
@@ -142,7 +155,7 @@ export function releasedCatalog(
         features: Object.fromEntries(
             Object.entries(studios).map(([key, studio]) => [
                 key,
-                studio.feature
+                { type: studio.feature, mateConnector: studio.mateConnector }
             ])
         ),
         catalog

@@ -1,6 +1,6 @@
 import { NonRetryableError } from "cloudflare:workflows";
 import { eq } from "drizzle-orm";
-import { generatedFeatureTypes } from "../generated-parts/store";
+import { generatedFeatures } from "../generated-parts/store";
 import { type Db, getDb } from "../../db/client";
 import {
     type Configuration,
@@ -25,6 +25,7 @@ import { getParts } from "../../lib/onshape/endpoints/parts";
 import { checkInsertable } from "../build-checker/checks";
 import { generatedConfiguration } from "../generated-parts/records";
 import {
+    type GeneratedFeature,
     GeneratedManifestError,
     type GeneratedTab,
     parseManifest,
@@ -158,7 +159,14 @@ async function probeInsertable(
         : parseVendors(target.name, parameters);
 
     const fastenInfo = flags.supportsFasten
-        ? await parseFastenInfoStep(ctx, target, released?.feature)
+        ? await parseFastenInfoStep(
+              ctx,
+              target,
+              released && {
+                  type: released.feature,
+                  mateConnector: released.mateConnector
+              }
+          )
         : null;
 
     const parts = await readPartsStep(ctx, target);
@@ -320,7 +328,7 @@ function readPartsStep(
 function parseFastenInfoStep(
     ctx: LoadContext,
     { insertableId, elementPath, elementType }: InsertableTarget,
-    ownFeature: string | undefined
+    ownFeature: GeneratedFeature | undefined
 ): Promise<FastenInfo> {
     return ctx.step.do(
         `fasten-${insertableId}`,
@@ -331,7 +339,7 @@ function parseFastenInfoStep(
                 elementPath,
                 elementType,
                 [
-                    ...(await generatedFeatureTypes(getDb(ctx.env.DB))),
+                    ...(await generatedFeatures(getDb(ctx.env.DB))),
                     ...(ownFeature ? [ownFeature] : [])
                 ]
             )

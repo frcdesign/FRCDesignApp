@@ -4,18 +4,13 @@
  * fastened to the hole's edge and its screw or nut to the washer's top edge,
  * so any washer fits and each stack holds together for a Replicate.
  */
-import { HttpStatus } from "http-status-ts";
-import { handledError } from "../../lib/api-error";
-import { kvStore } from "../../lib/kv-store";
 import { type OnshapeApi } from "../../lib/onshape/client";
-import { getAssembly } from "../../lib/onshape/endpoints/assemblies";
 import { PartType } from "../../lib/onshape/endpoints/documents";
 import {
     type EdgeReference,
     fastenMateToCircularEdge,
     partStudioMateConnectorQuery
 } from "../../lib/onshape/objects/assembly-features";
-import { type ElementPath } from "../../lib/onshape/path";
 import { type Selection } from "../configurations/contract";
 import { encodeConfiguration } from "../configurations/utils";
 import { type Catalog, getWasher } from "./catalog";
@@ -30,7 +25,6 @@ import {
     studioConfiguration
 } from "./studios";
 import { tolerantEquals } from "../configurations/input-parser";
-import { type StudioLocation } from "../generated-parts/studios";
 import { sameRadius, toEdgeReference } from "./replicate";
 
 /** What a part is fastened to: an edge in the assembly, or the top of a washer placed with it. */
@@ -56,9 +50,6 @@ export interface PartPlacement {
     seat: PartSeat;
     name: string;
 }
-
-/** A released studio's mate connector, by its version: a version's never changes. */
-const mateConnectorIds = kvStore<string>("quick-fastener-mate-connector");
 
 function thickness(catalog: Catalog, washer: PartChoice | undefined): number {
     return washer
@@ -247,58 +238,6 @@ export function insertGroups(
             transform: part.transform
         };
     });
-}
-
-function locationKey(location: StudioLocation): string {
-    return `${location.documentId}|${location.versionId}|${location.elementId}`;
-}
-
-/** Each studio's mate connector, as the assembly names it; read from the assembly once per release. */
-export async function mateConnectorIdsFor(
-    client: OnshapeApi,
-    kv: KVNamespace,
-    assembly: ElementPath,
-    set: FastenerSet,
-    kinds: FastenerKind[]
-): Promise<Partial<Record<FastenerKind, string>>> {
-    const ids: Partial<Record<FastenerKind, string>> = {};
-    const missing: FastenerKind[] = [];
-    for (const kind of kinds) {
-        const cached = await mateConnectorIds.get(
-            kv,
-            locationKey(set.studios[kind].location)
-        );
-        if (cached) {
-            ids[kind] = cached;
-        } else {
-            missing.push(kind);
-        }
-    }
-    if (missing.length === 0) {
-        return ids;
-    }
-    const definition = await getAssembly(client, assembly, {
-        includeMateConnectors: true
-    });
-    for (const kind of missing) {
-        const { location } = set.studios[kind];
-        const id = definition.parts.find(
-            (each) =>
-                each.documentId === location.documentId &&
-                each.elementId === location.elementId &&
-                each.documentVersion === location.versionId &&
-                (each.mateConnectors?.length ?? 0) > 0
-        )?.mateConnectors?.[0]?.featureId;
-        if (!id) {
-            throw handledError(
-                "The inserted fastener has no mate connector to fasten.",
-                HttpStatus.BAD_GATEWAY
-            );
-        }
-        await mateConnectorIds.put(kv, locationKey(location), id);
-        ids[kind] = id;
-    }
-    return ids;
 }
 
 /** The washer studio at its release, in one configuration: what its top edge is read from. */

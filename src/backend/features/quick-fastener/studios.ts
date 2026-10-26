@@ -36,6 +36,8 @@ export const FASTENERS = "fasteners";
 export interface FastenerStudio {
     parameters: ConfigurationParameter[];
     location: StudioLocation;
+    /** What a fasten mate names its mate connector by, as the studio's load found it. */
+    mateConnectorId?: string;
 }
 
 /** The fasteners a library loaded: its manifest's catalog, and each kind's studio. */

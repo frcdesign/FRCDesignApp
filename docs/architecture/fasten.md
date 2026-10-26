@@ -275,14 +275,14 @@ interface EntityReference {
 
 ```ts
 // Finds the mate connector an insertable fastens by, at load or toggle: the
-// first unsuppressed feature that makes one, Onshape's or a generated
-// studio's, which a fasten query names by its feature id.
+// first unsuppressed feature that makes one, Onshape's, named by its feature
+// id, or a generated studio's, named `<featureId>.<mateConnector>`.
 async function parseFastenInfo(
     onshapeApi: OnshapeApi,
     elementPath: ElementPath,
     elementType: ElementType,
-    // Every loaded set's studio features (`generatedFeatureTypes`)
-    generatedFeatures: string[]
+    // Every loaded set's studio features (`generatedFeatures`)
+    generatedFeatures: GeneratedFeature[]
 ): Promise<FastenInfo>;
 // The Replicate not decided warning.
 function checkInsertableSettings(input: InsertableSettingsInput): BuildIssue[];
@@ -291,6 +291,12 @@ interface FastenInfo {
     mateConnectorId: string;
     mateLocation: MateLocation;
     path: string[];
+}
+
+// A generated studio's feature type, and the id it gives its mate connector.
+interface GeneratedFeature {
+    type: string;
+    mateConnector?: string;
 }
 
 enum MateLocation {

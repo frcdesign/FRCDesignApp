@@ -35,6 +35,7 @@ export async function getFastenerSet(
             documentId: insertables.documentId,
             versionId: insertables.versionId,
             elementId: insertables.elementId,
+            fastenInfo: insertables.fastenInfo,
             parameters: configurations.parameters
         })
         .from(insertables)
@@ -60,7 +61,8 @@ export async function getFastenerSet(
                 documentId: row.documentId,
                 versionId: row.versionId,
                 elementId: row.elementId
-            }
+            },
+            mateConnectorId: row.fastenInfo?.mateConnectorId
         };
     }
     if (!Object.values(FastenerKind).every((kind) => studios[kind])) {

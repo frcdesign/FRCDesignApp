@@ -3,7 +3,7 @@ import { and, eq } from "drizzle-orm";
 import { type Db } from "../../db/client";
 import { generatedSets } from "../../db/schema";
 import { type LibraryId } from "../library/library-id";
-import { type ReleasedCatalog } from "./manifest";
+import { type GeneratedFeature, type ReleasedCatalog } from "./manifest";
 
 export interface GeneratedSetRow extends ReleasedCatalog {
     libraryId: LibraryId;
@@ -48,10 +48,15 @@ export async function getGeneratedSet(
     return row && { ...row, catalog: row.catalog as Record<string, unknown> };
 }
 
-/** Every loaded set's studio features, which each make one mate connector. */
-export async function generatedFeatureTypes(db: Db): Promise<string[]> {
+/** Every loaded set's studio features, each once. */
+export async function generatedFeatures(db: Db): Promise<GeneratedFeature[]> {
     const rows = await db
         .select({ features: generatedSets.features })
         .from(generatedSets);
-    return [...new Set(rows.flatMap((row) => Object.values(row.features)))];
+    const byType = new Map(
+        rows
+            .flatMap((row) => Object.values(row.features))
+            .map((feature) => [feature.type, feature])
+    );
+    return [...byType.values()];
 }

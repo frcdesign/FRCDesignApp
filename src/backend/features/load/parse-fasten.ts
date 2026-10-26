@@ -3,6 +3,7 @@ import { FastenInfo, MateLocation } from "../library/insertables/fasten";
 import { type ElementPath } from "../../lib/onshape/path";
 import { getAssembly } from "../../lib/onshape/endpoints/assemblies";
 import { getFeatures } from "../../lib/onshape/endpoints/part-studios";
+import { type GeneratedFeature } from "../generated-parts/manifest";
 
 import { OnshapeApi } from "../../lib/onshape/client";
 import {
@@ -11,12 +12,12 @@ import {
     OnshapeFeatureListResponse
 } from "../../lib/onshape/types";
 
-/** `generatedFeatures`: every loaded generated set's studio features (`generatedFeatureTypes`). */
+/** `generatedFeatures`: every loaded generated set's studio features (`generatedFeatures`). */
 export async function parseFastenInfo(
     onshapeApi: OnshapeApi,
     elementPath: ElementPath,
     elementType: ElementType,
-    generatedFeatures: string[]
+    generatedFeatures: GeneratedFeature[]
 ): Promise<FastenInfo> {
     if (elementType === ElementType.PART_STUDIO) {
         const rawFeatureList = await getFeatures(onshapeApi, elementPath);
@@ -52,20 +53,27 @@ function searchFeatures(
 }
 
 /**
- * The first feature making one mate connector: Onshape's own, or a generated
- * studio's, whose connector a fasten query names by the feature's id, as it
- * takes no index into what a feature made.
+ * The first feature making one mate connector: Onshape's own, named by its id,
+ * or a generated studio's, named `<featureId>.<mateConnector>` as a fasten
+ * mate names what a feature made.
  */
 export function parseFastenInfoFromPartStudio(
     rawFeatureList: OnshapeFeatureListResponse,
-    generatedFeatures: string[] = []
+    generatedFeatures: GeneratedFeature[] = []
 ): FastenInfo {
-    const connectorFeatures = new Set(["mateConnector", ...generatedFeatures]);
+    const subIds = new Map(
+        generatedFeatures.flatMap((feature) =>
+            feature.mateConnector ? [[feature.type, feature.mateConnector]] : []
+        )
+    );
     for (const feature of rawFeatureList.features) {
         if (feature.suppressed) continue;
-        if (connectorFeatures.has(feature.featureType)) {
+        const subId = subIds.get(feature.featureType);
+        if (feature.featureType === "mateConnector" || subId) {
             return {
-                mateConnectorId: feature.featureId,
+                mateConnectorId: subId
+                    ? `${feature.featureId}.${subId}`
+                    : feature.featureId,
                 mateLocation: MateLocation.Feature,
                 path: []
             };

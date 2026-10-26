@@ -377,7 +377,7 @@ describe("loadGroup", () => {
                 set: "fasteners",
                 groupId: TEST_GROUP_ID,
                 versionId: "v-2",
-                features: { nut: "fastenerNut" },
+                features: { nut: { type: "fastenerNut" } },
                 catalog: { sizes: [{ id: "NO_10_32" }] }
             }
         );

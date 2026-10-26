@@ -9,6 +9,7 @@ export const NUT_MANIFEST = {
     studios: {
         nut: {
             feature: "fastenerNut",
+            mateConnector: "mateConnector",
             elementId: "NUT_TAB",
             configuration: {
                 btType: "BTConfigurationUpdateCall-2933",

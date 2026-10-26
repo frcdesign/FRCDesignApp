@@ -24,7 +24,7 @@ Parts modeled by hand aren't generated, whatever their configuration.
 | -------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
 | `scripts/sync-generated-parts.js`                                    | `npm run sync:generated-parts`: a test fixture, at a pinned commit                                               |
 | `src/backend/features/generated-parts/manifest.ts`                   | The released manifest: `findManifestTabs`, `parseManifest`, `generatedTabs`, `releasedStudio`, `releasedCatalog` |
-| `src/backend/features/generated-parts/store.ts`                      | `saveGeneratedSet`, `getGeneratedSet`, `generatedFeatureTypes`: the stored catalogs                              |
+| `src/backend/features/generated-parts/store.ts`                      | `saveGeneratedSet`, `getGeneratedSet`, `generatedFeatures`: the stored catalogs                                  |
 | `src/backend/features/generated-parts/records.ts`                    | `generatedConfiguration`, `describeMismatch`, `GeneratedPartMismatchError`; the server's                         |
 | `src/backend/lib/onshape/endpoints/blob-elements.ts`                 | `getBlobText`: a file tab's contents                                                                             |
 | `src/backend/features/load/load-group.ts`                            | `readGeneratedTabsStep`: which tabs the version's manifests name, storing each's catalog                         |
@@ -40,7 +40,9 @@ tables, each Part Studio's configuration and the manifest
 the configuration offers (`ConfiguredStudio.combinations()`). Each release
 writes that manifest into the document it releases to, as a file tab named
 `<set>.parts.json` (`fasteners.parts.json`), with each studio's tab there
-(`elementId`) and its configuration and records. Its features set
+(`elementId`), its feature and the id it gives its mate connector
+(`mateConnector`, from `ConfiguredStudio.mate_connector`), and its
+configuration and records. Its features set
 exactly the properties the records name. An input shows only where more than
 one of its options is made, and is left out of a record where it's hidden, as
 `enumerateConfigurations` leaves it unset; one with a single option anywhere
@@ -57,7 +59,8 @@ default's in `insertables.part_metadata`, the rest in `configurations.records`.
 
 **D1** `generated_sets` — one row per library and set: the manifest less its
 studios (`catalog`, checked against its set's schema where it's read, such as
-Quick fastener's `catalogSchema`), each studio's feature by key (`features`),
+Quick fastener's `catalogSchema`), each studio's feature by key with its mate
+connector's id (`features`, `GeneratedFeature`),
 and the group and version it was read from. Replaced by each load of the group
 releasing it; deleted with the group. The rest of the manifest isn't stored: a
 load reads it from the version it loads, in Onshape.
@@ -110,11 +113,12 @@ The default parts are still read (for the thumbnail and the composite check), as
 is fasten info when it's on. Insert and fasten is on for a generated tab from its
 first load, which an editor can turn off. Its mate connector is the one its
 feature makes, found by the feature's type, which every stored set names
-(`generatedFeatureTypes`) and the tab's own studio does before any is stored,
-and named by the feature's id:
-Onshape's mate connector query takes a feature id and no index into what the
-feature made (`parseFastenInfoFromPartStudio`). robot-code checks that each
-generated feature makes exactly one. A tab is loaded when its microversion changes, as
+(`generatedFeatures`) and the tab's own studio does before any is stored. A
+fasten mate names it `<featureId>.<mateConnector>`: the feature's id, then the
+id the feature gives it, which the manifest says, since Onshape's API shows no
+mate connector a feature makes (`parseFastenInfoFromPartStudio`). The same holds
+in any Part Studio using the feature. robot-code checks that each generated
+feature makes exactly one. A tab is loaded when its microversion changes, as
 any is; a release rebuilds every studio, which changes each.
 
 ### Changing a generated part
@@ -175,6 +179,12 @@ shows it in place of the indexing switches.
 | A set's catalog isn't what its reader's schema takes | Its reader treats the set as not loaded (Quick fastener says so) | Release the set, and the app, together                        |
 
 ## Decisions
+
+- **The manifest names each feature's mate connector.** A fasten mate names a
+  mate connector a feature made `<featureId>.<id>`, and Onshape's API shows no
+  such connector: not in an assembly's parts, nor a feature's `subFeatures`. So
+  robot-code says the id each studio's feature gives it, and a load applies it
+  to the feature wherever it finds one, rather than reading it from Onshape.
 
 - **The generator is the source of truth.** A mismatch fails rather than falls
   back to probing: probed parts the generator didn't name would quietly disagree

@@ -37,7 +37,6 @@ import { type FastenerSet } from "./studios";
 import { indexHoles } from "./index-holes";
 import {
     insertGroups,
-    mateConnectorIdsFor,
     type PartPlacement,
     PartStack,
     partMate,
@@ -282,13 +281,11 @@ async function fastenParts(
     parts: PartPlacement[],
     paths: (string[] | null)[]
 ): Promise<(string | null)[]> {
-    const kinds = [...new Set(parts.map((part) => part.kind))];
-    const connectors = await run(
-        `${prefix}mate-connectors`,
-        isTransient,
-        (client) =>
-            mateConnectorIdsFor(client, ctx.env.KV, ctx.assembly, set, kinds)
-    );
+    if (parts.some((part) => !set.studios[part.kind].mateConnectorId)) {
+        throw runFailure(
+            "A fastener's studio has no mate connector to fasten by. Reload its group."
+        );
+    }
     const washerEdges = await run(
         `${prefix}washer-edges`,
         isTransient,
@@ -298,7 +295,7 @@ async function fastenParts(
     const mates: (string | null)[] = [];
     for (const [index, part] of parts.entries()) {
         const path = insertedPaths[index];
-        const connector = connectors[part.kind];
+        const connector = set.studios[part.kind].mateConnectorId;
         const mate =
             path && connector
                 ? partMate(part, path, connector, insertedPaths, washerEdges)

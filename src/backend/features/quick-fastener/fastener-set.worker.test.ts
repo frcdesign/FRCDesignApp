@@ -12,12 +12,10 @@ import {
 import { FASTENER_SET } from "../../../__test_utils__/fastener-set";
 import { FASTENERS_MANIFEST } from "../../../__test_utils__/fasteners-manifest.gen";
 import { releasedCatalog } from "../generated-parts/manifest";
-import {
-    generatedFeatureTypes,
-    saveGeneratedSet
-} from "../generated-parts/store";
+import { generatedFeatures, saveGeneratedSet } from "../generated-parts/store";
 import { getFastenerSet } from "./fastener-set";
 import { FastenerKind } from "./studios";
+import { MateLocation } from "../library/insertables/fasten";
 
 const db = getDb(env.DB);
 
@@ -50,7 +48,12 @@ async function storeStudios(kinds = Object.values(FastenerKind)) {
             elementId: `${kind}Studio`,
             documentId: "lib",
             versionId: "libv",
-            generatedStudio: `fasteners/${kind}`
+            generatedStudio: `fasteners/${kind}`,
+            fastenInfo: {
+                mateConnectorId: `${kind}MC`,
+                mateLocation: MateLocation.Feature,
+                path: []
+            }
         });
         await db.insert(configurations).values({
             insertableId: id,
@@ -82,13 +85,17 @@ describe("getFastenerSet", () => {
         expect(await getFastenerSet(db, TEST_LIBRARY_ID)).toBeUndefined();
     });
 
-    it("names every stored set's features, which each make one mate connector", async () => {
-        expect(await generatedFeatureTypes(db)).toEqual([]);
+    it("names every stored set's features, with the id each gives its mate connector", async () => {
+        expect(await generatedFeatures(db)).toEqual([]);
         await storeCatalog();
-        expect((await generatedFeatureTypes(db)).sort()).toEqual([
-            "fastenerNut",
-            "fastenerScrew",
-            "fastenerWasher"
+        expect(
+            (await generatedFeatures(db)).sort((a, b) =>
+                a.type.localeCompare(b.type)
+            )
+        ).toEqual([
+            { type: "fastenerNut", mateConnector: "mateConnector" },
+            { type: "fastenerScrew", mateConnector: "mateConnector" },
+            { type: "fastenerWasher", mateConnector: "mateConnector" }
         ]);
     });
 });

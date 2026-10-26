@@ -7,10 +7,12 @@ import {
 } from "./parse-fasten";
 
 /** As the loaded generated sets name their studios' features. */
-const GENERATED = ["fastenerScrew", "fastenerWasher", "fastenerNut"];
+const GENERATED = ["fastenerScrew", "fastenerWasher", "fastenerNut"].map(
+    (type) => ({ type, mateConnector: "mateConnector" })
+);
 
 describe("parseFastenInfoFromPartStudio", () => {
-    it("takes a generated feature, which makes its mate connector, wherever it is", () => {
+    it("takes a generated feature's mate connector, under the feature's id, wherever it is", () => {
         const rawFeatureList = {
             features: [
                 {
@@ -38,14 +40,14 @@ describe("parseFastenInfoFromPartStudio", () => {
         expect(
             parseFastenInfoFromPartStudio(rawFeatureList, GENERATED)
         ).toEqual({
-            mateConnectorId: "nut-id",
+            mateConnectorId: "nut-id.mateConnector",
             mateLocation: MateLocation.Feature,
             path: []
         });
     });
 
     it("takes each loaded set's features", () => {
-        for (const featureType of GENERATED) {
+        for (const { type: featureType } of GENERATED) {
             expect(
                 parseFastenInfoFromPartStudio(
                     {
@@ -60,8 +62,26 @@ describe("parseFastenInfoFromPartStudio", () => {
                     },
                     GENERATED
                 ).mateConnectorId
-            ).toBe("id");
+            ).toBe("id.mateConnector");
         }
+    });
+
+    it("refuses a generated feature that names no mate connector", () => {
+        expect(() =>
+            parseFastenInfoFromPartStudio(
+                {
+                    features: [
+                        {
+                            featureType: "robotFrame",
+                            featureId: "frame-id",
+                            name: "Frame",
+                            suppressed: false
+                        }
+                    ]
+                },
+                [{ type: "robotFrame" }]
+            )
+        ).toThrow();
     });
 
     it("refuses a custom feature it doesn't know makes a mate connector", () => {

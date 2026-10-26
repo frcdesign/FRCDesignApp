@@ -597,6 +597,8 @@ interface Catalog {
 interface FastenerStudio {
     parameters: ConfigurationParameter[];
     location: StudioLocation;
+    /** What a fasten mate names its mate connector by, as the studio's load found it. */
+    mateConnectorId?: string;
 }
 
 interface CatalogVendor {
@@ -668,14 +670,6 @@ function insertGroups(
     set: FastenerSet,
     parts: PartPlacement[]
 ): { instances: object[]; transform: number[] }[];
-// Each studio's mate connector, read from the assembly once per release.
-async function mateConnectorIdsFor(
-    client: OnshapeApi,
-    kv: KVNamespace,
-    assembly: ElementPath,
-    set: FastenerSet,
-    kinds: FastenerKind[]
-): Promise<Partial<Record<FastenerKind, string>>>;
 async function washerTopEdges(
     client: OnshapeApi,
     kv: KVNamespace,
@@ -805,9 +799,6 @@ vectors, Onshape's 4×4 transforms and `LINEAR_TOLERANCE`.
   (`toStudioSource`): `{documentId}|v|{versionId}|…` for a part from a version,
   `{documentId}|e|{elementMicroversionId}|…` for one from the assembly's own
   workspace, and `{documentId}|m|{documentMicroversionId}|…` otherwise.
-- **KV** `quick-fastener-mate-connector:{documentId}|{versionId}|{elementId}` —
-  the mate connector feature id a released studio's part has in an assembly,
-  with no expiry.
 - **KV** `fastener-job:{documentId}|{instanceId}|{elementId}` — the run an
   assembly last started (`FastenerJobStatus`), for six hours: `RUNNING` with
   its workflow run id and each step's state, then how it ended, with each
@@ -989,8 +980,9 @@ recorded with why, and the steps after it are skipped.
    size and out far edges of the same size, in the order found. Only each
    group's first hole gets parts here.
 3. **Fasten parts**:
-    1. Reads each studio's mate connector id from the assembly, once per
-       release (`mate-connectors`).
+    1. Takes each studio's mate connector id from its load
+       (`FastenerStudio.mateConnectorId`, the insertable's fasten info); with
+       one missing, the step fails.
     2. Scans the washer studio in each configuration placed, for its top edge
        (`washerTopEdge`): its hole's circular edge farthest up its Z axis
        (`washer-edges`).
@@ -1089,7 +1081,7 @@ app.
 | "Couldn't read the assembly's holes." / "Couldn't insert the fasteners."                                                         | A step's failure, index / insert                           |
 | "Couldn't fasten the inserted parts." / "Couldn't replicate the inserted parts."                                                 | A step's failure, fasten / replicate                       |
 | "You don't have permission to edit this assembly."                                                                               | A step's failure, Onshape answered 403                     |
-| "The inserted fastener has no mate connector to fasten."                                                                         | Fasten step's failure                                      |
+| "A fastener's studio has no mate connector to fasten by. Reload its group."                                                      | Fasten step's failure                                      |
 | "A hole's parts weren't all inserted and fastened, so they can't be replicated."                                                 | Replicate step's failure                                   |
 | "Onshape refused the Replicate ({Onshape's message})."                                                                           | Replicate step's failure                                   |
 

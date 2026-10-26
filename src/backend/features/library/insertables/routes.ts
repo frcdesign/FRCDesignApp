@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { handledError, internalError } from "../../../lib/api-error";
 import { getFastenerSet } from "../../quick-fastener/fastener-set";
-import { generatedFeatureTypes } from "../../generated-parts/store";
+import { generatedFeatures } from "../../generated-parts/store";
 import { validate } from "../../../lib/validate";
 import { HttpStatus } from "http-status-ts";
 import z from "zod";
@@ -115,7 +115,7 @@ insertableRoutes.post(
                 await c.var.getOnshapeApi(),
                 toElementPath(row),
                 row.elementType,
-                await generatedFeatureTypes(db)
+                await generatedFeatures(db)
             );
         }
 

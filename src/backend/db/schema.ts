@@ -10,6 +10,7 @@ import { ElementType } from "../lib/onshape/element-type";
 import { FastenInfo } from "../features/library/insertables/fasten";
 import { DEFAULT_LIBRARY, LibraryId } from "../features/library/library-id";
 import type { AdminTeamMember } from "../features/admin-team/contract";
+import type { GeneratedFeature } from "../features/generated-parts/manifest";
 import { Vendor } from "../features/library/vendors";
 import {
     ConfigurationParameter,
@@ -180,9 +181,9 @@ export const generatedSets = sqliteTable(
             .notNull()
             .references(() => groups.id, { onDelete: "cascade" }),
         versionId: text("version_id").notNull(),
-        // Each studio's feature, by its key
+        // Each studio's feature and its mate connector's id, by its key
         features: text("features", { mode: "json" })
-            .$type<Record<string, string>>()
+            .$type<Record<string, GeneratedFeature>>()
             .notNull(),
         // Checked against its set's schema where it's read
         catalog: text("catalog", { mode: "json" }).$type<unknown>().notNull()

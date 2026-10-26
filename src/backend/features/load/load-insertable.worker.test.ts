@@ -291,7 +291,7 @@ describe("loadInsertable, for a generated studio", () => {
         vi.spyOn(BlobEndpoints, "getBlobText").mockResolvedValue(
             JSON.stringify(NUT_MANIFEST)
         );
-        // Its only feature, which makes its mate connector
+        // Its only feature, which makes its mate connector, as its manifest says
         vi.spyOn(PartStudioEndpoints, "getFeatures").mockResolvedValue({
             features: [
                 {
@@ -324,7 +324,7 @@ describe("loadInsertable, for a generated studio", () => {
         expect(row?.vendors).toContain(Vendor.MCM);
         expect(row?.supportsFasten).toBe(true);
         expect(row?.fastenInfo).toEqual({
-            mateConnectorId: "nut-feature",
+            mateConnectorId: "nut-feature.mateConnector",
             mateLocation: MateLocation.Feature,
             path: []
         });

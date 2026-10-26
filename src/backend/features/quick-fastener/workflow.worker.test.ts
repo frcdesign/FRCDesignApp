@@ -351,17 +351,17 @@ describe("QuickFastenerWorkflow", () => {
         });
     });
 
-    it("fails fastening at once when the inserted part has no mate connector", async () => {
-        // Nothing cached from another test's run
-        await resetStorage();
-        vi.mocked(Assemblies.getAssembly).mockImplementation(
-            (_client, _path, options) =>
-                Promise.resolve(
-                    options?.includeMateConnectors
-                        ? { ...DEFINITION, parts: [] }
-                        : DEFINITION
-                )
-        );
+    it("fails fastening when a studio's load found no mate connector", async () => {
+        vi.mocked(FastenerSets.getFastenerSet).mockResolvedValue({
+            ...FASTENER_SET,
+            studios: {
+                ...FASTENER_SET.studios,
+                [FastenerKind.SCREW]: {
+                    ...FASTENER_SET.studios[FastenerKind.SCREW],
+                    mateConnectorId: undefined
+                }
+            }
+        });
         const status = await run("no-connector", {
             sessionId: "session",
             request: BODY
@@ -369,16 +369,30 @@ describe("QuickFastenerWorkflow", () => {
 
         expect(status.tasks?.[2]).toMatchObject({
             state: FastenerTaskState.FAILED,
-            reason: "The inserted fastener has no mate connector to fasten."
+            reason: "A fastener's studio has no mate connector to fasten by. Reload its group."
         });
-        // Asked once: our own error says the same thing every time
-        expect(
-            vi
-                .mocked(Assemblies.getAssembly)
-                .mock.calls.filter(
-                    ([, , options]) => options?.includeMateConnectors
-                )
-        ).toHaveLength(1);
+        expect(Assemblies.addAssemblyFeature).not.toHaveBeenCalled();
+    });
+
+    it("fails a step at once on the app's own error, whatever its status", async () => {
+        // Nothing cached from another test's run
+        await resetStorage();
+        // The hole scan failing is our own 502, which a retry would only repeat
+        vi.mocked(PartStudios.evaluateFeatureScript).mockResolvedValue({
+            notices: [{ message: { message: "bad lambda" } }]
+        });
+        const status = await run("own-error", {
+            sessionId: "session",
+            request: BODY
+        });
+
+        expect(status.tasks?.[0]).toMatchObject({
+            state: FastenerTaskState.FAILED
+        });
+        const scanned = vi
+            .mocked(PartStudios.evaluateFeatureScript)
+            .mock.calls.map(([, path]) => path.elementId);
+        expect(scanned).toEqual([...new Set(scanned)]);
     });
 
     it("stops before inserting when Onshape refuses to read the assembly", async () => {
