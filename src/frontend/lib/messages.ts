@@ -10,6 +10,12 @@ import {
     useOnshapeSelection
 } from "./selection";
 
+/**
+ * What carries the window's whole selection each time it changes: SELECTION,
+ * and while a selection request is pending, its answers instead.
+ */
+const SELECTION_MESSAGES = new Set(["SELECTION", "REQUESTED_SELECTION"]);
+
 declare global {
     interface Window {
         /** Posts a message to Onshape, addressed to the launching element; from the browser console. */
@@ -43,7 +49,10 @@ export function useMessageListener() {
             // What Onshape sends about selection is undocumented; this is how to see it
             console.debug("Received from Onshape", event.data);
             const { messageName } = event.data as { messageName?: unknown };
-            if (messageName === "SELECTION") {
+            if (
+                typeof messageName === "string" &&
+                SELECTION_MESSAGES.has(messageName)
+            ) {
                 useOnshapeSelection
                     .getState()
                     .receive(parseSelections(event.data));

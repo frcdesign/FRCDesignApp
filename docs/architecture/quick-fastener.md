@@ -823,10 +823,11 @@ vectors, Onshape's 4×4 transforms and `LINEAR_TOLERANCE`.
 
 ### Picking
 
-1. Once the app sends `applicationInit`, Onshape sends a `SELECTION` message
-   with the window's whole selection each time it changes; `parseSelections`
-   keeps its entities, and `receive` hands the focused list what was added and
-   what was removed since the last. Answers to requests carry no picks. A
+1. Once the app sends `applicationInit`, Onshape sends the window's whole
+   selection each time it changes: in a `SELECTION` message, or, while a
+   selection request is pending, in its `REQUESTED_SELECTION` answers instead.
+   `parseSelections` keeps its entities, and `receive` hands the focused list
+   what was added and what was removed since the last. A
    highlight or a selection request changes the window's selection too, and
    Onshape reports that as an empty selection, then the new one, sometimes
    interleaved with an earlier highlight's; so the app says what it expects

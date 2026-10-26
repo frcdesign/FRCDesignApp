@@ -62,8 +62,27 @@ describe("useMessageListener", () => {
         expect(picked).toHaveBeenLastCalledWith({ added: [], removed: picks });
     });
 
-    it("takes nothing from a request's answer", () => {
-        post({ messageId: "selection-1", selections: [edge] });
+    it("follows a pending selection request's answers, which carry the selection in its place", () => {
+        const answer = (selections: unknown[]) =>
+            post({
+                messageName: "REQUESTED_SELECTION",
+                messageId: "selection-1",
+                status: { statusCode: "PENDING" },
+                selections
+            });
+        answer([]);
+        answer([edge]);
+        expect(picked).toHaveBeenLastCalledWith({ added: picks, removed: [] });
+        answer([]);
+        expect(picked).toHaveBeenLastCalledWith({ added: [], removed: picks });
+    });
+
+    it("takes nothing from a highlight's answer", () => {
+        post({
+            messageName: "REQUESTED_SELECTION_HIGHLIGHT",
+            messageId: "highlight-selection-1",
+            selections: [edge]
+        });
         expect(picked).not.toHaveBeenCalled();
     });
 
