@@ -61,9 +61,10 @@ export async function addReplicate(
         if (onshapeStatus(error) !== HttpStatus.BAD_REQUEST) {
             throw error;
         }
-        const message = error instanceof Error ? error.message : String(error);
+        // Onshape's words are for developers
+        console.error("Onshape refused a Replicate", error);
         throw handledError(
-            `Onshape refused the Replicate (${message}).`,
+            "Onshape refused the Replicate.",
             HttpStatus.BAD_GATEWAY
         );
     }

@@ -419,7 +419,7 @@ interface InsertableSettingsInput {
 | "Select either faces or circular edges to fasten to, not both."                                                              | Validation error, inconsistent picks                    |
 | "{name} does not support insert and fasten."                                                                                 | Error toast                                             |
 | "Tip: You can select circular edges in Onshape before you insert and fasten to automatically fasten to each one."            | Tip toast                                               |
-| "Onshape refused the Replicate ({Onshape's message})."                                                                       | Error toast                                             |
+| "Onshape refused the Replicate."                                                                                             | Error toast                                             |
 | "Replicate not decided"                                                                                                      | Build check title                                       |
 | "Allow replicate for parts that sit the same way on every circular edge, like bolts, and not for parts with an orientation." | Build check description                                 |
 | "Replicate"                                                                                                                  | Editor switch label                                     |
@@ -465,12 +465,12 @@ interface InsertableSettingsInput {
   aren't circular.
 - **The list stays focused.** The targets' list is focused while the menu is
   open, so picking in Onshape and then inserting needs no click in the panel.
-  Each message names only the latest pick, so what was picked before the menu
-  opened can't be taken.
+  A list takes what's added to the selection after it's focused, so what was
+  picked before the menu opened isn't taken.
 - **Replicate is copied from Onshape.** Onshape's feature specs omit
-  Replicate, so `replicateFeature` is shaped as Onshape answers a Replicate
-  matching edges on a face, with the individual edges' `INDIVIDUAL` scope,
-  which is unconfirmed. Replicate is off by default until it's seen working.
+  Replicate, so `replicateFeature` is shaped as Onshape answers a Replicate of
+  picked edges: the `SAME_EDGE` scope, with the edges in `targetEdges`.
+  Replicate is off by default for a part modeled by hand.
 - **No fallbacks.** Onshape refusing a Replicate, or any other write, is an
   error the user sees, not something worked around with other features.
 - **Individual edges only.** Of Onshape's three ways to match, only "Match

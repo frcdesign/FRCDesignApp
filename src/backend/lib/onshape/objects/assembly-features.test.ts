@@ -33,7 +33,7 @@ describe("replicateFeature", () => {
             }),
             expect.objectContaining({
                 parameterId: "edgeTargetType",
-                value: "INDIVIDUAL"
+                value: "SAME_EDGE"
             }),
             expect.objectContaining({
                 parameterId: "targetEdges",

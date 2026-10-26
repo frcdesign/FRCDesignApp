@@ -146,10 +146,10 @@ function enumParameter(
 }
 
 /**
- * Copies fastened instances onto more circular edges ("Match individual
- * edges"), each placed as the mate places the seed, so every edge must be the
- * size of the seed's. Shaped as Onshape answers a Replicate matching edges on
- * a face, with the `INDIVIDUAL` scope, which is unconfirmed.
+ * Copies fastened instances onto more circular edges, each placed as the mate
+ * places the seed, so every edge must be the size of the seed's. Shaped as
+ * Onshape answers a Replicate of picked edges: `SAME_EDGE` scope, the edges in
+ * `targetEdges`.
  */
 export function replicateFeature(
     name: string,
@@ -171,7 +171,7 @@ export function replicateFeature(
             ),
             queryParameter("seedMate", [featureOccurrenceQuery(mateFeatureId)]),
             enumParameter("seedEntityType", "Seed geometry type", "EDGE"),
-            enumParameter("edgeTargetType", "Edge match scope", "INDIVIDUAL"),
+            enumParameter("edgeTargetType", "Edge match scope", "SAME_EDGE"),
             queryParameter("targetEdges", edges.map(entityQuery))
         ]
     };

@@ -315,7 +315,7 @@ describe("QuickFastenerWorkflow", () => {
             expect(fastenerJobOutcome(status)).toBe(FastenerJobOutcome.SUCCESS);
         });
 
-        it("fails the step, in Onshape's words, when Onshape refuses the replicate", async () => {
+        it("fails the step, in our words, when Onshape refuses the replicate", async () => {
             vi.mocked(Assemblies.addAssemblyFeature).mockImplementation(
                 (_client, _path, feature) => {
                     const json = JSON.stringify(feature);
@@ -340,7 +340,7 @@ describe("QuickFastenerWorkflow", () => {
                 FastenerTaskState.FAILED
             ]);
             expect(status.tasks?.[3].reason).toBe(
-                "Onshape refused the Replicate (Onshape API error 400: bad feature)."
+                "Onshape refused the Replicate."
             );
             expect(status.result).toEqual({
                 inserted: 2,
@@ -386,8 +386,10 @@ describe("QuickFastenerWorkflow", () => {
             request: BODY
         });
 
+        // In our words: the notices are for the logs
         expect(status.tasks?.[0]).toMatchObject({
-            state: FastenerTaskState.FAILED
+            state: FastenerTaskState.FAILED,
+            reason: "Couldn't read the assembly's holes."
         });
         const scanned = vi
             .mocked(PartStudios.evaluateFeatureScript)

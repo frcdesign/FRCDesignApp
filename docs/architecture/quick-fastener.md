@@ -765,14 +765,9 @@ function jobHeadline(
     status: FastenerJobStatus,
     outcome: FastenerJobOutcome
 ): string;
-// e.g. `#10-32 x 7/8 in Button head, Nylock nut`; or why the hole got nothing.
-function describePlan(
-    set: FastenerSet | undefined,
-    planned: PlannedHole
-): string;
 function LastRunCallout(props: LastRunCalloutProps): ReactNode;
 function JobDetails(props: JobDetailsProps): ReactNode;
-// A toast when a run finishes, from anywhere in the app.
+// A toast as a run starts, which says how it finished, from anywhere in the app.
 function useFastenerJobToasts(): void;
 
 interface LastRunCalloutProps {
@@ -1012,9 +1007,10 @@ running step reads failed and the rest skipped.
 
 The page shows the run in a callout above the options — its step while it
 goes, saying the page can be left, then how it went — with a Details modal
-listing the steps and each hole's plan. `useFastenerJobToasts`, in the app
-shell, shows a toast when a run watched going finishes, from any tab of the
-app.
+listing the steps. `useFastenerJobToasts`, in the app shell, shows a toast as
+a run starts ("Inserting fasteners..."), which becomes how it finished, from
+any tab of the app. A step's failure shows in our words; Onshape's own message
+is logged to the console.
 
 ## User-facing strings
 
@@ -1058,18 +1054,15 @@ app.
 | "{parts} with problems"                                                                                                          | Headline, partly                                           |
 | "Couldn't insert fasteners"                                                                                                      | Headline, failed                                           |
 | "Details"                                                                                                                        | Callout button, and the finished toast's action            |
+| "Inserting fasteners..."                                                                                                         | Toast, as a watched run starts                             |
 | "{headline}."                                                                                                                    | Toast, when a watched run finishes                         |
 | "No recent run" / "Loading..." / "{running headline}..."                                                                         | Details modal title                                        |
 | "Stopped early."                                                                                                                 | Details modal notice, with the run's error                 |
-| "Holes"                                                                                                                          | Details modal, the plans' heading                          |
-| "{size} x {length} {head}[ ({finish}, fully threaded)], {nut type} nut" / "…, through"                                           | A ready hole's plan (`describePlan`)                       |
-| "into threads" / "into a blind hole"                                                                                             | A ready hole's plan, its end, without a nut                |
-| "Already fastened" / "Can't be fastened"                                                                                         | A hole's plan                                              |
-| "The head isn't made in this size."                                                                                              | A hole's plan, no fit                                      |
-| "No hole goes into the part from this circular edge."                                                                            | A hole's plan, no fit                                      |
+| "The head isn't made in this size."                                                                                              | A hole's plan, in the run's status                         |
+| "No hole goes into the part from this circular edge."                                                                            | A hole's plan, in the run's status                         |
 | "Couldn't find this part in the assembly." / "Not a circular edge." / "No circular edges in this face."                          | A pick that gave no circular edge                          |
-| "The hole is too small for a {size} screw."                                                                                      | A hole's plan, no fit                                      |
-| "The vendor doesn't make this head in this size."                                                                                | A hole's plan, no fit                                      |
+| "The hole is too small for a {size} screw."                                                                                      | A hole's plan, in the run's status                         |
+| "The vendor doesn't make this head in this size."                                                                                | A hole's plan, in the run's status                         |
 | "The vendor doesn't make this length in this size and head."                                                                     | A hole's plan, no fit, preset                              |
 | "No screw reaches through within the maximum length." / "No screw is long enough to reach through."                              | A hole's plan, no fit, through                             |
 | "The screw is too long or too short for this hole."                                                                              | A hole's plan, no fit, preset into threads                 |
@@ -1082,7 +1075,7 @@ app.
 | "You don't have permission to edit this assembly."                                                                               | A step's failure, Onshape answered 403                     |
 | "A fastener's studio has no mate connector to fasten by. Reload its group."                                                      | Fasten step's failure                                      |
 | "A hole's parts weren't all inserted and fastened, so they can't be replicated."                                                 | Replicate step's failure                                   |
-| "Onshape refused the Replicate ({Onshape's message})."                                                                           | Replicate step's failure                                   |
+| "Onshape refused the Replicate."                                                                                                 | Replicate step's failure                                   |
 
 ## Invariants
 

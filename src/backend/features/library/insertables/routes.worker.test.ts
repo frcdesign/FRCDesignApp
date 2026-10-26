@@ -660,7 +660,7 @@ describe("insertable routes", () => {
         });
         expect(res.status).toBe(502);
         expect((await res.json<{ message: string }>()).message).toBe(
-            "Onshape refused the Replicate (Onshape API error 400: bad feature)."
+            "Onshape refused the Replicate."
         );
         expect(addedFeatureTypes(addFeature)).toEqual(["mate", "replicate"]);
     });

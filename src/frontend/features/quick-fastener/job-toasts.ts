@@ -10,6 +10,7 @@ import { type ElementPath } from "@backend/lib/onshape/path";
 import {
     renderNotification,
     showErrorToast,
+    showLoadingToast,
     showSuccessToast,
     showWarningToast
 } from "../../lib/notifications";
@@ -44,8 +45,9 @@ function showJobToast(status: FastenerJobStatus, assembly: ElementPath): void {
 }
 
 /**
- * Reports a run once it finishes, to whoever watched it go. Mounted in the
- * app shell, so a run started here still reports from a library.
+ * Says a run is inserting, then how it finished, in the same toast, to
+ * whoever watched it go. Mounted in the app shell, so a run started here still
+ * reports from a library.
  */
 export function useFastenerJobToasts(): void {
     const assembly = useTargetAssembly();
@@ -58,6 +60,9 @@ export function useFastenerJobToasts(): void {
         const isRunning = data?.state === FastenerJobState.RUNNING;
         if (wasRunning.current === key && !isRunning && data && assembly) {
             showJobToast(data, assembly);
+        }
+        if (isRunning && wasRunning.current !== key) {
+            showLoadingToast("Inserting fasteners...", JOB_TOAST_ID);
         }
         wasRunning.current = isRunning ? key : undefined;
     }, [data, assembly]);

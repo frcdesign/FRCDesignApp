@@ -5,9 +5,7 @@ import {
     fastenerJobOutcome,
     FastenerJobState,
     FastenerTaskState,
-    HoleStatus,
-    type FastenerTask,
-    type PlannedHole
+    type FastenerTask
 } from "@backend/features/quick-fastener/contract";
 import { type ElementPath } from "@backend/lib/onshape/path";
 import { AppIcon } from "../../../components/app-icon";
@@ -15,25 +13,14 @@ import { SectionNotice } from "../../../components/app-notice";
 import { AppTitle } from "../../../components/app-title";
 import { StatusIcon } from "../../../components/status-icon";
 import { Status } from "../../../lib/status";
-import {
-    FontWeight,
-    IconSize,
-    StatusColor
-} from "../../../lib/style-constants";
+import { IconSize, StatusColor } from "../../../lib/style-constants";
 import {
     jobHeadline,
     OUTCOME_STATUS,
     runningHeadline,
     TASK_LABEL
 } from "../job-report";
-import { describePlan } from "../options";
-import { useFastenerJobQuery, useFastenerSetQuery } from "../queries";
-
-const HOLE_STATUS: Record<HoleStatus, Status> = {
-    [HoleStatus.READY]: Status.SUCCESS,
-    [HoleStatus.FASTENED]: Status.INFO,
-    [HoleStatus.NO_FIT]: Status.WARNING
-};
+import { useFastenerJobQuery } from "../queries";
 
 interface JobDetailsTitleProps {
     assembly: ElementPath;
@@ -73,7 +60,7 @@ interface JobDetailsProps {
     assembly: ElementPath;
 }
 
-/** The run this assembly last started, step by step, and what each hole got. */
+/** The run this assembly last started, step by step. */
 export function JobDetails(props: JobDetailsProps): ReactNode {
     const { data: status } = useFastenerJobQuery(props.assembly);
     if (!status) {
@@ -101,7 +88,6 @@ export function JobDetails(props: JobDetailsProps): ReactNode {
                     <TaskRow key={task.action} task={task} />
                 ))}
             </Stack>
-            {status.holes && <HoleList holes={status.holes} />}
         </Stack>
     );
 }
@@ -165,37 +151,5 @@ function TaskRow(props: TaskRowProps): ReactNode {
                 )}
             </Stack>
         </Group>
-    );
-}
-
-interface HoleListProps {
-    holes: PlannedHole[];
-}
-
-function HoleList(props: HoleListProps): ReactNode {
-    const { holes } = props;
-    const { data: set } = useFastenerSetQuery();
-    if (holes.length === 0) {
-        return (
-            <Text size="sm" c={StatusColor.DIMMED}>
-                No holes found in what was selected.
-            </Text>
-        );
-    }
-    return (
-        <Stack gap={4}>
-            <Text fw={FontWeight.SEMI_BOLD}>Holes</Text>
-            {holes.map((hole) => (
-                <Group key={hole.key} gap="xs" wrap="nowrap">
-                    <StatusIcon
-                        status={HOLE_STATUS[hole.status]}
-                        size={IconSize.SMALL}
-                    />
-                    <Text size="sm" truncate>
-                        {describePlan(set ?? undefined, hole)}
-                    </Text>
-                </Group>
-            ))}
-        </Stack>
     );
 }

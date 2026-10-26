@@ -5,8 +5,6 @@ import {
     DEFAULT_MAX_LENGTH,
     DEFAULT_MAX_THREAD_DEPTH,
     FastenerMode,
-    HoleEnd,
-    HoleStatus,
     StopCondition
 } from "@backend/features/quick-fastener/contract";
 import {
@@ -17,7 +15,6 @@ import {
 import {
     type Choices,
     defaultChoices,
-    describePlan,
     fastenerOptions,
     Part,
     settleChoices
@@ -123,36 +120,5 @@ describe("settleChoices", () => {
         );
         expect(options.stop).toBe(StopCondition.FIRST_GAP);
         expect(options.maxGap).toBeCloseTo(0.125 * 0.0254);
-    });
-});
-
-describe("describePlan", () => {
-    it("names the screw and its nut", () => {
-        expect(
-            describePlan(FASTENER_SET, {
-                key: "k",
-                status: HoleStatus.READY,
-                end: HoleEnd.THROUGH,
-                screw: {
-                    vendor: GENERIC,
-                    size: "NO_10_32",
-                    head: "BUTTON",
-                    finish: "BLACK",
-                    length: "IN_0_875",
-                    fullyThreaded: "false"
-                },
-                nut: { vendor: "MCMASTER", size: "NO_10_32", type: "NYLOCK" }
-            })
-        ).toBe("#10-32 x 7/8 in Button head, Nylock nut");
-    });
-
-    it("says why a hole gets nothing", () => {
-        expect(
-            describePlan(FASTENER_SET, {
-                key: "k",
-                status: HoleStatus.NO_FIT,
-                reason: "No screw fits."
-            })
-        ).toBe("No screw fits.");
     });
 });

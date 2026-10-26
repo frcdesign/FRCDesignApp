@@ -1,5 +1,5 @@
 /** A run's failures, in our own words; Onshape's are for developers. */
-import { ApiError } from "../../lib/api-error";
+import { ApiError, ApiErrorKind } from "../../lib/api-error";
 import { describeOnshapeFailure } from "../../lib/onshape/failures";
 import { runFailures } from "../../lib/run-failures";
 import { FastenerTaskAction } from "./contract";
@@ -18,8 +18,15 @@ export function describeStepFailure(
     error: unknown,
     action: FastenerTaskAction
 ): string {
-    if (error instanceof ApiError) {
+    // An internal error's message is for the logs, which the step writes
+    if (
+        error instanceof ApiError &&
+        error.body.kind !== ApiErrorKind.INTERNAL
+    ) {
         return failures.word(error.body.message);
+    }
+    if (error instanceof ApiError) {
+        return failures.word(ACTION_FAILURE[action]);
     }
     return failures.word(
         describeOnshapeFailure(error, {

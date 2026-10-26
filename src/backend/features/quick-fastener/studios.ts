@@ -199,20 +199,6 @@ export function getParameter(
     return parameter?.type === ParameterType.ENUM ? parameter : undefined;
 }
 
-/** An option's name, e.g. `#10-32` for a size; its id when it has none. */
-export function optionName(
-    set: FastenerSet,
-    kind: FastenerKind,
-    id: StudioInput,
-    value: string
-): string {
-    return (
-        getParameter(set, kind, id)?.options.find(
-            (option) => option.id === value
-        )?.name ?? value
-    );
-}
-
 /** A screw as its studio allows it: each choice one shown with those before it. */
 export function settleScrew(
     set: FastenerSet,

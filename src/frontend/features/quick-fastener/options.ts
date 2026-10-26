@@ -1,7 +1,7 @@
 /**
  * Quick fastener's choices: what's stored, settled into parts the studios make
- * (as the configuration dialog settles a selection), the options a run is
- * sent, and how a hole's plan reads.
+ * (as the configuration dialog settles a selection), and the options a run is
+ * sent.
  */
 import {
     type PartialSelection,
@@ -17,9 +17,6 @@ import { type Program } from "@backend/features/quick-fastener/catalog";
 import {
     FastenerMode,
     type FastenerOptions,
-    HoleEnd,
-    HoleStatus,
-    type PlannedHole,
     type SelectionMode,
     type StopCondition
 } from "@backend/features/quick-fastener/contract";
@@ -27,13 +24,10 @@ import {
     FastenerKind,
     type FastenerSet,
     isCountersunk,
-    optionName,
     type PartChoice,
     type ScrewChoice,
     settlePart,
-    settleScrew,
-    STANDARD_FINISH,
-    StudioInput
+    settleScrew
 } from "@backend/features/quick-fastener/studios";
 import { FORM_PARAMETERS, FormInput, formParameter } from "./parameters";
 
@@ -170,50 +164,4 @@ export function fastenerOptions(settled: SettledChoices): FastenerOptions {
 
 export function selectionMode(settled: SettledChoices): SelectionMode {
     return settled.form[FormInput.SELECT_BY] as SelectionMode;
-}
-
-const END_NAMES: Record<HoleEnd, string> = {
-    [HoleEnd.THROUGH]: "through",
-    [HoleEnd.TAPPED]: "into threads",
-    [HoleEnd.BLIND]: "into a blind hole"
-};
-
-/**
- * e.g. `#10-32 x 7/8 in Button head, Nylock nut`; or why the hole got nothing.
- * Options are named by their ids until the set has loaded.
- */
-export function describePlan(
-    set: FastenerSet | undefined,
-    planned: PlannedHole
-): string {
-    if (planned.status === HoleStatus.FASTENED) {
-        return "Already fastened";
-    }
-    if (planned.status !== HoleStatus.READY || !planned.screw) {
-        return planned.reason ?? "Can't be fastened";
-    }
-    const { screw } = planned;
-    const named = (kind: FastenerKind, input: StudioInput, value: string) =>
-        set ? optionName(set, kind, input, value) : value;
-    const name = (input: StudioInput, value: string) =>
-        named(FastenerKind.SCREW, input, value);
-    const beyondStandard = [
-        ...(screw.finish === STANDARD_FINISH
-            ? []
-            : [name(StudioInput.FINISH, screw.finish)]),
-        ...(screw.fullyThreaded === "true" ? ["fully threaded"] : [])
-    ];
-    const suffix =
-        beyondStandard.length > 0 ? ` (${beyondStandard.join(", ")})` : "";
-    const parts = [
-        `${name(StudioInput.SIZE, screw.size)} x ${name(StudioInput.LENGTH, screw.length)} ${name(StudioInput.HEAD, screw.head)}${suffix}`
-    ];
-    if (planned.nut) {
-        parts.push(
-            `${named(FastenerKind.NUT, StudioInput.TYPE, planned.nut.type)} nut`
-        );
-    } else if (planned.end) {
-        parts.push(END_NAMES[planned.end]);
-    }
-    return parts.join(", ");
 }
