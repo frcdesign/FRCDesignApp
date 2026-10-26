@@ -84,11 +84,10 @@ function entityQueryString(entity: EntityReference): string {
     return `query=qTransient("${entity.deterministicId}");`;
 }
 
-/** The entity itself, as a Replicate's matches name it. */
+/** The entity itself, as a Replicate's matches name it: its deterministic id stands in for a query. */
 function entityQuery(entity: EntityReference): object {
     return {
         btType: "BTMIndividualQueryWithOccurrence-811",
-        entityQuery: entityQueryString(entity),
         deterministicIds: [entity.deterministicId],
         path: entity.path
     };

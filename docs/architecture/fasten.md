@@ -473,7 +473,9 @@ interface InsertableSettingsInput {
 - **Replicate is copied from Onshape.** Onshape's feature specs omit
   Replicate, so `replicateFeature` is shaped as Onshape answers a Replicate of
   picked edges, every parameter included: the `SAME_EDGE` scope, with the
-  edges in `targetEdges` and the other scopes' lists empty. Each one added is
+  edges in `targetEdges` and the other scopes' lists empty. Each target edge
+  is named by its deterministic id alone, which Onshape accepts in place of
+  a query; `qTransient` takes a transient id, not one. Each one added is
   logged with what Onshape answered.
   Replicate is off by default for a part modeled by hand.
 - **No fallbacks.** Onshape refusing a Replicate, or any other write, is an
