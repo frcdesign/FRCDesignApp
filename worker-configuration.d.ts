@@ -6,7 +6,7 @@ interface __BaseEnv_Env {
 	BLOB: R2Bucket;
 	DB: D1Database;
 	ASSETS: Fetcher;
-	OWNER_USER_ID: "5eace32713a966103efd2a9c" | "5eace32713a966103efd2aa0";
+	OWNER_USER_ID: "5eace32713a966103efd2a9c";
 	APP_URL: "https://dev.frcdesign.org";
 	NODE_ENV: "production" | "development";
 	API_ACCESS_KEY: string;
@@ -47,7 +47,7 @@ declare namespace Cloudflare {
 		BLOB: R2Bucket;
 		DB: D1Database;
 		ASSETS: Fetcher;
-		OWNER_USER_ID: "5eace32713a966103efd2aa0";
+		OWNER_USER_ID: "5eace32713a966103efd2a9c";
 		APP_URL: "https://app.frcdesign.org";
 		NODE_ENV: "production";
 		API_ACCESS_KEY: string;
