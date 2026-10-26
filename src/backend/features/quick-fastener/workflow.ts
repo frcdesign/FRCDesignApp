@@ -248,6 +248,13 @@ async function runSteps(ctx: RunContext, request: QuickFastenerIn) {
                     seedParts.find(
                         ([, part]) => part.kind !== FastenerKind.WASHER
                     ) ?? seedParts[0];
+                const edges = stackTargets(group, stack);
+                // Whether the targets are other holes' edges than the one the seed sits on
+                console.log("Quick fastener replicating", {
+                    stack,
+                    seedEdge: seated?.[1].seat,
+                    edges
+                });
                 await run(
                     `replicate-${index}-${stack}`,
                     isRateLimited,
@@ -256,7 +263,7 @@ async function runSteps(ctx: RunContext, request: QuickFastenerIn) {
                             name: named.name,
                             instancePaths,
                             mateFeatureId,
-                            edges: stackTargets(group, stack)
+                            edges
                         });
                         return true;
                     }
