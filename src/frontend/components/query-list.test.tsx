@@ -186,7 +186,7 @@ describe("QueryList", () => {
         expect(messages).toEqual([]);
     });
 
-    it("lights its picks up once the mouse leaves a row, and limits picks again when clicked", async () => {
+    it("ends a row's highlight with a stop once the mouse leaves, keeping its picks", async () => {
         renderWithProviders(<Harness />);
         await userEvent.click(screen.getByText("Holes"));
         select(edge("A"), edge("B"));
@@ -194,35 +194,25 @@ describe("QueryList", () => {
         await userEvent.hover(row);
         expect(messages.at(-1)).toMatchObject({
             messageName: "requestSelectionHighlight",
-            selections: [{ selectionId: "A" }],
-            selectionType: "GEOMETRY",
-            entityType: "EDGE",
-            geometryType: "CIRCLE"
+            selections: [{ selectionId: "A" }]
         });
+        expect(messages.at(-1)).not.toHaveProperty("geometryType");
 
         messages = [];
         await userEvent.unhover(row);
         expect(messages).toEqual([
-            expect.objectContaining({
-                messageName: "requestSelectionHighlight",
-                selections: [
-                    expect.objectContaining({ selectionId: "A" }),
-                    expect.objectContaining({ selectionId: "B" })
-                ]
-            })
+            expect.objectContaining({ messageName: "stopRequest" })
         ]);
 
-        messages = [];
-        await userEvent.click(screen.getByText("Edge 2"));
-        expect(messages).toContainEqual(
-            expect.objectContaining({
-                messageName: "requestSelection",
-                entityTypeSpecifier: ["EDGE"]
-            })
+        // What Onshape shows once the highlight ends isn't a pick
+        act(() => useOnshapeSelection.getState().receive([]));
+        act(() =>
+            useOnshapeSelection.getState().receive([edge("A"), edge("B")])
         );
+        expect(screen.getByText("Edge 2")).toBeTruthy();
     });
 
-    it("lights the focused list's picks up again after a row of another list", async () => {
+    it("ends the highlight of another list's row the same way", async () => {
         function Other() {
             const [entities, setEntities] = useState(() => [edge("X")]);
             return (
@@ -253,40 +243,8 @@ describe("QueryList", () => {
 
         messages = [];
         await userEvent.unhover(other);
-        expect(messages).toContainEqual(
-            expect.objectContaining({
-                messageName: "requestSelectionHighlight",
-                selections: [expect.objectContaining({ selectionId: "A" })]
-            })
-        );
-    });
-
-    it("lights nothing once the mouse leaves a row with no list focused", async () => {
-        function Unfocused() {
-            const [entities, setEntities] = useState(() => [edge("A")]);
-            return (
-                <QueryList
-                    id="holes"
-                    label="Holes"
-                    prompt={PROMPT}
-                    entities={entities}
-                    onChange={setEntities}
-                    accepts={() => true}
-                    filter={CIRCULAR_EDGES}
-                />
-            );
-        }
-        renderWithProviders(<Unfocused />);
-        const row = screen.getByText("Edge 1").parentElement!;
-        await userEvent.hover(row);
-
-        messages = [];
-        await userEvent.unhover(row);
         expect(messages).toEqual([
-            expect.objectContaining({
-                messageName: "requestSelectionHighlight",
-                selections: []
-            })
+            expect.objectContaining({ messageName: "stopRequest" })
         ]);
     });
 

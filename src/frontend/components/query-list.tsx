@@ -18,8 +18,9 @@ import {
 } from "../lib/messages";
 import { useTargetElement } from "../lib/onshape-params";
 import {
-    focusedList,
-    holdList,
+    expectSelection,
+    focusedPicks,
+    holdPicks,
     onPick,
     selectionKey,
     useOnshapeSelection,
@@ -65,9 +66,9 @@ function defaultName(entity: OnshapeSelection, index: number): string {
  * window's selection: what's picked of the kind it takes is added, and what's
  * deselected is dropped. Hover a row to light its entity up alone.
  *
- * A selection request and a highlight can't be pending together: a highlight
- * cancels the request, and a request clears the highlight. So the filter is
- * asked for on focus, and a highlight lasts until the list is clicked again.
+ * The filter is asked for on focus. Hovering a row highlights its entity alone,
+ * and leaving ends that highlight with a stop, rather than asking for the
+ * filter again, since a request clears what the window shows.
  */
 export function QueryList(props: QueryListProps): ReactNode {
     const {
@@ -102,10 +103,7 @@ export function QueryList(props: QueryListProps): ReactNode {
         [id, entities, onChange, accepts]
     );
 
-    useEffect(
-        () => holdList(id, { picks: entities, filter }),
-        [id, entities, filter]
-    );
+    useEffect(() => holdPicks(id, entities), [id, entities]);
 
     useEffect(() => {
         if (!target || !isFocused) {
@@ -128,25 +126,25 @@ export function QueryList(props: QueryListProps): ReactNode {
         }
     };
 
-    // Each highlight keeps picks limited to the focused list's kind
     const show = (picks: OnshapeSelection[]) => {
         if (target) {
-            sendHighlightMessage(
-                target,
-                picks.map(toHighlighted),
-                focusedList()?.filter
-            );
+            sendHighlightMessage(target, picks.map(toHighlighted));
         }
     };
 
     const highlight = (entity: OnshapeSelection) => show([entity]);
 
-    // Back to the focused list's picks, whichever list the rows were in
-    const unhighlight = () => show(focusedList()?.picks ?? []);
+    // Ends the highlight, back to the selection request and what was picked under it
+    const unhighlight = () => {
+        if (target) {
+            expectSelection(focusedPicks());
+            sendStopRequestMessage(target);
+        }
+    };
 
     const remove = (entity: OnshapeSelection) => {
         const rest = without(entities, [entity]);
-        show(isFocused ? rest : (focusedList()?.picks ?? []));
+        show(isFocused ? rest : focusedPicks());
         onChange(rest);
     };
 

@@ -51,7 +51,7 @@ export function jobHeadline(
         case FastenerJobOutcome.SUCCESS:
             return parts;
         case FastenerJobOutcome.PARTIAL:
-            return `${parts}, with problems`;
+            return `${parts} with problems`;
         case FastenerJobOutcome.FAILED:
             return "Couldn't insert fasteners";
     }
