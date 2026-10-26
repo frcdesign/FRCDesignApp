@@ -20,9 +20,7 @@ import { useTargetElement } from "../lib/onshape-params";
 import {
     focusedPicks,
     holdPicks,
-    holdResume,
     onPick,
-    resumeFocused,
     selectionKey,
     useOnshapeSelection,
     without,
@@ -67,9 +65,10 @@ function defaultName(entity: OnshapeSelection, index: number): string {
  * window's selection: what's picked of the kind it takes is added, and what's
  * deselected is dropped. Hover a row to light its entity up alone.
  *
- * The filter is asked for on focus. Hovering a row highlights its entity alone,
- * and leaving ends that highlight with a stop, rather than asking for the
- * filter again, since a request clears what the window shows.
+ * The filter is asked for on focus. A highlight cancels it, and a request
+ * clears what the window shows, so hovering a row highlights its entity alone,
+ * leaving lights the focused list's picks up, and the filter is off until the
+ * list is clicked again.
  */
 export function QueryList(props: QueryListProps): ReactNode {
     const {
@@ -85,9 +84,8 @@ export function QueryList(props: QueryListProps): ReactNode {
     } = props;
     const target = useTargetElement();
     const isFocused = useOnshapeSelection((state) => state.focused === id);
-    // Each stop names the request it ends
+    // The stop names the request it ends
     const selectionRequest = useRef<string>(undefined);
-    const highlightRequest = useRef<string>(undefined);
     const [refused, setRefused] = useState(false);
 
     useEffect(
@@ -108,21 +106,6 @@ export function QueryList(props: QueryListProps): ReactNode {
     );
 
     useEffect(() => holdPicks(id, entities), [id, entities]);
-
-    // The same request, under its own id, that a highlight ended
-    useEffect(
-        () =>
-            holdResume(id, () => {
-                if (target && selectionRequest.current) {
-                    sendSelectionRequest(
-                        target,
-                        filter,
-                        selectionRequest.current
-                    );
-                }
-            }),
-        [id, target, filter]
-    );
 
     useEffect(() => {
         if (!target || !isFocused) {
@@ -151,23 +134,14 @@ export function QueryList(props: QueryListProps): ReactNode {
 
     const show = (picks: OnshapeSelection[]) => {
         if (target) {
-            highlightRequest.current = sendHighlightMessage(
-                target,
-                picks.map(toHighlighted)
-            );
+            sendHighlightMessage(target, picks.map(toHighlighted));
         }
     };
 
     const highlight = (entity: OnshapeSelection) => show([entity]);
 
-    // Ends the highlight, then starts the focused list's selection request again
-    const unhighlight = () => {
-        if (target && highlightRequest.current) {
-            sendStopRequestMessage(target, highlightRequest.current);
-            highlightRequest.current = undefined;
-            resumeFocused();
-        }
-    };
+    // Back to the focused list's picks, whichever list the rows were in
+    const unhighlight = () => show(focusedPicks());
 
     const remove = (entity: OnshapeSelection) => {
         const rest = without(entities, [entity]);

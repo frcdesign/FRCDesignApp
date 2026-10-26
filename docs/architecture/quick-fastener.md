@@ -844,12 +844,11 @@ vectors, Onshape's 4×4 transforms and `LINEAR_TOLERANCE`.
 4. Hovering a row, in any list, lights its entity up alone
    (`requestSelectionHighlight`, which makes it what the Onshape window shows
    selected, each with its own message id). Moving between rows lights each
-   alone; leaving the rows sends `stopRequest` with the highlight's
-   `messageId` to end it, then sends the focused list's `requestSelection`
-   again under its original `messageId` (`resumeFocused`), so picks are
-   limited again. That request's clearing of the window isn't taken as picks
-   (`expectCleared`). Removing a row lights the rest up. Clicking a focused
-   list asks for its filter again.
+   alone; leaving the rows lights the focused list's picks up
+   (`focusedPicks`), or nothing with no list focused. Removing a row lights
+   the rest up. A highlight cancels any pending selection request, and a
+   request clears what the window shows, so the filter stays off after a
+   hover until the focused list is clicked again, which asks for it again.
 
 ### The form
 
@@ -1153,10 +1152,13 @@ is logged to the console.
   also holds a `requestSelection`, which only limits what the Onshape window
   lets be picked, in the form Onshape answers to (array specifiers per level)
   rather than the one it documents. A highlight replaces what the window shows
-  selected, and a request clears it, so a hover ends its highlight with a stop
-  naming it, then starts the focused list's request again under its own id. A highlight carrying the filter, in
-  Onshape's documented fields for a selection, was tried and doesn't limit
-  picks. A list still refuses kinds it doesn't take.
+  selected and cancels any pending request, and a request clears what the
+  window shows, so the two can't be up together: leaving a hovered row lights
+  the focused list's picks up, and clicking the list limits picks again. Tried
+  and dropped: a highlight carrying the filter, in Onshape's documented fields
+  for a selection, which doesn't limit picks; and stopping the highlight then
+  sending the request again under its own id, which a highlight has already
+  cancelled. A list still refuses kinds it doesn't take.
 - **Washers are mated to, not offset for.** Mate offsets aren't in Onshape's
   API reference. Fastening a screw or nut to the washer under it puts it at the
   washer's thickness whichever washer was chosen, where moving the mate

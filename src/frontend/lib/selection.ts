@@ -156,23 +156,6 @@ export function holdPicks(
     };
 }
 
-/** How each mounted query list asks for its selection request again, once a highlight has ended it. */
-const resumers = new Map<string, () => void>();
-
-export function holdResume(listId: string, resume: () => void): () => void {
-    resumers.set(listId, resume);
-    return () => {
-        resumers.delete(listId);
-    };
-}
-
-export function resumeFocused(): void {
-    const { focused } = useOnshapeSelection.getState();
-    if (focused !== undefined) {
-        resumers.get(focused)?.();
-    }
-}
-
 /** The focused list's picks; none with no list focused. */
 export function focusedPicks(): OnshapeSelection[] {
     const { focused } = useOnshapeSelection.getState();

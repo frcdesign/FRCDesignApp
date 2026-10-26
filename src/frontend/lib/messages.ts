@@ -156,14 +156,14 @@ let selectionRequests = 0;
 /**
  * Limits picks in the Onshape window to `filter` until {@link sendStopRequestMessage},
  * clearing what it shows selected. Picks still arrive as SELECTION messages.
- * `messageId` sends an earlier request again under its own id.
+ * A highlight cancels it.
  */
 export function sendSelectionRequest(
     elementPath: ElementPath,
-    filter: SelectionFilter,
-    messageId = `${SELECTION_PREFIX}${++selectionRequests}`
+    filter: SelectionFilter
 ): string {
     expectCleared();
+    const messageId = `${SELECTION_PREFIX}${++selectionRequests}`;
     sendMessage(elementPath, {
         messageName: MessageType.REQUEST_SELECTION,
         messageId,
