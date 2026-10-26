@@ -22,7 +22,6 @@ import {
 import { OpenDocumentItems } from "../../../components/open-document-items";
 import { AdminMenuSection, MenuSection } from "../../../components/app-menu";
 import { ReloadThumbnailMenuItem } from "./reload-thumbnail-item";
-import { GeneratedBadge } from "../../../components/generated-badge";
 import { QuickInsertItems } from "../../insert/components/quick-insert-items";
 import { openCannotDeriveAssemblyAlert } from "../../../components/alerts";
 import { useIsAssemblyInPartStudio } from "../../insert/insert-hooks";
@@ -102,7 +101,6 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
             thumbnail={thumbnail}
             badge={
                 <>
-                    {insertable.isGenerated && <GeneratedBadge />}
                     <InsertableStatusBadge
                         insertableId={insertable.id}
                         groupId={insertable.groupId}

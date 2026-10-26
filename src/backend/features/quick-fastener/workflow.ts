@@ -231,6 +231,14 @@ async function runSteps(ctx: RunContext, request: QuickFastenerIn) {
                         (path): path is string[] => path !== null
                     )
                 ) {
+                    console.error("Quick fastener can't replicate a stack", {
+                        stack,
+                        parts: seedParts.map(([index, part]) => ({
+                            name: part.name,
+                            path: paths[index],
+                            mate: mates[index]
+                        }))
+                    });
                     throw runFailure(
                         "A hole's parts weren't all inserted and fastened, so they can't be replicated."
                     );
@@ -276,9 +284,17 @@ async function insertParts(
                 ctx.assembly,
                 insertGroups(set, parts)
             );
-            return (response.insertInstanceResponses ?? []).map(
+            const inserted = (response.insertInstanceResponses ?? []).map(
                 (each) => each.occurrences?.[0]?.path ?? null
             );
+            if (inserted.length !== parts.length || inserted.includes(null)) {
+                // Which part Onshape answered no occurrence for, and how it answered
+                console.error("Quick fastener insert answered no path", {
+                    parts: parts.map((part) => part.name),
+                    response
+                });
+            }
+            return inserted;
         }
     );
     ctx.result.inserted += paths.filter((path) => path !== null).length;

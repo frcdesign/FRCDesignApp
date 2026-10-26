@@ -30,7 +30,7 @@ Parts modeled by hand aren't generated, whatever their configuration.
 | `src/backend/features/load/load-group.ts`                            | `readGeneratedTabsStep`: which tabs the version's manifests name, storing each's catalog                         |
 | `src/backend/features/load/load-insertable.ts`                       | `probeInsertable`: a generated tab's records come from `generatedConfiguration`                                  |
 | `src/backend/features/generated-parts/studios.ts`                    | `GeneratedStudio`, `StudioLocation`; client-safe                                                                 |
-| `src/frontend/components/generated-badge.tsx`                        | `GeneratedBadge`: the FeatureScript mark, blue, on the library card and its build status card                    |
+| `src/frontend/components/generated-badge.tsx`                        | `GeneratedBadge`: the FeatureScript mark, blue, in the build status card's header                                |
 | `src/frontend/features/build-status/components/indexing-section.tsx` | Shows nothing for a generated part, which indexes every configuration                                            |
 
 robot-code owns each set's definition: for the fasteners,
@@ -148,10 +148,10 @@ any is; a release rebuilds every studio, which changes each.
 
 ### Indicator
 
-`InsertableOut.isGenerated` puts `GeneratedBadge` beside the library card's
-title. The build status carries `generatedStudio`, which puts it in the build
-status card's header too, and leaves out the indexing section and the insert
-and fasten and Replicate switches.
+The build status carries `generatedStudio`, which puts `GeneratedBadge` in
+the build status card's header beside the part's name, and leaves out the
+indexing section and the insert and fasten and Replicate switches. The library
+list's rows don't mark it.
 
 ## Invariants
 

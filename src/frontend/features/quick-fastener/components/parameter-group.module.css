@@ -1,4 +1,4 @@
-/* Its header and rows span the grid, and the rows keep its columns, so names line up across groups. */
+/* Its header and rows span the grid. */
 .header,
 .full {
     grid-column: 1 / -1;
@@ -18,7 +18,7 @@
 .body {
     grid-column: 1 / -1;
     display: grid;
-    grid-template-columns: subgrid;
+    grid-template-columns: minmax(0, 1fr);
     gap: var(--mantine-spacing-sm);
     align-items: start;
 }

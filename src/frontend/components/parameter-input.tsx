@@ -26,10 +26,7 @@ interface ParameterGridProps {
     children: ReactNode;
 }
 
-/**
- * What parameter inputs sit in: a column of names and one of controls, so
- * every control starts at one edge whatever its name says.
- */
+/** What parameter inputs sit in: a row each, its name as wide as its text, then its control. */
 export function ParameterGrid(props: ParameterGridProps): ReactNode {
     return <div className={classes.grid}>{props.children}</div>;
 }
@@ -44,12 +41,12 @@ interface ParameterCellsProps {
 function ParameterCells(props: ParameterCellsProps): ReactNode {
     const { parameter, inputId, children } = props;
     return (
-        <>
+        <div className={classes.row}>
             <label className={classes.label} htmlFor={inputId}>
                 {parameter.name}
             </label>
             {children}
-        </>
+        </div>
     );
 }
 
