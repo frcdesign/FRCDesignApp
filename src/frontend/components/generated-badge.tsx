@@ -1,8 +1,8 @@
 import { Tooltip } from "@mantine/core";
 import { CodeIcon } from "@phosphor-icons/react";
 import { type ReactNode } from "react";
-import { AppIcon } from "../../../components/app-icon";
-import { IconSize, StatusColor } from "../../../lib/style-constants";
+import { AppIcon } from "./app-icon";
+import { IconSize, StatusColor } from "../lib/style-constants";
 
 /** Marks a part FeatureScript generates, whose configurations and part numbers come from its code. */
 export function GeneratedBadge(): ReactNode {
@@ -11,7 +11,7 @@ export function GeneratedBadge(): ReactNode {
             <AppIcon
                 icon={CodeIcon}
                 size={IconSize.SMALL}
-                color={StatusColor.DIMMED}
+                color={StatusColor.INFO}
             />
         </Tooltip>
     );

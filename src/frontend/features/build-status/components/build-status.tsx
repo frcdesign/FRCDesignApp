@@ -26,6 +26,7 @@ import {
 } from "../../../lib/style-constants";
 import { AppIcon } from "../../../components/app-icon";
 import { AppHoverCard } from "../../../components/app-hover-card";
+import { GeneratedBadge } from "../../../components/generated-badge";
 import { RequireAccessLevel } from "../../auth/access-level";
 import { useBuildStatusQuery } from "../queries";
 import {
@@ -60,6 +61,8 @@ interface BuildStatusSubject {
     configurationTarget?: ConfigurationTarget;
     /** Draws the badge as hidden-from-users instead of as its worst severity. */
     isHidden?: boolean;
+    /** Marks the header as a part FeatureScript generates. */
+    isGenerated?: boolean;
 }
 
 interface BuildStatusCardProps extends BuildStatusSubject {
@@ -74,6 +77,7 @@ function BuildStatusCard(props: BuildStatusCardProps): ReactNode {
         issues,
         versionCreatedAt,
         configurationTarget,
+        isGenerated,
         children
     } = props;
     return (
@@ -83,6 +87,7 @@ function BuildStatusCard(props: BuildStatusCardProps): ReactNode {
                 groupId={groupId}
                 issues={issues}
                 versionCreatedAt={versionCreatedAt}
+                isGenerated={isGenerated}
             />
             {issues.length > 0 && (
                 <>
@@ -123,6 +128,7 @@ function BuildStatusHoverCard({
     versionCreatedAt,
     configurationTarget,
     isHidden,
+    isGenerated,
     hoverMenu
 }: BuildStatusHoverCardProps): ReactNode {
     const maxSeverity = getMaxSeverity(issues);
@@ -150,6 +156,7 @@ function BuildStatusHoverCard({
                 issues={issues}
                 versionCreatedAt={versionCreatedAt}
                 configurationTarget={configurationTarget}
+                isGenerated={isGenerated}
             >
                 {hoverMenu}
             </BuildStatusCard>
@@ -162,11 +169,12 @@ interface CardHeaderProps {
     groupId: string;
     issues: BuildIssue[];
     versionCreatedAt?: number;
+    isGenerated?: boolean;
 }
 
 /** The card header: name + severity summary on the left, the version's age on the right. */
 function CardHeader(props: CardHeaderProps): ReactNode {
-    const { name, groupId, issues, versionCreatedAt } = props;
+    const { name, groupId, issues, versionCreatedAt, isGenerated } = props;
     return (
         <Stack gap={6}>
             <Group justify="space-between" align="center" gap="sm">
@@ -179,6 +187,7 @@ function CardHeader(props: CardHeaderProps): ReactNode {
                 >
                     {name}
                 </Text>
+                {isGenerated && <GeneratedBadge />}
                 <VersionAge
                     groupId={groupId}
                     versionCreatedAt={versionCreatedAt}
@@ -243,6 +252,7 @@ export function InsertableStatusBadge(
             issues={insertable.buildIssues}
             versionCreatedAt={insertable.versionCreatedAt}
             isHidden={!insertable.isVisible}
+            isGenerated={insertable.generatedStudio !== undefined}
             configurationTarget={
                 insertable.configuration && {
                     elementPath: insertable.elementPath,

@@ -58,7 +58,7 @@ describe("indexing section", () => {
         mocks.setExcluded.mockReset();
     });
 
-    it("has no switches for a generated part, which indexes every configuration", () => {
+    it("shows nothing for a generated part, which indexes every configuration", () => {
         renderWithProviders(
             <IndexingSection
                 insertableId="i"
@@ -68,7 +68,7 @@ describe("indexing section", () => {
                 }}
             />
         );
-        expect(screen.getByText(/indexed from its FeatureScript/)).toBeTruthy();
+        expect(screen.queryByText("Indexing")).toBeNull();
         expect(screen.queryAllByRole("switch")).toHaveLength(0);
     });
 

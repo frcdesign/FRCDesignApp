@@ -89,6 +89,22 @@ describe("insertable routes", () => {
         expect(row?.fastenInfo).toBeNull();
     });
 
+    it("refuses to toggle fasten or replicate for a generated part", async () => {
+        await seedPartStudio(db, { generatedStudio: "fasteners/screw" });
+
+        for (const [route, body] of [
+            ["toggle-insert-and-fasten", { supportsFasten: false }],
+            ["toggle-replicate", { supportsReplicate: false }]
+        ] as const) {
+            const res = await createTestApp().request(
+                `/api/${route}/library/${TEST_LIBRARY_ID}/insertable/${TEST_PART_STUDIO_ID}`,
+                jsonRequest("POST", body),
+                env
+            );
+            expect(res.status).toBe(400);
+        }
+    });
+
     it("POST /add-to-part-studio inserts via the Onshape API", async () => {
         await seedPartStudio(db);
         const spy = vi

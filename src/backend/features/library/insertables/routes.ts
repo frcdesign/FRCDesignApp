@@ -80,6 +80,16 @@ function inLibrary(libraryId: LibraryId, insertableId: string) {
 /** POST /api/toggle-insert-and-fasten/library/:libraryId/insertable/:insertableId */
 const setFastenBody = z.object({ supportsFasten: z.boolean() });
 
+/** A generated part always fastens and replicates, which its load sets. */
+function refuseGenerated(generatedStudio: string | null): void {
+    if (generatedStudio !== null) {
+        throw handledError(
+            "A FeatureScript part always inserts and fastens, and replicates.",
+            HttpStatus.BAD_REQUEST
+        );
+    }
+}
+
 const indexConfigurationsBody = z.object({ indexConfigurations: z.boolean() });
 
 const excludedParametersBody = z.object({
@@ -102,13 +112,15 @@ insertableRoutes.post(
                 documentId: insertables.documentId,
                 versionId: insertables.versionId,
                 elementId: insertables.elementId,
-                elementType: insertables.elementType
+                elementType: insertables.elementType,
+                generatedStudio: insertables.generatedStudio
             })
             .from(insertables)
             .where(inLibrary(libraryId, insertableId))
             .get();
         if (!row)
             throw internalError("Insertable not found", HttpStatus.NOT_FOUND);
+        refuseGenerated(row.generatedStudio);
 
         let fastenInfo = null;
         if (supportsFasten) {
@@ -141,15 +153,21 @@ insertableRoutes.post(
         const db = getDb(c.env.DB);
         const libraryId = getLibraryParam(c);
         const { supportsReplicate } = c.req.valid("json");
+        const insertableId = getInsertableParam(c);
 
-        const updated = await db
-            .update(insertables)
-            .set({ supportsReplicate })
-            .where(inLibrary(libraryId, getInsertableParam(c)))
-            .returning({ id: insertables.id });
-        if (updated.length === 0) {
+        const row = await db
+            .select({ generatedStudio: insertables.generatedStudio })
+            .from(insertables)
+            .where(inLibrary(libraryId, insertableId))
+            .get();
+        if (!row) {
             throw internalError("Insertable not found", HttpStatus.NOT_FOUND);
         }
+        refuseGenerated(row.generatedStudio);
+        await db
+            .update(insertables)
+            .set({ supportsReplicate })
+            .where(inLibrary(libraryId, insertableId));
 
         await bumpLibraryVersion(db, libraryId);
         return c.json({ success: true });

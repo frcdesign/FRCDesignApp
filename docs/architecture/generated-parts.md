@@ -30,8 +30,8 @@ Parts modeled by hand aren't generated, whatever their configuration.
 | `src/backend/features/load/load-group.ts`                            | `readGeneratedTabsStep`: which tabs the version's manifests name, storing each's catalog                         |
 | `src/backend/features/load/load-insertable.ts`                       | `probeInsertable`: a generated tab's records come from `generatedConfiguration`                                  |
 | `src/backend/features/generated-parts/studios.ts`                    | `GeneratedStudio`, `StudioLocation`; client-safe                                                                 |
-| `src/frontend/features/library/components/generated-badge.tsx`       | `GeneratedBadge`: the library card's FeatureScript mark                                                          |
-| `src/frontend/features/build-status/components/indexing-section.tsx` | Says a generated part indexes every configuration, in place of the indexing switches                             |
+| `src/frontend/components/generated-badge.tsx`                        | `GeneratedBadge`: the FeatureScript mark, blue, on the library card and its build status card                    |
+| `src/frontend/features/build-status/components/indexing-section.tsx` | Shows nothing for a generated part, which indexes every configuration                                            |
 
 robot-code owns each set's definition: for the fasteners,
 `featurescripts/fasteners/fastenerTables.py`, which writes the FeatureScript's
@@ -110,8 +110,9 @@ library loads.
    No configuration is probed, and `decideIndexing` isn't consulted.
 
 The default parts are still read (for the thumbnail and the composite check), as
-is fasten info when it's on. Insert and fasten is on for a generated tab from its
-first load, which an editor can turn off. Its mate connector is the one its
+is fasten info. Insert and fasten and Replicate are on for a generated tab,
+set by every load and not an editor's to change: the toggles refuse it
+(`refuseGenerated`). Its mate connector is the one its
 feature makes, found by the feature's type, which every stored set names
 (`generatedFeatures`) and the tab's own studio does before any is stored. A
 fasten mate names it `<featureId>.<mateConnector>`: the feature's id, then the
@@ -148,8 +149,9 @@ any is; a release rebuilds every studio, which changes each.
 ### Indicator
 
 `InsertableOut.isGenerated` puts `GeneratedBadge` beside the library card's
-title. The build status carries `generatedStudio`, and the indexing section
-shows it in place of the indexing switches.
+title. The build status carries `generatedStudio`, which puts it in the build
+status card's header too, and leaves out the indexing section and the insert
+and fasten and Replicate switches.
 
 ## Invariants
 

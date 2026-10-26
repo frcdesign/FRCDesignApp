@@ -29,11 +29,14 @@ export function InsertableAdminSection(
                 insertableId={insertableId}
                 isVisible={status.isVisible}
             />
-            <FastenSwitch
-                insertableId={insertableId}
-                supportsFasten={status.supportsFasten}
-            />
-            {status.supportsFasten && (
+            {/* A FeatureScript part always fastens and replicates */}
+            {!status.generatedStudio && (
+                <FastenSwitch
+                    insertableId={insertableId}
+                    supportsFasten={status.supportsFasten}
+                />
+            )}
+            {!status.generatedStudio && status.supportsFasten && (
                 <ReplicateSwitch
                     insertableId={insertableId}
                     supportsReplicate={status.supportsReplicate}

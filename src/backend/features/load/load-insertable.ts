@@ -264,13 +264,13 @@ function readFlagsStep(
             .from(insertables)
             .where(eq(insertables.id, insertableId))
             .get();
-        return (
-            row ?? {
-                supportsFasten: generated !== undefined,
-                indexConfigurations: false,
-                excludedParameterIds: []
-            }
-        );
+        const flags = row ?? {
+            supportsFasten: false,
+            indexConfigurations: false,
+            excludedParameterIds: []
+        };
+        // A generated studio's part makes a mate connector, and always fastens
+        return generated ? { ...flags, supportsFasten: true } : flags;
     });
 }
 
@@ -370,7 +370,12 @@ export async function saveInsertable(
         partMetadata: parsed.partMetadata,
         generatedStudio: parsed.generatedStudio,
         buildIssues: parsed.buildIssues,
-        lastLoadedAt: new Date()
+        lastLoadedAt: new Date(),
+        // Not an editor's to change: a generated part fastens and replicates
+        ...(target.generated !== undefined && {
+            supportsFasten: true,
+            supportsReplicate: true
+        })
     };
 
     const insertableWrite = db
@@ -384,8 +389,7 @@ export async function saveInsertable(
             sortOrder: target.sortOrder,
             // Only on insert, so an existing row keeps the user's choices.
             isVisible: false,
-            // A generated studio's feature makes a mate connector to fasten by
-            supportsFasten: target.generated !== undefined,
+            supportsFasten: false,
             indexConfigurations: false,
             ...reloaded
         })
