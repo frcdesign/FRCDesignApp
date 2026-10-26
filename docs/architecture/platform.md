@@ -102,6 +102,7 @@ If it keeps happening, contact the FRCDesignApp developers."
 | Any Onshape request             | `REQUEST_TIMEOUT_MS`               | Aborts after 60 s                                                                          |
 | Load steps calling Onshape      | `ONSHAPE_STEP_RETRIES`             | 5 retries after 10, 20, 40, 80, 160 s; a 429 waits its `Retry-After` plus 0–20 s of jitter |
 | Load thumbnail steps            | `THUMBNAIL_RETRIES`                | 3 retries after 10, 20, 40 s; a 429 as above                                               |
+| Quick fastener steps            | `ONSHAPE_QUICK_RETRIES`            | 1 retry after 2 s; a 429 as above. Never for the app's own errors                          |
 | Configuration renders           | `RENDER_RETRIES`                   | 30 retries every 2 s; a 429 waits its `Retry-After` plus jitter                            |
 | A held reload                   | `APPROVAL_TIMEOUT`                 | Waits a week for approval, then loads                                                      |
 | A reload waiting its turn       | `TURN_INTERVAL`                    | Checks the library again every 30 s                                                        |
