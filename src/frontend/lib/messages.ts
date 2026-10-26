@@ -3,7 +3,12 @@
 import { type ElementPath } from "@backend/lib/onshape/path";
 import { useEffect } from "react";
 import { useOnshapeServer, useTargetElement } from "./onshape-params";
-import { parseSelections, useOnshapeSelection } from "./selection";
+import {
+    expectCleared,
+    expectSelection,
+    parseSelections,
+    useOnshapeSelection
+} from "./selection";
 
 declare global {
     interface Window {
@@ -37,10 +42,8 @@ export function useMessageListener() {
             }
             // What Onshape sends about selection is undocumented; this is how to see it
             console.debug("Received from Onshape", event.data);
-            if (
-                !isHighlightAnswer(event.data) &&
-                carriesSelections(event.data)
-            ) {
+            const { messageName } = event.data as { messageName?: unknown };
+            if (messageName === "SELECTION") {
                 useOnshapeSelection
                     .getState()
                     .receive(parseSelections(event.data));
@@ -68,35 +71,9 @@ export function sendOpenFeatureMessage(
     });
 }
 
-/**
- * Picks arrive as SELECTION messages, and, while a selection request is
- * pending, in its answers, which Onshape doesn't document.
- */
-function carriesSelections(data: unknown): boolean {
-    const { messageName, messageId } = data as {
-        messageName?: unknown;
-        messageId?: unknown;
-    };
-    return (
-        messageName === "SELECTION" ||
-        (typeof messageId === "string" &&
-            messageId.startsWith(SELECTION_PREFIX))
-    );
-}
-
 /** Onshape wants each request identified uniquely; one highlight is up at a time. */
 const HIGHLIGHT_PREFIX = "highlight-selection-";
 let highlights = 0;
-
-function isHighlightAnswer(data: unknown): boolean {
-    const { messageId, stoppedMessageId } = data as {
-        messageId?: unknown;
-        stoppedMessageId?: unknown;
-    };
-    return [messageId, stoppedMessageId].some(
-        (id) => typeof id === "string" && id.startsWith(HIGHLIGHT_PREFIX)
-    );
-}
 
 /** Something picked in the assembly, as Onshape names it. */
 export interface HighlightedEntity {
@@ -114,6 +91,7 @@ export function sendHighlightMessage(
     elementPath: ElementPath,
     entities: HighlightedEntity[]
 ) {
+    expectSelection(entities);
     sendMessage(elementPath, {
         messageName: MessageType.REQUEST_HIGHLIGHT_SELECTION,
         messageId: `${HIGHLIGHT_PREFIX}${++highlights}`,
@@ -158,14 +136,14 @@ const SELECTION_PREFIX = "selection-";
 let selectionRequests = 0;
 
 /**
- * Limits picks in the Onshape window to `filter` until {@link sendStopRequestMessage}.
- * Picks still arrive as SELECTION messages; the request only limits what the
- * window lets be picked.
+ * Limits picks in the Onshape window to `filter` until {@link sendStopRequestMessage},
+ * clearing what it shows selected. Picks still arrive as SELECTION messages.
  */
 export function sendSelectionRequest(
     elementPath: ElementPath,
     filter: SelectionFilter
 ) {
+    expectCleared();
     sendMessage(elementPath, {
         messageName: MessageType.REQUEST_SELECTION,
         messageId: `${SELECTION_PREFIX}${++selectionRequests}`,

@@ -30,7 +30,10 @@ const face = (selectionId: string): OnshapeSelection => ({
 /** As the message listener hands each pick Onshape streams over. */
 function selectInOnshape(...picked: OnshapeSelection[]) {
     for (const pick of picked) {
-        act(() => useOnshapeSelection.getState().receive([pick]));
+        act(() => {
+            const { shown, receive } = useOnshapeSelection.getState();
+            receive([...shown, pick]);
+        });
     }
 }
 
@@ -66,7 +69,11 @@ describe("FastenCircularEdgesStatus", () => {
     afterEach(() => {
         vi.restoreAllMocks();
         clearFastenPicks();
-        useOnshapeSelection.setState({ focused: undefined });
+        useOnshapeSelection.setState({
+            focused: undefined,
+            shown: [],
+            awaited: undefined
+        });
     });
 
     it("takes the circular edges picked, leaving out faces", async () => {

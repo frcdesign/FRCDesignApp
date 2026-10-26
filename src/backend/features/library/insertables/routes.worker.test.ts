@@ -519,7 +519,8 @@ describe("insertable routes", () => {
                 radius
             })),
             holes: [],
-            placed: []
+            placed: [],
+            unfound: []
         });
     }
 

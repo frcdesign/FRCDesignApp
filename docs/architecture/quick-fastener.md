@@ -41,9 +41,12 @@ shared with insert and fasten
 ```ts
 // Keeps a SELECTION message's entities, leaving out whole occurrences.
 function parseSelections(data: unknown): OnshapeSelection[];
-// The one focused list, and handing it each pick Onshape streams.
+// The one focused list, and handing it how the window's selection changed.
 const useOnshapeSelection: UseBoundStore<StoreApi<SelectionState>>;
 function onPick(listId: string, handler: PickHandler): () => void;
+// Says the app made the window show a selection, so its SELECTION messages aren't picks.
+function expectSelection(selection: OnshapeSelection[]): void;
+function expectCleared(): void;
 // Onshape's query parameter, for entities picked in the Onshape window.
 function QueryList(props: QueryListProps): ReactNode;
 
@@ -58,11 +61,21 @@ interface OnshapeSelection {
 interface SelectionState {
     /** The query list taking picks; none takes them when absent. */
     focused?: string;
-    receive: (picked: OnshapeSelection[]) => void;
+    /** What the Onshape window last said it has selected. */
+    shown: OnshapeSelection[];
+    /** A selection the app asked Onshape to show, until it arrives or a second passes. */
+    awaited?: { keys: string; until: number };
+    /** Takes a SELECTION message's whole selection. */
+    receive: (selection: OnshapeSelection[]) => void;
     focus: (listId: string | undefined) => void;
 }
 
-type PickHandler = (picked: OnshapeSelection[]) => void;
+interface SelectionChange {
+    added: OnshapeSelection[];
+    removed: OnshapeSelection[];
+}
+
+type PickHandler = (change: SelectionChange) => void;
 
 interface QueryListProps {
     /** Unique on the page: which list takes picks. */
@@ -419,6 +432,8 @@ interface IndexedHoles {
     circularEdges: AssemblyCircularEdge[];
     holes: AssemblyHole[];
     placed: PlacedScrew[];
+    /** Each target that gave no circular edge, and why. */
+    unfound: PlannedHole[];
 }
 
 type ElementMicroversions = Map<string, string>;
@@ -808,35 +823,41 @@ vectors, Onshape's 4×4 transforms and `LINEAR_TOLERANCE`.
 
 ### Picking
 
-1. Once the app sends `applicationInit`, Onshape streams a `SELECTION` message
-   for each pick as it's made, not the whole selection; while a selection
-   request is pending, picks arrive in its answers instead, which carry its
-   message id. `parseSelections` keeps either's entities; a highlight's answers
-   are never taken as picks. None of this is documented, so every message to
+1. Once the app sends `applicationInit`, Onshape sends a `SELECTION` message
+   with the window's whole selection each time it changes; `parseSelections`
+   keeps its entities, and `receive` hands the focused list what was added and
+   what was removed since the last. Answers to requests carry no picks. A
+   highlight or a selection request changes the window's selection too, and
+   Onshape reports that as an empty selection, then the new one, sometimes
+   interleaved with an earlier highlight's; so the app says what it expects
+   (`expectSelection`, `expectCleared`) and takes nothing until that arrives,
+   or for a second at most. None of this is documented, so every message to
    and from Onshape is logged at debug level ("Sent to Onshape", "Received from
    Onshape"), and `window.sendToOnshape(message)` sends one by hand from the
    browser console, addressed to the launching element.
 2. Clicking a `QueryList` focuses it (one at a time, `useOnshapeSelection`) and
-   shows its prompt in Onshape's bubble. Each pick goes to the focused list,
-   which keeps the edges and faces it doesn't hold yet, and repeats its prompt
-   for anything else. With no list focused, picks are dropped.
+   shows its prompt in Onshape's bubble. The focused list adds what's picked of
+   the kind it takes, drops what's deselected, and repeats its prompt for
+   anything else picked. With no list focused, the selection is ignored. A list
+   is named inside its box, as Onshape's query parameters are.
 3. While focused, a list holds a `requestSelection` with its `filter`
    (`sendSelectionRequest`), which limits what the Onshape window lets be
    picked: `CIRCULAR_EDGES` (`entityTypeSpecifier: ["EDGE"]`,
    `selectionTypeSpecifier: ["GEOMETRY"]`, `geometryTypeSpecifier: ["CIRCLE"]`)
    or `PLANAR_FACES` (`["FACE"]`, `["GEOMETRY"]`, `["PLANE"]`). Onshape
-   documents other field names, which it ignores. Onshape shows what's picked
-   under it, so nothing is sent as picks arrive. Losing focus or unmounting
-   sends `stopRequest`.
+   documents other field names, which it ignores. The request clears the
+   window's selection, and Onshape shows what's picked under it, so nothing is
+   sent as picks arrive. **Clear** empties the list and asks for the filter
+   again, clearing the window too. Losing focus or unmounting sends
+   `stopRequest`.
 4. Hovering a row, in any list, lights its entity up alone
    (`requestSelectionHighlight`, which makes it what the Onshape window shows
-   selected, each with its own message id). Leaving the row lights the focused
-   list's picks up (`focusedPicks`), or nothing with no list focused
-   (`clearHighlight`). A highlight cancels the selection request, and a
+   selected, each with its own message id). Moving between rows lights each
+   alone; leaving the rows lights the focused list's picks up (`focusedPicks`),
+   or nothing with no list focused (`clearHighlight`). Removing a row lights the
+   rest up. A highlight cancels the selection request, and a
    request clears the highlight, so the picks stay lit and the filter stays off
    until the list is clicked again, which asks for it again.
-5. Deselecting in the Onshape window leaves a list as it is: what Onshape sends
-   for a deselection is unknown.
 
 ### The form
 
@@ -922,7 +943,8 @@ skipped.
        scanned.
     4. Moves every part's holes, and the picked circular edges (an edge's own,
        or every circular edge of a face), into the assembly; drops the skipped
-       ones.
+       ones. A pick that gives no circular edge is reported as a hole that
+       can't be fastened, saying why (`IndexedHoles.unfound`).
     5. `planHoles`, for each circular edge, with the chosen screw's size and
        head:
         1. A library screw already on its axis, seated there: **fastened**.
@@ -1014,7 +1036,7 @@ app.
 | "Select the edges of holes to leave out."                                                                                        | Holes to skip's prompt                                     |
 | "Circular edges"                                                                                                                 | Targets list's label, circular edges                       |
 | "Select the circular edges of holes to fasten."                                                                                  | Targets list's prompt, circular edges                      |
-| "Click to select"                                                                                                                | An empty list, not focused (`QueryList`)                   |
+| "Clear"                                                                                                                          | A list with picks, inside its box (`QueryList`)            |
 | "{Kind} {n}", e.g. "Edge 1"                                                                                                      | A list's row                                               |
 | "Fastener"                                                                                                                       | Heading                                                    |
 | "Program" / "FRC" / "FTC"                                                                                                        | Program, its options                                       |
@@ -1046,6 +1068,7 @@ app.
 | "Already fastened" / "Can't be fastened"                                                                                         | A hole's plan                                              |
 | "The head isn't made in this size."                                                                                              | A hole's plan, no fit                                      |
 | "No hole goes into the part from this circular edge."                                                                            | A hole's plan, no fit                                      |
+| "Couldn't find this part in the assembly." / "Not a circular edge." / "No circular edges in this face."                          | A pick that gave no circular edge                          |
 | "The hole is too small for a {size} screw."                                                                                      | A hole's plan, no fit                                      |
 | "The vendor doesn't make this head in this size."                                                                                | A hole's plan, no fit                                      |
 | "The vendor doesn't make this length in this size and head."                                                                     | A hole's plan, no fit, preset                              |
@@ -1126,9 +1149,11 @@ app.
   current. A Part Studio deriving from another tab of its workspace keeps its
   tab's microversion when only that other tab changes; this is untried in
   Onshape.
-- **The panel listens to the stream.** Onshape streams every pick once the app
-  has sent `applicationInit`, and in a pending selection request's answers. A
-  focused list also holds a `requestSelection`,
+- **The panel follows the window's selection.** Onshape reports the whole
+  selection each time it changes once the app has sent `applicationInit`, so a
+  focused list takes what was added and drops what was deselected, and ignores
+  what its own highlights and requests made the window select. A focused list
+  also holds a `requestSelection`,
   which only limits what the Onshape window lets be picked, in the form Onshape
   answers to (array specifiers per level) rather than the one it documents; a
   highlight cancels it. A highlight replaces what the Onshape window shows

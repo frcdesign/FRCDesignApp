@@ -133,7 +133,7 @@ async function runSteps(ctx: RunContext, request: QuickFastenerIn) {
     if (!set) {
         throw runFailure("Quick fastener's parts aren't published yet.");
     }
-    const plans = await runTask(ctx, FastenerTaskAction.INDEX, (run) =>
+    const indexed = await runTask(ctx, FastenerTaskAction.INDEX, (run) =>
         run("index", isTransient, async (client) => {
             const indexed = await indexHoles(
                 client,
@@ -143,20 +143,24 @@ async function runSteps(ctx: RunContext, request: QuickFastenerIn) {
                 request.excluded,
                 set
             );
-            return planHoles(
-                indexed.circularEdges,
-                indexed.holes,
-                indexed.placed,
-                request.options,
-                set.catalog
-            );
+            return {
+                plans: planHoles(
+                    indexed.circularEdges,
+                    indexed.holes,
+                    indexed.placed,
+                    request.options,
+                    set.catalog
+                ),
+                unfound: indexed.unfound
+            };
         })
     );
-    if (!plans) {
+    if (!indexed) {
         skipRest(ctx);
         return;
     }
-    ctx.holes = plans.map((plan) => plan.planned);
+    const { plans } = indexed;
+    ctx.holes = [...plans.map((plan) => plan.planned), ...indexed.unfound];
 
     // Only each group's first hole gets parts; a Replicate puts them on the rest
     const groups = replicateGroups(plans);

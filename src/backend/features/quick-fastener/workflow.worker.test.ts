@@ -26,6 +26,7 @@ import {
     FastenerTaskState,
     HoleEnd,
     HoleStatus,
+    SelectedEntityType,
     type FastenerJobStatus
 } from "./contract";
 import { getJobStatus } from "./jobs";
@@ -201,6 +202,42 @@ describe("QuickFastenerWorkflow", () => {
         expect(mates[3]).toContain(
             '"deterministicIds":["W-top"],"path":["part2"]'
         );
+    });
+
+    it("says why a pick gave no circular edge", async () => {
+        const status = await run("unfound", {
+            sessionId: "session",
+            request: {
+                ...BODY,
+                targets: [
+                    ...BODY.targets,
+                    {
+                        occurrencePath: ["gone"],
+                        entityId: "X",
+                        entityType: SelectedEntityType.EDGE
+                    },
+                    {
+                        occurrencePath: ["top"],
+                        entityId: "TOP-face",
+                        entityType: SelectedEntityType.EDGE
+                    }
+                ]
+            }
+        });
+
+        expect(status.holes).toEqual([
+            expect.objectContaining({ status: HoleStatus.READY }),
+            {
+                key: "gone|X",
+                status: HoleStatus.NO_FIT,
+                reason: "Couldn't find this part in the assembly."
+            },
+            {
+                key: "top|TOP-face",
+                status: HoleStatus.NO_FIT,
+                reason: "Not a circular edge."
+            }
+        ]);
     });
 
     describe("replicating", () => {

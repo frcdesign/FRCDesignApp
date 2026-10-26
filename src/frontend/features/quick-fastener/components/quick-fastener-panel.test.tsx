@@ -72,7 +72,11 @@ const insertButton = () =>
 
 beforeEach(() => {
     vi.spyOn(window.parent, "postMessage").mockImplementation(vi.fn());
-    useOnshapeSelection.setState({ focused: undefined });
+    useOnshapeSelection.setState({
+        focused: undefined,
+        shown: [],
+        awaited: undefined
+    });
     useQuickFastenerStore.setState({
         ...defaultChoices(),
         targets: [],
@@ -111,7 +115,7 @@ describe("QuickFastenerPanel", () => {
         await choose("Select by", "Faces");
         expect(insertButton().disabled).toBe(true);
 
-        await userEvent.click(screen.getAllByText("Click to select")[0]);
+        await userEvent.click(screen.getByText("Faces", { selector: "p" }));
         select(face("F"));
         await userEvent.click(insertButton());
 

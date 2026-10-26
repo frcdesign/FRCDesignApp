@@ -35,10 +35,13 @@ const edge = (id: string): OnshapeSelection => ({
     occurrencePath: ["plate"]
 });
 
-/** As Onshape streams them: each pick as it's made. */
+/** As Onshape sends them: the whole selection, after each pick. */
 function select(...picked: OnshapeSelection[]) {
     for (const pick of picked) {
-        act(() => useOnshapeSelection.getState().receive([pick]));
+        act(() => {
+            const { shown, receive } = useOnshapeSelection.getState();
+            receive([...shown, pick]);
+        });
     }
 }
 
@@ -46,7 +49,11 @@ let messages: unknown[];
 
 beforeEach(() => {
     messages = [];
-    useOnshapeSelection.setState({ focused: undefined });
+    useOnshapeSelection.setState({
+        focused: undefined,
+        shown: [],
+        awaited: undefined
+    });
     useOnshapeLaunch.setState({
         documentId: "doc",
         instanceId: "ws",
@@ -65,9 +72,9 @@ describe("QueryList", () => {
     it("takes nothing until it's focused, then each pick once", async () => {
         renderWithProviders(<Harness />);
         select(edge("A"));
-        expect(screen.getByText("Click to select")).toBeTruthy();
+        expect(screen.getByText("Holes")).toBeTruthy();
 
-        await userEvent.click(screen.getByText("Click to select"));
+        await userEvent.click(screen.getByText("Holes"));
         expect(screen.getByText(PROMPT)).toBeTruthy();
         expect(messages).toContainEqual(
             expect.objectContaining({
@@ -76,6 +83,8 @@ describe("QueryList", () => {
             })
         );
 
+        // The request clears what the window showed
+        act(() => useOnshapeSelection.getState().receive([]));
         select(edge("B"), edge("B"));
         expect(screen.getByText("Edge 1")).toBeTruthy();
         expect(screen.queryByText("Edge 2")).toBeNull();
@@ -83,9 +92,9 @@ describe("QueryList", () => {
 
     it("refuses picks it doesn't take, saying what it wants", async () => {
         renderWithProviders(<Harness />);
-        await userEvent.click(screen.getByText("Click to select"));
+        await userEvent.click(screen.getByText("Holes"));
         select({ ...edge("F"), entityType: "FACE" });
-        expect(screen.getAllByText(PROMPT)).toHaveLength(2);
+        expect(screen.getAllByText(PROMPT)).toHaveLength(1);
         expect(screen.queryByText("Face 1")).toBeNull();
     });
 
@@ -107,7 +116,10 @@ describe("QueryList", () => {
         expect(messages).not.toContainEqual(
             expect.objectContaining({ messageName: "requestSelection" })
         );
-        const [edges, faces] = screen.getAllByText("Click to select");
+        const [edges, faces] = [
+            screen.getByText("Holes"),
+            screen.getByText("Faces")
+        ];
 
         await userEvent.click(edges);
         expect(messages).toContainEqual(
@@ -137,7 +149,7 @@ describe("QueryList", () => {
 
     it("lights a row's entity up while hovered, and removes it", async () => {
         renderWithProviders(<Harness />);
-        await userEvent.click(screen.getByText("Click to select"));
+        await userEvent.click(screen.getByText("Holes"));
         select(edge("A"));
 
         const row = screen.getByText("Edge 1").parentElement!;
@@ -167,7 +179,7 @@ describe("QueryList", () => {
 
     it("sends nothing as picks arrive, which Onshape already shows", async () => {
         renderWithProviders(<Harness />);
-        await userEvent.click(screen.getByText("Click to select"));
+        await userEvent.click(screen.getByText("Holes"));
 
         messages = [];
         select(edge("A"), edge("B"));
@@ -176,7 +188,7 @@ describe("QueryList", () => {
 
     it("lights its picks up once the mouse leaves a row, and limits picks again when clicked", async () => {
         renderWithProviders(<Harness />);
-        await userEvent.click(screen.getByText("Click to select"));
+        await userEvent.click(screen.getByText("Holes"));
         select(edge("A"), edge("B"));
         const row = screen.getByText("Edge 1").parentElement!;
         await userEvent.hover(row);
@@ -228,7 +240,7 @@ describe("QueryList", () => {
                 <Other />
             </>
         );
-        await userEvent.click(screen.getByText("Click to select"));
+        await userEvent.click(screen.getByText("Holes"));
         select(edge("A"));
         const other = screen.getByText("Edge 1", {
             selector: "p",
@@ -275,6 +287,32 @@ describe("QueryList", () => {
         ]);
     });
 
+    it("drops what's deselected in the Onshape window", async () => {
+        renderWithProviders(<Harness />);
+        await userEvent.click(screen.getByText("Holes"));
+        select(edge("A"), edge("B"));
+
+        act(() => useOnshapeSelection.getState().receive([edge("B")]));
+        expect(screen.queryByText("Edge 2")).toBeNull();
+        expect(screen.getByText("Edge 1")).toBeTruthy();
+    });
+
+    it("clears the Onshape window's selection with its picks, keeping them limited", async () => {
+        renderWithProviders(<Harness />);
+        await userEvent.click(screen.getByText("Holes"));
+        select(edge("A"));
+
+        messages = [];
+        await userEvent.click(screen.getByText("Clear"));
+        expect(screen.queryByText("Edge 1")).toBeNull();
+        expect(messages).toEqual([
+            expect.objectContaining({
+                messageName: "requestSelection",
+                entityTypeSpecifier: ["EDGE"]
+            })
+        ]);
+    });
+
     it("hands picks to one list at a time", async () => {
         renderWithProviders(
             <>
@@ -290,7 +328,10 @@ describe("QueryList", () => {
                 />
             </>
         );
-        const [first, second] = screen.getAllByText("Click to select");
+        const [first, second] = [
+            screen.getByText("Holes"),
+            screen.getByText("Other")
+        ];
         await userEvent.click(first);
         await userEvent.click(second);
         select(edge("A"));

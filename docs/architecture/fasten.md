@@ -18,7 +18,7 @@ Where to start reading, in the order a fasten runs.
 shared with Quick fastener
 
 ```ts
-// The one focused list, and handing it each pick Onshape streams.
+// The one focused list, and handing it how the window's selection changed.
 const useOnshapeSelection: UseBoundStore<StoreApi<SelectionState>>;
 function toSelectedEntities(selections: OnshapeSelection[]): SelectedEntity[];
 function QueryList(props: QueryListProps): ReactNode;
@@ -26,7 +26,8 @@ function QueryList(props: QueryListProps): ReactNode;
 interface SelectionState {
     /** The query list taking picks; none takes them when absent. */
     focused?: string;
-    receive: (picked: OnshapeSelection[]) => void;
+    /** Takes a SELECTION message's whole selection. */
+    receive: (selection: OnshapeSelection[]) => void;
     focus: (listId: string | undefined) => void;
 }
 
@@ -325,9 +326,9 @@ interface InsertableSettingsInput {
 
 ### Picking
 
-1. Once the app sends `applicationInit`, Onshape streams each pick as it's
-   made, and `useOnshapeSelection` hands it to the focused `QueryList`, as in
-   Quick fastener.
+1. Once the app sends `applicationInit`, Onshape sends the window's whole
+   selection each time it changes, and `useOnshapeSelection` hands the focused
+   `QueryList` what was added and deselected, as in Quick fastener.
 2. With **Fasten** ticked in an assembly, the insert menu shows the cursor icon
    beside the insert location's: a red stop sign with nothing picked, a check
    with something. `useFastenPicksFromSelection` focuses the targets' list, so
@@ -403,7 +404,7 @@ interface InsertableSettingsInput {
 | "Select circular edges to fasten this part to."                                                                              | Targets list's prompt, in Onshape's bubble and the list |
 | "Select faces to fasten this part to every hole in."                                                                         | Targets list's prompt, faces                            |
 | "Select the edges of holes to leave out."                                                                                    | Holes to skip's prompt                                  |
-| "Click to select"                                                                                                            | An empty list, not focused (`QueryList`)                |
+| "Clear"                                                                                                                      | A list with picks, inside its box (`QueryList`)         |
 | "Replicate"                                                                                                                  | Checkbox                                                |
 | "Insert one part and replicate it onto the other holes, rather than inserting a part for each."                              | Replicate's info tooltip                                |
 | "Successfully inserted {name} and fastened it to {n} circular edges."                                                        | Success toast, with picks                               |
@@ -447,8 +448,8 @@ interface InsertableSettingsInput {
 
 ## Decisions
 
-- **One way to pick, shared with Quick fastener.** The app listens to the
-  picks Onshape streams and lets a focused query list take them. A focused list
+- **One way to pick, shared with Quick fastener.** The app follows the
+  selection Onshape reports and lets a focused query list take it. A focused list
   also holds a `requestSelection` limiting the Onshape window to its kind, in
   the form Onshape answers to rather than the one it documents (see Quick
   fastener's picking flow); a hovered row lights its own entity up alone, and

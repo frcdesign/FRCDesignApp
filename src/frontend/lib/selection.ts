@@ -1,7 +1,8 @@
 /**
  * Picks in the Onshape window, from its SELECTION messages, and the one query
- * list taking them. Once the app sends `applicationInit`, Onshape streams each
- * pick as it's made, not the whole selection; a focused list takes each one.
+ * list taking them. Once the app sends `applicationInit`, Onshape sends the
+ * whole selection each time it changes; a focused list takes what was added
+ * and drops what was deselected.
  */
 import { create } from "zustand";
 import {
@@ -77,13 +78,59 @@ export function parseSelections(data: unknown): OnshapeSelection[] {
     });
 }
 
-type PickHandler = (picked: OnshapeSelection[]) => void;
+/** How the Onshape window's selection changed since its last SELECTION message. */
+export interface SelectionChange {
+    added: OnshapeSelection[];
+    removed: OnshapeSelection[];
+}
+
+type PickHandler = (change: SelectionChange) => void;
 
 interface SelectionState {
     /** The query list taking picks; none takes them when absent. */
     focused?: string;
-    receive: (picked: OnshapeSelection[]) => void;
+    /** What the Onshape window last said it has selected. */
+    shown: OnshapeSelection[];
+    /**
+     * A selection the app asked Onshape to show, whose SELECTION messages
+     * aren't picks. Onshape answers a highlight with an empty selection, then
+     * the one highlighted, and may interleave an earlier highlight's; `until`
+     * keeps a selection that never arrives from holding picks back.
+     */
+    awaited?: { keys: string; until: number };
+    /** Takes a SELECTION message's whole selection. */
+    receive: (selection: OnshapeSelection[]) => void;
     focus: (listId: string | undefined) => void;
+}
+
+/** Long enough for Onshape to answer, short of anyone picking in its window after clicking the panel. */
+const AWAIT_MS = 1000;
+
+function keysOf(selection: OnshapeSelection[]): string {
+    return selection.map(selectionKey).sort().join(",");
+}
+
+/** Says the app made the Onshape window show `selection`, rather than someone picking it. */
+export function expectSelection(selection: OnshapeSelection[]): void {
+    useOnshapeSelection.setState({
+        awaited: { keys: keysOf(selection), until: Date.now() + AWAIT_MS }
+    });
+}
+
+/** A selection request clears the window's selection, which says so only if there was one. */
+export function expectCleared(): void {
+    if (useOnshapeSelection.getState().shown.length > 0) {
+        expectSelection([]);
+    }
+}
+
+/** `selections` less any in `removed`. */
+export function without(
+    selections: OnshapeSelection[],
+    removed: OnshapeSelection[]
+): OnshapeSelection[] {
+    const keys = new Set(removed.map(selectionKey));
+    return selections.filter((each) => !keys.has(selectionKey(each)));
 }
 
 /** Each mounted query list's handler, by its id; not state, since nothing renders from it. */
@@ -116,10 +163,24 @@ export function focusedPicks(): OnshapeSelection[] | undefined {
 }
 
 export const useOnshapeSelection = create<SelectionState>()((set, get) => ({
-    receive: (picked) => {
-        const { focused } = get();
-        if (focused && picked.length > 0) {
-            handlers.get(focused)?.(picked);
+    shown: [],
+    receive: (selection) => {
+        const { shown: previous, awaited, focused } = get();
+        set({ shown: selection });
+        if (awaited) {
+            if (
+                keysOf(selection) === awaited.keys ||
+                Date.now() > awaited.until
+            ) {
+                set({ awaited: undefined });
+            }
+            return;
+        }
+        if (focused) {
+            handlers.get(focused)?.({
+                added: without(selection, previous),
+                removed: without(previous, selection)
+            });
         }
     },
     focus: (listId) => set({ focused: listId })

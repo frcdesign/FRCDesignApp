@@ -19,7 +19,12 @@ import {
     type PartOccurrence
 } from "./assembly";
 import { FastenerKind, type FastenerSet } from "./studios";
-import { type SelectedEntity } from "./contract";
+import {
+    HoleStatus,
+    type PlannedHole,
+    type SelectedEntity,
+    SelectedEntityType
+} from "./contract";
 import {
     type AssemblyCircularEdge,
     type AssemblyHole,
@@ -34,6 +39,8 @@ export interface IndexedHoles {
     circularEdges: AssemblyCircularEdge[];
     holes: AssemblyHole[];
     placed: PlacedScrew[];
+    /** Each target that gave no circular edge, and why. */
+    unfound: PlannedHole[];
 }
 
 function isFastener(
@@ -145,11 +152,30 @@ export async function indexHoles(
             )
         );
 
+    const unfound = targets.flatMap((target): PlannedHole[] => {
+        if (circularEdgesOf([target]).length > 0) {
+            return [];
+        }
+        const isFound = byPath.has(pathKey(target.occurrencePath));
+        return [
+            {
+                key: `${pathKey(target.occurrencePath)}|${target.entityId}`,
+                status: HoleStatus.NO_FIT,
+                reason: !isFound
+                    ? "Couldn't find this part in the assembly."
+                    : target.entityType === SelectedEntityType.EDGE
+                      ? "Not a circular edge."
+                      : "No circular edges in this face."
+            }
+        ];
+    });
+
     return {
         circularEdges: withoutExcluded(
             circularEdgesOf(targets),
             circularEdgesOf(excluded)
         ),
+        unfound,
         holes,
         placed: placedScrews(
             occurrences,
