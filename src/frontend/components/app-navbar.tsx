@@ -56,6 +56,7 @@ import { LibraryId } from "@backend/features/library/library-id";
 import { AppColor, getLibraryColor, toShade } from "../theme";
 import { queryClient } from "../lib/query-client";
 import { InsertLocationStatus } from "../features/insert-location/components/insert-location-status";
+import { NavbarFastenStatus } from "../features/insert/components/fasten-circular-edges-status";
 import {
     useIsVersionManager,
     useIsVersionManagerNew
@@ -107,6 +108,7 @@ export function AppNavbar(): ReactNode {
                 <Group gap="xs" ml="auto" className={styles.noShrink}>
                     {/* Inserting is the library's; the version manager inserts nothing. */}
                     {!isUtility && <InsertLocationStatus />}
+                    {!isUtility && <NavbarFastenStatus />}
                     <SignInButton />
                     {isVersionManager && <VersionManagerRefreshButton />}
                     <SettingsControls />

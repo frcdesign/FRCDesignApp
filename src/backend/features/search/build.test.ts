@@ -134,7 +134,6 @@ function library(name: string, vendors: Vendor[] = []): LibraryOut {
                 microversionId: "mv1",
                 isVisible: true,
                 supportsFasten: false,
-                supportsReplicate: false,
                 elementType: ElementType.PART_STUDIO,
                 isConfigurable: false,
                 vendors

@@ -93,6 +93,8 @@ interface QueryListProps {
     describe?: (entity: OnshapeSelection, index: number) => string;
     /** Beside a row's name: a status, say. */
     rowSection?: (entity: OnshapeSelection) => ReactNode;
+    /** Takes picks whenever no list does, as a form's first list should. */
+    autoFocus?: boolean;
 }
 ```
 
@@ -302,16 +304,12 @@ interface FastenerJobResult {
     inserted: number;
     /** Parts fastened to where they sit. */
     fastened: number;
-    /** Holes a Replicate filled, rather than parts inserted in each. */
-    replicated: number;
 }
 
 enum FastenerTaskAction {
     INDEX = "index",
     INSERT = "insert",
-    FASTEN = "fasten",
-    /** Skipped when no two holes are alike. */
-    REPLICATE = "replicate"
+    FASTEN = "fasten"
 }
 
 enum FastenerTaskState {
@@ -378,7 +376,7 @@ enum FastenerJobOutcome {
 `src/backend/features/quick-fastener/workflow.ts`
 
 ```ts
-// A run, step by step: index, insert, fasten, replicate, finish.
+// A run, step by step: index, insert, fasten, finish.
 class QuickFastenerWorkflow extends WorkflowEntrypoint<
     AppBindings,
     FastenerJobParams
@@ -666,8 +664,6 @@ interface Stocked {
 ```ts
 // Each ready hole's parts, in two stacks, each part on the one under it.
 function placements(set: FastenerSet, plans: HolePlan[]): PartPlacement[];
-// Alike holes together, each group's first the one given parts.
-function replicateGroups(plans: HolePlan[]): HolePlan[][];
 function insertGroups(
     set: FastenerSet,
     parts: PartPlacement[]
@@ -685,14 +681,9 @@ function partMate(
     paths: (string[] | undefined)[],
     washerEdges: Record<number, string>
 ): object | undefined;
-// The screw stack goes on the rest's circular edges; the nut stack, their far edges.
-function stackTargets(group: HolePlan[], stack: PartStack): EdgeReference[];
 
 interface PartPlacement {
     kind: FastenerKind;
-    /** The hole it's in, by its plan's key. */
-    hole: string;
-    stack: PartStack;
     /** The studio's overrides of its defaults. */
     configuration: Selection;
     transform: number[];
@@ -700,26 +691,13 @@ interface PartPlacement {
     name: string;
 }
 
-enum PartStack {
-    /** The screw and the washer under its head, on the hole's circular edge. */
-    SCREW = "screw",
-    /** The nut and its washer, on the far side's edge. */
-    NUT = "nut"
-}
-
 type PartSeat = { edge: MateEdge } | { washer: number };
 ```
 
-`src/backend/features/quick-fastener/replicate.ts` and
 `src/backend/lib/onshape/objects/assembly-features.ts`, shared with insert and
 fasten
 
 ```ts
-async function addReplicate(
-    onshapeApi: OnshapeApi,
-    assembly: ElementPath,
-    args: ReplicateArgs
-): Promise<void>;
 function fastenMateToCircularEdge(
     name: string,
     query: object,
@@ -732,16 +710,6 @@ interface EntityReference {
     /** The id Onshape's selection reports, which is the entity's deterministic id. */
     deterministicId: string;
     path: string[];
-}
-
-interface ReplicateArgs {
-    name: string;
-    /** The seed's instances, each copied onto every match. */
-    instancePaths: string[][];
-    /** The mate placing the seed, which each copy is placed as. */
-    mateFeatureId: string;
-    /** Each the size of the seed mate's edge. */
-    edges: EdgeReference[];
 }
 ```
 
@@ -826,10 +794,12 @@ vectors, Onshape's 4×4 transforms and `LINEAR_TOLERANCE`.
    Onshape"), and `window.sendToOnshape(message)` sends one by hand from the
    browser console, addressed to the launching element.
 2. Clicking a `QueryList` focuses it (one at a time, `useOnshapeSelection`) and
-   shows its prompt in Onshape's bubble. The focused list adds what's picked of
-   the kind it takes, drops what's deselected, and repeats its prompt for
-   anything else picked. With no list focused, the selection is ignored. A list
-   is named inside its box, as Onshape's query parameters are.
+   shows its prompt in Onshape's bubble. A form's first list is `autoFocus`:
+   focused on mount, and again whenever no list is, as when the focused list
+   unmounts; here that's **Faces** or **Circular edges**. The focused list adds
+   what's picked of the kind it takes, drops what's deselected, and repeats its
+   prompt for anything else picked. With no list focused, the selection is
+   ignored. A list is named inside its box, as Onshape's query parameters are.
 3. While focused, a list holds a `requestSelection` with its `filter`
    (`sendSelectionRequest`), which limits what the Onshape window lets be
    picked: `CIRCULAR_EDGES` (`entityTypeSpecifier: ["EDGE"]`,
@@ -970,12 +940,8 @@ recorded with why, and the steps after it are skipped.
    the nut washer on the far side's edge and the nut on it, turned over — and
    inserts them all in one `transformedinstances` call, from each studio's
    released version, with its configuration. Skipped when no hole is ready.
-   The ready holes are grouped first (`replicateGroups`):
-   holes given the same parts, as deep, through circular edges of the same
-   size and out far edges of the same size, in the order found. Only each
-   group's first hole gets parts here. Each part is named as its studio's
-   records name its configuration (`namePlacements`, `part-names`), which its
-   mate and its stack's Replicate take.
+   Each part is named as its studio's records name its configuration
+   (`namePlacements`, `part-names`), which its mate takes.
 3. **Fasten parts**:
     1. Takes each studio's mate connector id from its load
        (`FastenerStudio.mateConnectorId`, the insertable's fasten info); with
@@ -989,17 +955,8 @@ recorded with why, and the steps after it are skipped.
        fastened to its stack's hole edge, and the screw or nut on it to the
        washer's top edge; without a washer, the screw or nut is fastened to the
        hole edge itself.
-4. **Replicate parts**, skipped when no two holes are alike: for each group of more than
-   one hole, one at a time, a Replicate per stack of the first hole's parts
-   (`replicate-{n}-screw`, then `replicate-{n}-nut`), each seeded with the
-   stack's parts and placed as the mate holding its bottom part on its edge
-   (`addReplicate`), named after the stack's screw or nut. Each matches
-   individual edges (`stackTargets`): the screw stack's, the rest of the
-   group's circular edges; the nut stack's, their far edges. Onshape refusing
-   one fails the step, in our words, with Onshape's message logged, and the
-   Replicates after it aren't added.
-5. **Finish** (`finish-job`): stores `COMPLETE` or `FAILED`, with how many parts
-   were inserted and fastened, how many holes its Replicates filled, and when.
+4. **Finish** (`finish-job`): stores `COMPLETE` or `FAILED`, with how many parts
+   were inserted and fastened, and when.
 
 ### Reporting
 
@@ -1018,68 +975,66 @@ is logged to the console.
 
 ## User-facing strings
 
-| String                                                                                                                           | Where                                                      |
-| -------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
-| "Open an assembly to fasten parts"                                                                                               | Route notice title, outside an assembly                    |
-| "Quick Fastener puts screws, washers and nuts in the holes of an assembly's parts. Open it from an assembly's panel."            | Route notice description, outside an assembly              |
-| "Sign in to fasten parts" / "Sign in"                                                                                            | Route notice title and button, signed out                  |
-| "Quick Fastener reads your assembly's holes and inserts fasteners into it."                                                      | Route notice description, signed out                       |
-| "Loading fasteners..."                                                                                                           | In place of the panel, while the fasteners are read        |
-| "Couldn't load the fasteners."                                                                                                   | In place of the panel, the read failed                     |
-| "No fasteners are loaded yet." / "Quick Fastener uses the fasteners in FRCDesignLib's Fasteners group, once they're loaded."     | In place of the panel, none loaded                         |
-| "Selections"                                                                                                                     | Heading, last                                              |
-| "Select by" / "Circular edges" / "Faces"                                                                                         | Selection mode, its options                                |
-| "Faces"                                                                                                                          | Targets list's label, faces                                |
-| "Select faces to fasten every hole in."                                                                                          | Targets list's prompt, faces, in Onshape's bubble and list |
-| "Holes to skip"                                                                                                                  | Second list's label, faces                                 |
-| "Select the edges of holes to leave out."                                                                                        | Holes to skip's prompt                                     |
-| "Circular edges"                                                                                                                 | Targets list's label, circular edges                       |
-| "Select the circular edges of holes to fasten."                                                                                  | Targets list's prompt, circular edges                      |
-| "Clear"                                                                                                                          | A list with picks, inside its box (`QueryList`)            |
-| "{Kind} {n}", e.g. "Edge 1"                                                                                                      | A list's row                                               |
-| "Fastener"                                                                                                                       | Heading                                                    |
-| "Program" / "FRC" / "FTC"                                                                                                        | Program, its options                                       |
-| "FTC fasteners aren't available yet."                                                                                            | In place of the Fastener group's inputs, FTC               |
-| "Sizing" / "Automatic" / "Manual"                                                                                                | How the screw's length is chosen, its options              |
-| "Add screw washer" / "Add nut" / "Add nut washer"                                                                                | Group titles, each a checkbox                              |
-| "Stop condition" / "Max length" / "First gap"                                                                                    | Stop condition, its options                                |
-| "Max length" / "Max gap to ignore" / "Max thread depth"                                                                          | Length inputs                                              |
-| "Insert"                                                                                                                         | Button                                                     |
-| "Unexpectedly failed to start inserting."                                                                                        | Error toast, the request failed                            |
-| "Quick fastener doesn't have FTC fasteners yet."                                                                                 | Error, insert route (400)                                  |
-| "Quick fastener's parts aren't published yet."                                                                                   | Error, insert route (503)                                  |
-| "Fasteners are already being inserted in this assembly."                                                                         | Error, insert route (409)                                  |
-| "Every part must be one its vendor makes, in the screw's size."                                                                  | Validation error, insert route                             |
-| "A nut washer goes under a nut."                                                                                                 | Validation error, insert route                             |
-| "Index holes" / "Insert parts" / "Fasten parts" / "Replicate parts"                                                              | Details modal, the steps                                   |
-| "{Indexing holes \| Inserting parts \| Fastening parts \| Replicating parts \| Inserting fasteners}... You can leave this page." | Callout, while running                                     |
-| "{headline} {time ago}."                                                                                                         | Callout, finished                                          |
-| "Inserted {n} parts" / "Inserted {n} parts, replicated onto {m} holes"                                                           | Headline, succeeded                                        |
-| "{parts} with problems"                                                                                                          | Headline, partly                                           |
-| "Couldn't insert fasteners"                                                                                                      | Headline, failed                                           |
-| "Details"                                                                                                                        | Callout button, and the finished toast's action            |
-| "Inserting fasteners..."                                                                                                         | Toast, as a watched run starts                             |
-| "{headline}."                                                                                                                    | Toast, when a watched run finishes                         |
-| "No recent run" / "Loading..." / "{running headline}..."                                                                         | Details modal title                                        |
-| "Stopped early."                                                                                                                 | Details modal notice, with the run's error                 |
-| "The head isn't made in this size."                                                                                              | A hole's plan, in the run's status                         |
-| "No hole goes into the part from this circular edge."                                                                            | A hole's plan, in the run's status                         |
-| "Couldn't find this part in the assembly." / "Not a circular edge." / "No circular edges in this face."                          | A pick that gave no circular edge                          |
-| "The hole is too small for a {size} screw."                                                                                      | A hole's plan, in the run's status                         |
-| "The vendor doesn't make this head in this size."                                                                                | A hole's plan, in the run's status                         |
-| "The vendor doesn't make this length in this size and head."                                                                     | A hole's plan, no fit, preset                              |
-| "No screw reaches through within the maximum length." / "No screw is long enough to reach through."                              | A hole's plan, no fit, through                             |
-| "The screw is too long or too short for this hole."                                                                              | A hole's plan, no fit, preset into threads                 |
-| "No screw length engages the threads within the maximum thread depth without bottoming out."                                     | A hole's plan, no fit, tapped                              |
-| "No screw length fits the blind hole within the maximum thread depth."                                                           | A hole's plan, no fit, blind                               |
-| "No edge on the far side to fasten a nut to."                                                                                    | A hole's plan, ready without its nut                       |
-| "Quick fastener stopped: {why}"                                                                                                  | The run's error                                            |
-| "Couldn't read the assembly's holes." / "Couldn't insert the fasteners."                                                         | A step's failure, index / insert                           |
-| "Couldn't fasten the inserted parts." / "Couldn't replicate the inserted parts."                                                 | A step's failure, fasten / replicate                       |
-| "You don't have permission to edit this assembly."                                                                               | A step's failure, Onshape answered 403                     |
-| "A fastener's studio has no mate connector to fasten by. Reload its group."                                                      | Fasten step's failure                                      |
-| "A hole's parts weren't all inserted and fastened, so they can't be replicated."                                                 | Replicate step's failure                                   |
-| "Onshape refused the Replicate."                                                                                                 | Replicate step's failure                                   |
+| String                                                                                                                       | Where                                                      |
+| ---------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| "Open an assembly to fasten parts"                                                                                           | Route notice title, outside an assembly                    |
+| "Quick Fastener puts screws, washers and nuts in the holes of an assembly's parts. Open it from an assembly's panel."        | Route notice description, outside an assembly              |
+| "Sign in to fasten parts" / "Sign in"                                                                                        | Route notice title and button, signed out                  |
+| "Quick Fastener reads your assembly's holes and inserts fasteners into it."                                                  | Route notice description, signed out                       |
+| "Loading fasteners..."                                                                                                       | In place of the panel, while the fasteners are read        |
+| "Couldn't load the fasteners."                                                                                               | In place of the panel, the read failed                     |
+| "No fasteners are loaded yet." / "Quick Fastener uses the fasteners in FRCDesignLib's Fasteners group, once they're loaded." | In place of the panel, none loaded                         |
+| "Selections"                                                                                                                 | Heading, last                                              |
+| "Select by" / "Circular edges" / "Faces"                                                                                     | Selection mode, its options                                |
+| "Faces"                                                                                                                      | Targets list's label, faces                                |
+| "Select faces to fasten every hole in."                                                                                      | Targets list's prompt, faces, in Onshape's bubble and list |
+| "Holes to skip"                                                                                                              | Second list's label, faces                                 |
+| "Select the edges of holes to leave out."                                                                                    | Holes to skip's prompt                                     |
+| "Circular edges"                                                                                                             | Targets list's label, circular edges                       |
+| "Select the circular edges of holes to fasten."                                                                              | Targets list's prompt, circular edges                      |
+| "Clear"                                                                                                                      | A list with picks, inside its box (`QueryList`)            |
+| "{Kind} {n}", e.g. "Edge 1"                                                                                                  | A list's row                                               |
+| "Fastener"                                                                                                                   | Heading                                                    |
+| "Program" / "FRC" / "FTC"                                                                                                    | Program, its options                                       |
+| "FTC fasteners aren't available yet."                                                                                        | In place of the Fastener group's inputs, FTC               |
+| "Sizing" / "Automatic" / "Manual"                                                                                            | How the screw's length is chosen, its options              |
+| "Add screw washer" / "Add nut" / "Add nut washer"                                                                            | Group titles, each a checkbox                              |
+| "Stop condition" / "Max length" / "First gap"                                                                                | Stop condition, its options                                |
+| "Max length" / "Max gap to ignore" / "Max thread depth"                                                                      | Length inputs                                              |
+| "Insert"                                                                                                                     | Button                                                     |
+| "Unexpectedly failed to start inserting."                                                                                    | Error toast, the request failed                            |
+| "Quick fastener doesn't have FTC fasteners yet."                                                                             | Error, insert route (400)                                  |
+| "Quick fastener's parts aren't published yet."                                                                               | Error, insert route (503)                                  |
+| "Fasteners are already being inserted in this assembly."                                                                     | Error, insert route (409)                                  |
+| "Every part must be one its vendor makes, in the screw's size."                                                              | Validation error, insert route                             |
+| "A nut washer goes under a nut."                                                                                             | Validation error, insert route                             |
+| "Index holes" / "Insert parts" / "Fasten parts"                                                                              | Details modal, the steps                                   |
+| "{Indexing holes \| Inserting parts \| Fastening parts \| Inserting fasteners}... You can leave this page."                  | Callout, while running                                     |
+| "{headline} {time ago}."                                                                                                     | Callout, finished                                          |
+| "Inserted {n} parts"                                                                                                         | Headline, succeeded                                        |
+| "{parts} with problems"                                                                                                      | Headline, partly                                           |
+| "Couldn't insert fasteners"                                                                                                  | Headline, failed                                           |
+| "Details"                                                                                                                    | Callout button, and the finished toast's action            |
+| "Inserting fasteners..."                                                                                                     | Toast, as a watched run starts                             |
+| "{headline}."                                                                                                                | Toast, when a watched run finishes                         |
+| "No recent run" / "Loading..." / "{running headline}..."                                                                     | Details modal title                                        |
+| "Stopped early."                                                                                                             | Details modal notice, with the run's error                 |
+| "The head isn't made in this size."                                                                                          | A hole's plan, in the run's status                         |
+| "No hole goes into the part from this circular edge."                                                                        | A hole's plan, in the run's status                         |
+| "Couldn't find this part in the assembly." / "Not a circular edge." / "No circular edges in this face."                      | A pick that gave no circular edge                          |
+| "The hole is too small for a {size} screw."                                                                                  | A hole's plan, in the run's status                         |
+| "The vendor doesn't make this head in this size."                                                                            | A hole's plan, in the run's status                         |
+| "The vendor doesn't make this length in this size and head."                                                                 | A hole's plan, no fit, preset                              |
+| "No screw reaches through within the maximum length." / "No screw is long enough to reach through."                          | A hole's plan, no fit, through                             |
+| "The screw is too long or too short for this hole."                                                                          | A hole's plan, no fit, preset into threads                 |
+| "No screw length engages the threads within the maximum thread depth without bottoming out."                                 | A hole's plan, no fit, tapped                              |
+| "No screw length fits the blind hole within the maximum thread depth."                                                       | A hole's plan, no fit, blind                               |
+| "No edge on the far side to fasten a nut to."                                                                                | A hole's plan, ready without its nut                       |
+| "Quick fastener stopped: {why}"                                                                                              | The run's error                                            |
+| "Couldn't read the assembly's holes." / "Couldn't insert the fasteners."                                                     | A step's failure, index / insert                           |
+| "Couldn't fasten the inserted parts."                                                                                        | A step's failure, fasten                                   |
+| "You don't have permission to edit this assembly."                                                                           | A step's failure, Onshape answered 403                     |
+| "A fastener's studio has no mate connector to fasten by. Reload its group."                                                  | Fasten step's failure                                      |
 
 ## Invariants
 
@@ -1092,12 +1047,7 @@ is logged to the console.
   is fastened to its stack's hole edge, the screw or nut on it to the washer's
   top edge, and without a washer the screw or nut to the hole edge. No mate has
   an offset, and any washer fits. The studios have no Washer input.
-- A Replicate's seed is one stack's parts, and its seed mate is the one holding
-  that stack's bottom part on its edge: the screw stack copies onto circular
-  edges, the nut stack onto far edges, never one onto the other's.
-- A Replicate only fills holes alike its first one's: the same parts, as deep,
-  through a circular edge of the same size and out a far edge of the same size,
-  so each copy sits as the stack it copies.
+- Every ready hole gets its own parts and mates.
 - The form's studio parameters are the studios' own configurations, parsed as
   any configuration is, and a part is inserted with its selection's overrides
   (`studioConfiguration`, through `partStudioInsertOverrides`, never empty,
@@ -1117,17 +1067,15 @@ is logged to the console.
 
 ## Failure and recovery
 
-| Failure                              | Result                                                                                                       | Recovery                                              |
-| ------------------------------------ | ------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------- |
-| No fasteners are loaded              | The panel says so; insert answers 503                                                                        | Release them in robot-code, load the Fasteners group  |
-| The hole scan fails in a Part Studio | Index fails, naming Onshape's notice; the rest is skipped                                                    | Fix the Part Studio, or skip what's in it             |
-| No hole, or nothing fits             | That hole's plan is **no fit**, with why                                                                     | Change the options or the hole                        |
-| The insert fails                     | Nothing is inserted; fastening is skipped                                                                    | Run it again                                          |
-| A mate fails partway                 | The parts so far stay, some unmated                                                                          | Mate the rest by hand, or undo and run again          |
-| Onshape refuses a Replicate          | Replicate fails, saying why; the holes it and those after it were for stay empty, or hold only a screw stack | Fasten the rest by hand, and report Onshape's message |
-| A Replicate fails to regenerate      | It stays in the assembly, with its error                                                                     | Fix or delete it in Onshape                           |
-| Onshape rate-limits                  | The step retries, then fails as above                                                                        | Run it again                                          |
-| The run dies without reporting       | The job reads failed once the run has ended                                                                  | Run it again                                          |
+| Failure                              | Result                                                    | Recovery                                             |
+| ------------------------------------ | --------------------------------------------------------- | ---------------------------------------------------- |
+| No fasteners are loaded              | The panel says so; insert answers 503                     | Release them in robot-code, load the Fasteners group |
+| The hole scan fails in a Part Studio | Index fails, naming Onshape's notice; the rest is skipped | Fix the Part Studio, or skip what's in it            |
+| No hole, or nothing fits             | That hole's plan is **no fit**, with why                  | Change the options or the hole                       |
+| The insert fails                     | Nothing is inserted; fastening is skipped                 | Run it again                                         |
+| A mate fails partway                 | The parts so far stay, some unmated                       | Mate the rest by hand, or undo and run again         |
+| Onshape rate-limits                  | The step retries, then fails as above                     | Run it again                                         |
+| The run dies without reporting       | The job reads failed once the run has ended               | Run it again                                         |
 
 ## Decisions
 
@@ -1164,10 +1112,6 @@ is logged to the console.
   API reference. Fastening a screw or nut to the washer under it puts it at the
   washer's thickness whichever washer was chosen, where moving the mate
   connector by a seat washer would fit only that one.
-- **A Replicate per stack.** Onshape's Replicate copies several instances
-  together, placed as one seed mate places its part, so a stack fastened
-  together copies as one. The nut stack sits on another edge than the screw's,
-  so it takes a Replicate of its own, seeded by its own mate.
 - **A run, not a request, and no preview.** Indexing a large assembly and
   mating each part takes many Onshape calls, longer than anyone should wait on
   a panel; a workflow keeps going when the panel closes, and its stored status
@@ -1186,14 +1130,10 @@ is logged to the console.
   which the vendor may not make; the feature takes the one value made there, and
   so does `settle`. Inserts send only the inputs shown, or at the defaults the
   first (`partStudioInsertOverrides`).
-- **Alike holes are always replicated, with no option.** One set of parts and
-  a Replicate per stack does what a set per hole would, in fewer inserts and
-  mates. Onshape publishes no spec for Replicate: `replicateFeature` is copied
-  from a Replicate matching edges on a face, with the individual edges' scope,
-  which is unconfirmed, so a refused Replicate fails the run's last step with
-  Onshape's message. Every Replicate matches individual edges, never a face, as
-  insert and fasten's do, and shares its Replicate and mate code, so one fix
-  there fixes both.
+- **No Replicate.** Onshape accepts a Replicate added through the API (200,
+  `featureStatus` OK, listed by the features endpoint) but makes no copies,
+  and the assembly shows nothing for it, so every hole is inserted and
+  fastened alike, as insert and fasten does for each edge.
 - **No fallbacks.** Onshape refusing a write fails its step with Onshape's
   message rather than being worked around.
 - **An automatic screw is partly threaded.** The screw studio asks Fully

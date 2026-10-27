@@ -1,7 +1,7 @@
 {
     "version": "6",
     "dialect": "sqlite",
-    "id": "1a2cb2eb-5b59-4050-99d5-69ab6146f1c8",
+    "id": "4540ccb4-7edf-4542-85d5-5a58909cb7b1",
     "prevId": "78216f0c-ffe1-4fad-8e20-20bec253eb8b",
     "tables": {
         "configurations": {
@@ -412,13 +412,6 @@
                     "notNull": true,
                     "autoincrement": false,
                     "default": false
-                },
-                "supports_replicate": {
-                    "name": "supports_replicate",
-                    "type": "integer",
-                    "primaryKey": false,
-                    "notNull": false,
-                    "autoincrement": false
                 },
                 "index_configurations": {
                     "name": "index_configurations",

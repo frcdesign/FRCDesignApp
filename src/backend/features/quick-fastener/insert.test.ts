@@ -2,14 +2,7 @@ import { describe, expect, it } from "vitest";
 import { FastenerKind } from "./studios";
 import { FASTENER_SET } from "../../../__test_utils__/fastener-set";
 import { HoleEnd, HoleStatus } from "./contract";
-import {
-    PartStack,
-    partMate,
-    placements,
-    replicateGroups,
-    stackTargets,
-    washerTopEdge
-} from "./insert";
+import { partMate, placements, washerTopEdge } from "./insert";
 import { type HolePlan } from "./planner";
 
 const INCH = 0.0254;
@@ -67,12 +60,6 @@ describe("placements", () => {
             edge: { occurrencePath: ["bottom"], edgeId: "B" }
         });
         expect(nut.seat).toEqual({ washer: 2 });
-        expect(parts.map((part) => part.stack)).toEqual([
-            PartStack.SCREW,
-            PartStack.SCREW,
-            PartStack.NUT,
-            PartStack.NUT
-        ]);
     });
 
     it("places the screw on its washer pointing out, and the nut on the far side turned over", () => {
@@ -108,55 +95,6 @@ describe("placements", () => {
                 { ...PLAN, planned: { key: "x", status: HoleStatus.NO_FIT } }
             ])
         ).toEqual([]);
-    });
-});
-
-describe("replicateGroups", () => {
-    const at = (key: string, change: Partial<HolePlan["planned"]> = {}) => ({
-        ...PLAN,
-        circularEdge: { ...PLAN.circularEdge, key, edgeId: key },
-        planned: { ...PLAN.planned, key, ...change }
-    });
-
-    it("groups ready holes given the same parts as deep, the first found first", () => {
-        const groups = replicateGroups([
-            at("a"),
-            at("b", { depth: 0.75 * INCH }),
-            at("c"),
-            at("d", { status: HoleStatus.FASTENED }),
-            at("e", { nutWasher: undefined }),
-            { ...at("f"), exit: { ...PLAN.exit!, radius: 0.004 } }
-        ]);
-        expect(
-            groups.map((group) => group.map((plan) => plan.planned.key))
-        ).toEqual([["a", "c"], ["b"], ["e"], ["f"]]);
-    });
-});
-
-describe("stackTargets", () => {
-    const hole = (key: string): HolePlan => ({
-        ...PLAN,
-        circularEdge: { ...PLAN.circularEdge, key, edgeId: key },
-        planned: { ...PLAN.planned, key },
-        exit: {
-            ...PLAN.exit!,
-            edge: { occurrencePath: ["bottom"], edgeId: `${key}-far` }
-        }
-    });
-    const group = [hole("a"), hole("b"), hole("c")];
-
-    it("puts the screw's stack on the rest's circular edges", () => {
-        expect(stackTargets(group, PartStack.SCREW)).toEqual([
-            { deterministicId: "b", path: ["plate"] },
-            { deterministicId: "c", path: ["plate"] }
-        ]);
-    });
-
-    it("puts the nut's stack on the rest's far edges", () => {
-        expect(stackTargets(group, PartStack.NUT)).toEqual([
-            { deterministicId: "b-far", path: ["bottom"] },
-            { deterministicId: "c-far", path: ["bottom"] }
-        ]);
     });
 });
 

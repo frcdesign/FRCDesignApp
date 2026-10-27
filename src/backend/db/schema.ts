@@ -116,8 +116,6 @@ export const insertables = sqliteTable("insertables", {
     supportsFasten: integer("supports_fasten", { mode: "boolean" })
         .notNull()
         .default(false),
-    // Set by an editor; null until they decide, which raises a build warning.
-    supportsReplicate: integer("supports_replicate", { mode: "boolean" }),
     // Set by an admin; kept across reloads.
     indexConfigurations: integer("index_configurations", { mode: "boolean" })
         .notNull()

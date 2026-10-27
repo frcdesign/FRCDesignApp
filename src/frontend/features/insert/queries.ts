@@ -88,7 +88,7 @@ export function useInsertMutation(
             source: insertArgs.source
         };
         // Read at the click, since picks land as Onshape reports them.
-        const { fastenSelectionMode, replicate } = getUiState();
+        const { fastenSelectionMode } = getUiState();
         const { targets, excluded } = useFastenPicks.getState();
         const isFaces = fastenSelectionMode === SelectionMode.FACES;
         return elementType === ElementType.ASSEMBLY
@@ -101,8 +101,7 @@ export function useInsertMutation(
                       selectionMode: fastenSelectionMode,
                       targets: fasten ? toSelectedEntities(targets) : [],
                       excluded:
-                          fasten && isFaces ? toSelectedEntities(excluded) : [],
-                      replicate: insertable.supportsReplicate && replicate
+                          fasten && isFaces ? toSelectedEntities(excluded) : []
                   }
               }
             : {

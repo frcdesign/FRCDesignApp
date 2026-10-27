@@ -159,7 +159,7 @@ quickFastenerRoutes.post(
             state: FastenerJobState.RUNNING,
             jobId: run.id,
             tasks: pendingTasks(),
-            result: { inserted: 0, fastened: 0, replicated: 0 }
+            result: { inserted: 0, fastened: 0 }
         };
         await reportJob(c.env, request.assembly, status);
         return c.json(status);

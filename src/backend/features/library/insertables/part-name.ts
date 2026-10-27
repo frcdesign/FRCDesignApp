@@ -1,4 +1,4 @@
-/** What an inserted part is called, which the mates and Replicates made for it are named after. */
+/** What an inserted part is called, which the mates made for it are named after. */
 import { eq } from "drizzle-orm";
 import { type Db } from "../../../db/client";
 import { configurations, insertables } from "../../../db/schema";

@@ -56,18 +56,3 @@ export function checkInsertable(input: InsertableCheckInput): BuildIssue[] {
 
     return issues;
 }
-
-interface InsertableSettingsInput {
-    supportsFasten: boolean;
-    /** Undefined until an editor decides. */
-    supportsReplicate?: boolean;
-}
-
-/** Pure: what an editor's settings leave undecided. */
-export function checkInsertableSettings(
-    input: InsertableSettingsInput
-): BuildIssue[] {
-    return input.supportsFasten && input.supportsReplicate === undefined
-        ? [{ type: BuildIssueType.REPLICATE_UNDECIDED }]
-        : [];
-}

@@ -31,9 +31,7 @@ export enum BuildIssueType {
     /** A generated studio's tab isn't configured as robot-code generated it, so its load failed. */
     GENERATED_PART_MISMATCH = "generated-part-mismatch",
     /** A document added but not yet loaded, until its first load saves it. */
-    NOT_LOADED = "not-loaded",
-    /** Insert and fasten is on, and nobody has said whether it may replicate. */
-    REPLICATE_UNDECIDED = "replicate-undecided"
+    NOT_LOADED = "not-loaded"
 }
 
 interface BuildIssueOf<T extends BuildIssueType> {
@@ -68,8 +66,7 @@ export type BuildIssue =
     | ConfigurationBuildIssueOf<BuildIssueType.UNSTABLE_COMPOSITE>
     | BuildIssueOf<BuildIssueType.INSERTABLES_FAILED>
     | BuildIssueOf<BuildIssueType.LOAD_FAILED>
-    | BuildIssueOf<BuildIssueType.NOT_LOADED>
-    | BuildIssueOf<BuildIssueType.REPLICATE_UNDECIDED>;
+    | BuildIssueOf<BuildIssueType.NOT_LOADED>;
 
 /** The card links to the first; the rest are counted. */
 export function toConfigurationIssue(
@@ -130,8 +127,6 @@ export function getIssueTitle(issue: BuildIssue): string {
             return "Document failed to load";
         case BuildIssueType.NOT_LOADED:
             return "Document not loaded yet";
-        case BuildIssueType.REPLICATE_UNDECIDED:
-            return "Replicate not decided";
         case BuildIssueType.GENERATED_PART_MISMATCH:
             return "Not configured as generated";
     }
@@ -152,8 +147,6 @@ export function getIssueDescription(issue: BuildIssue): string | undefined {
             return "The default configuration has one, so every configuration should.";
         case BuildIssueType.NOT_LOADED:
             return "Use Reload if it doesn't start loading.";
-        case BuildIssueType.REPLICATE_UNDECIDED:
-            return "Allow replicate for parts that sit the same way on every circular edge, like bolts, and not for parts with an orientation.";
         case BuildIssueType.GENERATED_PART_MISMATCH:
             return "Its configuration isn't the one robot-code generated, so it keeps its last load. Configure the studio with fs configure-studio, or sync the generated parts.";
         default:
@@ -178,7 +171,6 @@ export function getIssueSeverity(issue: BuildIssue): BuildIssueSeverity {
         case BuildIssueType.CONFIGURATION_LIMIT_EXCEEDED:
         case BuildIssueType.MANUAL_INDEXING_REQUIRED:
         case BuildIssueType.NOT_LOADED:
-        case BuildIssueType.REPLICATE_UNDECIDED:
             return BuildIssueSeverity.WARNING;
         case BuildIssueType.NO_VENDORS:
             return BuildIssueSeverity.INFO;

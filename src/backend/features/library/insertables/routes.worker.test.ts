@@ -29,10 +29,7 @@ import * as PartStudioEndpoints from "../../../lib/onshape/endpoints/part-studio
 import * as AssemblyEndpoints from "../../../lib/onshape/endpoints/assemblies";
 import * as PartsEndpoints from "../../../lib/onshape/endpoints/parts";
 import * as IndexHoles from "../../quick-fastener/index-holes";
-import {
-    OnshapeApiError,
-    OnshapeRateLimitError
-} from "../../../lib/onshape/client";
+import { OnshapeRateLimitError } from "../../../lib/onshape/client";
 import { OnshapeFailure } from "../../../lib/onshape/failures";
 import { AUTO_INDEX_THRESHOLD } from "../../configurations/combinations";
 import {
@@ -89,20 +86,15 @@ describe("insertable routes", () => {
         expect(row?.fastenInfo).toBeNull();
     });
 
-    it("refuses to toggle fasten or replicate for a generated part", async () => {
+    it("refuses to toggle fasten for a generated part", async () => {
         await seedPartStudio(db, { generatedStudio: "fasteners/screw" });
 
-        for (const [route, body] of [
-            ["toggle-insert-and-fasten", { supportsFasten: false }],
-            ["toggle-replicate", { supportsReplicate: false }]
-        ] as const) {
-            const res = await createTestApp().request(
-                `/api/${route}/library/${TEST_LIBRARY_ID}/insertable/${TEST_PART_STUDIO_ID}`,
-                jsonRequest("POST", body),
-                env
-            );
-            expect(res.status).toBe(400);
-        }
+        const res = await createTestApp().request(
+            `/api/toggle-insert-and-fasten/library/${TEST_LIBRARY_ID}/insertable/${TEST_PART_STUDIO_ID}`,
+            jsonRequest("POST", { supportsFasten: false }),
+            env
+        );
+        expect(res.status).toBe(400);
     });
 
     it("POST /add-to-part-studio inserts via the Onshape API", async () => {
@@ -433,13 +425,12 @@ describe("insertable routes", () => {
     });
 
     /** An assembly that supports insert-and-fasten, and a landed insert to fasten. */
-    async function seedFastenable(supportsReplicate?: boolean) {
+    async function seedFastenable() {
         await seedAssembly(db);
         await db
             .update(insertables)
             .set({
                 supportsFasten: true,
-                supportsReplicate,
                 fastenInfo: {
                     mateConnectorId: "mc1",
                     mateLocation: MateLocation.Part,
@@ -617,82 +608,24 @@ describe("insertable routes", () => {
         expect(AssemblyEndpoints.addElementToAssembly).not.toHaveBeenCalled();
     });
 
-    it("fastens and replicates once per edge size, onto each edge alone", async () => {
-        await seedFastenable(true);
-        mockIndexHoles({ JH1: 0.0025, JH2: 0.004, JH3: 0.0025000000001 });
+    it("inserts and fastens an instance on each edge", async () => {
+        await seedFastenable();
+        mockIndexHoles({ JH1: 0.0025, JH2: 0.004, JH3: 0.0025 });
         const addFeature = vi
             .spyOn(AssemblyEndpoints, "addAssemblyFeature")
             .mockResolvedValue({ feature: { featureId: "f1" } });
 
-        const res = await fastenToPicks({
-            targets: EDGE_PICKS,
-            replicate: true
-        });
+        const res = await fastenToPicks({ targets: EDGE_PICKS });
         expect(res.status).toBe(200);
 
-        expect(AssemblyEndpoints.addElementToAssembly).toHaveBeenCalledTimes(2);
-        expect(addedFeatureTypes(addFeature)).toEqual([
-            "mate",
-            "replicate",
-            "mate"
-        ]);
+        expect(AssemblyEndpoints.addElementToAssembly).toHaveBeenCalledTimes(3);
+        expect(addedFeatureTypes(addFeature)).toEqual(["mate", "mate", "mate"]);
         const features = addFeature.mock.calls.map((call) =>
             JSON.stringify(call[2])
         );
-        expect(features[1]).toContain('"parameterId":"targetEdges"');
-        expect(features[1]).toContain("JH3");
-        expect(features[1]).not.toContain("JH1");
-        expect(features[2]).toContain("JH2");
-    });
-
-    it("fastens an instance per edge for a part not allowed to replicate", async () => {
-        await seedFastenable();
-        mockIndexHoles({ JH1: 1, JH2: 1, JH3: 1 });
-        const addFeature = vi
-            .spyOn(AssemblyEndpoints, "addAssemblyFeature")
-            .mockResolvedValue({ feature: { featureId: "f1" } });
-
-        const res = await fastenToPicks({
-            targets: EDGE_PICKS,
-            replicate: true
-        });
-        expect(res.status).toBe(200);
-        expect(addedFeatureTypes(addFeature)).toEqual(["mate", "mate", "mate"]);
-    });
-
-    it("answers Onshape refusing the replicate, with nothing more inserted", async () => {
-        await seedFastenable(true);
-        mockIndexHoles({ JH1: 1, JH2: 1, JH3: 1 });
-        const addFeature = vi
-            .spyOn(AssemblyEndpoints, "addAssemblyFeature")
-            .mockResolvedValueOnce({ feature: { featureId: "mate" } })
-            .mockRejectedValueOnce(
-                new OnshapeApiError("Onshape API error 400: bad feature", 400)
-            );
-
-        const res = await fastenToPicks({
-            targets: EDGE_PICKS,
-            replicate: true
-        });
-        expect(res.status).toBe(502);
-        expect((await res.json<{ message: string }>()).message).toBe(
-            "Onshape refused the Replicate."
+        ["JH1", "JH2", "JH3"].forEach((edge, index) =>
+            expect(features[index]).toContain(edge)
         );
-        expect(addedFeatureTypes(addFeature)).toEqual(["mate", "replicate"]);
-    });
-
-    it("POST /toggle-replicate records the editor's decision", async () => {
-        await seedFastenable();
-
-        const res = await createTestApp().request(
-            `/api/toggle-replicate/library/${TEST_LIBRARY_ID}/insertable/${TEST_ASSEMBLY_ID}`,
-            jsonRequest("POST", { supportsReplicate: true }),
-            env
-        );
-        expect(res.status).toBe(200);
-        expect(
-            (await readInsertable(TEST_ASSEMBLY_ID))?.supportsReplicate
-        ).toBe(true);
     });
 
     it("POST /index-configurations indexes and forces the flag on", async () => {

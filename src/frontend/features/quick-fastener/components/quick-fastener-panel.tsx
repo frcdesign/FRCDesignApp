@@ -120,6 +120,7 @@ function QuickFastenerForm(props: QuickFastenerFormProps): ReactNode {
                             <FullWidthRow>
                                 <QueryList
                                     id="quick-fastener-faces"
+                                    autoFocus
                                     label="Faces"
                                     prompt="Select faces to fasten every hole in."
                                     entities={targets}
@@ -144,6 +145,7 @@ function QuickFastenerForm(props: QuickFastenerFormProps): ReactNode {
                         <FullWidthRow>
                             <QueryList
                                 id="quick-fastener-locations"
+                                autoFocus
                                 label="Circular edges"
                                 prompt="Select the circular edges of holes to fasten."
                                 entities={targets}

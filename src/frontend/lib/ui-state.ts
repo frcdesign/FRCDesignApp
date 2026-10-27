@@ -37,8 +37,6 @@ interface UiState {
     fasten: boolean;
     /** What an insert and fasten's picks are: circular edges, or faces with holes to skip. */
     fastenSelectionMode: SelectionMode;
-    /** Fastening to several circular edges replicates, where the part allows it. */
-    replicate: boolean;
     /** How many times an insert and fasten has offered the circular edges tip; see `insert-tips`. */
     fastenCircularEdgesTipCount: number;
     /** The access level to view the app as; absent means the granted default. */
@@ -63,7 +61,6 @@ export const useUiState = create<UiState>()(
             searchQuery: "",
             fasten: true,
             fastenSelectionMode: SelectionMode.LOCATIONS,
-            replicate: false,
             fastenCircularEdgesTipCount: 0
         }),
         { name: "uiState" }

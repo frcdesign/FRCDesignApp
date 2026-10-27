@@ -4,11 +4,13 @@
 
 Inserting a part into an assembly can also mate it in place: a fasten mate from
 the part's own mate connector either to nothing yet, for the user to finish in
-the mate dialog, or to circular edges picked in the Onshape window. The picks
-are circular edges, or faces whose every hole is fastened to, less holes to
-skip; they work the way Quick fastener's do, and share its selection store,
-query list and hole scan ([quick-fastener.md](./quick-fastener.md)). Part
-studios derive instead and are not fastened.
+the mate dialog, or to circular edges picked in the Onshape window, with an
+instance of the part on each. The picks are circular edges, or faces whose every
+hole is fastened to, less holes to skip; they can be made from the navbar before
+a quick insert or in the insert menu, and work the way Quick fastener's do,
+sharing its selection store, query list and hole scan
+([quick-fastener.md](./quick-fastener.md)). Part studios derive instead and are
+not fastened.
 
 ## Code map
 
@@ -55,15 +57,18 @@ interface QueryListProps {
     describe?: (entity: OnshapeSelection, index: number) => string;
     /** Beside a row's name: a status, say. */
     rowSection?: (entity: OnshapeSelection) => ReactNode;
+    /** Takes picks whenever no list does, as a form's first list should. */
+    autoFocus?: boolean;
 }
 ```
 
 `src/frontend/features/insert/fasten-picks.ts`
 
 ```ts
+// Held for the tab, so picks carry from the navbar into the insert menu.
 const useFastenPicks: UseBoundStore<StoreApi<FastenPicksState>>;
-// Focuses the targets' list while the menu is open.
-function useFastenPicksFromSelection(mode: SelectionMode): void;
+// Clears picks of the other kind when the mode changes.
+function useFastenPicksForMode(mode: SelectionMode): void;
 function clearFastenPicks(): void;
 
 interface FastenPicksState {
@@ -78,22 +83,17 @@ interface FastenPicksState {
 `src/frontend/features/insert/insert-tips.ts`
 
 ```ts
-// The icon, its card, the mode, the query lists and the Replicate checkbox.
-function FastenCircularEdgesStatus(
-    props: FastenCircularEdgesStatusProps
-): ReactNode;
-// Sends the picks and the Replicate preference with a fasten.
+// The icon, its card, the mode and the query lists, in the insert menu.
+function FastenCircularEdgesStatus(): ReactNode;
+// The same in the navbar, for an assembly, signed in, while no insert menu is open.
+function NavbarFastenStatus(): ReactNode;
+// Sends the picks with a fasten, a quick insert's included.
 function useInsertMutation(
     insertable: InsertableOut,
     selection: PartialSelection | undefined,
     insertArgs: InsertArgs
 );
 function useFastenCircularEdgesTip(): (fasten: boolean) => void;
-
-interface FastenCircularEdgesStatusProps {
-    /** Whether an editor allowed the part to replicate. */
-    supportsReplicate: boolean;
-}
 
 interface InsertArgs {
     /** Whether the part is favorited — see `source` for where the insert began. */
@@ -107,7 +107,6 @@ interface InsertArgs {
 
 ```text
 POST /api/add-to-assembly/insertable/:insertableId    inserts, then fastens
-POST /api/toggle-replicate/library/:libraryId/insertable/:insertableId
 ```
 
 `src/backend/features/quick-fastener/picked.ts`,
@@ -193,47 +192,24 @@ interface PlacedScrew {
 `src/backend/features/library/insertables/fasten-circular-edges.ts`
 
 ```ts
-// One instance per edge, or per edge size with a Replicate onto the rest.
+// An instance fastened to each edge.
 async function fastenToCircularEdges(
     onshapeApi: OnshapeApi,
     targetPath: ElementPath,
     args: FastenToCircularEdgesArgs
 ): Promise<void>;
-function groupBySize(edges: AssemblyCircularEdge[]): AssemblyCircularEdge[][];
 
 interface FastenToCircularEdgesArgs {
-    /** The part's, which its mates and Replicates are named. */
+    /** The part's, which its mates are named. */
     name: string;
     /** The instance already inserted, which takes the first edge. */
     inserted: OnshapeInsertInstancesResponse;
-    /** Inserts one more instance, for an edge no Replicate covers. */
+    /** Inserts one more instance, for each edge after the first. */
     insert: () => Promise<OnshapeInsertInstancesResponse>;
     /** The inserted part's own connector, in the instance at `instancePath`. */
     fastenQuery: (instancePath: string[]) => object;
     /** From `indexHoles`, in the order picked. */
     edges: AssemblyCircularEdge[];
-    replicate: boolean;
-}
-```
-
-`src/backend/features/quick-fastener/replicate.ts`, shared with Quick fastener
-
-```ts
-// Onshape refusing it is an error in the user's words; Onshape's own is logged.
-async function addReplicate(
-    onshapeApi: OnshapeApi,
-    assembly: ElementPath,
-    args: ReplicateArgs
-): Promise<void>;
-
-interface ReplicateArgs {
-    name: string;
-    /** The seed's instances, each copied onto every match. */
-    instancePaths: string[][];
-    /** The mate placing the seed, which each copy is placed as. */
-    mateFeatureId: string;
-    /** Each the size of the seed mate's edge. */
-    edges: EdgeReference[];
 }
 ```
 
@@ -246,13 +222,6 @@ function fastenMateToCircularEdge(
     name: string,
     query: object,
     edge: EdgeReference
-): object;
-// Onshape's "Match individual edges".
-function replicateFeature(
-    name: string,
-    instancePaths: string[][],
-    mateFeatureId: string,
-    edges: EdgeReference[]
 ): object;
 // The inserted part's own connector, as a query on its instance.
 function getFastenQuery(
@@ -270,9 +239,8 @@ interface EntityReference {
 }
 ```
 
-`src/backend/features/load/parse-fasten.ts`,
-`src/backend/features/library/insertables/fasten.ts` and
-`src/backend/features/build-checker/checks.ts`
+`src/backend/features/load/parse-fasten.ts` and
+`src/backend/features/library/insertables/fasten.ts`
 
 ```ts
 // Finds the mate connector an insertable fastens by, at load or toggle: the
@@ -285,8 +253,6 @@ async function parseFastenInfo(
     // Every loaded set's studio features (`generatedFeatures`)
     generatedFeatures: GeneratedFeature[]
 ): Promise<FastenInfo>;
-// The Replicate not decided warning.
-function checkInsertableSettings(input: InsertableSettingsInput): BuildIssue[];
 
 interface FastenInfo {
     mateConnectorId: string;
@@ -305,12 +271,6 @@ enum MateLocation {
     Part = "Part",
     Subassembly = "Subassembly"
 }
-
-interface InsertableSettingsInput {
-    supportsFasten: boolean;
-    /** Undefined until an editor decides. */
-    supportsReplicate?: boolean;
-}
 ```
 
 ## Storage
@@ -319,15 +279,14 @@ interface InsertableSettingsInput {
   by a load or the toggle, cleared when fasten is turned off. A new row is off,
   except a generated tab's, which is on (see
   [generated-parts.md](./generated-parts.md)).
-- **D1** `insertables.supports_replicate`: whether an editor allows the part to
-  replicate; null until one decides. Reloads keep it.
 - **KV** `quick-fastener-scan:` — each Part Studio's scan, shared with Quick
   fastener, which owns it.
 - **KV** `seen-hints:` — `Hint.FASTENED_TO_CIRCULAR_EDGES`, once the user has
   fastened to circular edges; see [auth.md](./auth.md).
-- **Memory** `useFastenPicks` — the targets and holes to skip, for the tab.
-- **localStorage** (`ui-state`): `fasten`, `fastenSelectionMode`, `replicate`
-  and `fastenCircularEdgesTipCount`.
+- **Memory** `useFastenPicks` — the targets and holes to skip, for the tab,
+  shared by the navbar and the insert menu.
+- **localStorage** (`ui-state`): `fasten`, `fastenSelectionMode` and
+  `fastenCircularEdgesTipCount`.
 
 ## Flows
 
@@ -336,110 +295,86 @@ interface InsertableSettingsInput {
 1. Once the app sends `applicationInit`, Onshape sends the window's whole
    selection each time it changes, and `useOnshapeSelection` hands the focused
    `QueryList` what was added and deselected, as in Quick fastener.
-2. With **Fasten** ticked in an assembly, the insert menu shows the cursor icon
-   beside the insert location's: a red stop sign with nothing picked, a check
-   with something. `useFastenPicksFromSelection` focuses the targets' list, so
-   anything picked while the menu is open joins it; what was picked before it
-   opened isn't known.
+2. In an assembly, signed in, the navbar of a library page shows the cursor
+   icon beside the insert location's (`NavbarFastenStatus`): a red stop sign
+   with nothing picked, a check with something. So does the insert menu, with
+   **Fasten** ticked (`FastenCircularEdgesStatus`). The navbar hides its own
+   while an insert menu is open (`openInsertableId`), since two lists of one id
+   would both take picks; both read `useFastenPicks`, so what was picked from
+   the navbar is in the menu's list, and the other way round.
 3. The card holds the mode (**Circular edges** or planar **Faces**), the targets'
    query list, and in faces mode **Holes to skip**. It stays mounted while
    hidden (`keepMounted`), so its lists take picks with the card closed, and
-   the icon turns the primary colour while one of them is focused. A focused
-   list limits what the Onshape window lets be picked to its kind, as in Quick
-   fastener. Hovering a row lights its entity up; clicking a list shows its
-   prompt in Onshape.
+   the icon turns the primary colour while one of them is focused. The targets'
+   list is `autoFocus`: it is focused on mount, and again whenever the focused
+   list unmounts, so one list always takes picks. A focused list limits what
+   the Onshape window lets be picked to its kind, as in Quick fastener.
+   Hovering a row lights its entity up; clicking a list shows its prompt in
+   Onshape.
 4. Changing the mode clears the picks.
 
 ### Inserting
 
-1. `useInsertMutation` reads the picks, the mode and the Replicate preference
-   at the click, and sends them with `fasten` to `POST /add-to-assembly`.
+1. `useInsertMutation` reads the picks and the mode at the click, and sends
+   them with `fasten` to `POST /add-to-assembly`, from the insert menu's
+   **Insert** or a row's **Quick insert and fasten** alike.
    `isConsistentPick` refuses edges as faces, or faces as edges.
 2. With picks, the route calls `indexHoles` first, which scans each Part Studio
    holding a pick (cached) and answers the picked circular edges in the
    assembly with their radii: each picked edge that is circular, or every
    circular edge of each picked face, less the skipped holes. None found
    answers 400 and inserts nothing.
-3. It inserts the part at the insert location, then names its mates and
-   Replicates after the part: its configuration's indexed record's name, the
-   element's own part's at the defaults, else the tab's (`partName`,
-   `readStoredParts`):
+3. It inserts the part at the insert location, then names its mates after the
+   part: its configuration's indexed record's name, the element's own part's at
+   the defaults, else the tab's (`partName`, `readStoredParts`):
     - **No picks**: adds a fasten mate naming only the part's connector, and
       answers its `featureId`; the client opens the mate dialog to finish it.
-    - **One instance each**: `fastenToCircularEdges` mates the inserted
-      instance to the first edge, then inserts and mates one more per remaining
-      edge, serially. Each mate is the part's connector followed by an implicit
-      connector the mate owns, at the edge's centre, so the edge's part stays
-      put.
-    - **Replicated**: with Replicate and a part allowed it, `groupBySize`
-      groups the edges by radius in the order found. Each group gets one
-      instance, the inserted one first, mated to its first edge, and a
-      Replicate onto the rest of the group's edges, each matched on its own
-      (`addReplicate`), whether they were picked or came from a face.
-
-    Either way it answers `fastenedCount` and records
-    `Hint.FASTENED_TO_CIRCULAR_EDGES`.
+    - **Picks**: `fastenToCircularEdges` mates the inserted instance to the
+      first edge, then inserts and mates one more per remaining edge, serially.
+      Each mate is the part's connector followed by an implicit connector the
+      mate owns, at the edge's centre, so the edge's part stays put. It answers
+      `fastenedCount` and records `Hint.FASTENED_TO_CIRCULAR_EDGES`.
 
 4. On `fastenedCount` the client clears the picks.
 5. An insert and fasten with nothing picked shows the circular edges tip,
    unless the quick insert tip showed, at most three times and never after the
    hint is seen.
 
-### Deciding whether a part replicates
-
-1. A part with Insert and fasten on and `supports_replicate` null shows the
-   **Replicate not decided** warning. `GET /api/build-status` adds it from
-   `checkInsertableSettings` as it answers, so no load records it.
-2. The Replicate switch under the part's admin toggles shows the undecided
-   state with its thumb centred. Either choice, through
-   `POST /api/toggle-replicate`, clears the warning and bumps the library
-   version, since `InsertableOut.supportsReplicate` changes.
-
 ## User-facing strings
 
-| String                                                                                                                       | Where                                                   |
-| ---------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
-| "{n} circular edges selected" / "{n} faces selected"                                                                         | Card title, with picks                                  |
-| "No circular edges selected" / "No faces selected"                                                                           | Card title, without                                     |
-| "New"                                                                                                                        | Badge beside the title until the hint is seen           |
-| "Select edges to automatically fasten this part to."                                                                         | Card description, circular edges, none picked           |
-| "The part will be fastened to the selected edge."                                                                            | Card description, one edge                              |
-| "A part will be inserted and fastened to each selected edge."                                                                | Card description, several edges                         |
-| "A part will be fastened to an edge and replicated onto the rest."                                                           | Card description, several edges, Replicate              |
-| "Select faces to automatically fasten this part to every hole in them."                                                      | Card description, faces, none picked                    |
-| "A part will be inserted and fastened to every hole in the selected faces."                                                  | Card description, faces                                 |
-| "A part will be fastened to a hole and replicated onto every other hole in the selected faces."                              | Card description, faces, Replicate                      |
-| "Circular edges" / "Faces"                                                                                                   | Mode, and the targets list's label                      |
-| "Holes to skip"                                                                                                              | Second list's label, faces                              |
-| "Select circular edges to fasten this part to."                                                                              | Targets list's prompt, in Onshape's bubble and the list |
-| "Select faces to fasten this part to every hole in."                                                                         | Targets list's prompt, faces                            |
-| "Select the edges of holes to leave out."                                                                                    | Holes to skip's prompt                                  |
-| "Clear"                                                                                                                      | A list with picks, inside its box (`QueryList`)         |
-| "Replicate"                                                                                                                  | Checkbox                                                |
-| "Insert one part and replicate it onto the other holes, rather than inserting a part for each."                              | Replicate's info tooltip                                |
-| "Successfully inserted {name} and fastened it to {n} circular edges."                                                        | Success toast, with picks                               |
-| "Successfully inserted {name} and created a Fasten mate."                                                                    | Success toast, without                                  |
-| "No circular edges were found in what was selected."                                                                         | Error toast, picks with no circular edge                |
-| "Select either faces or circular edges to fasten to, not both."                                                              | Validation error, inconsistent picks                    |
-| "{name} does not support insert and fasten."                                                                                 | Error toast                                             |
-| "Tip: You can select circular edges in Onshape before you insert and fasten to automatically fasten to each one."            | Tip toast                                               |
-| "Onshape refused the Replicate."                                                                                             | Error toast                                             |
-| "Replicate not decided"                                                                                                      | Build check title                                       |
-| "Allow replicate for parts that sit the same way on every circular edge, like bolts, and not for parts with an orientation." | Build check description                                 |
-| "Replicate"                                                                                                                  | Editor switch label                                     |
-| "Undecided: allow for parts that sit the same way on every edge" / "Allows replicating onto several circular edges"          | Editor switch description, undecided / decided          |
+| String                                                                                                            | Where                                                   |
+| ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| "{n} circular edges selected" / "{n} faces selected"                                                              | Card title, with picks                                  |
+| "No circular edges selected" / "No faces selected"                                                                | Card title, without                                     |
+| "New"                                                                                                             | Badge beside the title until the hint is seen           |
+| "Select edges to automatically fasten inserted parts to."                                                         | Card description, circular edges, none picked           |
+| "The part will be fastened to the selected edge."                                                                 | Card description, one edge                              |
+| "A part will be inserted and fastened to each selected edge."                                                     | Card description, several edges                         |
+| "Select faces to automatically fasten inserted parts to every hole in them."                                      | Card description, faces, none picked                    |
+| "A part will be inserted and fastened to every hole in the selected faces."                                       | Card description, faces                                 |
+| "Circular edges" / "Faces"                                                                                        | Mode, and the targets list's label                      |
+| "Holes to skip"                                                                                                   | Second list's label, faces                              |
+| "Select circular edges to fasten parts to."                                                                       | Targets list's prompt, in Onshape's bubble and the list |
+| "Select faces to fasten parts to every hole in."                                                                  | Targets list's prompt, faces                            |
+| "Select the edges of holes to leave out."                                                                         | Holes to skip's prompt                                  |
+| "Clear"                                                                                                           | A list with picks, inside its box (`QueryList`)         |
+| "Successfully inserted {name} and fastened it to {n} circular edges."                                             | Success toast, with picks                               |
+| "Successfully inserted {name} and created a Fasten mate."                                                         | Success toast, without                                  |
+| "No circular edges were found in what was selected."                                                              | Error toast, picks with no circular edge                |
+| "Select either faces or circular edges to fasten to, not both."                                                   | Validation error, inconsistent picks                    |
+| "{name} does not support insert and fasten."                                                                      | Error toast                                             |
+| "Tip: You can select circular edges in Onshape before you insert and fasten to automatically fasten to each one." | Tip toast                                               |
 
 ## Invariants
 
 - The insert is recorded exactly once per request, with `fasten` true only once
-  every mate and the Replicate are built.
+  every mate is built.
 - Picks are read before anything is inserted, so picks with no circular edge
   insert nothing.
-- Nothing replicates unless `supports_replicate` is true: the client hides the
-  option, and the route ignores `replicate` for any other part.
-- Every edge a Replicate targets has the radius of its seed's edge, within
-  Onshape's length tolerance (`sameRadius`); Onshape matches no other.
-- A Replicate matches individual edges, never a face or a plane.
+- Each picked or found edge gets its own instance and mate.
+- While an assembly's library page is open, exactly one query list of the
+  fasten picks is mounted: the insert menu's when one is open, else the
+  navbar's.
 - Mates and inserts are added one at a time: Onshape rejects a feature-list edit
   that races another.
 
@@ -447,10 +382,6 @@ interface InsertableSettingsInput {
 
 - **A mate fails**: the request errors, and whatever was inserted before it
   stays in the assembly, as in the Onshape UI.
-- **Onshape refuses a Replicate**: the request errors with Onshape's own
-  message, and the instance and mate before it stay in the assembly, as for
-  a mate. One Onshape accepts but fails to regenerate stays in the assembly
-  for the user to fix.
 - **The scan fails in a Part Studio**: the request errors and nothing is
   inserted; see [quick-fastener.md](./quick-fastener.md).
 - **A pick isn't circular**: the scan finds no circular edge for it and it is left
@@ -466,33 +397,23 @@ interface InsertableSettingsInput {
   leaving it lights the focused list's picks up again. The list still refuses other
   kinds, and the scan drops edges that
   aren't circular.
-- **The list stays focused.** The targets' list is focused while the menu is
-  open, so picking in Onshape and then inserting needs no click in the panel.
-  A list takes what's added to the selection after it's focused, so what was
-  picked before the menu opened isn't taken.
-- **Replicate is copied from Onshape.** Onshape's feature specs omit
-  Replicate, so `replicateFeature` is shaped as Onshape answers a Replicate of
-  picked edges, every parameter included: the `SAME_EDGE` scope, with the
-  edges in `targetEdges` and the other scopes' lists empty. Each target edge
-  is named by its deterministic id alone, which Onshape accepts in place of
-  a query; `qTransient` takes a transient id, not one. Each one added is
-  logged with what Onshape answered.
-  Replicate is off by default for a part modeled by hand.
-- **No fallbacks.** Onshape refusing a Replicate, or any other write, is an
-  error the user sees, not something worked around with other features.
-- **Individual edges only.** Of Onshape's three ways to match, only "Match
-  individual edges" is used, even for a picked face whose every hole is in the
-  group. One way to build a Replicate is simpler to get right than three; a
-  face's Replicate would follow holes added later, which this gives up.
-- **Always a new Replicate.** An insert never edits a Replicate already in the
-  assembly; adding edges to an existing one is the user's to do in Onshape.
+- **A list is always focused.** The targets' list is focused in the navbar and
+  in the insert menu, so picking in Onshape and then inserting, or quick
+  inserting, needs no click in the panel. A list takes what's added to the
+  selection after it's focused, so what was picked before the app opened isn't
+  taken.
+- **Preselection lives in the navbar.** Quick insert opens no menu, so the
+  picks it fastens to are made beside the insert location, which a quick
+  insert also uses; the insert menu shows the same picks rather than its own.
+- **No Replicate.** Onshape accepts a Replicate added through the API (200,
+  `featureStatus` OK, listed by the features endpoint) but makes no copies,
+  and the assembly shows nothing for it. Each edge gets its own instance and
+  mate instead.
+- **No fallbacks.** Onshape refusing a mate, or any other write, is an error
+  the user sees, not something worked around with other features.
 - **Radii from the scan.** Onshape's selection messages carry no geometry, so
   the circular edges and their radii come from Quick fastener's hole scan, which also
   turns a face into its holes.
-- **Replicate is the editor's call.** Insert and fasten suits any part with a
-  mate connector, including ones whose orientation matters, which a Replicate
-  can place wrongly. Existing parts were never assessed, so null means
-  undecided and raises a warning rather than defaulting either way.
 - **Implicit connector ids.** A mate names its implicit connector by a
   placeholder id that Onshape replaces on creation, which is undocumented but
   is how Onshape itself stores a mate to an inferred point. It's unconfirmed

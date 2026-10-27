@@ -23,8 +23,6 @@ export interface InsertableBuildStatus {
     elementType: ElementType;
     isVisible: boolean;
     supportsFasten: boolean;
-    /** Undefined until an editor decides. */
-    supportsReplicate?: boolean;
     indexConfigurations: boolean;
     /** Parameters an admin left out of indexing. */
     excludedParameterIds: string[];

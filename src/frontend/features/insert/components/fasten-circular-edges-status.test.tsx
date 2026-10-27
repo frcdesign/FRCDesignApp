@@ -11,9 +11,13 @@ import {
 } from "../../../lib/selection";
 import { updateUiState } from "../../../lib/ui-state";
 import { clearFastenPicks, useFastenPicks } from "../fasten-picks";
-import { FastenCircularEdgesStatus } from "./fasten-circular-edges-status";
+import {
+    FastenCircularEdgesStatus,
+    NavbarFastenStatus
+} from "./fasten-circular-edges-status";
 
 vi.mock("../../hints/queries", () => ({ useHasSeenHint: () => true }));
+vi.mock("../../auth/access-level", () => ({ useIsSignedIn: () => true }));
 
 const edge = (selectionId: string): OnshapeSelection => ({
     entityType: "EDGE",
@@ -37,10 +41,8 @@ function selectInOnshape(...picked: OnshapeSelection[]) {
     }
 }
 
-function renderStatus(supportsReplicate = false) {
-    return renderWithProviders(
-        <FastenCircularEdgesStatus supportsReplicate={supportsReplicate} />
-    );
+function renderStatus() {
+    return renderWithProviders(<FastenCircularEdgesStatus />);
 }
 
 async function openCard() {
@@ -62,7 +64,7 @@ describe("FastenCircularEdgesStatus", () => {
         });
         updateUiState({
             fastenSelectionMode: SelectionMode.LOCATIONS,
-            replicate: false
+            openInsertableId: undefined
         });
     });
 
@@ -106,11 +108,10 @@ describe("FastenCircularEdgesStatus", () => {
         expect(screen.getByText("Holes to skip")).toBeTruthy();
     });
 
-    it("offers to replicate only a part an editor allowed to", async () => {
+    it("inserts a part for each circular edge", async () => {
         renderStatus();
         selectInOnshape(edge("JH1"), edge("JH2"));
         await openCard();
-        expect(screen.queryByLabelText("Replicate")).toBeNull();
         expect(
             screen.getByText(
                 "A part will be inserted and fastened to each selected edge."
@@ -118,14 +119,32 @@ describe("FastenCircularEdgesStatus", () => {
         ).toBeTruthy();
     });
 
-    it("offers to replicate once there is more than one circular edge", async () => {
-        renderStatus(true);
+    it("takes picks in the navbar, until the insert menu takes them over", () => {
+        const { rerender } = renderWithProviders(<NavbarFastenStatus />);
         selectInOnshape(edge("JH1"));
-        await openCard();
-        expect(screen.queryByLabelText("Replicate")).toBeNull();
+        expect(useFastenPicks.getState().targets).toEqual([edge("JH1")]);
 
+        act(() => updateUiState({ openInsertableId: "part" }));
+        rerender(
+            <>
+                <NavbarFastenStatus />
+                <FastenCircularEdgesStatus />
+            </>
+        );
+        expect(document.querySelectorAll("[data-focused]")).toHaveLength(1);
+        // The menu's request clears the window, keeping the picks
+        act(() => useOnshapeSelection.getState().receive([]));
         selectInOnshape(edge("JH2"));
-        expect(screen.getByLabelText("Replicate")).toBeTruthy();
+        expect(useFastenPicks.getState().targets).toEqual([
+            edge("JH1"),
+            edge("JH2")
+        ]);
+    });
+
+    it("isn't in the navbar for a Part Studio", () => {
+        useOnshapeLaunch.setState({ elementType: ElementType.PART_STUDIO });
+        renderWithProviders(<NavbarFastenStatus />);
+        expect(document.querySelector("svg")).toBeNull();
     });
 
     it("says how to fasten when nothing is selected", async () => {
@@ -134,7 +153,7 @@ describe("FastenCircularEdgesStatus", () => {
         expect(screen.getByText("No circular edges selected")).toBeTruthy();
         expect(
             screen.getByText(
-                "Select edges to automatically fasten this part to."
+                "Select edges to automatically fasten inserted parts to."
             )
         ).toBeTruthy();
     });

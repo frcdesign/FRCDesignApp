@@ -44,6 +44,8 @@ interface QueryListProps {
     describe?: (entity: OnshapeSelection, index: number) => string;
     /** Beside a row's name: a status, say. */
     rowSection?: (entity: OnshapeSelection) => ReactNode;
+    /** Takes picks whenever no list does, as a form's first list should. */
+    autoFocus?: boolean;
 }
 
 function toHighlighted(entity: OnshapeSelection): HighlightedEntity {
@@ -63,7 +65,8 @@ function defaultName(entity: OnshapeSelection, index: number): string {
  * Onshape's query parameter, for entities picked in the Onshape window, named
  * inside its box as Onshape's are. Click it to focus it, and it follows the
  * window's selection: what's picked of the kind it takes is added, and what's
- * deselected is dropped. Hover a row to light its entity up alone.
+ * deselected is dropped. Hover a row to light its entity up alone. A form's
+ * first list takes `autoFocus`, so whenever no list is focused it is.
  *
  * The filter is asked for on focus. A highlight cancels it, and a request
  * clears what the window shows, so hovering a row highlights its entity alone,
@@ -80,10 +83,14 @@ export function QueryList(props: QueryListProps): ReactNode {
         accepts,
         filter,
         describe = defaultName,
-        rowSection
+        rowSection,
+        autoFocus = false
     } = props;
     const target = useTargetElement();
     const isFocused = useOnshapeSelection((state) => state.focused === id);
+    const isUnclaimed = useOnshapeSelection(
+        (state) => state.focused === undefined
+    );
     // The stop names the request it ends
     const selectionRequest = useRef<string>(undefined);
     const [refused, setRefused] = useState(false);
@@ -106,6 +113,22 @@ export function QueryList(props: QueryListProps): ReactNode {
     );
 
     useEffect(() => holdPicks(id, entities), [id, entities]);
+
+    useEffect(() => {
+        if (autoFocus && isUnclaimed) {
+            useOnshapeSelection.getState().focus(id);
+        }
+    }, [autoFocus, isUnclaimed, id]);
+
+    // Gone, it leaves picks to the form's first list
+    useEffect(
+        () => () => {
+            if (useOnshapeSelection.getState().focused === id) {
+                useOnshapeSelection.getState().focus(undefined);
+            }
+        },
+        [id]
+    );
 
     useEffect(() => {
         if (!target || !isFocused) {

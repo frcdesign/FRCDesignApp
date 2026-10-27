@@ -1,7 +1,3 @@
-ALTER TABLE `insertables` ADD `generated_studio` text;
---> statement-breakpoint
-ALTER TABLE `insertables` ADD `supports_replicate` integer;
---> statement-breakpoint
 CREATE TABLE `generated_sets` (
 	`library_id` text NOT NULL,
 	`set` text NOT NULL,
@@ -13,3 +9,5 @@ CREATE TABLE `generated_sets` (
 	FOREIGN KEY (`library_id`) REFERENCES `libraries`(`id`) ON UPDATE no action ON DELETE no action,
 	FOREIGN KEY (`group_id`) REFERENCES `groups`(`id`) ON UPDATE no action ON DELETE cascade
 );
+--> statement-breakpoint
+ALTER TABLE `insertables` ADD `generated_studio` text;

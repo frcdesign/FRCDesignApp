@@ -289,11 +289,7 @@ function InsertButtons(props: InsertButtonsProps): ReactNode {
     return (
         <Group gap="sm" align="center">
             <InsertLocationStatus />
-            {canFasten && fasten && (
-                <FastenCircularEdgesStatus
-                    supportsReplicate={insertable.supportsReplicate}
-                />
-            )}
+            {canFasten && fasten && <FastenCircularEdgesStatus />}
             {canFasten && (
                 <InfoCheckbox
                     label="Fasten"

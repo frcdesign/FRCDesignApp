@@ -371,11 +371,8 @@ export async function saveInsertable(
         generatedStudio: parsed.generatedStudio,
         buildIssues: parsed.buildIssues,
         lastLoadedAt: new Date(),
-        // Not an editor's to change: a generated part fastens and replicates
-        ...(target.generated !== undefined && {
-            supportsFasten: true,
-            supportsReplicate: true
-        })
+        // Not an editor's to change: a generated part fastens
+        ...(target.generated !== undefined && { supportsFasten: true })
     };
 
     const insertableWrite = db

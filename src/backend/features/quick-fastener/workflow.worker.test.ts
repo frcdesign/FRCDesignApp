@@ -174,23 +174,17 @@ describe("QuickFastenerWorkflow", () => {
         });
 
         expect(status.state).toBe(FastenerJobState.COMPLETE);
-        // One hole: nothing to replicate
         expect(status.tasks?.map((task) => task.state)).toEqual([
             FastenerTaskState.DONE,
             FastenerTaskState.DONE,
-            FastenerTaskState.DONE,
-            FastenerTaskState.SKIPPED
+            FastenerTaskState.DONE
         ]);
         expect(status.holes?.[0]).toMatchObject({
             status: HoleStatus.READY,
             screw: { length: "IN_1" }
         });
         // Washer, screw, washer, nut
-        expect(status.result).toEqual({
-            inserted: 4,
-            fastened: 4,
-            replicated: 0
-        });
+        expect(status.result).toEqual({ inserted: 4, fastened: 4 });
         expect(fastenerJobOutcome(status)).toBe(FastenerJobOutcome.SUCCESS);
 
         expect(mates[0]).toContain('"deterministicIds":["TOP-top"]');
@@ -241,7 +235,7 @@ describe("QuickFastenerWorkflow", () => {
         ]);
     });
 
-    describe("replicating", () => {
+    describe("alike holes", () => {
         const INCH = 0.0254;
         /** Two alike holes through the top plate, `a` and `b`. */
         const alike = (key: string): Planner.HolePlan => ({
@@ -274,11 +268,6 @@ describe("QuickFastenerWorkflow", () => {
                 radius: (0.201 * INCH) / 2
             }
         });
-        const REPLICATING = {
-            sessionId: "session",
-            request: BODY
-        };
-
         beforeEach(() => {
             vi.spyOn(Planner, "planHoles").mockReturnValue([
                 alike("a"),
@@ -286,68 +275,23 @@ describe("QuickFastenerWorkflow", () => {
             ]);
         });
 
-        it("gives the first of alike holes parts, and replicates each stack onto the rest", async () => {
-            const status = await run("replicated", REPLICATING);
+        it("inserts and fastens every hole's own parts", async () => {
+            const status = await run("alike", {
+                sessionId: "session",
+                request: BODY
+            });
 
             expect(status.tasks?.map((task) => task.action)).toEqual([
                 "index",
                 "insert",
-                "fasten",
-                "replicate"
+                "fasten"
             ]);
-            // A screw and a nut in `a`
-            expect(status.result).toEqual({
-                inserted: 2,
-                fastened: 2,
-                replicated: 1
-            });
-            const [screws, nuts] = mates.slice(2);
-            expect(screws).toContain('"featureType":"replicate"');
-            expect(screws).toContain('"parameterId":"targetEdges"');
-            expect(screws).toContain('"deterministicIds":["b"]');
-            expect(screws).toContain(
-                '"seedInstances","queries":[{"btType":"BTMIndividualOccurrenceQuery-626","path":["part0"]}]'
-            );
-            expect(nuts).toContain('"deterministicIds":["b-far"]');
-            expect(nuts).toContain(
-                '"seedInstances","queries":[{"btType":"BTMIndividualOccurrenceQuery-626","path":["part1"]}]'
+            // A screw and a nut in each
+            expect(status.result).toEqual({ inserted: 4, fastened: 4 });
+            ["a", "a-far", "b", "b-far"].forEach((edge, index) =>
+                expect(mates[index]).toContain(`"deterministicIds":["${edge}"]`)
             );
             expect(fastenerJobOutcome(status)).toBe(FastenerJobOutcome.SUCCESS);
-        });
-
-        it("fails the step, in our words, when Onshape refuses the replicate", async () => {
-            vi.mocked(Assemblies.addAssemblyFeature).mockImplementation(
-                (_client, _path, feature) => {
-                    const json = JSON.stringify(feature);
-                    if (json.includes('"featureType":"replicate"')) {
-                        return Promise.reject(
-                            new OnshapeApiError(
-                                "Onshape API error 400: bad feature",
-                                400
-                            )
-                        );
-                    }
-                    mates.push(json);
-                    return Promise.resolve({ feature: { featureId: "mate" } });
-                }
-            );
-            const status = await run("refused", REPLICATING);
-
-            expect(status.tasks?.map((task) => task.state)).toEqual([
-                FastenerTaskState.DONE,
-                FastenerTaskState.DONE,
-                FastenerTaskState.DONE,
-                FastenerTaskState.FAILED
-            ]);
-            expect(status.tasks?.[3].reason).toBe(
-                "Onshape refused the Replicate."
-            );
-            expect(status.result).toEqual({
-                inserted: 2,
-                fastened: 2,
-                replicated: 0
-            });
-            expect(fastenerJobOutcome(status)).toBe(FastenerJobOutcome.PARTIAL);
         });
     });
 
@@ -407,7 +351,6 @@ describe("QuickFastenerWorkflow", () => {
         });
         expect(status.tasks?.map((task) => task.state)).toEqual([
             FastenerTaskState.FAILED,
-            FastenerTaskState.SKIPPED,
             FastenerTaskState.SKIPPED,
             FastenerTaskState.SKIPPED
         ]);

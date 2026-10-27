@@ -84,11 +84,11 @@ function inLibrary(libraryId: LibraryId, insertableId: string) {
 /** POST /api/toggle-insert-and-fasten/library/:libraryId/insertable/:insertableId */
 const setFastenBody = z.object({ supportsFasten: z.boolean() });
 
-/** A generated part always fastens and replicates, which its load sets. */
+/** A generated part always fastens, which its load sets. */
 function refuseGenerated(generatedStudio: string | null): void {
     if (generatedStudio !== null) {
         throw handledError(
-            "A FeatureScript part always inserts and fastens, and replicates.",
+            "A FeatureScript part always inserts and fastens.",
             HttpStatus.BAD_REQUEST
         );
     }
@@ -140,38 +140,6 @@ insertableRoutes.post(
             .update(insertables)
             .set({ supportsFasten, fastenInfo })
             .where(eq(insertables.id, insertableId));
-
-        await bumpLibraryVersion(db, libraryId);
-        return c.json({ success: true });
-    }
-);
-
-const setReplicateBody = z.object({ supportsReplicate: z.boolean() });
-
-/** POST /api/toggle-replicate/library/:libraryId/insertable/:insertableId */
-insertableRoutes.post(
-    "/toggle-replicate" + libraryRoute() + insertableRoute(),
-    requireEditorMiddleware,
-    validate("json", setReplicateBody),
-    async (c) => {
-        const db = getDb(c.env.DB);
-        const libraryId = getLibraryParam(c);
-        const { supportsReplicate } = c.req.valid("json");
-        const insertableId = getInsertableParam(c);
-
-        const row = await db
-            .select({ generatedStudio: insertables.generatedStudio })
-            .from(insertables)
-            .where(inLibrary(libraryId, insertableId))
-            .get();
-        if (!row) {
-            throw internalError("Insertable not found", HttpStatus.NOT_FOUND);
-        }
-        refuseGenerated(row.generatedStudio);
-        await db
-            .update(insertables)
-            .set({ supportsReplicate })
-            .where(inLibrary(libraryId, insertableId));
 
         await bumpLibraryVersion(db, libraryId);
         return c.json({ success: true });
@@ -352,9 +320,7 @@ const addToAssemblyBody = insertBody
         /** What to fasten to, as Quick fastener takes it; none leaves the mate open. */
         selectionMode: z.enum(SelectionMode).default(SelectionMode.LOCATIONS),
         targets: z.array(entitySchema).max(MAX_SELECTIONS).default([]),
-        excluded: z.array(entitySchema).max(MAX_SELECTIONS).default([]),
-        /** Ignored unless an editor allowed the insertable to replicate. */
-        replicate: z.boolean().default(false)
+        excluded: z.array(entitySchema).max(MAX_SELECTIONS).default([])
     })
     .refine(isConsistentPick, INCONSISTENT_PICK_MESSAGE);
 
@@ -453,8 +419,7 @@ insertableRoutes.post(
                 name: insertables.name,
                 elementType: insertables.elementType,
                 isOpenComposite: insertables.isOpenComposite,
-                fastenInfo: insertables.fastenInfo,
-                supportsReplicate: insertables.supportsReplicate
+                fastenInfo: insertables.fastenInfo
             })
             .from(insertables)
             .where(eq(insertables.id, insertableId))
@@ -509,7 +474,6 @@ insertableRoutes.post(
                 fasten
             });
 
-        const replicate = body.replicate && row.supportsReplicate === true;
         // Read before inserting, so picks with no circular edge insert nothing.
         const fastensToPicks =
             body.fasten && row.fastenInfo !== null && body.targets.length > 0;
@@ -561,7 +525,7 @@ insertableRoutes.post(
 
         const fastenQuery = (instancePath: string[]) =>
             getFastenQuery(row.elementType, instancePath, fastenInfo);
-        // Mates and Replicates named after the part, as its configuration names it
+        // Mates named after the part, as its configuration names it
         const stored = await readStoredParts(db, insertableId);
         const name = stored ? partName(stored, selection) : row.name;
 
@@ -572,8 +536,7 @@ insertableRoutes.post(
                     inserted: result,
                     insert,
                     fastenQuery,
-                    edges,
-                    replicate
+                    edges
                 });
                 await track(true);
                 await markHintSeen(c, Hint.FASTENED_TO_CIRCULAR_EDGES);

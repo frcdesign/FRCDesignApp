@@ -12,7 +12,6 @@ import { SelectionMode } from "@backend/features/quick-fastener/contract";
 import { AppHoverCard } from "../../../components/app-hover-card";
 import { BadgedIcon } from "../../../components/badged-icon";
 import { StatusIcon } from "../../../components/status-icon";
-import { InfoCheckbox } from "../../../components/info-checkbox";
 import { NewBadge, NewIndicator } from "../../../components/new-feature";
 import { QueryList } from "../../../components/query-list";
 import { Status } from "../../../lib/status";
@@ -22,6 +21,9 @@ import { isEdge, useOnshapeSelection } from "../../../lib/selection";
 import { CIRCULAR_EDGES } from "../../../lib/messages";
 import { updateUiState, useUiState } from "../../../lib/ui-state";
 import { useHasSeenHint } from "../../hints/queries";
+import { useIsSignedIn } from "../../auth/access-level";
+import { ElementType } from "@backend/lib/onshape/element-type";
+import { useTargetElementType } from "../insert-hooks";
 import {
     acceptsTarget,
     targetFilter,
@@ -31,35 +33,45 @@ import {
     setFastenExcluded,
     setFastenTargets,
     useFastenPicks,
-    useFastenPicksFromSelection
+    useFastenPicksForMode
 } from "../fasten-picks";
 
-interface FastenCircularEdgesStatusProps {
-    /** Whether an editor allowed the part to replicate. */
-    supportsReplicate: boolean;
+/** Picks made before a quick insert, which the insert menu takes over while it's open. */
+export function NavbarFastenStatus(): ReactNode {
+    const targetElementType = useTargetElementType();
+    const isSignedIn = useIsSignedIn();
+    const isMenuOpen = useUiState(
+        (state) => state.openInsertableId !== undefined
+    );
+    // Two lists of the same id would both take picks
+    if (
+        targetElementType !== ElementType.ASSEMBLY ||
+        !isSignedIn ||
+        isMenuOpen
+    ) {
+        return null;
+    }
+    return <FastenCircularEdgesStatus />;
 }
 
-/** For an insert that will fasten: what it will fasten to, and where to pick more. */
-export function FastenCircularEdgesStatus(
-    props: FastenCircularEdgesStatusProps
-): ReactNode {
-    const { supportsReplicate } = props;
+/**
+ * What an insert and fasten will fasten to, and where to pick more: in the
+ * insert menu, and in the navbar for a quick insert, sharing the same picks.
+ */
+export function FastenCircularEdgesStatus(): ReactNode {
     const mode = useUiState((state) => state.fastenSelectionMode);
-    const replicate = useUiState((state) => state.replicate);
     const targets = useFastenPicks((state) => state.targets);
     const excluded = useFastenPicks((state) => state.excluded);
     const isPicking = useOnshapeSelection((state) =>
         isFastenList(state.focused)
     );
     const hasFastened = useHasSeenHint(Hint.FASTENED_TO_CIRCULAR_EDGES);
-    useFastenPicksFromSelection(mode);
+    useFastenPicksForMode(mode);
 
     const isFaces = mode === SelectionMode.FACES;
     const found = targets.length > 0;
     const isNew = !found && !hasFastened;
     const status = found ? Status.SUCCESS : Status.ERROR;
-    const canReplicate =
-        supportsReplicate && (isFaces ? found : targets.length > 1);
     const noun = isFaces ? "face" : "circular edge";
 
     return (
@@ -95,11 +107,7 @@ export function FastenCircularEdgesStatus(
                             {isNew && <NewBadge />}
                         </Group>
                     }
-                    description={describeFasten(
-                        mode,
-                        targets.length,
-                        canReplicate && replicate
-                    )}
+                    description={describeFasten(mode, targets.length)}
                 />
                 <SegmentedControl
                     fullWidth
@@ -123,13 +131,14 @@ export function FastenCircularEdgesStatus(
                     label={isFaces ? "Faces" : "Circular edges"}
                     prompt={
                         isFaces
-                            ? "Select faces to fasten this part to every hole in."
-                            : "Select circular edges to fasten this part to."
+                            ? "Select faces to fasten parts to every hole in."
+                            : "Select circular edges to fasten parts to."
                     }
                     entities={targets}
                     onChange={setFastenTargets}
                     accepts={acceptsTarget(mode)}
                     filter={targetFilter(mode)}
+                    autoFocus
                 />
                 {isFaces && (
                     <QueryList
@@ -142,41 +151,22 @@ export function FastenCircularEdgesStatus(
                         filter={CIRCULAR_EDGES}
                     />
                 )}
-                {canReplicate && (
-                    <InfoCheckbox
-                        label="Replicate"
-                        info="Insert one part and replicate it onto the other holes, rather than inserting a part for each."
-                        checked={replicate}
-                        onChange={(checked) =>
-                            updateUiState({ replicate: checked })
-                        }
-                    />
-                )}
             </Stack>
         </AppHoverCard>
     );
 }
 
-function describeFasten(
-    mode: SelectionMode,
-    count: number,
-    replicate: boolean
-): string {
+function describeFasten(mode: SelectionMode, count: number): string {
     if (mode === SelectionMode.FACES) {
-        if (count === 0) {
-            return "Select faces to automatically fasten this part to every hole in them.";
-        }
-        return replicate
-            ? "A part will be fastened to a hole and replicated onto every other hole in the selected faces."
+        return count === 0
+            ? "Select faces to automatically fasten inserted parts to every hole in them."
             : "A part will be inserted and fastened to every hole in the selected faces.";
     }
     if (count === 0) {
-        return "Select edges to automatically fasten this part to.";
+        return "Select edges to automatically fasten inserted parts to.";
     }
     if (count === 1) {
         return "The part will be fastened to the selected edge.";
     }
-    return replicate
-        ? "A part will be fastened to an edge and replicated onto the rest."
-        : "A part will be inserted and fastened to each selected edge.";
+    return "A part will be inserted and fastened to each selected edge.";
 }

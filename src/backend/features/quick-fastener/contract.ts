@@ -114,9 +114,7 @@ export function assemblyKey(assembly: ElementPath): string {
 export enum FastenerTaskAction {
     INDEX = "index",
     INSERT = "insert",
-    FASTEN = "fasten",
-    /** Skipped when no two holes are alike. */
-    REPLICATE = "replicate"
+    FASTEN = "fasten"
 }
 
 export enum FastenerTaskState {
@@ -157,8 +155,6 @@ export interface FastenerJobResult {
     inserted: number;
     /** Parts fastened to where they sit. */
     fastened: number;
-    /** Holes a Replicate filled, rather than parts inserted in each. */
-    replicated: number;
 }
 
 export interface FastenerJobStatus {

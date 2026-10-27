@@ -7,7 +7,6 @@ import {
 import {
     useSetVisibilityMutation,
     useToggleInsertAndFastenMutation,
-    useToggleReplicateMutation,
     useToggleSortOrderMutation
 } from "../queries";
 import { SectionHeader, SwitchRow } from "./sections";
@@ -29,17 +28,11 @@ export function InsertableAdminSection(
                 insertableId={insertableId}
                 isVisible={status.isVisible}
             />
-            {/* A FeatureScript part always fastens and replicates */}
+            {/* A FeatureScript part always fastens */}
             {!status.generatedStudio && (
                 <FastenSwitch
                     insertableId={insertableId}
                     supportsFasten={status.supportsFasten}
-                />
-            )}
-            {!status.generatedStudio && status.supportsFasten && (
-                <ReplicateSwitch
-                    insertableId={insertableId}
-                    supportsReplicate={status.supportsReplicate}
                 />
             )}
         </Stack>
@@ -77,30 +70,6 @@ function FastenSwitch(props: FastenSwitchProps): ReactNode {
             description="Allows mate-on-insert"
             checked={supportsFasten}
             onToggle={() => mutation.mutate(!supportsFasten)}
-        />
-    );
-}
-
-interface ReplicateSwitchProps {
-    insertableId: string;
-    /** Undefined until an editor decides. */
-    supportsReplicate?: boolean;
-}
-
-function ReplicateSwitch(props: ReplicateSwitchProps): ReactNode {
-    const { insertableId, supportsReplicate } = props;
-    const mutation = useToggleReplicateMutation(insertableId);
-    return (
-        <SwitchRow
-            label="Replicate"
-            description={
-                supportsReplicate === undefined
-                    ? "Undecided: allow for parts that sit the same way on every edge"
-                    : "Allows replicating onto several circular edges"
-            }
-            checked={supportsReplicate === true}
-            indeterminate={supportsReplicate === undefined}
-            onToggle={() => mutation.mutate(supportsReplicate !== true)}
         />
     );
 }

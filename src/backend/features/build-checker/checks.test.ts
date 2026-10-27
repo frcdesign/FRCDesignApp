@@ -4,7 +4,7 @@ import { Vendor } from "../library/vendors";
 import { BuildIssueType } from "./issues";
 import { DEFAULT_CONFIGURATION_KEY } from "../configurations/contract";
 import { thumbnailUrl } from "../thumbnails/keys";
-import { checkGroup, checkInsertable, checkInsertableSettings } from "./checks";
+import { checkGroup, checkInsertable } from "./checks";
 
 /** What uploadThumbnails returns: the element's default configuration. */
 const THUMBNAILS: ThumbnailUrls = {
@@ -79,23 +79,5 @@ describe("checkInsertable", () => {
             thumbnailUrls: null
         });
         expect(issues).toEqual([{ type: BuildIssueType.THUMBNAIL_FAILED }]);
-    });
-});
-
-describe("checkInsertableSettings", () => {
-    it("warns while nobody has decided whether a fastened part replicates", () => {
-        expect(checkInsertableSettings({ supportsFasten: true })).toEqual([
-            { type: BuildIssueType.REPLICATE_UNDECIDED }
-        ]);
-    });
-
-    it("is satisfied by either decision, or by fasten being off", () => {
-        expect(
-            checkInsertableSettings({
-                supportsFasten: true,
-                supportsReplicate: false
-            })
-        ).toEqual([]);
-        expect(checkInsertableSettings({ supportsFasten: false })).toEqual([]);
     });
 });

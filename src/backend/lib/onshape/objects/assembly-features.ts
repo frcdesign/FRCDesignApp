@@ -84,15 +84,6 @@ function entityQueryString(entity: EntityReference): string {
     return `query=qTransient("${entity.deterministicId}");`;
 }
 
-/** The entity itself, as a Replicate's matches name it: its deterministic id stands in for a query. */
-function entityQuery(entity: EntityReference): object {
-    return {
-        btType: "BTMIndividualQueryWithOccurrence-811",
-        deterministicIds: [entity.deterministicId],
-        path: entity.path
-    };
-}
-
 /** The center of a circular edge, where a fastener's axis runs. */
 function circularEdgeCenterQuery(edge: EdgeReference): object {
     return {
@@ -134,54 +125,4 @@ export function fastenMateToCircularEdge(
         [query, featureOccurrenceQuery(PLACEHOLDER_FEATURE_ID)],
         [implicitMateConnector(circularEdgeCenterQuery(edge))]
     );
-}
-
-function enumParameter(
-    parameterId: string,
-    enumName: string,
-    value: string
-): object {
-    return { btType: "BTMParameterEnum-145", parameterId, enumName, value };
-}
-
-/**
- * Copies fastened instances onto more circular edges, each placed as the mate
- * places the seed, so every edge must be the size of the seed's. Shaped as
- * Onshape answers a Replicate of picked edges, every parameter included: the
- * `SAME_EDGE` scope, the edges in `targetEdges`, the other scopes' lists empty.
- */
-export function replicateFeature(
-    name: string,
-    instancePaths: string[][],
-    mateFeatureId: string,
-    edges: EdgeReference[]
-): object {
-    return {
-        btType: "BTMAssemblyReplicateFeature-1351",
-        featureType: "replicate",
-        name,
-        parameters: [
-            queryParameter(
-                "seedInstances",
-                instancePaths.map((path) => ({
-                    btType: "BTMIndividualOccurrenceQuery-626",
-                    path
-                }))
-            ),
-            queryParameter("seedMate", [featureOccurrenceQuery(mateFeatureId)]),
-            enumParameter("seedEntityType", "Seed geometry type", "EDGE"),
-            enumParameter(
-                "faceTargetType",
-                "Face match scope",
-                "SAME_OCCURRENCE"
-            ),
-            queryParameter("targetInstances", []),
-            queryParameter("targetFeatures", []),
-            queryParameter("targetFaces", []),
-            enumParameter("edgeTargetType", "Edge match scope", "SAME_EDGE"),
-            queryParameter("targetBoundingFaces", []),
-            queryParameter("targetPlanes", []),
-            queryParameter("targetEdges", edges.map(entityQuery))
-        ]
-    };
 }

@@ -33,22 +33,18 @@ import {
     runFailure
 } from "./failures";
 import { getFastenerSet } from "./fastener-set";
-import { FastenerKind, type FastenerSet } from "./studios";
+import { type FastenerSet } from "./studios";
 import { indexHoles } from "./index-holes";
 import {
     insertGroups,
     type PartPlacement,
-    PartStack,
     partMate,
     namePlacements,
     placements,
-    replicateGroups,
-    stackTargets,
     washerTopEdges
 } from "./insert";
 import { reportJob } from "./jobs";
 import { planHoles } from "./planner";
-import { addReplicate } from "./replicate";
 
 export interface FastenerJobParams {
     /** Whose Onshape session the run borrows; see the load workflow. */
@@ -96,7 +92,7 @@ export class QuickFastenerWorkflow extends WorkflowEntrypoint<
             sessionId,
             assembly: request.assembly,
             tasks,
-            result: { inserted: 0, fastened: 0, replicated: 0 },
+            result: { inserted: 0, fastened: 0 },
             status: (state) => ({
                 state,
                 jobId: event.instanceId,
@@ -163,115 +159,24 @@ async function runSteps(ctx: RunContext, request: QuickFastenerIn) {
     const { plans } = indexed;
     ctx.holes = [...plans.map((plan) => plan.planned), ...indexed.unfound];
 
-    // Only each group's first hole gets parts; a Replicate puts them on the rest
-    const groups = replicateGroups(plans);
-    const later = new Set(
-        groups.flatMap((group) =>
-            group.slice(1).map((plan) => plan.planned.key)
-        )
-    );
-    // Named as the studios' records name each configuration, for its mates and Replicate
+    // Named as the studios' records name each configuration, for its mates
     const parts = await ctx.step.do("part-names", () =>
-        namePlacements(
-            getDb(ctx.env.DB),
-            set,
-            placements(
-                set,
-                plans.filter((plan) => !later.has(plan.planned.key))
-            )
-        )
+        namePlacements(getDb(ctx.env.DB), set, placements(set, plans))
     );
     if (parts.length === 0) {
         skipRest(ctx);
         return;
     }
     const paths = await runTask(ctx, FastenerTaskAction.INSERT, (run) =>
-        insertParts(ctx, set, run, "", parts)
+        insertParts(ctx, set, run, parts)
     );
     if (!paths) {
         skipRest(ctx);
         return;
     }
-
-    const mates = await runTask(ctx, FastenerTaskAction.FASTEN, (run) =>
-        fastenParts(ctx, set, run, "", parts, paths)
+    await runTask(ctx, FastenerTaskAction.FASTEN, (run) =>
+        fastenParts(ctx, set, run, parts, paths)
     );
-    if (!mates) {
-        skipRest(ctx);
-        return;
-    }
-
-    if (groups.every((group) => group.length < 2)) {
-        skipRest(ctx);
-        return;
-    }
-    await runTask(ctx, FastenerTaskAction.REPLICATE, async (run) => {
-        for (const [index, group] of groups.entries()) {
-            const [seed, ...rest] = group;
-            if (rest.length === 0) {
-                continue;
-            }
-            for (const stack of Object.values(PartStack)) {
-                const seedParts = [...parts.entries()].filter(
-                    ([, part]) =>
-                        part.hole === seed.planned.key && part.stack === stack
-                );
-                if (seedParts.length === 0) {
-                    continue;
-                }
-                // The mate holding the stack on its edge, which each copy is placed as
-                const seated = seedParts.find(
-                    ([, part]) => "edge" in part.seat
-                );
-                const mateFeatureId = seated ? mates[seated[0]] : null;
-                const instancePaths = seedParts.map(([each]) => paths[each]);
-                if (
-                    !mateFeatureId ||
-                    !instancePaths.every(
-                        (path): path is string[] => path !== null
-                    )
-                ) {
-                    console.error("Quick fastener can't replicate a stack", {
-                        stack,
-                        parts: seedParts.map(([index, part]) => ({
-                            name: part.name,
-                            path: paths[index],
-                            mate: mates[index]
-                        }))
-                    });
-                    throw runFailure(
-                        "A hole's parts weren't all inserted and fastened, so they can't be replicated."
-                    );
-                }
-                // Named after the screw or nut, rather than a washer under it
-                const [, named] =
-                    seedParts.find(
-                        ([, part]) => part.kind !== FastenerKind.WASHER
-                    ) ?? seedParts[0];
-                const edges = stackTargets(group, stack);
-                // Whether the targets are other holes' edges than the one the seed sits on
-                console.log("Quick fastener replicating", {
-                    stack,
-                    seedEdge: seated?.[1].seat,
-                    edges
-                });
-                await run(
-                    `replicate-${index}-${stack}`,
-                    isRateLimited,
-                    async (client) => {
-                        await addReplicate(client, request.assembly, {
-                            name: named.name,
-                            instancePaths,
-                            mateFeatureId,
-                            edges
-                        });
-                        return true;
-                    }
-                );
-            }
-            ctx.result.replicated += rest.length;
-        }
-    });
 }
 
 /** Inserts parts in one call: each one's occurrence path, or null where Onshape answered none. */
@@ -279,57 +184,48 @@ async function insertParts(
     ctx: RunContext,
     set: FastenerSet,
     run: StepRunner,
-    prefix: string,
     parts: PartPlacement[]
 ): Promise<(string[] | null)[]> {
-    const paths = await run(
-        `${prefix}insert`,
-        isRateLimited,
-        async (client) => {
-            const response = await insertTransformedInstances(
-                client,
-                ctx.assembly,
-                insertGroups(set, parts)
+    const paths = await run("insert", isRateLimited, async (client) => {
+        const response = await insertTransformedInstances(
+            client,
+            ctx.assembly,
+            insertGroups(set, parts)
+        );
+        const inserted = (response.insertInstanceResponses ?? []).map(
+            (each) => each.occurrences?.[0]?.path ?? null
+        );
+        if (inserted.length !== parts.length || inserted.includes(null)) {
+            // Which part Onshape answered no occurrence for, and how it answered
+            console.error(
+                "Quick fastener insert answered no path",
+                parts.map((part) => part.name),
+                JSON.stringify(response)
             );
-            const inserted = (response.insertInstanceResponses ?? []).map(
-                (each) => each.occurrences?.[0]?.path ?? null
-            );
-            if (inserted.length !== parts.length || inserted.includes(null)) {
-                // Which part Onshape answered no occurrence for, and how it answered
-                console.error(
-                    "Quick fastener insert answered no path",
-                    parts.map((part) => part.name),
-                    JSON.stringify(response)
-                );
-            }
-            return inserted;
         }
-    );
+        return inserted;
+    });
     ctx.result.inserted += paths.filter((path) => path !== null).length;
     return paths;
 }
 
-/** Fastens each inserted part where it sits: each one's mate feature id, or null where it has none. */
+/** Fastens each inserted part where it sits. */
 async function fastenParts(
     ctx: RunContext,
     set: FastenerSet,
     run: StepRunner,
-    prefix: string,
     parts: PartPlacement[],
     paths: (string[] | null)[]
-): Promise<(string | null)[]> {
+): Promise<void> {
     if (parts.some((part) => !set.studios[part.kind].mateConnectorId)) {
         throw runFailure(
             "A fastener's studio has no mate connector to fasten by. Reload its group."
         );
     }
-    const washerEdges = await run(
-        `${prefix}washer-edges`,
-        isTransient,
-        (client) => washerTopEdges(client, ctx.env.KV, set, parts)
+    const washerEdges = await run("washer-edges", isTransient, (client) =>
+        washerTopEdges(client, ctx.env.KV, set, parts)
     );
     const insertedPaths = paths.map((path) => path ?? undefined);
-    const mates: (string | null)[] = [];
     for (const [index, part] of parts.entries()) {
         const path = insertedPaths[index];
         const connector = set.studios[part.kind].mateConnectorId;
@@ -338,26 +234,14 @@ async function fastenParts(
                 ? partMate(part, path, connector, insertedPaths, washerEdges)
                 : undefined;
         if (!mate) {
-            mates.push(null);
             continue;
         }
-        mates.push(
-            await run(
-                `${prefix}mate-${index}`,
-                isRateLimited,
-                async (client) => {
-                    const added = await addAssemblyFeature(
-                        client,
-                        ctx.assembly,
-                        mate
-                    );
-                    return added.feature.featureId;
-                }
-            )
-        );
+        await run(`mate-${index}`, isRateLimited, async (client) => {
+            await addAssemblyFeature(client, ctx.assembly, mate);
+            return true;
+        });
         ctx.result.fastened++;
     }
-    return mates;
 }
 
 function skipRest(ctx: RunContext): void {

@@ -110,8 +110,8 @@ library loads.
    No configuration is probed, and `decideIndexing` isn't consulted.
 
 The default parts are still read (for the thumbnail and the composite check), as
-is fasten info. Insert and fasten and Replicate are on for a generated tab,
-set by every load and not an editor's to change: the toggles refuse it
+is fasten info. Insert and fasten is on for a generated tab, set by every
+load and not an editor's to change: the toggle refuses it
 (`refuseGenerated`). Its mate connector is the one its
 feature makes, found by the feature's type, which every stored set names
 (`generatedFeatures`) and the tab's own studio does before any is stored. A
@@ -150,7 +150,7 @@ any is; a release rebuilds every studio, which changes each.
 
 The build status carries `generatedStudio`, which puts `GeneratedBadge` in
 the build status card's header beside the part's name, and leaves out the
-indexing section and the insert and fasten and Replicate switches. The library
+indexing section and the insert and fasten switch. The library
 list's rows don't mark it.
 
 ## Invariants

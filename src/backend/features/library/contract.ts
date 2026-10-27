@@ -17,8 +17,6 @@ export interface InsertableOut {
     microversionId: string;
     isVisible: boolean;
     supportsFasten: boolean;
-    /** Whether an editor allowed replicating it onto several circular edges. */
-    supportsReplicate: boolean;
     elementType: ElementType;
     smallThumbnailUrl?: string;
     largeThumbnailUrl?: string;

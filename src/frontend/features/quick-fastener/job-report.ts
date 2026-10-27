@@ -17,15 +17,13 @@ export const OUTCOME_STATUS: Record<FastenerJobOutcome, Status> = {
 export const TASK_LABEL: Record<FastenerTaskAction, string> = {
     [FastenerTaskAction.INDEX]: "Index holes",
     [FastenerTaskAction.INSERT]: "Insert parts",
-    [FastenerTaskAction.FASTEN]: "Fasten parts",
-    [FastenerTaskAction.REPLICATE]: "Replicate parts"
+    [FastenerTaskAction.FASTEN]: "Fasten parts"
 };
 
 const TASK_RUNNING: Record<FastenerTaskAction, string> = {
     [FastenerTaskAction.INDEX]: "Indexing holes",
     [FastenerTaskAction.INSERT]: "Inserting parts",
-    [FastenerTaskAction.FASTEN]: "Fastening parts",
-    [FastenerTaskAction.REPLICATE]: "Replicating parts"
+    [FastenerTaskAction.FASTEN]: "Fastening parts"
 };
 
 /** "Indexing holes", or whichever step is going. */
@@ -41,12 +39,7 @@ export function jobHeadline(
     status: FastenerJobStatus,
     outcome: FastenerJobOutcome
 ): string {
-    const inserted = status.result?.inserted ?? 0;
-    const replicated = status.result?.replicated ?? 0;
-    const parts =
-        replicated > 0
-            ? `Inserted ${plural(inserted, "part")}, replicated onto ${plural(replicated, "hole")}`
-            : `Inserted ${plural(inserted, "part")}`;
+    const parts = `Inserted ${plural(status.result?.inserted ?? 0, "part")}`;
     switch (outcome) {
         case FastenerJobOutcome.SUCCESS:
             return parts;

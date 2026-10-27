@@ -318,6 +318,37 @@ describe("QueryList", () => {
         select(edge("A"));
         expect(screen.queryByText("Edge 1")).toBeNull();
     });
+
+    it("focuses a form's first list, and returns to it once the focused list is gone", async () => {
+        const list = (id: string, autoFocus = false) => (
+            <QueryList
+                id={id}
+                label={id}
+                prompt={id}
+                entities={[]}
+                onChange={() => undefined}
+                accepts={() => true}
+                filter={CIRCULAR_EDGES}
+                autoFocus={autoFocus}
+            />
+        );
+        const { rerender } = renderWithProviders(
+            <>
+                {list("first", true)}
+                {list("second")}
+            </>
+        );
+        expect(useOnshapeSelection.getState().focused).toBe("first");
+        expect(messages).toContainEqual(
+            expect.objectContaining({ messageName: "requestSelection" })
+        );
+
+        await userEvent.click(screen.getByText("second"));
+        expect(useOnshapeSelection.getState().focused).toBe("second");
+
+        rerender(list("first", true));
+        expect(useOnshapeSelection.getState().focused).toBe("first");
+    });
 });
 
 describe("parseSelections", () => {
