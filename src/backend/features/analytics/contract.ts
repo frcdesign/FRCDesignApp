@@ -27,8 +27,8 @@ export interface AnalyticsTotals {
     fastenableInserts: number;
     /** Fastened to edges or faces picked in Onshape beforehand. */
     preselectedInserts: number;
-    /** Placed by Quick fastener; also its entry of the sources. */
-    quickFastenerInserts: number;
+    /** Placed by Auto Assembly; also its entry of the sources. */
+    autoAssemblyInserts: number;
     targets: InsertTargets;
     /** Current, not over the range: a favorite is state, not an event. */
     favorites: number;
@@ -53,7 +53,7 @@ export interface DailyMetricPoint {
     fastenInserts: number;
     fastenableInserts: number;
     preselectedInserts: number;
-    quickFastenerInserts: number;
+    autoAssemblyInserts: number;
     /** That day's inserts by target; the assembly entry is fasten's denominator. */
     targets: InsertTargets;
 }

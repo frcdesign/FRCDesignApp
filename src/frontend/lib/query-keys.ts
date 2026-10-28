@@ -1,6 +1,6 @@
 /** Library-scoped keys hang off {@link libraryQueryKey}, so a refresh invalidates one prefix. */
 import { LibraryId } from "@backend/features/library/library-id";
-import { assemblyKey } from "@backend/features/quick-fastener/contract";
+import { assemblyKey } from "@backend/features/auto-assembly/contract";
 import { ElementPath, InstancePath } from "@backend/lib/onshape/path";
 
 /** Access is per library; without one, the prefix every library's shares. */
@@ -111,6 +111,6 @@ export function nextVersionNameQueryKey(workspace: InstancePath | undefined) {
 /** By the assembly's key, so a launch's extra fields don't make a second entry. */
 export const FASTENER_SET_QUERY_KEY = ["fastener-set"];
 
-export function fastenerJobQueryKey(assembly: ElementPath | undefined) {
-    return ["fastener-job", assembly && assemblyKey(assembly)];
+export function assemblyJobQueryKey(assembly: ElementPath | undefined) {
+    return ["assembly-job", assembly && assemblyKey(assembly)];
 }

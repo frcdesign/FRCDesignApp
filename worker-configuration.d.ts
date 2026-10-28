@@ -18,7 +18,7 @@ interface __BaseEnv_Env {
 	RELOAD_LIBRARY_WORKFLOW: Workflow<Parameters<import("./src/backend/index").ReloadLibraryWorkflow['run']>[0]['payload']>;
 	RENDER_THUMBNAIL_WORKFLOW: Workflow<Parameters<import("./src/backend/index").RenderThumbnailWorkflow['run']>[0]['payload']>;
 	VERSION_MANAGER_WORKFLOW: Workflow<Parameters<import("./src/backend/index").VersionManagerWorkflow['run']>[0]['payload']>;
-	QUICK_FASTENER_WORKFLOW: Workflow<Parameters<import("./src/backend/index").QuickFastenerWorkflow['run']>[0]['payload']>;
+	AUTO_ASSEMBLY_WORKFLOW: Workflow<Parameters<import("./src/backend/index").AutoAssemblyWorkflow['run']>[0]['payload']>;
 }
 declare namespace Cloudflare {
 	interface GlobalProps {
@@ -42,7 +42,7 @@ declare namespace Cloudflare {
 		RELOAD_LIBRARY_WORKFLOW: Workflow<Parameters<import("./src/backend/index").ReloadLibraryWorkflow['run']>[0]['payload']>;
 		RENDER_THUMBNAIL_WORKFLOW: Workflow<Parameters<import("./src/backend/index").RenderThumbnailWorkflow['run']>[0]['payload']>;
 		VERSION_MANAGER_WORKFLOW: Workflow<Parameters<import("./src/backend/index").VersionManagerWorkflow['run']>[0]['payload']>;
-		QUICK_FASTENER_WORKFLOW: Workflow<Parameters<import("./src/backend/index").QuickFastenerWorkflow['run']>[0]['payload']>;
+		AUTO_ASSEMBLY_WORKFLOW: Workflow<Parameters<import("./src/backend/index").AutoAssemblyWorkflow['run']>[0]['payload']>;
 	}
 	interface ProductionEnv {
 		KV: KVNamespace;
@@ -61,7 +61,7 @@ declare namespace Cloudflare {
 		RELOAD_LIBRARY_WORKFLOW: Workflow<Parameters<import("./src/backend/index").ReloadLibraryWorkflow['run']>[0]['payload']>;
 		RENDER_THUMBNAIL_WORKFLOW: Workflow<Parameters<import("./src/backend/index").RenderThumbnailWorkflow['run']>[0]['payload']>;
 		VERSION_MANAGER_WORKFLOW: Workflow<Parameters<import("./src/backend/index").VersionManagerWorkflow['run']>[0]['payload']>;
-		QUICK_FASTENER_WORKFLOW: Workflow<Parameters<import("./src/backend/index").QuickFastenerWorkflow['run']>[0]['payload']>;
+		AUTO_ASSEMBLY_WORKFLOW: Workflow<Parameters<import("./src/backend/index").AutoAssemblyWorkflow['run']>[0]['payload']>;
 	}
 	interface Env extends __BaseEnv_Env {}
 }

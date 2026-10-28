@@ -7,7 +7,7 @@ import {
     fastenMateToCircularEdge
 } from "../../../lib/onshape/objects/assembly-features";
 import { type OnshapeInsertInstancesResponse } from "../../../lib/onshape/types";
-import { type AssemblyCircularEdge } from "../../quick-fastener/planner";
+import { type AssemblyCircularEdge } from "../../auto-assembly/planner";
 
 interface FastenToCircularEdgesArgs {
     name: string;

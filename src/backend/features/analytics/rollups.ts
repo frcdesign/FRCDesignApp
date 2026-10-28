@@ -134,7 +134,7 @@ function countDay(db: Db, event: LoggedEvent, libraryId: LibraryId) {
             ? 1
             : 0;
     const preselected = event.preselected ? 1 : 0;
-    const quickFastener = event.source === InsertSource.QUICK_FASTENER ? 1 : 0;
+    const autoAssembly = event.source === InsertSource.AUTO_ASSEMBLY ? 1 : 0;
 
     return db
         .insert(dailyMetrics)
@@ -148,7 +148,7 @@ function countDay(db: Db, event: LoggedEvent, libraryId: LibraryId) {
             quickInsertCount: quickInsert,
             fastenableCount: fastenable,
             preselectedCount: preselected,
-            quickFastenerCount: quickFastener
+            autoAssemblyCount: autoAssembly
         })
         .onConflictDoUpdate({
             target: [
@@ -172,9 +172,9 @@ function countDay(db: Db, event: LoggedEvent, libraryId: LibraryId) {
                     dailyMetrics.preselectedCount,
                     preselected
                 ),
-                quickFastenerCount: increment(
-                    dailyMetrics.quickFastenerCount,
-                    quickFastener
+                autoAssemblyCount: increment(
+                    dailyMetrics.autoAssemblyCount,
+                    autoAssembly
                 )
             }
         });

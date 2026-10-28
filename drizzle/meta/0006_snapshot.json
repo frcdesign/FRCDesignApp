@@ -1,7 +1,7 @@
 {
     "version": "6",
     "dialect": "sqlite",
-    "id": "cd38a1c7-52c0-40c6-9d31-2c0ef0f26f77",
+    "id": "0bc82633-7e65-482f-bcdf-a291786a75ca",
     "prevId": "78216f0c-ffe1-4fad-8e20-20bec253eb8b",
     "tables": {
         "configurations": {
@@ -952,8 +952,8 @@
                     "autoincrement": false,
                     "default": 0
                 },
-                "quick_fastener_count": {
-                    "name": "quick_fastener_count",
+                "auto_assembly_count": {
+                    "name": "auto_assembly_count",
                     "type": "integer",
                     "primaryKey": false,
                     "notNull": true,

@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { handledError, internalError } from "../../../lib/api-error";
-import { getFastenerSet } from "../../quick-fastener/fastener-set";
+import { getFastenerSet } from "../../auto-assembly/fastener-set";
 import { generatedFeatures } from "../../generated-parts/store";
 import { validate } from "../../../lib/validate";
 import { HttpStatus } from "http-status-ts";
@@ -58,14 +58,14 @@ import {
     fastenToCircularEdges,
     getInstancePath
 } from "./fasten-circular-edges";
-import { indexHoles } from "../../quick-fastener/index-holes";
-import { SelectionMode } from "../../quick-fastener/contract";
+import { indexHoles } from "../../auto-assembly/index-holes";
+import { SelectionMode } from "../../auto-assembly/contract";
 import {
     entitySchema,
     INCONSISTENT_PICK_MESSAGE,
     isConsistentPick,
     MAX_SELECTIONS
-} from "../../quick-fastener/picked";
+} from "../../auto-assembly/picked";
 import { getInsertLocationTransform } from "../../insert-location/parse";
 import { addBuildIssue, clearBuildIssue } from "../../build-checker/issues";
 import { markHintSeen } from "../../hints/store";
@@ -305,10 +305,10 @@ const insertBody = z.object({
     isFavorite: z.boolean().default(false),
     isQuickInsert: z.boolean().default(false),
     // Defaulted so an older client can't fail the tracking batch on NOT NULL.
-    // A Quick fastener run records its own inserts
+    // An Auto Assembly run records its own inserts
     source: z
         .enum(InsertSource)
-        .exclude(["QUICK_FASTENER"])
+        .exclude(["AUTO_ASSEMBLY"])
         .default(InsertSource.BROWSE)
 });
 
@@ -321,7 +321,7 @@ const addToAssemblyBody = insertBody
         fasten: z.boolean().default(false),
         /** The insert location marker's instance id, when the assembly has one. */
         insertLocationId: z.string().optional(),
-        /** What to fasten to, as Quick fastener takes it; none leaves the mate open. */
+        /** What to fasten to, as Auto Assembly takes it; none leaves the mate open. */
         selectionMode: z.enum(SelectionMode).default(SelectionMode.LOCATIONS),
         targets: z.array(entitySchema).max(MAX_SELECTIONS).default([]),
         excluded: z.array(entitySchema).max(MAX_SELECTIONS).default([])

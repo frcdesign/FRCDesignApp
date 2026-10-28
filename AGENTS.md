@@ -143,7 +143,7 @@ the user runs a command themselves, say exactly what to run.
 `docs/architecture/` holds one document per feature area, indexed in its
 `README.md`: thumbnails, configurations, loading, favorites, insert and fasten,
 auth (with access levels and environment variables), search, analytics, the
-version manager, quick fastener, and generated parts. Each states the area's flows, storage,
+version manager, Auto Assembly, and generated parts. Each states the area's flows, storage,
 **invariants**, failure modes and decisions. Read the area's document before
 changing it, and check the change against its invariants.
 

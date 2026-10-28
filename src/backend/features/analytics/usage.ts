@@ -22,6 +22,6 @@ export enum InsertSource {
     /** The group's own list of parts. */
     BROWSE = "browse",
     FAVORITES = "favorites",
-    /** A Quick fastener run, which inserts a part per fastener it places. */
-    QUICK_FASTENER = "quick_fastener"
+    /** An Auto Assembly run, which inserts a part per fastener it places. */
+    AUTO_ASSEMBLY = "auto_assembly"
 }

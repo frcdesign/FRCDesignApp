@@ -93,7 +93,7 @@ export const dailyMetrics = sqliteTable(
         /** Inserts into an assembly of a part offering insert and fasten. */
         fastenableCount: integer("fastenable_count").notNull().default(0),
         preselectedCount: integer("preselected_count").notNull().default(0),
-        quickFastenerCount: integer("quick_fastener_count").notNull().default(0)
+        autoAssemblyCount: integer("auto_assembly_count").notNull().default(0)
     },
     (t) => [primaryKey({ columns: [t.day, t.libraryId, t.type] })]
 );

@@ -166,7 +166,7 @@ export const configurations = sqliteTable("configurations", {
 
 /**
  * A generated set's released manifest less its studios, as the last load of
- * the group releasing it read it: what Quick fastener sizes fasteners by. The
+ * the group releasing it read it: what Auto Assembly sizes fasteners by. The
  * studios themselves are the group's insertables.
  */
 export const generatedSets = sqliteTable(

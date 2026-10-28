@@ -13,7 +13,7 @@ const SOURCE_LABELS: Record<InsertSource, string> = {
     [InsertSource.GROUP_SEARCH]: "Search within a group",
     [InsertSource.BROWSE]: "Browsing a group",
     [InsertSource.FAVORITES]: "Favorites list",
-    [InsertSource.QUICK_FASTENER]: "Quick fastener"
+    [InsertSource.AUTO_ASSEMBLY]: "Auto Assembly"
 };
 
 /** One bar of a breakdown: its share of the bars' sum. */
@@ -116,29 +116,29 @@ export function FastenMethodBreakdown(props: TotalsBreakdownProps): ReactNode {
 }
 
 function insertMethodShares(totals: AnalyticsTotals): Share[] {
-    const { inserts, quickInserts, quickFastenerInserts } = totals;
+    const { inserts, quickInserts, autoAssemblyInserts } = totals;
     return [
         {
             label: "Insert menu",
-            count: Math.max(0, inserts - quickInserts - quickFastenerInserts)
+            count: Math.max(0, inserts - quickInserts - autoAssemblyInserts)
         },
         { label: "Quick insert", count: quickInserts },
-        { label: "Quick fastener", count: quickFastenerInserts }
+        { label: "Auto Assembly", count: autoAssemblyInserts }
     ];
 }
 
 function fastenMethodShares(totals: AnalyticsTotals): Share[] {
-    const { fastenableInserts, preselectedInserts, quickFastenerInserts } =
+    const { fastenableInserts, preselectedInserts, autoAssemblyInserts } =
         totals;
     return [
         {
             label: "Inserted normally",
             count: Math.max(
                 0,
-                fastenableInserts - preselectedInserts - quickFastenerInserts
+                fastenableInserts - preselectedInserts - autoAssemblyInserts
             )
         },
         { label: "Fastened to preselected edges", count: preselectedInserts },
-        { label: "Quick fastener", count: quickFastenerInserts }
+        { label: "Auto Assembly", count: autoAssemblyInserts }
     ];
 }

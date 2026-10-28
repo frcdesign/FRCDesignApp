@@ -6,7 +6,7 @@ import {
     PLANAR_FACES,
     type SelectionFilter
 } from "../../lib/messages";
-import { SelectionMode } from "@backend/features/quick-fastener/contract";
+import { SelectionMode } from "@backend/features/auto-assembly/contract";
 import { isEdge, isFace, type OnshapeSelection } from "../../lib/selection";
 
 export const FASTEN_TARGETS_LIST = "insert-fasten-targets";

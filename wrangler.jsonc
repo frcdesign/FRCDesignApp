@@ -71,9 +71,9 @@
             "class_name": "VersionManagerWorkflow"
         },
         {
-            "name": "quick-fastener-workflow",
-            "binding": "QUICK_FASTENER_WORKFLOW",
-            "class_name": "QuickFastenerWorkflow"
+            "name": "auto-assembly-workflow",
+            "binding": "AUTO_ASSEMBLY_WORKFLOW",
+            "class_name": "AutoAssemblyWorkflow"
         }
     ],
     // Inherited by every environment. v2 swaps the thumbnail render queue,
@@ -163,9 +163,9 @@
                     "class_name": "VersionManagerWorkflow"
                 },
                 {
-                    "name": "quick-fastener-workflow-cert",
-                    "binding": "QUICK_FASTENER_WORKFLOW",
-                    "class_name": "QuickFastenerWorkflow"
+                    "name": "auto-assembly-workflow-cert",
+                    "binding": "AUTO_ASSEMBLY_WORKFLOW",
+                    "class_name": "AutoAssemblyWorkflow"
                 }
             ],
             "durable_objects": {
@@ -228,9 +228,9 @@
                     "class_name": "VersionManagerWorkflow"
                 },
                 {
-                    "name": "quick-fastener-workflow-prod",
-                    "binding": "QUICK_FASTENER_WORKFLOW",
-                    "class_name": "QuickFastenerWorkflow"
+                    "name": "auto-assembly-workflow-prod",
+                    "binding": "AUTO_ASSEMBLY_WORKFLOW",
+                    "class_name": "AutoAssemblyWorkflow"
                 }
             ],
             "durable_objects": {

@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ElementType } from "@backend/lib/onshape/element-type";
-import { SelectionMode } from "@backend/features/quick-fastener/contract";
+import { SelectionMode } from "@backend/features/auto-assembly/contract";
 import { renderWithProviders } from "../../../../__test_utils__/render";
 import { useOnshapeLaunch } from "../../../lib/onshape-params";
 import {

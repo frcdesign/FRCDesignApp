@@ -59,9 +59,9 @@ Cloudflare Workflows run long background jobs that survive past a request and re
 | `RELOAD_LIBRARY_WORKFLOW`   | `ReloadLibraryWorkflow`   | Reloads a library's groups, or the few named, one reload per library at a time |
 | `RENDER_THUMBNAIL_WORKFLOW` | `RenderThumbnailWorkflow` | Waits out one configuration's render and stores both sizes in R2               |
 | `VERSION_MANAGER_WORKFLOW`  | `VersionManagerWorkflow`  | Runs one push or pull between linked workspaces                                |
-| `QUICK_FASTENER_WORKFLOW`   | `QuickFastenerWorkflow`   | Indexes an assembly's picked holes, inserts their fasteners and mates them     |
+| `AUTO_ASSEMBLY_WORKFLOW`    | `AutoAssemblyWorkflow`    | Indexes an assembly's picked holes, inserts their fasteners and mates them     |
 
-Loads, their job tracking, webhooks and version approval are in [architecture/loading.md](./architecture/loading.md); renders in [architecture/thumbnails.md](./architecture/thumbnails.md); pushes and pulls between linked workspaces in [architecture/version-manager.md](./architecture/version-manager.md); fastener runs in [architecture/quick-fastener.md](./architecture/quick-fastener.md).
+Loads, their job tracking, webhooks and version approval are in [architecture/loading.md](./architecture/loading.md); renders in [architecture/thumbnails.md](./architecture/thumbnails.md); pushes and pulls between linked workspaces in [architecture/version-manager.md](./architecture/version-manager.md); Auto Assembly runs in [architecture/auto-assembly.md](./architecture/auto-assembly.md).
 
 ### Pushes
 
@@ -119,7 +119,7 @@ owns, `lib/` for cross-cutting plumbing, and a small set of files at the root.
     - `push/` — the `ClientRelay` Durable Object and what it pushes
     - `admin-team/` — each library's admin team, set by the owner and synced from Onshape
     - `version-manager/` — links between Onshape workspaces and the pushes and pulls along them; see [architecture/version-manager.md](./architecture/version-manager.md)
-    - `quick-fastener/` — sizing and inserting fasteners in an assembly's holes, from the fasteners FRCDesignLib loaded; see [architecture/quick-fastener.md](./architecture/quick-fastener.md)
+    - `auto-assembly/` — sizing and inserting fasteners in an assembly's holes, from the fasteners FRCDesignLib loaded; see [architecture/auto-assembly.md](./architecture/auto-assembly.md)
     - `generated-parts/` — library parts FeatureScript generates, whose records robot-code writes and loads index; see [architecture/generated-parts.md](./architecture/generated-parts.md)
     - `favorites/`, `search/`, `analytics/`, `insert-location/`
 

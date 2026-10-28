@@ -10,7 +10,7 @@ import { insertableRoutes } from "./features/library/insertables/routes";
 import { libraryRoutes } from "./features/library/routes";
 import { thumbnailRoutes } from "./features/thumbnails/routes";
 import { versionManagerRoutes } from "./features/version-manager/routes";
-import { quickFastenerRoutes } from "./features/quick-fastener/routes";
+import { autoAssemblyRoutes } from "./features/auto-assembly/routes";
 import { webhookRoutes } from "./features/webhooks/routes";
 import { pushRoutes } from "./features/push/routes";
 import { adminTeamRoutes } from "./features/admin-team/routes";
@@ -37,7 +37,7 @@ const apiRoutes = [
     adminTeamRoutes,
     loadRoutes,
     versionManagerRoutes,
-    quickFastenerRoutes
+    autoAssemblyRoutes
 ];
 
 export function createApp(resolveAuth: AuthResolver) {

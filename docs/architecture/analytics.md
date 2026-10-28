@@ -15,7 +15,7 @@ aggregates.
 | Path                                                                  | Role                                                                             |
 | --------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
 | `src/backend/features/analytics/tracking.ts`                          | `trackInsert`, `recordInserts`, `trackAppOpen`, `trackVersionRun`: record events |
-| `src/backend/features/quick-fastener/track-inserts.ts`                | `recordRunInserts`: a Quick fastener run's parts, as inserts                     |
+| `src/backend/features/auto-assembly/track-inserts.ts`                 | `recordRunInserts`: an Auto Assembly run's parts, as inserts                     |
 | `src/backend/features/analytics/usage.ts`                             | `EventType`, `InsertSource`, `EVENT_SCHEMA_VERSION`                              |
 | `src/backend/features/analytics/logged-event.ts`                      | Which columns each kind of event sets                                            |
 | `src/backend/features/analytics/schema.ts`                            | The event log and every rollup table                                             |
@@ -40,7 +40,7 @@ no foreign key crosses between them):
 - `events` — the append-only log. Every event has an id, type, time, day key,
   user and schema version, and the library where it has one; an insert adds the
   element path, insertable, target tab type, canonical selection, source
-  (`InsertSource`, `quick_fastener` for a Quick fastener run), and the
+  (`InsertSource`, `auto_assembly` for an Auto Assembly run), and the
   favorite, quick-insert, fasten, fastenable (the part offered insert and
   fasten) and preselected (fastened to picks made beforehand) flags, and a
   version run adds its kind,
@@ -58,7 +58,7 @@ no foreign key crosses between them):
 - `daily_metrics` counts each day's inserts per library with its subsets:
   favorited, fastened, quick-inserted, and, of inserts into an assembly of a
   part offering insert and fasten, `fastenable_count`, with the
-  `preselected_count` and `quick_fastener_count` inside it.
+  `preselected_count` and `auto_assembly_count` inside it.
 - `daily_version_metrics` is keyed by day: runs, update-only runs, runs that
   partially failed and runs that failed outright, versions created and tabs
   updated.
@@ -73,10 +73,10 @@ no foreign key crosses between them):
 
 1. An insert route calls `trackInsert` once the insert succeeded, with how many
    instances it placed: an insert and fasten to picks places one per edge, and
-   each is an insert of its own, `preselected`. Quick fastener's workflow
+   each is an insert of its own, `preselected`. Auto Assembly's workflow
    calls `recordRunInserts` in its `record-inserts` step once fastening has
    ended, however it ended: each part it inserted is an insert from the
-   library its studio is in, source `quick_fastener`, fastened if its mate was
+   library its studio is in, source `auto_assembly`, fastened if its mate was
    added, never favorited. `/init`'s handoff calls `POST /api/app-open`, which
    calls `trackAppOpen`; the version manager's workflow calls
    `trackVersionRun` in its `record-run` step once its run has finished, so a
@@ -106,9 +106,9 @@ panel. Its routes read only rollups and return only aggregates:
 - **Overview** — totals, per-library summaries, insert and metric series,
   growth, the version manager's own totals, and three breakdowns: where
   inserts start (`InsertSourceBreakdown`), how every insert was made (insert
-  menu, quick insert or Quick fastener, `InsertMethodBreakdown`), and how a
+  menu, quick insert or Auto Assembly, `InsertMethodBreakdown`), and how a
   part offering insert and fasten was placed when inserted into an assembly
-  (normally, fastened to preselected edges, or by Quick fastener,
+  (normally, fastened to preselected edges, or by Auto Assembly,
   `FastenMethodBreakdown`).
 - **Library** — its summary, the last two breakdowns, health (build issues by
   severity, hidden elements left out), and its parts table.
@@ -168,7 +168,7 @@ only on **All time**, its own window being a season rather than the picked one.
 - **Public aggregates.** The numbers are useful to the community, and nothing
   per-user is exposed.
 - **An instance inserted is an insert.** Fastening to five edges places five
-  parts, and a Quick fastener run a part per screw, washer and nut, so each
+  parts, and an Auto Assembly run a part per screw, washer and nut, so each
   counts in every headline number as five inserts from the insert menu
   would. How they were made is in the source, the quick-insert flag and
   `preselected`, which the breakdowns split them by.

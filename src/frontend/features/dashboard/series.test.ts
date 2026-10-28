@@ -34,7 +34,7 @@ function day(index: number, values: Partial<DailyMetricPoint> = {}) {
         fastenInserts: 0,
         fastenableInserts: 0,
         preselectedInserts: 0,
-        quickFastenerInserts: 0,
+        autoAssemblyInserts: 0,
         targets: emptyTargets(),
         ...values
     };

@@ -7,9 +7,9 @@ the part's own mate connector either to nothing yet, for the user to finish in
 the mate dialog, or to circular edges picked in the Onshape window, with an
 instance of the part on each. The picks are circular edges, or faces whose every
 hole is fastened to, less holes to skip; they can be made from the navbar before
-a quick insert or in the insert menu, and work the way Quick fastener's do,
+a quick insert or in the insert menu, and work the way Auto Assembly's do,
 sharing its selection store, query list and hole scan
-([quick-fastener.md](./quick-fastener.md)). Part studios derive instead and are
+([auto-assembly.md](./auto-assembly.md)). Part studios derive instead and are
 not fastened.
 
 ## Code map
@@ -17,7 +17,7 @@ not fastened.
 Where to start reading, in the order a fasten runs.
 
 `src/frontend/lib/selection.ts` and `src/frontend/components/query-list.tsx`,
-shared with Quick fastener
+shared with Auto Assembly
 
 ```ts
 // The one focused list, and handing it how the window's selection changed.
@@ -109,10 +109,10 @@ interface InsertArgs {
 POST /api/add-to-assembly/insertable/:insertableId    inserts, then fastens
 ```
 
-`src/backend/features/quick-fastener/picked.ts`,
-`src/backend/features/quick-fastener/index-holes.ts`,
-`src/backend/features/quick-fastener/contract.ts` and
-`src/backend/features/quick-fastener/planner.ts`, shared with Quick fastener
+`src/backend/features/auto-assembly/picked.ts`,
+`src/backend/features/auto-assembly/index-holes.ts`,
+`src/backend/features/auto-assembly/contract.ts` and
+`src/backend/features/auto-assembly/planner.ts`, shared with Auto Assembly
 
 ```ts
 const entitySchema: ZodObject<...>;
@@ -217,7 +217,7 @@ interface FastenToCircularEdgesArgs {
 fastener, and `src/backend/features/library/insertables/fasten-query.ts`
 
 ```ts
-// Every fasten mate to a circular edge, Quick fastener's included.
+// Every fasten mate to a circular edge, Auto Assembly's included.
 function fastenMateToCircularEdge(
     name: string,
     query: object,
@@ -279,7 +279,7 @@ enum MateLocation {
   by a load or the toggle, cleared when fasten is turned off. A new row is off,
   except a generated tab's, which is on (see
   [generated-parts.md](./generated-parts.md)).
-- **KV** `quick-fastener-scan:` — each Part Studio's scan, shared with Quick
+- **KV** `auto-assembly-scan:` — each Part Studio's scan, shared with Quick
   fastener, which owns it.
 - **KV** `seen-hints:` — `Hint.FASTENED_TO_CIRCULAR_EDGES`, once the user has
   fastened to circular edges; see [auth.md](./auth.md).
@@ -294,7 +294,7 @@ enum MateLocation {
 
 1. Once the app sends `applicationInit`, Onshape sends the window's whole
    selection each time it changes, and `useOnshapeSelection` hands the focused
-   `QueryList` what was added and deselected, as in Quick fastener.
+   `QueryList` what was added and deselected, as in Auto Assembly.
 2. In an assembly, signed in, the navbar of a library page shows the cursor
    icon beside the insert location's (`NavbarFastenStatus`): a red stop sign
    with nothing picked, a check with something. So does the insert menu, with
@@ -308,7 +308,7 @@ enum MateLocation {
    the icon turns the primary colour while one of them is focused. The targets'
    list is `autoFocus`: it is focused on mount, and again whenever the focused
    list unmounts, so one list always takes picks. A focused list limits what
-   the Onshape window lets be picked to its kind, as in Quick fastener.
+   the Onshape window lets be picked to its kind, as in Auto Assembly.
    Hovering a row lights its entity up; clicking a list shows its prompt in
    Onshape.
 4. Changing the mode clears the picks.
@@ -383,13 +383,13 @@ enum MateLocation {
 - **A mate fails**: the request errors, and whatever was inserted before it
   stays in the assembly, as in the Onshape UI.
 - **The scan fails in a Part Studio**: the request errors and nothing is
-  inserted; see [quick-fastener.md](./quick-fastener.md).
+  inserted; see [auto-assembly.md](./auto-assembly.md).
 - **A pick isn't circular**: the scan finds no circular edge for it and it is left
   out; with nothing left, the request answers 400.
 
 ## Decisions
 
-- **One way to pick, shared with Quick fastener.** The app follows the
+- **One way to pick, shared with Auto Assembly.** The app follows the
   selection Onshape reports and lets a focused query list take it. A focused list
   also holds a `requestSelection` limiting the Onshape window to its kind, in
   the form Onshape answers to rather than the one it documents (see Quick
@@ -412,12 +412,12 @@ enum MateLocation {
 - **No fallbacks.** Onshape refusing a mate, or any other write, is an error
   the user sees, not something worked around with other features.
 - **Radii from the scan.** Onshape's selection messages carry no geometry, so
-  the circular edges and their radii come from Quick fastener's hole scan, which also
+  the circular edges and their radii come from Auto Assembly's hole scan, which also
   turns a face into its holes.
 - **Implicit connector ids.** A mate names its implicit connector by a
   placeholder id that Onshape replaces on creation, which is undocumented but
   is how Onshape itself stores a mate to an inferred point. It's unconfirmed
-  in Onshape; insert and fasten and Quick fastener both build their mates with
+  in Onshape; insert and fasten and Auto Assembly both build their mates with
   `fastenMateToCircularEdge`, so they work or fail together.
 
 _Last reviewed: 2026-10-21_

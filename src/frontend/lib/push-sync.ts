@@ -2,7 +2,7 @@
 import { useEffect, useRef } from "react";
 import { type PushMessage, PushType } from "@backend/features/push/contract";
 import { workspaceKey } from "@backend/features/version-manager/contract";
-import { assemblyKey } from "@backend/features/quick-fastener/contract";
+import { assemblyKey } from "@backend/features/auto-assembly/contract";
 import { hasEditorAccess } from "@backend/features/auth/access-level";
 import { useAccessData } from "../features/auth/access-level";
 import { isRenderOf } from "../features/thumbnails/render-wait";
@@ -15,7 +15,7 @@ import {
 import { useTargetAssembly, useTargetWorkspace } from "./onshape-params";
 import { queryClient } from "./query-client";
 import {
-    fastenerJobQueryKey,
+    assemblyJobQueryKey,
     jobStatusQueryKey,
     versionJobQueryKey
 } from "./query-keys";
@@ -63,14 +63,14 @@ export function usePushSync(): void {
                         });
                     }
                     break;
-                case PushType.FASTENER_JOB:
+                case PushType.ASSEMBLY_JOB:
                     // Tagged to this workspace, which has other assemblies' runs too
                     if (
                         assembly &&
                         message.assemblyKey === assemblyKey(assembly)
                     ) {
                         void queryClient.invalidateQueries({
-                            queryKey: fastenerJobQueryKey(assembly)
+                            queryKey: assemblyJobQueryKey(assembly)
                         });
                     }
                     break;
@@ -109,7 +109,7 @@ export function usePushSync(): void {
                     }
                     if (assembly) {
                         void queryClient.invalidateQueries({
-                            queryKey: fastenerJobQueryKey(assembly)
+                            queryKey: assemblyJobQueryKey(assembly)
                         });
                     }
                 }

@@ -49,14 +49,14 @@ function utilityRoute(tab: UtilityTab) {
     switch (tab) {
         case UtilityTab.VERSION_MANAGER:
             return "/app/version-manager" as const;
-        case UtilityTab.QUICK_FASTENER:
-            return "/app/quick-fastener" as const;
+        case UtilityTab.AUTO_ASSEMBLY:
+            return "/app/auto-assembly" as const;
     }
 }
 
 /**
  * Whether a utility page has what it acts on. The version manager acts on the
- * workspace Onshape launched the app in, and Quick fastener on its tab; neither
+ * workspace Onshape launched the app in, and Auto Assembly on its tab; neither
  * has a page without one.
  */
 function canResume(tab: UtilityTab, search: Record<string, unknown>): boolean {
@@ -65,7 +65,7 @@ function canResume(tab: UtilityTab, search: Record<string, unknown>): boolean {
             return (
                 toTargetWorkspace(OnshapeLaunchType.parse(search)) !== undefined
             );
-        case UtilityTab.QUICK_FASTENER:
+        case UtilityTab.AUTO_ASSEMBLY:
             return (
                 toTargetElement(OnshapeLaunchType.parse(search)) !== undefined
             );

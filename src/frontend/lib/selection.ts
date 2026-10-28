@@ -8,7 +8,7 @@ import { create } from "zustand";
 import {
     type SelectedEntity,
     SelectedEntityType
-} from "@backend/features/quick-fastener/contract";
+} from "@backend/features/auto-assembly/contract";
 
 /** An edge, face or other entity picked in an assembly. */
 export interface OnshapeSelection {

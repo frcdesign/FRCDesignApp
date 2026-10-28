@@ -24,7 +24,7 @@ import { Hint } from "@backend/features/hints/contract";
 import { markHintSeen } from "../hints/queries";
 import { clearFastenPicks, useFastenPicks } from "./fasten-picks";
 import { toSelectedEntities } from "../../lib/selection";
-import { SelectionMode } from "@backend/features/quick-fastener/contract";
+import { SelectionMode } from "@backend/features/auto-assembly/contract";
 
 interface InsertArgs {
     /** Whether the part is favorited — see `source` for where the insert began. */

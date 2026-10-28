@@ -19,7 +19,7 @@ import {
 import { useIsDashboard } from "./features/dashboard/dashboard-nav";
 import { LibraryId } from "@backend/features/library/library-id";
 import { useIsVersionManager } from "./features/version-manager/navigation";
-import { useIsQuickFastener } from "./features/quick-fastener/navigation";
+import { useIsAutoAssembly } from "./features/auto-assembly/navigation";
 import { FILLED_SHADE, IconSize, StatusColor } from "./lib/style-constants";
 
 /** Index 6 is the brand color; https://mantine.dev/colors-generator to tune. */
@@ -66,8 +66,8 @@ export enum AppColor {
     DASHBOARD = "frcGreen",
     /** The version manager acts on the open document, which is no library's. */
     VERSION_MANAGER = "blue",
-    /** Quick fastener's parts are FRCDesign's, but it acts on the open assembly. */
-    QUICK_FASTENER = "orange"
+    /** Auto Assembly's parts are FRCDesign's, but it acts on the open assembly. */
+    AUTO_ASSEMBLY = "orange"
 }
 
 /**
@@ -77,7 +77,7 @@ export enum AppColor {
 export function useAppColor(libraryId: string): string {
     const isDashboard = useIsDashboard();
     const isVersionManager = useIsVersionManager();
-    const isQuickFastener = useIsQuickFastener();
+    const isAutoAssembly = useIsAutoAssembly();
 
     if (isDashboard) {
         return AppColor.DASHBOARD;
@@ -85,8 +85,8 @@ export function useAppColor(libraryId: string): string {
     if (isVersionManager) {
         return AppColor.VERSION_MANAGER;
     }
-    if (isQuickFastener) {
-        return AppColor.QUICK_FASTENER;
+    if (isAutoAssembly) {
+        return AppColor.AUTO_ASSEMBLY;
     }
     return getLibraryColor(libraryId);
 }

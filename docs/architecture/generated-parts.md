@@ -59,7 +59,7 @@ default's in `insertables.part_metadata`, the rest in `configurations.records`.
 
 **D1** `generated_sets` — one row per library and set: the manifest less its
 studios (`catalog`, checked against its set's schema where it's read, such as
-Quick fastener's `catalogSchema`), each studio's feature by key with its mate
+Auto Assembly's `catalogSchema`), each studio's feature by key with its mate
 connector's id (`features`, `GeneratedFeature`),
 and the group and version it was read from. Replaced by each load of the group
 releasing it; deleted with the group. The rest of the manifest isn't stored: a
@@ -167,18 +167,18 @@ list's rows don't mark it.
 - A generated studio holds one feature, the set's, which makes exactly one mate
   connector: insert and fasten names it by that feature's id.
 - A set's stored catalog is the one released in the version its group last
-  loaded; what reads it (Quick fastener) reads nothing else of the set but the
+  loaded; what reads it (Auto Assembly) reads nothing else of the set but the
   loaded studios.
 
 ## Failure and recovery
 
-| Failure                                              | Result                                                           | Recovery                                                      |
-| ---------------------------------------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------- |
-| The tab's configuration isn't the generated one      | `GENERATED_PART_MISMATCH`; it keeps its last good load           | Release the fasteners again (`fs parts fasteners --release`)  |
-| A manifest isn't JSON, or isn't a manifest           | The group's load fails, `LOAD_FAILED` on the group               | Release the set again                                         |
-| A manifest names a tab but has no studio for it      | That tab's load fails                                            | Release the set again                                         |
-| A studio's part of a manifest passes 1 MiB           | That tab's step fails                                            | Split what the step returns (configuration and records apart) |
-| A set's catalog isn't what its reader's schema takes | Its reader treats the set as not loaded (Quick fastener says so) | Release the set, and the app, together                        |
+| Failure                                              | Result                                                          | Recovery                                                      |
+| ---------------------------------------------------- | --------------------------------------------------------------- | ------------------------------------------------------------- |
+| The tab's configuration isn't the generated one      | `GENERATED_PART_MISMATCH`; it keeps its last good load          | Release the fasteners again (`fs parts fasteners --release`)  |
+| A manifest isn't JSON, or isn't a manifest           | The group's load fails, `LOAD_FAILED` on the group              | Release the set again                                         |
+| A manifest names a tab but has no studio for it      | That tab's load fails                                           | Release the set again                                         |
+| A studio's part of a manifest passes 1 MiB           | That tab's step fails                                           | Split what the step returns (configuration and records apart) |
+| A set's catalog isn't what its reader's schema takes | Its reader treats the set as not loaded (Auto Assembly says so) | Release the set, and the app, together                        |
 
 ## Decisions
 
@@ -190,7 +190,7 @@ list's rows don't mark it.
 
 - **The generator is the source of truth.** A mismatch fails rather than falls
   back to probing: probed parts the generator didn't name would quietly disagree
-  with what Quick fastener and the FeatureScript say.
+  with what Auto Assembly and the FeatureScript say.
 - **In the library's documents, not a library of their own.** Generated parts
   are found, favorited and inserted like any part, so they share all of it;
   only where their records come from differs.
@@ -203,10 +203,10 @@ list's rows don't mark it.
   from that version, they can't disagree with the tabs, a release needs no app
   deploy, a document released to for testing loads like any, and a new part set
   needs no app change.
-- **The catalog is stored at load, not synced.** What Quick fastener offers is
+- **The catalog is stored at load, not synced.** What Auto Assembly offers is
   what the library loaded, so a release reaches it with the group's next load
   rather than a deploy. Nothing robot-code releases is compiled into the app:
-  Quick fastener's hole scan is the app's own FeatureScript, beside its
+  Auto Assembly's hole scan is the app's own FeatureScript, beside its
   parser.
 
 _Last reviewed: 2026-10-22_

@@ -10,7 +10,7 @@ import type { LibraryId } from "@backend/features/library/library-id";
 import type { Vendor } from "@backend/features/library/vendors";
 import type { PartialSelection } from "@backend/features/configurations/contract";
 import type { AppTab } from "./app-tab";
-import { SelectionMode } from "@backend/features/quick-fastener/contract";
+import { SelectionMode } from "@backend/features/auto-assembly/contract";
 
 export enum Theme {
     DARK = "dark",

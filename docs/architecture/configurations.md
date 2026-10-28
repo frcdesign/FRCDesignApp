@@ -125,7 +125,7 @@ robot-code's records, whatever its count, and its indexing isn't configurable
    only the overrides (`onshapeOverrides`). Onshape refuses a part studio's
    empty configuration (an assembly's is fine), so a part studio left on its
    defaults is sent its first parameter at its default
-   (`partStudioInsertOverrides`, which Quick fastener's inserts use too).
+   (`partStudioInsertOverrides`, which Auto Assembly's inserts use too).
 
 ### Search
 

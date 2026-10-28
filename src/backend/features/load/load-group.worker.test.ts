@@ -341,7 +341,7 @@ describe("loadGroup", () => {
         }
     });
 
-    it("stores a released manifest's catalog, which Quick fastener sizes fasteners by", async () => {
+    it("stores a released manifest's catalog, which Auto Assembly sizes fasteners by", async () => {
         mockContents([
             tab("e1"),
             {

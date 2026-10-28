@@ -16,13 +16,13 @@ const TOTALS: AnalyticsTotals = {
     fastenInserts: 8,
     fastenableInserts: 10,
     preselectedInserts: 2,
-    quickFastenerInserts: 3,
+    autoAssemblyInserts: 3,
     targets: emptyTargets(),
     favorites: 0
 };
 
 describe("insert breakdowns", () => {
-    it("splits every insert into the menu, quick insert and Quick fastener", () => {
+    it("splits every insert into the menu, quick insert and Auto Assembly", () => {
         renderWithProviders(<InsertMethodBreakdown totals={TOTALS} />);
         expect(screen.getByText("12 (60.0%)")).toBeTruthy();
         expect(screen.getByText("5 (25.0%)")).toBeTruthy();
@@ -43,7 +43,7 @@ describe("insert breakdowns", () => {
                     ...TOTALS,
                     fastenableInserts: 0,
                     preselectedInserts: 0,
-                    quickFastenerInserts: 0
+                    autoAssemblyInserts: 0
                 }}
             />
         );

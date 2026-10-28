@@ -66,7 +66,7 @@ export async function getTotals(
         fastenInserts: Number(inserts?.fastens ?? 0),
         fastenableInserts: Number(inserts?.fastenables ?? 0),
         preselectedInserts: Number(inserts?.preselected ?? 0),
-        quickFastenerInserts: Number(inserts?.quickFasteners ?? 0),
+        autoAssemblyInserts: Number(inserts?.autoAssemblys ?? 0),
         targets: toTargets(targets),
         favorites: favoriteCount?.value ?? 0
     };
@@ -99,7 +99,7 @@ function countMetrics(db: Db, libraryId?: LibraryId, range?: DayRange) {
             quickInserts: sum(dailyMetrics.quickInsertCount),
             fastenables: sum(dailyMetrics.fastenableCount),
             preselected: sum(dailyMetrics.preselectedCount),
-            quickFasteners: sum(dailyMetrics.quickFastenerCount)
+            autoAssemblys: sum(dailyMetrics.autoAssemblyCount)
         })
         .from(dailyMetrics)
         .where(filters.length ? and(...filters) : undefined)
@@ -234,7 +234,7 @@ function countMetricsByDay(db: Db, range: DayRange, libraryId?: LibraryId) {
             quickInserts: sum(dailyMetrics.quickInsertCount),
             fastenableInserts: sum(dailyMetrics.fastenableCount),
             preselectedInserts: sum(dailyMetrics.preselectedCount),
-            quickFastenerInserts: sum(dailyMetrics.quickFastenerCount)
+            autoAssemblyInserts: sum(dailyMetrics.autoAssemblyCount)
         })
         .from(dailyMetrics)
         .where(and(...filters))
@@ -306,7 +306,7 @@ export async function getMetricSeries(
             fastenInserts: 0,
             fastenableInserts: 0,
             preselectedInserts: 0,
-            quickFastenerInserts: 0,
+            autoAssemblyInserts: 0,
             targets: emptyTargets()
         };
         byDay.set(day, created);
@@ -322,7 +322,7 @@ export async function getMetricSeries(
         point.quickInserts = Number(row.quickInserts ?? 0);
         point.fastenableInserts = Number(row.fastenableInserts ?? 0);
         point.preselectedInserts = Number(row.preselectedInserts ?? 0);
-        point.quickFastenerInserts = Number(row.quickFastenerInserts ?? 0);
+        point.autoAssemblyInserts = Number(row.autoAssemblyInserts ?? 0);
     }
     for (const row of openRows) {
         pointFor(row.day).appOpens = Number(row.total ?? 0);

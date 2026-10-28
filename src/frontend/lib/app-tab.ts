@@ -4,7 +4,7 @@ import { LibraryId } from "@backend/features/library/library-id";
 /** A tab that is not a library, having a page of the app's own instead. */
 export enum UtilityTab {
     VERSION_MANAGER = "version-manager",
-    QUICK_FASTENER = "quick-fastener"
+    AUTO_ASSEMBLY = "auto-assembly"
 }
 
 export type AppTab = LibraryId | UtilityTab;

@@ -1,10 +1,10 @@
 /** A `FastenerSet` as a library loads one, from robot-code's manifest (synced by `npm run sync:generated-parts`). */
-import { catalogSchema } from "@backend/features/quick-fastener/catalog";
+import { catalogSchema } from "@backend/features/auto-assembly/catalog";
 import {
     FastenerKind,
     type FastenerSet,
     type FastenerStudio
-} from "@backend/features/quick-fastener/studios";
+} from "@backend/features/auto-assembly/studios";
 import { parseOnshapeConfiguration } from "@backend/features/load/parse-configuration";
 import { type OnshapeConfigurationResponse } from "@backend/lib/onshape/types";
 import { FASTENERS_MANIFEST } from "./fasteners-manifest.gen";

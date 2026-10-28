@@ -375,7 +375,7 @@ describe("tracking", () => {
                     ...assembly,
                     fastenable: true,
                     fasten: true,
-                    source: InsertSource.QUICK_FASTENER
+                    source: InsertSource.AUTO_ASSEMBLY
                 })
             );
             // A derive can't fasten, so it isn't a fastenable insert
@@ -386,7 +386,7 @@ describe("tracking", () => {
                 count: 4,
                 fastenableCount: 3,
                 preselectedCount: 1,
-                quickFastenerCount: 1
+                autoAssemblyCount: 1
             });
         });
 

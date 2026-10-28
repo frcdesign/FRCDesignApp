@@ -1,4 +1,4 @@
-/** The configuration dialog's inputs, for any `ConfigurationParameter`: the insert menu's, and Quick fastener's. */
+/** The configuration dialog's inputs, for any `ConfigurationParameter`: the insert menu's, and Auto Assembly's. */
 import { Checkbox, type ComboboxProps, Select, TextInput } from "@mantine/core";
 import { ReactNode, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {

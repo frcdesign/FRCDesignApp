@@ -77,7 +77,7 @@ action for `sign-in-required`, and shows `defaultMessage` for `internal` or any
 non-`AppError`. Images use `loadImage`, which throws `ImageLoadError` with only
 the status.
 
-A background run (the version manager's, Quick fastener's) has no response to
+A background run (the version manager's, Auto Assembly's) has no response to
 carry a body, so each feature makes a `runFailures(marker)`. A step that fails
 leaves with `word(message)`, the message being `describeOnshapeFailure` with
 the feature's own words for a refusal, or the feature's wording for the step;
@@ -172,10 +172,10 @@ tags each with the library it shows.
 | `library`      | A load that wrote, a shell group, an admin team sync | That library's sockets   | `refreshLibrary()`, which moves to the new cache version       |
 | `thumbnail`    | Each stored render size                              | Every socket             | Refetches rows that missed that render; wakes a waiting render |
 | `version-job`  | A push or pull starting, and the workflow ending it  | That workspace's sockets | Sets the run's status query                                    |
-| `fastener-job` | A fastener run starting, each step, and its end      | That workspace's sockets | Refetches the run's status, if it's this page's assembly       |
+| `assembly-job` | A fastener run starting, each step, and its end      | That workspace's sockets | Refetches the run's status, if it's this page's assembly       |
 
 A socket is tagged with the library it shows and, where Onshape launched the app
-in one, the workspace it was launched in — which is what a `version-job` or `fastener-job` reaches.
+in one, the workspace it was launched in — which is what a `version-job` or `assembly-job` reaches.
 
 A push says only what changed; the client refetches under its own access, so
 nothing private travels over it. A failed send is logged, not thrown. A client

@@ -8,7 +8,7 @@ import {
 } from "@mantine/core";
 import { CursorClickIcon } from "@phosphor-icons/react";
 import { Hint } from "@backend/features/hints/contract";
-import { SelectionMode } from "@backend/features/quick-fastener/contract";
+import { SelectionMode } from "@backend/features/auto-assembly/contract";
 import { AppHoverCard } from "../../../components/app-hover-card";
 import { BadgedIcon } from "../../../components/badged-icon";
 import { StatusIcon } from "../../../components/status-icon";

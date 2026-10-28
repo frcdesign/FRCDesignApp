@@ -62,7 +62,7 @@ import {
     useIsVersionManagerNew
 } from "../features/version-manager/navigation";
 import { useTargetElement, useTargetWorkspace } from "../lib/onshape-params";
-import { useIsQuickFastener } from "../features/quick-fastener/navigation";
+import { useIsAutoAssembly } from "../features/auto-assembly/navigation";
 import { type AppTab, UtilityTab } from "../lib/app-tab";
 import { getTabName, useNavigateToTab } from "../lib/tabs";
 import { useRefreshVersionManagerMutation } from "../features/version-manager/queries";
@@ -98,8 +98,8 @@ export function AppNavbar(): ReactNode {
     // Search and its filters belong to a library, and neither utility is
     // one; their pages fill the room they leave.
     const isVersionManager = useIsVersionManager();
-    const isQuickFastener = useIsQuickFastener();
-    const isUtility = isVersionManager || isQuickFastener;
+    const isAutoAssembly = useIsAutoAssembly();
+    const isUtility = isVersionManager || isAutoAssembly;
 
     return (
         <Stack gap={0}>
@@ -157,7 +157,7 @@ function useAppPages(): AppPage[] {
     const targetWorkspace = useTargetWorkspace();
     const targetElement = useTargetElement();
     const isVersionManager = useIsVersionManager();
-    const isQuickFastener = useIsQuickFastener();
+    const isAutoAssembly = useIsAutoAssembly();
     const isNew = useIsVersionManagerNew();
 
     const libraries = Object.values(LibraryId).map((libraryId) => ({
@@ -188,13 +188,13 @@ function useAppPages(): AppPage[] {
                   }
               ]
             : []),
-        ...(targetElement || isQuickFastener
+        ...(targetElement || isAutoAssembly
             ? [
                   {
-                      tab: UtilityTab.QUICK_FASTENER,
+                      tab: UtilityTab.AUTO_ASSEMBLY,
                       group: UTILITIES_GROUP,
                       icon: ScrewdriverIcon,
-                      color: AppColor.QUICK_FASTENER
+                      color: AppColor.AUTO_ASSEMBLY
                   }
               ]
             : [])
@@ -216,13 +216,13 @@ function PagePicker(): ReactNode {
     const pages = useAppPages();
     const currentLibraryId = useLibraryId();
     const isVersionManager = useIsVersionManager();
-    const isQuickFastener = useIsQuickFastener();
+    const isAutoAssembly = useIsAutoAssembly();
     const navigateToTab = useNavigateToTab();
 
     const current: AppTab = isVersionManager
         ? UtilityTab.VERSION_MANAGER
-        : isQuickFastener
-          ? UtilityTab.QUICK_FASTENER
+        : isAutoAssembly
+          ? UtilityTab.AUTO_ASSEMBLY
           : currentLibraryId;
     const currentPage = pages.find((page) => page.tab === current);
 

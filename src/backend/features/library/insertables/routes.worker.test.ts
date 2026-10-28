@@ -28,7 +28,7 @@ import { getDb } from "../../../db/client";
 import * as PartStudioEndpoints from "../../../lib/onshape/endpoints/part-studios";
 import * as AssemblyEndpoints from "../../../lib/onshape/endpoints/assemblies";
 import * as PartsEndpoints from "../../../lib/onshape/endpoints/parts";
-import * as IndexHoles from "../../quick-fastener/index-holes";
+import * as IndexHoles from "../../auto-assembly/index-holes";
 import { OnshapeRateLimitError } from "../../../lib/onshape/client";
 import { OnshapeFailure } from "../../../lib/onshape/failures";
 import { AUTO_INDEX_THRESHOLD } from "../../configurations/combinations";

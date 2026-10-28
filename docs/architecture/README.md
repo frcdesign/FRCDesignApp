@@ -26,7 +26,7 @@ Claude, held to these documents by their invariants, the tests and CI. So:
 | [search.md](./search.md)                   | Building, serving and querying each library's search index                         |
 | [analytics.md](./analytics.md)             | Usage tracking, rollups, and the public dashboard                                  |
 | [version-manager.md](./version-manager.md) | Links between Onshape workspaces, and the pushes and pulls along them              |
-| [quick-fastener.md](./quick-fastener.md)   | Sizing fasteners to an assembly's holes, scanning and caching, inserting, picking  |
+| [auto-assembly.md](./auto-assembly.md)     | Auto Assembly: sizing fasteners to holes, scanning and caching, inserting, picking |
 | [generated-parts.md](./generated-parts.md) | Library parts FeatureScript generates: syncing their records, loading, the badge   |
 | [platform.md](./platform.md)               | Onshape client, errors, retries and timeouts, concurrency, toasts, pushes, caching |
 
