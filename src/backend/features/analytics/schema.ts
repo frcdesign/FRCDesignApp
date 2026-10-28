@@ -57,6 +57,10 @@ export const events = sqliteTable(
         source: text("source").$type<InsertSource>(),
         // Insert-and-fasten, which Onshape only offers for assembly targets.
         fasten: integer("fasten", { mode: "boolean" }),
+        // Whether the part offered insert and fasten when it was inserted.
+        fastenable: integer("fastenable", { mode: "boolean" }),
+        // Fastened to circular edges or faces picked in Onshape beforehand.
+        preselected: integer("preselected", { mode: "boolean" }),
         // A version run's own columns: how it was aimed, and what it did.
         versionKind: text("version_kind").$type<VersionJobKind>(),
         versionScope: text("version_scope").$type<
@@ -85,7 +89,11 @@ export const dailyMetrics = sqliteTable(
         count: integer("count").notNull().default(0),
         favoriteCount: integer("favorite_count").notNull().default(0),
         fastenCount: integer("fasten_count").notNull().default(0),
-        quickInsertCount: integer("quick_insert_count").notNull().default(0)
+        quickInsertCount: integer("quick_insert_count").notNull().default(0),
+        /** Inserts into an assembly of a part offering insert and fasten. */
+        fastenableCount: integer("fastenable_count").notNull().default(0),
+        preselectedCount: integer("preselected_count").notNull().default(0),
+        quickFastenerCount: integer("quick_fastener_count").notNull().default(0)
     },
     (t) => [primaryKey({ columns: [t.day, t.libraryId, t.type] })]
 );

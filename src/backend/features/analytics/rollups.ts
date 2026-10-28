@@ -3,7 +3,8 @@ import { type Db } from "../../db/client";
 import { type ConfigurationParameter } from "../configurations/contract";
 import { toInstanceKeys } from "../configurations/instances";
 import { earliest, increment, latest } from "../../db/updates";
-import { EventType } from "./usage";
+import { EventType, InsertSource } from "./usage";
+import { ElementType } from "../../lib/onshape/element-type";
 import { VersionJobOutcome } from "../version-manager/contract";
 import {
     asInsert,
@@ -127,6 +128,13 @@ function countDay(db: Db, event: LoggedEvent, libraryId: LibraryId) {
     const favorite = event.isFavorite ? 1 : 0;
     const fasten = event.fasten ? 1 : 0;
     const quickInsert = event.isQuickInsert ? 1 : 0;
+    // Only an assembly is fastened to, so a derive isn't a fastenable insert
+    const fastenable =
+        event.fastenable && event.targetElementType === ElementType.ASSEMBLY
+            ? 1
+            : 0;
+    const preselected = event.preselected ? 1 : 0;
+    const quickFastener = event.source === InsertSource.QUICK_FASTENER ? 1 : 0;
 
     return db
         .insert(dailyMetrics)
@@ -137,7 +145,10 @@ function countDay(db: Db, event: LoggedEvent, libraryId: LibraryId) {
             count: 1,
             favoriteCount: favorite,
             fastenCount: fasten,
-            quickInsertCount: quickInsert
+            quickInsertCount: quickInsert,
+            fastenableCount: fastenable,
+            preselectedCount: preselected,
+            quickFastenerCount: quickFastener
         })
         .onConflictDoUpdate({
             target: [
@@ -152,6 +163,18 @@ function countDay(db: Db, event: LoggedEvent, libraryId: LibraryId) {
                 quickInsertCount: increment(
                     dailyMetrics.quickInsertCount,
                     quickInsert
+                ),
+                fastenableCount: increment(
+                    dailyMetrics.fastenableCount,
+                    fastenable
+                ),
+                preselectedCount: increment(
+                    dailyMetrics.preselectedCount,
+                    preselected
+                ),
+                quickFastenerCount: increment(
+                    dailyMetrics.quickFastenerCount,
+                    quickFastener
                 )
             }
         });

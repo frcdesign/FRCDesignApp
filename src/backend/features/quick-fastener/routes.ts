@@ -153,7 +153,11 @@ quickFastenerRoutes.post(
         }
 
         const run = await c.env.QUICK_FASTENER_WORKFLOW.create({
-            params: { sessionId: getSessionId(c), request }
+            params: {
+                sessionId: getSessionId(c),
+                userId: await c.var.getUserId(),
+                request
+            }
         });
         const status: FastenerJobStatus = {
             state: FastenerJobState.RUNNING,

@@ -44,11 +44,14 @@ import {
     washerTopEdges
 } from "./insert";
 import { reportJob } from "./jobs";
+import { recordRunInserts } from "./track-inserts";
 import { planHoles } from "./planner";
 
 export interface FastenerJobParams {
     /** Whose Onshape session the run borrows; see the load workflow. */
     sessionId: string;
+    /** Who started it, whom its inserts are recorded for. */
+    userId: string;
     request: QuickFastenerIn;
 }
 
@@ -57,6 +60,7 @@ interface RunContext {
     env: AppBindings;
     step: WorkflowStep;
     sessionId: string;
+    userId: string;
     assembly: ElementPath;
     tasks: FastenerTask[];
     holes?: PlannedHole[];
@@ -84,12 +88,13 @@ export class QuickFastenerWorkflow extends WorkflowEntrypoint<
         event: WorkflowEvent<FastenerJobParams>,
         step: WorkflowStep
     ): Promise<FastenerJobResult> {
-        const { sessionId, request } = event.payload;
+        const { sessionId, userId, request } = event.payload;
         const tasks: FastenerTask[] = pendingTasks();
         const ctx: RunContext = {
             env: this.env,
             step,
             sessionId,
+            userId,
             assembly: request.assembly,
             tasks,
             result: { inserted: 0, fastened: 0 },
@@ -174,8 +179,22 @@ async function runSteps(ctx: RunContext, request: QuickFastenerIn) {
         skipRest(ctx);
         return;
     }
+    const mated = new Set<number>();
     await runTask(ctx, FastenerTaskAction.FASTEN, (run) =>
-        fastenParts(ctx, set, run, parts, paths)
+        fastenParts(ctx, set, run, parts, paths, mated)
+    );
+    // Whatever fastening managed, what was inserted counts
+    await ctx.step.do("record-inserts", () =>
+        recordRunInserts(
+            getDb(ctx.env.DB),
+            ctx.userId,
+            set,
+            parts,
+            paths,
+            mated
+        ).catch((error: unknown) =>
+            console.error("Failed to record Quick fastener's inserts", error)
+        )
     );
 }
 
@@ -209,13 +228,14 @@ async function insertParts(
     return paths;
 }
 
-/** Fastens each inserted part where it sits. */
+/** Fastens each inserted part where it sits, adding each one mated to `mated`. */
 async function fastenParts(
     ctx: RunContext,
     set: FastenerSet,
     run: StepRunner,
     parts: PartPlacement[],
-    paths: (string[] | null)[]
+    paths: (string[] | null)[],
+    mated: Set<number>
 ): Promise<void> {
     if (parts.some((part) => !set.studios[part.kind].mateConnectorId)) {
         throw runFailure(
@@ -240,6 +260,7 @@ async function fastenParts(
             await addAssemblyFeature(client, ctx.assembly, mate);
             return true;
         });
+        mated.add(index);
         ctx.result.fastened++;
     }
 }

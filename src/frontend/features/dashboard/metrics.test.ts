@@ -31,6 +31,9 @@ function day(index: number, overrides: Partial<DailyMetricPoint> = {}) {
         favoriteInserts: 0,
         quickInserts: 0,
         fastenInserts: 0,
+        fastenableInserts: 0,
+        preselectedInserts: 0,
+        quickFastenerInserts: 0,
         targets: emptyTargets(),
         ...overrides
     };

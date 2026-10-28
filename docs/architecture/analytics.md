@@ -12,23 +12,25 @@ aggregates.
 
 ## Code map
 
-| Path                                                                  | Role                                                              |
-| --------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| `src/backend/features/analytics/tracking.ts`                          | `trackInsert`, `trackAppOpen`, `trackVersionRun`: record an event |
-| `src/backend/features/analytics/usage.ts`                             | `EventType`, `InsertSource`, `EVENT_SCHEMA_VERSION`               |
-| `src/backend/features/analytics/logged-event.ts`                      | Which columns each kind of event sets                             |
-| `src/backend/features/analytics/schema.ts`                            | The event log and every rollup table                              |
-| `src/backend/features/analytics/rollups.ts`                           | `rollupWrites`: the rollup rows one event adds to                 |
-| `src/backend/features/analytics/day.ts`                               | Day keys in the reporting time zone                               |
-| `src/backend/features/analytics/seasons.ts`                           | FRC and FTC seasons, for season-over-season comparison            |
-| `src/backend/features/analytics/range.ts`, `growth.ts`                | Date ranges, clamped to when tracking began; growth windows       |
-| `src/backend/features/analytics/metric-queries.ts`, `part-queries.ts` | The dashboard's reads over the rollups                            |
-| `src/backend/features/analytics/health.ts`                            | Build-issue counts per library                                    |
-| `src/backend/features/analytics/parameter-usage.ts`                   | Option usage, per way a parameter is shown                        |
-| `src/backend/features/analytics/routes.ts`                            | `GET /api/analytics/...`                                          |
-| `src/backend/features/entry/routes.ts`                                | `POST /api/app-open`, sent on a launch from Onshape               |
-| `src/frontend/routes/dashboard/`                                      | The dashboard pages: overview, library, part, unused              |
-| `src/frontend/features/dashboard/`                                    | The dashboard's queries, charts and tables                        |
+| Path                                                                  | Role                                                                             |
+| --------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `src/backend/features/analytics/tracking.ts`                          | `trackInsert`, `recordInserts`, `trackAppOpen`, `trackVersionRun`: record events |
+| `src/backend/features/quick-fastener/track-inserts.ts`                | `recordRunInserts`: a Quick fastener run's parts, as inserts                     |
+| `src/backend/features/analytics/usage.ts`                             | `EventType`, `InsertSource`, `EVENT_SCHEMA_VERSION`                              |
+| `src/backend/features/analytics/logged-event.ts`                      | Which columns each kind of event sets                                            |
+| `src/backend/features/analytics/schema.ts`                            | The event log and every rollup table                                             |
+| `src/backend/features/analytics/rollups.ts`                           | `rollupWrites`: the rollup rows one event adds to                                |
+| `src/backend/features/analytics/day.ts`                               | Day keys in the reporting time zone                                              |
+| `src/backend/features/analytics/seasons.ts`                           | FRC and FTC seasons, for season-over-season comparison                           |
+| `src/backend/features/analytics/range.ts`, `growth.ts`                | Date ranges, clamped to when tracking began; growth windows                      |
+| `src/backend/features/analytics/metric-queries.ts`, `part-queries.ts` | The dashboard's reads over the rollups                                           |
+| `src/backend/features/analytics/health.ts`                            | Build-issue counts per library                                                   |
+| `src/backend/features/analytics/parameter-usage.ts`                   | Option usage, per way a parameter is shown                                       |
+| `src/backend/features/analytics/routes.ts`                            | `GET /api/analytics/...`                                                         |
+| `src/backend/features/entry/routes.ts`                                | `POST /api/app-open`, sent on a launch from Onshape                              |
+| `src/frontend/routes/dashboard/`                                      | The dashboard pages: overview, library, part, unused                             |
+| `src/frontend/features/dashboard/`                                    | The dashboard's queries, charts and tables                                       |
+| `src/frontend/features/dashboard/insert-mix.tsx`                      | The breakdowns: where inserts start, how they're made and placed                 |
 
 ## Storage
 
@@ -37,8 +39,11 @@ no foreign key crosses between them):
 
 - `events` — the append-only log. Every event has an id, type, time, day key,
   user and schema version, and the library where it has one; an insert adds the
-  element path, insertable, target tab type, canonical selection, source, and
-  the favorite, quick-insert and fasten flags, and a version run adds its kind,
+  element path, insertable, target tab type, canonical selection, source
+  (`InsertSource`, `quick_fastener` for a Quick fastener run), and the
+  favorite, quick-insert, fasten, fastenable (the part offered insert and
+  fasten) and preselected (fastened to picks made beforehand) flags, and a
+  version run adds its kind,
   scope, whether it was update-only, its outcome, and how many steps failed,
   versions it created and tabs it updated. Keyed on Onshape's element id with no foreign keys, so
   history survives a reload or a re-added tab.
@@ -50,6 +55,10 @@ no foreign key crosses between them):
   `daily_insertable_metrics`, `daily_insertable_users`,
   `daily_configuration_metrics`, `daily_user_activity`, `user_stats`,
   `daily_app_opens`, `daily_version_metrics`.
+- `daily_metrics` counts each day's inserts per library with its subsets:
+  favorited, fastened, quick-inserted, and, of inserts into an assembly of a
+  part offering insert and fasten, `fastenable_count`, with the
+  `preselected_count` and `quick_fastener_count` inside it.
 - `daily_version_metrics` is keyed by day: runs, update-only runs, runs that
   partially failed and runs that failed outright, versions created and tabs
   updated.
@@ -62,18 +71,24 @@ no foreign key crosses between them):
 
 ### Recording
 
-1. An insert route calls `trackInsert` once the insert succeeded; `/init`'s
-   handoff calls `POST /api/app-open`, which calls `trackAppOpen`; the
-   version manager's workflow calls `trackVersionRun` in its `record-run` step
-   once its run has finished, so a run that failed halfway still records what
-   it managed.
+1. An insert route calls `trackInsert` once the insert succeeded, with how many
+   instances it placed: an insert and fasten to picks places one per edge, and
+   each is an insert of its own, `preselected`. Quick fastener's workflow
+   calls `recordRunInserts` in its `record-inserts` step once fastening has
+   ended, however it ended: each part it inserted is an insert from the
+   library its studio is in, source `quick_fastener`, fastened if its mate was
+   added, never favorited. `/init`'s handoff calls `POST /api/app-open`, which
+   calls `trackAppOpen`; the version manager's workflow calls
+   `trackVersionRun` in its `record-run` step once its run has finished, so a
+   run that failed halfway still records what it managed.
 2. An insert and an open are recorded in the background (`runInBackground`),
-   after the response; a version run's step swallows a failure to record. So
+   after the response; a workflow's step swallows a failure to record. So
    tracking never slows or fails what the user asked for.
 3. The selection is stored canonically (`canonicalValues`), so `5 in` and
    `(2 + 3) in` count as one value.
-4. `record` writes the event and its rollup rows in one D1 batch, so neither
-   lands without the other.
+4. `record` writes the events and their rollup rows in one D1 batch, so none
+   lands without the rest; a batch is one query against D1's per-invocation
+   limit, however many statements it holds.
 
 ### Days and seasons
 
@@ -88,10 +103,15 @@ is nothing like a calendar year; between seasons it shows the last complete one.
 The dashboard is a sibling of `/app`, a full-screen page outside the Onshape
 panel. Its routes read only rollups and return only aggregates:
 
-- **Overview** — totals, per-library summaries, insert and metric series, insert
-  sources, growth, and the version manager's own totals.
-- **Library** — its summary, health (build issues by severity, hidden elements
-  left out), and its parts table.
+- **Overview** — totals, per-library summaries, insert and metric series,
+  growth, the version manager's own totals, and three breakdowns: where
+  inserts start (`InsertSourceBreakdown`), how every insert was made (insert
+  menu, quick insert or Quick fastener, `InsertMethodBreakdown`), and how a
+  part offering insert and fasten was placed when inserted into an assembly
+  (normally, fastened to preselected edges, or by Quick fastener,
+  `FastenMethodBreakdown`).
+- **Library** — its summary, the last two breakdowns, health (build issues by
+  severity, hidden elements left out), and its parts table.
 - **Part** — one element's history, and usage of each configuration option,
   split per way the option is shown (`toParameterInstances`).
 - **Unused** — parts and options at or below a usage threshold.
@@ -147,6 +167,16 @@ only on **All time**, its own window being a season rather than the picked one.
   is removed and re-added; its element id is not.
 - **Public aggregates.** The numbers are useful to the community, and nothing
   per-user is exposed.
+- **An instance inserted is an insert.** Fastening to five edges places five
+  parts, and a Quick fastener run a part per screw, washer and nut, so each
+  counts in every headline number as five inserts from the insert menu
+  would. How they were made is in the source, the quick-insert flag and
+  `preselected`, which the breakdowns split them by.
+- **Fastenable inserts are their own denominator.** Preselection and Quick
+  fastener only place parts that offer insert and fasten, into an assembly;
+  measured against every insert they would read as rare however often they
+  replace the alternative. Only events from schema version 3 carry
+  `fastenable` and `preselected`, so the breakdown counts from then.
 - **The module isn't called `events.ts`.** Ad blockers match an `events-<hash>.js`
   chunk, and the frontend imports its enums.
 

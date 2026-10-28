@@ -50,7 +50,9 @@ export const NOT_AN_INSERT: InsertColumns = {
     isFavorite: null,
     isQuickInsert: null,
     source: null,
-    fasten: null
+    fasten: null,
+    fastenable: null,
+    preselected: null
 };
 
 export const NOT_A_VERSION_RUN: VersionRunColumns = {

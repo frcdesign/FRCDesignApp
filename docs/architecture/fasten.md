@@ -367,8 +367,8 @@ enum MateLocation {
 
 ## Invariants
 
-- The insert is recorded exactly once per request, with `fasten` true only once
-  every mate is built.
+- A request records once, an insert per instance it placed, with `fasten` true
+  only once every mate is built and `preselected` when fastened to picks.
 - Picks are read before anything is inserted, so picks with no circular edge
   insert nothing.
 - Each picked or found edge gets its own instance and mate.

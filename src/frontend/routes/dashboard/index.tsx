@@ -1,4 +1,4 @@
-import { Card, SimpleGrid, Stack } from "@mantine/core";
+import { SimpleGrid, Stack } from "@mantine/core";
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { type ReactNode } from "react";
@@ -10,7 +10,11 @@ import {
 } from "../../features/dashboard/dashboard-queries";
 import { DashboardState } from "../../features/dashboard/dashboard-state";
 import { InsertsByLibraryCard } from "../../features/dashboard/inserts-chart";
-import { InsertSourceBreakdown } from "../../features/dashboard/insert-mix";
+import {
+    FastenMethodBreakdown,
+    InsertMethodBreakdown,
+    InsertSourceBreakdown
+} from "../../features/dashboard/insert-mix";
 import { RangePreset, toDayRange } from "../../features/dashboard/range";
 import { useRangePreset } from "../../features/dashboard/range-control";
 import { HeadlineTiles } from "../../features/dashboard/headline-tiles";
@@ -61,9 +65,11 @@ function DashboardOverview(): ReactNode {
             <VersionManagerTiles totals={versionManager} />
 
             <Section title="How people use the app">
-                <Card>
+                <SimpleGrid cols={{ base: 1, sm: 3 }}>
                     <InsertSourceBreakdown sources={sources} />
-                </Card>
+                    <InsertMethodBreakdown totals={totals} />
+                    <FastenMethodBreakdown totals={totals} />
+                </SimpleGrid>
                 <SimpleGrid cols={{ base: 1, sm: 3 }}>
                     <TrendTile
                         metric={METRICS.quickFraction}

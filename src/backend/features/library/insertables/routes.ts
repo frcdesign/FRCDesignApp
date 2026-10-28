@@ -305,7 +305,11 @@ const insertBody = z.object({
     isFavorite: z.boolean().default(false),
     isQuickInsert: z.boolean().default(false),
     // Defaulted so an older client can't fail the tracking batch on NOT NULL.
-    source: z.enum(InsertSource).default(InsertSource.BROWSE)
+    // A Quick fastener run records its own inserts
+    source: z
+        .enum(InsertSource)
+        .exclude(["QUICK_FASTENER"])
+        .default(InsertSource.BROWSE)
 });
 
 const addToPartStudioBody = insertBody.extend({
@@ -343,7 +347,8 @@ insertableRoutes.post(
                 elementId: insertables.elementId,
                 name: insertables.name,
                 microversionId: insertables.microversionId,
-                libraryId: insertables.libraryId
+                libraryId: insertables.libraryId,
+                supportsFasten: insertables.supportsFasten
             })
             .from(insertables)
             .where(eq(insertables.id, insertableId))
@@ -387,7 +392,9 @@ insertableRoutes.post(
             isQuickInsert: body.isQuickInsert,
             source: body.source,
             // Insert-and-fasten is only offered for assembly targets.
-            fasten: false
+            fasten: false,
+            fastenable: row.supportsFasten,
+            preselected: false
         });
 
         return c.json({
@@ -459,20 +466,26 @@ insertableRoutes.post(
               )
             : undefined;
 
-        // Every path below records the insert exactly once.
-        const track = (fasten: boolean) =>
-            trackInsert(c, {
-                libraryId: row.libraryId,
-                path: sourcePath,
-                insertableId,
-                targetElementType: ElementType.ASSEMBLY,
-                selection,
-                parameters,
-                isFavorite: body.isFavorite,
-                isQuickInsert: body.isQuickInsert,
-                source: body.source,
-                fasten
-            });
+        // Every path below records once, an insert per instance it placed.
+        const track = (fasten: boolean, instances = 1, preselected = false) =>
+            trackInsert(
+                c,
+                {
+                    libraryId: row.libraryId,
+                    path: sourcePath,
+                    insertableId,
+                    targetElementType: ElementType.ASSEMBLY,
+                    selection,
+                    parameters,
+                    isFavorite: body.isFavorite,
+                    isQuickInsert: body.isQuickInsert,
+                    source: body.source,
+                    fasten,
+                    fastenable: row.fastenInfo !== null,
+                    preselected
+                },
+                instances
+            );
 
         // Read before inserting, so picks with no circular edge insert nothing.
         const fastensToPicks =
@@ -508,6 +521,12 @@ insertableRoutes.post(
                 }
             );
         const result = await insert();
+        let instances = 1;
+        const insertAnother = async () => {
+            const inserted = await insert();
+            instances++;
+            return inserted;
+        };
 
         if (!body.fasten) {
             await track(false);
@@ -534,11 +553,11 @@ insertableRoutes.post(
                 await fastenToCircularEdges(onshapeApi, targetPath, {
                     name,
                     inserted: result,
-                    insert,
+                    insert: insertAnother,
                     fastenQuery,
                     edges
                 });
-                await track(true);
+                await track(true, instances, true);
                 await markHintSeen(c, Hint.FASTENED_TO_CIRCULAR_EDGES);
                 return c.json({
                     fastenedCount: edges.length
@@ -555,8 +574,8 @@ insertableRoutes.post(
                 featureId: fastenResult.feature.featureId
             } satisfies InsertOut);
         } catch (error) {
-            // The first insert is in the assembly whatever failed after it.
-            await track(false);
+            // What was inserted stays in the assembly whatever failed after it.
+            await track(false, instances);
             throw error;
         }
     }

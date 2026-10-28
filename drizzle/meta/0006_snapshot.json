@@ -1,7 +1,7 @@
 {
     "version": "6",
     "dialect": "sqlite",
-    "id": "4540ccb4-7edf-4542-85d5-5a58909cb7b1",
+    "id": "cd38a1c7-52c0-40c6-9d31-2c0ef0f26f77",
     "prevId": "78216f0c-ffe1-4fad-8e20-20bec253eb8b",
     "tables": {
         "configurations": {
@@ -935,6 +935,30 @@
                     "notNull": true,
                     "autoincrement": false,
                     "default": 0
+                },
+                "fastenable_count": {
+                    "name": "fastenable_count",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false,
+                    "default": 0
+                },
+                "preselected_count": {
+                    "name": "preselected_count",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false,
+                    "default": 0
+                },
+                "quick_fastener_count": {
+                    "name": "quick_fastener_count",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false,
+                    "default": 0
                 }
             },
             "indexes": {},
@@ -1288,6 +1312,20 @@
                 },
                 "fasten": {
                     "name": "fasten",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": false,
+                    "autoincrement": false
+                },
+                "fastenable": {
+                    "name": "fastenable",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": false,
+                    "autoincrement": false
+                },
+                "preselected": {
+                    "name": "preselected",
                     "type": "integer",
                     "primaryKey": false,
                     "notNull": false,

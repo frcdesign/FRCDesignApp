@@ -247,7 +247,10 @@ describe("analytics routes", () => {
                 count: 10,
                 favoriteCount: 4,
                 fastenCount: 3,
-                quickInsertCount: 6
+                quickInsertCount: 6,
+                fastenableCount: 5,
+                preselectedCount: 2,
+                quickFastenerCount: 1
             });
             await db.insert(dailyTargetMetrics).values([
                 {
@@ -274,6 +277,9 @@ describe("analytics routes", () => {
                 favoriteInserts: 4,
                 fastenInserts: 3,
                 quickInserts: 6,
+                fastenableInserts: 5,
+                preselectedInserts: 2,
+                quickFastenerInserts: 1,
                 targets: {
                     [ElementType.ASSEMBLY]: 5,
                     [ElementType.PART_STUDIO]: 5
@@ -287,6 +293,9 @@ describe("analytics routes", () => {
                 favoriteInserts: 4,
                 fastenInserts: 3,
                 quickInserts: 6,
+                fastenableInserts: 5,
+                preselectedInserts: 2,
+                quickFastenerInserts: 1,
                 targets: {
                     [ElementType.ASSEMBLY]: 5,
                     [ElementType.PART_STUDIO]: 5

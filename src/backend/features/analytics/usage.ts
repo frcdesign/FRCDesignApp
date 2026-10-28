@@ -4,7 +4,7 @@
  */
 
 /** Bump when the columns' meaning changes. */
-export const EVENT_SCHEMA_VERSION = 2;
+export const EVENT_SCHEMA_VERSION = 3;
 
 export enum EventType {
     INSERT = "insert",
@@ -21,5 +21,7 @@ export enum InsertSource {
     GROUP_SEARCH = "group_search",
     /** The group's own list of parts. */
     BROWSE = "browse",
-    FAVORITES = "favorites"
+    FAVORITES = "favorites",
+    /** A Quick fastener run, which inserts a part per fastener it places. */
+    QUICK_FASTENER = "quick_fastener"
 }

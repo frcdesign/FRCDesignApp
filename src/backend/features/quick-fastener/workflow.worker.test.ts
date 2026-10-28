@@ -32,6 +32,10 @@ import {
 import { getJobStatus } from "./jobs";
 import { resetStorage } from "../../../__test_utils__/storage";
 import type { FastenerJobParams } from "./workflow";
+import { getDb } from "../../db/client";
+import { events, dailyMetrics } from "../analytics/schema";
+import { InsertSource } from "../analytics/usage";
+import { seedGroup, seedInsertable } from "../../../__test_utils__/seed";
 
 /** Runs the workflow to its end and answers what it stored. */
 async function run(
@@ -163,6 +167,7 @@ describe("QuickFastenerWorkflow", () => {
     it("indexes, inserts, and fastens each part on the one under it", async () => {
         const status = await run("full", {
             sessionId: "session",
+            userId: "user",
             request: {
                 ...BODY,
                 options: {
@@ -199,9 +204,56 @@ describe("QuickFastenerWorkflow", () => {
         );
     });
 
+    it("records each part it inserted as a fastened Quick fastener insert", async () => {
+        const db = getDb(env.DB);
+        await seedGroup(db);
+        for (const kind of Object.values(FastenerKind)) {
+            await seedInsertable(db, {
+                id: `${kind}-row`,
+                elementId: `${kind}Studio`
+            });
+        }
+        await run("recorded", {
+            sessionId: "session",
+            userId: "user",
+            request: {
+                ...BODY,
+                options: { ...BODY.options, screwWasher: WASHER }
+            }
+        });
+
+        const recorded = await db.select().from(events).all();
+        // Washer, screw, nut
+        expect(
+            recorded.map((event) => [
+                event.elementId,
+                event.source,
+                event.fasten,
+                event.fastenable,
+                event.userId
+            ])
+        ).toEqual(
+            ["washerStudio", "screwStudio", "nutStudio"].map((elementId) => [
+                elementId,
+                InsertSource.QUICK_FASTENER,
+                true,
+                true,
+                "user"
+            ])
+        );
+        const [day] = await db.select().from(dailyMetrics).all();
+        expect(day).toMatchObject({
+            count: 3,
+            fastenableCount: 3,
+            quickFastenerCount: 3,
+            preselectedCount: 0
+        });
+    });
+
     it("says why a pick gave no circular edge", async () => {
         const status = await run("unfound", {
             sessionId: "session",
+            userId: "user",
             request: {
                 ...BODY,
                 targets: [
@@ -278,6 +330,7 @@ describe("QuickFastenerWorkflow", () => {
         it("inserts and fastens every hole's own parts", async () => {
             const status = await run("alike", {
                 sessionId: "session",
+                userId: "user",
                 request: BODY
             });
 
@@ -308,6 +361,7 @@ describe("QuickFastenerWorkflow", () => {
         });
         const status = await run("no-connector", {
             sessionId: "session",
+            userId: "user",
             request: BODY
         });
 
@@ -327,6 +381,7 @@ describe("QuickFastenerWorkflow", () => {
         });
         const status = await run("own-error", {
             sessionId: "session",
+            userId: "user",
             request: BODY
         });
 
@@ -347,6 +402,7 @@ describe("QuickFastenerWorkflow", () => {
         );
         const status = await run("forbidden", {
             sessionId: "session",
+            userId: "user",
             request: BODY
         });
         expect(status.tasks?.map((task) => task.state)).toEqual([

@@ -376,7 +376,7 @@ enum FastenerJobOutcome {
 `src/backend/features/quick-fastener/workflow.ts`
 
 ```ts
-// A run, step by step: index, insert, fasten, finish.
+// A run, step by step: index, insert, fasten, record its inserts, finish.
 class QuickFastenerWorkflow extends WorkflowEntrypoint<
     AppBindings,
     FastenerJobParams
@@ -385,6 +385,8 @@ class QuickFastenerWorkflow extends WorkflowEntrypoint<
 interface FastenerJobParams {
     /** Whose Onshape session the run borrows; see the load workflow. */
     sessionId: string;
+    /** Who started it, whom its inserts are recorded for. */
+    userId: string;
     request: QuickFastenerIn;
 }
 ```
@@ -955,7 +957,11 @@ recorded with why, and the steps after it are skipped.
        fastened to its stack's hole edge, and the screw or nut on it to the
        washer's top edge; without a washer, the screw or nut is fastened to the
        hole edge itself.
-4. **Finish** (`finish-job`): stores `COMPLETE` or `FAILED`, with how many parts
+4. **Record inserts** (`record-inserts`), once fastening has ended however it
+   ended: each part inserted is recorded as an insert from its studio's
+   library (`recordRunInserts`); see [analytics.md](./analytics.md). A
+   failure to record is logged and nothing else.
+5. **Finish** (`finish-job`): stores `COMPLETE` or `FAILED`, with how many parts
    were inserted and fastened, and when.
 
 ### Reporting

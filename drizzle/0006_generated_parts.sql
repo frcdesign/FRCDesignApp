@@ -10,4 +10,9 @@ CREATE TABLE `generated_sets` (
 	FOREIGN KEY (`group_id`) REFERENCES `groups`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
-ALTER TABLE `insertables` ADD `generated_studio` text;
+ALTER TABLE `insertables` ADD `generated_studio` text;--> statement-breakpoint
+ALTER TABLE `daily_metrics` ADD `fastenable_count` integer DEFAULT 0 NOT NULL;--> statement-breakpoint
+ALTER TABLE `daily_metrics` ADD `preselected_count` integer DEFAULT 0 NOT NULL;--> statement-breakpoint
+ALTER TABLE `daily_metrics` ADD `quick_fastener_count` integer DEFAULT 0 NOT NULL;--> statement-breakpoint
+ALTER TABLE `events` ADD `fastenable` integer;--> statement-breakpoint
+ALTER TABLE `events` ADD `preselected` integer;

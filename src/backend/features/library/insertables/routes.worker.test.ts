@@ -626,6 +626,14 @@ describe("insertable routes", () => {
         ["JH1", "JH2", "JH3"].forEach((edge, index) =>
             expect(features[index]).toContain(edge)
         );
+        // Each instance is an insert, fastened to what was preselected
+        const logged = await db.select().from(events).all();
+        expect(logged).toHaveLength(3);
+        expect(logged[0]).toMatchObject({
+            fasten: true,
+            fastenable: true,
+            preselected: true
+        });
     });
 
     it("POST /index-configurations indexes and forces the flag on", async () => {

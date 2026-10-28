@@ -23,6 +23,12 @@ export interface AnalyticsTotals {
     quickInserts: number;
     /** Onshape only offers fasten on assemblies, so compare to that entry of `targets`. */
     fastenInserts: number;
+    /** Into an assembly, of a part offering insert and fasten; the base of the next two. */
+    fastenableInserts: number;
+    /** Fastened to edges or faces picked in Onshape beforehand. */
+    preselectedInserts: number;
+    /** Placed by Quick fastener; also its entry of the sources. */
+    quickFastenerInserts: number;
     targets: InsertTargets;
     /** Current, not over the range: a favorite is state, not an event. */
     favorites: number;
@@ -45,6 +51,9 @@ export interface DailyMetricPoint {
     favoriteInserts: number;
     quickInserts: number;
     fastenInserts: number;
+    fastenableInserts: number;
+    preselectedInserts: number;
+    quickFastenerInserts: number;
     /** That day's inserts by target; the assembly entry is fasten's denominator. */
     targets: InsertTargets;
 }

@@ -46,19 +46,41 @@ export interface InsertEvent {
     isQuickInsert: boolean;
     source: InsertSource;
     fasten: boolean;
+    /** Whether the part offered insert and fasten. */
+    fastenable: boolean;
+    /** Fastened to circular edges or faces picked in Onshape beforehand. */
+    preselected: boolean;
 }
 
-/** After the response, and never failing it: tracking is not what was asked for. */
-export function trackInsert(c: AppContext, event: InsertEvent): Promise<void> {
+/**
+ * After the response, and never failing it: tracking is not what was asked
+ * for. Each of the `instances` the insert placed is an insert of its own.
+ */
+export function trackInsert(
+    c: AppContext,
+    event: InsertEvent,
+    instances = 1
+): Promise<void> {
     return runInBackground(c, "record an insert", async () =>
-        record(
+        recordInserts(
             getDb(c.env.DB),
-            {
-                ...eventCore(
-                    EventType.INSERT,
-                    event.libraryId,
-                    await c.var.getUserId()
-                ),
+            await c.var.getUserId(),
+            Array.from({ length: instances }, () => event)
+        )
+    );
+}
+
+/** One event per insert, all in one batch; for a caller with no request to track from. */
+export async function recordInserts(
+    db: Db,
+    userId: string,
+    inserts: InsertEvent[]
+): Promise<void> {
+    await record(
+        db,
+        inserts.map((event) => ({
+            event: {
+                ...eventCore(EventType.INSERT, event.libraryId, userId),
                 ...NOT_A_VERSION_RUN,
                 ...event.path,
                 insertableId: event.insertableId,
@@ -67,25 +89,32 @@ export function trackInsert(c: AppContext, event: InsertEvent): Promise<void> {
                 isFavorite: event.isFavorite,
                 isQuickInsert: event.isQuickInsert,
                 source: event.source,
-                fasten: event.fasten
+                fasten: event.fasten,
+                fastenable: event.fastenable,
+                preselected: event.preselected
             },
-            event.parameters
-        )
+            parameters: event.parameters
+        }))
     );
 }
 
 /** As `trackInsert`, for a launch from Onshape. */
 export function trackAppOpen(c: AppContext): Promise<void> {
     return runInBackground(c, "record an app open", async () =>
-        record(
-            getDb(c.env.DB),
+        record(getDb(c.env.DB), [
             {
-                ...eventCore(EventType.APP_OPEN, null, await c.var.getUserId()),
-                ...NOT_AN_INSERT,
-                ...NOT_A_VERSION_RUN
-            },
-            []
-        )
+                event: {
+                    ...eventCore(
+                        EventType.APP_OPEN,
+                        null,
+                        await c.var.getUserId()
+                    ),
+                    ...NOT_AN_INSERT,
+                    ...NOT_A_VERSION_RUN
+                },
+                parameters: []
+            }
+        ])
     );
 }
 
@@ -131,33 +160,39 @@ export async function trackVersionRun(
     event: VersionRunEvent
 ): Promise<void> {
     const { status } = event;
-    await record(
-        getDb(env.DB),
+    await record(getDb(env.DB), [
         {
-            ...eventCore(EventType.VERSION_RUN, null, event.userId),
-            ...NOT_AN_INSERT,
-            versionKind: event.kind,
-            versionScope: event.scope,
-            versionUpdateOnly: status.updateOnly ?? false,
-            versionOutcome: jobOutcome(status) ?? VersionJobOutcome.FAILED,
-            failedSteps: failedTaskCount(status),
-            createdVersions: status.result?.createdVersions ?? 0,
-            updatedElements: status.result?.updatedElements ?? 0
-        },
-        []
-    );
+            event: {
+                ...eventCore(EventType.VERSION_RUN, null, event.userId),
+                ...NOT_AN_INSERT,
+                versionKind: event.kind,
+                versionScope: event.scope,
+                versionUpdateOnly: status.updateOnly ?? false,
+                versionOutcome: jobOutcome(status) ?? VersionJobOutcome.FAILED,
+                failedSteps: failedTaskCount(status),
+                createdVersions: status.result?.createdVersions ?? 0,
+                updatedElements: status.result?.updatedElements ?? 0
+            },
+            parameters: []
+        }
+    ]);
 }
 
-/** Batched so neither half lands without the other. */
-async function record(
-    db: Db,
-    event: LoggedEvent,
-    parameters: ConfigurationParameter[]
-): Promise<void> {
-    const writes: BatchItem<"sqlite">[] = [
-        db.insert(events).values(event),
-        ...rollupWrites(db, event, parameters)
-    ];
+/** An event, and the part's parameters its rollups key configuration counts by. */
+interface Recorded {
+    event: LoggedEvent;
+    parameters: ConfigurationParameter[];
+}
+
+/** Batched so no event lands without its rollups, nor they without it. */
+async function record(db: Db, recorded: Recorded[]): Promise<void> {
+    if (recorded.length === 0) return;
+    const writes: BatchItem<"sqlite">[] = recorded.flatMap(
+        ({ event, parameters }) => [
+            db.insert(events).values(event),
+            ...rollupWrites(db, event, parameters)
+        ]
+    );
 
     await db.batch(writes as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]]);
 }
