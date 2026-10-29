@@ -54,6 +54,29 @@ describe("VersionForm", () => {
         expect([name.selectionStart, name.selectionEnd]).toEqual([0, 2]);
     });
 
+    it("shows the suggestion loading in an empty field", () => {
+        suggested = { isPending: true };
+        renderForm();
+
+        const name = nameField();
+        expect(name.value).toBe("");
+        expect(name.placeholder).toBe("Name");
+        expect(document.querySelector(".mantine-Loader-root")).not.toBeNull();
+    });
+
+    it("keeps what was typed when the suggestion arrives after", async () => {
+        const user = userEvent.setup();
+        suggested = { isPending: true };
+        const { rerender } = renderWithProviders(form(vi.fn()));
+
+        await user.type(nameField(), "Release");
+        suggested = ANSWERED;
+        rerender(form(vi.fn()));
+
+        expect(nameField().value).toBe("Release");
+        expect(document.querySelector(".mantine-Loader-root")).toBeNull();
+    });
+
     // Each document a run versions is then numbered from its own history.
     it("submits no name while the suggestion is untouched", async () => {
         const user = userEvent.setup();

@@ -1,4 +1,4 @@
-import { eq, inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 import { type Db, getDb } from "../../db/client";
 import { chunkForInArray } from "../../db/chunk";
@@ -212,10 +212,23 @@ async function saveGroup(
     const { thumbnailUrls, removedInsertableIds } = input;
     const hasFailedInsertables = input.failedInsertableIds.length > 0;
 
+    // Removed rows stay until the batch below deletes them.
+    const visibleRows = await db
+        .select({ id: insertables.id })
+        .from(insertables)
+        .where(
+            and(
+                eq(insertables.groupId, target.groupId),
+                eq(insertables.isVisible, true)
+            )
+        );
     const buildIssues = checkGroup({
         hasThumbnailTab: !!target.thumbnailElementId,
         thumbnailUrls,
-        hasFailedInsertables
+        hasFailedInsertables,
+        hasVisibleInsertable: visibleRows.some(
+            (row) => !removedInsertableIds.includes(row.id)
+        )
     });
     const parsed: ParsedGroup = {
         name: target.name,

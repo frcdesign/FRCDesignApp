@@ -1,4 +1,3 @@
-/** Mostly stored at load time; a few are computed live from per-user state. */
 import {
     AUTO_INDEX_THRESHOLD,
     MAX_PART_NUMBER_CONFIGURATIONS

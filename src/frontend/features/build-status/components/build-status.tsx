@@ -27,7 +27,7 @@ import {
 import { AppIcon } from "../../../components/app-icon";
 import { AppHoverCard } from "../../../components/app-hover-card";
 import { RequireAccessLevel } from "../../auth/components/require-access";
-import { useBuildStatusQuery, useGroupBuildIssues } from "../queries";
+import { useBuildStatusQuery } from "../queries";
 import { useIsGroupLoading } from "../../library/queries";
 import {
     BuildChecksSection,
@@ -280,19 +280,18 @@ interface GroupStatusBadgeProps {
     name: string;
 }
 
-/** Build-status badge pre-wired for a group (includes live visibility check). */
+/** Build-status badge pre-wired for a group. */
 export function GroupStatusBadge(props: GroupStatusBadgeProps): ReactNode {
     const { groupId, name } = props;
     const { data } = useBuildStatusQuery();
     const groupStatus = data?.groups[groupId];
-    const issues = useGroupBuildIssues(groupStatus, data?.insertables);
     return (
         <>
             {groupStatus && (
                 <BuildStatusBadge
                     name={name}
                     groupId={groupId}
-                    issues={issues}
+                    issues={groupStatus.buildIssues}
                     versionCreatedAt={groupStatus.versionCreatedAt}
                     hoverMenu={
                         <GroupAdminSection

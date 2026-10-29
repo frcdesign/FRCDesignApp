@@ -91,10 +91,10 @@ export function useSetDefaultConfigurationMutation(favoriteId: string) {
             // No router.invalidate(): the loader's prefetch would race this and undo it.
         },
         onError: () => {
-            showErrorToast("Failed to save favorite default configuration.");
+            showErrorToast("Failed to set the default configuration.");
         },
         onSuccess: () => {
-            showSuccessToast("Favorite default configuration set.");
+            showSuccessToast("Default configuration set.");
         },
         onSettled: refreshFavorites
     });

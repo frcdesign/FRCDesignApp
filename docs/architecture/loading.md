@@ -115,9 +115,15 @@ the reload's limiters:
    limiter (`LOAD_CONCURRENCY`, 30, shared by every group). A tab that fails is
    recorded and the rest carry on.
 4. Stores the group's thumbnail, then saves the group in one step: its fields,
-   removals, new order, and `INSERTABLES_FAILED` if any tab failed. A save
-   with no failed tab releases the group's hold.
+   removals, new order, and the group checks (`checkGroup`), among them
+   `INSERTABLES_FAILED` if any tab failed. A save with no failed tab releases
+   the group's hold.
 5. Deletes stale thumbnails, which is never fatal.
+
+Every build issue is stored. The one that depends on an editor's choice,
+`NO_UNHIDDEN_INSERTABLES`, is checked by the save and again whenever an editor
+shows or hides elements (`recheckVisibility`), which skips a group with no
+insertables.
 
 `loadInsertable`: probes the tab under the limiter (configuration, parts, fasten
 info, vendors, and a record per indexed combination), fetches its thumbnail
