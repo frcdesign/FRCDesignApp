@@ -77,7 +77,7 @@ function renderItem(
         queryClient
     );
     return screen.getByRole("menuitem", {
-        name: "Set as default configuration"
+        name: "Set default configuration"
     });
 }
 

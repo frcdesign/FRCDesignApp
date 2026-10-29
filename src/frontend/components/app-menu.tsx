@@ -72,16 +72,19 @@ export function AppContextMenu(props: AppContextMenuProps): ReactNode {
 interface MenuButtonProps extends PropsWithChildren {
     /** Sizes the button to sit beside a full-height button, not in a card row. */
     large?: boolean;
+    /** Room for a long item to stay on one line. */
+    wide?: boolean;
     /** Dots the button while the menu holds a new feature. */
     isNew?: boolean;
     onClose?: () => void;
 }
 
 export function MenuButton(props: MenuButtonProps): ReactNode {
-    const { large, isNew, onClose, children } = props;
+    const { large, wide, isNew, onClose, children } = props;
     return (
         <AppContextMenu
             controlledByButton
+            wideMenu={wide}
             menuItems={children}
             isNew={isNew}
             onClose={onClose}

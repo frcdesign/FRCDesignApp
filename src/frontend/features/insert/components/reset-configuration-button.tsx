@@ -28,7 +28,15 @@ export function ResetConfigurationButton(
                 // A favorite with no selection opens on the defaults.
                 onClick={() => onReset(favorite?.defaultSelection ?? {})}
             >
-                <ArrowCounterClockwiseIcon size={IconSize.CONTROL} />
+                <ArrowCounterClockwiseIcon
+                    size={IconSize.CONTROL}
+                    // The library's accent, as the heart beside it is red.
+                    color={
+                        isDefault
+                            ? undefined
+                            : "var(--mantine-primary-color-filled)"
+                    }
+                />
             </ActionIcon>
         </Tooltip>
     );

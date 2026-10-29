@@ -7,16 +7,16 @@ configuration each one opens with. Favorites are per user and per library.
 
 ## Code map
 
-| Path                                                                            | Role                                                          |
-| ------------------------------------------------------------------------------- | ------------------------------------------------------------- |
-| `src/backend/features/favorites/contract.ts`                                    | `Favorite`, `FavoritesData`, `MAX_FAVORITES`                  |
-| `src/backend/features/favorites/routes.ts`                                      | List, add, delete, reorder, and set the saved configuration   |
-| `src/frontend/features/favorites/queries.ts`                                    | Query and optimistic mutations                                |
-| `src/frontend/features/favorites/components/favorites-list.tsx`                 | The Favorites tab, searchable through the library index       |
-| `src/frontend/features/favorites/components/favorite-button.tsx`                | Toggling a favorite                                           |
-| `src/frontend/features/favorites/components/set-default-configuration-item.tsx` | **Set as default configuration**, in the insert menu's ⋯ menu |
-| `src/frontend/features/favorites/default-configuration.ts`                      | Whether the configuration on screen is the default            |
-| `src/frontend/features/insert/components/reset-configuration-button.tsx`        | Back to the default configuration                             |
+| Path                                                                            | Role                                                        |
+| ------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| `src/backend/features/favorites/contract.ts`                                    | `Favorite`, `FavoritesData`, `MAX_FAVORITES`                |
+| `src/backend/features/favorites/routes.ts`                                      | List, add, delete, reorder, and set the saved configuration |
+| `src/frontend/features/favorites/queries.ts`                                    | Query and optimistic mutations                              |
+| `src/frontend/features/favorites/components/favorites-list.tsx`                 | The Favorites tab, searchable through the library index     |
+| `src/frontend/features/favorites/components/favorite-button.tsx`                | Toggling a favorite                                         |
+| `src/frontend/features/favorites/components/set-default-configuration-item.tsx` | **Set default configuration**, in the insert menu's ⋯ menu  |
+| `src/frontend/features/favorites/default-configuration.ts`                      | Whether the configuration on screen is the default          |
+| `src/frontend/features/insert/components/reset-configuration-button.tsx`        | Back to the default configuration                           |
 
 ## Storage
 
@@ -54,7 +54,7 @@ The insert menu opens on the favorite's saved selection, and its thumbnail row
 asks for that configuration's render (see [thumbnails.md](./thumbnails.md)).
 That selection is the favorite's default configuration; a favorite without one
 has the element's own defaults. The reset button returns to the default, and is
-off while it is on screen. **Set as default configuration**, in the ⋯ menu,
+off while it is on screen. **Set default configuration**, in the ⋯ menu,
 saves the configuration on screen as the default. Until the user first opens a
 menu offering it, a blue dot marks the ⋯ button and the item
 (`Hint.OPENED_SET_DEFAULT_CONFIGURATION`, see [auth.md](./auth.md)).

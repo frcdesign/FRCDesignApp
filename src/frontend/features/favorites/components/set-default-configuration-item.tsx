@@ -38,7 +38,7 @@ export function SetDefaultConfigurationItem(
                 })
             }
         >
-            Set as default configuration
+            Set default configuration
         </Menu.Item>
     );
 }
