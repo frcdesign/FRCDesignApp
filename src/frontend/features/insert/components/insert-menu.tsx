@@ -19,11 +19,11 @@ import {
 } from "../insert-tips";
 import { PreviewImageCard } from "../../thumbnails/components/thumbnail";
 import { FavoriteButton } from "../../favorites/components/favorite-button";
-import { SaveFavoriteConfigurationButton } from "../../favorites/components/save-favorite-configuration-button";
 import { MenuButton } from "../../../components/app-menu";
 import { GetAppCallout } from "../../../components/get-app";
 import { InsertableMenuItems } from "../../library/components/insertable-card";
 import { ConfigurationWrapper, type SelectionReport } from "./configurations";
+import { ResetConfigurationButton } from "./reset-configuration-button";
 import {
     useConfigurationQuery,
     useInsertMutation,
@@ -38,6 +38,9 @@ import {
 import { useFavorite } from "../../favorites/queries";
 import { updateUiState, useUiState } from "../../../lib/ui-state";
 import { RequireSignIn } from "../../auth/components/require-access";
+import { useIsSignedIn } from "../../auth/access-level";
+import { Hint } from "@backend/features/hints/contract";
+import { useHasSeenHint, useMarkHintSeen } from "../../hints/queries";
 import { useTargetElementType } from "../insert-hooks";
 import { InsertSource } from "@backend/features/analytics/usage";
 import { InsertLocationStatus } from "../../insert-location/components/insert-location-status";
@@ -200,6 +203,15 @@ function InsertMenuFooter(props: InsertMenuFooterProps): ReactNode {
         source,
         onInsert
     } = props;
+    const isSignedIn = useIsSignedIn();
+    const hasOpenedSetDefault = useHasSeenHint(
+        Hint.OPENED_SET_DEFAULT_CONFIGURATION
+    );
+    const markSetDefaultOpened = useMarkHintSeen(
+        Hint.OPENED_SET_DEFAULT_CONFIGURATION
+    );
+    // The menu offers it only to a signed-in favorite with a configuration on screen.
+    const offersSetDefault = isSignedIn && !!favorite && !!report;
     return (
         <AppModalFooter>
             <Group gap={4}>
@@ -211,20 +223,26 @@ function InsertMenuFooter(props: InsertMenuFooterProps): ReactNode {
                         configurationKey={configurationKey}
                         large
                     />
-                    {favorite && report && (
-                        <SaveFavoriteConfigurationButton
-                            favorite={favorite}
-                            report={report}
-                            configurationKey={configurationKey}
-                        />
-                    )}
                 </RequireSignIn>
-                <MenuButton large>
+                {insertable.isConfigurable && (
+                    <ResetConfigurationButton
+                        favorite={favorite}
+                        report={report}
+                        onReset={onResetSelection}
+                    />
+                )}
+                <MenuButton
+                    large
+                    isNew={offersSetDefault && !hasOpenedSetDefault}
+                    onClose={
+                        offersSetDefault ? markSetDefaultOpened : undefined
+                    }
+                >
                     <InsertableMenuItems
                         favorite={favorite}
                         insertable={insertable}
                         inInsertMenu
-                        onResetSelection={onResetSelection}
+                        report={report}
                         selection={selection}
                         configurationKey={configurationKey}
                         source={source}

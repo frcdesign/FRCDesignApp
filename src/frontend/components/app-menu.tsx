@@ -4,6 +4,7 @@ import { DotsThreeIcon } from "@phosphor-icons/react";
 import { IconSize } from "../lib/style-constants";
 import { RequireAccessLevel } from "../features/auth/components/require-access";
 import classes from "./app-menu.module.css";
+import { NewIndicator } from "./new-feature";
 
 interface AppContextMenuProps {
     menuItems: ReactNode;
@@ -12,6 +13,9 @@ interface AppContextMenuProps {
     wideMenu?: boolean;
     /** Caps the dropdown to the available room and scrolls it. */
     scrollable?: boolean;
+    /** With `controlledByButton`: dots the button. Set, even false, it wraps the button. */
+    isNew?: boolean;
+    onClose?: () => void;
 }
 
 export function AppContextMenu(props: AppContextMenuProps): ReactNode {
@@ -20,7 +24,9 @@ export function AppContextMenu(props: AppContextMenuProps): ReactNode {
         children,
         controlledByButton = false,
         wideMenu = false,
-        scrollable = false
+        scrollable = false,
+        isNew,
+        onClose
     } = props;
 
     let menuChildren: ReactNode;
@@ -28,6 +34,12 @@ export function AppContextMenu(props: AppContextMenuProps): ReactNode {
     if (controlledByButton) {
         position = "bottom-end";
         menuChildren = <Menu.Target>{children}</Menu.Target>;
+        // Outside the target: the button stops its clicks, so a wrapper inside would never open the menu.
+        if (isNew !== undefined) {
+            menuChildren = (
+                <NewIndicator shown={isNew}>{menuChildren}</NewIndicator>
+            );
+        }
     } else {
         menuChildren = <Menu.ContextMenu>{children}</Menu.ContextMenu>;
     }
@@ -43,6 +55,7 @@ export function AppContextMenu(props: AppContextMenuProps): ReactNode {
             ]}
             position={position}
             middlewares={{ size: scrollable }}
+            onClose={onClose}
         >
             {menuChildren}
             <Menu.Dropdown
@@ -59,12 +72,20 @@ export function AppContextMenu(props: AppContextMenuProps): ReactNode {
 interface MenuButtonProps extends PropsWithChildren {
     /** Sizes the button to sit beside a full-height button, not in a card row. */
     large?: boolean;
+    /** Dots the button while the menu holds a new feature. */
+    isNew?: boolean;
+    onClose?: () => void;
 }
 
 export function MenuButton(props: MenuButtonProps): ReactNode {
-    const { large, children } = props;
+    const { large, isNew, onClose, children } = props;
     return (
-        <AppContextMenu controlledByButton menuItems={children}>
+        <AppContextMenu
+            controlledByButton
+            menuItems={children}
+            isNew={isNew}
+            onClose={onClose}
+        >
             <ActionIcon
                 size={large ? "input-sm" : undefined}
                 title="View options"
