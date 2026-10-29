@@ -67,6 +67,8 @@ export interface PushJobParams extends JobParamsBase {
     steps: WorkspacePath[];
     /** Versions each of them too, which the ones past it need to reference. */
     recursive: boolean;
+    /** Steps nothing later in the run references, which a recursive push leaves un-versioned. */
+    leaves?: WorkspacePath[];
 }
 
 export interface PullJobParams extends JobParamsBase {

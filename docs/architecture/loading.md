@@ -17,7 +17,7 @@ stopped. One reload holds a library at a time.
 | Path                                                            | Role                                                         |
 | --------------------------------------------------------------- | ------------------------------------------------------------ |
 | `src/backend/features/load/jobs.ts`                             | `requestReload`, the library's claim and job status, in KV   |
-| `src/backend/features/load/holds.ts`                            | Holding a new version, releasing it, approving held groups   |
+| `src/backend/features/load/holds.ts`                            | Holding or loading a new version, releasing, approving       |
 | `src/backend/features/load/workflows.ts`                        | `ReloadLibraryWorkflow`: claim, load each group, finish      |
 | `src/backend/features/load/load-group.ts`                       | `loadGroup`: contents, which tabs to load, save, cleanup     |
 | `src/backend/features/load/load-insertable.ts`                  | `loadInsertable`: probe one tab, its thumbnail, save its row |
@@ -27,10 +27,10 @@ stopped. One reload holds a library at a time.
 | `src/backend/features/load/routes.ts`                           | Reload and approve endpoints                                 |
 | `src/backend/features/load/parse-*.ts`                          | Onshape responses to what we store                           |
 | `src/backend/features/library/groups/routes.ts`                 | Adding a document (shell group + load) and deleting a group  |
-| `src/backend/features/webhooks/`                                | The per-document webhook that holds new versions             |
+| `src/backend/features/webhooks/`                                | The per-document webhook that reports new versions           |
 | `src/backend/features/push/`                                    | Pushes job status and library changes to open clients        |
 | `src/frontend/features/library/components/reload-button.tsx`    | **Reload** (outdated) and the owner's **Reload all**         |
-| `src/frontend/features/library/components/version-approval.tsx` | **Held versions**, and approving them                        |
+| `src/frontend/features/library/components/version-approval.tsx` | **Hold new versions**, **Held versions**, and approving them |
 
 ## Storage
 
@@ -43,6 +43,8 @@ stopped. One reload holds a library at a time.
   response is cached under it.
 - `groups.held_at` — when a webhook last reported a version not yet loaded;
   null when nothing is held. Set by the webhook, cleared by a load.
+- `libraries.hold_new_versions` — whether a new version waits for approval;
+  on unless an admin turns it off.
 - `onshape_webhooks` — one row per document: its webhook id and delivery token.
 
 **R2**: `search-index/` — each library's serialized search index, rebuilt by
@@ -62,8 +64,8 @@ wrote.
 
 ### Starting reloads
 
-Three things call `requestReload`, each naming the groups to load and passing
-its requester's session:
+Four things call `requestReload`, each naming the groups to load; all but the
+webhook pass their requester's session:
 
 - **Adding a document** writes a shell group first, flagged `NOT_LOADED`, so a
   first load that fails or never starts still leaves something to retry or
@@ -75,8 +77,9 @@ its requester's session:
   held version too, which releases its hold.
 - **Approve** (editor) reloads the library's held groups; see
   [Version approval](#version-approval).
-
-A webhook for a new version starts nothing: it holds the document's groups.
+- **A webhook for a new version** reloads the document's group in a library
+  that doesn't hold new versions, and only holds it in the rest; see
+  [Version approval](#version-approval).
 
 `requestReload` marks the reload queued, so its groups show as loading at once,
 creates the instance and pushes the library's job status.
@@ -178,6 +181,7 @@ picks the first of these that works, per call:
 | Load started by                                            | 1st: the requester's session | Then, borrowed (`getBackgroundOnshapeApi`)                                                                   |
 | ---------------------------------------------------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------ |
 | Adding a document, **Reload**, **Reload all**, **Approve** | Yes, while it works          | The owner's, then the library's team admins', then its editors', then (dev only) the access-level override's |
+| A webhook for a new version                                | No one is signed in          | The owner's, then the library's team admins', then its editors', then (dev only) the access-level override's |
 
 A borrowed session is one saved under `background-session:` in KV, which
 happens whenever the owner's or an admin team member's access is checked (they
@@ -200,9 +204,12 @@ costs the webhook. Deleting the last group of a document removes its webhook.
 
 ### Version approval
 
-A webhook for a new version holds the document's groups in every library
-(`holdNewVersion`): it stamps `groups.held_at`, bumps each library and pushes,
-and starts no reload. A held group shows as awaiting approval in the build
+A webhook for a new version (`receiveNewVersion`) holds the document's groups
+in every library that holds new versions: it stamps `groups.held_at`, bumps
+each library and pushes, and starts no reload. In a library an admin has set
+not to hold them (**Hold new versions**, off), it reloads the group at once
+instead, under a borrowed session. Turning holding off leaves versions already
+held waiting for approval. A held group shows as awaiting approval in the build
 status. **Approve** under **Held versions** (`approveHeldVersions`) reloads the
 library's held groups as the approver; an editor's **Reload** loads them too.
 Either reload waits its turn like any other.
@@ -220,8 +227,9 @@ approval. A failed load leaves the hold in place.
 - A reload that wrote anything rebuilds the search index once, **before**
   bumping the library version, since the bump makes the old index url immutable.
 - Only the reload holding a library releases it.
-- A new version loads only once an editor approves it or reloads; a webhook
-  only holds the group.
+- Where a library holds new versions, a new version loads only once an
+  editor approves it or reloads; a webhook only holds the group. Where it
+  doesn't, the webhook reloads the group.
 - A hold is released only by a load that read the latest version after the
   hold was set.
 - A failure writes no microversion, so a failed tab or group is always retried
@@ -256,9 +264,10 @@ approval. A failed load leaves the hold in place.
   at once.
 - **Load state in KV, not D1.** It is ephemeral and apart from the library's
   data; the rare simultaneous claim it can't prevent is accepted.
-- **Every new version is held, as a mark on the group.** A webhook can come
-  from any edit, and an editor decides when it reaches the library; nothing
-  loads it otherwise. A mark rather than a workflow waiting on an approval
+- **New versions are held by default, as a mark on the group.** A webhook can
+  come from any edit, and an editor decides when it reaches the library; an
+  admin can turn this off for a library whose documents are ready whenever
+  they are versioned, and the version then loads as Onshape reports it. A mark rather than a workflow waiting on an approval
   event: nothing runs for a version nobody approves, repeated versions collapse
   into one hold, and the approved load runs as the approver.
 - **"Deprecated" in a name deletes the tab.** Authors retire a part by

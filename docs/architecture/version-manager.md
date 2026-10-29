@@ -139,9 +139,11 @@ each document still gets its own next number.
    this workspace, then each child's references moved onto it. The children are
    left un-versioned, so their owners decide when to cut one.
 2. **Recursive** (`DESCENDANTS`, or `ONE` with `recursive`): the whole closure
-   below this workspace in topological order, cutting a version of each as it
-   passes. A workspace two hops out can only pick the change up from a version
-   of the workspace between them, so there has to be one. Two parents feeding
+   below this workspace in topological order, cutting a version of each one it
+   carries on past. A workspace two hops out can only pick the change up from a
+   version of the workspace between them, so there has to be one. A workspace
+   nothing further down references (`leaves`) has its references moved and no
+   version cut, as a direct push leaves its children. Two parents feeding
    one workspace is why the order is topological rather than breadth-first: it
    must be updated once, after both have versions. A cycle is refused before
    the run starts (`LinkCycleError`, answered as a 409), and so are two
@@ -206,7 +208,8 @@ Two departures from the app this was ported from:
 
 A run's steps are laid out before it takes any (`planTasks` in `tasks.ts`): a
 version of a document, or its references moved. A push versions this workspace
-and then moves each child, versioning each after it when recursive; a pull
+and then moves each child, versioning each after it when recursive unless it is
+one of the push's `leaves`; a pull
 versions each parent and then moves this workspace, moving each parent onto
 those above it first when recursive. An update-only run is the reference moves
 alone.
@@ -302,8 +305,9 @@ deletes a transient webhook that goes quiet, so the entries expire as well.
 - One run at a time per workspace, and no run versions one document twice.
 - A retried step never cuts a second version.
 - A run is recorded once, after it has finished, and never fails the run.
-- A recursive push or pull versions every workspace it passes through, in
-  topological order.
+- A recursive push or pull versions, in topological order, every workspace it
+  passes through that a later one references, and no other: the workspace a
+  pull ends on, and a push's leaves, are only moved.
 - Nothing about a workspace the caller cannot read reaches them: no name, no
   thumbnail, and no run status. The socket says only that a status changed.
 - Permissions are never cached; names and change counts are.
@@ -350,6 +354,9 @@ deletes a transient webhook that goes quiet, so the entries expire as well.
   sometimes versions and sometimes does not reads oddly, most of all a pull that
   versions nothing. Moving references without versioning is asked for by name
   instead — **Update references** — and a push or pull does what it says.
+- **Only the versions a run needs.** A version is cut only where a reference
+  will point at it. The documents a run ends on are moved and left for their
+  owners to version, which is what a direct push already did to its children.
 - **Pulling can recurse, by request.** A pull that carries on upstream
   versions documents beyond the parents it names, as a recursive push does
   downstream, so it is asked for by name — **Quick recursive pull**, or the

@@ -6,7 +6,7 @@ import { type AppContext, getApp } from "../../lib/context";
 import type { InstancePath } from "../../lib/onshape/path";
 import { forbiddenError } from "../../lib/api-error";
 import { WebhookSubject } from "../../db/schema";
-import { holdNewVersion } from "../load/holds";
+import { receiveNewVersion } from "../load/holds";
 import {
     findWebhookByToken,
     forgetWebhook,
@@ -47,7 +47,7 @@ webhookRoutes.post(WEBHOOK_ROUTE, async (c) => {
         switch (event) {
             case WebhookEvent.CREATE_VERSION:
                 if (subject === WebhookSubject.DOCUMENT) {
-                    await holdNewVersion(c.env, subjectId);
+                    await receiveNewVersion(c.env, subjectId);
                 }
                 break;
             case WebhookEvent.UNREGISTER:

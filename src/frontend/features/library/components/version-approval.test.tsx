@@ -5,21 +5,32 @@ import { renderWithProviders } from "../../../../__test_utils__/render";
 
 const mocks = vi.hoisted(() => ({
     held: 0,
-    approve: vi.fn()
+    approve: vi.fn(),
+    hold: undefined as boolean | undefined,
+    setHold: vi.fn()
 }));
 
 vi.mock("../queries", () => ({
     useApproveVersionsMutation: () => ({
         mutate: mocks.approve,
         isPending: false
-    })
+    }),
+    useHoldNewVersionsQuery: () => ({
+        data:
+            mocks.hold === undefined
+                ? undefined
+                : { holdNewVersions: mocks.hold },
+        isPending: mocks.hold === undefined
+    }),
+    useSetHoldNewVersionsMutation: () => ({ mutate: mocks.setHold })
 }));
 
 vi.mock("../../build-status/queries", () => ({
     useHeldGroupCount: () => mocks.held
 }));
 
-const { HeldVersionsSetting } = await import("./version-approval");
+const { HeldVersionsSetting, HoldNewVersionsSetting } =
+    await import("./version-approval");
 
 describe("held versions", () => {
     afterEach(() => mocks.approve.mockReset());
@@ -37,5 +48,30 @@ describe("held versions", () => {
         expect(screen.getByText("Approve").closest("button")?.disabled).toBe(
             true
         );
+    });
+});
+
+describe("holding new versions", () => {
+    afterEach(() => mocks.setHold.mockReset());
+
+    const toggle = () =>
+        screen.getByRole<HTMLInputElement>("switch", {
+            name: "Hold new versions"
+        });
+
+    it("turns holding off", async () => {
+        mocks.hold = true;
+        renderWithProviders(<HoldNewVersionsSetting />);
+        expect(toggle().checked).toBe(true);
+
+        await userEvent.setup().click(toggle());
+
+        expect(mocks.setHold).toHaveBeenCalledWith(false);
+    });
+
+    it("shows a library that loads new versions at once", () => {
+        mocks.hold = false;
+        renderWithProviders(<HoldNewVersionsSetting />);
+        expect(toggle().checked).toBe(false);
     });
 });

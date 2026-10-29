@@ -62,15 +62,20 @@ describe("planTasks", () => {
         ).toBe(true);
     });
 
-    it("versions each document a recursive push passes through", () => {
+    it("versions each document a recursive push passes on from", () => {
         expect(
-            summary(push({ steps: [child, grandchild], recursive: true }))
+            summary(
+                push({
+                    steps: [child, grandchild],
+                    recursive: true,
+                    leaves: [grandchild]
+                })
+            )
         ).toEqual([
             [VersionTaskAction.VERSION, "robot"],
             [VersionTaskAction.REFERENCES, "practice"],
             [VersionTaskAction.VERSION, "practice"],
-            [VersionTaskAction.REFERENCES, "renders"],
-            [VersionTaskAction.VERSION, "renders"]
+            [VersionTaskAction.REFERENCES, "renders"]
         ]);
     });
 

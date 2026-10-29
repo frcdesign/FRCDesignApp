@@ -27,11 +27,15 @@ export function planTasks(params: VersionJobParams): VersionTask[] {
         if (params.updateOnly) {
             return params.steps.map((each) => task(REFERENCES, each));
         }
+        const leaves = params.leaves ?? [];
         return [
             task(VERSION, params.workspace),
             ...params.steps.flatMap((each) => [
                 task(REFERENCES, each),
-                ...(params.recursive ? [task(VERSION, each)] : [])
+                ...(params.recursive &&
+                !leaves.some((leaf) => isSameWorkspace(leaf, each))
+                    ? [task(VERSION, each)]
+                    : [])
             ])
         ];
     }

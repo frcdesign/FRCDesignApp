@@ -113,6 +113,29 @@ describe("version manager routes", () => {
         expect(res.status).toBe(409);
     });
 
+    it("starts a recursive push that versions only what the documents past it reference", async () => {
+        const grandchild = ws("grandchild");
+        await addLink(db, CHILD, grandchild);
+        // No link permission on the grandchild: nothing cuts a version of it.
+        grant({
+            root: ALL,
+            child: ALL,
+            grandchild: [OnshapePermission.READ, OnshapePermission.WRITE]
+        });
+        const create = vi
+            .spyOn(env.VERSION_MANAGER_WORKFLOW, "create")
+            .mockResolvedValue({ id: "started" } as WorkflowInstance);
+        const res = await postSignedIn("/push-version", {
+            workspace: toInput(ROOT),
+            scope: { kind: PushScopeKind.DESCENDANTS }
+        });
+        expect(res.status).toBe(200);
+        expect(create.mock.calls[0][0]?.params).toMatchObject({
+            steps: [CHILD, grandchild],
+            leaves: [grandchild]
+        });
+    });
+
     it("refuses a second run while one from the workspace is going", async () => {
         grant({ root: ALL, child: ALL });
         vi.spyOn(Jobs, "getJobStatus").mockResolvedValue({

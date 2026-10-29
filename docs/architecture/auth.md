@@ -87,7 +87,7 @@ Onshape:
 | Level      | Who                                | May                                                                                                                                         |
 | ---------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Owner**  | The user `OWNER_USER_ID` names     | Everything, in every library; set admin teams; **Reload all**                                                                               |
-| **Admin**  | A team admin of the library's team | Editor rights, plus refreshing the team                                                                                                     |
+| **Admin**  | A team admin of the library's team | Editor rights, plus refreshing the team and **Hold new versions**                                                                           |
 | **Editor** | A member of the library's team     | Groups (add, delete, order, sort), element settings and visibility, build status, **Reload**, approving held versions, **Reload thumbnail** |
 | **User**   | Anyone signed in                   | Browse, insert, favorites                                                                                                                   |
 

@@ -9,6 +9,7 @@ import { apiDelete, apiGet, apiPost } from "../../lib/api-client";
 import { type LibraryOut } from "@backend/features/library/contract";
 import {
     type ApproveVersionsOut,
+    type HoldNewVersionsOut,
     type JobStatus,
     type ReloadOut
 } from "@backend/features/load/contract";
@@ -18,6 +19,7 @@ import { useAccessData } from "../auth/access-level";
 import { toLibraryPath } from "../../lib/api-paths";
 import { useLibraryId } from "../../lib/library";
 import {
+    holdNewVersionsQueryKey,
     jobStatusQueryKey,
     libraryDataQueryKey,
     libraryVersionQueryKey
@@ -30,7 +32,7 @@ import {
     showLoadingToast,
     showSuccessToast
 } from "../../lib/notifications";
-import { getAppErrorHandler, appError } from "../../lib/errors";
+import { getAppErrorHandler, appError, handleAppError } from "../../lib/errors";
 import { modals } from "@mantine/modals";
 import {
     INVALID_DOCUMENT_URL,
@@ -172,6 +174,43 @@ export function useReloadMutation(all: boolean) {
         onError: getAppErrorHandler("Failed to reload documents."),
         onSuccess: (data) => {
             showInfoToast(`Reloading ${data.documents} documents...`);
+        }
+    });
+}
+
+export function useHoldNewVersionsQuery() {
+    const libraryId = useLibraryId();
+    return useQuery({
+        queryKey: holdNewVersionsQueryKey(libraryId),
+        queryFn: () =>
+            apiGet<HoldNewVersionsOut>(
+                "/hold-new-versions" + toLibraryPath(libraryId)
+            )
+    });
+}
+
+/** Shown before the server confirms; a failure puts it back. */
+export function useSetHoldNewVersionsMutation() {
+    const libraryId = useLibraryId();
+    const queryKey = holdNewVersionsQueryKey(libraryId);
+    return useMutation({
+        mutationKey: ["hold-new-versions", libraryId],
+        mutationFn: (holdNewVersions: boolean) =>
+            apiPost<HoldNewVersionsOut>(
+                "/hold-new-versions" + toLibraryPath(libraryId),
+                { body: { holdNewVersions } }
+            ),
+        onMutate: (holdNewVersions) => {
+            queryClient.setQueryData<HoldNewVersionsOut>(queryKey, {
+                holdNewVersions
+            });
+        },
+        onError: (error) => {
+            void queryClient.invalidateQueries({ queryKey });
+            handleAppError(
+                error,
+                "Failed to change whether new versions are held."
+            );
         }
     });
 }

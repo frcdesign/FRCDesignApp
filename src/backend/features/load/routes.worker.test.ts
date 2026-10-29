@@ -99,3 +99,42 @@ describe("approving versions", () => {
         );
     });
 });
+
+describe("holding new versions", () => {
+    const HOLD_PATH = `/api/hold-new-versions/library/${LibraryId.FRC_DESIGN_LIB}`;
+
+    function request(accessLevel: AccessLevel, method: string, body?: unknown) {
+        const init = jsonRequest(method, body);
+        return createTestApp({ accessLevel }).request(
+            HOLD_PATH,
+            {
+                ...init,
+                headers: { ...init.headers, Cookie: "frc-design-app-session=s" }
+            },
+            env
+        );
+    }
+
+    beforeEach(() => resetDb(db));
+
+    it("holds by default", async () => {
+        const res = await request(AccessLevel.EDITOR, "GET");
+        expect(await res.json()).toEqual({ holdNewVersions: true });
+    });
+
+    it("is an admin's to turn off", async () => {
+        const res = await request(AccessLevel.ADMIN, "POST", {
+            holdNewVersions: false
+        });
+        expect(res.status).toBe(200);
+        const read = await request(AccessLevel.EDITOR, "GET");
+        expect(await read.json()).toEqual({ holdNewVersions: false });
+    });
+
+    it("is not an editor's", async () => {
+        const res = await request(AccessLevel.EDITOR, "POST", {
+            holdNewVersions: false
+        });
+        expect(res.status).toBe(403);
+    });
+});

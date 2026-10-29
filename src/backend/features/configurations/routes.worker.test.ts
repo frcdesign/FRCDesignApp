@@ -39,6 +39,43 @@ describe("configuration routes", () => {
         expect(body).toEqual({ parameters: TEST_PARAMETERS, records: [] });
     });
 
+    // Written before records carried their values, as production's still are until a reload.
+    it("GET /configuration/insertable/:insertableId drops a record stored without its values", async () => {
+        await seedPartStudio(db);
+        await seedConfiguration(db);
+        const current = {
+            partNumber: "WCP-0405",
+            name: "2x1 Tube",
+            hasMultipleParts: false,
+            isOpenComposite: false,
+            values: { boolean: "false" }
+        };
+        const { values: _values, ...old } = current;
+        await env.DB.prepare(
+            "UPDATE configurations SET records = ? WHERE insertable_id = ?"
+        )
+            .bind(
+                JSON.stringify([
+                    { ...old, partNumber: "OLD-1", configurationKey: "k" },
+                    current
+                ]),
+                TEST_PART_STUDIO_ID
+            )
+            .run();
+
+        const res = await createTestApp().request(
+            `/api/configuration/insertable/${TEST_PART_STUDIO_ID}?v=abc123`,
+            jsonRequest("GET"),
+            env
+        );
+
+        expect(res.status).toBe(200);
+        const body = await res.json<{ records: { partNumber?: string }[] }>();
+        expect(body.records.map((record) => record.partNumber)).toEqual([
+            "WCP-0405"
+        ]);
+    });
+
     it("GET /configuration/insertable/:insertableId serves the element's own part data as a record", async () => {
         await seedPartStudio(db, {
             partMetadata: {

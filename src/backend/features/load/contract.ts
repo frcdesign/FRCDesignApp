@@ -12,3 +12,8 @@ export interface ReloadOut {
     /** How many documents were asked to reload. */
     documents: number;
 }
+
+export interface HoldNewVersionsOut {
+    /** Whether a new version waits for an editor's approval rather than loading at once. */
+    holdNewVersions: boolean;
+}

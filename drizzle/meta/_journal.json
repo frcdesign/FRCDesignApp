@@ -50,6 +50,13 @@
             "when": 1793242556117,
             "tag": "0006_store_no_unhidden_insertables",
             "breakpoints": true
+        },
+        {
+            "idx": 7,
+            "version": "6",
+            "when": 1793248115850,
+            "tag": "0007_hold_new_versions",
+            "breakpoints": true
         }
     ]
 }
