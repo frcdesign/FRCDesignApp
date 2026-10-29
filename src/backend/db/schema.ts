@@ -62,7 +62,11 @@ export const libraries = sqliteTable("libraries", {
     adminTeam: text("admin_team", { mode: "json" })
         .$type<AdminTeamMember[]>()
         .notNull()
-        .default([])
+        .default([]),
+    // Off, a webhook's new version loads at once instead of waiting for approval.
+    holdNewVersions: integer("hold_new_versions", { mode: "boolean" })
+        .notNull()
+        .default(true)
 });
 
 /** Before a load pins a real version, so a failed group can still be retried. */

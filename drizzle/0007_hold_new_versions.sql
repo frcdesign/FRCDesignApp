@@ -1,0 +1,1 @@
+ALTER TABLE `libraries` ADD `hold_new_versions` integer DEFAULT true NOT NULL;

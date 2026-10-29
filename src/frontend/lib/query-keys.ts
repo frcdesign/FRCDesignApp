@@ -11,6 +11,10 @@ export function adminTeamQueryKey(libraryId: LibraryId) {
     return ["admin-team", libraryId];
 }
 
+export function holdNewVersionsQueryKey(libraryId: LibraryId) {
+    return ["hold-new-versions", libraryId];
+}
+
 export function configurationQueryKey(
     insertableId: string,
     microversionId: string

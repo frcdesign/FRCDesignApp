@@ -6,7 +6,7 @@ import { getDb } from "../../db/client";
 import { groups, libraries } from "../../db/schema";
 import { LibraryId } from "../library/library-id";
 import * as Jobs from "./jobs";
-import { approveHeldVersions, holdNewVersion, releaseHold } from "./holds";
+import { approveHeldVersions, receiveNewVersion, releaseHold } from "./holds";
 
 const db = getDb(env.DB);
 
@@ -40,7 +40,7 @@ describe("held versions", () => {
         await seedGroup(db, "c");
         const startVersion = await cacheVersionOf(LibraryId.FRC_DESIGN_LIB);
 
-        await holdNewVersion(env, "doc");
+        await receiveNewVersion(env, "doc");
 
         expect(await heldAtOf("a")).toEqual(expect.any(Date));
         expect(await heldAtOf("b")).toEqual(expect.any(Date));
@@ -48,6 +48,29 @@ describe("held versions", () => {
         expect(await cacheVersionOf(LibraryId.FRC_DESIGN_LIB)).toBeGreaterThan(
             startVersion ?? 0
         );
+    });
+
+    it("loads the new version at once where the library doesn't hold them", async () => {
+        await seedGroup(db, "a", LibraryId.FRC_DESIGN_LIB, {
+            documentId: "doc"
+        });
+        await seedGroup(db, "b", LibraryId.CONFIG_LIB, { documentId: "doc" });
+        await db
+            .update(libraries)
+            .set({ holdNewVersions: false })
+            .where(eq(libraries.id, LibraryId.CONFIG_LIB));
+        const load = vi.spyOn(Jobs, "requestReload").mockResolvedValue();
+
+        await receiveNewVersion(env, "doc");
+
+        expect(await heldAtOf("a")).toEqual(expect.any(Date));
+        expect(await heldAtOf("b")).toBeNull();
+        expect(load).toHaveBeenCalledOnce();
+        expect(load).toHaveBeenCalledWith(expect.anything(), {
+            libraryId: LibraryId.CONFIG_LIB,
+            groupIds: ["b"],
+            forceReload: false
+        });
     });
 
     it("releases only a hold set before the version was read", async () => {
