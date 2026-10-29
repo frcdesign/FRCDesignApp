@@ -43,14 +43,13 @@ describe("configuration routes", () => {
     it("GET /configuration/insertable/:insertableId drops a record stored without its values", async () => {
         await seedPartStudio(db);
         await seedConfiguration(db);
-        const current = {
+        const old = {
             partNumber: "WCP-0405",
             name: "2x1 Tube",
             hasMultipleParts: false,
-            isOpenComposite: false,
-            values: { boolean: "false" }
+            isOpenComposite: false
         };
-        const { values: _values, ...old } = current;
+        const current = { ...old, values: { boolean: "false" } };
         await env.DB.prepare(
             "UPDATE configurations SET records = ? WHERE insertable_id = ?"
         )
