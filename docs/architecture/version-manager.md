@@ -72,8 +72,7 @@ count of each workspace it versions or moves (`forgetChanges`, a step after
 each of its own), and the client reads the links again once the run ends, so a
 parent's badge reflects the version just cut.
 
-**Browser** `isParentsOpen`, `isChildrenOpen` and `quickActionTipCount` in
-`uiState`.
+**Browser** `isParentsOpen` and `isChildrenOpen` in `uiState`.
 
 ## Flows
 
@@ -345,9 +344,7 @@ deletes a transient webhook that goes quiet, so the entries expire as well.
   the opt-in, not the default.
 - **The row is the form; the menu is the runs.** Rows carry no push or pull
   button: a list of documents reads as a list, and the buttons competed with the
-  names. Clicking a row opens the form, ctrl-clicking (⌘ on a Mac, where
-  ctrl-click is the context menu) runs it under the defaults, and the menu says
-  so beside the item it is a shortcut for. The menu holds the runs alone —
+  names. Clicking a row opens the form. The menu holds the runs alone —
   anybody who did not want the defaults is one click from the form already.
 - **Always a new version; updating is its own action.** A push or pull that
   sometimes versions and sometimes does not reads oddly, most of all a pull that

@@ -1,5 +1,5 @@
 import { Group, Stack, Table, Text } from "@mantine/core";
-import { type MouseEvent, PropsWithChildren, ReactNode } from "react";
+import { PropsWithChildren, ReactNode } from "react";
 import { meaningfulPartNumber } from "@backend/features/configurations/part-number";
 import { StatusColor } from "../lib/style-constants";
 import { AppContextMenu, MenuButton } from "./app-menu";
@@ -133,8 +133,7 @@ interface ItemRowProps {
     left: ReactNode;
     /** Menu items shown on right-click and (when shown) via the "more" button. */
     menuItems: ReactNode;
-    /** Given the event, so a row can offer a modified click of its own. */
-    onClick?: (event: MouseEvent<HTMLTableRowElement>) => void;
+    onClick?: () => void;
     /** Extra right-aligned controls (e.g. a favorite button or an arrow). */
     rightSection?: ReactNode;
     /** Shows the explicit "..." button that opens the same menu. */

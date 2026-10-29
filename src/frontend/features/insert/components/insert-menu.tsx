@@ -233,6 +233,7 @@ function InsertMenuFooter(props: InsertMenuFooterProps): ReactNode {
                 )}
                 <MenuButton
                     large
+                    wide
                     isNew={offersSetDefault && !hasOpenedSetDefault}
                     onClose={
                         offersSetDefault ? markSetDefaultOpened : undefined

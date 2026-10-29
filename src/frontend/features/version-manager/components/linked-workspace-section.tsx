@@ -16,7 +16,7 @@ import {
     LinkBreakIcon,
     TreeStructureIcon
 } from "@phosphor-icons/react";
-import { type MouseEvent, type ReactNode } from "react";
+import { type ReactNode } from "react";
 import {
     LinkDirection,
     workspaceThumbnailUrl,
@@ -27,6 +27,7 @@ import {
 import { ThumbnailSize } from "@backend/features/thumbnails/contract";
 import { MenuButton, MenuSection } from "../../../components/app-menu";
 import { InfoTooltip } from "../../../components/info-tooltip";
+import { openDeleteConfirm } from "../../../components/alerts";
 import { CardTitle, ItemRow, ItemTable } from "../../../components/item-row";
 import { SectionNotice } from "../../../components/app-notice";
 import { CardThumbnail } from "../../thumbnails/components/thumbnail";
@@ -38,7 +39,6 @@ import {
 import { makeUrl, openUrlInNewTab } from "../../../lib/url";
 import styles from "../../../lib/styles.module.css";
 import { useOnshapeOrigin } from "../../../lib/onshape-params";
-import { quickClickName } from "../version-manager-tips";
 import { plural } from "../../../lib/plural";
 import { runningHeadline } from "../job-report";
 import { useMoveLinkMutation, useRemoveLinkMutation } from "../queries";
@@ -84,11 +84,6 @@ export function DirectionInfo(props: DirectionInfoProps): ReactNode {
             className={`${styles.noShrink} ${styles.titleIcon}`}
         />
     );
-}
-
-/** Whether the click asked for the run rather than the form. */
-function isQuickClick(event: MouseEvent): boolean {
-    return event.ctrlKey || event.metaKey;
 }
 
 interface RunningIndicatorProps {
@@ -173,13 +168,6 @@ function RunMenuSection(props: RunMenuSectionProps): ReactNode {
         <MenuSection label={isChild ? "Push" : "Pull"}>
             <Menu.Item
                 leftSection={<DirectionIcon direction={direction} />}
-                rightSection={
-                    linked && (
-                        <Text size="xs" c={StatusColor.DIMMED}>
-                            {quickClickName()}
-                        </Text>
-                    )
-                }
                 disabled={disabled}
                 onClick={onQuick}
             >
@@ -310,7 +298,15 @@ function LinkedWorkspaceRow(props: LinkedWorkspaceRowProps): ReactNode {
                 <Menu.Item
                     color={StatusColor.ERROR}
                     leftSection={<LinkBreakIcon size={IconSize.MEDIUM} />}
-                    onClick={onRemove}
+                    onClick={() =>
+                        openDeleteConfirm({
+                            title: "Remove link",
+                            // Unnamed where the caller can't open it.
+                            text: `Are you sure you want to delete the link to ${linked.documentName ?? "this document"}?`,
+                            confirmLabel: "Remove link",
+                            onConfirm: onRemove
+                        })
+                    }
                 >
                     Remove link
                 </Menu.Item>
@@ -324,16 +320,10 @@ function LinkedWorkspaceRow(props: LinkedWorkspaceRowProps): ReactNode {
             menuItems={menuItems}
             // Its own menu button, so the spinner comes before it.
             moreButton={false}
-            // A click opens the form; a modified one runs it with the defaults.
-            onClick={(event) => {
-                if (running || !linked.isOpenable) {
-                    return;
+            onClick={() => {
+                if (!running && linked.isOpenable) {
+                    actions.openOne(linked);
                 }
-                if (isQuickClick(event)) {
-                    actions.quickOne(linked, false);
-                    return;
-                }
-                actions.openOne(linked);
             }}
             rightSection={
                 <>

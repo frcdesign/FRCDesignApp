@@ -37,6 +37,37 @@ function openWarningAlert(props: OpenWarningAlertProps): void {
     });
 }
 
+interface OpenDeleteConfirmProps {
+    title: string;
+    text: string;
+    /** Names the deletion, so the button says what it does. */
+    confirmLabel: string;
+    onConfirm: () => void;
+}
+
+/** Asks before something is deleted for good. */
+export function openDeleteConfirm(props: OpenDeleteConfirmProps): void {
+    modals.openConfirmModal({
+        title: (
+            <AppTitle
+                icon={
+                    <StatusIcon
+                        status={Status.ERROR}
+                        size={IconSize.MEDIUM}
+                        raised={false}
+                    />
+                }
+                title={props.title}
+            />
+        ),
+        children: <Text>{props.text}</Text>,
+        labels: { confirm: props.confirmLabel, cancel: "Cancel" },
+        centered: true,
+        confirmProps: { color: StatusColor.ERROR },
+        onConfirm: props.onConfirm
+    });
+}
+
 export function openCannotDeriveAssemblyAlert(): void {
     openWarningAlert({
         title: "Cannot derive assembly",

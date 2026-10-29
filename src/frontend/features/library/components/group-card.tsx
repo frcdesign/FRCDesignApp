@@ -1,14 +1,11 @@
-import { Menu, Text } from "@mantine/core";
-import { modals } from "@mantine/modals";
+import { Menu } from "@mantine/core";
 import {
     ArrowRightIcon,
     EyeIcon,
     EyeSlashIcon,
     TrashIcon
 } from "@phosphor-icons/react";
-import { AppTitle } from "../../../components/app-title";
-import { StatusIcon } from "../../../components/status-icon";
-import { Status } from "../../../lib/status";
+import { openDeleteConfirm } from "../../../components/alerts";
 import { IconSize, StatusColor } from "../../../lib/style-constants";
 import { useNavigate } from "@tanstack/react-router";
 import { PropsWithChildren, ReactNode } from "react";
@@ -175,27 +172,10 @@ function DeleteGroupMenuItem(props: DeleteGroupMenuItemProps): ReactNode {
     const mutation = useDeleteGroupMutation(groupId);
 
     const confirmDelete = () => {
-        modals.openConfirmModal({
-            title: (
-                <AppTitle
-                    icon={
-                        <StatusIcon
-                            status={Status.ERROR}
-                            size={IconSize.MEDIUM}
-                            raised={false}
-                        />
-                    }
-                    title="Delete group"
-                />
-            ),
-            children: (
-                <Text>
-                    {`Are you sure you want to delete ${name}? Its elements are deleted with it, and permanently removed from every user's favorites.`}
-                </Text>
-            ),
-            labels: { confirm: "Delete group", cancel: "Cancel" },
-            centered: true,
-            confirmProps: { color: StatusColor.ERROR },
+        openDeleteConfirm({
+            title: "Delete group",
+            text: `Are you sure you want to delete ${name}? All favorites which reference it will be permanently deleted.`,
+            confirmLabel: "Delete group",
             onConfirm: () => mutation.mutate()
         });
     };

@@ -1,7 +1,6 @@
 import { ArrowLineUpIcon } from "@phosphor-icons/react";
 import { useState, type ReactNode } from "react";
 import {
-    LinkDirection,
     PushScopeKind,
     type LinkedWorkspace,
     type WorkspacePath
@@ -10,7 +9,6 @@ import { InfoCheckbox } from "../../../components/info-checkbox";
 import { useAppModal } from "../../../components/open-app-modal";
 import { IconSize } from "../../../lib/style-constants";
 import { useIsVersionJobRunning, usePushVersionMutation } from "../queries";
-import { showQuickActionTip } from "../version-manager-tips";
 import { VersionForm, type VersionFields } from "./version-form";
 
 interface PushVersionFormProps {
@@ -38,13 +36,7 @@ export function PushVersionForm(props: PushVersionFormProps): ReactNode {
                 }
             },
             {
-                onSuccess: () => {
-                    modal.close();
-                    // Untouched, the form did what a quick push does.
-                    if (!name && !description && !recursive) {
-                        showQuickActionTip(LinkDirection.CHILD);
-                    }
-                }
+                onSuccess: () => modal.close()
             }
         );
     };

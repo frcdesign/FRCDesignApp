@@ -44,7 +44,7 @@ team, plus one owner set by configuration.
   **New** badge the user no longer needs, recorded by `POST /api/seen-hints`
   once the feature has been opened: the version manager's page on showing, the
   insert location's card on closing, and an insert menu's ⋯ menu offering **Set
-  as default configuration** on closing. Signed out, the dot goes for the session only.
+  default configuration** on closing. Signed out, the dot goes for the session only.
   Kept until deleted; losing it only shows a dot again.
 - **localStorage** (`ui-state`): `accessLevel`, the level the app is viewed as.
 
