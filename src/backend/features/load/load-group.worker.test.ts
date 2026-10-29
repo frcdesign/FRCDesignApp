@@ -14,7 +14,11 @@ import * as PartsEndpoints from "../../lib/onshape/endpoints/parts";
 import * as ThumbnailStore from "../thumbnails/store";
 import { getDb } from "../../db/client";
 import { groups, insertables } from "../../db/schema";
-import { type BuildIssue, BuildIssueType } from "../build-checker/issues";
+import {
+    type BuildIssue,
+    BuildIssueType,
+    hasBuildIssue
+} from "../build-checker/issues";
 import {
     type StoredInsertable,
     findMovedInsertables,
@@ -345,6 +349,45 @@ describe("loadGroup", () => {
             type: BuildIssueType.NOT_LOADED
         });
     });
+
+    it("flags a group whose insertables all start hidden", async () => {
+        mockContents([tab("e1")]);
+        vi.spyOn(ConfigurationEndpoints, "getConfiguration").mockResolvedValue(
+            NO_CONFIGURATION
+        );
+
+        await loadGroup(CTX, LOADED_TARGET, false);
+
+        expect((await readGroup())?.buildIssues).toContainEqual({
+            type: BuildIssueType.NO_UNHIDDEN_INSERTABLES
+        });
+    });
+
+    it.each([
+        { visibleElementId: "e1", flagged: false },
+        // Its tab is gone, so the save deletes it.
+        { visibleElementId: "removed", flagged: true }
+    ])(
+        "counts a visible insertable only while its tab remains: $visibleElementId",
+        async ({ visibleElementId, flagged }) => {
+            mockContents([tab("e1")]);
+            for (const elementId of ["e1", "removed"]) {
+                await seedInsertable(db, {
+                    id: `ins-${elementId}`,
+                    elementId,
+                    microversionId: "mv-1",
+                    isVisible: elementId === visibleElementId
+                });
+            }
+
+            await loadGroup(CTX, LOADED_TARGET, false);
+
+            const issues = (await readGroup())?.buildIssues ?? [];
+            expect(
+                hasBuildIssue(issues, BuildIssueType.NO_UNHIDDEN_INSERTABLES)
+            ).toBe(flagged);
+        }
+    );
 
     it.each([
         { heldAt: new Date(LOADED_READ_AT.getTime() - 1), released: true },

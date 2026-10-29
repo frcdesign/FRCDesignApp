@@ -16,6 +16,7 @@ import {
     WebhookSubject
 } from "../../../db/schema";
 import { bumpLibraryVersion, rebuildSearchDb } from "../db";
+import { recheckVisibility } from "../../build-checker/visibility";
 import { HttpStatus } from "http-status-ts";
 import { handledError } from "../../../lib/api-error";
 import { getJobStatus, requestReload } from "../../load/jobs";
@@ -101,6 +102,7 @@ groupRoutes.post(
                 writes as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]]
             );
         }
+        await recheckVisibility(db, libraryId);
 
         // Before the bump, which makes /search-db immutable for a year.
         await rebuildSearchDb(c.env.BLOB, db, libraryId);

@@ -17,6 +17,7 @@ import MiniSearch from "minisearch";
 import { getDb } from "../../../db/client";
 import type { JobStatus } from "../../load/contract";
 import { searchIndexKey } from "../db";
+import { BuildIssueType } from "../../build-checker/issues";
 import { SEARCH_OPTIONS, type SearchDocument } from "../../search/contract";
 import * as DocumentsEndpoint from "../../../lib/onshape/endpoints/documents";
 import * as Reconcile from "../../thumbnails/reconcile";
@@ -119,6 +120,68 @@ describe("group admin routes", () => {
         const rows = await db.select().from(insertables).all();
         expect(rows).toHaveLength(count);
         expect(rows.every((row) => !row.isVisible)).toBe(true);
+    });
+
+    it("POST /set-insertable-visibility flags a group once all of it is hidden, and clears it when one is shown", async () => {
+        await seedGroup(db);
+        await seedInsertable(db, { isVisible: true });
+        await seedGroup(db, "other-group");
+        await seedInsertable(db, {
+            id: "other-insertable",
+            groupId: "other-group",
+            elementId: "other-element"
+        });
+        await db
+            .update(groups)
+            .set({
+                buildIssues: [{ type: BuildIssueType.NO_UNHIDDEN_INSERTABLES }]
+            })
+            .where(eq(groups.id, "other-group"));
+        const setVisibility = (insertableIds: string[], isVisible: boolean) =>
+            createTestApp().request(
+                `/api/set-insertable-visibility/library/${TEST_LIBRARY_ID}`,
+                jsonRequest("POST", { insertableIds, isVisible }),
+                env
+            );
+        const issuesOf = async (groupId: string) =>
+            (await db.select().from(groups).where(eq(groups.id, groupId)).get())
+                ?.buildIssues;
+
+        await setVisibility([TEST_PART_STUDIO_ID], false);
+        expect(await issuesOf(TEST_GROUP_ID)).toEqual([
+            { type: BuildIssueType.NO_UNHIDDEN_INSERTABLES }
+        ]);
+
+        await setVisibility([TEST_PART_STUDIO_ID, "other-insertable"], true);
+        expect(await issuesOf(TEST_GROUP_ID)).toEqual([]);
+        expect(await issuesOf("other-group")).toEqual([]);
+    });
+
+    it("POST /set-insertable-visibility leaves a group with no insertables to its load", async () => {
+        await seedGroup(db, TEST_GROUP_ID, TEST_LIBRARY_ID, {
+            buildIssues: [{ type: BuildIssueType.NOT_LOADED }]
+        });
+        await seedGroup(db, "other-group");
+        await seedInsertable(db, {
+            id: "other-insertable",
+            groupId: "other-group"
+        });
+
+        await createTestApp().request(
+            `/api/set-insertable-visibility/library/${TEST_LIBRARY_ID}`,
+            jsonRequest("POST", {
+                insertableIds: ["other-insertable"],
+                isVisible: false
+            }),
+            env
+        );
+
+        const row = await db
+            .select()
+            .from(groups)
+            .where(eq(groups.id, TEST_GROUP_ID))
+            .get();
+        expect(row?.buildIssues).toEqual([{ type: BuildIssueType.NOT_LOADED }]);
     });
 
     it("POST /sort-group-alphabetically updates the flag", async () => {
