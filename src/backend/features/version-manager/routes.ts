@@ -422,6 +422,15 @@ versionManagerRoutes.post(
         if (recursive) {
             requireDistinctDocuments([workspace, ...order]);
         }
+        // Nothing later references them, so a version of them would serve nothing.
+        const leaves = recursive
+            ? order.filter(
+                  (each) =>
+                      !childrenOf(edges, each).some((child) =>
+                          order.some((step) => isSameWorkspace(step, child))
+                      )
+              )
+            : [];
 
         await Promise.all([
             ...(updateOnly
@@ -443,7 +452,10 @@ versionManagerRoutes.post(
                     OnshapePermission.WRITE,
                     // What the run versions is what the workspaces past it
                     // come to reference.
-                    ...(recursive ? [OnshapePermission.LINK] : [])
+                    ...(recursive &&
+                    !leaves.some((leaf) => isSameWorkspace(leaf, each))
+                        ? [OnshapePermission.LINK]
+                        : [])
                 )
             )
         ]);
@@ -471,7 +483,8 @@ versionManagerRoutes.post(
                 name,
                 description,
                 steps: order,
-                recursive
+                recursive,
+                leaves
             }
         });
         const status = await startJob(c.env, workspace, run.id, {
