@@ -37,6 +37,17 @@ const buildIssues = () =>
         .notNull()
         .default([]);
 
+/**
+ * Filtered on read: a record written before records carried their `values`
+ * can't be matched to a selection, so it is dropped until a reload rewrites it.
+ */
+const configurationRecords = () =>
+    upgradedJson<ConfigurationRecord[]>((records) =>
+        records.filter((record) => "values" in record)
+    )("records")
+        .notNull()
+        .default([]);
+
 /** The pair Onshape renders for a group or an insertable; null until rendered. */
 const thumbnailUrls = () => ({
     smallThumbnailUrl: text("small_thumbnail_url"),
@@ -62,7 +73,11 @@ export const libraries = sqliteTable("libraries", {
     adminTeam: text("admin_team", { mode: "json" })
         .$type<AdminTeamMember[]>()
         .notNull()
-        .default([])
+        .default([]),
+    // Off, a webhook's new version loads at once instead of waiting for approval.
+    holdNewVersions: integer("hold_new_versions", { mode: "boolean" })
+        .notNull()
+        .default(true)
 });
 
 /** Before a load pins a real version, so a failed group can still be retried. */
@@ -156,10 +171,7 @@ export const configurations = sqliteTable("configurations", {
         .notNull()
         .default([]),
     // Empty unless indexed; the default part is `insertables.partMetadata`.
-    records: text("records", { mode: "json" })
-        .$type<ConfigurationRecord[]>()
-        .notNull()
-        .default([])
+    records: configurationRecords()
 });
 
 export const users = sqliteTable("users", {

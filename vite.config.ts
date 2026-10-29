@@ -17,6 +17,12 @@ export const alias = {
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => ({
     resolve: { alias },
+    define: {
+        // Actions sets it on every deploy; see `getUrl` in `api-client.ts`.
+        "import.meta.env.VITE_BUILD_ID": JSON.stringify(
+            process.env.GITHUB_SHA ?? "dev"
+        )
+    },
     plugins: [
         tanstackRouter({
             routesDirectory: "src/frontend/routes",

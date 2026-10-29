@@ -49,7 +49,9 @@ describe("receiving a webhook", () => {
     // Onshape deactivates a webhook whose deliveries error.
     it("answers 200 even when handling the delivery fails", async () => {
         const token = await registered(WebhookSubject.DOCUMENT, DOCUMENT);
-        vi.spyOn(Holds, "holdNewVersion").mockRejectedValue(new Error("down"));
+        vi.spyOn(Holds, "receiveNewVersion").mockRejectedValue(
+            new Error("down")
+        );
         vi.spyOn(console, "error").mockImplementation(() => undefined);
 
         const res = await deliver(

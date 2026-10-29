@@ -44,7 +44,11 @@ const BASE = {
 
 function push(
     steps: WorkspacePath[],
-    options: { recursive?: boolean; updateOnly?: boolean } = {}
+    options: {
+        recursive?: boolean;
+        updateOnly?: boolean;
+        leaves?: WorkspacePath[];
+    } = {}
 ): VersionJobParams {
     return {
         ...BASE,
@@ -52,7 +56,8 @@ function push(
         scope: PushScopeKind.CHILDREN,
         steps,
         recursive: options.recursive ?? false,
-        updateOnly: options.updateOnly ?? false
+        updateOnly: options.updateOnly ?? false,
+        leaves: options.leaves
     };
 }
 
@@ -104,7 +109,10 @@ describe("VersionManagerWorkflow", () => {
 
         const status = await run(
             "recursive",
-            push([CHILD, GRANDCHILD], { recursive: true })
+            push([CHILD, GRANDCHILD], {
+                recursive: true,
+                leaves: [GRANDCHILD]
+            })
         );
 
         expect(update).toHaveBeenNthCalledWith(1, expect.anything(), CHILD, {
@@ -121,8 +129,9 @@ describe("VersionManagerWorkflow", () => {
             }
         );
         expect(status.state).toBe(VersionJobState.COMPLETE);
+        // Nothing references the grandchild, so it is left un-versioned.
         expect(status.result).toEqual({
-            createdVersions: 3,
+            createdVersions: 2,
             updatedElements: 4
         });
         expect(jobOutcome(status)).toBe(VersionJobOutcome.SUCCESS);
