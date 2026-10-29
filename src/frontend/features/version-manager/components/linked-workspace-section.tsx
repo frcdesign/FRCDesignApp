@@ -27,6 +27,7 @@ import {
 import { ThumbnailSize } from "@backend/features/thumbnails/contract";
 import { MenuButton, MenuSection } from "../../../components/app-menu";
 import { InfoTooltip } from "../../../components/info-tooltip";
+import { openDeleteConfirm } from "../../../components/alerts";
 import { CardTitle, ItemRow, ItemTable } from "../../../components/item-row";
 import { SectionNotice } from "../../../components/app-notice";
 import { CardThumbnail } from "../../thumbnails/components/thumbnail";
@@ -310,7 +311,15 @@ function LinkedWorkspaceRow(props: LinkedWorkspaceRowProps): ReactNode {
                 <Menu.Item
                     color={StatusColor.ERROR}
                     leftSection={<LinkBreakIcon size={IconSize.MEDIUM} />}
-                    onClick={onRemove}
+                    onClick={() =>
+                        openDeleteConfirm({
+                            title: "Remove link",
+                            // Unnamed where the caller can't open it.
+                            text: `Are you sure you want to delete the link to ${linked.documentName ?? "this document"}?`,
+                            confirmLabel: "Remove link",
+                            onConfirm: onRemove
+                        })
+                    }
                 >
                     Remove link
                 </Menu.Item>
