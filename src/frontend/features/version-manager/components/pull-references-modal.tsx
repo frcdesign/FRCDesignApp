@@ -1,7 +1,6 @@
 import { ArrowLineDownIcon } from "@phosphor-icons/react";
 import { useState, type ReactNode } from "react";
 import {
-    LinkDirection,
     PullScopeKind,
     type LinkedWorkspace,
     type WorkspacePath
@@ -10,7 +9,6 @@ import { InfoCheckbox } from "../../../components/info-checkbox";
 import { useAppModal } from "../../../components/open-app-modal";
 import { IconSize } from "../../../lib/style-constants";
 import { useIsVersionJobRunning, usePullReferencesMutation } from "../queries";
-import { showQuickActionTip } from "../version-manager-tips";
 import { VersionForm, type VersionFields } from "./version-form";
 
 interface PullReferencesFormProps {
@@ -39,13 +37,7 @@ export function PullReferencesForm(props: PullReferencesFormProps): ReactNode {
                 }
             },
             {
-                onSuccess: () => {
-                    modal.close();
-                    // Untouched, the form did what a quick pull does.
-                    if (!name && !description && !recursive) {
-                        showQuickActionTip(LinkDirection.PARENT);
-                    }
-                }
+                onSuccess: () => modal.close()
             }
         );
     };

@@ -13,7 +13,6 @@ import {
     openPullReferencesModal,
     openPushVersionModal
 } from "./open-version-modals";
-import { retireQuickActionTip } from "./version-manager-tips";
 import {
     usePullReferencesMutation,
     usePushVersionMutation,
@@ -113,11 +112,8 @@ export function useLinkActions(
         });
     };
 
-    const quick = (each: LinkedWorkspace | undefined, recursive: boolean) => {
-        // They have found the shortcut, so the form stops pointing at it.
-        retireQuickActionTip();
+    const quick = (each: LinkedWorkspace | undefined, recursive: boolean) =>
         start(each, { recursive });
-    };
 
     return {
         running,
