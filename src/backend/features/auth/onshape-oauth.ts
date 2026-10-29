@@ -4,24 +4,20 @@ import { generateState, OAuth2Client, OAuth2Tokens } from "arctic";
 import { internalError } from "../../lib/api-error";
 import { env } from "cloudflare:workers";
 import { type AppContext } from "../../lib/context";
-import {
-    type AuthTokens,
-    beginSession,
-    PERSONAL_COMPANY_ID,
-    startLoginSession,
-    takeLoginSession
-} from "./session";
+import { type AuthTokens, beginSession } from "./session";
+import { PERSONAL_COMPANY_ID } from "./company";
+import { startLogin, takeLogin } from "./login";
 
 const AUTH_ENDPOINT = "https://oauth.onshape.com/oauth/authorize";
 export const TOKEN_ENDPOINT = "https://oauth.onshape.com/oauth/token";
 
-/**
- * No redirect uri, so neither the authorization request nor the code exchange
- * names one and Onshape returns the caller to whichever its OAuth app
- * registers — so a host wants an app registering its own callback.
- */
+/** The redirect uri must match one registered on the Onshape OAuth app. */
 export function getOauthClient(): OAuth2Client {
-    return new OAuth2Client(env.OAUTH_CLIENT_ID, env.OAUTH_CLIENT_SECRET, null);
+    return new OAuth2Client(
+        env.OAUTH_CLIENT_ID,
+        env.OAUTH_CLIENT_SECRET,
+        `${env.APP_URL}/auth/callback`
+    );
 }
 
 export function makeAuthTokens(tokens: OAuth2Tokens): AuthTokens {
@@ -32,32 +28,24 @@ export function makeAuthTokens(tokens: OAuth2Tokens): AuthTokens {
     };
 }
 
-/**
- * Stores the redirectUrl and state.
- *
- * Returns the URL the user should be redirected to.
- */
-export async function doSignIn(
+/** Stores the redirect url and state; returns the url to send the user to. */
+export function doSignIn(
     c: AppContext,
     redirectUrl: string,
     companyId?: string
-): Promise<string> {
+): string {
     const oauthClient = getOauthClient();
 
     const state = generateState();
 
-    // Store the state and redirectUrl so the callback can complete sign-in.
-    await startLoginSession(c, { state, redirectUrl });
+    startLogin(c, { state, redirectUrl });
 
     const authorizationUrl = oauthClient.createAuthorizationURL(
         AUTH_ENDPOINT,
         state,
         []
     );
-    // company_id scopes the sign-in to an enterprise, and Onshape only accepts
-    // a real one: sign-in worked in an enterprise and failed for plain
-    // cad.onshape.com users, whose id is PERSONAL_COMPANY_ID. So that id is
-    // left off, as a standalone sign-in's missing company already is.
+    // Onshape only accepts a real enterprise's company_id.
     if (companyId && companyId !== PERSONAL_COMPANY_ID) {
         authorizationUrl.searchParams.set("company_id", companyId);
     }
@@ -72,17 +60,17 @@ export async function doCallback(c: AppContext): Promise<Response> {
         return c.redirect("/grant-denied");
     }
 
-    const session = await takeLoginSession(c);
+    const login = takeLogin(c);
 
-    // There was a problem with the cookie used to store redirect information
-    if (!session) {
+    // The redirect cookie was missing.
+    if (!login) {
         if (isSafari(c.req.raw)) {
             return c.redirect("/safari-error");
         }
         return c.redirect("/cookie-error");
     }
 
-    if (!search.code || session.state !== search.state) {
+    if (!search.code || login.state !== search.state) {
         throw internalError(
             "Invalid response from Onshape",
             HttpStatus.UNAUTHORIZED
@@ -95,7 +83,7 @@ export async function doCallback(c: AppContext): Promise<Response> {
         .then((tokens) => makeAuthTokens(tokens))
         .then((tokens) => beginSession(c, tokens));
 
-    return c.redirect(session.redirectUrl);
+    return c.redirect(login.redirectUrl);
 }
 
 function isSafari(request: Request): boolean {

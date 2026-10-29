@@ -40,6 +40,7 @@ import {
     getSeries,
     getSources,
     getTotals,
+    getVersionManagerTotals,
     toTargets
 } from "./metric-queries";
 import {
@@ -51,10 +52,7 @@ import {
 
 export const analyticsRoutes = getApp();
 
-/**
- * Every handler here is public, which in this app means never touching
- * `getUserId()` or `getOnshapeApi()`. Only aggregates leave — never a user id.
- */
+/** Public: never call `getUserId()` or `getOnshapeApi()`, and return only aggregates. */
 
 /** GET /api/analytics/overview */
 analyticsRoutes.get(
@@ -64,19 +62,26 @@ analyticsRoutes.get(
         const db = getDb(c.env.DB);
         const requested = c.req.valid("query");
         const trackingSince = await getTrackingSince(db);
-        // Series are densified, so they read the clamped range; the totals still
-        // read what was asked for, where extra empty days cost nothing.
+        // Series are densified, so they need the clamped range.
         const range = clampRange(requested, trackingSince);
 
-        const [totals, perLibrary, series, metricSeries, sources, growth] =
-            await Promise.all([
-                getTotals(db),
-                getLibrarySummaries(db),
-                getSeries(db, range),
-                getMetricSeries(db, range),
-                getSources(db, requested),
-                getGrowth(db, toReportingDay(Date.now()), trackingSince)
-            ]);
+        const [
+            totals,
+            perLibrary,
+            series,
+            metricSeries,
+            sources,
+            versionManager,
+            growth
+        ] = await Promise.all([
+            getTotals(db, undefined, range),
+            getLibrarySummaries(db),
+            getSeries(db, range),
+            getMetricSeries(db, range),
+            getSources(db, requested),
+            getVersionManagerTotals(db, requested),
+            getGrowth(db, toReportingDay(Date.now()), trackingSince)
+        ]);
 
         const out: AnalyticsOverviewOut = {
             totals,
@@ -84,6 +89,7 @@ analyticsRoutes.get(
             series,
             metricSeries,
             sources,
+            versionManager,
             growth,
             ...requested
         };
@@ -103,7 +109,7 @@ analyticsRoutes.get(
         const range = clampRange(requested, trackingSince);
 
         const [totals, metricSeries, growth] = await Promise.all([
-            getTotals(db, libraryId),
+            getTotals(db, libraryId, range),
             getMetricSeries(db, range, libraryId),
             getGrowth(db, toReportingDay(Date.now()), trackingSince, libraryId)
         ]);
@@ -121,8 +127,7 @@ analyticsRoutes.get(
 /** GET /api/analytics/health/library/:libraryId?v=:cacheVersion */
 analyticsRoutes.get(
     "/analytics/health" + libraryRoute(),
-    // Off the same build issues `/build-status` reads, so keyed the same way.
-    // Public rather than private: this answer is the same for whoever asks.
+    // Public cache: the answer is the same for everyone.
     cacheMiddleware(CachePolicy.PUBLIC_CACHE),
     async (c) => {
         const libraryId = getLibraryParam(c);
@@ -228,8 +233,7 @@ analyticsRoutes.get(
                 byElement.get(part.elementId) ?? []
             );
             for (const parameter of usage) {
-                // Only an enum declares the options it could have been given, so
-                // only an enum can have one that was never picked.
+                // Only an enum declares its options.
                 if (parameter.type !== ParameterType.ENUM) continue;
                 for (const value of parameter.values) {
                     if (value.count > threshold) continue;
@@ -246,8 +250,7 @@ analyticsRoutes.get(
             }
         }
 
-        // Never-picked first, then by how much of the parameter went elsewhere:
-        // an option skipped on a heavily configured part is the stronger signal.
+        // Never-picked first, then by how much of the parameter went elsewhere.
         out.sort(
             (a, b) =>
                 a.value.count - b.value.count ||
@@ -289,8 +292,7 @@ analyticsRoutes.get(
             (total, count) => total + count,
             0
         );
-        // Rated over the days the part has existed inside the window, as the
-        // parts table rates it.
+        // Over the days the part existed in the window, as the parts table rates it.
         const windowStart = Date.parse(`${range.from}T00:00:00Z`);
         const windowEnd = Math.min(
             Date.now(),
@@ -301,8 +303,7 @@ analyticsRoutes.get(
             windowStart
         );
 
-        // Only a part still in the library has a report: its name, its path
-        // and its parameters all come from the row that is no longer there.
+        // Its name, path and parameters all come from the row.
         if (!insertable) {
             throw internalError("Insertable not found", HttpStatus.NOT_FOUND);
         }

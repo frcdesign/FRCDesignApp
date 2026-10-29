@@ -1,7 +1,6 @@
 import { OnshapeApi } from "../client";
 import { assertInstanceType } from "../assertions";
 import { ElementPath, toElementApiPath } from "../path";
-import { apiPath } from "../api-path";
 import { OnshapeCreatedFeature, OnshapeFeatureListResponse } from "../types";
 
 export function addPartStudioFeature(
@@ -11,9 +10,7 @@ export function addPartStudioFeature(
 ): Promise<OnshapeCreatedFeature> {
     assertInstanceType(partStudioPath, "w");
     return client.post(
-        apiPath("partstudios", partStudioPath, toElementApiPath, {
-            endRoute: "features"
-        }),
+        `/partstudios${toElementApiPath(partStudioPath)}/features`,
         { body: { feature } }
     );
 }
@@ -23,9 +20,7 @@ export function getFeatures(
     partStudioPath: ElementPath
 ): Promise<OnshapeFeatureListResponse> {
     return client.get(
-        apiPath("partstudios", partStudioPath, toElementApiPath, {
-            endRoute: "features"
-        }),
+        `/partstudios${toElementApiPath(partStudioPath)}/features`,
         {
             query: {
                 includeSketches: "false",

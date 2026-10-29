@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { ThumbnailSize, ThumbnailUrls } from "../thumbnails/contract";
 import { Vendor } from "../library/vendors";
-import { BuildIssueType } from "./issues";
+import { type BuildIssue, BuildIssueType } from "./issues";
 import { DEFAULT_CONFIGURATION_KEY } from "../configurations/contract";
 import { thumbnailUrl } from "../thumbnails/keys";
-import { checkGroup, checkInsertable } from "./checks";
+import { checkGroup, checkInsertable, checkVisibility } from "./checks";
 
 /** What uploadThumbnails returns: the element's default configuration. */
 const THUMBNAILS: ThumbnailUrls = {
@@ -25,7 +25,8 @@ function defaultThumbnailUrl(size: ThumbnailSize): string {
 const HEALTHY_GROUP = {
     hasThumbnailTab: true,
     thumbnailUrls: THUMBNAILS,
-    hasFailedInsertables: false
+    hasFailedInsertables: false,
+    hasVisibleInsertable: true
 };
 
 describe("checkGroup", () => {
@@ -52,6 +53,36 @@ describe("checkGroup", () => {
             hasFailedInsertables: true
         });
         expect(issues).toEqual([{ type: BuildIssueType.INSERTABLES_FAILED }]);
+    });
+
+    it("errors when every insertable is hidden", () => {
+        const issues = checkGroup({
+            ...HEALTHY_GROUP,
+            hasVisibleInsertable: false
+        });
+        expect(issues).toEqual([
+            { type: BuildIssueType.NO_UNHIDDEN_INSERTABLES }
+        ]);
+    });
+});
+
+describe("checkVisibility", () => {
+    const OTHER_ISSUE: BuildIssue = { type: BuildIssueType.NO_THUMBNAIL_TAB };
+    const HIDDEN_ISSUE: BuildIssue = {
+        type: BuildIssueType.NO_UNHIDDEN_INSERTABLES
+    };
+
+    it("flags a group with nothing visible, keeping its other issues", () => {
+        expect(checkVisibility([OTHER_ISSUE], false)).toEqual([
+            OTHER_ISSUE,
+            HIDDEN_ISSUE
+        ]);
+    });
+
+    it("clears the flag once an insertable is shown", () => {
+        expect(checkVisibility([OTHER_ISSUE, HIDDEN_ISSUE], true)).toEqual([
+            OTHER_ISSUE
+        ]);
     });
 });
 

@@ -1,23 +1,23 @@
-import { Anchor, Group, Stack, Text, UnstyledButton } from "@mantine/core";
+import { ExternalLink } from "../../../components/external-link";
+import { Group, Stack, Text, UnstyledButton } from "@mantine/core";
 import { ArrowRightIcon, BooksIcon } from "@phosphor-icons/react";
 import { ReactNode } from "react";
 import { LibraryId } from "@backend/features/library/library-id";
-import { type AppTab } from "@backend/features/settings/app-tab";
+import { type AppTab } from "../../../lib/app-tab";
 import { AppBrandMark } from "../../../components/app-brand";
 import { AppModal, AppModalBody } from "../../../components/app-modal";
 import { AppIcon } from "../../../components/app-icon";
-import { ZeroState } from "../../../components/app-zero-state";
+import { SectionNotice } from "../../../components/app-notice";
 import {
-    BORDER,
     FontWeight,
     IconSize,
-    RADIUS,
     StatusColor
 } from "../../../lib/style-constants";
 import { getLibraryName } from "../../../lib/library";
 import { useNavigateToTab } from "../../../lib/tabs";
 import { getLibraryShade } from "../../../theme";
-import { updateUiState, useGetUiState } from "../../../lib/ui-state";
+import { updateUiState, useUiState } from "../../../lib/ui-state";
+import styles from "../../../lib/styles.module.css";
 
 interface Program {
     libraryId: LibraryId;
@@ -28,7 +28,7 @@ interface Program {
 /** What the app is offered for. MKCad is deprecated, so nobody is started in it. */
 const PROGRAMS: Program[] = [
     { libraryId: LibraryId.FRC_DESIGN_LIB, name: "FRC" },
-    { libraryId: LibraryId.FTC_DESIGN_LIB, name: "FTC" }
+    { libraryId: LibraryId.CONFIG_LIB, name: "FTC" }
 ];
 
 /** FIRST's own site, which their notice has to name. */
@@ -52,14 +52,13 @@ function ProgramCard(props: ProgramCardProps): ReactNode {
 
     return (
         <UnstyledButton
-            className="interactive"
+            className={`interactive ${styles.outlined}`}
             p="md"
-            style={{ border: BORDER, borderRadius: RADIUS }}
             onClick={() => {
                 onSelect(libraryId);
             }}
         >
-            <Group gap="md" wrap="nowrap">
+            <Group gap="md">
                 {/* In the library's own color, so the two choices read as the
                     two libraries they open. */}
                 <AppIcon
@@ -72,7 +71,7 @@ function ProgramCard(props: ProgramCardProps): ReactNode {
                         {name}
                         <RegisteredMark />
                     </Text>
-                    <Text size="sm">{getLibraryName(libraryId)}</Text>
+                    <Text>{getLibraryName(libraryId)}</Text>
                 </Stack>
                 <ArrowRightIcon size={IconSize.MEDIUM} />
             </Group>
@@ -91,22 +90,18 @@ function TrademarkDisclaimer(): ReactNode {
                 FIRST
             </Text>
             <RegisteredMark /> (
-            <Anchor href={FIRST_URL} target="_blank" inherit>
+            <ExternalLink href={FIRST_URL} inherit>
                 www.firstinspires.org
-            </Anchor>
+            </ExternalLink>
             ) which is not overseeing, involved with, or responsible for this
             activity, product, or service.
         </Text>
     );
 }
 
-/**
- * What a new user is met with: which program they build for, which becomes the
- * tab the app opens in. Stored like any other synced setting, so it is asked
- * once per account rather than once per browser.
- */
+/** Asks a new user's program, which becomes their tab. Asked once per browser. */
 export function ProgramSelect(): ReactNode {
-    const { tabId } = useGetUiState();
+    const tabId = useUiState((state) => state.tabId);
     const navigateToTab = useNavigateToTab();
 
     const selectTab = (tabId: AppTab) => {
@@ -115,15 +110,14 @@ export function ProgramSelect(): ReactNode {
     };
 
     return (
-        <AppModal opened={tabId === null} dismissible={false} size="lg">
+        <AppModal opened={tabId === undefined} dismissible={false} size="lg">
             <AppModalBody>
-                <ZeroState
+                <SectionNotice
                     icon={<AppBrandMark size={IconSize.PAGE} />}
                     title="Welcome to the FRCDesignApp!"
-                    description="To get started, select your library. You can switch between libraries at any time using the top navbar."
+                    description="To get started, select your library. You can switch between libraries at any time from the menu in the top navbar."
                     action={
-                        // Stacked and full width: two side by side would each
-                        // be narrower than their own name in Onshape's panel.
+                        // Side by side, each would be narrower than its name in Onshape's panel.
                         <Stack gap="sm" w="100%" maw={320}>
                             {PROGRAMS.map((program) => (
                                 <ProgramCard

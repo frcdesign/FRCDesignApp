@@ -8,20 +8,15 @@ import {
     Tooltip
 } from "@mantine/core";
 import { CheckIcon, CopyIcon } from "@phosphor-icons/react";
-import { type ReactNode, useEffect } from "react";
-import { modals } from "@mantine/modals";
+import { type ReactNode } from "react";
 import type { SearchRecord } from "@backend/features/configurations/contract";
-import {
-    FontWeight,
-    IconSize,
-    StatusColor,
-    TITLE_ICON_NUDGE
-} from "../lib/style-constants";
+import { FontWeight, IconSize, StatusColor } from "../lib/style-constants";
 import { meaningfulPartNumber } from "@backend/features/configurations/part-number";
-import { PartNumberLink } from "./part-number";
+import { PartNumber } from "./part-number";
+import styles from "../lib/styles.module.css";
 
 interface AppTitleProps {
-    title: ReactNode;
+    title: string;
     /** Leading icon, at `IconSize.MEDIUM` to match the title's size. */
     icon?: ReactNode;
     /** A quieter second line, laid out as a row so it can hold controls. */
@@ -34,25 +29,28 @@ interface AppTitleProps {
 export function AppTitle(props: AppTitleProps): ReactNode {
     const { title, icon, subtitle, rightSection } = props;
     return (
-        <Group gap="sm" wrap="nowrap" miw={0}>
+        <Group gap="sm" miw={0}>
             {/* Centred, not wrapped in a block, where the icon would go back
                 to sitting on the text baseline several pixels low. */}
-            {icon && <Center style={TITLE_ICON_NUDGE}>{icon}</Center>}
+            {icon && <Center className={styles.titleIcon}>{icon}</Center>}
             <Stack gap={0} miw={0}>
-                <Group gap="xs" wrap="nowrap" miw={0}>
-                    <Text fw={FontWeight.SEMI_BOLD} truncate miw={0}>
+                <Group gap="xs" miw={0}>
+                    <Text
+                        size="md"
+                        fw={FontWeight.SEMI_BOLD}
+                        truncate
+                        title={title}
+                        miw={0}
+                    >
                         {title}
                     </Text>
                     {rightSection}
                 </Group>
                 {subtitle && (
-                    // lh, because inheriting the title's 1 leaves no leading
-                    // under the last line, reading low in an evenly padded header.
+                    // Inheriting the title's line height of 1 reads low.
                     <Group
                         gap={4}
-                        wrap="nowrap"
-                        // Shrinkable, so a part number long enough to overrun
-                        // the header ellipsizes instead.
+                        // So a long part number ellipsizes.
                         miw={0}
                         fz="xs"
                         lh="xs"
@@ -66,15 +64,13 @@ export function AppTitle(props: AppTitleProps): ReactNode {
     );
 }
 
-interface MenuTitleProps {
+export interface MenuTitleProps {
     name: string;
     /** The configuration in view, which names the part the element resolves to. */
     record?: SearchRecord;
     icon?: ReactNode;
 }
 
-/** A menu's header: the element name is how the part was found, the part
- * number is what identifies what gets inserted. */
 export function MenuTitle(props: MenuTitleProps): ReactNode {
     const { name, record, icon } = props;
     const partNumber = meaningfulPartNumber(record?.partNumber, name);
@@ -84,33 +80,11 @@ export function MenuTitle(props: MenuTitleProps): ReactNode {
             title={name}
             subtitle={
                 partNumber && (
-                    <PartNumber partNumber={partNumber} url={record?.url} />
+                    <PartNumberLine partNumber={partNumber} url={record?.url} />
                 )
             }
         />
     );
-}
-
-interface UseMenuTitleProps extends Omit<MenuTitleProps, "name"> {
-    /** Undefined until known, which leaves the title the opener set. */
-    name: string | undefined;
-}
-
-/**
- * Keeps a modal's header on the selection in view. The header is updated rather
- * than rendered, being the modal's rather than the content's.
- */
-export function useMenuTitle(modalId: string, props: UseMenuTitleProps): void {
-    const { name, record, icon } = props;
-    useEffect(() => {
-        if (name === undefined) {
-            return;
-        }
-        modals.updateModal({
-            modalId,
-            title: <MenuTitle name={name} record={record} icon={icon} />
-        });
-    }, [modalId, name, record, icon]);
 }
 
 /** The xs line box the subtitle row is otherwise sized by, floored. */
@@ -126,17 +100,11 @@ function CopyPartNumberButton(props: CopyPartNumberButtonProps): ReactNode {
     return (
         <CopyButton value={partNumber}>
             {({ copied, copy }) => (
-                <Tooltip
-                    label={copied ? "Copied" : "Copy part number"}
-                    withArrow
-                >
+                <Tooltip label={copied ? "Copied" : "Copy part number"}>
                     <ActionIcon
-                        variant="subtle"
                         color={copied ? "teal" : "gray"}
-                        // Sized to the text line: taller, and the row grows,
-                        // shifting the title above it.
+                        // Any taller and the row grows, shifting the title.
                         size={COPY_BUTTON_SIZE}
-                        aria-label="Copy part number"
                         onClick={copy}
                     >
                         {copied ? (
@@ -151,24 +119,18 @@ function CopyPartNumberButton(props: CopyPartNumberButtonProps): ReactNode {
     );
 }
 
-interface PartNumberProps {
+interface PartNumberLineProps {
     partNumber: string;
     url?: string;
 }
 
-/** The part number, linked to the vendor's page for it when there is one. */
-function PartNumber(props: PartNumberProps): ReactNode {
+function PartNumberLine(props: PartNumberLineProps): ReactNode {
     const { partNumber, url } = props;
-    if (url) {
-        return <PartNumberLink url={url}>{partNumber}</PartNumberLink>;
-    }
-    // Nowhere to send them, so offer the number itself to search with.
     return (
         <>
-            <Text inherit truncate miw={0}>
-                {partNumber}
-            </Text>
-            <CopyPartNumberButton partNumber={partNumber} />
+            <PartNumber partNumber={partNumber} url={url} />
+            {/* Nowhere to send them, so offer the number to search with. */}
+            {!url && <CopyPartNumberButton partNumber={partNumber} />}
         </>
     );
 }

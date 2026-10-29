@@ -1,7 +1,6 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback } from "react";
 import { useRouter } from "@tanstack/react-router";
 import { queryClient } from "./query-client";
-import { useIsJobRunning } from "../features/library/queries";
 import {
     accessDataQueryKey,
     favoritesQueryKey,
@@ -11,23 +10,13 @@ import {
 import { useLibraryId } from "./library";
 
 interface RefreshLibraryOptions {
-    /**
-     * Refetch the version-keyed queries too, dropping whatever an optimistic
-     * patch left on them. For a mutation that failed: it bumped nothing, so the
-     * version on screen is still the one the server can answer for.
-     */
+    /** For a failed mutation: refetches versioned queries to drop optimistic patches. */
     discardPatches?: boolean;
 }
 
 /**
- * Refreshes the current library and the caller's access.
- *
- * The version-keyed queries are left alone, because a versioned url answers for
- * its own version and keeps answering for it — immutably, out of the browser's
- * cache. Refetching the version a bump is replacing therefore reinstates the
- * state that version had, which is what put an optimistic patch back to its old
- * value for one round trip before the new version landed. Moving the pointer is
- * enough: the new version is a new key, and it fetches.
+ * Leaves versioned queries alone: their urls are immutable, so refetching the
+ * old version restores its old state. The bump moves to a new key, which fetches.
  */
 export function useRefreshLibrary(): (
     options?: RefreshLibraryOptions
@@ -63,20 +52,4 @@ export function useRefreshFavorites(): () => Promise<void> {
         });
         await router.invalidate();
     }, [router, libraryId]);
-}
-
-/** Polls whether a load job is running and refreshes the library once it finishes. */
-export function useJobStatus(): boolean {
-    const refreshLibrary = useRefreshLibrary();
-    const running = useIsJobRunning();
-    // A ref, not state: tracking the previous value to detect the finished
-    // transition shouldn't trigger a render (and set-state-in-effect is banned).
-    const wasRunning = useRef(running);
-    useEffect(() => {
-        if (wasRunning.current && !running) {
-            void refreshLibrary();
-        }
-        wasRunning.current = running;
-    }, [running, refreshLibrary]);
-    return running;
 }

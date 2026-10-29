@@ -1,10 +1,24 @@
 import type { BatchItem } from "drizzle-orm/batch";
-import { type AppContext } from "../../lib/context";
+import { runInBackground } from "../../lib/background";
+import { type AppBindings, type AppContext } from "../../lib/context";
 import { getDb, type Db } from "../../db/client";
 import { events, type LoggedEvent } from "./schema";
-import { NOT_AN_INSERT, type EventCore } from "./logged-event";
+import {
+    NOT_AN_INSERT,
+    NOT_A_VERSION_RUN,
+    type EventCore
+} from "./logged-event";
 import { rollupWrites } from "./rollups";
 import { EVENT_SCHEMA_VERSION, EventType, InsertSource } from "./usage";
+import {
+    failedTaskCount,
+    jobOutcome,
+    VersionJobOutcome,
+    type PullScopeKind,
+    type VersionJobKind,
+    type PushScopeKind,
+    type VersionJobStatus
+} from "../version-manager/contract";
 import { type LibraryId } from "../library/library-id";
 import { type ElementPath } from "../../lib/onshape/path";
 import { ElementType } from "../../lib/onshape/element-type";
@@ -12,24 +26,20 @@ import {
     type ConfigurationParameter,
     type Selection
 } from "../configurations/contract";
-import { appliedValues } from "../configurations/selection";
+import { canonicalValues } from "../configurations/selection";
 import { toDayKey } from "./day";
 
+/** The caller is the one who inserted; see `trackInsert`. */
 export interface InsertEvent {
     libraryId: LibraryId;
-    userId: string;
-    /** The version-pinned tab inserted from, logged whole: the rollups key on
-     * its element id, and the rest says which version was used. */
+    /** The rollups key on the element id; the rest records the version. */
     path: ElementPath;
     insertableId: string;
     /** The type of tab the user inserted into. */
     targetElementType: ElementType;
     /** The whole selection the insert applied; undefined when it has none. */
     selection: Selection | undefined;
-    /**
-     * The parameters that selection was made whole against, carried rather than
-     * read back: applying the insert already had to load them.
-     */
+    /** Passed in, since the insert already loaded them. */
     parameters: ConfigurationParameter[];
     /** Whether the part was favorited, not where the insert came from. */
     isFavorite: boolean;
@@ -38,102 +48,107 @@ export interface InsertEvent {
     fasten: boolean;
 }
 
-interface AppOpenEvent {
-    libraryId: LibraryId;
-    userId: string;
-}
-
-/**
- * Usage data is never worth failing a user's insert over, so errors are logged
- * and dropped. Awaits when no execution context is available.
- */
-export async function trackInBackground(
-    c: AppContext,
-    work: () => Promise<void>
-): Promise<void> {
-    const guarded = work().catch((error) => {
-        console.error("Failed to record usage event", error);
-    });
-
-    try {
-        c.executionCtx.waitUntil(guarded);
-    } catch {
-        await guarded;
-    }
-}
-
-export async function trackInsert(
-    c: AppContext,
-    event: InsertEvent
-): Promise<void> {
-    const db = getDb(c.env.DB);
-    const now = Date.now();
-
-    await record(
-        db,
-        {
-            ...core(EventType.INSERT, now, event),
-            ...event.path,
-            insertableId: event.insertableId,
-            targetElementType: event.targetElementType,
-            selection: appliedSelection(event.selection, event.parameters),
-            isFavorite: event.isFavorite,
-            isQuickInsert: event.isQuickInsert,
-            source: event.source,
-            fasten: event.fasten
-        },
-        event.parameters
+/** After the response, and never failing it: tracking is not what was asked for. */
+export function trackInsert(c: AppContext, event: InsertEvent): Promise<void> {
+    return runInBackground(c, "record an insert", async () =>
+        record(
+            getDb(c.env.DB),
+            {
+                ...eventCore(
+                    EventType.INSERT,
+                    event.libraryId,
+                    await c.var.getUserId()
+                ),
+                ...NOT_A_VERSION_RUN,
+                ...event.path,
+                insertableId: event.insertableId,
+                targetElementType: event.targetElementType,
+                selection: appliedSelection(event.selection, event.parameters),
+                isFavorite: event.isFavorite,
+                isQuickInsert: event.isQuickInsert,
+                source: event.source,
+                fasten: event.fasten
+            },
+            event.parameters
+        )
     );
 }
 
-export async function trackAppOpen(
-    c: AppContext,
-    event: AppOpenEvent
-): Promise<void> {
-    const db = getDb(c.env.DB);
-    const now = Date.now();
-
-    // An app open configures nothing, so it has no parameters to key by.
-    await record(
-        db,
-        { ...core(EventType.APP_OPEN, now, event), ...NOT_AN_INSERT },
-        []
+/** As `trackInsert`, for a launch from Onshape. */
+export function trackAppOpen(c: AppContext): Promise<void> {
+    return runInBackground(c, "record an app open", async () =>
+        record(
+            getDb(c.env.DB),
+            {
+                ...eventCore(EventType.APP_OPEN, null, await c.var.getUserId()),
+                ...NOT_AN_INSERT,
+                ...NOT_A_VERSION_RUN
+            },
+            []
+        )
     );
 }
 
-/**
- * What Onshape applied for a selection: the values no condition hid. Null when
- * the insertable has nothing to configure, which is what the log records.
- */
+/** Canonical, so "5 in" and "(2 + 3) in" count as one. Null when there's nothing to configure. */
 function appliedSelection(
     selection: Selection | undefined,
     parameters: ConfigurationParameter[]
 ): Selection | null {
     if (!selection || parameters.length === 0) return null;
-    return appliedValues(selection, parameters);
+    return canonicalValues(selection, parameters);
 }
 
 /** What every logged event carries; its kind fills in the rest. */
-function core(
+function eventCore(
     type: EventType,
-    now: number,
-    event: { libraryId: LibraryId; userId: string }
+    libraryId: LibraryId | null,
+    userId: string
 ): EventCore {
+    const now = Date.now();
     return {
         id: crypto.randomUUID(),
         type,
         createdAt: new Date(now),
         day: toDayKey(now),
-        libraryId: event.libraryId,
-        userId: event.userId,
+        libraryId,
+        userId,
         schemaVersion: EVENT_SCHEMA_VERSION
     };
 }
 
-/**
- * The two halves of a write, batched so neither lands without the other. Kept
- * apart so the counting can move to a batch job without touching the recording.
- */
+/** A finished push or pull; see `features/version-manager`. */
+export interface VersionRunEvent {
+    userId: string;
+    kind: VersionJobKind;
+    scope: PushScopeKind | PullScopeKind;
+    /** How it ended. */
+    status: VersionJobStatus;
+}
+
+/** Recorded by the workflow once the run has ended, however it ended. */
+export async function trackVersionRun(
+    env: AppBindings,
+    event: VersionRunEvent
+): Promise<void> {
+    const { status } = event;
+    await record(
+        getDb(env.DB),
+        {
+            ...eventCore(EventType.VERSION_RUN, null, event.userId),
+            ...NOT_AN_INSERT,
+            versionKind: event.kind,
+            versionScope: event.scope,
+            versionUpdateOnly: status.updateOnly ?? false,
+            versionOutcome: jobOutcome(status) ?? VersionJobOutcome.FAILED,
+            failedSteps: failedTaskCount(status),
+            createdVersions: status.result?.createdVersions ?? 0,
+            updatedElements: status.result?.updatedElements ?? 0
+        },
+        []
+    );
+}
+
+/** Batched so neither half lands without the other. */
 async function record(
     db: Db,
     event: LoggedEvent,

@@ -102,8 +102,7 @@ describe("toParameterInstances", () => {
             optionConditions: [shownWhen(["s2"], "vendor", "wcp")]
         });
 
-        // Both series leave a generic part the same list, so the series is not
-        // what decides it and is left off that path.
+        // Both series leave generic the same list, so the series is left off.
         expect(labels([series, gated, size])).toEqual([
             "series",
             "old › vendor",
@@ -114,8 +113,7 @@ describe("toParameterInstances", () => {
     });
 
     it("names a checkbox by its own name and the state it is in", () => {
-        // A checkbox has no option names to borrow, so "true" on its own would
-        // say nothing about which checkbox it is.
+        // "true" alone wouldn't say which checkbox.
         const hub = boolParam("hub");
         const style = enumParam("style", ["plain", "splined"], {
             optionConditions: [shownWhen(["splined"], "hub", "true")]
@@ -132,8 +130,6 @@ describe("toParameterInstances", () => {
     it("names both choices when a checkbox and a list each narrow the options", () => {
         const vendor = enumParam("vendor", ["generic", "wcp"]);
         const hub = boolParam("hub");
-        // Two independent conditions, so the four combinations leave four
-        // different lists and each path has to name both choices.
         const style = enumParam("style", ["plain", "wcpOnly", "hubbed"], {
             optionConditions: [
                 shownWhen(["wcpOnly"], "vendor", "wcp"),
@@ -183,8 +179,6 @@ describe("toParameterInstances", () => {
     });
 
     it("reports a parameter whole when its condition names a stale parameter", () => {
-        // A RANGE condition on something that is no longer an enum throws; the
-        // report has to survive it.
         const stale: ConfigurationParameter = {
             ...quantityParam("length"),
             condition: {

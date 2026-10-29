@@ -1,0 +1,104 @@
+import { env } from "cloudflare:workers";
+import { introspectWorkflowInstance } from "cloudflare:test";
+import { afterEach, expect, it, vi } from "vitest";
+import * as ThumbnailEndpoints from "../../lib/onshape/endpoints/thumbnails";
+import * as RequestAuth from "../auth/request-auth";
+import { OnshapeApiError, type OAuthApi } from "../../lib/onshape/client";
+import { ThumbnailSize } from "./contract";
+import { thumbnailKey } from "./keys";
+import { TEST_LIBRARY_ID } from "../../../__test_utils__";
+import * as BackgroundSessions from "../auth/background-sessions";
+
+afterEach(() => vi.restoreAllMocks());
+
+const key = (size: ThumbnailSize) => thumbnailKey("e1", "mv1", size, "a=1");
+
+it("stores both sizes once Onshape has rendered them", async () => {
+    vi.spyOn(RequestAuth, "getOnshapeApiFromSessionId").mockResolvedValue(
+        {} as OAuthApi
+    );
+    const fetch = vi
+        .spyOn(ThumbnailEndpoints, "getThumbnailFromId")
+        .mockRejectedValueOnce(new OnshapeApiError("rendering", 404))
+        .mockResolvedValue(new TextEncoder().encode("gif").buffer);
+
+    await using instance = await introspectWorkflowInstance(
+        env.RENDER_THUMBNAIL_WORKFLOW,
+        "render-test"
+    );
+    await instance.modify(async (m) => {
+        await m.disableRetryDelays();
+    });
+    await env.RENDER_THUMBNAIL_WORKFLOW.create({
+        id: "render-test",
+        params: {
+            thumbnailId: "thumbnail-id",
+            targets: [
+                { size: ThumbnailSize.LARGE, key: key(ThumbnailSize.LARGE) },
+                { size: ThumbnailSize.SMALL, key: key(ThumbnailSize.SMALL) }
+            ],
+            elementId: "e1",
+            microversionId: "mv1",
+            configurationKey: "a=1",
+            sessionId: "session",
+            libraryId: TEST_LIBRARY_ID
+        }
+    });
+    await instance.waitForStatus("complete");
+
+    // The id it was handed, never one it resolved again itself; and one size
+    // at a time, since asking for the other would abandon the render.
+    expect(fetch.mock.calls.map((call) => [call[1], call[2]])).toEqual([
+        ["thumbnail-id", ThumbnailSize.LARGE],
+        ["thumbnail-id", ThumbnailSize.LARGE],
+        ["thumbnail-id", ThumbnailSize.SMALL]
+    ]);
+    for (const size of Object.values(ThumbnailSize)) {
+        const stored = await env.BLOB.get(key(size));
+        expect(stored?.customMetadata).toEqual({
+            microversionId: "mv1",
+            configurationKey: "a=1"
+        });
+    }
+});
+
+// A restart reruns with the first requester's session, which may have ended.
+it("borrows an admin's session once the requester's has ended", async () => {
+    vi.spyOn(RequestAuth, "getOnshapeApiFromSessionId").mockRejectedValue(
+        new Error("signed out")
+    );
+    const admin = {} as OAuthApi;
+    vi.spyOn(BackgroundSessions, "getBackgroundOnshapeApi").mockResolvedValue(
+        admin
+    );
+    const fetch = vi
+        .spyOn(ThumbnailEndpoints, "getThumbnailFromId")
+        .mockResolvedValue(new TextEncoder().encode("gif").buffer);
+    const renderKey = (size: ThumbnailSize) =>
+        thumbnailKey("e2", "mv1", size, "a=1");
+
+    await using instance = await introspectWorkflowInstance(
+        env.RENDER_THUMBNAIL_WORKFLOW,
+        "render-borrowed"
+    );
+    await env.RENDER_THUMBNAIL_WORKFLOW.create({
+        id: "render-borrowed",
+        params: {
+            thumbnailId: "thumbnail-id",
+            targets: [
+                {
+                    size: ThumbnailSize.LARGE,
+                    key: renderKey(ThumbnailSize.LARGE)
+                }
+            ],
+            elementId: "e2",
+            microversionId: "mv1",
+            configurationKey: "a=1",
+            sessionId: "ended",
+            libraryId: TEST_LIBRARY_ID
+        }
+    });
+    await instance.waitForStatus("complete");
+
+    expect(fetch.mock.calls[0][0]).toBe(admin);
+});

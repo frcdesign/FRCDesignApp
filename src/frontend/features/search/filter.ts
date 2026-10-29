@@ -14,10 +14,7 @@ interface FilterArgs {
     visibleOnly?: boolean;
 }
 
-/**
- * Insertables narrowed for display, plus what the narrowing cost. Searching and
- * plain filtering both produce one, so a list renders the same either way.
- */
+/** Search and plain filtering both produce one, so a list renders the same either way. */
 export interface FilteredInsertables {
     insertables: InsertableOut[];
     filtered: FilterResult;
@@ -25,8 +22,7 @@ export interface FilteredInsertables {
     hits: Record<string, SearchHit>;
 }
 
-/** Ordered insertables plus the vendor-filtered count. Browsing only: an
- * active search goes through `searchInsertables` instead. */
+/** Browsing only; a search goes through `searchInsertables`. */
 export function filterInsertables(
     insertables: InsertableOut[],
     args: FilterArgs

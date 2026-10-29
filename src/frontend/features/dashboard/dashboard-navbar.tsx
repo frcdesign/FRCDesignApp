@@ -1,15 +1,13 @@
 import {
-    ActionIcon,
     Button,
     Group,
     Menu,
     NumberInput,
     Stack,
     Text,
-    Tabs,
-    Tooltip
+    Tabs
 } from "@mantine/core";
-import { ArrowClockwiseIcon, CaretDownIcon } from "@phosphor-icons/react";
+import { CaretDownIcon } from "@phosphor-icons/react";
 import { useIsFetching, useQueryClient } from "@tanstack/react-query";
 import {
     useNavigate,
@@ -20,8 +18,9 @@ import {
 import { type ReactNode } from "react";
 import { LibraryId } from "@backend/features/library/library-id";
 import { getLibraryName } from "../../lib/library";
-import { BORDER, IconSize, NAVBAR_ROW_HEIGHT } from "../../lib/style-constants";
-import { NavbarRow, SettingsButton } from "../../components/app-navbar";
+import { NAVBAR_ROW_HEIGHT } from "../../lib/style-constants";
+import { NavbarRow, SettingsControls } from "../../components/app-navbar";
+import { RefreshButton } from "../../components/refresh-button";
 import { RangeControl } from "./range-control";
 import {
     DASHBOARDS,
@@ -30,14 +29,12 @@ import {
     toDashboardKey,
     type DashboardKey
 } from "./dashboard-nav";
+import styles from "../../lib/styles.module.css";
 
 interface DashboardTabsProps {
     current: DashboardKey;
 }
 
-/**
- * Two tiers, like the panel's navbar: the dashboard over the library it reads.
- */
 export function DashboardNavbar(): ReactNode {
     const pathname = useRouterState({ select: (s) => s.location.pathname });
     const current = toDashboardKey(pathname);
@@ -46,30 +43,25 @@ export function DashboardNavbar(): ReactNode {
         <Stack gap={0}>
             <NavbarRow>
                 <DashboardTabs current={current} />
-                <Group gap="xs" wrap="nowrap" ml="auto">
-                    <RefreshButton />
-                    <SettingsButton />
+                <Group gap="xs" ml="auto">
+                    <DashboardRefreshButton />
+                    <SettingsControls />
                 </Group>
             </NavbarRow>
-            {/* Only the library-scoped dashboards have anything to put here:
-                the app dashboard spans every library, and its cards each state
-                their own window. */}
-            {current !== "app" && (
-                <Group
-                    gap="sm"
-                    px="sm"
-                    h={NAVBAR_ROW_HEIGHT}
-                    wrap="nowrap"
-                    align="center"
-                    style={{ borderBottom: BORDER }}
-                >
-                    <LibraryMenu dashboard={current} />
-                    <Group gap="sm" ml="auto">
-                        {current === "unused" && <ThresholdControl />}
-                        <RangeControl />
-                    </Group>
+            <Group
+                gap="sm"
+                px="sm"
+                h={NAVBAR_ROW_HEIGHT}
+                align="center"
+                className={styles.dividerBottom}
+            >
+                {/* The app dashboard spans every library, so it picks none. */}
+                {current !== "app" && <LibraryMenu dashboard={current} />}
+                <Group gap="sm" ml="auto">
+                    {current === "unused" && <ThresholdControl />}
+                    <RangeControl />
                 </Group>
-            )}
+            </Group>
         </Stack>
     );
 }
@@ -94,7 +86,7 @@ function DashboardTabs({ current }: DashboardTabsProps): ReactNode {
             }}
             styles={TAB_STYLES}
         >
-            <Tabs.List aria-label="Dashboards">
+            <Tabs.List>
                 {DASHBOARDS.map((entry) => (
                     <Tabs.Tab key={entry.key} value={entry.key}>
                         {entry.label}
@@ -118,12 +110,12 @@ function LibraryMenu({ dashboard }: LibraryMenuProps): ReactNode {
     const target = DASHBOARDS.find((entry) => entry.key === dashboard);
 
     return (
-        <Menu position="bottom-start" withinPortal>
+        <Menu position="bottom-start">
             <Menu.Target>
                 <Button
                     variant="default"
                     size="compact-sm"
-                    rightSection={<CaretDownIcon size={IconSize.SMALL} />}
+                    rightSection={<CaretDownIcon />}
                 >
                     {getLibraryName(current)}
                 </Button>
@@ -139,8 +131,7 @@ function LibraryMenu({ dashboard }: LibraryMenuProps): ReactNode {
                                     target?.to ??
                                     "/dashboard/library/$libraryId",
                                 params: { libraryId },
-                                // Dropped, not retained: the part being
-                                // reported on belongs to the old library.
+                                // The part belongs to the old library.
                                 search: { element: undefined }
                             })
                         }
@@ -170,7 +161,6 @@ function ThresholdControl(): ReactNode {
                 </Text>
             }
             leftSectionWidth={THRESHOLD_LABEL_WIDTH}
-            aria-label="Low-usage threshold"
             value={threshold ?? DEFAULT_THRESHOLD}
             onChange={(value) =>
                 void navigate({
@@ -191,35 +181,24 @@ function ThresholdControl(): ReactNode {
 const THRESHOLD_LABEL_WIDTH = 52;
 
 /** Refetches whatever the current dashboard is showing. */
-function RefreshButton(): ReactNode {
+function DashboardRefreshButton(): ReactNode {
     const queryClient = useQueryClient();
     const fetching = useIsFetching({ queryKey: ["analytics"] }) > 0;
 
     return (
-        <Tooltip withArrow label="Refresh">
-            <ActionIcon
-                my="auto"
-                variant="subtle"
-                color="gray"
-                aria-label="Refresh"
-                loading={fetching}
-                onClick={() =>
-                    void queryClient.invalidateQueries({
-                        queryKey: ["analytics"]
-                    })
-                }
-            >
-                <ArrowClockwiseIcon size={IconSize.MEDIUM} />
-            </ActionIcon>
-        </Tooltip>
+        <RefreshButton
+            loading={fetching}
+            onClick={() =>
+                void queryClient.invalidateQueries({ queryKey: ["analytics"] })
+            }
+        />
     );
 }
 
 const TAB_STYLES = {
     // Hides the line under the tab list alone; the row owns one that spans it.
     root: { "--tab-border-color": "transparent", minWidth: 0 },
-    // Full height, so the underline lands on the row's border rather than
-    // partway up a taller bar.
+    // So the underline lands on the row's border.
     list: {
         height: "100%",
         flexWrap: "nowrap",

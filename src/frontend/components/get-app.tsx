@@ -3,13 +3,9 @@ import { ReactNode } from "react";
 import { useIsConnectedToOnshape } from "../lib/onshape-params";
 import { IconSize } from "../lib/style-constants";
 import { openUrlInNewTab, SETUP_URL } from "../lib/url";
-import { Callout } from "./callout";
+import { Callout, CalloutButton } from "./callout";
 
-/**
- * Offers the app over the insert menu's preview, where a part somebody cannot
- * insert is in front of them. Inside Onshape's panel they are already running
- * it, so nothing renders there.
- */
+/** Offers the app where someone sees a part they can't insert. Hidden inside Onshape. */
 export function GetAppCallout(): ReactNode {
     const isConnected = useIsConnectedToOnshape();
 
@@ -20,11 +16,14 @@ export function GetAppCallout(): ReactNode {
     return (
         <Callout
             text="To use this part, get the FRCDesignApp."
-            action={{
-                text: "Instructions",
-                icon: <ArrowSquareOutIcon size={IconSize.SMALL} />,
-                onClick: () => openUrlInNewTab(SETUP_URL)
-            }}
+            action={
+                <CalloutButton
+                    icon={<ArrowSquareOutIcon size={IconSize.SMALL} />}
+                    onClick={() => openUrlInNewTab(SETUP_URL)}
+                >
+                    Instructions
+                </CalloutButton>
+            }
         />
     );
 }

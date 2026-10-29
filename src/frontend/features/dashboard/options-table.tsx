@@ -9,8 +9,9 @@ import { LibraryId } from "@backend/features/library/library-id";
 import { StatusColor } from "../../lib/style-constants";
 import { formatCount, formatFraction } from "./format";
 import { ImplicitDefaultBadge } from "./implicit-default";
-import { ParameterPath } from "./parameter-path";
-import { TablePagination, usePagedRows } from "./table-pagination";
+import { AppBreadcrumbs } from "../../components/breadcrumbs";
+import { usePagedRows } from "./paged-rows";
+import { TablePagination } from "./table-pagination";
 
 /** Below this the part and parameter names wrap into each other. */
 const MIN_TABLE_WIDTH = 760;
@@ -44,7 +45,7 @@ export function OptionsTable({
     return (
         <>
             <Table.ScrollContainer minWidth={MIN_TABLE_WIDTH}>
-                <Table striped highlightOnHover>
+                <Table striped>
                     <Table.Thead>
                         <Table.Tr>
                             {COLUMNS.map((column, index) => (
@@ -104,9 +105,10 @@ function OptionRow({ libraryId, option }: OptionRowProps): ReactNode {
         >
             <Table.Td>{option.partName}</Table.Td>
             <Table.Td>
-                <ParameterPath path={option.parameterPath}>
-                    <span>{option.parameterName}</span>
-                </ParameterPath>
+                <AppBreadcrumbs
+                    crumbs={option.parameterPath.map((label) => ({ label }))}
+                    current={<span>{option.parameterName}</span>}
+                />
             </Table.Td>
             <Table.Td>
                 <OptionLabel value={option.value} />
@@ -129,9 +131,7 @@ function OptionLabel({ value }: OptionLabelProps): ReactNode {
         <Group gap="xs">
             {value.label}
             {value.count === 0 && (
-                <Badge color={StatusColor.INFO} size="sm">
-                    Never used
-                </Badge>
+                <Badge color={StatusColor.INFO}>Never used</Badge>
             )}
             {/* A default nobody picks is the strongest signal the parameter
                 is wrong. An implicit one is stronger still: it is what this
@@ -140,9 +140,7 @@ function OptionLabel({ value }: OptionLabelProps): ReactNode {
                 <ImplicitDefaultBadge color={StatusColor.WARNING} size="sm" />
             )}
             {value.isDefault && (
-                <Badge color={StatusColor.WARNING} size="sm">
-                    Default
-                </Badge>
+                <Badge color={StatusColor.WARNING}>Default</Badge>
             )}
         </Group>
     );

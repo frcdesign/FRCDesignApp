@@ -7,47 +7,17 @@ import {
     getVendorName,
     Vendor
 } from "@backend/features/library/vendors";
-import {
-    getUiState,
-    updateUiState,
-    useGetUiState
-} from "../../../lib/ui-state";
 import { AppContextMenu } from "../../../components/app-menu";
 import { useLibraryId } from "../../../lib/library";
-import type { LibraryId } from "@backend/features/library/library-id";
+import {
+    setVendorFilters,
+    useClearVendorFilters,
+    useVendorFilters
+} from "../vendor-filters";
 
-/** The current library's active filters; `undefined` means every vendor. */
-export function useVendorFilters(): Vendor[] | undefined {
-    const uiState = useGetUiState();
-    const libraryId = useLibraryId();
-    return uiState.vendorFilters[libraryId];
-}
-
-/** Replaces one library's filters, leaving what the others have picked. An
- * empty list is no filter at all, so it is stored as absent. */
-function setVendorFilters(libraryId: LibraryId, vendors: Vendor[]): void {
-    // Read at call time rather than from a render, so two changes in a tick
-    // cannot drop one another's library.
-    const vendorFilters = { ...getUiState().vendorFilters };
-    if (vendors.length > 0) {
-        vendorFilters[libraryId] = vendors;
-    } else {
-        delete vendorFilters[libraryId];
-    }
-    updateUiState({ vendorFilters });
-}
-
-/** A vendor's name, and the code a part number writes it as when that differs
- * — Custom names itself, so it does not repeat. */
 function vendorLabel(vendor: Vendor): string {
     const name = getVendorName(vendor);
     return name === vendor ? name : `${name} (${vendor})`;
-}
-
-/** Drops the current library's filters, leaving the other libraries' alone. */
-export function useClearVendorFilters(): () => void {
-    const libraryId = useLibraryId();
-    return () => setVendorFilters(libraryId, []);
 }
 
 interface ClearFiltersButtonProps {
@@ -64,7 +34,7 @@ export function ClearFiltersButton(props: ClearFiltersButtonProps): ReactNode {
         <Button
             disabled={areAllTagsActive}
             variant="default"
-            leftSection={<FunnelXIcon size={IconSize.SMALL} />}
+            leftSection={<FunnelXIcon />}
             onClick={clearVendorFilters}
         >
             {text}
@@ -72,10 +42,7 @@ export function ClearFiltersButton(props: ClearFiltersButtonProps): ReactNode {
     );
 }
 
-/**
- * Vendor filter control: an icon button on the header that opens a menu of
- * vendor checkbox items. `undefined` filters mean "all vendors active".
- */
+/** `undefined` filters mean every vendor is active. */
 export function VendorMenu(): ReactNode {
     const libraryId = useLibraryId();
     const vendorFilters = useVendorFilters();
@@ -99,7 +66,7 @@ export function VendorMenu(): ReactNode {
             </Menu.CheckboxGroup>
             <Menu.Divider />
             <Menu.Item
-                leftSection={<FunnelXIcon size={IconSize.SMALL} />}
+                leftSection={<FunnelXIcon />}
                 disabled={!hasFilters}
                 onClick={() => setVendorFilters(libraryId, [])}
             >

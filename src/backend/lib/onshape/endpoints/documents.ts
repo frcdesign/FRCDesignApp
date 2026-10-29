@@ -1,12 +1,18 @@
 import { OnshapeApi } from "../client";
 import {
     DocumentPath,
+    ElementPath,
     InstancePath,
-    toDocumentApiPath,
+    toElementApiObject,
+    toElementApiPath,
     toInstanceApiPath
 } from "../path";
-import { apiPath } from "../api-path";
-import { OnshapeDocumentContents, OnshapeDocumentInfo } from "../types";
+import {
+    OnshapeDocumentContents,
+    OnshapeDocumentInfo,
+    OnshapeExternalReferences,
+    OnshapeInsertables
+} from "../types";
 
 /** Describes possible part types. */
 export enum PartType {
@@ -19,11 +25,7 @@ export function getDocument(
     client: OnshapeApi,
     documentPath: DocumentPath
 ): Promise<OnshapeDocumentInfo> {
-    return client.get(
-        apiPath("documents", documentPath, toDocumentApiPath, {
-            skipDocumentD: true
-        })
-    );
+    return client.get(`/documents/${documentPath.documentId}`);
 }
 
 export function getContents(
@@ -31,12 +33,9 @@ export function getContents(
     instancePath: InstancePath,
     includeThumbnails = false
 ): Promise<OnshapeDocumentContents> {
-    return client.get(
-        apiPath("documents", instancePath, toInstanceApiPath, {
-            endRoute: "contents"
-        }),
-        { query: { withThumbnails: includeThumbnails } }
-    );
+    return client.get(`/documents${toInstanceApiPath(instancePath)}/contents`, {
+        query: { withThumbnails: includeThumbnails }
+    });
 }
 
 /** The document's units, as much of the response as anything here reads. */
@@ -52,8 +51,72 @@ export function getUnitInfo(
     instancePath: InstancePath
 ): Promise<OnshapeUnitInfo> {
     return onshapeApi.get(
-        apiPath("documents", instancePath, toInstanceApiPath, {
-            endRoute: "unitinfo"
-        })
+        `/documents${toInstanceApiPath(instancePath)}/unitinfo`
+    );
+}
+
+/**
+ * `GET /documents/d/{did}/{wv}/{wvid}/insertables`
+ *
+ * What can be inserted from an instance, and how far a workspace has moved
+ * since its last version. Every `include` flag defaults to false, so a caller
+ * after the counters alone passes no query at all and Onshape enumerates
+ * nothing.
+ */
+export function getInsertables(
+    client: OnshapeApi,
+    instancePath: InstancePath,
+    query: Record<string, string | boolean> = {}
+): Promise<OnshapeInsertables> {
+    return client.get(
+        `/documents${toInstanceApiPath(instancePath)}/insertables`,
+        { query }
+    );
+}
+
+/**
+ * `GET /documents/d/{did}/w/{wid}/externalreferences`
+ *
+ * Every version of another document this workspace's tabs reference, and the
+ * latest version of each of those documents. Undocumented (absent from the
+ * OpenAPI spec); shape unverified.
+ */
+export function getExternalReferences(
+    client: OnshapeApi,
+    instancePath: InstancePath
+): Promise<OnshapeExternalReferences> {
+    return client.get(
+        `/documents${toInstanceApiPath(instancePath)}/externalreferences`
+    );
+}
+
+/** Repoints a reference from one path to another; both name the same tab. */
+export interface ReferenceUpdate {
+    fromReference: ElementPath;
+    toReference: ElementPath;
+}
+
+/**
+ * `POST /elements/d/{did}/w/{wid}/e/{eid}/updatereferences`
+ *
+ * Repoints the references one tab makes, each from the element path it points
+ * at now to the one it should. Requires write on the tab's document, and link
+ * on each document being referenced.
+ */
+export function updateReferences(
+    client: OnshapeApi,
+    elementPath: ElementPath,
+    referenceUpdates: ReferenceUpdate[]
+): Promise<void> {
+    return client.postNone(
+        `/elements${toElementApiPath(elementPath)}/updatereferences`,
+        {
+            body: {
+                referenceUpdates: referenceUpdates.map((update) => ({
+                    fromReference: toElementApiObject(update.fromReference),
+                    toReference: toElementApiObject(update.toReference)
+                }))
+            }
+        }
     );
 }

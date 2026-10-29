@@ -1,7 +1,4 @@
-/**
- * Hand-authored subsets of the Onshape responses we use. To find a field's real
- * shape, regenerate `onshape-api-reference/` — see `openapi-ts.config.ts`.
- */
+/** Hand-written subsets. For a field's real shape, regenerate `onshape-api-reference/`; see `openapi-ts.config.ts`. */
 import {
     LogicalOp,
     QuantityType,
@@ -115,7 +112,6 @@ interface OnshapeQuantityRange {
 interface OnshapeParameterBase {
     parameterId: string;
     parameterName: string;
-    isCosmetic: boolean;
     visibilityCondition: OnshapeVisibilityCondition;
 }
 
@@ -162,6 +158,7 @@ export interface OnshapeVersionInfo {
     name: string;
     /** ISO-8601 timestamp. */
     createdAt: string;
+    creator?: { id: string };
 }
 
 // === documents (GET /documents/{did}, GET .../contents) ===
@@ -186,16 +183,22 @@ export interface OnshapeDocumentInfo {
     id: string;
     name: string;
     documentThumbnailElementId?: string;
-    /**
-     * Optional because nothing here has confirmed Onshape always sends it; the
-     * load throws rather than guessing when it is absent.
-     */
+    /** Not confirmed to always be sent; the load throws when it's absent. */
     defaultWorkspace?: { id: string };
+}
+
+/** A workspace, as much of Onshape's `BTWorkspaceInfo` as anything reads. */
+export interface OnshapeWorkspaceInfo {
+    id: string;
+    name: string;
+    description?: string;
 }
 
 /** A folder (group) node in the document contents tree. */
 export interface OnshapeElementGroup {
     btType: OnshapeFolderEntryType.GROUP;
+    /** The folder's name; the root folder's is not one anybody sees. */
+    groupName?: string;
     /** Child folders and element references, in display order. */
     groups: OnshapeFolderEntry[];
 }
@@ -263,10 +266,7 @@ interface OnshapeSubAssembly {
     features: OnshapeAssemblyFeature[];
 }
 
-/**
- * A part studio feature an instance was inserted from, in the assembly's
- * flattened `partStudioFeatures` list — what `parts` is for part instances.
- */
+/** What `parts` is for part instances. */
 interface OnshapeAssemblyPsFeature {
     documentId?: string;
     elementId?: string;
@@ -355,4 +355,47 @@ interface OnshapePartStudioFeature {
 /** GET /partstudios/d/{did}/{wvm}/{wvmid}/e/{eid}/features (the subset we read). */
 export interface OnshapeFeatureListResponse {
     features: OnshapePartStudioFeature[];
+}
+
+// === external references (GET /documents/d/{did}/w/{wid}/externalreferences) ===
+
+/**
+ * One external instance a tab references: the document and version it lives in,
+ * and which of that instance's tabs are referenced.
+ */
+export interface OnshapeExternalReference {
+    documentId: string;
+    /** The referenced instance's id. Always a version: references are to versions. */
+    id: string;
+    /** Onshape's own verdict on whether a newer version exists. */
+    isOutOfDate: boolean;
+    referencedElements: string[];
+}
+
+/**
+ * GET /documents/d/{did}/w/{wid}/externalreferences (the subset we read).
+ * Undocumented (absent from the OpenAPI spec); shape unverified.
+ */
+export interface OnshapeExternalReferences {
+    /** Keyed by the referencing tab's element id. */
+    elementExternalReferences?: Record<string, OnshapeExternalReference[]>;
+    /** The newest version of each referenced document. */
+    latestVersions?: { documentId: string; id: string }[];
+}
+
+// === insertables (GET /documents/d/{did}/{wv}/{wvid}/insertables) ===
+
+/** GET /documents/d/{did}/{wv}/{wvid}/insertables (the subset we read). */
+/** One thing that can be inserted from an instance (the subset we read). */
+interface OnshapeInsertable {
+    predictableThumbnailId?: string;
+}
+
+export interface OnshapeInsertables {
+    items?: OnshapeInsertable[];
+    /**
+     * Edits made in the workspace that its latest version does not carry.
+     * Absent for a version, which is a snapshot and cannot have moved on.
+     */
+    changesSinceVersionSave?: number;
 }

@@ -75,7 +75,7 @@ describe("Vendor", () => {
 
 describe("getLibraryVendors", () => {
     it("stocks each library with its own list", () => {
-        const ftc = getLibraryVendors(LibraryId.FTC_DESIGN_LIB);
+        const ftc = getLibraryVendors(LibraryId.CONFIG_LIB);
         const frc = getLibraryVendors(LibraryId.FRC_DESIGN_LIB);
 
         expect(ftc).toContain(Vendor.GB);
@@ -87,8 +87,7 @@ describe("getLibraryVendors", () => {
         expect(frc).toContain(Vendor.MCM);
     });
 
-    // The roster itself, so a vendor cannot quietly go missing: FRC teams see
-    // this list and nothing else, in this order.
+    // Pinned so a vendor can't quietly go missing.
     it("stocks FRC with exactly the vendors it buys from", () => {
         expect(
             getLibraryVendors(LibraryId.FRC_DESIGN_LIB).map((vendor) => [
@@ -114,11 +113,9 @@ describe("getLibraryVendors", () => {
         ]);
     });
 
-    // The same roster check for FTC, whose list is its own and shares only
-    // part of FRC's.
     it("stocks FTC with exactly the vendors it buys from", () => {
         expect(
-            getLibraryVendors(LibraryId.FTC_DESIGN_LIB).map((vendor) => [
+            getLibraryVendors(LibraryId.CONFIG_LIB).map((vendor) => [
                 getVendorName(vendor),
                 vendor
             ])

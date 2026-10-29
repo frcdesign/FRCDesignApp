@@ -4,7 +4,14 @@ import { type ConfigurationParameter } from "../configurations/contract";
 import { toInstanceKeys } from "../configurations/instances";
 import { earliest, increment, latest } from "../../db/updates";
 import { EventType } from "./usage";
-import { asInsert, type LoggedInsert } from "./logged-event";
+import { VersionJobOutcome } from "../version-manager/contract";
+import {
+    asInsert,
+    asVersionRun,
+    type LoggedInsert,
+    type LoggedVersionRun
+} from "./logged-event";
+import type { LibraryId } from "../library/library-id";
 import {
     dailyConfigurationMetrics,
     dailyInsertableMetrics,
@@ -12,30 +19,39 @@ import {
     dailyMetrics,
     dailySourceMetrics,
     dailyTargetMetrics,
+    dailyAppOpens,
     dailyUserActivity,
+    dailyVersionMetrics,
     insertableStats,
     userStats,
     type LoggedEvent
 } from "./schema";
 
 /**
- * Every counter one event feeds, derived from the row and the parameters the
- * part declares — which is what lets a replay rebuild the rollups exactly, or
- * move them to a batch job.
- *
- * `parameters` is only read to key a configuration count by the branch it was
- * chosen in; everything else comes from the row. Pass the part's declared
- * parameters, or none for an event that configured nothing.
+ * Derived from the row, and the part's parameters to key a configuration count
+ * by its branch, so a replay rebuilds the rollups exactly.
  */
 export function rollupWrites(
     db: Db,
     event: LoggedEvent,
     parameters: ConfigurationParameter[]
 ): BatchItem<"sqlite">[] {
+    const run = asVersionRun(event);
+    if (run) {
+        return [countVersionRunDay(db, run)];
+    }
+    if (event.type === EventType.APP_OPEN) {
+        return [countAppOpenDay(db, event)];
+    }
+    // Every other rollup is keyed by library.
+    if (event.libraryId === null) {
+        return [];
+    }
+    const libraryId = event.libraryId;
     const writes = [
-        countDay(db, event),
-        markUserActive(db, event),
-        countUser(db, event)
+        countDay(db, event, libraryId),
+        markUserActive(db, event, libraryId),
+        countUser(db, event, libraryId)
     ];
     const insert = asInsert(event);
     if (!insert) return writes;
@@ -51,8 +67,63 @@ export function rollupWrites(
     ];
 }
 
+/** A day's pushes and pulls, and what they moved. */
+function countVersionRunDay(db: Db, run: LoggedVersionRun) {
+    const values = {
+        day: run.day,
+        kind: run.versionKind,
+        runs: 1,
+        updateOnlyRuns: run.versionUpdateOnly ? 1 : 0,
+        partialRuns: run.versionOutcome === VersionJobOutcome.PARTIAL ? 1 : 0,
+        failedRuns: run.versionOutcome === VersionJobOutcome.FAILED ? 1 : 0,
+        createdVersions: run.createdVersions,
+        updatedElements: run.updatedElements
+    };
+
+    return db
+        .insert(dailyVersionMetrics)
+        .values(values)
+        .onConflictDoUpdate({
+            target: [dailyVersionMetrics.day, dailyVersionMetrics.kind],
+            set: {
+                runs: increment(dailyVersionMetrics.runs),
+                updateOnlyRuns: increment(
+                    dailyVersionMetrics.updateOnlyRuns,
+                    values.updateOnlyRuns
+                ),
+                partialRuns: increment(
+                    dailyVersionMetrics.partialRuns,
+                    values.partialRuns
+                ),
+                failedRuns: increment(
+                    dailyVersionMetrics.failedRuns,
+                    values.failedRuns
+                ),
+                createdVersions: increment(
+                    dailyVersionMetrics.createdVersions,
+                    values.createdVersions
+                ),
+                updatedElements: increment(
+                    dailyVersionMetrics.updatedElements,
+                    values.updatedElements
+                )
+            }
+        });
+}
+
+/** One person's opens for a day. */
+function countAppOpenDay(db: Db, event: LoggedEvent) {
+    return db
+        .insert(dailyAppOpens)
+        .values({ day: event.day, userId: event.userId, opens: 1 })
+        .onConflictDoUpdate({
+            target: [dailyAppOpens.day, dailyAppOpens.userId],
+            set: { opens: increment(dailyAppOpens.opens) }
+        });
+}
+
 /** The library's day: each flag counter a subset of the day's total. */
-function countDay(db: Db, event: LoggedEvent) {
+function countDay(db: Db, event: LoggedEvent, libraryId: LibraryId) {
     const favorite = event.isFavorite ? 1 : 0;
     const fasten = event.fasten ? 1 : 0;
     const quickInsert = event.isQuickInsert ? 1 : 0;
@@ -61,7 +132,7 @@ function countDay(db: Db, event: LoggedEvent) {
         .insert(dailyMetrics)
         .values({
             day: event.day,
-            libraryId: event.libraryId,
+            libraryId,
             type: event.type,
             count: 1,
             favoriteCount: favorite,
@@ -86,33 +157,28 @@ function countDay(db: Db, event: LoggedEvent) {
         });
 }
 
-/**
- * Records that this user was active that day. Idempotent, so the row is written
- * once per user per library per day no matter how much they do.
- */
-function markUserActive(db: Db, event: LoggedEvent) {
+/** Idempotent: one row per user per library per day. */
+function markUserActive(db: Db, event: LoggedEvent, libraryId: LibraryId) {
     return db
         .insert(dailyUserActivity)
         .values({
             day: event.day,
-            libraryId: event.libraryId,
+            libraryId,
             userId: event.userId
         })
         .onConflictDoNothing();
 }
 
-/** The user's lifetime row, counting inserts and opens apart. */
-function countUser(db: Db, event: LoggedEvent) {
+/** The user's lifetime row in one library. */
+function countUser(db: Db, event: LoggedEvent, libraryId: LibraryId) {
     const insert = event.type === EventType.INSERT ? 1 : 0;
-    const open = event.type === EventType.APP_OPEN ? 1 : 0;
 
     return db
         .insert(userStats)
         .values({
             userId: event.userId,
-            libraryId: event.libraryId,
+            libraryId,
             insertCount: insert,
-            openCount: open,
             firstSeenAt: event.createdAt,
             lastSeenAt: event.createdAt
         })
@@ -120,7 +186,6 @@ function countUser(db: Db, event: LoggedEvent) {
             target: [userStats.userId, userStats.libraryId],
             set: {
                 insertCount: increment(userStats.insertCount, insert),
-                openCount: increment(userStats.openCount, open),
                 firstSeenAt: earliest(userStats.firstSeenAt, event.createdAt),
                 lastSeenAt: latest(userStats.lastSeenAt, event.createdAt)
             }
@@ -176,7 +241,7 @@ function countTarget(db: Db, event: LoggedInsert) {
         });
 }
 
-/** As {@link countTarget}, but for one part rather than the library. */
+/** {@link countTarget} for one part. */
 function countPartDay(db: Db, event: LoggedInsert) {
     return db
         .insert(dailyInsertableMetrics)
@@ -198,7 +263,7 @@ function countPartDay(db: Db, event: LoggedInsert) {
         });
 }
 
-/** As {@link markUserActive}, but for one part rather than the library. */
+/** {@link markUserActive} for one part. */
 function markPartUser(db: Db, event: LoggedInsert) {
     return db
         .insert(dailyInsertableUsers)

@@ -8,10 +8,7 @@ export function isPlaceholderPartNumber(text: string): boolean {
     return PLACEHOLDER_PART_NUMBER.test(text.trim());
 }
 
-/**
- * The part number when it identifies the part, and nothing when it repeats the
- * name or holds a placeholder. One rule, so an unsearchable number is never shown.
- */
+/** Undefined when it repeats the name or is a placeholder. */
 export function meaningfulPartNumber(
     partNumber: string | undefined | null,
     name?: string | null

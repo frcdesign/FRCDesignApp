@@ -1,7 +1,4 @@
-/**
- * Every series the dashboard plots, and the bucketing they share. Points keep
- * the raw key beside the label: a reference line matches "2026-01", not "Jan 2026".
- */
+/** Points keep the raw key beside the label, so a reference line can match "2026-01". */
 
 import type {
     DailyInsertPoint,
@@ -29,10 +26,7 @@ export interface BucketPoint {
     label: string;
 }
 
-/**
- * From the span the days cover, not how many there are: a sparse three-year
- * series has few points but must still bucket, or its gaps compress silently.
- */
+/** From the span, not the count: a sparse series must still bucket. */
 export function pickGranularity(days: string[]): Granularity {
     if (days.length === 0) return Granularity.DAY;
     let first = days[0];
@@ -60,10 +54,6 @@ function weekStart(day: string): string {
     return date.toISOString().slice(0, 10);
 }
 
-/**
- * Points folded into their buckets, in key order. The three series the dashboard
- * plots differ only in what they accumulate, so that is all a caller supplies.
- */
 export function bucketBy<Point extends { day: string }, Totals>(
     points: Point[],
     granularity: Granularity,
@@ -108,10 +98,7 @@ export function formatBucket(bucket: string, granularity: Granularity): string {
 
 type ChartPoint = BucketPoint & Record<string, string | number>;
 
-/**
- * Flattens the API's per-day/per-library counts into the one-record-per-x-value
- * shape charts expect, keyed by library display name so the legend reads well.
- */
+/** One record per x value, keyed by library name for the legend. */
 export function toChartData(
     series: DailyInsertPoint[],
     libraryIds: LibraryId[],
@@ -155,10 +142,7 @@ interface Bucket {
     days: number;
 }
 
-/**
- * Folded by the chart's own rule, since two years of raw days is a smear. Users
- * are averaged over a bucket, not summed: one person all week is one user.
- */
+/** Users are averaged over a bucket: one person all week is one user. */
 export function toSparkSeries(points: DailyMetricPoint[]): SparkSeries {
     const ordered = bucketBy(
         points,

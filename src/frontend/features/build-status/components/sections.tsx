@@ -1,4 +1,4 @@
-import { Box, Group, Text } from "@mantine/core";
+import { Box, Group, Switch, Text } from "@mantine/core";
 import { ReactNode } from "react";
 import { FontWeight, StatusColor } from "../../../lib/style-constants";
 
@@ -22,20 +22,45 @@ interface ControlRowProps {
     control: ReactNode;
 }
 
-/**
- * A label (+ description) and a right-aligned control. Usually a Switch, but a
- * setting that isn't the admin's to make shows an icon saying why instead.
- */
+/** Usually a Switch; an icon when the setting isn't the admin's to make. */
 export function ControlRow(props: ControlRowProps): ReactNode {
     return (
-        <Group justify="space-between" wrap="nowrap" gap="md" align="center">
+        <Group justify="space-between" gap="md" align="center">
             <Box miw={0}>
-                <Text size="sm">{props.label}</Text>
-                <Text size="xs" c={StatusColor.DIMMED}>
-                    {props.description}
-                </Text>
+                <Text>{props.label}</Text>
+                {props.description && (
+                    <Text size="xs" c={StatusColor.DIMMED}>
+                        {props.description}
+                    </Text>
+                )}
             </Box>
             {props.control}
         </Group>
+    );
+}
+
+interface SwitchRowProps {
+    label: string;
+    description?: string;
+    checked: boolean;
+    disabled?: boolean;
+    onToggle: () => void;
+}
+
+export function SwitchRow(props: SwitchRowProps): ReactNode {
+    return (
+        <ControlRow
+            label={props.label}
+            description={props.description}
+            control={
+                <Switch
+                    size="sm"
+                    checked={props.checked}
+                    disabled={props.disabled}
+                    onChange={props.onToggle}
+                    withThumbIndicator={false}
+                />
+            }
+        />
     );
 }

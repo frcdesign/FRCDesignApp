@@ -70,24 +70,19 @@ interface AlwaysShownVisibilityCondition {
 
 export interface ConfigurationResult {
     parameters: ConfigurationParameter[];
-    /** The insertable's search records, so the insert menu can show the part
-     * number + name of the selected configuration. Empty when not indexed. */
+    /** Empty when not indexed. */
     records: SearchRecord[];
 }
 
-/**
- * The slice of a {@link ConfigurationRecord} search needs. MiniSearch-free, so
- * the index and the `/configuration` route can share it.
- */
+/** MiniSearch-free, so the index and `/configuration` share it. */
 export interface SearchRecord {
     partNumber?: string;
     name?: string;
     /** The vendor's page for this part, when one can be resolved. */
     url?: string;
-    /**
-     * The key of the selection producing it, so it names the same render the
-     * insert menu asks for; empty for the element's own defaults.
-     */
+    /** The enumerated values producing it; empty for the element's defaults. */
+    values: PartialSelection;
+    /** Those values' key, which is only for naming its thumbnail. */
     configurationKey: ConfigurationKey;
 }
 
@@ -97,13 +92,23 @@ export type ConfigurationParameter =
     | BooleanParameter
     | StringParameter;
 
+/** Parameters about how a part is derived or drawn, not which part it is; see `roles.ts`. */
+export enum ParameterRole {
+    /** The insert menu fills it with a unique value, so each derive is its own configuration. */
+    DERIVATION_VARIABLE = "derivation-variable",
+    COLOR = "color",
+    /** One of a color's R, G and B, when a part spells a color out as three. */
+    COLOR_CHANNEL = "color-channel",
+    TESSELLATION = "tessellation"
+}
+
 interface ConfigurationParameterBase {
     id: string;
     name: string;
     default: string;
-    /** Parameters excluded from configuration properties. */
-    isCosmetic: boolean;
     condition?: VisibilityCondition;
+    /** Absent for an ordinary parameter, which is most of them. */
+    role?: ParameterRole;
 }
 export interface BooleanParameter extends ConfigurationParameterBase {
     type: ParameterType.BOOLEAN;
@@ -133,34 +138,19 @@ export interface QuantityParameter extends ConfigurationParameterBase {
     unit: Unit; // Always UNITLESS for QuantityType.INTEGER and QuantityType.REAL
 }
 
-/**
- * One selection, keyed by parameter id: always complete, always canonical.
- * `toSelection` is what makes one; nothing else may claim to.
- */
+/** Every declared parameter, as entered; see AGENTS.md. */
 export type Selection = Record<string, string>;
 
-/**
- * A selection still being built: enumeration names only what it varies, and a
- * search hit only what it overrides. `toSelection` is what makes one whole.
- */
+/** `toSelection` makes one whole. */
 export type PartialSelection = Partial<Selection>;
 
-/**
- * A selection's identity: what it overrides, which is what addresses a render.
- * {@link DEFAULT_CONFIGURATION_KEY} — empty — overrides nothing, and so is the default.
- */
+/** Names a selection's thumbnail and nothing else; see AGENTS.md. */
 export type ConfigurationKey = string;
 
-/**
- * The key of a selection that overrides nothing: the element's own defaults. Here
- * rather than in `selection.ts`, which `utils.ts` would have to import back from.
- */
+// Here rather than in `selection.ts` to avoid an import cycle with `utils.ts`.
 export const DEFAULT_CONFIGURATION_KEY: ConfigurationKey = "";
 
-/**
- * The part one probe resolved to: the element itself from its own defaults, a
- * {@link ConfigurationRecord} from any other selection.
- */
+/** The part one probe resolved to. */
 export interface PartMetadata {
     partNumber?: string;
     name?: string;
@@ -175,41 +165,23 @@ export interface PartMetadata {
     isOpenComposite: boolean;
 }
 
-/**
- * {@link PartMetadata} for one selection, as it came back from Onshape — keyed
- * by the selection as written rather than as it is stored.
- */
-export interface ProbedRecord extends PartMetadata {
-    /** The selection probed, before it is keyed for storage. */
-    selection: Selection;
-}
-
-/** A probe as it is stored. Kept only for an indexed insertable. */
+/** What one probe came back with, and the enumerated values it probed. */
 export interface ConfigurationRecord extends PartMetadata {
-    /** The key of the selection that produces it. */
-    configurationKey: ConfigurationKey;
+    /** The enum and boolean values enumeration chose; empty for the defaults. */
+    values: PartialSelection;
 }
 
-/**
- * An insertable's configuration: the parameters it exposes and a record for each
- * configuration we probed. Mirrors the `configurations` row.
- */
+/** Mirrors the `configurations` row. */
 export interface Configuration {
     parameters: ConfigurationParameter[];
     records: ConfigurationRecord[];
 }
 
-/**
- * The current document's units. Every field is optional: an absent one leaves
- * the quantity on its own default unit.
- */
+/** A document's units, which quantities are shown in. */
 export interface UnitInfo {
-    angleUnit?: Unit;
-    lengthUnit?: Unit;
-    lengthPrecision?: number;
-    anglePrecision?: number;
-    realPrecision?: number;
+    angleUnit: Unit;
+    lengthUnit: Unit;
+    lengthPrecision: number;
+    anglePrecision: number;
+    realPrecision: number;
 }
-
-/** No document units available; each quantity falls back to its own unit. */
-export const EMPTY_UNIT_INFO: UnitInfo = {};

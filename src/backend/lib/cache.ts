@@ -30,10 +30,7 @@ function cacheControl(policy: CachePolicy): string {
         : immutableCacheControl(policy);
 }
 
-/**
- * For a route whose answers differ: the same url can serve bytes it pins and a
- * stand-in it does not. One whose answers are alike takes {@link cacheMiddleware}.
- */
+/** For a route whose answers differ in cacheability; otherwise use {@link cacheMiddleware}. */
 export function setCache(response: Response, policy: CachePolicy): Response {
     response.headers.set("Cache-Control", cacheControl(policy));
     return response;
@@ -51,8 +48,7 @@ export function cacheMiddleware(
     }
 
     return async (c, next) => {
-        // An immutable response has to be pinned by something, or the next
-        // version of it is unreachable behind the cache.
+        // Unpinned, the next version would be unreachable behind the cache.
         if (!c.req.query("v")) {
             throw internalError(
                 "Missing cache version",

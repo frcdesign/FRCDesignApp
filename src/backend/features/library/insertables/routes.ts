@@ -1,10 +1,16 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { handledError, internalError } from "../../../lib/api-error";
 import { validate } from "../../../lib/validate";
 import { HttpStatus } from "http-status-ts";
 import z from "zod";
-import { getApp } from "../../../lib/context";
-import { getInsertableParam, insertableRoute } from "../../../lib/route-params";
+import { type AppContext, getApp } from "../../../lib/context";
+import type { BatchItem } from "drizzle-orm/batch";
+import {
+    getInsertableParam,
+    getLibraryParam,
+    insertableRoute,
+    libraryRoute
+} from "../../../lib/route-params";
 import { getDb, type Db } from "../../../db/client";
 import {
     requireEditorMiddleware,
@@ -13,6 +19,7 @@ import {
 import { insertables, configurations } from "../../../db/schema";
 import { bumpLibraryVersion, rebuildSearchDb } from "../db";
 import { type InsertOut } from "../contract";
+import type { LibraryId } from "../library-id";
 import { toElementPath, INSTANCE_TYPES } from "../../../lib/onshape/path";
 import {
     type ConfigurationParameter,
@@ -22,11 +29,12 @@ import {
     INDEXING_ISSUE_TYPES,
     NO_RECORDS,
     decideIndexing,
+    type IndexingSettings,
     parseConfigurationRecords
 } from "../../load/parse-configuration-records";
 import { ElementType } from "../../../lib/onshape/element-type";
 import { InsertSource } from "../../analytics/usage";
-import { trackInBackground, trackInsert } from "../../analytics/tracking";
+import { trackInsert } from "../../analytics/tracking";
 import { DerivedFeature } from "../../../lib/onshape/objects/derive-feature";
 import { addPartStudioFeature } from "../../../lib/onshape/endpoints/part-studios";
 import {
@@ -34,11 +42,8 @@ import {
     addAssemblyFeature
 } from "../../../lib/onshape/endpoints/assemblies";
 import { PartType } from "../../../lib/onshape/endpoints/documents";
-import {
-    toShortestConfiguration,
-    toOnshapeConfiguration,
-    toSelection
-} from "../../configurations/selection";
+import { onshapeOverrides, toSelection } from "../../configurations/selection";
+import { encodeConfiguration } from "../../configurations/utils";
 import { fastenMate } from "../../../lib/onshape/objects/assembly-features";
 import { parseFastenInfo } from "../../load/parse-fasten";
 import { getFastenQuery } from "./fasten-query";
@@ -47,31 +52,43 @@ import { addBuildIssue, clearBuildIssue } from "../../build-checker/issues";
 
 export const insertableRoutes = getApp();
 
-/** POST /api/toggle-insert-and-fasten/insertable/:insertableId */
+/** An editor's access is to the path's library, so the insertable must be in it. */
+function inLibrary(libraryId: LibraryId, insertableId: string) {
+    return and(
+        eq(insertables.id, insertableId),
+        eq(insertables.libraryId, libraryId)
+    );
+}
+
+/** POST /api/toggle-insert-and-fasten/library/:libraryId/insertable/:insertableId */
 const setFastenBody = z.object({ supportsFasten: z.boolean() });
 
 const indexConfigurationsBody = z.object({ indexConfigurations: z.boolean() });
 
+const excludedParametersBody = z.object({
+    excludedParameterIds: z.array(z.string())
+});
+
 insertableRoutes.post(
-    "/toggle-insert-and-fasten" + insertableRoute(),
+    "/toggle-insert-and-fasten" + libraryRoute() + insertableRoute(),
     requireEditorMiddleware,
     validate("json", setFastenBody),
     async (c) => {
         const db = getDb(c.env.DB);
 
+        const libraryId = getLibraryParam(c);
         const insertableId = getInsertableParam(c);
         const { supportsFasten } = c.req.valid("json");
 
         const row = await db
             .select({
-                libraryId: insertables.libraryId,
                 documentId: insertables.documentId,
                 versionId: insertables.versionId,
                 elementId: insertables.elementId,
                 elementType: insertables.elementType
             })
             .from(insertables)
-            .where(eq(insertables.id, insertableId))
+            .where(inLibrary(libraryId, insertableId))
             .get();
         if (!row)
             throw internalError("Insertable not found", HttpStatus.NOT_FOUND);
@@ -90,117 +107,122 @@ insertableRoutes.post(
             .set({ supportsFasten, fastenInfo })
             .where(eq(insertables.id, insertableId));
 
-        await bumpLibraryVersion(db, row.libraryId);
+        await bumpLibraryVersion(db, libraryId);
         return c.json({ success: true });
     }
 );
 
-/** POST /api/index-configurations/insertable/:insertableId */
+/** POST /api/index-configurations/library/:libraryId/insertable/:insertableId */
 insertableRoutes.post(
-    "/index-configurations" + insertableRoute(),
+    "/index-configurations" + libraryRoute() + insertableRoute(),
     requireEditorMiddleware,
     validate("json", indexConfigurationsBody),
     async (c) => {
-        const db = getDb(c.env.DB);
-        const insertableId = getInsertableParam(c);
-        const body = c.req.valid("json");
-
-        const row = await db
-            .select({
-                libraryId: insertables.libraryId,
-                documentId: insertables.documentId,
-                versionId: insertables.versionId,
-                elementId: insertables.elementId,
-                elementType: insertables.elementType,
-                vendors: insertables.vendors,
-                isOpenComposite: insertables.isOpenComposite,
-                buildIssues: insertables.buildIssues
-            })
-            .from(insertables)
-            .where(eq(insertables.id, insertableId))
-            .get();
-        if (!row)
-            throw internalError("Insertable not found", HttpStatus.NOT_FOUND);
-
-        const parameters =
-            (
-                await db
-                    .select({ parameters: configurations.parameters })
-                    .from(configurations)
-                    .where(eq(configurations.insertableId, insertableId))
-                    .get()
-            )?.parameters ?? [];
-        const indexing = decideIndexing(
-            row.elementType,
-            parameters,
-            body.indexConfigurations
-        );
-
-        // Index before committing anything: if this throws, nothing is written.
-        // The error reaches the client via the app's onError handler.
-        const indexed = indexing.shouldIndex
-            ? await parseConfigurationRecords(
-                  await c.var.getOnshapeApi(),
-                  {
-                      elementPath: toElementPath(row),
-                      elementType: row.elementType,
-                      isOpenComposite: row.isOpenComposite
-                  },
-                  parameters,
-                  indexing.configurations
-              )
-            : NO_RECORDS;
-
-        // Clear first, so an issue the reindex resolved (or that disabling makes
-        // moot) doesn't stick around.
-        const buildIssues = addBuildIssue(
-            clearBuildIssue(row.buildIssues, ...INDEXING_ISSUE_TYPES),
-            ...indexed.buildIssues,
-            ...indexing.buildIssues
-        );
-
-        // A configurations row exists exactly when the insertable is configurable.
-        const configWrite =
-            parameters.length > 0
-                ? db
-                      .insert(configurations)
-                      .values({
-                          insertableId,
-                          parameters,
-                          records: indexed.records
-                      })
-                      .onConflictDoUpdate({
-                          target: configurations.insertableId,
-                          set: { records: indexed.records }
-                      })
-                : db
-                      .delete(configurations)
-                      .where(eq(configurations.insertableId, insertableId));
-
-        await db.batch([
-            db
-                .update(insertables)
-                .set({
-                    indexConfigurations: body.indexConfigurations,
-                    partMetadata: indexed.partMetadata,
-                    buildIssues
-                })
-                .where(eq(insertables.id, insertableId)),
-            configWrite
-        ]);
-
-        // Records feed the search index; rebuild before the bump makes the
-        // /search-db url immutable, or a stale index gets pinned for a year.
-        await rebuildSearchDb(c.env.BLOB, db, row.libraryId);
-        await bumpLibraryVersion(db, row.libraryId);
+        const { indexConfigurations } = c.req.valid("json");
+        await reindex(c, getLibraryParam(c), getInsertableParam(c), {
+            indexConfigurations
+        });
         return c.json({ success: true });
     }
 );
 
-/**
- * The tab being inserted into, in the body so the whole path arrives as one
- * object. A half-built one is rejected here, not as a nonsense Onshape URL.
- */
+/** POST /api/excluded-parameters/library/:libraryId/insertable/:insertableId */
+insertableRoutes.post(
+    "/excluded-parameters" + libraryRoute() + insertableRoute(),
+    requireEditorMiddleware,
+    validate("json", excludedParametersBody),
+    async (c) => {
+        const { excludedParameterIds } = c.req.valid("json");
+        await reindex(c, getLibraryParam(c), getInsertableParam(c), {
+            excludedParameterIds
+        });
+        return c.json({ success: true });
+    }
+);
+
+/** Probes before writing anything, so a failure writes nothing. */
+async function reindex(
+    c: AppContext,
+    libraryId: LibraryId,
+    insertableId: string,
+    change: Partial<IndexingSettings>
+): Promise<void> {
+    const db = getDb(c.env.DB);
+    const row = await db
+        .select({
+            documentId: insertables.documentId,
+            versionId: insertables.versionId,
+            elementId: insertables.elementId,
+            elementType: insertables.elementType,
+            isOpenComposite: insertables.isOpenComposite,
+            buildIssues: insertables.buildIssues,
+            indexConfigurations: insertables.indexConfigurations,
+            excludedParameterIds: insertables.excludedParameterIds,
+            parameters: configurations.parameters
+        })
+        .from(insertables)
+        .leftJoin(
+            configurations,
+            eq(configurations.insertableId, insertables.id)
+        )
+        .where(inLibrary(libraryId, insertableId))
+        .get();
+    if (!row) {
+        throw internalError("Insertable not found", HttpStatus.NOT_FOUND);
+    }
+    const parameters = row.parameters ?? [];
+    const settings: IndexingSettings = {
+        indexConfigurations: row.indexConfigurations,
+        excludedParameterIds: row.excludedParameterIds,
+        ...change
+    };
+    const indexing = decideIndexing(parameters, settings);
+    const indexed = indexing.shouldIndex
+        ? await parseConfigurationRecords(
+              await c.var.getOnshapeApi(),
+              {
+                  elementPath: toElementPath(row),
+                  elementType: row.elementType,
+                  isOpenComposite: row.isOpenComposite
+              },
+              parameters,
+              indexing.configurations
+          )
+        : NO_RECORDS;
+
+    // Cleared first, so an issue the reindex resolved doesn't stick around.
+    const buildIssues = addBuildIssue(
+        clearBuildIssue(row.buildIssues, ...INDEXING_ISSUE_TYPES),
+        ...indexed.buildIssues,
+        ...indexing.buildIssues
+    );
+
+    const writes: BatchItem<"sqlite">[] = [
+        db
+            .update(insertables)
+            .set({
+                ...settings,
+                partMetadata: indexed.partMetadata,
+                buildIssues
+            })
+            .where(eq(insertables.id, insertableId))
+    ];
+    if (parameters.length > 0) {
+        writes.push(
+            db
+                .update(configurations)
+                .set({ records: indexed.records })
+                .where(eq(configurations.insertableId, insertableId))
+        );
+    }
+    await db.batch([writes[0], ...writes.slice(1)]);
+
+    // Before the bump, which makes /search-db immutable for a year.
+    await rebuildSearchDb(c.env.BLOB, db, libraryId);
+    await bumpLibraryVersion(db, libraryId);
+}
+
+/** Rejected here if half-built, rather than reaching Onshape as a bad url. */
 const targetPathSchema = z.object({
     documentId: z.string().min(1),
     instanceId: z.string().min(1),
@@ -210,10 +232,7 @@ const targetPathSchema = z.object({
 
 const selectionSchema = z.record(z.string(), z.string()).optional();
 
-/**
- * What an insert applies, made whole against the insertable's parameters. Every
- * request crosses here, so nothing past it holds a partial or as-typed map.
- */
+/** Every request goes through here, so nothing past it holds a partial selection. */
 async function readSelection(
     db: Db,
     insertableId: string,
@@ -243,8 +262,7 @@ const insertBody = z.object({
     selection: selectionSchema,
     isFavorite: z.boolean().default(false),
     isQuickInsert: z.boolean().default(false),
-    // Where the insert began, which `isFavorite` does not answer. Defaulted so
-    // an older client cannot drop the whole tracking batch on a NOT NULL.
+    // Defaulted so an older client can't fail the tracking batch on NOT NULL.
     source: z.enum(InsertSource).default(InsertSource.BROWSE)
 });
 
@@ -310,25 +328,22 @@ insertableRoutes.post(
             feature.getFeature()
         );
 
-        await trackInBackground(c, async () =>
-            trackInsert(c, {
-                libraryId: row.libraryId,
-                userId: await c.var.getUserId(),
-                path: sourcePath,
-                insertableId,
-                targetElementType: ElementType.PART_STUDIO,
-                selection,
-                parameters,
-                isFavorite: body.isFavorite,
-                isQuickInsert: body.isQuickInsert,
-                source: body.source,
-                // Insert-and-fasten is only offered for assembly targets.
-                fasten: false
-            })
-        );
+        await trackInsert(c, {
+            libraryId: row.libraryId,
+            path: sourcePath,
+            insertableId,
+            targetElementType: ElementType.PART_STUDIO,
+            selection,
+            parameters,
+            isFavorite: body.isFavorite,
+            isQuickInsert: body.isQuickInsert,
+            source: body.source,
+            // Insert-and-fasten is only offered for assembly targets.
+            fasten: false
+        });
 
         return c.json({
-            featureId: result.feature?.featureId ?? null
+            featureId: result.feature?.featureId
         } satisfies InsertOut);
     }
 );
@@ -378,28 +393,25 @@ insertableRoutes.post(
             body.selection
         );
 
-        // Only what the selection overrides. Onshape applies the element's own
-        // default to every parameter left out, so this inserts the same thing —
-        // and a whole selection can outrun the configuration Onshape accepts.
+        // Only the overrides: a whole selection can exceed what Onshape accepts.
         let configuration = selection
-            ? toOnshapeConfiguration(selection, parameters)
+            ? encodeConfiguration(onshapeOverrides(selection, parameters))
             : undefined;
 
-        // Except a part studio at its defaults, which Onshape refuses to insert
-        // from an empty configuration and from no configuration alike, though an
-        // assembly inserts from either. Naming one parameter, at the default it
-        // already holds, is enough: what Onshape wants turns out to be a
-        // configuration that is there, not one that is complete.
+        // Onshape won't insert a part studio from an empty configuration (an assembly
+        // is fine), so name one parameter at its default.
         if (
             selection &&
             configuration === "" &&
             row.elementType === ElementType.PART_STUDIO
         ) {
-            configuration = toShortestConfiguration(selection, parameters);
+            const [first] = parameters;
+            configuration = encodeConfiguration({
+                [first.id]: selection[first.id]
+            });
         }
 
-        // Resolved here rather than sent by the client: the marker moves
-        // whenever somebody drags it, so only Onshape knows where it is now.
+        // Resolved here, since the marker moves whenever someone drags it.
         const transform = body.insertLocationId
             ? await getInsertLocationTransform(
                   onshapeApi,
@@ -420,28 +432,24 @@ insertableRoutes.post(
             }
         );
 
-        // The insert has landed, and every path below records it exactly once — so a
-        // fasten that never happened leaves none unrecorded, and `fasten` says what was.
+        // Every path below records the insert exactly once.
         const track = (fasten: boolean) =>
-            trackInBackground(c, async () =>
-                trackInsert(c, {
-                    libraryId: row.libraryId,
-                    userId: await c.var.getUserId(),
-                    path: sourcePath,
-                    insertableId,
-                    targetElementType: ElementType.ASSEMBLY,
-                    selection,
-                    parameters,
-                    isFavorite: body.isFavorite,
-                    isQuickInsert: body.isQuickInsert,
-                    source: body.source,
-                    fasten
-                })
-            );
+            trackInsert(c, {
+                libraryId: row.libraryId,
+                path: sourcePath,
+                insertableId,
+                targetElementType: ElementType.ASSEMBLY,
+                selection,
+                parameters,
+                isFavorite: body.isFavorite,
+                isQuickInsert: body.isQuickInsert,
+                source: body.source,
+                fasten
+            });
 
         if (!body.fasten) {
             await track(false);
-            return c.json({ featureId: null } satisfies InsertOut);
+            return c.json({} satisfies InsertOut);
         }
 
         const fastenInfo = row.fastenInfo;

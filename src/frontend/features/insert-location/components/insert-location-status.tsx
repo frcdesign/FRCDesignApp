@@ -1,33 +1,27 @@
 import { ReactNode } from "react";
-import { Button, Center, EmptyState, HoverCard } from "@mantine/core";
-import {
-    CheckIcon,
-    PlusIcon,
-    TargetIcon,
-    WarningIcon
-} from "@phosphor-icons/react";
+import { Button, Center, EmptyState, Group } from "@mantine/core";
+import { PlusIcon, TargetIcon } from "@phosphor-icons/react";
 import { type TargetElement } from "../../../lib/onshape-launch";
-import { IconSize, StatusColor } from "../../../lib/style-constants";
-import { AppIcon } from "../../../components/app-icon";
+import { IconSize } from "../../../lib/style-constants";
+import { BadgedIcon } from "../../../components/badged-icon";
 import { StatusIcon } from "../../../components/status-icon";
+import { Status } from "../../../lib/status";
+import { AppHoverCard } from "../../../components/app-hover-card";
+import { NewBadge, NewIndicator } from "../../../components/new-feature";
+import { Hint } from "@backend/features/hints/contract";
+import { useHasSeenHint, useMarkHintSeen } from "../../hints/queries";
 import {
     useAddInsertLocationMutation,
     useInsertLocationQuery,
     useInsertLocationTarget
 } from "../queries";
 
-/**
- * Whether the assembly has somewhere to insert to, as a badged icon saying
- * which. Renders nowhere but an assembly the caller is signed in to: a derive
- * has no insert location, and the query needs a session.
- */
+/** Only for an assembly the caller is signed in to. */
 export function InsertLocationStatus(): ReactNode {
     const target = useInsertLocationTarget();
     const { data, isPending, isError } = useInsertLocationQuery(target);
 
-    // Waiting rather than assuming: a badge that flips from a warning to a tick
-    // on every open would read as the assembly having changed. A failed read
-    // has not established there is none, so it says nothing at all.
+    // Say nothing until known: a badge that flips on every open looks like a change.
     if (!target || isPending || isError) {
         return null;
     }
@@ -50,56 +44,52 @@ function InsertLocationHoverCard(
     props: InsertLocationHoverCardProps
 ): ReactNode {
     const { target, instanceId } = props;
+    const hasOpened = useHasSeenHint(Hint.OPENED_INSERT_LOCATION);
+    const markOpened = useMarkHintSeen(Hint.OPENED_INSERT_LOCATION);
     const found = instanceId !== undefined;
+    const isNew = !found && !hasOpened;
 
-    // The bubble shows the state alone: unlike the bar, it is already about
-    // one thing, and its title says which.
-    const stateIcon = found ? CheckIcon : WarningIcon;
-    const stateColor = found ? StatusColor.SUCCESS : StatusColor.WARNING;
+    const status = found ? Status.SUCCESS : Status.WARNING;
 
     return (
-        <HoverCard shadow="md" position="bottom-end" withArrow>
-            <HoverCard.Target>
-                {/* Wrapped, because HoverCard.Target attaches a ref to its
-                    child and StatusIcon does not take one. */}
+        <AppHoverCard
+            position="bottom-end"
+            interactive
+            // On close, so the card's own badge is there to read while open.
+            onClose={markOpened}
+            target={
                 <Center my="auto">
-                    <StatusIcon
-                        icon={TargetIcon}
-                        status={stateIcon}
-                        color={stateColor}
-                    />
+                    <NewIndicator shown={isNew} offset={2}>
+                        <BadgedIcon icon={TargetIcon} status={status} />
+                    </NewIndicator>
                 </Center>
-            </HoverCard.Target>
-            <HoverCard.Dropdown p="md">
-                <EmptyState
-                    align="left"
-                    size="sm"
-                    icon={
-                        <AppIcon
-                            icon={stateIcon}
-                            size={IconSize.CONTROL}
-                            color={stateColor}
-                        />
-                    }
-                    title={
-                        found
+            }
+        >
+            <EmptyState
+                align="left"
+                size="sm"
+                icon={<StatusIcon status={status} size={IconSize.CONTROL} />}
+                title={
+                    <Group gap="xs">
+                        {found
                             ? "Insert location active"
-                            : "No insert location found"
-                    }
-                    description={
-                        found
-                            ? "New parts will be placed at the insert location."
-                            : "New parts will be placed at the origin."
-                    }
-                >
-                    {!found && (
-                        <EmptyState.Actions>
-                            <AddInsertLocationButton target={target} />
-                        </EmptyState.Actions>
-                    )}
-                </EmptyState>
-            </HoverCard.Dropdown>
-        </HoverCard>
+                            : "No insert location found"}
+                        {isNew && <NewBadge />}
+                    </Group>
+                }
+                description={
+                    found
+                        ? "New parts will be placed at the insert location."
+                        : "New parts will be placed at the origin."
+                }
+            >
+                {!found && (
+                    <EmptyState.Actions>
+                        <AddInsertLocationButton target={target} />
+                    </EmptyState.Actions>
+                )}
+            </EmptyState>
+        </AppHoverCard>
     );
 }
 
@@ -115,8 +105,7 @@ function AddInsertLocationButton(
     return (
         <Button
             size="compact-sm"
-            variant="light"
-            leftSection={<PlusIcon size={IconSize.SMALL} />}
+            leftSection={<PlusIcon />}
             loading={addMutation.isPending}
             onClick={() => addMutation.mutate()}
         >

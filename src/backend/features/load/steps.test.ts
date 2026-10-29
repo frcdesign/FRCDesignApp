@@ -7,8 +7,7 @@ const secondsOf = (delay: string) => Number.parseInt(delay, 10);
 /** The spread `rateLimitDelay` adds on top of what Onshape asked for. */
 const JITTER_SECONDS = 20;
 
-// A poll capped at two minutes waited four hours between attempts until these
-// were pinned; see CONSTANT_BACKOFF for what the platform was adding.
+// Any curve multiplies the delay; see CONSTANT_BACKOFF.
 describe("every retry config", () => {
     it("leaves the platform no curve to apply on top", () => {
         for (const retries of [ONSHAPE_STEP_RETRIES]) {
@@ -43,9 +42,7 @@ describe("ONSHAPE_STEP_RETRIES", () => {
         expect(delay).toBeLessThanOrEqual(7 + JITTER_SECONDS);
     });
 
-    // What the platform actually hands the callback. Passing the instance above
-    // is what let an `instanceof` check pass here and fail in production, where
-    // every 429 fell through to the curve and hammered Onshape six times.
+    // What Workflows actually passes the callback: a rebuilt Error, not the instance.
     it("waits out a rate limit Workflows rebuilt as a plain Error", () => {
         const rebuilt = new Error(
             new OnshapeRateLimitError("slow down", 450).message

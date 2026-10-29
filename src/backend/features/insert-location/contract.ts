@@ -1,15 +1,9 @@
-/**
- * The insert location: a marker in the assembly being inserted into, which new
- * parts land on instead of the origin. A leaf, so the frontend can name it
- * without pulling the Onshape client into the bundle.
- */
+/** A marker in an assembly that new parts land on. A leaf, so the frontend can import it. */
 import { type ElementPath } from "../../lib/onshape/path";
 
 /**
- * The tab the marker is inserted from. A standalone mate connector cannot be
- * created in an assembly through the API, so the app inserts a sketch that
- * carries one instead — pinned to a version, which is what makes the ids below
- * stable.
+ * The API can't create a standalone mate connector in an assembly, so a sketch
+ * carrying one is inserted instead, from a pinned version so the ids are stable.
  */
 export const INSERT_LOCATION_SOURCE: ElementPath = {
     documentId: "6c26fe7a89b71b80707ee3cf",
@@ -18,27 +12,13 @@ export const INSERT_LOCATION_SOURCE: ElementPath = {
     elementId: "8252e798e07255ac1235e7e5"
 };
 
-/**
- * The sketch inside that tab: what an assembly gets an instance of. Only the
- * insert names it — recognizing a marker goes by the tab, so an assembly
- * holding one from before the sketch was redrawn still counts.
- */
+/** Only inserts use it; recognizing a marker goes by the tab. */
 export const INSERT_LOCATION_SKETCH_ID = "FoHmJsKNNEuStrH_0";
 
-/**
- * The mate connector that sketch carries. An id in the source tab rather than
- * in any one assembly: two SELECTION messages from different assemblies
- * reported it unchanged, with only the occurrence around it differing.
- *
- * Unused — kept for whatever eventually points the caller at the marker in the
- * viewport. The frontend's `messages.ts` says how far that got.
- */
+/** Unused, kept for pointing the caller at the marker; see `messages.ts`. */
 export const INSERT_LOCATION_MATE_CONNECTOR_ID = "F2t8fekeOt5UXBq_0";
 
 export interface InsertLocationOut {
-    /**
-     * The marker's instance id in this assembly — not the sketch's own id,
-     * which every assembly shares. Absent when the assembly has none.
-     */
+    /** Not the sketch's id, which every assembly shares. */
     instanceId?: string;
 }

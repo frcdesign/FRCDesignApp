@@ -31,9 +31,7 @@ interface SectionCardProps {
 export function SectionCard({ title, children }: SectionCardProps): ReactNode {
     return (
         <Section title={title}>
-            <Card withBorder padding="lg" radius="md">
-                {children}
-            </Card>
+            <Card>{children}</Card>
         </Section>
     );
 }

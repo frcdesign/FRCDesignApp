@@ -3,7 +3,6 @@ import {
     type Selection,
     type ConfigurationParameter
 } from "../../../features/configurations/contract";
-import { toExpression } from "../../../features/configurations/selection";
 import { type ElementPath } from "../path";
 
 const PART_STUDIO_QUERY =
@@ -67,9 +66,8 @@ export class DerivedFeature {
                     return {
                         btType: "BTMParameterQuantity-147",
                         parameterId: parameter.id,
-                        // In the parameter's own unit: the feature dialog shows
-                        // this expression, and "0.0381 meter" is not what was asked for.
-                        expression: toExpression(parameter, value)
+                        // As entered, so the feature dialog shows what was typed.
+                        expression: value
                     };
                 case ParameterType.BOOLEAN:
                     return {

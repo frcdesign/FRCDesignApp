@@ -10,8 +10,10 @@ import {
 import { DashboardState } from "../../../../features/dashboard/dashboard-state";
 import { OptionsTable } from "../../../../features/dashboard/options-table";
 import { PartsTable } from "../../../../features/dashboard/parts-table";
-import { toDayRange } from "../../../../features/dashboard/range";
-import { useRangePreset } from "../../../../features/dashboard/range-control";
+import {
+    toDayRange,
+    useRangePreset
+} from "../../../../features/dashboard/range";
 
 export const Route = createFileRoute("/dashboard/library/$libraryId/unused")({
     component: LowUsage
@@ -32,7 +34,7 @@ function LowUsage(): ReactNode {
 
     return (
         <Stack gap="xl">
-            <Card withBorder padding="lg" radius="md">
+            <Card>
                 <Title order={4} mb="md">
                     Low-usage parts
                 </Title>
@@ -47,7 +49,7 @@ function LowUsage(): ReactNode {
                 )}
             </Card>
 
-            <Card withBorder padding="lg" radius="md">
+            <Card>
                 <Title order={4} mb="md">
                     Low-usage configuration options
                 </Title>

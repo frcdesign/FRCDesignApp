@@ -6,8 +6,8 @@ import {
     BuildIssueSeverity,
     BuildIssueType,
     clearBuildIssue,
-    getIssueConfigurationKey,
-    getIssueDescription,
+    getIssueConfiguration,
+    getIssueTitle,
     getMaxSeverity,
     knownBuildIssues
 } from "./issues";
@@ -23,34 +23,34 @@ const issue = (severity: BuildIssueSeverity): BuildIssue => ({
     type: TYPE_BY_SEVERITY[severity]
 });
 
-describe("getIssueConfigurationKey", () => {
+describe("getIssueConfiguration", () => {
     it("names the configuration an issue blames", () => {
         expect(
-            getIssueConfigurationKey({
+            getIssueConfiguration({
                 type: BuildIssueType.UNSTABLE_COMPOSITE,
-                configurationKey: "size=large",
+                values: { size: "large" },
                 configurationCount: 1
             })
-        ).toBe("size=large");
+        ).toEqual({ size: "large" });
     });
 
     it("names none where the element itself is at fault", () => {
         expect(
-            getIssueConfigurationKey({ type: BuildIssueType.MULTIPLE_PARTS })
+            getIssueConfiguration({ type: BuildIssueType.MULTIPLE_PARTS })
         ).toBeUndefined();
     });
 });
 
-describe("getIssueDescription", () => {
+describe("getIssueTitle", () => {
     // The count is the difference between "go fix this one" and "go fix forty".
     it.each([
-        [1, "A configuration resolves to more than one part"],
-        [4, "4 configurations resolve to more than one part"]
+        [1, "A configuration has more than one part"],
+        [4, "4 configurations have more than one part"]
     ])("counts %i offending configurations", (count, expected) => {
         expect(
-            getIssueDescription({
+            getIssueTitle({
                 type: BuildIssueType.CONFIGURATION_MULTIPLE_PARTS,
-                configurationKey: "size=large",
+                values: { size: "large" },
                 configurationCount: count
             })
         ).toBe(expected);
@@ -58,7 +58,6 @@ describe("getIssueDescription", () => {
 });
 
 describe("knownBuildIssues", () => {
-    /** A type an older deploy stored, cast because this build no longer has it. */
     const retired = { type: "thumbnail-pending" } as unknown as BuildIssue;
 
     it("drops a type this build has no check for", () => {
@@ -67,9 +66,18 @@ describe("knownBuildIssues", () => {
         ).toEqual([{ type: BuildIssueType.LOAD_FAILED }]);
     });
 
+    it("keeps an issue stored before issues carried values, unlinked", () => {
+        const stored = {
+            type: BuildIssueType.UNSTABLE_COMPOSITE,
+            configurationKey: "size=large",
+            configurationCount: 2
+        } as unknown as BuildIssue;
+        const [kept] = knownBuildIssues([stored]);
+        expect(kept.type).toBe(BuildIssueType.UNSTABLE_COMPOSITE);
+        expect(getIssueConfiguration(kept)).toBeUndefined();
+    });
+
     it("keeps every type it knows", () => {
-        // Only the type is read, so the ones carrying a configuration stand up
-        // bare here rather than being built twice.
         const issues = Object.values(BuildIssueType).map(
             (type) => ({ type }) as BuildIssue
         );
@@ -79,7 +87,7 @@ describe("knownBuildIssues", () => {
 
 describe("getMaxSeverity", () => {
     it("returns null when there are no issues", () => {
-        expect(getMaxSeverity([])).toBeNull();
+        expect(getMaxSeverity([])).toBeUndefined();
     });
 
     const { INFO, WARNING, ERROR } = BuildIssueSeverity;
@@ -108,8 +116,7 @@ describe("addBuildIssue", () => {
         expect(result).toEqual(existing);
     });
 
-    // Callers hold onto the array they passed in, so it must never be the one
-    // that comes back, even when there was nothing to add.
+    // Callers keep the array they passed in.
     it("returns a new array even when nothing is added", () => {
         const existing: BuildIssue[] = [{ type: BuildIssueType.NO_VENDORS }];
         expect(

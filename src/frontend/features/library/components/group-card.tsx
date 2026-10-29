@@ -1,21 +1,18 @@
-import { Menu, Text } from "@mantine/core";
-import { modals } from "@mantine/modals";
+import { Menu } from "@mantine/core";
 import {
     ArrowRightIcon,
     EyeIcon,
     EyeSlashIcon,
-    TrashIcon,
-    WarningIcon
+    TrashIcon
 } from "@phosphor-icons/react";
-import { AppIcon } from "../../../components/app-icon";
-import { AppTitle } from "../../../components/app-title";
+import { openDeleteConfirm } from "../../../components/alerts";
 import { IconSize, StatusColor } from "../../../lib/style-constants";
 import { useNavigate } from "@tanstack/react-router";
 import { PropsWithChildren, ReactNode } from "react";
 import { GroupOut } from "@backend/features/library/contract";
 import { ChangeOrderItems } from "../../../components/change-order";
 import { AdminMenuSection, MenuSection } from "../../../components/app-menu";
-import { ReloadThumbnailMenuItem } from "../../../components/reload-thumbnail-item";
+import { ReloadThumbnailMenuItem } from "./reload-thumbnail-item";
 import { CardTitle, ItemRow } from "../../../components/item-row";
 import { OpenDocumentItems } from "../../../components/open-document-items";
 import { AddGroupItem } from "./add-group-menu";
@@ -58,7 +55,7 @@ export function GroupCard(props: GroupCardProps): ReactNode {
                             largeThumbnailUrl={group.largeThumbnailUrl}
                         />
                     }
-                    buildStatusBadge={
+                    badge={
                         <GroupStatusBadge
                             groupId={group.id}
                             name={group.name}
@@ -144,7 +141,7 @@ function ShowAllElementsMenuItem(props: AllElementsVisibilityProps): ReactNode {
     return (
         <Menu.Item
             color={StatusColor.INFO}
-            leftSection={<EyeIcon size={IconSize.SMALL} />}
+            leftSection={<EyeIcon />}
             onClick={() => mutation.mutate()}
         >
             Show all elements
@@ -157,7 +154,7 @@ function HideAllElementsMenuItem(props: AllElementsVisibilityProps): ReactNode {
     return (
         <Menu.Item
             color={StatusColor.ERROR}
-            leftSection={<EyeSlashIcon size={IconSize.SMALL} />}
+            leftSection={<EyeSlashIcon />}
             onClick={() => mutation.mutate()}
         >
             Hide all elements
@@ -175,34 +172,17 @@ function DeleteGroupMenuItem(props: DeleteGroupMenuItemProps): ReactNode {
     const mutation = useDeleteGroupMutation(groupId);
 
     const confirmDelete = () => {
-        modals.openConfirmModal({
-            title: (
-                <AppTitle
-                    icon={
-                        <AppIcon
-                            icon={WarningIcon}
-                            size={IconSize.MEDIUM}
-                            color={StatusColor.ERROR}
-                        />
-                    }
-                    title="Delete group"
-                />
-            ),
-            children: (
-                <Text size="sm">
-                    {`Are you sure you want to delete ${name}? Its elements are deleted with it, and permanently removed from every user's favorites.`}
-                </Text>
-            ),
-            labels: { confirm: "Delete group", cancel: "Cancel" },
-            centered: true,
-            confirmProps: { color: StatusColor.ERROR },
+        openDeleteConfirm({
+            title: "Delete group",
+            text: `Are you sure you want to delete ${name}? All favorites which reference it will be permanently deleted.`,
+            confirmLabel: "Delete group",
             onConfirm: () => mutation.mutate()
         });
     };
 
     return (
         <Menu.Item
-            leftSection={<TrashIcon size={IconSize.SMALL} />}
+            leftSection={<TrashIcon />}
             color={StatusColor.ERROR}
             onClick={confirmDelete}
         >

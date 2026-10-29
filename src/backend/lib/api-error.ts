@@ -1,10 +1,6 @@
-/**
- * The one shape every failed /api response takes; `kind` tells the client what
- * to do about it. A leaf module the frontend imports.
- */
+/** Every failed /api response; `kind` tells the client what to do. A leaf the frontend imports. */
 import { HttpStatus } from "http-status-ts";
-// Type-only, so this stays a leaf the frontend can import: the statuses that
-// can carry a body, which is every status an error of ours is sent with.
+// Type-only, to stay a leaf.
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 
 export enum ApiErrorKind {

@@ -1,12 +1,13 @@
-import { decodeConfiguration } from "@backend/features/configurations/utils";
 import { PropsWithChildren, ReactNode } from "react";
 import { Favorite } from "@backend/features/favorites/contract";
 import { InsertableOut } from "@backend/features/library/contract";
 import {
     type ConfigurationKey,
     DEFAULT_CONFIGURATION_KEY,
-    Selection
+    type PartialSelection
 } from "@backend/features/configurations/contract";
+import { SetDefaultConfigurationItem } from "../../favorites/components/set-default-configuration-item";
+import type { SelectionReport } from "../../insert/components/configurations";
 import {
     FavoriteButton,
     FavoriteInsertableItem
@@ -21,22 +22,20 @@ import {
 } from "../../../components/item-row";
 import { OpenDocumentItems } from "../../../components/open-document-items";
 import { AdminMenuSection, MenuSection } from "../../../components/app-menu";
-import { ReloadThumbnailMenuItem } from "../../../components/reload-thumbnail-item";
+import { ReloadThumbnailMenuItem } from "./reload-thumbnail-item";
 import { QuickInsertItems } from "../../insert/components/quick-insert-items";
 import { openCannotDeriveAssemblyAlert } from "../../../components/alerts";
 import { useIsAssemblyInPartStudio } from "../../insert/insert-hooks";
 import { openInsertMenu } from "../../insert/open-insert-menu";
 import { useFavorite } from "../../favorites/queries";
-import { RequireSignIn } from "../../auth/access-level";
+import { RequireSignIn } from "../../auth/components/require-access";
 import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
 import { InsertSource } from "@backend/features/analytics/usage";
 
-/**
- * What a search found in this row. Structural rather than the search feature's
- * own `SearchHit`, which a card has no other reason to know about.
- */
 interface InsertableMatch extends RowMatch {
-    /** The key of the selection it names, for the thumbnail and the menu. */
+    /** The values of the configuration it names, for the menu. */
+    values?: PartialSelection;
+    /** Their key, for the thumbnail. */
     configurationKey?: ConfigurationKey;
 }
 
@@ -49,9 +48,6 @@ interface InsertableCardProps extends PropsWithChildren {
     source?: InsertSource;
 }
 
-/**
- * A card representing a part studio or assembly.
- */
 export function InsertableCard(props: InsertableCardProps): ReactNode {
     const { insertable, match, source = InsertSource.BROWSE } = props;
 
@@ -67,11 +63,8 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
         return null;
     }
 
-    // What the hit names, for inserting and for prefilling the menu; its key
-    // is what names the thumbnail.
-    const hitSelection = match?.configurationKey
-        ? decodeConfiguration(match.configurationKey)
-        : undefined;
+    // What the hit names, for inserting and for prefilling the menu.
+    const hitSelection = match?.values;
 
     const openMenu = () => {
         props.onClick?.();
@@ -96,8 +89,7 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
                 microversionId: insertable.microversionId,
                 configurationKey:
                     match?.configurationKey ?? DEFAULT_CONFIGURATION_KEY
-                // No renderSource: a cold search would otherwise queue a render
-                // per row, against a thread that runs one at a time.
+                // No insertableId: a cold search would otherwise start a render per row.
             }}
         />
     );
@@ -108,9 +100,10 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
             match={match}
             title={insertable.name}
             thumbnail={thumbnail}
-            buildStatusBadge={
+            badge={
                 <InsertableStatusBadge
                     insertableId={insertable.id}
+                    groupId={insertable.groupId}
                     name={insertable.name}
                 />
             }
@@ -147,12 +140,13 @@ interface InsertableMenuItemsProps {
     favorite: Favorite | undefined;
     insertable: InsertableOut;
     inInsertMenu?: boolean;
-    /** What quick insert inserts and "Open document" opens: a search hit's
-     * selection on a card, the selected one inside the insert menu. */
-    selection?: Selection;
+    /** A search hit's values on a card; the selected configuration inside the menu. */
+    selection?: PartialSelection;
     /** That selection's key, so favoriting can name its thumbnail. */
     configurationKey?: ConfigurationKey;
     source: InsertSource;
+    /** Inside the insert menu: the configuration on screen, which a favorite can open with. */
+    report?: SelectionReport;
 }
 
 export function InsertableMenuItems(
@@ -164,7 +158,8 @@ export function InsertableMenuItems(
         inInsertMenu,
         selection,
         configurationKey,
-        source
+        source,
+        report
     } = props;
     const isConnected = useIsConnectedToOnshape();
 
@@ -181,6 +176,14 @@ export function InsertableMenuItems(
                 </MenuSection>
             )}
             <RequireSignIn>
+                {favorite && report && (
+                    <MenuSection label="Configuration">
+                        <SetDefaultConfigurationItem
+                            favorite={favorite}
+                            report={report}
+                        />
+                    </MenuSection>
+                )}
                 <MenuSection label="Favorites">
                     <FavoriteInsertableItem
                         favorite={favorite}
@@ -191,7 +194,10 @@ export function InsertableMenuItems(
                 </MenuSection>
             </RequireSignIn>
             <MenuSection label="Document">
-                <OpenDocumentItems path={{ ...insertable.path, selection }} />
+                <OpenDocumentItems
+                    path={insertable.path}
+                    selection={selection}
+                />
             </MenuSection>
             <AdminMenuSection>
                 <ReloadThumbnailMenuItem

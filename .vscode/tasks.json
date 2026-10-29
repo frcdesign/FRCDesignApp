@@ -36,6 +36,28 @@
         "clear": true
       },
       "group": {
+        "kind": "build"
+      }
+    },
+    {
+      "label": "Launch tunnel",
+      "type": "npm",
+      "script": "tunnel",
+      "problemMatcher": [],
+      "presentation": {
+        "echo": true,
+        // Only on failure, so the dev server's output stays in front.
+        "reveal": "silent",
+        "focus": false,
+        "panel": "dedicated",
+        "clear": true
+      }
+    },
+    {
+      "label": "Launch servers",
+      "dependsOn": ["Launch dev", "Launch tunnel"],
+      "problemMatcher": [],
+      "group": {
         "kind": "build",
         "isDefault": true
       }

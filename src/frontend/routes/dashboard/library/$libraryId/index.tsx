@@ -17,12 +17,15 @@ import { DashboardState } from "../../../../features/dashboard/dashboard-state";
 import { HealthTiles } from "../../../../features/dashboard/health-report";
 import { InsertsOverTimeCard } from "../../../../features/dashboard/inserts-chart";
 import { PartsTable } from "../../../../features/dashboard/parts-table";
-import { toDayRange } from "../../../../features/dashboard/range";
 import { getLibraryName } from "../../../../lib/library";
 import { useCacheVersion } from "../../../../features/library/queries";
-import { useRangePreset } from "../../../../features/dashboard/range-control";
+import {
+    RangePreset,
+    toDayRange,
+    useRangePreset
+} from "../../../../features/dashboard/range";
 import { UsageTreemap } from "../../../../features/dashboard/usage-treemap";
-import { LifetimeTiles } from "../../../../features/dashboard/lifetime-tiles";
+import { HeadlineTiles } from "../../../../features/dashboard/headline-tiles";
 import { SectionCard } from "../../../../components/section";
 
 export const Route = createFileRoute("/dashboard/library/$libraryId/")({
@@ -47,6 +50,7 @@ function LibraryOverview(): ReactNode {
                 <LibraryBody
                     libraryId={libraryId}
                     summary={summary.data}
+                    preset={preset}
                     parts={parts}
                     health={health}
                 />
@@ -60,6 +64,8 @@ function LibraryOverview(): ReactNode {
 interface LibraryBodyProps {
     libraryId: LibraryId;
     summary: LibrarySummaryOut;
+    /** Which window the totals cover; the season change fits only all of it. */
+    preset: RangePreset;
     parts: UseQueryResult<PartUsageOut[]>;
     health: UseQueryResult<LibraryHealthCounts>;
 }
@@ -67,6 +73,7 @@ interface LibraryBodyProps {
 function LibraryBody({
     libraryId,
     summary,
+    preset,
     parts,
     health
 }: LibraryBodyProps): ReactNode {
@@ -74,9 +81,9 @@ function LibraryBody({
 
     return (
         <>
-            <LifetimeTiles
+            <HeadlineTiles
                 totals={totals}
-                growth={growth}
+                growth={preset === RangePreset.ALL ? growth : undefined}
                 series={metricSeries}
             />
 
@@ -84,8 +91,6 @@ function LibraryBody({
 
             <SectionCard title="Most used parts">
                 {parts.data ? (
-                    // Sorted most used first, so the head of the distribution
-                    // is the first page and the zeroes are pages away.
                     <PartsTable
                         libraryId={libraryId}
                         parts={parts.data}
@@ -103,8 +108,7 @@ function LibraryBody({
             )}
 
             {parts.data ? (
-                /* Keyed so switching library drops a zoom into a group that
-                   the next library does not have. */
+                /* Keyed so a zoom into a group doesn't carry to a library without it. */
                 <UsageTreemap
                     key={libraryId}
                     root={{ libraryId }}

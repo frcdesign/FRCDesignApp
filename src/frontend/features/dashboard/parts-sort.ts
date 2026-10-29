@@ -7,10 +7,7 @@ export interface SortState {
     descending: boolean;
 }
 
-/**
- * Most used first, by rate rather than lifetime total: a part added last month
- * should not sit below one that earned its total over three seasons.
- */
+/** By rate, so a new part isn't buried under one with three seasons' total. */
 export const DEFAULT_SORT: SortState = {
     column: "usesPerMonth",
     descending: true

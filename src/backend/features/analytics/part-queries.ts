@@ -1,7 +1,3 @@
-/**
- * Reads of the per-part rollups: what a part was used for inside a window, and
- * how that lands day by day.
- */
 import { and, count, countDistinct, eq, gte, lte, sum } from "drizzle-orm";
 import { type Db } from "../../db/client";
 import {
@@ -24,6 +20,7 @@ import { toElementPath } from "../../lib/onshape/path";
 import { type ConfigurationParameter } from "../configurations/contract";
 
 export interface PartRow {
+    libraryId: LibraryId;
     elementId: string;
     name: string;
     groupName: string;
@@ -33,11 +30,7 @@ export interface PartRow {
     firstInsertedAt: Date | null;
 }
 
-/**
- * Every part the library still lists, with the date it was first inserted.
- * Driven off `insertables` rather than the stats table, so a part nobody has
- * used lists at zero and one that has left the library does not list at all.
- */
+/** From `insertables`, so unused parts list at zero and removed ones don't list. */
 export function getPartRows(
     db: Db,
     libraryId: LibraryId,
@@ -50,6 +43,7 @@ export function getPartRows(
     return (
         db
             .select({
+                libraryId: insertables.libraryId,
                 elementId: insertables.elementId,
                 name: insertables.name,
                 groupName: groups.name,
@@ -73,7 +67,6 @@ export function getPartRows(
     );
 }
 
-/** One part counted over the window rather than over its whole history. */
 export function toWindowedPart(
     row: PartRow,
     windowed: Map<string, number>,
@@ -83,11 +76,11 @@ export function toWindowedPart(
     const from = Date.parse(`${range.from}T00:00:00Z`);
     const to = Math.min(Date.now(), Date.parse(`${range.to}T23:59:59Z`));
     const insertCount = windowed.get(row.elementId) ?? 0;
-    // Rated over the days the part has existed, so arriving late in the window
-    // does not read as unpopular.
+    // Over the days it existed, so arriving late doesn't read as unpopular.
     const firstUsed = Math.max(row.firstInsertedAt?.getTime() ?? from, from);
 
     return {
+        libraryId: row.libraryId,
         path: toElementPath(row),
         name: row.name,
         groupName: row.groupName,
@@ -102,10 +95,7 @@ export function toWindowedPart(
     };
 }
 
-/**
- * Inserts per element inside the window, folded out of the daily rollup —
- * a range scan, thanks to `daily_insertable_metrics_day_idx`.
- */
+/** A range scan on `daily_insertable_metrics_day_idx`. */
 export async function getWindowedInsertCounts(
     db: Db,
     libraryId: LibraryId,
@@ -186,11 +176,7 @@ function emptySparkline(): number[] {
     return Array.from({ length: MONTH_DAYS }, () => 0);
 }
 
-/**
- * Daily insert counts per part over the trailing window, as dense arrays the
- * table can plot directly. Ends on the last complete day, as every other
- * series does, so no row trails off into a half-recorded today.
- */
+/** Ends on the last complete day, like every other series. */
 export async function getPartSparklines(
     db: Db,
     libraryId: LibraryId
@@ -201,8 +187,7 @@ export async function getPartSparklines(
     );
     const dayIndex = new Map(days.map((day, i) => [day, i]));
 
-    // Summed over targets: a part inserted into both kinds of tab on one day
-    // has a row apiece, and the sparkline plots the day.
+    // Summed over targets, which each have a row.
     const rows = await db
         .select({
             elementId: dailyInsertableMetrics.elementId,
@@ -311,10 +296,6 @@ export function sumPartTargets(
         .all();
 }
 
-/**
- * Favorites are keyed by insertable id, so a part that has left the library has
- * none to count.
- */
 export function countPartFavorites(
     db: Db,
     libraryId: LibraryId,
@@ -333,10 +314,7 @@ export function countPartFavorites(
         .get();
 }
 
-/**
- * The parameters the part declares today. The 1:1 configurations table is keyed
- * by insertable id, so they are only reachable through a live row.
- */
+/** Only reachable through a live insertable row. */
 export async function getPartParameters(
     db: Db,
     insertableId: string | undefined

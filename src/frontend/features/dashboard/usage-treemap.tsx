@@ -1,4 +1,5 @@
-import { Anchor, Text } from "@mantine/core";
+import { Text } from "@mantine/core";
+import type { PartUsageOut } from "@backend/features/analytics/contract";
 import { useNavigate } from "@tanstack/react-router";
 import { useMemo, useState, type ReactNode } from "react";
 import { getLibraryName } from "../../lib/library";
@@ -9,12 +10,11 @@ import {
     toNodes,
     TreemapKind,
     type TreemapNode,
-    type TreemapPath,
-    type UsagePart
+    type TreemapPath
 } from "./treemap-data";
 
 interface UsageTreemapProps {
-    parts: UsagePart[];
+    parts: PartUsageOut[];
     /** The level this instance starts at and will not go above. */
     root?: TreemapPath;
 }
@@ -22,10 +22,7 @@ interface UsageTreemapProps {
 /** Tall enough that the smaller slices still get a readable tile. */
 const CHART_HEIGHT = 360;
 
-/**
- * Insertions as area, drilled by clicking. `root` is the level the breadcrumb
- * cannot climb above: every library, or one of them.
- */
+/** `root` is the highest level the breadcrumb can climb to. */
 export function UsageTreemap({
     parts,
     root = {}
@@ -93,24 +90,16 @@ function TreemapTrail({ root, path, onSelect }: TreemapTrailProps): ReactNode {
         return null;
     }
 
+    const current = steps[steps.length - 1];
     return (
         // Spaced off the chart below, which otherwise sits on the trail.
-        <AppBreadcrumbs mb="sm">
-            {steps.map((step, index) =>
-                index === steps.length - 1 ? (
-                    <Text key={step.label} size="sm">
-                        {step.label}
-                    </Text>
-                ) : (
-                    <Anchor
-                        key={step.label}
-                        size="sm"
-                        onClick={() => onSelect(step.to)}
-                    >
-                        {step.label}
-                    </Anchor>
-                )
-            )}
-        </AppBreadcrumbs>
+        <AppBreadcrumbs
+            mb="sm"
+            crumbs={steps.slice(0, -1).map((step) => ({
+                label: step.label,
+                onClick: () => onSelect(step.to)
+            }))}
+            current={current.label}
+        />
     );
 }

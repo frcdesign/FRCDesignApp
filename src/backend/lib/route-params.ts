@@ -37,3 +37,13 @@ export function getFavoriteParam(c: AppContext): string {
     if (!id) throw new Error("Missing favoriteId route param");
     return id;
 }
+
+export function workspaceLinkRoute(): string {
+    return "/workspace-link/:linkId";
+}
+
+export function getWorkspaceLinkParam(c: AppContext): string {
+    const id = c.req.param("linkId");
+    if (!id) throw new Error("Missing linkId route param");
+    return id;
+}

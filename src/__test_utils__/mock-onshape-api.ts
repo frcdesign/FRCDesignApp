@@ -1,8 +1,5 @@
 import { OAuthApi } from "@backend/lib/onshape/client";
 
-/**
- * A thin shell client extending OAuthApi.
- */
 export class MockOnshapeApi extends OAuthApi {
     constructor() {
         // The token/refresh callback are unused — requests never reach the network.

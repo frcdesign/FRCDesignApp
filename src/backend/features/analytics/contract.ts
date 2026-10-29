@@ -3,10 +3,7 @@ import { ElementType } from "../../lib/onshape/element-type";
 import type { ElementPath } from "../../lib/onshape/path";
 import { InsertSource } from "./usage";
 
-/**
- * Inserts by the kind of tab they landed in. Every type is listed, so a tab
- * nobody inserts into reads as a zero rather than a missing key.
- */
+/** Every type is listed, so an unused one reads as zero. */
 export type InsertTargets = Record<ElementType, number>;
 
 export function emptyTargets(): InsertTargets {
@@ -18,21 +15,16 @@ export function emptyTargets(): InsertTargets {
 /** Lifetime counts, either overall or scoped to one library. */
 export interface AnalyticsTotals {
     inserts: number;
+    /** App-wide only; zero for a library. */
     appOpens: number;
     uniqueUsers: number;
     /** Subsets of `inserts`; divide by it for the percentages. */
     favoriteInserts: number;
     quickInserts: number;
-    /**
-     * Insert-and-fasten, which Onshape only offers on an assembly target — so
-     * its denominator is the assembly entry of `targets`, not `inserts`.
-     */
+    /** Onshape only offers fasten on assemblies, so compare to that entry of `targets`. */
     fastenInserts: number;
     targets: InsertTargets;
-    /**
-     * Favorites standing right now, not over the range: a favorite is state a
-     * user keeps, not an event, so it has no day to be windowed by.
-     */
+    /** Current, not over the range: a favorite is state, not an event. */
     favorites: number;
 }
 
@@ -42,13 +34,11 @@ export interface DailyInsertPoint {
     counts: Partial<Record<LibraryId, number>>;
 }
 
-/**
- * One day of every tracked metric, as raw counts. One series backs every trend,
- * so a tile and the chart behind it cannot disagree.
- */
+/** One series backs every trend, so a tile and its chart can't disagree. */
 export interface DailyMetricPoint {
     day: string;
     inserts: number;
+    /** App-wide, as `AnalyticsTotals.appOpens`. */
     appOpens: number;
     /** Distinct users active that day; not summable across days. */
     activeUsers: number;
@@ -67,10 +57,7 @@ export interface InsertSourceUsage {
     quickInsertCount: number;
 }
 
-/**
- * Severity counts are of issues, not items — one part with three warnings is
- * three — while `healthyItems` counts items, as the two counts above it do.
- */
+/** Severity counts are of issues; `healthyItems` counts items. */
 export interface LibraryHealthCounts {
     groupCount: number;
     insertableCount: number;
@@ -85,10 +72,7 @@ export interface LibrarySummary {
     health: LibraryHealthCounts;
 }
 
-/**
- * Why a change cannot be stated: an unmeasured baseline, two empty windows, or
- * an empty baseline, which reads as new rather than infinite.
- */
+/** An empty baseline reads as new rather than infinite. */
 export enum ChangeUnavailable {
     NO_PRIOR_DATA = "no-prior-data",
     PARTIAL_PRIOR_DATA = "partial-prior-data",
@@ -115,38 +99,47 @@ export interface PeriodComparison {
     baselineShort: string;
 }
 
-/** The measures reported both as a trailing window and season over season. */
-export type GrowthMeasure = "inserts" | "activeUsers" | "appOpens";
-
+/** Season to date against the same stretch of the season before. */
 export interface GrowthOut {
-    /** Trailing windows, which are meaningful from the first month. */
-    recent: Record<GrowthMeasure, PeriodComparison>;
-    /** Season to date against the same stretch of the season before. */
-    season: Record<GrowthMeasure, PeriodComparison>;
+    inserts: PeriodComparison;
+    activeUsers: PeriodComparison;
+    /** Absent for a library: an app open belongs to none. */
+    appOpens?: PeriodComparison;
 }
 
-/**
- * What one library's page reads. Narrower than the app overview it used to
- * share a type with, which had every library page paying for unopened fields.
- */
 export interface LibrarySummaryOut {
-    /** Lifetime, for the headline cards. */
+    /** Over the requested range, for the headline cards. */
     totals: AnalyticsTotals;
-    /** Scoped to the requested range, for the chart and the sparklines. */
+    /** Also over the range, for the chart and the sparklines. */
     metricSeries: DailyMetricPoint[];
     growth: GrowthOut;
     from: string;
     to: string;
 }
 
+/** What the version manager has done, and how much is linked to do it with. */
+export interface VersionManagerTotals {
+    /** Pushes and pulls together. */
+    runs: number;
+    /** Runs with a step that failed, partway or entirely. */
+    runsWithFailures: number;
+    /** Tabs whose references the app repointed. */
+    updatedElements: number;
+    createdVersions: number;
+    /** Current, not over the range: a link is state, not an event. */
+    links: number;
+}
+
 export interface AnalyticsOverviewOut {
-    /** Lifetime totals, shown as context beneath each tile's range value. */
+    /** Over the requested range, for the headline cards. */
     totals: AnalyticsTotals;
     libraries: LibrarySummary[];
     /** Per-library daily inserts, for the inserts tile's split-out detail. */
     series: DailyInsertPoint[];
     metricSeries: DailyMetricPoint[];
     sources: InsertSourceUsage[];
+    /** Over the range, but for `links`. */
+    versionManager: VersionManagerTotals;
     from: string;
     to: string;
     growth: GrowthOut;
@@ -154,6 +147,7 @@ export interface AnalyticsOverviewOut {
 
 /** A row of the parts table. Only parts still in the library are listed. */
 export interface PartUsageOut {
+    libraryId: LibraryId;
     /** The version-pinned tab, which is both the analytics key and the link. */
     path: ElementPath;
     name: string;
@@ -164,8 +158,7 @@ export interface PartUsageOut {
     insertCount: number;
     /** The window's inserts scaled to a month; see {@link usesPerMonth}. */
     usesPerMonth: number;
-    /** Daily inserts over a trailing {@link MONTH_DAYS}, oldest first: a
-     * shape rather than the reported window, which can be years of smear. */
+    /** Daily inserts over the last {@link MONTH_DAYS}, oldest first. */
     recent: number[];
 }
 
@@ -176,49 +169,33 @@ export interface ConfigurationValueUsage {
     label: string;
     count: number;
     isDefault: boolean;
-    /**
-     * The option the app lands on here, the declared default not being offered
-     * in this instance; see `resolveSelectedOption`.
-     */
+    /** The declared default isn't offered here; see `resolveSelectedOption`. */
     isImplicitDefault?: boolean;
 }
 
-/**
- * One parameter as it is shown under one set of controlling choices. A list
- * another choice filters has an entry per branch, so the options in each are
- * only the ones that branch offers.
- */
+/** One parameter under one set of controlling choices; see `instances.ts`. */
 export interface ConfigurationParameterUsage {
     parameterId: string;
     name: string;
     type: string;
     defaultValue?: string;
-    /**
-     * The controlling choices this instance is shown under, outermost first —
-     * ["Generic"] for the list a Generic vendor offers. Empty when nothing
-     * conditions the parameter.
-     */
+    /** Outermost first, e.g. ["Generic"]; empty when unconditioned. */
     path: string[];
     /** Recorded values counted here, the base for percentages. */
     total: number;
     values: ConfigurationValueUsage[];
 }
 
-/**
- * One declared enum option and how often it was chosen. Only an enum declares
- * its options, so only an enum can have one nobody picked.
- */
+/** Only an enum declares its options, so only an enum can have an unused one. */
 export interface UnusedOptionOut {
     path: ElementPath;
     partName: string;
     parameterId: string;
     parameterName: string;
-    /** The choices the parameter is shown under; see
-     * {@link ConfigurationParameterUsage.path}. */
+    /** See {@link ConfigurationParameterUsage.path}. */
     parameterPath: string[];
     value: ConfigurationValueUsage;
-    /** Every recorded value for this parameter, which the count is a
-     * fraction of. */
+    /** Every recorded value for this parameter. */
     parameterTotal: number;
 }
 

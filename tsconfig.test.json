@@ -16,6 +16,7 @@
         "types": [
             "vitest/globals",
             "node",
+            "vite/client",
             "@cloudflare/vitest-pool-workers/types",
             "./worker-configuration.d.ts"
         ],

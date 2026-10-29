@@ -1,35 +1,5 @@
 import { Group, Pagination } from "@mantine/core";
-import { useState, type ReactNode } from "react";
-
-/** Short enough that a page of a dashboard table reads at a glance. */
-export const ROWS_PER_PAGE = 10;
-
-interface Paged<T> {
-    rows: T[];
-    page: number;
-    pageCount: number;
-    setPage: (page: number) => void;
-}
-
-/**
- * One page of a list. The page is clamped rather than reset, so a filter that
- * shortens the list lands on its last page instead of an empty one — there is
- * no effect to run, and so no render showing rows that are gone.
- */
-export function usePagedRows<T>(rows: T[]): Paged<T> {
-    const [requestedPage, setRequestedPage] = useState(1);
-
-    const pageCount = Math.max(1, Math.ceil(rows.length / ROWS_PER_PAGE));
-    const page = Math.min(requestedPage, pageCount);
-    const start = (page - 1) * ROWS_PER_PAGE;
-
-    return {
-        rows: rows.slice(start, start + ROWS_PER_PAGE),
-        page,
-        pageCount,
-        setPage: setRequestedPage
-    };
-}
+import { type ReactNode } from "react";
 
 interface TablePaginationProps {
     page: number;

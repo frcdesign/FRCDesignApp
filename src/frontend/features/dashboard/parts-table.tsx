@@ -1,9 +1,6 @@
-import { Anchor, Badge, Group, Table, Text } from "@mantine/core";
-import {
-    ArrowSquareOutIcon,
-    CaretDownIcon,
-    CaretUpIcon
-} from "@phosphor-icons/react";
+import { ExternalLink } from "../../components/external-link";
+import { Badge, Group, Table, Text } from "@mantine/core";
+import { CaretDownIcon, CaretUpIcon } from "@phosphor-icons/react";
 import { useMemo, useState, type ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { AppSparkline } from "./sparkline";
@@ -11,6 +8,7 @@ import { type PartUsageOut } from "@backend/features/analytics/contract";
 import { MONTH_DAYS } from "@backend/features/analytics/measures";
 import { LibraryId } from "@backend/features/library/library-id";
 import { makeUrl } from "../../lib/url";
+import { useOnshapeOrigin } from "../../lib/onshape-params";
 import { IconSize, StatusColor } from "../../lib/style-constants";
 import { formatCount } from "./format";
 import {
@@ -20,15 +18,13 @@ import {
     type SortColumn,
     type SortState
 } from "./parts-sort";
-import { TablePagination, usePagedRows } from "./table-pagination";
+import { usePagedRows } from "./paged-rows";
+import { TablePagination } from "./table-pagination";
 
 /** Small enough to sit in a row without stretching it. */
 const ROW_SPARKLINE = { h: 24, w: 80 };
 
-/**
- * Widths for every column but the first, which takes what is left: unset, the
- * text columns take all the slack and strand the numbers from the sparkline.
- */
+/** The first column takes the rest; unset, text columns would take the slack. */
 const COLUMN_WIDTH = {
     group: 180,
     // Wide enough that the two longest headings stay on one line.
@@ -102,7 +98,7 @@ export function PartsTable({
     return (
         <>
             <Table.ScrollContainer minWidth={900}>
-                <Table striped highlightOnHover>
+                <Table striped>
                     <Table.Thead>
                         <Table.Tr>
                             {SORTABLE_COLUMNS.map((heading) => (
@@ -164,11 +160,7 @@ function SortableTh({
             onClick={() => onToggle(column)}
             style={{ cursor: "pointer", userSelect: "none" }}
         >
-            <Group
-                gap={4}
-                wrap="nowrap"
-                justify={align === "right" ? "flex-end" : undefined}
-            >
+            <Group gap={4} justify={align === "right" ? "flex-end" : undefined}>
                 {label}
                 {/* Reserved even when inactive, so the header never reflows. */}
                 <Caret
@@ -188,6 +180,7 @@ interface PartRowProps {
 
 function PartRow({ libraryId, part }: PartRowProps): ReactNode {
     const navigate = useNavigate();
+    const origin = useOnshapeOrigin();
 
     return (
         <Table.Tr
@@ -204,9 +197,7 @@ function PartRow({ libraryId, part }: PartRowProps): ReactNode {
                 <Group gap="xs">
                     {part.name}
                     {!part.isVisible && (
-                        <Badge color={StatusColor.INFO} size="sm">
-                            Hidden
-                        </Badge>
+                        <Badge color={StatusColor.INFO}>Hidden</Badge>
                     )}
                 </Group>
             </Table.Td>
@@ -218,16 +209,11 @@ function PartRow({ libraryId, part }: PartRowProps): ReactNode {
             <Table.Td>
                 <AppSparkline data={part.recent} {...ROW_SPARKLINE} />
             </Table.Td>
-            {/* Stops the row's own navigation: this link leaves the app. */}
-            <Table.Td ta="center" onClick={(event) => event.stopPropagation()}>
-                <Anchor
-                    href={makeUrl(part.path)}
-                    target="_blank"
-                    rel="noreferrer"
-                    aria-label={`Open ${part.name} in Onshape`}
-                >
-                    <ArrowSquareOutIcon size={IconSize.SMALL} />
-                </Anchor>
+            <Table.Td ta="center">
+                <ExternalLink
+                    href={makeUrl(origin, part.path)}
+                    iconSize={IconSize.SMALL}
+                />
             </Table.Td>
         </Table.Tr>
     );

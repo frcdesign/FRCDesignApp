@@ -1,13 +1,9 @@
-/**
- * What a part's recorded configuration values say, merged with the parameters
- * it declares today — once per way each parameter is shown.
- */
 import {
     ParameterType,
     type ConfigurationParameter
 } from "../configurations/contract";
 import { toParameterInstances } from "../configurations/instances";
-import { formatValue } from "../configurations/selection";
+import { canonicalValue, formatValue } from "../configurations/selection";
 import type {
     ConfigurationParameterUsage,
     ConfigurationValueUsage
@@ -26,14 +22,9 @@ export interface ValueCount {
 }
 
 /**
- * Merged with the parameters declared today, so an unused option still surfaces
- * and a retired one is dropped: nobody can pick it any more.
- *
- * One entry per instance rather than per parameter — a list another choice
- * filters is a different list under each — and each counts only the rows keyed
- * to a branch it covers. A row recorded before those keys were written belongs
- * to no branch, so it counts only where the parameter is reported whole; a
- * rebuild from the event log is what attributes the rest.
+ * Against today's parameters, so unused options show and retired ones drop.
+ * One entry per instance, counting only the rows keyed to a branch it covers.
+ * Rows from before keys were written count only where it is reported whole.
  */
 export function buildParameterUsage(
     parameters: ConfigurationParameter[],
@@ -61,7 +52,12 @@ export function buildParameterUsage(
                       isImplicitDefault: true
                   })
               }))
-            : toFreeFormValues(counts, parameter, parameter.default);
+            : // Counted canonically, so the default is looked up that way too.
+              toFreeFormValues(
+                  counts,
+                  parameter,
+                  canonicalValue(parameter, parameter.default)
+              );
 
         return {
             parameterId: parameter.id,
@@ -69,19 +65,14 @@ export function buildParameterUsage(
             type: parameter.type,
             defaultValue: parameter.default,
             path: instance.path.map((step) => step.label),
-            // An instance's own options, so its percentages add to a hundred;
-            // a free-form list is truncated, so its total stays the true one.
+            // An enum's percentages add to 100; a free-form list is truncated, so it keeps the true total.
             total: isEnum ? sumValues(values) : sumCounts(counts),
             values: values.sort((a, b) => b.count - a.count)
         };
     });
 }
 
-/**
- * One parameter's counts by value, narrowed to the branches `keys` names. An
- * absent `keys` is a parameter reported whole, which every branch counts
- * towards — including the empty one older rows carry.
- */
+/** Narrowed to the branches `keys` names; absent keys count every branch. */
 function countsFor(
     rows: ValueCount[] | undefined,
     keys: string[] | undefined
@@ -95,10 +86,7 @@ function countsFor(
     return counts;
 }
 
-/**
- * Unbounded distinct values, so only the most-used are returned, plus the
- * default. Labelled in the parameter's unit; nobody reads a tube length in metres.
- */
+/** The most-used values plus the default, in the parameter's unit. */
 function toFreeFormValues(
     counts: Map<string, number>,
     parameter: ConfigurationParameter,

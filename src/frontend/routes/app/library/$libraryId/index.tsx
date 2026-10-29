@@ -1,14 +1,9 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
-import { Accordion, Badge } from "@mantine/core";
+import { AppSection, AppSections } from "../../../../components/app-section";
 import { AppTitle } from "../../../../components/app-title";
+import { LibraryStatusBadge } from "../../../../components/library-status-badge";
 import { BooksIcon, MagnifyingGlassIcon } from "@phosphor-icons/react";
-import {
-    BORDER,
-    IconSize,
-    PrimaryColor,
-    SECTION_HEADER_HEIGHT,
-    TITLE_ICON_NUDGE
-} from "../../../../lib/style-constants";
+import { IconSize, PrimaryColor } from "../../../../lib/style-constants";
 import { ReactNode, useState } from "react";
 import { GroupCard } from "../../../../features/library/components/group-card";
 import { ItemTable } from "../../../../components/item-row";
@@ -17,33 +12,34 @@ import { SearchResults } from "../../../../features/search/components/search-res
 import { InsertSource } from "@backend/features/analytics/usage";
 import {
     SectionNotice,
-    SectionLoading
-} from "../../../../components/app-zero-state";
-import { RequireAccessLevel } from "../../../../features/auth/access-level";
+    SectionLoading,
+    SectionError
+} from "../../../../components/app-notice";
+import { RequireAccessLevel } from "../../../../features/auth/components/require-access";
 import { AddGroupButton } from "../../../../features/library/components/add-group-menu";
 import { FavoritesList } from "../../../../features/favorites/components/favorites-list";
 import { useLibraryQuery } from "../../../../features/library/queries";
-import {
-    getLibraryName,
-    getLibraryStatus,
-    useLibraryId
-} from "../../../../lib/library";
-import { useGetUiState, updateUiState } from "../../../../lib/ui-state";
-import { useVendorFilters } from "../../../../features/settings/components/vendor-filters";
+import { getLibraryName, useLibraryId } from "../../../../lib/library";
+import { useShallow } from "zustand/react/shallow";
+import { updateUiState, useUiState } from "../../../../lib/ui-state";
+import { useVendorFilters } from "../../../../features/settings/vendor-filters";
 
 export const Route = createFileRoute("/app/library/$libraryId/")({
     component: HomeList,
     // Back in the library itself, which is where entry should resume.
     onEnter: () => {
-        updateUiState({ groupId: null });
+        updateUiState({ groupId: undefined });
     }
 });
 
 /** One accordion section: what it shows, and where its open state lives. */
 interface Section {
     value: string;
+    /** Names the section, and titles it where `title` is left out. */
+    name: string;
     icon: ReactNode;
-    title: ReactNode;
+    /** A title of its own, for a section whose header carries more than a name. */
+    title?: ReactNode;
     panel: ReactNode;
     opened: boolean;
     setOpened: (opened: boolean) => void;
@@ -51,7 +47,13 @@ interface Section {
 
 /** The sections the home list shows, in the order they are stacked. */
 function useHomeSections(): Section[] {
-    const uiState = useGetUiState();
+    const { isFavoritesOpen, isLibraryOpen, searchQuery } = useUiState(
+        useShallow((state) => ({
+            isFavoritesOpen: state.isFavoritesOpen,
+            isLibraryOpen: state.isLibraryOpen,
+            searchQuery: state.searchQuery
+        }))
+    );
     // Not persisted: search results open on every visit, unlike the library.
     const [isSearchOpen, setIsSearchOpen] = useState(true);
     const libraryId = useLibraryId();
@@ -60,25 +62,25 @@ function useHomeSections(): Section[] {
     // Shown signed out too, where the panel says what signing in would add.
     const favorites: Section = {
         value: "favorites",
+        name: "Favorites",
         icon: <FavoriteIcon size={IconSize.MEDIUM} />,
-        title: <AppTitle title="Favorites" />,
         panel: <FavoritesList />,
-        opened: uiState.isFavoritesOpen,
+        opened: isFavoritesOpen,
         setOpened: (opened) => updateUiState({ isFavoritesOpen: opened })
     };
 
     const search: Section = {
         value: "search",
+        name: "Search Results",
         icon: (
             <MagnifyingGlassIcon
                 size={IconSize.MEDIUM}
                 color={PrimaryColor.FILLED}
             />
         ),
-        title: <AppTitle title="Search Results" />,
         panel: (
             <SearchResults
-                query={uiState.searchQuery ?? ""}
+                query={searchQuery}
                 filters={{ vendors: vendorFilters }}
                 source={InsertSource.SEARCH}
             />
@@ -89,16 +91,16 @@ function useHomeSections(): Section[] {
 
     const library: Section = {
         value: "library",
+        name: getLibraryName(libraryId),
         icon: <BooksIcon size={IconSize.MEDIUM} color={PrimaryColor.FILLED} />,
         title: <LibraryTitle libraryId={libraryId} />,
         panel: <LibraryList />,
-        opened: uiState.isLibraryOpen,
+        opened: isLibraryOpen,
         setOpened: (opened) => updateUiState({ isLibraryOpen: opened })
     };
 
-    // One slot below favorites, showing search results while a query is active
-    // and the library otherwise. The differing `value` remounts it on the swap.
-    return [favorites, uiState.searchQuery ? search : library];
+    // The differing `value` remounts the slot when search starts or ends.
+    return [favorites, searchQuery ? search : library];
 }
 
 interface SectionAccordionProps {
@@ -115,41 +117,24 @@ function SectionAccordion(props: SectionAccordionProps): ReactNode {
     };
 
     return (
-        <Accordion
-            multiple
-            variant="unstyled"
-            value={sections
+        <AppSections
+            opened={sections
                 .filter((section) => section.opened)
                 .map((section) => section.value)}
             onChange={handleChange}
-            styles={{
-                // On the control, so a collapsed section still divides from
-                // the next one; content closes off an open one.
-                control: {
-                    borderBottom: BORDER,
-                    minHeight: SECTION_HEADER_HEIGHT,
-                    // Mantine brightens a control to pure white or black; a section header is a title
-                    // like the group page's, so it reads in the same text color.
-                    color: "var(--mantine-color-text)"
-                },
-                // Its own padding would outgrow that height.
-                label: { paddingBlock: 0 },
-                content: { padding: 0, borderBottom: BORDER },
-                icon: TITLE_ICON_NUDGE
-            }}
         >
             {sections.map((section) => (
-                <Accordion.Item key={section.value} value={section.value}>
-                    <Accordion.Control
-                        icon={section.icon}
-                        className="interactive"
-                    >
-                        {section.title}
-                    </Accordion.Control>
-                    <Accordion.Panel>{section.panel}</Accordion.Panel>
-                </Accordion.Item>
+                <AppSection
+                    key={section.value}
+                    value={section.value}
+                    name={section.name}
+                    title={section.title}
+                    icon={section.icon}
+                >
+                    {section.panel}
+                </AppSection>
             ))}
-        </Accordion>
+        </AppSections>
     );
 }
 
@@ -170,17 +155,10 @@ interface LibraryTitleProps {
 
 function LibraryTitle(props: LibraryTitleProps): ReactNode {
     const { libraryId } = props;
-    const status = getLibraryStatus(libraryId);
     return (
         <AppTitle
             title={getLibraryName(libraryId)}
-            rightSection={
-                status && (
-                    <Badge size="sm" variant="light">
-                        {status}
-                    </Badge>
-                )
-            }
+            rightSection={<LibraryStatusBadge libraryId={libraryId} />}
         />
     );
 }
@@ -191,7 +169,7 @@ function LibraryList() {
     if (libraryQuery.isPending) {
         return <SectionLoading title="Loading groups..." />;
     } else if (libraryQuery.isError) {
-        return <SectionNotice title="Failed to load groups." />;
+        return <SectionError title="Failed to load groups." />;
     }
 
     const groups = libraryQuery.data.groups;
@@ -201,7 +179,6 @@ function LibraryList() {
         return (
             <SectionNotice
                 title="No groups found"
-                description={null}
                 action={
                     <RequireAccessLevel>
                         <AddGroupButton />

@@ -4,10 +4,7 @@ import { HttpStatus } from "http-status-ts";
 import type { ZodType } from "zod";
 import { internalError } from "./api-error";
 
-/**
- * `zValidator` with our error shape; its own body is the one that would not
- * match. A malformed request is our bug, so the detail is for the logs.
- */
+/** `zValidator` with our error shape. A malformed request is our bug, so details go to the logs. */
 export function validate<
     T extends ZodType,
     Target extends keyof ValidationTargets

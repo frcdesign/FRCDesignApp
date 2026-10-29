@@ -22,10 +22,6 @@ interface TrendTileProps {
     series: DailyMetricPoint[];
 }
 
-/**
- * One number and its trend. Leads with the range so it agrees with the
- * sparkline beneath it.
- */
 export function TrendTile({
     metric,
     totals,
@@ -46,8 +42,8 @@ export function TrendTile({
         : formatCount(metric.lifetimeValue(totals));
 
     return (
-        <Card withBorder padding="lg" radius="md">
-            <Text size="sm" c="dimmed" tt="uppercase" fw={700}>
+        <Card>
+            <Text c="dimmed" tt="uppercase" fw={700}>
                 {metric.label}
             </Text>
             <Title order={2}>{value}</Title>

@@ -1,7 +1,4 @@
-import { Selection } from "../../features/configurations/contract";
-
-/** The instance kinds an Onshape path can address, as one definition: the type
- * and the runtime list validators check against both derive from it. */
+/** Both the type and the runtime list derive from this. */
 export const INSTANCE_TYPES = ["w", "v", "m"] as const;
 
 export type InstanceType = (typeof INSTANCE_TYPES)[number];
@@ -19,7 +16,19 @@ export interface ElementPath extends InstancePath {
     elementId: string;
 }
 
-/** Represents a part inside a Part Studio. */
+/** A document's own workspace; undefined when Onshape didn't name one. */
+export function toDefaultWorkspacePath(document: {
+    id: string;
+    defaultWorkspace?: { id: string };
+}): InstancePath | undefined {
+    return document.defaultWorkspace
+        ? {
+              documentId: document.id,
+              instanceId: document.defaultWorkspace.id,
+              instanceType: "w"
+          }
+        : undefined;
+}
 
 /** The version-pinned tab a stored insertable row addresses. */
 export function toElementPath(row: {
@@ -35,10 +44,6 @@ export function toElementPath(row: {
     };
 }
 
-export interface ConfigurablePath extends ElementPath {
-    selection: Selection;
-}
-
 function isDocumentPath(path: unknown): path is DocumentPath {
     return (
         typeof path === "object" &&
@@ -51,8 +56,7 @@ export function isInstancePath(path: unknown): path is InstancePath {
     return (
         isDocumentPath(path) &&
         typeof (path as InstancePath).instanceId === "string" &&
-        // Checked against the literals: an unrecognized instance type builds a
-        // path Onshape rejects, which is worth catching at the boundary.
+        // An unrecognized type builds a path Onshape rejects.
         INSTANCE_TYPES.includes((path as InstancePath).instanceType)
     );
 }
@@ -61,15 +65,6 @@ export function isElementPath(path: unknown): path is ElementPath {
     return (
         isInstancePath(path) &&
         typeof (path as ElementPath).elementId === "string"
-    );
-}
-
-export function isConfigurablePath(
-    path: DocumentPath
-): path is ConfigurablePath {
-    return (
-        isElementPath(path) &&
-        (path as ConfigurablePath).selection !== undefined
     );
 }
 
@@ -98,13 +93,8 @@ function toInstanceTypeKey(instanceType: InstanceType): InstanceTypeKey {
     }
 }
 
-/**
- * Returns the named-ID object that Onshape API bodies/query params expect,
- * e.g. `{ documentId, workspaceId }` rather than the `/d/.../w/...` path form.
- */
-function toInstanceApiObject(
-    path: InstancePath
-): Record<string, string> {
+/** `{ documentId, workspaceId }`, as API bodies and query params expect. */
+function toInstanceApiObject(path: InstancePath): Record<string, string> {
     return {
         documentId: path.documentId,
         [toInstanceTypeKey(path.instanceType)]: path.instanceId

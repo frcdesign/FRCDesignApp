@@ -3,6 +3,7 @@
 -- _cf_METADATA alone. Clearing d1_migrations is what lets 0000_init reapply.
 DROP TABLE IF EXISTS `__old_favorites`;
 DROP TABLE IF EXISTS `__new_users`;
+DROP TABLE IF EXISTS `load_jobs`;
 DROP TABLE IF EXISTS `configurations`;
 DROP TABLE IF EXISTS `favorites`;
 DROP TABLE IF EXISTS `insertables`;
@@ -19,4 +20,8 @@ DROP TABLE IF EXISTS `daily_user_activity`;
 DROP TABLE IF EXISTS `events`;
 DROP TABLE IF EXISTS `insertable_stats`;
 DROP TABLE IF EXISTS `user_stats`;
+DROP TABLE IF EXISTS `daily_app_opens`;
+DROP TABLE IF EXISTS `daily_version_metrics`;
+DROP TABLE IF EXISTS `onshape_webhooks`;
+DROP TABLE IF EXISTS `workspace_links`;
 DROP TABLE IF EXISTS `d1_migrations`;

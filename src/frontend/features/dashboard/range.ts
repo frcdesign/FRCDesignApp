@@ -1,3 +1,4 @@
+import { useSearch } from "@tanstack/react-router";
 import {
     addDays,
     toReportingDay,
@@ -26,21 +27,22 @@ export const RANGE_PRESETS: Record<
 
 export const DEFAULT_RANGE_PRESET = RangePreset.ALL;
 
+/** Reads the active range preset from the URL. */
+export function useRangePreset(): RangePreset {
+    const search = useSearch({ from: "/dashboard" });
+    return search.range ?? DEFAULT_RANGE_PRESET;
+}
+
 export function isRangePreset(value: unknown): value is RangePreset {
     return typeof value === "string" && value in RANGE_PRESETS;
 }
 
-/**
- * Resolves a preset to the concrete day bounds the API expects, ending on the
- * last complete day: today is still filling, and a preset that reached into it
- * put a dip at the end of every chart.
- */
+/** Ends on the last complete day, since today is still filling. */
 export function toDayRange(preset: RangePreset): DayRange {
     const to = toReportingDay(Date.now());
     const { days } = RANGE_PRESETS[preset];
     return {
-        // The app has no data before 2026, so "all time" just reaches back far.
-        // Both bounds are inclusive, so the -1 is what makes "7 days" seven.
+        // Inclusive bounds, so -1 makes "7 days" seven.
         from: days === undefined ? "2000-01-01" : addDays(to, -(days - 1)),
         to
     };

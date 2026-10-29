@@ -18,8 +18,7 @@ describe("summarizeHealth", () => {
                     ]
                 },
                 {
-                    // Info-only, so it leaves the item unhealthy without
-                    // landing on either tile.
+                    // Info-only: unhealthy, but on neither tile.
                     buildIssues: [{ type: BuildIssueType.NO_THUMBNAIL_TAB }]
                 }
             ]
@@ -52,8 +51,6 @@ describe("summarizeHealth", () => {
     });
 
     it("reports a group's stored issues without recomputing any", () => {
-        // Visibility checks now run in the workflow and on the visibility
-        // toggle, so this only reads what they wrote.
         const counts = summarizeHealth(
             [
                 {

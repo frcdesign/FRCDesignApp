@@ -1,9 +1,9 @@
 import { modals } from "@mantine/modals";
 import { Text } from "@mantine/core";
-import { WarningIcon } from "@phosphor-icons/react";
 import { AppTitle } from "./app-title";
+import { Status } from "../lib/status";
 import { IconSize, StatusColor } from "../lib/style-constants";
-import { AppIcon } from "./app-icon";
+import { StatusIcon } from "./status-icon";
 
 interface OpenWarningAlertProps {
     title: string;
@@ -15,32 +15,56 @@ function openWarningAlert(props: OpenWarningAlertProps): void {
         title: (
             <AppTitle
                 icon={
-                    <AppIcon
-                        icon={WarningIcon}
+                    <StatusIcon
+                        status={Status.WARNING}
                         size={IconSize.MEDIUM}
-                        color={StatusColor.WARNING}
+                        raised={false}
                     />
                 }
                 title={props.title}
             />
         ),
         children: (
-            // Takes the focus the trap would otherwise land on Close, which
-            // reads as that button being pre-selected. No outline: a focus ring
-            // around a paragraph reads as a text box the reader can type in.
-            <Text
-                data-autofocus
-                tabIndex={-1}
-                size="sm"
-                style={{ outline: "none" }}
-            >
+            // Takes focus from Close, which would look pre-selected. No outline, which
+            // would make the text look editable.
+            <Text data-autofocus tabIndex={-1} style={{ outline: "none" }}>
                 {props.text}
             </Text>
         ),
         labels: { confirm: "Close", cancel: null },
-        centered: true,
         cancelProps: { display: "none" },
-        confirmProps: { color: "yellow" }
+        confirmProps: { color: StatusColor.WARNING }
+    });
+}
+
+interface OpenDeleteConfirmProps {
+    title: string;
+    text: string;
+    /** Names the deletion, so the button says what it does. */
+    confirmLabel: string;
+    onConfirm: () => void;
+}
+
+/** Asks before something is deleted for good. */
+export function openDeleteConfirm(props: OpenDeleteConfirmProps): void {
+    modals.openConfirmModal({
+        title: (
+            <AppTitle
+                icon={
+                    <StatusIcon
+                        status={Status.ERROR}
+                        size={IconSize.MEDIUM}
+                        raised={false}
+                    />
+                }
+                title={props.title}
+            />
+        ),
+        children: <Text>{props.text}</Text>,
+        labels: { confirm: props.confirmLabel, cancel: "Cancel" },
+        centered: true,
+        confirmProps: { color: StatusColor.ERROR },
+        onConfirm: props.onConfirm
     });
 }
 
@@ -55,12 +79,5 @@ export function openCannotReorderAlert(): void {
     openWarningAlert({
         title: "Cannot reorder favorites",
         text: "To prevent confusion, favorites cannot be reordered while filters are active."
-    });
-}
-
-export function openCannotEditDefaultConfigurationAlert(): void {
-    openWarningAlert({
-        title: "Cannot edit configuration",
-        text: "This element is not configurable, so its default configuration cannot be changed."
     });
 }

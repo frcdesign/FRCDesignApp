@@ -5,19 +5,15 @@ import {
     DEFAULT_LIBRARY,
     LibraryId
 } from "@backend/features/library/library-id";
+import { isLibraryTab } from "./app-tab";
+import { getUiState } from "./ui-state";
 
-/**
- * Returns the library being displayed, which the url is the source of truth
- * for. Callers can sit outside the library route — modals mount at the root
- * and error components replace the match — so it falls back rather than throw.
- */
+/** Falls back rather than throws, since modals and error components sit outside the library route. */
 export function useLibraryId(): LibraryId {
     const params = useParams({
         from: "/app/library/$libraryId",
         shouldThrow: false
     });
-    // The dashboard scopes to a library of its own, which its settings menu
-    // offers the app for.
     const dashboardParams = useParams({
         from: "/dashboard/library/$libraryId",
         shouldThrow: false
@@ -25,13 +21,15 @@ export function useLibraryId(): LibraryId {
     return params?.libraryId ?? dashboardParams?.libraryId ?? DEFAULT_LIBRARY;
 }
 
+/** The library to show where the url names none: the last one picked. */
+export function getUiLibraryId(): LibraryId {
+    const { tabId } = getUiState();
+    return tabId && isLibraryTab(tabId) ? tabId : DEFAULT_LIBRARY;
+}
+
 const LibraryIdType = z.enum(LibraryId);
 
-/**
- * Reads a library id out of a url — the dashboard's, which scopes to one
- * directly. An unknown one 404s here rather than falling back, which would
- * hide the bad url and strand the caller elsewhere.
- */
+/** 404s an unknown id rather than hiding the bad url. */
 export function parseLibraryId(libraryId: string): LibraryId {
     const parsed = LibraryIdType.safeParse(libraryId);
     if (!parsed.success) {
@@ -44,10 +42,22 @@ export function getLibraryName(libraryId: string): string {
     switch (libraryId) {
         case LibraryId.FRC_DESIGN_LIB:
             return "FRCDesignLib";
-        case LibraryId.FTC_DESIGN_LIB:
-            return "FTCDesignLib";
+        case LibraryId.CONFIG_LIB:
+            return "ConfigLib";
         case LibraryId.MKCAD:
             return "MKCad";
+    }
+    throw new Error("Unknown library: " + libraryId);
+}
+
+/** The program a library's parts are for, which the page menu files it under. */
+export function getLibraryProgram(libraryId: string): string {
+    switch (libraryId) {
+        case LibraryId.FRC_DESIGN_LIB:
+        case LibraryId.MKCAD:
+            return "FRC";
+        case LibraryId.CONFIG_LIB:
+            return "FTC";
     }
     throw new Error("Unknown library: " + libraryId);
 }
@@ -61,7 +71,6 @@ export function getLibraryStatus(libraryId: string): string | undefined {
     return undefined;
 }
 
-/** Whether the tab's own page is showing, rather than one of its groups. */
 export function useIsHome(): boolean {
     return (
         useMatch({

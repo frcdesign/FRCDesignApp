@@ -1,0 +1,64 @@
+import { eq } from "drizzle-orm";
+import * as z from "zod";
+import { getApp } from "../../lib/context";
+import { getDb } from "../../db/client";
+import { groups } from "../../db/schema";
+import { getLibraryParam, libraryRoute } from "../../lib/route-params";
+import { validate } from "../../lib/validate";
+import { requireEditorMiddleware, requireOwner } from "../auth/guards";
+import { getSessionId } from "../auth/session";
+import { requestReload } from "./jobs";
+import { approveHeldVersions } from "./holds";
+import type { ApproveVersionsOut, ReloadOut } from "./contract";
+
+export const loadRoutes = getApp();
+
+const reloadBody = z.object({
+    /** Reloads documents whose version has not changed, too. */
+    forceReload: z.boolean()
+});
+
+/**
+ * POST /api/reload/library/:libraryId: the documents with a new version or a
+ * failed load, or every one when forced. Editors may, so a held or failed
+ * document is never something they can only watch; forcing spends a lot of
+ * the Onshape allocation, so it is the owner's alone. It loads any held
+ * version too, which releases its hold.
+ */
+loadRoutes.post(
+    "/reload" + libraryRoute(),
+    requireEditorMiddleware,
+    validate("json", reloadBody),
+    async (c) => {
+        const libraryId = getLibraryParam(c);
+        const { forceReload } = c.req.valid("json");
+        if (forceReload) {
+            await requireOwner(c);
+        }
+        const rows = await getDb(c.env.DB)
+            .select({ groupId: groups.id })
+            .from(groups)
+            .where(eq(groups.libraryId, libraryId));
+        await requestReload(c.env, {
+            libraryId,
+            groupIds: rows.map((row) => row.groupId),
+            sessionId: getSessionId(c),
+            forceReload
+        });
+        return c.json({ documents: rows.length } satisfies ReloadOut);
+    }
+);
+
+/** POST /api/approve-versions/library/:libraryId */
+loadRoutes.post(
+    "/approve-versions" + libraryRoute(),
+    requireEditorMiddleware,
+    async (c) => {
+        const documents = await approveHeldVersions(
+            c.env,
+            getLibraryParam(c),
+            getSessionId(c)
+        );
+        return c.json({ documents } satisfies ApproveVersionsOut);
+    }
+);

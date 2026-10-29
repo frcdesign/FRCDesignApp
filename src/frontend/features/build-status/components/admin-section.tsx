@@ -1,62 +1,26 @@
-import { Stack, Switch, Tooltip } from "@mantine/core";
+import { Stack } from "@mantine/core";
 import { ReactNode } from "react";
-import { BuildIssueSeverity } from "@backend/features/build-checker/issues";
 import {
     GroupBuildStatus,
     InsertableBuildStatus
 } from "@backend/features/build-checker/contract";
-import { ElementType } from "@backend/lib/onshape/element-type";
-import {
-    type ConfigurationCount,
-    IndexingBand,
-    MAX_PART_NUMBER_CONFIGURATIONS
-} from "@backend/features/configurations/combinations";
-import { NO_SHRINK } from "../../../lib/style-constants";
 import {
     useSetVisibilityMutation,
     useToggleInsertAndFastenMutation,
-    useIndexConfigurationsMutation,
     useToggleSortOrderMutation
 } from "../queries";
-import { ControlRow, SectionHeader } from "./sections";
-import { IssueIcon } from "./issues";
-
-interface SwitchRowProps {
-    label: string;
-    description?: string;
-    checked: boolean;
-    onToggle: () => void;
-}
-
-/** A label (+ description) and on/off Switch row for an editable admin flag. */
-function SwitchRow(props: SwitchRowProps): ReactNode {
-    return (
-        <ControlRow
-            label={props.label}
-            description={props.description}
-            control={
-                <Switch
-                    size="sm"
-                    checked={props.checked}
-                    onChange={props.onToggle}
-                    withThumbIndicator={false}
-                />
-            }
-        />
-    );
-}
+import { SectionHeader, SwitchRow } from "./sections";
 
 interface InsertableAdminSectionProps {
     insertableId: string;
     status: InsertableBuildStatus;
-    configurationCount: ConfigurationCount;
 }
 
 /** The editable admin toggles for an insertable. */
 export function InsertableAdminSection(
     props: InsertableAdminSectionProps
 ): ReactNode {
-    const { insertableId, status, configurationCount } = props;
+    const { insertableId, status } = props;
     return (
         <Stack gap="sm">
             <SectionHeader>Admin</SectionHeader>
@@ -67,11 +31,6 @@ export function InsertableAdminSection(
             <FastenSwitch
                 insertableId={insertableId}
                 supportsFasten={status.supportsFasten}
-            />
-            <IndexingRow
-                insertableId={insertableId}
-                status={status}
-                band={configurationCount.band}
             />
         </Stack>
     );
@@ -109,80 +68,6 @@ function FastenSwitch(props: FastenSwitchProps): ReactNode {
             checked={supportsFasten}
             onToggle={() => mutation.mutate(!supportsFasten)}
         />
-    );
-}
-
-interface IndexingRowProps {
-    insertableId: string;
-    status: InsertableBuildStatus;
-    band: IndexingBand;
-}
-
-/**
- * A switch only where enabling indexing is the admin's call, an icon saying why
- * not otherwise — past the cap it can't run, under the threshold it already has.
- */
-function IndexingRow(props: IndexingRowProps): ReactNode {
-    const { insertableId, status, band } = props;
-    const mutation = useIndexConfigurationsMutation(insertableId);
-
-    let control: ReactNode;
-    if (status.elementType === ElementType.ASSEMBLY) {
-        control = (
-            <IndexingIcon
-                severity={null}
-                tooltip="Metadata is pulled from the top level assembly tab."
-            />
-        );
-    } else if (band === IndexingBand.EXCEEDED) {
-        control = (
-            <IndexingIcon
-                severity={BuildIssueSeverity.ERROR}
-                tooltip={`Parts with more than ${MAX_PART_NUMBER_CONFIGURATIONS} configurations are not eligible for indexing. To resolve, exclude configurations from affecting part properties in Onshape.`}
-            />
-        );
-    } else if (band === IndexingBand.AUTOMATIC) {
-        control = (
-            <IndexingIcon
-                severity={null}
-                tooltip="Metadata is indexed from this part's configurations."
-            />
-        );
-    } else {
-        control = (
-            <Switch
-                size="sm"
-                checked={status.indexConfigurations}
-                onChange={() => mutation.mutate(!status.indexConfigurations)}
-                withThumbIndicator={false}
-            />
-        );
-    }
-
-    return (
-        <ControlRow
-            label="Enable indexing"
-            description="Index metadata for search"
-            control={control}
-        />
-    );
-}
-
-interface IndexingIconProps {
-    severity: BuildIssueSeverity | null;
-    tooltip: string;
-}
-
-/**
- * Stands in for the switch where there is nothing to toggle, reusing the
- * build-check icons so the state reads the same as the callouts above it.
- */
-function IndexingIcon(props: IndexingIconProps): ReactNode {
-    const { severity, tooltip } = props;
-    return (
-        <Tooltip label={tooltip} withArrow multiline w={260}>
-            <IssueIcon severity={severity} style={NO_SHRINK} />
-        </Tooltip>
     );
 }
 

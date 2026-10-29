@@ -4,7 +4,7 @@ import { getApp } from "../../lib/context";
 import { getLibraryParam, libraryRoute } from "../../lib/route-params";
 import { getDb } from "../../db/client";
 import { libraries } from "../../db/schema";
-import { getLibraryOut, searchIndexKey } from "./db";
+import { getLibraryOut, rebuildSearchDb, searchIndexKey } from "./db";
 
 export const libraryRoutes = getApp();
 
@@ -35,10 +35,7 @@ libraryRoutes.get(
     }
 );
 
-/**
- * GET /api/search-db/library/:libraryId?v=:cacheVersion. Never set
- * `Content-Encoding` here: the runtime would compress it a second time.
- */
+/** GET /api/search-db/library/:libraryId?v=:cacheVersion. No `Content-Encoding`: the runtime compresses. */
 libraryRoutes.get(
     "/search-db" + libraryRoute(),
     cacheMiddleware(CachePolicy.PUBLIC_CACHE),
@@ -47,7 +44,15 @@ libraryRoutes.get(
 
         const object = await c.env.BLOB.get(searchIndexKey(libraryId));
         if (!object) {
-            return c.notFound();
+            // Not built in this deploy's shape yet.
+            const searchDb = await rebuildSearchDb(
+                c.env.BLOB,
+                getDb(c.env.DB),
+                libraryId
+            );
+            return new Response(searchDb, {
+                headers: { "Content-Type": "application/json" }
+            });
         }
 
         const headers = new Headers();

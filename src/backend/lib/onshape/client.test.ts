@@ -44,8 +44,6 @@ describe("OnshapeApi error handling", () => {
     it("aborts a call that never answers", async () => {
         const api = new TestApi(new Response("{}"));
         await api.get("/x");
-        // Nothing here waits a minute, so this asserts the signal is armed
-        // rather than that it fires.
         expect(api.lastInit?.signal).toBeInstanceOf(AbortSignal);
         expect(api.lastInit?.signal?.aborted).toBe(false);
     });

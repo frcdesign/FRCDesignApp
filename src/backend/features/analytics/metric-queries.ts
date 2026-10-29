@@ -1,7 +1,3 @@
-/**
- * Reads of the library-wide rollups: totals, the day series behind the charts,
- * and where inserts started from.
- */
 import {
     and,
     asc,
@@ -17,12 +13,15 @@ import { type SQLiteColumn } from "drizzle-orm/sqlite-core";
 import { type Db } from "../../db/client";
 import { favorites } from "../../db/schema";
 import {
+    dailyAppOpens,
     dailyMetrics,
     dailySourceMetrics,
     dailyTargetMetrics,
     dailyUserActivity,
+    dailyVersionMetrics,
     userStats
 } from "./schema";
+import { workspaceLinks } from "../version-manager/schema";
 import { EventType, InsertSource } from "./usage";
 import { LibraryId } from "../library/library-id";
 import { ElementType } from "../../lib/onshape/element-type";
@@ -33,31 +32,34 @@ import {
     type DailyInsertPoint,
     type DailyMetricPoint,
     type InsertSourceUsage,
-    type LibrarySummary
+    type LibrarySummary,
+    type VersionManagerTotals
 } from "./contract";
 import { type DayRange } from "./day";
 import { eachDay } from "./range";
 import { getHealthCounts } from "./health";
 
-/** Lifetime totals, optionally scoped to one library and to a window. */
+/** Lifetime totals, or scoped to one library or a window. */
 export async function getTotals(
     db: Db,
     libraryId?: LibraryId,
     range?: DayRange
 ): Promise<AnalyticsTotals> {
-    const [metrics, targets, uniqueUsers, favoriteCount] = await Promise.all([
-        countMetrics(db, libraryId, range),
-        countTargets(db, libraryId, range),
-        countUsers(db, libraryId, range),
-        countFavorites(db, libraryId)
-    ]);
+    const [metrics, targets, uniqueUsers, favoriteCount, opens] =
+        await Promise.all([
+            countMetrics(db, libraryId, range),
+            countTargets(db, libraryId, range),
+            countUsers(db, libraryId, range),
+            countFavorites(db, libraryId),
+            countAppOpens(db, libraryId, range)
+        ]);
 
     const byType = new Map(metrics.map((row) => [row.type, row]));
     const inserts = byType.get(EventType.INSERT);
 
     return {
         inserts: Number(inserts?.total ?? 0),
-        appOpens: Number(byType.get(EventType.APP_OPEN)?.total ?? 0),
+        appOpens: Number(opens?.value ?? 0),
         uniqueUsers: uniqueUsers?.value ?? 0,
         favoriteInserts: Number(inserts?.favorites ?? 0),
         quickInserts: Number(inserts?.quickInserts ?? 0),
@@ -67,10 +69,6 @@ export async function getTotals(
     };
 }
 
-/**
- * The scope every rollup read takes: one library or all of them, one window or
- * all of time. The tables differ only in which columns carry the two.
- */
 function scopeFilters(
     columns: { day: SQLiteColumn; libraryId: SQLiteColumn },
     libraryId?: LibraryId,
@@ -129,30 +127,67 @@ export function toTargets(
     return targets;
 }
 
-/**
- * `user_stats` holds one row per user for all time and so cannot be windowed;
- * a range counts the per-day activity rollup instead.
- */
+/** `user_stats` is all-time, so a range counts the daily rollups. */
 function countUsers(db: Db, libraryId?: LibraryId, range?: DayRange) {
     if (range) {
+        const active = activeUserRows(db, range, libraryId);
         return db
-            .select({ value: countDistinct(dailyUserActivity.userId) })
-            .from(dailyUserActivity)
-            .where(and(...activityFilters(range, libraryId)))
+            .select({ value: countDistinct(active.userId) })
+            .from(active)
             .get();
     }
-    if (libraryId) {
-        return db
-            .select({ value: count() })
-            .from(userStats)
-            .where(eq(userStats.libraryId, libraryId))
-            .get();
-    }
-    // Distinct across libraries: someone active in two has a row in each.
     return db
-        .select({ value: countDistinct(userStats.userId) })
+        .select({ value: count() })
         .from(userStats)
+        .where(libraryId ? eq(userStats.libraryId, libraryId) : undefined)
         .get();
+}
+
+/** Both bounds inclusive, as every day key is. */
+function openFilters(range: DayRange): SQL[] {
+    return [
+        gte(dailyAppOpens.day, range.from),
+        lte(dailyAppOpens.day, range.to)
+    ];
+}
+
+/** App-wide only; see `dailyAppOpens`. */
+function countAppOpens(db: Db, libraryId?: LibraryId, range?: DayRange) {
+    if (libraryId) return undefined;
+    return db
+        .select({ value: sum(dailyAppOpens.opens) })
+        .from(dailyAppOpens)
+        .where(range ? and(...openFilters(range)) : undefined)
+        .get();
+}
+
+/**
+ * Who was about on each day of the range: the library rollup, and app opens,
+ * which have no library and so no row in it. Rows are one per library, and an
+ * open's is one per person, so every read of this counts distinct.
+ */
+export function activeUserRows(db: Db, range: DayRange, libraryId?: LibraryId) {
+    const activity = db
+        .select({
+            day: dailyUserActivity.day,
+            userId: dailyUserActivity.userId
+        })
+        .from(dailyUserActivity)
+        .where(and(...activityFilters(range, libraryId)));
+
+    if (libraryId) return activity.as("active");
+
+    return activity
+        .union(
+            db
+                .select({
+                    day: dailyAppOpens.day,
+                    userId: dailyAppOpens.userId
+                })
+                .from(dailyAppOpens)
+                .where(and(...openFilters(range)))
+        )
+        .as("active");
 }
 
 /** Favorites standing now, which have no day to be windowed by. */
@@ -214,36 +249,38 @@ function countTargetsByDay(db: Db, range: DayRange, libraryId?: LibraryId) {
         .all();
 }
 
-/**
- * DISTINCT, not COUNT: the table holds one row per user *per library* per day,
- * so an unscoped read counts someone active in two libraries twice — and would
- * then disagree with getTotals, which counts distinct.
- */
 function countUsersByDay(db: Db, range: DayRange, libraryId?: LibraryId) {
+    const active = activeUserRows(db, range, libraryId);
+
     return db
-        .select({
-            day: dailyUserActivity.day,
-            activeUsers: countDistinct(dailyUserActivity.userId)
-        })
-        .from(dailyUserActivity)
-        .where(and(...activityFilters(range, libraryId)))
-        .groupBy(dailyUserActivity.day)
+        .select({ day: active.day, activeUsers: countDistinct(active.userId) })
+        .from(active)
+        .groupBy(active.day)
         .all();
 }
 
-/**
- * Every metric's daily values as one series, read from rollups: the event log
- * grows with every insert rather than with the range.
- */
+/** App-wide, as {@link countAppOpens}: a library's series has no opens. */
+function countOpensByDay(db: Db, range: DayRange, libraryId?: LibraryId) {
+    if (libraryId) return [];
+    return db
+        .select({ day: dailyAppOpens.day, total: sum(dailyAppOpens.opens) })
+        .from(dailyAppOpens)
+        .where(and(...openFilters(range)))
+        .groupBy(dailyAppOpens.day)
+        .all();
+}
+
+/** From rollups, since the event log grows with every insert. */
 export async function getMetricSeries(
     db: Db,
     range: DayRange,
     libraryId?: LibraryId
 ): Promise<DailyMetricPoint[]> {
-    const [rows, targetRows, userRows] = await Promise.all([
+    const [rows, targetRows, userRows, openRows] = await Promise.all([
         countMetricsByDay(db, range, libraryId),
         countTargetsByDay(db, range, libraryId),
-        countUsersByDay(db, range, libraryId)
+        countUsersByDay(db, range, libraryId),
+        countOpensByDay(db, range, libraryId)
     ]);
 
     const byDay = new Map<string, DailyMetricPoint>();
@@ -265,15 +302,15 @@ export async function getMetricSeries(
     };
 
     for (const row of rows) {
+        if (row.type !== EventType.INSERT) continue;
         const point = pointFor(row.day);
-        if (row.type === EventType.APP_OPEN) {
-            point.appOpens = Number(row.total ?? 0);
-            continue;
-        }
         point.inserts = Number(row.total ?? 0);
         point.favoriteInserts = Number(row.favoriteInserts ?? 0);
         point.fastenInserts = Number(row.fastenInserts ?? 0);
         point.quickInserts = Number(row.quickInserts ?? 0);
+    }
+    for (const row of openRows) {
+        pointFor(row.day).appOpens = Number(row.total ?? 0);
     }
     for (const row of targetRows) {
         pointFor(row.day).targets[row.targetElementType] = Number(
@@ -284,8 +321,7 @@ export async function getMetricSeries(
         pointFor(row.day).activeUsers = row.activeUsers;
     }
 
-    // A quiet day is a zero, not a missing point: anything dividing by the
-    // number of points would average over active days instead of calendar ones.
+    // A quiet day is a zero, so averages are over calendar days.
     for (const day of eachDay(range)) pointFor(day);
 
     return [...byDay.values()].sort((a, b) => a.day.localeCompare(b.day));
@@ -365,10 +401,44 @@ export async function getSeries(
         point.counts[row.libraryId] = row.count;
         byDay.set(row.day, point);
     }
-    // Same reason as the metric series: a missing day is a zero, and a line
-    // that jumps across it reads as activity that never happened.
+    // A missing day is a zero, or the line jumps across it.
     for (const day of eachDay(range)) {
         if (!byDay.has(day)) byDay.set(day, { day, counts: {} });
     }
     return [...byDay.values()].sort((a, b) => a.day.localeCompare(b.day));
+}
+
+/** The version manager's totals over a range, and what is linked right now. */
+export async function getVersionManagerTotals(
+    db: Db,
+    range: DayRange
+): Promise<VersionManagerTotals> {
+    const [totals, links] = await Promise.all([
+        db
+            .select({
+                runs: sum(dailyVersionMetrics.runs),
+                partialRuns: sum(dailyVersionMetrics.partialRuns),
+                failedRuns: sum(dailyVersionMetrics.failedRuns),
+                createdVersions: sum(dailyVersionMetrics.createdVersions),
+                updatedElements: sum(dailyVersionMetrics.updatedElements)
+            })
+            .from(dailyVersionMetrics)
+            .where(
+                and(
+                    gte(dailyVersionMetrics.day, range.from),
+                    lte(dailyVersionMetrics.day, range.to)
+                )
+            )
+            .get(),
+        db.select({ value: count() }).from(workspaceLinks).get()
+    ]);
+
+    return {
+        runs: Number(totals?.runs ?? 0),
+        runsWithFailures:
+            Number(totals?.partialRuns ?? 0) + Number(totals?.failedRuns ?? 0),
+        createdVersions: Number(totals?.createdVersions ?? 0),
+        updatedElements: Number(totals?.updatedElements ?? 0),
+        links: links?.value ?? 0
+    };
 }

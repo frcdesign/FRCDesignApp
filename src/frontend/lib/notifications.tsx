@@ -1,17 +1,16 @@
 import { notifications } from "@mantine/notifications";
 import type { ReactNode } from "react";
-import { CheckCircleIcon, InfoIcon, XCircleIcon } from "@phosphor-icons/react";
-import { IconSize, NO_SHRINK } from "./style-constants";
+import { StatusIcon } from "../components/status-icon";
+import { Status } from "./status";
+import { IconSize } from "./style-constants";
 import { Box, Group, Button } from "@mantine/core";
+import styles from "./styles.module.css";
 
 export interface NotificationAction {
     text: string;
     onClick: () => void;
 }
 
-/**
- * Renders a Notification with an added Action button.
- */
 export function renderNotification(
     message: ReactNode,
     action: NotificationAction | undefined
@@ -20,7 +19,7 @@ export function renderNotification(
         return message;
     }
     return (
-        <Group justify="space-between" wrap="nowrap" gap="sm">
+        <Group justify="space-between" gap="sm">
             {/* Only reachable on a window too narrow for the row: the message
                 is what gives, and the button keeps its label intact. */}
             <Box component="span" miw={0}>
@@ -30,7 +29,7 @@ export function renderNotification(
                 size="compact-sm"
                 variant="subtle"
                 onClick={action.onClick}
-                style={NO_SHRINK}
+                className={styles.noShrink}
             >
                 {action.text}
             </Button>
@@ -48,7 +47,6 @@ interface ToastConfig {
     withCloseButton?: boolean;
 }
 
-/** Ids currently on screen, so a repeat updates rather than replaces. */
 const liveToasts = new Set<string>();
 
 /** Shows a toast, updating any existing toast with the same id. */
@@ -63,8 +61,7 @@ function showToast(config: ToastConfig): string {
         withCloseButton: config.withCloseButton
     };
 
-    // Updating keeps the toast in place, so a loading toast becoming a success
-    // one reads as the same toast rather than one leaving and another arriving.
+    // Updated in place, so a loading toast turning into a success reads as one toast.
     if (config.id && liveToasts.has(config.id)) {
         notifications.update(props);
         return config.id;
@@ -78,28 +75,59 @@ function showToast(config: ToastConfig): string {
     return id;
 }
 
-interface InfoToastOptions {
-    /** Repeats with the same id update the toast rather than stacking one up. */
+interface ToastOptions {
+    /** A repeat with the same id updates the toast. */
     id?: string;
+    /** False keeps it up until dismissed, for one somebody has to act on. */
     autoClose?: number | false;
 }
 
-export function showInfoToast(
+const STATUS_TOAST_COLOR: Record<Status, string> = {
+    [Status.SUCCESS]: "green",
+    [Status.INFO]: "blue",
+    [Status.WARNING]: "yellow",
+    [Status.ERROR]: "red"
+};
+
+function showStatusToast(
+    status: Status,
     message: ReactNode,
-    options: InfoToastOptions = {}
+    options: ToastOptions
 ): string {
     return showToast({
-        color: "blue",
-        icon: <InfoIcon size={IconSize.MEDIUM} />,
+        color: STATUS_TOAST_COLOR[status],
+        icon: (
+            <StatusIcon
+                status={status}
+                size={IconSize.MEDIUM}
+                color="white"
+                raised={false}
+            />
+        ),
         message,
         ...options
     });
 }
 
+export function showInfoToast(
+    message: ReactNode,
+    options: ToastOptions = {}
+): string {
+    return showStatusToast(Status.INFO, message, options);
+}
+
+/** Long enough to read, short enough not to follow somebody around. */
+const TIP_AUTO_CLOSE_MS = 8000;
+
+/** A hint about the app; one per `id` on screen at a time. */
+export function showTipToast(message: ReactNode, id: string): string {
+    return showInfoToast(message, { id, autoClose: TIP_AUTO_CLOSE_MS });
+}
+
 export function showLoadingToast(message: string, id: string): string {
     return showToast({
         id,
-        color: "blue",
+        color: STATUS_TOAST_COLOR[Status.INFO],
         loading: true,
         message,
         autoClose: false,
@@ -108,19 +136,22 @@ export function showLoadingToast(message: string, id: string): string {
 }
 
 export function showSuccessToast(message: string, id?: string): string {
-    return showToast({
-        id,
-        color: "green",
-        icon: <CheckCircleIcon size={IconSize.MEDIUM} />,
-        message
-    });
+    return showStatusToast(Status.SUCCESS, message, { id });
 }
 
-export function showErrorToast(message: ReactNode, id?: string): string {
-    return showToast({
-        id,
-        color: "red",
-        icon: <XCircleIcon size={IconSize.MEDIUM} />,
-        message
-    });
+export function showErrorToast(
+    message: ReactNode,
+    id?: string,
+    options: Omit<ToastOptions, "id"> = {}
+): string {
+    return showStatusToast(Status.ERROR, message, { id, ...options });
+}
+
+/** Something went through, but not all of it. */
+export function showWarningToast(
+    message: ReactNode,
+    id?: string,
+    options: Omit<ToastOptions, "id"> = {}
+): string {
+    return showStatusToast(Status.WARNING, message, { id, ...options });
 }
