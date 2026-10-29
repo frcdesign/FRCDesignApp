@@ -61,11 +61,8 @@ export function VersionForm(props: VersionFormProps): ReactNode {
                     ref={nameRef}
                     label="Version name"
                     required
-                    placeholder={
-                        suggested.isPending
-                            ? "Reading the document's versions..."
-                            : undefined
-                    }
+                    placeholder="Name"
+                    loading={suggested.isPending}
                     maxLength={MAX_VERSION_NAME_LENGTH}
                     value={name}
                     {...selectAll}
@@ -74,7 +71,7 @@ export function VersionForm(props: VersionFormProps): ReactNode {
                 />
                 <Textarea
                     label="Description"
-                    placeholder="Optional"
+                    placeholder="Description"
                     autosize
                     minRows={2}
                     maxRows={5}
