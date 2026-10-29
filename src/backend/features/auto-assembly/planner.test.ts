@@ -87,7 +87,7 @@ function options(extra: ExtraOptions = {}): FastenerOptions {
             ...screw
         },
         nut: NYLOCK,
-        stop: StopCondition.MAX_LENGTH,
+        stop: StopCondition.ALL_HOLES,
         maxLength: DEFAULT_MAX_LENGTH,
         maxGap: DEFAULT_MAX_GAP,
         maxThreadDepth: DEFAULT_MAX_THREAD_DEPTH,
@@ -250,6 +250,13 @@ describe("planHoles", () => {
             });
             expect(short.planned.depth).toBeCloseTo(0.25 * INCH);
             expect(short.planned.screw?.length).toBe("IN_0_25");
+        });
+
+        it("reaches as far as the longest screw made when length isn't limited", () => {
+            const unlimited = plan(gapped(3), { maxLength: undefined });
+            expect(unlimited.planned.depth).toBeCloseTo(3.5 * INCH);
+            // Within a 3 in. limit, the far plate is out of reach
+            expect(plan(gapped(3)).planned.depth).toBeCloseTo(0.25 * INCH);
         });
 
         it("respects a gap wider than the maximum gap, and ignores a narrower one", () => {

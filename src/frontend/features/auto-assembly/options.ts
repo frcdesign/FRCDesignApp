@@ -156,7 +156,10 @@ export function fastenerOptions(settled: SettledChoices): FastenerOptions {
         nut: part(Part.NUT),
         nutWasher: part(Part.NUT_WASHER),
         stop: form[FormInput.STOP] as StopCondition,
-        maxLength: metres(form, FormInput.MAX_LENGTH),
+        maxLength:
+            form[FormInput.LIMIT_LENGTH] === "true"
+                ? metres(form, FormInput.MAX_LENGTH)
+                : undefined,
         maxGap: metres(form, FormInput.MAX_GAP),
         maxThreadDepth: metres(form, FormInput.MAX_THREAD_DEPTH)
     };

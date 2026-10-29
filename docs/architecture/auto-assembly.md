@@ -151,6 +151,7 @@ enum FormInput {
     SELECT_BY = "selectBy",
     PROGRAM = "program",
     STOP = "stop",
+    LIMIT_LENGTH = "limitLength",
     MAX_LENGTH = "maxLength",
     MAX_GAP = "maxGap",
     MAX_THREAD_DEPTH = "maxThreadDepth"
@@ -235,8 +236,8 @@ interface FastenerOptions {
     /** Under the nut; only with one. */
     nutWasher?: PartChoice;
     stop: StopCondition;
-    /** Metres; what `StopCondition.MAX_LENGTH` stops at. */
-    maxLength: number;
+    /** Metres; the longest screw an automatic one may be, under either stop condition. Unlimited when absent. */
+    maxLength?: number;
     /** Metres; the widest gap `StopCondition.FIRST_GAP` reaches across. */
     maxGap: number;
     /** Metres; the farthest an automatic screw goes past where threads, or a blind hole, start. */
@@ -251,8 +252,8 @@ enum FastenerMode {
 }
 
 enum StopCondition {
-    /** Through every hole on the axis, gaps and all, up to the maximum length. */
-    MAX_LENGTH = "max-length",
+    /** Through every hole on the axis, gaps and all. */
+    ALL_HOLES = "all-holes",
     /** At the first gap between parts wider than the maximum gap. */
     FIRST_GAP = "first-gap"
 }
@@ -844,8 +845,9 @@ The panel is a `ParameterGrid` of the configuration dialog's own inputs
    Finish show only where there's a choice, so a Generic washer, one in each
    size, shows its checkbox alone. The screw washer is gone under a countersunk
    head, and the nut washer without a nut.
-3. Automatic only: _Stop condition_ (**Max length** with its length, or **First
-   gap** with the widest gap to ignore), and _Max thread depth_.
+3. Automatic only: _Stop condition_ (**All holes**, or **First gap** with the
+   widest gap to ignore), _Limit screw length_, a checkbox off by default that
+   shows _Max length_ while ticked, and _Max thread depth_.
 4. **Selections**, last: _Select by_ (Circular edges, the default, or Faces),
    and its query lists.
 
@@ -920,15 +922,15 @@ recorded with why, and the steps after it are skipped.
            least the size's major diameter across.
         3. Follow the holes (`followStack`): into a hole tapped for the size
            (threads, or a hole at its tap drill narrower than the screw), to the
-           bottom of a blind hole, or out the far side. **Max length** reaches
-           across any gap and stops past the maximum length; **First gap** stops
-           at the first gap wider than the maximum gap, and past the vendor's
-           longest screw.
+           bottom of a blind hole, or out the far side. **All holes** reaches
+           across any gap; **First gap** stops at the first gap wider than the
+           maximum gap. Either stops past the maximum length when screw length
+           is limited, and past the vendor's longest screw otherwise.
         4. Washers (`chooseWashers`): the screw washer chosen, never under a
            flat head; the nut washer only under a nut.
         5. Length, from the lengths the vendor makes the size and head in, in
-           the finish chosen (`getLengths`; within the maximum length under
-           **Max length**), partly threaded: the shortest reaching through the
+           the finish chosen (`getLengths`; within the maximum length when
+           limited), partly threaded: the shortest reaching through the
            stack, its washers, its nut and two threads past it; or, into
            threads or a blind hole, the longest reaching no farther than the
            maximum thread depth past where they start and a thread short of a
@@ -1006,7 +1008,8 @@ is logged to the console.
 | "FTC fasteners aren't available yet."                                                                                       | In place of the Fastener group's inputs, FTC               |
 | "Sizing" / "Automatic" / "Manual"                                                                                           | How the screw's length is chosen, its options              |
 | "Add screw washer" / "Add nut" / "Add nut washer"                                                                           | Group titles, each a checkbox                              |
-| "Stop condition" / "Max length" / "First gap"                                                                               | Stop condition, its options                                |
+| "Stop condition" / "All holes" / "First gap"                                                                                | Stop condition, its options                                |
+| "Limit screw length"                                                                                                        | Checkbox, showing Max length                               |
 | "Max length" / "Max gap to ignore" / "Max thread depth"                                                                     | Length inputs                                              |
 | "Insert"                                                                                                                    | Button                                                     |
 | "Unexpectedly failed to start inserting."                                                                                   | Error toast, the request failed                            |

@@ -12,8 +12,8 @@ export enum FastenerMode {
 
 /** Where an automatic screw's stack ends. */
 export enum StopCondition {
-    /** Through every hole on the axis, gaps and all, up to the maximum length. */
-    MAX_LENGTH = "max-length",
+    /** Through every hole on the axis, gaps and all. */
+    ALL_HOLES = "all-holes",
     /** At the first gap between parts wider than the maximum gap. */
     FIRST_GAP = "first-gap"
 }
@@ -35,8 +35,8 @@ export interface FastenerOptions {
     /** Under the nut; only with one. */
     nutWasher?: PartChoice;
     stop: StopCondition;
-    /** Metres; what `StopCondition.MAX_LENGTH` stops at. */
-    maxLength: number;
+    /** Metres; the longest screw an automatic one may be, under either stop condition. Unlimited when absent. */
+    maxLength?: number;
     /** Metres; the widest gap `StopCondition.FIRST_GAP` reaches across. */
     maxGap: number;
     /** Metres; the farthest an automatic screw goes past where threads, or a blind hole, start. */

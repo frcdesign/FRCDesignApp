@@ -243,18 +243,21 @@ interface StopInputsProps {
     settled: SettledChoices;
 }
 
-/** Where an automatic screw stops: its condition and limit, and how deep into threads it goes. */
+/** Where an automatic screw stops, how long it may be, and how deep into threads it goes. */
 function StopInputs(props: StopInputsProps): ReactNode {
     const { settled } = props;
-    const isMaxLength =
-        settled.form[FormInput.STOP] === StopCondition.MAX_LENGTH;
+    const isFirstGap = settled.form[FormInput.STOP] === StopCondition.FIRST_GAP;
+    const isLimited = settled.form[FormInput.LIMIT_LENGTH] === "true";
     return (
         <>
             <FormInputRow id={FormInput.STOP} settled={settled} />
-            <FormInputRow
-                id={isMaxLength ? FormInput.MAX_LENGTH : FormInput.MAX_GAP}
-                settled={settled}
-            />
+            {isFirstGap && (
+                <FormInputRow id={FormInput.MAX_GAP} settled={settled} />
+            )}
+            <FormInputRow id={FormInput.LIMIT_LENGTH} settled={settled} />
+            {isLimited && (
+                <FormInputRow id={FormInput.MAX_LENGTH} settled={settled} />
+            )}
             <FormInputRow id={FormInput.MAX_THREAD_DEPTH} settled={settled} />
         </>
     );

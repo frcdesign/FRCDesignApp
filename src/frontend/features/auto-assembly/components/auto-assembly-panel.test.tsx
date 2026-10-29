@@ -242,14 +242,21 @@ describe("AutoAssemblyPanel", () => {
 
     it("stops an automatic screw by the condition chosen, and a manual one not at all", async () => {
         renderPanel();
-        expect(screen.getByLabelText("Max length")).toBeTruthy();
+        expect(screen.queryByLabelText("Max gap to ignore")).toBeNull();
         expect(screen.getByLabelText("Max thread depth")).toBeTruthy();
 
         await choose("Stop condition", "First gap");
-        expect(screen.queryByLabelText("Max length")).toBeNull();
         expect(screen.getByLabelText("Max gap to ignore")).toBeTruthy();
 
         await choose("Sizing", "Manual");
         expect(screen.queryByLabelText("Stop condition")).toBeNull();
+    });
+
+    it("asks for a maximum length only once screw length is limited", async () => {
+        renderPanel();
+        expect(screen.queryByLabelText("Max length")).toBeNull();
+
+        await userEvent.click(screen.getByLabelText("Limit screw length"));
+        expect(screen.getByLabelText("Max length")).toBeTruthy();
     });
 });

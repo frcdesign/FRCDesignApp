@@ -90,7 +90,7 @@ const optionsSchema = z
         nut: partSchema.optional(),
         nutWasher: partSchema.optional(),
         stop: z.enum(StopCondition),
-        maxLength: z.number().positive().max(MAX_LENGTH_LIMIT),
+        maxLength: z.number().positive().max(MAX_LENGTH_LIMIT).optional(),
         maxGap: z.number().min(0).max(MAX_GAP_LIMIT),
         maxThreadDepth: z.number().positive().max(MAX_LENGTH_LIMIT)
     })

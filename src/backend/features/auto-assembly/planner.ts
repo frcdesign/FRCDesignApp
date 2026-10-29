@@ -301,10 +301,11 @@ function stopLimits(options: PlanOptions): {
     reach: number;
     gap: number;
 } {
-    if (options.stop === StopCondition.FIRST_GAP) {
-        return { reach: longestLength(options), gap: options.maxGap };
-    }
-    return { reach: options.maxLength, gap: Infinity };
+    return {
+        reach: options.maxLength ?? longestLength(options),
+        gap:
+            options.stop === StopCondition.FIRST_GAP ? options.maxGap : Infinity
+    };
 }
 
 interface Stack {
@@ -433,7 +434,7 @@ function pickScrew(
             ? made.filter((each) => each.id === options.screw.length)
             : made.filter(
                   (each) =>
-                      options.stop !== StopCondition.MAX_LENGTH ||
+                      options.maxLength === undefined ||
                       each.length <= options.maxLength + LINEAR_TOLERANCE
               );
     const choose = (lengthId: string): ScrewChoice => ({
@@ -473,7 +474,7 @@ function pickScrew(
         if (shortest) {
             return choose(shortest.id);
         }
-        return options.stop === StopCondition.MAX_LENGTH
+        return options.maxLength !== undefined
             ? "No screw reaches through within the maximum length."
             : "No screw is long enough to reach through.";
     }

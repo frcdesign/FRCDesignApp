@@ -40,8 +40,8 @@ describe("settleChoices", () => {
         });
         expect(options.screwWasher).toBeUndefined();
         expect(options.mode).toBe(FastenerMode.AUTOMATIC);
-        expect(options.stop).toBe(StopCondition.MAX_LENGTH);
-        expect(options.maxLength).toBeCloseTo(DEFAULT_MAX_LENGTH);
+        expect(options.stop).toBe(StopCondition.ALL_HOLES);
+        expect(options.maxLength).toBeUndefined();
         expect(options.maxGap).toBeCloseTo(DEFAULT_MAX_GAP);
         expect(options.maxThreadDepth).toBeCloseTo(DEFAULT_MAX_THREAD_DEPTH);
         expect(isMade(FASTENER_SET, FastenerKind.SCREW, options.screw)).toBe(
@@ -120,5 +120,17 @@ describe("settleChoices", () => {
         );
         expect(options.stop).toBe(StopCondition.FIRST_GAP);
         expect(options.maxGap).toBeCloseTo(0.125 * 0.0254);
+    });
+
+    it("sends a maximum length only while screw length is limited", () => {
+        const limited = (limitLength: string) =>
+            fastenerOptions(
+                settleChoices(
+                    FASTENER_SET,
+                    choices({ form: { [FormInput.LIMIT_LENGTH]: limitLength } })
+                )
+            ).maxLength;
+        expect(limited("true")).toBeCloseTo(DEFAULT_MAX_LENGTH);
+        expect(limited("false")).toBeUndefined();
     });
 });

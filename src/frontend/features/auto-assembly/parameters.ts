@@ -4,6 +4,7 @@
  * decides what shows, so a hidden choice keeps its value for when it's back.
  */
 import {
+    type BooleanParameter,
     type ConfigurationParameter,
     type EnumParameter,
     ParameterType,
@@ -22,6 +23,7 @@ export enum FormInput {
     SELECT_BY = "selectBy",
     PROGRAM = "program",
     STOP = "stop",
+    LIMIT_LENGTH = "limitLength",
     MAX_LENGTH = "maxLength",
     MAX_GAP = "maxGap",
     MAX_THREAD_DEPTH = "maxThreadDepth"
@@ -40,6 +42,10 @@ function enumParameter(
         options,
         optionConditions: []
     };
+}
+
+function booleanParameter(id: FormInput, name: string): BooleanParameter {
+    return { type: ParameterType.BOOLEAN, id, name, default: "false" };
 }
 
 /** Inches, as the document's own units show them. */
@@ -71,9 +77,10 @@ export const FORM_PARAMETERS: ConfigurationParameter[] = [
         { id: Program.FTC, name: "FTC" }
     ]),
     enumParameter(FormInput.STOP, "Stop condition", [
-        { id: StopCondition.MAX_LENGTH, name: "Max length" },
+        { id: StopCondition.ALL_HOLES, name: "All holes" },
         { id: StopCondition.FIRST_GAP, name: "First gap" }
     ]),
+    booleanParameter(FormInput.LIMIT_LENGTH, "Limit screw length"),
     inchParameter(FormInput.MAX_LENGTH, "Max length", {
         default: 3,
         min: 0.25,
