@@ -14,7 +14,12 @@ function getUrl(
 ): string {
     const searchParams = createSearchParams(query);
     if (cacheId !== undefined) {
-        searchParams.append("v", String(cacheId));
+        // A cached answer is immutable for a year, so a deploy that changes a
+        // response's shape must not be handed the last deploy's.
+        searchParams.append(
+            "v",
+            `${import.meta.env.VITE_BUILD_ID ?? "dev"}.${cacheId}`
+        );
     }
     return "/api" + path + `?${searchParams}`;
 }
