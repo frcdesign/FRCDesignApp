@@ -134,8 +134,9 @@ export function sendHighlightMessage(
  */
 export interface SelectionFilter {
     entityTypeSpecifier: string[];
-    selectionTypeSpecifier: string[];
+    selectionTypeSpecifier?: string[];
     geometryTypeSpecifier?: string[];
+    bodyTypeSpecifier?: string[];
 }
 
 export const CIRCULAR_EDGES: SelectionFilter = {
@@ -144,10 +145,10 @@ export const CIRCULAR_EDGES: SelectionFilter = {
     geometryTypeSpecifier: ["CIRCLE"]
 };
 
-/** Any face, of any part: a screw's, say. */
-export const FACES: SelectionFilter = {
-    entityTypeSpecifier: ["FACE"],
-    selectionTypeSpecifier: ["GEOMETRY"]
+/** Whole parts. */
+export const SOLID_BODIES: SelectionFilter = {
+    entityTypeSpecifier: ["BODY"],
+    bodyTypeSpecifier: ["SOLID"]
 };
 export const PLANAR_FACES: SelectionFilter = {
     entityTypeSpecifier: ["FACE"],

@@ -149,7 +149,7 @@ describe("AutoAssemblyPanel", () => {
         await userEvent.click(screen.getByText("Screws to replace"));
         // The focus moved from Circular edges, whose request this clears
         act(() => useOnshapeSelection.getState().receive([]));
-        select(face("S"));
+        select({ ...face("S"), entityType: "BODY" });
         expect(screen.getByText("Screw 1")).toBeTruthy();
 
         await userEvent.click(insertButton());
@@ -160,7 +160,7 @@ describe("AutoAssemblyPanel", () => {
                     {
                         occurrencePath: ["plate"],
                         entityId: "S",
-                        entityType: "FACE"
+                        entityType: "BODY"
                     }
                 ]
             })

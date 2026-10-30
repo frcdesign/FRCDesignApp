@@ -868,8 +868,9 @@ vectors, Onshape's 4×4 transforms and `LINEAR_TOLERANCE`.
 3. While focused, a list holds a `requestSelection` with its `filter`
    (`sendSelectionRequest`), which limits what the Onshape window lets be
    picked: `CIRCULAR_EDGES` (`entityTypeSpecifier: ["EDGE"]`,
-   `selectionTypeSpecifier: ["GEOMETRY"]`, `geometryTypeSpecifier: ["CIRCLE"]`)
-   or `PLANAR_FACES` (`["FACE"]`, `["GEOMETRY"]`, `["PLANE"]`). Onshape
+   `selectionTypeSpecifier: ["GEOMETRY"]`, `geometryTypeSpecifier: ["CIRCLE"]`),
+   `PLANAR_FACES` (`["FACE"]`, `["GEOMETRY"]`, `["PLANE"]`) or
+   `SOLID_BODIES` (`["BODY"]` with `bodyTypeSpecifier: ["SOLID"]`). Onshape
    documents other field names, which it ignores. The request clears the
    window's selection, and Onshape shows what's picked under it, so nothing is
    sent as picks arrive. **Clear** empties the list and asks for the filter
@@ -933,8 +934,8 @@ _Select by_ decides what the picks are:
 - **Faces** — every circular edge of each planar face is a hole to fasten;
   _Holes to skip_ takes the edges of holes in them to leave out.
 
-_Screws to replace_ takes faces of library screws already in the assembly
-(`FACES`), each row named "Screw {n}"; the run decides which picks are screws.
+_Screws to replace_ takes library screws already in the assembly, as whole
+solid parts (`SOLID_BODIES`), each row named "Screw {n}"; the run decides which picks are screws.
 Insert needs a pick in either.
 
 `insertBody` in `routes.ts` refuses a body whose picks don't match its mode,

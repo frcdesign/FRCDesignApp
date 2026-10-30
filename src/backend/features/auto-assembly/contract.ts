@@ -59,7 +59,9 @@ export interface SelectedEntity {
 
 export enum SelectedEntityType {
     EDGE = "EDGE",
-    FACE = "FACE"
+    FACE = "FACE",
+    /** A whole part, as a screw to replace is picked. */
+    BODY = "BODY"
 }
 
 export interface AutoAssemblyIn {

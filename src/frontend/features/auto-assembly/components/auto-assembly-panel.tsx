@@ -19,8 +19,17 @@ import { Status } from "../../../lib/status";
 import { IconSize } from "../../../lib/style-constants";
 import { ParameterGrid } from "../../../components/parameter-input";
 import { QueryList } from "../../../components/query-list";
-import { isEdge, isFace, toSelectedEntities } from "../../../lib/selection";
-import { CIRCULAR_EDGES, FACES, PLANAR_FACES } from "../../../lib/messages";
+import {
+    isBody,
+    isEdge,
+    isFace,
+    toSelectedEntities
+} from "../../../lib/selection";
+import {
+    CIRCULAR_EDGES,
+    PLANAR_FACES,
+    SOLID_BODIES
+} from "../../../lib/messages";
 import { fastenerOptions, selectionMode, settleChoices } from "../options";
 import { FormInput } from "../parameters";
 import {
@@ -166,8 +175,8 @@ function AutoAssemblyForm(props: AutoAssemblyFormProps): ReactNode {
                             prompt="Select screws to take out, with their washers and nuts, and fasten again."
                             entities={replaced}
                             onChange={setReplaced}
-                            accepts={isFace}
-                            filter={FACES}
+                            accepts={isBody}
+                            filter={SOLID_BODIES}
                             describe={(_entity, index) => `Screw ${index + 1}`}
                         />
                     </FullWidthRow>

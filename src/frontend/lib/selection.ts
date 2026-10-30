@@ -25,6 +25,9 @@ export const isEdge = (selection: OnshapeSelection): boolean =>
 export const isFace = (selection: OnshapeSelection): boolean =>
     selection.entityType === SelectedEntityType.FACE;
 
+export const isBody = (selection: OnshapeSelection): boolean =>
+    selection.entityType === SelectedEntityType.BODY;
+
 /** As a request carries picks. */
 export function toSelectedEntities(
     selections: OnshapeSelection[]

@@ -10,7 +10,7 @@ import { FormInput } from "./parameters";
 interface AutoAssemblyState extends Choices {
     targets: OnshapeSelection[];
     excluded: OnshapeSelection[];
-    /** Faces of screws to take out and fasten again. */
+    /** Screws to take out and fasten again. */
     replaced: OnshapeSelection[];
     setForm: (id: FormInput, value: string) => void;
     setMode: (mode: FastenerMode) => void;
