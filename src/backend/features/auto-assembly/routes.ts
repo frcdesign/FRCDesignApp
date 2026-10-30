@@ -13,11 +13,15 @@ import {
     FastenerMode,
     type AssemblyJobStatus,
     pendingTasks,
+    type PickCheckOut,
     SelectionMode,
     StopCondition
 } from "./contract";
 import { getFastenerSet } from "./fastener-set";
 import { getJobStatus, reportJob } from "./jobs";
+import { indexHoles } from "./index-holes";
+import { planHoles } from "./planner";
+import { pickProblems } from "./check";
 import {
     entitySchema,
     INCONSISTENT_PICK_MESSAGE,
@@ -121,6 +125,63 @@ const insertBody = z
         (body) => body.targets.length > 0 || body.replaced.length > 0,
         "Select holes to fasten or screws to replace."
     );
+
+const checkBody = z
+    .object({
+        assembly: assemblySchema,
+        selectionMode: z.enum(SelectionMode),
+        targets: z.array(entitySchema).max(MAX_SELECTIONS).default([]),
+        excluded: z.array(entitySchema).max(MAX_SELECTIONS).default([]),
+        replaced: z.array(entitySchema).max(MAX_SELECTIONS).default([]),
+        options: optionsSchema.optional()
+    })
+    .refine(isConsistentPick, INCONSISTENT_PICK_MESSAGE);
+
+/**
+ * POST /api/auto-assembly/check — what's wrong with each pick, found as a run
+ * would: the assembly read, and its Part Studios scanned, under the caller's
+ * session. Planned too when the body has options.
+ */
+autoAssemblyRoutes.post(
+    "/auto-assembly/check",
+    requireSignInMiddleware,
+    validate("json", checkBody),
+    async (c) => {
+        const request = c.req.valid("json");
+        const { targets, excluded, replaced, options } = request;
+        if (targets.length + excluded.length + replaced.length === 0) {
+            return c.json({ problems: [] } satisfies PickCheckOut);
+        }
+        const set = await getFastenerSet(getDb(c.env.DB));
+        const indexed = await indexHoles(
+            await c.var.getOnshapeApi(),
+            c.env.KV,
+            request.assembly,
+            targets,
+            excluded,
+            set,
+            replaced
+        );
+        // Only parts the catalog makes can be planned with
+        const canPlan =
+            set &&
+            options &&
+            options.program === Program.FRC &&
+            isEveryPartMade(set, options);
+        const planned = canPlan
+            ? planHoles(
+                  indexed.circularEdges,
+                  indexed.holes,
+                  indexed.placed,
+                  options,
+                  set.catalog
+              ).map((plan) => plan.planned)
+            : undefined;
+        return c.json({
+            problems: pickProblems(request, indexed, planned)
+        } satisfies PickCheckOut);
+    }
+);
 
 const assemblyQuery = z.object({
     documentId: z.string().min(1),

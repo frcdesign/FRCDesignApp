@@ -34,3 +34,11 @@ export function isConsistentPick(body: PickedEntities): boolean {
 
 export const INCONSISTENT_PICK_MESSAGE =
     "Select either faces or circular edges to fasten to, not both.";
+
+/** A pick as the client keys its rows: its part's path and its id. */
+export function pickKey(entity: {
+    occurrencePath: string[];
+    entityId: string;
+}): string {
+    return `${entity.occurrencePath.join("/")}|${entity.entityId}`;
+}

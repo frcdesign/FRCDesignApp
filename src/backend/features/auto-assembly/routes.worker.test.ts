@@ -8,11 +8,13 @@ import { Program } from "./catalog";
 import {
     AssemblyJobState,
     AssemblyTaskState,
+    HoleStatus,
     type AssemblyJobStatus,
     SelectedEntityType,
     SelectionMode
 } from "./contract";
 import { reportJob } from "./jobs";
+import * as IndexHoles from "./index-holes";
 
 const app = createTestApp();
 
@@ -175,6 +177,48 @@ describe("POST /api/auto-assembly/insert", () => {
                 })
             ).status
         ).toBe(400);
+    });
+});
+
+describe("POST /api/auto-assembly/check", () => {
+    const check = {
+        assembly: ASSEMBLY,
+        selectionMode: SelectionMode.LOCATIONS,
+        targets: BODY.targets,
+        options: BODY.options
+    };
+
+    it("asks Onshape nothing with nothing picked", async () => {
+        const index = vi.spyOn(IndexHoles, "indexHoles");
+        const res = await post("/auto-assembly/check", {
+            ...check,
+            targets: []
+        });
+        expect(await res.json()).toEqual({ problems: [] });
+        expect(index).not.toHaveBeenCalled();
+    });
+
+    it("says why each pick won't be fastened", async () => {
+        publish();
+        vi.spyOn(IndexHoles, "indexHoles").mockResolvedValue({
+            circularEdges: [],
+            holes: [],
+            placed: [],
+            replacements: [],
+            pickEdges: { "top|TOP-top": [] },
+            unfound: [
+                {
+                    key: "top|TOP-top",
+                    status: HoleStatus.NO_FIT,
+                    reason: "Not a circular edge."
+                }
+            ]
+        });
+        const res = await post("/auto-assembly/check", check);
+        expect(res.status).toBe(200);
+        expect(await res.json()).toEqual({
+            problems: [{ key: "top|TOP-top", message: "Not a circular edge." }]
+        });
     });
 });
 

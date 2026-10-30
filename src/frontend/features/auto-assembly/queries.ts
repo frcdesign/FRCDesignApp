@@ -1,7 +1,16 @@
-import { skipToken, useMutation, useQuery } from "@tanstack/react-query";
+import {
+    keepPreviousData,
+    skipToken,
+    useMutation,
+    useQuery
+} from "@tanstack/react-query";
+import { useDebouncedValue } from "@mantine/hooks";
+import { useMemo } from "react";
 import {
     type AssemblyJobStatus,
-    type AutoAssemblyIn
+    type AutoAssemblyIn,
+    type PickCheckIn,
+    type PickCheckOut
 } from "@backend/features/auto-assembly/contract";
 import { type FastenerSet } from "@backend/features/auto-assembly/studios";
 import { type ElementPath } from "@backend/lib/onshape/path";
@@ -10,7 +19,8 @@ import { getAppErrorHandler } from "../../lib/errors";
 import { queryClient } from "../../lib/query-client";
 import {
     FASTENER_SET_QUERY_KEY,
-    assemblyJobQueryKey
+    assemblyJobQueryKey,
+    pickCheckQueryKey
 } from "../../lib/query-keys";
 import { useIsSignedIn } from "../auth/access-level";
 
@@ -53,4 +63,39 @@ export function useInsertMutation(assembly: ElementPath) {
             queryClient.setQueryData(assemblyJobQueryKey(assembly), status),
         onError: getAppErrorHandler("Unexpectedly failed to start inserting.")
     });
+}
+
+/** Long enough that picking several in a row checks them once. */
+const PICK_CHECK_DELAY_MS = 600;
+
+/**
+ * Each pick's problem by its row key, checked in the background once the
+ * picks settle; each check reads the assembly in Onshape. Memoize `body`.
+ */
+export function usePickProblems(
+    body: PickCheckIn | undefined
+): Map<string, string> {
+    const isSignedIn = useIsSignedIn();
+    const [settled] = useDebouncedValue(body, PICK_CHECK_DELAY_MS);
+    const { data } = useQuery<PickCheckOut>({
+        queryKey: pickCheckQueryKey(settled),
+        queryFn:
+            settled && isSignedIn
+                ? () => apiPost("/auto-assembly/check", { body: settled })
+                : skipToken,
+        // The last check's marks stay while the next is going
+        placeholderData: keepPreviousData,
+        staleTime: Infinity,
+        retry: false
+    });
+    return useMemo(
+        () =>
+            new Map(
+                (data?.problems ?? []).map((problem) => [
+                    problem.key,
+                    problem.message
+                ])
+            ),
+        [data]
+    );
 }

@@ -349,6 +349,32 @@ describe("QueryList", () => {
         rerender(list("first", true));
         expect(useOnshapeSelection.getState().focused).toBe("first");
     });
+
+    it("marks a row with a problem in red, with why under it", () => {
+        renderWithProviders(
+            <QueryList
+                id="checked"
+                label="Checked"
+                prompt="Select edges."
+                entities={[edge("A"), edge("B")]}
+                onChange={() => undefined}
+                accepts={() => true}
+                filter={CIRCULAR_EDGES}
+                problem={(entity) =>
+                    entity.selectionId === "B"
+                        ? "Not a circular edge."
+                        : undefined
+                }
+            />
+        );
+        expect(screen.getByText("Not a circular edge.")).toBeTruthy();
+        expect(screen.getByText("Edge 2").getAttribute("style")).toContain(
+            "red"
+        );
+        expect(
+            screen.getByText("Edge 1").getAttribute("style") ?? ""
+        ).not.toContain("red");
+    });
 });
 
 describe("parseSelections", () => {

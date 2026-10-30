@@ -32,6 +32,7 @@ import {
     type PlacedScrew
 } from "./planner";
 import { scanStudio, type StudioScan } from "./scan";
+import { pickKey } from "./picked";
 import { type Replacement, screwLength, seatEdge, stackParts } from "./replace";
 
 /** Part Studios evaluated at once: each is one Onshape call, and an assembly can have dozens. */
@@ -45,6 +46,8 @@ export interface IndexedHoles {
     unfound: PlannedHole[];
     /** The screws to replace, whose holes are among `circularEdges`. */
     replacements: Replacement[];
+    /** The circular edges' keys each pick gave, by `pickKey`; none for one in `unfound`. */
+    pickEdges: Record<string, string[]>;
 }
 
 function isFastener(
@@ -158,8 +161,15 @@ export async function indexHoles(
             )
         );
 
+    const pickEdges: Record<string, string[]> = {};
+    for (const pick of [...targets, ...excluded]) {
+        pickEdges[pickKey(pick)] = circularEdgesOf([pick]).map(
+            (circularEdge) => circularEdge.key
+        );
+    }
+
     const unfound = targets.flatMap((target): PlannedHole[] => {
-        if (circularEdgesOf([target]).length > 0) {
+        if (pickEdges[pickKey(target)].length > 0) {
             return [];
         }
         const isFound = byPath.has(pathKey(target.occurrencePath));
@@ -181,7 +191,7 @@ export async function indexHoles(
         }
         return [
             {
-                key: `${pathKey(target.occurrencePath)}|${target.entityId}`,
+                key: pickKey(target),
                 status: HoleStatus.NO_FIT,
                 reason: !isFound
                     ? "Couldn't find this part in the assembly."
@@ -205,7 +215,27 @@ export async function indexHoles(
             return seat ? [{ screw, seat }] : [];
         }
     );
-    const seated = new Set(seats.map(({ screw }) => pathKey(screw.path)));
+    const seatByPath = new Map(
+        seats.map(({ screw, seat }) => [pathKey(screw.path), seat.key])
+    );
+    const seated = new Set(seatByPath.keys());
+    const screwPaths = new Set(
+        replacing.screws.map((screw) => pathKey(screw.path))
+    );
+    const unseated: PlannedHole[] = [];
+    for (const pick of replaced) {
+        const path = pathKey(pick.occurrencePath);
+        const seat = seatByPath.get(path);
+        if (seat) {
+            pickEdges[pickKey(pick)] = [seat];
+        } else if (screwPaths.has(path)) {
+            unseated.push({
+                key: pickKey(pick),
+                status: HoleStatus.NO_FIT,
+                reason: "Couldn't find the hole this screw is in."
+            });
+        }
+    }
     const replacements = seats.map(({ screw, seat }): Replacement => {
         const length = fasteners && screwLength(fasteners, screw);
         const stack =
@@ -233,19 +263,7 @@ export async function indexHoles(
                 .map(({ seat }) => seat)
                 .filter((seat) => !pickedKeys.has(seat.key))
         ],
-        unfound: [
-            ...unfound,
-            ...replacing.unfound,
-            ...replacing.screws
-                .filter((screw) => !seated.has(pathKey(screw.path)))
-                .map(
-                    (screw): PlannedHole => ({
-                        key: pathKey(screw.path),
-                        status: HoleStatus.NO_FIT,
-                        reason: "Couldn't find the hole this screw is in."
-                    })
-                )
-        ],
+        unfound: [...unfound, ...replacing.unfound, ...unseated],
         holes,
         // A screw being replaced leaves its hole free to plan again
         placed: placedScrews(
@@ -254,7 +272,8 @@ export async function indexHoles(
             ),
             fasteners?.studios[FastenerKind.SCREW].location
         ),
-        replacements
+        replacements,
+        pickEdges
     };
 }
 
@@ -291,7 +310,7 @@ function screwsToReplace(
         }
         if (reason || !occurrence) {
             unfound.push({
-                key: `${pathKey(pick.occurrencePath)}|${pick.entityId}`,
+                key: pickKey(pick),
                 status: HoleStatus.NO_FIT,
                 reason
             });

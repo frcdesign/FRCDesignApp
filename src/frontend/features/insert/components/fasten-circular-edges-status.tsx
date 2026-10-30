@@ -1,4 +1,6 @@
-import { ReactNode } from "react";
+import { ReactNode, useMemo } from "react";
+import { usePickProblems } from "../../auto-assembly/queries";
+import { useTargetAssembly } from "../../../lib/onshape-params";
 import {
     Center,
     EmptyState,
@@ -8,7 +10,10 @@ import {
 } from "@mantine/core";
 import { CursorClickIcon } from "@phosphor-icons/react";
 import { Hint } from "@backend/features/hints/contract";
-import { SelectionMode } from "@backend/features/auto-assembly/contract";
+import {
+    type PickCheckIn,
+    SelectionMode
+} from "@backend/features/auto-assembly/contract";
 import { AppHoverCard } from "../../../components/app-hover-card";
 import { BadgedIcon } from "../../../components/badged-icon";
 import { StatusIcon } from "../../../components/status-icon";
@@ -17,7 +22,13 @@ import { QueryList } from "../../../components/query-list";
 import { Status } from "../../../lib/status";
 import { IconSize, PrimaryColor } from "../../../lib/style-constants";
 import { plural } from "../../../lib/plural";
-import { isEdge, useOnshapeSelection } from "../../../lib/selection";
+import {
+    isEdge,
+    type OnshapeSelection,
+    selectionKey,
+    toSelectedEntities,
+    useOnshapeSelection
+} from "../../../lib/selection";
 import { CIRCULAR_EDGES } from "../../../lib/messages";
 import { updateUiState, useUiState } from "../../../lib/ui-state";
 import { useHasSeenHint } from "../../hints/queries";
@@ -66,9 +77,33 @@ export function FastenCircularEdgesStatus(): ReactNode {
         isFastenList(state.focused)
     );
     const hasFastened = useHasSeenHint(Hint.FASTENED_TO_CIRCULAR_EDGES);
+    const assembly = useTargetAssembly();
+    const isFaces = mode === SelectionMode.FACES;
+    const checkBody = useMemo(
+        (): PickCheckIn | undefined =>
+            !assembly ||
+            assembly.instanceType !== "w" ||
+            targets.length + excluded.length === 0
+                ? undefined
+                : {
+                      assembly: {
+                          documentId: assembly.documentId,
+                          instanceType: assembly.instanceType,
+                          instanceId: assembly.instanceId,
+                          elementId: assembly.elementId
+                      },
+                      selectionMode: mode,
+                      targets: toSelectedEntities(targets),
+                      excluded: isFaces ? toSelectedEntities(excluded) : [],
+                      replaced: []
+                  },
+        [assembly, mode, isFaces, targets, excluded]
+    );
+    const problems = usePickProblems(checkBody);
     useFastenPicksForMode(mode);
 
-    const isFaces = mode === SelectionMode.FACES;
+    const problem = (entity: OnshapeSelection) =>
+        problems.get(selectionKey(entity));
     const found = targets.length > 0;
     const isNew = !found && !hasFastened;
     const status = found ? Status.SUCCESS : Status.ERROR;
@@ -139,6 +174,7 @@ export function FastenCircularEdgesStatus(): ReactNode {
                     accepts={acceptsTarget(mode)}
                     filter={targetFilter(mode)}
                     autoFocus
+                    problem={problem}
                 />
                 {isFaces && (
                     <QueryList
@@ -149,6 +185,7 @@ export function FastenCircularEdgesStatus(): ReactNode {
                         onChange={setFastenExcluded}
                         accepts={isEdge}
                         filter={CIRCULAR_EDGES}
+                        problem={problem}
                     />
                 )}
             </Stack>

@@ -528,7 +528,8 @@ describe("insertable routes", () => {
             holes: [],
             placed: [],
             unfound: [],
-            replacements: []
+            replacements: [],
+            pickEdges: {}
         });
     }
 

@@ -76,6 +76,27 @@ export interface AutoAssemblyIn {
     options: FastenerOptions;
 }
 
+/** The picks to check as they're made; with `options`, each hole is planned as a run would. */
+export interface PickCheckIn {
+    assembly: ElementPath;
+    selectionMode: SelectionMode;
+    targets: SelectedEntity[];
+    excluded: SelectedEntity[];
+    replaced: SelectedEntity[];
+    options?: FastenerOptions;
+}
+
+/** Why a pick won't be fastened or replaced as asked, keyed as the client keys its rows. */
+export interface PickProblem {
+    /** The pick's part path, joined with "/", then "|" and its id. */
+    key: string;
+    message: string;
+}
+
+export interface PickCheckOut {
+    problems: PickProblem[];
+}
+
 export enum HoleStatus {
     READY = "ready",
     /** A library screw is already in it. */

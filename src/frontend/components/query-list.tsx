@@ -46,6 +46,8 @@ interface QueryListProps {
     rowSection?: (entity: OnshapeSelection) => ReactNode;
     /** Takes picks whenever no list does, as a form's first list should. */
     autoFocus?: boolean;
+    /** Why a row won't do what it was picked for; shown under it, in red. */
+    problem?: (entity: OnshapeSelection) => string | undefined;
 }
 
 function toHighlighted(entity: OnshapeSelection): HighlightedEntity {
@@ -84,7 +86,8 @@ export function QueryList(props: QueryListProps): ReactNode {
         filter,
         describe = defaultName,
         rowSection,
-        autoFocus = false
+        autoFocus = false,
+        problem
     } = props;
     const target = useTargetElement();
     const isFocused = useOnshapeSelection((state) => state.focused === id);
@@ -217,31 +220,52 @@ export function QueryList(props: QueryListProps): ReactNode {
                         </Group>
                         {/* Left as a whole, so moving between rows lights each alone without the rest between */}
                         <Stack gap={2} onMouseLeave={unhighlight}>
-                            {entities.map((entity, index) => (
-                                <Group
-                                    key={selectionKey(entity)}
-                                    gap="xs"
-                                    px={4}
-                                    wrap="nowrap"
-                                    onMouseEnter={() => highlight(entity)}
-                                >
-                                    <Text size="sm" flex={1} truncate>
-                                        {describe(entity, index)}
-                                    </Text>
-                                    {rowSection?.(entity)}
-                                    <ActionIcon
-                                        variant="subtle"
-                                        color={StatusColor.NEUTRAL}
-                                        size="sm"
-                                        onClick={(event) => {
-                                            event.stopPropagation();
-                                            remove(entity);
-                                        }}
+                            {entities.map((entity, index) => {
+                                const message = problem?.(entity);
+                                return (
+                                    <Stack
+                                        key={selectionKey(entity)}
+                                        gap={0}
+                                        px={4}
+                                        onMouseEnter={() => highlight(entity)}
                                     >
-                                        <XIcon size={IconSize.TINY} />
-                                    </ActionIcon>
-                                </Group>
-                            ))}
+                                        <Group gap="xs" wrap="nowrap">
+                                            <Text
+                                                size="sm"
+                                                flex={1}
+                                                truncate
+                                                c={
+                                                    message
+                                                        ? StatusColor.ERROR
+                                                        : undefined
+                                                }
+                                            >
+                                                {describe(entity, index)}
+                                            </Text>
+                                            {rowSection?.(entity)}
+                                            <ActionIcon
+                                                variant="subtle"
+                                                color={StatusColor.NEUTRAL}
+                                                size="sm"
+                                                onClick={(event) => {
+                                                    event.stopPropagation();
+                                                    remove(entity);
+                                                }}
+                                            >
+                                                <XIcon size={IconSize.TINY} />
+                                            </ActionIcon>
+                                        </Group>
+                                        {message && (
+                                            <Text
+                                                size="xs"
+                                                c={StatusColor.ERROR}
+                                            >
+                                                {message}
+                                            </Text>
+                                        )}
+                                    </Stack>
+                                );
+                            })}
                         </Stack>
                     </Stack>
                 )}

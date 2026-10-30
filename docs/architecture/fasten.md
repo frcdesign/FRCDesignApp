@@ -59,6 +59,8 @@ interface QueryListProps {
     rowSection?: (entity: OnshapeSelection) => ReactNode;
     /** Takes picks whenever no list does, as a form's first list should. */
     autoFocus?: boolean;
+    /** Why a row won't do what it was picked for; shown under it, in red. */
+    problem?: (entity: OnshapeSelection) => string | undefined;
 }
 ```
 
@@ -312,6 +314,11 @@ enum MateLocation {
    Hovering a row lights its entity up; clicking a list shows its prompt in
    Onshape.
 4. Changing the mode clears the picks.
+5. A moment after the picks change, they're checked in the background with
+   Auto Assembly's `POST /api/auto-assembly/check`, without options: a pick
+   that gives no circular edge, or a hole to skip outside the faces picked,
+   turns red with why under it. See
+   [auto-assembly.md](./auto-assembly.md#checking-picks--post-apiauto-assemblycheck).
 
 ### Inserting
 

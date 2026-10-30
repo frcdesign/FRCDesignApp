@@ -5,6 +5,7 @@ import { Program } from "@backend/features/auto-assembly/catalog";
 import {
     AssemblyJobState,
     type AutoAssemblyIn,
+    type PickCheckIn,
     SelectionMode
 } from "@backend/features/auto-assembly/contract";
 import { type FastenerSet } from "@backend/features/auto-assembly/studios";
@@ -23,6 +24,8 @@ import {
     isBody,
     isEdge,
     isFace,
+    type OnshapeSelection,
+    selectionKey,
     toSelectedEntities
 } from "../../../lib/selection";
 import {
@@ -35,7 +38,8 @@ import { FormInput } from "../parameters";
 import {
     useAssemblyJobQuery,
     useFastenerSetQuery,
-    useInsertMutation
+    useInsertMutation,
+    usePickProblems
 } from "../queries";
 import { useAutoAssemblyStore } from "../store";
 import { FastenerOptionsForm, FormInputRow } from "./fastener-options-form";
@@ -96,12 +100,29 @@ function AutoAssemblyForm(props: AutoAssemblyFormProps): ReactNode {
     const setReplaced = useAutoAssemblyStore((state) => state.setReplaced);
     const { data: job } = useAssemblyJobQuery(assembly);
     const insertMutation = useInsertMutation(assembly);
-
     const settled = useMemo(() => settleChoices(set, choices), [set, choices]);
     const mode = selectionMode(settled);
     const isFaces = mode === SelectionMode.FACES;
-    const isRunning = job?.state === AssemblyJobState.RUNNING;
     const isFtc = settled.form[FormInput.PROGRAM] === Program.FTC;
+    const checkBody = useMemo(
+        (): PickCheckIn | undefined =>
+            targets.length + excluded.length + replaced.length === 0
+                ? undefined
+                : {
+                      assembly,
+                      selectionMode: mode,
+                      targets: toSelectedEntities(targets),
+                      excluded: isFaces ? toSelectedEntities(excluded) : [],
+                      replaced: toSelectedEntities(replaced),
+                      options: isFtc ? undefined : fastenerOptions(settled)
+                  },
+        [assembly, mode, isFaces, isFtc, settled, targets, excluded, replaced]
+    );
+    const problems = usePickProblems(checkBody);
+
+    const isRunning = job?.state === AssemblyJobState.RUNNING;
+    const problem = (entity: OnshapeSelection) =>
+        problems.get(selectionKey(entity));
 
     const insert = () => {
         const body: AutoAssemblyIn = {
@@ -140,6 +161,7 @@ function AutoAssemblyForm(props: AutoAssemblyFormProps): ReactNode {
                                     onChange={setTargets}
                                     accepts={isFace}
                                     filter={PLANAR_FACES}
+                                    problem={problem}
                                 />
                             </FullWidthRow>
                             <FullWidthRow>
@@ -151,6 +173,7 @@ function AutoAssemblyForm(props: AutoAssemblyFormProps): ReactNode {
                                     onChange={setExcluded}
                                     accepts={isEdge}
                                     filter={CIRCULAR_EDGES}
+                                    problem={problem}
                                 />
                             </FullWidthRow>
                         </>
@@ -165,6 +188,7 @@ function AutoAssemblyForm(props: AutoAssemblyFormProps): ReactNode {
                                 onChange={setTargets}
                                 accepts={isEdge}
                                 filter={CIRCULAR_EDGES}
+                                problem={problem}
                             />
                         </FullWidthRow>
                     )}
@@ -177,6 +201,7 @@ function AutoAssemblyForm(props: AutoAssemblyFormProps): ReactNode {
                             onChange={setReplaced}
                             accepts={isBody}
                             filter={SOLID_BODIES}
+                            problem={problem}
                             describe={(_entity, index) => `Screw ${index + 1}`}
                         />
                     </FullWidthRow>

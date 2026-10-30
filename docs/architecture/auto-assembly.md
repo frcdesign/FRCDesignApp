@@ -96,6 +96,8 @@ interface QueryListProps {
     rowSection?: (entity: OnshapeSelection) => ReactNode;
     /** Takes picks whenever no list does, as a form's first list should. */
     autoFocus?: boolean;
+    /** Why a row won't do what it was picked for; shown under it, in red. */
+    problem?: (entity: OnshapeSelection) => string | undefined;
 }
 ```
 
@@ -445,6 +447,8 @@ interface IndexedHoles {
     unfound: PlannedHole[];
     /** The screws to replace, whose holes are among `circularEdges`. */
     replacements: Replacement[];
+    /** The circular edges' keys each pick gave, by `pickKey`; none for one in `unfound`. */
+    pickEdges: Record<string, string[]>;
 }
 
 type ElementMicroversions = Map<string, string>;
@@ -943,6 +947,27 @@ one with neither holes nor screws to replace, and a part its studio doesn't
 make (`isMade`) or not in the screw's size. Changing the mode clears the picks,
 but not the screws to replace.
 
+### Checking picks — `POST /api/auto-assembly/check`
+
+Each list's rows are checked in the background (`usePickProblems`), 600 ms
+after the picks or options last changed, and a row that won't do what it was
+picked for turns red with why under it (`QueryList`'s `problem`). The route
+indexes the picks as a run's first step does (`indexHoles`: the assembly read,
+and each Part Studio holding a pick scanned), plans them with the form's
+options (`planHoles`), and answers each pick's problem (`pickProblems` in
+`check.ts`, keyed by `pickKey`, as the client keys its rows):
+
+- a target that gave no circular edge: why, as a run reports it;
+- a hole that won't plan ready: its plan's reason, or that a library screw is
+  already in it; a face, how many of its holes won't, and the first reason;
+- a hole to skip that isn't a hole in the faces picked;
+- a screw to replace that isn't one, or whose hole won't plan ready.
+
+Nothing picked asks Onshape nothing. FTC, or parts the catalog doesn't make,
+is checked without planning. The last check's marks stay while the next goes,
+and the same picks and options are checked once. Insert and fasten's lists use
+the same route without options (see [fasten.md](./fasten.md)).
+
 ### Starting a run — `POST /api/auto-assembly/insert`
 
 1. Answers 400 for FTC, 503 when no fasteners are loaded (`getFastenerSet`),
@@ -1126,6 +1151,11 @@ is logged to the console.
 | "Couldn't read the assembly's holes." / "Couldn't insert the fasteners."                                                                                                | A step's failure, index / insert                           |
 | "Couldn't fasten the inserted parts."                                                                                                                                   | A step's failure, fasten                                   |
 | "Couldn't remove the screws to replace."                                                                                                                                | A step's failure, remove                                   |
+| "A library screw is already in this hole. Pick it under Screws to replace to change it."                                                                                | A row's problem, hole already fastened                     |
+| "{n} of {m} holes can't be fastened: {why}"                                                                                                                             | A face's problem, some holes won't plan                    |
+| "Not a hole in the faces picked."                                                                                                                                       | A hole to skip's problem                                   |
+| "Its hole can't be fastened again, so it stays: {why}"                                                                                                                  | A screw to replace's problem                               |
+| "This hole can't be fastened."                                                                                                                                          | A row's problem, a plan with no reason                     |
 | "Select holes to fasten or screws to replace."                                                                                                                          | Validation error, insert route, nothing picked             |
 | "Not a screw from FRCDesignLib's Fasteners group." / "This screw is in a subassembly, which Auto Assembly doesn't change." / "Couldn't find the hole this screw is in." | A screw to replace that can't be                           |
 | "You don't have permission to edit this assembly."                                                                                                                      | A step's failure, Onshape answered 403                     |
@@ -1179,6 +1209,12 @@ is logged to the console.
 
 ## Decisions
 
+- **Picks are checked as they're made, in Onshape.** Whether an edge is a
+  hole, and what would fit it, takes the scan and the planner, so a check
+  reads the assembly and scans each Part Studio holding a pick, under the
+  caller's session: a call or a few per check. Waiting for the picks to settle
+  and checking the same picks once keeps that to about one check per burst of
+  picking; the run checks again regardless.
 - **Replacing is deleting and inserting.** Onshape's API can neither replace
   an instance nor change its configuration, so a replaced screw's stack is
   deleted and its hole fastened as if picked. Anything else that referenced
