@@ -16,12 +16,14 @@ export const OUTCOME_STATUS: Record<AssemblyJobOutcome, Status> = {
 
 export const TASK_LABEL: Record<AssemblyTaskAction, string> = {
     [AssemblyTaskAction.INDEX]: "Index holes",
+    [AssemblyTaskAction.REMOVE]: "Remove replaced parts",
     [AssemblyTaskAction.INSERT]: "Insert parts",
     [AssemblyTaskAction.FASTEN]: "Fasten parts"
 };
 
 const TASK_RUNNING: Record<AssemblyTaskAction, string> = {
     [AssemblyTaskAction.INDEX]: "Indexing holes",
+    [AssemblyTaskAction.REMOVE]: "Removing replaced parts",
     [AssemblyTaskAction.INSERT]: "Inserting parts",
     [AssemblyTaskAction.FASTEN]: "Fastening parts"
 };
@@ -39,7 +41,12 @@ export function jobHeadline(
     status: AssemblyJobStatus,
     outcome: AssemblyJobOutcome
 ): string {
-    const parts = `Inserted ${plural(status.result?.inserted ?? 0, "part")}`;
+    const inserted = `Inserted ${plural(status.result?.inserted ?? 0, "part")}`;
+    const replaced = status.result?.replaced ?? 0;
+    const parts =
+        replaced > 0
+            ? `${inserted}, replacing ${plural(replaced, "screw")}`
+            : inserted;
     switch (outcome) {
         case AssemblyJobOutcome.SUCCESS:
             return parts;

@@ -174,6 +174,14 @@ export function isFromStudio(
     );
 }
 
+/** A library part's origin and Z axis in the assembly. */
+export function placedScrew(occurrence: PartOccurrence): PlacedScrew {
+    return {
+        origin: transformPoint(occurrence.transform, [0, 0, 0]),
+        axis: transformDirection(occurrence.transform, [0, 0, 1])
+    };
+}
+
 /** The screws already placed: each one's origin and axis in the assembly. */
 export function placedScrews(
     occurrences: PartOccurrence[],
@@ -181,10 +189,7 @@ export function placedScrews(
 ): PlacedScrew[] {
     return occurrences
         .filter((occurrence) => isFromStudio(occurrence, screwStudio))
-        .map((occurrence) => ({
-            origin: transformPoint(occurrence.transform, [0, 0, 0]),
-            axis: transformDirection(occurrence.transform, [0, 0, 1])
-        }));
+        .map(placedScrew);
 }
 
 /** What's picked in each studio, by its source's key. */

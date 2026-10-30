@@ -20,7 +20,7 @@ import { IconSize } from "../../../lib/style-constants";
 import { ParameterGrid } from "../../../components/parameter-input";
 import { QueryList } from "../../../components/query-list";
 import { isEdge, isFace, toSelectedEntities } from "../../../lib/selection";
-import { CIRCULAR_EDGES, PLANAR_FACES } from "../../../lib/messages";
+import { CIRCULAR_EDGES, FACES, PLANAR_FACES } from "../../../lib/messages";
 import { fastenerOptions, selectionMode, settleChoices } from "../options";
 import { FormInput } from "../parameters";
 import {
@@ -81,8 +81,10 @@ function AutoAssemblyForm(props: AutoAssemblyFormProps): ReactNode {
     );
     const targets = useAutoAssemblyStore((state) => state.targets);
     const excluded = useAutoAssemblyStore((state) => state.excluded);
+    const replaced = useAutoAssemblyStore((state) => state.replaced);
     const setTargets = useAutoAssemblyStore((state) => state.setTargets);
     const setExcluded = useAutoAssemblyStore((state) => state.setExcluded);
+    const setReplaced = useAutoAssemblyStore((state) => state.setReplaced);
     const { data: job } = useAssemblyJobQuery(assembly);
     const insertMutation = useInsertMutation(assembly);
 
@@ -98,12 +100,14 @@ function AutoAssemblyForm(props: AutoAssemblyFormProps): ReactNode {
             selectionMode: mode,
             targets: toSelectedEntities(targets),
             excluded: isFaces ? toSelectedEntities(excluded) : [],
+            replaced: toSelectedEntities(replaced),
             options: fastenerOptions(settled)
         };
         insertMutation.mutate(body, {
             onSuccess: () => {
                 setTargets([]);
                 setExcluded([]);
+                setReplaced([]);
             }
         });
     };
@@ -155,12 +159,24 @@ function AutoAssemblyForm(props: AutoAssemblyFormProps): ReactNode {
                             />
                         </FullWidthRow>
                     )}
+                    <FullWidthRow>
+                        <QueryList
+                            id="auto-assembly-replaced"
+                            label="Screws to replace"
+                            prompt="Select screws to take out, with their washers and nuts, and fasten again."
+                            entities={replaced}
+                            onChange={setReplaced}
+                            accepts={isFace}
+                            filter={FACES}
+                            describe={(_entity, index) => `Screw ${index + 1}`}
+                        />
+                    </FullWidthRow>
                 </ParameterGroup>
             </ParameterGrid>
             <Button
                 disabled={
                     isFtc ||
-                    targets.length === 0 ||
+                    (targets.length === 0 && replaced.length === 0) ||
                     isRunning ||
                     insertMutation.isPending
                 }

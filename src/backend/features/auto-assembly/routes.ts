@@ -111,11 +111,16 @@ const insertBody = z
     .object({
         assembly: assemblySchema,
         selectionMode: z.enum(SelectionMode),
-        targets: z.array(entitySchema).min(1).max(MAX_SELECTIONS),
+        targets: z.array(entitySchema).max(MAX_SELECTIONS).default([]),
         excluded: z.array(entitySchema).max(MAX_SELECTIONS).default([]),
+        replaced: z.array(entitySchema).max(MAX_SELECTIONS).default([]),
         options: optionsSchema
     })
-    .refine(isConsistentPick, INCONSISTENT_PICK_MESSAGE);
+    .refine(isConsistentPick, INCONSISTENT_PICK_MESSAGE)
+    .refine(
+        (body) => body.targets.length > 0 || body.replaced.length > 0,
+        "Select holes to fasten or screws to replace."
+    );
 
 const assemblyQuery = z.object({
     documentId: z.string().min(1),
@@ -163,7 +168,7 @@ autoAssemblyRoutes.post(
             state: AssemblyJobState.RUNNING,
             jobId: run.id,
             tasks: pendingTasks(),
-            result: { inserted: 0, fastened: 0 }
+            result: { inserted: 0, fastened: 0, replaced: 0 }
         };
         await reportJob(c.env, request.assembly, status);
         return c.json(status);

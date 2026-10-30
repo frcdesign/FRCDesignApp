@@ -113,6 +113,7 @@ export const BODY: AutoAssemblyIn = {
     assembly: ASSEMBLY,
     selectionMode: SelectionMode.LOCATIONS,
     excluded: [],
+    replaced: [],
     targets: [
         {
             occurrencePath: ["top"],

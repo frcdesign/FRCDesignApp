@@ -9,6 +9,9 @@ import type { AppBindings } from "../../lib/context";
 import type { OnshapeApi } from "../../lib/onshape/client";
 import {
     addAssemblyFeature,
+    deleteAssemblyFeature,
+    deleteAssemblyInstances,
+    getAssemblyFeatures,
     insertTransformedInstances
 } from "../../lib/onshape/endpoints/assemblies";
 import { type ElementPath } from "../../lib/onshape/path";
@@ -20,6 +23,7 @@ import {
     AssemblyJobState,
     AssemblyTaskAction,
     AssemblyTaskState,
+    HoleStatus,
     type AssemblyJobResult,
     type AssemblyJobStatus,
     type AssemblyTask,
@@ -45,6 +49,7 @@ import {
 } from "./insert";
 import { reportJob } from "./jobs";
 import { recordRunInserts } from "./track-inserts";
+import { orphanedMates, type Replacement } from "./replace";
 import { planHoles } from "./planner";
 
 export interface AssemblyJobParams {
@@ -97,7 +102,7 @@ export class AutoAssemblyWorkflow extends WorkflowEntrypoint<
             userId,
             assembly: request.assembly,
             tasks,
-            result: { inserted: 0, fastened: 0 },
+            result: { inserted: 0, fastened: 0, replaced: 0 },
             status: (state) => ({
                 state,
                 jobId: event.instanceId,
@@ -143,7 +148,8 @@ async function runSteps(ctx: RunContext, request: AutoAssemblyIn) {
                 request.assembly,
                 request.targets,
                 request.excluded,
-                set
+                set,
+                request.replaced
             );
             return {
                 plans: planHoles(
@@ -153,7 +159,8 @@ async function runSteps(ctx: RunContext, request: AutoAssemblyIn) {
                     request.options,
                     set.catalog
                 ),
-                unfound: indexed.unfound
+                unfound: indexed.unfound,
+                replacements: indexed.replacements
             };
         })
     );
@@ -172,6 +179,27 @@ async function runSteps(ctx: RunContext, request: AutoAssemblyIn) {
         skipRest(ctx);
         return;
     }
+
+    // A screw whose hole has no new plan keeps its parts
+    const ready = new Set(
+        plans
+            .filter((plan) => plan.planned.status === HoleStatus.READY)
+            .map((plan) => plan.planned.key)
+    );
+    const removing = indexed.replacements.filter((replacement) =>
+        ready.has(replacement.key)
+    );
+    if (removing.length === 0) {
+        skipTask(ctx, AssemblyTaskAction.REMOVE);
+    } else if (
+        !(await runTask(ctx, AssemblyTaskAction.REMOVE, (run) =>
+            removeStacks(ctx, run, removing)
+        ))
+    ) {
+        skipRest(ctx);
+        return;
+    }
+
     const paths = await runTask(ctx, AssemblyTaskAction.INSERT, (run) =>
         insertParts(ctx, set, run, parts)
     );
@@ -262,6 +290,50 @@ async function fastenParts(
         });
         mated.add(index);
         ctx.result.fastened++;
+    }
+}
+
+/**
+ * Deletes each replaced screw with its washers and nuts in one change, then
+ * any mate still referencing them. True once done.
+ */
+async function removeStacks(
+    ctx: RunContext,
+    run: StepRunner,
+    replacements: Replacement[]
+): Promise<boolean> {
+    const instanceIds = [
+        ...new Set(replacements.flatMap((each) => each.instanceIds))
+    ];
+    await run("remove-instances", isRateLimited, async (client) => {
+        await deleteAssemblyInstances(
+            client,
+            ctx.assembly,
+            instanceIds,
+            "Auto Assembly: replace screws"
+        );
+        return true;
+    });
+    const mates = await run("orphaned-mates", isTransient, async (client) =>
+        orphanedMates(
+            (await getAssemblyFeatures(client, ctx.assembly)).features,
+            instanceIds
+        )
+    );
+    for (const [index, featureId] of mates.entries()) {
+        await run(`remove-mate-${index}`, isRateLimited, async (client) => {
+            await deleteAssemblyFeature(client, ctx.assembly, featureId);
+            return true;
+        });
+    }
+    ctx.result.replaced += replacements.length;
+    return true;
+}
+
+function skipTask(ctx: RunContext, action: AssemblyTaskAction): void {
+    const task = ctx.tasks.find((each) => each.action === action);
+    if (task) {
+        task.state = AssemblyTaskState.SKIPPED;
     }
 }
 

@@ -434,3 +434,16 @@ export interface OnshapeFeatureScriptResponse {
     /** Errors and warnings, among others; an error leaves `result` empty. */
     notices?: { level?: string; message?: { message?: string } }[];
 }
+
+/** GET /assemblies/.../features: each feature as Onshape stores it. */
+export interface OnshapeAssemblyFeatureList {
+    features: OnshapeListedFeature[];
+}
+
+export interface OnshapeListedFeature {
+    featureId: string;
+    featureType: string;
+    /** Its parameters, whose queries name the instances it references by `path`. */
+    parameters?: unknown[];
+    mateConnectors?: unknown[];
+}

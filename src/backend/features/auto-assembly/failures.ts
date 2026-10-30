@@ -8,6 +8,7 @@ const failures = runFailures("Auto Assembly stopped: ");
 
 const ACTION_FAILURE = {
     [AssemblyTaskAction.INDEX]: "Couldn't read the assembly's holes.",
+    [AssemblyTaskAction.REMOVE]: "Couldn't remove the screws to replace.",
     [AssemblyTaskAction.INSERT]: "Couldn't insert the fasteners.",
     [AssemblyTaskAction.FASTEN]: "Couldn't fasten the inserted parts."
 } as const;

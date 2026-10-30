@@ -144,6 +144,11 @@ export const CIRCULAR_EDGES: SelectionFilter = {
     geometryTypeSpecifier: ["CIRCLE"]
 };
 
+/** Any face, of any part: a screw's, say. */
+export const FACES: SelectionFilter = {
+    entityTypeSpecifier: ["FACE"],
+    selectionTypeSpecifier: ["GEOMETRY"]
+};
 export const PLANAR_FACES: SelectionFilter = {
     entityTypeSpecifier: ["FACE"],
     selectionTypeSpecifier: ["GEOMETRY"],

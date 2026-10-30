@@ -10,6 +10,8 @@ import { FormInput } from "./parameters";
 interface AutoAssemblyState extends Choices {
     targets: OnshapeSelection[];
     excluded: OnshapeSelection[];
+    /** Faces of screws to take out and fasten again. */
+    replaced: OnshapeSelection[];
     setForm: (id: FormInput, value: string) => void;
     setMode: (mode: FastenerMode) => void;
     setScrew: (id: string, value: string) => void;
@@ -17,6 +19,7 @@ interface AutoAssemblyState extends Choices {
     setAdded: (part: Part, added: boolean) => void;
     setTargets: (targets: OnshapeSelection[]) => void;
     setExcluded: (excluded: OnshapeSelection[]) => void;
+    setReplaced: (replaced: OnshapeSelection[]) => void;
 }
 
 /** Every part from a vendor; each settles back to one making it. */
@@ -38,6 +41,7 @@ export const useAutoAssemblyStore = create<AutoAssemblyState>()(
             ...defaultChoices(),
             targets: [],
             excluded: [],
+            replaced: [],
             setForm: (id, value) =>
                 set((state) => ({
                     form: { ...state.form, [id]: value },
@@ -65,7 +69,8 @@ export const useAutoAssemblyStore = create<AutoAssemblyState>()(
             setAdded: (part, added) =>
                 set((state) => ({ added: { ...state.added, [part]: added } })),
             setTargets: (targets) => set({ targets }),
-            setExcluded: (excluded) => set({ excluded })
+            setExcluded: (excluded) => set({ excluded }),
+            setReplaced: (replaced) => set({ replaced })
         }),
         {
             name: "autoAssembly",

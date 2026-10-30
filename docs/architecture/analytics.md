@@ -77,7 +77,7 @@ no foreign key crosses between them):
    calls `recordRunInserts` in its `record-inserts` step once fastening has
    ended, however it ended: each part it inserted is an insert from the
    library its studio is in, source `auto_assembly`, fastened if its mate was
-   added, never favorited. `/init`'s handoff calls `POST /api/app-open`, which
+   added, never favorited. The parts a run deletes to replace a screw aren't recorded; their replacements are inserts like any other. `/init`'s handoff calls `POST /api/app-open`, which
    calls `trackAppOpen`; the version manager's workflow calls
    `trackVersionRun` in its `record-run` step once its run has finished, so a
    run that failed halfway still records what it managed.

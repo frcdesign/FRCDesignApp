@@ -11,6 +11,7 @@ import {
     isLocal,
     partOccurrences,
     pathKey,
+    placedScrew,
     placedScrews,
     selectionsByStudio,
     toAssemblyCircularEdges,
@@ -31,6 +32,7 @@ import {
     type PlacedScrew
 } from "./planner";
 import { scanStudio, type StudioScan } from "./scan";
+import { type Replacement, screwLength, seatEdge, stackParts } from "./replace";
 
 /** Part Studios evaluated at once: each is one Onshape call, and an assembly can have dozens. */
 const SCAN_CONCURRENCY = 6;
@@ -39,8 +41,10 @@ export interface IndexedHoles {
     circularEdges: AssemblyCircularEdge[];
     holes: AssemblyHole[];
     placed: PlacedScrew[];
-    /** Each target that gave no circular edge, and why. */
+    /** Each target that gave no circular edge, and each screw to replace that can't be, and why. */
     unfound: PlannedHole[];
+    /** The screws to replace, whose holes are among `circularEdges`. */
+    replacements: Replacement[];
 }
 
 function isFastener(
@@ -82,7 +86,9 @@ export async function indexHoles(
     targets: SelectedEntity[],
     excluded: SelectedEntity[],
     // Fasteners already placed, which have no holes to fasten through; none before the library loads them
-    fasteners: FastenerSet | undefined
+    fasteners: FastenerSet | undefined,
+    /** Picks on screws whose stacks are taken out and their holes planned again. */
+    replaced: SelectedEntity[] = []
 ): Promise<IndexedHoles> {
     const definition = await getAssembly(client, assembly, {
         excludeSuppressed: true
@@ -186,18 +192,114 @@ export async function indexHoles(
         ];
     });
 
+    const replacing = screwsToReplace(replaced, byPath, fasteners);
+    const seats = replacing.screws.flatMap(
+        (screw): { screw: PartOccurrence; seat: AssemblyCircularEdge }[] => {
+            const seat =
+                fasteners &&
+                seatEdge(
+                    placedScrew(screw),
+                    holes,
+                    maxWasherThickness(fasteners)
+                );
+            return seat ? [{ screw, seat }] : [];
+        }
+    );
+    const seated = new Set(seats.map(({ screw }) => pathKey(screw.path)));
+    const replacements = seats.map(({ screw, seat }): Replacement => {
+        const length = fasteners && screwLength(fasteners, screw);
+        const stack =
+            fasteners && length !== undefined
+                ? stackParts(screw, length, occurrences, fasteners)
+                : [];
+        return {
+            key: seat.key,
+            // Only top-level instances are deleted, as only they are inserted
+            instanceIds: [screw, ...stack]
+                .filter((part) => part.path.length === 1)
+                .map((part) => part.path[0])
+        };
+    });
+    const picked = withoutExcluded(
+        circularEdgesOf(targets),
+        circularEdgesOf(excluded)
+    );
+    const pickedKeys = new Set(picked.map((circularEdge) => circularEdge.key));
+
     return {
-        circularEdges: withoutExcluded(
-            circularEdgesOf(targets),
-            circularEdgesOf(excluded)
-        ),
-        unfound,
+        circularEdges: [
+            ...picked,
+            ...seats
+                .map(({ seat }) => seat)
+                .filter((seat) => !pickedKeys.has(seat.key))
+        ],
+        unfound: [
+            ...unfound,
+            ...replacing.unfound,
+            ...replacing.screws
+                .filter((screw) => !seated.has(pathKey(screw.path)))
+                .map(
+                    (screw): PlannedHole => ({
+                        key: pathKey(screw.path),
+                        status: HoleStatus.NO_FIT,
+                        reason: "Couldn't find the hole this screw is in."
+                    })
+                )
+        ],
         holes,
+        // A screw being replaced leaves its hole free to plan again
         placed: placedScrews(
-            occurrences,
+            occurrences.filter(
+                (occurrence) => !seated.has(pathKey(occurrence.path))
+            ),
             fasteners?.studios[FastenerKind.SCREW].location
-        )
+        ),
+        replacements
     };
+}
+
+function maxWasherThickness(fasteners: FastenerSet): number {
+    return Math.max(
+        0,
+        ...fasteners.catalog.washers.map((washer) => washer.thickness)
+    );
+}
+
+/** The library screws picked, each once, and why any other pick isn't one. */
+function screwsToReplace(
+    picks: SelectedEntity[],
+    byPath: Map<string, PartOccurrence>,
+    fasteners: FastenerSet | undefined
+): { screws: PartOccurrence[]; unfound: PlannedHole[] } {
+    const screws = new Map<string, PartOccurrence>();
+    const unfound: PlannedHole[] = [];
+    for (const pick of picks) {
+        const occurrence = byPath.get(pathKey(pick.occurrencePath));
+        let reason: string | undefined;
+        if (!occurrence) {
+            reason = "Couldn't find this part in the assembly.";
+        } else if (
+            !isFromStudio(
+                occurrence,
+                fasteners?.studios[FastenerKind.SCREW].location
+            )
+        ) {
+            reason = "Not a screw from FRCDesignLib's Fasteners group.";
+        } else if (occurrence.path.length > 1) {
+            reason =
+                "This screw is in a subassembly, which Auto Assembly doesn't change.";
+        }
+        if (reason || !occurrence) {
+            unfound.push({
+                key: `${pathKey(pick.occurrencePath)}|${pick.entityId}`,
+                status: HoleStatus.NO_FIT,
+                reason
+            });
+            continue;
+        }
+        screws.set(pathKey(occurrence.path), occurrence);
+    }
+    return { screws: [...screws.values()], unfound };
 }
 
 function byPathValues(

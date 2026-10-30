@@ -527,7 +527,8 @@ describe("insertable routes", () => {
             })),
             holes: [],
             placed: [],
-            unfound: []
+            unfound: [],
+            replacements: []
         });
     }
 

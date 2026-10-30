@@ -80,7 +80,8 @@ beforeEach(() => {
     useAutoAssemblyStore.setState({
         ...defaultChoices(),
         targets: [],
-        excluded: []
+        excluded: [],
+        replaced: []
     });
 });
 
@@ -141,6 +142,30 @@ describe("AutoAssemblyPanel", () => {
             })
         });
         expect(useAutoAssemblyStore.getState().targets).toEqual([]);
+    });
+
+    it("replaces the screws picked, with nothing else picked", async () => {
+        renderPanel();
+        await userEvent.click(screen.getByText("Screws to replace"));
+        // The focus moved from Circular edges, whose request this clears
+        act(() => useOnshapeSelection.getState().receive([]));
+        select(face("S"));
+        expect(screen.getByText("Screw 1")).toBeTruthy();
+
+        await userEvent.click(insertButton());
+        expect(apiPost).toHaveBeenCalledWith("/auto-assembly/insert", {
+            body: expect.objectContaining({
+                targets: [],
+                replaced: [
+                    {
+                        occurrencePath: ["plate"],
+                        entityId: "S",
+                        entityType: "FACE"
+                    }
+                ]
+            })
+        });
+        expect(useAutoAssemblyStore.getState().replaced).toEqual([]);
     });
 
     it("says a run is going and that it can be left, and holds the next one", () => {

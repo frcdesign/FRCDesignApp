@@ -69,6 +69,8 @@ export interface AutoAssemblyIn {
     targets: SelectedEntity[];
     /** The edges of holes in `targets` to leave out; faces only. */
     excluded: SelectedEntity[];
+    /** Picks on library screws to take out, with their washers and nuts, and fasten again. */
+    replaced: SelectedEntity[];
     options: FastenerOptions;
 }
 
@@ -113,6 +115,8 @@ export function assemblyKey(assembly: ElementPath): string {
 /** The steps of a run, in the order it takes them. */
 export enum AssemblyTaskAction {
     INDEX = "index",
+    /** Skipped when no screw to replace has a new plan. */
+    REMOVE = "remove",
     INSERT = "insert",
     FASTEN = "fasten"
 }
@@ -155,6 +159,8 @@ export interface AssemblyJobResult {
     inserted: number;
     /** Parts fastened to where they sit. */
     fastened: number;
+    /** Screws taken out, with their washers and nuts, for new ones. */
+    replaced: number;
 }
 
 export interface AssemblyJobStatus {

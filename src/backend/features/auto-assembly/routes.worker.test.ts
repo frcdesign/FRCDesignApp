@@ -72,6 +72,7 @@ describe("POST /api/auto-assembly/insert", () => {
         expect(status.tasks?.map((task) => task.state)).toEqual([
             AssemblyTaskState.PENDING,
             AssemblyTaskState.PENDING,
+            AssemblyTaskState.PENDING,
             AssemblyTaskState.PENDING
         ]);
     });

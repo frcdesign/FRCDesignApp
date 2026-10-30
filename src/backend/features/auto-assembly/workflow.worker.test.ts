@@ -16,6 +16,7 @@ import * as Documents from "../../lib/onshape/endpoints/documents";
 import * as PartStudios from "../../lib/onshape/endpoints/part-studios";
 import { OnshapeApiError, type OAuthApi } from "../../lib/onshape/client";
 import * as Planner from "./planner";
+import * as IndexHoles from "./index-holes";
 import { FastenerKind } from "./studios";
 
 const WASHER = { vendor: "GENERIC", size: "NO_10_32", type: "OD_1_2_X_0_049" };
@@ -179,8 +180,10 @@ describe("AutoAssemblyWorkflow", () => {
         });
 
         expect(status.state).toBe(AssemblyJobState.COMPLETE);
+        // Nothing to replace
         expect(status.tasks?.map((task) => task.state)).toEqual([
             AssemblyTaskState.DONE,
+            AssemblyTaskState.SKIPPED,
             AssemblyTaskState.DONE,
             AssemblyTaskState.DONE
         ]);
@@ -189,7 +192,11 @@ describe("AutoAssemblyWorkflow", () => {
             screw: { length: "IN_1" }
         });
         // Washer, screw, washer, nut
-        expect(status.result).toEqual({ inserted: 4, fastened: 4 });
+        expect(status.result).toEqual({
+            inserted: 4,
+            fastened: 4,
+            replaced: 0
+        });
         expect(assemblyJobOutcome(status)).toBe(AssemblyJobOutcome.SUCCESS);
 
         expect(mates[0]).toContain('"deterministicIds":["TOP-top"]');
@@ -336,15 +343,95 @@ describe("AutoAssemblyWorkflow", () => {
 
             expect(status.tasks?.map((task) => task.action)).toEqual([
                 "index",
+                "remove",
                 "insert",
                 "fasten"
             ]);
             // A screw and a nut in each
-            expect(status.result).toEqual({ inserted: 4, fastened: 4 });
+            expect(status.result).toEqual({
+                inserted: 4,
+                fastened: 4,
+                replaced: 0
+            });
             ["a", "a-far", "b", "b-far"].forEach((edge, index) =>
                 expect(mates[index]).toContain(`"deterministicIds":["${edge}"]`)
             );
             expect(assemblyJobOutcome(status)).toBe(AssemblyJobOutcome.SUCCESS);
+        });
+    });
+
+    describe("replacing", () => {
+        const deleted = () =>
+            vi.mocked(Assemblies.deleteAssemblyInstances).mock.calls;
+
+        beforeEach(() => {
+            const indexHoles = IndexHoles.indexHoles;
+            vi.spyOn(IndexHoles, "indexHoles").mockImplementation(
+                async (...args) => ({
+                    ...(await indexHoles(...args)),
+                    replacements: [
+                        {
+                            key: "top|TOP-top",
+                            instanceIds: ["oldScrew", "oldNut"]
+                        }
+                    ]
+                })
+            );
+            vi.spyOn(Assemblies, "deleteAssemblyInstances").mockResolvedValue();
+            vi.spyOn(Assemblies, "getAssemblyFeatures").mockResolvedValue({
+                features: [
+                    {
+                        featureId: "oldMate",
+                        featureType: "mate",
+                        parameters: [{ queries: [{ path: ["oldScrew"] }] }]
+                    },
+                    {
+                        featureId: "otherMate",
+                        featureType: "mate",
+                        parameters: [{ queries: [{ path: ["bracket"] }] }]
+                    }
+                ]
+            });
+            vi.spyOn(Assemblies, "deleteAssemblyFeature").mockResolvedValue();
+        });
+
+        it("takes out a replaced screw's parts and their mates, then fastens its hole again", async () => {
+            const status = await run("replaced", {
+                sessionId: "session",
+                userId: "user",
+                request: BODY
+            });
+
+            expect(status.tasks?.map((task) => task.state)).toEqual([
+                AssemblyTaskState.DONE,
+                AssemblyTaskState.DONE,
+                AssemblyTaskState.DONE,
+                AssemblyTaskState.DONE
+            ]);
+            expect(deleted()).toHaveLength(1);
+            expect(deleted()[0][2]).toEqual(["oldScrew", "oldNut"]);
+            expect(
+                vi
+                    .mocked(Assemblies.deleteAssemblyFeature)
+                    .mock.calls.map((call) => call[2])
+            ).toEqual(["oldMate"]);
+            expect(status.result).toEqual({
+                inserted: 2,
+                fastened: 2,
+                replaced: 1
+            });
+        });
+
+        it("keeps a replaced screw whose hole has no new plan", async () => {
+            vi.spyOn(Planner, "planHoles").mockReturnValue([]);
+            const status = await run("kept", {
+                sessionId: "session",
+                userId: "user",
+                request: BODY
+            });
+
+            expect(deleted()).toHaveLength(0);
+            expect(status.tasks?.[1].state).toBe(AssemblyTaskState.SKIPPED);
         });
     });
 
@@ -365,7 +452,7 @@ describe("AutoAssemblyWorkflow", () => {
             request: BODY
         });
 
-        expect(status.tasks?.[2]).toMatchObject({
+        expect(status.tasks?.[3]).toMatchObject({
             state: AssemblyTaskState.FAILED,
             reason: "A fastener's studio has no mate connector to fasten by. Reload its group."
         });
@@ -407,6 +494,7 @@ describe("AutoAssemblyWorkflow", () => {
         });
         expect(status.tasks?.map((task) => task.state)).toEqual([
             AssemblyTaskState.FAILED,
+            AssemblyTaskState.SKIPPED,
             AssemblyTaskState.SKIPPED,
             AssemblyTaskState.SKIPPED
         ]);

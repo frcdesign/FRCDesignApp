@@ -6,6 +6,7 @@ import { ElementType } from "../element-type";
 import { IDENTITY_TRANSFORM } from "../objects/transform";
 import {
     OnshapeAssemblyDefinition,
+    OnshapeAssemblyFeatureList,
     OnshapeBoundingBox,
     OnshapeCreatedFeature,
     OnshapeInsertInstancesResponse
@@ -137,5 +138,38 @@ export function addAssemblyFeature(
     return client.post(
         `/assemblies${toElementApiPath(assemblyPath)}/features`,
         { body: { feature } }
+    );
+}
+
+/** Deletes instances, by node id, in one change to the assembly's history. */
+export function deleteAssemblyInstances(
+    client: OnshapeApi,
+    assemblyPath: ElementPath,
+    nodeIds: string[],
+    editDescription: string
+): Promise<void> {
+    assertWorkspace(assemblyPath);
+    return client.postNone(
+        `/assemblies${toElementApiPath(assemblyPath)}/modify`,
+        { body: { deleteInstances: nodeIds, editDescription } }
+    );
+}
+
+/** Every feature in an assembly's feature list: its mates, mate connectors and the rest. */
+export function getAssemblyFeatures(
+    client: OnshapeApi,
+    assemblyPath: ElementPath
+): Promise<OnshapeAssemblyFeatureList> {
+    return client.get(`/assemblies${toElementApiPath(assemblyPath)}/features`);
+}
+
+export function deleteAssemblyFeature(
+    client: OnshapeApi,
+    assemblyPath: ElementPath,
+    featureId: string
+): Promise<void> {
+    assertWorkspace(assemblyPath);
+    return client.deleteNone(
+        `/assemblies${toElementApiPath(assemblyPath)}/features/featureid/${encodeURIComponent(featureId)}`
     );
 }
