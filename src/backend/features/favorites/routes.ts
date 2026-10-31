@@ -1,4 +1,4 @@
-import { and, asc, count, eq, inArray, max } from "drizzle-orm";
+import { and, asc, count, eq, max } from "drizzle-orm";
 import { handledError } from "../../lib/api-error";
 import { HttpStatus } from "http-status-ts";
 import { cacheMiddleware } from "../../lib/cache";
@@ -10,21 +10,14 @@ import {
     libraryRoute
 } from "../../lib/route-params";
 import { type Db, getDb } from "../../db/client";
-import { chunkForInArray } from "../../db/chunk";
-import { users, favorites, configurations, insertables } from "../../db/schema";
+import { users, favorites } from "../../db/schema";
 import {
-    findRecord,
-    toKey,
-    toSelection,
-    toStoredSelection
-} from "../configurations/selection";
+    getInsertableConfigurations,
+    getParametersFor,
+    resolveStoredSelection,
+    toRowSelection
+} from "../configurations/stored-selections";
 import { MAX_FAVORITES, type Favorite, type FavoritesData } from "./contract";
-import {
-    type ConfigurationParameter,
-    type PartialSelection,
-    type SearchRecord
-} from "../configurations/contract";
-import { searchRecordsOf } from "../search/records";
 import type { LibraryId } from "../library/library-id";
 import { z } from "zod";
 import { validate } from "../../lib/validate";
@@ -67,8 +60,7 @@ async function getFavorites(
         .orderBy(asc(favorites.sortOrder))
         .all();
 
-    // Computed, not stored: a reload can move the defaults a key is measured against.
-    const configurationsById = await getConfigurations(
+    const configurationsById = await getInsertableConfigurations(
         db,
         rows.map((row) => row.insertableId)
     );
@@ -76,100 +68,21 @@ async function getFavorites(
     const favoritesOut: Record<string, Favorite> = {};
     const favoriteOrder: string[] = [];
     for (const row of rows) {
-        const { parameters = [], records = [] } =
-            configurationsById.get(row.insertableId) ?? {};
-        // A row written before a parameter existed still has to be whole.
-        const defaultSelection = row.defaultSelection
-            ? toSelection(
-                  toStoredSelection(row.defaultSelection, parameters),
-                  parameters
-              )
-            : undefined;
-        const fav: Favorite = {
+        const { selection, configurationKey, record } = resolveStoredSelection(
+            row.defaultSelection ?? undefined,
+            configurationsById.get(row.insertableId)
+        );
+        favoritesOut[row.id] = {
             id: row.id,
             insertableId: row.insertableId,
             libraryId,
-            defaultSelection,
-            configurationKey: defaultSelection
-                ? toKey(defaultSelection, parameters)
-                : undefined,
-            // So a row never shows another configuration's part number.
-            record: findRecord(
-                defaultSelection ?? toSelection({}, parameters),
-                records
-            )
+            defaultSelection: selection,
+            configurationKey,
+            record
         };
-        favoritesOut[row.id] = fav;
         favoriteOrder.push(row.id);
     }
     return { favorites: favoritesOut, favoriteOrder };
-}
-
-function toFavoriteSelection(
-    selection: PartialSelection,
-    parameters: ConfigurationParameter[]
-): PartialSelection {
-    return toStoredSelection(toSelection(selection, parameters), parameters);
-}
-
-/** One insertable's parameters, for making a selection whole. */
-async function getParametersFor(
-    db: Db,
-    insertableId: string
-): Promise<ConfigurationParameter[]> {
-    return (
-        (await getConfigurations(db, [insertableId])).get(insertableId)
-            ?.parameters ?? []
-    );
-}
-
-/** What a favorite's insertable contributes to the response. */
-interface InsertableConfiguration {
-    /** What a stored selection is made whole against. */
-    parameters: ConfigurationParameter[];
-    /** Includes the element's own. */
-    records: SearchRecord[];
-}
-
-/**
- * Joined with the insertable, whose vendors give a record its url. A left join,
- * since an unconfigurable insertable has no configurations row.
- */
-async function getConfigurations(
-    db: Db,
-    insertableIds: string[]
-): Promise<Map<string, InsertableConfiguration>> {
-    // Chunked: there can be more favorites than one statement binds.
-    const reads = await Promise.all(
-        chunkForInArray(insertableIds).map((ids) =>
-            db
-                .select({
-                    insertableId: insertables.id,
-                    vendors: insertables.vendors,
-                    partMetadata: insertables.partMetadata,
-                    parameters: configurations.parameters,
-                    records: configurations.records
-                })
-                .from(insertables)
-                .leftJoin(
-                    configurations,
-                    eq(configurations.insertableId, insertables.id)
-                )
-                .where(inArray(insertables.id, ids))
-                .all()
-        )
-    );
-    return new Map(
-        reads.flat().map((row) => {
-            return [
-                row.insertableId,
-                {
-                    parameters: row.parameters ?? [],
-                    records: searchRecordsOf(row)
-                }
-            ];
-        })
-    );
 }
 
 /** GET /api/favorites/library/:libraryId */
@@ -237,7 +150,7 @@ favoriteRoutes.post(
                 libraryId,
                 insertableId,
                 defaultSelection: selection
-                    ? toFavoriteSelection(
+                    ? toRowSelection(
                           selection,
                           await getParametersFor(db, insertableId)
                       )
@@ -316,7 +229,7 @@ favoriteRoutes.post(
         await db
             .update(favorites)
             .set({
-                defaultSelection: toFavoriteSelection(
+                defaultSelection: toRowSelection(
                     selection,
                     await getParametersFor(db, row.insertableId)
                 )

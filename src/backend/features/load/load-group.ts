@@ -267,7 +267,7 @@ async function saveGroup(
                 .where(eq(insertables.id, insertableId))
         );
     }
-    // Configurations and favorites cascade.
+    // Configurations, favorites and recents cascade.
     for (const ids of chunkForInArray(removedInsertableIds)) {
         writes.push(db.delete(insertables).where(inArray(insertables.id, ids)));
     }

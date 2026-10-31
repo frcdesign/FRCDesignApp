@@ -11,6 +11,7 @@ configuration each one opens with. Favorites are per user and per library.
 | ------------------------------------------------------------------------------- | ----------------------------------------------------------- |
 | `src/backend/features/favorites/contract.ts`                                    | `Favorite`, `FavoritesData`, `MAX_FAVORITES`                |
 | `src/backend/features/favorites/routes.ts`                                      | List, add, delete, reorder, and set the saved configuration |
+| `src/backend/features/configurations/stored-selections.ts`                      | Reading a stored selection back, with its key and record    |
 | `src/frontend/features/favorites/queries.ts`                                    | Query and optimistic mutations                              |
 | `src/frontend/features/favorites/components/favorites-list.tsx`                 | The Favorites tab, searchable through the library index     |
 | `src/frontend/features/favorites/components/favorite-button.tsx`                | Toggling a favorite                                         |

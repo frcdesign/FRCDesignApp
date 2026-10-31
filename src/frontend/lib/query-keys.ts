@@ -59,6 +59,10 @@ export function favoritesQueryKey(libraryId: LibraryId) {
     return [...libraryQueryKey(libraryId), "favorites"];
 }
 
+export function recentsQueryKey(libraryId: LibraryId) {
+    return [...libraryQueryKey(libraryId), "recents"];
+}
+
 export function buildStatusQueryKey(
     libraryId: LibraryId,
     cacheVersion: number

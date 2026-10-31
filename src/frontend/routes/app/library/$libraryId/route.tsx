@@ -2,6 +2,7 @@ import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { type ReactNode } from "react";
 import { queryClient } from "../../../../lib/query-client";
 import { prefetchFavorites } from "../../../../features/favorites/queries";
+import { prefetchRecents } from "../../../../features/recents/queries";
 import {
     getLibraryQuery,
     getLibraryVersionQuery
@@ -40,6 +41,7 @@ export const Route = createFileRoute("/app/library/$libraryId")({
             getSearchDbQuery(libraryId, cacheVersion)
         );
         void prefetchFavorites(libraryId);
+        void prefetchRecents(libraryId);
     }
 });
 

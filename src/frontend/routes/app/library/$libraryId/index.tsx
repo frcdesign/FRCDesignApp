@@ -18,6 +18,9 @@ import {
 import { RequireAccessLevel } from "../../../../features/auth/components/require-access";
 import { AddGroupButton } from "../../../../features/library/components/add-group-menu";
 import { FavoritesList } from "../../../../features/favorites/components/favorites-list";
+import { RecentsList } from "../../../../features/recents/components/recents-list";
+import { RecentIcon } from "../../../../features/recents/components/recent-icon";
+import { useIsSignedIn } from "../../../../features/auth/access-level";
 import { useLibraryQuery } from "../../../../features/library/queries";
 import { getLibraryName, useLibraryId } from "../../../../lib/library";
 import { useShallow } from "zustand/react/shallow";
@@ -47,17 +50,20 @@ interface Section {
 
 /** The sections the home list shows, in the order they are stacked. */
 function useHomeSections(): Section[] {
-    const { isFavoritesOpen, isLibraryOpen, searchQuery } = useUiState(
-        useShallow((state) => ({
-            isFavoritesOpen: state.isFavoritesOpen,
-            isLibraryOpen: state.isLibraryOpen,
-            searchQuery: state.searchQuery
-        }))
-    );
+    const { isFavoritesOpen, isRecentsOpen, isLibraryOpen, searchQuery } =
+        useUiState(
+            useShallow((state) => ({
+                isFavoritesOpen: state.isFavoritesOpen,
+                isRecentsOpen: state.isRecentsOpen,
+                isLibraryOpen: state.isLibraryOpen,
+                searchQuery: state.searchQuery
+            }))
+        );
     // Not persisted: search results open on every visit, unlike the library.
     const [isSearchOpen, setIsSearchOpen] = useState(true);
     const libraryId = useLibraryId();
     const vendorFilters = useVendorFilters();
+    const isSignedIn = useIsSignedIn();
 
     // Shown signed out too, where the panel says what signing in would add.
     const favorites: Section = {
@@ -67,6 +73,15 @@ function useHomeSections(): Section[] {
         panel: <FavoritesList />,
         opened: isFavoritesOpen,
         setOpened: (opened) => updateUiState({ isFavoritesOpen: opened })
+    };
+
+    const recents: Section = {
+        value: "recents",
+        name: "Recently Used",
+        icon: <RecentIcon size={IconSize.MEDIUM} />,
+        panel: <RecentsList />,
+        opened: isRecentsOpen,
+        setOpened: (opened) => updateUiState({ isRecentsOpen: opened })
     };
 
     const search: Section = {
@@ -100,7 +115,11 @@ function useHomeSections(): Section[] {
     };
 
     // The differing `value` remounts the slot when search starts or ends.
-    return [favorites, searchQuery ? search : library];
+    if (searchQuery) {
+        return [favorites, search];
+    }
+    // Signed out has nothing inserted, and favorites already offer sign-in.
+    return isSignedIn ? [favorites, recents, library] : [favorites, library];
 }
 
 interface SectionAccordionProps {

@@ -4,6 +4,7 @@ import { buildStatusRoutes } from "./features/build-checker/routes";
 import { configurationRoutes } from "./features/configurations/routes";
 import { appOpenRoutes, entryRoutes } from "./features/entry/routes";
 import { favoriteRoutes } from "./features/favorites/routes";
+import { recentRoutes } from "./features/recents/routes";
 import { groupRoutes } from "./features/library/groups/routes";
 import { insertLocationRoutes } from "./features/insert-location/routes";
 import { insertableRoutes } from "./features/library/insertables/routes";
@@ -30,6 +31,7 @@ const apiRoutes = [
     configurationRoutes,
     thumbnailRoutes,
     favoriteRoutes,
+    recentRoutes,
     buildStatusRoutes,
     analyticsRoutes,
     webhookRoutes,

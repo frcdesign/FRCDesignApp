@@ -72,7 +72,7 @@ serves what is stored:
 ### Rendering a configuration
 
 A render is started explicitly, by a client that got a configuration miss and
-can wait for it: the insert menu's preview and favorite rows. Search rows never
+can wait for it: the insert menu's preview, and favorite and recent rows. Search rows never
 start one, so a cold search cannot start a render per row.
 
 1. The client calls `POST /api/render-thumbnail/insertable/:insertableId` with
@@ -171,7 +171,8 @@ previous picture up with a small spinner while the new one renders.
   configuration that produces no part says "Part failed to regenerate." at once.
 - Picking the configuration again tries again.
 
-**A favorite was saved with a configuration.** Its row starts the same render,
+**A favorite was saved, or a part inserted, with a configuration.** Its favorite
+or recent row starts the same render,
 showing the part's default until it lands. The row's small picture is rendered
 after the large one, so it can arrive after the row has stopped waiting; the
 row still picks it up when the server says it landed.

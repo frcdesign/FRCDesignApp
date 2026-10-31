@@ -21,5 +21,6 @@ export enum InsertSource {
     GROUP_SEARCH = "group_search",
     /** The group's own list of parts. */
     BROWSE = "browse",
-    FAVORITES = "favorites"
+    FAVORITES = "favorites",
+    RECENTS = "recents"
 }

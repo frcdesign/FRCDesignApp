@@ -12,7 +12,11 @@ import { useClearVendorFilters } from "../../settings/vendor-filters";
 import { FilterResult } from "../search";
 
 /** What a narrowed-down list is called to the user. */
-type ObjectLabel = "element" | "favorite" | "search result";
+type ObjectLabel =
+    | "element"
+    | "favorite"
+    | "recently used part"
+    | "search result";
 
 function plural(objectLabel: ObjectLabel): string {
     return objectLabel + "s";
@@ -21,6 +25,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { SectionNotice } from "../../../components/app-notice";
 import { useLibraryId } from "../../../lib/library";
 import { AppIcon } from "../../../components/app-icon";
+import { RecentIcon } from "../../recents/components/recent-icon";
 
 function getGroupString(filtered: FilterResult, objectLabel: ObjectLabel) {
     if (filtered.byGroup > 1) {
@@ -85,7 +90,7 @@ export function SearchCallout(props: FilterCalloutProps): ReactNode {
 }
 
 interface NoSearchResultErrorProps {
-    objectLabel: Extract<ObjectLabel, "search result" | "favorite">;
+    objectLabel: Exclude<ObjectLabel, "element">;
     filtered: FilterResult;
 }
 
@@ -94,20 +99,26 @@ export function NoSearchResultError(
 ): ReactNode {
     const { objectLabel, filtered } = props;
 
-    const icon =
-        objectLabel === "search result" ? (
+    let icon: ReactNode;
+    if (objectLabel === "search result") {
+        icon = (
             <AppIcon
                 icon={MagnifyingGlassIcon}
                 size={IconSize.SECTION}
                 color={StatusColor.WARNING}
             />
-        ) : (
+        );
+    } else if (objectLabel === "recently used part") {
+        icon = <RecentIcon size={IconSize.SECTION} />;
+    } else {
+        icon = (
             <AppIcon
                 icon={HeartBreakIcon}
                 size={IconSize.SECTION}
                 color={StatusColor.ERROR}
             />
         );
+    }
 
     if (filtered.byGroup > 0) {
         return (

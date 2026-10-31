@@ -8,7 +8,8 @@ const SOURCE_LABELS: Record<InsertSource, string> = {
     [InsertSource.SEARCH]: "Search results",
     [InsertSource.GROUP_SEARCH]: "Search within a group",
     [InsertSource.BROWSE]: "Browsing a group",
-    [InsertSource.FAVORITES]: "Favorites list"
+    [InsertSource.FAVORITES]: "Favorites list",
+    [InsertSource.RECENTS]: "Recently used list"
 };
 
 interface InsertSourceBreakdownProps {
