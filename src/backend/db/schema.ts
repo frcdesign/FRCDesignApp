@@ -208,10 +208,13 @@ export const favorites = sqliteTable(
     (t) => [unique().on(t.userId, t.libraryId, t.insertableId)]
 );
 
-/** One row per user and insertable, moved to the front by each insert. */
+/** One row per user, insertable and configuration, moved to the front by each insert. */
 export const recentInserts = sqliteTable(
     "recent_inserts",
     {
+        id: text("id")
+            .primaryKey()
+            .$defaultFn(() => crypto.randomUUID()),
         userId: text("user_id").notNull(),
         libraryId: libraryId().references(() => libraries.id),
         insertableId: text("insertable_id")
@@ -221,10 +224,12 @@ export const recentInserts = sqliteTable(
         selection: text("selection", {
             mode: "json"
         }).$type<PartialSelection | null>(),
+        // `canonicalText` of the selection, so one configuration typed two ways is one row.
+        configuration: text("configuration").notNull(),
         insertedAt: integer("inserted_at", { mode: "timestamp_ms" }).notNull()
     },
     (t) => [
-        primaryKey({ columns: [t.userId, t.insertableId] }),
+        unique().on(t.userId, t.insertableId, t.configuration),
         index("recent_inserts_user_library_idx").on(
             t.userId,
             t.libraryId,

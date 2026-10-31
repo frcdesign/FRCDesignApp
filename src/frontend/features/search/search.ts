@@ -27,7 +27,8 @@ const MAX_HITS = 50;
 export interface SearchFilters {
     groupId?: string;
     vendors?: Vendor[];
-    isFavorite?: boolean;
+    /** Only these, for a list searched within itself: favorites, recents. */
+    insertableIds?: Set<string>;
 }
 
 export interface SearchHit {
@@ -60,13 +61,11 @@ export interface SearchArgs {
     searchDb: MiniSearch<SearchDocument>;
     query?: string;
     filters?: SearchFilters;
-    /** Required by an `isFavorite` filter, which matches against it. */
-    favoritedInsertableIds?: Set<string>;
     /** @default false */
     showHidden?: boolean;
     /**
-     * Off for favorites, which name one configuration: other configurations'
-     * fields would pull them up.
+     * Off for favorites and recents, whose rows each name one configuration:
+     * other configurations' fields would pull them up.
      * @default true
      */
     searchConfigurations?: boolean;
@@ -77,7 +76,6 @@ export function doSearch(args: SearchArgs): SearchResult {
         searchDb,
         query,
         filters,
-        favoritedInsertableIds,
         showHidden,
         searchConfigurations = true
     } = args;
@@ -107,10 +105,11 @@ export function doSearch(args: SearchArgs): SearchResult {
                 return false;
             }
 
-            if (filters?.isFavorite) {
-                if (!favoritedInsertableIds?.has(searchResult.id)) {
-                    return false;
-                }
+            if (
+                filters?.insertableIds &&
+                !filters.insertableIds.has(searchResult.id)
+            ) {
+                return false;
             }
 
             let filteredByGroup = false;

@@ -25,14 +25,17 @@ import { MenuSection } from "../../../components/app-menu";
 import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
 import { openCannotDeriveAssemblyAlert } from "../../../components/alerts";
 import { useRemoveRecentMutation } from "../queries";
+import { type SearchHit } from "../../search/search";
 
 interface RecentCardProps {
     insertable: InsertableOut;
     recent: RecentInsert;
+    /** Set when a search found this row, to underline what matched. */
+    searchHit?: SearchHit;
 }
 
 export function RecentCard(props: RecentCardProps): ReactNode {
-    const { insertable, recent } = props;
+    const { insertable, recent, searchHit } = props;
 
     const favorite = useFavorite(insertable.id);
     const isHidden = useIsInsertableHidden(insertable);
@@ -44,9 +47,10 @@ export function RecentCard(props: RecentCardProps): ReactNode {
         return null;
     }
 
-    // The part number of the configuration last inserted, matching the thumbnail.
+    // From the row's own configuration, so it matches the thumbnail. Only
+    // title underlining comes from the search.
     const rowMatch: RowMatch = {
-        positions: [],
+        positions: searchHit?.positions ?? [],
         partNumber: recent.record?.partNumber,
         partName: recent.record?.name,
         url: recent.record?.url
@@ -132,7 +136,7 @@ function RecentMenuItems(props: RecentMenuItemsProps): ReactNode {
             <MenuSection label="Recently used">
                 <Menu.Item
                     leftSection={<XIcon />}
-                    onClick={() => removeRecentMutation.mutate(insertable.id)}
+                    onClick={() => removeRecentMutation.mutate(recent.id)}
                 >
                     Remove
                 </Menu.Item>

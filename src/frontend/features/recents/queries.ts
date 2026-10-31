@@ -6,7 +6,7 @@ import { getAccessDataQuery, useIsSignedIn } from "../auth/access-level";
 import { useLibraryId } from "../../lib/library";
 import { queryClient } from "../../lib/query-client";
 import { recentsQueryKey } from "../../lib/query-keys";
-import { toInsertablePath, toLibraryPath } from "../../lib/api-paths";
+import { toLibraryPath, toRecentPath } from "../../lib/api-paths";
 import { getAppErrorHandler } from "../../lib/errors";
 import { patchQuery } from "../../lib/query-cache";
 
@@ -49,16 +49,11 @@ export function useRemoveRecentMutation() {
     const queryKey = recentsQueryKey(libraryId);
     return useMutation({
         mutationKey: ["remove-recent"],
-        mutationFn: (insertableId: string) =>
-            apiDelete(
-                "/recents" +
-                    toLibraryPath(libraryId) +
-                    toInsertablePath(insertableId)
-            ),
-        onMutate: (insertableId: string) =>
+        mutationFn: (recentId: string) => apiDelete(toRecentPath(recentId)),
+        onMutate: (recentId: string) =>
             patchQuery(queryKey, (data: RecentsData) => {
                 data.recents = data.recents.filter(
-                    (recent) => recent.insertableId !== insertableId
+                    (recent) => recent.id !== recentId
                 );
             }),
         onError: getAppErrorHandler(

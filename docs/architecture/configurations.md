@@ -70,7 +70,8 @@ link reopens it.
   `DEFAULT_CONFIGURATION_KEY` is the empty string.
 
 Comparing or counting values (analytics, "is this the default") goes through
-`canonicalValue` / `canonicalValues`.
+`canonicalValue` / `canonicalValues`. `canonicalText` is the same values as one
+string, for a D1 column that tells configurations apart (recents).
 
 ## Flows
 

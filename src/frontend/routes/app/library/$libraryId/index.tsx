@@ -115,7 +115,7 @@ function useHomeSections(): Section[] {
 
     // The differing `value` remounts the slot when search starts or ends.
     if (searchQuery) {
-        return needsSignIn ? [search] : [favorites, search];
+        return needsSignIn ? [search] : [favorites, recents, search];
     }
     // Both are saved to an Onshape account, so signed out they have nothing to show.
     return needsSignIn ? [library] : [favorites, recents, library];

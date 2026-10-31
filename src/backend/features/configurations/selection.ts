@@ -110,6 +110,22 @@ export function canonicalValues(
     return values;
 }
 
+/**
+ * {@link canonicalValues} as one string, for a column that tells configurations
+ * apart. Ordered by parameter id, so a reload that reorders parameters agrees.
+ */
+export function canonicalText(
+    selection: Selection,
+    parameters: ConfigurationParameter[]
+): string {
+    const values = canonicalValues(selection, parameters);
+    return JSON.stringify(
+        Object.keys(values)
+            .sort()
+            .map((id) => [id, values[id]])
+    );
+}
+
 /** Whether a value is the parameter's default, however either is spelled. */
 function isDefault(parameter: ConfigurationParameter, value: string): boolean {
     return (

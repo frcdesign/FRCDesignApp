@@ -1,7 +1,10 @@
 import { env } from "cloudflare:workers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { eq } from "drizzle-orm";
-import { insertables, recentInserts } from "../../db/schema";
+import { configurations, insertables, recentInserts } from "../../db/schema";
+import { type ConfigurationParameter } from "../configurations/contract";
+import { toSelection } from "../configurations/selection";
+import { quantityParam } from "../../../__test_utils__/configuration-fixtures";
 import { getDb } from "../../db/client";
 import * as PartStudioEndpoints from "../../lib/onshape/endpoints/part-studios";
 import { MAX_RECENTS, type RecentsData } from "./contract";
@@ -61,6 +64,24 @@ function writeRecent(
             insertableId,
             selection: undefined,
             parameters: []
+        },
+        new Date(insertedAt)
+    );
+}
+
+function writeConfigured(
+    selection: Record<string, string>,
+    insertedAt: number,
+    parameters: ConfigurationParameter[] = TEST_PARAMETERS
+) {
+    return writeRecentInsert(
+        db,
+        TEST_USER_ID,
+        {
+            libraryId: TEST_LIBRARY_ID,
+            insertableId: TEST_PART_STUDIO_ID,
+            selection: toSelection(selection, parameters),
+            parameters
         },
         new Date(insertedAt)
     );
@@ -139,28 +160,65 @@ describe("recents routes", () => {
         ]);
     });
 
-    it("keeps the selection last inserted", async () => {
+    it("keeps each configuration of a part as its own row", async () => {
         await seedPartStudio(db);
         await seedConfiguration(db);
-        const write = (value: string, at: number) =>
-            writeRecentInsert(
-                db,
-                TEST_USER_ID,
-                {
-                    libraryId: TEST_LIBRARY_ID,
-                    insertableId: TEST_PART_STUDIO_ID,
-                    selection: { boolean: value },
-                    parameters: TEST_PARAMETERS
-                },
-                new Date(at)
-            );
 
-        await write("false", 1000);
-        await write("true", 2000);
+        await writeConfigured({ boolean: "false" }, 1000);
+        await writeConfigured({ boolean: "true" }, 2000);
 
         const { recents } = await getRecents();
-        expect(recents).toHaveLength(1);
-        expect(recents[0].selection).toEqual({ boolean: "true" });
+        expect(recents.map((recent) => recent.selection)).toEqual([
+            { boolean: "true" },
+            { boolean: "false" }
+        ]);
+    });
+
+    it("moves a configuration inserted again to the front", async () => {
+        await seedPartStudio(db);
+        await seedConfiguration(db);
+
+        await writeConfigured({ boolean: "false" }, 1000);
+        await writeConfigured({ boolean: "true" }, 2000);
+        await writeConfigured({ boolean: "false" }, 3000);
+
+        const { recents } = await getRecents();
+        expect(recents.map((recent) => recent.selection)).toEqual([
+            { boolean: "false" },
+            { boolean: "true" }
+        ]);
+    });
+
+    it("treats one value typed two ways as one configuration", async () => {
+        await seedPartStudio(db);
+        const parameters = [quantityParam("length")];
+        await db
+            .insert(configurations)
+            .values({ insertableId: TEST_PART_STUDIO_ID, parameters });
+
+        await writeConfigured({ length: "5 in" }, 1000, parameters);
+        await writeConfigured({ length: "(2 + 3) in" }, 2000, parameters);
+
+        const { recents } = await getRecents();
+        // Kept as it was typed last.
+        expect(recents.map((recent) => recent.selection)).toEqual([
+            { length: "(2 + 3) in" }
+        ]);
+    });
+
+    it("shows one row for configurations a reload made the same", async () => {
+        await seedPartStudio(db);
+        await seedConfiguration(db);
+        await writeConfigured({ boolean: "false" }, 1000);
+        await writeConfigured({ boolean: "true" }, 2000);
+
+        // The parameter that told them apart is gone.
+        await db
+            .update(configurations)
+            .set({ parameters: [] })
+            .where(eq(configurations.insertableId, TEST_PART_STUDIO_ID));
+
+        expect(recentIds(await getRecents())).toEqual([TEST_PART_STUDIO_ID]);
     });
 
     it(`keeps only the ${MAX_RECENTS} most recent`, async () => {
@@ -217,19 +275,40 @@ describe("recents routes", () => {
         expect(await db.select().from(recentInserts).all()).toEqual([]);
     });
 
-    it("DELETE removes one of the caller's recents", async () => {
+    it("DELETE removes one configuration, leaving the part's others", async () => {
         await seedPartStudio(db);
-        await seedAssembly(db);
-        await writeRecent(TEST_PART_STUDIO_ID, 1000);
-        await writeRecent(TEST_ASSEMBLY_ID, 2000);
+        await seedConfiguration(db);
+        await writeConfigured({ boolean: "false" }, 1000);
+        await writeConfigured({ boolean: "true" }, 2000);
+        const [newest] = (await getRecents()).recents;
 
         const res = await createTestApp().request(
-            `${recentsUrl}/insertable/${TEST_ASSEMBLY_ID}`,
+            `/api/recent/${newest.id}`,
             jsonRequest("DELETE"),
             env
         );
         expect(res.status).toBe(200);
-        expect(recentIds(await getRecents())).toEqual([TEST_PART_STUDIO_ID]);
+
+        const { recents } = await getRecents();
+        expect(recents.map((recent) => recent.selection)).toEqual([
+            { boolean: "false" }
+        ]);
+    });
+
+    it("DELETE leaves another user's recent alone", async () => {
+        await seedPartStudio(db);
+        await writeRecent(TEST_PART_STUDIO_ID, 1000, "someone-else");
+        const [theirs] = (await getRecents("someone-else")).recents;
+
+        await createTestApp().request(
+            `/api/recent/${theirs.id}`,
+            jsonRequest("DELETE"),
+            env
+        );
+
+        expect(recentIds(await getRecents("someone-else"))).toEqual([
+            TEST_PART_STUDIO_ID
+        ]);
     });
 
     it("requires sign-in", async () => {

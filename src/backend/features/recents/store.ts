@@ -8,6 +8,7 @@ import {
     type Selection
 } from "../configurations/contract";
 import { toRowSelection } from "../configurations/stored-selections";
+import { canonicalText } from "../configurations/selection";
 import { MAX_RECENTS } from "./contract";
 
 export interface RecentInsertEvent {
@@ -39,7 +40,7 @@ export async function recordRecentInsert(
     }
 }
 
-/** Moves the insertable to the front, then drops what falls past {@link MAX_RECENTS}. */
+/** Moves the configuration to the front, then drops what falls past {@link MAX_RECENTS}. */
 export async function writeRecentInsert(
     db: Db,
     userId: string,
@@ -50,8 +51,9 @@ export async function writeRecentInsert(
     const selection = event.selection
         ? toRowSelection(event.selection, parameters)
         : null;
+    const configuration = toConfiguration(event.selection, parameters);
     const kept = db
-        .select({ insertableId: recentInserts.insertableId })
+        .select({ id: recentInserts.id })
         .from(recentInserts)
         .where(ofUserInLibrary(userId, libraryId))
         .orderBy(desc(recentInserts.insertedAt))
@@ -59,9 +61,21 @@ export async function writeRecentInsert(
     await db.batch([
         db
             .insert(recentInserts)
-            .values({ userId, libraryId, insertableId, selection, insertedAt })
+            .values({
+                userId,
+                libraryId,
+                insertableId,
+                selection,
+                configuration,
+                insertedAt
+            })
             .onConflictDoUpdate({
-                target: [recentInserts.userId, recentInserts.insertableId],
+                target: [
+                    recentInserts.userId,
+                    recentInserts.insertableId,
+                    recentInserts.configuration
+                ],
+                // As typed this time, though it compares equal to the last.
                 set: { selection, insertedAt }
             }),
         db
@@ -69,7 +83,7 @@ export async function writeRecentInsert(
             .where(
                 and(
                     ofUserInLibrary(userId, libraryId),
-                    notInArray(recentInserts.insertableId, kept)
+                    notInArray(recentInserts.id, kept)
                 )
             )
     ]);
@@ -80,4 +94,12 @@ export function ofUserInLibrary(userId: string, libraryId: LibraryId) {
         eq(recentInserts.userId, userId),
         eq(recentInserts.libraryId, libraryId)
     );
+}
+
+/** What tells two of a part's recents apart; empty for a part with nothing to configure. */
+export function toConfiguration(
+    selection: Selection | undefined,
+    parameters: ConfigurationParameter[]
+): string {
+    return selection ? canonicalText(selection, parameters) : "";
 }

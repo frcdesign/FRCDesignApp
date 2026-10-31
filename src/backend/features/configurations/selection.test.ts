@@ -8,6 +8,7 @@ import {
 } from "./contract";
 import {
     appliedValues,
+    canonicalText,
     canonicalValues,
     findRecord,
     formatValue,
@@ -174,6 +175,27 @@ describe("canonicalValues", () => {
     it("spells two expressions of one value alike", () => {
         expect(canonicalValues(select({ length: "5 in" }), parameters)).toEqual(
             canonicalValues(select({ length: "(2 + 3) in" }), parameters)
+        );
+    });
+});
+
+describe("canonicalText", () => {
+    it("agrees for one value typed two ways", () => {
+        expect(canonicalText(select({ length: "5 in" }), parameters)).toBe(
+            canonicalText(select({ length: "(2 + 3) in" }), parameters)
+        );
+    });
+
+    it("tells different values apart", () => {
+        expect(canonicalText(select({ size: "s" }), parameters)).not.toBe(
+            canonicalText(select({ size: "l" }), parameters)
+        );
+    });
+
+    it("ignores the order parameters are declared in", () => {
+        const reordered = [length, flag, size];
+        expect(canonicalText(select({ size: "l" }), parameters)).toBe(
+            canonicalText(select({ size: "l" }, reordered), reordered)
         );
     });
 });

@@ -107,10 +107,14 @@ function FavoriteSearchResults(props: FavoriteSearchResultsProps): ReactNode {
         searchDb: searchDbQuery.data,
         insertables,
         query,
-        filters: { vendors: vendorFilters, isFavorite: true },
-        favoritedInsertableIds: new Set(
-            Object.values(favoritesData.favorites).map((f) => f.insertableId)
-        ),
+        filters: {
+            vendors: vendorFilters,
+            insertableIds: new Set(
+                Object.values(favoritesData.favorites).map(
+                    (f) => f.insertableId
+                )
+            )
+        },
         // A favorite is one configuration, so other configurations' fields mustn't match.
         searchConfigurations: false,
         showHidden

@@ -2,10 +2,10 @@ import { and, desc, eq } from "drizzle-orm";
 import { cacheMiddleware } from "../../lib/cache";
 import { getApp } from "../../lib/context";
 import {
-    getInsertableParam,
     getLibraryParam,
-    insertableRoute,
-    libraryRoute
+    getRecentParam,
+    libraryRoute,
+    recentRoute
 } from "../../lib/route-params";
 import { getDb, type Db } from "../../db/client";
 import { recentInserts } from "../../db/schema";
@@ -15,8 +15,8 @@ import {
 } from "../configurations/stored-selections";
 import type { LibraryId } from "../library/library-id";
 import { requireSignInMiddleware } from "../auth/guards";
-import { MAX_RECENTS, type RecentsData } from "./contract";
-import { ofUserInLibrary } from "./store";
+import { MAX_RECENTS, type RecentInsert, type RecentsData } from "./contract";
+import { ofUserInLibrary, toConfiguration } from "./store";
 
 export const recentRoutes = getApp();
 
@@ -38,16 +38,33 @@ async function getRecents(
         rows.map((row) => row.insertableId)
     );
 
-    return {
-        recents: rows.map((row) => ({
+    const recents: RecentInsert[] = [];
+    // Measured again: after a reload, two rows' stored identities can name one configuration.
+    const seen = new Set<string>();
+    for (const row of rows) {
+        const configuration = configurationsById.get(row.insertableId);
+        const resolved = resolveStoredSelection(
+            row.selection ?? undefined,
+            configuration
+        );
+        const identity =
+            row.insertableId +
+            toConfiguration(
+                resolved.selection,
+                configuration?.parameters ?? []
+            );
+        if (seen.has(identity)) {
+            continue;
+        }
+        seen.add(identity);
+        recents.push({
+            id: row.id,
             insertableId: row.insertableId,
-            ...resolveStoredSelection(
-                row.selection ?? undefined,
-                configurationsById.get(row.insertableId)
-            ),
+            ...resolved,
             insertedAt: row.insertedAt.getTime()
-        }))
-    };
+        });
+    }
+    return { recents };
 }
 
 /** GET /api/recents/library/:libraryId */
@@ -62,21 +79,18 @@ recentRoutes.get(
     }
 );
 
-/** DELETE /api/recents/library/:libraryId/insertable/:insertableId */
-recentRoutes.delete(
-    "/recents" + libraryRoute() + insertableRoute(),
-    requireSignInMiddleware,
-    async (c) => {
-        const userId = await c.var.getUserId();
-        const db = getDb(c.env.DB);
-        await db
-            .delete(recentInserts)
-            .where(
-                and(
-                    ofUserInLibrary(userId, getLibraryParam(c)),
-                    eq(recentInserts.insertableId, getInsertableParam(c))
-                )
-            );
-        return c.json({ success: true });
-    }
-);
+/** DELETE /api/recent/:recentId */
+recentRoutes.delete(recentRoute(), requireSignInMiddleware, async (c) => {
+    const userId = await c.var.getUserId();
+    const db = getDb(c.env.DB);
+    // Scoped to the owner, so another user's recent matches nothing.
+    await db
+        .delete(recentInserts)
+        .where(
+            and(
+                eq(recentInserts.id, getRecentParam(c)),
+                eq(recentInserts.userId, userId)
+            )
+        );
+    return c.json({ success: true });
+});

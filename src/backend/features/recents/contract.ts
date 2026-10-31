@@ -7,9 +7,11 @@ import {
 /** How many a user keeps per library; older ones are dropped on insert. */
 export const MAX_RECENTS = 100;
 
+/** One configuration of one insertable, as it was last inserted. */
 export interface RecentInsert {
+    id: string;
     insertableId: string;
-    /** What was last inserted; absent for an insertable with nothing to configure. */
+    /** What was inserted; absent for an insertable with nothing to configure. */
     selection?: Selection;
     /** Derived per response, since a reload can move the defaults. */
     configurationKey?: ConfigurationKey;

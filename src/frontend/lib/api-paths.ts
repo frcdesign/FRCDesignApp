@@ -13,6 +13,10 @@ export function toFavoritePath(favoriteId: string): string {
     return `/favorite/${favoriteId}`;
 }
 
+export function toRecentPath(recentId: string): string {
+    return `/recent/${recentId}`;
+}
+
 export function toWorkspaceLinkPath(linkId: string): string {
     return `/workspace-link/${linkId}`;
 }
