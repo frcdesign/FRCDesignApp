@@ -7,6 +7,8 @@ const WEBHOOK = "https://discord.com/api/webhooks/1/token";
 function report(overrides: Partial<Report> = {}): Report {
     return {
         id: "report-1",
+        title: "Bearing's part number",
+        tagIds: [],
         topic: FeedbackTopic.FRC_DESIGN_LIB,
         category: FeedbackCategory.METADATA,
         source: FeedbackSource.PART,
@@ -33,11 +35,15 @@ function fieldValue(
 }
 
 describe("buildReportMessage", () => {
-    it("names the kind and the part, and links to it", () => {
+    it("titles the thread as the reporter did, and links to the part", () => {
         const message = buildReportMessage(report());
         const [embed] = message.embeds;
 
-        expect(embed.title).toBe("Missing or incorrect metadata: Bearing");
+        expect(message.thread_name).toBe("Bearing's part number");
+        expect(embed.title).toBe("Bearing's part number");
+        expect(fieldValue(message, "Category")).toBe(
+            "Missing or incorrect metadata"
+        );
         expect(embed.url).toBe("https://cad.onshape.com/documents/d/v/v/e/e");
         expect(embed.description).toBe("The part number is wrong.");
         expect(fieldValue(message, "Part")).toBe("Bearings / Bearing");
@@ -86,7 +92,6 @@ describe("buildReportMessage", () => {
         expect(error).toContain("Failed to insert.");
         expect(error).toContain("detail: '''boom'''");
         expect(message.embeds[0].description).toBe("_No description given._");
-        expect(message.embeds[0].title).toBe("Bug: FRCDesignApp");
     });
 
     it("stays within Discord's limits however long the parts are", () => {
@@ -123,6 +128,7 @@ describe("buildReportMessage", () => {
 describe("postToDiscord", () => {
     afterEach(() => {
         vi.unstubAllGlobals();
+        vi.restoreAllMocks();
     });
 
     function stubFetch(...responses: Response[]) {
@@ -149,9 +155,44 @@ describe("postToDiscord", () => {
         expect(fetch).toHaveBeenCalledTimes(1);
         const url = fetch.mock.calls[0][0] as URL;
         expect(url.searchParams.get("wait")).toBe("true");
-        expect(sentBody(fetch, 0).thread_name).toBe(
-            "Missing or incorrect metadata: Bearing"
+        expect(sentBody(fetch, 0).thread_name).toBe("Bearing's part number");
+    });
+
+    it("files the thread under the forum's tags", async () => {
+        const fetch = stubFetch(new Response("{}", { status: 200 }));
+
+        await postToDiscord(
+            WEBHOOK,
+            buildReportMessage(report({ tagIds: ["t1", "t2"] }))
         );
+
+        expect(sentBody(fetch, 0).applied_tags).toEqual(["t1", "t2"]);
+    });
+
+    it("sends no tags to a forum with none configured", async () => {
+        const fetch = stubFetch(new Response("{}", { status: 200 }));
+
+        await postToDiscord(WEBHOOK, buildReportMessage(report()));
+
+        expect(sentBody(fetch, 0)).not.toHaveProperty("applied_tags");
+    });
+
+    // A stale tag id must not lose the report.
+    it("sends a report again untagged when Discord refuses its tags", async () => {
+        vi.spyOn(console, "error").mockImplementation(() => undefined);
+        const fetch = stubFetch(
+            Response.json({ code: 50035 }, { status: 400 }),
+            new Response("{}", { status: 200 })
+        );
+
+        await postToDiscord(
+            WEBHOOK,
+            buildReportMessage(report({ tagIds: ["stale"] }))
+        );
+
+        expect(fetch).toHaveBeenCalledTimes(2);
+        expect(sentBody(fetch, 1)).not.toHaveProperty("applied_tags");
+        expect(sentBody(fetch, 1).thread_name).toBe("Bearing's part number");
     });
 
     it("throws when Discord refuses the post", async () => {

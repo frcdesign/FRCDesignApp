@@ -45,17 +45,35 @@ and replies happen in Discord.
 
 ### Topics and channels
 
-| Topic           | Channel secret                       | Library |
-| --------------- | ------------------------------------ | ------- |
-| FRCDesignApp    | `DISCORD_APP_WEBHOOK_URL`            | —       |
-| Version Manager | `DISCORD_APP_WEBHOOK_URL`            | —       |
-| FRCDesignLib    | `DISCORD_FRC_DESIGN_LIB_WEBHOOK_URL` | its own |
-| MKCad           | `DISCORD_FRC_DESIGN_LIB_WEBHOOK_URL` | its own |
-| ConfigLib       | `DISCORD_CONFIG_LIB_WEBHOOK_URL`     | its own |
+| Topic           | Webhook                              | Tag ids                          | Library |
+| --------------- | ------------------------------------ | -------------------------------- | ------- |
+| FRCDesignApp    | `DISCORD_APP_WEBHOOK_URL`            | `DISCORD_APP_TAG_IDS`            | —       |
+| Version Manager | `DISCORD_APP_WEBHOOK_URL`            | `DISCORD_APP_TAG_IDS`            | —       |
+| FRCDesignLib    | `DISCORD_FRC_DESIGN_LIB_WEBHOOK_URL` | `DISCORD_FRC_DESIGN_LIB_TAG_IDS` | its own |
+| MKCad           | `DISCORD_FRC_DESIGN_LIB_WEBHOOK_URL` | `DISCORD_FRC_DESIGN_LIB_TAG_IDS` | its own |
+| ConfigLib       | `DISCORD_CONFIG_LIB_WEBHOOK_URL`     | `DISCORD_CONFIG_LIB_TAG_IDS`     | its own |
 
-Each secret is the webhook url of a Discord forum channel, set per environment with
-`wrangler secret put` and in `.env` locally. A topic whose secret is unset
+Each webhook is a Discord forum channel's, set per environment with
+`wrangler secret put` and in `.env` locally. A topic whose webhook is unset
 refuses reports with a `handled` 503.
+
+### Tags
+
+Each thread is filed under up to three of its forum's tags (`reportTagKeys`):
+its topic's, its type's, and **Error report** when it started from an error.
+A forum's tag ids are JSON keyed by tag key, set like the webhook:
+
+```json
+{ "bug": "1234567890", "feature-request": "…", "error-report": "…" }
+```
+
+The keys are the topic values (`app`, `version-manager`, `frc-design-lib`,
+`mkcad`, `config-lib`), the category values (`bug`, `feature-request`,
+`question`, `part-request`, `organization`, `metadata`, `incorrect-part`,
+`broken-configuration`, `insert-failed`, `thumbnail`, `other`) and
+`error-report`. A key with no id is left untagged, and a value that isn't JSON
+tags nothing. A tag id the forum doesn't have makes Discord refuse the post,
+which then goes again untagged.
 
 ### Where a report starts
 
@@ -64,7 +82,7 @@ The source decides what the form offers and what the report carries
 
 - **General** — **Send feedback** in settings. The reporter picks the topic.
   The app's topics offer bug, feature request, question and other; a library's
-  offer part request, search or organization, bug, feature request and other,
+  offer new part request, search or organization, bug, feature request and other,
   and the form says that a problem with one part is reported from its menu.
 - **Part** — **Report an issue** in a part's menu, on its card or in the
   insert menu. The topic is the part's library. It offers missing or incorrect
@@ -78,14 +96,16 @@ The source decides what the form offers and what the report carries
 
 ### Sending
 
-1. The form sends `{ topic, category, source, message, contact?, part?,
-diagnostics }`. Diagnostics are gathered as it sends: the page url, the build
+1. The form sends `{ topic, category, source, title, message, contact?, part?,
+diagnostics }`. The title is the reporter's, filled in with `suggestTitle`
+   until they write their own: the type and the part or topic ("Broken
+   configuration: Hex Shaft"), or the error they were shown. Diagnostics are gathered as it sends: the page url, the build
    id, the Onshape launch (from `useOnshapeLaunch`, since in-app navigation drops
    it from the url), the level the app is viewed as, the window size, and the
    error.
 2. `feedbackBody` checks that the category belongs to the topic and source,
-   that only a part report names a part, and that only an error report may
-   have no message. Diagnostics are clipped to length rather than refused.
+   that only a part report names a part, that the title fits a thread's name
+   (100 characters), and that only an error report may have no message. Diagnostics are clipped to length rather than refused.
 3. The route resolves the reporter (a user id when signed in, none otherwise)
    and takes a slot from the rate limit.
 4. A part report looks the part up in the topic's library (`findReportedPart`),
@@ -93,7 +113,7 @@ diagnostics }`. Diagnostics are gathered as it sends: the page url, the build
    `onshapeOverrides` and the readable `Name: value` lines from the parameters
    the reporter could see.
 5. `postToDiscord` posts the embed with `?wait=true`, opening a thread named
-   for the report (`thread_name`, the embed's title cut to 100 characters).
+   by the title (`thread_name`) under the report's tags (`applied_tags`).
 6. Once posted, `trackReport` records it in the background, under the id the
    post quotes in its footer.
 7. The form closes with "Report sent. Thank you!", or stays open with the
@@ -143,6 +163,9 @@ parts still in the library, each opening the part's page.
 - **Forum channels only.** Each report gets its own thread to be discussed in,
   so every post names one. A webhook on a plain text channel is not supported:
   Discord documents `thread_name` only for forum and media channels.
+- **Tag ids in configuration.** A webhook can't read its forum's tags; only a
+  bot can. So ids are set beside the webhook, by keys the code owns, and a
+  wrong one costs the tags rather than the report.
 - **Links on cad's domain.** A reporter's company domain means nothing to the
   person reading the report.
 

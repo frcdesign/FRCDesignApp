@@ -41,9 +41,13 @@ FORCE_SIGNED_IN=false
 DISCORD_APP_WEBHOOK_URL=<Webhook for FRCDesignApp and Version Manager reports>
 DISCORD_FRC_DESIGN_LIB_WEBHOOK_URL=<Webhook for FRCDesignLib and MKCad reports>
 DISCORD_CONFIG_LIB_WEBHOOK_URL=<Webhook for ConfigLib reports>
+
+# Each forum's tag ids, as JSON keyed by tag (Optional); see
+# docs/architecture/feedback.md for the keys.
+DISCORD_APP_TAG_IDS={"bug":"<tag id>","feature-request":"<tag id>"}
 ```
 
-In a deployed environment, set the three webhooks as secrets with
+In a deployed environment, set the webhooks and tag ids as secrets with
 `npx wrangler secret put <NAME> --env <environment>`.
 
 ## Onshape OAuth App Setup

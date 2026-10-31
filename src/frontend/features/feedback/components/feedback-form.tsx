@@ -17,6 +17,8 @@ import {
     FeedbackSource,
     FeedbackTopic,
     MAX_FEEDBACK_MESSAGE,
+    MAX_FEEDBACK_TITLE,
+    suggestTitle,
     topicLibrary
 } from "@backend/features/feedback/contract";
 import {
@@ -42,7 +44,8 @@ const MESSAGE_PLACEHOLDERS: Partial<Record<FeedbackCategory, string>> = {
     [FeedbackCategory.BUG]:
         "What did you do, what happened, and what did you expect?",
     [FeedbackCategory.FEATURE_REQUEST]: "What would you like the app to do?",
-    [FeedbackCategory.PART_REQUEST]: "Which part, and where can it be bought?",
+    [FeedbackCategory.PART_REQUEST]:
+        "Which part would you like added? A link to where it's sold helps.",
     [FeedbackCategory.METADATA]:
         "Which field is wrong or missing, and what should it be?",
     [FeedbackCategory.INCORRECT_PART]: "What doesn't match the real part?",
@@ -83,17 +86,30 @@ export function FeedbackForm(props: FeedbackFormProps): ReactNode {
     const category = categories.includes(chosenCategory)
         ? chosenCategory
         : categories[0];
+    // Undefined until edited, so the suggestion follows the topic and type.
+    const [editedTitle, setEditedTitle] = useState<string>();
     const [message, setMessage] = useState("");
     const [contact, setContact] = useState("");
     const [includeConfiguration, setIncludeConfiguration] = useState(true);
 
-    const canSend = message.trim().length > 0 || error !== undefined;
+    const title =
+        editedTitle ??
+        suggestTitle({
+            topic,
+            category,
+            partName: part?.insertable.name,
+            errorShown: error?.shown
+        });
+    const canSend =
+        title.trim().length > 0 &&
+        (message.trim().length > 0 || error !== undefined);
 
     const send = () => {
         sendMutation.mutate({
             topic,
             category,
             source,
+            title: title.trim(),
             message: message.trim(),
             contact: contact.trim() || undefined,
             part: part && {
@@ -150,6 +166,16 @@ export function FeedbackForm(props: FeedbackFormProps): ReactNode {
                     onChange={(value) => {
                         if (value) setChosenCategory(value);
                     }}
+                />
+                <TextInput
+                    label="Title"
+                    description="Names the report's thread in Discord."
+                    required
+                    maxLength={MAX_FEEDBACK_TITLE}
+                    value={title}
+                    onChange={(event) =>
+                        setEditedTitle(event.currentTarget.value)
+                    }
                 />
                 <Textarea
                     label="Details"

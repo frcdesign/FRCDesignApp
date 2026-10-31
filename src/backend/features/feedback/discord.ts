@@ -23,6 +23,10 @@ export interface ReportedPart {
 
 export interface Report {
     id: string;
+    /** The reporter's; names the thread. */
+    title: string;
+    /** The forum's tags to file the thread under. */
+    tagIds: string[];
     topic: FeedbackTopic;
     category: FeedbackCategory;
     source: FeedbackSource;
@@ -58,6 +62,8 @@ export interface DiscordMessage {
     allowed_mentions: { parse: [] };
     /** Every report channel is a forum, which opens each post as a thread named this. */
     thread_name: string;
+    /** The forum's own tag ids; absent when the forum has none configured. */
+    applied_tags?: string[];
 }
 
 /** Discord's limits on an embed. */
@@ -108,12 +114,6 @@ function describeLaunch(
         .filter(([, value]) => value !== undefined && value !== "")
         .map(([key, value]) => `${key}: ${value}`);
     return lines.length ? lines.join("\n") : undefined;
-}
-
-function reportTitle(report: Report): string {
-    const category = FEEDBACK_CATEGORY_LABELS[report.category];
-    const about = report.part?.name ?? FEEDBACK_TOPIC_LABELS[report.topic];
-    return `${category}: ${about}`;
 }
 
 function reportFields(report: Report): DiscordEmbedField[] {
@@ -173,7 +173,7 @@ function embedLength(embed: DiscordEmbed): number {
 }
 
 export function buildReportMessage(report: Report): DiscordMessage {
-    const title = truncate(reportTitle(report), TITLE_LIMIT);
+    const title = truncate(report.title, TITLE_LIMIT);
     const embed: DiscordEmbed = {
         title,
         url: report.part?.url,
@@ -194,11 +194,24 @@ export function buildReportMessage(report: Report): DiscordMessage {
     return {
         embeds: [embed],
         allowed_mentions: { parse: [] },
-        thread_name: truncate(title, THREAD_NAME_LIMIT)
+        thread_name: truncate(title, THREAD_NAME_LIMIT),
+        ...(report.tagIds.length > 0 && { applied_tags: report.tagIds })
     };
 }
 
-/** Opens the report's thread in the topic's forum channel. */
+function send(url: URL, message: DiscordMessage): Promise<Response> {
+    return fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(message)
+    });
+}
+
+/**
+ * Opens the report's thread in the topic's forum channel. A tag id the forum
+ * doesn't have fails the whole post, so a refused tagged post goes again
+ * untagged: a report matters more than its tags.
+ */
 export async function postToDiscord(
     webhookUrl: string,
     message: DiscordMessage
@@ -206,11 +219,16 @@ export async function postToDiscord(
     const url = new URL(webhookUrl);
     // Without it a message Discord drops still answers 204.
     url.searchParams.set("wait", "true");
-    const response = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(message)
-    });
+
+    let response = await send(url, message);
+    if (response.status === HttpStatus.BAD_REQUEST && message.applied_tags) {
+        console.error(
+            "Discord refused a tagged report; sending it untagged",
+            await response.text().catch(() => "")
+        );
+        // Undefined is left out of the JSON.
+        response = await send(url, { ...message, applied_tags: undefined });
+    }
     if (!response.ok) {
         const text = await response.text().catch(() => "");
         throw internalError(

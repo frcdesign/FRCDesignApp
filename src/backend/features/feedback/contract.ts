@@ -47,7 +47,7 @@ export const FEEDBACK_CATEGORY_LABELS: Record<FeedbackCategory, string> = {
     [FeedbackCategory.BUG]: "Bug",
     [FeedbackCategory.FEATURE_REQUEST]: "Feature request",
     [FeedbackCategory.QUESTION]: "Question",
-    [FeedbackCategory.PART_REQUEST]: "Part request",
+    [FeedbackCategory.PART_REQUEST]: "New part request",
     [FeedbackCategory.ORGANIZATION]: "Search or organization",
     [FeedbackCategory.METADATA]: "Missing or incorrect metadata",
     [FeedbackCategory.INCORRECT_PART]: "Incorrect part",
@@ -127,8 +127,30 @@ export function feedbackCategories(
     return topicLibrary(topic) ? LIBRARY_CATEGORIES : APP_CATEGORIES;
 }
 
+interface TitleContext {
+    topic: FeedbackTopic;
+    category: FeedbackCategory;
+    /** The part a part report names. */
+    partName?: string;
+    /** What an error report's user was shown. */
+    errorShown?: string;
+}
+
+/** What the form fills the title in with until the reporter writes their own. */
+export function suggestTitle(context: TitleContext): string {
+    const { topic, category, partName, errorShown } = context;
+    const title = errorShown
+        ? errorShown.replace(/\.$/, "")
+        : `${FEEDBACK_CATEGORY_LABELS[category]}: ${partName ?? FEEDBACK_TOPIC_LABELS[topic]}`;
+    return title.length <= MAX_FEEDBACK_TITLE
+        ? title
+        : title.slice(0, MAX_FEEDBACK_TITLE - 1) + "…";
+}
+
 /** Discord's own cap on a message is 4096; this leaves room for the rest. */
 export const MAX_FEEDBACK_MESSAGE = 2000;
+/** The title names the report's forum thread, which Discord caps at 100. */
+export const MAX_FEEDBACK_TITLE = 100;
 const MAX_CONTACT = 200;
 const MAX_FIELD = 1000;
 const MAX_ID = 100;
@@ -178,6 +200,7 @@ export const feedbackBody = z
         topic: z.enum(FeedbackTopic),
         category: z.enum(FeedbackCategory),
         source: z.enum(FeedbackSource),
+        title: z.string().trim().min(1).max(MAX_FEEDBACK_TITLE),
         /** May be empty only for an error, which says something on its own. */
         message: z.string().trim().max(MAX_FEEDBACK_MESSAGE),
         contact: z.string().trim().max(MAX_CONTACT).optional(),

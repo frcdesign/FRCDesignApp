@@ -47,6 +47,7 @@ function body(overrides: Partial<FeedbackIn> = {}): FeedbackIn {
         topic: FeedbackTopic.APP,
         category: FeedbackCategory.BUG,
         source: FeedbackSource.GENERAL,
+        title: "Something broke",
         message: "Something broke.",
         diagnostics: DIAGNOSTICS,
         ...overrides
@@ -155,7 +156,10 @@ describe("POST /api/feedback", () => {
         expect(res.status).toBe(200);
         const [, message] = post.mock.calls[0];
         const [embed] = message.embeds;
-        expect(embed.title).toBe("Broken configuration: Test PARTSTUDIO");
+        expect(embed.title).toBe("Something broke");
+        expect(embed.fields.find((field) => field.name === "Part")?.value).toBe(
+            "Test Group / Test PARTSTUDIO"
+        );
         expect(embed.url).toContain(`/e/${TEST_PART_STUDIO_PATH.elementId}`);
         expect(embed.url).toContain("configuration=boolean%3Dfalse");
         expect(
@@ -210,6 +214,8 @@ describe("POST /api/feedback", () => {
             body({ category: FeedbackCategory.PART_REQUEST })
         ],
         ["no message", body({ message: "  " })],
+        ["no title", body({ title: "  " })],
+        ["a title too long for a thread", body({ title: "x".repeat(101) })],
         [
             "a part outside a part report",
             body({ part: { insertableId: TEST_PART_STUDIO_ID } })
@@ -241,6 +247,45 @@ describe("POST /api/feedback", () => {
         expect(
             message.embeds[0].fields.find((field) => field.name === "Error")
         ).toBeDefined();
+    });
+
+    it("files the thread under the forum's tags for its topic, type and source", async () => {
+        const res = await send(
+            body({
+                topic: FeedbackTopic.MKCAD,
+                category: FeedbackCategory.BUG,
+                source: FeedbackSource.ERROR
+            }),
+            {
+                bindings: {
+                    ...WEBHOOKS,
+                    DISCORD_FRC_DESIGN_LIB_TAG_IDS: JSON.stringify({
+                        mkcad: "tag-mkcad",
+                        bug: "tag-bug",
+                        "error-report": "tag-error",
+                        "frc-design-lib": "tag-frc"
+                    })
+                }
+            }
+        );
+
+        expect(res.status).toBe(200);
+        expect(post.mock.calls[0][1].applied_tags).toEqual([
+            "tag-mkcad",
+            "tag-bug",
+            "tag-error"
+        ]);
+    });
+
+    it("sends a report untagged when its forum's tag ids are malformed", async () => {
+        vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+        const res = await send(body(), {
+            bindings: { ...WEBHOOKS, DISCORD_APP_TAG_IDS: "{not json" }
+        });
+
+        expect(res.status).toBe(200);
+        expect(post.mock.calls[0][1]).not.toHaveProperty("applied_tags");
     });
 
     it("takes a report from somebody who isn't signed in", async () => {

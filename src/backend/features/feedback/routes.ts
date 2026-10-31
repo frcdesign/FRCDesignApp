@@ -6,7 +6,7 @@ import { getDb } from "../../db/client";
 import { isSignedIn } from "../auth/request-auth";
 import { trackReport } from "../analytics/tracking";
 import { feedbackBody, type FeedbackOut, topicLibrary } from "./contract";
-import { getWebhookUrl } from "./channels";
+import { getChannel, reportTagIds, reportTagKeys } from "./channels";
 import { buildReportMessage, postToDiscord } from "./discord";
 import { findReportedPart } from "./reported-part";
 import { reporterKey, takeReportSlot } from "./rate-limit";
@@ -19,8 +19,8 @@ export const feedbackRoutes = getApp();
  */
 feedbackRoutes.post("/feedback", validate("json", feedbackBody), async (c) => {
     const body = c.req.valid("json");
-    const webhookUrl = getWebhookUrl(c.env, body.topic);
-    if (!webhookUrl) {
+    const channel = getChannel(c.env, body.topic);
+    if (!channel) {
         throw handledError(
             "Reports can't be sent right now. Please post in the FRCDesign Discord instead.",
             HttpStatus.SERVICE_UNAVAILABLE
@@ -57,9 +57,14 @@ feedbackRoutes.post("/feedback", validate("json", feedbackBody), async (c) => {
 
     const reportId = crypto.randomUUID();
     await postToDiscord(
-        webhookUrl,
+        channel.webhookUrl,
         buildReportMessage({
             id: reportId,
+            title: body.title,
+            tagIds: reportTagIds(
+                channel,
+                reportTagKeys(body.topic, body.category, body.source)
+            ),
             topic: body.topic,
             category: body.category,
             source: body.source,

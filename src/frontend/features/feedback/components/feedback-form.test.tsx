@@ -71,7 +71,7 @@ describe("FeedbackForm", () => {
         expect(type.value).toBe("Bug");
         await user.click(type);
         expect(
-            screen.getByRole("option", { name: "Part request" })
+            screen.getByRole("option", { name: "New part request" })
         ).toBeTruthy();
     });
 
@@ -96,10 +96,52 @@ describe("FeedbackForm", () => {
             topic: FeedbackTopic.VERSION_MANAGER,
             category: FeedbackCategory.BUG,
             source: FeedbackSource.GENERAL,
+            title: "Bug: Version Manager",
             message: "Pull is slow."
         });
         expect(sent().part).toBeUndefined();
         expect(sent().diagnostics.url).toBe(window.location.href);
+    });
+
+    it("suggests a title that follows the type until it is written over", async () => {
+        const user = userEvent.setup();
+        renderWithProviders(
+            <FeedbackForm
+                initialTopic={FeedbackTopic.FRC_DESIGN_LIB}
+                source={FeedbackSource.PART}
+                part={{ insertable: INSERTABLE }}
+            />
+        );
+        const title = screen.getByRole<HTMLInputElement>("textbox", {
+            name: /Title/
+        });
+        expect(title.value).toBe("Missing or incorrect metadata: Hex shaft");
+
+        await user.click(screen.getByRole("combobox", { name: "Type" }));
+        await user.click(
+            screen.getByRole("option", { name: "Broken configuration" })
+        );
+        expect(title.value).toBe("Broken configuration: Hex shaft");
+
+        await user.clear(title);
+        await user.type(
+            screen.getByRole("textbox", { name: /Details/ }),
+            "Sizes over 1 in fail."
+        );
+        // A title is required, so clearing it can't send.
+        expect(screen.getByRole("button", { name: "Send" })).toHaveProperty(
+            "disabled",
+            true
+        );
+
+        await user.type(title, "Large sizes fail");
+        await user.click(screen.getByRole("combobox", { name: "Type" }));
+        await user.click(screen.getByRole("option", { name: "Insert fails" }));
+        await user.click(screen.getByRole("button", { name: "Send" }));
+        expect(sent()).toMatchObject({
+            title: "Large sizes fail",
+            category: FeedbackCategory.INSERT_FAILED
+        });
     });
 
     it("sends a part's configuration unless it is left out", async () => {
