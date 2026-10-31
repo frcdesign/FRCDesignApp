@@ -1,6 +1,6 @@
 import { RequireAccessLevel } from "../features/auth/components/require-access";
 import { PageError } from "./app-notice";
-import { DISCORD_INVITE_URL } from "../lib/url";
+import { DISCORD_INVITE_URL } from "@backend/features/feedback/discord-forums";
 import { ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Button } from "@mantine/core";

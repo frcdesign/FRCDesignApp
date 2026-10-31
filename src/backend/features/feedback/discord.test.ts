@@ -13,7 +13,7 @@ function report(overrides: Partial<Report> = {}): Report {
         category: FeedbackCategory.METADATA,
         source: FeedbackSource.PART,
         message: "The part number is wrong.",
-        signedIn: true,
+        userId: "user-1",
         userAgent: "Test browser",
         part: {
             name: "Bearing",
@@ -56,16 +56,16 @@ describe("buildReportMessage", () => {
         expect(message.allowed_mentions).toEqual({ parse: [] });
     });
 
-    it("says whether the reporter was signed in, but not who they are", () => {
-        expect(fieldValue(buildReportMessage(report()), "Signed in")).toBe(
-            "Yes"
+    it("names the reporter's Onshape user, or that they weren't signed in", () => {
+        expect(fieldValue(buildReportMessage(report()), "Onshape user")).toBe(
+            "user-1"
         );
         expect(
             fieldValue(
-                buildReportMessage(report({ signedIn: false })),
-                "Signed in"
+                buildReportMessage(report({ userId: undefined })),
+                "Onshape user"
             )
-        ).toBe("No");
+        ).toBe("Not signed in");
     });
 
     it("says what kind of tab the app was launched in, never which", () => {

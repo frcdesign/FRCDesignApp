@@ -1,49 +1,49 @@
-import { Button, Group, Text } from "@mantine/core";
+import { Button } from "@mantine/core";
 import { DiscordLogoIcon } from "@phosphor-icons/react";
 import { type ReactNode } from "react";
-import { type FeedbackOut } from "@backend/features/feedback/contract";
+import { type FeedbackTopic } from "@backend/features/feedback/contract";
+import {
+    forumInvite,
+    topicForum
+} from "@backend/features/feedback/discord-forums";
 import { AppModalBody, AppModalFooter } from "../../../components/app-modal";
-import { Callout } from "../../../components/callout";
+import { SectionNotice } from "../../../components/app-notice";
+import { StatusIcon } from "../../../components/status-icon";
 import { Status } from "../../../lib/status";
-import { DISCORD_INVITE_URL, openUrlInNewTab } from "../../../lib/url";
+import { IconSize } from "../../../lib/style-constants";
+import { openUrlInNewTab } from "../../../lib/url";
 
 interface ReportSentProps {
-    sent: FeedbackOut;
-    /** The thread's name, which is what to look for in the channel. */
-    title: string;
+    /** Decides the forum the report went to. */
+    topic: FeedbackTopic;
     onClose: () => void;
 }
 
-/** Where the conversation goes on: replies happen only in the report's Discord thread. */
+/** Replies happen only in the report's Discord thread, so say where it is. */
 export function ReportSent(props: ReportSentProps): ReactNode {
-    const { sent, title, onClose } = props;
-    const { name, inviteUrl = DISCORD_INVITE_URL } = sent.forum;
+    const { topic, onClose } = props;
     return (
         <>
             <AppModalBody>
-                <Callout
-                    status={Status.SUCCESS}
-                    text="Report sent. Thank you!"
+                <SectionNotice
+                    icon={
+                        <StatusIcon
+                            status={Status.SUCCESS}
+                            size={IconSize.PAGE}
+                            raised={false}
+                        />
+                    }
+                    title="Report sent!"
+                    description={`You can find your report in #${topicForum(topic).channel} if you want to follow up in Discord.`}
+                    action={
+                        <Button
+                            leftSection={<DiscordLogoIcon />}
+                            onClick={() => openUrlInNewTab(forumInvite(topic))}
+                        >
+                            Open Discord
+                        </Button>
+                    }
                 />
-                <Text>
-                    It&apos;s posted as <b>{title}</b>
-                    {name ? (
-                        <>
-                            {" "}
-                            in <b>#{name}</b>
-                        </>
-                    ) : null}{" "}
-                    in the FRCDesign Discord. The team answers there, so open it
-                    to follow along or add details.
-                </Text>
-                <Group>
-                    <Button
-                        leftSection={<DiscordLogoIcon />}
-                        onClick={() => openUrlInNewTab(inviteUrl)}
-                    >
-                        Open in Discord
-                    </Button>
-                </Group>
             </AppModalBody>
             <AppModalFooter>
                 <Button variant="default" onClick={onClose}>

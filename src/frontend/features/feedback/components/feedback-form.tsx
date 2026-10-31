@@ -108,13 +108,7 @@ export function FeedbackForm(props: FeedbackFormProps): ReactNode {
 
     const sent: FeedbackOut | undefined = sendMutation.data;
     if (sent) {
-        return (
-            <ReportSent
-                sent={sent}
-                title={title.trim()}
-                onClose={modal.close}
-            />
-        );
+        return <ReportSent topic={topic} onClose={modal.close} />;
     }
 
     const send = () => {

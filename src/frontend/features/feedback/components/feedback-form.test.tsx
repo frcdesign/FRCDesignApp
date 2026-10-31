@@ -11,7 +11,11 @@ import {
 import type { InsertableOut } from "@backend/features/library/contract";
 import { ElementType } from "@backend/lib/onshape/element-type";
 import { renderWithProviders } from "../../../../__test_utils__/render";
-import { DISCORD_INVITE_URL } from "../../../lib/url";
+import {
+    DISCORD_FORUMS,
+    DISCORD_INVITE_URL,
+    DiscordForum
+} from "@backend/features/feedback/discord-forums";
 
 const mutate = vi.hoisted(() => vi.fn<(body: FeedbackIn) => void>());
 /** What the server answered, once the report has gone. */
@@ -62,51 +66,30 @@ describe("FeedbackForm", () => {
         vi.restoreAllMocks();
     });
 
-    it("sends the reporter to the report's forum once it is sent", async () => {
+    it("says which channel the report is in once it is sent", async () => {
         const user = userEvent.setup();
         const open = vi.spyOn(window, "open").mockReturnValue(null);
-        answer.data = {
-            reportId: "r",
-            forum: {
-                name: "app-feedback",
-                inviteUrl: "https://discord.gg/app-feedback"
-            }
-        };
+        answer.data = { reportId: "r" };
         renderWithProviders(
             <FeedbackForm
-                initialTopic={FeedbackTopic.APP}
+                initialTopic={FeedbackTopic.MKCAD}
                 source={FeedbackSource.GENERAL}
             />
         );
 
-        expect(screen.getByText("Report sent. Thank you!")).toBeTruthy();
-        expect(screen.getByText("#app-feedback")).toBeTruthy();
-        // Named as its thread is, so it can be found in the channel.
-        expect(screen.getByText("Bug: FRCDesignApp")).toBeTruthy();
-        await user.click(
-            screen.getByRole("button", { name: "Open in Discord" })
-        );
+        expect(screen.getByText("Report sent!")).toBeTruthy();
+        // MKCad shares FRCDesignLib's forum.
+        const forum = DISCORD_FORUMS[DiscordForum.LIBRARY];
+        expect(
+            screen.getByText(
+                `You can find your report in #${forum.channel} if you want to follow up in Discord.`
+            )
+        ).toBeTruthy();
+        await user.click(screen.getByRole("button", { name: "Open Discord" }));
         expect(open).toHaveBeenCalledWith(
-            "https://discord.gg/app-feedback",
+            forum.invite ?? DISCORD_INVITE_URL,
             "_blank"
         );
-    });
-
-    it("sends the reporter to the server where the forum has no invite", async () => {
-        const user = userEvent.setup();
-        const open = vi.spyOn(window, "open").mockReturnValue(null);
-        answer.data = { reportId: "r", forum: {} };
-        renderWithProviders(
-            <FeedbackForm
-                initialTopic={FeedbackTopic.APP}
-                source={FeedbackSource.GENERAL}
-            />
-        );
-
-        await user.click(
-            screen.getByRole("button", { name: "Open in Discord" })
-        );
-        expect(open).toHaveBeenCalledWith(DISCORD_INVITE_URL, "_blank");
     });
 
     it("points a library's feedback at the part menu", async () => {

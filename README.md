@@ -44,10 +44,9 @@ DISCORD_CONFIG_LIB_WEBHOOK_URL=<Webhook for ConfigLib reports>
 ```
 
 In a deployed environment, set the webhooks as secrets with
-`npx wrangler secret put <NAME> --env <environment>`. Each forum's channel
-name, invite and tag ids aren't secret, so they live in `wrangler.jsonc`'s
-`vars` (`DISCORD_APP_FORUM` and its siblings); see
-[docs/architecture/feedback.md](docs/architecture/feedback.md).
+`npx wrangler secret put <NAME> --env <environment>`. The forums' channel
+names, invites and tag ids aren't secret, and live in
+`src/backend/features/feedback/discord-forums.ts`.
 
 ## Onshape OAuth App Setup
 

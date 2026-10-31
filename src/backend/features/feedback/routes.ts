@@ -6,7 +6,7 @@ import { getDb } from "../../db/client";
 import { isSignedIn } from "../auth/request-auth";
 import { trackReport } from "../analytics/tracking";
 import { feedbackBody, type FeedbackOut, topicLibrary } from "./contract";
-import { getChannel, reportTagIds, reportTagKeys } from "./channels";
+import { getWebhookUrl, reportTagIds } from "./channels";
 import { buildReportMessage, postToDiscord } from "./discord";
 import { findReportedPart } from "./reported-part";
 import { reporterKey, takeReportSlot } from "./rate-limit";
@@ -19,8 +19,8 @@ export const feedbackRoutes = getApp();
  */
 feedbackRoutes.post("/feedback", validate("json", feedbackBody), async (c) => {
     const body = c.req.valid("json");
-    const channel = getChannel(c.env, body.topic);
-    if (!channel) {
+    const webhookUrl = getWebhookUrl(c.env, body.topic);
+    if (!webhookUrl) {
         throw handledError(
             "Reports can't be sent right now. Please post in the FRCDesign Discord instead.",
             HttpStatus.SERVICE_UNAVAILABLE
@@ -57,20 +57,17 @@ feedbackRoutes.post("/feedback", validate("json", feedbackBody), async (c) => {
 
     const reportId = crypto.randomUUID();
     await postToDiscord(
-        channel.webhookUrl,
+        webhookUrl,
         buildReportMessage({
             id: reportId,
             title: body.title,
-            tagIds: reportTagIds(
-                channel,
-                reportTagKeys(body.topic, body.category, body.source)
-            ),
+            tagIds: reportTagIds(body.topic, body.category, body.source),
             topic: body.topic,
             category: body.category,
             source: body.source,
             message: body.message,
             contact: body.contact || undefined,
-            signedIn: userId !== undefined,
+            userId,
             userAgent: c.req.header("User-Agent"),
             part,
             diagnostics: body.diagnostics,
@@ -87,5 +84,5 @@ feedbackRoutes.post("/feedback", validate("json", feedbackBody), async (c) => {
         source: body.source,
         part
     });
-    return c.json({ reportId, forum: channel.forum } satisfies FeedbackOut);
+    return c.json({ reportId } satisfies FeedbackOut);
 });

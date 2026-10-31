@@ -227,16 +227,7 @@ export const feedbackBody = z
 
 export type FeedbackIn = z.input<typeof feedbackBody>;
 
-/** Where the report's thread is, for the reporter to follow up in. */
-export interface ReportForum {
-    /** The channel's name, without its `#`; undefined when not configured. */
-    name?: string;
-    /** An invite to the channel; undefined falls back to the server's own. */
-    inviteUrl?: string;
-}
-
 export interface FeedbackOut {
     /** Quoted in the Discord post, so a report can be found from the app. */
     reportId: string;
-    forum: ReportForum;
 }

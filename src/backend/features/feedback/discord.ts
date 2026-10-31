@@ -32,7 +32,8 @@ export interface Report {
     source: FeedbackSource;
     message: string;
     contact?: string;
-    signedIn: boolean;
+    /** Undefined for a reporter who isn't signed in. */
+    userId?: string;
     userAgent?: string;
     part?: ReportedPart;
     diagnostics: FeedbackDiagnostics;
@@ -154,7 +155,7 @@ function reportFields(report: Report): DiscordEmbedField[] {
             describeLaunch(diagnostics.launch) ?? "Not in Onshape",
             true
         ),
-        field("Signed in", report.signedIn ? "Yes" : "No", true),
+        field("Onshape user", report.userId ?? "Not signed in", true),
         field("Viewed as", diagnostics.viewedAccessLevel ?? "unknown", true),
         field("Build", diagnostics.build ?? "unknown", true)
     );

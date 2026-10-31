@@ -250,87 +250,26 @@ describe("POST /api/feedback", () => {
         ).toBeDefined();
     });
 
-    it("reads a forum's tag ids from the JSON text .env holds", async () => {
-        await send(body(), {
-            bindings: {
-                ...WEBHOOKS,
-                DISCORD_APP_FORUM: JSON.stringify({ tags: { bug: "tag-bug" } })
-            }
-        });
+    it("names the reporter, but not the document they were in", async () => {
+        const userId = "5eace32713a966103efd2a9d";
+        const document = "0123456789abcdef01234567";
 
-        expect(post.mock.calls[0][1].applied_tags).toEqual(["tag-bug"]);
-    });
-
-    it("files the thread under the forum's tags for its topic, type and source", async () => {
-        const res = await send(
+        await send(
             body({
-                topic: FeedbackTopic.MKCAD,
-                category: FeedbackCategory.BUG,
-                source: FeedbackSource.ERROR
-            }),
-            {
-                bindings: {
-                    ...WEBHOOKS,
-                    DISCORD_FRC_DESIGN_LIB_FORUM: {
-                        tags: {
-                            mkcad: "tag-mkcad",
-                            bug: "tag-bug",
-                            "error-report": "tag-error",
-                            "frc-design-lib": "tag-frc"
-                        }
+                diagnostics: {
+                    url: `/document-access?documentId=${document}`,
+                    error: {
+                        shown: "Failed.",
+                        detail: `Onshape API error 403 on /documents/${document}`
                     }
                 }
-            }
+            }),
+            { userId }
         );
 
-        expect(res.status).toBe(200);
-        expect(post.mock.calls[0][1].applied_tags).toEqual([
-            "tag-mkcad",
-            "tag-bug",
-            "tag-error"
-        ]);
-    });
-
-    it("sends a report untagged when its forum's tag ids are malformed", async () => {
-        vi.spyOn(console, "error").mockImplementation(() => undefined);
-
-        const res = await send(body(), {
-            bindings: { ...WEBHOOKS, DISCORD_APP_FORUM: "{not json" }
-        });
-
-        expect(res.status).toBe(200);
-        expect(post.mock.calls[0][1]).not.toHaveProperty("applied_tags");
-    });
-
-    it("tells the reporter which forum the report is in, to follow up there", async () => {
-        const res = await send(body(), {
-            bindings: {
-                ...WEBHOOKS,
-                DISCORD_APP_FORUM: {
-                    name: "app-feedback",
-                    invite: "https://discord.gg/app-feedback"
-                }
-            }
-        });
-
-        expect((await res.json<FeedbackOut>()).forum).toEqual({
-            name: "app-feedback",
-            inviteUrl: "https://discord.gg/app-feedback"
-        });
-    });
-
-    it("leaves the forum unnamed where it isn't configured", async () => {
-        const res = await send(body());
-
-        expect((await res.json<FeedbackOut>()).forum).toEqual({});
-    });
-
-    it("posts nothing that says who the reporter is", async () => {
-        const userId = "5eace32713a966103efd2a9d";
-
-        await send(body(), { userId });
-
-        expect(JSON.stringify(post.mock.calls[0][1])).not.toContain(userId);
+        const posted = JSON.stringify(post.mock.calls[0][1]);
+        expect(posted).toContain(userId);
+        expect(posted).not.toContain(document);
     });
 
     it("takes a report from somebody who isn't signed in", async () => {

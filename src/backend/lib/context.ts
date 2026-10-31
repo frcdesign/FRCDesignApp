@@ -7,9 +7,6 @@ import { type AccessLevel } from "../features/auth/access-level";
 import type { LibraryId } from "../features/library/library-id";
 import { type OAuthApi } from "./onshape/client";
 
-/** An object in `wrangler.jsonc`'s vars; its JSON text when set from `.env`. */
-type DiscordForum = object | string;
-
 export interface AppBindings {
     DB: D1Database;
     KV: KVNamespace;
@@ -37,10 +34,6 @@ export interface AppBindings {
     /** FRCDesignLib's and MKCad's, which share a channel. */
     DISCORD_FRC_DESIGN_LIB_WEBHOOK_URL?: string;
     DISCORD_CONFIG_LIB_WEBHOOK_URL?: string;
-    /** Each forum's name, invite and tag ids, from `wrangler.jsonc`; see `features/feedback/channels.ts`. */
-    DISCORD_APP_FORUM?: DiscordForum;
-    DISCORD_FRC_DESIGN_LIB_FORUM?: DiscordForum;
-    DISCORD_CONFIG_LIB_FORUM?: DiscordForum;
 }
 
 interface AppVariables {

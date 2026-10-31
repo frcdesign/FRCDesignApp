@@ -104,12 +104,7 @@
         "NODE_ENV": "development",
         // Where the app is served: OAuth's redirect and every webhook point here.
         // The dev tunnel's; a developer on their own tunnel overrides it in `.env`.
-        "APP_URL": "https://dev.frcdesign.org",
-        // Each report forum's channel name and invite, which the reporter is
-        // sent to, and its tag ids by tag key; see docs/architecture/feedback.md.
-        "DISCORD_APP_FORUM": { "tags": {} },
-        "DISCORD_FRC_DESIGN_LIB_FORUM": { "tags": {} },
-        "DISCORD_CONFIG_LIB_FORUM": { "tags": {} }
+        "APP_URL": "https://dev.frcdesign.org"
     },
     /**
      * Service Bindings (communicate between multiple Workers)
@@ -174,12 +169,7 @@
                 // FORCE_SIGNED_IN and VITE_ACCESS_LEVEL_OVERRIDE are gated on
                 // this alone: anything but "production" leaves them armed.
                 "NODE_ENV": "production",
-                "APP_URL": "https://frc-design-app-cert.frcdesign-org.workers.dev",
-                // Each report forum's channel name and invite, which the reporter is
-                // sent to, and its tag ids by tag key; see docs/architecture/feedback.md.
-                "DISCORD_APP_FORUM": { "tags": {} },
-                "DISCORD_FRC_DESIGN_LIB_FORUM": { "tags": {} },
-                "DISCORD_CONFIG_LIB_FORUM": { "tags": {} }
+                "APP_URL": "https://frc-design-app-cert.frcdesign-org.workers.dev"
             },
             "limits": {
                 "subrequests": 1000
@@ -236,12 +226,7 @@
             "vars": {
                 "OWNER_USER_ID": "5eace32713a966103efd2a9c",
                 "NODE_ENV": "production",
-                "APP_URL": "https://app.frcdesign.org",
-                // Each report forum's channel name and invite, which the reporter is
-                // sent to, and its tag ids by tag key; see docs/architecture/feedback.md.
-                "DISCORD_APP_FORUM": { "tags": {} },
-                "DISCORD_FRC_DESIGN_LIB_FORUM": { "tags": {} },
-                "DISCORD_CONFIG_LIB_FORUM": { "tags": {} }
+                "APP_URL": "https://app.frcdesign.org"
             },
             "limits": {
                 "subrequests": 100000
