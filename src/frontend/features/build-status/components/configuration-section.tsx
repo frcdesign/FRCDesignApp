@@ -32,7 +32,7 @@ import {
     ParameterRoleLabel
 } from "../../../components/parameter-role";
 import {
-    CATEGORY_COLOR,
+    FontWeight,
     IconSize,
     StatusColor
 } from "../../../lib/style-constants";
@@ -171,10 +171,22 @@ function ConfigurationEditor(props: ConfigurationEditorProps): ReactNode {
                     horizontalSpacing={0}
                 >
                     <Table.Thead>
+                        {/* The weight of the card's other labels, not Mantine's bold. */}
                         <Table.Tr c={StatusColor.DIMMED}>
-                            <Table.Th>Parameter</Table.Th>
-                            <Table.Th w={TYPE_COLUMN_WIDTH}>Type</Table.Th>
-                            <Table.Th w={INDEXED_COLUMN_WIDTH} ta="center">
+                            <Table.Th fw={FontWeight.SEMI_BOLD}>
+                                Parameter
+                            </Table.Th>
+                            <Table.Th
+                                w={TYPE_COLUMN_WIDTH}
+                                fw={FontWeight.SEMI_BOLD}
+                            >
+                                Type
+                            </Table.Th>
+                            <Table.Th
+                                w={INDEXED_COLUMN_WIDTH}
+                                fw={FontWeight.SEMI_BOLD}
+                                ta="center"
+                            >
                                 Indexed
                             </Table.Th>
                         </Table.Tr>
@@ -333,7 +345,7 @@ interface ParameterKindProps {
 
 /**
  * A role says more than the type it implies, and the parameter's name usually
- * spells it already, so a role is only its icon.
+ * spells it already, so a role's badge holds only its icon.
  */
 function ParameterKind(props: ParameterKindProps): ReactNode {
     const { parameter } = props;
@@ -341,12 +353,14 @@ function ParameterKind(props: ParameterKindProps): ReactNode {
     if (role) {
         return (
             <Tooltip label={<ParameterRoleLabel role={role} />}>
-                <ParameterRoleIcon
-                    role={role}
-                    size={IconSize.SMALL}
-                    color={StatusColor.DIMMED}
-                    className={styles.titleIcon}
-                />
+                <Badge size="xs">
+                    {/* A block, or it sits on the label's baseline, high in the pill. */}
+                    <ParameterRoleIcon
+                        role={role}
+                        size={IconSize.TINY}
+                        style={{ display: "block" }}
+                    />
+                </Badge>
             </Tooltip>
         );
     }
@@ -365,11 +379,7 @@ function ParameterTypeBadge(props: ParameterTypeBadgeProps): ReactNode {
         ? `${getParameterTypeLabel(parameter.type)} · ${parameter.options.length}`
         : getParameterTypeLabel(parameter.type);
 
-    const badge = (
-        <Badge size="xs" color={CATEGORY_COLOR}>
-            {label}
-        </Badge>
-    );
+    const badge = <Badge size="xs">{label}</Badge>;
     if (!isEnum || parameter.options.length === 0) {
         return badge;
     }
