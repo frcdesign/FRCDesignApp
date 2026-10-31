@@ -4,6 +4,8 @@ import { getApp, type AppContext } from "../../lib/context";
 import { requireSignInMiddleware } from "../auth/guards";
 import { getSessionCompanyId } from "../auth/company";
 import { trackAppOpen } from "../analytics/tracking";
+import { DOCUMENT_ACCESS_PROBLEM_PARAM } from "./contract";
+import { findDocumentAccessProblem } from "./document-access";
 
 /** Marks the `/init` a sign-in returns to; see {@link needsSignIn}. */
 const SIGN_IN_ATTEMPTED = "signInAttempted";
@@ -34,7 +36,11 @@ function getSignInUrl(c: AppContext): string {
 
 export const entryRoutes = getApp();
 
-/** GET /init: the app resumes the caller's last tab itself, from the browser's storage. */
+/**
+ * GET /init: the app resumes the caller's last tab itself, from the browser's
+ * storage. A grant that can't edit the document goes to `/document-access`
+ * first: a session for the right company can still be one Onshape refuses.
+ */
 entryRoutes.get("/init", cacheMiddleware(), async (c) => {
     // A version can't be changed, so there is nothing to insert into.
     const instanceType = c.req.query("instanceType");
@@ -47,6 +53,14 @@ entryRoutes.get("/init", cacheMiddleware(), async (c) => {
     const search = new URL(c.req.url).searchParams;
     // Ours, and spent: the app is being opened, however that turned out.
     search.delete(SIGN_IN_ATTEMPTED);
+    const problem = await findDocumentAccessProblem(
+        c,
+        c.req.query("documentId")
+    );
+    if (problem) {
+        search.set(DOCUMENT_ACCESS_PROBLEM_PARAM, problem);
+        return c.redirect(`/document-access?${search.toString()}`);
+    }
     return c.redirect(`/?${search.toString()}`);
 });
 

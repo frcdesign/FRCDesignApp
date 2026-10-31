@@ -17,6 +17,11 @@ import {
     VersionJobKind,
     VersionJobOutcome
 } from "../version-manager/contract";
+import {
+    FeedbackCategory,
+    FeedbackSource,
+    FeedbackTopic
+} from "../feedback/contract";
 import { EventType, InsertSource } from "./usage";
 
 /**
@@ -66,7 +71,11 @@ export const events = sqliteTable(
         versionOutcome: text("version_outcome").$type<VersionJobOutcome>(),
         failedSteps: integer("failed_steps"),
         createdVersions: integer("created_versions"),
-        updatedElements: integer("updated_elements")
+        updatedElements: integer("updated_elements"),
+        // A report's own columns; a part report also sets the element's.
+        reportTopic: text("report_topic").$type<FeedbackTopic>(),
+        reportCategory: text("report_category").$type<FeedbackCategory>(),
+        reportSource: text("report_source").$type<FeedbackSource>()
     },
     // Only used to rebuild the rollups, which walk by day.
     (t) => [index("events_day_idx").on(t.day)]
@@ -268,4 +277,26 @@ export const dailyVersionMetrics = sqliteTable(
         updatedElements: integer("updated_elements").notNull().default(0)
     },
     (t) => [primaryKey({ columns: [t.day, t.kind] })]
+);
+
+/**
+ * A day's reports. Keyed by topic rather than library, since the app's own
+ * topics belong to none; a topic names its library when it has one.
+ */
+export const dailyReportMetrics = sqliteTable(
+    "daily_report_metrics",
+    {
+        day: text("day").notNull(),
+        topic: text("topic").notNull().$type<FeedbackTopic>(),
+        category: text("category").notNull().$type<FeedbackCategory>(),
+        source: text("source").notNull().$type<FeedbackSource>(),
+        /** The reported part's; empty for a report that names none. */
+        elementId: text("element_id").notNull().default(""),
+        count: integer("count").notNull().default(0)
+    },
+    (t) => [
+        primaryKey({
+            columns: [t.day, t.topic, t.category, t.source, t.elementId]
+        })
+    ]
 );

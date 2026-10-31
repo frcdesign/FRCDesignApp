@@ -1,15 +1,17 @@
-import { Center, EmptyState, Loader } from "@mantine/core";
+import { Center, EmptyState, Group, Loader } from "@mantine/core";
 import { Status } from "../lib/status";
 import { IconSize } from "../lib/style-constants";
 import { ReactNode } from "react";
 import { StatusIcon } from "./status-icon";
+import { ReportButton } from "../features/feedback/components/report-button";
+import type { FeedbackTopic } from "@backend/features/feedback/contract";
+import { toReportedError } from "../features/feedback/diagnostics";
 
 const ERROR_ICON = (
     <StatusIcon status={Status.ERROR} size={IconSize.PAGE} raised={false} />
 );
 
-const CONTACT_DEVELOPERS =
-    "If the problem persists, contact the FRCDesignApp developers.";
+export const SEND_A_REPORT = "If the problem persists, send a report.";
 
 interface NoticeProps {
     /** Ends with a period whenever there is a description. */
@@ -63,11 +65,34 @@ export function SectionLoading(props: SectionLoadingProps): ReactNode {
     return <SectionNotice title={props.title} icon={<Loader />} />;
 }
 
-type ErrorProps = Omit<NoticeProps, "description">;
+interface ErrorProps extends Omit<NoticeProps, "description"> {
+    /** What failed, which the report carries. */
+    error?: unknown;
+    /** What the report is about. @default FeedbackTopic.APP */
+    topic?: FeedbackTopic;
+}
+
+/** The notice's own action, then a report of the failure. */
+function withReport(props: ErrorProps): NoticeProps {
+    const { error, topic, action, ...notice } = props;
+    return {
+        ...notice,
+        description: SEND_A_REPORT,
+        action: (
+            <Group gap="xs" justify="center" wrap="wrap">
+                {action}
+                <ReportButton
+                    report={toReportedError(notice.title, error)}
+                    topic={topic}
+                />
+            </Group>
+        )
+    };
+}
 
 /** A failure with nothing more specific to say. */
 export function SectionError(props: ErrorProps): ReactNode {
-    return <SectionNotice {...props} description={CONTACT_DEVELOPERS} />;
+    return <SectionNotice {...withReport(props)} />;
 }
 
 interface PageNoticeProps extends NoticeProps {
@@ -95,7 +120,8 @@ export function PageLoading(props: SectionLoadingProps): ReactNode {
 
 /** {@link SectionError} for a whole page. */
 export function PageError(
-    props: Omit<PageNoticeProps, "description">
+    props: ErrorProps & Pick<PageNoticeProps, "justifyUp">
 ): ReactNode {
-    return <PageNotice {...props} description={CONTACT_DEVELOPERS} />;
+    const { justifyUp, ...error } = props;
+    return <PageNotice {...withReport(error)} justifyUp={justifyUp} />;
 }

@@ -8,6 +8,7 @@ import {
     dailyInsertableMetrics,
     dailyInsertableUsers,
     dailyMetrics,
+    dailyReportMetrics,
     dailyTargetMetrics,
     dailySourceMetrics,
     dailyUserActivity,
@@ -47,6 +48,11 @@ import {
 import { MONTH_DAYS } from "./measures";
 import { addDays, toDayKey, toReportingDay } from "./day";
 import { BuildIssueType } from "../build-checker/issues";
+import {
+    FeedbackCategory,
+    FeedbackSource,
+    FeedbackTopic
+} from "../feedback/contract";
 
 const db = getDb(env.DB);
 const elementId = TEST_PART_STUDIO_PATH.elementId;
@@ -503,6 +509,91 @@ describe("analytics routes", () => {
             const body: LibrarySummaryOut = await res.json();
 
             expect(body.totals.inserts).toBe(2);
+        });
+    });
+
+    describe("reports", () => {
+        async function seedReports(
+            count: number,
+            topic: FeedbackTopic,
+            options: {
+                day?: string;
+                category?: FeedbackCategory;
+                source?: FeedbackSource;
+                element?: string;
+            } = {}
+        ) {
+            await db.insert(dailyReportMetrics).values({
+                day: options.day ?? "2026-06-01",
+                topic,
+                category: options.category ?? FeedbackCategory.BUG,
+                source: options.source ?? FeedbackSource.GENERAL,
+                elementId: options.element ?? "",
+                count
+            });
+        }
+
+        it("counts every topic's reports in the overview, over the range", async () => {
+            await seedReports(2, FeedbackTopic.APP);
+            await seedReports(1, FeedbackTopic.MKCAD, {
+                category: FeedbackCategory.PART_REQUEST
+            });
+            await seedReports(5, FeedbackTopic.APP, { day: "2025-01-01" });
+
+            const res = await anonymousGet(
+                "/api/analytics/overview?from=2026-05-01&to=2026-07-01"
+            );
+            const body: AnalyticsOverviewOut = await res.json();
+
+            expect(body.reports.counts).toEqual(
+                expect.arrayContaining([
+                    expect.objectContaining({
+                        topic: FeedbackTopic.APP,
+                        category: FeedbackCategory.BUG,
+                        count: 2
+                    }),
+                    expect.objectContaining({
+                        topic: FeedbackTopic.MKCAD,
+                        count: 1
+                    })
+                ])
+            );
+            expect(body.reports.counts).toHaveLength(2);
+        });
+
+        it("gives a library its own reports and its most reported parts", async () => {
+            await seedPartStudio(db);
+            await seedReports(3, FeedbackTopic.FRC_DESIGN_LIB, {
+                category: FeedbackCategory.METADATA,
+                source: FeedbackSource.PART,
+                element: elementId
+            });
+            await seedReports(1, FeedbackTopic.FRC_DESIGN_LIB, {
+                category: FeedbackCategory.METADATA,
+                source: FeedbackSource.PART,
+                element: "removed-part"
+            });
+            await seedReports(4, FeedbackTopic.CONFIG_LIB);
+
+            const res = await anonymousGet(
+                `/api/analytics/summary/library/${TEST_LIBRARY_ID}?${ALL_TIME}`
+            );
+            const body: LibrarySummaryOut = await res.json();
+
+            expect(body.reports.counts).toEqual([
+                expect.objectContaining({
+                    topic: FeedbackTopic.FRC_DESIGN_LIB,
+                    count: 4
+                })
+            ]);
+            // A part no longer in the library has nothing to link to.
+            expect(body.reportedParts).toEqual([
+                {
+                    path: TEST_PART_STUDIO_PATH,
+                    name: "Test PARTSTUDIO",
+                    count: 3
+                }
+            ]);
         });
     });
 

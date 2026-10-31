@@ -1,3 +1,4 @@
+import { FeedbackTopic } from "@backend/features/feedback/contract";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { type ReactNode, useEffect } from "react";
 import {
@@ -94,7 +95,13 @@ function VersionManager(props: VersionManagerProps): ReactNode {
         return <PageLoading title="Loading linked documents..." />;
     }
     if (linksQuery.isError || !linksQuery.data) {
-        return <PageError title="Failed to load linked documents." />;
+        return (
+            <PageError
+                title="Failed to load linked documents."
+                error={linksQuery.error}
+                topic={FeedbackTopic.VERSION_MANAGER}
+            />
+        );
     }
 
     const links = linksQuery.data;

@@ -1,5 +1,5 @@
 import { env } from "cloudflare:workers";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { events } from "../analytics/schema";
 import { EVENT_SCHEMA_VERSION, EventType } from "../analytics/usage";
 import {
@@ -10,6 +10,10 @@ import {
     seedUser
 } from "../../../__test_utils__";
 import { getDb } from "../../db/client";
+import * as Permissions from "../../lib/onshape/endpoints/permissions";
+import { OnshapePermission } from "../../lib/onshape/endpoints/permissions";
+import { OnshapeApiError } from "../../lib/onshape/client";
+import { DocumentAccessProblem } from "./contract";
 
 const db = getDb(env.DB);
 
@@ -122,6 +126,102 @@ describe("GET /init", () => {
             env
         );
         expect(res.headers.get("Cache-Control")).toBe("private, no-store");
+    });
+});
+
+describe("GET /init's document access check", () => {
+    afterEach(() => {
+        vi.restoreAllMocks();
+    });
+
+    function grant(permissions: OnshapePermission[]) {
+        vi.spyOn(Permissions, "getPermissions").mockResolvedValue(permissions);
+    }
+
+    async function launch(
+        options: Parameters<typeof createTestApp>[0] = {}
+    ): Promise<URL> {
+        const res = await createTestApp(options).request(
+            "/init?documentId=doc&instanceType=w&instanceId=ws&sessionCompanyId=company-1",
+            jsonRequest("GET"),
+            env
+        );
+        expect(res.status).toBe(302);
+        return new URL(res.headers.get("Location")!, "http://x");
+    }
+
+    it("opens the app for a grant that can edit the document", async () => {
+        grant([OnshapePermission.READ, OnshapePermission.WRITE]);
+
+        expect((await launch()).pathname).toBe("/");
+    });
+
+    // A personal grant asked about an Enterprise's document, or the reverse.
+    it("explains a grant that can't see the document", async () => {
+        grant([]);
+
+        const location = await launch();
+
+        expect(location.pathname).toBe("/document-access");
+        expect(location.searchParams.get("problem")).toBe(
+            DocumentAccessProblem.WRONG_ACCOUNT
+        );
+        // The page goes back through /init, or on to the app, with these.
+        expect(location.searchParams.get("documentId")).toBe("doc");
+        expect(location.searchParams.get("sessionCompanyId")).toBe("company-1");
+    });
+
+    it("explains a grant that can't see the document after a sign-in", async () => {
+        grant([]);
+
+        const res = await createTestApp({ isAuthenticated: false }).request(
+            "/init?documentId=doc&signInAttempted=1",
+            jsonRequest("GET"),
+            env
+        );
+
+        const location = new URL(res.headers.get("Location")!, "http://x");
+        expect(location.pathname).toBe("/document-access");
+        expect(location.searchParams.has("signInAttempted")).toBe(false);
+    });
+
+    it("reads Onshape's 404 as a grant that can't see the document", async () => {
+        vi.spyOn(Permissions, "getPermissions").mockRejectedValue(
+            new OnshapeApiError("Not found", 404)
+        );
+
+        expect((await launch()).searchParams.get("problem")).toBe(
+            DocumentAccessProblem.WRONG_ACCOUNT
+        );
+    });
+
+    it("explains a document the caller can only view", async () => {
+        grant([OnshapePermission.READ]);
+
+        expect((await launch()).searchParams.get("problem")).toBe(
+            DocumentAccessProblem.READ_ONLY
+        );
+    });
+
+    it("opens the app when Onshape can't answer", async () => {
+        vi.spyOn(Permissions, "getPermissions").mockRejectedValue(
+            new OnshapeApiError("Unavailable", 503)
+        );
+
+        expect((await launch()).pathname).toBe("/");
+    });
+
+    it("leaves a caller with no session to the app's own sign-in", async () => {
+        const getPermissions = vi.spyOn(Permissions, "getPermissions");
+
+        const location = await launch({
+            signedIn: false,
+            isAuthenticated: false
+        });
+
+        // Sent to sign in first, not to the access page.
+        expect(location.pathname).toBe("/auth/sign-in");
+        expect(getPermissions).not.toHaveBeenCalled();
     });
 });
 

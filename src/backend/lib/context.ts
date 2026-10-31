@@ -29,6 +29,11 @@ export interface AppBindings {
     VITE_ACCESS_LEVEL_OVERRIDE?: string;
     /** Testing-only: treat requests as signed in with a fake user. Not for production. */
     FORCE_SIGNED_IN?: string;
+    /** Discord webhooks reports are posted to; see `features/feedback/channels.ts`. */
+    DISCORD_APP_WEBHOOK_URL?: string;
+    /** FRCDesignLib's and MKCad's, which share a channel. */
+    DISCORD_FRC_DESIGN_LIB_WEBHOOK_URL?: string;
+    DISCORD_CONFIG_LIB_WEBHOOK_URL?: string;
 }
 
 interface AppVariables {

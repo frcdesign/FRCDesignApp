@@ -16,8 +16,8 @@ import {
     type Selection
 } from "@backend/features/configurations/contract";
 import { toFavoritePath, toLibraryPath } from "../../lib/api-paths";
-import { getAppErrorHandler } from "../../lib/errors";
-import { showErrorToast, showSuccessToast } from "../../lib/notifications";
+import { getAppErrorHandler, showReportableErrorToast } from "../../lib/errors";
+import { showSuccessToast } from "../../lib/notifications";
 import { getQueryUpdater } from "../../lib/query-cache";
 import { useRefreshFavorites } from "../../lib/refresh";
 
@@ -90,8 +90,11 @@ export function useSetDefaultConfigurationMutation(favoriteId: string) {
             );
             // No router.invalidate(): the loader's prefetch would race this and undo it.
         },
-        onError: () => {
-            showErrorToast("Failed to set the default configuration.");
+        onError: (error) => {
+            showReportableErrorToast(
+                "Failed to set the default configuration.",
+                error
+            );
         },
         onSuccess: () => {
             showSuccessToast("Default configuration set.");

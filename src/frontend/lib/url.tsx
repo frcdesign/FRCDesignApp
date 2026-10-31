@@ -34,6 +34,9 @@ export function toOnshapeOrigin(server: string | undefined): string {
     return isOnshape ? url.origin : DEFAULT_ONSHAPE_ORIGIN;
 }
 
+/** The FRCDesign Discord, where feedback and support live. */
+export const DISCORD_INVITE_URL = "https://discord.gg/PMgzEUTgB7";
+
 /** Opened in a new window so the insert menu stays. */
 export const SETUP_URL = "/setup";
 

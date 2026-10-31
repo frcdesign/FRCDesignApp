@@ -27,9 +27,19 @@ export function SearchResults(props: SearchResultsProps): ReactNode {
     if (searchDbQuery.isPending || libraryQuery.isPending) {
         return <SectionLoading title="Loading library..." />;
     } else if (libraryQuery.isError) {
-        return <SectionError title="Failed to load library." />;
+        return (
+            <SectionError
+                title="Failed to load library."
+                error={libraryQuery.error}
+            />
+        );
     } else if (searchDbQuery.isError) {
-        return <SectionError title="Failed to load search database." />;
+        return (
+            <SectionError
+                title="Failed to load search database."
+                error={searchDbQuery.error}
+            />
+        );
     } else if (!searchDbQuery.data) {
         return <SectionError title="The search database is empty." />;
     }

@@ -169,7 +169,12 @@ function LibraryList() {
     if (libraryQuery.isPending) {
         return <SectionLoading title="Loading groups..." />;
     } else if (libraryQuery.isError) {
-        return <SectionError title="Failed to load groups." />;
+        return (
+            <SectionError
+                title="Failed to load groups."
+                error={libraryQuery.error}
+            />
+        );
     }
 
     const groups = libraryQuery.data.groups;

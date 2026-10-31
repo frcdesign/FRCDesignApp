@@ -57,7 +57,12 @@ function GroupList(): ReactNode {
     if (libraryQuery.isPending) {
         return <SectionLoading title="Loading group..." />;
     } else if (libraryQuery.isError) {
-        return <SectionError title="Failed to load group." />;
+        return (
+            <SectionError
+                title="Failed to load group."
+                error={libraryQuery.error}
+            />
+        );
     }
     const groups = libraryQuery.data.groups;
     const insertables = libraryQuery.data.insertables;

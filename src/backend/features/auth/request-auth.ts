@@ -18,7 +18,8 @@ import {
     TOKEN_ENDPOINT
 } from "./onshape-oauth";
 import { getSession, getSessionId, saveSession } from "./session";
-import { getSessionCompanyId, PERSONAL_COMPANY_ID } from "./company";
+import { getSessionCompanyId } from "./company";
+import { PERSONAL_COMPANY_ID } from "./personal-company";
 
 /** Stable fake user id used for FORCE_SIGNED_IN testing sessions. */
 const FORCE_SIGNED_IN_USER_ID = "force-signed-in-user";

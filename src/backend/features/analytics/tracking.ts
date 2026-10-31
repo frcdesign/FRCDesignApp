@@ -4,8 +4,11 @@ import { type AppBindings, type AppContext } from "../../lib/context";
 import { getDb, type Db } from "../../db/client";
 import { events, type LoggedEvent } from "./schema";
 import {
+    NO_ELEMENT,
     NOT_AN_INSERT,
+    NOT_A_REPORT,
     NOT_A_VERSION_RUN,
+    type ElementColumns,
     type EventCore
 } from "./logged-event";
 import { rollupWrites } from "./rollups";
@@ -28,6 +31,11 @@ import {
 } from "../configurations/contract";
 import { canonicalValues } from "../configurations/selection";
 import { toDayKey } from "./day";
+import type {
+    FeedbackCategory,
+    FeedbackSource,
+    FeedbackTopic
+} from "../feedback/contract";
 
 /** The caller is the one who inserted; see `trackInsert`. */
 export interface InsertEvent {
@@ -60,6 +68,7 @@ export function trackInsert(c: AppContext, event: InsertEvent): Promise<void> {
                     await c.var.getUserId()
                 ),
                 ...NOT_A_VERSION_RUN,
+                ...NOT_A_REPORT,
                 ...event.path,
                 insertableId: event.insertableId,
                 targetElementType: event.targetElementType,
@@ -81,8 +90,10 @@ export function trackAppOpen(c: AppContext): Promise<void> {
             getDb(c.env.DB),
             {
                 ...eventCore(EventType.APP_OPEN, null, await c.var.getUserId()),
+                ...NO_ELEMENT,
                 ...NOT_AN_INSERT,
-                ...NOT_A_VERSION_RUN
+                ...NOT_A_VERSION_RUN,
+                ...NOT_A_REPORT
             },
             []
         )
@@ -102,11 +113,12 @@ function appliedSelection(
 function eventCore(
     type: EventType,
     libraryId: LibraryId | null,
-    userId: string
+    userId: string,
+    id: string = crypto.randomUUID()
 ): EventCore {
     const now = Date.now();
     return {
-        id: crypto.randomUUID(),
+        id,
         type,
         createdAt: new Date(now),
         day: toDayKey(now),
@@ -135,7 +147,9 @@ export async function trackVersionRun(
         getDb(env.DB),
         {
             ...eventCore(EventType.VERSION_RUN, null, event.userId),
+            ...NO_ELEMENT,
             ...NOT_AN_INSERT,
+            ...NOT_A_REPORT,
             versionKind: event.kind,
             versionScope: event.scope,
             versionUpdateOnly: status.updateOnly ?? false,
@@ -145,6 +159,51 @@ export async function trackVersionRun(
             updatedElements: status.result?.updatedElements ?? 0
         },
         []
+    );
+}
+
+/** Who sent a report, when they weren't signed in. */
+export const SIGNED_OUT_USER_ID = "signed-out";
+
+/** A report already posted to Discord; see `features/feedback`. */
+export interface ReportEvent {
+    /** The id the Discord post quotes, so the two can be matched. */
+    id: string;
+    /** Undefined for a reporter who isn't signed in. */
+    userId: string | undefined;
+    /** The topic's library, when it has one. */
+    libraryId: LibraryId | undefined;
+    topic: FeedbackTopic;
+    category: FeedbackCategory;
+    source: FeedbackSource;
+    /** Set for a report from a part's menu. */
+    part?: { path: ElementPath; insertableId: string };
+}
+
+/** As `trackInsert`: the report has been sent, whatever happens to its record. */
+export function trackReport(c: AppContext, event: ReportEvent): Promise<void> {
+    const element: ElementColumns = event.part
+        ? { ...event.part.path, insertableId: event.part.insertableId }
+        : NO_ELEMENT;
+    return runInBackground(c, "record a report", () =>
+        record(
+            getDb(c.env.DB),
+            {
+                ...eventCore(
+                    EventType.REPORT,
+                    event.libraryId ?? null,
+                    event.userId ?? SIGNED_OUT_USER_ID,
+                    event.id
+                ),
+                ...element,
+                ...NOT_AN_INSERT,
+                ...NOT_A_VERSION_RUN,
+                reportTopic: event.topic,
+                reportCategory: event.category,
+                reportSource: event.source
+            },
+            []
+        )
     );
 }
 

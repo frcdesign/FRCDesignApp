@@ -1,6 +1,10 @@
 import { ApiErrorKind, type ApiErrorBody } from "@backend/lib/api-error";
+import { notifications } from "@mantine/notifications";
+import type { ReactNode } from "react";
 import { renderNotification, showErrorToast } from "./notifications";
 import { startSignIn } from "../features/auth/sign-in";
+import { toReportedError } from "../features/feedback/diagnostics";
+import { openErrorReport } from "../features/feedback/open-feedback";
 
 /** `body` is the discriminated shape the backend sends. */
 export class AppError extends Error {
@@ -47,12 +51,39 @@ export function getAppErrorHandler(defaultMessage: string, toastId?: string) {
     return (error: Error) => handleAppError(error, defaultMessage, toastId);
 }
 
-/** Only messages worded for the user are shown; anything else gets `defaultMessage`. */
+/** Long enough to reach the Report button before the toast goes. */
+const REPORTABLE_AUTO_CLOSE_MS = 8000;
+
+/** An error toast with a Report button, which carries `error` into the report. */
+export function showReportableErrorToast(
+    message: string,
+    error?: unknown,
+    toastKey?: string
+): void {
+    const body: ReactNode = renderNotification(message, {
+        text: "Report",
+        // Clicked only once the toast is up, so `id` is set by then.
+        onClick: () => {
+            notifications.hide(id);
+            openErrorReport(toReportedError(message, error));
+        }
+    });
+    const id = showErrorToast(body, toastKey, {
+        autoClose: REPORTABLE_AUTO_CLOSE_MS
+    });
+}
+
+/**
+ * Only messages worded for the user are shown; anything else gets
+ * `defaultMessage`. Each offers a report, unless `reportable` is false.
+ */
 export function handleAppError(
     error: Error,
     defaultMessage: string,
-    toastKey?: string
+    toastKey?: string,
+    reportable = true
 ) {
+    let message = defaultMessage;
     if (error instanceof AppError) {
         switch (error.body.kind) {
             case ApiErrorKind.SIGN_IN_REQUIRED:
@@ -66,11 +97,15 @@ export function handleAppError(
                 return;
             case ApiErrorKind.HANDLED:
             case ApiErrorKind.FORBIDDEN:
-                showErrorToast(error.body.message, toastKey);
-                return;
+                message = error.body.message;
+                break;
             case ApiErrorKind.INTERNAL:
                 break;
         }
     }
-    showErrorToast(defaultMessage, toastKey);
+    if (reportable) {
+        showReportableErrorToast(message, error, toastKey);
+    } else {
+        showErrorToast(message, toastKey);
+    }
 }

@@ -22,7 +22,7 @@ const SIGN_IN_EXPIRED =
     "Your Onshape sign-in expired. Reopen the app from Onshape and try again.";
 
 const UNEXPECTED =
-    "Something went wrong. If it keeps happening, contact the FRCDesignApp developers.";
+    "Something went wrong. If it keeps happening, send a report.";
 
 /**
  * The HTTP status behind a failure, or undefined when nothing answered. Read

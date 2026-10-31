@@ -22,6 +22,7 @@ import { Section } from "../../components/section";
 import { UsageTreemap } from "../../features/dashboard/usage-treemap";
 import { VersionManagerTiles } from "../../features/dashboard/version-manager-tiles";
 import { TrendTile } from "../../features/dashboard/trend-tile";
+import { OverviewReports } from "../../features/dashboard/report-summary";
 
 export const Route = createFileRoute("/dashboard/")({
     component: DashboardOverview
@@ -45,8 +46,15 @@ function DashboardOverview(): ReactNode {
     if (!query.data) {
         return <DashboardState query={query} />;
     }
-    const { totals, series, metricSeries, sources, versionManager, growth } =
-        query.data;
+    const {
+        totals,
+        series,
+        metricSeries,
+        sources,
+        versionManager,
+        reports,
+        growth
+    } = query.data;
 
     return (
         <Stack gap="xl">
@@ -62,6 +70,8 @@ function DashboardOverview(): ReactNode {
             <InsertsByLibraryCard series={series} />
 
             <VersionManagerTiles totals={versionManager} />
+
+            <OverviewReports reports={reports} />
 
             <Section title="How people use the app">
                 <Card>

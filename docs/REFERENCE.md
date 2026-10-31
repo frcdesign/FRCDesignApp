@@ -37,6 +37,7 @@ KV holds what may expire or be lost. Every key belongs to a `kvStore` (`src/back
 - `session:` — a signed-in session's access and refresh tokens and user id, keyed by the opaque id in the `frc-design-app-session` cookie, for 30 days (`features/auth/session.ts`). A sign-in in flight keeps nothing here: its state and return path are the whole of the ten-minute `frc-design-app-login` cookie (`features/auth/login.ts`).
 - `background-session:` — the latest session ids of the owner and each admin team member, so a load nobody is signed in behind can run as one of them.
 - `library-reload:`, `library-reload-queued:` — the reload holding each library, and those waiting for their turn ([architecture/loading.md](./architecture/loading.md)).
+- `feedback-sent:` — when each reporter sent their reports in the last hour, for the reports' rate limit ([architecture/feedback.md](./architecture/feedback.md)).
 - `unit-info:` — a workspace's units, for a week. On a miss the route asks Onshape and registers a transient `updateworkspaceunits` webhook, whose delivery drops the entry. Onshape cleans transient webhooks up after a while without events, so nothing records or removes them, and the expiry covers one it drops quietly. Onshape doesn't sign webhooks registered through the API, so the url names the workspace plainly: a forged delivery only costs a refetch (`features/webhooks/transient.ts`).
 
 ### R2 — Blob Storage (`c.env.BLOB`)
@@ -74,7 +75,7 @@ The asset binding is configured with `single-page-application` mode, which means
 
 ## How Users Get Into the App
 
-Onshape opens the app at `/init`, which sends a caller without a working session through Onshape sign-in and back, then hands off to the SPA at `/`. `/` resumes the last tab and group from `localStorage`. The sign-in flow, sessions and access are in [architecture/auth.md](./architecture/auth.md).
+Onshape opens the app at `/init`, which sends a caller without a working session through Onshape sign-in and back, checks that the grant can edit the document (sending one that can't to `/document-access`), then hands off to the SPA at `/`. `/` resumes the last tab and group from `localStorage`. The sign-in flow, sessions and access are in [architecture/auth.md](./architecture/auth.md).
 
 The `/app` route reads Onshape's parameters off the url once per page load, into `ui-state` (`src/frontend/routes/app/route.tsx`). From then on the store is what the app reads, and in-app navigation keeps only the app's own parameters (`q`, `part`, `config`, `favorite`) in the url.
 
@@ -118,6 +119,7 @@ owns, `lib/` for cross-cutting plumbing, and a small set of files at the root.
     - `push/` — the `ClientRelay` Durable Object and what it pushes
     - `admin-team/` — each library's admin team, set by the owner and synced from Onshape
     - `version-manager/` — links between Onshape workspaces and the pushes and pulls along them; see [architecture/version-manager.md](./architecture/version-manager.md)
+    - `feedback/` — reports posted to the FRCDesign Discord; see [architecture/feedback.md](./architecture/feedback.md)
     - `favorites/`, `search/`, `analytics/`, `insert-location/`
 
 ### `src/frontend/`

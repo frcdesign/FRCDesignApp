@@ -1,5 +1,9 @@
 import { Box, Button, Select, Stack } from "@mantine/core";
-import { ArrowLeftIcon, SignOutIcon } from "@phosphor-icons/react";
+import {
+    ArrowLeftIcon,
+    ChatCircleTextIcon,
+    SignOutIcon
+} from "@phosphor-icons/react";
 import { useIsDashboard } from "../../dashboard/dashboard-nav";
 import {
     SETTING_CONTROL_WIDTH,
@@ -23,7 +27,9 @@ import {
 import { startSignOut } from "../../auth/sign-out";
 import { updateUiState } from "../../../lib/ui-state";
 import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
-import { SETUP_URL } from "../../../lib/url";
+import { DISCORD_INVITE_URL, SETUP_URL } from "../../../lib/url";
+import { useAppModal } from "../../../components/open-app-modal";
+import { openFeedbackForm } from "../../feedback/open-feedback";
 import { useLibraryId } from "../../../lib/library";
 import { ReloadButton } from "../../library/components/reload-button";
 import {
@@ -32,9 +38,6 @@ import {
 } from "../../library/components/version-approval";
 import { RefreshAdminTeamButton } from "../../admin-team/components/refresh-admin-team-button";
 import { AdminTeamSetting } from "../../admin-team/components/admin-team-setting";
-
-/** The FRCDesign Discord, where feedback and support now live. */
-const DISCORD_INVITE_URL = "https://discord.gg/PMgzEUTgB7";
 
 /** The usage dashboard, served standalone and needing no sign-in. */
 const DASHBOARD_URL = "/dashboard";
@@ -104,6 +107,7 @@ function UserSettings(): ReactNode {
     const libraryId = useLibraryId();
     const isConnected = useIsConnectedToOnshape();
     const isDashboard = useIsDashboard();
+    const modal = useAppModal();
 
     return (
         <Stack gap="sm">
@@ -127,6 +131,17 @@ function UserSettings(): ReactNode {
                     <OpenUrlButton text="Open dashboard" url={DASHBOARD_URL} />
                 </InputRow>
             )}
+            <InputRow label="Feedback">
+                <Button
+                    leftSection={<ChatCircleTextIcon />}
+                    onClick={() => {
+                        modal.close();
+                        openFeedbackForm();
+                    }}
+                >
+                    Send feedback
+                </Button>
+            </InputRow>
             <InputRow label="Discord">
                 <OpenUrlButton text="Join discord" url={DISCORD_INVITE_URL} />
             </InputRow>

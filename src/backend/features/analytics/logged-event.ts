@@ -5,6 +5,11 @@ import type {
     VersionJobKind,
     VersionJobOutcome
 } from "../version-manager/contract";
+import type {
+    FeedbackCategory,
+    FeedbackSource,
+    FeedbackTopic
+} from "../feedback/contract";
 import { EventType, type InsertSource } from "./usage";
 import { type LoggedEvent } from "./schema";
 
@@ -32,25 +37,43 @@ type VersionRunColumns = Pick<
     | "updatedElements"
 >;
 
+/** What only a report fills in. */
+type ReportColumns = Pick<
+    LoggedEvent,
+    "reportTopic" | "reportCategory" | "reportSource"
+>;
+
+/** The part an insert placed, or a part report named. */
+export type ElementColumns = Pick<
+    LoggedEvent,
+    "elementId" | "documentId" | "instanceId" | "instanceType" | "insertableId"
+>;
+
 /** What only an insert fills in. */
 type InsertColumns = Omit<
     LoggedEvent,
-    keyof EventCore | keyof VersionRunColumns
+    | keyof EventCore
+    | keyof VersionRunColumns
+    | keyof ReportColumns
+    | keyof ElementColumns
 >;
 
 /** Spelled out, so a new column fails to compile until someone decides its value here. */
 export const NOT_AN_INSERT: InsertColumns = {
-    elementId: null,
-    documentId: null,
-    instanceId: null,
-    instanceType: null,
-    insertableId: null,
     targetElementType: null,
     selection: null,
     isFavorite: null,
     isQuickInsert: null,
     source: null,
     fasten: null
+};
+
+export const NO_ELEMENT: ElementColumns = {
+    elementId: null,
+    documentId: null,
+    instanceId: null,
+    instanceType: null,
+    insertableId: null
 };
 
 export const NOT_A_VERSION_RUN: VersionRunColumns = {
@@ -61,6 +84,12 @@ export const NOT_A_VERSION_RUN: VersionRunColumns = {
     failedSteps: null,
     createdVersions: null,
     updatedElements: null
+};
+
+export const NOT_A_REPORT: ReportColumns = {
+    reportTopic: null,
+    reportCategory: null,
+    reportSource: null
 };
 
 /** A logged run, whose own columns a reader can then count on. */
@@ -98,4 +127,21 @@ export function asInsert(event: LoggedEvent): LoggedInsert | undefined {
         event.targetElementType !== null &&
         event.source !== null;
     return isInsert ? (event as LoggedInsert) : undefined;
+}
+
+/** A logged report, whose own columns a reader can then count on. */
+export type LoggedReport = LoggedEvent & {
+    reportTopic: FeedbackTopic;
+    reportCategory: FeedbackCategory;
+    reportSource: FeedbackSource;
+};
+
+/** Undefined for another kind of event. */
+export function asReport(event: LoggedEvent): LoggedReport | undefined {
+    const isReport =
+        event.type === EventType.REPORT &&
+        event.reportTopic !== null &&
+        event.reportCategory !== null &&
+        event.reportSource !== null;
+    return isReport ? (event as LoggedReport) : undefined;
 }

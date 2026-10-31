@@ -31,6 +31,10 @@ import { useFavorite } from "../../favorites/queries";
 import { RequireSignIn } from "../../auth/components/require-access";
 import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
 import { InsertSource } from "@backend/features/analytics/usage";
+import { Menu } from "@mantine/core";
+import { FlagIcon } from "@phosphor-icons/react";
+import { openPartReport } from "../../feedback/open-feedback";
+import { useLibraryId } from "../../../lib/library";
 
 interface InsertableMatch extends RowMatch {
     /** The values of the configuration it names, for the menu. */
@@ -162,6 +166,7 @@ export function InsertableMenuItems(
         report
     } = props;
     const isConnected = useIsConnectedToOnshape();
+    const libraryId = useLibraryId();
 
     return (
         <>
@@ -198,6 +203,20 @@ export function InsertableMenuItems(
                     path={insertable.path}
                     selection={selection}
                 />
+            </MenuSection>
+            <MenuSection label="Feedback">
+                <Menu.Item
+                    leftSection={<FlagIcon />}
+                    onClick={() =>
+                        openPartReport(libraryId, {
+                            insertable,
+                            // The menu's whole selection; a card's search hit names only some.
+                            selection: report?.selection ?? selection
+                        })
+                    }
+                >
+                    Report an issue
+                </Menu.Item>
             </MenuSection>
             <AdminMenuSection>
                 <ReloadThumbnailMenuItem

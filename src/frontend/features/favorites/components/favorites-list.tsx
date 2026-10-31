@@ -55,6 +55,7 @@ export function FavoritesList(): ReactNode {
         return (
             <SectionError
                 title="Failed to load favorites."
+                error={libraryQuery.error ?? favoritesQuery.error}
                 icon={
                     <AppIcon
                         icon={HeartBreakIcon}
@@ -124,7 +125,12 @@ function FavoriteSearchResults(props: FavoriteSearchResultsProps): ReactNode {
     if (searchDbQuery.isLoading) {
         return <SectionLoading title="Searching..." />;
     } else if (searchDbQuery.isError) {
-        return <SectionError title="Failed to load search database." />;
+        return (
+            <SectionError
+                title="Failed to load search database."
+                error={searchDbQuery.error}
+            />
+        );
     } else if (!searchDbQuery.data) {
         return <SectionError title="The search database is empty." />;
     }
