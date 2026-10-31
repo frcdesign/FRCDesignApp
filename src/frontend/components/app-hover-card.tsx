@@ -14,6 +14,7 @@ interface AppHoverCardProps extends Pick<
     | "closeDelay"
     | "interactive"
     | "onClose"
+    | "middlewares"
 > {
     /** What is hovered or tapped. Wrapped, so it need not take a ref. */
     target: ReactNode;

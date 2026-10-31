@@ -1,12 +1,20 @@
-import { Loader, Table, Text } from "@mantine/core";
+import { Group, Loader, Stack, Table, Text } from "@mantine/core";
 import { SlidersHorizontalIcon } from "@phosphor-icons/react";
 import { ReactNode } from "react";
 import type { InsertableOut } from "@backend/features/library/contract";
-import { type PartialSelection } from "@backend/features/configurations/contract";
+import {
+    type ConfigurationParameter,
+    type PartialSelection
+} from "@backend/features/configurations/contract";
 import { displayedValues } from "@backend/features/configurations/selection";
 import { AppHoverCard } from "../../../components/app-hover-card";
 import { AppIcon } from "../../../components/app-icon";
-import { IconSize, StatusColor } from "../../../lib/style-constants";
+import {
+    FontWeight,
+    IconSize,
+    PrimaryColor,
+    StatusColor
+} from "../../../lib/style-constants";
 import { useConfigurationQuery } from "../queries";
 
 interface ConfigurationHoverCardProps {
@@ -30,15 +38,11 @@ export function ConfigurationHoverCard(
             openDelay={150}
             closeDelay={50}
             position="right"
+            // Stays on the right, sliding back into view rather than flipping over the row.
+            middlewares={{ flip: false, shift: { crossAxis: true } }}
             arrowSize={20}
             padding="xs"
-            target={
-                <AppIcon
-                    icon={SlidersHorizontalIcon}
-                    size={IconSize.SMALL}
-                    color={StatusColor.DIMMED}
-                />
-            }
+            target={<ConfigurationIcon />}
         >
             <ConfigurationCard
                 insertable={insertable}
@@ -62,20 +66,48 @@ function ConfigurationCard(props: ConfigurationCardProps): ReactNode {
         insertable.microversionId
     );
 
-    if (configurationQuery.isPending) {
-        return <Loader size={IconSize.SMALL} />;
-    } else if (configurationQuery.isError) {
-        return (
-            <Text size="sm" c={StatusColor.ERROR}>
-                Failed to load the configuration.
-            </Text>
-        );
-    }
-
-    const values = displayedValues(
-        selection,
-        configurationQuery.data.parameters
+    return (
+        <Stack gap="xs">
+            <Group gap="xs">
+                <ConfigurationIcon />
+                <Text size="sm" fw={FontWeight.SEMI_BOLD}>
+                    Configuration
+                </Text>
+            </Group>
+            {configurationQuery.isPending ? (
+                <Loader size={IconSize.SMALL} />
+            ) : configurationQuery.isError ? (
+                <Text size="sm" c={StatusColor.ERROR}>
+                    Failed to load the configuration.
+                </Text>
+            ) : (
+                <ConfigurationTable
+                    selection={selection}
+                    parameters={configurationQuery.data.parameters}
+                />
+            )}
+        </Stack>
     );
+}
+
+function ConfigurationIcon(): ReactNode {
+    return (
+        <AppIcon
+            icon={SlidersHorizontalIcon}
+            size={IconSize.SMALL}
+            color={PrimaryColor.FILLED}
+        />
+    );
+}
+
+interface ConfigurationTableProps {
+    selection: PartialSelection;
+    parameters: ConfigurationParameter[];
+}
+
+function ConfigurationTable(props: ConfigurationTableProps): ReactNode {
+    const { selection, parameters } = props;
+    const values = displayedValues(selection, parameters);
 
     return (
         <Table
@@ -93,7 +125,7 @@ function ConfigurationCard(props: ConfigurationCardProps): ReactNode {
                         {/* What was changed stands out from what was left alone. */}
                         <Table.Td
                             c={isDefault ? StatusColor.DIMMED : undefined}
-                            fw={isDefault ? undefined : 500}
+                            fw={isDefault ? undefined : FontWeight.SEMI_BOLD}
                         >
                             {value}
                         </Table.Td>
