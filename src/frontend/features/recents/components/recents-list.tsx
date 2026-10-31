@@ -21,6 +21,7 @@ import { useVendorFilters } from "../../settings/vendor-filters";
 import { useRecentsQuery } from "../queries";
 import { RecentCard } from "./recent-card";
 import { RecentIcon } from "./recent-icon";
+import { rankRecents } from "../rank";
 
 /** Only shown signed in. Searched within itself, like the favorites list. */
 export function RecentsList(): ReactNode {
@@ -64,7 +65,7 @@ interface RecentSearchResultsProps {
     insertables: Insertables;
 }
 
-/** The recents whose part the query matches, still newest first. */
+/** The recents whose part the query matches, ranked as the search ranks them. */
 function RecentSearchResults(props: RecentSearchResultsProps): ReactNode {
     const { query, recents, insertables } = props;
 
@@ -93,7 +94,7 @@ function RecentSearchResults(props: RecentSearchResultsProps): ReactNode {
 
     return (
         <RecentCards
-            recents={recents.filter((recent) => hitsById[recent.insertableId])}
+            recents={rankRecents(recents, hits)}
             insertables={insertables}
             hits={hitsById}
         />
