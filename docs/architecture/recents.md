@@ -4,9 +4,8 @@
 
 A signed-in user sees the configurations they last inserted from a library,
 most recent first, each opening on that configuration. Two configurations of
-one part are two rows. Recents are
-per user and per library, and recorded only by inserting: opening the insert
-menu without inserting records nothing.
+one part are two rows. Recents are per user and per library, and recorded only
+by inserting: opening the insert menu without inserting records nothing.
 
 It is not usage tracking: [analytics.md](./analytics.md) logs every insert for
 the dashboard, and never reads back per user. Recents keep one row per
@@ -107,12 +106,12 @@ optimistically and refetched on settle.
 
 ## Failure and recovery
 
-| Failure                                   | Result                                  | Recovery                     |
-| ----------------------------------------- | --------------------------------------- | ---------------------------- |
-| The recent write fails                    | The insert succeeds; the list misses it | The next insert of that part |
-| A reload makes two rows one configuration | One row shown; the other stays stored   | Pushed out by later inserts  |
-| The insertable gains a parameter          | Stored selection lacks it               | Defaulted on read            |
-| The insertable loses the stored option    | `toSelection` falls back to the default | Insert it again              |
+| Failure                                   | Result                                  | Recovery                              |
+| ----------------------------------------- | --------------------------------------- | ------------------------------------- |
+| The recent write fails                    | The insert succeeds; the list misses it | The next insert of that configuration |
+| A reload makes two rows one configuration | One row shown; the other stays stored   | Pushed out by later inserts           |
+| The insertable gains a parameter          | Stored selection lacks it               | Defaulted on read                     |
+| The insertable loses the stored option    | `toSelection` falls back to the default | Insert it again                       |
 
 ## Decisions
 
