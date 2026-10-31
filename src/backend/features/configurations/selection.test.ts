@@ -8,6 +8,7 @@ import {
 } from "./contract";
 import {
     appliedValues,
+    canonicalValue,
     canonicalValues,
     displayedValues,
     findRecord,
@@ -51,9 +52,55 @@ describe("toSelection", () => {
         });
     });
 
-    it("keeps an expression as it was entered", () => {
-        expect(select({ length: "(2 + 3) in" }).length).toBe("(2 + 3) in");
-        expect(select({ length: "  50.8 mm " }).length).toBe("50.8 mm");
+    it("collapses a quantity to its value in the parameter's unit", () => {
+        expect(select({ length: "(2 + 3) in" }).length).toBe("5 in");
+        expect(select({ length: "  50.8 mm " }).length).toBe("2 in");
+        expect(select({ length: "5" }).length).toBe("5 in");
+    });
+
+    it("keeps every digit a repeating value needs", () => {
+        expect(select({ length: "1/3 in" }).length).toBe("0.33333333 in");
+    });
+
+    it("leaves a value that does not evaluate as it was given", () => {
+        expect(select({ length: "2 deg" }).length).toBe("2 deg");
+    });
+
+    // So a collapsed selection keeps its thumbnail key and its analytics value.
+    it.each([
+        ["length", quantityParam("length"), "(2 + 3) in"],
+        ["length", quantityParam("length"), "1/3 in"],
+        ["length", quantityParam("length"), "1/7 ft"],
+        ["length", quantityParam("length"), "0.05715 m"],
+        ["length", quantityParam("length"), "3 in + 1 mm"],
+        [
+            "length",
+            quantityParam("length", { unit: Unit.MILLIMETER }),
+            "1/3 in"
+        ],
+        [
+            "angle",
+            quantityParam("angle", {
+                quantityType: QuantityType.ANGLE,
+                unit: Unit.DEGREE
+            }),
+            "100/3 deg"
+        ],
+        [
+            "number",
+            quantityParam("count", {
+                quantityType: QuantityType.REAL,
+                unit: Unit.UNITLESS
+            }),
+            "1/3 + 2"
+        ]
+    ])("keeps a %s's canonical value: %s", (_type, parameter, typed) => {
+        const collapsed = toSelection({ [parameter.id]: typed }, [parameter])[
+            parameter.id
+        ];
+        expect(canonicalValue(parameter, collapsed)).toBe(
+            canonicalValue(parameter, typed)
+        );
     });
 
     it("spells a checkbox the one way Onshape does", () => {
@@ -131,10 +178,10 @@ describe("toKey", () => {
 });
 
 describe("onshapeOverrides", () => {
-    it("sends a quantity as it was entered, not as its value", () => {
+    it("sends a quantity as its value in the parameter's unit", () => {
         expect(
             onshapeOverrides(select({ length: "(2 + 3) in" }), parameters)
-        ).toEqual({ length: "(2 + 3) in" });
+        ).toEqual({ length: "5 in" });
     });
 
     it("leaves out a value that is the default however it is spelled", () => {

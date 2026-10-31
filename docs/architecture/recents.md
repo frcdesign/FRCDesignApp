@@ -32,7 +32,7 @@ configuration and are read only by their owner.
 **D1** `recent_inserts`: `id`, `user_id`, `library_id`, `insertable_id`
 (cascade on delete), `selection` (a stored selection, or null for a part with
 nothing to configure), `inserted_at`. The same shape as a favorite: only the
-selection, as typed, with nothing derived from it. Indexed on user, library
+selection, collapsed by `toSelection`, with nothing derived from it. Indexed on user, library
 and time for the list.
 At most `MAX_RECENTS` (100) rows per user and library.
 
@@ -46,9 +46,9 @@ At most `MAX_RECENTS` (100) rows per user and library.
    `recordRecentInsert` once Onshape has added the part. In an assembly that is
    before any fasten, since a failed fasten leaves the part inserted.
 2. `writeRecentInsert` reads the user's rows for that part and finds the one
-   for this configuration with `sameConfiguration`, so `5 in` and `(2 + 3) in`
-   are one row. It updates that row, or adds one, with the selection as typed
-   this time (`toStoredSelection`) and the time, then deletes the user's rows
+   for this configuration with `sameConfiguration`, which also passes over a
+   parameter a condition hides. It updates that row, or adds one, with the
+   selection (`toStoredSelection`) and the time, then deletes the user's rows
    in that library past the newest `MAX_RECENTS`. The write and the trim are
    one D1 batch.
 3. The write is awaited, so it lands before the response, but its failure is

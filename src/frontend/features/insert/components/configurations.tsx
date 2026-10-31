@@ -419,7 +419,7 @@ function QuantityInput(props: ParameterProps<QuantityParameter>): ReactNode {
         if (result.errorMessage) {
             return;
         }
-        // The expression, so the derived feature shows what was typed.
+        // Collapsed once it reaches the selection, which then re-seeds this box.
         setEmitted(result.expression);
         onValueChange(result.expression);
     };

@@ -200,9 +200,8 @@ describe("recents routes", () => {
         await writeConfigured({ length: "(2 + 3) in" }, 2000, parameters);
 
         const { recents } = await getRecents();
-        // Kept as it was typed last.
         expect(recents.map((recent) => recent.selection)).toEqual([
-            { length: "(2 + 3) in" }
+            { length: "5 in" }
         ]);
     });
 

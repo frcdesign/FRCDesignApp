@@ -1,6 +1,6 @@
 /**
- * Builds the two forms of a configuration: a selection, as entered, and the
- * key derived from it to name a thumbnail. See AGENTS.md.
+ * Builds the two forms of a configuration: a selection, its quantities
+ * collapsed, and the key derived from it to name a thumbnail. See AGENTS.md.
  */
 import {
     type ConfigurationKey,
@@ -23,6 +23,7 @@ import {
 import {
     evaluateBaseValue,
     formatBaseValue,
+    formatValueInUnit,
     formatValueWithUnits
 } from "./input-parser";
 
@@ -36,8 +37,8 @@ export function quantityDefault(
 }
 
 /**
- * Every declared parameter, as entered, with missing ones defaulted. Checkboxes
- * are normalized to Onshape's spelling and quantities trimmed.
+ * Every declared parameter, with missing ones defaulted. Checkboxes are
+ * normalized to Onshape's spelling and quantities collapsed (`collapseQuantity`).
  */
 export function toSelection(
     values: PartialSelection,
@@ -49,12 +50,26 @@ export function toSelection(
         if (parameter.type === ParameterType.BOOLEAN) {
             selection[parameter.id] = value.trim().toLowerCase();
         } else if (parameter.type === ParameterType.QUANTITY) {
-            selection[parameter.id] = value.trim();
+            selection[parameter.id] = collapseQuantity(parameter, value.trim());
         } else {
             selection[parameter.id] = value;
         }
     }
     return selection;
+}
+
+/**
+ * A quantity as its value in the parameter's own unit, to the precision values
+ * are compared at: `(2 + 3) in` is `5 in`, and `1/3 in` keeps every digit that
+ * tells it apart. Left as given when it doesn't evaluate, so the input can say why.
+ */
+function collapseQuantity(parameter: QuantityParameter, value: string): string {
+    const base = evaluateBaseValue(
+        value,
+        parameter.quantityType,
+        parameter.unit
+    );
+    return base === undefined ? value : formatValueInUnit(base, parameter.unit);
 }
 
 /** Drops parameters hidden by a condition, which Onshape never applies. */
@@ -111,8 +126,8 @@ export function canonicalValues(
 }
 
 /**
- * Whether two selections apply the same values, however each was typed. Unlike
- * {@link sameSelection}, `5 in` and `(2 + 3) in` agree.
+ * Whether two selections apply the same values. Unlike {@link sameSelection},
+ * a parameter a condition hides, or a derivation variable, makes no difference.
  */
 export function sameConfiguration(
     a: Selection,
@@ -136,7 +151,7 @@ function isDefault(parameter: ConfigurationParameter, value: string): boolean {
     );
 }
 
-/** The values that differ from the element's defaults, as entered. */
+/** The values that differ from the element's defaults. */
 export function onshapeOverrides(
     selection: Selection,
     parameters: ConfigurationParameter[]
@@ -153,9 +168,10 @@ export function onshapeOverrides(
 }
 
 /**
- * What a render sends Onshape, as entered: Onshape names its renders by the
- * value it computes, which differs in the last bit between `2.25 in` and
- * `0.05715 m`. Derivation variables are left out, since each insert's is unique.
+ * What a render sends Onshape: the selection's values, never the key's base
+ * units, since Onshape names its renders by the value it computes, which
+ * differs in the last bit between `2.25 in` and `0.05715 m`. Derivation
+ * variables are left out, since each insert's is unique.
  */
 export function renderOverrides(
     selection: Selection,

@@ -575,7 +575,7 @@ describe("favorites routes", () => {
         });
 
         // What the favorite opens with is what was typed, not what it evaluates to.
-        it("keeps a quantity as the expression it was entered as", async () => {
+        it("stores a quantity collapsed to its value", async () => {
             await seedPartStudio(db);
             await seedConfiguration(db);
             await db
@@ -584,7 +584,32 @@ describe("favorites routes", () => {
                 .where(eq(configurations.insertableId, TEST_PART_STUDIO_ID));
 
             expect(await post({ length: "(2 + 3) in" })).toEqual({
-                length: "(2 + 3) in"
+                length: "5 in"
+            });
+        });
+
+        // Rows saved before quantities collapsed still hold the expression.
+        it("reads back a stored expression collapsed", async () => {
+            await seedPartStudio(db);
+            await seedConfiguration(db);
+            await db
+                .update(configurations)
+                .set({ parameters: [quantityParam("length")] })
+                .where(eq(configurations.insertableId, TEST_PART_STUDIO_ID));
+            const favoriteId = await seedFavorite(db, TEST_PART_STUDIO_ID);
+            await db
+                .update(favorites)
+                .set({ defaultSelection: { length: "(2 + 3) in" } })
+                .where(eq(favorites.id, favoriteId));
+
+            const res = await createTestApp().request(
+                favoritesUrl,
+                jsonRequest("GET"),
+                env
+            );
+            const body: FavoritesBody = await res.json();
+            expect(body.favorites[favoriteId].defaultSelection).toEqual({
+                length: "5 in"
             });
         });
     });

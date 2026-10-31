@@ -85,7 +85,6 @@ export async function writeRecentInsert(
         existing
             ? db
                   .update(recentInserts)
-                  // As typed this time, though it compares equal to the last.
                   .set({ selection, insertedAt })
                   .where(eq(recentInserts.id, existing.id))
             : db.insert(recentInserts).values({

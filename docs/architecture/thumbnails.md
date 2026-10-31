@@ -76,7 +76,7 @@ can wait for it: the insert menu's preview, and favorite and recent rows. Search
 start one, so a cold search cannot start a render per row.
 
 1. The client calls `POST /api/render-thumbnail/insertable/:insertableId` with
-   the selection as entered. It must be signed in: the render calls Onshape as
+   the selection. It must be signed in: the render calls Onshape as
    the caller.
 2. `requestRender` makes the selection whole against the insertable's
    parameters and settles it as the insert menu does (`normalizeSelection`),
@@ -85,7 +85,7 @@ start one, so a cold search cannot start a render per row.
    element's default is refused with a 400.
 3. It asks the insertables endpoint, on the insertable's version, for the
    configuration's `predictableThumbnailId`, sending `renderOverrides`: the
-   values as entered, escaped once (`encodeQueryConfiguration`). No insertables
+   selection's values, escaped once (`encodeQueryConfiguration`). No insertables
    answers `no-part`, which the client shows as a configuration that failed to
    regenerate; otherwise it answers `rendering`.
 4. The instance id is `version-render-` plus a SHA-256 of
