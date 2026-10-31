@@ -1,7 +1,7 @@
 {
     "version": "6",
     "dialect": "sqlite",
-    "id": "66e21b86-70a9-41c8-a348-8c4ef89e2e16",
+    "id": "36e7baf7-ae39-4983-8b5b-a38051fee845",
     "prevId": "6f2386eb-1754-42e7-a379-680294ffc63a",
     "tables": {
         "configurations": {
@@ -350,14 +350,6 @@
                     "primaryKey": false,
                     "notNull": false,
                     "autoincrement": false
-                },
-                "insert_as_rigid": {
-                    "name": "insert_as_rigid",
-                    "type": "integer",
-                    "primaryKey": false,
-                    "notNull": true,
-                    "autoincrement": false,
-                    "default": false
                 },
                 "index_configurations": {
                     "name": "index_configurations",

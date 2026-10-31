@@ -207,33 +207,6 @@ export function useIndexingMutation(insertableId: string) {
     });
 }
 
-/** A part studio grouped on insert, so its parts move as one. */
-export function useInsertAsRigidMutation(insertableId: string) {
-    const libraryId = useLibraryId();
-    const key = useBuildStatusKey();
-    const refreshLibrary = useRefreshLibrary();
-    return useMutation({
-        mutationKey: ["insert-as-rigid", insertableId],
-        mutationFn: (insertAsRigid: boolean) =>
-            apiPost(
-                "/insert-as-rigid" +
-                    toLibraryPath(libraryId) +
-                    toInsertablePath(insertableId),
-                { body: { insertAsRigid } }
-            ),
-        onMutate: (insertAsRigid) =>
-            patchQuery<LibraryBuildStatus>(key, (status) => {
-                const insertable = status.insertables[insertableId];
-                if (insertable) insertable.insertAsRigid = insertAsRigid;
-            }),
-        onError: getAppErrorHandler(
-            "Unexpectedly failed to update insert as rigid."
-        ),
-        onSettled: (_result, error) =>
-            refreshLibrary({ discardPatches: error !== null })
-    });
-}
-
 /** Toggles a group between alphabetical and tab sort order. */
 export function useToggleSortOrderMutation(groupId: string) {
     const libraryId = useLibraryId();

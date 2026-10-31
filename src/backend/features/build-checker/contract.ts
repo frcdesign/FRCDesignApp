@@ -30,8 +30,6 @@ export interface InsertableBuildStatus {
     fastenOverride?: boolean;
     /** A mate connector was found, whether or not inserts use it. */
     hasMateConnector: boolean;
-    /** A part studio inserted into an assembly is grouped to move as one. */
-    insertAsRigid: boolean;
     indexConfigurations: boolean;
     /** Parameters an admin left out of indexing. */
     excludedParameterIds: string[];

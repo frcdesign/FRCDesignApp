@@ -63,7 +63,6 @@ describe("saveInsertable", () => {
             // User-owned flags start off.
             isVisible: false,
             fastenOverride: null,
-            insertAsRigid: false,
             indexConfigurations: false,
             // Computed columns come from the parse.
             isOpenComposite: true,
@@ -83,7 +82,6 @@ describe("saveInsertable", () => {
             .set({
                 isVisible: true,
                 fastenOverride: false,
-                insertAsRigid: true,
                 indexConfigurations: true,
                 sortOrder: 5
             })
@@ -103,7 +101,6 @@ describe("saveInsertable", () => {
             // Preserved.
             isVisible: true,
             fastenOverride: false,
-            insertAsRigid: true,
             indexConfigurations: true,
             sortOrder: 5,
             // Overwritten.

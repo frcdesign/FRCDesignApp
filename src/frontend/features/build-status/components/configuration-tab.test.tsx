@@ -44,7 +44,6 @@ function statusOf(
         isVisible: true,
         supportsFasten: false,
         hasMateConnector: false,
-        insertAsRigid: false,
         indexConfigurations: false,
         excludedParameterIds: [],
         vendors: [],

@@ -8,7 +8,6 @@ import { ElementType } from "@backend/lib/onshape/element-type";
 import { getVendorName, Vendor } from "@backend/features/library/vendors";
 import { StatusColor } from "../../../lib/style-constants";
 import {
-    useInsertAsRigidMutation,
     useSetVisibilityMutation,
     useToggleInsertAndFastenMutation,
     useToggleSortOrderMutation
@@ -23,7 +22,6 @@ interface InsertableSettingsProps {
 /** How an insertable is offered and inserted, and what its load found. */
 export function InsertableSettings(props: InsertableSettingsProps): ReactNode {
     const { insertableId, status } = props;
-    const isPartStudio = status.elementType === ElementType.PART_STUDIO;
     return (
         <Stack gap="sm">
             <SectionHeader>Settings</SectionHeader>
@@ -32,12 +30,6 @@ export function InsertableSettings(props: InsertableSettingsProps): ReactNode {
                 isVisible={status.isVisible}
             />
             <FastenSwitch insertableId={insertableId} status={status} />
-            {isPartStudio && (
-                <RigidSwitch
-                    insertableId={insertableId}
-                    insertAsRigid={status.insertAsRigid}
-                />
-            )}
             <ControlRow
                 label="Vendors"
                 control={<VendorBadges vendors={status.vendors} />}
@@ -97,25 +89,6 @@ function describeFasten(status: InsertableBuildStatus): string {
         return "Turned off; has a mate connector";
     }
     return "Placed and fastened at its first mate connector";
-}
-
-interface RigidSwitchProps {
-    insertableId: string;
-    insertAsRigid: boolean;
-}
-
-function RigidSwitch(props: RigidSwitchProps): ReactNode {
-    const { insertableId, insertAsRigid } = props;
-    const mutation = useInsertAsRigidMutation(insertableId);
-    return (
-        <SwitchRow
-            label="Insert as rigid"
-            description="Groups its parts in an assembly"
-            checked={insertAsRigid}
-            disabled={mutation.isPending}
-            onToggle={() => mutation.mutate(!insertAsRigid)}
-        />
-    );
 }
 
 interface VendorBadgesProps {

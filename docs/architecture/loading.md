@@ -43,7 +43,7 @@ stopped. One reload holds a library at a time.
   fasten at a mate connector, and which; written by every load and by the
   insert-and-fasten switch. `fasten_info` holds a connector found even where
   fastening is off, so the admin card can offer it.
-- `insertables.fasten_override`, `insert_as_rigid`, `is_visible`,
+- `insertables.fasten_override`, `is_visible`,
   `index_configurations`, `excluded_parameter_ids` — an admin's choices, which
   a load reads but never writes. A null `fasten_override` leaves fastening to
   detection.

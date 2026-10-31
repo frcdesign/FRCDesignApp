@@ -135,10 +135,6 @@ export const insertables = sqliteTable("insertables", {
         .default(false),
     // Set by an admin; kept across reloads. Null leaves it to detection.
     fastenOverride: integer("fasten_override", { mode: "boolean" }),
-    // Set by an admin; kept across reloads. Part studios only.
-    insertAsRigid: integer("insert_as_rigid", { mode: "boolean" })
-        .notNull()
-        .default(false),
     // Set by an admin; kept across reloads.
     indexConfigurations: integer("index_configurations", { mode: "boolean" })
         .notNull()

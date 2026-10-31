@@ -184,31 +184,6 @@ describe("insertable routes", () => {
         ).toEqual([{ type: BuildIssueType.NO_VENDORS }]);
     });
 
-    it("POST /insert-as-rigid sets a part studio's flag", async () => {
-        await seedPartStudio(db);
-
-        const res = await createTestApp().request(
-            `/api/insert-as-rigid/library/${TEST_LIBRARY_ID}/insertable/${TEST_PART_STUDIO_ID}`,
-            jsonRequest("POST", { insertAsRigid: true }),
-            env
-        );
-        expect(res.status).toBe(200);
-        expect((await readInsertable(TEST_PART_STUDIO_ID))?.insertAsRigid).toBe(
-            true
-        );
-    });
-
-    it("POST /insert-as-rigid refuses an assembly", async () => {
-        await seedAssembly(db);
-
-        const res = await createTestApp().request(
-            `/api/insert-as-rigid/library/${TEST_LIBRARY_ID}/insertable/${TEST_ASSEMBLY_ID}`,
-            jsonRequest("POST", { insertAsRigid: true }),
-            env
-        );
-        expect(res.status).toBe(400);
-    });
-
     it("POST /add-to-part-studio places at the mate connector when it fastens", async () => {
         await seedPartStudio(db, { supportsFasten: true });
         const spy = vi
@@ -224,55 +199,6 @@ describe("insertable routes", () => {
         expect(JSON.stringify(spy.mock.calls[0][2])).toContain(
             "AT_MATE_CONNECTOR"
         );
-    });
-
-    it("POST /add-to-assembly groups a rigid part studio's parts", async () => {
-        await seedPartStudio(db, { insertAsRigid: true });
-        vi.spyOn(AssemblyEndpoints, "addElementToAssembly").mockResolvedValue({
-            insertInstanceResponses: [
-                { occurrences: [{ path: ["o1"] }, { path: ["o2"] }] }
-            ]
-        });
-        const feature = vi
-            .spyOn(AssemblyEndpoints, "addAssemblyFeature")
-            .mockResolvedValue({ feature: { featureId: "group-1" } });
-
-        const res = await createTestApp().request(
-            `/api/add-to-assembly/insertable/${TEST_PART_STUDIO_ID}`,
-            jsonRequest("POST", { targetPath }),
-            env
-        );
-        expect(res.status).toBe(200);
-        // The group isn't a feature for the panel to open.
-        const body: InsertOut = await res.json();
-        expect(body.featureId).toBeUndefined();
-
-        expect(feature).toHaveBeenCalledOnce();
-        expect(feature.mock.calls[0][2]).toMatchObject({
-            featureType: "mateGroup",
-            parameters: [
-                {
-                    queries: [{ path: ["o1"] }, { path: ["o2"] }]
-                }
-            ]
-        });
-    });
-
-    it("POST /add-to-assembly leaves a part studio not set rigid ungrouped", async () => {
-        await seedPartStudio(db);
-        vi.spyOn(AssemblyEndpoints, "addElementToAssembly").mockResolvedValue({
-            insertInstanceResponses: [
-                { occurrences: [{ path: ["o1"] }, { path: ["o2"] }] }
-            ]
-        });
-        const feature = vi.spyOn(AssemblyEndpoints, "addAssemblyFeature");
-
-        await createTestApp().request(
-            `/api/add-to-assembly/insertable/${TEST_PART_STUDIO_ID}`,
-            jsonRequest("POST", { targetPath }),
-            env
-        );
-        expect(feature).not.toHaveBeenCalled();
     });
 
     it("POST /indexing applies a switch and exclusions in one reindex", async () => {

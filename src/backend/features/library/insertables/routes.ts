@@ -44,10 +44,7 @@ import {
 import { PartType } from "../../../lib/onshape/endpoints/documents";
 import { onshapeOverrides, toSelection } from "../../configurations/selection";
 import { encodeConfiguration } from "../../configurations/utils";
-import {
-    fastenMate,
-    groupMate
-} from "../../../lib/onshape/objects/assembly-features";
+import { fastenMate } from "../../../lib/onshape/objects/assembly-features";
 import {
     decideFasten,
     FASTEN_ISSUE_TYPES,
@@ -69,8 +66,6 @@ function inLibrary(libraryId: LibraryId, insertableId: string) {
 }
 
 const setFastenBody = z.object({ supportsFasten: z.boolean() });
-
-const setRigidBody = z.object({ insertAsRigid: z.boolean() });
 
 /** Either or both, so an admin's edits land in one reindex. */
 const indexingBody = z.object({
@@ -144,40 +139,6 @@ insertableRoutes.post(
             })
             .where(eq(insertables.id, insertableId));
 
-        await bumpLibraryVersion(db, libraryId);
-        return c.json({ success: true });
-    }
-);
-
-/** POST /api/insert-as-rigid/library/:libraryId/insertable/:insertableId */
-insertableRoutes.post(
-    "/insert-as-rigid" + libraryRoute() + insertableRoute(),
-    requireEditorMiddleware,
-    validate("json", setRigidBody),
-    async (c) => {
-        const db = getDb(c.env.DB);
-        const libraryId = getLibraryParam(c);
-        const insertableId = getInsertableParam(c);
-        const { insertAsRigid } = c.req.valid("json");
-
-        const row = await db
-            .select({ elementType: insertables.elementType })
-            .from(insertables)
-            .where(inLibrary(libraryId, insertableId))
-            .get();
-        if (!row)
-            throw internalError("Insertable not found", HttpStatus.NOT_FOUND);
-        if (row.elementType !== ElementType.PART_STUDIO) {
-            throw handledError(
-                "Only a part studio can be inserted as rigid.",
-                HttpStatus.BAD_REQUEST
-            );
-        }
-
-        await db
-            .update(insertables)
-            .set({ insertAsRigid })
-            .where(eq(insertables.id, insertableId));
         await bumpLibraryVersion(db, libraryId);
         return c.json({ success: true });
     }
@@ -429,8 +390,7 @@ insertableRoutes.post(
                 elementType: insertables.elementType,
                 isOpenComposite: insertables.isOpenComposite,
                 supportsFasten: insertables.supportsFasten,
-                fastenInfo: insertables.fastenInfo,
-                insertAsRigid: insertables.insertAsRigid
+                fastenInfo: insertables.fastenInfo
             })
             .from(insertables)
             .where(eq(insertables.id, insertableId))
@@ -508,28 +468,6 @@ insertableRoutes.post(
 
         const occurrences =
             result.insertInstanceResponses?.[0]?.occurrences ?? [];
-
-        // A whole part studio arrives as one instance per part, free to move apart.
-        if (
-            row.insertAsRigid &&
-            row.elementType === ElementType.PART_STUDIO &&
-            occurrences.length > 1
-        ) {
-            try {
-                await addAssemblyFeature(
-                    onshapeApi,
-                    targetPath,
-                    groupMate(
-                        row.name,
-                        occurrences.map((occurrence) => occurrence.path)
-                    )
-                );
-            } catch (error) {
-                // Only the group failed; the insert is still in the assembly.
-                await track(false);
-                throw error;
-            }
-        }
 
         if (!body.fasten) {
             await track(false);
