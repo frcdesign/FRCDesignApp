@@ -1,12 +1,4 @@
-import {
-    Badge,
-    Divider,
-    Group,
-    Loader,
-    Stack,
-    Text,
-    Tooltip
-} from "@mantine/core";
+import { Badge, Divider, Group, Loader, Text, Tooltip } from "@mantine/core";
 import {
     EyeSlashIcon,
     GitBranchIcon,
@@ -19,13 +11,9 @@ import {
     getMaxSeverity
 } from "@backend/features/build-checker/issues";
 import { InsertableBuildStatus } from "@backend/features/build-checker/contract";
-import {
-    FontWeight,
-    IconSize,
-    StatusColor
-} from "../../../lib/style-constants";
+import { IconSize, StatusColor } from "../../../lib/style-constants";
 import { AppIcon } from "../../../components/app-icon";
-import { AppHoverCard } from "../../../components/app-hover-card";
+import { AppHoverBubble } from "../../../components/app-hover-bubble";
 import { RequireAccessLevel } from "../../auth/components/require-access";
 import { useBuildStatusQuery } from "../queries";
 import { useIsGroupLoading } from "../../library/queries";
@@ -58,43 +46,6 @@ interface BuildStatusSubject {
     isHidden?: boolean;
 }
 
-interface BuildStatusCardProps extends BuildStatusSubject {
-    /** The group/insertable admin menu wrapped by the card. */
-    children: ReactNode;
-}
-
-function BuildStatusCard(props: BuildStatusCardProps): ReactNode {
-    const {
-        name,
-        groupId,
-        issues,
-        versionCreatedAt,
-        configurationTarget,
-        children
-    } = props;
-    return (
-        <Stack gap="sm" w={300}>
-            <CardHeader
-                name={name}
-                groupId={groupId}
-                issues={issues}
-                versionCreatedAt={versionCreatedAt}
-            />
-            {issues.length > 0 && (
-                <>
-                    <Divider />
-                    <BuildChecksSection
-                        issues={issues}
-                        configurationTarget={configurationTarget}
-                    />
-                </>
-            )}
-            <Divider />
-            {children}
-        </Stack>
-    );
-}
-
 interface BuildStatusBadgeProps extends BuildStatusSubject {
     /** The group/insertable admin menu shown in the hover card. */
     hoverMenu: ReactNode;
@@ -124,64 +75,50 @@ function BuildStatusHoverCard({
     const maxSeverity = getMaxSeverity(issues);
     const loading = useIsGroupLoading(groupId);
 
+    const statusIcon = (size: IconSize) =>
+        isHidden ? (
+            // Only editors see hidden insertables, so its checks don't matter yet.
+            <AppIcon
+                icon={EyeSlashIcon}
+                size={size}
+                color={StatusColor.WARNING}
+            />
+        ) : (
+            <IssueIcon severity={maxSeverity} size={size} raised={false} />
+        );
+
     return (
-        <AppHoverCard
-            position="right"
-            arrowSize={20}
+        <AppHoverBubble
             interactive
             target={
                 loading ? (
                     <Loader size={IconSize.SMALL} />
-                ) : isHidden ? (
-                    // Only editors see hidden insertables, so its checks don't matter yet.
-                    <AppIcon icon={EyeSlashIcon} color={StatusColor.WARNING} />
                 ) : (
-                    <IssueIcon severity={maxSeverity} raised={false} />
+                    statusIcon(IconSize.SMALL)
                 )
             }
-        >
-            <BuildStatusCard
-                name={name}
-                groupId={groupId}
-                issues={issues}
-                versionCreatedAt={versionCreatedAt}
-                configurationTarget={configurationTarget}
-            >
-                {hoverMenu}
-            </BuildStatusCard>
-        </AppHoverCard>
-    );
-}
-
-interface CardHeaderProps {
-    name: string;
-    groupId: string;
-    issues: BuildIssue[];
-    versionCreatedAt?: number;
-}
-
-/** The card header: name + severity summary on the left, the version's age on the right. */
-function CardHeader(props: CardHeaderProps): ReactNode {
-    const { name, groupId, issues, versionCreatedAt } = props;
-    return (
-        <Stack gap={6}>
-            <Group justify="space-between" align="center" gap="sm">
-                <Text
-                    truncate
-                    title={name}
-                    fw={FontWeight.SEMI_BOLD}
-                    flex={1}
-                    miw={0}
-                >
-                    {name}
-                </Text>
+            // The version's age spins while loading, so the title keeps the status.
+            icon={statusIcon(IconSize.CONTROL)}
+            title={name}
+            rightSection={
                 <VersionAge
                     groupId={groupId}
                     versionCreatedAt={versionCreatedAt}
                 />
-            </Group>
-            <SeverityBadges issues={issues} />
-        </Stack>
+            }
+            subtitle={<SeverityBadges issues={issues} />}
+        >
+            {issues.length > 0 && (
+                <>
+                    <BuildChecksSection
+                        issues={issues}
+                        configurationTarget={configurationTarget}
+                    />
+                    <Divider />
+                </>
+            )}
+            {hoverMenu}
+        </AppHoverBubble>
     );
 }
 

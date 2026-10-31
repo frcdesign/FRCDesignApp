@@ -24,6 +24,7 @@ import {
     StatusColor
 } from "../../../lib/style-constants";
 import { SectionHeader } from "./sections";
+import { HoverBubbleRow } from "../../../components/app-hover-bubble";
 import { getParameterTypeLabel } from "../parameter-type-label";
 import styles from "../../../lib/styles.module.css";
 
@@ -41,10 +42,9 @@ export function InsertableParsedSection(
             <Divider />
             <Stack gap={6}>
                 <SectionHeader>Parsed</SectionHeader>
-                <Group gap="xl" justify="space-between">
-                    <Text>Vendors</Text>
+                <HoverBubbleRow label="Vendors">
                     <VendorBadges vendors={status.vendors} />
-                </Group>
+                </HoverBubbleRow>
             </Stack>
         </>
     );
@@ -94,13 +94,12 @@ interface ParameterRowProps {
 function ParameterRow(props: ParameterRowProps): ReactNode {
     const { parameter } = props;
     return (
-        <Group gap="xl" justify="space-between">
-            <Text>{parameter.name}</Text>
+        <HoverBubbleRow label={parameter.name}>
             <Group gap={6}>
                 <ParameterTypeBadge parameter={parameter} />
                 <RoleIcon parameter={parameter} />
             </Group>
-        </Group>
+        </HoverBubbleRow>
     );
 }
 

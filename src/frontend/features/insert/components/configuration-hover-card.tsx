@@ -1,4 +1,4 @@
-import { Group, Loader, Stack, Table, Text } from "@mantine/core";
+import { Loader, Stack, Text } from "@mantine/core";
 import { SlidersHorizontalIcon } from "@phosphor-icons/react";
 import { ReactNode } from "react";
 import type { InsertableOut } from "@backend/features/library/contract";
@@ -7,7 +7,10 @@ import {
     type PartialSelection
 } from "@backend/features/configurations/contract";
 import { displayedValues } from "@backend/features/configurations/selection";
-import { AppHoverCard } from "../../../components/app-hover-card";
+import {
+    AppHoverBubble,
+    HoverBubbleRow
+} from "../../../components/app-hover-bubble";
 import { AppIcon } from "../../../components/app-icon";
 import {
     FontWeight,
@@ -34,57 +37,16 @@ export function ConfigurationHoverCard(
     }
 
     return (
-        <AppHoverCard
-            openDelay={150}
-            closeDelay={50}
-            position="right"
-            // Stays on the right, sliding back into view rather than flipping over the row.
-            middlewares={{ flip: false, shift: { crossAxis: true } }}
-            arrowSize={20}
-            padding="xs"
+        <AppHoverBubble
             target={<ConfigurationIcon size={IconSize.SMALL} />}
+            icon={<ConfigurationIcon size={IconSize.CONTROL} />}
+            title="Configuration"
         >
-            <ConfigurationCard
+            <ConfigurationValues
                 insertable={insertable}
                 selection={selection ?? {}}
             />
-        </AppHoverCard>
-    );
-}
-
-interface ConfigurationCardProps {
-    insertable: InsertableOut;
-    selection: PartialSelection;
-}
-
-/** Mounted only while the card is open, so the parameters are fetched on first hover. */
-function ConfigurationCard(props: ConfigurationCardProps): ReactNode {
-    const { insertable, selection } = props;
-
-    const configurationQuery = useConfigurationQuery(
-        insertable.id,
-        insertable.microversionId
-    );
-
-    return (
-        <Stack gap="xs">
-            <Group gap="xs">
-                <ConfigurationIcon size={IconSize.CONTROL} />
-                <Text fw={FontWeight.SEMI_BOLD}>Configuration</Text>
-            </Group>
-            {configurationQuery.isPending ? (
-                <Loader size={IconSize.SMALL} />
-            ) : configurationQuery.isError ? (
-                <Text size="sm" c={StatusColor.ERROR}>
-                    Failed to load the configuration.
-                </Text>
-            ) : (
-                <ConfigurationTable
-                    selection={selection}
-                    parameters={configurationQuery.data.parameters}
-                />
-            )}
-        </Stack>
+        </AppHoverBubble>
     );
 }
 
@@ -103,38 +65,57 @@ function ConfigurationIcon(props: ConfigurationIconProps): ReactNode {
     );
 }
 
-interface ConfigurationTableProps {
+interface ConfigurationValuesProps {
+    insertable: InsertableOut;
+    selection: PartialSelection;
+}
+
+/** Mounted only while the card is open, so the parameters are fetched on first hover. */
+function ConfigurationValues(props: ConfigurationValuesProps): ReactNode {
+    const { insertable, selection } = props;
+
+    const configurationQuery = useConfigurationQuery(
+        insertable.id,
+        insertable.microversionId
+    );
+
+    if (configurationQuery.isPending) {
+        return <Loader size={IconSize.SMALL} />;
+    } else if (configurationQuery.isError) {
+        return (
+            <Text c={StatusColor.ERROR}>Failed to load the configuration.</Text>
+        );
+    }
+    return (
+        <ValueRows
+            selection={selection}
+            parameters={configurationQuery.data.parameters}
+        />
+    );
+}
+
+interface ValueRowsProps {
     selection: PartialSelection;
     parameters: ConfigurationParameter[];
 }
 
-function ConfigurationTable(props: ConfigurationTableProps): ReactNode {
+function ValueRows(props: ValueRowsProps): ReactNode {
     const { selection, parameters } = props;
-    const values = displayedValues(selection, parameters);
-
     return (
-        <Table
-            withRowBorders={false}
-            verticalSpacing={2}
-            horizontalSpacing="xs"
-            fz="sm"
-        >
-            <Table.Tbody>
-                {values.map(({ parameter, value, isDefault }) => (
-                    <Table.Tr key={parameter.id}>
-                        <Table.Td c={StatusColor.DIMMED}>
-                            {parameter.name}
-                        </Table.Td>
+        <Stack gap={4}>
+            {displayedValues(selection, parameters).map(
+                ({ parameter, value, isDefault }) => (
+                    <HoverBubbleRow key={parameter.id} label={parameter.name}>
                         {/* What was changed stands out from what was left alone. */}
-                        <Table.Td
+                        <Text
                             c={isDefault ? StatusColor.DIMMED : undefined}
                             fw={isDefault ? undefined : FontWeight.SEMI_BOLD}
                         >
                             {value}
-                        </Table.Td>
-                    </Table.Tr>
-                ))}
-            </Table.Tbody>
-        </Table>
+                        </Text>
+                    </HoverBubbleRow>
+                )
+            )}
+        </Stack>
     );
 }
