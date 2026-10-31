@@ -75,7 +75,7 @@ menu offering it, a blue dot marks the ⋯ button and the item
 | ------------------------------------- | --------------------------------------- | ----------------------------------- |
 | The insertable gains a parameter      | Stored selection lacks it               | Defaulted on read                   |
 | The insertable loses the saved option | `toSelection` falls back to the default | Set the default configuration again |
-| Signed out                            | No favorites shown; prompt to sign in   | Sign in                             |
+| Signed out                            | No Favorites section                    | Sign in from the navbar             |
 
 ## Decisions
 

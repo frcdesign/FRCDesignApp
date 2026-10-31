@@ -5,7 +5,7 @@ import {
 } from "../configurations/contract";
 
 /** How many a user keeps per library; older ones are dropped on insert. */
-export const MAX_RECENTS = 10;
+export const MAX_RECENTS = 100;
 
 export interface RecentInsert {
     insertableId: string;

@@ -437,6 +437,9 @@ describe("analytics routes", () => {
             expect(bySource[InsertSource.GROUP_SEARCH]).toMatchObject({
                 count: 0
             });
+            expect(bySource[InsertSource.RECENTS]).toMatchObject({
+                count: 0
+            });
         });
 
         it("scopes the source breakdown to the range", async () => {

@@ -31,7 +31,7 @@ are read only by their owner.
 delete), `selection` (a stored selection, or null for a part with nothing to
 configure), `inserted_at`. Keyed on user and insertable, so a part has one row
 however often it is inserted; indexed on user, library and time for the list.
-At most `MAX_RECENTS` (10) rows per user and library.
+At most `MAX_RECENTS` (100) rows per user and library.
 
 **Browser** `uiState.isRecentsOpen`: whether the section is open; it starts open.
 
@@ -57,9 +57,13 @@ first. Like a favorite, each stored selection is made whole against the
 insertable's current parameters, and its configuration key and record are
 derived per response (`resolveStoredSelection`).
 
-The frontend shows the section only while signed in and not searching. Rows
-are resolved against the library's insertables, so a part the user may not see
+The frontend shows the section only while signed in, like Favorites. Rows are
+resolved against the library's insertables, so a part the user may not see
 drops out, and narrowed by the vendor filters like the favorites list.
+
+While a search is typed, the section is left out: the home list is Favorites,
+narrowed to what matches, and the search results, which find recent parts
+along with everything else. Recents are not searched on their own.
 
 ### Opening and removing
 
@@ -98,7 +102,7 @@ optimistically and refetched on settle.
 - **Awaited, unlike tracking.** Tracking runs after the response; a recent
   written that late could miss the refetch the client makes on settle.
 - **One row per part.** Inserting a part again moves it up and replaces its
-  selection, so ten rows are ten different parts.
+  selection, so every row is a different part.
 - **Not derived from the analytics log.** Analytics never returns anything about
   one user, and its log is append-only and unbounded; a small table of its own
   keeps the read one indexed query.

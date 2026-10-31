@@ -17,7 +17,7 @@ import { useRecentsQuery } from "../queries";
 import { RecentCard } from "./recent-card";
 import { RecentIcon } from "./recent-icon";
 
-/** Only shown signed in: inserting takes an Onshape account, so signed out has none. */
+/** Only shown signed in. */
 export function RecentsList(): ReactNode {
     const vendorFilters = useVendorFilters();
     const recentsQuery = useRecentsQuery();

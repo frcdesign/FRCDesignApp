@@ -1,5 +1,4 @@
-import { useAccessData, useShowHidden } from "../../auth/access-level";
-import { Button } from "@mantine/core";
+import { useShowHidden } from "../../auth/access-level";
 import { HeartBreakIcon } from "@phosphor-icons/react";
 import { IconSize, StatusColor } from "../../../lib/style-constants";
 import { ReactNode } from "react";
@@ -14,11 +13,7 @@ import {
 } from "@backend/features/favorites/contract";
 import type { Insertables } from "@backend/features/library/contract";
 import { useUiState } from "../../../lib/ui-state";
-import {
-    SectionNotice,
-    SectionLoading,
-    SectionError
-} from "../../../components/app-notice";
+import { SectionLoading, SectionError } from "../../../components/app-notice";
 import {
     NoSearchResultError,
     SearchCallout
@@ -29,27 +24,17 @@ import { useFavoritesQuery } from "../queries";
 import { useLibraryQuery } from "../../library/queries";
 import { useSearchDbQuery } from "../../search/queries";
 import { AppIcon } from "../../../components/app-icon";
-import { FavoriteIcon } from "./favorite-button";
-import { startSignIn } from "../../auth/sign-in";
 import { useVendorFilters } from "../../settings/vendor-filters";
 
-/** Unlike DocumentList, this list can be searched directly. */
+/** Only shown signed in. Unlike DocumentList, this list can be searched directly. */
 export function FavoritesList(): ReactNode {
     const searchQuery = useUiState((state) => state.searchQuery);
     const vendorFilters = useVendorFilters();
 
-    const { signedIn, isPending } = useAccessData();
     const favoritesQuery = useFavoritesQuery();
     const libraryQuery = useLibraryQuery();
 
-    // Before the pending branch, which never resolves while signed out.
-    if (!isPending && !signedIn) {
-        return <SignInToViewFavorites />;
-    } else if (
-        isPending ||
-        libraryQuery.isPending ||
-        favoritesQuery.isPending
-    ) {
+    if (libraryQuery.isPending || favoritesQuery.isPending) {
         return <SectionLoading title="Loading favorites..." />;
     } else if (libraryQuery.isError || favoritesQuery.isError) {
         return (
@@ -92,17 +77,6 @@ export function FavoritesList(): ReactNode {
                 visibleOnly: true
             })}
             favoritesData={favoritesData}
-        />
-    );
-}
-
-function SignInToViewFavorites(): ReactNode {
-    return (
-        <SectionNotice
-            icon={<FavoriteIcon size={IconSize.SECTION} />}
-            title="Sign in to view favorites"
-            description="Favorites are saved to your Onshape account."
-            action={<Button onClick={startSignIn}>Sign in</Button>}
         />
     );
 }

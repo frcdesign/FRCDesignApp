@@ -20,7 +20,7 @@ import { AddGroupButton } from "../../../../features/library/components/add-grou
 import { FavoritesList } from "../../../../features/favorites/components/favorites-list";
 import { RecentsList } from "../../../../features/recents/components/recents-list";
 import { RecentIcon } from "../../../../features/recents/components/recent-icon";
-import { useIsSignedIn } from "../../../../features/auth/access-level";
+import { useNeedsSignIn } from "../../../../features/auth/access-level";
 import { useLibraryQuery } from "../../../../features/library/queries";
 import { getLibraryName, useLibraryId } from "../../../../lib/library";
 import { useShallow } from "zustand/react/shallow";
@@ -63,9 +63,8 @@ function useHomeSections(): Section[] {
     const [isSearchOpen, setIsSearchOpen] = useState(true);
     const libraryId = useLibraryId();
     const vendorFilters = useVendorFilters();
-    const isSignedIn = useIsSignedIn();
+    const needsSignIn = useNeedsSignIn();
 
-    // Shown signed out too, where the panel says what signing in would add.
     const favorites: Section = {
         value: "favorites",
         name: "Favorites",
@@ -116,10 +115,10 @@ function useHomeSections(): Section[] {
 
     // The differing `value` remounts the slot when search starts or ends.
     if (searchQuery) {
-        return [favorites, search];
+        return needsSignIn ? [search] : [favorites, search];
     }
-    // Signed out has nothing inserted, and favorites already offer sign-in.
-    return isSignedIn ? [favorites, recents, library] : [favorites, library];
+    // Both are saved to an Onshape account, so signed out they have nothing to show.
+    return needsSignIn ? [library] : [favorites, recents, library];
 }
 
 interface SectionAccordionProps {

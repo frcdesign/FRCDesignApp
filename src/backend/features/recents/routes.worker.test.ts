@@ -6,6 +6,8 @@ import { getDb } from "../../db/client";
 import * as PartStudioEndpoints from "../../lib/onshape/endpoints/part-studios";
 import { MAX_RECENTS, type RecentsData } from "./contract";
 import { writeRecentInsert } from "./store";
+import { InsertSource } from "../analytics/usage";
+import { dailySourceMetrics } from "../analytics/schema";
 import {
     TEST_ASSEMBLY_ID,
     TEST_LIBRARY_ID,
@@ -95,6 +97,28 @@ describe("recents routes", () => {
             selection: { boolean: "false" }
         });
         expect(recents[0].configurationKey).toBeTruthy();
+    });
+
+    it("records an insert from the list under its own source", async () => {
+        await seedPartStudio(db);
+        vi.spyOn(PartStudioEndpoints, "addPartStudioFeature").mockResolvedValue(
+            { feature: { featureId: "feat-1" } }
+        );
+
+        const res = await createTestApp().request(
+            `/api/add-to-part-studio/insertable/${TEST_PART_STUDIO_ID}`,
+            jsonRequest("POST", { targetPath, source: InsertSource.RECENTS }),
+            env
+        );
+        expect(res.status).toBe(200);
+
+        // The overview sums this rollup, and ends yesterday, so today's insert is read here.
+        const rollup = await db
+            .select()
+            .from(dailySourceMetrics)
+            .where(eq(dailySourceMetrics.source, InsertSource.RECENTS))
+            .all();
+        expect(rollup).toMatchObject([{ count: 1 }]);
     });
 
     it("moves an insertable inserted again to the front", async () => {
