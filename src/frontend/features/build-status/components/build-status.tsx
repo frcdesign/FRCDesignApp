@@ -1,9 +1,8 @@
 import {
     Badge,
-    Divider,
     Group,
+    Image,
     Loader,
-    SegmentedControl,
     Stack,
     Text,
     Tooltip
@@ -13,7 +12,9 @@ import {
     GitBranchIcon,
     HourglassIcon
 } from "@phosphor-icons/react";
-import { ReactNode, useState } from "react";
+import { ReactNode } from "react";
+import partStudioIcon from "/part-studio.svg";
+import assemblyIcon from "/assembly.svg";
 import { formatShortTimeAgo } from "../../../lib/format-time";
 import {
     BuildIssue,
@@ -32,15 +33,16 @@ import { RequireAccessLevel } from "../../auth/components/require-access";
 import { useBuildStatusQuery } from "../queries";
 import { useIsGroupLoading } from "../../library/queries";
 import {
-    BuildChecksSection,
+    BuildIssueList,
     type ConfigurationTarget,
     IssueIcon,
     SeverityBadges
 } from "./issues";
-import { ConfigurationTab } from "./configuration-tab";
+import { ConfigurationSection } from "./configuration-section";
 import { GroupSettings, InsertableSettings } from "./admin-section";
 import { UsageSection } from "./usage-section";
-import { useIndexingView } from "../indexing-draft";
+import { CardSection } from "./card-section";
+import { CardSectionId } from "../card-section-id";
 import styles from "../../../lib/styles.module.css";
 
 /** What the card and the badge both say about a group or an insertable. */
@@ -60,78 +62,39 @@ interface BuildStatusSubject {
     elementType?: ElementType;
 }
 
-/** A second page of the card, for what doesn't fit beside the settings. */
-interface CardTab {
-    label: string;
-    content: ReactNode;
-}
-
 interface BuildStatusCardProps extends BuildStatusSubject {
-    /** The settings shown under the build checks. */
+    /** The sections under the build checks. */
     children: ReactNode;
-    tab?: CardTab;
 }
-
-/** Overview first, since the build checks are what an admin opens it for. */
-const OVERVIEW = "overview";
 
 /** Wide enough for a parameter's name beside its type and checkbox. */
 const CARD_WIDTH = 320;
 
 function BuildStatusCard(props: BuildStatusCardProps): ReactNode {
-    const { tab, children, ...subject } = props;
-    const [page, setPage] = useState(OVERVIEW);
-    const showTab = tab !== undefined && page !== OVERVIEW;
+    const { children, ...subject } = props;
+    const { issues, configurationTarget } = subject;
     return (
         <Stack gap="sm" w={CARD_WIDTH}>
             <CardHeader {...subject} />
-            {tab && (
-                <SegmentedControl
-                    size="xs"
-                    fullWidth
-                    value={page}
-                    onChange={setPage}
-                    data={[
-                        { value: OVERVIEW, label: "Overview" },
-                        { value: "tab", label: tab.label }
-                    ]}
-                />
+            {issues.length > 0 && (
+                <CardSection
+                    id={CardSectionId.BUILD_CHECKS}
+                    title="Build checks"
+                >
+                    <BuildIssueList
+                        issues={issues}
+                        configurationTarget={configurationTarget}
+                    />
+                </CardSection>
             )}
-            {showTab ? (
-                tab.content
-            ) : (
-                <Overview {...subject}>{children}</Overview>
-            )}
+            {children}
         </Stack>
     );
 }
 
-interface OverviewProps extends BuildStatusSubject {
-    children: ReactNode;
-}
-
-function Overview(props: OverviewProps): ReactNode {
-    const { issues, configurationTarget, children } = props;
-    return (
-        <>
-            {issues.length > 0 && (
-                <>
-                    <BuildChecksSection
-                        issues={issues}
-                        configurationTarget={configurationTarget}
-                    />
-                    <Divider />
-                </>
-            )}
-            {children}
-        </>
-    );
-}
-
 interface BuildStatusBadgeProps extends BuildStatusSubject {
-    /** The group/insertable settings shown in the hover card. */
-    hoverMenu: ReactNode;
-    tab?: CardTab;
+    /** The group/insertable sections shown in the hover card. */
+    sections: ReactNode;
 }
 
 /** Gated first, so the card and its admin controls only exist for an editor. */
@@ -153,8 +116,7 @@ function BuildStatusHoverCard({
     versionCreatedAt,
     configurationTarget,
     isHidden,
-    hoverMenu,
-    tab,
+    sections,
     elementType
 }: BuildStatusHoverCardProps): ReactNode {
     const maxSeverity = getMaxSeverity(issues);
@@ -183,9 +145,8 @@ function BuildStatusHoverCard({
                 versionCreatedAt={versionCreatedAt}
                 configurationTarget={configurationTarget}
                 elementType={elementType}
-                tab={tab}
             >
-                {hoverMenu}
+                {sections}
             </BuildStatusCard>
         </AppHoverCard>
     );
@@ -196,6 +157,12 @@ type CardHeaderProps = BuildStatusSubject;
 const ELEMENT_TYPE_LABEL: Record<ElementType, string> = {
     [ElementType.PART_STUDIO]: "Part studio",
     [ElementType.ASSEMBLY]: "Assembly"
+};
+
+/** Onshape's own tab icons, which its users already know the two by. */
+const ELEMENT_TYPE_ICON: Record<ElementType, string> = {
+    [ElementType.PART_STUDIO]: partStudioIcon,
+    [ElementType.ASSEMBLY]: assemblyIcon
 };
 
 /** The name and what it is above, the severity summary below. */
@@ -220,17 +187,32 @@ function CardHeader(props: CardHeaderProps): ReactNode {
             </Group>
             <Group justify="space-between" align="center" gap="sm">
                 <SeverityBadges issues={issues} />
-                {elementType && (
-                    <Text
-                        size="xs"
-                        c={StatusColor.DIMMED}
-                        className={styles.noShrink}
-                    >
-                        {ELEMENT_TYPE_LABEL[elementType]}
-                    </Text>
-                )}
+                {elementType && <ElementTypeBadge elementType={elementType} />}
             </Group>
         </Stack>
+    );
+}
+
+interface ElementTypeBadgeProps {
+    elementType: ElementType;
+}
+
+function ElementTypeBadge(props: ElementTypeBadgeProps): ReactNode {
+    const { elementType } = props;
+    return (
+        <Badge
+            variant="default"
+            className={styles.noShrink}
+            leftSection={
+                <Image
+                    src={ELEMENT_TYPE_ICON[elementType]}
+                    w={IconSize.TINY}
+                    h={IconSize.TINY}
+                />
+            }
+        >
+            {ELEMENT_TYPE_LABEL[elementType]}
+        </Badge>
     );
 }
 
@@ -297,7 +279,7 @@ interface InsertableBadgeProps extends InsertableStatusBadgeProps {
 
 function InsertableBadge(props: InsertableBadgeProps): ReactNode {
     const { insertableId, groupId, name, status: insertable } = props;
-    const tab = useConfigurationTab(insertableId, insertable);
+    const parameters = insertable.configuration?.parameters ?? [];
     return (
         <BuildStatusBadge
             name={name}
@@ -309,45 +291,31 @@ function InsertableBadge(props: InsertableBadgeProps): ReactNode {
             configurationTarget={
                 insertable.configuration && {
                     elementPath: insertable.elementPath,
-                    parameters: insertable.configuration.parameters
+                    parameters
                 }
             }
-            hoverMenu={
+            sections={
                 <>
-                    <InsertableSettings
-                        insertableId={insertableId}
-                        status={insertable}
-                    />
-                    <Divider />
+                    <CardSection id={CardSectionId.SETTINGS} title="Settings">
+                        <InsertableSettings
+                            insertableId={insertableId}
+                            status={insertable}
+                        />
+                    </CardSection>
+                    {parameters.length > 0 && (
+                        <ConfigurationSection
+                            insertableId={insertableId}
+                            status={insertable}
+                            parameters={parameters}
+                        />
+                    )}
                     <UsageSection
                         elementId={insertable.elementPath.elementId}
                     />
                 </>
             }
-            tab={tab}
         />
     );
-}
-
-/** Undefined for an element with no parameters, which needs no second page. */
-function useConfigurationTab(
-    insertableId: string,
-    status: InsertableBuildStatus
-): CardTab | undefined {
-    const { changeCount } = useIndexingView(insertableId, status);
-    const parameters = status.configuration?.parameters ?? [];
-    if (parameters.length === 0) return undefined;
-    return {
-        // A dot, so an unapplied edit is noticed from the overview.
-        label: `Configuration (${parameters.length})${changeCount > 0 ? " •" : ""}`,
-        content: (
-            <ConfigurationTab
-                insertableId={insertableId}
-                status={status}
-                parameters={parameters}
-            />
-        )
-    };
 }
 
 interface GroupStatusBadgeProps {
@@ -368,8 +336,16 @@ export function GroupStatusBadge(props: GroupStatusBadgeProps): ReactNode {
                     groupId={groupId}
                     issues={groupStatus.buildIssues}
                     versionCreatedAt={groupStatus.versionCreatedAt}
-                    hoverMenu={
-                        <GroupSettings groupId={groupId} status={groupStatus} />
+                    sections={
+                        <CardSection
+                            id={CardSectionId.SETTINGS}
+                            title="Settings"
+                        >
+                            <GroupSettings
+                                groupId={groupId}
+                                status={groupStatus}
+                            />
+                        </CardSection>
                     }
                 />
             )}

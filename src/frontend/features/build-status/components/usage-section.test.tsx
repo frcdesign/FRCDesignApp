@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { screen } from "@testing-library/react";
 import { renderWithProviders } from "../../../../__test_utils__/render";
 import { DEFAULT_LIBRARY } from "@backend/features/library/library-id";
@@ -11,6 +11,7 @@ vi.mock("../../../lib/library", () => ({
 }));
 
 const { UsageSection } = await import("./usage-section");
+const { updateUiState } = await import("../../../lib/ui-state");
 
 const report: InsertableReportOut = {
     name: "Gearbox",
@@ -29,6 +30,8 @@ const report: InsertableReportOut = {
 };
 
 describe("usage section", () => {
+    afterEach(() => updateUiState({ cardSections: {} }));
+
     it("shows the part's all-time numbers", async () => {
         const { queryClient } = renderWithProviders(
             <UsageSection elementId="e1" />
@@ -53,5 +56,19 @@ describe("usage section", () => {
         expect(
             screen.getByText("Dashboard").closest("a")?.getAttribute("href")
         ).toBe(`/dashboard/library/${DEFAULT_LIBRARY}/part?element=e1`);
+    });
+});
+
+describe("usage section, closed", () => {
+    afterEach(() => updateUiState({ cardSections: {} }));
+
+    it("keeps its link, and asks for nothing", () => {
+        updateUiState({ cardSections: { usage: false } });
+        const { queryClient } = renderWithProviders(
+            <UsageSection elementId="e1" />
+        );
+        expect(screen.getByText("Dashboard")).toBeTruthy();
+        expect(screen.queryByText("Inserts")).toBeNull();
+        expect(queryClient.getQueryCache().getAll()).toHaveLength(0);
     });
 });

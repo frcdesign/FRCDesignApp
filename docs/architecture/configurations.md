@@ -13,24 +13,24 @@ or the load that probes Onshape ([loading.md](./loading.md)); both consume it.
 
 ## Code map
 
-| Path                                                                  | Role                                                                   |
-| --------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| `src/backend/features/configurations/contract.ts`                     | Parameter, `Selection`, `ConfigurationKey`, record and result types    |
-| `src/backend/features/configurations/selection.ts`                    | The only place a selection or key is built; see the invariants         |
-| `src/backend/features/configurations/utils.ts`                        | Visibility conditions, option resolution, configuration text encodings |
-| `src/backend/features/configurations/input-parser.ts`                 | Parses and evaluates typed quantity expressions (`(2 + 3) in`)         |
-| `src/backend/features/configurations/combinations.ts`                 | Indexing limits and bands, enumeration and counting of combinations    |
-| `src/backend/features/configurations/roles.ts`                        | Recognizes parameter roles by name (derivation variable, color, ...)   |
-| `src/backend/features/configurations/instances.ts`                    | Splits a parameter by the choices that filter it, for reporting        |
-| `src/backend/features/configurations/units.ts`                        | A workspace's display units, cached in KV                              |
-| `src/backend/features/configurations/part-number.ts`                  | Placeholder and meaningless part numbers                               |
-| `src/backend/features/configurations/routes.ts`                       | `GET /api/configuration/...`, `GET /api/unit-info`                     |
-| `src/backend/features/load/parse-configuration.ts`                    | Onshape's configuration response to our parameters, roles attached     |
-| `src/backend/features/load/parse-configuration-records.ts`            | `decideIndexing`, probing each combination into a record               |
-| `src/backend/features/search/records.ts`                              | Records to search records, each with its thumbnail key                 |
-| `src/frontend/features/insert/components/configurations.tsx`          | The parameter panel in the insert menu                                 |
-| `src/frontend/features/build-status/components/configuration-tab.tsx` | The admin card's parameter list and indexing controls                  |
-| `src/frontend/features/build-status/indexing-draft.ts`                | Indexing edits held until applied                                      |
+| Path                                                                      | Role                                                                   |
+| ------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| `src/backend/features/configurations/contract.ts`                         | Parameter, `Selection`, `ConfigurationKey`, record and result types    |
+| `src/backend/features/configurations/selection.ts`                        | The only place a selection or key is built; see the invariants         |
+| `src/backend/features/configurations/utils.ts`                            | Visibility conditions, option resolution, configuration text encodings |
+| `src/backend/features/configurations/input-parser.ts`                     | Parses and evaluates typed quantity expressions (`(2 + 3) in`)         |
+| `src/backend/features/configurations/combinations.ts`                     | Indexing limits and bands, enumeration and counting of combinations    |
+| `src/backend/features/configurations/roles.ts`                            | Recognizes parameter roles by name (derivation variable, color, ...)   |
+| `src/backend/features/configurations/instances.ts`                        | Splits a parameter by the choices that filter it, for reporting        |
+| `src/backend/features/configurations/units.ts`                            | A workspace's display units, cached in KV                              |
+| `src/backend/features/configurations/part-number.ts`                      | Placeholder and meaningless part numbers                               |
+| `src/backend/features/configurations/routes.ts`                           | `GET /api/configuration/...`, `GET /api/unit-info`                     |
+| `src/backend/features/load/parse-configuration.ts`                        | Onshape's configuration response to our parameters, roles attached     |
+| `src/backend/features/load/parse-configuration-records.ts`                | `decideIndexing`, probing each combination into a record               |
+| `src/backend/features/search/records.ts`                                  | Records to search records, each with its thumbnail key                 |
+| `src/frontend/features/insert/components/configurations.tsx`              | The parameter panel in the insert menu                                 |
+| `src/frontend/features/build-status/components/configuration-section.tsx` | The admin card's parameter table and indexing controls                 |
+| `src/frontend/features/build-status/indexing-draft.ts`                    | Indexing edits held until applied                                      |
 
 ## Storage
 
@@ -97,9 +97,9 @@ Comparing or counting values (analytics, "is this the default") goes through
 3. `decideIndexing` returns the combinations; `parseConfigurationRecords` probes
    each in batches of 20, with only the values that differ from the defaults
    sent, and stores a record per combination.
-4. In the admin card's Configuration tab, unchecking a parameter or flipping
+4. In the admin card's Configuration section, unchecking a parameter or flipping
    the indexing switch only edits a draft (`indexing-draft.ts`), recounted as
-   it changes. **Apply** sends every edit in one
+   it changes. **Save** sends every edit in one
    `POST /api/indexing/...`, which re-runs this for the element.
 
 The admin card counts with the same functions, so it cannot disagree with the
@@ -145,12 +145,12 @@ record for a selection, since records name only what enumeration varied.
 
 ## Failure and recovery
 
-| Failure                                         | Result                                                               | Recovery                                             |
-| ----------------------------------------------- | -------------------------------------------------------------------- | ---------------------------------------------------- |
-| A combination doesn't regenerate in Onshape     | That probe fails; the batch retries, then the load flags the element | Fix the part in Onshape; the next version reloads it |
-| Too many combinations                           | Not indexed; build issue                                             | Uncheck parameters in the card's Configuration tab   |
-| Units change in a workspace                     | Cached units drop via webhook, or expire in a week                   | Automatic                                            |
-| A parameter is added after a favorite was saved | Favorite's selection is short one parameter                          | `toSelection` defaults it on read                    |
+| Failure                                         | Result                                                               | Recovery                                               |
+| ----------------------------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------ |
+| A combination doesn't regenerate in Onshape     | That probe fails; the batch retries, then the load flags the element | Fix the part in Onshape; the next version reloads it   |
+| Too many combinations                           | Not indexed; build issue                                             | Uncheck parameters in the card's Configuration section |
+| Units change in a workspace                     | Cached units drop via webhook, or expire in a week                   | Automatic                                              |
+| A parameter is added after a favorite was saved | Favorite's selection is short one parameter                          | `toSelection` defaults it on read                      |
 
 ## Decisions
 

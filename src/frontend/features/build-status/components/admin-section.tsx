@@ -12,7 +12,7 @@ import {
     useToggleInsertAndFastenMutation,
     useToggleSortOrderMutation
 } from "../queries";
-import { ControlRow, SectionHeader, SwitchRow } from "./sections";
+import { ControlRow, SwitchRow } from "./sections";
 
 interface InsertableSettingsProps {
     insertableId: string;
@@ -24,7 +24,6 @@ export function InsertableSettings(props: InsertableSettingsProps): ReactNode {
     const { insertableId, status } = props;
     return (
         <Stack gap="sm">
-            <SectionHeader>Settings</SectionHeader>
             <VisibilitySwitch
                 insertableId={insertableId}
                 isVisible={status.isVisible}
@@ -125,7 +124,6 @@ export function GroupSettings(props: GroupSettingsProps): ReactNode {
     const mutation = useToggleSortOrderMutation(groupId);
     return (
         <Stack gap="sm">
-            <SectionHeader>Settings</SectionHeader>
             <SwitchRow
                 label="Sort alphabetically"
                 description="Order elements A-Z instead of by tab"

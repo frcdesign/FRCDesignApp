@@ -1,11 +1,13 @@
 import {
     Badge,
     Button,
+    Center,
     Checkbox,
     Group,
     ScrollArea,
     Stack,
     Switch,
+    Table,
     Text,
     Tooltip
 } from "@mantine/core";
@@ -31,9 +33,7 @@ import {
 } from "../../../components/parameter-role";
 import {
     CATEGORY_COLOR,
-    FontWeight,
     IconSize,
-    PrimaryColor,
     StatusColor
 } from "../../../lib/style-constants";
 import { useIndexingMutation } from "../queries";
@@ -43,15 +43,23 @@ import {
     type IndexingView,
     useIndexingView
 } from "../indexing-draft";
-import { ControlRow, SectionHeader } from "./sections";
+import { ControlRow } from "./sections";
 import { IssueIcon } from "./issues";
+import { CardSection } from "./card-section";
+import { CardSectionId } from "../card-section-id";
 import { getParameterTypeLabel } from "../parameter-type-label";
 import styles from "../../../lib/styles.module.css";
 
-/** Tall enough for a handful of parameters before the list starts scrolling. */
-const PARAMETER_LIST_MAX_HEIGHT = 240;
+/** Tall enough for a handful of parameters before the table starts scrolling. */
+const TABLE_MAX_HEIGHT = 240;
 
-interface ConfigurationTabProps {
+/** Fits "Enum · 12", the widest type badge. */
+const TYPE_COLUMN_WIDTH = 84;
+
+/** Fits the "Indexed" heading, which its checkboxes centre under. */
+const INDEXED_COLUMN_WIDTH = 64;
+
+interface ConfigurationSectionProps {
     insertableId: string;
     status: InsertableBuildStatus;
     parameters: ConfigurationParameter[];
@@ -59,11 +67,64 @@ interface ConfigurationTabProps {
 
 /**
  * Every parameter, with whether search indexes it. Edits collect as a draft
- * and apply in one reindex.
+ * and save in one reindex.
  */
-export function ConfigurationTab(props: ConfigurationTabProps): ReactNode {
+export function ConfigurationSection(
+    props: ConfigurationSectionProps
+): ReactNode {
     const { insertableId, status, parameters } = props;
     const view = useIndexingView(insertableId, status);
+    return (
+        <CardSection
+            id={CardSectionId.CONFIGURATION}
+            title="Configuration"
+            actions={
+                <SectionSummary
+                    parameterCount={parameters.length}
+                    changeCount={view.changeCount}
+                />
+            }
+        >
+            <ConfigurationEditor
+                insertableId={insertableId}
+                status={status}
+                parameters={parameters}
+                view={view}
+            />
+        </CardSection>
+    );
+}
+
+interface SectionSummaryProps {
+    parameterCount: number;
+    changeCount: number;
+}
+
+/** Unsaved edits show here, so they are noticed with the section closed. */
+function SectionSummary(props: SectionSummaryProps): ReactNode {
+    const { parameterCount, changeCount } = props;
+    if (changeCount > 0) {
+        return (
+            <Badge color={StatusColor.WARNING} className={styles.noShrink}>
+                {changeCount} unsaved
+            </Badge>
+        );
+    }
+    return (
+        <Text size="xs" c={StatusColor.DIMMED} className={styles.noShrink}>
+            {parameterCount === 1
+                ? "1 parameter"
+                : `${parameterCount} parameters`}
+        </Text>
+    );
+}
+
+interface ConfigurationEditorProps extends ConfigurationSectionProps {
+    view: IndexingView;
+}
+
+function ConfigurationEditor(props: ConfigurationEditorProps): ReactNode {
+    const { insertableId, status, parameters, view } = props;
     const { excludedParameterIds } = view;
 
     // Counted with the load's own routine, so the card and the load agree.
@@ -102,17 +163,23 @@ export function ConfigurationTab(props: ConfigurationTabProps): ReactNode {
                     />
                 }
             />
-            <Stack gap={4}>
-                <Group justify="space-between" gap="xs">
-                    <SectionHeader>Parameters</SectionHeader>
-                    <SectionHeader>Indexed</SectionHeader>
-                </Group>
-                <ScrollArea.Autosize
-                    mah={PARAMETER_LIST_MAX_HEIGHT}
-                    type="auto"
-                    offsetScrollbars="y"
+            <ScrollArea.Autosize mah={TABLE_MAX_HEIGHT} type="auto">
+                <Table
+                    layout="fixed"
+                    withRowBorders={false}
+                    verticalSpacing={4}
+                    horizontalSpacing={0}
                 >
-                    <Stack gap={2}>
+                    <Table.Thead>
+                        <Table.Tr c={StatusColor.DIMMED}>
+                            <Table.Th>Parameter</Table.Th>
+                            <Table.Th w={TYPE_COLUMN_WIDTH}>Type</Table.Th>
+                            <Table.Th w={INDEXED_COLUMN_WIDTH} ta="center">
+                                Indexed
+                            </Table.Th>
+                        </Table.Tr>
+                    </Table.Thead>
+                    <Table.Tbody>
                         {parameters.map((parameter) => (
                             <ParameterRow
                                 key={parameter.id}
@@ -124,10 +191,10 @@ export function ConfigurationTab(props: ConfigurationTabProps): ReactNode {
                                 onToggle={() => toggleParameter(parameter.id)}
                             />
                         ))}
-                    </Stack>
-                </ScrollArea.Autosize>
-            </Stack>
-            <ApplyBar insertableId={insertableId} view={view} />
+                    </Table.Tbody>
+                </Table>
+            </ScrollArea.Autosize>
+            <SaveButtons insertableId={insertableId} view={view} />
         </Stack>
     );
 }
@@ -211,18 +278,25 @@ interface ParameterRowProps {
 function ParameterRow(props: ParameterRowProps): ReactNode {
     const { parameter, isIndexed, onToggle } = props;
     return (
-        <Group gap="xs" mih={26}>
-            <Text truncate title={parameter.name} flex={1} miw={0}>
-                {parameter.name}
-            </Text>
-            <RoleIcon parameter={parameter} />
-            <ParameterTypeBadge parameter={parameter} />
-            <IndexCheckbox
-                parameter={parameter}
-                checked={isIndexed}
-                onToggle={onToggle}
-            />
-        </Group>
+        <Table.Tr>
+            <Table.Td pr="xs">
+                <Text truncate title={parameter.name}>
+                    {parameter.name}
+                </Text>
+            </Table.Td>
+            <Table.Td>
+                <ParameterKind parameter={parameter} />
+            </Table.Td>
+            <Table.Td>
+                <Center>
+                    <IndexCheckbox
+                        parameter={parameter}
+                        checked={isIndexed}
+                        onToggle={onToggle}
+                    />
+                </Center>
+            </Table.Td>
+        </Table.Tr>
     );
 }
 
@@ -236,14 +310,7 @@ interface IndexCheckboxProps {
 function IndexCheckbox(props: IndexCheckboxProps): ReactNode {
     const { parameter, checked, onToggle } = props;
     if (isIndexedParameter(parameter)) {
-        return (
-            <Checkbox
-                size="xs"
-                checked={checked}
-                onChange={onToggle}
-                className={styles.noShrink}
-            />
-        );
+        return <Checkbox size="xs" checked={checked} onChange={onToggle} />;
     }
     const reason = parameter.role ? (
         <ParameterRoleLabel
@@ -255,34 +322,35 @@ function IndexCheckbox(props: IndexCheckboxProps): ReactNode {
     );
     return (
         <Tooltip label={reason}>
-            <Checkbox
-                size="xs"
-                checked={false}
-                disabled
-                readOnly
-                className={styles.noShrink}
-            />
+            <Checkbox size="xs" checked={false} disabled readOnly />
         </Tooltip>
     );
 }
 
-interface RoleIconProps {
+interface ParameterKindProps {
     parameter: ConfigurationParameter;
 }
 
-function RoleIcon(props: RoleIconProps): ReactNode {
-    const role = props.parameter.role;
-    if (!role) return null;
-    return (
-        <Tooltip label={<ParameterRoleLabel role={role} />}>
-            <ParameterRoleIcon
-                role={role}
-                size={IconSize.SMALL}
-                color={StatusColor.DIMMED}
-                className={styles.noShrink}
-            />
-        </Tooltip>
-    );
+/**
+ * A role says more than the type it implies, and the parameter's name usually
+ * spells it already, so a role is only its icon.
+ */
+function ParameterKind(props: ParameterKindProps): ReactNode {
+    const { parameter } = props;
+    const { role } = parameter;
+    if (role) {
+        return (
+            <Tooltip label={<ParameterRoleLabel role={role} />}>
+                <ParameterRoleIcon
+                    role={role}
+                    size={IconSize.SMALL}
+                    color={StatusColor.DIMMED}
+                    className={styles.titleIcon}
+                />
+            </Tooltip>
+        );
+    }
+    return <ParameterTypeBadge parameter={parameter} />;
 }
 
 interface ParameterTypeBadgeProps {
@@ -298,7 +366,7 @@ function ParameterTypeBadge(props: ParameterTypeBadgeProps): ReactNode {
         : getParameterTypeLabel(parameter.type);
 
     const badge = (
-        <Badge size="xs" color={CATEGORY_COLOR} className={styles.noShrink}>
+        <Badge size="xs" color={CATEGORY_COLOR}>
             {label}
         </Badge>
     );
@@ -316,48 +384,40 @@ function ParameterTypeBadge(props: ParameterTypeBadgeProps): ReactNode {
     );
 }
 
-interface ApplyBarProps {
+interface SaveButtonsProps {
     insertableId: string;
     view: IndexingView;
 }
 
-/** Shown while there is something to apply. */
-function ApplyBar(props: ApplyBarProps): ReactNode {
+/** Always shown, and disabled with nothing to save, so the form keeps its shape. */
+function SaveButtons(props: SaveButtonsProps): ReactNode {
     const { insertableId, view } = props;
     const mutation = useIndexingMutation(insertableId);
-    if (view.changeCount === 0) return null;
+    const hasChanges = view.changeCount > 0;
 
-    const apply = () => {
+    const save = () => {
         mutation.mutate(view.change);
         clearIndexingDraft(insertableId);
     };
 
     return (
-        <Group
-            justify="space-between"
-            gap="xs"
-            p="xs"
-            bg={PrimaryColor.LIGHT}
-            bdrs="sm"
-        >
-            <Text size="sm" fw={FontWeight.SEMI_BOLD}>
-                {view.changeCount === 1
-                    ? "1 change"
-                    : `${view.changeCount} changes`}
-            </Text>
-            <Group gap={6}>
-                <Button
-                    size="compact-sm"
-                    variant="subtle"
-                    color={StatusColor.NEUTRAL}
-                    onClick={() => clearIndexingDraft(insertableId)}
-                >
-                    Discard
-                </Button>
-                <Button size="compact-sm" variant="filled" onClick={apply}>
-                    Apply and reindex
-                </Button>
-            </Group>
+        <Group justify="flex-end" gap="xs">
+            <Button
+                size="xs"
+                variant="default"
+                disabled={!hasChanges}
+                onClick={() => clearIndexingDraft(insertableId)}
+            >
+                Discard
+            </Button>
+            <Button
+                size="xs"
+                variant="filled"
+                disabled={!hasChanges}
+                onClick={save}
+            >
+                Save
+            </Button>
         </Group>
     );
 }

@@ -1,4 +1,4 @@
-import { Group, SimpleGrid, Stack, Text } from "@mantine/core";
+import { SimpleGrid, Stack, Text } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
 import { ReactNode } from "react";
 import { LibraryId } from "@backend/features/library/library-id";
@@ -6,13 +6,10 @@ import { getInsertableReportQuery } from "../../dashboard/dashboard-queries";
 import { RangePreset, toDayRange } from "../../dashboard/range";
 import { formatCount } from "../../dashboard/format";
 import { useLibraryId } from "../../../lib/library";
-import { ExternalLink } from "../../../components/external-link";
-import {
-    FontWeight,
-    IconSize,
-    StatusColor
-} from "../../../lib/style-constants";
-import { SectionHeader } from "./sections";
+import { FontWeight, StatusColor } from "../../../lib/style-constants";
+import { AppLink } from "../../../components/app-link";
+import { CardSection } from "./card-section";
+import { CardSectionId } from "../card-section-id";
 
 /** The dashboard's report on one part, all time, as its own tab. */
 function getPartDashboardUrl(libraryId: LibraryId, elementId: string): string {
@@ -25,8 +22,34 @@ interface UsageSectionProps {
     elementId: string;
 }
 
-/** Fetched only while the card is open, since the dropdown mounts on open. */
 export function UsageSection(props: UsageSectionProps): ReactNode {
+    const { elementId } = props;
+    const libraryId = useLibraryId();
+
+    return (
+        <CardSection
+            id={CardSectionId.USAGE}
+            title="Usage"
+            actions={
+                <AppLink
+                    href={getPartDashboardUrl(libraryId, elementId)}
+                    size="sm"
+                >
+                    Dashboard
+                </AppLink>
+            }
+        >
+            <UsageStats elementId={elementId} />
+        </CardSection>
+    );
+}
+
+interface UsageStatsProps {
+    elementId: string;
+}
+
+/** Fetched only while the section is open, since it unmounts when closed. */
+function UsageStats(props: UsageStatsProps): ReactNode {
     const { elementId } = props;
     const libraryId = useLibraryId();
     const report = useQuery(
@@ -37,26 +60,13 @@ export function UsageSection(props: UsageSectionProps): ReactNode {
         )
     );
     const data = report.data;
-
     return (
-        <Stack gap={6}>
-            <Group justify="space-between">
-                <SectionHeader>Usage</SectionHeader>
-                <ExternalLink
-                    href={getPartDashboardUrl(libraryId, elementId)}
-                    size="xs"
-                    iconSize={IconSize.TINY}
-                >
-                    Dashboard
-                </ExternalLink>
-            </Group>
-            <SimpleGrid cols={4} spacing="xs">
-                <Stat label="Inserts" value={data?.insertCount} />
-                <Stat label="Per month" value={data?.usesPerMonth} />
-                <Stat label="Users" value={data?.uniqueUsers} />
-                <Stat label="Favorites" value={data?.favorites} />
-            </SimpleGrid>
-        </Stack>
+        <SimpleGrid cols={4} spacing="xs">
+            <Stat label="Inserts" value={data?.insertCount} />
+            <Stat label="Per month" value={data?.usesPerMonth} />
+            <Stat label="Users" value={data?.uniqueUsers} />
+            <Stat label="Favorites" value={data?.favorites} />
+        </SimpleGrid>
     );
 }
 

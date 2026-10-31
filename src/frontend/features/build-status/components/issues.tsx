@@ -1,4 +1,4 @@
-import { ExternalLink } from "../../../components/external-link";
+import { AppLink } from "../../../components/app-link";
 import { Badge, Group, Stack, Text } from "@mantine/core";
 import { ArrowSquareOutIcon } from "@phosphor-icons/react";
 import { ReactNode } from "react";
@@ -22,7 +22,6 @@ import {
 } from "../../../components/status-icon";
 import { Status, STATUS_COLOR, statusWash } from "../../../lib/status";
 import { InfoTooltip } from "../../../components/info-tooltip";
-import { SectionHeader } from "./sections";
 import { useOnshapeOrigin } from "../../../lib/onshape-params";
 import styles from "../../../lib/styles.module.css";
 
@@ -167,19 +166,18 @@ function getIssueUrl(
     );
 }
 
-interface BuildChecksSectionProps {
+interface BuildIssueListProps {
     issues: BuildIssue[];
     /** Passed for an insertable; a group has no configurations to open. */
     configurationTarget?: ConfigurationTarget;
 }
 
-/** The build checks: one tinted callout per issue. Rendered only when non-empty. */
-export function BuildChecksSection(props: BuildChecksSectionProps): ReactNode {
+/** One tinted callout per issue. */
+export function BuildIssueList(props: BuildIssueListProps): ReactNode {
     const { issues, configurationTarget } = props;
     const origin = useOnshapeOrigin();
     return (
         <Stack gap={6}>
-            <SectionHeader>Build checks</SectionHeader>
             {issues.map((issue) => (
                 <IssueCallout
                     key={issue.type}
@@ -190,6 +188,8 @@ export function BuildChecksSection(props: BuildChecksSectionProps): ReactNode {
         </Stack>
     );
 }
+
+const TEXT_COLOR = "var(--mantine-color-text)";
 
 /** Shared by both callouts, so the linked one is laid out like the plain one. */
 const CALLOUT_LAYOUT = {
@@ -221,7 +221,13 @@ function IssueCallout(props: IssueCalloutProps): ReactNode {
     }
 
     return (
-        <ExternalLink href={url} display="block" underline="never" c="inherit">
+        <AppLink
+            href={url}
+            withIcon={false}
+            display="block"
+            underline="never"
+            c="inherit"
+        >
             <Group {...CALLOUT_LAYOUT} bg={background} bdrs="sm">
                 <CalloutIcon severity={severity} />
                 <IssueText issue={issue} />
@@ -231,7 +237,7 @@ function IssueCallout(props: IssueCalloutProps): ReactNode {
                     style={CALLOUT_ICON_NUDGE}
                 />
             </Group>
-        </ExternalLink>
+        </AppLink>
     );
 }
 
@@ -248,9 +254,8 @@ function IssueText(props: IssueTextProps): ReactNode {
             {description && (
                 <InfoTooltip
                     label={description}
-                    color={
-                        STATUS_COLOR[severityStatus(getIssueSeverity(issue))]
-                    }
+                    // The text's color, as the link arrow beside it is.
+                    color={TEXT_COLOR}
                     className={styles.noShrink}
                     style={CALLOUT_ICON_NUDGE}
                 />

@@ -1,20 +1,6 @@
 import { Box, Group, Switch, Text } from "@mantine/core";
 import { ReactNode } from "react";
-import { FontWeight, StatusColor } from "../../../lib/style-constants";
-
-interface SectionHeaderProps {
-    children: ReactNode;
-}
-
-/** A dimmed section header, e.g. "Admin" or "Parsed". */
-export function SectionHeader(props: SectionHeaderProps): ReactNode {
-    const { children } = props;
-    return (
-        <Text size="xs" fw={FontWeight.SEMI_BOLD} c={StatusColor.DIMMED}>
-            {children}
-        </Text>
-    );
-}
+import { StatusColor } from "../../../lib/style-constants";
 
 interface ControlRowProps {
     label: string;

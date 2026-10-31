@@ -1,4 +1,4 @@
-import { ExternalLink } from "../../../components/external-link";
+import { AppLink } from "../../../components/app-link";
 import { Group, Stack, Text, UnstyledButton } from "@mantine/core";
 import { ArrowRightIcon, BooksIcon } from "@phosphor-icons/react";
 import { ReactNode } from "react";
@@ -90,9 +90,9 @@ function TrademarkDisclaimer(): ReactNode {
                 FIRST
             </Text>
             <RegisteredMark /> (
-            <ExternalLink href={FIRST_URL} inherit>
+            <AppLink href={FIRST_URL} inherit withIcon={false}>
                 www.firstinspires.org
-            </ExternalLink>
+            </AppLink>
             ) which is not overseeing, involved with, or responsible for this
             activity, product, or service.
         </Text>

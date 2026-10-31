@@ -125,7 +125,7 @@ The flows that use them:
 | Reload thumbnail              | `reload-thumbnail`                                        | "Reloading thumbnail..."        | "Thumbnail reloaded."                                           |
 | Show or hide elements         | `set-visibility`                                          | "Showing/Hiding insertables..." | "Insertables shown/hidden."                                     |
 | Toggle insert and fasten      | per insertable                                            | loading                         | success                                                         |
-| Apply indexing changes        | per insertable                                            | info: "Reindexing..."           | "Reindexed."                                                    |
+| Save indexing changes         | per insertable                                            | info: "Reindexing..."           | "Reindexed."                                                    |
 | Set or refresh the admin team | none                                                      | —                               | "Admin team set/refreshed: {n} members."                        |
 | Reload documents / approve    | none                                                      | —                               | info: "Reloading {n} documents..."                              |
 | Save favorite configuration   | none                                                      | —                               | "Favorite default configuration set."                           |

@@ -1,4 +1,4 @@
-import { Box, Button, Select, Stack } from "@mantine/core";
+import { Button, Divider, Select, Stack } from "@mantine/core";
 import { ArrowLeftIcon, SignOutIcon } from "@phosphor-icons/react";
 import { useIsDashboard } from "../../dashboard/dashboard-nav";
 import {
@@ -14,7 +14,7 @@ import {
 import { type AppTab, getTabPath } from "../../../lib/app-tab";
 import { InputRow } from "../../../components/input-row";
 import { OpenUrlButton } from "../../../components/open-url-button";
-import { Section } from "../../../components/section";
+import { PANEL_TITLE_ORDER, Section } from "../../../components/section";
 import { useAccessData } from "../../auth/access-level";
 import {
     RequireAccessLevel,
@@ -88,13 +88,12 @@ export function SettingsMenuContent(): ReactNode {
             {/* Unlike all other checks, this one uses maxAccessLevel so you can
                 still switch back up from user to admin. */}
             {hasEditorAccess(maxAccessLevel) && (
-                <Box mt="md">
-                    {/* The modal title's size, so the admin half of the menu
-                        announces itself rather than reading as another row. */}
-                    <Section title="Admin settings" order={5}>
+                <>
+                    <Divider my="md" />
+                    <Section title="Admin settings" order={PANEL_TITLE_ORDER}>
                         <AdminSettings />
                     </Section>
-                </Box>
+                </>
             )}
         </>
     );

@@ -1,4 +1,4 @@
-import { ExternalLink } from "../../components/external-link";
+import { AppLink } from "../../components/app-link";
 import { Badge, Group, Table, Text } from "@mantine/core";
 import { CaretDownIcon, CaretUpIcon } from "@phosphor-icons/react";
 import { useMemo, useState, type ReactNode } from "react";
@@ -210,10 +210,7 @@ function PartRow({ libraryId, part }: PartRowProps): ReactNode {
                 <AppSparkline data={part.recent} {...ROW_SPARKLINE} />
             </Table.Td>
             <Table.Td ta="center">
-                <ExternalLink
-                    href={makeUrl(origin, part.path)}
-                    iconSize={IconSize.SMALL}
-                />
+                <AppLink href={makeUrl(origin, part.path)} />
             </Table.Td>
         </Table.Tr>
     );

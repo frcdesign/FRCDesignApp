@@ -1,8 +1,7 @@
 import { Text } from "@mantine/core";
 import { ReactNode } from "react";
-import { IconSize } from "../lib/style-constants";
 import styles from "../lib/styles.module.css";
-import { ExternalLink } from "./external-link";
+import { AppLink } from "./app-link";
 
 interface PartNumberProps {
     partNumber: string;
@@ -34,14 +33,8 @@ export function PartNumber(props: PartNumberProps): ReactNode {
         );
     }
     return (
-        <ExternalLink
-            href={url}
-            inherit
-            maw="100%"
-            className={styles.noShrink}
-            iconSize={IconSize.TINY}
-        >
+        <AppLink href={url} inherit maw="100%" className={styles.noShrink}>
             {text}
-        </ExternalLink>
+        </AppLink>
     );
 }

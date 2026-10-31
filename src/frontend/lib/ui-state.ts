@@ -27,6 +27,8 @@ interface UiState {
     /** The version manager's two sections, which open like the home page's. */
     isParentsOpen: boolean;
     isChildrenOpen: boolean;
+    /** The admin card's sections an editor opened or closed, by section id. */
+    cardSections: Partial<Record<string, boolean>>;
     /** Per library; a library with no entry has every vendor active. */
     vendorFilters: Partial<Record<LibraryId, Vendor[]>>;
     searchQuery: string;
@@ -48,6 +50,7 @@ export const useUiState = create<UiState>()(
             isLibraryOpen: true,
             isParentsOpen: true,
             isChildrenOpen: true,
+            cardSections: {},
             vendorFilters: {},
             searchQuery: "",
             fasten: true
