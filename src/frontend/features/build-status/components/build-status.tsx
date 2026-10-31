@@ -165,54 +165,50 @@ const ELEMENT_TYPE_ICON: Record<ElementType, string> = {
     [ElementType.ASSEMBLY]: assemblyIcon
 };
 
-/** The name and what it is above, the severity summary below. */
+/** What it is and its name above, the severity summary below. */
 function CardHeader(props: CardHeaderProps): ReactNode {
     const { name, groupId, issues, versionCreatedAt, elementType } = props;
     return (
         <Stack gap={6}>
             <Group justify="space-between" align="center" gap="sm">
-                <Text
-                    truncate
-                    title={name}
-                    fw={FontWeight.SEMI_BOLD}
-                    flex={1}
-                    miw={0}
-                >
-                    {name}
-                </Text>
+                <Group gap={6} flex={1} miw={0}>
+                    {elementType && (
+                        <ElementTypeIcon elementType={elementType} />
+                    )}
+                    <Text
+                        truncate
+                        title={name}
+                        fw={FontWeight.SEMI_BOLD}
+                        miw={0}
+                    >
+                        {name}
+                    </Text>
+                </Group>
                 <VersionAge
                     groupId={groupId}
                     versionCreatedAt={versionCreatedAt}
                 />
             </Group>
-            <Group justify="space-between" align="center" gap="sm">
-                <SeverityBadges issues={issues} />
-                {elementType && <ElementTypeBadge elementType={elementType} />}
-            </Group>
+            <SeverityBadges issues={issues} />
         </Stack>
     );
 }
 
-interface ElementTypeBadgeProps {
+interface ElementTypeIconProps {
     elementType: ElementType;
 }
 
-function ElementTypeBadge(props: ElementTypeBadgeProps): ReactNode {
+function ElementTypeIcon(props: ElementTypeIconProps): ReactNode {
     const { elementType } = props;
     return (
-        <Badge
-            variant="default"
-            className={styles.noShrink}
-            leftSection={
-                <Image
-                    src={ELEMENT_TYPE_ICON[elementType]}
-                    w={IconSize.TINY}
-                    h={IconSize.TINY}
-                />
-            }
-        >
-            {ELEMENT_TYPE_LABEL[elementType]}
-        </Badge>
+        <Tooltip label={ELEMENT_TYPE_LABEL[elementType]}>
+            <Image
+                src={ELEMENT_TYPE_ICON[elementType]}
+                w={IconSize.SMALL}
+                h={IconSize.SMALL}
+                className={styles.noShrink}
+            />
+        </Tooltip>
     );
 }
 
