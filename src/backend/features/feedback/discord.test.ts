@@ -41,7 +41,7 @@ describe("buildReportMessage", () => {
 
         expect(message.thread_name).toBe("Bearing's part number");
         expect(embed.title).toBe("Bearing's part number");
-        expect(fieldValue(message, "Category")).toBe(
+        expect(fieldValue(message, "Type")).toBe(
             "Missing or incorrect metadata"
         );
         expect(embed.url).toBe("https://cad.onshape.com/documents/d/v/v/e/e");

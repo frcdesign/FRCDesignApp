@@ -214,9 +214,9 @@ export function FeedbackForm(props: FeedbackFormProps): ReactNode {
                     onChange={(event) => setContact(event.currentTarget.value)}
                 />
                 <Text size="sm" c="dimmed">
-                    Sent with the page you&apos;re on and your browser, to help
-                    find the problem; nothing that says who you are or which
-                    document you&apos;re in.
+                    Sent with your Onshape user id, the page you&apos;re on and
+                    your browser, to help find the problem. Nothing about your
+                    own documents is included.
                 </Text>
             </AppModalBody>
             <AppModalFooter>

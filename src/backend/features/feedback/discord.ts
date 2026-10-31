@@ -119,7 +119,7 @@ function reportFields(report: Report): DiscordEmbedField[] {
     const { diagnostics, part } = report;
     const fields = [
         field("Topic", FEEDBACK_TOPIC_LABELS[report.topic], true),
-        field("Category", FEEDBACK_CATEGORY_LABELS[report.category], true),
+        field("Type", FEEDBACK_CATEGORY_LABELS[report.category], true),
         field("From", FEEDBACK_SOURCE_LABELS[report.source], true)
     ];
     if (part) {
@@ -138,7 +138,7 @@ function reportFields(report: Report): DiscordEmbedField[] {
         fields.push(field("Error", code(lines.join("\n"))));
     }
     if (report.contact) {
-        fields.push(field("Contact", report.contact));
+        fields.push(field("Discord username", report.contact));
     }
     fields.push(field("Page", code(diagnostics.url)));
     fields.push(
