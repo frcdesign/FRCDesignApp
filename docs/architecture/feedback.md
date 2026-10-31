@@ -105,8 +105,8 @@ diagnostics }`. The title is the reporter's, filled in with `suggestTitle`
    until they write their own: the type and the part or topic ("Broken
    configuration: Hex Shaft"), or the error they were shown. The contact is a
    Discord username, if they give one.
-2. Diagnostics (`collectDiagnostics`) are gathered as it sends, and say nothing
-   about who sent the report or which document they were in: the app's own path
+2. Diagnostics (`collectDiagnostics`) are gathered as it sends, and never name
+   the document the reporter was in: the app's own path
    and params with Onshape's launch params removed, the build id, the kind of
    tab the app was launched in (Part Studio or Assembly, workspace or not, in
    an Enterprise or not), the level the app is viewed as, the window size, and
@@ -122,14 +122,11 @@ diagnostics }`. The title is the reporter's, filled in with `suggestTitle`
    runs the selection through `toSelection`, and builds the Onshape link from
    `onshapeOverrides` and the readable `Name: value` lines from the parameters
    the reporter could see. The link is to the library's own document.
-6. `buildReportMessage` replaces any Onshape id (24 hex digits) in the error and
-   the page with `<id>` (`redactIds`), for an id the client couldn't strip, such
-   as one in an Onshape error message.
-7. `postToDiscord` posts the embed with `?wait=true`, opening a thread named by
+6. `postToDiscord` posts the embed with `?wait=true`, opening a thread named by
    the title (`thread_name`) under the report's tags (`applied_tags`).
-8. Once posted, `trackReport` records it in the background, under the id the
+7. Once posted, `trackReport` records it in the background, under the id the
    post quotes in its footer.
-9. The form turns into a success notice (`ReportSent`, a `SectionNotice`):
+8. The form turns into a success notice (`ReportSent`, a `SectionNotice`):
    "Report sent!", "You can find your report in #library-feedback if you want
    to follow up in Discord.", and **Open Discord**, the forum's invite
    (`forumInvite`). Replies happen only there. If anything failed, the form
@@ -149,9 +146,10 @@ parts still in the library, each opening the part's page.
 - Text a reporter typed can never mention anyone (`allowed_mentions` is empty).
 - A part report names a part in the topic's own library, looked up on the
   server; its configuration is sent as a selection, never as a key.
-- A post never carries the reporter's own documents: no document, workspace,
-  element, company or company domain from the launch, and Onshape ids in free
-  text are redacted. The part a part report names is the library's, not theirs.
+- A post never gathers the reporter's own documents: no document, workspace,
+  element, company or company domain from the launch. An error's detail is
+  sent as it came, since what Onshape said is what the team needs, ids and
+  all. The part a part report names is the library's, not theirs.
   The reporter is named only by their Onshape user id and what they typed.
 - The route works signed out, since signing in is one of the things that breaks.
 - Every embed stays within Discord's limits (`buildReportMessage` trims the

@@ -13,7 +13,6 @@ import { getDb } from "../../db/client";
 import * as Permissions from "../../lib/onshape/endpoints/permissions";
 import { OnshapePermission } from "../../lib/onshape/endpoints/permissions";
 import { OnshapeApiError } from "../../lib/onshape/client";
-import { DocumentAccessProblem } from "./contract";
 
 const db = getDb(env.DB);
 
@@ -163,9 +162,6 @@ describe("GET /init's document access check", () => {
         const location = await launch();
 
         expect(location.pathname).toBe("/document-access");
-        expect(location.searchParams.get("problem")).toBe(
-            DocumentAccessProblem.WRONG_ACCOUNT
-        );
         // The page goes back through /init, or on to the app, with these.
         expect(location.searchParams.get("documentId")).toBe("doc");
         expect(location.searchParams.get("sessionCompanyId")).toBe("company-1");
@@ -190,17 +186,14 @@ describe("GET /init's document access check", () => {
             new OnshapeApiError("Not found", 404)
         );
 
-        expect((await launch()).searchParams.get("problem")).toBe(
-            DocumentAccessProblem.WRONG_ACCOUNT
-        );
+        expect((await launch()).pathname).toBe("/document-access");
     });
 
+    // A public document can be seen by anybody; inserting needs edit access.
     it("explains a document the caller can only view", async () => {
         grant([OnshapePermission.READ]);
 
-        expect((await launch()).searchParams.get("problem")).toBe(
-            DocumentAccessProblem.READ_ONLY
-        );
+        expect((await launch()).pathname).toBe("/document-access");
     });
 
     it("opens the app when Onshape can't answer", async () => {

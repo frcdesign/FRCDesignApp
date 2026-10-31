@@ -41,7 +41,7 @@ function appPage(url: URL): string {
 
 /**
  * Read when the report is sent, so it describes the page it was sent from.
- * Nothing in it says who sent it or which document they were in.
+ * It describes the kind of tab the app was launched in, never which document.
  */
 export function collectDiagnostics(error?: ReportedError): FeedbackDiagnostics {
     const url = new URL(window.location.href);

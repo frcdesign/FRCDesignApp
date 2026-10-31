@@ -94,23 +94,20 @@ describe("buildReportMessage", () => {
     });
 
     // An Onshape message or a url can carry the reporter's document's id.
-    it("redacts Onshape ids from the error and the page", () => {
-        const id = "0123456789abcdef01234567";
+    // What Onshape said is what the team needs to read.
+    it("carries an error's detail as it came, ids included", () => {
+        const detail =
+            "Onshape API error 403 on /documents/0123456789abcdef01234567";
         const message = buildReportMessage(
             report({
                 diagnostics: {
-                    url: `/document-access?documentId=${id}`,
-                    error: {
-                        shown: "Failed.",
-                        detail: `Onshape API error 403 on /documents/${id}`
-                    }
+                    url: "/app/library/frc-design-lib",
+                    error: { shown: "Failed.", detail }
                 }
             })
         );
 
-        const text = JSON.stringify(message.embeds[0].fields);
-        expect(text).not.toContain(id);
-        expect(fieldValue(message, "Error")).toContain("/documents/<id>");
+        expect(fieldValue(message, "Error")).toContain(detail);
     });
 
     it("carries the error, fenced so it can't format the post", () => {

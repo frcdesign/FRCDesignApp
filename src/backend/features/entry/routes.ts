@@ -4,8 +4,7 @@ import { getApp, type AppContext } from "../../lib/context";
 import { requireSignInMiddleware } from "../auth/guards";
 import { getSessionCompanyId } from "../auth/company";
 import { trackAppOpen } from "../analytics/tracking";
-import { DOCUMENT_ACCESS_PROBLEM_PARAM } from "./contract";
-import { findDocumentAccessProblem } from "./document-access";
+import { cannotEditDocument } from "./document-access";
 
 /** Marks the `/init` a sign-in returns to; see {@link needsSignIn}. */
 const SIGN_IN_ATTEMPTED = "signInAttempted";
@@ -53,12 +52,7 @@ entryRoutes.get("/init", cacheMiddleware(), async (c) => {
     const search = new URL(c.req.url).searchParams;
     // Ours, and spent: the app is being opened, however that turned out.
     search.delete(SIGN_IN_ATTEMPTED);
-    const problem = await findDocumentAccessProblem(
-        c,
-        c.req.query("documentId")
-    );
-    if (problem) {
-        search.set(DOCUMENT_ACCESS_PROBLEM_PARAM, problem);
+    if (await cannotEditDocument(c, c.req.query("documentId"))) {
         return c.redirect(`/document-access?${search.toString()}`);
     }
     return c.redirect(`/?${search.toString()}`);

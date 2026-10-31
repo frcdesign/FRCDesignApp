@@ -250,26 +250,16 @@ describe("POST /api/feedback", () => {
         ).toBeDefined();
     });
 
-    it("names the reporter, but not the document they were in", async () => {
+    it("names the reporter by their Onshape user id", async () => {
         const userId = "5eace32713a966103efd2a9d";
-        const document = "0123456789abcdef01234567";
 
-        await send(
-            body({
-                diagnostics: {
-                    url: `/document-access?documentId=${document}`,
-                    error: {
-                        shown: "Failed.",
-                        detail: `Onshape API error 403 on /documents/${document}`
-                    }
-                }
-            }),
-            { userId }
-        );
+        await send(body(), { userId });
 
-        const posted = JSON.stringify(post.mock.calls[0][1]);
-        expect(posted).toContain(userId);
-        expect(posted).not.toContain(document);
+        expect(
+            post.mock.calls[0][1].embeds[0].fields.find(
+                (field) => field.name === "Onshape user"
+            )?.value
+        ).toBe(userId);
     });
 
     it("takes a report from somebody who isn't signed in", async () => {

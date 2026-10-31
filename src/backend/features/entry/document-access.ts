@@ -6,38 +6,29 @@ import {
     OnshapePermission
 } from "../../lib/onshape/endpoints/permissions";
 import { type AppContext } from "../../lib/context";
-import { DocumentAccessProblem } from "./contract";
 
 /**
- * Undefined when the grant can edit the document, and whenever that can't be
- * told: no document, no session (the app offers sign-in), or Onshape failing.
- * A check that can't answer never keeps somebody out of the app.
+ * True only when Onshape says the grant can't edit the document: whether it
+ * can't see it (a grant for another account) or only view it (a public or
+ * view-only document), nothing can be inserted. False whenever that can't be
+ * told: no document, no session (the app offers sign-in), or Onshape failing,
+ * so a check that can't answer never keeps somebody out of the app.
  */
-export async function findDocumentAccessProblem(
+export async function cannotEditDocument(
     c: AppContext,
     documentId: string | undefined
-): Promise<DocumentAccessProblem | undefined> {
-    if (!documentId) return undefined;
-    let permissions: OnshapePermission[];
+): Promise<boolean> {
+    if (!documentId) return false;
     try {
-        permissions = await getPermissions(await c.var.getOnshapeApi(), {
+        const permissions = await getPermissions(await c.var.getOnshapeApi(), {
             documentId
         });
+        return !permissions.includes(OnshapePermission.WRITE);
     } catch (error) {
         // Onshape answers 404 for a document the grant can't see at all.
-        if (
+        return (
             error instanceof OnshapeApiError &&
             error.status === HttpStatus.NOT_FOUND
-        ) {
-            return DocumentAccessProblem.WRONG_ACCOUNT;
-        }
-        return undefined;
+        );
     }
-    if (permissions.includes(OnshapePermission.WRITE)) {
-        return undefined;
-    }
-    // The person opened it in Onshape, so seeing nothing means the grant is for another account.
-    return permissions.includes(OnshapePermission.READ)
-        ? DocumentAccessProblem.READ_ONLY
-        : DocumentAccessProblem.WRONG_ACCOUNT;
 }

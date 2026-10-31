@@ -105,14 +105,6 @@ function field(name: string, value: string, inline = false) {
     return { name, value: truncate(value, FIELD_LIMIT), inline };
 }
 
-/** Onshape's ids are 24 hex digits; one in an error or a url names somebody's document. */
-const ONSHAPE_ID = /\b[0-9a-f]{24}\b/gi;
-
-/** For text the server didn't write, which can carry an id the client didn't strip. */
-export function redactIds(text: string): string {
-    return text.replace(ONSHAPE_ID, "<id>");
-}
-
 function describeLaunch(
     launch: FeedbackDiagnostics["launch"]
 ): string | undefined {
@@ -143,12 +135,12 @@ function reportFields(report: Report): DiscordEmbedField[] {
         const lines = [shown];
         if (kind) lines.push(`kind: ${kind}`);
         if (detail && detail !== shown) lines.push(`detail: ${detail}`);
-        fields.push(field("Error", code(redactIds(lines.join("\n")))));
+        fields.push(field("Error", code(lines.join("\n"))));
     }
     if (report.contact) {
         fields.push(field("Contact", report.contact));
     }
-    fields.push(field("Page", code(redactIds(diagnostics.url))));
+    fields.push(field("Page", code(diagnostics.url)));
     fields.push(
         field(
             "Launched in",

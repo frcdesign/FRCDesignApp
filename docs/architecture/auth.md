@@ -24,7 +24,7 @@ team, plus one owner set by configuration.
 | `src/backend/features/hints/routes.ts`                      | `POST /api/seen-hints`, sent by `useMarkHintSeen` once a feature is opened |
 | `src/backend/features/admin-team/`                          | The owner sets a library's admin team; members are synced from Onshape     |
 | `src/backend/features/entry/routes.ts`                      | `/init`, where Onshape launches the app                                    |
-| `src/backend/features/entry/document-access.ts`             | `findDocumentAccessProblem`: whether the grant can edit the document       |
+| `src/backend/features/entry/document-access.ts`             | `cannotEditDocument`: whether the grant can edit the document              |
 | `src/frontend/routes/_pages/document-access.tsx`            | `/document-access`: what to do about a grant that can't                    |
 | `src/backend/lib/context.ts`                                | `AppBindings` (every binding and variable) and `bindAuth`                  |
 | `src/frontend/features/auth/access-level.ts`                | `useAccessData`: the server's level and the level the app is viewed as     |
@@ -63,17 +63,21 @@ team, plus one owner set by configuration.
 4. The authorize request names `APP_URL/auth/callback` as its redirect uri,
    which must be registered on the OAuth app. Onshape returns there; the callback checks
    the state, exchanges the code, starts a session (a new id), and redirects back.
-5. Back at `/init`, `findDocumentAccessProblem` asks Onshape for the caller's
+5. Back at `/init`, `cannotEditDocument` asks Onshape for the caller's
    permissions on the document (`getPermissions`). With `WRITE` the app opens.
-   Otherwise `/init` sends the launch to `/document-access?problem=…`:
-   `wrong-account` when the grant can't see the document at all (no
-   permissions, or a 404), `read-only` when it can see but not edit. A grant
-   is per Onshape account, so one given to somebody's personal account can't
-   reach their Enterprise's documents however the session's company reads, and
-   sign-in can ask Onshape for an Enterprise but never for a personal account.
-6. `/document-access` explains, for the document's account, how to revoke the
-   grant on Onshape's Applications page and grant it again to the right
-   account, and offers **Try again** (back through `/init`), **Continue
+   Without it, whether the grant can't see the document at all (no
+   permissions, or a 404) or can only view it, `/init` sends the launch to
+   `/document-access`: inserting needs edit access, and a public document is
+   visible to anybody, so seeing it says nothing about the grant. A grant is
+   per Onshape account, so one given to somebody's personal account can't
+   reach their Enterprise's documents however the session's company reads,
+   and sign-in can ask Onshape for an Enterprise but never for a personal
+   account.
+6. `/document-access` explains both causes. For an account mix-up, it says how
+   to revoke the grant on Onshape's Applications page and grant it again to
+   the document's account (the Enterprise or the personal one, from
+   `sessionCompanyId`); for a view-only document, to ask for edit access or
+   make a copy. It offers **Try again** (back through `/init`), **Continue
    anyway** (the app, which still browses) and **Send a report**. With no
    session, or Onshape not answering, the app opens as before: the check never
    keeps anybody out on a guess.
@@ -168,7 +172,7 @@ declared in `wrangler.jsonc` per environment and typed in `AppBindings`. Run
 | Refresh token revoked or expired          | Treated as signed out                          | Sign in again                            |
 | Enterprise session opening a personal doc | `/init` sends the caller through sign-in       | Automatic, once                          |
 | Grant for another account than the doc's  | `/init` sends the launch to `/document-access` | Revoke and grant again, per the page     |
-| Document shared view-only                 | `/document-access`, read-only                  | Edit access from the owner, or a copy    |
+| Document public or shared view-only       | `/init` sends the launch to `/document-access` | Edit access from the owner, or a copy    |
 | Team membership changed in Onshape        | Stale access until synced                      | **Refresh** beside the admin team        |
 | No saved background session               | A load whose requester's session lapses fails  | The owner or a team member opens the app |
 
