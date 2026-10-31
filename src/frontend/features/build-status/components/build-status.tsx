@@ -42,6 +42,8 @@ import { ConfigurationSection } from "./configuration-section";
 import { GroupSettings, InsertableSettings } from "./admin-section";
 import { UsageSection } from "./usage-section";
 import { CardSection } from "./card-section";
+import { DotIndicator } from "../../../components/dot-indicator";
+import { useHasIndexingDraft } from "../indexing-draft";
 import { CardSectionId } from "../card-section-id";
 import styles from "../../../lib/styles.module.css";
 
@@ -95,6 +97,8 @@ function BuildStatusCard(props: BuildStatusCardProps): ReactNode {
 interface BuildStatusBadgeProps extends BuildStatusSubject {
     /** The group/insertable sections shown in the hover card. */
     sections: ReactNode;
+    /** Dots the badge: the card holds edits not yet saved. */
+    hasUnsavedEdits?: boolean;
 }
 
 /** Gated first, so the card and its admin controls only exist for an editor. */
@@ -117,7 +121,8 @@ function BuildStatusHoverCard({
     configurationTarget,
     isHidden,
     sections,
-    elementType
+    elementType,
+    hasUnsavedEdits = false
 }: BuildStatusHoverCardProps): ReactNode {
     const maxSeverity = getMaxSeverity(issues);
     const loading = useIsGroupLoading(groupId);
@@ -128,14 +133,19 @@ function BuildStatusHoverCard({
             arrowSize={20}
             interactive
             target={
-                loading ? (
-                    <Loader size={IconSize.SMALL} />
-                ) : isHidden ? (
-                    // Only editors see hidden insertables, so its checks don't matter yet.
-                    <AppIcon icon={EyeSlashIcon} color={StatusColor.WARNING} />
-                ) : (
-                    <IssueIcon severity={maxSeverity} raised={false} />
-                )
+                <DotIndicator shown={hasUnsavedEdits} offset={2}>
+                    {loading ? (
+                        <Loader size={IconSize.SMALL} />
+                    ) : isHidden ? (
+                        // Only editors see hidden insertables, so its checks don't matter yet.
+                        <AppIcon
+                            icon={EyeSlashIcon}
+                            color={StatusColor.WARNING}
+                        />
+                    ) : (
+                        <IssueIcon severity={maxSeverity} raised={false} />
+                    )}
+                </DotIndicator>
             }
         >
             <BuildStatusCard
@@ -275,9 +285,11 @@ interface InsertableBadgeProps extends InsertableStatusBadgeProps {
 
 function InsertableBadge(props: InsertableBadgeProps): ReactNode {
     const { insertableId, groupId, name, status: insertable } = props;
+    const hasUnsavedEdits = useHasIndexingDraft(insertableId);
     const parameters = insertable.configuration?.parameters ?? [];
     return (
         <BuildStatusBadge
+            hasUnsavedEdits={hasUnsavedEdits}
             name={name}
             groupId={groupId}
             issues={insertable.buildIssues}

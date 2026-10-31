@@ -167,7 +167,8 @@ record for a selection, since records name only what enumeration varied.
   combination, so an admin's several edits land in one request rather than
   one each. The draft lives in memory, outside the card, so it survives the
   card closing but not a page load, after which a reload may have changed what
-  it was made against.
+  it was made against. A blue dot on the element's status badge marks one
+  left unsaved.
 - **Assemblies index like part studios.** Their probes send overrides the same
   way, so exclusions apply to both.
 

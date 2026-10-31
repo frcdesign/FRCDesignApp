@@ -54,6 +54,11 @@ function toView(
     return { indexConfigurations, excludedParameterIds, change, changeCount };
 }
 
+/** Whether there is anything to save, for the dot on the card's badge. */
+export function useHasIndexingDraft(insertableId: string): boolean {
+    return useIndexingDrafts((drafts) => drafts[insertableId] !== undefined);
+}
+
 /** Merges an edit in, dropping whatever it returns to the stored value. */
 export function editIndexingDraft(
     insertableId: string,
