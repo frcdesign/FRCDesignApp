@@ -13,24 +13,25 @@ or the load that probes Onshape ([loading.md](./loading.md)); both consume it.
 
 ## Code map
 
-| Path                                                                 | Role                                                                        |
-| -------------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| `src/backend/features/configurations/contract.ts`                    | Parameter, `Selection`, `ConfigurationKey`, record and result types         |
-| `src/backend/features/configurations/selection.ts`                   | The only place a selection or key is built; see the invariants              |
-| `src/backend/features/configurations/utils.ts`                       | Visibility conditions, option resolution, configuration text encodings      |
-| `src/backend/features/configurations/input-parser.ts`                | Parses and evaluates typed quantity expressions (`(2 + 3) in`)              |
-| `src/backend/features/configurations/combinations.ts`                | Indexing limits and bands, enumeration and counting of combinations         |
-| `src/backend/features/configurations/roles.ts`                       | Recognizes parameter roles by name (derivation variable, color, ...)        |
-| `src/backend/features/configurations/instances.ts`                   | Splits a parameter by the choices that filter it, for reporting             |
-| `src/backend/features/configurations/units.ts`                       | A workspace's display units, cached in KV                                   |
-| `src/backend/features/configurations/part-number.ts`                 | Placeholder and meaningless part numbers                                    |
-| `src/backend/features/configurations/stored-selections.ts`           | Reads a selection a favorite or recent stored against the part as it is now |
-| `src/backend/features/configurations/routes.ts`                      | `GET /api/configuration/...`, `GET /api/unit-info`                          |
-| `src/backend/features/load/parse-configuration.ts`                   | Onshape's configuration response to our parameters, roles attached          |
-| `src/backend/features/load/parse-configuration-records.ts`           | `decideIndexing`, probing each combination into a record                    |
-| `src/backend/features/search/records.ts`                             | Records to search records, each with its thumbnail key                      |
-| `src/frontend/features/insert/components/configurations.tsx`         | The parameter panel in the insert menu                                      |
-| `src/frontend/features/build-status/components/indexing-section.tsx` | Admin indexing controls                                                     |
+| Path                                                                   | Role                                                                        |
+| ---------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| `src/backend/features/configurations/contract.ts`                      | Parameter, `Selection`, `ConfigurationKey`, record and result types         |
+| `src/backend/features/configurations/selection.ts`                     | The only place a selection or key is built; see the invariants              |
+| `src/backend/features/configurations/utils.ts`                         | Visibility conditions, option resolution, configuration text encodings      |
+| `src/backend/features/configurations/input-parser.ts`                  | Parses and evaluates typed quantity expressions (`(2 + 3) in`)              |
+| `src/backend/features/configurations/combinations.ts`                  | Indexing limits and bands, enumeration and counting of combinations         |
+| `src/backend/features/configurations/roles.ts`                         | Recognizes parameter roles by name (derivation variable, color, ...)        |
+| `src/backend/features/configurations/instances.ts`                     | Splits a parameter by the choices that filter it, for reporting             |
+| `src/backend/features/configurations/units.ts`                         | A workspace's display units, cached in KV                                   |
+| `src/backend/features/configurations/part-number.ts`                   | Placeholder and meaningless part numbers                                    |
+| `src/backend/features/configurations/stored-selections.ts`             | Reads a selection a favorite or recent stored against the part as it is now |
+| `src/backend/features/configurations/routes.ts`                        | `GET /api/configuration/...`, `GET /api/unit-info`                          |
+| `src/backend/features/load/parse-configuration.ts`                     | Onshape's configuration response to our parameters, roles attached          |
+| `src/backend/features/load/parse-configuration-records.ts`             | `decideIndexing`, probing each combination into a record                    |
+| `src/backend/features/search/records.ts`                               | Records to search records, each with its thumbnail key                      |
+| `src/frontend/features/insert/components/configurations.tsx`           | The parameter panel in the insert menu                                      |
+| `src/frontend/features/insert/components/configuration-hover-card.tsx` | A row's icon whose card lists the configuration it opens on                 |
+| `src/frontend/features/build-status/components/indexing-section.tsx`   | Admin indexing controls                                                     |
 
 ## Storage
 
@@ -72,6 +73,18 @@ link reopens it.
 Comparing or counting values (analytics, "is this the default") goes through
 `canonicalValue` / `canonicalValues`. `canonicalText` is the same values as one
 string, for a D1 column that tells configurations apart (recents).
+`displayedValues` spells a selection for reading: what it applies, enums by
+option name, quantities in their own unit, each marked when at its default.
+
+### Showing a row's configuration
+
+A favorite, recent or search-result row of a configurable part shows a sliders
+icon beside its title (`ConfigurationHoverCard`). Hovering it fetches the
+part's parameters with the insert menu's own query, keyed on the microversion,
+and lists `displayedValues` of the selection the row opens on: the favorite's
+saved one, the recent's, or the hit's matched record, else the defaults.
+Values left at their default are dimmed. Browsing a group shows no icon, since
+every row there opens on the defaults.
 
 ## Flows
 

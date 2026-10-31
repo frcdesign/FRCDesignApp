@@ -84,7 +84,9 @@ vendor filters then apply per row.
 
 A row opens the insert menu on the stored selection, with
 `InsertSource.RECENTS` as its source; its thumbnail asks for that
-configuration's render (see [thumbnails.md](./thumbnails.md)). The row's menu
+configuration's render (see [thumbnails.md](./thumbnails.md)), and the icon
+beside its title lists that configuration on hover (see
+[configurations.md](./configurations.md)). The row's menu
 offers quick insert, favoriting with that selection, and **Remove**, which is
 `DELETE /api/recent/:recentId`, removing that configuration only, applied
 optimistically and refetched on settle.

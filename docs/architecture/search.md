@@ -102,13 +102,15 @@ Results come back highest score first, capped at a list's worth.
 ### Filters and the matched configuration
 
 1. Filters apply during the search: hidden parts (unless showing them), the
-   favorites tab, the group being browsed, and vendors. Hits a group or vendor
+   parts a list is searched within (`insertableIds`: the favorites or recents
+   list), the group being browsed, and vendors. Hits a group or vendor
    filter removed are counted, so the UI can say how many it hid.
 2. For each hit, `matchedRecord` picks the configuration record whose part
    number the query matched, preferring a whole term to a prefix: `16` names
    `am-16` but only starts `am-160`. A hit that matched no part number opens on
-   the default. The row shows that record's name and part number, and its
-   thumbnail.
+   the default. The row shows that record's name and part number, its
+   thumbnail, and a hover card listing its configuration (see
+   [configurations.md](./configurations.md)).
 
 ## Invariants
 

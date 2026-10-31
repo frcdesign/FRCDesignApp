@@ -324,3 +324,48 @@ export function normalizeSelection(
     }
     return current;
 }
+
+/** One parameter of a configuration, spelled for reading. */
+export interface DisplayedValue {
+    parameter: ConfigurationParameter;
+    /** An enum's option name, a checkbox's Yes or No, a quantity in its own unit. */
+    value: string;
+    isDefault: boolean;
+}
+
+/**
+ * What a selection applies, as the insert menu would settle it, in declaration
+ * order. Hidden parameters and derivation variables are left out.
+ */
+export function displayedValues(
+    selection: PartialSelection,
+    parameters: ConfigurationParameter[]
+): DisplayedValue[] {
+    const applied = appliedValues(
+        normalizeSelection(toSelection(selection, parameters), parameters),
+        parameters
+    );
+    return parameters.flatMap((parameter) => {
+        const value = applied[parameter.id];
+        if (value === undefined || isDerivationVariable(parameter)) {
+            return [];
+        }
+        return [
+            {
+                parameter,
+                value: displayValue(parameter, value),
+                isDefault: isDefault(parameter, value)
+            }
+        ];
+    });
+}
+
+function displayValue(parameter: ConfigurationParameter, value: string) {
+    if (parameter.type === ParameterType.ENUM) {
+        return (
+            parameter.options.find((option) => option.id === value)?.name ??
+            value
+        );
+    }
+    return formatValue(parameter, value);
+}

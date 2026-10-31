@@ -24,6 +24,7 @@ import { OpenDocumentItems } from "../../../components/open-document-items";
 import { AdminMenuSection, MenuSection } from "../../../components/app-menu";
 import { ReloadThumbnailMenuItem } from "./reload-thumbnail-item";
 import { QuickInsertItems } from "../../insert/components/quick-insert-items";
+import { ConfigurationHoverCard } from "../../insert/components/configuration-hover-card";
 import { openCannotDeriveAssemblyAlert } from "../../../components/alerts";
 import { useIsAssemblyInPartStudio } from "../../insert/insert-hooks";
 import { openInsertMenu } from "../../insert/open-insert-menu";
@@ -101,11 +102,20 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
             title={insertable.name}
             thumbnail={thumbnail}
             badge={
-                <InsertableStatusBadge
-                    insertableId={insertable.id}
-                    groupId={insertable.groupId}
-                    name={insertable.name}
-                />
+                <>
+                    {/* Browsing opens every part on its defaults; a hit names a configuration. */}
+                    {match && (
+                        <ConfigurationHoverCard
+                            insertable={insertable}
+                            selection={hitSelection}
+                        />
+                    )}
+                    <InsertableStatusBadge
+                        insertableId={insertable.id}
+                        groupId={insertable.groupId}
+                        name={insertable.name}
+                    />
+                </>
             }
         />
     );

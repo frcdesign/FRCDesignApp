@@ -53,6 +53,8 @@ number.
 
 The insert menu opens on the favorite's saved selection, and its thumbnail row
 asks for that configuration's render (see [thumbnails.md](./thumbnails.md)).
+The icon beside the row's title lists that configuration on hover (see
+[configurations.md](./configurations.md)).
 That selection is the favorite's default configuration; a favorite without one
 has the element's own defaults. The reset button returns to the default, and is
 off while it is on screen. **Set default configuration**, in the ⋯ menu,

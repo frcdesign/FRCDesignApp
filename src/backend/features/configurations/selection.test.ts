@@ -10,6 +10,7 @@ import {
     appliedValues,
     canonicalText,
     canonicalValues,
+    displayedValues,
     findRecord,
     formatValue,
     normalizeSelection,
@@ -197,6 +198,62 @@ describe("canonicalText", () => {
         expect(canonicalText(select({ size: "l" }), parameters)).toBe(
             canonicalText(select({ size: "l" }, reordered), reordered)
         );
+    });
+});
+
+describe("displayedValues", () => {
+    const shown = (
+        values: Record<string, string>,
+        params: ConfigurationParameter[] = parameters
+    ) =>
+        displayedValues(values, params).map(
+            ({ parameter, value, isDefault }) => [
+                parameter.id,
+                value,
+                isDefault
+            ]
+        );
+
+    it("spells each value for reading, marking what is left at its default", () => {
+        expect(shown({ size: "l", length: "(2 + 3) in" })).toEqual([
+            ["size", "l", false],
+            ["flag", "No", true],
+            ["length", "5 in", false]
+        ]);
+    });
+
+    it("names an enum's option rather than its id", () => {
+        const named = {
+            ...size,
+            options: [
+                { id: "s", name: "Small" },
+                { id: "l", name: "Large" }
+            ]
+        };
+        expect(shown({ size: "l" }, [named])).toEqual([
+            ["size", "Large", false]
+        ]);
+    });
+
+    it("leaves out a parameter the selection hides", () => {
+        const params = [
+            size,
+            {
+                ...boolParam("reinforced"),
+                condition: {
+                    type: VisibilityType.EQUAL as const,
+                    id: "size",
+                    value: "l"
+                }
+            }
+        ];
+        expect(shown({ size: "s" }, params)).toEqual([["size", "s", true]]);
+    });
+
+    it("leaves out a derivation variable", () => {
+        expect(shown({}, [size, derivationParam("dv")])).toEqual([
+            ["size", "s", true]
+        ]);
     });
 });
 

@@ -18,6 +18,7 @@ import {
 } from "../../../components/item-row";
 import { OpenDocumentItems } from "../../../components/open-document-items";
 import { QuickInsertItems } from "../../insert/components/quick-insert-items";
+import { ConfigurationHoverCard } from "../../insert/components/configuration-hover-card";
 import { useIsInsertableHidden } from "../../library/visibility";
 import { CardThumbnail } from "../../thumbnails/components/thumbnail";
 import { useIsAssemblyInPartStudio } from "../../insert/insert-hooks";
@@ -74,6 +75,12 @@ export function RecentCard(props: RecentCardProps): ReactNode {
                 <CardTitle
                     disabled={isAssemblyInPartStudio}
                     title={insertable.name}
+                    badge={
+                        <ConfigurationHoverCard
+                            insertable={insertable}
+                            selection={recent.selection}
+                        />
+                    }
                     thumbnail={
                         <CardThumbnail
                             smallThumbnailUrl={insertable.smallThumbnailUrl}
