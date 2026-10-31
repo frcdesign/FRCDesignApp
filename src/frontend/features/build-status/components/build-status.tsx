@@ -3,6 +3,7 @@ import {
     Divider,
     Group,
     Loader,
+    SegmentedControl,
     Stack,
     Text,
     Tooltip
@@ -12,13 +13,14 @@ import {
     GitBranchIcon,
     HourglassIcon
 } from "@phosphor-icons/react";
-import { ReactNode } from "react";
+import { ReactNode, useState } from "react";
 import { formatShortTimeAgo } from "../../../lib/format-time";
 import {
     BuildIssue,
     getMaxSeverity
 } from "@backend/features/build-checker/issues";
 import { InsertableBuildStatus } from "@backend/features/build-checker/contract";
+import { ElementType } from "@backend/lib/onshape/element-type";
 import {
     FontWeight,
     IconSize,
@@ -35,12 +37,9 @@ import {
     IssueIcon,
     SeverityBadges
 } from "./issues";
-import {
-    ConfigurationSection,
-    InsertableParsedSection
-} from "./parsed-section";
-import { GroupAdminSection, InsertableAdminSection } from "./admin-section";
-import { IndexingSection } from "./indexing-section";
+import { ConfigurationTab } from "./configuration-tab";
+import { GroupSettings, InsertableSettings } from "./admin-section";
+import { useIndexingView } from "../indexing-draft";
 import styles from "../../../lib/styles.module.css";
 
 /** What the card and the badge both say about a group or an insertable. */
@@ -56,48 +55,82 @@ interface BuildStatusSubject {
     configurationTarget?: ConfigurationTarget;
     /** Draws the badge as hidden-from-users instead of as its worst severity. */
     isHidden?: boolean;
+    /** Named in the header; a group has none. */
+    elementType?: ElementType;
+}
+
+/** A second page of the card, for what doesn't fit beside the settings. */
+interface CardTab {
+    label: string;
+    content: ReactNode;
 }
 
 interface BuildStatusCardProps extends BuildStatusSubject {
-    /** The group/insertable admin menu wrapped by the card. */
+    /** The settings shown under the build checks. */
     children: ReactNode;
+    tab?: CardTab;
 }
 
+/** Overview first, since the build checks are what an admin opens it for. */
+const OVERVIEW = "overview";
+
+/** Wide enough for a parameter's name beside its type and checkbox. */
+const CARD_WIDTH = 320;
+
 function BuildStatusCard(props: BuildStatusCardProps): ReactNode {
-    const {
-        name,
-        groupId,
-        issues,
-        versionCreatedAt,
-        configurationTarget,
-        children
-    } = props;
+    const { tab, children, ...subject } = props;
+    const [page, setPage] = useState(OVERVIEW);
+    const showTab = tab !== undefined && page !== OVERVIEW;
     return (
-        <Stack gap="sm" w={300}>
-            <CardHeader
-                name={name}
-                groupId={groupId}
-                issues={issues}
-                versionCreatedAt={versionCreatedAt}
-            />
-            {issues.length > 0 && (
-                <>
-                    <Divider />
-                    <BuildChecksSection
-                        issues={issues}
-                        configurationTarget={configurationTarget}
-                    />
-                </>
+        <Stack gap="sm" w={CARD_WIDTH}>
+            <CardHeader {...subject} />
+            {tab && (
+                <SegmentedControl
+                    size="xs"
+                    fullWidth
+                    value={page}
+                    onChange={setPage}
+                    data={[
+                        { value: OVERVIEW, label: "Overview" },
+                        { value: "tab", label: tab.label }
+                    ]}
+                />
             )}
-            <Divider />
-            {children}
+            {showTab ? (
+                tab.content
+            ) : (
+                <Overview {...subject}>{children}</Overview>
+            )}
         </Stack>
     );
 }
 
+interface OverviewProps extends BuildStatusSubject {
+    children: ReactNode;
+}
+
+function Overview(props: OverviewProps): ReactNode {
+    const { issues, configurationTarget, children } = props;
+    return (
+        <>
+            {issues.length > 0 && (
+                <>
+                    <BuildChecksSection
+                        issues={issues}
+                        configurationTarget={configurationTarget}
+                    />
+                    <Divider />
+                </>
+            )}
+            {children}
+        </>
+    );
+}
+
 interface BuildStatusBadgeProps extends BuildStatusSubject {
-    /** The group/insertable admin menu shown in the hover card. */
+    /** The group/insertable settings shown in the hover card. */
     hoverMenu: ReactNode;
+    tab?: CardTab;
 }
 
 /** Gated first, so the card and its admin controls only exist for an editor. */
@@ -119,7 +152,9 @@ function BuildStatusHoverCard({
     versionCreatedAt,
     configurationTarget,
     isHidden,
-    hoverMenu
+    hoverMenu,
+    tab,
+    elementType
 }: BuildStatusHoverCardProps): ReactNode {
     const maxSeverity = getMaxSeverity(issues);
     const loading = useIsGroupLoading(groupId);
@@ -146,6 +181,8 @@ function BuildStatusHoverCard({
                 issues={issues}
                 versionCreatedAt={versionCreatedAt}
                 configurationTarget={configurationTarget}
+                elementType={elementType}
+                tab={tab}
             >
                 {hoverMenu}
             </BuildStatusCard>
@@ -153,16 +190,16 @@ function BuildStatusHoverCard({
     );
 }
 
-interface CardHeaderProps {
-    name: string;
-    groupId: string;
-    issues: BuildIssue[];
-    versionCreatedAt?: number;
-}
+type CardHeaderProps = BuildStatusSubject;
 
-/** The card header: name + severity summary on the left, the version's age on the right. */
+const ELEMENT_TYPE_LABEL: Record<ElementType, string> = {
+    [ElementType.PART_STUDIO]: "Part studio",
+    [ElementType.ASSEMBLY]: "Assembly"
+};
+
+/** The name and what it is above, the severity summary below. */
 function CardHeader(props: CardHeaderProps): ReactNode {
-    const { name, groupId, issues, versionCreatedAt } = props;
+    const { name, groupId, issues, versionCreatedAt, elementType } = props;
     return (
         <Stack gap={6}>
             <Group justify="space-between" align="center" gap="sm">
@@ -180,7 +217,18 @@ function CardHeader(props: CardHeaderProps): ReactNode {
                     versionCreatedAt={versionCreatedAt}
                 />
             </Group>
-            <SeverityBadges issues={issues} />
+            <Group justify="space-between" align="center" gap="sm">
+                <SeverityBadges issues={issues} />
+                {elementType && (
+                    <Text
+                        size="xs"
+                        c={StatusColor.DIMMED}
+                        className={styles.noShrink}
+                    >
+                        {ELEMENT_TYPE_LABEL[elementType]}
+                    </Text>
+                )}
+            </Group>
         </Stack>
     );
 }
@@ -233,12 +281,30 @@ export function InsertableStatusBadge(
     const insertable = data?.insertables[insertableId];
     if (!insertable) return null;
     return (
+        <InsertableBadge
+            insertableId={insertableId}
+            groupId={groupId}
+            name={name}
+            status={insertable}
+        />
+    );
+}
+
+interface InsertableBadgeProps extends InsertableStatusBadgeProps {
+    status: InsertableBuildStatus;
+}
+
+function InsertableBadge(props: InsertableBadgeProps): ReactNode {
+    const { insertableId, groupId, name, status: insertable } = props;
+    const tab = useConfigurationTab(insertableId, insertable);
+    return (
         <BuildStatusBadge
             name={name}
             groupId={groupId}
             issues={insertable.buildIssues}
             versionCreatedAt={insertable.versionCreatedAt}
             isHidden={!insertable.isVisible}
+            elementType={insertable.elementType}
             configurationTarget={
                 insertable.configuration && {
                     elementPath: insertable.elementPath,
@@ -246,33 +312,35 @@ export function InsertableStatusBadge(
                 }
             }
             hoverMenu={
-                <InsertableHoverMenu
+                <InsertableSettings
                     insertableId={insertableId}
                     status={insertable}
                 />
             }
+            tab={tab}
         />
     );
 }
 
-interface InsertableHoverMenuProps {
-    insertableId: string;
-    status: InsertableBuildStatus;
-}
-
-function InsertableHoverMenu(props: InsertableHoverMenuProps): ReactNode {
-    const { insertableId, status } = props;
-    return (
-        <>
-            <InsertableAdminSection
+/** Undefined for an element with no parameters, which needs no second page. */
+function useConfigurationTab(
+    insertableId: string,
+    status: InsertableBuildStatus
+): CardTab | undefined {
+    const { changeCount } = useIndexingView(insertableId, status);
+    const parameters = status.configuration?.parameters ?? [];
+    if (parameters.length === 0) return undefined;
+    return {
+        // A dot, so an unapplied edit is noticed from the overview.
+        label: `Configuration (${parameters.length})${changeCount > 0 ? " •" : ""}`,
+        content: (
+            <ConfigurationTab
                 insertableId={insertableId}
                 status={status}
+                parameters={parameters}
             />
-            <IndexingSection insertableId={insertableId} status={status} />
-            <InsertableParsedSection status={status} />
-            <ConfigurationSection status={status} />
-        </>
-    );
+        )
+    };
 }
 
 interface GroupStatusBadgeProps {
@@ -294,10 +362,7 @@ export function GroupStatusBadge(props: GroupStatusBadgeProps): ReactNode {
                     issues={groupStatus.buildIssues}
                     versionCreatedAt={groupStatus.versionCreatedAt}
                     hoverMenu={
-                        <GroupAdminSection
-                            groupId={groupId}
-                            status={groupStatus}
-                        />
+                        <GroupSettings groupId={groupId} status={groupStatus} />
                     }
                 />
             )}

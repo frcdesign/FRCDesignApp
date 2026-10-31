@@ -25,6 +25,10 @@ export enum BuildIssueType {
     MULTIPLE_PARTS = "multiple-parts",
     CONFIGURATION_MULTIPLE_PARTS = "configuration-multiple-parts",
     UNSTABLE_COMPOSITE = "unstable-composite",
+    /** Insert and fasten was turned on, but there is no mate connector to use. */
+    NO_MATE_CONNECTOR = "no-mate-connector",
+    /** The mate connector inserts use can change or break between configurations. */
+    UNSTABLE_MATE_CONNECTOR = "unstable-mate-connector",
     INSERTABLES_FAILED = "insertables-failed",
     LOAD_FAILED = "load-failed",
     /** A document added but not yet loaded, until its first load saves it. */
@@ -60,6 +64,8 @@ export type BuildIssue =
     | BuildIssueOf<BuildIssueType.MULTIPLE_PARTS>
     | ConfigurationBuildIssueOf<BuildIssueType.CONFIGURATION_MULTIPLE_PARTS>
     | ConfigurationBuildIssueOf<BuildIssueType.UNSTABLE_COMPOSITE>
+    | BuildIssueOf<BuildIssueType.NO_MATE_CONNECTOR>
+    | BuildIssueOf<BuildIssueType.UNSTABLE_MATE_CONNECTOR>
     | BuildIssueOf<BuildIssueType.INSERTABLES_FAILED>
     | BuildIssueOf<BuildIssueType.LOAD_FAILED>
     | BuildIssueOf<BuildIssueType.NOT_LOADED>;
@@ -117,6 +123,10 @@ export function getIssueTitle(issue: BuildIssue): string {
             return issue.configurationCount === 1
                 ? "A configuration has no open composite part"
                 : `${issue.configurationCount} configurations have no open composite part`;
+        case BuildIssueType.NO_MATE_CONNECTOR:
+            return "No mate connector to fasten to";
+        case BuildIssueType.UNSTABLE_MATE_CONNECTOR:
+            return "First mate connector isn't stable";
         case BuildIssueType.INSERTABLES_FAILED:
             return "Some elements failed to load";
         case BuildIssueType.LOAD_FAILED:
@@ -139,6 +149,10 @@ export function getIssueDescription(issue: BuildIssue): string | undefined {
             return `Elements with ${AUTO_INDEX_THRESHOLD}+ configurations must be enabled manually.`;
         case BuildIssueType.UNSTABLE_COMPOSITE:
             return "The default configuration has one, so every configuration should.";
+        case BuildIssueType.NO_MATE_CONNECTOR:
+            return "Add a mate connector feature, or turn insert and fasten off.";
+        case BuildIssueType.UNSTABLE_MATE_CONNECTOR:
+            return "Inserts use the first mate connector, so it must not fail or have configured suppression, nor may one before it.";
         case BuildIssueType.NOT_LOADED:
             return "Use Reload if it doesn't start loading.";
         default:
@@ -155,6 +169,8 @@ export function getIssueSeverity(issue: BuildIssue): BuildIssueSeverity {
         case BuildIssueType.CONFIGURATION_MULTIPLE_PARTS:
         case BuildIssueType.NO_PARTS:
         case BuildIssueType.UNSTABLE_COMPOSITE:
+        case BuildIssueType.NO_MATE_CONNECTOR:
+        case BuildIssueType.UNSTABLE_MATE_CONNECTOR:
         case BuildIssueType.INSERTABLES_FAILED:
         case BuildIssueType.LOAD_FAILED:
             return BuildIssueSeverity.ERROR;

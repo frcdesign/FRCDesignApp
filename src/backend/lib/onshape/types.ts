@@ -349,12 +349,22 @@ interface OnshapePartStudioFeature {
     featureType: string;
     featureId: string;
     name: string;
+    /** In the configuration asked for. */
     suppressed: boolean;
+    /** A configuration decides whether it is suppressed. */
+    suppressionConfigured?: boolean;
+}
+
+/** Whether a feature regenerated. */
+interface OnshapeFeatureState {
+    featureStatus?: "OK" | "INFO" | "WARNING" | "ERROR" | "UNKNOWN";
 }
 
 /** GET /partstudios/d/{did}/{wvm}/{wvmid}/e/{eid}/features (the subset we read). */
 export interface OnshapeFeatureListResponse {
     features: OnshapePartStudioFeature[];
+    /** Keyed by feature id. */
+    featureStates?: Record<string, OnshapeFeatureState>;
 }
 
 // === external references (GET /documents/d/{did}/w/{wid}/externalreferences) ===

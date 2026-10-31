@@ -44,8 +44,16 @@ import {
 import { PartType } from "../../../lib/onshape/endpoints/documents";
 import { onshapeOverrides, toSelection } from "../../configurations/selection";
 import { encodeConfiguration } from "../../configurations/utils";
-import { fastenMate } from "../../../lib/onshape/objects/assembly-features";
-import { parseFastenInfo } from "../../load/parse-fasten";
+import {
+    fastenMate,
+    groupMate
+} from "../../../lib/onshape/objects/assembly-features";
+import {
+    decideFasten,
+    FASTEN_ISSUE_TYPES,
+    findMateConnector,
+    shouldFindMateConnector
+} from "../../load/parse-fasten";
 import { getFastenQuery } from "./fasten-query";
 import { getInsertLocationTransform } from "../../insert-location/parse";
 import { addBuildIssue, clearBuildIssue } from "../../build-checker/issues";
@@ -60,15 +68,22 @@ function inLibrary(libraryId: LibraryId, insertableId: string) {
     );
 }
 
-/** POST /api/toggle-insert-and-fasten/library/:libraryId/insertable/:insertableId */
 const setFastenBody = z.object({ supportsFasten: z.boolean() });
 
-const indexConfigurationsBody = z.object({ indexConfigurations: z.boolean() });
+const setRigidBody = z.object({ insertAsRigid: z.boolean() });
 
-const excludedParametersBody = z.object({
-    excludedParameterIds: z.array(z.string())
+/** Either or both, so an admin's edits land in one reindex. */
+const indexingBody = z.object({
+    indexConfigurations: z.boolean().optional(),
+    excludedParameterIds: z.array(z.string()).optional()
 });
 
+/**
+ * POST /api/toggle-insert-and-fasten/library/:libraryId/insertable/:insertableId
+ *
+ * Keeps an override only where it differs from what detection decides, so a
+ * part studio switched back to its default follows its mate connectors again.
+ */
 insertableRoutes.post(
     "/toggle-insert-and-fasten" + libraryRoute() + insertableRoute(),
     requireEditorMiddleware,
@@ -82,10 +97,12 @@ insertableRoutes.post(
 
         const row = await db
             .select({
+                name: insertables.name,
                 documentId: insertables.documentId,
                 versionId: insertables.versionId,
                 elementId: insertables.elementId,
-                elementType: insertables.elementType
+                elementType: insertables.elementType,
+                buildIssues: insertables.buildIssues
             })
             .from(insertables)
             .where(inLibrary(libraryId, insertableId))
@@ -93,18 +110,38 @@ insertableRoutes.post(
         if (!row)
             throw internalError("Insertable not found", HttpStatus.NOT_FOUND);
 
-        let fastenInfo = null;
-        if (supportsFasten) {
-            fastenInfo = await parseFastenInfo(
-                await c.var.getOnshapeApi(),
-                toElementPath(row),
-                row.elementType
+        const found = shouldFindMateConnector(row.elementType, supportsFasten)
+            ? await findMateConnector(
+                  await c.var.getOnshapeApi(),
+                  toElementPath(row),
+                  row.elementType
+              )
+            : undefined;
+        if (supportsFasten && !found) {
+            throw handledError(
+                `${row.name} has no mate connector to fasten to.`,
+                HttpStatus.BAD_REQUEST
             );
         }
 
+        const automatic = decideFasten(row.elementType, undefined, found);
+        const fastenOverride =
+            supportsFasten === automatic.supportsFasten
+                ? undefined
+                : supportsFasten;
+        const fasten = decideFasten(row.elementType, fastenOverride, found);
+
         await db
             .update(insertables)
-            .set({ supportsFasten, fastenInfo })
+            .set({
+                fastenOverride: fastenOverride ?? null,
+                supportsFasten: fasten.supportsFasten,
+                fastenInfo: fasten.fastenInfo,
+                buildIssues: addBuildIssue(
+                    clearBuildIssue(row.buildIssues, ...FASTEN_ISSUE_TYPES),
+                    ...(fasten.issue ? [{ type: fasten.issue }] : [])
+                )
+            })
             .where(eq(insertables.id, insertableId));
 
         await bumpLibraryVersion(db, libraryId);
@@ -112,30 +149,52 @@ insertableRoutes.post(
     }
 );
 
-/** POST /api/index-configurations/library/:libraryId/insertable/:insertableId */
+/** POST /api/insert-as-rigid/library/:libraryId/insertable/:insertableId */
 insertableRoutes.post(
-    "/index-configurations" + libraryRoute() + insertableRoute(),
+    "/insert-as-rigid" + libraryRoute() + insertableRoute(),
     requireEditorMiddleware,
-    validate("json", indexConfigurationsBody),
+    validate("json", setRigidBody),
     async (c) => {
-        const { indexConfigurations } = c.req.valid("json");
-        await reindex(c, getLibraryParam(c), getInsertableParam(c), {
-            indexConfigurations
-        });
+        const db = getDb(c.env.DB);
+        const libraryId = getLibraryParam(c);
+        const insertableId = getInsertableParam(c);
+        const { insertAsRigid } = c.req.valid("json");
+
+        const row = await db
+            .select({ elementType: insertables.elementType })
+            .from(insertables)
+            .where(inLibrary(libraryId, insertableId))
+            .get();
+        if (!row)
+            throw internalError("Insertable not found", HttpStatus.NOT_FOUND);
+        if (row.elementType !== ElementType.PART_STUDIO) {
+            throw handledError(
+                "Only a part studio can be inserted as rigid.",
+                HttpStatus.BAD_REQUEST
+            );
+        }
+
+        await db
+            .update(insertables)
+            .set({ insertAsRigid })
+            .where(eq(insertables.id, insertableId));
+        await bumpLibraryVersion(db, libraryId);
         return c.json({ success: true });
     }
 );
 
-/** POST /api/excluded-parameters/library/:libraryId/insertable/:insertableId */
+/** POST /api/indexing/library/:libraryId/insertable/:insertableId */
 insertableRoutes.post(
-    "/excluded-parameters" + libraryRoute() + insertableRoute(),
+    "/indexing" + libraryRoute() + insertableRoute(),
     requireEditorMiddleware,
-    validate("json", excludedParametersBody),
+    validate("json", indexingBody),
     async (c) => {
-        const { excludedParameterIds } = c.req.valid("json");
-        await reindex(c, getLibraryParam(c), getInsertableParam(c), {
-            excludedParameterIds
-        });
+        await reindex(
+            c,
+            getLibraryParam(c),
+            getInsertableParam(c),
+            c.req.valid("json")
+        );
         return c.json({ success: true });
     }
 );
@@ -172,9 +231,10 @@ async function reindex(
     }
     const parameters = row.parameters ?? [];
     const settings: IndexingSettings = {
-        indexConfigurations: row.indexConfigurations,
-        excludedParameterIds: row.excludedParameterIds,
-        ...change
+        indexConfigurations:
+            change.indexConfigurations ?? row.indexConfigurations,
+        excludedParameterIds:
+            change.excludedParameterIds ?? row.excludedParameterIds
     };
     const indexing = decideIndexing(parameters, settings);
     const indexed = indexing.shouldIndex
@@ -266,10 +326,6 @@ const insertBody = z.object({
     source: z.enum(InsertSource).default(InsertSource.BROWSE)
 });
 
-const addToPartStudioBody = insertBody.extend({
-    useMateConnector: z.boolean().default(false)
-});
-
 const addToAssemblyBody = insertBody.extend({
     fasten: z.boolean().default(false),
     /** The insert location marker's instance id, when the assembly has one. */
@@ -280,7 +336,7 @@ const addToAssemblyBody = insertBody.extend({
 insertableRoutes.post(
     "/add-to-part-studio" + insertableRoute(),
     requireSignInMiddleware,
-    validate("json", addToPartStudioBody),
+    validate("json", insertBody),
     async (c) => {
         const onshapeApi = await c.var.getOnshapeApi();
         const insertableId = getInsertableParam(c);
@@ -295,7 +351,8 @@ insertableRoutes.post(
                 elementId: insertables.elementId,
                 name: insertables.name,
                 microversionId: insertables.microversionId,
-                libraryId: insertables.libraryId
+                libraryId: insertables.libraryId,
+                supportsFasten: insertables.supportsFasten
             })
             .from(insertables)
             .where(eq(insertables.id, insertableId))
@@ -317,7 +374,7 @@ insertableRoutes.post(
             row.name,
             sourcePath,
             row.microversionId,
-            body.useMateConnector,
+            row.supportsFasten,
             selection,
             parameters
         );
@@ -371,7 +428,9 @@ insertableRoutes.post(
                 name: insertables.name,
                 elementType: insertables.elementType,
                 isOpenComposite: insertables.isOpenComposite,
-                fastenInfo: insertables.fastenInfo
+                supportsFasten: insertables.supportsFasten,
+                fastenInfo: insertables.fastenInfo,
+                insertAsRigid: insertables.insertAsRigid
             })
             .from(insertables)
             .where(eq(insertables.id, insertableId))
@@ -447,12 +506,37 @@ insertableRoutes.post(
                 fasten
             });
 
+        const occurrences =
+            result.insertInstanceResponses?.[0]?.occurrences ?? [];
+
+        // A whole part studio arrives as one instance per part, free to move apart.
+        if (
+            row.insertAsRigid &&
+            row.elementType === ElementType.PART_STUDIO &&
+            occurrences.length > 1
+        ) {
+            try {
+                await addAssemblyFeature(
+                    onshapeApi,
+                    targetPath,
+                    groupMate(
+                        row.name,
+                        occurrences.map((occurrence) => occurrence.path)
+                    )
+                );
+            } catch (error) {
+                // Only the group failed; the insert is still in the assembly.
+                await track(false);
+                throw error;
+            }
+        }
+
         if (!body.fasten) {
             await track(false);
             return c.json({} satisfies InsertOut);
         }
 
-        const fastenInfo = row.fastenInfo;
+        const fastenInfo = row.supportsFasten ? row.fastenInfo : null;
         if (!fastenInfo) {
             await track(false);
             throw handledError(
@@ -461,8 +545,7 @@ insertableRoutes.post(
             );
         }
 
-        const instancePath: string[] =
-            result.insertInstanceResponses?.[0]?.occurrences?.[0]?.path ?? [];
+        const instancePath: string[] = occurrences[0]?.path ?? [];
 
         const mate = fastenMate(row.name, [
             getFastenQuery(row.elementType, instancePath, fastenInfo)

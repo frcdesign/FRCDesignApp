@@ -11,6 +11,7 @@ import {
 import * as DocumentEndpoints from "../../lib/onshape/endpoints/documents";
 import * as ConfigurationEndpoints from "../../lib/onshape/endpoints/configurations";
 import * as PartsEndpoints from "../../lib/onshape/endpoints/parts";
+import * as PartStudioEndpoints from "../../lib/onshape/endpoints/part-studios";
 import * as ThumbnailStore from "../thumbnails/store";
 import { getDb } from "../../db/client";
 import { groups, insertables } from "../../db/schema";
@@ -301,8 +302,12 @@ describe("loadGroup", () => {
             LoadCommonModule,
             "getOnshapeApiFromContext"
         ).mockResolvedValue(MOCK_ONSHAPE_API);
-        // Every part-studio load probes its parts for the open-composite flag.
+        // Every part-studio load probes its parts for the open-composite flag,
+        // and its features for a mate connector.
         vi.spyOn(PartsEndpoints, "getParts").mockResolvedValue([]);
+        vi.spyOn(PartStudioEndpoints, "getFeatures").mockResolvedValue({
+            features: []
+        });
     });
 
     afterEach(() => vi.restoreAllMocks());

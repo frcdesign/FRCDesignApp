@@ -3,6 +3,7 @@ import { FastenInfo, MateLocation } from "../library/insertables/fasten";
 import { type ElementPath } from "../../lib/onshape/path";
 import { getAssembly } from "../../lib/onshape/endpoints/assemblies";
 import { getFeatures } from "../../lib/onshape/endpoints/part-studios";
+import { BuildIssueType } from "../build-checker/issues";
 
 import { OnshapeApi } from "../../lib/onshape/client";
 import {
@@ -11,21 +12,122 @@ import {
     OnshapeFeatureListResponse
 } from "../../lib/onshape/types";
 
-export async function parseFastenInfo(
+/** The mate connector inserts would place and fasten at. */
+export interface MateConnector {
+    fastenInfo: FastenInfo;
+    /** Some configuration may lose it or put another first, or it fails to regenerate. */
+    isUnstable: boolean;
+}
+
+/** What the load stores about fastening, and the issue it raises, if any. */
+export interface FastenResult {
+    supportsFasten: boolean;
+    /** The connector found, kept even when fastening is off so the card can offer it. */
+    fastenInfo: FastenInfo | null;
+    issue?:
+        | BuildIssueType.NO_MATE_CONNECTOR
+        | BuildIssueType.UNSTABLE_MATE_CONNECTOR;
+}
+
+/** Cleared before a fasten decision is merged in, so a fixed one doesn't stick. */
+export const FASTEN_ISSUE_TYPES = [
+    BuildIssueType.NO_MATE_CONNECTOR,
+    BuildIssueType.UNSTABLE_MATE_CONNECTOR
+];
+
+/**
+ * A part studio is always looked at, since that is how its default is decided.
+ * An assembly's definition is far larger, so it is read only when an admin turned
+ * fastening on.
+ */
+export function shouldFindMateConnector(
+    elementType: ElementType,
+    fastenOverride: boolean | undefined
+): boolean {
+    return elementType === ElementType.PART_STUDIO || fastenOverride === true;
+}
+
+export async function findMateConnector(
     onshapeApi: OnshapeApi,
     elementPath: ElementPath,
     elementType: ElementType
-): Promise<FastenInfo> {
+): Promise<MateConnector | undefined> {
     if (elementType === ElementType.PART_STUDIO) {
-        const rawFeatureList = await getFeatures(onshapeApi, elementPath);
-        return parseFastenInfoFromPartStudio(rawFeatureList);
-    } else {
-        const rawAssemblyInfo = await getAssembly(onshapeApi, elementPath, {
+        return findPartStudioMateConnector(
+            await getFeatures(onshapeApi, elementPath)
+        );
+    }
+    const fastenInfo = findAssemblyMateConnector(
+        await getAssembly(onshapeApi, elementPath, {
             includeMateConnectors: true,
             includeMateFeatures: true
-        });
-        return parseFastenInfoFromAssembly(rawAssemblyInfo);
+        })
+    );
+    return fastenInfo && { fastenInfo, isUnstable: false };
+}
+
+/** The admin's choice wins; left to itself, a part studio with a connector fastens. */
+export function decideFasten(
+    elementType: ElementType,
+    fastenOverride: boolean | undefined,
+    found: MateConnector | undefined
+): FastenResult {
+    const fastenInfo = found?.fastenInfo ?? null;
+    const wanted = fastenOverride ?? elementType === ElementType.PART_STUDIO;
+    if (!wanted) {
+        return { supportsFasten: false, fastenInfo };
     }
+    if (!found) {
+        return {
+            supportsFasten: false,
+            fastenInfo,
+            issue:
+                fastenOverride === true
+                    ? BuildIssueType.NO_MATE_CONNECTOR
+                    : undefined
+        };
+    }
+    return {
+        supportsFasten: true,
+        fastenInfo,
+        issue: found.isUnstable
+            ? BuildIssueType.UNSTABLE_MATE_CONNECTOR
+            : undefined
+    };
+}
+
+/**
+ * The first mate connector the default configuration regenerates. It is unstable
+ * when a configuration decides its suppression, or that of one before it, since
+ * either changes which connector comes first.
+ */
+export function findPartStudioMateConnector(
+    response: OnshapeFeatureListResponse
+): MateConnector | undefined {
+    // One suppressed outright is off in every configuration, so it never counts.
+    const candidates = response.features.filter(
+        (feature) =>
+            feature.featureType === "mateConnector" &&
+            (!feature.suppressed || feature.suppressionConfigured === true)
+    );
+    const index = candidates.findIndex((feature) => !feature.suppressed);
+    if (index === -1) {
+        return undefined;
+    }
+    const first = candidates[index];
+    const status = response.featureStates?.[first.featureId]?.featureStatus;
+    return {
+        fastenInfo: {
+            mateConnectorId: first.featureId,
+            mateLocation: MateLocation.Feature,
+            path: []
+        },
+        isUnstable:
+            status === "ERROR" ||
+            candidates
+                .slice(0, index + 1)
+                .some((feature) => feature.suppressionConfigured === true)
+    };
 }
 
 function searchFeatures(
@@ -49,25 +151,9 @@ function searchFeatures(
     return undefined;
 }
 
-export function parseFastenInfoFromPartStudio(
-    rawFeatureList: OnshapeFeatureListResponse
-): FastenInfo {
-    for (const feature of rawFeatureList.features) {
-        if (feature.suppressed) continue;
-        if (feature.featureType === "mateConnector") {
-            return {
-                mateConnectorId: feature.featureId,
-                mateLocation: MateLocation.Feature,
-                path: []
-            };
-        }
-    }
-    throw new Error("Failed to find a valid Mate connector feature.");
-}
-
-export function parseFastenInfoFromAssembly(
+export function findAssemblyMateConnector(
     rawAssemblyInfo: OnshapeAssemblyDefinition
-): FastenInfo {
+): FastenInfo | undefined {
     const rootAssembly = rawAssemblyInfo.rootAssembly;
     const fromFeatures = searchFeatures(
         rootAssembly.features,
@@ -102,7 +188,5 @@ export function parseFastenInfoFromAssembly(
             if (found) return found;
         }
     }
-    throw new Error(
-        "Failed to find a valid Mate connector feature or instance."
-    );
+    return undefined;
 }

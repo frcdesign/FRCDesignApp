@@ -24,7 +24,14 @@ export interface InsertableBuildStatus {
     elementPath: ElementPath;
     elementType: ElementType;
     isVisible: boolean;
+    /** Whether inserts place and fasten at its mate connector. */
     supportsFasten: boolean;
+    /** The admin's choice; absent when detection decides. */
+    fastenOverride?: boolean;
+    /** A mate connector was found, whether or not inserts use it. */
+    hasMateConnector: boolean;
+    /** A part studio inserted into an assembly is grouped to move as one. */
+    insertAsRigid: boolean;
     indexConfigurations: boolean;
     /** Parameters an admin left out of indexing. */
     excludedParameterIds: string[];

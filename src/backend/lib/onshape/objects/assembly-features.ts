@@ -58,3 +58,24 @@ export function fastenMate(name: string, queries: Iterable<object>): object {
         ]
     };
 }
+
+/**
+ * Moves the occurrences as one body. Onshape documents no example of this
+ * feature; its shape follows the group feature's spec.
+ */
+export function groupMate(name: string, paths: Iterable<string[]>): object {
+    return {
+        btType: "BTMMateGroup-65",
+        featureType: "mateGroup",
+        name,
+        parameters: [
+            queryParameter(
+                "occurrencesQuery",
+                [...paths].map((path) => ({
+                    btType: "BTMIndividualOccurrenceQuery-626",
+                    path
+                }))
+            )
+        ]
+    };
+}

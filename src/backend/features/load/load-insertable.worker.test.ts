@@ -21,6 +21,8 @@ import {
 } from "../../../__test_utils__/insertable-fixtures";
 import * as ConfigurationEndpoints from "../../lib/onshape/endpoints/configurations";
 import * as PartsEndpoints from "../../lib/onshape/endpoints/parts";
+import * as PartStudioEndpoints from "../../lib/onshape/endpoints/part-studios";
+import { MateLocation } from "../library/insertables/fasten";
 import * as ThumbnailStore from "../thumbnails/store";
 import { BuildIssueType } from "../build-checker/issues";
 import { LOAD_CONCURRENCY, type LoadContext } from "./context";
@@ -60,7 +62,8 @@ describe("saveInsertable", () => {
         expect(await readInsertable()).toMatchObject({
             // User-owned flags start off.
             isVisible: false,
-            supportsFasten: false,
+            fastenOverride: null,
+            insertAsRigid: false,
             indexConfigurations: false,
             // Computed columns come from the parse.
             isOpenComposite: true,
@@ -79,7 +82,8 @@ describe("saveInsertable", () => {
             .update(insertables)
             .set({
                 isVisible: true,
-                supportsFasten: true,
+                fastenOverride: false,
+                insertAsRigid: true,
                 indexConfigurations: true,
                 sortOrder: 5
             })
@@ -98,7 +102,8 @@ describe("saveInsertable", () => {
         expect(await readInsertable()).toMatchObject({
             // Preserved.
             isVisible: true,
-            supportsFasten: true,
+            fastenOverride: false,
+            insertAsRigid: true,
             indexConfigurations: true,
             sortOrder: 5,
             // Overwritten.
@@ -192,6 +197,94 @@ describe("loadInsertable", () => {
         vi.spyOn(PartsEndpoints, "getParts").mockResolvedValue([
             { partId: "p1" }
         ]);
+        vi.spyOn(ThumbnailStore, "uploadThumbnails").mockResolvedValue({
+            small: "small.png",
+            large: "large.png"
+        });
+        vi.spyOn(PartStudioEndpoints, "getFeatures").mockResolvedValue({
+            features: []
+        });
+    });
+
+    function mockFeatures(
+        ...features: { featureId: string; suppressionConfigured?: boolean }[]
+    ) {
+        vi.spyOn(PartStudioEndpoints, "getFeatures").mockResolvedValue({
+            features: features.map((feature) => ({
+                featureType: "mateConnector",
+                name: feature.featureId,
+                suppressed: false,
+                ...feature
+            }))
+        });
+    }
+
+    function load(insertableId: string) {
+        return loadInsertable(
+            ctx(),
+            insertableTarget({
+                insertableId,
+                elementPath: {
+                    ...TEST_PART_STUDIO_PATH,
+                    elementId: insertableId
+                }
+            })
+        );
+    }
+
+    function readRow(insertableId: string) {
+        return db
+            .select()
+            .from(insertables)
+            .where(eq(insertables.id, insertableId))
+            .get();
+    }
+
+    it("fastens a part studio at the mate connector it finds", async () => {
+        mockFeatures({ featureId: "mc-1" });
+
+        await load("ins-mc");
+
+        const row = await readRow("ins-mc");
+        expect(row).toMatchObject({
+            supportsFasten: true,
+            fastenInfo: {
+                mateConnectorId: "mc-1",
+                mateLocation: MateLocation.Feature,
+                path: []
+            }
+        });
+        expect(row?.buildIssues.map((issue) => issue.type)).not.toContain(
+            BuildIssueType.UNSTABLE_MATE_CONNECTOR
+        );
+    });
+
+    it("leaves fastening off where an admin turned it off", async () => {
+        mockFeatures({ featureId: "mc-1" });
+        await load("ins-off");
+        await db
+            .update(insertables)
+            .set({ fastenOverride: false })
+            .where(eq(insertables.id, "ins-off"));
+
+        await load("ins-off");
+
+        expect(await readRow("ins-off")).toMatchObject({
+            supportsFasten: false,
+            fastenOverride: false
+        });
+    });
+
+    it("flags a mate connector a configuration can suppress", async () => {
+        mockFeatures({ featureId: "mc-1", suppressionConfigured: true });
+
+        await load("ins-unstable");
+
+        const row = await readRow("ins-unstable");
+        expect(row?.supportsFasten).toBe(true);
+        expect(row?.buildIssues.map((issue) => issue.type)).toContain(
+            BuildIssueType.UNSTABLE_MATE_CONNECTOR
+        );
     });
 
     afterEach(() => vi.restoreAllMocks());

@@ -116,13 +116,7 @@ export function useInsertMutation(
                   endpoint: "/add-to-assembly",
                   body: { ...common, fasten, insertLocationId }
               }
-            : {
-                  endpoint: "/add-to-part-studio",
-                  body: {
-                      ...common,
-                      useMateConnector: insertable.supportsFasten
-                  }
-              };
+            : { endpoint: "/add-to-part-studio", body: common };
     };
 
     return useMutation({

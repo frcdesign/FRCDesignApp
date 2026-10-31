@@ -1,109 +1,185 @@
 import { describe, expect, it } from "vitest";
 
 import { MateLocation } from "../library/insertables/fasten";
+import { ElementType } from "../../lib/onshape/element-type";
+import { BuildIssueType } from "../build-checker/issues";
+import type { OnshapeFeatureListResponse } from "../../lib/onshape/types";
 import {
-    parseFastenInfoFromPartStudio,
-    parseFastenInfoFromAssembly
+    decideFasten,
+    findAssemblyMateConnector,
+    findPartStudioMateConnector,
+    type MateConnector
 } from "./parse-fasten";
 
-describe("parseFastenInfoFromPartStudio", () => {
-    it("returns Feature location with empty path when mate connector is found", () => {
-        const rawFeatureList = {
-            features: [
-                {
-                    featureType: "other",
-                    featureId: "other-id",
-                    name: "Other",
-                    suppressed: false
-                },
-                {
-                    featureType: "mateConnector",
-                    featureId: "mate-id-1",
-                    name: "Mate connector 1",
-                    suppressed: false
-                }
-            ]
-        };
-        const result = parseFastenInfoFromPartStudio(rawFeatureList);
-        expect(result.mateConnectorId).toBe("mate-id-1");
-        expect(result.mateLocation).toBe(MateLocation.Feature);
-        expect(result.path).toEqual([]);
+function feature(
+    featureId: string,
+    options: {
+        featureType?: string;
+        suppressed?: boolean;
+        suppressionConfigured?: boolean;
+    } = {}
+) {
+    return {
+        featureType: options.featureType ?? "mateConnector",
+        featureId,
+        name: featureId,
+        suppressed: options.suppressed ?? false,
+        suppressionConfigured: options.suppressionConfigured
+    };
+}
+
+function features(
+    list: ReturnType<typeof feature>[],
+    featureStates?: OnshapeFeatureListResponse["featureStates"]
+): OnshapeFeatureListResponse {
+    return { features: list, featureStates };
+}
+
+describe("findPartStudioMateConnector", () => {
+    it("finds the first mate connector, at the part studio's root", () => {
+        const found = findPartStudioMateConnector(
+            features([
+                feature("extrude", { featureType: "extrude" }),
+                feature("first"),
+                feature("second")
+            ])
+        );
+        expect(found).toEqual({
+            fastenInfo: {
+                mateConnectorId: "first",
+                mateLocation: MateLocation.Feature,
+                path: []
+            },
+            isUnstable: false
+        });
     });
 
-    it("uses first mate connector when multiple are present", () => {
-        const rawFeatureList = {
-            features: [
-                {
-                    featureType: "mateConnector",
-                    featureId: "first",
-                    name: "Mate connector 1",
-                    suppressed: false
-                },
-                {
-                    featureType: "mateConnector",
-                    featureId: "second",
-                    name: "Mate connector 2",
-                    suppressed: false
-                }
-            ]
-        };
-        const result = parseFastenInfoFromPartStudio(rawFeatureList);
-        expect(result.mateConnectorId).toBe("first");
+    it("passes over one suppressed in every configuration", () => {
+        const found = findPartStudioMateConnector(
+            features([feature("off", { suppressed: true }), feature("on")])
+        );
+        expect(found?.fastenInfo.mateConnectorId).toBe("on");
+        expect(found?.isUnstable).toBe(false);
     });
 
-    it("skips a suppressed mate connector in favor of the next valid one", () => {
-        const rawFeatureList = {
-            features: [
-                {
-                    featureType: "mateConnector",
-                    featureId: "suppressed-mate",
-                    name: "Mate connector 1",
-                    suppressed: true
-                },
-                {
-                    featureType: "mateConnector",
-                    featureId: "active-mate",
-                    name: "Mate connector 2",
-                    suppressed: false
-                }
-            ]
-        };
-        const result = parseFastenInfoFromPartStudio(rawFeatureList);
-        expect(result.mateConnectorId).toBe("active-mate");
+    it("finds nothing when there is no mate connector", () => {
+        expect(
+            findPartStudioMateConnector(
+                features([feature("extrude", { featureType: "extrude" })])
+            )
+        ).toBeUndefined();
+        expect(
+            findPartStudioMateConnector(
+                features([feature("off", { suppressed: true })])
+            )
+        ).toBeUndefined();
     });
 
-    it("throws when the only mate connector is suppressed", () => {
-        const rawFeatureList = {
-            features: [
-                {
-                    featureType: "mateConnector",
-                    featureId: "suppressed-mate",
-                    name: "Mate connector 1",
-                    suppressed: true
-                }
-            ]
-        };
-        expect(() => parseFastenInfoFromPartStudio(rawFeatureList)).toThrow();
+    it("is unstable when a configuration can suppress it", () => {
+        const found = findPartStudioMateConnector(
+            features([feature("first", { suppressionConfigured: true })])
+        );
+        expect(found?.isUnstable).toBe(true);
     });
 
-    it("throws when no mate connector is found", () => {
-        const rawFeatureList = {
-            features: [
-                {
-                    featureType: "extrude",
-                    featureId: "ext-1",
-                    name: "Extrude 1",
-                    suppressed: false
-                }
-            ]
-        };
-        expect(() => parseFastenInfoFromPartStudio(rawFeatureList)).toThrow();
+    // Another configuration would bring it back, and it would come first.
+    it("is unstable when one before it is suppressed only by configuration", () => {
+        const found = findPartStudioMateConnector(
+            features([
+                feature("earlier", {
+                    suppressed: true,
+                    suppressionConfigured: true
+                }),
+                feature("first")
+            ])
+        );
+        expect(found?.fastenInfo.mateConnectorId).toBe("first");
+        expect(found?.isUnstable).toBe(true);
+    });
+
+    it("ignores configured suppression of one after it", () => {
+        const found = findPartStudioMateConnector(
+            features([
+                feature("first"),
+                feature("later", { suppressionConfigured: true })
+            ])
+        );
+        expect(found?.isUnstable).toBe(false);
+    });
+
+    it("is unstable when it fails to regenerate", () => {
+        const found = findPartStudioMateConnector(
+            features([feature("first")], {
+                first: { featureStatus: "ERROR" }
+            })
+        );
+        expect(found?.isUnstable).toBe(true);
     });
 });
 
-describe("parseFastenInfoFromAssembly", () => {
+describe("decideFasten", () => {
+    const stable: MateConnector = {
+        fastenInfo: {
+            mateConnectorId: "mc",
+            mateLocation: MateLocation.Feature,
+            path: []
+        },
+        isUnstable: false
+    };
+
+    it("fastens a part studio with a mate connector by default", () => {
+        expect(
+            decideFasten(ElementType.PART_STUDIO, undefined, stable)
+        ).toEqual({ supportsFasten: true, fastenInfo: stable.fastenInfo });
+    });
+
+    it("leaves a part studio without one alone, raising nothing", () => {
+        expect(
+            decideFasten(ElementType.PART_STUDIO, undefined, undefined)
+        ).toEqual({ supportsFasten: false, fastenInfo: null });
+    });
+
+    it("leaves an assembly off by default", () => {
+        expect(decideFasten(ElementType.ASSEMBLY, undefined, stable)).toEqual({
+            supportsFasten: false,
+            fastenInfo: stable.fastenInfo
+        });
+    });
+
+    it("keeps the connector it found when an admin turned fastening off", () => {
+        expect(decideFasten(ElementType.PART_STUDIO, false, stable)).toEqual({
+            supportsFasten: false,
+            fastenInfo: stable.fastenInfo
+        });
+    });
+
+    it("flags an unstable connector it fastens to", () => {
+        expect(
+            decideFasten(ElementType.PART_STUDIO, undefined, {
+                ...stable,
+                isUnstable: true
+            }).issue
+        ).toBe(BuildIssueType.UNSTABLE_MATE_CONNECTOR);
+        expect(
+            decideFasten(ElementType.PART_STUDIO, false, {
+                ...stable,
+                isUnstable: true
+            }).issue
+        ).toBeUndefined();
+    });
+
+    it("flags fastening turned on with nothing to fasten to", () => {
+        expect(decideFasten(ElementType.ASSEMBLY, true, undefined)).toEqual({
+            supportsFasten: false,
+            fastenInfo: null,
+            issue: BuildIssueType.NO_MATE_CONNECTOR
+        });
+    });
+});
+
+describe("findAssemblyMateConnector", () => {
     it("returns Feature location from root assembly mate connector", () => {
-        const rawAssemblyInfo = {
+        const result = findAssemblyMateConnector({
             rootAssembly: {
                 features: [
                     {
@@ -116,15 +192,16 @@ describe("parseFastenInfoFromAssembly", () => {
             },
             parts: [],
             subAssemblies: []
-        };
-        const result = parseFastenInfoFromAssembly(rawAssemblyInfo);
-        expect(result.mateConnectorId).toBe("root-mate");
-        expect(result.mateLocation).toBe(MateLocation.Feature);
-        expect(result.path).toEqual([]);
+        });
+        expect(result).toEqual({
+            mateConnectorId: "root-mate",
+            mateLocation: MateLocation.Feature,
+            path: []
+        });
     });
 
     it("returns Subassembly location from sub-assembly mate connector", () => {
-        const rawAssemblyInfo = {
+        const result = findAssemblyMateConnector({
             rootAssembly: {
                 features: [],
                 instances: [{ id: "instance-id", type: "Assembly" }]
@@ -141,37 +218,40 @@ describe("parseFastenInfoFromAssembly", () => {
                     ]
                 }
             ]
-        };
-        const result = parseFastenInfoFromAssembly(rawAssemblyInfo);
-        expect(result.mateConnectorId).toBe("sub-mate");
-        expect(result.mateLocation).toBe(MateLocation.Subassembly);
-        expect(result.path).toEqual(["instance-id"]);
+        });
+        expect(result).toEqual({
+            mateConnectorId: "sub-mate",
+            mateLocation: MateLocation.Subassembly,
+            path: ["instance-id"]
+        });
     });
 
     it("returns Part location from part mate connector", () => {
-        const rawAssemblyInfo = {
+        const result = findAssemblyMateConnector({
             rootAssembly: {
                 features: [],
                 instances: [{ id: "part-instance-id", type: "Part" }]
             },
             parts: [{ mateConnectors: [{ featureId: "part-mate" }] }],
             subAssemblies: []
-        };
-        const result = parseFastenInfoFromAssembly(rawAssemblyInfo);
-        expect(result.mateConnectorId).toBe("part-mate");
-        expect(result.mateLocation).toBe(MateLocation.Part);
-        expect(result.path).toEqual(["part-instance-id"]);
+        });
+        expect(result).toEqual({
+            mateConnectorId: "part-mate",
+            mateLocation: MateLocation.Part,
+            path: ["part-instance-id"]
+        });
     });
 
-    it("throws when no mate connector found anywhere", () => {
-        const rawAssemblyInfo = {
-            rootAssembly: {
-                features: [],
-                instances: [{ id: "part-instance-id", type: "Part" }]
-            },
-            parts: [{ mateConnectors: [] }],
-            subAssemblies: []
-        };
-        expect(() => parseFastenInfoFromAssembly(rawAssemblyInfo)).toThrow();
+    it("finds nothing when no mate connector is anywhere", () => {
+        expect(
+            findAssemblyMateConnector({
+                rootAssembly: {
+                    features: [],
+                    instances: [{ id: "part-instance-id", type: "Part" }]
+                },
+                parts: [{ mateConnectors: [] }],
+                subAssemblies: []
+            })
+        ).toBeUndefined();
     });
 });

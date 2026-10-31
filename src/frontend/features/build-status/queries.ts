@@ -156,7 +156,7 @@ export function useToggleInsertAndFastenMutation(insertableId: string) {
                 toastId
             ),
         onError: getAppErrorHandler(
-            "Failed to enable insert and fasten. Is the target valid?",
+            "Unexpectedly failed to update insert and fasten.",
             toastId
         ),
         onSettled: (_result, error) =>
@@ -164,43 +164,40 @@ export function useToggleInsertAndFastenMutation(insertableId: string) {
     });
 }
 
-/** The Onshape call runs long, so the toast reports the switch without waiting. */
-export function useIndexConfigurationsMutation(insertableId: string) {
+/** What an admin changed about indexing; a field left out keeps what is stored. */
+export interface IndexingChange {
+    indexConfigurations?: boolean;
+    excludedParameterIds?: string[];
+}
+
+/** Every change lands in one reindex, so the toast reports it before Onshape answers. */
+export function useIndexingMutation(insertableId: string) {
     const libraryId = useLibraryId();
     const key = useBuildStatusKey();
     const refreshLibrary = useRefreshLibrary();
-    const toastId = `index-configurations-${insertableId}`;
+    const toastId = `indexing-${insertableId}`;
     return useMutation({
-        mutationKey: ["index-configurations", insertableId],
-        mutationFn: (indexConfigurations: boolean) =>
+        mutationKey: ["indexing", insertableId],
+        mutationFn: (change: IndexingChange) =>
             apiPost(
-                "/index-configurations" +
+                "/indexing" +
                     toLibraryPath(libraryId) +
                     toInsertablePath(insertableId),
-                {
-                    body: { indexConfigurations }
-                }
+                { body: change }
             ),
-        onMutate: (indexConfigurations) => {
-            showInfoToast(
-                indexConfigurations
-                    ? "Enabling indexing..."
-                    : "Disabling indexing",
-                { id: toastId }
-            );
+        onMutate: (change) => {
+            showInfoToast("Reindexing...", { id: toastId });
             return patchQuery<LibraryBuildStatus>(key, (status) => {
                 const insertable = status.insertables[insertableId];
-                if (insertable)
-                    insertable.indexConfigurations = indexConfigurations;
+                if (!insertable) return;
+                if (change.indexConfigurations !== undefined)
+                    insertable.indexConfigurations = change.indexConfigurations;
+                if (change.excludedParameterIds !== undefined)
+                    insertable.excludedParameterIds =
+                        change.excludedParameterIds;
             });
         },
-        onSuccess: (_result, indexConfigurations) =>
-            showSuccessToast(
-                indexConfigurations
-                    ? "Indexing enabled."
-                    : "Indexing disabled.",
-                toastId
-            ),
+        onSuccess: () => showSuccessToast("Reindexed.", toastId),
         onError: getAppErrorHandler(
             "Unexpectedly failed to update indexing.",
             toastId
@@ -210,35 +207,27 @@ export function useIndexConfigurationsMutation(insertableId: string) {
     });
 }
 
-/** Re-probes the part, so the toast reports the change first. */
-export function useExcludedParametersMutation(insertableId: string) {
+/** A part studio grouped on insert, so its parts move as one. */
+export function useInsertAsRigidMutation(insertableId: string) {
     const libraryId = useLibraryId();
     const key = useBuildStatusKey();
     const refreshLibrary = useRefreshLibrary();
-    const toastId = `excluded-parameters-${insertableId}`;
     return useMutation({
-        mutationKey: ["excluded-parameters", insertableId],
-        mutationFn: (excludedParameterIds: string[]) =>
+        mutationKey: ["insert-as-rigid", insertableId],
+        mutationFn: (insertAsRigid: boolean) =>
             apiPost(
-                "/excluded-parameters" +
+                "/insert-as-rigid" +
                     toLibraryPath(libraryId) +
                     toInsertablePath(insertableId),
-                {
-                    body: { excludedParameterIds }
-                }
+                { body: { insertAsRigid } }
             ),
-        onMutate: (excludedParameterIds) => {
-            showInfoToast("Reindexing part...", { id: toastId });
-            return patchQuery<LibraryBuildStatus>(key, (status) => {
+        onMutate: (insertAsRigid) =>
+            patchQuery<LibraryBuildStatus>(key, (status) => {
                 const insertable = status.insertables[insertableId];
-                if (insertable)
-                    insertable.excludedParameterIds = excludedParameterIds;
-            });
-        },
-        onSuccess: () => showSuccessToast("Part reindexed.", toastId),
+                if (insertable) insertable.insertAsRigid = insertAsRigid;
+            }),
         onError: getAppErrorHandler(
-            "Unexpectedly failed to update the indexed parameters.",
-            toastId
+            "Unexpectedly failed to update insert as rigid."
         ),
         onSettled: (_result, error) =>
             refreshLibrary({ discardPatches: error !== null })

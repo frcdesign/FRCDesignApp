@@ -129,7 +129,14 @@ export const insertables = sqliteTable("insertables", {
     isOpenComposite: integer("is_open_composite", { mode: "boolean" })
         .notNull()
         .default(false),
+    // Whether inserts use the mate connector in `fastenInfo`, as the load decided.
     supportsFasten: integer("supports_fasten", { mode: "boolean" })
+        .notNull()
+        .default(false),
+    // Set by an admin; kept across reloads. Null leaves it to detection.
+    fastenOverride: integer("fasten_override", { mode: "boolean" }),
+    // Set by an admin; kept across reloads. Part studios only.
+    insertAsRigid: integer("insert_as_rigid", { mode: "boolean" })
         .notNull()
         .default(false),
     // Set by an admin; kept across reloads.
