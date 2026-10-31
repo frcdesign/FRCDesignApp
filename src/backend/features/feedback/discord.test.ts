@@ -13,7 +13,7 @@ function report(overrides: Partial<Report> = {}): Report {
         category: FeedbackCategory.METADATA,
         source: FeedbackSource.PART,
         message: "The part number is wrong.",
-        userId: "user-1",
+        signedIn: true,
         userAgent: "Test browser",
         part: {
             name: "Bearing",
@@ -56,16 +56,61 @@ describe("buildReportMessage", () => {
         expect(message.allowed_mentions).toEqual({ parse: [] });
     });
 
-    it("says who sent it, or that they weren't signed in", () => {
-        expect(fieldValue(buildReportMessage(report()), "Onshape user")).toBe(
-            "user-1"
+    it("says whether the reporter was signed in, but not who they are", () => {
+        expect(fieldValue(buildReportMessage(report()), "Signed in")).toBe(
+            "Yes"
         );
         expect(
             fieldValue(
-                buildReportMessage(report({ userId: undefined })),
-                "Onshape user"
+                buildReportMessage(report({ signedIn: false })),
+                "Signed in"
             )
-        ).toBe("Not signed in");
+        ).toBe("No");
+    });
+
+    it("says what kind of tab the app was launched in, never which", () => {
+        const message = buildReportMessage(
+            report({
+                diagnostics: {
+                    url: "/app/library/frc-design-lib",
+                    launch: {
+                        elementType: "ASSEMBLY",
+                        instanceType: "w",
+                        enterprise: true
+                    }
+                }
+            })
+        );
+
+        expect(fieldValue(message, "Launched in")).toBe(
+            "ASSEMBLY, workspace, Enterprise"
+        );
+        expect(
+            fieldValue(
+                buildReportMessage(report({ diagnostics: { url: "/" } })),
+                "Launched in"
+            )
+        ).toBe("Not in Onshape");
+    });
+
+    // An Onshape message or a url can carry the reporter's document's id.
+    it("redacts Onshape ids from the error and the page", () => {
+        const id = "0123456789abcdef01234567";
+        const message = buildReportMessage(
+            report({
+                diagnostics: {
+                    url: `/document-access?documentId=${id}`,
+                    error: {
+                        shown: "Failed.",
+                        detail: `Onshape API error 403 on /documents/${id}`
+                    }
+                }
+            })
+        );
+
+        const text = JSON.stringify(message.embeds[0].fields);
+        expect(text).not.toContain(id);
+        expect(fieldValue(message, "Error")).toContain("/documents/<id>");
     });
 
     it("carries the error, fenced so it can't format the post", () => {
@@ -133,15 +178,13 @@ describe("postToDiscord", () => {
 
     /** A forum thread's starter message, which is in the thread. */
     const POSTED = { id: "thread-1", channel_id: "thread-1" };
-    const WEBHOOK_INFO = { guild_id: "guild-1", channel_id: "forum-1" };
 
-    /** Answers the webhook's own lookup with `webhook`, and each post in turn with `posts`. */
-    function stubDiscord(
-        posts: Response[],
-        webhook: Response = Response.json(WEBHOOK_INFO)
-    ) {
+    /** Answers each post in turn with `posts`; anything else is unexpected. */
+    function stubDiscord(posts: Response[]) {
         const fetch = vi.fn<typeof globalThis.fetch>((_url, init) => {
-            if (init?.method !== "POST") return Promise.resolve(webhook);
+            if (init?.method !== "POST") {
+                return Promise.reject(new Error("unexpected request"));
+            }
             const next = posts.shift();
             return next
                 ? Promise.resolve(next)
@@ -173,34 +216,6 @@ describe("postToDiscord", () => {
         expect(postedBodies(fetch)[0].thread_name).toBe(
             "Bearing's part number"
         );
-    });
-
-    it("answers the link to the report's thread", async () => {
-        stubDiscord([Response.json(POSTED)]);
-
-        await expect(
-            postToDiscord(WEBHOOK, buildReportMessage(report()))
-        ).resolves.toBe("https://discord.com/channels/guild-1/thread-1");
-    });
-
-    it("reads the server from the webhook itself, without the wait", async () => {
-        const fetch = stubDiscord([Response.json(POSTED)]);
-
-        await postToDiscord(WEBHOOK, buildReportMessage(report()));
-
-        const lookup = fetch.mock.calls.find(
-            ([, init]) => init?.method !== "POST"
-        )!;
-        expect((lookup[0] as URL).href).toBe(WEBHOOK);
-    });
-
-    // The report is in Discord either way; only the link is missing.
-    it("answers no link when the webhook's server can't be read", async () => {
-        stubDiscord([Response.json(POSTED)], new Response("", { status: 500 }));
-
-        await expect(
-            postToDiscord(WEBHOOK, buildReportMessage(report()))
-        ).resolves.toBeUndefined();
     });
 
     it("files the thread under the forum's tags", async () => {

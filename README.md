@@ -44,10 +44,10 @@ DISCORD_CONFIG_LIB_WEBHOOK_URL=<Webhook for ConfigLib reports>
 ```
 
 In a deployed environment, set the webhooks as secrets with
-`npx wrangler secret put <NAME> --env <environment>`. Each forum's tag ids
-aren't secret, so they live in `wrangler.jsonc`'s `vars`
-(`DISCORD_APP_TAG_IDS` and its siblings); see
-[docs/architecture/feedback.md](docs/architecture/feedback.md) for the keys.
+`npx wrangler secret put <NAME> --env <environment>`. Each forum's channel
+name, invite and tag ids aren't secret, so they live in `wrangler.jsonc`'s
+`vars` (`DISCORD_APP_FORUM` and its siblings); see
+[docs/architecture/feedback.md](docs/architecture/feedback.md).
 
 ## Onshape OAuth App Setup
 

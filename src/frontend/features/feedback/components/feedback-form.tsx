@@ -108,7 +108,13 @@ export function FeedbackForm(props: FeedbackFormProps): ReactNode {
 
     const sent: FeedbackOut | undefined = sendMutation.data;
     if (sent) {
-        return <ReportSent sent={sent} onClose={modal.close} />;
+        return (
+            <ReportSent
+                sent={sent}
+                title={title.trim()}
+                onClose={modal.close}
+            />
+        );
     }
 
     const send = () => {
@@ -214,8 +220,9 @@ export function FeedbackForm(props: FeedbackFormProps): ReactNode {
                     onChange={(event) => setContact(event.currentTarget.value)}
                 />
                 <Text size="sm" c="dimmed">
-                    Sent with the page you're on, your Onshape user id, and your
-                    browser, to help find the problem.
+                    Sent with the page you&apos;re on and your browser, to help
+                    find the problem; nothing that says who you are or which
+                    document you&apos;re in.
                 </Text>
             </AppModalBody>
             <AppModalFooter>

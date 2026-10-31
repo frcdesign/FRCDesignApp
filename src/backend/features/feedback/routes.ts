@@ -56,7 +56,7 @@ feedbackRoutes.post("/feedback", validate("json", feedbackBody), async (c) => {
     }
 
     const reportId = crypto.randomUUID();
-    const threadUrl = await postToDiscord(
+    await postToDiscord(
         channel.webhookUrl,
         buildReportMessage({
             id: reportId,
@@ -70,7 +70,7 @@ feedbackRoutes.post("/feedback", validate("json", feedbackBody), async (c) => {
             source: body.source,
             message: body.message,
             contact: body.contact || undefined,
-            userId,
+            signedIn: userId !== undefined,
             userAgent: c.req.header("User-Agent"),
             part,
             diagnostics: body.diagnostics,
@@ -87,5 +87,5 @@ feedbackRoutes.post("/feedback", validate("json", feedbackBody), async (c) => {
         source: body.source,
         part
     });
-    return c.json({ reportId, threadUrl } satisfies FeedbackOut);
+    return c.json({ reportId, forum: channel.forum } satisfies FeedbackOut);
 });

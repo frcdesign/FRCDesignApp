@@ -1,32 +1,37 @@
 import * as z from "zod";
 import { type AppBindings } from "../../lib/context";
-import { FeedbackCategory, FeedbackSource, FeedbackTopic } from "./contract";
+import {
+    FeedbackCategory,
+    FeedbackSource,
+    FeedbackTopic,
+    type ReportForum
+} from "./contract";
 
 /** The bindings naming each topic's forum; FRCDesignLib and MKCad share one. */
 const TOPIC_CHANNELS = {
     [FeedbackTopic.APP]: {
         webhook: "DISCORD_APP_WEBHOOK_URL",
-        tags: "DISCORD_APP_TAG_IDS"
+        forum: "DISCORD_APP_FORUM"
     },
     [FeedbackTopic.VERSION_MANAGER]: {
         webhook: "DISCORD_APP_WEBHOOK_URL",
-        tags: "DISCORD_APP_TAG_IDS"
+        forum: "DISCORD_APP_FORUM"
     },
     [FeedbackTopic.FRC_DESIGN_LIB]: {
         webhook: "DISCORD_FRC_DESIGN_LIB_WEBHOOK_URL",
-        tags: "DISCORD_FRC_DESIGN_LIB_TAG_IDS"
+        forum: "DISCORD_FRC_DESIGN_LIB_FORUM"
     },
     [FeedbackTopic.MKCAD]: {
         webhook: "DISCORD_FRC_DESIGN_LIB_WEBHOOK_URL",
-        tags: "DISCORD_FRC_DESIGN_LIB_TAG_IDS"
+        forum: "DISCORD_FRC_DESIGN_LIB_FORUM"
     },
     [FeedbackTopic.CONFIG_LIB]: {
         webhook: "DISCORD_CONFIG_LIB_WEBHOOK_URL",
-        tags: "DISCORD_CONFIG_LIB_TAG_IDS"
+        forum: "DISCORD_CONFIG_LIB_FORUM"
     }
 } as const satisfies Record<
     FeedbackTopic,
-    { webhook: keyof AppBindings; tags: keyof AppBindings }
+    { webhook: keyof AppBindings; forum: keyof AppBindings }
 >;
 
 /** The tag every report started from an error is filed under, beside its type's. */
@@ -41,27 +46,33 @@ export type FeedbackTagKey =
 /** Discord applies at most five tags to a thread. */
 const MAX_TAGS = 5;
 
-const tagIdsSchema = z.record(z.string(), z.string());
+/** A forum's settings: what a reporter is told and sent to, and its tags. */
+const forumSchema = z.object({
+    name: z.string().min(1).optional(),
+    invite: z.url().optional(),
+    tags: z.record(z.string(), z.string()).default({})
+});
 
 export interface FeedbackChannel {
     webhookUrl: string;
+    forum: ReportForum;
     /** By {@link FeedbackTagKey}; a key with no id is left untagged. */
     tagIds: Partial<Record<string, string>>;
 }
 
 /**
- * `{"bug": "1234…"}`: an object from `wrangler.jsonc`'s vars, or its JSON text
- * from `.env`. A malformed value tags nothing rather than failing reports.
+ * An object from `wrangler.jsonc`'s vars, or its JSON text from `.env`. A
+ * malformed value is ignored rather than failing reports.
  */
-function parseTagIds(raw: unknown): Record<string, string> {
-    if (raw === undefined || raw === "") return {};
+function parseForum(raw: unknown): z.infer<typeof forumSchema> {
+    if (raw === undefined || raw === "") return { tags: {} };
     try {
-        return tagIdsSchema.parse(
+        return forumSchema.parse(
             typeof raw === "string" ? JSON.parse(raw) : raw
         );
     } catch (error) {
-        console.error("Ignoring malformed Discord tag ids", error);
-        return {};
+        console.error("Ignoring malformed Discord forum settings", error);
+        return { tags: {} };
     }
 }
 
@@ -73,7 +84,12 @@ export function getChannel(
     const bindings = TOPIC_CHANNELS[topic];
     const webhookUrl = env[bindings.webhook];
     if (!webhookUrl) return undefined;
-    return { webhookUrl, tagIds: parseTagIds(env[bindings.tags]) };
+    const forum = parseForum(env[bindings.forum]);
+    return {
+        webhookUrl,
+        forum: { name: forum.name, inviteUrl: forum.invite },
+        tagIds: forum.tags
+    };
 }
 
 /** The report's topic, its type, and whether it came from an error. */

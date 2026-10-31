@@ -32,8 +32,7 @@ export interface Report {
     source: FeedbackSource;
     message: string;
     contact?: string;
-    /** Undefined for a reporter who isn't signed in. */
-    userId?: string;
+    signedIn: boolean;
     userAgent?: string;
     part?: ReportedPart;
     diagnostics: FeedbackDiagnostics;
@@ -105,14 +104,22 @@ function field(name: string, value: string, inline = false) {
     return { name, value: truncate(value, FIELD_LIMIT), inline };
 }
 
+/** Onshape's ids are 24 hex digits; one in an error or a url names somebody's document. */
+const ONSHAPE_ID = /\b[0-9a-f]{24}\b/gi;
+
+/** For text the server didn't write, which can carry an id the client didn't strip. */
+export function redactIds(text: string): string {
+    return text.replace(ONSHAPE_ID, "<id>");
+}
+
 function describeLaunch(
     launch: FeedbackDiagnostics["launch"]
 ): string | undefined {
-    if (!launch) return undefined;
-    const lines = Object.entries(launch)
-        .filter(([, value]) => value !== undefined && value !== "")
-        .map(([key, value]) => `${key}: ${value}`);
-    return lines.length ? lines.join("\n") : undefined;
+    if (!launch?.elementType) return undefined;
+    const where = [launch.elementType];
+    if (launch.instanceType === "w") where.push("workspace");
+    if (launch.enterprise) where.push("Enterprise");
+    return where.join(", ");
 }
 
 function reportFields(report: Report): DiscordEmbedField[] {
@@ -135,18 +142,19 @@ function reportFields(report: Report): DiscordEmbedField[] {
         const lines = [shown];
         if (kind) lines.push(`kind: ${kind}`);
         if (detail && detail !== shown) lines.push(`detail: ${detail}`);
-        fields.push(field("Error", code(lines.join("\n"))));
+        fields.push(field("Error", code(redactIds(lines.join("\n")))));
     }
     if (report.contact) {
         fields.push(field("Contact", report.contact));
     }
-    fields.push(field("Page", code(diagnostics.url)));
-    const launch = describeLaunch(diagnostics.launch);
-    if (launch) {
-        fields.push(field("Launched in", code(launch)));
-    }
+    fields.push(field("Page", code(redactIds(diagnostics.url))));
     fields.push(
-        field("Onshape user", report.userId ?? "Not signed in", true),
+        field(
+            "Launched in",
+            describeLaunch(diagnostics.launch) ?? "Not in Onshape",
+            true
+        ),
+        field("Signed in", report.signedIn ? "Yes" : "No", true),
         field("Viewed as", diagnostics.viewedAccessLevel ?? "unknown", true),
         field("Build", diagnostics.build ?? "unknown", true)
     );
@@ -206,37 +214,18 @@ function send(url: URL, message: DiscordMessage): Promise<Response> {
     });
 }
 
-/** The server the webhook posts into; a webhook's own token reads it without a bot. */
-async function webhookGuildId(url: URL): Promise<string | undefined> {
-    try {
-        const response = await fetch(new URL(url.pathname, url.origin));
-        if (!response.ok) return undefined;
-        const webhook: { guild_id?: string } = await response.json();
-        return webhook.guild_id;
-    } catch {
-        return undefined;
-    }
-}
-
-/** Where a person who is in the server can open the thread. */
-export function threadUrl(guildId: string, threadId: string): string {
-    return `https://discord.com/channels/${guildId}/${threadId}`;
-}
-
 /**
- * Opens the report's thread in the topic's forum channel, and answers its
- * link: a posted message's `channel_id` is the thread it is in. A tag id the
- * forum doesn't have fails the whole post, so a refused tagged post goes again
+ * Opens the report's thread in the topic's forum channel. A tag id the forum
+ * doesn't have fails the whole post, so a refused tagged post goes again
  * untagged: a report matters more than its tags.
  */
 export async function postToDiscord(
     webhookUrl: string,
     message: DiscordMessage
-): Promise<string | undefined> {
+): Promise<void> {
     const url = new URL(webhookUrl);
-    // Without it a message Discord drops still answers 204, and no message comes back.
+    // Without it a message Discord drops still answers 204.
     url.searchParams.set("wait", "true");
-    const guildId = webhookGuildId(url);
 
     let response = await send(url, message);
     if (response.status === HttpStatus.BAD_REQUEST && message.applied_tags) {
@@ -254,11 +243,4 @@ export async function postToDiscord(
             HttpStatus.BAD_GATEWAY
         );
     }
-    const posted = (await response.json().catch(() => undefined)) as
-        | { channel_id?: string }
-        | undefined;
-    const guild = await guildId;
-    return guild && posted?.channel_id
-        ? threadUrl(guild, posted.channel_id)
-        : undefined;
 }

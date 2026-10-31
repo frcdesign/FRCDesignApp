@@ -41,8 +41,6 @@ const WEBHOOKS = {
     DISCORD_CONFIG_LIB_WEBHOOK_URL: "https://discord.test/config-lib"
 };
 
-const THREAD_URL = "https://discord.com/channels/guild/thread";
-
 const DIAGNOSTICS = { url: "https://app.test/app/library/frc-design-lib" };
 
 function body(overrides: Partial<FeedbackIn> = {}): FeedbackIn {
@@ -82,7 +80,7 @@ function postedTo(): string[] {
 describe("POST /api/feedback", () => {
     beforeEach(async () => {
         await resetDb(db);
-        post = vi.spyOn(Discord, "postToDiscord").mockResolvedValue(THREAD_URL);
+        post = vi.spyOn(Discord, "postToDiscord").mockResolvedValue();
     });
 
     afterEach(() => {
@@ -116,9 +114,7 @@ describe("POST /api/feedback", () => {
             }),
             { userId }
         );
-        const { reportId, threadUrl } = await res.json<FeedbackOut>();
-        // So the reporter can follow up where the team answers.
-        expect(threadUrl).toBe(THREAD_URL);
+        const { reportId } = await res.json<FeedbackOut>();
 
         expect(await db.select().from(events).get()).toMatchObject({
             id: reportId,
@@ -258,7 +254,7 @@ describe("POST /api/feedback", () => {
         await send(body(), {
             bindings: {
                 ...WEBHOOKS,
-                DISCORD_APP_TAG_IDS: JSON.stringify({ bug: "tag-bug" })
+                DISCORD_APP_FORUM: JSON.stringify({ tags: { bug: "tag-bug" } })
             }
         });
 
@@ -275,11 +271,13 @@ describe("POST /api/feedback", () => {
             {
                 bindings: {
                     ...WEBHOOKS,
-                    DISCORD_FRC_DESIGN_LIB_TAG_IDS: {
-                        mkcad: "tag-mkcad",
-                        bug: "tag-bug",
-                        "error-report": "tag-error",
-                        "frc-design-lib": "tag-frc"
+                    DISCORD_FRC_DESIGN_LIB_FORUM: {
+                        tags: {
+                            mkcad: "tag-mkcad",
+                            bug: "tag-bug",
+                            "error-report": "tag-error",
+                            "frc-design-lib": "tag-frc"
+                        }
                     }
                 }
             }
@@ -297,11 +295,42 @@ describe("POST /api/feedback", () => {
         vi.spyOn(console, "error").mockImplementation(() => undefined);
 
         const res = await send(body(), {
-            bindings: { ...WEBHOOKS, DISCORD_APP_TAG_IDS: "{not json" }
+            bindings: { ...WEBHOOKS, DISCORD_APP_FORUM: "{not json" }
         });
 
         expect(res.status).toBe(200);
         expect(post.mock.calls[0][1]).not.toHaveProperty("applied_tags");
+    });
+
+    it("tells the reporter which forum the report is in, to follow up there", async () => {
+        const res = await send(body(), {
+            bindings: {
+                ...WEBHOOKS,
+                DISCORD_APP_FORUM: {
+                    name: "app-feedback",
+                    invite: "https://discord.gg/app-feedback"
+                }
+            }
+        });
+
+        expect((await res.json<FeedbackOut>()).forum).toEqual({
+            name: "app-feedback",
+            inviteUrl: "https://discord.gg/app-feedback"
+        });
+    });
+
+    it("leaves the forum unnamed where it isn't configured", async () => {
+        const res = await send(body());
+
+        expect((await res.json<FeedbackOut>()).forum).toEqual({});
+    });
+
+    it("posts nothing that says who the reporter is", async () => {
+        const userId = "5eace32713a966103efd2a9d";
+
+        await send(body(), { userId });
+
+        expect(JSON.stringify(post.mock.calls[0][1])).not.toContain(userId);
     });
 
     it("takes a report from somebody who isn't signed in", async () => {

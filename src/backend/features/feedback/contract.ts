@@ -161,18 +161,15 @@ const idField = clipped(MAX_ID).optional();
 
 /** Gathered by the client, since only it knows the page and the launch. */
 export const feedbackDiagnosticsSchema = z.object({
+    /** The app's own path and params; Onshape's launch params are left out. */
     url: clipped(MAX_FIELD),
     build: idField,
-    /** What Onshape launched the app with; in-app navigation drops it from the url. */
+    /** What kind of tab Onshape launched the app in, never which document. */
     launch: z
         .object({
-            documentId: idField,
-            instanceType: idField,
-            instanceId: idField,
-            elementId: idField,
             elementType: idField,
-            sessionCompanyId: idField,
-            server: clipped(MAX_FIELD).optional()
+            instanceType: idField,
+            enterprise: z.boolean().optional()
         })
         .optional(),
     /** The level the app is viewed at, which can be below what is granted. */
@@ -230,9 +227,16 @@ export const feedbackBody = z
 
 export type FeedbackIn = z.input<typeof feedbackBody>;
 
+/** Where the report's thread is, for the reporter to follow up in. */
+export interface ReportForum {
+    /** The channel's name, without its `#`; undefined when not configured. */
+    name?: string;
+    /** An invite to the channel; undefined falls back to the server's own. */
+    inviteUrl?: string;
+}
+
 export interface FeedbackOut {
     /** Quoted in the Discord post, so a report can be found from the app. */
     reportId: string;
-    /** The report's thread, to follow up in; undefined when Discord didn't say where it is. */
-    threadUrl?: string;
+    forum: ReportForum;
 }

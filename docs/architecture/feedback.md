@@ -9,9 +9,10 @@ channel with enough about the page and the launch to act on it, and counted for
 the dashboard.
 
 It is not a support desk: nothing is stored about a report beyond its counts,
-and replies happen only in the report's Discord thread, which the app links the
-reporter to once it is sent. So it asks no questions it can't answer: there is
-no "question" type.
+and replies happen only in the report's Discord thread, which the app points
+the reporter to once it is sent. So it asks no questions it can't answer: there
+is no "question" type. And it carries nothing that identifies the reporter or
+their documents.
 
 ## Code map
 
@@ -19,7 +20,7 @@ no "question" type.
 | ------------------------------------------------------------- | ------------------------------------------------------------------------------- |
 | `src/backend/features/feedback/contract.ts`                   | Topics, categories, sources and their labels; the request body; a leaf          |
 | `src/backend/features/feedback/routes.ts`                     | `POST /api/feedback`                                                            |
-| `src/backend/features/feedback/channels.ts`                   | Which webhook secret each topic posts to                                        |
+| `src/backend/features/feedback/channels.ts`                   | Each topic's webhook, and its forum's name, invite and tags                     |
 | `src/backend/features/feedback/discord.ts`                    | `buildReportMessage`, `postToDiscord`                                           |
 | `src/backend/features/feedback/reported-part.ts`              | `findReportedPart`: the part, its link and its configuration as the reader sees |
 | `src/backend/features/feedback/rate-limit.ts`                 | `takeReportSlot`: reports per reporter per hour                                 |
@@ -29,6 +30,7 @@ no "question" type.
 | `src/frontend/features/feedback/open-feedback.tsx`            | `openFeedbackForm`, `openPartReport`, `openErrorReport`                         |
 | `src/frontend/features/feedback/diagnostics.ts`               | `collectDiagnostics`, `toReportedError`                                         |
 | `src/frontend/features/feedback/components/report-button.tsx` | **Send a report**, beside an error notice                                       |
+| `src/frontend/features/feedback/components/report-sent.tsx`   | What the form becomes once sent: where the thread is, and **Open in Discord**   |
 | `src/frontend/lib/errors.ts`                                  | `handleAppError`, `showReportableErrorToast`: the **Report** button on toasts   |
 | `src/frontend/features/dashboard/report-summary.tsx`          | The dashboard's **Reports** sections                                            |
 
@@ -45,38 +47,43 @@ no "question" type.
 
 ## Flows
 
-### Topics and channels
+### Topics and forums
 
-| Topic           | Webhook                              | Tag ids                          | Library |
-| --------------- | ------------------------------------ | -------------------------------- | ------- |
-| FRCDesignApp    | `DISCORD_APP_WEBHOOK_URL`            | `DISCORD_APP_TAG_IDS`            | —       |
-| Version Manager | `DISCORD_APP_WEBHOOK_URL`            | `DISCORD_APP_TAG_IDS`            | —       |
-| FRCDesignLib    | `DISCORD_FRC_DESIGN_LIB_WEBHOOK_URL` | `DISCORD_FRC_DESIGN_LIB_TAG_IDS` | its own |
-| MKCad           | `DISCORD_FRC_DESIGN_LIB_WEBHOOK_URL` | `DISCORD_FRC_DESIGN_LIB_TAG_IDS` | its own |
-| ConfigLib       | `DISCORD_CONFIG_LIB_WEBHOOK_URL`     | `DISCORD_CONFIG_LIB_TAG_IDS`     | its own |
+| Topic           | Webhook (secret)                     | Forum settings (var)           | Library |
+| --------------- | ------------------------------------ | ------------------------------ | ------- |
+| FRCDesignApp    | `DISCORD_APP_WEBHOOK_URL`            | `DISCORD_APP_FORUM`            | —       |
+| Version Manager | `DISCORD_APP_WEBHOOK_URL`            | `DISCORD_APP_FORUM`            | —       |
+| FRCDesignLib    | `DISCORD_FRC_DESIGN_LIB_WEBHOOK_URL` | `DISCORD_FRC_DESIGN_LIB_FORUM` | its own |
+| MKCad           | `DISCORD_FRC_DESIGN_LIB_WEBHOOK_URL` | `DISCORD_FRC_DESIGN_LIB_FORUM` | its own |
+| ConfigLib       | `DISCORD_CONFIG_LIB_WEBHOOK_URL`     | `DISCORD_CONFIG_LIB_FORUM`     | its own |
 
 Each webhook is a Discord forum channel's, set per environment with
 `wrangler secret put` and in `.env` locally. A topic whose webhook is unset
 refuses reports with a `handled` 503.
 
+A forum's settings aren't secret, so they sit in each environment's `vars` in
+`wrangler.jsonc` (or as JSON text in `.env`), parsed by `getChannel`:
+
+```jsonc
+"DISCORD_APP_FORUM": {
+    "name": "app-feedback",                  // the channel, as the reporter is told it
+    "invite": "https://discord.gg/…",        // an invite made from that channel
+    "tags": { "bug": "1234…", "error-report": "…" }
+}
+```
+
+Every field may be left out. A value that doesn't parse is ignored and logged.
+
 ### Tags
 
 Each thread is filed under up to three of its forum's tags (`reportTagKeys`):
 its topic's, its type's, and **Error report** when it started from an error.
-A forum's tag ids are an object keyed by tag key, in each environment's
-`vars` in `wrangler.jsonc` (they aren't secret), or its JSON text in `.env`:
-
-```jsonc
-"DISCORD_APP_TAG_IDS": { "bug": "1234567890", "error-report": "…" }
-```
-
 The keys are the topic values (`app`, `version-manager`, `frc-design-lib`,
 `mkcad`, `config-lib`), the category values (`bug`, `feature-request`,
 `part-request`, `organization`, `metadata`, `incorrect-part`,
 `broken-configuration`, `insert-failed`, `thumbnail`, `other`) and
-`error-report`. A key with no id is left untagged, and a value that isn't JSON
-tags nothing. A tag id the forum doesn't have makes Discord refuse the post,
-which then goes again untagged.
+`error-report`. A key with no id is left untagged. A tag id the forum doesn't
+have makes Discord refuse the post, which then goes again untagged.
 
 ### Where a report starts
 
@@ -100,34 +107,39 @@ The source decides what the form offers and what the report carries
 ### Sending
 
 1. The form sends `{ topic, category, source, title, message, contact?, part?,
-diagnostics }`; the contact is the reporter's Discord username, if they give it. The title is the reporter's, filled in with `suggestTitle`
+diagnostics }`. The title is the reporter's, filled in with `suggestTitle`
    until they write their own: the type and the part or topic ("Broken
-   configuration: Hex Shaft"), or the error they were shown. Diagnostics are gathered as it sends: the page url, the build
-   id, the Onshape launch (from `useOnshapeLaunch`, since in-app navigation drops
-   it from the url), the level the app is viewed as, the window size, and the
-   error.
-2. `feedbackBody` checks that the category belongs to the topic and source,
+   configuration: Hex Shaft"), or the error they were shown. The contact is a
+   Discord username, if they give one.
+2. Diagnostics (`collectDiagnostics`) are gathered as it sends, and say nothing
+   about who sent the report or which document they were in: the app's own path
+   and params with Onshape's launch params removed, the build id, the kind of
+   tab the app was launched in (Part Studio or Assembly, workspace or not, in
+   an Enterprise or not), the level the app is viewed as, the window size, and
+   the error.
+3. `feedbackBody` checks that the category belongs to the topic and source,
    that only a part report names a part, that the title fits a thread's name
-   (100 characters), and that only an error report may have no message. Diagnostics are clipped to length rather than refused.
-3. The route resolves the reporter (a user id when signed in, none otherwise)
-   and takes a slot from the rate limit.
-4. A part report looks the part up in the topic's library (`findReportedPart`),
+   (100 characters), and that only an error report may have no message.
+   Diagnostics are clipped to length rather than refused.
+4. The route resolves the reporter (a user id when signed in, none otherwise)
+   and takes a slot from the rate limit. The id goes no further than the limit
+   and the dashboard's count: the post says only whether they were signed in.
+5. A part report looks the part up in the topic's library (`findReportedPart`),
    runs the selection through `toSelection`, and builds the Onshape link from
    `onshapeOverrides` and the readable `Name: value` lines from the parameters
-   the reporter could see.
-5. `postToDiscord` posts the embed with `?wait=true`, opening a thread named
-   by the title (`thread_name`) under the report's tags (`applied_tags`). The
-   posted message's `channel_id` is the thread; the server's id comes from the
-   webhook itself (`GET` on its url, which its token authorizes), read while
-   the post is sent. Together they make the thread's link,
-   `https://discord.com/channels/<server>/<thread>`; if either is missing the
-   report still succeeds, without a link.
-6. Once posted, `trackReport` records it in the background, under the id the
+   the reporter could see. The link is to the library's own document.
+6. `buildReportMessage` replaces any Onshape id (24 hex digits) in the error and
+   the page with `<id>` (`redactIds`), for an id the client couldn't strip, such
+   as one in an Onshape error message.
+7. `postToDiscord` posts the embed with `?wait=true`, opening a thread named by
+   the title (`thread_name`) under the report's tags (`applied_tags`).
+8. Once posted, `trackReport` records it in the background, under the id the
    post quotes in its footer.
-7. The form turns into "Report sent. Thank you!" (`ReportSent`), with
-   **Join the Discord** (the server's invite) and **Open the thread**: replies
-   happen only there, and the link opens only for a member of the server. If
-   anything failed, the form stays open with the error and what was typed.
+9. The form turns into "Report sent. Thank you!" (`ReportSent`), naming the
+   thread and its channel ("posted as **Hex Shaft length** in **#library-feedback**")
+   with **Open in Discord**, the forum's invite (the server's own when the forum
+   has none). Replies happen only there. If anything failed, the form stays open
+   with the error and what was typed.
 
 ### The dashboard
 
@@ -143,8 +155,10 @@ parts still in the library, each opening the part's page.
 - Text a reporter typed can never mention anyone (`allowed_mentions` is empty).
 - A part report names a part in the topic's own library, looked up on the
   server; its configuration is sent as a selection, never as a key.
-- The only identity in a report is the Onshape user id and what the reporter
-  chose to type as contact; no name or email is looked up.
+- A post carries nothing that identifies the reporter or their documents: no
+  user id, name, email, company or document id, and Onshape ids in free text
+  are redacted. The only identity in it is what the reporter typed. The part a
+  part report names is the library's, not theirs.
 - The route works signed out, since signing in is one of the things that breaks.
 - Every embed stays within Discord's limits (`buildReportMessage` trims the
   message to fit).
@@ -178,7 +192,15 @@ parts still in the library, each opening the part's page.
   owns, and a wrong one costs the tags rather than the report. They aren't
   secret: an id is useless without the webhook.
 - **Follow up in Discord, not in the app.** There is nowhere in the app to
-  answer a reporter, so the app hands them the thread and the invite instead.
+  answer a reporter, so the app names the thread and sends them to its forum.
+- **An invite per forum, not a link to the thread.** A webhook can't create an
+  invite, and a thread's link opens only for somebody already in the server.
+  An invite made by hand from the forum works for both, so the app names the
+  thread and offers that one button.
+- **No identity in the post.** Reports are read by whoever is in the channel;
+  the team needs the problem, not the person. Who reported is kept only where
+  it does a job: the hour's rate limit, and the analytics event behind the
+  dashboard's count.
 - **Links on cad's domain.** A reporter's company domain means nothing to the
   person reading the report.
 
