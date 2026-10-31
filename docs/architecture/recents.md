@@ -32,9 +32,9 @@ configuration and are read only by their owner.
 **D1** `recent_inserts`: `id`, `user_id`, `library_id`, `insertable_id`
 (cascade on delete), `selection` (a stored selection, or null for a part with
 nothing to configure), `inserted_at`. The same shape as a favorite: only the
-selection, collapsed by `toSelection`, with nothing derived from it. Indexed on user, library
-and time for the list.
-At most `MAX_RECENTS` (100) rows per user and library.
+selection, collapsed by `toSelection`, with nothing derived from it. Indexed on
+user, library and time for the list. At most `MAX_RECENTS` (100) rows per user
+and library.
 
 **Browser** `uiState.isRecentsOpen`: whether the section is open; it starts open.
 
@@ -99,9 +99,8 @@ optimistically and refetched on settle.
 - A user has at most `MAX_RECENTS` rows per library after any insert.
 - The list shows at most one row per configuration of a part, compared with
   `sameConfiguration`, never by configuration key.
-- A row stores only the selection; nothing derived from it.
-- What is stored is a selection, never a key; the key and record are derived per
-  response.
+- A row stores only the selection, never a key or anything else derived from
+  it; the key and record are derived per response.
 - A stored selection never holds a derivation variable.
 - Deleting an insertable deletes its recents; hiding one deletes them too, as it
   does favorites.
@@ -109,12 +108,12 @@ optimistically and refetched on settle.
 
 ## Failure and recovery
 
-| Failure                                | Result                                  | Recovery                              |
-| -------------------------------------- | --------------------------------------- | ------------------------------------- |
-| The recent write fails                 | The insert succeeds; the list misses it | The next insert of that configuration |
-| Two rows for one configuration         | One row shown; the other stays stored   | Pushed out by later inserts           |
-| The insertable gains a parameter       | Stored selection lacks it               | Defaulted on read                     |
-| The insertable loses the stored option | `toSelection` falls back to the default | Insert it again                       |
+| Failure                                | Result                                  | Recovery                                                             |
+| -------------------------------------- | --------------------------------------- | -------------------------------------------------------------------- |
+| The recent write fails                 | The insert succeeds; the list misses it | The next insert of that configuration                                |
+| Two rows for one configuration         | One row shown; the other stays stored   | Pushed out by later inserts                                          |
+| The insertable gains a parameter       | Stored selection lacks it               | Defaulted on read                                                    |
+| The insertable loses the stored option | The row names an option that is gone    | The insert menu settles on the default option (`normalizeSelection`) |
 
 ## Decisions
 
