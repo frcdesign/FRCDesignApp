@@ -14,9 +14,13 @@ import { users, favorites } from "../../db/schema";
 import {
     getInsertableConfigurations,
     getParametersFor,
-    resolveStoredSelection,
-    toRowSelection
+    resolveStoredSelection
 } from "../configurations/stored-selections";
+import { toSelection, toStoredSelection } from "../configurations/selection";
+import {
+    type ConfigurationParameter,
+    type PartialSelection
+} from "../configurations/contract";
 import { MAX_FAVORITES, type Favorite, type FavoritesData } from "./contract";
 import type { LibraryId } from "../library/library-id";
 import { z } from "zod";
@@ -85,6 +89,14 @@ async function getFavorites(
     return { favorites: favoritesOut, favoriteOrder };
 }
 
+/** Whole, so the favorite keeps today's defaults for what it left alone. */
+function toFavoriteSelection(
+    selection: PartialSelection,
+    parameters: ConfigurationParameter[]
+): PartialSelection {
+    return toStoredSelection(toSelection(selection, parameters), parameters);
+}
+
 /** GET /api/favorites/library/:libraryId */
 favoriteRoutes.get(
     "/favorites" + libraryRoute(),
@@ -150,7 +162,7 @@ favoriteRoutes.post(
                 libraryId,
                 insertableId,
                 defaultSelection: selection
-                    ? toRowSelection(
+                    ? toFavoriteSelection(
                           selection,
                           await getParametersFor(db, insertableId)
                       )
@@ -229,7 +241,7 @@ favoriteRoutes.post(
         await db
             .update(favorites)
             .set({
-                defaultSelection: toRowSelection(
+                defaultSelection: toFavoriteSelection(
                     selection,
                     await getParametersFor(db, row.insertableId)
                 )

@@ -111,18 +111,20 @@ export function canonicalValues(
 }
 
 /**
- * {@link canonicalValues} as one string, for a column that tells configurations
- * apart. Ordered by parameter id, so a reload that reorders parameters agrees.
+ * Whether two selections apply the same values, however each was typed. Unlike
+ * {@link sameSelection}, `5 in` and `(2 + 3) in` agree.
  */
-export function canonicalText(
-    selection: Selection,
+export function sameConfiguration(
+    a: Selection,
+    b: Selection,
     parameters: ConfigurationParameter[]
-): string {
-    const values = canonicalValues(selection, parameters);
-    return JSON.stringify(
-        Object.keys(values)
-            .sort()
-            .map((id) => [id, values[id]])
+): boolean {
+    const aValues = canonicalValues(a, parameters);
+    const bValues = canonicalValues(b, parameters);
+    const ids = Object.keys(aValues);
+    return (
+        ids.length === Object.keys(bValues).length &&
+        ids.every((id) => aValues[id] === bValues[id])
     );
 }
 

@@ -8,12 +8,12 @@ import {
 } from "./contract";
 import {
     appliedValues,
-    canonicalText,
     canonicalValues,
     displayedValues,
     findRecord,
     formatValue,
     normalizeSelection,
+    sameConfiguration,
     onshapeOverrides,
     toKey,
     toSelection,
@@ -180,24 +180,20 @@ describe("canonicalValues", () => {
     });
 });
 
-describe("canonicalText", () => {
+describe("sameConfiguration", () => {
+    const same = (a: Record<string, string>, b: Record<string, string>) =>
+        sameConfiguration(select(a), select(b), parameters);
+
     it("agrees for one value typed two ways", () => {
-        expect(canonicalText(select({ length: "5 in" }), parameters)).toBe(
-            canonicalText(select({ length: "(2 + 3) in" }), parameters)
-        );
+        expect(same({ length: "5 in" }, { length: "(2 + 3) in" })).toBe(true);
+    });
+
+    it("agrees for a value left out and its default named", () => {
+        expect(same({}, { size: "s" })).toBe(true);
     });
 
     it("tells different values apart", () => {
-        expect(canonicalText(select({ size: "s" }), parameters)).not.toBe(
-            canonicalText(select({ size: "l" }), parameters)
-        );
-    });
-
-    it("ignores the order parameters are declared in", () => {
-        const reordered = [length, flag, size];
-        expect(canonicalText(select({ size: "l" }), parameters)).toBe(
-            canonicalText(select({ size: "l" }, reordered), reordered)
-        );
+        expect(same({ size: "s" }, { size: "l" })).toBe(false);
     });
 });
 

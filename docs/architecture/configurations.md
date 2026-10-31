@@ -71,8 +71,9 @@ link reopens it.
   `DEFAULT_CONFIGURATION_KEY` is the empty string.
 
 Comparing or counting values (analytics, "is this the default") goes through
-`canonicalValue` / `canonicalValues`. `canonicalText` is the same values as one
-string, for a D1 column that tells configurations apart (recents).
+`canonicalValue` / `canonicalValues`, or `sameConfiguration` to ask whether
+two selections are one configuration. These are computed where they are
+needed, never stored beside the selection they came from.
 `displayedValues` spells a selection for reading: what it applies, enums by
 option name, quantities in their own unit, each marked when at its default.
 
@@ -152,6 +153,13 @@ record for a selection, since records name only what enumeration varied.
 - Every boundary that receives a configuration (request body, url, stored
   favorite, search hit) passes it through `toSelection`.
 - Stored and shared selections omit derivation variables (`toStoredSelection`).
+- Nothing derived from a person's selection is stored beside it (a favorite, a
+  recent): no key, canonical values or identity column. A reload can move the
+  defaults and parameters a derived value was measured against, so it is
+  derived again on each read. Two stores differ for a reason: a load's records
+  keep their key, since each load rewrites them with the parameters they were
+  measured against, and the analytics log keeps the canonical values an insert
+  applied, as a fact about that moment.
 - Parameters with a role are never indexed.
 - The load and the admin UI decide the indexing band with the same
   `combinations.ts` functions.

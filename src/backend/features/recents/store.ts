@@ -7,8 +7,11 @@ import {
     type ConfigurationParameter,
     type Selection
 } from "../configurations/contract";
-import { toRowSelection } from "../configurations/stored-selections";
-import { canonicalText } from "../configurations/selection";
+import {
+    sameConfiguration,
+    toSelection,
+    toStoredSelection
+} from "../configurations/selection";
 import { MAX_RECENTS } from "./contract";
 
 export interface RecentInsertEvent {
@@ -48,10 +51,30 @@ export async function writeRecentInsert(
     insertedAt: Date
 ): Promise<void> {
     const { libraryId, insertableId, parameters } = event;
+    const inserted = event.selection ?? {};
     const selection = event.selection
-        ? toRowSelection(event.selection, parameters)
+        ? toStoredSelection(event.selection, parameters)
         : null;
-    const configuration = toConfiguration(event.selection, parameters);
+
+    // Compared here rather than by a stored column, which a reload would leave stale.
+    const partsRows = await db
+        .select({ id: recentInserts.id, selection: recentInserts.selection })
+        .from(recentInserts)
+        .where(
+            and(
+                ofUserInLibrary(userId, libraryId),
+                eq(recentInserts.insertableId, insertableId)
+            )
+        )
+        .all();
+    const existing = partsRows.find((row) =>
+        sameConfiguration(
+            toSelection(row.selection ?? {}, parameters),
+            inserted,
+            parameters
+        )
+    );
+
     const kept = db
         .select({ id: recentInserts.id })
         .from(recentInserts)
@@ -59,25 +82,19 @@ export async function writeRecentInsert(
         .orderBy(desc(recentInserts.insertedAt))
         .limit(MAX_RECENTS);
     await db.batch([
-        db
-            .insert(recentInserts)
-            .values({
-                userId,
-                libraryId,
-                insertableId,
-                selection,
-                configuration,
-                insertedAt
-            })
-            .onConflictDoUpdate({
-                target: [
-                    recentInserts.userId,
-                    recentInserts.insertableId,
-                    recentInserts.configuration
-                ],
-                // As typed this time, though it compares equal to the last.
-                set: { selection, insertedAt }
-            }),
+        existing
+            ? db
+                  .update(recentInserts)
+                  // As typed this time, though it compares equal to the last.
+                  .set({ selection, insertedAt })
+                  .where(eq(recentInserts.id, existing.id))
+            : db.insert(recentInserts).values({
+                  userId,
+                  libraryId,
+                  insertableId,
+                  selection,
+                  insertedAt
+              }),
         db
             .delete(recentInserts)
             .where(
@@ -94,12 +111,4 @@ export function ofUserInLibrary(userId: string, libraryId: LibraryId) {
         eq(recentInserts.userId, userId),
         eq(recentInserts.libraryId, libraryId)
     );
-}
-
-/** What tells two of a part's recents apart; empty for a part with nothing to configure. */
-export function toConfiguration(
-    selection: Selection | undefined,
-    parameters: ConfigurationParameter[]
-): string {
-    return selection ? canonicalText(selection, parameters) : "";
 }

@@ -71,14 +71,6 @@ export async function getParametersFor(
     );
 }
 
-/** A selection made whole and stripped of derivation variables, for a D1 row. */
-export function toRowSelection(
-    selection: PartialSelection,
-    parameters: ConfigurationParameter[]
-): PartialSelection {
-    return toStoredSelection(toSelection(selection, parameters), parameters);
-}
-
 export interface ResolvedSelection {
     /** Absent when nothing was stored, which is the element's own defaults. */
     selection?: Selection;

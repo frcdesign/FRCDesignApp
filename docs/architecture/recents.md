@@ -31,11 +31,9 @@ configuration and are read only by their owner.
 
 **D1** `recent_inserts`: `id`, `user_id`, `library_id`, `insertable_id`
 (cascade on delete), `selection` (a stored selection, or null for a part with
-nothing to configure), `configuration`, `inserted_at`. `configuration` is
-`canonicalText` of the selection (empty for a part with nothing to configure),
-and is unique with user and insertable, so a configuration has one row however
-often, and however it is typed, it is inserted. Indexed on user, library and
-time for the list.
+nothing to configure), `inserted_at`. The same shape as a favorite: only the
+selection, as typed, with nothing derived from it. Indexed on user, library
+and time for the list.
 At most `MAX_RECENTS` (100) rows per user and library.
 
 **Browser** `uiState.isRecentsOpen`: whether the section is open; it starts open.
@@ -47,10 +45,12 @@ At most `MAX_RECENTS` (100) rows per user and library.
 1. `POST /api/add-to-part-studio` and `POST /api/add-to-assembly` call
    `recordRecentInsert` once Onshape has added the part. In an assembly that is
    before any fasten, since a failed fasten leaves the part inserted.
-2. `writeRecentInsert` upserts the row for that configuration
-   (`toConfiguration`) with the selection as typed this time (`toRowSelection`:
-   whole, derivation variables removed) and the time, then deletes the user's
-   rows in that library past the newest `MAX_RECENTS`. Both are one D1 batch.
+2. `writeRecentInsert` reads the user's rows for that part and finds the one
+   for this configuration with `sameConfiguration`, so `5 in` and `(2 + 3) in`
+   are one row. It updates that row, or adds one, with the selection as typed
+   this time (`toStoredSelection`) and the time, then deletes the user's rows
+   in that library past the newest `MAX_RECENTS`. The write and the trim are
+   one D1 batch.
 3. The write is awaited, so it lands before the response, but its failure is
    logged rather than thrown: the part is already in the user's document.
 4. The insert mutation invalidates the recents query when it settles, so the
@@ -61,9 +61,9 @@ At most `MAX_RECENTS` (100) rows per user and library.
 `GET /api/recents/library/:libraryId` returns the caller's recents, newest
 first. Like a favorite, each stored selection is made whole against the
 insertable's current parameters, and its configuration key and record are
-derived per response (`resolveStoredSelection`). The configuration is measured
-again against the current parameters, and a row naming one already listed is
-left out, since a reload that drops a parameter can make two rows the same.
+derived per response (`resolveStoredSelection`). A row whose configuration is
+already listed (`sameConfiguration`) is left out: a reload that drops a
+parameter, or two inserts at once, can leave two rows for one configuration.
 
 The frontend shows the section only while signed in, like Favorites. Rows are
 resolved against the library's insertables, so a part the user may not see
@@ -97,8 +97,9 @@ optimistically and refetched on settle.
 - A recent is only ever read or written by its owner: every query filters by the
   caller's user id.
 - A user has at most `MAX_RECENTS` rows per library after any insert.
-- A user has at most one row per configuration of a part, compared canonically
-  (`canonicalText`), never by configuration key.
+- The list shows at most one row per configuration of a part, compared with
+  `sameConfiguration`, never by configuration key.
+- A row stores only the selection; nothing derived from it.
 - What is stored is a selection, never a key; the key and record are derived per
   response.
 - A stored selection never holds a derivation variable.
@@ -108,12 +109,12 @@ optimistically and refetched on settle.
 
 ## Failure and recovery
 
-| Failure                                   | Result                                  | Recovery                              |
-| ----------------------------------------- | --------------------------------------- | ------------------------------------- |
-| The recent write fails                    | The insert succeeds; the list misses it | The next insert of that configuration |
-| A reload makes two rows one configuration | One row shown; the other stays stored   | Pushed out by later inserts           |
-| The insertable gains a parameter          | Stored selection lacks it               | Defaulted on read                     |
-| The insertable loses the stored option    | `toSelection` falls back to the default | Insert it again                       |
+| Failure                                | Result                                  | Recovery                              |
+| -------------------------------------- | --------------------------------------- | ------------------------------------- |
+| The recent write fails                 | The insert succeeds; the list misses it | The next insert of that configuration |
+| Two rows for one configuration         | One row shown; the other stays stored   | Pushed out by later inserts           |
+| The insertable gains a parameter       | Stored selection lacks it               | Defaulted on read                     |
+| The insertable loses the stored option | `toSelection` falls back to the default | Insert it again                       |
 
 ## Decisions
 
@@ -124,9 +125,12 @@ optimistically and refetched on settle.
   written that late could miss the refetch the client makes on settle.
 - **One row per configuration.** A part used in two sizes is two things to
   reach for, so each configuration keeps its own row; inserting one again
-  moves it up. Configurations are told apart by `canonicalText`, the canonical
-  values, so `5 in` and `(2 + 3) in` are one row. A key is for naming a
-  thumbnail and is never compared.
+  moves it up.
+- **Compared on write, not by a column.** A unique column of canonical values
+  would let D1 enforce one row per configuration, but it is derived from the
+  selection, and a reload can make it wrong. Comparing in code keeps the row to
+  the selection alone, as a favorite is; the cost is that two inserts at the
+  same moment can both add a row, which the read folds together.
 - **Not derived from the analytics log.** Analytics never returns anything about
   one user, and its log is append-only and unbounded; a small table of its own
   keeps the read one indexed query.

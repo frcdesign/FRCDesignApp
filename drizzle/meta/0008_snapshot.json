@@ -1,7 +1,7 @@
 {
     "version": "6",
     "dialect": "sqlite",
-    "id": "4fcd102d-3930-4fff-af0d-97c4a1968339",
+    "id": "b145efc0-98db-4e52-986a-30068a9a9b16",
     "prevId": "6f2386eb-1754-42e7-a379-680294ffc63a",
     "tables": {
         "configurations": {
@@ -594,13 +594,6 @@
                     "notNull": false,
                     "autoincrement": false
                 },
-                "configuration": {
-                    "name": "configuration",
-                    "type": "text",
-                    "primaryKey": false,
-                    "notNull": true,
-                    "autoincrement": false
-                },
                 "inserted_at": {
                     "name": "inserted_at",
                     "type": "integer",
@@ -614,11 +607,6 @@
                     "name": "recent_inserts_user_library_idx",
                     "columns": ["user_id", "library_id", "inserted_at"],
                     "isUnique": false
-                },
-                "recent_inserts_user_id_insertable_id_configuration_unique": {
-                    "name": "recent_inserts_user_id_insertable_id_configuration_unique",
-                    "columns": ["user_id", "insertable_id", "configuration"],
-                    "isUnique": true
                 }
             },
             "foreignKeys": {
