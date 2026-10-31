@@ -39,6 +39,7 @@ import {
 } from "./issues";
 import { ConfigurationTab } from "./configuration-tab";
 import { GroupSettings, InsertableSettings } from "./admin-section";
+import { UsageSection } from "./usage-section";
 import { useIndexingView } from "../indexing-draft";
 import styles from "../../../lib/styles.module.css";
 
@@ -312,10 +313,16 @@ function InsertableBadge(props: InsertableBadgeProps): ReactNode {
                 }
             }
             hoverMenu={
-                <InsertableSettings
-                    insertableId={insertableId}
-                    status={insertable}
-                />
+                <>
+                    <InsertableSettings
+                        insertableId={insertableId}
+                        status={insertable}
+                    />
+                    <Divider />
+                    <UsageSection
+                        elementId={insertable.elementPath.elementId}
+                    />
+                </>
             }
             tab={tab}
         />
