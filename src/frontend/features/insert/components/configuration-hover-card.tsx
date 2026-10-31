@@ -42,7 +42,7 @@ export function ConfigurationHoverCard(
             middlewares={{ flip: false, shift: { crossAxis: true } }}
             arrowSize={20}
             padding="xs"
-            target={<ConfigurationIcon />}
+            target={<ConfigurationIcon size={IconSize.SMALL} />}
         >
             <ConfigurationCard
                 insertable={insertable}
@@ -69,10 +69,8 @@ function ConfigurationCard(props: ConfigurationCardProps): ReactNode {
     return (
         <Stack gap="xs">
             <Group gap="xs">
-                <ConfigurationIcon />
-                <Text size="sm" fw={FontWeight.SEMI_BOLD}>
-                    Configuration
-                </Text>
+                <ConfigurationIcon size={IconSize.CONTROL} />
+                <Text fw={FontWeight.SEMI_BOLD}>Configuration</Text>
             </Group>
             {configurationQuery.isPending ? (
                 <Loader size={IconSize.SMALL} />
@@ -90,11 +88,16 @@ function ConfigurationCard(props: ConfigurationCardProps): ReactNode {
     );
 }
 
-function ConfigurationIcon(): ReactNode {
+interface ConfigurationIconProps {
+    size: IconSize;
+}
+
+function ConfigurationIcon(props: ConfigurationIconProps): ReactNode {
+    const { size } = props;
     return (
         <AppIcon
             icon={SlidersHorizontalIcon}
-            size={IconSize.SMALL}
+            size={size}
             color={PrimaryColor.FILLED}
         />
     );
