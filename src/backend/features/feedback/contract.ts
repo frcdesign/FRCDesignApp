@@ -14,7 +14,6 @@ export enum FeedbackTopic {
 export enum FeedbackCategory {
     BUG = "bug",
     FEATURE_REQUEST = "feature-request",
-    QUESTION = "question",
     PART_REQUEST = "part-request",
     ORGANIZATION = "organization",
     METADATA = "metadata",
@@ -46,7 +45,6 @@ export const FEEDBACK_TOPIC_LABELS: Record<FeedbackTopic, string> = {
 export const FEEDBACK_CATEGORY_LABELS: Record<FeedbackCategory, string> = {
     [FeedbackCategory.BUG]: "Bug",
     [FeedbackCategory.FEATURE_REQUEST]: "Feature request",
-    [FeedbackCategory.QUESTION]: "Question",
     [FeedbackCategory.PART_REQUEST]: "New part request",
     [FeedbackCategory.ORGANIZATION]: "Search or organization",
     [FeedbackCategory.METADATA]: "Missing or incorrect metadata",
@@ -69,7 +67,6 @@ export const FEEDBACK_TOPICS = Object.values(FeedbackTopic);
 const APP_CATEGORIES = [
     FeedbackCategory.BUG,
     FeedbackCategory.FEATURE_REQUEST,
-    FeedbackCategory.QUESTION,
     FeedbackCategory.OTHER
 ];
 
@@ -236,4 +233,6 @@ export type FeedbackIn = z.input<typeof feedbackBody>;
 export interface FeedbackOut {
     /** Quoted in the Discord post, so a report can be found from the app. */
     reportId: string;
+    /** The report's thread, to follow up in; undefined when Discord didn't say where it is. */
+    threadUrl?: string;
 }

@@ -104,7 +104,13 @@
         "NODE_ENV": "development",
         // Where the app is served: OAuth's redirect and every webhook point here.
         // The dev tunnel's; a developer on their own tunnel overrides it in `.env`.
-        "APP_URL": "https://dev.frcdesign.org"
+        "APP_URL": "https://dev.frcdesign.org",
+        // Each report forum's tag ids by tag key, which files a report's thread
+        // under its topic, type and source; see docs/architecture/feedback.md.
+        // A key with no id is left untagged.
+        "DISCORD_APP_TAG_IDS": {},
+        "DISCORD_FRC_DESIGN_LIB_TAG_IDS": {},
+        "DISCORD_CONFIG_LIB_TAG_IDS": {}
     },
     /**
      * Service Bindings (communicate between multiple Workers)
@@ -169,7 +175,13 @@
                 // FORCE_SIGNED_IN and VITE_ACCESS_LEVEL_OVERRIDE are gated on
                 // this alone: anything but "production" leaves them armed.
                 "NODE_ENV": "production",
-                "APP_URL": "https://frc-design-app-cert.frcdesign-org.workers.dev"
+                "APP_URL": "https://frc-design-app-cert.frcdesign-org.workers.dev",
+                // Each report forum's tag ids by tag key, which files a report's thread
+                // under its topic, type and source; see docs/architecture/feedback.md.
+                // A key with no id is left untagged.
+                "DISCORD_APP_TAG_IDS": {},
+                "DISCORD_FRC_DESIGN_LIB_TAG_IDS": {},
+                "DISCORD_CONFIG_LIB_TAG_IDS": {}
             },
             "limits": {
                 "subrequests": 1000
@@ -226,7 +238,13 @@
             "vars": {
                 "OWNER_USER_ID": "5eace32713a966103efd2a9c",
                 "NODE_ENV": "production",
-                "APP_URL": "https://app.frcdesign.org"
+                "APP_URL": "https://app.frcdesign.org",
+                // Each report forum's tag ids by tag key, which files a report's thread
+                // under its topic, type and source; see docs/architecture/feedback.md.
+                // A key with no id is left untagged.
+                "DISCORD_APP_TAG_IDS": {},
+                "DISCORD_FRC_DESIGN_LIB_TAG_IDS": {},
+                "DISCORD_CONFIG_LIB_TAG_IDS": {}
             },
             "limits": {
                 "subrequests": 100000

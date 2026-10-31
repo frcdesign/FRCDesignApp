@@ -131,72 +131,118 @@ describe("postToDiscord", () => {
         vi.restoreAllMocks();
     });
 
-    function stubFetch(...responses: Response[]) {
-        const fetch = vi.fn<typeof globalThis.fetch>();
-        for (const response of responses) {
-            fetch.mockResolvedValueOnce(response);
-        }
+    /** A forum thread's starter message, which is in the thread. */
+    const POSTED = { id: "thread-1", channel_id: "thread-1" };
+    const WEBHOOK_INFO = { guild_id: "guild-1", channel_id: "forum-1" };
+
+    /** Answers the webhook's own lookup with `webhook`, and each post in turn with `posts`. */
+    function stubDiscord(
+        posts: Response[],
+        webhook: Response = Response.json(WEBHOOK_INFO)
+    ) {
+        const fetch = vi.fn<typeof globalThis.fetch>((_url, init) => {
+            if (init?.method !== "POST") return Promise.resolve(webhook);
+            const next = posts.shift();
+            return next
+                ? Promise.resolve(next)
+                : Promise.reject(new Error("unexpected post"));
+        });
         vi.stubGlobal("fetch", fetch);
         return fetch;
     }
 
-    function sentBody(fetch: ReturnType<typeof stubFetch>, call: number) {
-        return JSON.parse(fetch.mock.calls[call][1]!.body as string) as Record<
-            string,
-            unknown
-        >;
+    /** The bodies of the posts, in order. */
+    function postedBodies(fetch: ReturnType<typeof stubDiscord>) {
+        return fetch.mock.calls
+            .filter(([, init]) => init?.method === "POST")
+            .map(
+                ([, init]) =>
+                    JSON.parse(init!.body as string) as Record<string, unknown>
+            );
     }
 
     it("waits for Discord, and opens a thread named for the report", async () => {
-        const fetch = stubFetch(new Response("{}", { status: 200 }));
+        const fetch = stubDiscord([Response.json(POSTED)]);
 
         await postToDiscord(WEBHOOK, buildReportMessage(report()));
 
-        expect(fetch).toHaveBeenCalledTimes(1);
-        const url = fetch.mock.calls[0][0] as URL;
-        expect(url.searchParams.get("wait")).toBe("true");
-        expect(sentBody(fetch, 0).thread_name).toBe("Bearing's part number");
+        const [[url]] = fetch.mock.calls.filter(
+            ([, init]) => init?.method === "POST"
+        );
+        expect((url as URL).searchParams.get("wait")).toBe("true");
+        expect(postedBodies(fetch)[0].thread_name).toBe(
+            "Bearing's part number"
+        );
+    });
+
+    it("answers the link to the report's thread", async () => {
+        stubDiscord([Response.json(POSTED)]);
+
+        await expect(
+            postToDiscord(WEBHOOK, buildReportMessage(report()))
+        ).resolves.toBe("https://discord.com/channels/guild-1/thread-1");
+    });
+
+    it("reads the server from the webhook itself, without the wait", async () => {
+        const fetch = stubDiscord([Response.json(POSTED)]);
+
+        await postToDiscord(WEBHOOK, buildReportMessage(report()));
+
+        const lookup = fetch.mock.calls.find(
+            ([, init]) => init?.method !== "POST"
+        )!;
+        expect((lookup[0] as URL).href).toBe(WEBHOOK);
+    });
+
+    // The report is in Discord either way; only the link is missing.
+    it("answers no link when the webhook's server can't be read", async () => {
+        stubDiscord([Response.json(POSTED)], new Response("", { status: 500 }));
+
+        await expect(
+            postToDiscord(WEBHOOK, buildReportMessage(report()))
+        ).resolves.toBeUndefined();
     });
 
     it("files the thread under the forum's tags", async () => {
-        const fetch = stubFetch(new Response("{}", { status: 200 }));
+        const fetch = stubDiscord([Response.json(POSTED)]);
 
         await postToDiscord(
             WEBHOOK,
             buildReportMessage(report({ tagIds: ["t1", "t2"] }))
         );
 
-        expect(sentBody(fetch, 0).applied_tags).toEqual(["t1", "t2"]);
+        expect(postedBodies(fetch)[0].applied_tags).toEqual(["t1", "t2"]);
     });
 
     it("sends no tags to a forum with none configured", async () => {
-        const fetch = stubFetch(new Response("{}", { status: 200 }));
+        const fetch = stubDiscord([Response.json(POSTED)]);
 
         await postToDiscord(WEBHOOK, buildReportMessage(report()));
 
-        expect(sentBody(fetch, 0)).not.toHaveProperty("applied_tags");
+        expect(postedBodies(fetch)[0]).not.toHaveProperty("applied_tags");
     });
 
     // A stale tag id must not lose the report.
     it("sends a report again untagged when Discord refuses its tags", async () => {
         vi.spyOn(console, "error").mockImplementation(() => undefined);
-        const fetch = stubFetch(
+        const fetch = stubDiscord([
             Response.json({ code: 50035 }, { status: 400 }),
-            new Response("{}", { status: 200 })
-        );
+            Response.json(POSTED)
+        ]);
 
         await postToDiscord(
             WEBHOOK,
             buildReportMessage(report({ tagIds: ["stale"] }))
         );
 
-        expect(fetch).toHaveBeenCalledTimes(2);
-        expect(sentBody(fetch, 1)).not.toHaveProperty("applied_tags");
-        expect(sentBody(fetch, 1).thread_name).toBe("Bearing's part number");
+        const bodies = postedBodies(fetch);
+        expect(bodies).toHaveLength(2);
+        expect(bodies[1]).not.toHaveProperty("applied_tags");
+        expect(bodies[1].thread_name).toBe("Bearing's part number");
     });
 
     it("throws when Discord refuses the post", async () => {
-        stubFetch(new Response("nope", { status: 404 }));
+        stubDiscord([new Response("nope", { status: 404 })]);
 
         await expect(
             postToDiscord(WEBHOOK, buildReportMessage(report()))

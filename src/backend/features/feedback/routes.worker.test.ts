@@ -26,6 +26,7 @@ import { LibraryId } from "../library/library-id";
 import {
     FeedbackCategory,
     type FeedbackIn,
+    type FeedbackOut,
     FeedbackSource,
     FeedbackTopic
 } from "./contract";
@@ -39,6 +40,8 @@ const WEBHOOKS = {
     DISCORD_FRC_DESIGN_LIB_WEBHOOK_URL: "https://discord.test/frc-design-lib",
     DISCORD_CONFIG_LIB_WEBHOOK_URL: "https://discord.test/config-lib"
 };
+
+const THREAD_URL = "https://discord.com/channels/guild/thread";
 
 const DIAGNOSTICS = { url: "https://app.test/app/library/frc-design-lib" };
 
@@ -79,7 +82,7 @@ function postedTo(): string[] {
 describe("POST /api/feedback", () => {
     beforeEach(async () => {
         await resetDb(db);
-        post = vi.spyOn(Discord, "postToDiscord").mockResolvedValue();
+        post = vi.spyOn(Discord, "postToDiscord").mockResolvedValue(THREAD_URL);
     });
 
     afterEach(() => {
@@ -113,7 +116,9 @@ describe("POST /api/feedback", () => {
             }),
             { userId }
         );
-        const { reportId } = await res.json<{ reportId: string }>();
+        const { reportId, threadUrl } = await res.json<FeedbackOut>();
+        // So the reporter can follow up where the team answers.
+        expect(threadUrl).toBe(THREAD_URL);
 
         expect(await db.select().from(events).get()).toMatchObject({
             id: reportId,
@@ -249,6 +254,17 @@ describe("POST /api/feedback", () => {
         ).toBeDefined();
     });
 
+    it("reads a forum's tag ids from the JSON text .env holds", async () => {
+        await send(body(), {
+            bindings: {
+                ...WEBHOOKS,
+                DISCORD_APP_TAG_IDS: JSON.stringify({ bug: "tag-bug" })
+            }
+        });
+
+        expect(post.mock.calls[0][1].applied_tags).toEqual(["tag-bug"]);
+    });
+
     it("files the thread under the forum's tags for its topic, type and source", async () => {
         const res = await send(
             body({
@@ -259,12 +275,12 @@ describe("POST /api/feedback", () => {
             {
                 bindings: {
                     ...WEBHOOKS,
-                    DISCORD_FRC_DESIGN_LIB_TAG_IDS: JSON.stringify({
+                    DISCORD_FRC_DESIGN_LIB_TAG_IDS: {
                         mkcad: "tag-mkcad",
                         bug: "tag-bug",
                         "error-report": "tag-error",
                         "frc-design-lib": "tag-frc"
-                    })
+                    }
                 }
             }
         );

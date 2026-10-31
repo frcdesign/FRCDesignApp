@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import {
     FeedbackCategory,
     type FeedbackIn,
+    type FeedbackOut,
     FeedbackSource,
     FeedbackTopic
 } from "@backend/features/feedback/contract";
@@ -12,8 +13,16 @@ import { ElementType } from "@backend/lib/onshape/element-type";
 import { renderWithProviders } from "../../../../__test_utils__/render";
 
 const mutate = vi.hoisted(() => vi.fn<(body: FeedbackIn) => void>());
+/** What the server answered, once the report has gone. */
+const answer = vi.hoisted(() => ({
+    data: undefined as FeedbackOut | undefined
+}));
 vi.mock("../queries", () => ({
-    useSendFeedbackMutation: () => ({ mutate, isPending: false })
+    useSendFeedbackMutation: () => ({
+        mutate,
+        isPending: false,
+        data: answer.data
+    })
 }));
 
 const { FeedbackForm } = await import("./feedback-form");
@@ -48,6 +57,52 @@ function sent(): FeedbackIn {
 describe("FeedbackForm", () => {
     afterEach(() => {
         mutate.mockReset();
+        answer.data = undefined;
+        vi.restoreAllMocks();
+    });
+
+    it("points the reporter at their thread once the report is sent", async () => {
+        const user = userEvent.setup();
+        const open = vi.spyOn(window, "open").mockReturnValue(null);
+        answer.data = {
+            reportId: "r",
+            threadUrl: "https://discord.com/channels/g/t"
+        };
+        renderWithProviders(
+            <FeedbackForm
+                initialTopic={FeedbackTopic.APP}
+                source={FeedbackSource.GENERAL}
+            />
+        );
+
+        expect(screen.getByText("Report sent. Thank you!")).toBeTruthy();
+        expect(
+            screen.getByRole("button", { name: "Join the Discord" })
+        ).toBeTruthy();
+        await user.click(
+            screen.getByRole("button", { name: "Open the thread" })
+        );
+        expect(open).toHaveBeenCalledWith(
+            "https://discord.com/channels/g/t",
+            "_blank"
+        );
+    });
+
+    it("offers only the server when Discord didn't say where the thread is", () => {
+        answer.data = { reportId: "r" };
+        renderWithProviders(
+            <FeedbackForm
+                initialTopic={FeedbackTopic.APP}
+                source={FeedbackSource.GENERAL}
+            />
+        );
+
+        expect(
+            screen.getByRole("button", { name: "Join the Discord" })
+        ).toBeTruthy();
+        expect(
+            screen.queryByRole("button", { name: "Open the thread" })
+        ).toBeNull();
     });
 
     it("points a library's feedback at the part menu", async () => {

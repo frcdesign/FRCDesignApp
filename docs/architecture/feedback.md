@@ -9,7 +9,9 @@ channel with enough about the page and the launch to act on it, and counted for
 the dashboard.
 
 It is not a support desk: nothing is stored about a report beyond its counts,
-and replies happen in Discord.
+and replies happen only in the report's Discord thread, which the app links the
+reporter to once it is sent. So it asks no questions it can't answer: there is
+no "question" type.
 
 ## Code map
 
@@ -61,15 +63,16 @@ refuses reports with a `handled` 503.
 
 Each thread is filed under up to three of its forum's tags (`reportTagKeys`):
 its topic's, its type's, and **Error report** when it started from an error.
-A forum's tag ids are JSON keyed by tag key, set like the webhook:
+A forum's tag ids are an object keyed by tag key, in each environment's
+`vars` in `wrangler.jsonc` (they aren't secret), or its JSON text in `.env`:
 
-```json
-{ "bug": "1234567890", "feature-request": "…", "error-report": "…" }
+```jsonc
+"DISCORD_APP_TAG_IDS": { "bug": "1234567890", "error-report": "…" }
 ```
 
 The keys are the topic values (`app`, `version-manager`, `frc-design-lib`,
 `mkcad`, `config-lib`), the category values (`bug`, `feature-request`,
-`question`, `part-request`, `organization`, `metadata`, `incorrect-part`,
+`part-request`, `organization`, `metadata`, `incorrect-part`,
 `broken-configuration`, `insert-failed`, `thumbnail`, `other`) and
 `error-report`. A key with no id is left untagged, and a value that isn't JSON
 tags nothing. A tag id the forum doesn't have makes Discord refuse the post,
@@ -81,7 +84,7 @@ The source decides what the form offers and what the report carries
 (`feedbackCategories`):
 
 - **General** — **Send feedback** in settings. The reporter picks the topic.
-  The app's topics offer bug, feature request, question and other; a library's
+  The app's topics offer bug, feature request and other; a library's
   offer new part request, search or organization, bug, feature request and other,
   and the form says that a problem with one part is reported from its menu.
 - **Part** — **Report an issue** in a part's menu, on its card or in the
@@ -97,7 +100,7 @@ The source decides what the form offers and what the report carries
 ### Sending
 
 1. The form sends `{ topic, category, source, title, message, contact?, part?,
-diagnostics }`. The title is the reporter's, filled in with `suggestTitle`
+diagnostics }`; the contact is the reporter's Discord username, if they give it. The title is the reporter's, filled in with `suggestTitle`
    until they write their own: the type and the part or topic ("Broken
    configuration: Hex Shaft"), or the error they were shown. Diagnostics are gathered as it sends: the page url, the build
    id, the Onshape launch (from `useOnshapeLaunch`, since in-app navigation drops
@@ -113,11 +116,18 @@ diagnostics }`. The title is the reporter's, filled in with `suggestTitle`
    `onshapeOverrides` and the readable `Name: value` lines from the parameters
    the reporter could see.
 5. `postToDiscord` posts the embed with `?wait=true`, opening a thread named
-   by the title (`thread_name`) under the report's tags (`applied_tags`).
+   by the title (`thread_name`) under the report's tags (`applied_tags`). The
+   posted message's `channel_id` is the thread; the server's id comes from the
+   webhook itself (`GET` on its url, which its token authorizes), read while
+   the post is sent. Together they make the thread's link,
+   `https://discord.com/channels/<server>/<thread>`; if either is missing the
+   report still succeeds, without a link.
 6. Once posted, `trackReport` records it in the background, under the id the
    post quotes in its footer.
-7. The form closes with "Report sent. Thank you!", or stays open with the
-   error if anything failed.
+7. The form turns into "Report sent. Thank you!" (`ReportSent`), with
+   **Join the Discord** (the server's invite) and **Open the thread**: replies
+   happen only there, and the link opens only for a member of the server. If
+   anything failed, the form stays open with the error and what was typed.
 
 ### The dashboard
 
@@ -164,8 +174,11 @@ parts still in the library, each opening the part's page.
   so every post names one. A webhook on a plain text channel is not supported:
   Discord documents `thread_name` only for forum and media channels.
 - **Tag ids in configuration.** A webhook can't read its forum's tags; only a
-  bot can. So ids are set beside the webhook, by keys the code owns, and a
-  wrong one costs the tags rather than the report.
+  bot can. So ids are set per environment in `wrangler.jsonc`, by keys the code
+  owns, and a wrong one costs the tags rather than the report. They aren't
+  secret: an id is useless without the webhook.
+- **Follow up in Discord, not in the app.** There is nowhere in the app to
+  answer a reporter, so the app hands them the thread and the invite instead.
 - **Links on cad's domain.** A reporter's company domain means nothing to the
   person reading the report.
 

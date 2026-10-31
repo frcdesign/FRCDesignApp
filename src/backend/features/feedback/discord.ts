@@ -87,7 +87,6 @@ const CATEGORY_COLORS: Record<FeedbackCategory, number> = {
     [FeedbackCategory.ORGANIZATION]: ORANGE,
     [FeedbackCategory.FEATURE_REQUEST]: BLUE,
     [FeedbackCategory.PART_REQUEST]: BLUE,
-    [FeedbackCategory.QUESTION]: BLUE,
     [FeedbackCategory.OTHER]: GRAY
 };
 
@@ -207,18 +206,37 @@ function send(url: URL, message: DiscordMessage): Promise<Response> {
     });
 }
 
+/** The server the webhook posts into; a webhook's own token reads it without a bot. */
+async function webhookGuildId(url: URL): Promise<string | undefined> {
+    try {
+        const response = await fetch(new URL(url.pathname, url.origin));
+        if (!response.ok) return undefined;
+        const webhook: { guild_id?: string } = await response.json();
+        return webhook.guild_id;
+    } catch {
+        return undefined;
+    }
+}
+
+/** Where a person who is in the server can open the thread. */
+export function threadUrl(guildId: string, threadId: string): string {
+    return `https://discord.com/channels/${guildId}/${threadId}`;
+}
+
 /**
- * Opens the report's thread in the topic's forum channel. A tag id the forum
- * doesn't have fails the whole post, so a refused tagged post goes again
+ * Opens the report's thread in the topic's forum channel, and answers its
+ * link: a posted message's `channel_id` is the thread it is in. A tag id the
+ * forum doesn't have fails the whole post, so a refused tagged post goes again
  * untagged: a report matters more than its tags.
  */
 export async function postToDiscord(
     webhookUrl: string,
     message: DiscordMessage
-): Promise<void> {
+): Promise<string | undefined> {
     const url = new URL(webhookUrl);
-    // Without it a message Discord drops still answers 204.
+    // Without it a message Discord drops still answers 204, and no message comes back.
     url.searchParams.set("wait", "true");
+    const guildId = webhookGuildId(url);
 
     let response = await send(url, message);
     if (response.status === HttpStatus.BAD_REQUEST && message.applied_tags) {
@@ -236,4 +254,11 @@ export async function postToDiscord(
             HttpStatus.BAD_GATEWAY
         );
     }
+    const posted = (await response.json().catch(() => undefined)) as
+        | { channel_id?: string }
+        | undefined;
+    const guild = await guildId;
+    return guild && posted?.channel_id
+        ? threadUrl(guild, posted.channel_id)
+        : undefined;
 }

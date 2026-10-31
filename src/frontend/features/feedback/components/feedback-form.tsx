@@ -7,11 +7,13 @@ import {
     TextInput
 } from "@mantine/core";
 import { PaperPlaneTiltIcon } from "@phosphor-icons/react";
+import { ReportSent } from "./report-sent";
 import { type ReactNode, useState } from "react";
 import {
     FEEDBACK_CATEGORY_LABELS,
     FEEDBACK_TOPIC_LABELS,
     FEEDBACK_TOPICS,
+    type FeedbackOut,
     feedbackCategories,
     FeedbackCategory,
     FeedbackSource,
@@ -77,7 +79,7 @@ interface FeedbackFormProps {
 export function FeedbackForm(props: FeedbackFormProps): ReactNode {
     const { source, part, error } = props;
     const modal = useAppModal();
-    const sendMutation = useSendFeedbackMutation(modal.close);
+    const sendMutation = useSendFeedbackMutation();
 
     const [topic, setTopic] = useState(props.initialTopic);
     const categories = feedbackCategories(topic, source);
@@ -103,6 +105,11 @@ export function FeedbackForm(props: FeedbackFormProps): ReactNode {
     const canSend =
         title.trim().length > 0 &&
         (message.trim().length > 0 || error !== undefined);
+
+    const sent: FeedbackOut | undefined = sendMutation.data;
+    if (sent) {
+        return <ReportSent sent={sent} onClose={modal.close} />;
+    }
 
     const send = () => {
         sendMutation.mutate({
@@ -201,8 +208,8 @@ export function FeedbackForm(props: FeedbackFormProps): ReactNode {
                     />
                 )}
                 <TextInput
-                    label="How can we reach you?"
-                    description="Optional: a Discord username or an email address."
+                    label="Discord username"
+                    description="Optional, so the team knows who to answer in the report's thread."
                     value={contact}
                     onChange={(event) => setContact(event.currentTarget.value)}
                 />

@@ -49,11 +49,16 @@ export interface FeedbackChannel {
     tagIds: Partial<Record<string, string>>;
 }
 
-/** Tag ids are JSON, `{"bug": "1234…"}`; a malformed value tags nothing rather than failing reports. */
-function parseTagIds(raw: string | undefined): Record<string, string> {
-    if (!raw) return {};
+/**
+ * `{"bug": "1234…"}`: an object from `wrangler.jsonc`'s vars, or its JSON text
+ * from `.env`. A malformed value tags nothing rather than failing reports.
+ */
+function parseTagIds(raw: unknown): Record<string, string> {
+    if (raw === undefined || raw === "") return {};
     try {
-        return tagIdsSchema.parse(JSON.parse(raw));
+        return tagIdsSchema.parse(
+            typeof raw === "string" ? JSON.parse(raw) : raw
+        );
     } catch (error) {
         console.error("Ignoring malformed Discord tag ids", error);
         return {};
