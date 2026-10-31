@@ -116,7 +116,7 @@ describe("buildReportMessage", () => {
         for (const field of embed.fields) {
             expect(field.value.length).toBeLessThanOrEqual(1024);
         }
-        expect(message.thread_name!.length).toBeLessThanOrEqual(100);
+        expect(message.thread_name.length).toBeLessThanOrEqual(100);
     });
 });
 
@@ -141,7 +141,7 @@ describe("postToDiscord", () => {
         >;
     }
 
-    it("waits for Discord, and sends a text channel no thread", async () => {
+    it("waits for Discord, and opens a thread named for the report", async () => {
         const fetch = stubFetch(new Response("{}", { status: 200 }));
 
         await postToDiscord(WEBHOOK, buildReportMessage(report()));
@@ -149,19 +149,7 @@ describe("postToDiscord", () => {
         expect(fetch).toHaveBeenCalledTimes(1);
         const url = fetch.mock.calls[0][0] as URL;
         expect(url.searchParams.get("wait")).toBe("true");
-        expect(sentBody(fetch, 0)).not.toHaveProperty("thread_name");
-    });
-
-    it("opens a thread once Discord says the channel is a forum", async () => {
-        const fetch = stubFetch(
-            Response.json({ code: 220001 }, { status: 400 }),
-            new Response("{}", { status: 200 })
-        );
-
-        await postToDiscord(WEBHOOK, buildReportMessage(report()));
-
-        expect(fetch).toHaveBeenCalledTimes(2);
-        expect(sentBody(fetch, 1).thread_name).toBe(
+        expect(sentBody(fetch, 0).thread_name).toBe(
             "Missing or incorrect metadata: Bearing"
         );
     });

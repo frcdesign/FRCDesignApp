@@ -36,8 +36,8 @@ VITE_ACCESS_LEVEL_OVERRIDE=admin
 # session. Onshape calls it reveals won't work, so leave it unset normally.
 FORCE_SIGNED_IN=false
 
-# Discord webhooks reports are posted to (Optional). A topic whose webhook is
-# unset refuses reports. Point these at a test channel, not the real ones.
+# Discord forum-channel webhooks reports are posted to (Optional). A topic whose
+# webhook is unset refuses reports. Point these at a test forum, not the real ones.
 DISCORD_APP_WEBHOOK_URL=<Webhook for FRCDesignApp and Version Manager reports>
 DISCORD_FRC_DESIGN_LIB_WEBHOOK_URL=<Webhook for FRCDesignLib and MKCad reports>
 DISCORD_CONFIG_LIB_WEBHOOK_URL=<Webhook for ConfigLib reports>

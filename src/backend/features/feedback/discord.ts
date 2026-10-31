@@ -56,8 +56,8 @@ export interface DiscordMessage {
     embeds: DiscordEmbed[];
     /** Empty, so text a reporter typed can't ping anyone. */
     allowed_mentions: { parse: [] };
-    /** Required by a forum channel, which posts each message as a thread. */
-    thread_name?: string;
+    /** Every report channel is a forum, which opens each post as a thread named this. */
+    thread_name: string;
 }
 
 /** Discord's limits on an embed. */
@@ -198,31 +198,7 @@ export function buildReportMessage(report: Report): DiscordMessage {
     };
 }
 
-/** Discord's answer to a forum channel's webhook sent no thread. */
-const FORUM_NEEDS_THREAD_CODE = 220001;
-
-async function isForumWithoutThread(response: Response): Promise<boolean> {
-    if (response.status !== HttpStatus.BAD_REQUEST) return false;
-    const body = (await response
-        .clone()
-        .json()
-        .catch(() => undefined)) as { code?: number } | undefined;
-    return body?.code === FORUM_NEEDS_THREAD_CODE;
-}
-
-function send(url: URL, message: DiscordMessage): Promise<Response> {
-    return fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(message)
-    });
-}
-
-/**
- * Posts to a text channel, or opens a thread in a forum channel. Discord
- * doesn't document what a text channel does with `thread_name`, so it is only
- * sent once Discord has said the channel is a forum.
- */
+/** Opens the report's thread in the topic's forum channel. */
 export async function postToDiscord(
     webhookUrl: string,
     message: DiscordMessage
@@ -230,12 +206,11 @@ export async function postToDiscord(
     const url = new URL(webhookUrl);
     // Without it a message Discord drops still answers 204.
     url.searchParams.set("wait", "true");
-    const { thread_name: threadName, ...plain } = message;
-
-    let response = await send(url, plain);
-    if (await isForumWithoutThread(response)) {
-        response = await send(url, { ...plain, thread_name: threadName });
-    }
+    const response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(message)
+    });
     if (!response.ok) {
         const text = await response.text().catch(() => "");
         throw internalError(

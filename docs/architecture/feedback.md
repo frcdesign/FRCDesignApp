@@ -32,8 +32,8 @@ and replies happen in Discord.
 
 ## Storage
 
-- **Discord**, not ours: each report is one message (or one forum thread) in
-  the topic's channel.
+- **Discord**, not ours: each report is one thread in the topic's forum
+  channel.
 - **KV** `feedback-sent:` — by reporter (`user:<id>` signed in, `ip:<address>`
   otherwise), the times of their reports in the last hour, for an hour.
 - **D1** — one `events` row per sent report (`type` `report`, with
@@ -53,7 +53,7 @@ and replies happen in Discord.
 | MKCad           | `DISCORD_FRC_DESIGN_LIB_WEBHOOK_URL` | its own |
 | ConfigLib       | `DISCORD_CONFIG_LIB_WEBHOOK_URL`     | its own |
 
-Each secret is a Discord webhook url, set per environment with
+Each secret is the webhook url of a Discord forum channel, set per environment with
 `wrangler secret put` and in `.env` locally. A topic whose secret is unset
 refuses reports with a `handled` 503.
 
@@ -92,9 +92,8 @@ diagnostics }`. Diagnostics are gathered as it sends: the page url, the build
    runs the selection through `toSelection`, and builds the Onshape link from
    `onshapeOverrides` and the readable `Name: value` lines from the parameters
    the reporter could see.
-5. `postToDiscord` posts the embed with `?wait=true`. A forum channel answers
-   code 220001 to a post without a thread, and the post is sent again with
-   `thread_name`.
+5. `postToDiscord` posts the embed with `?wait=true`, opening a thread named
+   for the report (`thread_name`, the embed's title cut to 100 characters).
 6. Once posted, `trackReport` records it in the background, under the id the
    post quotes in its footer.
 7. The form closes with "Report sent. Thank you!", or stays open with the
@@ -141,9 +140,9 @@ parts still in the library, each opening the part's page.
   exactly when a report is wanted; the limit bounds what an open endpoint can
   post. KV's lag lets two reports at the same moment both pass, which is fine
   for a limit this loose.
-- **Retry with a thread only when Discord asks.** Discord documents
-  `thread_name` only for forum channels, so a text channel's webhook is never
-  sent one.
+- **Forum channels only.** Each report gets its own thread to be discussed in,
+  so every post names one. A webhook on a plain text channel is not supported:
+  Discord documents `thread_name` only for forum and media channels.
 - **Links on cad's domain.** A reporter's company domain means nothing to the
   person reading the report.
 
