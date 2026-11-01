@@ -53,10 +53,10 @@ import styles from "../../../lib/styles.module.css";
 /** Tall enough for a handful of parameters before the table starts scrolling. */
 const TABLE_MAX_HEIGHT = 240;
 
-/** Fits "Enum · 12", the widest type badge. */
+/** Fits "Enum · 12", the widest type badge. Both short columns centre under their headings. */
 const TYPE_COLUMN_WIDTH = 84;
 
-/** Fits the "Indexed" heading, which its checkboxes centre under. */
+/** Fits the "Indexed" heading. */
 const INDEXED_COLUMN_WIDTH = 64;
 
 interface ConfigurationSectionProps {
@@ -179,6 +179,7 @@ function ConfigurationEditor(props: ConfigurationEditorProps): ReactNode {
                             <Table.Th
                                 w={TYPE_COLUMN_WIDTH}
                                 fw={FontWeight.SEMI_BOLD}
+                                ta="center"
                             >
                                 Type
                             </Table.Th>
@@ -297,7 +298,9 @@ function ParameterRow(props: ParameterRowProps): ReactNode {
                 </Text>
             </Table.Td>
             <Table.Td>
-                <ParameterKind parameter={parameter} />
+                <Center>
+                    <ParameterKind parameter={parameter} />
+                </Center>
             </Table.Td>
             <Table.Td>
                 <Center>
