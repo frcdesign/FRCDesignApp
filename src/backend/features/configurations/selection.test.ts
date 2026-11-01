@@ -14,7 +14,6 @@ import {
     findRecord,
     formatValue,
     normalizeSelection,
-    sameConfiguration,
     onshapeOverrides,
     toKey,
     toSelection,
@@ -224,23 +223,6 @@ describe("canonicalValues", () => {
         expect(canonicalValues(select({ length: "5 in" }), parameters)).toEqual(
             canonicalValues(select({ length: "(2 + 3) in" }), parameters)
         );
-    });
-});
-
-describe("sameConfiguration", () => {
-    const same = (a: Record<string, string>, b: Record<string, string>) =>
-        sameConfiguration(select(a), select(b), parameters);
-
-    it("agrees for one value typed two ways", () => {
-        expect(same({ length: "5 in" }, { length: "(2 + 3) in" })).toBe(true);
-    });
-
-    it("agrees for a value left out and its default named", () => {
-        expect(same({}, { size: "s" })).toBe(true);
-    });
-
-    it("tells different values apart", () => {
-        expect(same({ size: "s" }, { size: "l" })).toBe(false);
     });
 });
 

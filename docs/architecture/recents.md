@@ -30,10 +30,11 @@ configuration and are read only by their owner.
 ## Storage
 
 **D1** `recent_inserts`: `id`, `user_id`, `library_id`, `insertable_id`
-(cascade on delete), `selection` (a stored selection, or null for a part with
+(cascade on delete), `selection` (a stored selection, empty for a part with
 nothing to configure), `inserted_at`. The same shape as a favorite: only the
-selection, collapsed by `toSelection`, with nothing derived from it. Indexed on
-user, library and time for the list. At most `MAX_RECENTS` (100) rows per user
+selection, collapsed by `toSelection`, with nothing derived from it. Unique on
+user, insertable and selection: a collapsed selection has one spelling, so that
+is one row per configuration. Indexed on user, library and time for the list. At most `MAX_RECENTS` (100) rows per user
 and library.
 
 **Browser** `uiState.isRecentsOpen`: whether the section is open; it starts open.
@@ -45,12 +46,10 @@ and library.
 1. `POST /api/add-to-part-studio` and `POST /api/add-to-assembly` call
    `recordRecentInsert` once Onshape has added the part. In an assembly that is
    before any fasten, since a failed fasten leaves the part inserted.
-2. `writeRecentInsert` reads the user's rows for that part and finds the one
-   for this configuration with `sameConfiguration`, which also passes over a
-   parameter a condition hides. It updates that row, or adds one, with the
-   selection (`toStoredSelection`) and the time, then deletes the user's rows
-   in that library past the newest `MAX_RECENTS`. The write and the trim are
-   one D1 batch.
+2. `writeRecentInsert` upserts the row for the selection
+   (`toStoredSelection`), moving an existing one to now, then deletes the
+   user's rows in that library past the newest `MAX_RECENTS`. Both are one D1
+   batch.
 3. The write is awaited, so it lands before the response, but its failure is
    logged rather than thrown: the part is already in the user's document.
 4. The insert mutation invalidates the recents query when it settles, so the
@@ -61,9 +60,7 @@ and library.
 `GET /api/recents/library/:libraryId` returns the caller's recents, newest
 first. Like a favorite, each stored selection is made whole against the
 insertable's current parameters, and its configuration key and record are
-derived per response (`resolveStoredSelection`). A row whose configuration is
-already listed (`sameConfiguration`) is left out: a reload that drops a
-parameter, or two inserts at once, can leave two rows for one configuration.
+derived per response (`resolveStoredSelection`).
 
 The frontend shows the section only while signed in, like Favorites. Rows are
 resolved against the library's insertables, so a part the user may not see
@@ -97,8 +94,7 @@ optimistically and refetched on settle.
 - A recent is only ever read or written by its owner: every query filters by the
   caller's user id.
 - A user has at most `MAX_RECENTS` rows per library after any insert.
-- The list shows at most one row per configuration of a part, compared with
-  `sameConfiguration`, never by configuration key.
+- A user has one row per stored selection of a part, enforced by D1.
 - A row stores only the selection, never a key or anything else derived from
   it; the key and record are derived per response.
 - A stored selection never holds a derivation variable.
@@ -108,12 +104,10 @@ optimistically and refetched on settle.
 
 ## Failure and recovery
 
-| Failure                                | Result                                  | Recovery                                                             |
-| -------------------------------------- | --------------------------------------- | -------------------------------------------------------------------- |
-| The recent write fails                 | The insert succeeds; the list misses it | The next insert of that configuration                                |
-| Two rows for one configuration         | One row shown; the other stays stored   | Pushed out by later inserts                                          |
-| The insertable gains a parameter       | Stored selection lacks it               | Defaulted on read                                                    |
-| The insertable loses the stored option | The row names an option that is gone    | The insert menu settles on the default option (`normalizeSelection`) |
+| Failure                              | Result                                                                                                             | Recovery                               |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------ | -------------------------------------- |
+| The recent write fails               | The insert succeeds; the list misses it                                                                            | The next insert of that configuration  |
+| A reload changes a part's parameters | A row may name an option that is gone, or two rows may now open on one configuration; accepted, since this is rare | Pushed out by later inserts, or Remove |
 
 ## Decisions
 
@@ -125,13 +119,16 @@ optimistically and refetched on settle.
 - **One row per configuration.** A part used in two sizes is two things to
   reach for, so each configuration keeps its own row; inserting one again
   moves it up.
-- **Compared on write, not by a column.** A unique column of canonical values
-  would let D1 enforce one row per configuration, but it is derived from the
-  selection, and a reload can make it wrong. Comparing in code keeps the row to
-  the selection alone, as a favorite is; the cost is that two inserts at the
-  same moment can both add a row, which the read folds together.
+- **Unique on the selection.** Collapsing gives a configuration one
+  spelling, so the stored selection is its own identity and D1 enforces one
+  row per configuration in a single upsert. Selections that differ only in a
+  parameter a condition hides are two rows; the insert menu settles hidden
+  parameters to their defaults, so this does not arise from it.
+- **A part's configuration changing is not defended against.** Configurations
+  change rarely, and the cost is a row that opens oddly until it is pushed out
+  or removed, so the read does no reconciling.
 - **Not derived from the analytics log.** Analytics never returns anything about
   one user, and its log is append-only and unbounded; a small table of its own
   keeps the read one indexed query.
 
-_Last reviewed: 2026-10-31_
+_Last reviewed: 2026-11-01_

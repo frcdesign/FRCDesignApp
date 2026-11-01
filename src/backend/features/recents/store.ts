@@ -7,11 +7,7 @@ import {
     type ConfigurationParameter,
     type Selection
 } from "../configurations/contract";
-import {
-    sameConfiguration,
-    toSelection,
-    toStoredSelection
-} from "../configurations/selection";
+import { toStoredSelection } from "../configurations/selection";
 import { MAX_RECENTS } from "./contract";
 
 export interface RecentInsertEvent {
@@ -51,30 +47,7 @@ export async function writeRecentInsert(
     insertedAt: Date
 ): Promise<void> {
     const { libraryId, insertableId, parameters } = event;
-    const inserted = event.selection ?? {};
-    const selection = event.selection
-        ? toStoredSelection(event.selection, parameters)
-        : null;
-
-    // Compared here rather than by a stored column, which a reload would leave stale.
-    const partsRows = await db
-        .select({ id: recentInserts.id, selection: recentInserts.selection })
-        .from(recentInserts)
-        .where(
-            and(
-                ofUserInLibrary(userId, libraryId),
-                eq(recentInserts.insertableId, insertableId)
-            )
-        )
-        .all();
-    const existing = partsRows.find((row) =>
-        sameConfiguration(
-            toSelection(row.selection ?? {}, parameters),
-            inserted,
-            parameters
-        )
-    );
-
+    const selection = toStoredSelection(event.selection ?? {}, parameters);
     const kept = db
         .select({ id: recentInserts.id })
         .from(recentInserts)
@@ -82,18 +55,17 @@ export async function writeRecentInsert(
         .orderBy(desc(recentInserts.insertedAt))
         .limit(MAX_RECENTS);
     await db.batch([
-        existing
-            ? db
-                  .update(recentInserts)
-                  .set({ selection, insertedAt })
-                  .where(eq(recentInserts.id, existing.id))
-            : db.insert(recentInserts).values({
-                  userId,
-                  libraryId,
-                  insertableId,
-                  selection,
-                  insertedAt
-              }),
+        db
+            .insert(recentInserts)
+            .values({ userId, libraryId, insertableId, selection, insertedAt })
+            .onConflictDoUpdate({
+                target: [
+                    recentInserts.userId,
+                    recentInserts.insertableId,
+                    recentInserts.selection
+                ],
+                set: { insertedAt }
+            }),
         db
             .delete(recentInserts)
             .where(

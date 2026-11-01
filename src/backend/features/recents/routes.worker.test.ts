@@ -205,21 +205,6 @@ describe("recents routes", () => {
         ]);
     });
 
-    it("shows one row for configurations a reload made the same", async () => {
-        await seedPartStudio(db);
-        await seedConfiguration(db);
-        await writeConfigured({ boolean: "false" }, 1000);
-        await writeConfigured({ boolean: "true" }, 2000);
-
-        // The parameter that told them apart is gone.
-        await db
-            .update(configurations)
-            .set({ parameters: [] })
-            .where(eq(configurations.insertableId, TEST_PART_STUDIO_ID));
-
-        expect(recentIds(await getRecents())).toEqual([TEST_PART_STUDIO_ID]);
-    });
-
     it(`keeps only the ${MAX_RECENTS} most recent`, async () => {
         await seedPartStudio(db);
         const ids = Array.from(

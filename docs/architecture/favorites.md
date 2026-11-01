@@ -73,11 +73,10 @@ menu offering it, a blue dot marks the ⋯ button and the item
 
 ## Failure and recovery
 
-| Failure                               | Result                                  | Recovery                            |
-| ------------------------------------- | --------------------------------------- | ----------------------------------- |
-| The insertable gains a parameter      | Stored selection lacks it               | Defaulted on read                   |
-| The insertable loses the saved option | `toSelection` falls back to the default | Set the default configuration again |
-| Signed out                            | No Favorites section                    | Sign in from the navbar             |
+| Failure                              | Result                                                                                                     | Recovery                            |
+| ------------------------------------ | ---------------------------------------------------------------------------------------------------------- | ----------------------------------- |
+| A reload changes a part's parameters | A new parameter is defaulted on read; a saved option that is gone opens oddly, accepted since this is rare | Set the default configuration again |
+| Signed out                           | No Favorites section                                                                                       | Sign in from the navbar             |
 
 ## Decisions
 

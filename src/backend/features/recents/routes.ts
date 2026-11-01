@@ -17,7 +17,6 @@ import type { LibraryId } from "../library/library-id";
 import { requireSignInMiddleware } from "../auth/guards";
 import { MAX_RECENTS, type RecentInsert, type RecentsData } from "./contract";
 import { ofUserInLibrary } from "./store";
-import { sameConfiguration } from "../configurations/selection";
 
 export const recentRoutes = getApp();
 
@@ -39,34 +38,20 @@ async function getRecents(
         rows.map((row) => row.insertableId)
     );
 
-    const recents: RecentInsert[] = [];
-    // A reload that drops a parameter, or two inserts at once, can leave two rows for one configuration.
-    for (const row of rows) {
-        const configuration = configurationsById.get(row.insertableId);
-        const parameters = configuration?.parameters ?? [];
-        const resolved = resolveStoredSelection(
-            row.selection ?? undefined,
-            configuration
-        );
-        const shown = recents.some(
-            (recent) =>
-                recent.insertableId === row.insertableId &&
-                sameConfiguration(
-                    recent.selection ?? {},
-                    resolved.selection ?? {},
-                    parameters
-                )
-        );
-        if (shown) {
-            continue;
-        }
-        recents.push({
+    const recents = rows.map(
+        (row): RecentInsert => ({
             id: row.id,
             insertableId: row.insertableId,
-            ...resolved,
+            ...resolveStoredSelection(
+                // An insertable with nothing to configure stores an empty one.
+                Object.keys(row.selection).length > 0
+                    ? row.selection
+                    : undefined,
+                configurationsById.get(row.insertableId)
+            ),
             insertedAt: row.insertedAt.getTime()
-        });
-    }
+        })
+    );
     return { recents };
 }
 

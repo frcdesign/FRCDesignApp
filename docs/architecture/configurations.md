@@ -75,9 +75,8 @@ link reopens it.
   `DEFAULT_CONFIGURATION_KEY` is the empty string.
 
 Comparing or counting values (analytics, "is this the default") goes through
-`canonicalValue` / `canonicalValues`, or `sameConfiguration` to ask whether
-two selections are one configuration. These are computed where they are
-needed, never stored beside the selection they came from.
+`canonicalValue` / `canonicalValues`, computed where they are needed, never
+stored beside the selection they came from.
 `displayedValues` spells a selection for reading: what it applies, enums by
 option name, quantities in their own unit, each marked when at its default.
 

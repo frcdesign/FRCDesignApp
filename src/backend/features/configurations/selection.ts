@@ -125,24 +125,6 @@ export function canonicalValues(
     return values;
 }
 
-/**
- * Whether two selections apply the same values. Unlike {@link sameSelection},
- * a parameter a condition hides, or a derivation variable, makes no difference.
- */
-export function sameConfiguration(
-    a: Selection,
-    b: Selection,
-    parameters: ConfigurationParameter[]
-): boolean {
-    const aValues = canonicalValues(a, parameters);
-    const bValues = canonicalValues(b, parameters);
-    const ids = Object.keys(aValues);
-    return (
-        ids.length === Object.keys(bValues).length &&
-        ids.every((id) => aValues[id] === bValues[id])
-    );
-}
-
 /** Whether a value is the parameter's default, however either is spelled. */
 function isDefault(parameter: ConfigurationParameter, value: string): boolean {
     return (
