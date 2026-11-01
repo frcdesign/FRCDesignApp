@@ -23,9 +23,8 @@ configuration and are read only by their owner.
 | `src/frontend/features/recents/queries.ts`                  | The query, its prefetch, and removing one                      |
 | `src/frontend/features/recents/components/recents-list.tsx` | The **Recently Used** section, under Favorites, and its search |
 | `src/frontend/features/recents/components/recent-card.tsx`  | One row and its menu                                           |
-| `src/frontend/features/recents/rank.ts`                     | `rankRecents`: a search's hits as rows, in its ranking         |
 | `src/frontend/routes/app/library/$libraryId/index.tsx`      | Where the section is stacked                                   |
-| `src/frontend/features/search/search.ts`                    | `doSearch`, narrowed to the recent parts by `insertableIds`    |
+| `src/frontend/features/search/list-search.ts`               | `searchList`: the rows searched by their own part numbers      |
 
 ## Storage
 
@@ -68,15 +67,12 @@ drops out, and narrowed by the vendor filters like the favorites list.
 
 ### Searching
 
-While a search is typed, the section stays, narrowed to the rows whose part
-the query matches, between Favorites and the search results. It searches as
-the favorites list does: `doSearch` over the parts the rows name
-(`insertableIds`), on the part's own name and group only
-(`searchConfigurations: false`), since another configuration's part number must
-not pull up a row. Rows follow the search's ranking (`rankRecents`), as every
-search result does; a part's own rows stay newest first among themselves. The
-matched words in a title are underlined, and the vendor filters then apply per
-row.
+While a search is typed, the section stays, between Favorites and the search
+results, narrowed to the rows the query matches and ranked as every search
+result is. It is searched by `searchList` (see [search.md](./search.md)): each
+row by its part's name and group and by its own configuration's part number,
+so two sizes of a part are found apart by number. Matched words in the title
+and part number are underlined, and the vendor filters then apply per row.
 
 ### Opening and removing
 

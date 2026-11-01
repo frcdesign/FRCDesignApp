@@ -45,10 +45,11 @@ export function FavoriteCard(props: FavoriteCardProps): ReactNode {
         return null;
     }
 
-    // From the favorite's own configuration, so it matches the thumbnail. Only
-    // title underlining comes from the search.
+    // From the favorite's own configuration, so it matches the thumbnail; the
+    // search, which read that configuration, only says where to underline.
     const rowMatch: RowMatch = {
         positions: searchHit?.positions ?? [],
+        partNumberPositions: searchHit?.partNumberPositions,
         partNumber: favorite.record?.partNumber,
         partName: favorite.record?.name,
         url: favorite.record?.url

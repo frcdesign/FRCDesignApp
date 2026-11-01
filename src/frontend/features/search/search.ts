@@ -4,10 +4,7 @@ import MiniSearch, {
 } from "minisearch";
 import { Vendor } from "@backend/features/library/vendors";
 import { type Position } from "../../lib/highlight";
-import {
-    INSERTABLE_FIELDS,
-    SearchDocument
-} from "@backend/features/search/contract";
+import { SearchDocument } from "@backend/features/search/contract";
 import { matchedRecord } from "@backend/features/search/records";
 import {
     nameSpans,
@@ -27,8 +24,6 @@ const MAX_HITS = 50;
 export interface SearchFilters {
     groupId?: string;
     vendors?: Vendor[];
-    /** Only these, for a list searched within itself: favorites, recents. */
-    insertableIds?: Set<string>;
 }
 
 export interface SearchHit {
@@ -63,22 +58,10 @@ export interface SearchArgs {
     filters?: SearchFilters;
     /** @default false */
     showHidden?: boolean;
-    /**
-     * Off for favorites and recents, whose rows each name one configuration:
-     * other configurations' fields would pull them up.
-     * @default true
-     */
-    searchConfigurations?: boolean;
 }
 
 export function doSearch(args: SearchArgs): SearchResult {
-    const {
-        searchDb,
-        query,
-        filters,
-        showHidden,
-        searchConfigurations = true
-    } = args;
+    const { searchDb, query, filters, showHidden } = args;
     const filtered: FilterResult = { byVendor: 0, byGroup: 0 };
 
     const words = queryWords(query ?? "");
@@ -93,7 +76,6 @@ export function doSearch(args: SearchArgs): SearchResult {
         queries: words.map((terms) => ({ combineWith: "OR", queries: terms }))
     };
     const miniSearchResults: MiniSearchResult[] = searchDb.search(expression, {
-        fields: searchConfigurations ? undefined : INSERTABLE_FIELDS,
         filter: (result) => {
             // MiniSearch types stored fields as `any`.
             const searchResult = result as unknown as Omit<
@@ -102,13 +84,6 @@ export function doSearch(args: SearchArgs): SearchResult {
             > &
                 SearchDocument;
             if (!showHidden && !searchResult.isVisible) {
-                return false;
-            }
-
-            if (
-                filters?.insertableIds &&
-                !filters.insertableIds.has(searchResult.id)
-            ) {
                 return false;
             }
 

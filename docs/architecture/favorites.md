@@ -13,7 +13,7 @@ configuration each one opens with. Favorites are per user and per library.
 | `src/backend/features/favorites/routes.ts`                                      | List, add, delete, reorder, and set the saved configuration |
 | `src/backend/features/configurations/stored-selections.ts`                      | Reading a stored selection back, with its key and record    |
 | `src/frontend/features/favorites/queries.ts`                                    | Query and optimistic mutations                              |
-| `src/frontend/features/favorites/components/favorites-list.tsx`                 | The Favorites tab, searchable through the library index     |
+| `src/frontend/features/favorites/components/favorites-list.tsx`                 | The Favorites tab, searched by `searchList` (see search.md) |
 | `src/frontend/features/favorites/components/favorite-button.tsx`                | Toggling a favorite                                         |
 | `src/frontend/features/favorites/components/set-default-configuration-item.tsx` | **Set default configuration**, in the insert menu's ⋯ menu  |
 | `src/frontend/features/favorites/default-configuration.ts`                      | Whether the configuration on screen is the default          |

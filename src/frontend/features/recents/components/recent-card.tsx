@@ -48,10 +48,11 @@ export function RecentCard(props: RecentCardProps): ReactNode {
         return null;
     }
 
-    // From the row's own configuration, so it matches the thumbnail. Only
-    // title underlining comes from the search.
+    // From the row's own configuration, so it matches the thumbnail; the
+    // search, which read that configuration, only says where to underline.
     const rowMatch: RowMatch = {
         positions: searchHit?.positions ?? [],
+        partNumberPositions: searchHit?.partNumberPositions,
         partNumber: recent.record?.partNumber,
         partName: recent.record?.name,
         url: recent.record?.url

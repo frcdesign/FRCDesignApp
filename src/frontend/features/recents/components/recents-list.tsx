@@ -1,8 +1,12 @@
 import { ReactNode } from "react";
 import type { RecentInsert } from "@backend/features/recents/contract";
-import type { Insertables } from "@backend/features/library/contract";
+import type {
+    Insertables,
+    LibraryOut
+} from "@backend/features/library/contract";
 import { filterInsertables } from "../../search/filter";
-import { doSearch, type SearchHit } from "../../search/search";
+import { type SearchHit } from "../../search/search";
+import { searchList } from "../../search/list-search";
 import {
     SectionNotice,
     SectionLoading,
@@ -16,12 +20,10 @@ import {
 import { ItemTable } from "../../../components/item-row";
 import { useUiState } from "../../../lib/ui-state";
 import { useLibraryQuery } from "../../library/queries";
-import { useSearchDbQuery } from "../../search/queries";
 import { useVendorFilters } from "../../settings/vendor-filters";
 import { useRecentsQuery } from "../queries";
 import { RecentCard } from "./recent-card";
 import { RecentIcon } from "./recent-icon";
-import { rankRecents } from "../rank";
 
 /** Only shown signed in. Searched within itself, like the favorites list. */
 export function RecentsList(): ReactNode {
@@ -49,62 +51,46 @@ export function RecentsList(): ReactNode {
 
     if (searchQuery) {
         return (
-            <RecentSearchResults
-                query={searchQuery}
-                recents={recents}
-                insertables={insertables}
+            <RecentCards
+                {...searchRecents(recents, libraryQuery.data, searchQuery)}
             />
         );
     }
     return <RecentCards recents={recents} insertables={insertables} />;
 }
 
-interface RecentSearchResultsProps {
-    query: string;
-    recents: RecentInsert[];
-    insertables: Insertables;
-}
-
-/** The recents whose part the query matches, ranked as the search ranks them. */
-function RecentSearchResults(props: RecentSearchResultsProps): ReactNode {
-    const { query, recents, insertables } = props;
-
-    const searchDbQuery = useSearchDbQuery();
-
-    if (searchDbQuery.isLoading) {
-        return <SectionLoading title="Searching..." />;
-    } else if (searchDbQuery.isError) {
-        return <SectionError title="Failed to load search database." />;
-    } else if (!searchDbQuery.data) {
-        return <SectionError title="The search database is empty." />;
-    }
-
-    const { hits } = doSearch({
-        searchDb: searchDbQuery.data,
-        query,
-        filters: {
-            insertableIds: new Set(recents.map((recent) => recent.insertableId))
-        },
-        // A row is one configuration, so other configurations' fields mustn't match.
-        searchConfigurations: false,
-        // Left to `RecentCards`, which counts what it drops per row.
-        showHidden: true
+/** The recents the query matches, ranked, each by its own configuration's part number. */
+function searchRecents(
+    recents: RecentInsert[],
+    library: LibraryOut,
+    query: string
+): RecentCardsProps {
+    const rows = recents.flatMap((recent) => {
+        const insertable = library.insertables[recent.insertableId];
+        return insertable
+            ? [
+                  {
+                      id: recent.id,
+                      insertable,
+                      groupName: library.groups[insertable.groupId]?.name ?? "",
+                      record: recent.record,
+                      recent
+                  }
+              ]
+            : [];
     });
-    const hitsById = Object.fromEntries(hits.map((hit) => [hit.id, hit]));
-
-    return (
-        <RecentCards
-            recents={rankRecents(recents, hits)}
-            insertables={insertables}
-            hits={hitsById}
-        />
-    );
+    const found = searchList(rows, query);
+    return {
+        recents: found.map(({ row }) => row.recent),
+        insertables: library.insertables,
+        hits: Object.fromEntries(found.map(({ row, hit }) => [row.id, hit]))
+    };
 }
 
 interface RecentCardsProps {
     recents: RecentInsert[];
     insertables: Insertables;
-    /** Where a search matched each part, by insertable id. */
+    /** Where a search matched each row, by recent id. */
     hits?: Record<string, SearchHit>;
 }
 
@@ -147,7 +133,7 @@ function RecentCards(props: RecentCardsProps): ReactNode {
                         key={recent.id}
                         insertable={insertable}
                         recent={recent}
-                        searchHit={hits[insertable.id]}
+                        searchHit={hits[recent.id]}
                     />
                 ))}
             </ItemTable>
