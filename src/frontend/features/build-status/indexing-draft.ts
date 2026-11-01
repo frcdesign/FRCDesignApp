@@ -13,8 +13,8 @@ const useIndexingDrafts = create<Record<string, IndexingDraft>>(() => ({}));
 
 /** What the card shows and saves: the stored settings with the draft laid over them. */
 export interface IndexingView extends IndexingSettings {
-    /** Each flipped switch or parameter; 0 when there is nothing to save. */
-    changeCount: number;
+    /** It differs from what is stored, so there is something to save. */
+    isUnsaved: boolean;
 }
 
 export function useIndexingView(
@@ -30,17 +30,15 @@ function toView(status: IndexingSettings, draft: IndexingDraft): IndexingView {
         draft.indexConfigurations ?? status.indexConfigurations;
     const excludedParameterIds =
         draft.excludedParameterIds ?? status.excludedParameterIds;
-    const changeCount =
-        Number(indexConfigurations !== status.indexConfigurations) +
-        symmetricDifference(excludedParameterIds, status.excludedParameterIds);
-    return { indexConfigurations, excludedParameterIds, changeCount };
+    const isUnsaved =
+        indexConfigurations !== status.indexConfigurations ||
+        !sameIds(excludedParameterIds, status.excludedParameterIds);
+    return { indexConfigurations, excludedParameterIds, isUnsaved };
 }
 
-function symmetricDifference(a: string[], b: string[]): number {
-    return (
-        a.filter((id) => !b.includes(id)).length +
-        b.filter((id) => !a.includes(id)).length
-    );
+/** Order aside, since unchecking and rechecking moves an id to the end. */
+function sameIds(a: string[], b: string[]): boolean {
+    return a.length === b.length && a.every((id) => b.includes(id));
 }
 
 /** Whether there is anything to save, for the dot on the card's badge. */
@@ -57,7 +55,7 @@ export function editIndexingDraft(
     useIndexingDrafts.setState((drafts) => {
         const draft = { ...drafts[insertableId], ...edit };
         const rest = without(drafts, insertableId);
-        return toView(status, draft).changeCount > 0
+        return toView(status, draft).isUnsaved
             ? { ...rest, [insertableId]: draft }
             : rest;
     }, true);

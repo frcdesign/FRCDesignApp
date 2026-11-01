@@ -84,7 +84,7 @@ export function ConfigurationSection(
             actions={
                 <SectionSummary
                     parameterCount={parameters.length}
-                    changeCount={view.changeCount}
+                    isUnsaved={view.isUnsaved}
                 />
             }
         >
@@ -100,16 +100,16 @@ export function ConfigurationSection(
 
 interface SectionSummaryProps {
     parameterCount: number;
-    changeCount: number;
+    isUnsaved: boolean;
 }
 
 /** Unsaved edits show here, so they are noticed with the section closed. */
 function SectionSummary(props: SectionSummaryProps): ReactNode {
-    const { parameterCount, changeCount } = props;
-    if (changeCount > 0) {
+    const { parameterCount, isUnsaved } = props;
+    if (isUnsaved) {
         return (
             <Badge color={StatusColor.WARNING} className={styles.noShrink}>
-                {changeCount} unsaved
+                Unsaved
             </Badge>
         );
     }
@@ -387,7 +387,6 @@ interface SaveButtonsProps {
 function SaveButtons(props: SaveButtonsProps): ReactNode {
     const { insertableId, view } = props;
     const mutation = useIndexingMutation(insertableId);
-    const hasChanges = view.changeCount > 0;
 
     const save = () => {
         mutation.mutate({
@@ -402,7 +401,7 @@ function SaveButtons(props: SaveButtonsProps): ReactNode {
             <Button
                 size="xs"
                 variant="default"
-                disabled={!hasChanges}
+                disabled={!view.isUnsaved}
                 onClick={() => clearIndexingDraft(insertableId)}
             >
                 Discard
@@ -410,7 +409,7 @@ function SaveButtons(props: SaveButtonsProps): ReactNode {
             <Button
                 size="xs"
                 variant="filled"
-                disabled={!hasChanges}
+                disabled={!view.isUnsaved}
                 onClick={save}
             >
                 Save

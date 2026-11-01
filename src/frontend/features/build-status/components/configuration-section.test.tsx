@@ -125,7 +125,7 @@ describe("configuration section", () => {
 
         await userEvent.click(checkbox("finish"));
         await userEvent.click(checkbox("holes"));
-        expect(screen.getByText("2 unsaved")).toBeTruthy();
+        expect(screen.getByText("Unsaved")).toBeTruthy();
 
         await userEvent.click(saveButton());
 
@@ -141,11 +141,11 @@ describe("configuration section", () => {
         expect(saveButton().disabled).toBe(true);
 
         await userEvent.click(checkbox("holes"));
-        expect(screen.getByText("1 unsaved")).toBeTruthy();
+        expect(screen.getByText("Unsaved")).toBeTruthy();
         expect(saveButton().disabled).toBe(false);
         await userEvent.click(checkbox("holes"));
 
-        expect(screen.queryByText("1 unsaved")).toBeNull();
+        expect(screen.queryByText("Unsaved")).toBeNull();
         expect(saveButton().disabled).toBe(true);
     });
 
@@ -175,7 +175,7 @@ describe("configuration section", () => {
             insertableId
         );
 
-        expect(screen.getByText("1 unsaved")).toBeTruthy();
+        expect(screen.getByText("Unsaved")).toBeTruthy();
         expect(checkbox("holes").checked).toBe(false);
     });
 });

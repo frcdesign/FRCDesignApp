@@ -2,8 +2,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { screen } from "@testing-library/react";
 import { renderWithProviders } from "../../../../__test_utils__/render";
 import { DEFAULT_LIBRARY } from "@backend/features/library/library-id";
-import type { InsertableReportOut } from "@backend/features/analytics/contract";
-import { getInsertableReportQuery } from "../../dashboard/dashboard-queries";
+import { getPartsQuery } from "../../dashboard/dashboard-queries";
+import { partUsage } from "../../../../__test_utils__/part-usage-fixtures";
 import { RangePreset, toDayRange } from "../../dashboard/range";
 
 vi.mock("../../../lib/library", () => ({
@@ -13,21 +13,15 @@ vi.mock("../../../lib/library", () => ({
 const { UsageSection } = await import("./usage-section");
 const { updateUiState } = await import("../../../lib/ui-state");
 
-const report: InsertableReportOut = {
-    name: "Gearbox",
-    path: {
-        documentId: "d",
-        instanceType: "v",
-        instanceId: "v",
-        elementId: "e1"
-    },
-    insertCount: 1240,
-    usesPerMonth: 85,
-    uniqueUsers: 310,
-    favorites: 42,
-    targets: { PARTSTUDIO: 1000, ASSEMBLY: 240 },
-    parameters: []
-};
+const parts = [
+    partUsage({ elementId: "other", insertCount: 3 }),
+    partUsage({
+        elementId: "e1",
+        insertCount: 1240,
+        usesPerMonth: 85,
+        favorites: 42
+    })
+];
 
 describe("usage section", () => {
     afterEach(() => updateUiState({ cardSections: {} }));
@@ -37,17 +31,13 @@ describe("usage section", () => {
             <UsageSection elementId="e1" />
         );
         queryClient.setQueryData(
-            getInsertableReportQuery(
-                DEFAULT_LIBRARY,
-                "e1",
-                toDayRange(RangePreset.ALL)
-            ).queryKey,
-            report
+            getPartsQuery(DEFAULT_LIBRARY, toDayRange(RangePreset.ALL))
+                .queryKey,
+            parts
         );
 
         expect(await screen.findByText("1,240")).toBeTruthy();
         expect(screen.getByText("85")).toBeTruthy();
-        expect(screen.getByText("310")).toBeTruthy();
         expect(screen.getByText("42")).toBeTruthy();
     });
 

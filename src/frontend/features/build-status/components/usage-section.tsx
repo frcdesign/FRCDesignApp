@@ -2,7 +2,7 @@ import { SimpleGrid, Stack, Text } from "@mantine/core";
 import { useQuery } from "@tanstack/react-query";
 import { ReactNode } from "react";
 import { LibraryId } from "@backend/features/library/library-id";
-import { getInsertableReportQuery } from "../../dashboard/dashboard-queries";
+import { getPartsQuery } from "../../dashboard/dashboard-queries";
 import { RangePreset, toDayRange } from "../../dashboard/range";
 import { formatCount } from "../../dashboard/format";
 import { useLibraryId } from "../../../lib/library";
@@ -52,24 +52,22 @@ interface UsageStatsProps {
 /** The report ends yesterday, so reopening a card within minutes needn't ask again. */
 const USAGE_STALE_TIME = 5 * 60 * 1000;
 
-/** Fetched only while the section is open, since it unmounts when closed. */
+/**
+ * Read from the library's parts report, fetched once for every card and shared
+ * with the dashboard. Only while the section is open, since it unmounts when closed.
+ */
 function UsageStats(props: UsageStatsProps): ReactNode {
     const { libraryId, elementId } = props;
-    const report = useQuery({
-        ...getInsertableReportQuery(
-            libraryId,
-            elementId,
-            toDayRange(RangePreset.ALL)
-        ),
+    const parts = useQuery({
+        ...getPartsQuery(libraryId, toDayRange(RangePreset.ALL)),
         staleTime: USAGE_STALE_TIME
     });
-    const data = report.data;
+    const part = parts.data?.find((each) => each.path.elementId === elementId);
     return (
-        <SimpleGrid cols={4} spacing="xs">
-            <Stat label="Inserts" value={data?.insertCount} />
-            <Stat label="Per month" value={data?.usesPerMonth} />
-            <Stat label="Users" value={data?.uniqueUsers} />
-            <Stat label="Favorites" value={data?.favorites} />
+        <SimpleGrid cols={3} spacing="xs">
+            <Stat label="Inserts" value={part?.insertCount} />
+            <Stat label="Per month" value={part?.usesPerMonth} />
+            <Stat label="Favorites" value={part?.favorites} />
         </SimpleGrid>
     );
 }
