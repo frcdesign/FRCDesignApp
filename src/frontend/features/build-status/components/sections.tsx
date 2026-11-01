@@ -25,28 +25,37 @@ export function ControlRow(props: ControlRowProps): ReactNode {
     );
 }
 
-interface SwitchRowProps {
-    label: string;
-    description?: string;
+interface RowSwitchProps {
     checked: boolean;
     disabled?: boolean;
     onToggle: () => void;
 }
 
+/** The switch every row in the card draws. */
+export function RowSwitch(props: RowSwitchProps): ReactNode {
+    return (
+        <Switch
+            size="sm"
+            checked={props.checked}
+            disabled={props.disabled}
+            onChange={props.onToggle}
+            withThumbIndicator={false}
+        />
+    );
+}
+
+interface SwitchRowProps extends RowSwitchProps {
+    label: string;
+    description?: string;
+}
+
 export function SwitchRow(props: SwitchRowProps): ReactNode {
+    const { label, description, ...control } = props;
     return (
         <ControlRow
-            label={props.label}
-            description={props.description}
-            control={
-                <Switch
-                    size="sm"
-                    checked={props.checked}
-                    disabled={props.disabled}
-                    onChange={props.onToggle}
-                    withThumbIndicator={false}
-                />
-            }
+            label={label}
+            description={description}
+            control={<RowSwitch {...control} />}
         />
     );
 }

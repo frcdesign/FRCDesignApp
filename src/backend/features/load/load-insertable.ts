@@ -13,6 +13,7 @@ import {
     hasBuildIssue
 } from "../build-checker/issues";
 import { ElementType } from "../../lib/onshape/element-type";
+import type { IndexingSettings } from "../build-checker/contract";
 import type { FastenInfo } from "../library/insertables/fasten";
 import type { ThumbnailUrls } from "../thumbnails/contract";
 import type { Vendor } from "../library/vendors";
@@ -35,7 +36,6 @@ import {
     decideIndexing,
     indexRecords,
     type ConfigurationRecordsResult,
-    type IndexingSettings,
     type ProbeTarget
 } from "./parse-configuration-records";
 import {
@@ -137,12 +137,16 @@ async function probeInsertable(
 
     const vendors = parseVendors(target.name, parameters);
 
+    const found = shouldFindMateConnector(
+        target.elementType,
+        flags.fastenOverride
+    )
+        ? ((await findMateConnectorStep(ctx, target)) ?? undefined)
+        : undefined;
     const fasten = decideFasten(
         target.elementType,
         flags.fastenOverride,
-        shouldFindMateConnector(target.elementType, flags.fastenOverride)
-            ? ((await findMateConnectorStep(ctx, target)) ?? undefined)
-            : undefined
+        found
     );
 
     const parts = await readPartsStep(ctx, target);
@@ -173,7 +177,7 @@ async function probeInsertable(
             hasParts ? [] : parts.buildIssues,
             ...recordsResult.buildIssues,
             ...indexing.buildIssues,
-            ...(fasten.issue ? [{ type: fasten.issue }] : [])
+            ...fasten.buildIssues
         )
     };
 }

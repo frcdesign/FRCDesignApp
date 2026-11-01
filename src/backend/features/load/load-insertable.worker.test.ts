@@ -12,9 +12,14 @@ import {
     TEST_PARAMETERS,
     TEST_PART_STUDIO_ID,
     TEST_PART_STUDIO_PATH,
+    readInsertable,
     resetDb,
     seedGroup
 } from "../../../__test_utils__";
+import {
+    featureList,
+    mateConnectorFeature
+} from "../../../__test_utils__/feature-fixtures";
 import {
     insertableTarget,
     parsedInsertable
@@ -31,14 +36,6 @@ import * as LoadContextModule from "./context";
 import { loadInsertable, saveInsertable } from "./load-insertable";
 
 const db = getDb(env.DB);
-
-function readInsertable() {
-    return db
-        .select()
-        .from(insertables)
-        .where(eq(insertables.id, TEST_PART_STUDIO_ID))
-        .get();
-}
 
 const partMetadata = (partNumber?: string): PartMetadata =>
     configurationRecord({ partNumber });
@@ -59,7 +56,7 @@ describe("saveInsertable", () => {
             parsedInsertable({ isOpenComposite: true })
         );
 
-        expect(await readInsertable()).toMatchObject({
+        expect(await readInsertable(db)).toMatchObject({
             // User-owned flags start off.
             isVisible: false,
             fastenOverride: null,
@@ -97,7 +94,7 @@ describe("saveInsertable", () => {
             parsedInsertable()
         );
 
-        expect(await readInsertable()).toMatchObject({
+        expect(await readInsertable(db)).toMatchObject({
             // Preserved.
             isVisible: true,
             fastenOverride: false,
@@ -198,22 +195,17 @@ describe("loadInsertable", () => {
             small: "small.png",
             large: "large.png"
         });
-        vi.spyOn(PartStudioEndpoints, "getFeatures").mockResolvedValue({
-            features: []
-        });
+        vi.spyOn(PartStudioEndpoints, "getFeatures").mockResolvedValue(
+            featureList()
+        );
     });
 
     function mockFeatures(
-        ...features: { featureId: string; suppressionConfigured?: boolean }[]
+        ...features: ReturnType<typeof mateConnectorFeature>[]
     ) {
-        vi.spyOn(PartStudioEndpoints, "getFeatures").mockResolvedValue({
-            features: features.map((feature) => ({
-                featureType: "mateConnector",
-                name: feature.featureId,
-                suppressed: false,
-                ...feature
-            }))
-        });
+        vi.spyOn(PartStudioEndpoints, "getFeatures").mockResolvedValue(
+            featureList(features)
+        );
     }
 
     function load(insertableId: string) {
@@ -229,20 +221,12 @@ describe("loadInsertable", () => {
         );
     }
 
-    function readRow(insertableId: string) {
-        return db
-            .select()
-            .from(insertables)
-            .where(eq(insertables.id, insertableId))
-            .get();
-    }
-
     it("fastens a part studio at the mate connector it finds", async () => {
-        mockFeatures({ featureId: "mc-1" });
+        mockFeatures(mateConnectorFeature("mc-1"));
 
         await load("ins-mc");
 
-        const row = await readRow("ins-mc");
+        const row = await readInsertable(db, "ins-mc");
         expect(row).toMatchObject({
             supportsFasten: true,
             fastenInfo: {
@@ -257,7 +241,7 @@ describe("loadInsertable", () => {
     });
 
     it("leaves fastening off where an admin turned it off", async () => {
-        mockFeatures({ featureId: "mc-1" });
+        mockFeatures(mateConnectorFeature("mc-1"));
         await load("ins-off");
         await db
             .update(insertables)
@@ -266,18 +250,20 @@ describe("loadInsertable", () => {
 
         await load("ins-off");
 
-        expect(await readRow("ins-off")).toMatchObject({
+        expect(await readInsertable(db, "ins-off")).toMatchObject({
             supportsFasten: false,
             fastenOverride: false
         });
     });
 
     it("flags a mate connector a configuration can suppress", async () => {
-        mockFeatures({ featureId: "mc-1", suppressionConfigured: true });
+        mockFeatures(
+            mateConnectorFeature("mc-1", { suppressionConfigured: true })
+        );
 
         await load("ins-unstable");
 
-        const row = await readRow("ins-unstable");
+        const row = await readInsertable(db, "ins-unstable");
         expect(row?.supportsFasten).toBe(true);
         expect(row?.buildIssues.map((issue) => issue.type)).toContain(
             BuildIssueType.UNSTABLE_MATE_CONNECTOR

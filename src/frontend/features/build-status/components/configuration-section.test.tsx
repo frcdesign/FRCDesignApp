@@ -9,9 +9,8 @@ import {
     paramsWithConfigs,
     stringParam
 } from "../../../../__test_utils__/configuration-fixtures";
-import type { InsertableBuildStatus } from "@backend/features/build-checker/contract";
 import type { ConfigurationParameter } from "@backend/features/configurations/contract";
-import { ElementType } from "@backend/lib/onshape/element-type";
+import { insertableBuildStatus } from "../../../../__test_utils__/build-status-fixtures";
 import { AUTO_INDEX_THRESHOLD } from "@backend/features/configurations/combinations";
 
 const mocks = vi.hoisted(() => ({ applyIndexing: vi.fn() }));
@@ -29,30 +28,6 @@ const { updateUiState } = await import("../../../lib/ui-state");
 
 let nextId = 0;
 
-function statusOf(
-    parameters: ConfigurationParameter[],
-    stored: Partial<InsertableBuildStatus> = {}
-): InsertableBuildStatus {
-    return {
-        buildIssues: [],
-        elementPath: {
-            documentId: "d",
-            instanceType: "v",
-            instanceId: "v",
-            elementId: "e"
-        },
-        elementType: ElementType.PART_STUDIO,
-        isVisible: true,
-        supportsFasten: false,
-        hasMateConnector: false,
-        indexConfigurations: false,
-        excludedParameterIds: [],
-        vendors: [],
-        configuration: { parameters },
-        ...stored
-    };
-}
-
 /** A fresh id unless given one, since drafts outlive a render. */
 function renderSection(
     parameters: ConfigurationParameter[],
@@ -61,8 +36,7 @@ function renderSection(
     const view = renderWithProviders(
         <ConfigurationSection
             insertableId={insertableId}
-            status={statusOf(parameters)}
-            parameters={parameters}
+            status={insertableBuildStatus({ configuration: { parameters } })}
         />
     );
     return { ...view, insertableId };
@@ -157,6 +131,7 @@ describe("configuration section", () => {
 
         expect(mocks.applyIndexing).toHaveBeenCalledOnce();
         expect(mocks.applyIndexing).toHaveBeenCalledWith({
+            indexConfigurations: false,
             excludedParameterIds: ["finish", "holes"]
         });
     });
@@ -181,7 +156,8 @@ describe("configuration section", () => {
         await userEvent.click(saveButton());
 
         expect(mocks.applyIndexing).toHaveBeenCalledWith({
-            indexConfigurations: true
+            indexConfigurations: true,
+            excludedParameterIds: []
         });
     });
 

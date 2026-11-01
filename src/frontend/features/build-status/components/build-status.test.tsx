@@ -3,29 +3,12 @@ import { act } from "@testing-library/react";
 import type { PropsWithChildren } from "react";
 import { renderWithProviders } from "../../../../__test_utils__/render";
 import { boolParam } from "../../../../__test_utils__/configuration-fixtures";
-import type {
-    InsertableBuildStatus,
-    LibraryBuildStatus
-} from "@backend/features/build-checker/contract";
-import { ElementType } from "@backend/lib/onshape/element-type";
+import type { LibraryBuildStatus } from "@backend/features/build-checker/contract";
+import { insertableBuildStatus } from "../../../../__test_utils__/build-status-fixtures";
 
-const status: InsertableBuildStatus = {
-    buildIssues: [],
-    elementPath: {
-        documentId: "d",
-        instanceType: "v",
-        instanceId: "v",
-        elementId: "e"
-    },
-    elementType: ElementType.PART_STUDIO,
-    isVisible: true,
-    supportsFasten: false,
-    hasMateConnector: false,
-    indexConfigurations: false,
-    excludedParameterIds: [],
-    vendors: [],
+const status = insertableBuildStatus({
     configuration: { parameters: [boolParam("holes")] }
-};
+});
 
 const buildStatus: LibraryBuildStatus = {
     groups: {},

@@ -12,6 +12,7 @@ import * as DocumentEndpoints from "../../lib/onshape/endpoints/documents";
 import * as ConfigurationEndpoints from "../../lib/onshape/endpoints/configurations";
 import * as PartsEndpoints from "../../lib/onshape/endpoints/parts";
 import * as PartStudioEndpoints from "../../lib/onshape/endpoints/part-studios";
+import { featureList } from "../../../__test_utils__/feature-fixtures";
 import * as ThumbnailStore from "../thumbnails/store";
 import { getDb } from "../../db/client";
 import { groups, insertables } from "../../db/schema";
@@ -305,9 +306,9 @@ describe("loadGroup", () => {
         // Every part-studio load probes its parts for the open-composite flag,
         // and its features for a mate connector.
         vi.spyOn(PartsEndpoints, "getParts").mockResolvedValue([]);
-        vi.spyOn(PartStudioEndpoints, "getFeatures").mockResolvedValue({
-            features: []
-        });
+        vi.spyOn(PartStudioEndpoints, "getFeatures").mockResolvedValue(
+            featureList()
+        );
     });
 
     afterEach(() => vi.restoreAllMocks());

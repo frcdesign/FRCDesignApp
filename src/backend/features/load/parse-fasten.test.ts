@@ -3,45 +3,29 @@ import { describe, expect, it } from "vitest";
 import { MateLocation } from "../library/insertables/fasten";
 import { ElementType } from "../../lib/onshape/element-type";
 import { BuildIssueType } from "../build-checker/issues";
-import type { OnshapeFeatureListResponse } from "../../lib/onshape/types";
+import {
+    featureList,
+    mateConnectorFeature
+} from "../../../__test_utils__/feature-fixtures";
 import {
     decideFasten,
     findAssemblyMateConnector,
     findPartStudioMateConnector,
-    type MateConnector
+    type MateConnector,
+    toFastenOverride
 } from "./parse-fasten";
 
-function feature(
-    featureId: string,
-    options: {
-        featureType?: string;
-        suppressed?: boolean;
-        suppressionConfigured?: boolean;
-    } = {}
-) {
-    return {
-        featureType: options.featureType ?? "mateConnector",
-        featureId,
-        name: featureId,
-        suppressed: options.suppressed ?? false,
-        suppressionConfigured: options.suppressionConfigured
-    };
-}
-
-function features(
-    list: ReturnType<typeof feature>[],
-    featureStates?: OnshapeFeatureListResponse["featureStates"]
-): OnshapeFeatureListResponse {
-    return { features: list, featureStates };
-}
+/** Any feature that isn't a mate connector. */
+const extrude = (featureId: string) =>
+    mateConnectorFeature(featureId, { featureType: "extrude" });
 
 describe("findPartStudioMateConnector", () => {
     it("finds the first mate connector, at the part studio's root", () => {
         const found = findPartStudioMateConnector(
-            features([
-                feature("extrude", { featureType: "extrude" }),
-                feature("first"),
-                feature("second")
+            featureList([
+                extrude("extrude"),
+                mateConnectorFeature("first"),
+                mateConnectorFeature("second")
             ])
         );
         expect(found).toEqual({
@@ -56,7 +40,10 @@ describe("findPartStudioMateConnector", () => {
 
     it("passes over one suppressed in every configuration", () => {
         const found = findPartStudioMateConnector(
-            features([feature("off", { suppressed: true }), feature("on")])
+            featureList([
+                mateConnectorFeature("off", { suppressed: true }),
+                mateConnectorFeature("on")
+            ])
         );
         expect(found?.fastenInfo.mateConnectorId).toBe("on");
         expect(found?.isUnstable).toBe(false);
@@ -64,20 +51,20 @@ describe("findPartStudioMateConnector", () => {
 
     it("finds nothing when there is no mate connector", () => {
         expect(
-            findPartStudioMateConnector(
-                features([feature("extrude", { featureType: "extrude" })])
-            )
+            findPartStudioMateConnector(featureList([extrude("extrude")]))
         ).toBeUndefined();
         expect(
             findPartStudioMateConnector(
-                features([feature("off", { suppressed: true })])
+                featureList([mateConnectorFeature("off", { suppressed: true })])
             )
         ).toBeUndefined();
     });
 
     it("is unstable when a configuration can suppress it", () => {
         const found = findPartStudioMateConnector(
-            features([feature("first", { suppressionConfigured: true })])
+            featureList([
+                mateConnectorFeature("first", { suppressionConfigured: true })
+            ])
         );
         expect(found?.isUnstable).toBe(true);
     });
@@ -85,12 +72,12 @@ describe("findPartStudioMateConnector", () => {
     // Another configuration would bring it back, and it would come first.
     it("is unstable when one before it is suppressed only by configuration", () => {
         const found = findPartStudioMateConnector(
-            features([
-                feature("earlier", {
+            featureList([
+                mateConnectorFeature("earlier", {
                     suppressed: true,
                     suppressionConfigured: true
                 }),
-                feature("first")
+                mateConnectorFeature("first")
             ])
         );
         expect(found?.fastenInfo.mateConnectorId).toBe("first");
@@ -99,9 +86,9 @@ describe("findPartStudioMateConnector", () => {
 
     it("ignores configured suppression of one after it", () => {
         const found = findPartStudioMateConnector(
-            features([
-                feature("first"),
-                feature("later", { suppressionConfigured: true })
+            featureList([
+                mateConnectorFeature("first"),
+                mateConnectorFeature("later", { suppressionConfigured: true })
             ])
         );
         expect(found?.isUnstable).toBe(false);
@@ -109,7 +96,7 @@ describe("findPartStudioMateConnector", () => {
 
     it("is unstable when it fails to regenerate", () => {
         const found = findPartStudioMateConnector(
-            features([feature("first")], {
+            featureList([mateConnectorFeature("first")], {
                 first: { featureStatus: "ERROR" }
             })
         );
@@ -130,26 +117,32 @@ describe("decideFasten", () => {
     it("fastens a part studio with a mate connector by default", () => {
         expect(
             decideFasten(ElementType.PART_STUDIO, undefined, stable)
-        ).toEqual({ supportsFasten: true, fastenInfo: stable.fastenInfo });
+        ).toEqual({
+            supportsFasten: true,
+            fastenInfo: stable.fastenInfo,
+            buildIssues: []
+        });
     });
 
     it("leaves a part studio without one alone, raising nothing", () => {
         expect(
             decideFasten(ElementType.PART_STUDIO, undefined, undefined)
-        ).toEqual({ supportsFasten: false, fastenInfo: null });
+        ).toEqual({ supportsFasten: false, fastenInfo: null, buildIssues: [] });
     });
 
     it("leaves an assembly off by default", () => {
         expect(decideFasten(ElementType.ASSEMBLY, undefined, stable)).toEqual({
             supportsFasten: false,
-            fastenInfo: stable.fastenInfo
+            fastenInfo: stable.fastenInfo,
+            buildIssues: []
         });
     });
 
     it("keeps the connector it found when an admin turned fastening off", () => {
         expect(decideFasten(ElementType.PART_STUDIO, false, stable)).toEqual({
             supportsFasten: false,
-            fastenInfo: stable.fastenInfo
+            fastenInfo: stable.fastenInfo,
+            buildIssues: []
         });
     });
 
@@ -158,22 +151,49 @@ describe("decideFasten", () => {
             decideFasten(ElementType.PART_STUDIO, undefined, {
                 ...stable,
                 isUnstable: true
-            }).issue
-        ).toBe(BuildIssueType.UNSTABLE_MATE_CONNECTOR);
+            }).buildIssues
+        ).toEqual([{ type: BuildIssueType.UNSTABLE_MATE_CONNECTOR }]);
         expect(
             decideFasten(ElementType.PART_STUDIO, false, {
                 ...stable,
                 isUnstable: true
-            }).issue
-        ).toBeUndefined();
+            }).buildIssues
+        ).toEqual([]);
     });
 
     it("flags fastening turned on with nothing to fasten to", () => {
         expect(decideFasten(ElementType.ASSEMBLY, true, undefined)).toEqual({
             supportsFasten: false,
             fastenInfo: null,
-            issue: BuildIssueType.NO_MATE_CONNECTOR
+            buildIssues: [{ type: BuildIssueType.NO_MATE_CONNECTOR }]
         });
+    });
+});
+
+describe("toFastenOverride", () => {
+    const found: MateConnector = {
+        fastenInfo: {
+            mateConnectorId: "mc",
+            mateLocation: MateLocation.Feature,
+            path: []
+        },
+        isUnstable: false
+    };
+
+    it("stores nothing for the choice detection would make", () => {
+        expect(
+            toFastenOverride(ElementType.PART_STUDIO, true, found)
+        ).toBeUndefined();
+        expect(toFastenOverride(ElementType.ASSEMBLY, false, found)).toBe(
+            undefined
+        );
+    });
+
+    it("stores a choice that goes against detection", () => {
+        expect(toFastenOverride(ElementType.PART_STUDIO, false, found)).toBe(
+            false
+        );
+        expect(toFastenOverride(ElementType.ASSEMBLY, true, found)).toBe(true);
     });
 });
 

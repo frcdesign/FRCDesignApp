@@ -2,7 +2,7 @@ import { Indicator, type IndicatorProps } from "@mantine/core";
 import { ReactNode } from "react";
 import { StatusColor } from "../lib/style-constants";
 
-export interface DotIndicatorProps extends Omit<
+interface DotIndicatorProps extends Omit<
     IndicatorProps,
     "disabled" | "color" | "size"
 > {
@@ -10,7 +10,7 @@ export interface DotIndicatorProps extends Omit<
     shown: boolean;
 }
 
-/** The app's blue dot, on something that wants a second look. */
+/** The app's blue dot, on something that wants a look: a new feature, unsaved edits. */
 export function DotIndicator(props: DotIndicatorProps): ReactNode {
     const { shown, offset = 6, ...others } = props;
     return (

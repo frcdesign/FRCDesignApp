@@ -90,7 +90,7 @@ Comparing or counting values (analytics, "is this the default") goes through
    parameters: enums and booleans without a role, minus
    `excluded_parameter_ids`. Visibility is honored, so a hidden parameter keeps
    its default.
-2. The count sets the band: under `AUTO_INDEX_THRESHOLD` (128) indexes
+2. The count sets the band (`bandOf`): under `AUTO_INDEX_THRESHOLD` (128) indexes
    automatically; at or above it indexes only with `index_configurations`
    (`MANUAL_INDEXING_REQUIRED` otherwise); past
    `MAX_PART_NUMBER_CONFIGURATIONS` (512) never (`CONFIGURATION_LIMIT_EXCEEDED`).
@@ -99,11 +99,14 @@ Comparing or counting values (analytics, "is this the default") goes through
    sent, and stores a record per combination.
 4. In the admin card's Configuration section, unchecking a parameter or flipping
    the indexing switch only edits a draft (`indexing-draft.ts`), recounted as
-   it changes. **Save** sends every edit in one
-   `POST /api/indexing/...`, which re-runs this for the element.
+   it changes. **Save** sends both settings in one `POST /api/indexing/...`,
+   which re-runs this for the element.
 
-The admin card counts with the same functions, so it cannot disagree with the
-load about the band.
+The admin card counts with `countCombinations`, which runs past the cap so it
+can show the true count, and bands that count with the same `bandOf`. Each
+indexed parameter only multiplies the combinations, so the two counts agree
+wherever enumeration doesn't stop, and the card cannot disagree with the load
+about the band.
 
 ### Configuring and inserting
 

@@ -18,7 +18,15 @@ export interface GroupBuildStatus {
     isHeld: boolean;
 }
 
-export interface InsertableBuildStatus {
+/** What an admin decided about indexing an insertable. */
+export interface IndexingSettings {
+    /** Index even past the automatic threshold. */
+    indexConfigurations: boolean;
+    /** Parameters an admin left out of indexing. */
+    excludedParameterIds: string[];
+}
+
+export interface InsertableBuildStatus extends IndexingSettings {
     buildIssues: BuildIssue[];
     /** The version-pinned tab, so an issue can link out to a configuration of it. */
     elementPath: ElementPath;
@@ -30,9 +38,6 @@ export interface InsertableBuildStatus {
     fastenOverride?: boolean;
     /** A mate connector was found, whether or not inserts use it. */
     hasMateConnector: boolean;
-    indexConfigurations: boolean;
-    /** Parameters an admin left out of indexing. */
-    excludedParameterIds: string[];
     vendors: Vendor[];
     configuration?: ConfigurationBuildStatus;
     /** When Onshape cut the version this insertable is pinned to (epoch ms). */

@@ -1,3 +1,4 @@
+import { eq } from "drizzle-orm";
 import { type Db } from "@backend/db/client";
 import {
     configurations,
@@ -157,6 +158,11 @@ export async function seedInsertable(
     };
     await db.insert(insertables).values(values).onConflictDoNothing();
     return values.id;
+}
+
+/** Reads an insertable back, to assert on what a route or load wrote. */
+export function readInsertable(db: Db, id: string = TEST_PART_STUDIO_ID) {
+    return db.select().from(insertables).where(eq(insertables.id, id)).get();
 }
 
 /** Seeds the standard part-studio insertable (ensures library + groups). */

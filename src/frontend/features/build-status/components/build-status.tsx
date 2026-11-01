@@ -20,7 +20,6 @@ import {
     BuildIssue,
     getMaxSeverity
 } from "@backend/features/build-checker/issues";
-import { InsertableBuildStatus } from "@backend/features/build-checker/contract";
 import { ElementType } from "@backend/lib/onshape/element-type";
 import {
     FontWeight,
@@ -162,17 +161,18 @@ function BuildStatusHoverCard({
     );
 }
 
-type CardHeaderProps = BuildStatusSubject;
-
-const ELEMENT_TYPE_LABEL: Record<ElementType, string> = {
-    [ElementType.PART_STUDIO]: "Part studio",
-    [ElementType.ASSEMBLY]: "Assembly"
-};
+interface CardHeaderProps {
+    name: string;
+    groupId: string;
+    issues: BuildIssue[];
+    versionCreatedAt?: number;
+    elementType?: ElementType;
+}
 
 /** Onshape's own tab icons, which its users already know the two by. */
-const ELEMENT_TYPE_ICON: Record<ElementType, string> = {
-    [ElementType.PART_STUDIO]: partStudioIcon,
-    [ElementType.ASSEMBLY]: assemblyIcon
+const ELEMENT_TYPES: Record<ElementType, { label: string; icon: string }> = {
+    [ElementType.PART_STUDIO]: { label: "Part studio", icon: partStudioIcon },
+    [ElementType.ASSEMBLY]: { label: "Assembly", icon: assemblyIcon }
 };
 
 /** What it is and its name above, the severity summary below. */
@@ -211,9 +211,9 @@ interface ElementTypeIconProps {
 function ElementTypeIcon(props: ElementTypeIconProps): ReactNode {
     const { elementType } = props;
     return (
-        <Tooltip label={ELEMENT_TYPE_LABEL[elementType]}>
+        <Tooltip label={ELEMENT_TYPES[elementType].label}>
             <Image
-                src={ELEMENT_TYPE_ICON[elementType]}
+                src={ELEMENT_TYPES[elementType].icon}
                 w={IconSize.SMALL}
                 h={IconSize.SMALL}
                 className={styles.noShrink}
@@ -267,26 +267,9 @@ export function InsertableStatusBadge(
 ): ReactNode {
     const { insertableId, groupId, name } = props;
     const { data } = useBuildStatusQuery();
+    const hasUnsavedEdits = useHasIndexingDraft(insertableId);
     const insertable = data?.insertables[insertableId];
     if (!insertable) return null;
-    return (
-        <InsertableBadge
-            insertableId={insertableId}
-            groupId={groupId}
-            name={name}
-            status={insertable}
-        />
-    );
-}
-
-interface InsertableBadgeProps extends InsertableStatusBadgeProps {
-    status: InsertableBuildStatus;
-}
-
-function InsertableBadge(props: InsertableBadgeProps): ReactNode {
-    const { insertableId, groupId, name, status: insertable } = props;
-    const hasUnsavedEdits = useHasIndexingDraft(insertableId);
-    const parameters = insertable.configuration?.parameters ?? [];
     return (
         <BuildStatusBadge
             hasUnsavedEdits={hasUnsavedEdits}
@@ -299,7 +282,7 @@ function InsertableBadge(props: InsertableBadgeProps): ReactNode {
             configurationTarget={
                 insertable.configuration && {
                     elementPath: insertable.elementPath,
-                    parameters
+                    parameters: insertable.configuration.parameters
                 }
             }
             sections={
@@ -310,13 +293,10 @@ function InsertableBadge(props: InsertableBadgeProps): ReactNode {
                             status={insertable}
                         />
                     </CardSection>
-                    {parameters.length > 0 && (
-                        <ConfigurationSection
-                            insertableId={insertableId}
-                            status={insertable}
-                            parameters={parameters}
-                        />
-                    )}
+                    <ConfigurationSection
+                        insertableId={insertableId}
+                        status={insertable}
+                    />
                     <UsageSection
                         elementId={insertable.elementPath.elementId}
                     />

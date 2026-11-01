@@ -100,16 +100,20 @@ export function AppSection(props: AppSectionProps): ReactNode {
 interface SectionChevronProps {
     opened: boolean;
     onToggle: () => void;
+    /** Smaller inside a popover. @default "md" */
+    size?: "sm" | "md";
 }
 
+const CHEVRON_ICON_SIZE = { sm: IconSize.SMALL, md: IconSize.MEDIUM };
+
 /** Mantine's chevron is hidden, so this one lands at the end of the row. */
-function SectionChevron(props: SectionChevronProps): ReactNode {
-    const { opened, onToggle } = props;
+export function SectionChevron(props: SectionChevronProps): ReactNode {
+    const { opened, onToggle, size = "md" } = props;
 
     return (
-        <ActionIcon className={styles.noShrink} onClick={onToggle}>
+        <ActionIcon size={size} className={styles.noShrink} onClick={onToggle}>
             <CaretDownIcon
-                size={IconSize.MEDIUM}
+                size={CHEVRON_ICON_SIZE[size]}
                 style={{
                     transform: opened ? "rotate(180deg)" : undefined,
                     transition: "transform 200ms ease"

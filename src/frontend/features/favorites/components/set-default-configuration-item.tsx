@@ -4,7 +4,7 @@ import { type ReactNode } from "react";
 import type { Favorite } from "@backend/features/favorites/contract";
 import { Hint } from "@backend/features/hints/contract";
 import type { SelectionReport } from "../../insert/components/configurations";
-import { NewIndicator } from "../../../components/new-feature";
+import { DotIndicator } from "../../../components/dot-indicator";
 import { useHasSeenHint } from "../../hints/queries";
 import { useSetDefaultConfigurationMutation } from "../queries";
 import { isDefaultConfiguration } from "../default-configuration";
@@ -25,10 +25,10 @@ export function SetDefaultConfigurationItem(
     return (
         <Menu.Item
             leftSection={
-                <NewIndicator shown={!hasOpened} offset={-1}>
+                <DotIndicator shown={!hasOpened} offset={-1}>
                     {/* Inline, it sits on a line of text above the label's center */}
                     <FloppyDiskIcon style={{ display: "block" }} />
-                </NewIndicator>
+                </DotIndicator>
             }
             disabled={isDefaultConfiguration(favorite, report)}
             onClick={() =>

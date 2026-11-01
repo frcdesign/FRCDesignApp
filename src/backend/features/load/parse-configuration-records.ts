@@ -1,4 +1,5 @@
 /** Every probe is kept: search dedupes, and build checks read the duplicates. */
+import type { IndexingSettings } from "../build-checker/contract";
 import { OnshapeApi } from "../../lib/onshape/client";
 import { parseRecordVendor } from "./parse-vendors";
 import { ElementPath } from "../../lib/onshape/path";
@@ -65,13 +66,6 @@ interface IndexingDecision {
     buildIssues: BuildIssue[];
     /** The combinations to probe, already enumerated by the count. */
     configurations: PartialSelection[];
-}
-
-/** What an admin decided about indexing an insertable. */
-export interface IndexingSettings {
-    /** Index even past the automatic threshold. */
-    indexConfigurations: boolean;
-    excludedParameterIds: string[];
 }
 
 /** Past the hard cap forcing it on cannot help, since enumeration stops there. */

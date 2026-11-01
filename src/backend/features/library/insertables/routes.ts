@@ -29,10 +29,10 @@ import {
     INDEXING_ISSUE_TYPES,
     NO_RECORDS,
     decideIndexing,
-    type IndexingSettings,
     parseConfigurationRecords
 } from "../../load/parse-configuration-records";
 import { ElementType } from "../../../lib/onshape/element-type";
+import type { IndexingSettings } from "../../build-checker/contract";
 import { InsertSource } from "../../analytics/usage";
 import { trackInsert } from "../../analytics/tracking";
 import { DerivedFeature } from "../../../lib/onshape/objects/derive-feature";
@@ -49,11 +49,13 @@ import {
     decideFasten,
     FASTEN_ISSUE_TYPES,
     findMateConnector,
-    shouldFindMateConnector
+    type MateConnector,
+    shouldFindMateConnector,
+    toFastenOverride
 } from "../../load/parse-fasten";
 import { getFastenQuery } from "./fasten-query";
 import { getInsertLocationTransform } from "../../insert-location/parse";
-import { addBuildIssue, clearBuildIssue } from "../../build-checker/issues";
+import { replaceBuildIssues } from "../../build-checker/issues";
 
 export const insertableRoutes = getApp();
 
@@ -67,18 +69,13 @@ function inLibrary(libraryId: LibraryId, insertableId: string) {
 
 const setFastenBody = z.object({ supportsFasten: z.boolean() });
 
-/** Either or both, so an admin's edits land in one reindex. */
+/** Both settings, so an admin's edits land in one reindex. */
 const indexingBody = z.object({
-    indexConfigurations: z.boolean().optional(),
-    excludedParameterIds: z.array(z.string()).optional()
-});
+    indexConfigurations: z.boolean(),
+    excludedParameterIds: z.array(z.string())
+}) satisfies z.ZodType<IndexingSettings>;
 
-/**
- * POST /api/toggle-insert-and-fasten/library/:libraryId/insertable/:insertableId
- *
- * Keeps an override only where it differs from what detection decides, so a
- * part studio switched back to its default follows its mate connectors again.
- */
+/** POST /api/toggle-insert-and-fasten/library/:libraryId/insertable/:insertableId */
 insertableRoutes.post(
     "/toggle-insert-and-fasten" + libraryRoute() + insertableRoute(),
     requireEditorMiddleware,
@@ -97,6 +94,7 @@ insertableRoutes.post(
                 versionId: insertables.versionId,
                 elementId: insertables.elementId,
                 elementType: insertables.elementType,
+                fastenInfo: insertables.fastenInfo,
                 buildIssues: insertables.buildIssues
             })
             .from(insertables)
@@ -105,13 +103,22 @@ insertableRoutes.post(
         if (!row)
             throw internalError("Insertable not found", HttpStatus.NOT_FOUND);
 
-        const found = shouldFindMateConnector(row.elementType, supportsFasten)
-            ? await findMateConnector(
-                  await c.var.getOnshapeApi(),
-                  toElementPath(row),
-                  row.elementType
-              )
-            : undefined;
+        // Turning off raises nothing, so a part studio's stored connector stands
+        // in for asking Onshape again; turning on checks it is still stable.
+        let found: MateConnector | undefined;
+        if (!shouldFindMateConnector(row.elementType, supportsFasten)) {
+            found = undefined;
+        } else if (supportsFasten) {
+            found = await findMateConnector(
+                await c.var.getOnshapeApi(),
+                toElementPath(row),
+                row.elementType
+            );
+        } else {
+            found = row.fastenInfo
+                ? { fastenInfo: row.fastenInfo, isUnstable: false }
+                : undefined;
+        }
         if (supportsFasten && !found) {
             throw handledError(
                 `${row.name} has no mate connector to fasten to.`,
@@ -119,11 +126,11 @@ insertableRoutes.post(
             );
         }
 
-        const automatic = decideFasten(row.elementType, undefined, found);
-        const fastenOverride =
-            supportsFasten === automatic.supportsFasten
-                ? undefined
-                : supportsFasten;
+        const fastenOverride = toFastenOverride(
+            row.elementType,
+            supportsFasten,
+            found
+        );
         const fasten = decideFasten(row.elementType, fastenOverride, found);
 
         await db
@@ -132,9 +139,10 @@ insertableRoutes.post(
                 fastenOverride: fastenOverride ?? null,
                 supportsFasten: fasten.supportsFasten,
                 fastenInfo: fasten.fastenInfo,
-                buildIssues: addBuildIssue(
-                    clearBuildIssue(row.buildIssues, ...FASTEN_ISSUE_TYPES),
-                    ...(fasten.issue ? [{ type: fasten.issue }] : [])
+                buildIssues: replaceBuildIssues(
+                    row.buildIssues,
+                    FASTEN_ISSUE_TYPES,
+                    fasten.buildIssues
                 )
             })
             .where(eq(insertables.id, insertableId));
@@ -165,7 +173,7 @@ async function reindex(
     c: AppContext,
     libraryId: LibraryId,
     insertableId: string,
-    change: Partial<IndexingSettings>
+    settings: IndexingSettings
 ): Promise<void> {
     const db = getDb(c.env.DB);
     const row = await db
@@ -176,8 +184,6 @@ async function reindex(
             elementType: insertables.elementType,
             isOpenComposite: insertables.isOpenComposite,
             buildIssues: insertables.buildIssues,
-            indexConfigurations: insertables.indexConfigurations,
-            excludedParameterIds: insertables.excludedParameterIds,
             parameters: configurations.parameters
         })
         .from(insertables)
@@ -191,12 +197,6 @@ async function reindex(
         throw internalError("Insertable not found", HttpStatus.NOT_FOUND);
     }
     const parameters = row.parameters ?? [];
-    const settings: IndexingSettings = {
-        indexConfigurations:
-            change.indexConfigurations ?? row.indexConfigurations,
-        excludedParameterIds:
-            change.excludedParameterIds ?? row.excludedParameterIds
-    };
     const indexing = decideIndexing(parameters, settings);
     const indexed = indexing.shouldIndex
         ? await parseConfigurationRecords(
@@ -211,11 +211,10 @@ async function reindex(
           )
         : NO_RECORDS;
 
-    // Cleared first, so an issue the reindex resolved doesn't stick around.
-    const buildIssues = addBuildIssue(
-        clearBuildIssue(row.buildIssues, ...INDEXING_ISSUE_TYPES),
-        ...indexed.buildIssues,
-        ...indexing.buildIssues
+    const buildIssues = replaceBuildIssues(
+        row.buildIssues,
+        INDEXING_ISSUE_TYPES,
+        [...indexed.buildIssues, ...indexing.buildIssues]
     );
 
     const writes: BatchItem<"sqlite">[] = [
@@ -466,9 +465,6 @@ insertableRoutes.post(
                 fasten
             });
 
-        const occurrences =
-            result.insertInstanceResponses?.[0]?.occurrences ?? [];
-
         if (!body.fasten) {
             await track(false);
             return c.json({} satisfies InsertOut);
@@ -483,7 +479,8 @@ insertableRoutes.post(
             );
         }
 
-        const instancePath: string[] = occurrences[0]?.path ?? [];
+        const instancePath: string[] =
+            result.insertInstanceResponses?.[0]?.occurrences?.[0]?.path ?? [];
 
         const mate = fastenMate(row.name, [
             getFastenQuery(row.elementType, instancePath, fastenInfo)

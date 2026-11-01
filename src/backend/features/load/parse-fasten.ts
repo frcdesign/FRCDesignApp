@@ -3,7 +3,7 @@ import { FastenInfo, MateLocation } from "../library/insertables/fasten";
 import { type ElementPath } from "../../lib/onshape/path";
 import { getAssembly } from "../../lib/onshape/endpoints/assemblies";
 import { getFeatures } from "../../lib/onshape/endpoints/part-studios";
-import { BuildIssueType } from "../build-checker/issues";
+import { type BuildIssue, BuildIssueType } from "../build-checker/issues";
 
 import { OnshapeApi } from "../../lib/onshape/client";
 import {
@@ -19,17 +19,15 @@ export interface MateConnector {
     isUnstable: boolean;
 }
 
-/** What the load stores about fastening, and the issue it raises, if any. */
+/** What the load stores about fastening, and the issues it raises. */
 export interface FastenResult {
     supportsFasten: boolean;
     /** The connector found, kept even when fastening is off so the card can offer it. */
     fastenInfo: FastenInfo | null;
-    issue?:
-        | BuildIssueType.NO_MATE_CONNECTOR
-        | BuildIssueType.UNSTABLE_MATE_CONNECTOR;
+    buildIssues: BuildIssue[];
 }
 
-/** Cleared before a fasten decision is merged in, so a fixed one doesn't stick. */
+/** The types a fasten decision raises, which `replaceBuildIssues` clears first. */
 export const FASTEN_ISSUE_TYPES = [
     BuildIssueType.NO_MATE_CONNECTOR,
     BuildIssueType.UNSTABLE_MATE_CONNECTOR
@@ -44,7 +42,12 @@ export function shouldFindMateConnector(
     elementType: ElementType,
     fastenOverride: boolean | undefined
 ): boolean {
-    return elementType === ElementType.PART_STUDIO || fastenOverride === true;
+    return fastensByDefault(elementType) || fastenOverride === true;
+}
+
+/** Left to itself, a part studio with a connector fastens and an assembly doesn't. */
+function fastensByDefault(elementType: ElementType): boolean {
+    return elementType === ElementType.PART_STUDIO;
 }
 
 export async function findMateConnector(
@@ -73,27 +76,42 @@ export function decideFasten(
     found: MateConnector | undefined
 ): FastenResult {
     const fastenInfo = found?.fastenInfo ?? null;
-    const wanted = fastenOverride ?? elementType === ElementType.PART_STUDIO;
+    const wanted = fastenOverride ?? fastensByDefault(elementType);
     if (!wanted) {
-        return { supportsFasten: false, fastenInfo };
+        return { supportsFasten: false, fastenInfo, buildIssues: [] };
     }
     if (!found) {
         return {
             supportsFasten: false,
             fastenInfo,
-            issue:
+            buildIssues:
                 fastenOverride === true
-                    ? BuildIssueType.NO_MATE_CONNECTOR
-                    : undefined
+                    ? [{ type: BuildIssueType.NO_MATE_CONNECTOR }]
+                    : []
         };
     }
     return {
         supportsFasten: true,
         fastenInfo,
-        issue: found.isUnstable
-            ? BuildIssueType.UNSTABLE_MATE_CONNECTOR
-            : undefined
+        buildIssues: found.isUnstable
+            ? [{ type: BuildIssueType.UNSTABLE_MATE_CONNECTOR }]
+            : []
     };
+}
+
+/**
+ * The override to store for what an admin switched to: none where it matches
+ * what detection decides, so a part studio switched back follows its connectors.
+ */
+export function toFastenOverride(
+    elementType: ElementType,
+    supportsFasten: boolean,
+    found: MateConnector | undefined
+): boolean | undefined {
+    const automatic = decideFasten(elementType, undefined, found);
+    return supportsFasten === automatic.supportsFasten
+        ? undefined
+        : supportsFasten;
 }
 
 /**

@@ -39,26 +39,30 @@ export function UsageSection(props: UsageSectionProps): ReactNode {
                 </AppLink>
             }
         >
-            <UsageStats elementId={elementId} />
+            <UsageStats libraryId={libraryId} elementId={elementId} />
         </CardSection>
     );
 }
 
 interface UsageStatsProps {
+    libraryId: LibraryId;
     elementId: string;
 }
 
+/** The report ends yesterday, so reopening a card within minutes needn't ask again. */
+const USAGE_STALE_TIME = 5 * 60 * 1000;
+
 /** Fetched only while the section is open, since it unmounts when closed. */
 function UsageStats(props: UsageStatsProps): ReactNode {
-    const { elementId } = props;
-    const libraryId = useLibraryId();
-    const report = useQuery(
-        getInsertableReportQuery(
+    const { libraryId, elementId } = props;
+    const report = useQuery({
+        ...getInsertableReportQuery(
             libraryId,
             elementId,
             toDayRange(RangePreset.ALL)
-        )
-    );
+        ),
+        staleTime: USAGE_STALE_TIME
+    });
     const data = report.data;
     return (
         <SimpleGrid cols={4} spacing="xs">

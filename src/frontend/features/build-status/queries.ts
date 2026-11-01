@@ -1,5 +1,6 @@
 import {
     keepPreviousData,
+    type QueryKey,
     queryOptions,
     useMutation,
     useQuery
@@ -16,7 +17,11 @@ import { getAppErrorHandler } from "../../lib/errors";
 import { patchQuery } from "../../lib/query-cache";
 import { useRefreshLibrary } from "../../lib/refresh";
 import { toInsertablePath, toLibraryPath } from "../../lib/api-paths";
-import { type LibraryBuildStatus } from "@backend/features/build-checker/contract";
+import type {
+    IndexingSettings,
+    InsertableBuildStatus,
+    LibraryBuildStatus
+} from "@backend/features/build-checker/contract";
 import { LibraryId } from "@backend/features/library/library-id";
 import { useLibraryId } from "../../lib/library";
 import { useCacheVersion } from "../library/queries";
@@ -43,6 +48,25 @@ function useBuildStatusKey() {
     return buildStatusQueryKey(libraryId, cacheVersion);
 }
 
+/** Patches one insertable in place; the refresh that settles each mutation is the undo. */
+function patchInsertable(
+    key: QueryKey,
+    insertableId: string,
+    recipe: (insertable: InsertableBuildStatus) => void
+): Promise<void> {
+    return patchQuery<LibraryBuildStatus>(key, (status) => {
+        const insertable = status.insertables[insertableId];
+        if (insertable) recipe(insertable);
+    });
+}
+
+/** Every build-status mutation's `onSettled`: refetch, dropping the patch if it failed. */
+function useSettleBuildStatus() {
+    const refreshLibrary = useRefreshLibrary();
+    return (_result: unknown, error: Error | null) =>
+        refreshLibrary({ discardPatches: error !== null });
+}
+
 export function useBuildStatusQuery() {
     const libraryId = useLibraryId();
     const cacheVersion = useCacheVersion();
@@ -61,8 +85,8 @@ export function useSetVisibilityMutation(
     isVisible: boolean
 ) {
     const libraryId = useLibraryId();
-    const refreshLibrary = useRefreshLibrary();
     const key = useBuildStatusKey();
+    const settle = useSettleBuildStatus();
 
     const mutation = useMutation({
         mutationKey: ["set-insertable-visibility", ...insertableIds],
@@ -99,8 +123,7 @@ export function useSetVisibilityMutation(
             "Unexpectedly failed to modify visibility.",
             "set-visibility"
         ),
-        onSettled: (_result, error) =>
-            refreshLibrary({ discardPatches: error !== null })
+        onSettled: settle
     });
 
     const mutate = useCallback(() => {
@@ -125,7 +148,7 @@ export function useSetVisibilityMutation(
 export function useToggleInsertAndFastenMutation(insertableId: string) {
     const libraryId = useLibraryId();
     const key = useBuildStatusKey();
-    const refreshLibrary = useRefreshLibrary();
+    const settle = useSettleBuildStatus();
     const toastId = `insert-and-fasten-${insertableId}`;
     return useMutation({
         mutationKey: ["toggle-insert-and-fasten", insertableId],
@@ -143,9 +166,8 @@ export function useToggleInsertAndFastenMutation(insertableId: string) {
                     : "Disabling insert and fasten...",
                 toastId
             );
-            return patchQuery<LibraryBuildStatus>(key, (status) => {
-                const insertable = status.insertables[insertableId];
-                if (insertable) insertable.supportsFasten = supportsFasten;
+            return patchInsertable(key, insertableId, (insertable) => {
+                insertable.supportsFasten = supportsFasten;
             });
         },
         onSuccess: (_result, supportsFasten) =>
@@ -159,42 +181,29 @@ export function useToggleInsertAndFastenMutation(insertableId: string) {
             "Unexpectedly failed to update insert and fasten.",
             toastId
         ),
-        onSettled: (_result, error) =>
-            refreshLibrary({ discardPatches: error !== null })
+        onSettled: settle
     });
 }
 
-/** What an admin changed about indexing; a field left out keeps what is stored. */
-export interface IndexingChange {
-    indexConfigurations?: boolean;
-    excludedParameterIds?: string[];
-}
-
-/** Every change lands in one reindex, so the toast reports it before Onshape answers. */
+/** Every edit lands in one reindex, so the toast reports it before Onshape answers. */
 export function useIndexingMutation(insertableId: string) {
     const libraryId = useLibraryId();
     const key = useBuildStatusKey();
-    const refreshLibrary = useRefreshLibrary();
+    const settle = useSettleBuildStatus();
     const toastId = `indexing-${insertableId}`;
     return useMutation({
         mutationKey: ["indexing", insertableId],
-        mutationFn: (change: IndexingChange) =>
+        mutationFn: (settings: IndexingSettings) =>
             apiPost(
                 "/indexing" +
                     toLibraryPath(libraryId) +
                     toInsertablePath(insertableId),
-                { body: change }
+                { body: settings }
             ),
-        onMutate: (change) => {
+        onMutate: (settings) => {
             showInfoToast("Reindexing...", { id: toastId });
-            return patchQuery<LibraryBuildStatus>(key, (status) => {
-                const insertable = status.insertables[insertableId];
-                if (!insertable) return;
-                if (change.indexConfigurations !== undefined)
-                    insertable.indexConfigurations = change.indexConfigurations;
-                if (change.excludedParameterIds !== undefined)
-                    insertable.excludedParameterIds =
-                        change.excludedParameterIds;
+            return patchInsertable(key, insertableId, (insertable) => {
+                Object.assign(insertable, settings);
             });
         },
         onSuccess: () => showSuccessToast("Reindexed.", toastId),
@@ -202,8 +211,7 @@ export function useIndexingMutation(insertableId: string) {
             "Unexpectedly failed to update indexing.",
             toastId
         ),
-        onSettled: (_result, error) =>
-            refreshLibrary({ discardPatches: error !== null })
+        onSettled: settle
     });
 }
 
@@ -211,7 +219,7 @@ export function useIndexingMutation(insertableId: string) {
 export function useToggleSortOrderMutation(groupId: string) {
     const libraryId = useLibraryId();
     const key = useBuildStatusKey();
-    const refreshLibrary = useRefreshLibrary();
+    const settle = useSettleBuildStatus();
     return useMutation({
         mutationKey: ["sort-group-alphabetically", groupId],
         mutationFn: (sortAlphabetically: boolean) =>
@@ -226,7 +234,6 @@ export function useToggleSortOrderMutation(groupId: string) {
         onError: getAppErrorHandler(
             "Unexpectedly failed to update sort order."
         ),
-        onSettled: (_result, error) =>
-            refreshLibrary({ discardPatches: error !== null })
+        onSettled: settle
     });
 }

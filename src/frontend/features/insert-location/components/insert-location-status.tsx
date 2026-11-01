@@ -7,7 +7,8 @@ import { BadgedIcon } from "../../../components/badged-icon";
 import { StatusIcon } from "../../../components/status-icon";
 import { Status } from "../../../lib/status";
 import { AppHoverCard } from "../../../components/app-hover-card";
-import { NewBadge, NewIndicator } from "../../../components/new-feature";
+import { NewBadge } from "../../../components/new-feature";
+import { DotIndicator } from "../../../components/dot-indicator";
 import { Hint } from "@backend/features/hints/contract";
 import { useHasSeenHint, useMarkHintSeen } from "../../hints/queries";
 import {
@@ -59,9 +60,9 @@ function InsertLocationHoverCard(
             onClose={markOpened}
             target={
                 <Center my="auto">
-                    <NewIndicator shown={isNew} offset={2}>
+                    <DotIndicator shown={isNew} offset={2}>
                         <BadgedIcon icon={TargetIcon} status={status} />
-                    </NewIndicator>
+                    </DotIndicator>
                 </Center>
             }
         >

@@ -213,6 +213,15 @@ export function clearBuildIssue(
     return issues.filter((issue) => !types.includes(issue.type));
 }
 
+/** Clears `types` first, so an issue the new check no longer finds doesn't stick. */
+export function replaceBuildIssues(
+    issues: BuildIssue[],
+    types: BuildIssueType[],
+    newIssues: BuildIssue[]
+): BuildIssue[] {
+    return addBuildIssue(clearBuildIssue(issues, ...types), ...newIssues);
+}
+
 /** Worst-to-best ordering. Higher index = more severe. */
 const SEVERITY_ORDER: BuildIssueSeverity[] = [
     BuildIssueSeverity.INFO,

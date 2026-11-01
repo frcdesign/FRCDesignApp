@@ -6,7 +6,6 @@ import {
     Group,
     ScrollArea,
     Stack,
-    Switch,
     Table,
     Text,
     Tooltip
@@ -20,8 +19,8 @@ import {
 } from "@backend/features/configurations/contract";
 import {
     AUTO_INDEX_THRESHOLD,
+    bandOf,
     countCombinations,
-    countConfigurations,
     IndexingBand,
     isIndexedParameter,
     MAX_COUNTED_CONFIGURATIONS,
@@ -43,7 +42,8 @@ import {
     type IndexingView,
     useIndexingView
 } from "../indexing-draft";
-import { ControlRow } from "./sections";
+import { ControlRow, RowSwitch } from "./sections";
+import { plural } from "../../../lib/plural";
 import { IssueIcon } from "./issues";
 import { CardSection } from "./card-section";
 import { CardSectionId } from "../card-section-id";
@@ -62,22 +62,25 @@ const INDEXED_COLUMN_WIDTH = 64;
 interface ConfigurationSectionProps {
     insertableId: string;
     status: InsertableBuildStatus;
-    parameters: ConfigurationParameter[];
 }
 
 /**
  * Every parameter, with whether search indexes it. Edits collect as a draft
- * and save in one reindex.
+ * and save in one reindex. None for an element with no parameters.
  */
 export function ConfigurationSection(
     props: ConfigurationSectionProps
 ): ReactNode {
-    const { insertableId, status, parameters } = props;
+    const { insertableId, status } = props;
     const view = useIndexingView(insertableId, status);
+    const parameters = status.configuration?.parameters ?? [];
+    if (parameters.length === 0) return null;
     return (
         <CardSection
             id={CardSectionId.CONFIGURATION}
             title="Configuration"
+            // Long, and wanted less often than the rest.
+            defaultOpened={false}
             actions={
                 <SectionSummary
                     parameterCount={parameters.length}
@@ -112,14 +115,13 @@ function SectionSummary(props: SectionSummaryProps): ReactNode {
     }
     return (
         <Text size="xs" c={StatusColor.DIMMED} className={styles.noShrink}>
-            {parameterCount === 1
-                ? "1 parameter"
-                : `${parameterCount} parameters`}
+            {plural(parameterCount, "parameter")}
         </Text>
     );
 }
 
 interface ConfigurationEditorProps extends ConfigurationSectionProps {
+    parameters: ConfigurationParameter[];
     view: IndexingView;
 }
 
@@ -127,15 +129,12 @@ function ConfigurationEditor(props: ConfigurationEditorProps): ReactNode {
     const { insertableId, status, parameters, view } = props;
     const { excludedParameterIds } = view;
 
-    // Counted with the load's own routine, so the card and the load agree.
-    const band = useMemo(
-        () => countConfigurations(parameters, excludedParameterIds).band,
-        [parameters, excludedParameterIds]
-    );
+    // Banded as the load bands it, so the card and the load agree.
     const count = useMemo(
         () => countCombinations(parameters, excludedParameterIds),
         [parameters, excludedParameterIds]
     );
+    const band = bandOf(count);
 
     const toggleParameter = (parameterId: string) => {
         const isExcluded = excludedParameterIds.includes(parameterId);
@@ -169,25 +168,16 @@ function ConfigurationEditor(props: ConfigurationEditorProps): ReactNode {
                     withRowBorders={false}
                     verticalSpacing={4}
                     horizontalSpacing={0}
+                    // The weight of the card's other labels, not Mantine's bold.
+                    styles={{ th: { fontWeight: FontWeight.SEMI_BOLD } }}
                 >
                     <Table.Thead>
-                        {/* The weight of the card's other labels, not Mantine's bold. */}
                         <Table.Tr c={StatusColor.DIMMED}>
-                            <Table.Th fw={FontWeight.SEMI_BOLD}>
-                                Parameter
-                            </Table.Th>
-                            <Table.Th
-                                w={TYPE_COLUMN_WIDTH}
-                                fw={FontWeight.SEMI_BOLD}
-                                ta="center"
-                            >
+                            <Table.Th>Parameter</Table.Th>
+                            <Table.Th w={TYPE_COLUMN_WIDTH} ta="center">
                                 Type
                             </Table.Th>
-                            <Table.Th
-                                w={INDEXED_COLUMN_WIDTH}
-                                fw={FontWeight.SEMI_BOLD}
-                                ta="center"
-                            >
+                            <Table.Th w={INDEXED_COLUMN_WIDTH} ta="center">
                                 Indexed
                             </Table.Th>
                         </Table.Tr>
@@ -257,14 +247,7 @@ function IndexingControl(props: IndexingControlProps): ReactNode {
             />
         );
     }
-    return (
-        <Switch
-            size="sm"
-            checked={checked}
-            onChange={onToggle}
-            withThumbIndicator={false}
-        />
-    );
+    return <RowSwitch checked={checked} onToggle={onToggle} />;
 }
 
 interface BandIconProps {
@@ -276,7 +259,7 @@ interface BandIconProps {
 function BandIcon(props: BandIconProps): ReactNode {
     const { severity, tooltip } = props;
     return (
-        <Tooltip label={tooltip} multiline maw={240}>
+        <Tooltip label={tooltip}>
             <IssueIcon severity={severity} className={styles.noShrink} />
         </Tooltip>
     );
@@ -389,8 +372,6 @@ function ParameterTypeBadge(props: ParameterTypeBadgeProps): ReactNode {
     return (
         <Tooltip
             label={parameter.options.map((option) => option.name).join(", ")}
-            multiline
-            maw={260}
         >
             {badge}
         </Tooltip>
@@ -409,7 +390,10 @@ function SaveButtons(props: SaveButtonsProps): ReactNode {
     const hasChanges = view.changeCount > 0;
 
     const save = () => {
-        mutation.mutate(view.change);
+        mutation.mutate({
+            indexConfigurations: view.indexConfigurations,
+            excludedParameterIds: view.excludedParameterIds
+        });
         clearIndexingDraft(insertableId);
     };
 

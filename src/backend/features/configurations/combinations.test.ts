@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
     AUTO_INDEX_THRESHOLD,
+    bandOf,
     countCombinations,
     countConfigurations,
     enumerateConfigurations,
@@ -210,6 +211,27 @@ describe("countCombinations", () => {
         expect(
             countCombinations(paramsWithConfigs(64), [], 32)
         ).toBeUndefined();
+    });
+});
+
+// The admin card bands its own count, so the load and the card can't disagree.
+describe("bandOf", () => {
+    it.each([
+        0,
+        AUTO_INDEX_THRESHOLD - 1,
+        AUTO_INDEX_THRESHOLD,
+        MAX_PART_NUMBER_CONFIGURATIONS,
+        MAX_PART_NUMBER_CONFIGURATIONS + 1,
+        MAX_PART_NUMBER_CONFIGURATIONS * 4
+    ])("bands %i combinations as the load does", (configs) => {
+        const params = paramsWithConfigs(configs);
+        expect(bandOf(countCombinations(params))).toBe(
+            countConfigurations(params).band
+        );
+    });
+
+    it("bands a count past counting as exceeded", () => {
+        expect(bandOf(undefined)).toBe(IndexingBand.EXCEEDED);
     });
 });
 

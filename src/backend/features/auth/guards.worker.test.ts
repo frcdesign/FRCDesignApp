@@ -105,7 +105,10 @@ describe("editing something inside a library", () => {
         const reindex = (libraryId: LibraryId) =>
             app.request(
                 `/api/indexing/library/${libraryId}/insertable/ftc-part`,
-                jsonRequest("POST", { indexConfigurations: true }),
+                jsonRequest("POST", {
+                    indexConfigurations: true,
+                    excludedParameterIds: []
+                }),
                 env
             );
 

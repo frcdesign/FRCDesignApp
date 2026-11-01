@@ -14,7 +14,11 @@ import { ConfigurationParameter } from "@backend/features/configurations/contrac
 import { toSelection } from "@backend/features/configurations/selection";
 import { ElementPath } from "@backend/lib/onshape/path";
 import { makeUrl } from "../../../lib/url";
-import { IconSize, StatusColor } from "../../../lib/style-constants";
+import {
+    IconSize,
+    StatusColor,
+    TEXT_COLOR
+} from "../../../lib/style-constants";
 import { AppIcon } from "../../../components/app-icon";
 import {
     StatusIcon,
@@ -188,8 +192,6 @@ export function BuildIssueList(props: BuildIssueListProps): ReactNode {
         </Stack>
     );
 }
-
-const TEXT_COLOR = "var(--mantine-color-text)";
 
 /** Shared by both callouts, so the linked one is laid out like the plain one. */
 const CALLOUT_LAYOUT = {
