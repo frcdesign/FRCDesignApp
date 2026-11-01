@@ -70,7 +70,7 @@ describe("configuration section", () => {
     afterEach(() => {
         mocks.applyIndexing.mockReset();
         for (let id = 0; id < nextId; id++) clearIndexingDraft(`i${id}`);
-        updateUiState({ cardSections: {} });
+        updateUiState({ sections: {} });
     });
 
     it("starts closed, counting its parameters", () => {

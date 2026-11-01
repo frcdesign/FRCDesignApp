@@ -10,16 +10,17 @@ import {
 import { ReactNode } from "react";
 import { SectionChevron } from "../../../components/app-section";
 import { PANEL_TITLE_ORDER } from "../../../components/section";
-import { getUiState, updateUiState, useUiState } from "../../../lib/ui-state";
-import { CardSectionId } from "../card-section-id";
+import {
+    SectionId,
+    setSectionOpened,
+    useSectionOpened
+} from "../../../lib/ui-state";
 
 interface CardSectionProps {
-    id: CardSectionId;
+    id: SectionId;
     title: string;
     /** Beside the title, before the chevron: a link, or what the closed section holds. */
     actions?: ReactNode;
-    /** Until an editor opens or closes it. @default true */
-    defaultOpened?: boolean;
     children: ReactNode;
 }
 
@@ -30,14 +31,10 @@ interface CardSectionProps {
  * nothing in it fetches.
  */
 export function CardSection(props: CardSectionProps): ReactNode {
-    const { id, title, actions, defaultOpened = true, children } = props;
-    const stored = useUiState((state) => state.cardSections[id]);
-    const opened = stored ?? defaultOpened;
+    const { id, title, actions, children } = props;
+    const opened = useSectionOpened(id);
 
-    const toggle = () =>
-        updateUiState({
-            cardSections: { ...getUiState().cardSections, [id]: !opened }
-        });
+    const toggle = () => setSectionOpened(id, !opened);
 
     return (
         <>

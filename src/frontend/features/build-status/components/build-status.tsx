@@ -43,7 +43,7 @@ import { UsageSection } from "./usage-section";
 import { CardSection } from "./card-section";
 import { DotIndicator } from "../../../components/dot-indicator";
 import { useHasIndexingDraft } from "../indexing-draft";
-import { CardSectionId } from "../card-section-id";
+import { SectionId } from "../../../lib/ui-state";
 import styles from "../../../lib/styles.module.css";
 
 /** What the card and the badge both say about a group or an insertable. */
@@ -78,10 +78,7 @@ function BuildStatusCard(props: BuildStatusCardProps): ReactNode {
         <Stack gap="sm" w={CARD_WIDTH}>
             <CardHeader {...subject} />
             {issues.length > 0 && (
-                <CardSection
-                    id={CardSectionId.BUILD_CHECKS}
-                    title="Build checks"
-                >
+                <CardSection id={SectionId.BUILD_CHECKS} title="Build checks">
                     <BuildIssueList
                         issues={issues}
                         configurationTarget={configurationTarget}
@@ -287,7 +284,7 @@ export function InsertableStatusBadge(
             }
             sections={
                 <>
-                    <CardSection id={CardSectionId.SETTINGS} title="Settings">
+                    <CardSection id={SectionId.SETTINGS} title="Settings">
                         <InsertableSettings
                             insertableId={insertableId}
                             status={insertable}
@@ -325,10 +322,7 @@ export function GroupStatusBadge(props: GroupStatusBadgeProps): ReactNode {
                     issues={groupStatus.buildIssues}
                     versionCreatedAt={groupStatus.versionCreatedAt}
                     sections={
-                        <CardSection
-                            id={CardSectionId.SETTINGS}
-                            title="Settings"
-                        >
+                        <CardSection id={SectionId.SETTINGS} title="Settings">
                             <GroupSettings
                                 groupId={groupId}
                                 status={groupStatus}

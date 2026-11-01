@@ -26,8 +26,7 @@ export function SetDefaultConfigurationItem(
         <Menu.Item
             leftSection={
                 <DotIndicator shown={!hasOpened} offset={-1}>
-                    {/* Inline, it sits on a line of text above the label's center */}
-                    <FloppyDiskIcon style={{ display: "block" }} />
+                    <FloppyDiskIcon />
                 </DotIndicator>
             }
             disabled={isDefaultConfiguration(favorite, report)}

@@ -15,6 +15,8 @@ export function DotIndicator(props: DotIndicatorProps): ReactNode {
     const { shown, offset = 6, ...others } = props;
     return (
         <Indicator
+            // No line of text to sit on, so a lone icon inside centres.
+            lh={0}
             disabled={!shown}
             color={StatusColor.INFO}
             size={8}

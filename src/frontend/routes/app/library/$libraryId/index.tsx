@@ -20,8 +20,13 @@ import { AddGroupButton } from "../../../../features/library/components/add-grou
 import { FavoritesList } from "../../../../features/favorites/components/favorites-list";
 import { useLibraryQuery } from "../../../../features/library/queries";
 import { getLibraryName, useLibraryId } from "../../../../lib/library";
-import { useShallow } from "zustand/react/shallow";
-import { updateUiState, useUiState } from "../../../../lib/ui-state";
+import {
+    SectionId,
+    setSectionOpened,
+    updateUiState,
+    useSectionOpened,
+    useUiState
+} from "../../../../lib/ui-state";
 import { useVendorFilters } from "../../../../features/settings/vendor-filters";
 
 export const Route = createFileRoute("/app/library/$libraryId/")({
@@ -47,13 +52,9 @@ interface Section {
 
 /** The sections the home list shows, in the order they are stacked. */
 function useHomeSections(): Section[] {
-    const { isFavoritesOpen, isLibraryOpen, searchQuery } = useUiState(
-        useShallow((state) => ({
-            isFavoritesOpen: state.isFavoritesOpen,
-            isLibraryOpen: state.isLibraryOpen,
-            searchQuery: state.searchQuery
-        }))
-    );
+    const isFavoritesOpen = useSectionOpened(SectionId.FAVORITES);
+    const isLibraryOpen = useSectionOpened(SectionId.LIBRARY);
+    const searchQuery = useUiState((state) => state.searchQuery);
     // Not persisted: search results open on every visit, unlike the library.
     const [isSearchOpen, setIsSearchOpen] = useState(true);
     const libraryId = useLibraryId();
@@ -66,7 +67,7 @@ function useHomeSections(): Section[] {
         icon: <FavoriteIcon size={IconSize.MEDIUM} />,
         panel: <FavoritesList />,
         opened: isFavoritesOpen,
-        setOpened: (opened) => updateUiState({ isFavoritesOpen: opened })
+        setOpened: (opened) => setSectionOpened(SectionId.FAVORITES, opened)
     };
 
     const search: Section = {
@@ -96,7 +97,7 @@ function useHomeSections(): Section[] {
         title: <LibraryTitle libraryId={libraryId} />,
         panel: <LibraryList />,
         opened: isLibraryOpen,
-        setOpened: (opened) => updateUiState({ isLibraryOpen: opened })
+        setOpened: (opened) => setSectionOpened(SectionId.LIBRARY, opened)
     };
 
     // The differing `value` remounts the slot when search starts or ends.

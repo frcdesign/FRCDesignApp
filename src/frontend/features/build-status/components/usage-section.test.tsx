@@ -24,7 +24,7 @@ const parts = [
 ];
 
 describe("usage section", () => {
-    afterEach(() => updateUiState({ cardSections: {} }));
+    afterEach(() => updateUiState({ sections: {} }));
 
     it("shows the part's all-time numbers", async () => {
         const { queryClient } = renderWithProviders(
@@ -50,10 +50,10 @@ describe("usage section", () => {
 });
 
 describe("usage section, closed", () => {
-    afterEach(() => updateUiState({ cardSections: {} }));
+    afterEach(() => updateUiState({ sections: {} }));
 
     it("keeps its link, and asks for nothing", () => {
-        updateUiState({ cardSections: { usage: false } });
+        updateUiState({ sections: { usage: false } });
         const { queryClient } = renderWithProviders(
             <UsageSection elementId="e1" />
         );

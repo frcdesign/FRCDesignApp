@@ -5,17 +5,12 @@ import { LibraryId } from "@backend/features/library/library-id";
 import { getPartsQuery } from "../../dashboard/dashboard-queries";
 import { RangePreset, toDayRange } from "../../dashboard/range";
 import { formatCount } from "../../dashboard/format";
+import { partDashboardUrl } from "../../dashboard/dashboard-nav";
 import { useLibraryId } from "../../../lib/library";
 import { FontWeight, StatusColor } from "../../../lib/style-constants";
 import { AppLink } from "../../../components/app-link";
 import { CardSection } from "./card-section";
-import { CardSectionId } from "../card-section-id";
-
-/** The dashboard's report on one part, all time, as its own tab. */
-function getPartDashboardUrl(libraryId: LibraryId, elementId: string): string {
-    const search = new URLSearchParams({ element: elementId });
-    return `/dashboard/library/${libraryId}/part?${search.toString()}`;
-}
+import { SectionId } from "../../../lib/ui-state";
 
 interface UsageSectionProps {
     /** Analytics key parts by element, so a reloaded tab keeps its history. */
@@ -28,11 +23,11 @@ export function UsageSection(props: UsageSectionProps): ReactNode {
 
     return (
         <CardSection
-            id={CardSectionId.USAGE}
+            id={SectionId.USAGE}
             title="Usage"
             actions={
                 <AppLink
-                    href={getPartDashboardUrl(libraryId, elementId)}
+                    href={partDashboardUrl(libraryId, elementId)}
                     size="sm"
                 >
                     Dashboard

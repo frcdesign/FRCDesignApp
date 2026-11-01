@@ -30,11 +30,7 @@ import {
     ParameterRoleIcon,
     ParameterRoleLabel
 } from "../../../components/parameter-role";
-import {
-    FontWeight,
-    IconSize,
-    StatusColor
-} from "../../../lib/style-constants";
+import { IconSize, StatusColor } from "../../../lib/style-constants";
 import { useIndexingMutation } from "../queries";
 import {
     clearIndexingDraft,
@@ -46,7 +42,7 @@ import { ControlRow, RowSwitch } from "./sections";
 import { plural } from "../../../lib/plural";
 import { IssueIcon } from "./issues";
 import { CardSection } from "./card-section";
-import { CardSectionId } from "../card-section-id";
+import { SectionId } from "../../../lib/ui-state";
 import { getParameterTypeLabel } from "../parameter-type-label";
 import styles from "../../../lib/styles.module.css";
 
@@ -77,10 +73,8 @@ export function ConfigurationSection(
     if (parameters.length === 0) return null;
     return (
         <CardSection
-            id={CardSectionId.CONFIGURATION}
+            id={SectionId.CONFIGURATION}
             title="Configuration"
-            // Long, and wanted less often than the rest.
-            defaultOpened={false}
             actions={
                 <SectionSummary
                     parameterCount={parameters.length}
@@ -168,8 +162,6 @@ function ConfigurationEditor(props: ConfigurationEditorProps): ReactNode {
                     withRowBorders={false}
                     verticalSpacing={4}
                     horizontalSpacing={0}
-                    // The weight of the card's other labels, not Mantine's bold.
-                    styles={{ th: { fontWeight: FontWeight.SEMI_BOLD } }}
                 >
                     <Table.Thead>
                         <Table.Tr c={StatusColor.DIMMED}>
@@ -339,13 +331,9 @@ function ParameterKind(props: ParameterKindProps): ReactNode {
     if (role) {
         return (
             <Tooltip label={<ParameterRoleLabel role={role} />}>
-                <Badge size="xs">
-                    {/* A block, or it sits on the label's baseline, high in the pill. */}
-                    <ParameterRoleIcon
-                        role={role}
-                        size={IconSize.TINY}
-                        style={{ display: "block" }}
-                    />
+                {/* No line of text to sit on, so the icon centres. */}
+                <Badge size="xs" lh={0}>
+                    <ParameterRoleIcon role={role} size={IconSize.TINY} />
                 </Badge>
             </Tooltip>
         );

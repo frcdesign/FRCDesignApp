@@ -1,3 +1,4 @@
+import { partDashboardLocation } from "./dashboard-nav";
 import { Badge, Group, Table, Text } from "@mantine/core";
 import { useNavigate } from "@tanstack/react-router";
 import { type ReactNode } from "react";
@@ -96,11 +97,9 @@ function OptionRow({ libraryId, option }: OptionRowProps): ReactNode {
         <Table.Tr
             style={{ cursor: "pointer" }}
             onClick={() =>
-                void navigate({
-                    to: "/dashboard/library/$libraryId/part",
-                    params: { libraryId },
-                    search: { element: option.path.elementId }
-                })
+                void navigate(
+                    partDashboardLocation(libraryId, option.path.elementId)
+                )
             }
         >
             <Table.Td>{option.partName}</Table.Td>

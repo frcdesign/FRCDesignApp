@@ -1,3 +1,4 @@
+import { partDashboardLocation } from "./dashboard-nav";
 import { AppLink } from "../../components/app-link";
 import { Badge, Group, Table, Text } from "@mantine/core";
 import { CaretDownIcon, CaretUpIcon } from "@phosphor-icons/react";
@@ -186,11 +187,9 @@ function PartRow({ libraryId, part }: PartRowProps): ReactNode {
         <Table.Tr
             style={{ cursor: "pointer" }}
             onClick={() =>
-                void navigate({
-                    to: "/dashboard/library/$libraryId/part",
-                    params: { libraryId },
-                    search: { element: part.path.elementId }
-                })
+                void navigate(
+                    partDashboardLocation(libraryId, part.path.elementId)
+                )
             }
         >
             <Table.Td>
