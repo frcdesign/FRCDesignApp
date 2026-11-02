@@ -18,10 +18,18 @@ import {
 import { RequireAccessLevel } from "../../../../features/auth/components/require-access";
 import { AddGroupButton } from "../../../../features/library/components/add-group-menu";
 import { FavoritesList } from "../../../../features/favorites/components/favorites-list";
+import { RecentsList } from "../../../../features/recents/components/recents-list";
+import { RecentIcon } from "../../../../features/recents/components/recent-icon";
+import { useNeedsSignIn } from "../../../../features/auth/access-level";
 import { useLibraryQuery } from "../../../../features/library/queries";
 import { getLibraryName, useLibraryId } from "../../../../lib/library";
-import { useShallow } from "zustand/react/shallow";
-import { updateUiState, useUiState } from "../../../../lib/ui-state";
+import {
+    SectionId,
+    setSectionOpened,
+    updateUiState,
+    useSectionOpened,
+    useUiState
+} from "../../../../lib/ui-state";
 import { useVendorFilters } from "../../../../features/settings/vendor-filters";
 
 export const Route = createFileRoute("/app/library/$libraryId/")({
@@ -47,26 +55,32 @@ interface Section {
 
 /** The sections the home list shows, in the order they are stacked. */
 function useHomeSections(): Section[] {
-    const { isFavoritesOpen, isLibraryOpen, searchQuery } = useUiState(
-        useShallow((state) => ({
-            isFavoritesOpen: state.isFavoritesOpen,
-            isLibraryOpen: state.isLibraryOpen,
-            searchQuery: state.searchQuery
-        }))
-    );
+    const isFavoritesOpen = useSectionOpened(SectionId.FAVORITES);
+    const isRecentsOpen = useSectionOpened(SectionId.RECENTS);
+    const isLibraryOpen = useSectionOpened(SectionId.LIBRARY);
+    const searchQuery = useUiState((state) => state.searchQuery);
     // Not persisted: search results open on every visit, unlike the library.
     const [isSearchOpen, setIsSearchOpen] = useState(true);
     const libraryId = useLibraryId();
     const vendorFilters = useVendorFilters();
+    const needsSignIn = useNeedsSignIn();
 
-    // Shown signed out too, where the panel says what signing in would add.
     const favorites: Section = {
         value: "favorites",
         name: "Favorites",
         icon: <FavoriteIcon size={IconSize.MEDIUM} />,
         panel: <FavoritesList />,
         opened: isFavoritesOpen,
-        setOpened: (opened) => updateUiState({ isFavoritesOpen: opened })
+        setOpened: (opened) => setSectionOpened(SectionId.FAVORITES, opened)
+    };
+
+    const recents: Section = {
+        value: "recents",
+        name: "Recently Used",
+        icon: <RecentIcon size={IconSize.MEDIUM} />,
+        panel: <RecentsList />,
+        opened: isRecentsOpen,
+        setOpened: (opened) => setSectionOpened(SectionId.RECENTS, opened)
     };
 
     const search: Section = {
@@ -96,11 +110,15 @@ function useHomeSections(): Section[] {
         title: <LibraryTitle libraryId={libraryId} />,
         panel: <LibraryList />,
         opened: isLibraryOpen,
-        setOpened: (opened) => updateUiState({ isLibraryOpen: opened })
+        setOpened: (opened) => setSectionOpened(SectionId.LIBRARY, opened)
     };
 
     // The differing `value` remounts the slot when search starts or ends.
-    return [favorites, searchQuery ? search : library];
+    if (searchQuery) {
+        return needsSignIn ? [search] : [favorites, recents, search];
+    }
+    // Both are saved to an Onshape account, so signed out they have nothing to show.
+    return needsSignIn ? [library] : [favorites, recents, library];
 }
 
 interface SectionAccordionProps {

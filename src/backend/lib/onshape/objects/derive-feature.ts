@@ -66,7 +66,6 @@ export class DerivedFeature {
                     return {
                         btType: "BTMParameterQuantity-147",
                         parameterId: parameter.id,
-                        // As entered, so the feature dialog shows what was typed.
                         expression: value
                     };
                 case ParameterType.BOOLEAN:

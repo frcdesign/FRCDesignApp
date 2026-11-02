@@ -38,6 +38,16 @@ export function getFavoriteParam(c: AppContext): string {
     return id;
 }
 
+export function recentRoute(): string {
+    return "/recent/:recentId";
+}
+
+export function getRecentParam(c: AppContext): string {
+    const id = c.req.param("recentId");
+    if (!id) throw new Error("Missing recentId route param");
+    return id;
+}
+
 export function workspaceLinkRoute(): string {
     return "/workspace-link/:linkId";
 }

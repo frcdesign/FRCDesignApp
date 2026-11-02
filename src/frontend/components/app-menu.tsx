@@ -4,7 +4,7 @@ import { DotsThreeIcon } from "@phosphor-icons/react";
 import { IconSize } from "../lib/style-constants";
 import { RequireAccessLevel } from "../features/auth/components/require-access";
 import classes from "./app-menu.module.css";
-import { NewIndicator } from "./new-feature";
+import { DotIndicator } from "./dot-indicator";
 
 interface AppContextMenuProps {
     menuItems: ReactNode;
@@ -37,7 +37,7 @@ export function AppContextMenu(props: AppContextMenuProps): ReactNode {
         // Outside the target: the button stops its clicks, so a wrapper inside would never open the menu.
         if (isNew !== undefined) {
             menuChildren = (
-                <NewIndicator shown={isNew}>{menuChildren}</NewIndicator>
+                <DotIndicator shown={isNew}>{menuChildren}</DotIndicator>
             );
         }
     } else {

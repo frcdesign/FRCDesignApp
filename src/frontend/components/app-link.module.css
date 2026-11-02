@@ -1,0 +1,23 @@
+/* Laid out on the text's baseline, so the arrow sits with the letters at any size. */
+.link {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.25em;
+    min-width: 0;
+}
+
+/*
+ * Phosphor draws inside an eighth of padding, so a 1em icon on the baseline
+ * floats that much above it; this lands the glyph on the baseline and its top
+ * at about cap height.
+ */
+.icon {
+    flex-shrink: 0;
+    transform: translateY(0.125em);
+}
+
+/* Alone, there is no baseline to sit on. */
+.iconOnly {
+    display: inline-flex;
+    align-items: center;
+}

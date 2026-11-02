@@ -14,7 +14,7 @@ export const AppParamsType = z.object({
     q: z.string().optional().catch(undefined),
     /** The insertable whose insert menu is open. */
     part: z.string().optional().catch(undefined),
-    /** Its selection, as entered. */
+    /** Its selection. */
     config: z.partialRecord(z.string(), z.string()).optional().catch(undefined),
     /** The favorite the menu was opened from, when it was opened from one. */
     favorite: z.string().optional().catch(undefined)

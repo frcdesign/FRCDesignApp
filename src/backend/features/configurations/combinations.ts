@@ -65,14 +65,22 @@ export function countConfigurations(
     )
         ? configurations.length
         : 0;
-    return {
-        count,
-        band:
-            count >= AUTO_INDEX_THRESHOLD
-                ? IndexingBand.MANUAL
-                : IndexingBand.AUTOMATIC,
-        configurations
-    };
+    return { count, band: bandOf(count), configurations };
+}
+
+/**
+ * The band a count falls in; undefined is past counting. The admin card bands
+ * {@link countCombinations}'s count with it, which matches enumerating: each
+ * parameter only ever multiplies the combinations, so the enumeration is capped
+ * exactly when the count passes the cap.
+ */
+export function bandOf(count: number | undefined): IndexingBand {
+    if (count === undefined || count > MAX_PART_NUMBER_CONFIGURATIONS) {
+        return IndexingBand.EXCEEDED;
+    }
+    return count >= AUTO_INDEX_THRESHOLD
+        ? IndexingBand.MANUAL
+        : IndexingBand.AUTOMATIC;
 }
 
 /**

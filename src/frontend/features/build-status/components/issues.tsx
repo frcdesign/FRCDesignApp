@@ -1,4 +1,4 @@
-import { ExternalLink } from "../../../components/external-link";
+import { AppLink } from "../../../components/app-link";
 import { Badge, Group, Stack, Text } from "@mantine/core";
 import { ArrowSquareOutIcon } from "@phosphor-icons/react";
 import { ReactNode } from "react";
@@ -6,15 +6,19 @@ import {
     BuildIssue,
     BuildIssueSeverity,
     getIssueConfiguration,
-    getIssueDescription,
-    getIssueSeverity,
-    getIssueTitle
+    getIssueSeverity
 } from "@backend/features/build-checker/issues";
+import { getIssueDescription, getIssueTitle } from "../issue-text";
+import { m } from "../../../paraglide/messages";
 import { ConfigurationParameter } from "@backend/features/configurations/contract";
 import { toSelection } from "@backend/features/configurations/selection";
 import { ElementPath } from "@backend/lib/onshape/path";
 import { makeUrl } from "../../../lib/url";
-import { IconSize, StatusColor } from "../../../lib/style-constants";
+import {
+    IconSize,
+    StatusColor,
+    TEXT_COLOR
+} from "../../../lib/style-constants";
 import { AppIcon } from "../../../components/app-icon";
 import {
     StatusIcon,
@@ -22,7 +26,6 @@ import {
 } from "../../../components/status-icon";
 import { Status, STATUS_COLOR, statusWash } from "../../../lib/status";
 import { InfoTooltip } from "../../../components/info-tooltip";
-import { SectionHeader } from "./sections";
 import { useOnshapeOrigin } from "../../../lib/onshape-params";
 import styles from "../../../lib/styles.module.css";
 
@@ -69,7 +72,7 @@ export function SeverityBadges(props: SeverityBadgesProps): ReactNode {
                     />
                 }
             >
-                All checks pass
+                {m.adminCardAllChecksPass()}
             </Badge>
         );
     }
@@ -99,10 +102,13 @@ export function SeverityBadges(props: SeverityBadgesProps): ReactNode {
     );
 }
 
-const SEVERITY_NOUN: Record<BuildIssueSeverity, string> = {
-    [BuildIssueSeverity.ERROR]: "error",
-    [BuildIssueSeverity.WARNING]: "warning",
-    [BuildIssueSeverity.INFO]: "info"
+const SEVERITY_COUNT: Record<
+    BuildIssueSeverity,
+    (inputs: { count: number }) => string
+> = {
+    [BuildIssueSeverity.ERROR]: m.adminCardErrorCount,
+    [BuildIssueSeverity.WARNING]: m.adminCardWarningCount,
+    [BuildIssueSeverity.INFO]: m.adminCardInfoCount
 };
 
 interface CountBadgeProps {
@@ -113,10 +119,7 @@ interface CountBadgeProps {
 function CountBadge(props: CountBadgeProps): ReactNode {
     const { severity, count } = props;
     const color = STATUS_COLOR[severityStatus(severity)];
-    const noun = SEVERITY_NOUN[severity];
-    // Don't pluralize info, e.g. "2 infos" reads wrong.
-    const plural = severity !== BuildIssueSeverity.INFO && count > 1 ? "s" : "";
-    return <Badge color={color}>{`${count} ${noun}${plural}`}</Badge>;
+    return <Badge color={color}>{SEVERITY_COUNT[severity]({ count })}</Badge>;
 }
 
 /** How many issues of each severity a build carries. */
@@ -167,19 +170,18 @@ function getIssueUrl(
     );
 }
 
-interface BuildChecksSectionProps {
+interface BuildIssueListProps {
     issues: BuildIssue[];
     /** Passed for an insertable; a group has no configurations to open. */
     configurationTarget?: ConfigurationTarget;
 }
 
-/** The build checks: one tinted callout per issue. Rendered only when non-empty. */
-export function BuildChecksSection(props: BuildChecksSectionProps): ReactNode {
+/** One tinted callout per issue. */
+export function BuildIssueList(props: BuildIssueListProps): ReactNode {
     const { issues, configurationTarget } = props;
     const origin = useOnshapeOrigin();
     return (
         <Stack gap={6}>
-            <SectionHeader>Build checks</SectionHeader>
             {issues.map((issue) => (
                 <IssueCallout
                     key={issue.type}
@@ -221,7 +223,13 @@ function IssueCallout(props: IssueCalloutProps): ReactNode {
     }
 
     return (
-        <ExternalLink href={url} display="block" underline="never" c="inherit">
+        <AppLink
+            href={url}
+            withIcon={false}
+            display="block"
+            underline="never"
+            c="inherit"
+        >
             <Group {...CALLOUT_LAYOUT} bg={background} bdrs="sm">
                 <CalloutIcon severity={severity} />
                 <IssueText issue={issue} />
@@ -231,7 +239,7 @@ function IssueCallout(props: IssueCalloutProps): ReactNode {
                     style={CALLOUT_ICON_NUDGE}
                 />
             </Group>
-        </ExternalLink>
+        </AppLink>
     );
 }
 
@@ -248,9 +256,8 @@ function IssueText(props: IssueTextProps): ReactNode {
             {description && (
                 <InfoTooltip
                     label={description}
-                    color={
-                        STATUS_COLOR[severityStatus(getIssueSeverity(issue))]
-                    }
+                    // The text's color, as the link arrow beside it is.
+                    color={TEXT_COLOR}
                     className={styles.noShrink}
                     style={CALLOUT_ICON_NUDGE}
                 />

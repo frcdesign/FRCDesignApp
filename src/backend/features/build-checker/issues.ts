@@ -1,7 +1,3 @@
-import {
-    AUTO_INDEX_THRESHOLD,
-    MAX_PART_NUMBER_CONFIGURATIONS
-} from "../configurations/combinations";
 import type { PartialSelection } from "../configurations/contract";
 
 export enum BuildIssueSeverity {
@@ -25,6 +21,8 @@ export enum BuildIssueType {
     MULTIPLE_PARTS = "multiple-parts",
     CONFIGURATION_MULTIPLE_PARTS = "configuration-multiple-parts",
     UNSTABLE_COMPOSITE = "unstable-composite",
+    /** The mate connector inserts use can change or break between configurations. */
+    UNSTABLE_MATE_CONNECTOR = "unstable-mate-connector",
     INSERTABLES_FAILED = "insertables-failed",
     LOAD_FAILED = "load-failed",
     /** A document added but not yet loaded, until its first load saves it. */
@@ -60,6 +58,7 @@ export type BuildIssue =
     | BuildIssueOf<BuildIssueType.MULTIPLE_PARTS>
     | ConfigurationBuildIssueOf<BuildIssueType.CONFIGURATION_MULTIPLE_PARTS>
     | ConfigurationBuildIssueOf<BuildIssueType.UNSTABLE_COMPOSITE>
+    | BuildIssueOf<BuildIssueType.UNSTABLE_MATE_CONNECTOR>
     | BuildIssueOf<BuildIssueType.INSERTABLES_FAILED>
     | BuildIssueOf<BuildIssueType.LOAD_FAILED>
     | BuildIssueOf<BuildIssueType.NOT_LOADED>;
@@ -90,62 +89,6 @@ export function knownBuildIssues(issues: BuildIssue[]): BuildIssue[] {
     return issues.filter((issue) => BUILD_ISSUE_TYPES.has(issue.type));
 }
 
-/** What is wrong, in a line. */
-export function getIssueTitle(issue: BuildIssue): string {
-    switch (issue.type) {
-        case BuildIssueType.THUMBNAIL_FAILED:
-            return "Thumbnail failed to render";
-        case BuildIssueType.NO_THUMBNAIL_TAB:
-            return "No document thumbnail set";
-        case BuildIssueType.NO_VENDORS:
-            return "No vendors found";
-        case BuildIssueType.NO_PARTS:
-            return "Part studio has no parts";
-        case BuildIssueType.NO_UNHIDDEN_INSERTABLES:
-            return "Every element is hidden";
-        case BuildIssueType.CONFIGURATION_LIMIT_EXCEEDED:
-            return "Too many configurations to index";
-        case BuildIssueType.MANUAL_INDEXING_REQUIRED:
-            return "Indexing is off";
-        case BuildIssueType.MULTIPLE_PARTS:
-            return "Part studio has more than one part";
-        case BuildIssueType.CONFIGURATION_MULTIPLE_PARTS:
-            return issue.configurationCount === 1
-                ? "A configuration has more than one part"
-                : `${issue.configurationCount} configurations have more than one part`;
-        case BuildIssueType.UNSTABLE_COMPOSITE:
-            return issue.configurationCount === 1
-                ? "A configuration has no open composite part"
-                : `${issue.configurationCount} configurations have no open composite part`;
-        case BuildIssueType.INSERTABLES_FAILED:
-            return "Some elements failed to load";
-        case BuildIssueType.LOAD_FAILED:
-            return "Document failed to load";
-        case BuildIssueType.NOT_LOADED:
-            return "Document not loaded yet";
-    }
-}
-
-/** The fix or reason, only where knowing Onshape doesn't make it plain. */
-export function getIssueDescription(issue: BuildIssue): string | undefined {
-    switch (issue.type) {
-        case BuildIssueType.THUMBNAIL_FAILED:
-            return "Use Reload thumbnail to try again.";
-        case BuildIssueType.NO_VENDORS:
-            return "Vendors are parsed from names and codes in the name or configuration options.";
-        case BuildIssueType.CONFIGURATION_LIMIT_EXCEEDED:
-            return `Stop indexing parameters to get under ${MAX_PART_NUMBER_CONFIGURATIONS}.`;
-        case BuildIssueType.MANUAL_INDEXING_REQUIRED:
-            return `Elements with ${AUTO_INDEX_THRESHOLD}+ configurations must be enabled manually.`;
-        case BuildIssueType.UNSTABLE_COMPOSITE:
-            return "The default configuration has one, so every configuration should.";
-        case BuildIssueType.NOT_LOADED:
-            return "Use Reload if it doesn't start loading.";
-        default:
-            return undefined;
-    }
-}
-
 /** The severity for a given issue, derived from its type. */
 export function getIssueSeverity(issue: BuildIssue): BuildIssueSeverity {
     switch (issue.type) {
@@ -155,6 +98,7 @@ export function getIssueSeverity(issue: BuildIssue): BuildIssueSeverity {
         case BuildIssueType.CONFIGURATION_MULTIPLE_PARTS:
         case BuildIssueType.NO_PARTS:
         case BuildIssueType.UNSTABLE_COMPOSITE:
+        case BuildIssueType.UNSTABLE_MATE_CONNECTOR:
         case BuildIssueType.INSERTABLES_FAILED:
         case BuildIssueType.LOAD_FAILED:
             return BuildIssueSeverity.ERROR;
@@ -195,6 +139,15 @@ export function clearBuildIssue(
     ...types: BuildIssueType[]
 ): BuildIssue[] {
     return issues.filter((issue) => !types.includes(issue.type));
+}
+
+/** Clears `types` first, so an issue the new check no longer finds doesn't stick. */
+export function replaceBuildIssues(
+    issues: BuildIssue[],
+    types: BuildIssueType[],
+    newIssues: BuildIssue[]
+): BuildIssue[] {
+    return addBuildIssue(clearBuildIssue(issues, ...types), ...newIssues);
 }
 
 /** Worst-to-best ordering. Higher index = more severe. */

@@ -1,4 +1,4 @@
-import { and, count, countDistinct, eq, gte, lte, sum } from "drizzle-orm";
+import { and, count, countDistinct, eq, gte, lte, sql, sum } from "drizzle-orm";
 import { type Db } from "../../db/client";
 import {
     configurations,
@@ -28,6 +28,7 @@ export interface PartRow {
     versionId: string;
     isVisible: boolean;
     firstInsertedAt: Date | null;
+    favorites: number;
 }
 
 /** From `insertables`, so unused parts list at zero and removed ones don't list. */
@@ -50,7 +51,8 @@ export function getPartRows(
                 documentId: insertables.documentId,
                 versionId: insertables.versionId,
                 isVisible: insertables.isVisible,
-                firstInsertedAt: insertableStats.firstInsertedAt
+                firstInsertedAt: insertableStats.firstInsertedAt,
+                favorites: sql<number>`(select count(*) from ${favorites} where ${favorites.insertableId} = ${insertables.id})`
             })
             .from(insertables)
             .leftJoin(
@@ -91,6 +93,7 @@ export function toWindowedPart(
             insertCount === 0 ? undefined : firstUsed,
             to
         ),
+        favorites: row.favorites,
         recent: series.get(row.elementId) ?? emptySparkline()
     };
 }

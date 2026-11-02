@@ -443,6 +443,9 @@ describe("analytics routes", () => {
             expect(bySource[InsertSource.GROUP_SEARCH]).toMatchObject({
                 count: 0
             });
+            expect(bySource[InsertSource.RECENTS]).toMatchObject({
+                count: 0
+            });
         });
 
         it("scopes the source breakdown to the range", async () => {
@@ -601,6 +604,18 @@ describe("analytics routes", () => {
         function partsUrl(query = `?${ALL_TIME}`) {
             return `/api/analytics/parts/library/${TEST_LIBRARY_ID}${query}`;
         }
+
+        it("counts who has each part favorited now", async () => {
+            await seedPartStudio(db);
+            await seedFavorite(db, TEST_PART_STUDIO_ID, "user-a");
+            await seedFavorite(db, TEST_PART_STUDIO_ID, "user-b");
+
+            const body: PartUsageOut[] = await (
+                await anonymousGet(partsUrl())
+            ).json();
+
+            expect(body[0].favorites).toBe(2);
+        });
 
         it("lists a visible part that has never been inserted", async () => {
             // The picker needs every part, not only the ones with history.

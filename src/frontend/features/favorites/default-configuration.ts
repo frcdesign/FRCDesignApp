@@ -8,7 +8,7 @@ export function isDefaultConfiguration(
     report: SelectionReport
 ): boolean {
     const saved = favorite?.defaultSelection;
-    // Compared as entered: saving "(2 + 3) in" over "5 in" changes what is stored.
+    // Exact: saving would store this selection, so any difference is a change.
     return saved
         ? sameSelection(report.stored, saved)
         : Object.keys(report.overrides).length === 0;

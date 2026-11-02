@@ -6,6 +6,7 @@ import {
     jobStatusQueryKey,
     libraryDataQueryKey,
     libraryVersionQueryKey,
+    recentsQueryKey,
     searchDbQueryKey
 } from "./query-keys";
 import { LibraryId } from "@backend/features/library/library-id";
@@ -24,6 +25,7 @@ describe("isVersionedLibraryQuery", () => {
 
     it.each([
         ["favorites", favoritesQueryKey(LIBRARY)],
+        ["recents", recentsQueryKey(LIBRARY)],
         ["job status", jobStatusQueryKey(LIBRARY)],
         ["library version", libraryVersionQueryKey(LIBRARY)]
     ])("does not hold for %s", (_name, key) => {

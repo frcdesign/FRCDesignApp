@@ -48,7 +48,8 @@ buildStatusRoutes.get(
                     elementId: insertables.elementId,
                     elementType: insertables.elementType,
                     isVisible: insertables.isVisible,
-                    supportsFasten: insertables.supportsFasten,
+                    fastenDisabled: insertables.fastenDisabled,
+                    fastenInfo: insertables.fastenInfo,
                     indexConfigurations: insertables.indexConfigurations,
                     excludedParameterIds: insertables.excludedParameterIds,
                     vendors: insertables.vendors,
@@ -75,10 +76,10 @@ buildStatusRoutes.get(
             .where(eq(insertables.libraryId, libraryId))
             .all();
 
-        const configMap = new Map(
-            allConfigurations.map(({ insertableId, ...status }) => [
+        const parametersById = new Map(
+            allConfigurations.map(({ insertableId, parameters }) => [
                 insertableId,
-                status
+                parameters
             ])
         );
 
@@ -103,11 +104,12 @@ buildStatusRoutes.get(
                 elementPath: toElementPath(ins),
                 elementType: ins.elementType,
                 isVisible: ins.isVisible,
-                supportsFasten: ins.supportsFasten,
+                supportsFasten: ins.fastenInfo !== null,
+                fastenDisabled: ins.fastenDisabled,
                 indexConfigurations: ins.indexConfigurations,
                 excludedParameterIds: ins.excludedParameterIds,
                 vendors: ins.vendors,
-                configuration: configMap.get(ins.id),
+                parameters: parametersById.get(ins.id) ?? [],
                 versionCreatedAt: ins.versionCreatedAt?.getTime()
             };
         }

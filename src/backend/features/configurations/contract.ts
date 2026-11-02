@@ -138,7 +138,7 @@ export interface QuantityParameter extends ConfigurationParameterBase {
     unit: Unit; // Always UNITLESS for QuantityType.INTEGER and QuantityType.REAL
 }
 
-/** Every declared parameter, as entered; see AGENTS.md. */
+/** Every declared parameter, its quantities collapsed; see AGENTS.md. */
 export type Selection = Record<string, string>;
 
 /** `toSelection` makes one whole. */

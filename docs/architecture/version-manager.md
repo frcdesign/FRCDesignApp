@@ -72,7 +72,8 @@ count of each workspace it versions or moves (`forgetChanges`, a step after
 each of its own), and the client reads the links again once the run ends, so a
 parent's badge reflects the version just cut.
 
-**Browser** `isParentsOpen` and `isChildrenOpen` in `uiState`.
+**Browser** whether each list is open, as `sections.parents` and
+`sections.children` in `uiState`.
 
 ## Flows
 

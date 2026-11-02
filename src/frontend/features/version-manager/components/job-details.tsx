@@ -16,7 +16,7 @@ import { SectionNotice } from "../../../components/app-notice";
 import { AppTitle } from "../../../components/app-title";
 import { StatusIcon } from "../../../components/status-icon";
 import { Status } from "../../../lib/status";
-import { ExternalLink } from "../../../components/external-link";
+import { AppLink } from "../../../components/app-link";
 import { useOnshapeOrigin } from "../../../lib/onshape-params";
 import {
     FontWeight,
@@ -171,16 +171,15 @@ function DocumentSteps(props: DocumentStepsProps): ReactNode {
     return (
         <Stack gap={6}>
             <Group miw={0}>
-                <ExternalLink
+                <AppLink
                     href={makeUrl(origin, group.workspace)}
                     fw={FontWeight.SEMI_BOLD}
                     maw="100%"
-                    iconSize={IconSize.SMALL}
                 >
                     <Text component="span" inherit truncate miw={0}>
                         {documentLabel(group.documentName)}
                     </Text>
-                </ExternalLink>
+                </AppLink>
             </Group>
             {group.tasks.map((task) => (
                 <TaskRow key={task.action} task={task} />

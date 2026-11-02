@@ -190,6 +190,8 @@ export interface PartUsageOut {
     insertCount: number;
     /** The window's inserts scaled to a month; see {@link usesPerMonth}. */
     usesPerMonth: number;
+    /** Users who have it favorited now, whatever the window. */
+    favorites: number;
     /** Daily inserts over the last {@link MONTH_DAYS}, oldest first. */
     recent: number[];
 }

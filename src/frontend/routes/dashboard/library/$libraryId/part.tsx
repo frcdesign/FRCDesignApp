@@ -1,4 +1,4 @@
-import { ExternalLink } from "../../../../components/external-link";
+import { AppLink } from "../../../../components/app-link";
 import { Card, SimpleGrid, Stack, Text, TextInput, Title } from "@mantine/core";
 import { MagnifyingGlassIcon } from "@phosphor-icons/react";
 import { useQuery } from "@tanstack/react-query";
@@ -8,7 +8,6 @@ import * as z from "zod";
 import { LibraryId } from "@backend/features/library/library-id";
 import { ElementType } from "@backend/lib/onshape/element-type";
 import type { InsertableReportOut } from "@backend/features/analytics/contract";
-import { IconSize } from "../../../../lib/style-constants";
 import { parseSearch } from "../../../../lib/search-params";
 import { makeUrl } from "../../../../lib/url";
 import { useOnshapeOrigin } from "../../../../lib/onshape-params";
@@ -155,13 +154,9 @@ function PartTitle({ report }: PartTitleProps): ReactNode {
     const origin = useOnshapeOrigin();
     return (
         <Title order={2}>
-            <ExternalLink
-                inherit
-                href={makeUrl(origin, report.path)}
-                iconSize={IconSize.MEDIUM}
-            >
+            <AppLink inherit href={makeUrl(origin, report.path)}>
                 {report.name}
-            </ExternalLink>
+            </AppLink>
         </Title>
     );
 }

@@ -1,5 +1,6 @@
 import {
     keepPreviousData,
+    type QueryKey,
     queryOptions,
     useMutation,
     useQuery
@@ -16,11 +17,16 @@ import { getAppErrorHandler } from "../../lib/errors";
 import { patchQuery } from "../../lib/query-cache";
 import { useRefreshLibrary } from "../../lib/refresh";
 import { toInsertablePath, toLibraryPath } from "../../lib/api-paths";
-import { type LibraryBuildStatus } from "@backend/features/build-checker/contract";
+import type {
+    IndexingSettings,
+    InsertableBuildStatus,
+    LibraryBuildStatus
+} from "@backend/features/build-checker/contract";
 import { LibraryId } from "@backend/features/library/library-id";
 import { useLibraryId } from "../../lib/library";
 import { useCacheVersion } from "../library/queries";
 import { buildStatusQueryKey } from "../../lib/query-keys";
+import { m } from "../../paraglide/messages";
 
 function getBuildStatusQuery(libraryId: LibraryId, cacheVersion: number) {
     return queryOptions<LibraryBuildStatus>({
@@ -43,6 +49,25 @@ function useBuildStatusKey() {
     return buildStatusQueryKey(libraryId, cacheVersion);
 }
 
+/** Patches one insertable in place; the refresh that settles each mutation is the undo. */
+function patchInsertable(
+    key: QueryKey,
+    insertableId: string,
+    recipe: (insertable: InsertableBuildStatus) => void
+): Promise<void> {
+    return patchQuery<LibraryBuildStatus>(key, (status) => {
+        const insertable = status.insertables[insertableId];
+        if (insertable) recipe(insertable);
+    });
+}
+
+/** Every build-status mutation's `onSettled`: refetch, dropping the patch if it failed. */
+function useSettleBuildStatus() {
+    const refreshLibrary = useRefreshLibrary();
+    return (_result: unknown, error: Error | null) =>
+        refreshLibrary({ discardPatches: error !== null });
+}
+
 export function useBuildStatusQuery() {
     const libraryId = useLibraryId();
     const cacheVersion = useCacheVersion();
@@ -61,8 +86,9 @@ export function useSetVisibilityMutation(
     isVisible: boolean
 ) {
     const libraryId = useLibraryId();
-    const refreshLibrary = useRefreshLibrary();
     const key = useBuildStatusKey();
+    const settle = useSettleBuildStatus();
+    const count = insertableIds.length;
 
     const mutation = useMutation({
         mutationKey: ["set-insertable-visibility", ...insertableIds],
@@ -79,7 +105,9 @@ export function useSetVisibilityMutation(
         },
         onMutate: () => {
             showLoadingToast(
-                isVisible ? "Showing insertables..." : "Hiding insertables...",
+                isVisible
+                    ? m.adminCardShowing({ count })
+                    : m.adminCardHiding({ count }),
                 "set-visibility"
             );
             return patchQuery<LibraryBuildStatus>(key, (status) => {
@@ -91,16 +119,17 @@ export function useSetVisibilityMutation(
         },
         onSuccess: () => {
             showSuccessToast(
-                isVisible ? "Insertables shown." : "Insertables hidden.",
+                isVisible
+                    ? m.adminCardShown({ count })
+                    : m.adminCardHidden({ count }),
                 "set-visibility"
             );
         },
         onError: getAppErrorHandler(
-            "Unexpectedly failed to modify visibility.",
+            m.adminCardVisibilityFailed(),
             "set-visibility"
         ),
-        onSettled: (_result, error) =>
-            refreshLibrary({ discardPatches: error !== null })
+        onSettled: settle
     });
 
     const mutate = useCallback(() => {
@@ -109,10 +138,12 @@ export function useSetVisibilityMutation(
             return;
         }
         modals.openConfirmModal({
-            title: "Hide elements",
-            children:
-                "You are about to hide one or more elements. This will also permanently remove them from all users' favorites. Are you sure?",
-            labels: { confirm: "Hide", cancel: "Cancel" },
+            title: m.adminCardHideTitle(),
+            children: m.adminCardHideBody(),
+            labels: {
+                confirm: m.adminCardHideConfirm(),
+                cancel: m.adminCardHideCancel()
+            },
             confirmProps: { color: "red" },
             onConfirm: () => mutation.mutate()
         });
@@ -125,7 +156,7 @@ export function useSetVisibilityMutation(
 export function useToggleInsertAndFastenMutation(insertableId: string) {
     const libraryId = useLibraryId();
     const key = useBuildStatusKey();
-    const refreshLibrary = useRefreshLibrary();
+    const settle = useSettleBuildStatus();
     const toastId = `insert-and-fasten-${insertableId}`;
     return useMutation({
         mutationKey: ["toggle-insert-and-fasten", insertableId],
@@ -139,109 +170,51 @@ export function useToggleInsertAndFastenMutation(insertableId: string) {
         onMutate: (supportsFasten) => {
             showLoadingToast(
                 supportsFasten
-                    ? "Enabling insert and fasten..."
-                    : "Disabling insert and fasten...",
+                    ? m.adminCardEnablingFasten()
+                    : m.adminCardDisablingFasten(),
                 toastId
             );
-            return patchQuery<LibraryBuildStatus>(key, (status) => {
-                const insertable = status.insertables[insertableId];
-                if (insertable) insertable.supportsFasten = supportsFasten;
+            return patchInsertable(key, insertableId, (insertable) => {
+                insertable.supportsFasten = supportsFasten;
+                insertable.fastenDisabled = !supportsFasten;
             });
         },
         onSuccess: (_result, supportsFasten) =>
             showSuccessToast(
                 supportsFasten
-                    ? "Enabled insert and fasten."
-                    : "Disabled insert and fasten.",
+                    ? m.adminCardEnabledFasten()
+                    : m.adminCardDisabledFasten(),
                 toastId
             ),
-        onError: getAppErrorHandler(
-            "Failed to enable insert and fasten. Is the target valid?",
-            toastId
-        ),
-        onSettled: (_result, error) =>
-            refreshLibrary({ discardPatches: error !== null })
+        onError: getAppErrorHandler(m.adminCardFastenFailed(), toastId),
+        onSettled: settle
     });
 }
 
-/** The Onshape call runs long, so the toast reports the switch without waiting. */
-export function useIndexConfigurationsMutation(insertableId: string) {
+/** Every edit lands in one reindex, so the toast reports it before Onshape answers. */
+export function useIndexingMutation(insertableId: string) {
     const libraryId = useLibraryId();
     const key = useBuildStatusKey();
-    const refreshLibrary = useRefreshLibrary();
-    const toastId = `index-configurations-${insertableId}`;
+    const settle = useSettleBuildStatus();
+    const toastId = `indexing-${insertableId}`;
     return useMutation({
-        mutationKey: ["index-configurations", insertableId],
-        mutationFn: (indexConfigurations: boolean) =>
+        mutationKey: ["indexing", insertableId],
+        mutationFn: (settings: IndexingSettings) =>
             apiPost(
-                "/index-configurations" +
+                "/indexing" +
                     toLibraryPath(libraryId) +
                     toInsertablePath(insertableId),
-                {
-                    body: { indexConfigurations }
-                }
+                { body: settings }
             ),
-        onMutate: (indexConfigurations) => {
-            showInfoToast(
-                indexConfigurations
-                    ? "Enabling indexing..."
-                    : "Disabling indexing",
-                { id: toastId }
-            );
-            return patchQuery<LibraryBuildStatus>(key, (status) => {
-                const insertable = status.insertables[insertableId];
-                if (insertable)
-                    insertable.indexConfigurations = indexConfigurations;
+        onMutate: (settings) => {
+            showInfoToast(m.adminCardReindexing(), { id: toastId });
+            return patchInsertable(key, insertableId, (insertable) => {
+                Object.assign(insertable, settings);
             });
         },
-        onSuccess: (_result, indexConfigurations) =>
-            showSuccessToast(
-                indexConfigurations
-                    ? "Indexing enabled."
-                    : "Indexing disabled.",
-                toastId
-            ),
-        onError: getAppErrorHandler(
-            "Unexpectedly failed to update indexing.",
-            toastId
-        ),
-        onSettled: (_result, error) =>
-            refreshLibrary({ discardPatches: error !== null })
-    });
-}
-
-/** Re-probes the part, so the toast reports the change first. */
-export function useExcludedParametersMutation(insertableId: string) {
-    const libraryId = useLibraryId();
-    const key = useBuildStatusKey();
-    const refreshLibrary = useRefreshLibrary();
-    const toastId = `excluded-parameters-${insertableId}`;
-    return useMutation({
-        mutationKey: ["excluded-parameters", insertableId],
-        mutationFn: (excludedParameterIds: string[]) =>
-            apiPost(
-                "/excluded-parameters" +
-                    toLibraryPath(libraryId) +
-                    toInsertablePath(insertableId),
-                {
-                    body: { excludedParameterIds }
-                }
-            ),
-        onMutate: (excludedParameterIds) => {
-            showInfoToast("Reindexing part...", { id: toastId });
-            return patchQuery<LibraryBuildStatus>(key, (status) => {
-                const insertable = status.insertables[insertableId];
-                if (insertable)
-                    insertable.excludedParameterIds = excludedParameterIds;
-            });
-        },
-        onSuccess: () => showSuccessToast("Part reindexed.", toastId),
-        onError: getAppErrorHandler(
-            "Unexpectedly failed to update the indexed parameters.",
-            toastId
-        ),
-        onSettled: (_result, error) =>
-            refreshLibrary({ discardPatches: error !== null })
+        onSuccess: () => showSuccessToast(m.adminCardReindexed(), toastId),
+        onError: getAppErrorHandler(m.adminCardIndexingFailed(), toastId),
+        onSettled: settle
     });
 }
 
@@ -249,7 +222,7 @@ export function useExcludedParametersMutation(insertableId: string) {
 export function useToggleSortOrderMutation(groupId: string) {
     const libraryId = useLibraryId();
     const key = useBuildStatusKey();
-    const refreshLibrary = useRefreshLibrary();
+    const settle = useSettleBuildStatus();
     return useMutation({
         mutationKey: ["sort-group-alphabetically", groupId],
         mutationFn: (sortAlphabetically: boolean) =>
@@ -261,10 +234,7 @@ export function useToggleSortOrderMutation(groupId: string) {
                 const group = status.groups[groupId];
                 if (group) group.sortAlphabetically = sortAlphabetically;
             }),
-        onError: getAppErrorHandler(
-            "Unexpectedly failed to update sort order."
-        ),
-        onSettled: (_result, error) =>
-            refreshLibrary({ discardPatches: error !== null })
+        onError: getAppErrorHandler(m.adminCardSortFailed()),
+        onSettled: settle
     });
 }

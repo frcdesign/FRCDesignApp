@@ -13,23 +13,26 @@ or the load that probes Onshape ([loading.md](./loading.md)); both consume it.
 
 ## Code map
 
-| Path                                                                 | Role                                                                   |
-| -------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| `src/backend/features/configurations/contract.ts`                    | Parameter, `Selection`, `ConfigurationKey`, record and result types    |
-| `src/backend/features/configurations/selection.ts`                   | The only place a selection or key is built; see the invariants         |
-| `src/backend/features/configurations/utils.ts`                       | Visibility conditions, option resolution, configuration text encodings |
-| `src/backend/features/configurations/input-parser.ts`                | Parses and evaluates typed quantity expressions (`(2 + 3) in`)         |
-| `src/backend/features/configurations/combinations.ts`                | Indexing limits and bands, enumeration and counting of combinations    |
-| `src/backend/features/configurations/roles.ts`                       | Recognizes parameter roles by name (derivation variable, color, ...)   |
-| `src/backend/features/configurations/instances.ts`                   | Splits a parameter by the choices that filter it, for reporting        |
-| `src/backend/features/configurations/units.ts`                       | A workspace's display units, cached in KV                              |
-| `src/backend/features/configurations/part-number.ts`                 | Placeholder and meaningless part numbers                               |
-| `src/backend/features/configurations/routes.ts`                      | `GET /api/configuration/...`, `GET /api/unit-info`                     |
-| `src/backend/features/load/parse-configuration.ts`                   | Onshape's configuration response to our parameters, roles attached     |
-| `src/backend/features/load/parse-configuration-records.ts`           | `decideIndexing`, probing each combination into a record               |
-| `src/backend/features/search/records.ts`                             | Records to search records, each with its thumbnail key                 |
-| `src/frontend/features/insert/components/configurations.tsx`         | The parameter panel in the insert menu                                 |
-| `src/frontend/features/build-status/components/indexing-section.tsx` | Admin indexing controls                                                |
+| Path                                                                      | Role                                                                        |
+| ------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| `src/backend/features/configurations/contract.ts`                         | Parameter, `Selection`, `ConfigurationKey`, record and result types         |
+| `src/backend/features/configurations/selection.ts`                        | The only place a selection or key is built; see the invariants              |
+| `src/backend/features/configurations/utils.ts`                            | Visibility conditions, option resolution, configuration text encodings      |
+| `src/backend/features/configurations/input-parser.ts`                     | Parses and evaluates typed quantity expressions (`(2 + 3) in`)              |
+| `src/backend/features/configurations/combinations.ts`                     | Indexing limits and bands, enumeration and counting of combinations         |
+| `src/backend/features/configurations/roles.ts`                            | Recognizes parameter roles by name (derivation variable, color, ...)        |
+| `src/backend/features/configurations/instances.ts`                        | Splits a parameter by the choices that filter it, for reporting             |
+| `src/backend/features/configurations/units.ts`                            | A workspace's display units, cached in KV                                   |
+| `src/backend/features/configurations/part-number.ts`                      | Placeholder and meaningless part numbers                                    |
+| `src/backend/features/configurations/stored-selections.ts`                | Reads a selection a favorite or recent stored against the part as it is now |
+| `src/backend/features/configurations/routes.ts`                           | `GET /api/configuration/...`, `GET /api/unit-info`                          |
+| `src/backend/features/load/parse-configuration.ts`                        | Onshape's configuration response to our parameters, roles attached          |
+| `src/backend/features/load/parse-configuration-records.ts`                | `decideIndexing`, probing each combination into a record                    |
+| `src/backend/features/search/records.ts`                                  | Records to search records, each with its thumbnail key                      |
+| `src/frontend/features/insert/components/configurations.tsx`              | The parameter panel in the insert menu                                      |
+| `src/frontend/features/insert/components/configuration-hover-card.tsx`    | A row's icon whose card lists the configuration it opens on                 |
+| `src/frontend/features/build-status/components/configuration-section.tsx` | The admin card's parameter table and indexing controls                      |
+| `src/frontend/features/build-status/indexing-draft.ts`                    | Indexing edits held until saved                                             |
 
 ## Storage
 
@@ -56,12 +59,16 @@ link reopens it.
 
 `AGENTS.md` states the rule; this is the reasoning.
 
-- **Selection** (`Selection`): every declared parameter, each value **as
-  entered**. A quantity keeps the expression typed, `(2 + 3) in`, and a
-  quantity's default is spelled in its own unit, `1 in`. It is what is stored,
-  what the url carries, and what Onshape is sent, so a derived feature in
-  Onshape shows what the person typed. `toSelection` makes one from anything: a
-  search hit, a favorite, a request body, the url.
+- **Selection** (`Selection`): every declared parameter, with each quantity
+  **collapsed** to its value in the parameter's own unit (`collapseQuantity`):
+  `(2 + 3) in` is `5 in`, and `25.4 mm` in an inch parameter is `1 in`. It keeps
+  as many digits as values are compared at (`1/3 in` is `0.33333333 in`), so
+  collapsing never changes a value's canonical form, its thumbnail key, or how
+  analytics counts it. It is what is stored, what the url carries, and what
+  Onshape is sent, so a derived feature in Onshape shows the collapsed value.
+  `toSelection` makes one from anything: a search hit, a favorite, a request
+  body, the url. A value that doesn't evaluate is left as given, so the input
+  can say why.
 - **Configuration key** (`ConfigurationKey`): derived from a selection only to
   name its thumbnail. It holds what the selection overrides, canonically spelled
   (base units, hidden parameters and derivation variables left out), so
@@ -69,7 +76,20 @@ link reopens it.
   `DEFAULT_CONFIGURATION_KEY` is the empty string.
 
 Comparing or counting values (analytics, "is this the default") goes through
-`canonicalValue` / `canonicalValues`.
+`canonicalValue` / `canonicalValues`, computed where they are needed, never
+stored beside the selection they came from.
+`displayedValues` spells a selection for reading: what it applies, enums by
+option name, quantities in their own unit, each marked when at its default.
+
+### Showing a row's configuration
+
+A favorite, recent or search-result row of a configurable part shows a sliders
+icon beside its title (`ConfigurationHoverCard`). Hovering it fetches the
+part's parameters with the insert menu's own query, keyed on the microversion,
+and lists `displayedValues` of the selection the row opens on: the favorite's
+saved one, the recent's, or the hit's matched record, else the defaults.
+Values left at their default are dimmed. Browsing a group shows no icon, since
+every row there opens on the defaults.
 
 ## Flows
 
@@ -89,19 +109,23 @@ Comparing or counting values (analytics, "is this the default") goes through
    parameters: enums and booleans without a role, minus
    `excluded_parameter_ids`. Visibility is honored, so a hidden parameter keeps
    its default.
-2. The count sets the band: under `AUTO_INDEX_THRESHOLD` (128) indexes
+2. The count sets the band (`bandOf`): under `AUTO_INDEX_THRESHOLD` (128) indexes
    automatically; at or above it indexes only with `index_configurations`
    (`MANUAL_INDEXING_REQUIRED` otherwise); past
    `MAX_PART_NUMBER_CONFIGURATIONS` (512) never (`CONFIGURATION_LIMIT_EXCEEDED`).
 3. `decideIndexing` returns the combinations; `parseConfigurationRecords` probes
    each in batches of 20, with only the values that differ from the defaults
    sent, and stores a record per combination.
-4. Changing the exclusions or the indexing switch re-runs this for one element
-   immediately (`POST /api/excluded-parameters/...`,
-   `POST /api/index-configurations/...`).
+4. In the admin card's Configuration section, unchecking a parameter or flipping
+   the indexing switch only edits a draft (`indexing-draft.ts`), recounted as
+   it changes. **Save** sends both settings in one `POST /api/indexing/...`,
+   which re-runs this for the element.
 
-The admin card counts with the same functions, so it cannot disagree with the
-load about the band.
+The admin card counts with `countCombinations`, which runs past the cap so it
+can show the true count, and bands that count with the same `bandOf`. Each
+indexed parameter only multiplies the combinations, so the two counts agree
+wherever enumeration doesn't stop, and the card cannot disagree with the load
+about the band.
 
 ### Configuring and inserting
 
@@ -133,27 +157,40 @@ record for a selection, since records name only what enumeration varied.
   and there are only these two forms.
 - A selection is never replaced by its key in storage, and a key is never sent
   to Onshape as a configuration, a render's included: Onshape names a render by
-  the value it computes from what was typed, which a key's base units round.
+  the value it computes from what it is sent, which a key's base units round.
 - Every boundary that receives a configuration (request body, url, stored
-  favorite, search hit) passes it through `toSelection`.
+  favorite or recent, search hit) passes it through `toSelection`, so quantities
+  are collapsed wherever a selection is held.
+- Collapsing a quantity never changes its `canonicalValue`.
 - Stored and shared selections omit derivation variables (`toStoredSelection`).
+- Nothing derived from a person's selection is stored beside it (a favorite, a
+  recent): no key, canonical values or identity column. A reload can move the
+  defaults and parameters a derived value was measured against, so it is
+  derived again on each read. Two stores differ for a reason: a load's records
+  keep their key, since each load rewrites them with the parameters they were
+  measured against, and the analytics log keeps the canonical values an insert
+  applied, as a fact about that moment.
 - Parameters with a role are never indexed.
 - The load and the admin UI decide the indexing band with the same
   `combinations.ts` functions.
 
 ## Failure and recovery
 
-| Failure                                         | Result                                                               | Recovery                                             |
-| ----------------------------------------------- | -------------------------------------------------------------------- | ---------------------------------------------------- |
-| A combination doesn't regenerate in Onshape     | That probe fails; the batch retries, then the load flags the element | Fix the part in Onshape; the next version reloads it |
-| Too many combinations                           | Not indexed; build issue                                             | Exclude parameters in the Indexing section           |
-| Units change in a workspace                     | Cached units drop via webhook, or expire in a week                   | Automatic                                            |
-| A parameter is added after a favorite was saved | Favorite's selection is short one parameter                          | `toSelection` defaults it on read                    |
+| Failure                                         | Result                                                               | Recovery                                               |
+| ----------------------------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------ |
+| A combination doesn't regenerate in Onshape     | That probe fails; the batch retries, then the load flags the element | Fix the part in Onshape; the next version reloads it   |
+| Too many combinations                           | Not indexed; build issue                                             | Uncheck parameters in the card's Configuration section |
+| Units change in a workspace                     | Cached units drop via webhook, or expire in a week                   | Automatic                                              |
+| A parameter is added after a favorite was saved | Favorite's selection is short one parameter                          | `toSelection` defaults it on read                      |
 
 ## Decisions
 
-- **Selections keep what was typed.** Sending Onshape the canonical value would
-  turn a derived feature's `(2 + 3) in` into `0.127 m`.
+- **Quantities collapse, in their own unit.** One configuration then has one
+  spelling everywhere it is held: a favorite, a recent, the url, the insert
+  menu. Onshape's derived feature shows `5 in` rather than the `(2 + 3) in`
+  that was typed, which is the cost. Base units would read `0.127 m` there, so
+  the parameter's own unit is used, and full precision keeps the canonical form
+  unchanged.
 - **Keys exist only for thumbnails.** Anything else built on a key would inherit
   its lossy canonicalization; comparisons use `canonicalValues`.
 - **Roles by name.** Onshape doesn't mark a parameter's purpose, so recognized
@@ -161,6 +198,12 @@ record for a selection, since records name only what enumeration varied.
 - **Derivation variables are filled in the menu.** Onshape takes a repeated
   derive of the same configuration; the unique value only keeps each derive
   distinct, which is the menu's concern, not the server's.
+- **Indexing edits are drafted.** Every reindex probes Onshape once per
+  combination, so an admin's several edits land in one request rather than
+  one each. The draft lives in memory, outside the card, so it survives the
+  card closing but not a page load, after which a reload may have changed what
+  it was made against. A blue dot on the element's status badge marks one
+  left unsaved.
 - **Assemblies index like part studios.** Their probes send overrides the same
   way, so exclusions apply to both.
 

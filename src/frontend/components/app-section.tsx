@@ -1,8 +1,9 @@
-import { Accordion, ActionIcon, Group } from "@mantine/core";
+import { Accordion, Box, Group, Title } from "@mantine/core";
 import { CaretDownIcon } from "@phosphor-icons/react";
 import { createContext, use, type ReactNode } from "react";
 import { IconSize } from "../lib/style-constants";
 import { AppTitle } from "./app-title";
+import { PANEL_TITLE_ORDER } from "./section";
 import styles from "../lib/styles.module.css";
 import classes from "./app-section.module.css";
 
@@ -10,34 +11,48 @@ interface AppSectionsProps {
     /** The values of the sections showing their content. */
     opened: string[];
     onChange: (opened: string[]) => void;
+    /** Inside a card: tighter, not stuck, and unmounted while closed. */
+    compact?: boolean;
     children: ReactNode;
 }
 
-/** Lets each section's chevron toggle itself without the caller wiring it. */
-const SectionsContext = createContext<{
+interface SectionsContextValue {
     opened: string[];
     onChange: (opened: string[]) => void;
-}>({ opened: [], onChange: () => undefined });
+    compact: boolean;
+}
+
+/** Lets each section's chevron toggle itself without the caller wiring it. */
+const SectionsContext = createContext<SectionsContextValue>({
+    opened: [],
+    onChange: () => undefined,
+    compact: false
+});
 
 /**
- * A page's stack of collapsing sections. Which are open belongs to the caller,
- * since it usually outlives the page. Flush to the page's edges, so a section's
+ * A stack of collapsing sections. Which are open belongs to the caller, since
+ * it usually outlives the page. On a page, flush to its edges, so a section's
  * rows sit on the same grid as every other list.
  */
 export function AppSections(props: AppSectionsProps): ReactNode {
-    const { opened, onChange, children } = props;
+    const { opened, onChange, compact = false, children } = props;
 
     return (
-        <SectionsContext value={{ opened, onChange }}>
+        <SectionsContext value={{ opened, onChange, compact }}>
             <Accordion
                 multiple
                 variant="unstyled"
                 value={opened}
                 onChange={onChange}
+                // A closed card section's content fetches nothing.
+                keepMounted={!compact}
                 classNames={{
                     item: classes.item,
+                    control: compact ? classes.compactControl : undefined,
                     label: classes.label,
-                    content: `${classes.content} ${styles.dividerBottom}`,
+                    content: compact
+                        ? classes.compactContent
+                        : `${classes.content} ${styles.dividerBottom}`,
                     icon: styles.titleIcon,
                     chevron: classes.chevron
                 }}
@@ -77,20 +92,33 @@ export function AppSection(props: AppSectionProps): ReactNode {
     return (
         <Accordion.Item value={value}>
             <Group
-                // The whole row highlights, buttons and chevron included.
-                className={`${classes.header} ${styles.sectionHeader} ${styles.dividerBottom} interactive`}
+                className={
+                    sections.compact
+                        ? undefined
+                        : // The whole row highlights, buttons and chevron included.
+                          `${classes.header} ${styles.sectionHeader} ${styles.dividerBottom} interactive`
+                }
                 gap="xs"
-                pr="sm"
+                pr={sections.compact ? undefined : "sm"}
             >
                 <Accordion.Control
                     // Shrinkable, so the buttons beside it keep their width.
                     miw={0}
                     icon={icon}
                 >
-                    {title ?? <AppTitle title={name} />}
+                    {title ??
+                        (sections.compact ? (
+                            <Title order={PANEL_TITLE_ORDER}>{name}</Title>
+                        ) : (
+                            <AppTitle title={name} />
+                        ))}
                 </Accordion.Control>
                 {actions}
-                <SectionChevron opened={opened} onToggle={toggle} />
+                <SectionChevron
+                    opened={opened}
+                    onToggle={toggle}
+                    size={sections.compact ? IconSize.SMALL : IconSize.MEDIUM}
+                />
             </Group>
             <Accordion.Panel>{children}</Accordion.Panel>
         </Accordion.Item>
@@ -100,21 +128,24 @@ export function AppSection(props: AppSectionProps): ReactNode {
 interface SectionChevronProps {
     opened: boolean;
     onToggle: () => void;
+    size: IconSize;
 }
 
-/** Mantine's chevron is hidden, so this one lands at the end of the row. */
+/**
+ * Mantine's chevron sits inside the control, before the actions; this one
+ * lands at the end of the row, and like Mantine's is part of the header rather
+ * than a button of its own.
+ */
 function SectionChevron(props: SectionChevronProps): ReactNode {
-    const { opened, onToggle } = props;
+    const { opened, onToggle, size } = props;
 
     return (
-        <ActionIcon className={styles.noShrink} onClick={onToggle}>
-            <CaretDownIcon
-                size={IconSize.MEDIUM}
-                style={{
-                    transform: opened ? "rotate(180deg)" : undefined,
-                    transition: "transform 200ms ease"
-                }}
-            />
-        </ActionIcon>
+        <Box
+            className={`${classes.toggle} ${styles.noShrink}`}
+            data-opened={opened || undefined}
+            onClick={onToggle}
+        >
+            <CaretDownIcon size={size} />
+        </Box>
     );
 }

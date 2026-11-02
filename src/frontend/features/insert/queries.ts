@@ -28,6 +28,8 @@ import {
 } from "../../lib/query-keys";
 import { toInsertablePath } from "../../lib/api-paths";
 import { useInsertLocationId } from "../insert-location/queries";
+import { useLibraryId } from "../../lib/library";
+import { invalidateRecents } from "../recents/queries";
 
 interface InsertArgs {
     /** Whether the part is favorited — see `source` for where the insert began. */
@@ -95,6 +97,7 @@ export function useInsertMutation(
     const target = useTargetElement();
     // The backend resolves where it is now, since it moves when dragged.
     const insertLocationId = useInsertLocationId();
+    const libraryId = useLibraryId();
 
     const toastId = "insert-" + insertable.id;
 
@@ -116,13 +119,7 @@ export function useInsertMutation(
                   endpoint: "/add-to-assembly",
                   body: { ...common, fasten, insertLocationId }
               }
-            : {
-                  endpoint: "/add-to-part-studio",
-                  body: {
-                      ...common,
-                      useMateConnector: insertable.supportsFasten
-                  }
-              };
+            : { endpoint: "/add-to-part-studio", body: common };
     };
 
     return useMutation({
@@ -154,6 +151,8 @@ export function useInsertMutation(
                     : `Successfully inserted ${insertable.name}.`,
                 toastId
             );
-        }
+        },
+        // Settled: a fasten that fails still leaves the part inserted.
+        onSettled: () => invalidateRecents(libraryId)
     });
 }

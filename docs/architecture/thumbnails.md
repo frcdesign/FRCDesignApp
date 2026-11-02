@@ -72,11 +72,11 @@ serves what is stored:
 ### Rendering a configuration
 
 A render is started explicitly, by a client that got a configuration miss and
-can wait for it: the insert menu's preview and favorite rows. Search rows never
+can wait for it: the insert menu's preview, and favorite and recent rows. Search rows never
 start one, so a cold search cannot start a render per row.
 
 1. The client calls `POST /api/render-thumbnail/insertable/:insertableId` with
-   the selection as entered. It must be signed in: the render calls Onshape as
+   the selection. It must be signed in: the render calls Onshape as
    the caller.
 2. `requestRender` makes the selection whole against the insertable's
    parameters and settles it as the insert menu does (`normalizeSelection`),
@@ -85,7 +85,7 @@ start one, so a cold search cannot start a render per row.
    element's default is refused with a 400.
 3. It asks the insertables endpoint, on the insertable's version, for the
    configuration's `predictableThumbnailId`, sending `renderOverrides`: the
-   values as entered, escaped once (`encodeQueryConfiguration`). No insertables
+   selection's values, escaped once (`encodeQueryConfiguration`). No insertables
    answers `no-part`, which the client shows as a configuration that failed to
    regenerate; otherwise it answers `rendering`.
 4. The instance id is `version-render-` plus a SHA-256 of
@@ -171,7 +171,8 @@ previous picture up with a small spinner while the new one renders.
   configuration that produces no part says "Part failed to regenerate." at once.
 - Picking the configuration again tries again.
 
-**A favorite was saved with a configuration.** Its row starts the same render,
+**A favorite was saved, or a part inserted, with a configuration.** Its favorite
+or recent row starts the same render,
 showing the part's default until it lands. The row's small picture is rendered
 after the large one, so it can arrive after the row has stopped waiting; the
 row still picks it up when the server says it landed.

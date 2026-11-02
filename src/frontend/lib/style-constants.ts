@@ -50,6 +50,9 @@ export const MUTED_MARK = `${StatusColor.NEUTRAL}.5`;
 export const RENDER_BACKGROUND =
     "light-dark(var(--mantine-color-gray-1), var(--mantine-color-body))";
 
+/** The page's text color, for an icon that should read as part of the text beside it. */
+export const TEXT_COLOR = "var(--mantine-color-text)";
+
 /** Matches a subtle gray control's icon, for a bare icon beside one. */
 export const CONTROL_ICON_COLOR = "var(--mantine-color-gray-light-color)";
 

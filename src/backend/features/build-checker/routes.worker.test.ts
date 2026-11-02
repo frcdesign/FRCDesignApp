@@ -114,9 +114,7 @@ describe("GET /build-status", () => {
         const body: LibraryBuildStatus = await res.json();
         expect(Object.keys(body.insertables)).toHaveLength(count);
         // The configurations come back joined, not just the insertables.
-        expect(body.insertables["ins-119"].configuration?.parameters).toEqual(
-            TEST_PARAMETERS
-        );
+        expect(body.insertables["ins-119"].parameters).toEqual(TEST_PARAMETERS);
     });
 
     // A removed check would render as a blank callout.

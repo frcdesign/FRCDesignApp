@@ -1,7 +1,7 @@
 {
     "version": "6",
     "dialect": "sqlite",
-    "id": "7339d10b-fc78-42dc-9968-b3212dd288d9",
+    "id": "ede5802c-dc3a-4aba-aa07-7b55595ba5e8",
     "prevId": "6f2386eb-1754-42e7-a379-680294ffc63a",
     "tables": {
         "configurations": {
@@ -336,8 +336,8 @@
                     "autoincrement": false,
                     "default": false
                 },
-                "supports_fasten": {
-                    "name": "supports_fasten",
+                "fasten_disabled": {
+                    "name": "fasten_disabled",
                     "type": "integer",
                     "primaryKey": false,
                     "notNull": true,
@@ -553,6 +553,88 @@
                     "name": "onshape_webhooks_subject_subject_id_pk"
                 }
             },
+            "uniqueConstraints": {},
+            "checkConstraints": {}
+        },
+        "recent_inserts": {
+            "name": "recent_inserts",
+            "columns": {
+                "id": {
+                    "name": "id",
+                    "type": "text",
+                    "primaryKey": true,
+                    "notNull": true,
+                    "autoincrement": false
+                },
+                "user_id": {
+                    "name": "user_id",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                },
+                "library_id": {
+                    "name": "library_id",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                },
+                "insertable_id": {
+                    "name": "insertable_id",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                },
+                "selection": {
+                    "name": "selection",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                },
+                "inserted_at": {
+                    "name": "inserted_at",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                }
+            },
+            "indexes": {
+                "recent_inserts_user_library_idx": {
+                    "name": "recent_inserts_user_library_idx",
+                    "columns": ["user_id", "library_id", "inserted_at"],
+                    "isUnique": false
+                },
+                "recent_inserts_user_id_insertable_id_selection_unique": {
+                    "name": "recent_inserts_user_id_insertable_id_selection_unique",
+                    "columns": ["user_id", "insertable_id", "selection"],
+                    "isUnique": true
+                }
+            },
+            "foreignKeys": {
+                "recent_inserts_library_id_libraries_id_fk": {
+                    "name": "recent_inserts_library_id_libraries_id_fk",
+                    "tableFrom": "recent_inserts",
+                    "tableTo": "libraries",
+                    "columnsFrom": ["library_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "no action",
+                    "onUpdate": "no action"
+                },
+                "recent_inserts_insertable_id_insertables_id_fk": {
+                    "name": "recent_inserts_insertable_id_insertables_id_fk",
+                    "tableFrom": "recent_inserts",
+                    "tableTo": "insertables",
+                    "columnsFrom": ["insertable_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "cascade",
+                    "onUpdate": "no action"
+                }
+            },
+            "compositePrimaryKeys": {},
             "uniqueConstraints": {},
             "checkConstraints": {}
         },
@@ -875,71 +957,6 @@
                 "daily_metrics_day_library_id_type_pk": {
                     "columns": ["day", "library_id", "type"],
                     "name": "daily_metrics_day_library_id_type_pk"
-                }
-            },
-            "uniqueConstraints": {},
-            "checkConstraints": {}
-        },
-        "daily_report_metrics": {
-            "name": "daily_report_metrics",
-            "columns": {
-                "day": {
-                    "name": "day",
-                    "type": "text",
-                    "primaryKey": false,
-                    "notNull": true,
-                    "autoincrement": false
-                },
-                "topic": {
-                    "name": "topic",
-                    "type": "text",
-                    "primaryKey": false,
-                    "notNull": true,
-                    "autoincrement": false
-                },
-                "category": {
-                    "name": "category",
-                    "type": "text",
-                    "primaryKey": false,
-                    "notNull": true,
-                    "autoincrement": false
-                },
-                "source": {
-                    "name": "source",
-                    "type": "text",
-                    "primaryKey": false,
-                    "notNull": true,
-                    "autoincrement": false
-                },
-                "element_id": {
-                    "name": "element_id",
-                    "type": "text",
-                    "primaryKey": false,
-                    "notNull": true,
-                    "autoincrement": false,
-                    "default": "''"
-                },
-                "count": {
-                    "name": "count",
-                    "type": "integer",
-                    "primaryKey": false,
-                    "notNull": true,
-                    "autoincrement": false,
-                    "default": 0
-                }
-            },
-            "indexes": {},
-            "foreignKeys": {},
-            "compositePrimaryKeys": {
-                "daily_report_metrics_day_topic_category_source_element_id_pk": {
-                    "columns": [
-                        "day",
-                        "topic",
-                        "category",
-                        "source",
-                        "element_id"
-                    ],
-                    "name": "daily_report_metrics_day_topic_category_source_element_id_pk"
                 }
             },
             "uniqueConstraints": {},
@@ -1335,27 +1352,6 @@
                 "updated_elements": {
                     "name": "updated_elements",
                     "type": "integer",
-                    "primaryKey": false,
-                    "notNull": false,
-                    "autoincrement": false
-                },
-                "report_topic": {
-                    "name": "report_topic",
-                    "type": "text",
-                    "primaryKey": false,
-                    "notNull": false,
-                    "autoincrement": false
-                },
-                "report_category": {
-                    "name": "report_category",
-                    "type": "text",
-                    "primaryKey": false,
-                    "notNull": false,
-                    "autoincrement": false
-                },
-                "report_source": {
-                    "name": "report_source",
-                    "type": "text",
                     "primaryKey": false,
                     "notNull": false,
                     "autoincrement": false

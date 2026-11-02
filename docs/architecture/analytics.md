@@ -108,6 +108,11 @@ panel. Its routes read only rollups and return only aggregates:
 
 The range, threshold and preset live in the url, so a view can be shared.
 
+The admin card in the app reads the library's **Parts** report, all time and
+fetched once for every card, for a part's inserts, monthly rate and favorites,
+and links to its **Part** report. It asks only while the card's Usage section is
+open, and reuses an answer for five minutes.
+
 Every page's totals are over the picked range, and two numbers are not: the
 favorites and linked documents standing now, which are state rather than events
 and say so on the tile. The season comparison beside a headline number is shown

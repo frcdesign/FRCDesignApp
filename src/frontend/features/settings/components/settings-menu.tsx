@@ -1,4 +1,4 @@
-import { Box, Button, Select, Stack } from "@mantine/core";
+import { Button, Divider, Select, Stack } from "@mantine/core";
 import {
     ArrowLeftIcon,
     ChatCircleTextIcon,
@@ -18,18 +18,24 @@ import {
 import { type AppTab, getTabPath } from "../../../lib/app-tab";
 import { InputRow } from "../../../components/input-row";
 import { OpenUrlButton } from "../../../components/open-url-button";
-import { Section } from "../../../components/section";
+import { AppSection, AppSections } from "../../../components/app-section";
 import { useAccessData } from "../../auth/access-level";
 import {
     RequireAccessLevel,
     RequireSignIn
 } from "../../auth/components/require-access";
 import { startSignOut } from "../../auth/sign-out";
-import { updateUiState } from "../../../lib/ui-state";
+import {
+    SectionId,
+    setOpenedSections,
+    updateUiState,
+    useOpenedSections
+} from "../../../lib/ui-state";
 import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
 import { SETUP_URL } from "../../../lib/url";
 import { useAppModal } from "../../../components/open-app-modal";
 import { openFeedbackForm } from "../../feedback/open-feedback";
+import { m } from "../../../paraglide/messages";
 import { useLibraryId } from "../../../lib/library";
 import { ReloadButton } from "../../library/components/reload-button";
 import {
@@ -91,13 +97,10 @@ export function SettingsMenuContent(): ReactNode {
             {/* Unlike all other checks, this one uses maxAccessLevel so you can
                 still switch back up from user to admin. */}
             {hasEditorAccess(maxAccessLevel) && (
-                <Box mt="md">
-                    {/* The modal title's size, so the admin half of the menu
-                        announces itself rather than reading as another row. */}
-                    <Section title="Admin settings" order={5}>
-                        <AdminSettings />
-                    </Section>
-                </Box>
+                <>
+                    <Divider my="md" />
+                    <AdminSettingsSection />
+                </>
             )}
         </>
     );
@@ -188,6 +191,26 @@ function OpenAppButton(props: OpenAppButtonProps): ReactNode {
         >
             Open app
         </Button>
+    );
+}
+
+const ADMIN_SECTION_IDS = [SectionId.ADMIN_SETTINGS];
+
+function AdminSettingsSection(): ReactNode {
+    const opened = useOpenedSections(ADMIN_SECTION_IDS);
+    return (
+        <AppSections
+            compact
+            opened={opened}
+            onChange={(next) => setOpenedSections(ADMIN_SECTION_IDS, next)}
+        >
+            <AppSection
+                value={SectionId.ADMIN_SETTINGS}
+                name={m.settingsAdminSettings()}
+            >
+                <AdminSettings />
+            </AppSection>
+        </AppSections>
     );
 }
 
