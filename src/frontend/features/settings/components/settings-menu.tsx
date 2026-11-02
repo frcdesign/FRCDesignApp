@@ -28,7 +28,6 @@ import { startSignOut } from "../../auth/sign-out";
 import { updateUiState } from "../../../lib/ui-state";
 import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
 import { SETUP_URL } from "../../../lib/url";
-import { DISCORD_INVITE_URL } from "@backend/features/feedback/discord-forums";
 import { useAppModal } from "../../../components/open-app-modal";
 import { openFeedbackForm } from "../../feedback/open-feedback";
 import { useLibraryId } from "../../../lib/library";
@@ -140,11 +139,8 @@ function UserSettings(): ReactNode {
                         openFeedbackForm();
                     }}
                 >
-                    Send feedback
+                    Leave feedback
                 </Button>
-            </InputRow>
-            <InputRow label="Discord">
-                <OpenUrlButton text="Join discord" url={DISCORD_INVITE_URL} />
             </InputRow>
             {/* Only worth offering to somebody who is not already running the
                 app, which inside Onshape's panel they are. */}

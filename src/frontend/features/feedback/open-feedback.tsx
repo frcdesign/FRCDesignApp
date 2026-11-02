@@ -26,7 +26,7 @@ export function openFeedbackForm(initialTopic = FeedbackTopic.APP): void {
     openAppModal({
         title: (
             <AppTitle
-                title="Send feedback"
+                title="Leave feedback"
                 icon={<ChatCircleTextIcon size={IconSize.MEDIUM} />}
             />
         ),

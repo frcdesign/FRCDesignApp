@@ -31,10 +31,9 @@ import { useFavorite } from "../../favorites/queries";
 import { RequireSignIn } from "../../auth/components/require-access";
 import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
 import { InsertSource } from "@backend/features/analytics/usage";
-import { Menu } from "@mantine/core";
-import { FlagIcon } from "@phosphor-icons/react";
-import { openPartReport } from "../../feedback/open-feedback";
-import { useLibraryId } from "../../../lib/library";
+import { Hint } from "@backend/features/hints/contract";
+import { ReportIssueItem } from "../../feedback/components/report-issue-item";
+import { useHasSeenHint, useMarkHintSeen } from "../../hints/queries";
 
 interface InsertableMatch extends RowMatch {
     /** The values of the configuration it names, for the menu. */
@@ -62,6 +61,10 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
     const isAssemblyInPartStudio = useIsAssemblyInPartStudio(
         insertable.elementType
     );
+
+    // Every part's menu offers Report an issue, so opening any one sees it.
+    const hasOpenedReport = useHasSeenHint(Hint.OPENED_REPORT_ISSUE);
+    const markReportOpened = useMarkHintSeen(Hint.OPENED_REPORT_ISSUE);
 
     if (isHidden) {
         return null;
@@ -118,6 +121,8 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
         <ItemRow
             onClick={openMenu}
             left={title}
+            isNew={!hasOpenedReport}
+            onMenuClose={markReportOpened}
             rightSection={
                 <RequireSignIn>
                     <FavoriteButton
@@ -166,7 +171,6 @@ export function InsertableMenuItems(
         report
     } = props;
     const isConnected = useIsConnectedToOnshape();
-    const libraryId = useLibraryId();
 
     return (
         <>
@@ -205,18 +209,11 @@ export function InsertableMenuItems(
                 />
             </MenuSection>
             <MenuSection label="Feedback">
-                <Menu.Item
-                    leftSection={<FlagIcon />}
-                    onClick={() =>
-                        openPartReport(libraryId, {
-                            insertable,
-                            // The menu's whole selection; a card's search hit names only some.
-                            selection: report?.selection ?? selection
-                        })
-                    }
-                >
-                    Report an issue
-                </Menu.Item>
+                <ReportIssueItem
+                    insertable={insertable}
+                    // The menu's whole selection; a card's search hit names only some.
+                    selection={report?.selection ?? selection}
+                />
             </MenuSection>
             <AdminMenuSection>
                 <ReloadThumbnailMenuItem

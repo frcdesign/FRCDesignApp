@@ -210,6 +210,8 @@ function InsertMenuFooter(props: InsertMenuFooterProps): ReactNode {
     const markSetDefaultOpened = useMarkHintSeen(
         Hint.OPENED_SET_DEFAULT_CONFIGURATION
     );
+    const hasOpenedReport = useHasSeenHint(Hint.OPENED_REPORT_ISSUE);
+    const markReportOpened = useMarkHintSeen(Hint.OPENED_REPORT_ISSUE);
     // The menu offers it only to a signed-in favorite with a configuration on screen.
     const offersSetDefault = isSignedIn && !!favorite && !!report;
     return (
@@ -234,10 +236,14 @@ function InsertMenuFooter(props: InsertMenuFooterProps): ReactNode {
                 <MenuButton
                     large
                     wide
-                    isNew={offersSetDefault && !hasOpenedSetDefault}
-                    onClose={
-                        offersSetDefault ? markSetDefaultOpened : undefined
+                    isNew={
+                        (offersSetDefault && !hasOpenedSetDefault) ||
+                        !hasOpenedReport
                     }
+                    onClose={() => {
+                        if (offersSetDefault) markSetDefaultOpened();
+                        markReportOpened();
+                    }}
                 >
                     <InsertableMenuItems
                         favorite={favorite}

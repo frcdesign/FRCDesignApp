@@ -84,13 +84,15 @@ have makes Discord refuse the post, which then goes again untagged.
 The source decides what the form offers and what the report carries
 (`feedbackCategories`):
 
-- **General** — **Send feedback** in settings. The reporter picks the topic.
+- **General** — **Leave feedback** in settings, which is also the app's way
+  into the Discord. The reporter picks the topic.
   The app's topics offer bug, feature request and other; a library's offer
   new part request, search or organization, bug and other, the kinds its
   forum is tagged by, and the form says that a problem with one part is
   reported from its menu.
 - **Part** — **Report an issue** in a part's menu, on its card or in the
-  insert menu. The topic is the part's library. It offers missing or incorrect
+  insert menu. Until somebody has closed a menu offering it, the item and the
+  ⋯ buttons opening it carry the blue dot (`Hint.OPENED_REPORT_ISSUE`). The topic is the part's library. It offers missing or incorrect
   metadata, incorrect geometry, broken configuration, wrong or missing
   thumbnail, bug (a part that won't insert is one) and other, and **Include
   the configuration** (on by default) sends the selection on screen.
