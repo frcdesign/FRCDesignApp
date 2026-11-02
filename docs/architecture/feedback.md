@@ -128,7 +128,7 @@ diagnostics }`. The title is the reporter's, filled in with `suggestTitle`
 7. Once posted, `trackReport` records it in the background, under the id the
    post quotes in its footer.
 8. The form turns into a success notice (`ReportSent`, a `SectionNotice`):
-   "Report sent!", "You can find your report in #library-feedback if you want
+   "Report sent!", "You can find your report in #frcdesignlib-feedback if you want
    to follow up in Discord.", and **Open Discord**, the forum's invite
    (`forumInvite`). Replies happen only there. If anything failed, the form
    stays open with the error and what was typed.

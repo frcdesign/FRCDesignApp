@@ -30,23 +30,28 @@ interface ForumSettings {
     /** Made from the channel, so joining lands there; the server's invite when absent. */
     invite?: string;
     /**
-     * By tag key; a key with no id is left untagged. With Developer Mode on in
-     * Discord, right-click a tag to copy its id.
+     * By tag key; a key with no id is left untagged. Discord's app never shows
+     * a tag's id: saving the forum's settings in the browser answers with the
+     * channel, whose `available_tags` hold each tag's id and name.
      */
     tags: Partial<Record<FeedbackTagKey, string>>;
 }
 
 export const DISCORD_FORUMS: Record<DiscordForum, ForumSettings> = {
     [DiscordForum.APP]: {
-        channel: "app-feedback",
+        channel: "frcdesignapp-feedback",
+        invite: "https://discord.gg/vJXPVbxddV",
         tags: {}
     },
     [DiscordForum.LIBRARY]: {
-        channel: "library-feedback",
+        channel: "frcdesignlib-feedback",
+        invite: "https://discord.gg/gPGBpFxm2S",
         tags: {}
     },
+    /** In ConfigLib's own server, not FRCDesign's. */
     [DiscordForum.CONFIG_LIB]: {
         channel: "configlib-feedback",
+        invite: "https://discord.gg/QM4EeNQ9KC",
         tags: {}
     }
 };
