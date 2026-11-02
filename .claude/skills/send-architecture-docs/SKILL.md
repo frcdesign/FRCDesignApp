@@ -1,6 +1,6 @@
 ---
 name: send-architecture-docs
-description: Send one or more of the architecture docs in docs/architecture/, or the strings files in docs/strings/, to the user as rendered Markdown in the chat. Use when the user asks to see, read, open, send or share an architecture doc or an area's strings ("send me the auth doc", "show the fasten architecture", "send the build issues strings", "send all the architecture docs"), when a doc would answer their question better than a summary, and at the end of any turn that changed an architecture doc or a strings file.
+description: Send one or more of the architecture docs in docs/architecture/, or the strings files in docs/strings/, to the user as rendered Markdown in the chat. Use when the user asks to see, read, open, send or share an architecture doc or an area's strings ("send me the auth doc", "show the fasten architecture", "send the build issues strings", "send all the architecture docs"), or when a doc would answer their question better than a summary. After a turn that changed docs, use review-docs instead.
 ---
 
 # Send architecture docs

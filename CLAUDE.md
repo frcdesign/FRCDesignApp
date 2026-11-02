@@ -1,5 +1,5 @@
 @AGENTS.md
 
 After a turn that changes a document in `docs/architecture/` or `docs/strings/`,
-send it to the user with the `send-architecture-docs` skill, so they read what
-changed.
+publish the review page with the `review-docs` skill, so the user reads and
+comments on what changed in one place.
