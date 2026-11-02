@@ -9,6 +9,7 @@ user.
 | File                                 | Area                                                 |
 | ------------------------------------ | ---------------------------------------------------- |
 | [build-issues.md](./build-issues.md) | Build issues, the admin card, and the Admin settings |
+| [library.md](./library.md)           | The library pages: so far the group page             |
 
 ## Shape of a file
 

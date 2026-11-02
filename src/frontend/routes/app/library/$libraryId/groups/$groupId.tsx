@@ -29,7 +29,11 @@ import {
 } from "../../../../../components/app-notice";
 import { ClearFiltersButton } from "../../../../../features/settings/components/vendor-filters";
 import { useVendorFilters } from "../../../../../features/settings/vendor-filters";
-import { useLibraryQuery } from "../../../../../features/library/queries";
+import {
+    useIsGroupLoading,
+    useLibraryQuery
+} from "../../../../../features/library/queries";
+import { m } from "../../../../../paraglide/messages";
 import { useLibraryId } from "../../../../../lib/library";
 import { updateUiState, useUiState } from "../../../../../lib/ui-state";
 import styles from "../../../../../lib/styles.module.css";
@@ -55,9 +59,9 @@ function GroupList(): ReactNode {
     const vendorFilters = useVendorFilters();
 
     if (libraryQuery.isPending) {
-        return <SectionLoading title="Loading group..." />;
+        return <SectionLoading title={m.groupPageLoading()} />;
     } else if (libraryQuery.isError) {
-        return <SectionError title="Failed to load group." />;
+        return <SectionError title={m.groupPageLoadFailed()} />;
     }
     const groups = libraryQuery.data.groups;
     const insertables = libraryQuery.data.insertables;
@@ -67,7 +71,7 @@ function GroupList(): ReactNode {
     if (!group) {
         return (
             <PageNotice
-                title="Group not found"
+                title={m.groupPageNotFound()}
                 justifyUp
                 action={
                     <Button
@@ -79,7 +83,7 @@ function GroupList(): ReactNode {
                             });
                         }}
                     >
-                        Go back
+                        {m.groupPageGoBack()}
                     </Button>
                 }
             />
@@ -167,18 +171,22 @@ function GroupListContent(props: GroupListCardsProps): ReactNode {
 
     const showHidden = useShowHidden();
     const vendorFilters = useVendorFilters();
+    const isLoading = useIsGroupLoading(group.id);
 
     const groupInsertables = group.insertableOrder
         .map((insertableId) => insertables[insertableId])
         .filter((insertable) => !!insertable);
 
     if (groupInsertables.length === 0) {
+        if (isLoading) {
+            return <SectionLoading title={m.groupPageLoadingDocument()} />;
+        }
         return group.isLoaded ? (
-            <SectionNotice title="This group has no visible elements" />
+            <SectionNotice title={m.groupPageNoVisibleElements()} />
         ) : (
             <SectionNotice
-                title="This group failed to load."
-                description="Reload outdated documents to try again, or delete the group."
+                title={m.groupPageDocumentFailed()}
+                description={m.groupPageDocumentFailedHelp()}
             />
         );
     }
@@ -198,7 +206,7 @@ function GroupListContent(props: GroupListCardsProps): ReactNode {
                         raised={false}
                     />
                 }
-                title="All elements are hidden by filters"
+                title={m.groupPageFilteredOut()}
                 action={<ClearFiltersButton />}
             />
         );

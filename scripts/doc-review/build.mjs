@@ -1,20 +1,39 @@
 /**
- * Builds one HTML review page from docs/architecture and docs/strings: a tab
- * per document, each with its diff against a base, for publishing as an
- * Artifact. See .claude/skills/review-docs/SKILL.md.
+ * Builds one HTML page holding every Markdown file in the repository, the ones
+ * a branch changed first with their diffs, for publishing as an Artifact. See
+ * .claude/skills/review-docs/SKILL.md.
  *
- *     node scripts/doc-review/build.mjs --out <file.html> [--base <ref>] [--title <name>] [paths...]
- *
- * With no paths it takes every document changed since the base, with its pair
- * (an area's architecture doc and its strings file).
+ *     node scripts/doc-review/build.mjs --out <file.html> [--base <ref>] [--title <name>]
  */
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const DOC_DIRS = ["docs/architecture", "docs/strings"];
 const DEFAULT_BASE_BRANCH = "origin/cert";
+
+/** In the picker's order; a file goes in the first group whose test it passes. */
+const GROUPS = [
+    {
+        name: "Architecture",
+        kind: "Doc",
+        test: (path) => path.startsWith("docs/architecture/")
+    },
+    {
+        name: "Strings",
+        kind: "Strings",
+        test: (path) => path.startsWith("docs/strings/")
+    },
+    {
+        name: "Agent instructions",
+        kind: "Agents",
+        test: (path) =>
+            path === "AGENTS.md" ||
+            path === "CLAUDE.md" ||
+            path.startsWith(".claude/")
+    },
+    { name: "Guides", kind: "Guide", test: () => true }
+];
 
 const git = (...args) =>
     execFileSync("git", args, {
@@ -23,14 +42,16 @@ const git = (...args) =>
         stdio: ["ignore", "pipe", "pipe"]
     });
 
+const lines = (text) => text.split("\n").filter(Boolean);
+
 function parseArgs(argv) {
-    const options = { paths: [] };
+    const options = {};
     for (let i = 0; i < argv.length; i++) {
         const arg = argv[i];
         if (arg === "--out") options.out = argv[++i];
         else if (arg === "--base") options.base = argv[++i];
         else if (arg === "--title") options.title = argv[++i];
-        else options.paths.push(arg);
+        else throw new Error(`Unknown argument: ${arg}`);
     }
     if (!options.out) {
         throw new Error("Pass --out <file.html>");
@@ -44,26 +65,12 @@ function resolveBase(base) {
     return { ref, label: `${DEFAULT_BASE_BRANCH} (${ref.slice(0, 8)})` };
 }
 
-function isTracked(path) {
-    try {
-        git("ls-files", "--error-unmatch", path);
-        return true;
-    } catch {
-        return false;
-    }
-}
-
-/** Against the working tree, so uncommitted edits are reviewed too. */
-function diffFor(base, path) {
-    if (!isTracked(path)) {
-        try {
-            return git("diff", "--no-index", "--", "/dev/null", path);
-        } catch (error) {
-            // `--no-index` exits 1 when the files differ, which they do.
-            return error.stdout ?? "";
-        }
-    }
-    return git("diff", base, "--", path);
+function markdownFiles() {
+    const tracked = lines(git("ls-files", "--", "*.md"));
+    const untracked = lines(
+        git("ls-files", "--others", "--exclude-standard", "--", "*.md")
+    );
+    return { tracked: new Set(tracked), all: [...tracked, ...untracked] };
 }
 
 function existsAt(ref, path) {
@@ -75,83 +82,67 @@ function existsAt(ref, path) {
     }
 }
 
-function changedDocs(base) {
-    const tracked = git("diff", "--name-only", base, "--", ...DOC_DIRS)
-        .split("\n")
-        .filter(Boolean);
-    const untracked = git(
-        "ls-files",
-        "--others",
-        "--exclude-standard",
-        "--",
-        ...DOC_DIRS
-    )
-        .split("\n")
-        .filter(Boolean);
-    return [...tracked, ...untracked].filter(
-        (path) => path.endsWith(".md") && existsSync(path)
-    );
-}
-
-/** An area's architecture doc and its strings file are reviewed together. */
-function withPairs(paths) {
-    const all = new Set(paths);
-    for (const path of paths) {
-        const name = basename(path);
-        if (name === "README.md") continue;
-        for (const dir of DOC_DIRS) {
-            const pair = join(dir, name);
-            if (existsSync(pair)) all.add(pair);
-        }
+/** Against the working tree, so uncommitted edits are reviewed too. */
+function diffFor(base, path, isTracked) {
+    if (isTracked) return git("diff", base, "--", path);
+    try {
+        return git("diff", "--no-index", "--", "/dev/null", path);
+    } catch (error) {
+        // `--no-index` exits 1 when the files differ, which they do.
+        return error.stdout ?? "";
     }
-    return [...all].sort(
-        (a, b) =>
-            isIndex(a) - isIndex(b) ||
-            basename(a).localeCompare(basename(b)) ||
-            isStrings(a) - isStrings(b)
-    );
 }
 
-const isIndex = (path) => Number(basename(path) === "README.md");
-const isStrings = (path) => Number(path.startsWith("docs/strings"));
-
-function describe(path, base) {
+function describe(path, base, isTracked) {
     const md = readFileSync(path, "utf8");
+    const group = GROUPS.find((each) => each.test(path));
     const heading = md.match(/^#\s+(.+)$/m)?.[1] ?? basename(path, ".md");
-    const strings = isStrings(path) === 1;
-    const label = heading.replace(/:\s*strings$/i, "");
     return {
-        id:
-            (strings ? "strings-" : "doc-") +
-            basename(path, ".md").toLowerCase(),
+        id: path
+            .replace(/\.md$/, "")
+            .replace(/[^a-z0-9]+/gi, "-")
+            .replace(/^-|-$/g, "")
+            .toLowerCase(),
         path,
-        kind: isIndex(path) ? "Index" : strings ? "Strings" : "Doc",
-        label,
+        group: group.name,
+        kind: basename(path) === "README.md" ? "Index" : group.kind,
+        label: heading.replace(/:\s*strings$/i, ""),
         md,
-        diff: diffFor(base, path),
+        diff: diffFor(base, path, isTracked),
         isNew: !existsAt(base, path)
     };
+}
+
+/** Each group's index first, then by name. */
+function compare(a, b) {
+    const groupOrder = (doc) =>
+        GROUPS.findIndex((group) => group.name === doc.group);
+    return (
+        groupOrder(a) - groupOrder(b) ||
+        Number(a.kind !== "Index") - Number(b.kind !== "Index") ||
+        a.label.localeCompare(b.label)
+    );
 }
 
 function main() {
     const options = parseArgs(process.argv.slice(2));
     const base = resolveBase(options.base);
-    const paths = withPairs(
-        options.paths.length > 0 ? options.paths : changedDocs(base.ref)
-    );
-    if (paths.length === 0) {
-        throw new Error(`No documents changed since ${base.label}`);
-    }
-    const branch = git("rev-parse", "--abbrev-ref", "HEAD").trim();
-    const dirty = git("status", "--porcelain", "--", ...DOC_DIRS).trim();
-    const head =
-        git("rev-parse", "--short", "HEAD").trim() + (dirty ? " + edits" : "");
+    const files = markdownFiles();
+    const docs = files.all
+        .map((path) => describe(path, base.ref, files.tracked.has(path)))
+        .sort(compare);
+    const dirty = git("status", "--porcelain", "--", "*.md").trim();
     const data = {
         title: options.title ?? "Doc review",
-        branch,
+        branch: git("rev-parse", "--abbrev-ref", "HEAD").trim(),
         baseLabel: base.label,
-        head,
-        docs: paths.map((path) => describe(path, base.ref))
+        head:
+            git("rev-parse", "--short", "HEAD").trim() +
+            (dirty ? " + edits" : ""),
+        groups: GROUPS.map((group) => group.name).filter((name) =>
+            docs.some((doc) => doc.group === name)
+        ),
+        docs
     };
 
     const template = readFileSync(
@@ -164,8 +155,9 @@ function main() {
         .replace("__TITLE__", escapeHtml(data.title))
         .replace("/*__DATA__*/", () => json);
     writeFileSync(options.out, html);
+    const changed = docs.filter((doc) => doc.diff).map((doc) => doc.path);
     console.log(
-        `Wrote ${options.out}: ${data.docs.map((doc) => doc.path).join(", ")}`
+        `Wrote ${options.out}: ${docs.length} documents, changed: ${changed.join(", ") || "none"}`
     );
 }
 

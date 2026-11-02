@@ -15,9 +15,9 @@ Claude, held to these documents by their invariants, the tests and CI. So:
 - A pull request that changes behavior with no document diff, or a document
   that no longer says what the code does, is the thing to send back.
 
-`scripts/doc-review/build.mjs` gathers the documents a branch changed, with
-their diffs, into one page to read and comment on; the `review-docs` skill
-publishes it.
+`scripts/doc-review/build.mjs` gathers every Markdown file into one page to
+read and comment on, the ones a branch changed first with their diffs; the
+`review-docs` skill publishes it.
 
 | Document                                   | Covers                                                                             |
 | ------------------------------------------ | ---------------------------------------------------------------------------------- |

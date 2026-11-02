@@ -7,7 +7,7 @@
     href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Sans+Condensed:wght@600&display=swap"
 />
 <style>
-    /* A review desk: sticky tab rail, one document at a time, every row commentable. */
+    /* A reading desk: a sticky picker of every document, changed ones first, one open at a time. */
     :root {
         --bg: #f6f7f4;
         --surface: #ffffff;
@@ -92,8 +92,7 @@
 
     header.masthead {
         background: var(--surface);
-        border-bottom: 1px solid var(--rule);
-        padding-block: 16px 12px;
+        padding-block: 16px 4px;
     }
     .masthead h1 {
         font-family: var(--font-display);
@@ -116,24 +115,46 @@
         font-size: 0.78rem;
     }
 
-    nav.tabs {
+    nav.picker {
         position: sticky;
         top: env(safe-area-inset-top, 0px);
         z-index: 5;
         background: var(--surface);
         border-bottom: 1px solid var(--rule);
+        padding-block: 8px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
     }
-    .tab-row {
+    .picker select {
+        width: 100%;
+        max-width: 560px;
+        font: inherit;
+        font-size: 0.95rem;
+        color: var(--fg);
+        background: var(--bg);
+        border: 1px solid var(--rule);
+        border-radius: 8px;
+        padding: 8px 10px;
+    }
+    .chip-row {
         display: flex;
         gap: 6px;
         overflow-x: auto;
-        padding-block: 8px;
         scrollbar-width: none;
     }
-    .tab-row::-webkit-scrollbar {
+    .chip-row::-webkit-scrollbar {
         display: none;
     }
-    .tab {
+    .chip-label {
+        flex: none;
+        align-self: center;
+        font-size: 0.68rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+    }
+    .chip {
         flex: none;
         display: inline-flex;
         align-items: center;
@@ -142,31 +163,25 @@
         background: var(--bg);
         color: var(--fg);
         border-radius: 999px;
-        padding: 6px 12px;
+        padding: 4px 10px;
         font: inherit;
-        font-size: 0.85rem;
+        font-size: 0.8rem;
         cursor: pointer;
         white-space: nowrap;
     }
-    .tab .kind {
-        font-size: 0.68rem;
+    .chip .kind {
+        font-size: 0.66rem;
         text-transform: uppercase;
         letter-spacing: 0.08em;
         color: var(--muted);
     }
-    .tab[aria-selected="true"] {
+    .chip[aria-selected="true"] {
         background: var(--accent-soft);
         border-color: var(--accent);
     }
-    .tab .dot {
-        width: 7px;
-        height: 7px;
-        border-radius: 50%;
-        background: var(--accent);
-    }
-    .tab:focus-visible,
+    .chip:focus-visible,
     .seg button:focus-visible,
-    .c-btn:focus-visible {
+    .picker select:focus-visible {
         outline: 2px solid var(--accent);
         outline-offset: 2px;
     }
@@ -198,6 +213,7 @@
         font-family: var(--font-mono);
         font-size: 0.78rem;
         font-variant-numeric: tabular-nums;
+        color: var(--muted);
     }
     .stat .add {
         color: var(--added-fg);
@@ -326,38 +342,6 @@
         box-shadow: -8px 0 0 var(--mark);
     }
 
-    /* Comment buttons */
-    .c-btn {
-        border: 1px solid var(--rule);
-        background: var(--surface);
-        color: var(--muted);
-        border-radius: 6px;
-        font: inherit;
-        font-size: 0.75rem;
-        padding: 2px 8px;
-        cursor: pointer;
-        white-space: nowrap;
-    }
-    .c-btn:hover {
-        color: var(--accent);
-        border-color: var(--accent);
-    }
-    .comments-off .c-btn {
-        display: none;
-    }
-    td.c-cell {
-        width: 1%;
-        text-align: right;
-    }
-    .md h2 .c-btn,
-    .md h3 .c-btn {
-        margin-left: 8px;
-        vertical-align: middle;
-        font-family: var(--font-body);
-        text-transform: none;
-        letter-spacing: 0;
-    }
-
     /* Phone: rows become cards, each cell labelled by its heading. */
     @media (max-width: 640px) {
         .md table.cards thead {
@@ -371,7 +355,6 @@
             width: 100%;
         }
         .md table.cards tr {
-            position: relative;
             border: 1px solid var(--rule);
             border-radius: 8px;
             background: var(--surface);
@@ -393,19 +376,9 @@
             letter-spacing: 0.06em;
             color: var(--muted);
         }
-        .md table.cards td:first-child {
-            padding-right: 84px;
-        }
         .md table.cards td:empty,
         .md table.cards td.dash {
             display: none;
-        }
-        .md table.cards td.c-cell {
-            position: absolute;
-            top: 8px;
-            right: 8px;
-            width: auto;
-            padding: 0;
         }
     }
 
@@ -437,13 +410,8 @@
         background: var(--code-bg);
         padding-block: 4px;
     }
-    .empty {
-        color: var(--muted);
-        font-style: italic;
-    }
     @media (prefers-reduced-motion: no-preference) {
-        .tab,
-        .c-btn {
+        .chip {
             transition:
                 background 120ms ease,
                 border-color 120ms ease;
@@ -455,10 +423,11 @@
     <h1 id="page-title"></h1>
     <div class="meta" id="meta"></div>
 </header>
-<nav class="tabs gutter">
-    <div class="tab-row" id="tabs"></div>
+<nav class="picker gutter">
+    <select id="picker"></select>
+    <div class="chip-row" id="chips"></div>
 </nav>
-<main class="gutter comments-off" id="main"></main>
+<main class="gutter" id="main"></main>
 
 <script type="application/json" id="review-data">
     /*__DATA__*/
@@ -470,12 +439,12 @@
             document.getElementById("review-data").textContent
         );
         const main = document.getElementById("main");
-        const tabs = document.getElementById("tabs");
-        let comments = null;
+        const picker = document.getElementById("picker");
+        const chips = document.getElementById("chips");
+        const changed = data.docs.filter((doc) => doc.diff);
 
         document.getElementById("page-title").textContent = data.title;
         const meta = document.getElementById("meta");
-        meta.innerHTML = "";
         const metaItem = (label, value) => {
             const span = document.createElement("span");
             span.append(label + " ");
@@ -487,6 +456,10 @@
         metaItem("Branch", data.branch);
         metaItem("Changes since", data.baseLabel);
         metaItem("At", data.head);
+        metaItem(
+            "Changed",
+            `${changed.length} of ${data.docs.length} documents`
+        );
 
         const normalize = (text) =>
             text
@@ -496,13 +469,6 @@
                 .trim()
                 .toLowerCase();
 
-        const addedLines = (diff) =>
-            diff
-                .split("\n")
-                .filter((l) => l.startsWith("+") && !l.startsWith("+++"))
-                .map((l) => normalize(l.slice(1)))
-                .filter((l) => l.length > 3);
-
         const rowKey = (cells) =>
             cells
                 .map((c) => normalize(c))
@@ -510,50 +476,29 @@
                 .join(" ");
 
         const markChanged = (root, diff) => {
-            const added = addedLines(diff);
-            if (added.length === 0) return;
+            const lines = diff.split("\n");
+            const added = lines
+                .filter((l) => l.startsWith("+") && !l.startsWith("+++"))
+                .map((l) => normalize(l.slice(1)))
+                .filter((l) => l.length > 12);
             const addedRows = new Set(
-                diff
-                    .split("\n")
+                lines
                     .filter((l) => l.startsWith("+|"))
                     .map((l) => rowKey(l.slice(1).split("|")))
             );
             root.querySelectorAll("tbody tr").forEach((tr) => {
-                const cells = [...tr.children]
-                    .filter((td) => !td.classList.contains("c-cell"))
-                    .map((td) => td.textContent);
+                const cells = [...tr.children].map((td) => td.textContent);
                 if (addedRows.has(rowKey(cells))) tr.classList.add("changed");
             });
             root.querySelectorAll("p, li, h2, h3").forEach((el) => {
                 if (el.closest("table")) return;
                 const own = normalize(el.textContent);
-                if (!own) return;
-                if (
-                    added.some((line) => line.length > 12 && own.includes(line))
-                )
+                if (own && added.some((line) => own.includes(line)))
                     el.classList.add("changed");
             });
         };
 
-        const commentButton = (target, label) => {
-            const button = document.createElement("button");
-            button.type = "button";
-            button.className = "c-btn";
-            button.textContent = label;
-            button.addEventListener("click", async (event) => {
-                event.stopPropagation();
-                if (!comments) return;
-                try {
-                    await comments.openComposer({ element: target });
-                } catch (error) {
-                    if (error && error.code === "unavailable")
-                        main.classList.add("comments-off");
-                }
-            });
-            return button;
-        };
-
-        const enhance = (root) => {
+        const enhanceTables = (root) => {
             root.querySelectorAll("table").forEach((table) => {
                 const wrap = document.createElement("div");
                 wrap.className = "table-wrap";
@@ -563,22 +508,13 @@
                 const headings = [...table.querySelectorAll("thead th")].map(
                     (th) => th.textContent.trim()
                 );
-                const headRow = table.querySelector("thead tr");
-                if (headRow) headRow.append(document.createElement("th"));
                 table.querySelectorAll("tbody tr").forEach((tr) => {
                     [...tr.children].forEach((td, i) => {
                         if (headings[i]) td.dataset.label = headings[i];
                         if (td.textContent.trim() === "—")
                             td.classList.add("dash");
                     });
-                    const cell = document.createElement("td");
-                    cell.className = "c-cell";
-                    cell.append(commentButton(tr, "Comment"));
-                    tr.append(cell);
                 });
-            });
-            root.querySelectorAll("h2, h3").forEach((h) => {
-                h.append(commentButton(h, "Comment"));
             });
         };
 
@@ -587,11 +523,7 @@
             box.className = "diff";
             const lines = diff.split("\n");
             const start = lines.findIndex((l) => l.startsWith("@@"));
-            if (start < 0) {
-                box.innerHTML = '<div class="ln empty">No changes.</div>';
-                return box;
-            }
-            for (const line of lines.slice(start)) {
+            for (const line of lines.slice(Math.max(start, 0))) {
                 if (line === "\\ No newline at end of file") continue;
                 const div = document.createElement("div");
                 div.className =
@@ -620,13 +552,11 @@
         };
 
         const panels = new Map();
-        const views = new Map();
 
+        // Built on first open: most documents are never opened in a review.
         const buildPanel = (doc) => {
             const panel = document.createElement("section");
             panel.className = "doc";
-            panel.id = "panel-" + doc.id;
-            panel.hidden = true;
 
             const bar = document.createElement("div");
             bar.className = "doc-bar";
@@ -634,16 +564,31 @@
             const path = document.createElement("div");
             path.className = "doc-path";
             path.textContent = doc.path;
-            const { add, del } = diffStat(doc.diff);
             const stat = document.createElement("div");
             stat.className = "stat";
-            stat.innerHTML = doc.isNew
-                ? `<span class="add">new · ${add} lines</span>`
-                : doc.diff
-                  ? `<span class="add">+${add}</span> <span class="del">−${del}</span>`
-                  : "unchanged";
+            if (doc.isNew) {
+                stat.innerHTML = `<span class="add">new · ${diffStat(doc.diff).add} lines</span>`;
+            } else if (doc.diff) {
+                const { add, del } = diffStat(doc.diff);
+                stat.innerHTML = `<span class="add">+${add}</span> <span class="del">−${del}</span>`;
+            } else {
+                stat.textContent = "unchanged";
+            }
             left.append(path, stat);
+            bar.append(left);
 
+            const body = document.createElement("div");
+            body.className = "md";
+            body.innerHTML = marked.parse(doc.md);
+            enhanceTables(body);
+
+            if (!doc.diff) {
+                panel.append(bar, body);
+                return panel;
+            }
+
+            if (!doc.isNew) markChanged(body, doc.diff);
+            const changes = renderDiff(doc.diff);
             const seg = document.createElement("div");
             seg.className = "seg";
             const docBtn = document.createElement("button");
@@ -653,96 +598,105 @@
             diffBtn.type = "button";
             diffBtn.textContent = "Changes";
             seg.append(docBtn, diffBtn);
-            const docComment = commentButton(panel, "Comment on doc");
-            const right = document.createElement("div");
-            right.style.display = "flex";
-            right.style.gap = "8px";
-            right.style.alignItems = "center";
-            right.append(seg, docComment);
-            bar.append(left, right);
-
-            const body = document.createElement("div");
-            body.className = "md";
-            body.innerHTML = marked.parse(doc.md);
-            enhance(body);
-            if (doc.diff && !doc.isNew) markChanged(body, doc.diff);
-
-            const hint = document.createElement("p");
-            hint.className = "hint";
-            hint.textContent = doc.isNew
-                ? "New document. Comment on any row or section, then Send to Claude."
-                : doc.diff
-                  ? "Highlighted rows and paragraphs changed. Comment on any of them, then Send to Claude."
-                  : "No changes in this document; it is here for context.";
-
-            const changes = renderDiff(doc.diff);
-            changes.hidden = true;
-
-            const show = (view) => {
-                const isDiff = view === "diff";
+            bar.append(seg);
+            const show = (isDiff) => {
                 body.hidden = isDiff;
                 changes.hidden = !isDiff;
                 docBtn.setAttribute("aria-pressed", String(!isDiff));
                 diffBtn.setAttribute("aria-pressed", String(isDiff));
-                views.set(doc.id, view);
             };
-            docBtn.addEventListener("click", () => show("doc"));
-            diffBtn.addEventListener("click", () => show("diff"));
-            show("doc");
+            docBtn.addEventListener("click", () => show(false));
+            diffBtn.addEventListener("click", () => show(true));
+            show(false);
 
+            const hint = document.createElement("p");
+            hint.className = "hint";
+            hint.textContent = doc.isNew
+                ? "New on this branch."
+                : "Highlighted rows and paragraphs changed on this branch.";
             panel.append(bar, hint, body, changes);
-            main.append(panel);
-            panels.set(doc.id, panel);
+            return panel;
         };
 
         const select = (id) => {
-            const doc = data.docs.find((d) => d.id === id) || data.docs[0];
-            if (!doc) return;
+            const doc =
+                data.docs.find((d) => d.id === id) ||
+                changed[0] ||
+                data.docs[0];
+            if (!panels.has(doc.id)) {
+                const panel = buildPanel(doc);
+                panels.set(doc.id, panel);
+                main.append(panel);
+            }
             for (const [docId, panel] of panels)
                 panel.hidden = docId !== doc.id;
-            tabs.querySelectorAll(".tab").forEach((tab) =>
-                tab.setAttribute(
-                    "aria-selected",
-                    String(tab.dataset.id === doc.id)
-                )
-            );
+            picker.value = doc.id;
+            chips
+                .querySelectorAll(".chip")
+                .forEach((chip) =>
+                    chip.setAttribute(
+                        "aria-selected",
+                        String(chip.dataset.id === doc.id)
+                    )
+                );
             if (location.hash !== "#" + doc.id)
                 history.replaceState(null, "", "#" + doc.id);
         };
 
-        for (const doc of data.docs) {
-            const tab = document.createElement("button");
-            tab.type = "button";
-            tab.className = "tab";
-            tab.dataset.id = doc.id;
-            tab.innerHTML = `<span class="kind"></span><span class="name"></span>`;
-            tab.querySelector(".kind").textContent = doc.kind;
-            tab.querySelector(".name").textContent = doc.label;
-            if (doc.diff) {
-                const dot = document.createElement("span");
-                dot.className = "dot";
-                tab.append(dot);
-            }
-            tab.addEventListener("click", () => {
+        const option = (doc, prefix) => {
+            const el = document.createElement("option");
+            el.value = doc.id;
+            el.textContent = prefix + doc.label;
+            return el;
+        };
+        if (changed.length > 0) {
+            const group = document.createElement("optgroup");
+            group.label = "Changed on this branch";
+            for (const doc of changed)
+                group.append(option(doc, doc.kind + ": "));
+            picker.append(group);
+        }
+        for (const groupName of data.groups) {
+            const group = document.createElement("optgroup");
+            group.label = groupName;
+            for (const doc of data.docs.filter((d) => d.group === groupName))
+                group.append(option(doc, doc.diff ? "● " : ""));
+            picker.append(group);
+        }
+        picker.addEventListener("change", () => {
+            select(picker.value);
+            window.scrollTo({ top: 0 });
+        });
+
+        if (changed.length > 0) {
+            const label = document.createElement("span");
+            label.className = "chip-label";
+            label.textContent = "Changed";
+            chips.append(label);
+        } else {
+            chips.hidden = true;
+        }
+        for (const doc of changed) {
+            const chip = document.createElement("button");
+            chip.type = "button";
+            chip.className = "chip";
+            chip.dataset.id = doc.id;
+            const kind = document.createElement("span");
+            kind.className = "kind";
+            kind.textContent = doc.kind;
+            const name = document.createElement("span");
+            name.textContent = doc.label;
+            chip.append(kind, name);
+            chip.addEventListener("click", () => {
                 select(doc.id);
                 window.scrollTo({ top: 0 });
             });
-            tabs.append(tab);
-            buildPanel(doc);
+            chips.append(chip);
         }
+
         select(location.hash.slice(1));
         window.addEventListener("hashchange", () =>
             select(location.hash.slice(1))
         );
-
-        if (window.claude && window.claude.use) {
-            window.claude
-                .use("comments")
-                .then((namespace) => {
-                    comments = namespace;
-                    if (comments) main.classList.remove("comments-off");
-                })
-                .catch(() => undefined);
-        }
     })();
 </script>
