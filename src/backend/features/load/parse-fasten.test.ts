@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 
 import { MateLocation } from "../library/insertables/fasten";
-import { ElementType } from "../../lib/onshape/element-type";
 import { BuildIssueType } from "../build-checker/issues";
 import {
     featureList,
@@ -11,8 +10,7 @@ import {
     decideFasten,
     findAssemblyMateConnector,
     findPartStudioMateConnector,
-    type MateConnector,
-    toFastenOverride
+    type MateConnector
 } from "./parse-fasten";
 
 /** Any feature that isn't a mate connector. */
@@ -114,86 +112,24 @@ describe("decideFasten", () => {
         isUnstable: false
     };
 
-    it("fastens a part studio with a mate connector by default", () => {
-        expect(
-            decideFasten(ElementType.PART_STUDIO, undefined, stable)
-        ).toEqual({
-            supportsFasten: true,
+    it("fastens at the connector found", () => {
+        expect(decideFasten(stable)).toEqual({
             fastenInfo: stable.fastenInfo,
             buildIssues: []
         });
     });
 
-    it("leaves a part studio without one alone, raising nothing", () => {
-        expect(
-            decideFasten(ElementType.PART_STUDIO, undefined, undefined)
-        ).toEqual({ supportsFasten: false, fastenInfo: null, buildIssues: [] });
-    });
-
-    it("leaves an assembly off by default", () => {
-        expect(decideFasten(ElementType.ASSEMBLY, undefined, stable)).toEqual({
-            supportsFasten: false,
-            fastenInfo: stable.fastenInfo,
-            buildIssues: []
-        });
-    });
-
-    it("keeps the connector it found when an admin turned fastening off", () => {
-        expect(decideFasten(ElementType.PART_STUDIO, false, stable)).toEqual({
-            supportsFasten: false,
-            fastenInfo: stable.fastenInfo,
-            buildIssues: []
-        });
-    });
-
-    it("flags an unstable connector it fastens to", () => {
-        expect(
-            decideFasten(ElementType.PART_STUDIO, undefined, {
-                ...stable,
-                isUnstable: true
-            }).buildIssues
-        ).toEqual([{ type: BuildIssueType.UNSTABLE_MATE_CONNECTOR }]);
-        expect(
-            decideFasten(ElementType.PART_STUDIO, false, {
-                ...stable,
-                isUnstable: true
-            }).buildIssues
-        ).toEqual([]);
-    });
-
-    it("flags fastening turned on with nothing to fasten to", () => {
-        expect(decideFasten(ElementType.ASSEMBLY, true, undefined)).toEqual({
-            supportsFasten: false,
+    it("doesn't fasten without one, and raises nothing", () => {
+        expect(decideFasten(undefined)).toEqual({
             fastenInfo: null,
-            buildIssues: [{ type: BuildIssueType.NO_MATE_CONNECTOR }]
+            buildIssues: []
         });
     });
-});
 
-describe("toFastenOverride", () => {
-    const found: MateConnector = {
-        fastenInfo: {
-            mateConnectorId: "mc",
-            mateLocation: MateLocation.Feature,
-            path: []
-        },
-        isUnstable: false
-    };
-
-    it("stores nothing for the choice detection would make", () => {
+    it("flags an unstable connector", () => {
         expect(
-            toFastenOverride(ElementType.PART_STUDIO, true, found)
-        ).toBeUndefined();
-        expect(toFastenOverride(ElementType.ASSEMBLY, false, found)).toBe(
-            undefined
-        );
-    });
-
-    it("stores a choice that goes against detection", () => {
-        expect(toFastenOverride(ElementType.PART_STUDIO, false, found)).toBe(
-            false
-        );
-        expect(toFastenOverride(ElementType.ASSEMBLY, true, found)).toBe(true);
+            decideFasten({ ...stable, isUnstable: true }).buildIssues
+        ).toEqual([{ type: BuildIssueType.UNSTABLE_MATE_CONNECTOR }]);
     });
 });
 

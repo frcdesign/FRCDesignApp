@@ -168,6 +168,7 @@ export function useToggleInsertAndFastenMutation(insertableId: string) {
             );
             return patchInsertable(key, insertableId, (insertable) => {
                 insertable.supportsFasten = supportsFasten;
+                insertable.fastenDisabled = !supportsFasten;
             });
         },
         onSuccess: (_result, supportsFasten) =>

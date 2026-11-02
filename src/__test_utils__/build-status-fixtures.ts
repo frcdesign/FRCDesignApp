@@ -16,7 +16,7 @@ export function insertableBuildStatus(
         elementType: ElementType.PART_STUDIO,
         isVisible: true,
         supportsFasten: false,
-        hasMateConnector: false,
+        fastenDisabled: false,
         indexConfigurations: false,
         excludedParameterIds: [],
         vendors: [],

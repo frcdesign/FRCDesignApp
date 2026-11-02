@@ -1,7 +1,7 @@
 {
     "version": "6",
     "dialect": "sqlite",
-    "id": "36e7baf7-ae39-4983-8b5b-a38051fee845",
+    "id": "797abbb9-4b8e-4559-a9e8-5ba88c41395f",
     "prevId": "6f2386eb-1754-42e7-a379-680294ffc63a",
     "tables": {
         "configurations": {
@@ -336,20 +336,13 @@
                     "autoincrement": false,
                     "default": false
                 },
-                "supports_fasten": {
-                    "name": "supports_fasten",
+                "fasten_disabled": {
+                    "name": "fasten_disabled",
                     "type": "integer",
                     "primaryKey": false,
                     "notNull": true,
                     "autoincrement": false,
                     "default": false
-                },
-                "fasten_override": {
-                    "name": "fasten_override",
-                    "type": "integer",
-                    "primaryKey": false,
-                    "notNull": false,
-                    "autoincrement": false
                 },
                 "index_configurations": {
                     "name": "index_configurations",

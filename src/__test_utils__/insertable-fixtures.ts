@@ -40,7 +40,6 @@ export function parsedInsertable(
     return {
         vendors: [],
         thumbnailUrls: null,
-        supportsFasten: false,
         fastenInfo: null,
         isOpenComposite: false,
         buildIssues: [],

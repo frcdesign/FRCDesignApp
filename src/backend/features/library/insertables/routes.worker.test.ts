@@ -96,49 +96,43 @@ describe("insertable routes", () => {
             .mockResolvedValue(featureList([mateConnectorFeature("mc1")]));
     }
 
-    it("POST /toggle-insert-and-fasten keeps an override that differs from detection", async () => {
-        await seedPartStudio(db, {
-            supportsFasten: true,
-            fastenInfo: {
-                mateConnectorId: "mc1",
-                mateLocation: MateLocation.Feature,
-                path: []
-            }
-        });
+    const MATE_CONNECTOR = {
+        mateConnectorId: "mc1",
+        mateLocation: MateLocation.Feature,
+        path: []
+    };
+
+    it("POST /toggle-insert-and-fasten turns fastening off without asking Onshape", async () => {
+        await seedPartStudio(db, { fastenInfo: MATE_CONNECTOR });
         const features = mockMateConnector();
 
         expect((await toggleFasten(TEST_PART_STUDIO_ID, false)).status).toBe(
             200
         );
-        // Turning off raises nothing, so the stored connector is enough.
-        expect(features).not.toHaveBeenCalled();
 
-        const row = await readInsertable(db, TEST_PART_STUDIO_ID);
-        expect(row).toMatchObject({
-            supportsFasten: false,
-            fastenOverride: false,
-            // Kept, so the card can offer it back.
-            fastenInfo: { mateConnectorId: "mc1" }
+        expect(features).not.toHaveBeenCalled();
+        expect(await readInsertable(db, TEST_PART_STUDIO_ID)).toMatchObject({
+            fastenDisabled: true,
+            fastenInfo: null
         });
     });
 
-    it("POST /toggle-insert-and-fasten drops the override on the detected default", async () => {
-        await seedPartStudio(db, { fastenOverride: false });
+    it("POST /toggle-insert-and-fasten turns it back on at the connector it finds", async () => {
+        await seedPartStudio(db, { fastenDisabled: true });
         mockMateConnector();
 
         expect((await toggleFasten(TEST_PART_STUDIO_ID, true)).status).toBe(
             200
         );
 
-        const row = await readInsertable(db, TEST_PART_STUDIO_ID);
-        expect(row).toMatchObject({
-            supportsFasten: true,
-            fastenOverride: null
+        expect(await readInsertable(db, TEST_PART_STUDIO_ID)).toMatchObject({
+            fastenDisabled: false,
+            fastenInfo: { mateConnectorId: "mc1" }
         });
     });
 
     it("POST /toggle-insert-and-fasten refuses with no mate connector", async () => {
-        await seedPartStudio(db);
+        await seedPartStudio(db, { fastenDisabled: true });
         vi.spyOn(PartStudioEndpoints, "getFeatures").mockResolvedValue(
             featureList()
         );
@@ -147,11 +141,11 @@ describe("insertable routes", () => {
             400
         );
         expect(
-            (await readInsertable(db, TEST_PART_STUDIO_ID))?.supportsFasten
-        ).toBe(false);
+            (await readInsertable(db, TEST_PART_STUDIO_ID))?.fastenDisabled
+        ).toBe(true);
     });
 
-    it("POST /toggle-insert-and-fasten turns an assembly on by override", async () => {
+    it("POST /toggle-insert-and-fasten finds an assembly's connector too", async () => {
         await seedAssembly(db);
         vi.spyOn(AssemblyEndpoints, "getAssembly").mockResolvedValue({
             rootAssembly: {
@@ -169,18 +163,9 @@ describe("insertable routes", () => {
         });
 
         expect((await toggleFasten(TEST_ASSEMBLY_ID, true)).status).toBe(200);
-        expect(await readInsertable(db, TEST_ASSEMBLY_ID)).toMatchObject({
-            supportsFasten: true,
-            fastenOverride: true
-        });
-
-        // Off is an assembly's default, so turning it off clears the override.
-        expect((await toggleFasten(TEST_ASSEMBLY_ID, false)).status).toBe(200);
-        expect(await readInsertable(db, TEST_ASSEMBLY_ID)).toMatchObject({
-            supportsFasten: false,
-            fastenOverride: null,
-            fastenInfo: null
-        });
+        expect(
+            (await readInsertable(db, TEST_ASSEMBLY_ID))?.fastenInfo
+        ).toMatchObject({ mateConnectorId: "mc1" });
     });
 
     it("POST /toggle-insert-and-fasten clears a stale fasten issue", async () => {
@@ -200,7 +185,7 @@ describe("insertable routes", () => {
     });
 
     it("POST /add-to-part-studio places at the mate connector when it fastens", async () => {
-        await seedPartStudio(db, { supportsFasten: true });
+        await seedPartStudio(db, { fastenInfo: MATE_CONNECTOR });
         const spy = vi
             .spyOn(PartStudioEndpoints, "addPartStudioFeature")
             .mockResolvedValue({ feature: { featureId: "feat-1" } });
@@ -571,7 +556,6 @@ describe("insertable routes", () => {
         await db
             .update(insertables)
             .set({
-                supportsFasten: true,
                 fastenInfo: {
                     mateConnectorId: "mc1",
                     mateLocation: MateLocation.Part,

@@ -48,10 +48,7 @@ import { fastenMate } from "../../../lib/onshape/objects/assembly-features";
 import {
     decideFasten,
     FASTEN_ISSUE_TYPES,
-    findMateConnector,
-    type MateConnector,
-    shouldFindMateConnector,
-    toFastenOverride
+    findMateConnector
 } from "../../load/parse-fasten";
 import { getFastenQuery } from "./fasten-query";
 import { getInsertLocationTransform } from "../../insert-location/parse";
@@ -94,7 +91,6 @@ insertableRoutes.post(
                 versionId: insertables.versionId,
                 elementId: insertables.elementId,
                 elementType: insertables.elementType,
-                fastenInfo: insertables.fastenInfo,
                 buildIssues: insertables.buildIssues
             })
             .from(insertables)
@@ -103,41 +99,26 @@ insertableRoutes.post(
         if (!row)
             throw internalError("Insertable not found", HttpStatus.NOT_FOUND);
 
-        // Turning off raises nothing, so a part studio's stored connector stands
-        // in for asking Onshape again; turning on checks it is still stable.
-        let found: MateConnector | undefined;
-        if (!shouldFindMateConnector(row.elementType, supportsFasten)) {
-            found = undefined;
-        } else if (supportsFasten) {
-            found = await findMateConnector(
-                await c.var.getOnshapeApi(),
-                toElementPath(row),
-                row.elementType
-            );
-        } else {
-            found = row.fastenInfo
-                ? { fastenInfo: row.fastenInfo, isUnstable: false }
-                : undefined;
-        }
+        // Off asks nothing of Onshape; on finds the connector again, in case it moved.
+        const found = supportsFasten
+            ? await findMateConnector(
+                  await c.var.getOnshapeApi(),
+                  toElementPath(row),
+                  row.elementType
+              )
+            : undefined;
         if (supportsFasten && !found) {
             throw handledError(
                 `${row.name} has no mate connector to fasten to.`,
                 HttpStatus.BAD_REQUEST
             );
         }
-
-        const fastenOverride = toFastenOverride(
-            row.elementType,
-            supportsFasten,
-            found
-        );
-        const fasten = decideFasten(row.elementType, fastenOverride, found);
+        const fasten = decideFasten(found);
 
         await db
             .update(insertables)
             .set({
-                fastenOverride: fastenOverride ?? null,
-                supportsFasten: fasten.supportsFasten,
+                fastenDisabled: !supportsFasten,
                 fastenInfo: fasten.fastenInfo,
                 buildIssues: replaceBuildIssues(
                     row.buildIssues,
@@ -312,7 +293,7 @@ insertableRoutes.post(
                 name: insertables.name,
                 microversionId: insertables.microversionId,
                 libraryId: insertables.libraryId,
-                supportsFasten: insertables.supportsFasten
+                fastenInfo: insertables.fastenInfo
             })
             .from(insertables)
             .where(eq(insertables.id, insertableId))
@@ -334,7 +315,7 @@ insertableRoutes.post(
             row.name,
             sourcePath,
             row.microversionId,
-            row.supportsFasten,
+            row.fastenInfo !== null,
             selection,
             parameters
         );
@@ -388,7 +369,6 @@ insertableRoutes.post(
                 name: insertables.name,
                 elementType: insertables.elementType,
                 isOpenComposite: insertables.isOpenComposite,
-                supportsFasten: insertables.supportsFasten,
                 fastenInfo: insertables.fastenInfo
             })
             .from(insertables)
@@ -470,7 +450,7 @@ insertableRoutes.post(
             return c.json({} satisfies InsertOut);
         }
 
-        const fastenInfo = row.supportsFasten ? row.fastenInfo : null;
+        const fastenInfo = row.fastenInfo;
         if (!fastenInfo) {
             await track(false);
             throw handledError(

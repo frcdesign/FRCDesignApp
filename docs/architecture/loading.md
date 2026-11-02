@@ -39,14 +39,12 @@ stopped. One reload holds a library at a time.
 - `groups`, `insertables`, `configurations` — what a load writes.
   `groups.version_id` is the version loaded; a shell group holds
   `PLACEHOLDER_VERSION_ID` until its first load.
-- `insertables.supports_fasten`, `fasten_info` — whether inserts place and
-  fasten at a mate connector, and which; written by every load and by the
-  insert-and-fasten switch. `fasten_info` holds a connector found even where
-  fastening is off, so the admin card can offer it.
-- `insertables.fasten_override`, `is_visible`,
-  `index_configurations`, `excluded_parameter_ids` — an admin's choices, which
-  a load reads but never writes. A null `fasten_override` leaves fastening to
-  detection.
+- `insertables.fasten_info` — the mate connector inserts place and fasten at;
+  null when there is none or fastening is off. Written by every load and by
+  the insert-and-fasten switch.
+- `insertables.fasten_disabled`, `is_visible`, `index_configurations`,
+  `excluded_parameter_ids` — an admin's choices, which a load reads but never
+  writes.
 - `libraries.cache_version` — bumped by every load that wrote; every library
   response is cached under it.
 - `groups.held_at` — when a webhook last reported a version not yet loaded;
@@ -140,22 +138,18 @@ insertables.
 connector, vendors, and a record per indexed combination), fetches its thumbnail
 under the thumbnail limiter, runs the insertable checks, and saves the row.
 
-Fastening is decided by `decideFasten` (`parse-fasten.ts`), and the
-insert-and-fasten switch decides it the same way:
+Fastening (`parse-fasten.ts`):
 
-1. A part studio's features are always read for its first mate connector
-   (`findPartStudioMateConnector`); an assembly's definition only when an
-   admin turned fastening on.
-2. An admin's `fasten_override` wins. Otherwise a part studio with a connector
-   fastens, and derives place at it; an assembly doesn't.
-3. Fastening to a connector a configuration can suppress, or one after a
-   connector a configuration can suppress, or one that fails to regenerate,
-   raises `UNSTABLE_MATE_CONNECTOR`. Turned on with no connector at all raises
-   `NO_MATE_CONNECTOR`, and fastening stays off.
+1. Unless an admin turned it off, the load finds the element's first mate
+   connector (`findMateConnector`): a part studio's from its features, an
+   assembly's from its definition.
+2. Inserts fasten, and derives place, at the connector found
+   (`decideFasten`); with none, they don't.
+3. A part studio's connector is unstable when a configuration can suppress it,
+   or one before it, or it fails to regenerate: `UNSTABLE_MATE_CONNECTOR`.
 
-The switch stores an override only where it differs from what detection
-decides, so switching a part studio back to its default follows its mate
-connectors again.
+The switch turning it off clears the connector without asking Onshape;
+turning it on finds the connector again, and refuses where there is none.
 
 `finishReload` always runs, success or not: when anything was written it
 rebuilds the search index, then bumps the library version and pushes; then it
@@ -171,27 +165,27 @@ library, so the workflow's step limit is raised to 25,000.
 `ONSHAPE` is `ONSHAPE_STEP_RETRIES`, `THUMBNAIL` is `THUMBNAIL_RETRIES` (see
 [platform.md](./platform.md#retries-and-timeouts)).
 
-| Step                                                           | Onshape call                                                                                            | Retries     |
-| -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- | ----------- |
-| `read-group`                                                   | —                                                                                                       | default     |
-| `document`                                                     | `GET /documents/{did}`                                                                                  | `ONSHAPE`   |
-| `version`                                                      | `GET /documents/d/{did}/versions` (the latest), and when it was read                                    | `ONSHAPE`   |
-| `release-hold` (skipped and held)                              | —                                                                                                       | default     |
-| `document-contents-{group}`                                    | `GET /documents/d/{did}/v/{vid}/contents`                                                               | `ONSHAPE`   |
-| `stored-insertables-{group}`, `select-insertables-{group}`     | —                                                                                                       | default     |
-| `flags-{insertable}`                                           | —                                                                                                       | default     |
-| `config-{insertable}`                                          | `GET /elements/d/{did}/v/{vid}/e/{eid}/configuration`                                                   | `ONSHAPE`   |
-| `parts-{insertable}` (part studios)                            | `GET /parts/d/{did}/v/{vid}/e/{eid}`                                                                    | `ONSHAPE`   |
-| `fasten-{insertable}` (part studios, and assemblies turned on) | Part studio features, or the assembly definition                                                        | `ONSHAPE`   |
-| `records-{insertable}-{batch}`                                 | Per configuration: `GET /parts/...` (part studio) or `GET /metadata/...` (assembly), with the overrides | `ONSHAPE`   |
-| `thumbnail-{insertable}`                                       | `GET /thumbnails/d/{did}/v/{vid}/e/{eid}/s/{size}`, then `/w/{wid}/` on failure, both sizes             | `THUMBNAIL` |
-| `save-{insertable}`                                            | —                                                                                                       | default     |
-| `document-thumbnail-{group}`                                   | As `thumbnail-`, for the thumbnail tab                                                                  | `THUMBNAIL` |
-| `save-group-{group}`                                           | —                                                                                                       | default     |
-| `delete-stale-thumbnails-{group}`                              | — (R2 only)                                                                                             | default     |
-| `register-webhook`                                             | `GET /webhooks/{id}`, `POST /webhooks` if gone                                                          | `ONSHAPE`   |
-| `flag-failed` (on a failure)                                   | —                                                                                                       | default     |
-| `finish`                                                       | —                                                                                                       | default     |
+| Step                                                       | Onshape call                                                                                            | Retries     |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- | ----------- |
+| `read-group`                                               | —                                                                                                       | default     |
+| `document`                                                 | `GET /documents/{did}`                                                                                  | `ONSHAPE`   |
+| `version`                                                  | `GET /documents/d/{did}/versions` (the latest), and when it was read                                    | `ONSHAPE`   |
+| `release-hold` (skipped and held)                          | —                                                                                                       | default     |
+| `document-contents-{group}`                                | `GET /documents/d/{did}/v/{vid}/contents`                                                               | `ONSHAPE`   |
+| `stored-insertables-{group}`, `select-insertables-{group}` | —                                                                                                       | default     |
+| `flags-{insertable}`                                       | —                                                                                                       | default     |
+| `config-{insertable}`                                      | `GET /elements/d/{did}/v/{vid}/e/{eid}/configuration`                                                   | `ONSHAPE`   |
+| `parts-{insertable}` (part studios)                        | `GET /parts/d/{did}/v/{vid}/e/{eid}`                                                                    | `ONSHAPE`   |
+| `fasten-{insertable}` (unless turned off)                  | Part studio features, or the assembly definition                                                        | `ONSHAPE`   |
+| `records-{insertable}-{batch}`                             | Per configuration: `GET /parts/...` (part studio) or `GET /metadata/...` (assembly), with the overrides | `ONSHAPE`   |
+| `thumbnail-{insertable}`                                   | `GET /thumbnails/d/{did}/v/{vid}/e/{eid}/s/{size}`, then `/w/{wid}/` on failure, both sizes             | `THUMBNAIL` |
+| `save-{insertable}`                                        | —                                                                                                       | default     |
+| `document-thumbnail-{group}`                               | As `thumbnail-`, for the thumbnail tab                                                                  | `THUMBNAIL` |
+| `save-group-{group}`                                       | —                                                                                                       | default     |
+| `delete-stale-thumbnails-{group}`                          | — (R2 only)                                                                                             | default     |
+| `register-webhook`                                         | `GET /webhooks/{id}`, `POST /webhooks` if gone                                                          | `ONSHAPE`   |
+| `flag-failed` (on a failure)                               | —                                                                                                       | default     |
+| `finish`                                                   | —                                                                                                       | default     |
 
 "default" is Workflows' own policy for a step given none. A step that exhausts
 its retries throws; a failed insertable step flags that insertable and the rest
@@ -301,10 +295,11 @@ approval. A failed load leaves the hold in place.
   renaming it or moving it into a deprecated folder, keeping it in the
   document for anything that still references it; the library drops it as it
   would a deleted tab. Configuration options are not filtered.
-- **Part studios fasten by default.** One features call per load finds a mate
-  connector, and an author adds one to say where the part attaches. An
-  assembly's definition is large, so it is read only for an assembly an admin
-  turned on.
+- **Fastening is on wherever there is a mate connector.** An author adds one
+  to say where the part attaches, so finding it is the signal, for part
+  studios and assemblies alike; an admin only ever turns it off. That costs
+  each changed element one more call per load, an assembly's definition being
+  the larger, for one flag in place of a default per element type.
 - **Stability from the default's feature list.** Whether a configuration
   decides a feature's suppression is in the one features response, where
   checking each configuration would cost a call per configuration.

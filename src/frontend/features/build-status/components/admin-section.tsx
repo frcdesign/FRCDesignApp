@@ -4,7 +4,6 @@ import {
     GroupBuildStatus,
     InsertableBuildStatus
 } from "@backend/features/build-checker/contract";
-import { ElementType } from "@backend/lib/onshape/element-type";
 import { getVendorName, Vendor } from "@backend/features/library/vendors";
 import { StatusColor } from "../../../lib/style-constants";
 import {
@@ -59,35 +58,24 @@ interface FastenSwitchProps {
     status: InsertableBuildStatus;
 }
 
-/** A part studio decides by itself whether it has a connector to use. */
+/** On wherever a load finds a connector, so the switch only turns it off or back on. */
 function FastenSwitch(props: FastenSwitchProps): ReactNode {
     const { insertableId, status } = props;
     const mutation = useToggleInsertAndFastenMutation(insertableId);
-    const isPartStudio = status.elementType === ElementType.PART_STUDIO;
+    const noConnector = !status.supportsFasten && !status.fastenDisabled;
     return (
         <SwitchRow
             label="Insert and fasten"
-            description={describeFasten(status)}
-            checked={status.supportsFasten}
-            disabled={
-                mutation.isPending || (isPartStudio && !status.hasMateConnector)
+            description={
+                noConnector
+                    ? "No mate connector found"
+                    : "Places and fastens at its first mate connector"
             }
+            checked={status.supportsFasten}
+            disabled={mutation.isPending || noConnector}
             onToggle={() => mutation.mutate(!status.supportsFasten)}
         />
     );
-}
-
-function describeFasten(status: InsertableBuildStatus): string {
-    if (status.elementType !== ElementType.PART_STUDIO) {
-        return "Fastens to its first mate connector";
-    }
-    if (!status.hasMateConnector) {
-        return "No mate connector found";
-    }
-    if (status.fastenOverride === false) {
-        return "Turned off; has a mate connector";
-    }
-    return "Placed and fastened at its first mate connector";
 }
 
 interface VendorBadgesProps {

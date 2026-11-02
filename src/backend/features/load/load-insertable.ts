@@ -27,8 +27,7 @@ import { parseVendors } from "./parse-vendors";
 import {
     decideFasten,
     findMateConnector,
-    type MateConnector,
-    shouldFindMateConnector
+    type MateConnector
 } from "./parse-fasten";
 import {
     NO_RECORDS,
@@ -49,7 +48,6 @@ import { ONSHAPE_STEP_RETRIES, uploadThumbnailsStep } from "./steps";
 export interface ParsedInsertable {
     vendors: Vendor[];
     thumbnailUrls: ThumbnailUrls | null;
-    supportsFasten: boolean;
     fastenInfo: FastenInfo | null;
     /** Whether the part studio resolves to an open composite. */
     isOpenComposite: boolean;
@@ -61,13 +59,12 @@ export interface ParsedInsertable {
 
 /** The user-owned flags that decide how much of a load runs. */
 interface InsertableFlags extends IndexingSettings {
-    fastenOverride?: boolean;
+    fastenDisabled: boolean;
 }
 
 /** Every Onshape call but the thumbnail's, all under the limiter. */
 interface ProbedInsertable {
     vendors: Vendor[];
-    supportsFasten: boolean;
     fastenInfo: FastenInfo | null;
     isOpenComposite: boolean;
     /** Whether there is anything for Onshape to render. */
@@ -106,7 +103,6 @@ export async function loadInsertable(
     const parsed: ParsedInsertable = {
         vendors: probed.vendors,
         thumbnailUrls,
-        supportsFasten: probed.supportsFasten,
         fastenInfo: probed.fastenInfo,
         isOpenComposite: probed.isOpenComposite,
         buildIssues: addBuildIssue(
@@ -137,16 +133,10 @@ async function probeInsertable(
 
     const vendors = parseVendors(target.name, parameters);
 
-    const found = shouldFindMateConnector(
-        target.elementType,
-        flags.fastenOverride
-    )
-        ? ((await findMateConnectorStep(ctx, target)) ?? undefined)
-        : undefined;
     const fasten = decideFasten(
-        target.elementType,
-        flags.fastenOverride,
-        found
+        flags.fastenDisabled
+            ? undefined
+            : ((await findMateConnectorStep(ctx, target)) ?? undefined)
     );
 
     const parts = await readPartsStep(ctx, target);
@@ -167,7 +157,6 @@ async function probeInsertable(
 
     return {
         vendors,
-        supportsFasten: fasten.supportsFasten,
         fastenInfo: fasten.fastenInfo,
         isOpenComposite,
         hasParts,
@@ -190,17 +179,20 @@ function readFlagsStep(
     return ctx.step.do(`flags-${insertableId}`, async () => {
         const row = await getDb(ctx.env.DB)
             .select({
-                fastenOverride: insertables.fastenOverride,
+                fastenDisabled: insertables.fastenDisabled,
                 indexConfigurations: insertables.indexConfigurations,
                 excludedParameterIds: insertables.excludedParameterIds
             })
             .from(insertables)
             .where(eq(insertables.id, insertableId))
             .get();
-        if (!row) {
-            return { indexConfigurations: false, excludedParameterIds: [] };
-        }
-        return { ...row, fastenOverride: row.fastenOverride ?? undefined };
+        return (
+            row ?? {
+                fastenDisabled: false,
+                indexConfigurations: false,
+                excludedParameterIds: []
+            }
+        );
     });
 }
 
@@ -290,7 +282,6 @@ export async function saveInsertable(
         vendors: parsed.vendors,
         smallThumbnailUrl: parsed.thumbnailUrls?.small ?? null,
         largeThumbnailUrl: parsed.thumbnailUrls?.large ?? null,
-        supportsFasten: parsed.supportsFasten,
         fastenInfo: parsed.fastenInfo,
         isOpenComposite: parsed.isOpenComposite,
         partMetadata: parsed.partMetadata,

@@ -32,12 +32,10 @@ export interface InsertableBuildStatus extends IndexingSettings {
     elementPath: ElementPath;
     elementType: ElementType;
     isVisible: boolean;
-    /** Whether inserts place and fasten at its mate connector. */
+    /** Inserts place and fasten at its mate connector. */
     supportsFasten: boolean;
-    /** The admin's choice; absent when detection decides. */
-    fastenOverride?: boolean;
-    /** A mate connector was found, whether or not inserts use it. */
-    hasMateConnector: boolean;
+    /** An admin turned fastening off; otherwise it is on wherever a connector is found. */
+    fastenDisabled: boolean;
     vendors: Vendor[];
     configuration?: ConfigurationBuildStatus;
     /** When Onshape cut the version this insertable is pinned to (epoch ms). */

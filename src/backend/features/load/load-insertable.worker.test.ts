@@ -27,6 +27,9 @@ import {
 import * as ConfigurationEndpoints from "../../lib/onshape/endpoints/configurations";
 import * as PartsEndpoints from "../../lib/onshape/endpoints/parts";
 import * as PartStudioEndpoints from "../../lib/onshape/endpoints/part-studios";
+import * as AssemblyEndpoints from "../../lib/onshape/endpoints/assemblies";
+import * as MetadataEndpoints from "../../lib/onshape/endpoints/metadata";
+import { ElementType } from "../../lib/onshape/element-type";
 import { MateLocation } from "../library/insertables/fasten";
 import * as ThumbnailStore from "../thumbnails/store";
 import { BuildIssueType } from "../build-checker/issues";
@@ -59,7 +62,7 @@ describe("saveInsertable", () => {
         expect(await readInsertable(db)).toMatchObject({
             // User-owned flags start off.
             isVisible: false,
-            fastenOverride: null,
+            fastenDisabled: false,
             indexConfigurations: false,
             // Computed columns come from the parse.
             isOpenComposite: true,
@@ -78,7 +81,7 @@ describe("saveInsertable", () => {
             .update(insertables)
             .set({
                 isVisible: true,
-                fastenOverride: false,
+                fastenDisabled: true,
                 indexConfigurations: true,
                 sortOrder: 5
             })
@@ -97,7 +100,7 @@ describe("saveInsertable", () => {
         expect(await readInsertable(db)).toMatchObject({
             // Preserved.
             isVisible: true,
-            fastenOverride: false,
+            fastenDisabled: true,
             indexConfigurations: true,
             sortOrder: 5,
             // Overwritten.
@@ -228,7 +231,6 @@ describe("loadInsertable", () => {
 
         const row = await readInsertable(db, "ins-mc");
         expect(row).toMatchObject({
-            supportsFasten: true,
             fastenInfo: {
                 mateConnectorId: "mc-1",
                 mateLocation: MateLocation.Feature,
@@ -240,20 +242,54 @@ describe("loadInsertable", () => {
         );
     });
 
-    it("leaves fastening off where an admin turned it off", async () => {
-        mockFeatures(mateConnectorFeature("mc-1"));
+    it("leaves fastening off where an admin turned it off, asking nothing", async () => {
+        const features = vi
+            .spyOn(PartStudioEndpoints, "getFeatures")
+            .mockResolvedValue(featureList([mateConnectorFeature("mc-1")]));
         await load("ins-off");
         await db
             .update(insertables)
-            .set({ fastenOverride: false })
+            .set({ fastenDisabled: true })
             .where(eq(insertables.id, "ins-off"));
+        features.mockClear();
 
         await load("ins-off");
 
-        expect(await readInsertable(db, "ins-off")).toMatchObject({
-            supportsFasten: false,
-            fastenOverride: false
+        expect(features).not.toHaveBeenCalled();
+        expect((await readInsertable(db, "ins-off"))?.fastenInfo).toBeNull();
+    });
+
+    it("fastens an assembly at the mate connector it finds", async () => {
+        vi.spyOn(AssemblyEndpoints, "getAssembly").mockResolvedValue({
+            rootAssembly: {
+                features: [
+                    {
+                        featureType: "mateConnector",
+                        id: "mc-asm",
+                        featureData: { occurrence: [] }
+                    }
+                ],
+                instances: []
+            },
+            parts: [],
+            subAssemblies: []
         });
+        vi.spyOn(MetadataEndpoints, "getElementMetadata").mockResolvedValue({
+            properties: []
+        });
+
+        await loadInsertable(
+            ctx(),
+            insertableTarget({
+                insertableId: "ins-asm",
+                elementType: ElementType.ASSEMBLY,
+                elementPath: { ...TEST_PART_STUDIO_PATH, elementId: "ins-asm" }
+            })
+        );
+
+        expect(
+            (await readInsertable(db, "ins-asm"))?.fastenInfo?.mateConnectorId
+        ).toBe("mc-asm");
     });
 
     it("flags a mate connector a configuration can suppress", async () => {
@@ -264,7 +300,7 @@ describe("loadInsertable", () => {
         await load("ins-unstable");
 
         const row = await readInsertable(db, "ins-unstable");
-        expect(row?.supportsFasten).toBe(true);
+        expect(row?.fastenInfo).not.toBeNull();
         expect(row?.buildIssues.map((issue) => issue.type)).toContain(
             BuildIssueType.UNSTABLE_MATE_CONNECTOR
         );
