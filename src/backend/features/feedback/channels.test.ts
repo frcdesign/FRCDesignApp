@@ -1,6 +1,13 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { FeedbackCategory, FeedbackSource, FeedbackTopic } from "./contract";
-import { DISCORD_FORUMS, DiscordForum } from "./discord-forums";
+import {
+    FEEDBACK_TOPICS,
+    feedbackCategories,
+    FeedbackCategory,
+    FeedbackSource,
+    FeedbackTopic,
+    topicLibrary
+} from "./contract";
+import { DISCORD_FORUMS, DiscordForum, topicForum } from "./discord-forums";
 import { reportTagIds } from "./channels";
 
 const library = DISCORD_FORUMS[DiscordForum.LIBRARY];
@@ -46,4 +53,24 @@ describe("reportTagIds", () => {
             )
         ).toEqual(["tag-bug"]);
     });
+});
+
+describe("DISCORD_FORUMS", () => {
+    // A thread with no type tag is one the forum's triage can't sort.
+    it.each(FEEDBACK_TOPICS)(
+        "tags every type a %s report can take",
+        (topic) => {
+            const { tags } = topicForum(topic);
+            // A part report is always about a library's part.
+            const sources = topicLibrary(topic)
+                ? Object.values(FeedbackSource)
+                : [FeedbackSource.GENERAL, FeedbackSource.ERROR];
+            const types = sources.flatMap((source) =>
+                feedbackCategories(topic, source)
+            );
+            expect(types.filter((type) => tags[type] === undefined)).toEqual(
+                []
+            );
+        }
+    );
 });

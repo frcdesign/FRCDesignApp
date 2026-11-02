@@ -41,18 +41,46 @@ export const DISCORD_FORUMS: Record<DiscordForum, ForumSettings> = {
     [DiscordForum.APP]: {
         channel: "frcdesignapp-feedback",
         invite: "https://discord.gg/vJXPVbxddV",
-        tags: {}
+        tags: {
+            [FeedbackTopic.APP]: "1566636688627736646",
+            [FeedbackTopic.VERSION_MANAGER]: "1566636709913829576",
+            [FeedbackCategory.BUG]: "1566636728180277448",
+            [FeedbackCategory.FEATURE_REQUEST]: "1566636742272880640",
+            [FeedbackCategory.OTHER]: "1566636757770838138",
+            [ERROR_REPORT_TAG]: "1566636772836777984"
+        }
     },
     [DiscordForum.LIBRARY]: {
         channel: "frcdesignlib-feedback",
         invite: "https://discord.gg/gPGBpFxm2S",
-        tags: {}
+        tags: {
+            [FeedbackTopic.FRC_DESIGN_LIB]: "1566635734725828659",
+            [FeedbackTopic.MKCAD]: "1566635762542321735",
+            [FeedbackCategory.PART_REQUEST]: "1566635785682161764",
+            [FeedbackCategory.ORGANIZATION]: "1566635803914797116",
+            [FeedbackCategory.BUG]: "1566635818054066237",
+            [FeedbackCategory.METADATA]: "1566635865222942810",
+            [FeedbackCategory.INCORRECT_GEOMETRY]: "1566635891412443186",
+            [FeedbackCategory.BROKEN_CONFIGURATION]: "1566636000825049179",
+            [FeedbackCategory.THUMBNAIL]: "1566636028092096572",
+            [FeedbackCategory.OTHER]: "1566636055531102300"
+        }
     },
     /** In ConfigLib's own server, not FRCDesign's. */
     [DiscordForum.CONFIG_LIB]: {
         channel: "configlib-feedback",
         invite: "https://discord.gg/QM4EeNQ9KC",
-        tags: {}
+        tags: {
+            [FeedbackCategory.PART_REQUEST]: "1566634451591758014",
+            [FeedbackCategory.ORGANIZATION]: "1566637067054747849",
+            [FeedbackCategory.BUG]: "1566637081210650725",
+            [FeedbackCategory.METADATA]: "1566637098138730647",
+            [FeedbackCategory.INCORRECT_GEOMETRY]: "1566637118959394956",
+            [FeedbackCategory.BROKEN_CONFIGURATION]: "1566637138064310322",
+            [FeedbackCategory.THUMBNAIL]: "1566637156498411610",
+            [FeedbackCategory.OTHER]: "1566637169806807151",
+            [ERROR_REPORT_TAG]: "1566640845430464682"
+        }
     }
 };
 
