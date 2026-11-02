@@ -1,24 +1,15 @@
-import { useAccessData, useShowHidden } from "../../auth/access-level";
-import { Button } from "@mantine/core";
 import { HeartBreakIcon } from "@phosphor-icons/react";
 import { IconSize, StatusColor } from "../../../lib/style-constants";
 import { ReactNode } from "react";
-import {
-    FilteredInsertables,
-    filterInsertables,
-    searchInsertables
-} from "../../search/filter";
+import { FilteredInsertables, filterInsertables } from "../../search/filter";
+import { searchList } from "../../search/list-search";
 import {
     getFavoriteForInsertable,
     type FavoritesData
 } from "@backend/features/favorites/contract";
-import type { Insertables } from "@backend/features/library/contract";
+import type { LibraryOut } from "@backend/features/library/contract";
 import { useUiState } from "../../../lib/ui-state";
-import {
-    SectionNotice,
-    SectionLoading,
-    SectionError
-} from "../../../components/app-notice";
+import { SectionLoading, SectionError } from "../../../components/app-notice";
 import {
     NoSearchResultError,
     SearchCallout
@@ -27,29 +18,18 @@ import { FavoriteCard } from "./favorite-card";
 import { ItemTable } from "../../../components/item-row";
 import { useFavoritesQuery } from "../queries";
 import { useLibraryQuery } from "../../library/queries";
-import { useSearchDbQuery } from "../../search/queries";
 import { AppIcon } from "../../../components/app-icon";
-import { FavoriteIcon } from "./favorite-button";
-import { startSignIn } from "../../auth/sign-in";
 import { useVendorFilters } from "../../settings/vendor-filters";
 
-/** Unlike DocumentList, this list can be searched directly. */
+/** Only shown signed in. Unlike DocumentList, this list can be searched directly. */
 export function FavoritesList(): ReactNode {
     const searchQuery = useUiState((state) => state.searchQuery);
     const vendorFilters = useVendorFilters();
 
-    const { signedIn, isPending } = useAccessData();
     const favoritesQuery = useFavoritesQuery();
     const libraryQuery = useLibraryQuery();
 
-    // Before the pending branch, which never resolves while signed out.
-    if (!isPending && !signedIn) {
-        return <SignInToViewFavorites />;
-    } else if (
-        isPending ||
-        libraryQuery.isPending ||
-        favoritesQuery.isPending
-    ) {
+    if (libraryQuery.isPending || favoritesQuery.isPending) {
         return <SectionLoading title="Loading favorites..." />;
     } else if (libraryQuery.isError || favoritesQuery.isError) {
         return (
@@ -73,7 +53,7 @@ export function FavoritesList(): ReactNode {
         return (
             <FavoriteSearchResults
                 query={searchQuery}
-                insertables={insertables}
+                library={libraryQuery.data}
                 favoritesData={favoritesData}
             />
         );
@@ -96,53 +76,49 @@ export function FavoritesList(): ReactNode {
     );
 }
 
-function SignInToViewFavorites(): ReactNode {
-    return (
-        <SectionNotice
-            icon={<FavoriteIcon size={IconSize.SECTION} />}
-            title="Sign in to view favorites"
-            description="Favorites are saved to your Onshape account."
-            action={<Button onClick={startSignIn}>Sign in</Button>}
-        />
-    );
-}
-
 interface FavoriteSearchResultsProps {
     query: string;
-    insertables: Insertables;
+    library: LibraryOut;
     favoritesData: FavoritesData;
 }
 
-/** The favorites the query matches, which the search index is what knows. */
+/** The favorites the query matches, ranked, each by its own configuration's part number. */
 function FavoriteSearchResults(props: FavoriteSearchResultsProps): ReactNode {
-    const { query, insertables, favoritesData } = props;
+    const { query, library, favoritesData } = props;
 
     const vendorFilters = useVendorFilters();
-    const showHidden = useShowHidden();
-    const searchDbQuery = useSearchDbQuery();
 
-    if (searchDbQuery.isLoading) {
-        return <SectionLoading title="Searching..." />;
-    } else if (searchDbQuery.isError) {
-        return <SectionError title="Failed to load search database." />;
-    } else if (!searchDbQuery.data) {
-        return <SectionError title="The search database is empty." />;
-    }
-
-    const result = searchInsertables({
-        searchDb: searchDbQuery.data,
-        insertables,
-        query,
-        filters: { vendors: vendorFilters, isFavorite: true },
-        favoritedInsertableIds: new Set(
-            Object.values(favoritesData.favorites).map((f) => f.insertableId)
-        ),
-        // A favorite is one configuration, so other configurations' fields mustn't match.
-        searchConfigurations: false,
-        showHidden
+    const rows = favoritesData.favoriteOrder.flatMap((favoriteId) => {
+        const favorite = favoritesData.favorites[favoriteId];
+        const insertable =
+            favorite && library.insertables[favorite.insertableId];
+        return insertable
+            ? [
+                  {
+                      id: favorite.id,
+                      insertable,
+                      groupName: library.groups[insertable.groupId]?.name ?? "",
+                      record: favorite.record
+                  }
+              ]
+            : [];
     });
+    const found = searchList(rows, query);
+    const result = filterInsertables(
+        found.map(({ row }) => row.insertable),
+        { vendors: vendorFilters, visibleOnly: true }
+    );
+    // A part has one favorite, so its id names the hit.
+    const hits = Object.fromEntries(
+        found.map(({ row, hit }) => [row.insertable.id, hit])
+    );
 
-    return <FavoriteCards result={result} favoritesData={favoritesData} />;
+    return (
+        <FavoriteCards
+            result={{ ...result, hits }}
+            favoritesData={favoritesData}
+        />
+    );
 }
 
 interface FavoriteCardsProps {

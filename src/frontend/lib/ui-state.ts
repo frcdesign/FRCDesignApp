@@ -23,6 +23,7 @@ interface UiState {
     /** The group last opened in that tab; undefined for the tab itself. */
     groupId?: string;
     isFavoritesOpen: boolean;
+    isRecentsOpen: boolean;
     isLibraryOpen: boolean;
     /** The version manager's two sections, which open like the home page's. */
     isParentsOpen: boolean;
@@ -45,6 +46,7 @@ export const useUiState = create<UiState>()(
         (): UiState => ({
             theme: Theme.DARK,
             isFavoritesOpen: false,
+            isRecentsOpen: true,
             isLibraryOpen: true,
             isParentsOpen: true,
             isChildrenOpen: true,

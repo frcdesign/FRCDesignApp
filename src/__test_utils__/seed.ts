@@ -2,6 +2,7 @@ import { type Db } from "@backend/db/client";
 import {
     configurations,
     favorites,
+    recentInserts,
     groups,
     insertables,
     libraries,
@@ -72,6 +73,7 @@ export async function resetDb(db: Db): Promise<void> {
     // One batch, one round trip: this runs before nearly every test.
     await db.batch([
         db.delete(favorites),
+        db.delete(recentInserts),
         db.delete(configurations),
         db.delete(insertables),
         db.delete(groups),

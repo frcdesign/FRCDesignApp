@@ -13,6 +13,7 @@ import {
     groups,
     insertables,
     favorites,
+    recentInserts,
     WebhookSubject
 } from "../../../db/schema";
 import { bumpLibraryVersion, rebuildSearchDb } from "../db";
@@ -81,6 +82,17 @@ groupRoutes.post(
                             and(
                                 eq(favorites.libraryId, libraryId),
                                 inArray(favorites.insertableId, insertableIds)
+                            )
+                        ),
+                    db
+                        .delete(recentInserts)
+                        .where(
+                            and(
+                                eq(recentInserts.libraryId, libraryId),
+                                inArray(
+                                    recentInserts.insertableId,
+                                    insertableIds
+                                )
                             )
                         )
                 );

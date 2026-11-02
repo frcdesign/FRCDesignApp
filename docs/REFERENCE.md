@@ -26,7 +26,7 @@ The app uses five Cloudflare products. Each one is declared as a **binding** in 
 
 ### D1 — The Database (`c.env.DB`)
 
-D1 is Cloudflare's managed SQLite database. It is the app's primary persistent store — everything about libraries, groups, parts, users, and favorites lives here.
+D1 is Cloudflare's managed SQLite database. It is the app's primary persistent store — everything about libraries, groups, parts, users, favorites, and recently inserted parts lives here.
 
 Queries go through **Drizzle ORM** so you write TypeScript instead of raw SQL. The schema is defined in `src/backend/db/schema.ts`. SQL migration files live in `drizzle/` and are applied automatically on deploy.
 
@@ -82,7 +82,7 @@ The `/app` route reads Onshape's parameters off the url once per page load, into
 
 | Store              | What it holds                                                                         | Lifetime                                                | Who reads/writes it                                                                           |
 | ------------------ | ------------------------------------------------------------------------------------- | ------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| **D1**             | Library data, groups, parts (insertables), configurations, users, favorites           | Permanent (until explicitly changed)                    | Backend Worker on every API request                                                           |
+| **D1**             | Library data, groups, parts (insertables), configurations, users, favorites, recents  | Permanent (until explicitly changed)                    | Backend Worker on every API request                                                           |
 | **KV**             | Session tokens, borrowable admin sessions, workspace units                            | Sessions: 30 days. Units: a week.                       | Backend Worker, through a `kvStore` per key prefix                                            |
 | **R2**             | Thumbnail images and per-library search indexes                                       | Until a load orphans them; indexes rewritten on rebuild | Backend Worker in `src/backend/features/thumbnails/` and `src/backend/features/library/db.ts` |
 | **localStorage**   | UI state: theme, last tab and group, open/closed panels, search query, vendor filters | Persists across browser sessions                        | Frontend only, via `src/frontend/lib/ui-state.ts`                                             |
@@ -118,7 +118,7 @@ owns, `lib/` for cross-cutting plumbing, and a small set of files at the root.
     - `push/` — the `ClientRelay` Durable Object and what it pushes
     - `admin-team/` — each library's admin team, set by the owner and synced from Onshape
     - `version-manager/` — links between Onshape workspaces and the pushes and pulls along them; see [architecture/version-manager.md](./architecture/version-manager.md)
-    - `favorites/`, `search/`, `analytics/`, `insert-location/`
+    - `favorites/`, `recents/`, `search/`, `analytics/`, `insert-location/`
 
 ### `src/frontend/`
 
@@ -126,7 +126,7 @@ owns, `lib/` for cross-cutting plumbing, and a small set of files at the root.
 - `routes/` — file-based TanStack Router routes
 - `lib/` — cross-cutting helpers: `api-client.ts` (fetch wrappers), `query-keys.ts` (every query key in one place), `query-client.ts`, `ui-state.ts` (the Zustand store kept in localStorage), `onshape-params.ts` (the tab's Onshape launch, in sessionStorage), `refresh.ts`, `notifications.tsx`
 - `components/` — UI used by more than one feature, plus the app shell (`app-navbar.tsx`, `alerts.tsx`, `root-error.tsx`)
-- `features/` — `library/`, `favorites/`, `insert/`, `insert-location/`, `search/`, `settings/`, `thumbnails/`, `build-status/`, `admin-team/`, `dashboard/`, `auth/`, each with its queries and a `components/` directory
+- `features/` — `library/`, `favorites/`, `recents/`, `insert/`, `insert-location/`, `search/`, `settings/`, `thumbnails/`, `build-status/`, `admin-team/`, `dashboard/`, `auth/`, each with its queries and a `components/` directory
 
 Other top-level files:
 
@@ -139,4 +139,4 @@ Four levels, per library: **owner** (the user `OWNER_USER_ID` names), **admin** 
 
 ## Architecture
 
-Each area's design, invariants and failure modes live in [architecture/](./architecture/README.md): thumbnails, configurations, loading, favorites, and auth.
+Each area's design, invariants and failure modes live in [architecture/](./architecture/README.md): thumbnails, configurations, loading, favorites, recents, and auth.
