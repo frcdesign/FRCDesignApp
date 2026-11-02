@@ -29,6 +29,7 @@ sends nothing about their own documents.
 | `src/backend/features/analytics/report-queries.ts`            | The dashboard's report counts and most reported parts                           |
 | `src/frontend/features/feedback/components/feedback-form.tsx` | The one form every report is sent from                                          |
 | `src/frontend/features/feedback/open-feedback.tsx`            | `openFeedbackForm`, `openPartReport`, `openErrorReport`                         |
+| `src/frontend/features/feedback/labels.ts`                    | Each topic's and type's message, the details placeholder, `suggestTitle`        |
 | `src/frontend/features/feedback/diagnostics.ts`               | `collectDiagnostics`, `toReportedError`                                         |
 | `src/frontend/features/feedback/components/report-button.tsx` | **Send a report**, beside an error notice                                       |
 | `src/frontend/features/feedback/components/report-sent.tsx`   | What the form becomes once sent: which channel, and **Open Discord**            |

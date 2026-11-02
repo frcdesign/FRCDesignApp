@@ -6,11 +6,9 @@ import type {
     ReportedPartOut,
     ReportSummary
 } from "@backend/features/analytics/contract";
-import {
-    FEEDBACK_CATEGORY_LABELS,
-    FEEDBACK_TOPIC_LABELS,
-    FeedbackSource
-} from "@backend/features/feedback/contract";
+import { FeedbackSource } from "@backend/features/feedback/contract";
+import { topicLabel, typeLabel } from "../feedback/labels";
+import { m } from "../../paraglide/messages";
 import { type LibraryId } from "@backend/features/library/library-id";
 import { Section } from "../../components/section";
 import { StatTile } from "./stat-tiles";
@@ -36,8 +34,8 @@ function byKind(counts: ReportCount[]): ReportRow[] {
         const key = `${each.topic}/${each.category}`;
         const row = rows.get(key) ?? {
             key,
-            topic: FEEDBACK_TOPIC_LABELS[each.topic],
-            category: FEEDBACK_CATEGORY_LABELS[each.category],
+            topic: topicLabel(each.topic),
+            category: typeLabel(each.category),
             count: 0
         };
         row.count += each.count;
@@ -59,26 +57,35 @@ function ReportTiles({ reports, withTopic }: ReportTilesProps): ReactNode {
     return (
         <>
             <SimpleGrid cols={{ base: 1, sm: 3 }}>
-                <StatTile label="Reports" value={total(reports.counts)} />
                 <StatTile
-                    label="From errors"
+                    label={m.dashboardReports()}
+                    value={total(reports.counts)}
+                />
+                <StatTile
+                    label={m.dashboardReportsFromErrors()}
                     value={total(reports.counts, FeedbackSource.ERROR)}
                 />
                 <StatTile
-                    label="About a part"
+                    label={m.dashboardReportsAboutPart()}
                     value={total(reports.counts, FeedbackSource.PART)}
                 />
             </SimpleGrid>
             <Card>
                 {rows.length === 0 ? (
-                    <Text c="dimmed">No reports in this range.</Text>
+                    <Text c="dimmed">{m.dashboardReportsEmpty()}</Text>
                 ) : (
                     <Table>
                         <Table.Thead>
                             <Table.Tr>
-                                {withTopic && <Table.Th>About</Table.Th>}
-                                <Table.Th>Type</Table.Th>
-                                <Table.Th ta="right">Reports</Table.Th>
+                                {withTopic && (
+                                    <Table.Th>
+                                        {m.dashboardReportsAbout()}
+                                    </Table.Th>
+                                )}
+                                <Table.Th>{m.dashboardReportsType()}</Table.Th>
+                                <Table.Th ta="right">
+                                    {m.dashboardReportsCount()}
+                                </Table.Th>
                             </Table.Tr>
                         </Table.Thead>
                         <Table.Tbody>
@@ -108,7 +115,7 @@ interface OverviewReportsProps {
 /** Every topic's reports, by what they were about and what kind they were. */
 export function OverviewReports({ reports }: OverviewReportsProps): ReactNode {
     return (
-        <Section title="Reports">
+        <Section title={m.dashboardReports()}>
             <ReportTiles reports={reports} withTopic />
         </Section>
     );
@@ -124,15 +131,19 @@ interface LibraryReportsProps {
 export function LibraryReports(props: LibraryReportsProps): ReactNode {
     const { libraryId, reports, reportedParts } = props;
     return (
-        <Section title="Reports">
+        <Section title={m.dashboardReports()}>
             <ReportTiles reports={reports} withTopic={false} />
             {reportedParts.length > 0 && (
                 <Card>
                     <Table>
                         <Table.Thead>
                             <Table.Tr>
-                                <Table.Th>Most reported parts</Table.Th>
-                                <Table.Th ta="right">Reports</Table.Th>
+                                <Table.Th>
+                                    {m.dashboardReportsMostReported()}
+                                </Table.Th>
+                                <Table.Th ta="right">
+                                    {m.dashboardReportsCount()}
+                                </Table.Th>
                             </Table.Tr>
                         </Table.Thead>
                         <Table.Tbody>

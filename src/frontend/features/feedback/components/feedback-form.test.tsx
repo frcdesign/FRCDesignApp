@@ -200,7 +200,9 @@ describe("FeedbackForm", () => {
                 }}
             />
         );
-        expect(screen.getByText("Hex shaft")).toBeTruthy();
+        expect(
+            screen.getByText("About Hex shaft in FRCDesignLib.")
+        ).toBeTruthy();
         await user.type(
             screen.getByRole("textbox", { name: /Details/ }),
             "Wrong length."

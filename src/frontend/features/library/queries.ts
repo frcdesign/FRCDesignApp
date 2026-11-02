@@ -37,6 +37,7 @@ import {
     handleAppError,
     showReportableErrorToast
 } from "../../lib/errors";
+import { m } from "../../paraglide/messages";
 import { modals } from "@mantine/modals";
 import {
     INVALID_DOCUMENT_URL,
@@ -158,10 +159,7 @@ export function useSetGroupOrderMutation() {
             );
         },
         onError: (error) => {
-            showReportableErrorToast(
-                "Unexpectedly failed to reorder group.",
-                error
-            );
+            showReportableErrorToast(m.libraryReorderGroupFailed(), error);
         },
         // A failure bumps nothing, so the patch has to be dropped explicitly.
         onSettled: (_result, error) =>

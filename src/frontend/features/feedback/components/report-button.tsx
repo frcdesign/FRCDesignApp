@@ -4,6 +4,7 @@ import { type ReactNode } from "react";
 import { FeedbackTopic } from "@backend/features/feedback/contract";
 import { type ReportedError } from "../diagnostics";
 import { openErrorReport } from "../open-feedback";
+import { m } from "../../../paraglide/messages";
 
 interface ReportButtonProps {
     /** The problem on screen, which the report carries; see `toReportedError`. */
@@ -20,7 +21,7 @@ export function ReportButton(props: ReportButtonProps): ReactNode {
             leftSection={<FlagIcon />}
             onClick={() => openErrorReport(report, topic)}
         >
-            Send a report
+            {m.feedbackSendAReport()}
         </Button>
     );
 }

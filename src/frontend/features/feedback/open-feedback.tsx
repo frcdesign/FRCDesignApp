@@ -13,6 +13,7 @@ import { type LibraryId } from "@backend/features/library/library-id";
 import { openAppModal } from "../../components/open-app-modal";
 import { AppTitle } from "../../components/app-title";
 import { IconSize } from "../../lib/style-constants";
+import { m } from "../../paraglide/messages";
 import {
     FeedbackForm,
     type ReportedPartChoice
@@ -26,7 +27,7 @@ export function openFeedbackForm(initialTopic = FeedbackTopic.APP): void {
     openAppModal({
         title: (
             <AppTitle
-                title="Leave feedback"
+                title={m.feedbackFormTitle()}
                 icon={<ChatCircleTextIcon size={IconSize.MEDIUM} />}
             />
         ),
@@ -48,7 +49,7 @@ export function openPartReport(
     openAppModal({
         title: (
             <AppTitle
-                title="Report an issue"
+                title={m.feedbackPartReportTitle()}
                 icon={<FlagIcon size={IconSize.MEDIUM} />}
             />
         ),
@@ -71,7 +72,7 @@ export function openErrorReport(
     openAppModal({
         title: (
             <AppTitle
-                title="Send a report"
+                title={m.feedbackErrorReportTitle()}
                 icon={<WarningIcon size={IconSize.MEDIUM} />}
             />
         ),

@@ -12,6 +12,7 @@ import { StatusIcon } from "../../../components/status-icon";
 import { Status } from "../../../lib/status";
 import { IconSize } from "../../../lib/style-constants";
 import { openUrlInNewTab } from "../../../lib/url";
+import { m } from "../../../paraglide/messages";
 
 interface ReportSentProps {
     /** Decides the forum the report went to. */
@@ -33,21 +34,23 @@ export function ReportSent(props: ReportSentProps): ReactNode {
                             raised={false}
                         />
                     }
-                    title="Report sent!"
-                    description={`You can find your report in #${topicForum(topic).channel} if you want to follow up in Discord.`}
+                    title={m.feedbackSent()}
+                    description={m.feedbackSentWhere({
+                        channel: topicForum(topic).channel
+                    })}
                     action={
                         <Button
                             leftSection={<DiscordLogoIcon />}
                             onClick={() => openUrlInNewTab(forumInvite(topic))}
                         >
-                            Open Discord
+                            {m.feedbackOpenDiscord()}
                         </Button>
                     }
                 />
             </AppModalBody>
             <AppModalFooter>
                 <Button variant="default" onClick={onClose}>
-                    Close
+                    {m.feedbackClose()}
                 </Button>
             </AppModalFooter>
         </>

@@ -123,26 +123,6 @@ export function feedbackCategories(
     return topicLibrary(topic) ? LIBRARY_CATEGORIES : APP_CATEGORIES;
 }
 
-interface TitleContext {
-    topic: FeedbackTopic;
-    category: FeedbackCategory;
-    /** The part a part report names. */
-    partName?: string;
-    /** What an error report's user was shown. */
-    errorShown?: string;
-}
-
-/** What the form fills the title in with until the reporter writes their own. */
-export function suggestTitle(context: TitleContext): string {
-    const { topic, category, partName, errorShown } = context;
-    const title = errorShown
-        ? errorShown.replace(/\.$/, "")
-        : `${FEEDBACK_CATEGORY_LABELS[category]}: ${partName ?? FEEDBACK_TOPIC_LABELS[topic]}`;
-    return title.length <= MAX_FEEDBACK_TITLE
-        ? title
-        : title.slice(0, MAX_FEEDBACK_TITLE - 1) + "…";
-}
-
 /** Discord's own cap on a message is 4096; this leaves room for the rest. */
 export const MAX_FEEDBACK_MESSAGE = 2000;
 /** The title names the report's forum thread, which Discord caps at 100. */

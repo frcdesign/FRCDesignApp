@@ -17,6 +17,7 @@ import {
 } from "@backend/features/configurations/contract";
 import { toFavoritePath, toLibraryPath } from "../../lib/api-paths";
 import { getAppErrorHandler, showReportableErrorToast } from "../../lib/errors";
+import { m } from "../../paraglide/messages";
 import { showSuccessToast } from "../../lib/notifications";
 import { getQueryUpdater } from "../../lib/query-cache";
 import { useRefreshFavorites } from "../../lib/refresh";
@@ -91,10 +92,7 @@ export function useSetDefaultConfigurationMutation(favoriteId: string) {
             // No router.invalidate(): the loader's prefetch would race this and undo it.
         },
         onError: (error) => {
-            showReportableErrorToast(
-                "Failed to set the default configuration.",
-                error
-            );
+            showReportableErrorToast(m.favoritesSetDefaultFailed(), error);
         },
         onSuccess: () => {
             showSuccessToast("Default configuration set.");

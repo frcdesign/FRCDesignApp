@@ -5,6 +5,7 @@ import {
 } from "@backend/features/feedback/contract";
 import { apiPost } from "../../lib/api-client";
 import { handleAppError } from "../../lib/errors";
+import { m } from "../../paraglide/messages";
 
 const FEEDBACK_TOAST_ID = "send-feedback";
 
@@ -17,7 +18,7 @@ export function useSendFeedbackMutation() {
             // No Report button: a report that can't be sent can't report itself.
             handleAppError(
                 error,
-                "Failed to send the report.",
+                m.feedbackSendFailed(),
                 FEEDBACK_TOAST_ID,
                 false
             )

@@ -7,6 +7,7 @@ import { useLibraryId } from "../../../lib/library";
 import { useHasSeenHint } from "../../hints/queries";
 import { openPartReport } from "../open-feedback";
 import { type ReportedPartChoice } from "./feedback-form";
+import { m } from "../../../paraglide/messages";
 
 /** Opens a report about the part, dotted until a menu offering it has been opened. */
 export function ReportIssueItem(props: ReportedPartChoice): ReactNode {
@@ -21,7 +22,7 @@ export function ReportIssueItem(props: ReportedPartChoice): ReactNode {
             }
             onClick={() => openPartReport(libraryId, props)}
         >
-            Report an issue
+            {m.feedbackReportIssue()}
         </Menu.Item>
     );
 }

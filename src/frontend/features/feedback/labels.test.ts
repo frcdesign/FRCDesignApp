@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { FeedbackCategory, FeedbackTopic, suggestTitle } from "./contract";
+import {
+    FeedbackCategory,
+    FeedbackTopic
+} from "@backend/features/feedback/contract";
+import { suggestTitle } from "./labels";
 
 describe("suggestTitle", () => {
     it("names the type and the part", () => {

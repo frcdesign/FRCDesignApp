@@ -5,6 +5,7 @@ import { renderNotification, showErrorToast } from "./notifications";
 import { startSignIn } from "../features/auth/sign-in";
 import { toReportedError } from "../features/feedback/diagnostics";
 import { openErrorReport } from "../features/feedback/open-feedback";
+import { m } from "../paraglide/messages";
 
 /** `body` is the discriminated shape the backend sends. */
 export class AppError extends Error {
@@ -61,7 +62,7 @@ export function showReportableErrorToast(
     toastKey?: string
 ): void {
     const body: ReactNode = renderNotification(message, {
-        text: "Report",
+        text: m.feedbackToastReport(),
         // Clicked only once the toast is up, so `id` is set by then.
         onClick: () => {
             notifications.hide(id);

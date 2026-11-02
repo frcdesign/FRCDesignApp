@@ -34,6 +34,7 @@ import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
 import { InsertSource } from "@backend/features/analytics/usage";
 import { Hint } from "@backend/features/hints/contract";
 import { ReportIssueItem } from "../../feedback/components/report-issue-item";
+import { m } from "../../../paraglide/messages";
 import { useHasSeenHint, useMarkHintSeen } from "../../hints/queries";
 
 interface InsertableMatch extends RowMatch {
@@ -218,7 +219,7 @@ export function InsertableMenuItems(
                     selection={selection}
                 />
             </MenuSection>
-            <MenuSection label="Feedback">
+            <MenuSection label={m.feedbackMenuSection()}>
                 <ReportIssueItem
                     insertable={insertable}
                     // The menu's whole selection; a card's search hit names only some.

@@ -1,5 +1,6 @@
 import { RequireAccessLevel } from "../features/auth/components/require-access";
 import { PageError } from "./app-notice";
+import { m } from "../paraglide/messages";
 import { DISCORD_INVITE_URL } from "@backend/features/feedback/discord-forums";
 import { ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
@@ -13,7 +14,7 @@ import { DEFAULT_LIBRARY } from "@backend/features/library/library-id";
 export function RootAppError(): ReactNode {
     return (
         <PageError
-            title="The app has crashed due to an unexpected error."
+            title={m.appCrashed()}
             action={
                 <RequireAccessLevel
                     accessLevel={AccessLevel.OWNER}
@@ -40,13 +41,12 @@ export function RootCrash(): ReactNode {
                 font: "16px system-ui, sans-serif"
             }}
         >
+            {/* Plain markup: this replaces the root, Mantine's provider included. */}
             <p>
-                The app has crashed due to an unexpected error. If the problem
-                persists, report it in the{" "}
+                {m.appCrashed()}{" "}
                 <a href={DISCORD_INVITE_URL} target="_blank" rel="noreferrer">
-                    FRCDesign Discord
+                    {m.appCrashedReport()}
                 </a>
-                .
             </p>
         </div>
     );
@@ -64,9 +64,9 @@ export function NotFoundError(): ReactNode {
                 });
             }}
         >
-            Go home
+            {m.appNotFoundGoHome()}
         </Button>
     );
 
-    return <PageError title="Failed to find page." action={homeButton} />;
+    return <PageError title={m.appNotFound()} action={homeButton} />;
 }

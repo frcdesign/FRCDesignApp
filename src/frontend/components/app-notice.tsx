@@ -6,12 +6,11 @@ import { StatusIcon } from "./status-icon";
 import { ReportButton } from "../features/feedback/components/report-button";
 import type { FeedbackTopic } from "@backend/features/feedback/contract";
 import { toReportedError } from "../features/feedback/diagnostics";
+import { m } from "../paraglide/messages";
 
 const ERROR_ICON = (
     <StatusIcon status={Status.ERROR} size={IconSize.PAGE} raised={false} />
 );
-
-export const SEND_A_REPORT = "If the problem persists, send a report.";
 
 interface NoticeProps {
     /** Ends with a period whenever there is a description. */
@@ -77,7 +76,7 @@ function withReport(props: ErrorProps): NoticeProps {
     const { error, topic, action, ...notice } = props;
     return {
         ...notice,
-        description: SEND_A_REPORT,
+        description: m.feedbackIfPersists(),
         action: (
             <Group gap="xs" justify="center" wrap="wrap">
                 {action}

@@ -134,7 +134,7 @@ function UserSettings(): ReactNode {
                     <OpenUrlButton text="Open dashboard" url={DASHBOARD_URL} />
                 </InputRow>
             )}
-            <InputRow label="Feedback">
+            <InputRow label={m.settingsFeedback()}>
                 <Button
                     leftSection={<ChatCircleTextIcon />}
                     onClick={() => {
@@ -142,7 +142,7 @@ function UserSettings(): ReactNode {
                         openFeedbackForm();
                     }}
                 >
-                    Leave feedback
+                    {m.settingsLeaveFeedback()}
                 </Button>
             </InputRow>
             {/* Only worth offering to somebody who is not already running the

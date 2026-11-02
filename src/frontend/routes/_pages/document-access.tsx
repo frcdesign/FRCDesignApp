@@ -12,13 +12,12 @@ import {
 } from "../../lib/onshape-launch";
 import { parseSearch } from "../../lib/search-params";
 import { APPLICATIONS_PATH, toOnshapeOrigin } from "../../lib/url";
+import { m } from "../../paraglide/messages";
 
 export const Route = createFileRoute("/_pages/document-access")({
     component: DocumentAccess,
     validateSearch: (search) => parseSearch(OnshapeLaunchType, search)
 });
-
-const TITLE = "The FRCDesignApp can't edit this document";
 
 /** What `/init` was launched with, to go back through it or on to the app. */
 function launchQuery(launch: OnshapeLaunch): string {
@@ -47,13 +46,9 @@ function DocumentAccess(): ReactNode {
             <Container size="sm" py="xl">
                 <Stack gap="lg">
                     <Stack gap="xs">
-                        <Title order={2}>{TITLE}</Title>
+                        <Title order={2}>{m.documentAccessTitle()}</Title>
                         <Text size="md" c="dimmed">
-                            Parts can only be inserted into a document the
-                            FRCDesignApp can edit. Either the app hasn&apos;t
-                            been given access to the account or classroom this
-                            document belongs to, or you can only view this
-                            document.
+                            {m.documentAccessIntro()}
                         </Text>
                     </Stack>
                     <AccessSteps
@@ -68,7 +63,7 @@ function DocumentAccess(): ReactNode {
                                 window.location.href = `/init?${query}`;
                             }}
                         >
-                            Try again
+                            {m.documentAccessTryAgain()}
                         </Button>
                         {/* Browsing still works; only inserting needs the access. */}
                         <Button
@@ -78,9 +73,11 @@ function DocumentAccess(): ReactNode {
                                 window.location.href = `/?${query}`;
                             }}
                         >
-                            Continue anyway
+                            {m.documentAccessContinue()}
                         </Button>
-                        <ReportButton report={{ shown: TITLE }} />
+                        <ReportButton
+                            report={{ shown: m.documentAccessTitle() }}
+                        />
                     </Group>
                 </Stack>
             </Container>
@@ -103,39 +100,21 @@ function AccessSteps(props: AccessStepsProps): ReactNode {
     if (isEnterprise) {
         return (
             <Stack gap="xs">
-                <Text size="md">
-                    This document belongs to an Onshape Enterprise, but the
-                    FRCDesignApp was probably given access to your personal
-                    account instead. Click Try again below, and when Onshape
-                    asks, grant the FRCDesignApp access to the Enterprise.
-                </Text>
-                <Text size="md">
-                    If your Enterprise limits which apps its members can use,
-                    ask an Enterprise admin to allow the FRCDesignApp.
-                </Text>
+                <Text size="md">{m.documentAccessEnterprise()}</Text>
+                <Text size="md">{m.documentAccessEnterpriseAdmin()}</Text>
             </Stack>
         );
     }
     return (
         <Stack gap="md">
             <Stack gap="xs" align="flex-start">
-                <Text size="md">
-                    If this document is in an Onshape classroom, the classroom
-                    needs access to the FRCDesignApp as well. Open your Onshape
-                    Applications page, grant the FRCDesignApp access to the
-                    classroom, then click Try again below.
-                </Text>
+                <Text size="md">{m.documentAccessClassroom()}</Text>
                 <OpenUrlButton
-                    text="Open Applications page"
+                    text={m.documentAccessOpenApplications()}
                     url={origin + APPLICATIONS_PATH}
                 />
             </Stack>
-            <Text size="md">
-                Otherwise, the FRCDesignApp was probably given access to an
-                Enterprise instead of your personal account. Click Try again
-                below, and when Onshape asks, grant the FRCDesignApp access to
-                your personal account.
-            </Text>
+            <Text size="md">{m.documentAccessPersonal()}</Text>
         </Stack>
     );
 }

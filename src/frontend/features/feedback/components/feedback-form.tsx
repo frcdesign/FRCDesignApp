@@ -10,17 +10,13 @@ import { PaperPlaneTiltIcon } from "@phosphor-icons/react";
 import { ReportSent } from "./report-sent";
 import { type ReactNode, useState } from "react";
 import {
-    FEEDBACK_CATEGORY_LABELS,
-    FEEDBACK_TOPIC_LABELS,
     FEEDBACK_TOPICS,
     type FeedbackOut,
     feedbackCategories,
-    FeedbackCategory,
     FeedbackSource,
     FeedbackTopic,
     MAX_FEEDBACK_MESSAGE,
     MAX_FEEDBACK_TITLE,
-    suggestTitle,
     topicLibrary
 } from "@backend/features/feedback/contract";
 import {
@@ -34,6 +30,13 @@ import { Callout } from "../../../components/callout";
 import { Status } from "../../../lib/status";
 import { collectDiagnostics, type ReportedError } from "../diagnostics";
 import { useSendFeedbackMutation } from "../queries";
+import {
+    detailsPlaceholder,
+    suggestTitle,
+    topicLabel,
+    typeLabel
+} from "../labels";
+import { m } from "../../../paraglide/messages";
 
 /** The part a report from its menu names, and the configuration on screen. */
 export interface ReportedPartChoice {
@@ -41,20 +44,6 @@ export interface ReportedPartChoice {
     /** What the menu had selected; the part's defaults when absent. */
     selection?: PartialSelection;
 }
-
-const MESSAGE_PLACEHOLDERS: Partial<Record<FeedbackCategory, string>> = {
-    [FeedbackCategory.BUG]:
-        "What did you do, what happened, and what did you expect?",
-    [FeedbackCategory.FEATURE_REQUEST]: "What would you like the app to do?",
-    [FeedbackCategory.PART_REQUEST]:
-        "Which part would you like added? A link to where it's sold helps.",
-    [FeedbackCategory.METADATA]:
-        "Which field is wrong or missing, and what should it be?",
-    [FeedbackCategory.INCORRECT_GEOMETRY]: "What doesn't match the real part?",
-    [FeedbackCategory.BROKEN_CONFIGURATION]: "Which options break, and how?"
-};
-
-const DEFAULT_PLACEHOLDER = "Tell us more.";
 
 /** The values a selection names; the server fills in the rest from the part's defaults. */
 function namedValues(selection: PartialSelection = {}): Selection {
@@ -134,20 +123,22 @@ export function FeedbackForm(props: FeedbackFormProps): ReactNode {
                 {error && (
                     <Callout
                         status={Status.ERROR}
-                        text={`The report includes this error: ${error.shown}`}
+                        text={m.feedbackIncludesError({ error: error.shown })}
                     />
                 )}
                 {part ? (
                     <Text>
-                        About <b>{part.insertable.name}</b> in{" "}
-                        {FEEDBACK_TOPIC_LABELS[topic]}.
+                        {m.feedbackAboutPart({
+                            part: part.insertable.name,
+                            library: topicLabel(topic)
+                        })}
                     </Text>
                 ) : (
                     <Select
-                        label="About"
+                        label={m.feedbackTopicLabel()}
                         data={FEEDBACK_TOPICS.map((value) => ({
                             value,
-                            label: FEEDBACK_TOPIC_LABELS[value]
+                            label: topicLabel(value)
                         }))}
                         value={topic}
                         allowDeselect={false}
@@ -158,13 +149,13 @@ export function FeedbackForm(props: FeedbackFormProps): ReactNode {
                     />
                 )}
                 {!part && topicLibrary(topic) && (
-                    <Callout text="To report a problem with one part, choose Report an issue in that part's menu." />
+                    <Callout text={m.feedbackPartMenuCallout()} />
                 )}
                 <Select
-                    label="Type"
+                    label={m.feedbackTypeLabel()}
                     data={categories.map((value) => ({
                         value,
-                        label: FEEDBACK_CATEGORY_LABELS[value]
+                        label: typeLabel(value)
                     }))}
                     value={category}
                     allowDeselect={false}
@@ -174,8 +165,8 @@ export function FeedbackForm(props: FeedbackFormProps): ReactNode {
                     }}
                 />
                 <TextInput
-                    label="Title"
-                    description="Names the report's thread in Discord."
+                    label={m.feedbackTitleLabel()}
+                    description={m.feedbackTitleDescription()}
                     required
                     maxLength={MAX_FEEDBACK_TITLE}
                     value={title}
@@ -184,10 +175,8 @@ export function FeedbackForm(props: FeedbackFormProps): ReactNode {
                     }
                 />
                 <Textarea
-                    label="Details"
-                    placeholder={
-                        MESSAGE_PLACEHOLDERS[category] ?? DEFAULT_PLACEHOLDER
-                    }
+                    label={m.feedbackDetailsLabel()}
+                    placeholder={detailsPlaceholder(category)}
                     autosize
                     minRows={4}
                     maxRows={10}
@@ -199,7 +188,7 @@ export function FeedbackForm(props: FeedbackFormProps): ReactNode {
                 />
                 {part?.insertable.isConfigurable && (
                     <Checkbox
-                        label="Include the configuration"
+                        label={m.feedbackIncludeConfiguration()}
                         checked={includeConfiguration}
                         onChange={(event) =>
                             setIncludeConfiguration(event.currentTarget.checked)
@@ -207,15 +196,15 @@ export function FeedbackForm(props: FeedbackFormProps): ReactNode {
                     />
                 )}
                 <TextInput
-                    label="Discord username"
-                    description="Optional, so the team knows who to answer in the report's thread."
+                    label={m.feedbackDiscordUsername()}
+                    description={m.feedbackDiscordUsernameDescription()}
                     value={contact}
                     onChange={(event) => setContact(event.currentTarget.value)}
                 />
             </AppModalBody>
             <AppModalFooter>
                 <Button variant="default" onClick={modal.close}>
-                    Cancel
+                    {m.feedbackCancel()}
                 </Button>
                 <Button
                     leftSection={<PaperPlaneTiltIcon />}
@@ -223,7 +212,7 @@ export function FeedbackForm(props: FeedbackFormProps): ReactNode {
                     loading={sendMutation.isPending}
                     onClick={send}
                 >
-                    Send
+                    {m.feedbackSend()}
                 </Button>
             </AppModalFooter>
         </>
