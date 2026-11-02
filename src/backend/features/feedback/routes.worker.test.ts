@@ -97,9 +97,8 @@ describe("POST /api/feedback", () => {
         [FeedbackTopic.MKCAD, WEBHOOKS.DISCORD_FRC_DESIGN_LIB_WEBHOOK_URL],
         [FeedbackTopic.CONFIG_LIB, WEBHOOKS.DISCORD_CONFIG_LIB_WEBHOOK_URL]
     ])("posts a %s report to its channel", async (topic, webhook) => {
-        const res = await send(
-            body({ topic, category: FeedbackCategory.FEATURE_REQUEST })
-        );
+        // A bug is the one kind every topic takes.
+        const res = await send(body({ topic, category: FeedbackCategory.BUG }));
 
         expect(res.status).toBe(200);
         expect(postedTo()).toEqual([webhook]);
@@ -213,6 +212,13 @@ describe("POST /api/feedback", () => {
         [
             "a category from another topic",
             body({ category: FeedbackCategory.PART_REQUEST })
+        ],
+        [
+            "a feature request for a library",
+            body({
+                topic: FeedbackTopic.FRC_DESIGN_LIB,
+                category: FeedbackCategory.FEATURE_REQUEST
+            })
         ],
         ["no message", body({ message: "  " })],
         ["no title", body({ title: "  " })],

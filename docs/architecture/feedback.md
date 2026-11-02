@@ -74,8 +74,8 @@ Each thread is filed under up to three of its forum's tags (`reportTagIds`):
 its topic's, its type's, and **Error report** when it started from an error.
 The keys are the topic values (`app`, `version-manager`, `frc-design-lib`,
 `mkcad`, `config-lib`), the category values (`bug`, `feature-request`,
-`part-request`, `organization`, `metadata`, `incorrect-part`,
-`broken-configuration`, `insert-failed`, `thumbnail`, `other`) and
+`part-request`, `organization`, `metadata`, `incorrect-geometry`,
+`broken-configuration`, `thumbnail`, `other`) and
 `error-report`. A key with no id is left untagged. A tag id the forum doesn't
 have makes Discord refuse the post, which then goes again untagged.
 
@@ -85,14 +85,15 @@ The source decides what the form offers and what the report carries
 (`feedbackCategories`):
 
 - **General** — **Send feedback** in settings. The reporter picks the topic.
-  The app's topics offer bug, feature request and other; a library's
-  offer new part request, search or organization, bug, feature request and other,
-  and the form says that a problem with one part is reported from its menu.
+  The app's topics offer bug, feature request and other; a library's offer
+  new part request, search or organization, bug and other, the kinds its
+  forum is tagged by, and the form says that a problem with one part is
+  reported from its menu.
 - **Part** — **Report an issue** in a part's menu, on its card or in the
   insert menu. The topic is the part's library. It offers missing or incorrect
-  metadata, incorrect part, broken configuration, insert fails, wrong or
-  missing thumbnail, and other, and **Include the configuration** (on by
-  default) sends the selection on screen.
+  metadata, incorrect geometry, broken configuration, wrong or missing
+  thumbnail, bug (a part that won't insert is one) and other, and **Include
+  the configuration** (on by default) sends the selection on screen.
 - **Error** — **Report** on an error toast, or **Send a report** under an
   error notice, a failed version run, the cookie error and `/document-access`.
   The report carries what the user was shown and the error behind it, and may

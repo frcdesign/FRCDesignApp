@@ -17,9 +17,8 @@ export enum FeedbackCategory {
     PART_REQUEST = "part-request",
     ORGANIZATION = "organization",
     METADATA = "metadata",
-    INCORRECT_PART = "incorrect-part",
+    INCORRECT_GEOMETRY = "incorrect-geometry",
     BROKEN_CONFIGURATION = "broken-configuration",
-    INSERT_FAILED = "insert-failed",
     THUMBNAIL = "thumbnail",
     OTHER = "other"
 }
@@ -48,9 +47,8 @@ export const FEEDBACK_CATEGORY_LABELS: Record<FeedbackCategory, string> = {
     [FeedbackCategory.PART_REQUEST]: "New part request",
     [FeedbackCategory.ORGANIZATION]: "Search or organization",
     [FeedbackCategory.METADATA]: "Missing or incorrect metadata",
-    [FeedbackCategory.INCORRECT_PART]: "Incorrect part",
+    [FeedbackCategory.INCORRECT_GEOMETRY]: "Incorrect geometry",
     [FeedbackCategory.BROKEN_CONFIGURATION]: "Broken configuration",
-    [FeedbackCategory.INSERT_FAILED]: "Insert fails",
     [FeedbackCategory.THUMBNAIL]: "Wrong or missing thumbnail",
     [FeedbackCategory.OTHER]: "Other"
 };
@@ -70,20 +68,21 @@ const APP_CATEGORIES = [
     FeedbackCategory.OTHER
 ];
 
+/** A library's forum tags, so a report lands under one its team triages. */
 const LIBRARY_CATEGORIES = [
     FeedbackCategory.PART_REQUEST,
     FeedbackCategory.ORGANIZATION,
     FeedbackCategory.BUG,
-    FeedbackCategory.FEATURE_REQUEST,
     FeedbackCategory.OTHER
 ];
 
+/** A part that fails to insert is a bug. */
 const PART_CATEGORIES = [
     FeedbackCategory.METADATA,
-    FeedbackCategory.INCORRECT_PART,
+    FeedbackCategory.INCORRECT_GEOMETRY,
     FeedbackCategory.BROKEN_CONFIGURATION,
-    FeedbackCategory.INSERT_FAILED,
     FeedbackCategory.THUMBNAIL,
+    FeedbackCategory.BUG,
     FeedbackCategory.OTHER
 ];
 

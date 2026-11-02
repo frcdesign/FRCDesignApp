@@ -178,11 +178,13 @@ describe("FeedbackForm", () => {
 
         await user.type(title, "Large sizes fail");
         await user.click(screen.getByRole("combobox", { name: "Type" }));
-        await user.click(screen.getByRole("option", { name: "Insert fails" }));
+        await user.click(
+            screen.getByRole("option", { name: "Wrong or missing thumbnail" })
+        );
         await user.click(screen.getByRole("button", { name: "Send" }));
         expect(sent()).toMatchObject({
             title: "Large sizes fail",
-            category: FeedbackCategory.INSERT_FAILED
+            category: FeedbackCategory.THUMBNAIL
         });
     });
 

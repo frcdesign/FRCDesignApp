@@ -79,9 +79,8 @@ const GRAY = 0x868e96;
 
 const CATEGORY_COLORS: Record<FeedbackCategory, number> = {
     [FeedbackCategory.BUG]: RED,
-    [FeedbackCategory.INSERT_FAILED]: RED,
     [FeedbackCategory.BROKEN_CONFIGURATION]: RED,
-    [FeedbackCategory.INCORRECT_PART]: ORANGE,
+    [FeedbackCategory.INCORRECT_GEOMETRY]: ORANGE,
     [FeedbackCategory.METADATA]: ORANGE,
     [FeedbackCategory.THUMBNAIL]: ORANGE,
     [FeedbackCategory.ORGANIZATION]: ORANGE,

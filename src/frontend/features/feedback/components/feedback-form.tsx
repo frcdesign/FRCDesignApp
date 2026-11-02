@@ -50,9 +50,8 @@ const MESSAGE_PLACEHOLDERS: Partial<Record<FeedbackCategory, string>> = {
         "Which part would you like added? A link to where it's sold helps.",
     [FeedbackCategory.METADATA]:
         "Which field is wrong or missing, and what should it be?",
-    [FeedbackCategory.INCORRECT_PART]: "What doesn't match the real part?",
-    [FeedbackCategory.BROKEN_CONFIGURATION]: "Which options break, and how?",
-    [FeedbackCategory.INSERT_FAILED]: "What happens when you insert it?"
+    [FeedbackCategory.INCORRECT_GEOMETRY]: "What doesn't match the real part?",
+    [FeedbackCategory.BROKEN_CONFIGURATION]: "Which options break, and how?"
 };
 
 const DEFAULT_PLACEHOLDER = "Tell us more.";
