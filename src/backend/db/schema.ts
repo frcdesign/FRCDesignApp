@@ -4,7 +4,8 @@ import {
     integer,
     unique,
     customType,
-    primaryKey
+    primaryKey,
+    index
 } from "drizzle-orm/sqlite-core";
 import { ElementType } from "../lib/onshape/element-type";
 import { FastenInfo } from "../features/library/insertables/fasten";
@@ -206,6 +207,35 @@ export const favorites = sqliteTable(
         createdAt: integer("created_at", { mode: "timestamp_ms" })
     },
     (t) => [unique().on(t.userId, t.libraryId, t.insertableId)]
+);
+
+/** One row per user, insertable and configuration, moved to the front by each insert. */
+export const recentInserts = sqliteTable(
+    "recent_inserts",
+    {
+        id: text("id")
+            .primaryKey()
+            .$defaultFn(() => crypto.randomUUID()),
+        userId: text("user_id").notNull(),
+        libraryId: libraryId().references(() => libraries.id),
+        insertableId: text("insertable_id")
+            .notNull()
+            .references(() => insertables.id, { onDelete: "cascade" }),
+        // Empty for an insertable with nothing to configure: SQLite's unique lets nulls repeat.
+        selection: text("selection", { mode: "json" })
+            .$type<PartialSelection>()
+            .notNull(),
+        insertedAt: integer("inserted_at", { mode: "timestamp_ms" }).notNull()
+    },
+    (t) => [
+        // A collapsed selection has one spelling, so this is one row per configuration.
+        unique().on(t.userId, t.insertableId, t.selection),
+        index("recent_inserts_user_library_idx").on(
+            t.userId,
+            t.libraryId,
+            t.insertedAt
+        )
+    ]
 );
 
 export enum WebhookSubject {

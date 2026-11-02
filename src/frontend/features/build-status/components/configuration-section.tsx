@@ -38,7 +38,8 @@ import {
     type IndexingView,
     useIndexingView
 } from "../indexing-draft";
-import { ControlRow, RowSwitch } from "./sections";
+import { RowSwitch } from "./sections";
+import { HoverBubbleRow } from "../../../components/app-hover-bubble";
 import { plural } from "../../../lib/plural";
 import { IssueIcon } from "./issues";
 import { CardSection } from "./card-section";
@@ -58,19 +59,19 @@ const INDEXED_COLUMN_WIDTH = 64;
 interface ConfigurationSectionProps {
     insertableId: string;
     status: InsertableBuildStatus;
+    /** Not empty: an element without parameters has no section. */
+    parameters: ConfigurationParameter[];
 }
 
 /**
  * Every parameter, with whether search indexes it. Edits collect as a draft
- * and save in one reindex. None for an element with no parameters.
+ * and save in one reindex.
  */
 export function ConfigurationSection(
     props: ConfigurationSectionProps
 ): ReactNode {
-    const { insertableId, status } = props;
+    const { insertableId, status, parameters } = props;
     const view = useIndexingView(insertableId, status);
-    const parameters = status.configuration?.parameters ?? [];
-    if (parameters.length === 0) return null;
     return (
         <CardSection
             id={SectionId.CONFIGURATION}
@@ -115,7 +116,6 @@ function SectionSummary(props: SectionSummaryProps): ReactNode {
 }
 
 interface ConfigurationEditorProps extends ConfigurationSectionProps {
-    parameters: ConfigurationParameter[];
     view: IndexingView;
 }
 
@@ -141,21 +141,20 @@ function ConfigurationEditor(props: ConfigurationEditorProps): ReactNode {
 
     return (
         <Stack gap="sm">
-            <ControlRow
+            <HoverBubbleRow
                 label="Index configurations"
                 description={describeCount(count, band)}
-                control={
-                    <IndexingControl
-                        band={band}
-                        checked={view.indexConfigurations}
-                        onToggle={() =>
-                            editIndexingDraft(insertableId, status, {
-                                indexConfigurations: !view.indexConfigurations
-                            })
-                        }
-                    />
-                }
-            />
+            >
+                <IndexingControl
+                    band={band}
+                    checked={view.indexConfigurations}
+                    onToggle={() =>
+                        editIndexingDraft(insertableId, status, {
+                            indexConfigurations: !view.indexConfigurations
+                        })
+                    }
+                />
+            </HoverBubbleRow>
             <ScrollArea.Autosize mah={TABLE_MAX_HEIGHT} type="auto">
                 <Table
                     layout="fixed"

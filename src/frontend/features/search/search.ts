@@ -4,10 +4,7 @@ import MiniSearch, {
 } from "minisearch";
 import { Vendor } from "@backend/features/library/vendors";
 import { type Position } from "../../lib/highlight";
-import {
-    INSERTABLE_FIELDS,
-    SearchDocument
-} from "@backend/features/search/contract";
+import { SearchDocument } from "@backend/features/search/contract";
 import { matchedRecord } from "@backend/features/search/records";
 import {
     nameSpans,
@@ -27,7 +24,6 @@ const MAX_HITS = 50;
 export interface SearchFilters {
     groupId?: string;
     vendors?: Vendor[];
-    isFavorite?: boolean;
 }
 
 export interface SearchHit {
@@ -60,27 +56,12 @@ export interface SearchArgs {
     searchDb: MiniSearch<SearchDocument>;
     query?: string;
     filters?: SearchFilters;
-    /** Required by an `isFavorite` filter, which matches against it. */
-    favoritedInsertableIds?: Set<string>;
     /** @default false */
     showHidden?: boolean;
-    /**
-     * Off for favorites, which name one configuration: other configurations'
-     * fields would pull them up.
-     * @default true
-     */
-    searchConfigurations?: boolean;
 }
 
 export function doSearch(args: SearchArgs): SearchResult {
-    const {
-        searchDb,
-        query,
-        filters,
-        favoritedInsertableIds,
-        showHidden,
-        searchConfigurations = true
-    } = args;
+    const { searchDb, query, filters, showHidden } = args;
     const filtered: FilterResult = { byVendor: 0, byGroup: 0 };
 
     const words = queryWords(query ?? "");
@@ -95,7 +76,6 @@ export function doSearch(args: SearchArgs): SearchResult {
         queries: words.map((terms) => ({ combineWith: "OR", queries: terms }))
     };
     const miniSearchResults: MiniSearchResult[] = searchDb.search(expression, {
-        fields: searchConfigurations ? undefined : INSERTABLE_FIELDS,
         filter: (result) => {
             // MiniSearch types stored fields as `any`.
             const searchResult = result as unknown as Omit<
@@ -105,12 +85,6 @@ export function doSearch(args: SearchArgs): SearchResult {
                 SearchDocument;
             if (!showHidden && !searchResult.isVisible) {
                 return false;
-            }
-
-            if (filters?.isFavorite) {
-                if (!favoritedInsertableIds?.has(searchResult.id)) {
-                    return false;
-                }
             }
 
             let filteredByGroup = false;

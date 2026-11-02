@@ -71,8 +71,8 @@ function renderPanel(
 }
 
 describe("ConfigurationWrapper", () => {
-    // Onshape is sent what was typed; the key is canonical, for the thumbnail.
-    it("keeps a typed expression, and shows what it evaluates to", async () => {
+    // Collapsed to its value, so every surface holds one spelling of it.
+    it("collapses a typed expression to its value", async () => {
         const user = userEvent.setup();
         const { lastReport } = renderPanel({
             parameters: [length],
@@ -84,14 +84,14 @@ describe("ConfigurationWrapper", () => {
         await user.type(input, "(2 + 3) in{Enter}");
 
         expect(input).toHaveProperty("value", "5 in");
-        expect(lastReport().overrides).toEqual({ length: "(2 + 3) in" });
+        expect(lastReport().overrides).toEqual({ length: "5 in" });
         expect(lastReport().configurationKey).toBe("length=0.127%20m");
 
         await user.click(input);
-        expect(input).toHaveProperty("value", "(2 + 3) in");
+        expect(input).toHaveProperty("value", "5 in");
     });
 
-    it("reopens a stored expression as it was typed", async () => {
+    it("reopens a stored expression collapsed", async () => {
         const user = userEvent.setup();
         renderPanel(
             { parameters: [length], records: [] },
@@ -101,23 +101,25 @@ describe("ConfigurationWrapper", () => {
         const input = await screen.findByLabelText("length");
         expect(input).toHaveProperty("value", "2 in");
         await user.click(input);
-        expect(input).toHaveProperty("value", "(1 + 1) in");
+        expect(input).toHaveProperty("value", "2 in");
     });
 
-    // The box swaps its display for the expression on focus, which would drop
+    // The box swaps its display for the full value on focus, which would drop
     // a selection made before the swap.
-    it("selects the whole expression when a shortened value is clicked", async () => {
+    it("selects the whole value when a shortened one is clicked", async () => {
         const user = userEvent.setup();
         renderPanel(
             { parameters: [length], records: [] },
-            { length: "(1 + 1) in" }
+            { length: "1/3 in" }
         );
 
         const input = await screen.findByLabelText<HTMLInputElement>("length");
+        expect(input.value).toBe("0.333 in");
         await user.click(input);
 
+        expect(input.value).toBe("0.33333333 in");
         expect(input.selectionStart).toBe(0);
-        expect(input.selectionEnd).toBe("(1 + 1) in".length);
+        expect(input.selectionEnd).toBe("0.33333333 in".length);
     });
 
     it("keeps a bad expression out of the selection, and says why", async () => {

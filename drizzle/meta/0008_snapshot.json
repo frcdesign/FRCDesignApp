@@ -1,7 +1,7 @@
 {
     "version": "6",
     "dialect": "sqlite",
-    "id": "797abbb9-4b8e-4559-a9e8-5ba88c41395f",
+    "id": "ede5802c-dc3a-4aba-aa07-7b55595ba5e8",
     "prevId": "6f2386eb-1754-42e7-a379-680294ffc63a",
     "tables": {
         "configurations": {
@@ -553,6 +553,88 @@
                     "name": "onshape_webhooks_subject_subject_id_pk"
                 }
             },
+            "uniqueConstraints": {},
+            "checkConstraints": {}
+        },
+        "recent_inserts": {
+            "name": "recent_inserts",
+            "columns": {
+                "id": {
+                    "name": "id",
+                    "type": "text",
+                    "primaryKey": true,
+                    "notNull": true,
+                    "autoincrement": false
+                },
+                "user_id": {
+                    "name": "user_id",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                },
+                "library_id": {
+                    "name": "library_id",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                },
+                "insertable_id": {
+                    "name": "insertable_id",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                },
+                "selection": {
+                    "name": "selection",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                },
+                "inserted_at": {
+                    "name": "inserted_at",
+                    "type": "integer",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "autoincrement": false
+                }
+            },
+            "indexes": {
+                "recent_inserts_user_library_idx": {
+                    "name": "recent_inserts_user_library_idx",
+                    "columns": ["user_id", "library_id", "inserted_at"],
+                    "isUnique": false
+                },
+                "recent_inserts_user_id_insertable_id_selection_unique": {
+                    "name": "recent_inserts_user_id_insertable_id_selection_unique",
+                    "columns": ["user_id", "insertable_id", "selection"],
+                    "isUnique": true
+                }
+            },
+            "foreignKeys": {
+                "recent_inserts_library_id_libraries_id_fk": {
+                    "name": "recent_inserts_library_id_libraries_id_fk",
+                    "tableFrom": "recent_inserts",
+                    "tableTo": "libraries",
+                    "columnsFrom": ["library_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "no action",
+                    "onUpdate": "no action"
+                },
+                "recent_inserts_insertable_id_insertables_id_fk": {
+                    "name": "recent_inserts_insertable_id_insertables_id_fk",
+                    "tableFrom": "recent_inserts",
+                    "tableTo": "insertables",
+                    "columnsFrom": ["insertable_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "cascade",
+                    "onUpdate": "no action"
+                }
+            },
+            "compositePrimaryKeys": {},
             "uniqueConstraints": {},
             "checkConstraints": {}
         },

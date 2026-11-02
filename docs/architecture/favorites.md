@@ -11,8 +11,9 @@ configuration each one opens with. Favorites are per user and per library.
 | ------------------------------------------------------------------------------- | ----------------------------------------------------------- |
 | `src/backend/features/favorites/contract.ts`                                    | `Favorite`, `FavoritesData`, `MAX_FAVORITES`                |
 | `src/backend/features/favorites/routes.ts`                                      | List, add, delete, reorder, and set the saved configuration |
+| `src/backend/features/configurations/stored-selections.ts`                      | Reading a stored selection back, with its key and record    |
 | `src/frontend/features/favorites/queries.ts`                                    | Query and optimistic mutations                              |
-| `src/frontend/features/favorites/components/favorites-list.tsx`                 | The Favorites tab, searchable through the library index     |
+| `src/frontend/features/favorites/components/favorites-list.tsx`                 | The Favorites tab, searched by `searchList` (see search.md) |
 | `src/frontend/features/favorites/components/favorite-button.tsx`                | Toggling a favorite                                         |
 | `src/frontend/features/favorites/components/set-default-configuration-item.tsx` | **Set default configuration**, in the insert menu's ⋯ menu  |
 | `src/frontend/features/favorites/default-configuration.ts`                      | Whether the configuration on screen is the default          |
@@ -52,6 +53,8 @@ number.
 
 The insert menu opens on the favorite's saved selection, and its thumbnail row
 asks for that configuration's render (see [thumbnails.md](./thumbnails.md)).
+The icon beside the row's title lists that configuration on hover (see
+[configurations.md](./configurations.md)).
 That selection is the favorite's default configuration; a favorite without one
 has the element's own defaults. The reset button returns to the default, and is
 off while it is on screen. **Set default configuration**, in the ⋯ menu,
@@ -70,11 +73,10 @@ menu offering it, a blue dot marks the ⋯ button and the item
 
 ## Failure and recovery
 
-| Failure                               | Result                                  | Recovery                            |
-| ------------------------------------- | --------------------------------------- | ----------------------------------- |
-| The insertable gains a parameter      | Stored selection lacks it               | Defaulted on read                   |
-| The insertable loses the saved option | `toSelection` falls back to the default | Set the default configuration again |
-| Signed out                            | No favorites shown; prompt to sign in   | Sign in                             |
+| Failure                              | Result                                                                                                     | Recovery                            |
+| ------------------------------------ | ---------------------------------------------------------------------------------------------------------- | ----------------------------------- |
+| A reload changes a part's parameters | A new parameter is defaulted on read; a saved option that is gone opens oddly, accepted since this is rare | Set the default configuration again |
+| Signed out                           | No Favorites section                                                                                       | Sign in from the navbar             |
 
 ## Decisions
 

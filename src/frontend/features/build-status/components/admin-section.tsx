@@ -11,7 +11,8 @@ import {
     useToggleInsertAndFastenMutation,
     useToggleSortOrderMutation
 } from "../queries";
-import { ControlRow, SwitchRow } from "./sections";
+import { SwitchRow } from "./sections";
+import { HoverBubbleRow } from "../../../components/app-hover-bubble";
 
 interface InsertableSettingsProps {
     insertableId: string;
@@ -28,10 +29,9 @@ export function InsertableSettings(props: InsertableSettingsProps): ReactNode {
                 isVisible={status.isVisible}
             />
             <FastenSwitch insertableId={insertableId} status={status} />
-            <ControlRow
-                label="Vendors"
-                control={<VendorBadges vendors={status.vendors} />}
-            />
+            <HoverBubbleRow label="Vendors">
+                <VendorBadges vendors={status.vendors} />
+            </HoverBubbleRow>
         </Stack>
     );
 }

@@ -9,18 +9,19 @@ browser, so typing never waits on the network.
 
 ## Code map
 
-| Path                                      | Role                                                               |
-| ----------------------------------------- | ------------------------------------------------------------------ |
-| `src/backend/features/search/contract.ts` | `SearchDocument` and `SEARCH_OPTIONS`, shared by both sides        |
-| `src/backend/features/search/fields.ts`   | The indexed field names                                            |
-| `src/backend/features/search/tokenize.ts` | How names and part numbers become terms, with their spans          |
-| `src/backend/features/search/records.ts`  | Configuration records to search records, and matching a hit to one |
-| `src/backend/features/search/build.ts`    | `buildSearchDb`: one document per insertable                       |
-| `src/backend/features/library/db.ts`      | `rebuildSearchDb`, `searchIndexKey`                                |
-| `src/backend/features/library/routes.ts`  | `GET /api/search-db/...`                                           |
-| `src/frontend/features/search/queries.ts` | Loads the index, keyed by the library's cache version              |
-| `src/frontend/features/search/search.ts`  | `doSearch`: the query, filters, ranking and highlighting           |
-| `src/frontend/features/search/filter.ts`  | Browsing and searching produce the same list shape                 |
+| Path                                          | Role                                                               |
+| --------------------------------------------- | ------------------------------------------------------------------ |
+| `src/backend/features/search/contract.ts`     | `SearchDocument` and `SEARCH_OPTIONS`, shared by both sides        |
+| `src/backend/features/search/fields.ts`       | The indexed field names                                            |
+| `src/backend/features/search/tokenize.ts`     | How names and part numbers become terms, with their spans          |
+| `src/backend/features/search/records.ts`      | Configuration records to search records, and matching a hit to one |
+| `src/backend/features/search/build.ts`        | `buildSearchDb`: one document per insertable                       |
+| `src/backend/features/library/db.ts`          | `rebuildSearchDb`, `searchIndexKey`                                |
+| `src/backend/features/library/routes.ts`      | `GET /api/search-db/...`                                           |
+| `src/frontend/features/search/queries.ts`     | Loads the index, keyed by the library's cache version              |
+| `src/frontend/features/search/search.ts`      | `doSearch`: the query, filters, ranking and highlighting           |
+| `src/frontend/features/search/filter.ts`      | Browsing and searching produce the same list shape                 |
+| `src/frontend/features/search/list-search.ts` | `searchList`: a kept list's rows, searched as the library is       |
 
 ## Storage
 
@@ -99,16 +100,26 @@ frequent in the field scores higher, and short fields beat long ones), then:
 
 Results come back highest score first, capped at a list's worth.
 
+### Searching a kept list
+
+Favorites and recents are searched by `searchList`, which indexes the list's
+own rows with `SEARCH_OPTIONS`: one document per row, holding the part's name,
+its group's name, and the part number of the configuration that row opens on.
+A row is found by its own part number and never by another configuration's,
+and the results are ranked and underlined as the library's are. Visibility and
+vendors are then applied by the list, as when it is browsed.
+
 ### Filters and the matched configuration
 
 1. Filters apply during the search: hidden parts (unless showing them), the
-   favorites tab, the group being browsed, and vendors. Hits a group or vendor
+   group being browsed, and vendors. Hits a group or vendor
    filter removed are counted, so the UI can say how many it hid.
 2. For each hit, `matchedRecord` picks the configuration record whose part
    number the query matched, preferring a whole term to a prefix: `16` names
    `am-16` but only starts `am-160`. A hit that matched no part number opens on
-   the default. The row shows that record's name and part number, and its
-   thumbnail.
+   the default. The row shows that record's name and part number, its
+   thumbnail, and a hover card listing its configuration (see
+   [configurations.md](./configurations.md)).
 
 ## Invariants
 

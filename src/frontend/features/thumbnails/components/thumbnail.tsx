@@ -200,7 +200,7 @@ interface PreviewImageProps {
     path: ElementPath;
     /** Names the stored render; derived from `selection`. */
     configurationKey: ConfigurationKey;
-    /** What a render is asked for with, as entered. */
+    /** The selection a render is asked for with. */
     selection: PartialSelection;
     /** Part of the thumbnail key, so an updated document renders again. */
     microversionId: string;

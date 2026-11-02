@@ -11,6 +11,7 @@ import {
 } from "../../../components/item-row";
 import { OpenDocumentItems } from "../../../components/open-document-items";
 import { QuickInsertItems } from "../../insert/components/quick-insert-items";
+import { ConfigurationHoverCard } from "../../insert/components/configuration-hover-card";
 import { useIsInsertableHidden } from "../../library/visibility";
 import { CardThumbnail } from "../../thumbnails/components/thumbnail";
 import { useIsAssemblyInPartStudio } from "../../insert/insert-hooks";
@@ -44,10 +45,11 @@ export function FavoriteCard(props: FavoriteCardProps): ReactNode {
         return null;
     }
 
-    // From the favorite's own configuration, so it matches the thumbnail. Only
-    // title underlining comes from the search.
+    // From the favorite's own configuration, so it matches the thumbnail; the
+    // search, which read that configuration, only says where to underline.
     const rowMatch: RowMatch = {
         positions: searchHit?.positions ?? [],
+        partNumberPositions: searchHit?.partNumberPositions,
         partNumber: favorite.record?.partNumber,
         partName: favorite.record?.name,
         url: favorite.record?.url
@@ -72,6 +74,12 @@ export function FavoriteCard(props: FavoriteCardProps): ReactNode {
                 <CardTitle
                     disabled={isAssemblyInPartStudio}
                     title={insertable.name}
+                    badge={
+                        <ConfigurationHoverCard
+                            insertable={insertable}
+                            selection={favorite.defaultSelection}
+                        />
+                    }
                     thumbnail={
                         <CardThumbnail
                             smallThumbnailUrl={insertable.smallThumbnailUrl}

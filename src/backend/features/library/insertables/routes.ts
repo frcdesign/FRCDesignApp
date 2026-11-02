@@ -35,6 +35,7 @@ import { ElementType } from "../../../lib/onshape/element-type";
 import type { IndexingSettings } from "../../build-checker/contract";
 import { InsertSource } from "../../analytics/usage";
 import { trackInsert } from "../../analytics/tracking";
+import { recordRecentInsert } from "../../recents/store";
 import { DerivedFeature } from "../../../lib/onshape/objects/derive-feature";
 import { addPartStudioFeature } from "../../../lib/onshape/endpoints/part-studios";
 import {
@@ -326,6 +327,12 @@ insertableRoutes.post(
             feature.getFeature()
         );
 
+        await recordRecentInsert(c, {
+            libraryId: row.libraryId,
+            insertableId,
+            selection,
+            parameters
+        });
         await trackInsert(c, {
             libraryId: row.libraryId,
             path: sourcePath,
@@ -429,6 +436,14 @@ insertableRoutes.post(
                 transform
             }
         );
+
+        // The part is in the assembly whatever the fasten does.
+        await recordRecentInsert(c, {
+            libraryId: row.libraryId,
+            insertableId,
+            selection,
+            parameters
+        });
 
         // Every path below records the insert exactly once.
         const track = (fasten: boolean) =>

@@ -1,7 +1,6 @@
 import {
     Box,
     Collapse,
-    Divider,
     Group,
     Stack,
     Title,
@@ -37,24 +36,17 @@ export function CardSection(props: CardSectionProps): ReactNode {
     const toggle = () => setSectionOpened(id, !opened);
 
     return (
-        <>
-            <Divider />
-            <Stack gap={0}>
-                <Group gap="xs">
-                    <UnstyledButton onClick={toggle} flex={1} miw={0}>
-                        <Title order={PANEL_TITLE_ORDER}>{title}</Title>
-                    </UnstyledButton>
-                    {actions}
-                    <SectionChevron
-                        opened={opened}
-                        onToggle={toggle}
-                        size="sm"
-                    />
-                </Group>
-                <Collapse expanded={opened} keepMounted={false}>
-                    <Box pt="sm">{children}</Box>
-                </Collapse>
-            </Stack>
-        </>
+        <Stack gap={0}>
+            <Group gap="xs">
+                <UnstyledButton onClick={toggle} flex={1} miw={0}>
+                    <Title order={PANEL_TITLE_ORDER}>{title}</Title>
+                </UnstyledButton>
+                {actions}
+                <SectionChevron opened={opened} onToggle={toggle} size="sm" />
+            </Group>
+            <Collapse expanded={opened} keepMounted={false}>
+                <Box pt="sm">{children}</Box>
+            </Collapse>
+        </Stack>
     );
 }

@@ -19,6 +19,7 @@ export enum Theme {
 /** Every folding section whose open state is remembered, on a page or in a card. */
 export enum SectionId {
     FAVORITES = "favorites",
+    RECENTS = "recents",
     LIBRARY = "library",
     /** The version manager's two lists. */
     PARENTS = "parents",
@@ -33,6 +34,7 @@ export enum SectionId {
 /** Until someone opens or closes it. Favorites and Configuration are long, and wanted less. */
 const OPENED_BY_DEFAULT: Record<SectionId, boolean> = {
     [SectionId.FAVORITES]: false,
+    [SectionId.RECENTS]: true,
     [SectionId.LIBRARY]: true,
     [SectionId.PARENTS]: true,
     [SectionId.CHILDREN]: true,
@@ -82,6 +84,7 @@ export function migrateUiState(persisted: unknown, version: number): UiState {
     if (version >= 1) return state;
     const {
         isFavoritesOpen,
+        isRecentsOpen,
         isLibraryOpen,
         isParentsOpen,
         isChildrenOpen,
@@ -90,6 +93,7 @@ export function migrateUiState(persisted: unknown, version: number): UiState {
     const sections: Partial<Record<SectionId, boolean>> = {};
     const carried: [SectionId, unknown][] = [
         [SectionId.FAVORITES, isFavoritesOpen],
+        [SectionId.RECENTS, isRecentsOpen],
         [SectionId.LIBRARY, isLibraryOpen],
         [SectionId.PARENTS, isParentsOpen],
         [SectionId.CHILDREN, isChildrenOpen]

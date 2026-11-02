@@ -37,6 +37,7 @@ function renderSection(
         <ConfigurationSection
             insertableId={insertableId}
             status={insertableBuildStatus({ configuration: { parameters } })}
+            parameters={parameters}
         />
     );
     return { ...view, insertableId };

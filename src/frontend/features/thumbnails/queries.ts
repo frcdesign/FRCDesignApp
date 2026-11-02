@@ -13,7 +13,7 @@ export function useIsThumbnailRendering(): boolean {
     return useIsFetching({ queryKey: renderQueryPrefix() }) > 0;
 }
 
-/** What a render is asked for with: the selection as entered, which the server keys. */
+/** What a render is asked for with: the selection, which the server keys. */
 export interface RenderSource {
     insertableId: string;
     selection: PartialSelection;

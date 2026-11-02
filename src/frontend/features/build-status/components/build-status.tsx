@@ -1,9 +1,9 @@
 import {
     Badge,
+    Divider,
     Group,
     Image,
     Loader,
-    Stack,
     Text,
     Tooltip
 } from "@mantine/core";
@@ -12,7 +12,7 @@ import {
     GitBranchIcon,
     HourglassIcon
 } from "@phosphor-icons/react";
-import { ReactNode } from "react";
+import { Fragment, ReactElement, ReactNode } from "react";
 import partStudioIcon from "/part-studio.svg";
 import assemblyIcon from "/assembly.svg";
 import { formatShortTimeAgo } from "../../../lib/format-time";
@@ -21,16 +21,15 @@ import {
     getMaxSeverity
 } from "@backend/features/build-checker/issues";
 import { ElementType } from "@backend/lib/onshape/element-type";
-import {
-    FontWeight,
-    IconSize,
-    StatusColor
-} from "../../../lib/style-constants";
+import { IconSize, StatusColor } from "../../../lib/style-constants";
 import { AppIcon } from "../../../components/app-icon";
-import { AppHoverCard } from "../../../components/app-hover-card";
+import { AppHoverBubble } from "../../../components/app-hover-bubble";
+import { DotIndicator } from "../../../components/dot-indicator";
 import { RequireAccessLevel } from "../../auth/components/require-access";
 import { useBuildStatusQuery } from "../queries";
 import { useIsGroupLoading } from "../../library/queries";
+import { useHasIndexingDraft } from "../indexing-draft";
+import { SectionId } from "../../../lib/ui-state";
 import {
     BuildIssueList,
     type ConfigurationTarget,
@@ -41,9 +40,6 @@ import { ConfigurationSection } from "./configuration-section";
 import { GroupSettings, InsertableSettings } from "./admin-section";
 import { UsageSection } from "./usage-section";
 import { CardSection } from "./card-section";
-import { DotIndicator } from "../../../components/dot-indicator";
-import { useHasIndexingDraft } from "../indexing-draft";
-import { SectionId } from "../../../lib/ui-state";
 import styles from "../../../lib/styles.module.css";
 
 /** What the card and the badge both say about a group or an insertable. */
@@ -59,40 +55,13 @@ interface BuildStatusSubject {
     configurationTarget?: ConfigurationTarget;
     /** Draws the badge as hidden-from-users instead of as its worst severity. */
     isHidden?: boolean;
-    /** Named in the header; a group has none. */
+    /** Beside the title in place of the status, which the badges under it give. */
     elementType?: ElementType;
 }
 
-interface BuildStatusCardProps extends BuildStatusSubject {
-    /** The sections under the build checks. */
-    children: ReactNode;
-}
-
-/** Wide enough for a parameter's name beside its type and checkbox. */
-const CARD_WIDTH = 320;
-
-function BuildStatusCard(props: BuildStatusCardProps): ReactNode {
-    const { children, ...subject } = props;
-    const { issues, configurationTarget } = subject;
-    return (
-        <Stack gap="sm" w={CARD_WIDTH}>
-            <CardHeader {...subject} />
-            {issues.length > 0 && (
-                <CardSection id={SectionId.BUILD_CHECKS} title="Build checks">
-                    <BuildIssueList
-                        issues={issues}
-                        configurationTarget={configurationTarget}
-                    />
-                </CardSection>
-            )}
-            {children}
-        </Stack>
-    );
-}
-
 interface BuildStatusBadgeProps extends BuildStatusSubject {
-    /** The group/insertable sections shown in the hover card. */
-    sections: ReactNode;
+    /** The group/insertable sections under the build checks, each keyed; false to skip one. */
+    sections: (ReactElement | false)[];
     /** Dots the badge: the card holds edits not yet saved. */
     hasUnsavedEdits?: boolean;
 }
@@ -123,47 +92,71 @@ function BuildStatusHoverCard({
     const maxSeverity = getMaxSeverity(issues);
     const loading = useIsGroupLoading(groupId);
 
+    const statusIcon = (size: IconSize) =>
+        isHidden ? (
+            // Only editors see hidden insertables, so its checks don't matter yet.
+            <AppIcon
+                icon={EyeSlashIcon}
+                size={size}
+                color={StatusColor.WARNING}
+            />
+        ) : (
+            <IssueIcon severity={maxSeverity} size={size} raised={false} />
+        );
+
+    const body = [
+        issues.length > 0 && (
+            <CardSection
+                key="build-checks"
+                id={SectionId.BUILD_CHECKS}
+                title="Build checks"
+            >
+                <BuildIssueList
+                    issues={issues}
+                    configurationTarget={configurationTarget}
+                />
+            </CardSection>
+        ),
+        ...sections
+    ].filter((section) => section !== false);
+
     return (
-        <AppHoverCard
-            position="right"
-            arrowSize={20}
+        <AppHoverBubble
             interactive
             target={
                 <DotIndicator shown={hasUnsavedEdits} offset={2}>
                     {loading ? (
                         <Loader size={IconSize.SMALL} />
-                    ) : isHidden ? (
-                        // Only editors see hidden insertables, so its checks don't matter yet.
-                        <AppIcon
-                            icon={EyeSlashIcon}
-                            color={StatusColor.WARNING}
-                        />
                     ) : (
-                        <IssueIcon severity={maxSeverity} raised={false} />
+                        statusIcon(IconSize.SMALL)
                     )}
                 </DotIndicator>
             }
+            // A group's keeps the status, since its target spins while loading.
+            icon={
+                elementType ? (
+                    <ElementTypeIcon elementType={elementType} />
+                ) : (
+                    statusIcon(IconSize.CONTROL)
+                )
+            }
+            title={name}
+            rightSection={
+                <VersionAge
+                    groupId={groupId}
+                    versionCreatedAt={versionCreatedAt}
+                />
+            }
+            subtitle={<SeverityBadges issues={issues} />}
         >
-            <BuildStatusCard
-                name={name}
-                groupId={groupId}
-                issues={issues}
-                versionCreatedAt={versionCreatedAt}
-                configurationTarget={configurationTarget}
-                elementType={elementType}
-            >
-                {sections}
-            </BuildStatusCard>
-        </AppHoverCard>
+            {body.map((section, index) => (
+                <Fragment key={section.key}>
+                    {index > 0 && <Divider />}
+                    {section}
+                </Fragment>
+            ))}
+        </AppHoverBubble>
     );
-}
-
-interface CardHeaderProps {
-    name: string;
-    groupId: string;
-    issues: BuildIssue[];
-    versionCreatedAt?: number;
-    elementType?: ElementType;
 }
 
 /** Onshape's own tab icons, which its users already know the two by. */
@@ -171,35 +164,6 @@ const ELEMENT_TYPES: Record<ElementType, { label: string; icon: string }> = {
     [ElementType.PART_STUDIO]: { label: "Part studio", icon: partStudioIcon },
     [ElementType.ASSEMBLY]: { label: "Assembly", icon: assemblyIcon }
 };
-
-/** What it is and its name above, the severity summary below. */
-function CardHeader(props: CardHeaderProps): ReactNode {
-    const { name, groupId, issues, versionCreatedAt, elementType } = props;
-    return (
-        <Stack gap={6}>
-            <Group justify="space-between" align="center" gap="sm">
-                <Group gap={6} flex={1} miw={0}>
-                    {elementType && (
-                        <ElementTypeIcon elementType={elementType} />
-                    )}
-                    <Text
-                        truncate
-                        title={name}
-                        fw={FontWeight.SEMI_BOLD}
-                        miw={0}
-                    >
-                        {name}
-                    </Text>
-                </Group>
-                <VersionAge
-                    groupId={groupId}
-                    versionCreatedAt={versionCreatedAt}
-                />
-            </Group>
-            <SeverityBadges issues={issues} />
-        </Stack>
-    );
-}
 
 interface ElementTypeIconProps {
     elementType: ElementType;
@@ -211,8 +175,8 @@ function ElementTypeIcon(props: ElementTypeIconProps): ReactNode {
         <Tooltip label={ELEMENT_TYPES[elementType].label}>
             <Image
                 src={ELEMENT_TYPES[elementType].icon}
-                w={IconSize.SMALL}
-                h={IconSize.SMALL}
+                w={IconSize.MEDIUM}
+                h={IconSize.MEDIUM}
                 className={styles.noShrink}
             />
         </Tooltip>
@@ -267,6 +231,7 @@ export function InsertableStatusBadge(
     const hasUnsavedEdits = useHasIndexingDraft(insertableId);
     const insertable = data?.insertables[insertableId];
     if (!insertable) return null;
+    const parameters = insertable.configuration?.parameters ?? [];
     return (
         <BuildStatusBadge
             hasUnsavedEdits={hasUnsavedEdits}
@@ -279,26 +244,33 @@ export function InsertableStatusBadge(
             configurationTarget={
                 insertable.configuration && {
                     elementPath: insertable.elementPath,
-                    parameters: insertable.configuration.parameters
+                    parameters
                 }
             }
-            sections={
-                <>
-                    <CardSection id={SectionId.SETTINGS} title="Settings">
-                        <InsertableSettings
-                            insertableId={insertableId}
-                            status={insertable}
-                        />
-                    </CardSection>
-                    <ConfigurationSection
+            sections={[
+                <CardSection
+                    key="settings"
+                    id={SectionId.SETTINGS}
+                    title="Settings"
+                >
+                    <InsertableSettings
                         insertableId={insertableId}
                         status={insertable}
                     />
-                    <UsageSection
-                        elementId={insertable.elementPath.elementId}
+                </CardSection>,
+                parameters.length > 0 && (
+                    <ConfigurationSection
+                        key="configuration"
+                        insertableId={insertableId}
+                        status={insertable}
+                        parameters={parameters}
                     />
-                </>
-            }
+                ),
+                <UsageSection
+                    key="usage"
+                    elementId={insertable.elementPath.elementId}
+                />
+            ]}
         />
     );
 }
@@ -321,14 +293,18 @@ export function GroupStatusBadge(props: GroupStatusBadgeProps): ReactNode {
                     groupId={groupId}
                     issues={groupStatus.buildIssues}
                     versionCreatedAt={groupStatus.versionCreatedAt}
-                    sections={
-                        <CardSection id={SectionId.SETTINGS} title="Settings">
+                    sections={[
+                        <CardSection
+                            key="settings"
+                            id={SectionId.SETTINGS}
+                            title="Settings"
+                        >
                             <GroupSettings
                                 groupId={groupId}
                                 status={groupStatus}
                             />
                         </CardSection>
-                    }
+                    ]}
                 />
             )}
             {groupStatus?.isHeld && <AwaitingApprovalBadge groupId={groupId} />}

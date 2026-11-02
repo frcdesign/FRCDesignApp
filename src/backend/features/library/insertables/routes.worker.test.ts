@@ -306,7 +306,7 @@ describe("insertable routes", () => {
     });
 
     // The feature dialog shows the typed expression, not its value.
-    it("POST /add-to-part-studio derives with the expression that was typed", async () => {
+    it("POST /add-to-part-studio derives with the value an expression collapses to", async () => {
         await seedPartStudio(db);
         await seedConfiguration(db);
         await db
@@ -328,7 +328,7 @@ describe("insertable routes", () => {
         expect(res.status).toBe(200);
 
         expect(JSON.stringify(spy.mock.calls[0][2])).toContain(
-            '"expression":"(2 + 3) in"'
+            '"expression":"5 in"'
         );
     });
 
@@ -524,7 +524,7 @@ describe("insertable routes", () => {
         expect(spy.mock.calls[0][4]?.configuration).toBe("boolean=true");
     });
 
-    it("POST /add-to-assembly sends a quantity as the expression typed", async () => {
+    it("POST /add-to-assembly sends a quantity collapsed to its value", async () => {
         await seedAssembly(db);
         await seedConfiguration(db, TEST_ASSEMBLY_ID);
         await db
@@ -545,9 +545,7 @@ describe("insertable routes", () => {
             env
         );
 
-        expect(spy.mock.calls[0][4]?.configuration).toBe(
-            "length=(2%20%2B%203)%20in"
-        );
+        expect(spy.mock.calls[0][4]?.configuration).toBe("length=5%20in");
     });
 
     /** An assembly that supports insert-and-fasten, and a landed insert to fasten. */

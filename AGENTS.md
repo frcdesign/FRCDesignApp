@@ -100,13 +100,14 @@ A configuration takes exactly two forms, and `features/configurations/selection.
 is the only place either is built:
 
 - A **selection** (`Selection`) is what someone picked: every parameter the
-  insertable declares, each value **as it was entered**. A quantity is the
-  expression that was typed — `(2 + 3) in`, not `0.127 m` — and a quantity's
-  default is spelled in its own unit (`1 in`). `toSelection` makes one out of
-  whatever arrived — a search hit's values, a stored favorite, a request body,
-  the url — and every boundary calls it. The selection is what is stored, what
-  the url carries, and what Onshape is sent (`onshapeOverrides`), so a derived
-  feature shows the expression that was typed.
+  insertable declares. A quantity is **collapsed** to its value in the
+  parameter's own unit, to the precision values are compared at — `(2 + 3) in`
+  is `5 in`, `1/3 in` is `0.33333333 in`, never `0.127 m` — so one
+  configuration has one spelling. `toSelection` makes one out of whatever
+  arrived — a search hit's values, a stored favorite, a request body, the url —
+  and every boundary calls it. The selection is what is stored, what the url
+  carries, and what Onshape is sent (`onshapeOverrides`), so a derived feature
+  shows the collapsed value.
 - A **`ConfigurationKey`** is derived from a selection for one purpose: naming
   its thumbnail. It holds what the selection overrides, canonically spelled
   (base units, hidden parameters left out), so selections rendering the same

@@ -18,12 +18,8 @@ export interface SearchDocument {
     records: SearchRecord[];
 }
 
-/** What the insertable itself is called, and where it lives. */
-export const INSERTABLE_FIELDS = [NAME_FIELD, GROUP_NAME_FIELD];
-
 export const SEARCH_OPTIONS: Options<SearchDocument> = {
-    // Part numbers apart, so a surface showing one configuration can leave them out.
-    fields: [...INSERTABLE_FIELDS, PART_NUMBER_FIELD],
+    fields: [NAME_FIELD, GROUP_NAME_FIELD, PART_NUMBER_FIELD],
     storeFields: [
         "id",
         "groupId",
