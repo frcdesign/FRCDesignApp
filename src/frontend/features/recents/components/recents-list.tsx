@@ -43,8 +43,7 @@ export function RecentsList(): ReactNode {
         return (
             <SectionNotice
                 icon={<RecentIcon size={IconSize.SECTION} />}
-                title="Nothing inserted yet."
-                description="The parts you insert are listed here."
+                title="Nothing inserted yet"
             />
         );
     }

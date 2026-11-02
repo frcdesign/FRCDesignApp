@@ -29,3 +29,23 @@
 .chevron {
     display: none;
 }
+
+.toggle {
+    display: flex;
+    cursor: pointer;
+    transition: transform 200ms ease;
+}
+
+.toggle[data-opened] {
+    transform: rotate(180deg);
+}
+
+/* In a card the header is only its text, on the card's own padding. */
+.compactControl {
+    padding: 0;
+    color: inherit;
+}
+
+.compactContent {
+    padding: var(--mantine-spacing-sm) 0 0;
+}

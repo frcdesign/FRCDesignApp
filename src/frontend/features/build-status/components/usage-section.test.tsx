@@ -11,7 +11,20 @@ vi.mock("../../../lib/library", () => ({
 }));
 
 const { UsageSection } = await import("./usage-section");
+const { CardSections } = await import("./card-section");
 const { updateUiState } = await import("../../../lib/ui-state");
+
+function renderUsage() {
+    return renderWithProviders(
+        <CardSections
+            sections={[<UsageSection key="usage" elementId="e1" />]}
+        />
+    );
+}
+
+function dashboardLink(): string | null | undefined {
+    return document.querySelector("a")?.getAttribute("href");
+}
 
 const parts = [
     partUsage({ elementId: "other", insertCount: 3 }),
@@ -27,9 +40,7 @@ describe("usage section", () => {
     afterEach(() => updateUiState({ sections: {} }));
 
     it("shows the part's all-time numbers", async () => {
-        const { queryClient } = renderWithProviders(
-            <UsageSection elementId="e1" />
-        );
+        const { queryClient } = renderUsage();
         queryClient.setQueryData(
             getPartsQuery(DEFAULT_LIBRARY, toDayRange(RangePreset.ALL))
                 .queryKey,
@@ -42,10 +53,10 @@ describe("usage section", () => {
     });
 
     it("links to the part's dashboard report", () => {
-        renderWithProviders(<UsageSection elementId="e1" />);
-        expect(
-            screen.getByText("Dashboard").closest("a")?.getAttribute("href")
-        ).toBe(`/dashboard/library/${DEFAULT_LIBRARY}/part?element=e1`);
+        renderUsage();
+        expect(dashboardLink()).toBe(
+            `/dashboard/library/${DEFAULT_LIBRARY}/part?element=e1`
+        );
     });
 });
 
@@ -54,10 +65,8 @@ describe("usage section, closed", () => {
 
     it("keeps its link, and asks for nothing", () => {
         updateUiState({ sections: { usage: false } });
-        const { queryClient } = renderWithProviders(
-            <UsageSection elementId="e1" />
-        );
-        expect(screen.getByText("Dashboard")).toBeTruthy();
+        const { queryClient } = renderUsage();
+        expect(dashboardLink()).toBeTruthy();
         expect(screen.queryByText("Inserts")).toBeNull();
         expect(queryClient.getQueryCache().getAll()).toHaveLength(0);
     });

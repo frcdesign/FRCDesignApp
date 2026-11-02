@@ -23,6 +23,7 @@ vi.mock("../queries", () => ({
 }));
 
 const { ConfigurationSection } = await import("./configuration-section");
+const { CardSections } = await import("./card-section");
 const { clearIndexingDraft } = await import("../indexing-draft");
 const { updateUiState } = await import("../../../lib/ui-state");
 
@@ -34,10 +35,17 @@ function renderSection(
     insertableId = `i${nextId++}`
 ) {
     const view = renderWithProviders(
-        <ConfigurationSection
-            insertableId={insertableId}
-            status={insertableBuildStatus({ configuration: { parameters } })}
-            parameters={parameters}
+        <CardSections
+            sections={[
+                <ConfigurationSection
+                    key="configuration"
+                    insertableId={insertableId}
+                    status={insertableBuildStatus({
+                        configuration: { parameters }
+                    })}
+                    parameters={parameters}
+                />
+            ]}
         />
     );
     return { ...view, insertableId };
@@ -74,9 +82,9 @@ describe("configuration section", () => {
         updateUiState({ sections: {} });
     });
 
-    it("starts closed, counting its parameters", () => {
+    it("starts closed", () => {
         renderSection([enumParam("size", ["s", "l"]), boolParam("holes")]);
-        expect(screen.getByText("2 parameters")).toBeTruthy();
+        expect(screen.getByText("Configuration")).toBeTruthy();
         expect(screen.queryByText("size")).toBeNull();
     });
 
@@ -89,6 +97,22 @@ describe("configuration section", () => {
         expect(screen.getByText("Enum · 3")).toBeTruthy();
         expect(screen.getByText("Boolean")).toBeTruthy();
         expect(screen.getByText("Text")).toBeTruthy();
+    });
+
+    it("lists an enum's options on hover, marking the default", async () => {
+        await renderOpen([
+            enumParam("size", ["s", "l"], {
+                default: "l",
+                options: [
+                    { id: "s", name: "Small" },
+                    { id: "l", name: "Large" }
+                ]
+            })
+        ]);
+        await userEvent.hover(screen.getByText("Enum · 2"));
+        expect(await screen.findByText("Small")).toBeTruthy();
+        expect(screen.getByText("Large")).toBeTruthy();
+        expect(screen.getByText("Default")).toBeTruthy();
     });
 
     it("lets enums and booleans be indexed, but not text or a role", async () => {

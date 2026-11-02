@@ -1,4 +1,4 @@
-import { Loader, Stack, Text } from "@mantine/core";
+import { DataList, Loader, Text } from "@mantine/core";
 import { SlidersHorizontalIcon } from "@phosphor-icons/react";
 import { ReactNode } from "react";
 import type { InsertableOut } from "@backend/features/library/contract";
@@ -7,10 +7,7 @@ import {
     type PartialSelection
 } from "@backend/features/configurations/contract";
 import { displayedValues } from "@backend/features/configurations/selection";
-import {
-    AppHoverBubble,
-    HoverBubbleRow
-} from "../../../components/app-hover-bubble";
+import { AppHoverBubble } from "../../../components/app-hover-bubble";
 import { AppIcon } from "../../../components/app-icon";
 import {
     FontWeight,
@@ -38,30 +35,20 @@ export function ConfigurationHoverCard(
 
     return (
         <AppHoverBubble
-            target={<ConfigurationIcon size={IconSize.SMALL} />}
-            icon={<ConfigurationIcon size={IconSize.CONTROL} />}
-            title="Configuration"
+            target={
+                <AppIcon
+                    icon={SlidersHorizontalIcon}
+                    size={IconSize.SMALL}
+                    color={PrimaryColor.FILLED}
+                />
+            }
+            padding="sm"
         >
             <ConfigurationValues
                 insertable={insertable}
                 selection={selection ?? {}}
             />
         </AppHoverBubble>
-    );
-}
-
-interface ConfigurationIconProps {
-    size: IconSize;
-}
-
-function ConfigurationIcon(props: ConfigurationIconProps): ReactNode {
-    const { size } = props;
-    return (
-        <AppIcon
-            icon={SlidersHorizontalIcon}
-            size={size}
-            color={PrimaryColor.FILLED}
-        />
     );
 }
 
@@ -102,20 +89,23 @@ interface ValueRowsProps {
 function ValueRows(props: ValueRowsProps): ReactNode {
     const { selection, parameters } = props;
     return (
-        <Stack gap={4}>
+        <DataList orientation="horizontal" size="sm" gap="xs">
             {displayedValues(selection, parameters).map(
                 ({ parameter, value, isDefault }) => (
-                    <HoverBubbleRow key={parameter.id} label={parameter.name}>
+                    <DataList.Item key={parameter.id}>
+                        <DataList.ItemLabel>
+                            {parameter.name}
+                        </DataList.ItemLabel>
                         {/* What was changed stands out from what was left alone. */}
-                        <Text
+                        <DataList.ItemValue
                             c={isDefault ? StatusColor.DIMMED : undefined}
                             fw={isDefault ? undefined : FontWeight.SEMI_BOLD}
                         >
                             {value}
-                        </Text>
-                    </HoverBubbleRow>
+                        </DataList.ItemValue>
+                    </DataList.Item>
                 )
             )}
-        </Stack>
+        </DataList>
     );
 }

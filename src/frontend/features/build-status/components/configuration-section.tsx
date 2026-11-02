@@ -15,7 +15,8 @@ import { InsertableBuildStatus } from "@backend/features/build-checker/contract"
 import { BuildIssueSeverity } from "@backend/features/build-checker/issues";
 import {
     ParameterType,
-    type ConfigurationParameter
+    type ConfigurationParameter,
+    type EnumParameter
 } from "@backend/features/configurations/contract";
 import {
     AUTO_INDEX_THRESHOLD,
@@ -39,8 +40,10 @@ import {
     useIndexingView
 } from "../indexing-draft";
 import { RowSwitch } from "./sections";
-import { HoverBubbleRow } from "../../../components/app-hover-bubble";
-import { plural } from "../../../lib/plural";
+import {
+    AppHoverBubble,
+    HoverBubbleRow
+} from "../../../components/app-hover-bubble";
 import { IssueIcon } from "./issues";
 import { CardSection } from "./card-section";
 import { SectionId } from "../../../lib/ui-state";
@@ -76,12 +79,7 @@ export function ConfigurationSection(
         <CardSection
             id={SectionId.CONFIGURATION}
             title="Configuration"
-            actions={
-                <SectionSummary
-                    parameterCount={parameters.length}
-                    isUnsaved={view.isUnsaved}
-                />
-            }
+            actions={<UnsavedBadge isUnsaved={view.isUnsaved} />}
         >
             <ConfigurationEditor
                 insertableId={insertableId}
@@ -93,25 +91,17 @@ export function ConfigurationSection(
     );
 }
 
-interface SectionSummaryProps {
-    parameterCount: number;
+interface UnsavedBadgeProps {
     isUnsaved: boolean;
 }
 
-/** Unsaved edits show here, so they are noticed with the section closed. */
-function SectionSummary(props: SectionSummaryProps): ReactNode {
-    const { parameterCount, isUnsaved } = props;
-    if (isUnsaved) {
-        return (
-            <Badge color={StatusColor.WARNING} className={styles.noShrink}>
-                Unsaved
-            </Badge>
-        );
-    }
+/** In the header, so unsaved edits are noticed with the section closed. */
+function UnsavedBadge(props: UnsavedBadgeProps): ReactNode {
+    if (!props.isUnsaved) return null;
     return (
-        <Text size="xs" c={StatusColor.DIMMED} className={styles.noShrink}>
-            {plural(parameterCount, "parameter")}
-        </Text>
+        <Badge color={StatusColor.WARNING} className={styles.noShrink}>
+            Unsaved
+        </Badge>
     );
 }
 
@@ -347,21 +337,46 @@ interface ParameterTypeBadgeProps {
 /** An enum lists its options on hover. */
 function ParameterTypeBadge(props: ParameterTypeBadgeProps): ReactNode {
     const { parameter } = props;
-    const isEnum = parameter.type === ParameterType.ENUM;
-    const label = isEnum
-        ? `${getParameterTypeLabel(parameter.type)} · ${parameter.options.length}`
-        : getParameterTypeLabel(parameter.type);
-
-    const badge = <Badge size="xs">{label}</Badge>;
-    if (!isEnum || parameter.options.length === 0) {
-        return badge;
+    if (
+        parameter.type !== ParameterType.ENUM ||
+        parameter.options.length === 0
+    ) {
+        return <Badge size="xs">{getParameterTypeLabel(parameter.type)}</Badge>;
     }
     return (
-        <Tooltip
-            label={parameter.options.map((option) => option.name).join(", ")}
+        <AppHoverBubble
+            padding="sm"
+            below
+            target={
+                <Badge size="xs">
+                    {`${getParameterTypeLabel(parameter.type)} · ${parameter.options.length}`}
+                </Badge>
+            }
         >
-            {badge}
-        </Tooltip>
+            <EnumOptions parameter={parameter} />
+        </AppHoverBubble>
+    );
+}
+
+interface EnumOptionsProps {
+    parameter: EnumParameter;
+}
+
+function EnumOptions(props: EnumOptionsProps): ReactNode {
+    const { parameter } = props;
+    return (
+        <Stack gap={4}>
+            {parameter.options.map((option) => (
+                <Group key={option.id} gap="xs" wrap="nowrap">
+                    <Text size="sm">{option.name}</Text>
+                    {option.id === parameter.default && (
+                        <Text size="xs" c={StatusColor.DIMMED}>
+                            Default
+                        </Text>
+                    )}
+                </Group>
+            ))}
+        </Stack>
     );
 }
 

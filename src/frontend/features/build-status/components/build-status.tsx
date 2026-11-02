@@ -1,18 +1,10 @@
-import {
-    Badge,
-    Divider,
-    Group,
-    Image,
-    Loader,
-    Text,
-    Tooltip
-} from "@mantine/core";
+import { Badge, Group, Image, Loader, Text, Tooltip } from "@mantine/core";
 import {
     EyeSlashIcon,
     GitBranchIcon,
     HourglassIcon
 } from "@phosphor-icons/react";
-import { Fragment, ReactElement, ReactNode } from "react";
+import { ReactElement, ReactNode } from "react";
 import partStudioIcon from "/part-studio.svg";
 import assemblyIcon from "/assembly.svg";
 import { formatShortTimeAgo } from "../../../lib/format-time";
@@ -39,7 +31,7 @@ import {
 import { ConfigurationSection } from "./configuration-section";
 import { GroupSettings, InsertableSettings } from "./admin-section";
 import { UsageSection } from "./usage-section";
-import { CardSection } from "./card-section";
+import { CardSection, CardSections } from "./card-section";
 import styles from "../../../lib/styles.module.css";
 
 /** What the card and the badge both say about a group or an insertable. */
@@ -132,29 +124,24 @@ function BuildStatusHoverCard({
                     )}
                 </DotIndicator>
             }
-            // A group's keeps the status, since its target spins while loading.
-            icon={
-                elementType ? (
+            header={{
+                // A group's keeps the status, since its target spins while loading.
+                icon: elementType ? (
                     <ElementTypeIcon elementType={elementType} />
                 ) : (
                     statusIcon(IconSize.CONTROL)
-                )
-            }
-            title={name}
-            rightSection={
-                <VersionAge
-                    groupId={groupId}
-                    versionCreatedAt={versionCreatedAt}
-                />
-            }
-            subtitle={<SeverityBadges issues={issues} />}
+                ),
+                title: name,
+                rightSection: (
+                    <VersionAge
+                        groupId={groupId}
+                        versionCreatedAt={versionCreatedAt}
+                    />
+                ),
+                subtitle: <SeverityBadges issues={issues} />
+            }}
         >
-            {body.map((section, index) => (
-                <Fragment key={section.key}>
-                    {index > 0 && <Divider />}
-                    {section}
-                </Fragment>
-            ))}
+            <CardSections sections={body} />
         </AppHoverBubble>
     );
 }
