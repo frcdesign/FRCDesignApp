@@ -360,70 +360,66 @@ Admin settings start open; Configuration starts closed.
 Issue titles and descriptions come from `issues.ts`; the rest from the
 components under `src/frontend/features/build-status/` and its `queries.ts`.
 
-| String                                                                                                                              | Where                                                                      |
-| ----------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| "Thumbnail failed to render"                                                                                                        | Issue title                                                                |
-| "Use Reload thumbnail to try again."                                                                                                | Its description, in the callout's info tooltip                             |
-| "No document thumbnail set"                                                                                                         | Issue title                                                                |
-| "No vendors found"                                                                                                                  | Issue title                                                                |
-| "Vendors are parsed from names and codes in the name or configuration options." **⚑**                                               | Its description. Reads oddly: "names and codes in the name"                |
-| "Part studio has no parts"                                                                                                          | Issue title                                                                |
-| "Every element is hidden"                                                                                                           | Issue title                                                                |
-| "Too many configurations to index"                                                                                                  | Issue title                                                                |
-| "Stop indexing parameters to get under {512}."                                                                                      | Its description                                                            |
-| "Indexing is off"                                                                                                                   | Issue title                                                                |
-| "Elements with {128}+ configurations must be enabled manually."                                                                     | Its description                                                            |
-| "Part studio has more than one part"                                                                                                | Issue title                                                                |
-| "A configuration has more than one part" / "{n} configurations have more than one part"                                             | Issue title                                                                |
-| "A configuration has no open composite part" / "{n} configurations have no open composite part"                                     | Issue title                                                                |
-| "The default configuration has one, so every configuration should."                                                                 | Its description                                                            |
-| "First mate connector isn't stable"                                                                                                 | Issue title                                                                |
-| "Inserts use the first mate connector, so it must not fail or have configured suppression, nor may one before it." **⚑**            | Its description. Long, and dense for a tooltip                             |
-| "Some elements failed to load"                                                                                                      | Issue title                                                                |
-| "Document failed to load"                                                                                                           | Issue title                                                                |
-| "Document not loaded yet"                                                                                                           | Issue title                                                                |
-| "Use Reload if it doesn't start loading."                                                                                           | Its description                                                            |
-| "All checks pass"                                                                                                                   | Card badge, no issues                                                      |
-| "{n} error(s)" / "{n} warning(s)" / "{n} info" **⚑**                                                                                | Card badges. "Info" never pluralizes: "2 info"                             |
-| "Part studio" / "Assembly"                                                                                                          | Tooltip on the card's element-type icon                                    |
-| "Unknown"                                                                                                                           | Version age, with no pinned version                                        |
-| "Being loaded from Onshape in the background."                                                                                      | Tooltip on the version age's spinner                                       |
-| "Awaiting approval"                                                                                                                 | Badge beside a group with a held version                                   |
-| "Build checks" / "Settings" / "Configuration" / "Usage"                                                                             | Card section titles                                                        |
-| "Visible to users"                                                                                                                  | Settings switch                                                            |
-| "Hide elements"                                                                                                                     | Confirm title, hiding                                                      |
-| "You are about to hide one or more elements. This will also permanently remove them from all users' favorites. Are you sure?" **⚑** | Confirm body. Long                                                         |
-| "Showing insertables..." / "Hiding insertables..." **⚑**                                                                            | Loading toast. Says "insertables" where every other string says "elements" |
-| "Insertables shown." / "Insertables hidden." **⚑**                                                                                  | Success toast. Same                                                        |
-| "Unexpectedly failed to modify visibility."                                                                                         | Error toast                                                                |
-| "Insert and fasten"                                                                                                                 | Settings switch                                                            |
-| "Places and fastens at its first mate connector" **⚑**                                                                              | Its description. May not need to exist: the label says most of it          |
-| "No mate connector found"                                                                                                           | Its description, switch disabled                                           |
-| "Enabling insert and fasten..." / "Disabling insert and fasten..."                                                                  | Loading toast                                                              |
-| "Enabled insert and fasten." / "Disabled insert and fasten."                                                                        | Success toast                                                              |
-| "Unexpectedly failed to update insert and fasten."                                                                                  | Error toast                                                                |
-| "Vendors"                                                                                                                           | Settings row                                                               |
-| "None found"                                                                                                                        | Its value, with none                                                       |
-| "Sort alphabetically"                                                                                                               | Group settings switch                                                      |
-| "Order elements A-Z instead of by tab" **⚑**                                                                                        | Its description. May not need to exist                                     |
-| "Unexpectedly failed to update sort order."                                                                                         | Error toast                                                                |
-| "Unsaved"                                                                                                                           | Configuration's header badge, with a draft                                 |
-| "Index configurations"                                                                                                              | Configuration row                                                          |
-| "Over {100,000} configurations"                                                                                                     | Its description, past counting                                             |
-| "Nothing to index"                                                                                                                  | Its description, at zero                                                   |
-| "{n} configurations, indexed automatically"                                                                                         | Its description, under 128                                                 |
-| "{n} configurations"                                                                                                                | Its description, 128 to 512                                                |
-| "{n} configurations, over the limit of {512}"                                                                                       | Its description, over 512                                                  |
-| "At most {512} configurations can be indexed. Uncheck parameters until it is under the limit."                                      | Tooltip on the error icon in place of the switch                           |
-| "Under {128}, so every load indexes it." **⚑**                                                                                      | Tooltip on the check in place of the switch. Terse: "under 128" what       |
-| "{Type} parameters aren't indexed."                                                                                                 | Tooltip on a disabled checkbox                                             |
-| "Enum · {n}"                                                                                                                        | An enum's type badge                                                       |
-| "Default" **⚑**                                                                                                                     | Beside the default option, in the enum's bubble. New                       |
-| "Reindexing..." / "Reindexed."                                                                                                      | Info, then success toast, on Save                                          |
-| "Unexpectedly failed to update indexing."                                                                                           | Error toast                                                                |
-| "Open in dashboard" **⚑**                                                                                                           | Tooltip on Usage's icon. New                                               |
-| "Inserts" / "Per month" / "Favorites"                                                                                               | Usage stat labels                                                          |
-| "Admin settings"                                                                                                                    | The settings menu's folding section                                        |
+| String                                                                                                                              | Where                                                |
+| ----------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| "Thumbnail failed to render"                                                                                                        | Issue title                                          |
+| "Use Reload thumbnail to try again."                                                                                                | Its description, in the callout's info tooltip       |
+| "No document thumbnail set"                                                                                                         | Issue title                                          |
+| "No vendors found"                                                                                                                  | Issue title                                          |
+| "Part studio has no parts"                                                                                                          | Issue title                                          |
+| "Every element is hidden"                                                                                                           | Issue title                                          |
+| "Too many configurations to index"                                                                                                  | Issue title                                          |
+| "Stop indexing parameters to get under {512}."                                                                                      | Its description                                      |
+| "Indexing is off"                                                                                                                   | Issue title                                          |
+| "Elements with {128}+ configurations must be enabled manually."                                                                     | Its description                                      |
+| "Part studio has more than one part"                                                                                                | Issue title                                          |
+| "A configuration has more than one part" / "{n} configurations have more than one part"                                             | Issue title                                          |
+| "A configuration has no open composite part" / "{n} configurations have no open composite part"                                     | Issue title                                          |
+| "The default configuration has one, so every configuration should."                                                                 | Its description                                      |
+| "First mate connector isn't stable"                                                                                                 | Issue title                                          |
+| "The first mate connector must be stable across all configurations."                                                                | Its description                                      |
+| "Some elements failed to load"                                                                                                      | Issue title                                          |
+| "Document failed to load"                                                                                                           | Issue title                                          |
+| "Document not loaded yet"                                                                                                           | Issue title                                          |
+| "Use Reload if it doesn't start loading."                                                                                           | Its description                                      |
+| "All checks pass"                                                                                                                   | Card badge, no issues                                |
+| "{n} error(s)" / "{n} warning(s)" / "{n} info" **⚑**                                                                                | Card badges. "Info" never pluralizes: "2 info"       |
+| "Part studio" / "Assembly"                                                                                                          | Tooltip on the card's element-type icon              |
+| "Unknown"                                                                                                                           | Version age, with no pinned version                  |
+| "Being loaded from Onshape in the background."                                                                                      | Tooltip on the version age's spinner                 |
+| "Awaiting approval"                                                                                                                 | Badge beside a group with a held version             |
+| "Build checks" / "Settings" / "Configuration" / "Usage"                                                                             | Card section titles                                  |
+| "Visible to users"                                                                                                                  | Settings switch                                      |
+| "Hide elements"                                                                                                                     | Confirm title, hiding                                |
+| "You are about to hide one or more elements. This will also permanently remove them from all users' favorites. Are you sure?" **⚑** | Confirm body. Long                                   |
+| "Showing element(s)..." / "Hiding element(s)..."                                                                                    | Loading toast, singular for one element              |
+| "Element(s) shown." / "Element(s) hidden."                                                                                          | Success toast                                        |
+| "Unexpectedly failed to modify visibility."                                                                                         | Error toast                                          |
+| "Insert and fasten"                                                                                                                 | Settings switch                                      |
+| "No mate connector found"                                                                                                           | Its description, switch disabled                     |
+| "Enabling insert and fasten..." / "Disabling insert and fasten..."                                                                  | Loading toast                                        |
+| "Enabled insert and fasten." / "Disabled insert and fasten."                                                                        | Success toast                                        |
+| "Unexpectedly failed to update insert and fasten."                                                                                  | Error toast                                          |
+| "Vendors"                                                                                                                           | Settings row                                         |
+| "None found"                                                                                                                        | Its value, with none                                 |
+| "Sort alphabetically"                                                                                                               | Group settings switch                                |
+| "Unexpectedly failed to update sort order."                                                                                         | Error toast                                          |
+| "Unsaved"                                                                                                                           | Configuration's header badge, with a draft           |
+| "Index configurations"                                                                                                              | Configuration row                                    |
+| "Over {100,000} configurations"                                                                                                     | Its description, past counting                       |
+| "Nothing to index"                                                                                                                  | Its description, at zero                             |
+| "{n} configurations, indexed automatically"                                                                                         | Its description, under 128                           |
+| "{n} configurations"                                                                                                                | Its description, 128 to 512                          |
+| "{n} configurations, over the limit of {512}"                                                                                       | Its description, over 512                            |
+| "At most {512} configurations can be indexed. Uncheck parameters until it is under the limit."                                      | Tooltip on the error icon in place of the switch     |
+| "{Type} parameters aren't indexed."                                                                                                 | Tooltip on a disabled checkbox                       |
+| "Enum · {n}"                                                                                                                        | An enum's type badge                                 |
+| "Default" **⚑**                                                                                                                     | Beside the default option, in the enum's bubble. New |
+| "Reindexing..." / "Reindexed."                                                                                                      | Info, then success toast, on Save                    |
+| "Unexpectedly failed to update indexing."                                                                                           | Error toast                                          |
+| "Open in dashboard" **⚑**                                                                                                           | Tooltip on Usage's icon. New                         |
+| "Inserts" / "Per month" / "Favorites"                                                                                               | Usage stat labels                                    |
+| "Admin settings"                                                                                                                    | The settings menu's folding section                  |
 
 ## Invariants
 

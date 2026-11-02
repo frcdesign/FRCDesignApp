@@ -136,8 +136,6 @@ export function getIssueDescription(issue: BuildIssue): string | undefined {
     switch (issue.type) {
         case BuildIssueType.THUMBNAIL_FAILED:
             return "Use Reload thumbnail to try again.";
-        case BuildIssueType.NO_VENDORS:
-            return "Vendors are parsed from names and codes in the name or configuration options.";
         case BuildIssueType.CONFIGURATION_LIMIT_EXCEEDED:
             return `Stop indexing parameters to get under ${MAX_PART_NUMBER_CONFIGURATIONS}.`;
         case BuildIssueType.MANUAL_INDEXING_REQUIRED:
@@ -145,7 +143,7 @@ export function getIssueDescription(issue: BuildIssue): string | undefined {
         case BuildIssueType.UNSTABLE_COMPOSITE:
             return "The default configuration has one, so every configuration should.";
         case BuildIssueType.UNSTABLE_MATE_CONNECTOR:
-            return "Inserts use the first mate connector, so it must not fail or have configured suppression, nor may one before it.";
+            return "The first mate connector must be stable across all configurations.";
         case BuildIssueType.NOT_LOADED:
             return "Use Reload if it doesn't start loading.";
         default:

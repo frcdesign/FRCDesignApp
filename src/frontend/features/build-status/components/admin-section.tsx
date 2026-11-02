@@ -66,11 +66,7 @@ function FastenSwitch(props: FastenSwitchProps): ReactNode {
     return (
         <SwitchRow
             label="Insert and fasten"
-            description={
-                noConnector
-                    ? "No mate connector found"
-                    : "Places and fastens at its first mate connector"
-            }
+            description={noConnector ? "No mate connector found" : undefined}
             checked={status.supportsFasten}
             disabled={mutation.isPending || noConnector}
             onToggle={() => mutation.mutate(!status.supportsFasten)}
@@ -114,7 +110,6 @@ export function GroupSettings(props: GroupSettingsProps): ReactNode {
         <Stack gap="sm">
             <SwitchRow
                 label="Sort alphabetically"
-                description="Order elements A-Z instead of by tab"
                 checked={status.sortAlphabetically}
                 onToggle={() => mutation.mutate(!status.sortAlphabetically)}
             />

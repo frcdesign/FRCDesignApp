@@ -19,7 +19,6 @@ import {
     type EnumParameter
 } from "@backend/features/configurations/contract";
 import {
-    AUTO_INDEX_THRESHOLD,
     bandOf,
     countCombinations,
     IndexingBand,
@@ -210,40 +209,25 @@ interface IndexingControlProps {
     onToggle: () => void;
 }
 
-/** A switch only where enabling is the admin's call; otherwise an icon says why. */
+/** A switch only where enabling is the admin's call; otherwise the build-check icon for the band. */
 function IndexingControl(props: IndexingControlProps): ReactNode {
     const { band, checked, onToggle } = props;
     if (band === IndexingBand.EXCEEDED) {
         return (
-            <BandIcon
-                severity={BuildIssueSeverity.ERROR}
-                tooltip={`At most ${MAX_PART_NUMBER_CONFIGURATIONS} configurations can be indexed. Uncheck parameters until it is under the limit.`}
-            />
+            <Tooltip
+                label={`At most ${MAX_PART_NUMBER_CONFIGURATIONS} configurations can be indexed. Uncheck parameters until it is under the limit.`}
+            >
+                <IssueIcon
+                    severity={BuildIssueSeverity.ERROR}
+                    className={styles.noShrink}
+                />
+            </Tooltip>
         );
     }
     if (band === IndexingBand.AUTOMATIC) {
-        return (
-            <BandIcon
-                tooltip={`Under ${AUTO_INDEX_THRESHOLD}, so every load indexes it.`}
-            />
-        );
+        return <IssueIcon className={styles.noShrink} />;
     }
     return <RowSwitch checked={checked} onToggle={onToggle} />;
-}
-
-interface BandIconProps {
-    severity?: BuildIssueSeverity;
-    tooltip: string;
-}
-
-/** The build-check icons, so it reads like the callouts. */
-function BandIcon(props: BandIconProps): ReactNode {
-    const { severity, tooltip } = props;
-    return (
-        <Tooltip label={tooltip}>
-            <IssueIcon severity={severity} className={styles.noShrink} />
-        </Tooltip>
-    );
 }
 
 interface ParameterRowProps {

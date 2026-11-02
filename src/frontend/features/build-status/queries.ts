@@ -87,6 +87,8 @@ export function useSetVisibilityMutation(
     const libraryId = useLibraryId();
     const key = useBuildStatusKey();
     const settle = useSettleBuildStatus();
+    const noun = insertableIds.length === 1 ? "element" : "elements";
+    const capitalizedNoun = insertableIds.length === 1 ? "Element" : "Elements";
 
     const mutation = useMutation({
         mutationKey: ["set-insertable-visibility", ...insertableIds],
@@ -103,7 +105,7 @@ export function useSetVisibilityMutation(
         },
         onMutate: () => {
             showLoadingToast(
-                isVisible ? "Showing insertables..." : "Hiding insertables...",
+                isVisible ? `Showing ${noun}...` : `Hiding ${noun}...`,
                 "set-visibility"
             );
             return patchQuery<LibraryBuildStatus>(key, (status) => {
@@ -115,7 +117,9 @@ export function useSetVisibilityMutation(
         },
         onSuccess: () => {
             showSuccessToast(
-                isVisible ? "Insertables shown." : "Insertables hidden.",
+                isVisible
+                    ? `${capitalizedNoun} shown.`
+                    : `${capitalizedNoun} hidden.`,
                 "set-visibility"
             );
         },
