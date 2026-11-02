@@ -74,10 +74,13 @@ team, plus one owner set by configuration.
    reach their Enterprise's documents however the session's company reads,
    and sign-in can ask Onshape for an Enterprise but never for a personal
    account.
-6. `/document-access` names both causes, and says how to fix the account
-   mix-up: **Try again**, and grant the app to the document's account (the
-   Enterprise or the personal one, from `sessionCompanyId`) when Onshape asks.
-   A grant to one account doesn't need revoking to grant another. It offers **Try again** (back through `/init`), **Continue
+6. `/document-access` names both causes, and says how to fix a missing grant.
+   For an Enterprise document (from `sessionCompanyId`): **Try again**, and
+   grant the app to the Enterprise when Onshape asks. For a personal one, first
+   a classroom that hasn't granted the app, the commonest case, granted on
+   Onshape's Applications page (**Open Applications page**); then a grant to an
+   Enterprise instead of the personal account, fixed by **Try again**. A grant
+   to one account doesn't need revoking to grant another. It offers **Try again** (back through `/init`), **Continue
    anyway** (the app, which still browses) and **Send a report**. With no
    session, or Onshape not answering, the app opens as before: the check never
    keeps anybody out on a guess.
@@ -166,15 +169,16 @@ declared in `wrangler.jsonc` per environment and typed in `AppBindings`. Run
 
 ## Failure and recovery
 
-| Failure                                   | Result                                         | Recovery                                   |
-| ----------------------------------------- | ---------------------------------------------- | ------------------------------------------ |
-| Access token expired                      | Refreshed on the next call                     | Automatic                                  |
-| Refresh token revoked or expired          | Treated as signed out                          | Sign in again                              |
-| Enterprise session opening a personal doc | `/init` sends the caller through sign-in       | Automatic, once                            |
-| Grant for another account than the doc's  | `/init` sends the launch to `/document-access` | Grant the document's account, per the page |
-| Document public or shared view-only       | `/init` sends the launch to `/document-access` | Edit access from the document's owner      |
-| Team membership changed in Onshape        | Stale access until synced                      | **Refresh** beside the admin team          |
-| No saved background session               | A load whose requester's session lapses fails  | The owner or a team member opens the app   |
+| Failure                                   | Result                                         | Recovery                                     |
+| ----------------------------------------- | ---------------------------------------------- | -------------------------------------------- |
+| Access token expired                      | Refreshed on the next call                     | Automatic                                    |
+| Refresh token revoked or expired          | Treated as signed out                          | Sign in again                                |
+| Enterprise session opening a personal doc | `/init` sends the caller through sign-in       | Automatic, once                              |
+| Grant for another account than the doc's  | `/init` sends the launch to `/document-access` | Grant the document's account, per the page   |
+| Classroom hasn't granted the app          | `/init` sends the launch to `/document-access` | Grant the classroom on the Applications page |
+| Document public or shared view-only       | `/init` sends the launch to `/document-access` | Edit access from the document's owner        |
+| Team membership changed in Onshape        | Stale access until synced                      | **Refresh** beside the admin team            |
+| No saved background session               | A load whose requester's session lapses fails  | The owner or a team member opens the app     |
 
 ## Decisions
 

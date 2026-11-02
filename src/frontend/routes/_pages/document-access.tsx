@@ -4,12 +4,14 @@ import { createFileRoute } from "@tanstack/react-router";
 import { type ReactNode } from "react";
 import { PERSONAL_COMPANY_ID } from "@backend/features/auth/personal-company";
 import { NavbarRow } from "../../components/app-navbar";
+import { OpenUrlButton } from "../../components/open-url-button";
 import { ReportButton } from "../../features/feedback/components/report-button";
 import {
     type OnshapeLaunch,
     OnshapeLaunchType
 } from "../../lib/onshape-launch";
 import { parseSearch } from "../../lib/search-params";
+import { APPLICATIONS_PATH, toOnshapeOrigin } from "../../lib/url";
 
 export const Route = createFileRoute("/_pages/document-access")({
     component: DocumentAccess,
@@ -48,12 +50,16 @@ function DocumentAccess(): ReactNode {
                         <Title order={2}>{TITLE}</Title>
                         <Text size="md" c="dimmed">
                             Parts can only be inserted into a document the
-                            FRCDesignApp can edit. Either the app was given
-                            access to a different Onshape account than this
-                            document&apos;s, or you can only view this document.
+                            FRCDesignApp can edit. Either the app hasn&apos;t
+                            been given access to the account or classroom this
+                            document belongs to, or you can only view this
+                            document.
                         </Text>
                     </Stack>
-                    <WrongAccountSteps isEnterprise={isEnterprise} />
+                    <AccessSteps
+                        isEnterprise={isEnterprise}
+                        origin={toOnshapeOrigin(launch.server)}
+                    />
                     {/* The panel is too narrow for three labels on one line. */}
                     <Group gap="sm" wrap="wrap">
                         <Button
@@ -82,26 +88,54 @@ function DocumentAccess(): ReactNode {
     );
 }
 
-interface WrongAccountStepsProps {
+interface AccessStepsProps {
     isEnterprise: boolean;
+    /** The caller's Onshape, so the Applications page opens on their company. */
+    origin: string;
 }
 
-/** Granting the app to the document's account is enough; the other grant can stay. */
-function WrongAccountSteps(props: WrongAccountStepsProps): ReactNode {
-    const { isEnterprise } = props;
-    return (
-        <Stack gap="xs">
-            <Text size="md">
-                {isEnterprise
-                    ? "This document belongs to an Onshape Enterprise, but the FRCDesignApp was probably given access to your personal account instead. Click Try again below, and when Onshape asks, grant the FRCDesignApp access to the Enterprise."
-                    : "This document belongs to your personal Onshape account, but the FRCDesignApp was probably given access to an Enterprise instead. Click Try again below, and when Onshape asks, grant the FRCDesignApp access to your personal account."}
-            </Text>
-            {isEnterprise && (
+/**
+ * Granting the app to the document's account is enough; the other grant can
+ * stay. A classroom is granted on the Applications page, never by sign-in.
+ */
+function AccessSteps(props: AccessStepsProps): ReactNode {
+    const { isEnterprise, origin } = props;
+    if (isEnterprise) {
+        return (
+            <Stack gap="xs">
+                <Text size="md">
+                    This document belongs to an Onshape Enterprise, but the
+                    FRCDesignApp was probably given access to your personal
+                    account instead. Click Try again below, and when Onshape
+                    asks, grant the FRCDesignApp access to the Enterprise.
+                </Text>
                 <Text size="md">
                     If your Enterprise limits which apps its members can use,
                     ask an Enterprise admin to allow the FRCDesignApp.
                 </Text>
-            )}
+            </Stack>
+        );
+    }
+    return (
+        <Stack gap="md">
+            <Stack gap="xs" align="flex-start">
+                <Text size="md">
+                    If this document is in an Onshape classroom, the classroom
+                    needs access to the FRCDesignApp as well. Open your Onshape
+                    Applications page, grant the FRCDesignApp access to the
+                    classroom, then click Try again below.
+                </Text>
+                <OpenUrlButton
+                    text="Open Applications page"
+                    url={origin + APPLICATIONS_PATH}
+                />
+            </Stack>
+            <Text size="md">
+                Otherwise, the FRCDesignApp was probably given access to an
+                Enterprise instead of your personal account. Click Try again
+                below, and when Onshape asks, grant the FRCDesignApp access to
+                your personal account.
+            </Text>
         </Stack>
     );
 }
