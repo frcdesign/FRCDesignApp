@@ -52,16 +52,8 @@ would be empty:
    with lifetimes.
 4. **Flows** — the paths through the code, as numbered steps. A diagram only
    where the ordering is the hard part.
-5. **User-facing strings** — the strings the area shows a user that are worth
-   a reviewer's read: titles, labels, descriptions, placeholders, prompts sent
-   to Onshape, toasts, tips, and errors written for the user. A table of each
-   string, word for word, with where it appears. Strings built from values
-   show the values as `{name}`. Leave out trivial, uncontroversial ones — a
-   "Save" or "Cancel" button, a column heading that only names its column.
-   Flag with **⚑** any that particularly want attention, and say why in a
-   few words: a string that may not need to exist at all, depending on
-   preference; one that is long; or one that is new or reworded and has
-   likely not been reviewed before.
+5. **User-facing strings** — a link to the area's file in
+   [`docs/strings/`](../strings/README.md), which lists them.
 6. **Invariants** — rules that must hold, stated so a reviewer can check a diff
    against them. This is the section drift is measured by.
 7. **Failure and recovery** — what goes wrong, and what puts it right.

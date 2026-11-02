@@ -1,0 +1,91 @@
+# Build issues and the admin card: strings
+
+What [build-issues.md](../architecture/build-issues.md) shows an editor. Issue
+text is in `src/backend/features/build-checker/issues.ts`; the rest is in
+`src/frontend/features/build-status/`.
+
+## Build checks
+
+One callout per issue in the card's **Build checks** section. The description
+sits in an info tooltip at the callout's end.
+
+| Title                                                                                           | Description                                                          | Severity | On                | Raised when                                                                                        |
+| ----------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- | -------- | ----------------- | -------------------------------------------------------------------------------------------------- |
+| "Thumbnail failed to render"                                                                    | "Use Reload thumbnail to try again."                                 | Error    | Document, element | The load's render never landed                                                                     |
+| "No document thumbnail set"                                                                     | —                                                                    | Warning  | Document          | The Onshape document has no thumbnail tab                                                          |
+| "No vendors found"                                                                              | —                                                                    | Info     | Element           | No vendor in its name or configuration options                                                     |
+| "Part studio has no parts"                                                                      | —                                                                    | Error    | Element           | The part studio's default configuration has no parts                                               |
+| "Every element is hidden"                                                                       | —                                                                    | Error    | Document          | No element of the document is visible to users                                                     |
+| "Too many configurations to index"                                                              | "Stop indexing parameters to get under {512}."                       | Warning  | Element           | The indexed parameters make over 512 configurations                                                |
+| "Indexing is off"                                                                               | "Elements with {128}+ configurations must be enabled manually."      | Warning  | Element           | 128 to 512 configurations, and indexing not switched on                                            |
+| "Part studio has more than one part"                                                            | —                                                                    | Error    | Element           | The default configuration has more than one part                                                   |
+| "A configuration has more than one part" / "{n} configurations have more than one part"         | —                                                                    | Error    | Element           | The default has one part, but some indexed configurations have more. Links to the first            |
+| "A configuration has no open composite part" / "{n} configurations have no open composite part" | "The default configuration has one, so every configuration should."  | Error    | Element           | The default is an open composite, but some indexed configurations aren't. Links to the first       |
+| "First mate connector isn't stable"                                                             | "The first mate connector must be stable across all configurations." | Error    | Element           | A configuration can suppress the first mate connector, or one before it, or it fails to regenerate |
+| "Some elements failed to load"                                                                  | —                                                                    | Error    | Document          | One or more of its tabs failed in the last load                                                    |
+| "Document failed to load"                                                                       | —                                                                    | Error    | Document          | The last load threw before saving                                                                  |
+| "Document not loaded yet"                                                                       | "Use Reload if it doesn't start loading."                            | Warning  | Document          | Added, and its first load hasn't saved                                                             |
+
+## Card header
+
+| String                                                  | Kind           | Where                                                 | When                                                                                                          | Review                                  |
+| ------------------------------------------------------- | -------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
+| "All checks pass"                                       | Badge          | Under the name                                        | No issues                                                                                                     |                                         |
+| "{n} error(s)" / "{n} warning(s)" / "{n} info"          | Badges         | Under the name                                        | One per severity present                                                                                      | **⚑** "Info" never pluralizes: "2 info" |
+| "Part studio" / "Assembly"                              | Tooltip        | The element-type icon beside the name                 | An element's card                                                                                             |                                         |
+| "Unknown"                                               | Label          | Version age, top right                                | No pinned version yet                                                                                         |                                         |
+| "Being loaded from Onshape in the background."          | Tooltip        | The spinner in place of the version age               | Its document is loading                                                                                       |                                         |
+| "Awaiting approval"                                     | Badge          | Beside a document's name in the list, not in the card | A new version is held for an editor                                                                           |                                         |
+| "Build checks" / "Settings" / "Configuration" / "Usage" | Section titles | The card's folding sections                           | Build checks only with issues; Configuration only with parameters; Configuration and Usage only on an element |                                         |
+
+## Settings section
+
+| String                                                                                                                        | Kind               | Where             | When                                                               | Review     |
+| ----------------------------------------------------------------------------------------------------------------------------- | ------------------ | ----------------- | ------------------------------------------------------------------ | ---------- |
+| "Visible to users"                                                                                                            | Switch label       | Element settings  | Always                                                             |            |
+| "Hide elements"                                                                                                               | Confirm title      | Modal             | Switching an element off, or hiding a whole document from its menu |            |
+| "You are about to hide one or more elements. This will also permanently remove them from all users' favorites. Are you sure?" | Confirm body       | Modal             | Same                                                               | **⚑** Long |
+| "Showing element(s)..." / "Hiding element(s)..."                                                                              | Loading toast      |                   | While the write runs; singular for one element                     |            |
+| "Element(s) shown." / "Element(s) hidden."                                                                                    | Success toast      |                   | The write landed                                                   |            |
+| "Unexpectedly failed to modify visibility."                                                                                   | Error toast        |                   | The write failed                                                   |            |
+| "Insert and fasten"                                                                                                           | Switch label       | Element settings  | Always                                                             |            |
+| "No mate connector found"                                                                                                     | Switch description | Under the label   | The load found no connector, so the switch is disabled             |            |
+| "Enabling insert and fasten..." / "Disabling insert and fasten..."                                                            | Loading toast      |                   | While the write runs                                               |            |
+| "Enabled insert and fasten." / "Disabled insert and fasten."                                                                  | Success toast      |                   | The write landed                                                   |            |
+| "Unexpectedly failed to update insert and fasten."                                                                            | Error toast        |                   | The write failed                                                   |            |
+| "Vendors"                                                                                                                     | Row label          | Element settings  | Always                                                             |            |
+| "None found"                                                                                                                  | Row value          | Beside Vendors    | No vendors parsed                                                  |            |
+| "Sort alphabetically"                                                                                                         | Switch label       | Document settings | Always                                                             |            |
+| "Unexpectedly failed to update sort order."                                                                                   | Error toast        |                   | The write failed                                                   |            |
+
+## Configuration section
+
+| String                                                                                         | Kind            | Where                                        | When                                        | Review                                                    |
+| ---------------------------------------------------------------------------------------------- | --------------- | -------------------------------------------- | ------------------------------------------- | --------------------------------------------------------- |
+| "Unsaved"                                                                                      | Badge           | Section header, before the chevron           | Indexing edits not yet saved                |                                                           |
+| "Index configurations"                                                                         | Row label       | Top of the section                           | Always                                      |                                                           |
+| "Over {100,000} configurations"                                                                | Row description | Under Index configurations                   | Too many to count                           |                                                           |
+| "Nothing to index"                                                                             | Row description | Same                                         | No enum or boolean parameter left checked   |                                                           |
+| "{n} configurations, indexed automatically"                                                    | Row description | Same                                         | Under 128, so no switch                     |                                                           |
+| "{n} configurations"                                                                           | Row description | Same                                         | 128 to 512: the switch is the editor's call |                                                           |
+| "{n} configurations, over the limit of {512}"                                                  | Row description | Same                                         | Over 512                                    |                                                           |
+| "At most {512} configurations can be indexed. Uncheck parameters until it is under the limit." | Tooltip         | The error icon in place of the switch        | Over 512                                    | **⚑** Repeats the row's description and the build check's |
+| "{Type} parameters aren't indexed."                                                            | Tooltip         | A parameter's disabled checkbox              | A text or quantity parameter                |                                                           |
+| "Enum · {n}"                                                                                   | Badge           | A parameter's Type column                    | An enum parameter                           |                                                           |
+| "Default"                                                                                      | Label           | Beside an option, in the enum's hover bubble | The parameter's default option              | **⚑** New                                                 |
+| "Reindexing..."                                                                                | Info toast      |                                              | Save clicked                                |                                                           |
+| "Reindexed."                                                                                   | Success toast   |                                              | The reindex landed                          |                                                           |
+| "Unexpectedly failed to update indexing."                                                      | Error toast     |                                              | The reindex failed; the edits are discarded |                                                           |
+
+## Usage section
+
+| String                                | Kind        | Where                                | When   | Review    |
+| ------------------------------------- | ----------- | ------------------------------------ | ------ | --------- |
+| "Open in dashboard"                   | Tooltip     | The chart icon in the section header | Always | **⚑** New |
+| "Inserts" / "Per month" / "Favorites" | Stat labels | Under each number                    | Always |           |
+
+## Settings menu
+
+| String           | Kind          | Where                            | When                                         | Review |
+| ---------------- | ------------- | -------------------------------- | -------------------------------------------- | ------ |
+| "Admin settings" | Section title | Below the user settings, folding | The user's highest access is editor or above |        |

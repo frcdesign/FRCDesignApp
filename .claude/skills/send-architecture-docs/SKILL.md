@@ -1,6 +1,6 @@
 ---
 name: send-architecture-docs
-description: Send one or more of the architecture docs in docs/architecture/ to the user as rendered Markdown in the chat. Use when the user asks to see, read, open, send or share an architecture doc ("send me the auth doc", "show the fasten architecture", "send all the architecture docs"), when a doc would answer their question better than a summary, and at the end of any turn that changed an architecture doc.
+description: Send one or more of the architecture docs in docs/architecture/, or the strings files in docs/strings/, to the user as rendered Markdown in the chat. Use when the user asks to see, read, open, send or share an architecture doc or an area's strings ("send me the auth doc", "show the fasten architecture", "send the build issues strings", "send all the architecture docs"), when a doc would answer their question better than a summary, and at the end of any turn that changed an architecture doc or a strings file.
 ---
 
 # Send architecture docs
@@ -8,11 +8,14 @@ description: Send one or more of the architecture docs in docs/architecture/ to 
 The docs live in `docs/architecture/`, one per feature area. `README.md` there is
 the index: it maps each file to the area it covers. Read it to match what the user
 asked for to a file, unless the name alone makes the match obvious (`auth` →
-`auth.md`).
+`auth.md`). An area's user-facing strings are in `docs/strings/`, under the same
+file name, indexed by its own `README.md`.
 
 ## Pick the files
 
 - A named area → that file. Several → all of them, in one send.
+- An area's strings, or a turn that changed them → its file in `docs/strings/`,
+  alongside the architecture doc when that changed too.
 - "All of them" → every `.md` in `docs/architecture/`, `README.md` first.
 - Nothing matches → send `README.md` and say which areas exist.
 - Send the file as it is in the working tree, including edits from this session

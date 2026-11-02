@@ -8,7 +8,7 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 
-const DOC_DIRS = ["docs", "docs/architecture"];
+const DOC_DIRS = ["docs", "docs/architecture", "docs/strings"];
 const ROOT_FILES = ["AGENTS.md", "README.md"];
 const CHECKED_ROOTS = ["src/", "docs/", "drizzle/", "scripts/"];
 
