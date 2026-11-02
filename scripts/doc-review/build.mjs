@@ -16,23 +16,20 @@ const DEFAULT_BASE_BRANCH = "origin/cert";
 const GROUPS = [
     {
         name: "Architecture",
-        kind: "Doc",
         test: (path) => path.startsWith("docs/architecture/")
     },
     {
         name: "Strings",
-        kind: "Strings",
         test: (path) => path.startsWith("docs/strings/")
     },
     {
         name: "Agent instructions",
-        kind: "Agents",
         test: (path) =>
             path === "AGENTS.md" ||
             path === "CLAUDE.md" ||
             path.startsWith(".claude/")
     },
-    { name: "Guides", kind: "Guide", test: () => true }
+    { name: "Guides", test: () => true }
 ];
 
 const git = (...args) =>
@@ -93,10 +90,23 @@ function diffFor(base, path, isTracked) {
     }
 }
 
+/**
+ * A file's one title, without a strings file's suffix; a folder's index is
+ * "Index", and a file of several top-level sections goes by its name.
+ */
+function labelFor(path, md) {
+    if (basename(path) === "README.md" && path.startsWith("docs/")) {
+        return "Index";
+    }
+    const prose = md.replace(/^```[\s\S]*?^```/gm, "");
+    const titles = [...prose.matchAll(/^#\s+(.+)$/gm)].map((match) => match[1]);
+    if (titles.length !== 1) return basename(path);
+    return titles[0].replace(/:\s*strings$/i, "");
+}
+
 function describe(path, base, isTracked) {
     const md = readFileSync(path, "utf8");
     const group = GROUPS.find((each) => each.test(path));
-    const heading = md.match(/^#\s+(.+)$/m)?.[1] ?? basename(path, ".md");
     return {
         id: path
             .replace(/\.md$/, "")
@@ -105,8 +115,7 @@ function describe(path, base, isTracked) {
             .toLowerCase(),
         path,
         group: group.name,
-        kind: basename(path) === "README.md" ? "Index" : group.kind,
-        label: heading.replace(/:\s*strings$/i, ""),
+        label: labelFor(path, md),
         md,
         diff: diffFor(base, path, isTracked),
         isNew: !existsAt(base, path)
@@ -119,7 +128,7 @@ function compare(a, b) {
         GROUPS.findIndex((group) => group.name === doc.group);
     return (
         groupOrder(a) - groupOrder(b) ||
-        Number(a.kind !== "Index") - Number(b.kind !== "Index") ||
+        Number(a.label !== "Index") - Number(b.label !== "Index") ||
         a.label.localeCompare(b.label)
     );
 }

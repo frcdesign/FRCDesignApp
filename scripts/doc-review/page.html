@@ -7,7 +7,7 @@
     href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Sans+Condensed:wght@600&display=swap"
 />
 <style>
-    /* A reading desk: a sticky picker of every document, changed ones first, one open at a time. */
+    /* A reading desk: pick a file from a sheet, then a section of it from tabs; one section on screen at a time. */
     :root {
         --bg: #f6f7f4;
         --surface: #ffffff;
@@ -22,6 +22,7 @@
         --removed-fg: #8a2a1e;
         --mark: #fff4cc;
         --code-bg: #eef1ec;
+        --scrim: rgba(20, 26, 20, 0.45);
         --font-body:
             "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
         --font-display:
@@ -44,6 +45,7 @@
             --removed-fg: #f0a99e;
             --mark: #3a3418;
             --code-bg: #252b25;
+            --scrim: rgba(0, 0, 0, 0.6);
             color-scheme: dark;
         }
     }
@@ -61,6 +63,7 @@
         --removed-fg: #f0a99e;
         --mark: #3a3418;
         --code-bg: #252b25;
+        --scrim: rgba(0, 0, 0, 0.6);
         color-scheme: dark;
     }
 
@@ -85,105 +88,269 @@
         z-index: 10;
         background: var(--surface);
     }
+    body.sheet-open {
+        overflow: hidden;
+    }
     .gutter {
         padding-left: max(16px, env(safe-area-inset-left, 0px));
         padding-right: max(16px, env(safe-area-inset-right, 0px));
     }
+    button {
+        font: inherit;
+        color: inherit;
+    }
+    button:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+    }
 
-    header.masthead {
-        background: var(--surface);
-        padding-block: 16px 4px;
-    }
-    .masthead h1 {
-        font-family: var(--font-display);
-        font-weight: 600;
-        font-size: 1.35rem;
-        letter-spacing: 0.01em;
-        margin: 0;
-        text-wrap: balance;
-    }
     .meta {
+        background: var(--surface);
         color: var(--muted);
-        font-size: 0.8rem;
-        margin-top: 4px;
+        font-size: 0.78rem;
+        padding-block: 10px 0;
         display: flex;
         flex-wrap: wrap;
-        gap: 4px 12px;
+        gap: 2px 12px;
     }
     .meta code {
         font-family: var(--font-mono);
-        font-size: 0.78rem;
+        font-size: 0.76rem;
     }
 
-    nav.picker {
+    /* Sticky bar: the open file, its view, and its sections */
+    nav.bar {
         position: sticky;
         top: env(safe-area-inset-top, 0px);
         z-index: 5;
         background: var(--surface);
         border-bottom: 1px solid var(--rule);
-        padding-block: 8px;
+        padding-block: 8px 0;
         display: flex;
         flex-direction: column;
         gap: 8px;
     }
-    .picker select {
-        width: 100%;
-        max-width: 560px;
-        font: inherit;
-        font-size: 0.95rem;
-        color: var(--fg);
+    .file-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .file-button {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        text-align: left;
         background: var(--bg);
         border: 1px solid var(--rule);
-        border-radius: 8px;
-        padding: 8px 10px;
+        border-radius: 10px;
+        padding: 8px 12px;
+        cursor: pointer;
     }
-    .chip-row {
+    .file-button .names {
+        flex: 1;
+        min-width: 0;
         display: flex;
-        gap: 6px;
+        flex-direction: column;
+    }
+    .file-button .title {
+        font-family: var(--font-display);
+        font-weight: 600;
+        font-size: 1.05rem;
+        line-height: 1.25;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .file-button .path {
+        font-family: var(--font-mono);
+        font-size: 0.72rem;
+        color: var(--muted);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .file-button svg {
+        flex: none;
+        color: var(--muted);
+    }
+    .seg {
+        flex: none;
+        display: inline-flex;
+        border: 1px solid var(--rule);
+        border-radius: 10px;
+        overflow: hidden;
+    }
+    .seg button {
+        border: 0;
+        background: var(--surface);
+        font-size: 0.8rem;
+        padding: 10px 10px;
+        cursor: pointer;
+    }
+    .seg button[aria-pressed="true"] {
+        background: var(--accent);
+        color: var(--surface);
+    }
+    .sections {
+        display: flex;
+        gap: 2px;
         overflow-x: auto;
         scrollbar-width: none;
     }
-    .chip-row::-webkit-scrollbar {
+    .sections::-webkit-scrollbar {
         display: none;
     }
-    .chip-label {
+    .section-tab {
         flex: none;
-        align-self: center;
-        font-size: 0.68rem;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
+        position: relative;
+        border: 0;
+        background: none;
+        font-size: 0.85rem;
         color: var(--muted);
-    }
-    .chip {
-        flex: none;
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        border: 1px solid var(--rule);
-        background: var(--bg);
-        color: var(--fg);
-        border-radius: 999px;
-        padding: 4px 10px;
-        font: inherit;
-        font-size: 0.8rem;
+        padding: 6px 10px 10px;
         cursor: pointer;
         white-space: nowrap;
+        border-bottom: 2px solid transparent;
     }
-    .chip .kind {
-        font-size: 0.66rem;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-        color: var(--muted);
+    .section-tab[aria-selected="true"] {
+        color: var(--fg);
+        font-weight: 600;
+        border-bottom-color: var(--accent);
     }
-    .chip[aria-selected="true"] {
+    .section-tab.has-changes::after {
+        content: "";
+        display: inline-block;
+        width: 6px;
+        height: 6px;
+        margin-left: 6px;
+        border-radius: 50%;
+        background: var(--accent);
+        vertical-align: middle;
+    }
+
+    /* The file sheet */
+    .scrim {
+        position: fixed;
+        inset: 0;
+        z-index: 20;
+        background: var(--scrim);
+    }
+    .sheet {
+        position: fixed;
+        z-index: 21;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        max-height: calc(100% - 48px - env(safe-area-inset-top, 0px));
+        background: var(--surface);
+        border-radius: 16px 16px 0 0;
+        display: flex;
+        flex-direction: column;
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+    @media (min-width: 720px) {
+        .sheet {
+            left: 50%;
+            right: auto;
+            bottom: auto;
+            top: 10vh;
+            width: 560px;
+            transform: translateX(-50%);
+            max-height: 80vh;
+            border-radius: 16px;
+        }
+    }
+    .sheet-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        padding-block: 14px 10px;
+        border-bottom: 1px solid var(--rule);
+    }
+    .sheet-head h2 {
+        margin: 0;
+        font-family: var(--font-display);
+        font-size: 1.1rem;
+    }
+    .filter {
+        display: inline-flex;
+        border: 1px solid var(--rule);
+        border-radius: 999px;
+        overflow: hidden;
+    }
+    .filter button {
+        border: 0;
+        background: var(--surface);
+        font-size: 0.78rem;
+        padding: 5px 12px;
+        cursor: pointer;
+    }
+    .filter button[aria-pressed="true"] {
         background: var(--accent-soft);
-        border-color: var(--accent);
+        color: var(--fg);
+        font-weight: 600;
     }
-    .chip:focus-visible,
-    .seg button:focus-visible,
-    .picker select:focus-visible {
-        outline: 2px solid var(--accent);
-        outline-offset: 2px;
+    .sheet-body {
+        overflow-y: auto;
+        padding-block: 4px 16px;
+    }
+    .group-name {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: var(--muted);
+        padding: 14px 0 4px;
+    }
+    .file-option {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        text-align: left;
+        background: none;
+        border: 0;
+        border-radius: 8px;
+        padding: 8px 8px;
+        cursor: pointer;
+    }
+    .file-option:hover {
+        background: var(--bg);
+    }
+    .file-option[aria-current="true"] {
+        background: var(--accent-soft);
+    }
+    .file-option .names {
+        flex: 1;
+        min-width: 0;
+    }
+    .file-option .label {
+        display: block;
+        font-weight: 500;
+    }
+    .file-option .path {
+        display: block;
+        font-family: var(--font-mono);
+        font-size: 0.72rem;
+        color: var(--muted);
+        overflow-wrap: anywhere;
+    }
+    .pill {
+        flex: none;
+        font-size: 0.68rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        border-radius: 999px;
+        padding: 2px 8px;
+        background: var(--mark);
+        color: var(--fg);
+    }
+    .pill.new {
+        background: var(--added);
+        color: var(--added-fg);
     }
 
     main {
@@ -194,20 +361,7 @@
         margin: 0 auto;
         display: flex;
         flex-direction: column;
-        gap: 12px;
-    }
-    .doc-bar {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        justify-content: space-between;
-        gap: 8px;
-    }
-    .doc-path {
-        font-family: var(--font-mono);
-        font-size: 0.78rem;
-        color: var(--muted);
-        overflow-wrap: anywhere;
+        gap: 10px;
     }
     .stat {
         font-family: var(--font-mono);
@@ -221,51 +375,57 @@
     .stat .del {
         color: var(--removed-fg);
     }
-    .seg {
-        display: inline-flex;
+    .pager {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        margin-top: 24px;
+        padding-top: 12px;
+        border-top: 1px solid var(--rule);
+    }
+    .pager button {
         border: 1px solid var(--rule);
-        border-radius: 8px;
-        overflow: hidden;
-    }
-    .seg button {
-        border: 0;
         background: var(--surface);
-        color: var(--fg);
-        font: inherit;
-        font-size: 0.82rem;
-        padding: 6px 12px;
+        border-radius: 8px;
+        padding: 8px 12px;
+        font-size: 0.85rem;
         cursor: pointer;
+        max-width: 48%;
+        text-align: left;
     }
-    .seg button[aria-pressed="true"] {
-        background: var(--accent);
-        color: var(--surface);
+    .pager button.next {
+        margin-left: auto;
+        text-align: right;
     }
-    .hint {
-        font-size: 0.82rem;
+    .pager small {
+        display: block;
         color: var(--muted);
-        margin: 0;
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
     }
 
     /* Rendered markdown */
     .md {
         min-width: 0;
     }
-    .md h1 {
-        font-family: var(--font-display);
-        font-weight: 600;
-        font-size: 1.6rem;
-        line-height: 1.2;
-        margin: 8px 0 4px;
-        text-wrap: balance;
+    .md > :first-child {
+        margin-top: 0;
     }
+    .md h1,
     .md h2 {
         font-family: var(--font-display);
         font-weight: 600;
-        font-size: 1.2rem;
-        margin: 28px 0 6px;
-        padding-top: 12px;
-        border-top: 1px solid var(--rule);
+        line-height: 1.2;
         text-wrap: balance;
+    }
+    .md h1 {
+        font-size: 1.5rem;
+        margin: 8px 0 4px;
+    }
+    .md h2 {
+        font-size: 1.25rem;
+        margin: 24px 0 6px;
     }
     .md h3 {
         font-size: 1rem;
@@ -341,8 +501,6 @@
     .md p.changed {
         box-shadow: -8px 0 0 var(--mark);
     }
-
-    /* Phone: rows become cards, each cell labelled by its heading. */
     @media (max-width: 640px) {
         .md table.cards thead {
             display: none;
@@ -410,24 +568,46 @@
         background: var(--code-bg);
         padding-block: 4px;
     }
-    @media (prefers-reduced-motion: no-preference) {
-        .chip {
-            transition:
-                background 120ms ease,
-                border-color 120ms ease;
-        }
-    }
 </style>
 
-<header class="masthead gutter">
-    <h1 id="page-title"></h1>
-    <div class="meta" id="meta"></div>
-</header>
-<nav class="picker gutter">
-    <select id="picker"></select>
-    <div class="chip-row" id="chips"></div>
+<div class="meta gutter" id="meta"></div>
+<nav class="bar gutter">
+    <div class="file-row">
+        <button type="button" class="file-button" id="file-button">
+            <span class="names">
+                <span class="title" id="file-title"></span>
+                <span class="path" id="file-path"></span>
+            </span>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path
+                    d="M4 6l4 4 4-4"
+                    stroke="currentColor"
+                    stroke-width="1.6"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                />
+            </svg>
+        </button>
+        <div class="seg" id="view-toggle" hidden>
+            <button type="button" id="view-doc">Doc</button>
+            <button type="button" id="view-diff">Diff</button>
+        </div>
+    </div>
+    <div class="sections" id="sections"></div>
 </nav>
 <main class="gutter" id="main"></main>
+
+<div class="scrim" id="scrim" hidden></div>
+<div class="sheet" id="sheet" hidden>
+    <div class="sheet-head gutter">
+        <h2>Files</h2>
+        <div class="filter">
+            <button type="button" id="filter-all">All</button>
+            <button type="button" id="filter-changed">Changed</button>
+        </div>
+    </div>
+    <div class="sheet-body gutter" id="sheet-body"></div>
+</div>
 
 <script type="application/json" id="review-data">
     /*__DATA__*/
@@ -438,13 +618,12 @@
         const data = JSON.parse(
             document.getElementById("review-data").textContent
         );
-        const main = document.getElementById("main");
-        const picker = document.getElementById("picker");
-        const chips = document.getElementById("chips");
+        const $ = (id) => document.getElementById(id);
+        const main = $("main");
         const changed = data.docs.filter((doc) => doc.diff);
+        const state = { docId: "", page: "", diff: false, changedOnly: false };
 
-        document.getElementById("page-title").textContent = data.title;
-        const meta = document.getElementById("meta");
+        const meta = $("meta");
         const metaItem = (label, value) => {
             const span = document.createElement("span");
             span.append(label + " ");
@@ -453,13 +632,16 @@
             span.append(code);
             meta.append(span);
         };
+        metaItem("", data.title);
         metaItem("Branch", data.branch);
         metaItem("Changes since", data.baseLabel);
         metaItem("At", data.head);
-        metaItem(
-            "Changed",
-            `${changed.length} of ${data.docs.length} documents`
-        );
+
+        const slug = (text) =>
+            text
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, "-")
+                .replace(/^-|-$/g, "") || "section";
 
         const normalize = (text) =>
             text
@@ -518,6 +700,49 @@
             });
         };
 
+        /**
+         * A file's pages: one per top-level section. A file with several
+         * H1s splits on them; otherwise its title H1 is dropped (the bar
+         * shows it) and it splits on H2s. What comes first is "Overview".
+         */
+        const paginate = (html) => {
+            const body = document.createElement("div");
+            body.innerHTML = html;
+            const top = [...body.children];
+            const h1s = top.filter((el) => el.tagName === "H1");
+            let splitTag = "H1";
+            if (h1s.length <= 1) {
+                splitTag = "H2";
+                if (h1s.length === 1 && top[0] === h1s[0]) h1s[0].remove();
+            }
+            const pages = [];
+            let current = { title: "Overview", nodes: [] };
+            for (const el of [...body.children]) {
+                if (el.tagName === splitTag) {
+                    if (current.nodes.some((n) => n.textContent.trim()))
+                        pages.push(current);
+                    current = { title: el.textContent.trim(), nodes: [] };
+                    if (splitTag === "H1") {
+                        const h2 = document.createElement("h2");
+                        h2.innerHTML = el.innerHTML;
+                        current.nodes.push(h2);
+                    }
+                    continue;
+                }
+                current.nodes.push(el);
+            }
+            if (current.nodes.some((n) => n.textContent.trim()))
+                pages.push(current);
+            const seen = new Map();
+            for (const page of pages) {
+                const base = slug(page.title);
+                const count = seen.get(base) ?? 0;
+                seen.set(base, count + 1);
+                page.id = count ? `${base}-${count + 1}` : base;
+            }
+            return pages;
+        };
+
         const renderDiff = (diff) => {
             const box = document.createElement("div");
             box.className = "diff";
@@ -551,152 +776,228 @@
             return { add, del };
         };
 
-        const panels = new Map();
+        // Built on first open: most files are never opened in a review.
+        const built = new Map();
+        const build = (doc) => {
+            if (built.has(doc.id)) return built.get(doc.id);
+            const html = marked.parse(doc.md);
+            const pages = paginate(html);
+            const root = document.createElement("section");
+            root.className = "doc";
+            // Never the hash itself, or the browser jumps to it.
+            root.id = `file-${doc.id}`;
 
-        // Built on first open: most documents are never opened in a review.
-        const buildPanel = (doc) => {
-            const panel = document.createElement("section");
-            panel.className = "doc";
-
-            const bar = document.createElement("div");
-            bar.className = "doc-bar";
-            const left = document.createElement("div");
-            const path = document.createElement("div");
-            path.className = "doc-path";
-            path.textContent = doc.path;
             const stat = document.createElement("div");
             stat.className = "stat";
             if (doc.isNew) {
-                stat.innerHTML = `<span class="add">new · ${diffStat(doc.diff).add} lines</span>`;
+                stat.innerHTML = `<span class="add">New on this branch · ${diffStat(doc.diff).add} lines</span>`;
             } else if (doc.diff) {
                 const { add, del } = diffStat(doc.diff);
-                stat.innerHTML = `<span class="add">+${add}</span> <span class="del">−${del}</span>`;
-            } else {
-                stat.textContent = "unchanged";
+                stat.innerHTML = `Changed on this branch · <span class="add">+${add}</span> <span class="del">−${del}</span>, highlighted`;
             }
-            left.append(path, stat);
-            bar.append(left);
+            if (doc.diff) root.append(stat);
 
-            const body = document.createElement("div");
-            body.className = "md";
-            body.innerHTML = marked.parse(doc.md);
-            enhanceTables(body);
-
-            if (!doc.diff) {
-                panel.append(bar, body);
-                return panel;
+            for (const [index, page] of pages.entries()) {
+                const el = document.createElement("div");
+                el.className = "md page";
+                el.id = `file-${doc.id}--${page.id}`;
+                el.append(...page.nodes);
+                enhanceTables(el);
+                if (doc.diff && !doc.isNew) markChanged(el, doc.diff);
+                page.hasChanges = !!el.querySelector(".changed");
+                if (pages.length > 1) el.append(pager(pages, index));
+                page.el = el;
+                root.append(el);
             }
-
-            if (!doc.isNew) markChanged(body, doc.diff);
-            const changes = renderDiff(doc.diff);
-            const seg = document.createElement("div");
-            seg.className = "seg";
-            const docBtn = document.createElement("button");
-            docBtn.type = "button";
-            docBtn.textContent = "Document";
-            const diffBtn = document.createElement("button");
-            diffBtn.type = "button";
-            diffBtn.textContent = "Changes";
-            seg.append(docBtn, diffBtn);
-            bar.append(seg);
-            const show = (isDiff) => {
-                body.hidden = isDiff;
-                changes.hidden = !isDiff;
-                docBtn.setAttribute("aria-pressed", String(!isDiff));
-                diffBtn.setAttribute("aria-pressed", String(isDiff));
-            };
-            docBtn.addEventListener("click", () => show(false));
-            diffBtn.addEventListener("click", () => show(true));
-            show(false);
-
-            const hint = document.createElement("p");
-            hint.className = "hint";
-            hint.textContent = doc.isNew
-                ? "New on this branch."
-                : "Highlighted rows and paragraphs changed on this branch.";
-            panel.append(bar, hint, body, changes);
-            return panel;
+            const diffView = doc.diff ? renderDiff(doc.diff) : undefined;
+            if (diffView) root.append(diffView);
+            main.append(root);
+            const entry = { root, pages, diffView };
+            built.set(doc.id, entry);
+            return entry;
         };
 
-        const select = (id) => {
+        const pager = (pages, index) => {
+            const nav = document.createElement("div");
+            nav.className = "pager";
+            const link = (page, label, cls) => {
+                const button = document.createElement("button");
+                button.type = "button";
+                button.className = cls;
+                button.innerHTML = `<small></small><span></span>`;
+                button.querySelector("small").textContent = label;
+                button.querySelector("span").textContent = page.title;
+                button.addEventListener("click", () => {
+                    open(state.docId, page.id);
+                    window.scrollTo({ top: 0 });
+                });
+                return button;
+            };
+            if (index > 0)
+                nav.append(link(pages[index - 1], "Previous", "prev"));
+            if (index < pages.length - 1)
+                nav.append(link(pages[index + 1], "Next", "next"));
+            return nav;
+        };
+
+        const renderSections = (entry) => {
+            const row = $("sections");
+            row.innerHTML = "";
+            row.hidden = state.diff || entry.pages.length < 2;
+            for (const page of entry.pages) {
+                const tab = document.createElement("button");
+                tab.type = "button";
+                tab.className = "section-tab";
+                if (page.hasChanges) tab.classList.add("has-changes");
+                tab.textContent = page.title;
+                tab.setAttribute(
+                    "aria-selected",
+                    String(page.id === state.page)
+                );
+                tab.addEventListener("click", () => {
+                    open(state.docId, page.id);
+                    window.scrollTo({ top: 0 });
+                });
+                row.append(tab);
+            }
+            // By hand: scrollIntoView would scroll the page too.
+            const selected = row.querySelector('[aria-selected="true"]');
+            if (selected)
+                row.scrollLeft =
+                    selected.offsetLeft -
+                    (row.clientWidth - selected.offsetWidth) / 2;
+        };
+
+        const open = (docId, pageId) => {
             const doc =
-                data.docs.find((d) => d.id === id) ||
+                data.docs.find((d) => d.id === docId) ||
                 changed[0] ||
                 data.docs[0];
-            if (!panels.has(doc.id)) {
-                const panel = buildPanel(doc);
-                panels.set(doc.id, panel);
-                main.append(panel);
-            }
-            for (const [docId, panel] of panels)
-                panel.hidden = docId !== doc.id;
-            picker.value = doc.id;
-            chips
-                .querySelectorAll(".chip")
-                .forEach((chip) =>
-                    chip.setAttribute(
-                        "aria-selected",
-                        String(chip.dataset.id === doc.id)
-                    )
-                );
-            if (location.hash !== "#" + doc.id)
-                history.replaceState(null, "", "#" + doc.id);
+            if (doc.id !== state.docId) state.diff = false;
+            state.docId = doc.id;
+            const entry = build(doc);
+            const page =
+                entry.pages.find((p) => p.id === pageId) ||
+                entry.pages.find((p) => p.hasChanges) ||
+                entry.pages[0];
+            state.page = page ? page.id : "";
+
+            for (const [id, other] of built) other.root.hidden = id !== doc.id;
+            for (const p of entry.pages) p.el.hidden = state.diff || p !== page;
+            if (entry.diffView) entry.diffView.hidden = !state.diff;
+
+            $("file-title").textContent = doc.label;
+            $("file-path").textContent = doc.path;
+            $("file-path").hidden = doc.path === doc.label;
+            $("view-toggle").hidden = !doc.diff;
+            $("view-doc").setAttribute("aria-pressed", String(!state.diff));
+            $("view-diff").setAttribute("aria-pressed", String(state.diff));
+            renderSections(entry);
+
+            const hash = state.page ? `${doc.id}--${state.page}` : doc.id;
+            if (location.hash !== "#" + hash)
+                history.replaceState(null, "", "#" + hash);
         };
 
-        const option = (doc, prefix) => {
-            const el = document.createElement("option");
-            el.value = doc.id;
-            el.textContent = prefix + doc.label;
-            return el;
-        };
-        if (changed.length > 0) {
-            const group = document.createElement("optgroup");
-            group.label = "Changed on this branch";
-            for (const doc of changed)
-                group.append(option(doc, doc.kind + ": "));
-            picker.append(group);
-        }
-        for (const groupName of data.groups) {
-            const group = document.createElement("optgroup");
-            group.label = groupName;
-            for (const doc of data.docs.filter((d) => d.group === groupName))
-                group.append(option(doc, doc.diff ? "● " : ""));
-            picker.append(group);
-        }
-        picker.addEventListener("change", () => {
-            select(picker.value);
-            window.scrollTo({ top: 0 });
+        $("view-doc").addEventListener("click", () => {
+            state.diff = false;
+            open(state.docId, state.page);
+        });
+        $("view-diff").addEventListener("click", () => {
+            state.diff = true;
+            open(state.docId, state.page);
         });
 
-        if (changed.length > 0) {
-            const label = document.createElement("span");
-            label.className = "chip-label";
-            label.textContent = "Changed";
-            chips.append(label);
-        } else {
-            chips.hidden = true;
-        }
-        for (const doc of changed) {
-            const chip = document.createElement("button");
-            chip.type = "button";
-            chip.className = "chip";
-            chip.dataset.id = doc.id;
-            const kind = document.createElement("span");
-            kind.className = "kind";
-            kind.textContent = doc.kind;
-            const name = document.createElement("span");
-            name.textContent = doc.label;
-            chip.append(kind, name);
-            chip.addEventListener("click", () => {
-                select(doc.id);
-                window.scrollTo({ top: 0 });
-            });
-            chips.append(chip);
-        }
+        // The file sheet
+        const sheetBody = $("sheet-body");
+        const renderSheet = () => {
+            sheetBody.innerHTML = "";
+            $("filter-all").setAttribute(
+                "aria-pressed",
+                String(!state.changedOnly)
+            );
+            $("filter-changed").setAttribute(
+                "aria-pressed",
+                String(state.changedOnly)
+            );
+            $("filter-changed").textContent = `Changed (${changed.length})`;
+            for (const groupName of data.groups) {
+                const docs = data.docs.filter(
+                    (d) =>
+                        d.group === groupName && (!state.changedOnly || d.diff)
+                );
+                if (docs.length === 0) continue;
+                const name = document.createElement("div");
+                name.className = "group-name";
+                name.textContent = groupName;
+                sheetBody.append(name);
+                for (const doc of docs) {
+                    const option = document.createElement("button");
+                    option.type = "button";
+                    option.className = "file-option";
+                    option.setAttribute(
+                        "aria-current",
+                        String(doc.id === state.docId)
+                    );
+                    const names = document.createElement("span");
+                    names.className = "names";
+                    const label = document.createElement("span");
+                    label.className = "label";
+                    label.textContent = doc.label;
+                    const path = document.createElement("span");
+                    path.className = "path";
+                    path.textContent = doc.path;
+                    names.append(label);
+                    if (doc.path !== doc.label) names.append(path);
+                    option.append(names);
+                    if (doc.diff) {
+                        const pill = document.createElement("span");
+                        pill.className = doc.isNew ? "pill new" : "pill";
+                        pill.textContent = doc.isNew ? "New" : "Changed";
+                        option.append(pill);
+                    }
+                    option.addEventListener("click", () => {
+                        closeSheet();
+                        open(doc.id);
+                        window.scrollTo({ top: 0 });
+                    });
+                    sheetBody.append(option);
+                }
+            }
+        };
+        const openSheet = () => {
+            renderSheet();
+            $("scrim").hidden = false;
+            $("sheet").hidden = false;
+            document.body.classList.add("sheet-open");
+            sheetBody
+                .querySelector('[aria-current="true"]')
+                ?.scrollIntoView({ block: "center" });
+        };
+        const closeSheet = () => {
+            $("scrim").hidden = true;
+            $("sheet").hidden = true;
+            document.body.classList.remove("sheet-open");
+        };
+        $("file-button").addEventListener("click", openSheet);
+        $("scrim").addEventListener("click", closeSheet);
+        document.addEventListener("keydown", (event) => {
+            if (event.key === "Escape") closeSheet();
+        });
+        $("filter-all").addEventListener("click", () => {
+            state.changedOnly = false;
+            renderSheet();
+        });
+        $("filter-changed").addEventListener("click", () => {
+            state.changedOnly = true;
+            renderSheet();
+        });
 
-        select(location.hash.slice(1));
-        window.addEventListener("hashchange", () =>
-            select(location.hash.slice(1))
-        );
+        const fromHash = () => {
+            const [docId, pageId] = location.hash.slice(1).split("--");
+            open(docId, pageId);
+        };
+        fromHash();
+        window.addEventListener("hashchange", fromHash);
     })();
 </script>

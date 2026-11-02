@@ -6,11 +6,12 @@ description: Publish every Markdown file in the repository (architecture docs, s
 # Review docs
 
 The user reads on their phone, so every Markdown file lives on one page and
-they never ask for a file: a picker lists them all, grouped (Architecture,
-Strings, Agent instructions, Guides), with the ones this branch changed first
-and as chips under it. A changed file has a **Document** view, its changed rows
-and paragraphs highlighted, and a **Changes** view, its diff. The user comments
-with claude.ai's own comment mode; the page draws no comment controls.
+they never ask for a file. A sheet lists the files by folder (Architecture,
+Strings, Agent instructions, Guides), each marked Changed or New when this
+branch touched it, with a filter for just those. An open file is split into its
+top-level sections, picked from tabs, one on screen at a time; a tab with
+changes carries a dot. A changed file also has a **Diff** view. The user
+comments with claude.ai's own comment mode; the page draws no comment controls.
 
 ## Build and publish
 
@@ -37,8 +38,10 @@ with claude.ai's own comment mode; the page draws no comment controls.
       `read` it, then publish with its `url`, so the link stays the same.
 3. Reply with the link in one line. To point at one file, add its id as the
    hash: the path without `.md`, every run of other characters as `-`,
-   lowercased (`docs/architecture/auth.md` → `#docs-architecture-auth`).
-   Don't send the Markdown files themselves.
+   lowercased (`docs/architecture/auth.md` → `#docs-architecture-auth`). To
+   point at a section, add `--` and the section's title the same way
+   (`#docs-architecture-auth--storage`). Don't send the Markdown files
+   themselves.
 
 Publishing uploads the built file; nothing of it passes through the
 conversation, so a page of every document costs no more than one of a few.
