@@ -43,3 +43,8 @@ __pycache__/
 
 # The shared dev tunnel's token
 .tunnel-token
+
+# Paraglide's compiled messages (`npm run messages`) and inlang's own files
+src/frontend/paraglide/
+project.inlang/*
+!project.inlang/settings.json

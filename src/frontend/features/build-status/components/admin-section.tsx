@@ -13,6 +13,7 @@ import {
 } from "../queries";
 import { SwitchRow } from "./sections";
 import { HoverBubbleRow } from "../../../components/app-hover-bubble";
+import { m } from "../../../paraglide/messages";
 
 interface InsertableSettingsProps {
     insertableId: string;
@@ -29,7 +30,7 @@ export function InsertableSettings(props: InsertableSettingsProps): ReactNode {
                 isVisible={status.isVisible}
             />
             <FastenSwitch insertableId={insertableId} status={status} />
-            <HoverBubbleRow label="Vendors">
+            <HoverBubbleRow label={m.adminCardVendors()}>
                 <VendorBadges vendors={status.vendors} />
             </HoverBubbleRow>
         </Stack>
@@ -46,7 +47,7 @@ function VisibilitySwitch(props: VisibilitySwitchProps): ReactNode {
     const mutation = useSetVisibilityMutation([insertableId], !isVisible);
     return (
         <SwitchRow
-            label="Visible to users"
+            label={m.adminCardVisibleToUsers()}
             checked={isVisible}
             onToggle={() => mutation.mutate()}
         />
@@ -65,12 +66,8 @@ function FastenSwitch(props: FastenSwitchProps): ReactNode {
     const noConnector = !status.supportsFasten && !status.fastenDisabled;
     return (
         <SwitchRow
-            label="Insert and fasten"
-            description={
-                noConnector
-                    ? "No mate connector found"
-                    : "Places and fastens at its first mate connector"
-            }
+            label={m.adminCardInsertAndFasten()}
+            description={noConnector ? m.adminCardNoMateConnector() : undefined}
             checked={status.supportsFasten}
             disabled={mutation.isPending || noConnector}
             onToggle={() => mutation.mutate(!status.supportsFasten)}
@@ -85,7 +82,7 @@ interface VendorBadgesProps {
 function VendorBadges(props: VendorBadgesProps): ReactNode {
     const { vendors } = props;
     if (vendors.length === 0) {
-        return <Text c={StatusColor.DIMMED}>None found</Text>;
+        return <Text c={StatusColor.DIMMED}>{m.adminCardNoVendors()}</Text>;
     }
     return (
         <Group gap={4} wrap="wrap" justify="flex-end">
@@ -113,8 +110,7 @@ export function GroupSettings(props: GroupSettingsProps): ReactNode {
     return (
         <Stack gap="sm">
             <SwitchRow
-                label="Sort alphabetically"
-                description="Order elements A-Z instead of by tab"
+                label={m.adminCardSortAlphabetically()}
                 checked={status.sortAlphabetically}
                 onToggle={() => mutation.mutate(!status.sortAlphabetically)}
             />

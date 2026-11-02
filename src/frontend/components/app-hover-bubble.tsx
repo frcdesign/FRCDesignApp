@@ -1,4 +1,11 @@
-import { Box, Divider, Group, Stack, Text } from "@mantine/core";
+import {
+    Box,
+    Divider,
+    Group,
+    Stack,
+    Text,
+    type MantineSize
+} from "@mantine/core";
 import { type ReactNode } from "react";
 import { FontWeight, StatusColor } from "../lib/style-constants";
 import { AppHoverCard } from "./app-hover-card";
@@ -9,69 +16,77 @@ const BUBBLE_WIDTH = 300;
 interface AppHoverBubbleProps {
     /** The row's icon, hovered or tapped to open the bubble. */
     target: ReactNode;
-    /** The same icon at `IconSize.CONTROL`, beside the title. */
+    /** Left out where the body says what it is on its own. */
+    header?: BubbleHeaderProps;
+    /** Set when the body holds controls. */
+    interactive?: boolean;
+    /** Ruled off from the header. */
+    children?: ReactNode;
+    /** Around the whole bubble. @default "md" */
+    padding?: MantineSize;
+    /** Under the target, for one inside another bubble, which fills the space to its right. */
+    below?: boolean;
+}
+
+/**
+ * A row icon's card about that row: a titled header, then a body. To the
+ * right, sliding back into view rather than flipping over the row. With a
+ * header it keeps one width whatever its body; without, it fits its body.
+ */
+export function AppHoverBubble(props: AppHoverBubbleProps): ReactNode {
+    const { target, header, interactive, children, padding, below } = props;
+
+    return (
+        <AppHoverCard
+            position={below ? "bottom" : "right"}
+            middlewares={
+                below ? undefined : { flip: false, shift: { crossAxis: true } }
+            }
+            arrowSize={20}
+            // Passing the pointer down a list shouldn't open every row's.
+            openDelay={150}
+            interactive={interactive}
+            target={target}
+            padding={padding}
+        >
+            <Stack gap="sm" w={header && BUBBLE_WIDTH} maw={BUBBLE_WIDTH}>
+                {header && <BubbleHeader {...header} />}
+                {header && children && <Divider />}
+                {children}
+            </Stack>
+        </AppHoverCard>
+    );
+}
+
+interface BubbleHeaderProps {
+    /** The target's icon at `IconSize.CONTROL`, beside the title. */
     icon: ReactNode;
     title: string;
     /** Beside the title, at the bubble's edge. */
     rightSection?: ReactNode;
     /** Under the title: badges summing up the body. */
     subtitle?: ReactNode;
-    /** Set when the body holds controls. */
-    interactive?: boolean;
-    /** Ruled off from the header. */
-    children?: ReactNode;
 }
 
-/**
- * A row icon's card about that row: a titled header, then a body. Always to
- * the right, sliding back into view rather than flipping over the row.
- */
-export function AppHoverBubble(props: AppHoverBubbleProps): ReactNode {
-    const {
-        target,
-        icon,
-        title,
-        rightSection,
-        subtitle,
-        interactive,
-        children
-    } = props;
-
+function BubbleHeader(props: BubbleHeaderProps): ReactNode {
+    const { icon, title, rightSection, subtitle } = props;
     return (
-        <AppHoverCard
-            position="right"
-            middlewares={{ flip: false, shift: { crossAxis: true } }}
-            arrowSize={20}
-            // Passing the pointer down a list shouldn't open every row's.
-            openDelay={150}
-            interactive={interactive}
-            target={target}
-        >
-            <Stack gap="sm" w={BUBBLE_WIDTH}>
-                <Stack gap={6}>
-                    <Group gap="xs" wrap="nowrap">
-                        {icon}
-                        <Text
-                            truncate
-                            title={title}
-                            fw={FontWeight.SEMI_BOLD}
-                            flex={1}
-                            miw={0}
-                        >
-                            {title}
-                        </Text>
-                        {rightSection}
-                    </Group>
-                    {subtitle}
-                </Stack>
-                {children && (
-                    <>
-                        <Divider />
-                        {children}
-                    </>
-                )}
-            </Stack>
-        </AppHoverCard>
+        <Stack gap={6}>
+            <Group gap="xs" wrap="nowrap">
+                {icon}
+                <Text
+                    truncate
+                    title={title}
+                    fw={FontWeight.SEMI_BOLD}
+                    flex={1}
+                    miw={0}
+                >
+                    {title}
+                </Text>
+                {rightSection}
+            </Group>
+            {subtitle}
+        </Stack>
     );
 }
 

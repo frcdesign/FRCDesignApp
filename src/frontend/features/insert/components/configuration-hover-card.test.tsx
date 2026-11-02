@@ -69,7 +69,6 @@ describe("ConfigurationHoverCard", () => {
         await user.hover(container.querySelector("svg")!);
 
         expect(await screen.findByText("Large")).not.toBeNull();
-        expect(screen.getByText("Configuration")).not.toBeNull();
         expect(screen.getByText("Size")).not.toBeNull();
         // Left at its default, so still listed.
         expect(screen.getByText("Flanged")).not.toBeNull();

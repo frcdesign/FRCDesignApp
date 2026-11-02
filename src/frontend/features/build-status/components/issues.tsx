@@ -6,10 +6,10 @@ import {
     BuildIssue,
     BuildIssueSeverity,
     getIssueConfiguration,
-    getIssueDescription,
-    getIssueSeverity,
-    getIssueTitle
+    getIssueSeverity
 } from "@backend/features/build-checker/issues";
+import { getIssueDescription, getIssueTitle } from "../issue-text";
+import { m } from "../../../paraglide/messages";
 import { ConfigurationParameter } from "@backend/features/configurations/contract";
 import { toSelection } from "@backend/features/configurations/selection";
 import { ElementPath } from "@backend/lib/onshape/path";
@@ -72,7 +72,7 @@ export function SeverityBadges(props: SeverityBadgesProps): ReactNode {
                     />
                 }
             >
-                All checks pass
+                {m.adminCardAllChecksPass()}
             </Badge>
         );
     }
@@ -102,10 +102,13 @@ export function SeverityBadges(props: SeverityBadgesProps): ReactNode {
     );
 }
 
-const SEVERITY_NOUN: Record<BuildIssueSeverity, string> = {
-    [BuildIssueSeverity.ERROR]: "error",
-    [BuildIssueSeverity.WARNING]: "warning",
-    [BuildIssueSeverity.INFO]: "info"
+const SEVERITY_COUNT: Record<
+    BuildIssueSeverity,
+    (inputs: { count: number }) => string
+> = {
+    [BuildIssueSeverity.ERROR]: m.adminCardErrorCount,
+    [BuildIssueSeverity.WARNING]: m.adminCardWarningCount,
+    [BuildIssueSeverity.INFO]: m.adminCardInfoCount
 };
 
 interface CountBadgeProps {
@@ -116,10 +119,7 @@ interface CountBadgeProps {
 function CountBadge(props: CountBadgeProps): ReactNode {
     const { severity, count } = props;
     const color = STATUS_COLOR[severityStatus(severity)];
-    const noun = SEVERITY_NOUN[severity];
-    // Don't pluralize info, e.g. "2 infos" reads wrong.
-    const plural = severity !== BuildIssueSeverity.INFO && count > 1 ? "s" : "";
-    return <Badge color={color}>{`${count} ${noun}${plural}`}</Badge>;
+    return <Badge color={color}>{SEVERITY_COUNT[severity]({ count })}</Badge>;
 }
 
 /** How many issues of each severity a build carries. */

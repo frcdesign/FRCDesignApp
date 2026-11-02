@@ -1,4 +1,5 @@
-import { SimpleGrid, Stack, Text } from "@mantine/core";
+import { ActionIcon, SimpleGrid, Stack, Text, Tooltip } from "@mantine/core";
+import { ChartLineIcon } from "@phosphor-icons/react";
 import { useQuery } from "@tanstack/react-query";
 import { ReactNode } from "react";
 import { LibraryId } from "@backend/features/library/library-id";
@@ -7,10 +8,14 @@ import { RangePreset, toDayRange } from "../../dashboard/range";
 import { formatCount } from "../../dashboard/format";
 import { partDashboardUrl } from "../../dashboard/dashboard-nav";
 import { useLibraryId } from "../../../lib/library";
-import { FontWeight, StatusColor } from "../../../lib/style-constants";
-import { AppLink } from "../../../components/app-link";
+import {
+    FontWeight,
+    IconSize,
+    StatusColor
+} from "../../../lib/style-constants";
 import { CardSection } from "./card-section";
 import { SectionId } from "../../../lib/ui-state";
+import { m } from "../../../paraglide/messages";
 
 interface UsageSectionProps {
     /** Analytics key parts by element, so a reloaded tab keeps its history. */
@@ -24,14 +29,19 @@ export function UsageSection(props: UsageSectionProps): ReactNode {
     return (
         <CardSection
             id={SectionId.USAGE}
-            title="Usage"
+            title={m.adminCardUsage()}
             actions={
-                <AppLink
-                    href={partDashboardUrl(libraryId, elementId)}
-                    size="sm"
-                >
-                    Dashboard
-                </AppLink>
+                <Tooltip label={m.adminCardOpenDashboard()}>
+                    <ActionIcon
+                        size="sm"
+                        component="a"
+                        href={partDashboardUrl(libraryId, elementId)}
+                        target="_blank"
+                        rel="noreferrer"
+                    >
+                        <ChartLineIcon size={IconSize.SMALL} />
+                    </ActionIcon>
+                </Tooltip>
             }
         >
             <UsageStats libraryId={libraryId} elementId={elementId} />
@@ -60,9 +70,9 @@ function UsageStats(props: UsageStatsProps): ReactNode {
     const part = parts.data?.find((each) => each.path.elementId === elementId);
     return (
         <SimpleGrid cols={3} spacing="xs">
-            <Stat label="Inserts" value={part?.insertCount} />
-            <Stat label="Per month" value={part?.usesPerMonth} />
-            <Stat label="Favorites" value={part?.favorites} />
+            <Stat label={m.adminCardInserts()} value={part?.insertCount} />
+            <Stat label={m.adminCardPerMonth()} value={part?.usesPerMonth} />
+            <Stat label={m.adminCardFavorites()} value={part?.favorites} />
         </SimpleGrid>
     );
 }

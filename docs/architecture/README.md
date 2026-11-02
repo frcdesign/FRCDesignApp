@@ -2,8 +2,22 @@
 
 One document per feature area, describing how it works **now**: what it owns,
 where it stores things, how its flows run, and the rules that must keep holding.
-They are the reference for reviewing a change against the design, and for
-noticing when the code has drifted from it.
+
+**These documents are what a reviewer reviews.** The architecture is decided
+here, by people: an area's purpose, contracts and types, storage, flows,
+user-facing strings, invariants and decisions. The implementation is left to
+Claude, held to these documents by their invariants, the tests and CI. So:
+
+- A change to the design shows in a document's diff, in the same pull request
+  as the code. Review that diff as the change.
+- Read the code against the document's invariants and code map, not line by
+  line: whether it does what the document says, not how it's written.
+- A pull request that changes behavior with no document diff, or a document
+  that no longer says what the code does, is the thing to send back.
+
+`scripts/doc-review/build.mjs` gathers every Markdown file into one page to
+read and comment on, the ones a branch changed first with their diffs; the
+`review-docs` skill publishes it.
 
 | Document                                   | Covers                                                                             |
 | ------------------------------------------ | ---------------------------------------------------------------------------------- |
@@ -15,6 +29,7 @@ noticing when the code has drifted from it.
 | [auth.md](./auth.md)                       | Onshape OAuth, sessions, access levels, and the environment variables              |
 | [search.md](./search.md)                   | Building, serving and querying each library's search index                         |
 | [analytics.md](./analytics.md)             | Usage tracking, rollups, and the public dashboard                                  |
+| [build-issues.md](./build-issues.md)       | Build issues, the checks that raise them, and the admin card editors fix them from |
 | [version-manager.md](./version-manager.md) | Links between Onshape workspaces, and the pushes and pulls along them              |
 | [platform.md](./platform.md)               | Onshape client, errors, retries and timeouts, concurrency, toasts, pushes, caching |
 
@@ -27,15 +42,26 @@ Every document uses the same sections, in this order, leaving out any that
 would be empty:
 
 1. **Purpose** — what the area is for, and what it deliberately is not.
-2. **Code map** — the files that own it, each with one line on its role.
+2. **Code map** — the functions to start reading, as signatures in `ts`
+   blocks grouped under the file paths they live in, in the order the area's
+   main flow runs them. A one-line comment above a signature only where its
+   name and types don't say what it is for. Routes are listed as method and
+   path in a `text` block under their file. Below the signatures, in the block
+   of the files that define them, the interfaces, types and enums they take
+   and return, and those those refer to, as the code declares them, field
+   comments included, so the map reads without opening the code. A type
+   defined outside the listed files (a library's, Onshape's, another area's)
+   is named, not copied.
 3. **Storage** — every table, KV store, R2 prefix and browser store it touches,
    with lifetimes.
 4. **Flows** — the paths through the code, as numbered steps. A diagram only
    where the ordering is the hard part.
-5. **Invariants** — rules that must hold, stated so a reviewer can check a diff
+5. **User-facing strings** — a link to the area's file in
+   [`docs/strings/`](../strings/README.md), which lists them.
+6. **Invariants** — rules that must hold, stated so a reviewer can check a diff
    against them. This is the section drift is measured by.
-6. **Failure and recovery** — what goes wrong, and what puts it right.
-7. **Decisions** — choices that look wrong or have a tempting alternative, each
+7. **Failure and recovery** — what goes wrong, and what puts it right.
+8. **Decisions** — choices that look wrong or have a tempting alternative, each
    with its reason. New decisions are added here rather than in a separate log.
 
 Write the way `AGENTS.md` asks of comments: what is true now, plainly, without

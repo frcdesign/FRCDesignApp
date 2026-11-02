@@ -122,11 +122,35 @@ default" — goes through `canonicalValue`/`canonicalValues`, never through a ke
 Don't add a third form: if something needs a different view of a selection, it
 wants a function in `selection.ts`, not a new shape.
 
+# User-facing strings
+
+Text the app shows is a message in `src/frontend/messages/en.json`, compiled by
+Paraglide into typed functions: `m.adminCardUnsaved()`,
+`m.adminCardShowing({ count })`. Import `m` from `src/frontend/paraglide/messages`.
+`npm run messages` compiles it, and runs before `tsc`, `test` and `build` and
+after install; the Vite plugin recompiles in dev. `src/frontend/paraglide/` is
+generated and git-ignored: never edit it.
+
+- Keys are camelCase, prefixed by area: `buildIssue…`, `adminCard…`.
+- A count goes through a `plural` selector and a number through `: number`,
+  never `count === 1 ? … : …` or `toLocaleString` in code.
+- A sentence is one message with parameters, never pieces joined in code.
+- Text from Onshape — a part, parameter or option name — is a parameter, not a
+  message.
+- A value with a known set of cases maps to its message in an exhaustive
+  `switch`, so a new case without one fails `tsc`; never index `m` by a built
+  key.
+
+The build-status feature is migrated. The rest moves over as it is worked on:
+a new string goes in the catalog, and a component you change has its strings
+moved there in the same change. `docs/strings/` lists them for review.
+
 # Architecture docs
 
 `docs/architecture/` holds one document per feature area, indexed in its
-`README.md`: thumbnails, configurations, loading, favorites, auth (with access
-levels and environment variables), search, analytics, and the version manager. Each states the area's flows, storage,
+`README.md`: thumbnails, configurations, loading, favorites, recents, auth
+(with access levels and environment variables), search, analytics, build
+issues and the admin card, and the version manager. Each states the area's flows, storage,
 **invariants**, failure modes and decisions. Read the area's document before
 changing it, and check the change against its invariants.
 
@@ -138,6 +162,9 @@ Update the document in the same commit when a change:
 - adds, renames or removes an environment variable or binding;
 - changes who may do something (a guard);
 - moves or renames a file a document names (`npm run check:docs` fails on these);
+- adds, rewords or removes a string the user sees that the area's file in
+  `docs/strings/` lists or should list, or a function, interface, type or
+  enum its code map lists;
 - breaks or replaces an invariant. That is a design change: say so in the
   commit message, rewrite the invariant, and add the reason under **Decisions**.
 

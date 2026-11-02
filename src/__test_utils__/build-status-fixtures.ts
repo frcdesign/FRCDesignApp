@@ -20,6 +20,7 @@ export function insertableBuildStatus(
         indexConfigurations: false,
         excludedParameterIds: [],
         vendors: [],
+        parameters: [],
         ...overrides
     };
 }

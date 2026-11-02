@@ -15,10 +15,10 @@ import { InsertableBuildStatus } from "@backend/features/build-checker/contract"
 import { BuildIssueSeverity } from "@backend/features/build-checker/issues";
 import {
     ParameterType,
-    type ConfigurationParameter
+    type ConfigurationParameter,
+    type EnumParameter
 } from "@backend/features/configurations/contract";
 import {
-    AUTO_INDEX_THRESHOLD,
     bandOf,
     countCombinations,
     IndexingBand,
@@ -39,12 +39,15 @@ import {
     useIndexingView
 } from "../indexing-draft";
 import { RowSwitch } from "./sections";
-import { HoverBubbleRow } from "../../../components/app-hover-bubble";
-import { plural } from "../../../lib/plural";
+import {
+    AppHoverBubble,
+    HoverBubbleRow
+} from "../../../components/app-hover-bubble";
 import { IssueIcon } from "./issues";
 import { CardSection } from "./card-section";
 import { SectionId } from "../../../lib/ui-state";
 import { getParameterTypeLabel } from "../parameter-type-label";
+import { m } from "../../../paraglide/messages";
 import styles from "../../../lib/styles.module.css";
 
 /** Tall enough for a handful of parameters before the table starts scrolling. */
@@ -75,13 +78,8 @@ export function ConfigurationSection(
     return (
         <CardSection
             id={SectionId.CONFIGURATION}
-            title="Configuration"
-            actions={
-                <SectionSummary
-                    parameterCount={parameters.length}
-                    isUnsaved={view.isUnsaved}
-                />
-            }
+            title={m.adminCardConfiguration()}
+            actions={<UnsavedBadge isUnsaved={view.isUnsaved} />}
         >
             <ConfigurationEditor
                 insertableId={insertableId}
@@ -93,25 +91,17 @@ export function ConfigurationSection(
     );
 }
 
-interface SectionSummaryProps {
-    parameterCount: number;
+interface UnsavedBadgeProps {
     isUnsaved: boolean;
 }
 
-/** Unsaved edits show here, so they are noticed with the section closed. */
-function SectionSummary(props: SectionSummaryProps): ReactNode {
-    const { parameterCount, isUnsaved } = props;
-    if (isUnsaved) {
-        return (
-            <Badge color={StatusColor.WARNING} className={styles.noShrink}>
-                Unsaved
-            </Badge>
-        );
-    }
+/** In the header, so unsaved edits are noticed with the section closed. */
+function UnsavedBadge(props: UnsavedBadgeProps): ReactNode {
+    if (!props.isUnsaved) return null;
     return (
-        <Text size="xs" c={StatusColor.DIMMED} className={styles.noShrink}>
-            {plural(parameterCount, "parameter")}
-        </Text>
+        <Badge color={StatusColor.WARNING} className={styles.noShrink}>
+            {m.adminCardUnsaved()}
+        </Badge>
     );
 }
 
@@ -142,7 +132,7 @@ function ConfigurationEditor(props: ConfigurationEditorProps): ReactNode {
     return (
         <Stack gap="sm">
             <HoverBubbleRow
-                label="Index configurations"
+                label={m.adminCardIndexConfigurations()}
                 description={describeCount(count, band)}
             >
                 <IndexingControl
@@ -164,12 +154,12 @@ function ConfigurationEditor(props: ConfigurationEditorProps): ReactNode {
                 >
                     <Table.Thead>
                         <Table.Tr c={StatusColor.DIMMED}>
-                            <Table.Th>Parameter</Table.Th>
+                            <Table.Th>{m.adminCardParameter()}</Table.Th>
                             <Table.Th w={TYPE_COLUMN_WIDTH} ta="center">
-                                Type
+                                {m.adminCardType()}
                             </Table.Th>
                             <Table.Th w={INDEXED_COLUMN_WIDTH} ta="center">
-                                Indexed
+                                {m.adminCardIndexed()}
                             </Table.Th>
                         </Table.Tr>
                     </Table.Thead>
@@ -195,22 +185,21 @@ function ConfigurationEditor(props: ConfigurationEditorProps): ReactNode {
 
 function describeCount(count: number | undefined, band: IndexingBand): string {
     if (count === undefined) {
-        return `Over ${MAX_COUNTED_CONFIGURATIONS.toLocaleString()} configurations`;
+        return m.adminCardCountUncounted({ max: MAX_COUNTED_CONFIGURATIONS });
     }
     if (count === 0) {
-        return "Nothing to index";
+        return m.adminCardCountNothing();
     }
-    const counted =
-        count === 1
-            ? "1 configuration"
-            : `${count.toLocaleString()} configurations`;
     switch (band) {
         case IndexingBand.AUTOMATIC:
-            return `${counted}, indexed automatically`;
+            return m.adminCardCountAutomatic({ count });
         case IndexingBand.MANUAL:
-            return counted;
+            return m.adminCardCountManual({ count });
         case IndexingBand.EXCEEDED:
-            return `${counted}, over the limit of ${MAX_PART_NUMBER_CONFIGURATIONS}`;
+            return m.adminCardCountExceeded({
+                count,
+                max: MAX_PART_NUMBER_CONFIGURATIONS
+            });
     }
 }
 
@@ -220,40 +209,27 @@ interface IndexingControlProps {
     onToggle: () => void;
 }
 
-/** A switch only where enabling is the admin's call; otherwise an icon says why. */
+/** A switch only where enabling is the admin's call; otherwise the build-check icon for the band. */
 function IndexingControl(props: IndexingControlProps): ReactNode {
     const { band, checked, onToggle } = props;
     if (band === IndexingBand.EXCEEDED) {
         return (
-            <BandIcon
-                severity={BuildIssueSeverity.ERROR}
-                tooltip={`At most ${MAX_PART_NUMBER_CONFIGURATIONS} configurations can be indexed. Uncheck parameters until it is under the limit.`}
-            />
+            <Tooltip
+                label={m.adminCardIndexLimit({
+                    max: MAX_PART_NUMBER_CONFIGURATIONS
+                })}
+            >
+                <IssueIcon
+                    severity={BuildIssueSeverity.ERROR}
+                    className={styles.noShrink}
+                />
+            </Tooltip>
         );
     }
     if (band === IndexingBand.AUTOMATIC) {
-        return (
-            <BandIcon
-                tooltip={`Under ${AUTO_INDEX_THRESHOLD}, so every load indexes it.`}
-            />
-        );
+        return <IssueIcon className={styles.noShrink} />;
     }
     return <RowSwitch checked={checked} onToggle={onToggle} />;
-}
-
-interface BandIconProps {
-    severity?: BuildIssueSeverity;
-    tooltip: string;
-}
-
-/** The build-check icons, so it reads like the callouts. */
-function BandIcon(props: BandIconProps): ReactNode {
-    const { severity, tooltip } = props;
-    return (
-        <Tooltip label={tooltip}>
-            <IssueIcon severity={severity} className={styles.noShrink} />
-        </Tooltip>
-    );
 }
 
 interface ParameterRowProps {
@@ -304,10 +280,12 @@ function IndexCheckbox(props: IndexCheckboxProps): ReactNode {
     const reason = parameter.role ? (
         <ParameterRoleLabel
             role={parameter.role}
-            suffix=", so never indexed."
+            suffix={m.adminCardRoleNotIndexed()}
         />
     ) : (
-        `${getParameterTypeLabel(parameter.type)} parameters aren't indexed.`
+        m.adminCardTypeNotIndexed({
+            type: getParameterTypeLabel(parameter.type)
+        })
     );
     return (
         <Tooltip label={reason}>
@@ -347,21 +325,49 @@ interface ParameterTypeBadgeProps {
 /** An enum lists its options on hover. */
 function ParameterTypeBadge(props: ParameterTypeBadgeProps): ReactNode {
     const { parameter } = props;
-    const isEnum = parameter.type === ParameterType.ENUM;
-    const label = isEnum
-        ? `${getParameterTypeLabel(parameter.type)} · ${parameter.options.length}`
-        : getParameterTypeLabel(parameter.type);
-
-    const badge = <Badge size="xs">{label}</Badge>;
-    if (!isEnum || parameter.options.length === 0) {
-        return badge;
+    if (
+        parameter.type !== ParameterType.ENUM ||
+        parameter.options.length === 0
+    ) {
+        return <Badge size="xs">{getParameterTypeLabel(parameter.type)}</Badge>;
     }
     return (
-        <Tooltip
-            label={parameter.options.map((option) => option.name).join(", ")}
+        <AppHoverBubble
+            padding="sm"
+            below
+            target={
+                <Badge size="xs">
+                    {m.adminCardEnumBadge({
+                        type: getParameterTypeLabel(parameter.type),
+                        count: parameter.options.length
+                    })}
+                </Badge>
+            }
         >
-            {badge}
-        </Tooltip>
+            <EnumOptions parameter={parameter} />
+        </AppHoverBubble>
+    );
+}
+
+interface EnumOptionsProps {
+    parameter: EnumParameter;
+}
+
+function EnumOptions(props: EnumOptionsProps): ReactNode {
+    const { parameter } = props;
+    return (
+        <Stack gap={4}>
+            {parameter.options.map((option) => (
+                <Group key={option.id} gap="xs" wrap="nowrap">
+                    <Text size="sm">{option.name}</Text>
+                    {option.id === parameter.default && (
+                        <Text size="xs" c={StatusColor.DIMMED}>
+                            {m.adminCardDefaultOption()}
+                        </Text>
+                    )}
+                </Group>
+            ))}
+        </Stack>
     );
 }
 
@@ -391,7 +397,7 @@ function SaveButtons(props: SaveButtonsProps): ReactNode {
                 disabled={!view.isUnsaved}
                 onClick={() => clearIndexingDraft(insertableId)}
             >
-                Discard
+                {m.adminCardDiscard()}
             </Button>
             <Button
                 size="xs"
@@ -399,7 +405,7 @@ function SaveButtons(props: SaveButtonsProps): ReactNode {
                 disabled={!view.isUnsaved}
                 onClick={save}
             >
-                Save
+                {m.adminCardSave()}
             </Button>
         </Group>
     );
