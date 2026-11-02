@@ -7,7 +7,7 @@ import type { LibraryBuildStatus } from "@backend/features/build-checker/contrac
 import { insertableBuildStatus } from "../../../../__test_utils__/build-status-fixtures";
 
 const status = insertableBuildStatus({
-    configuration: { parameters: [boolParam("holes")] }
+    parameters: [boolParam("holes")]
 });
 
 const buildStatus: LibraryBuildStatus = {

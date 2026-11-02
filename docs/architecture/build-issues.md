@@ -197,13 +197,10 @@ interface InsertableBuildStatus extends IndexingSettings {
     /** An admin turned fastening off; otherwise it is on wherever a connector is found. */
     fastenDisabled: boolean;
     vendors: Vendor[];
-    configuration?: ConfigurationBuildStatus;
+    /** Empty for an element without configurations. */
+    parameters: ConfigurationParameter[];
     /** When Onshape cut the version this insertable is pinned to (epoch ms). */
     versionCreatedAt?: number;
-}
-
-interface ConfigurationBuildStatus {
-    parameters: ConfigurationParameter[];
 }
 ```
 

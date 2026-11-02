@@ -40,9 +40,7 @@ function renderSection(
                 <ConfigurationSection
                     key="configuration"
                     insertableId={insertableId}
-                    status={insertableBuildStatus({
-                        configuration: { parameters }
-                    })}
+                    status={insertableBuildStatus({ parameters })}
                     parameters={parameters}
                 />
             ]}

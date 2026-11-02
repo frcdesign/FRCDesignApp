@@ -76,10 +76,10 @@ buildStatusRoutes.get(
             .where(eq(insertables.libraryId, libraryId))
             .all();
 
-        const configMap = new Map(
-            allConfigurations.map(({ insertableId, ...status }) => [
+        const parametersById = new Map(
+            allConfigurations.map(({ insertableId, parameters }) => [
                 insertableId,
-                status
+                parameters
             ])
         );
 
@@ -109,7 +109,7 @@ buildStatusRoutes.get(
                 indexConfigurations: ins.indexConfigurations,
                 excludedParameterIds: ins.excludedParameterIds,
                 vendors: ins.vendors,
-                configuration: configMap.get(ins.id),
+                parameters: parametersById.get(ins.id) ?? [],
                 versionCreatedAt: ins.versionCreatedAt?.getTime()
             };
         }

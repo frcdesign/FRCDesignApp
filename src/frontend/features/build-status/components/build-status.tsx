@@ -225,7 +225,7 @@ export function InsertableStatusBadge(
     const hasUnsavedEdits = useHasIndexingDraft(insertableId);
     const insertable = data?.insertables[insertableId];
     if (!insertable) return null;
-    const parameters = insertable.configuration?.parameters ?? [];
+    const { parameters } = insertable;
     return (
         <BuildStatusBadge
             hasUnsavedEdits={hasUnsavedEdits}
@@ -236,10 +236,9 @@ export function InsertableStatusBadge(
             isHidden={!insertable.isVisible}
             elementType={insertable.elementType}
             configurationTarget={
-                insertable.configuration && {
-                    elementPath: insertable.elementPath,
-                    parameters
-                }
+                parameters.length > 0
+                    ? { elementPath: insertable.elementPath, parameters }
+                    : undefined
             }
             sections={[
                 <CardSection
