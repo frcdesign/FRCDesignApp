@@ -78,8 +78,7 @@ export const DISCORD_FORUMS: Record<DiscordForum, ForumSettings> = {
             [FeedbackCategory.INCORRECT_GEOMETRY]: "1566637118959394956",
             [FeedbackCategory.BROKEN_CONFIGURATION]: "1566637138064310322",
             [FeedbackCategory.THUMBNAIL]: "1566637156498411610",
-            [FeedbackCategory.OTHER]: "1566637169806807151",
-            [ERROR_REPORT_TAG]: "1566640845430464682"
+            [FeedbackCategory.OTHER]: "1566637169806807151"
         }
     }
 };
