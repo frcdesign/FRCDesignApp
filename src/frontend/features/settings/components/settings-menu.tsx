@@ -1,5 +1,9 @@
 import { Button, Divider, Select, Stack } from "@mantine/core";
-import { ArrowLeftIcon, SignOutIcon } from "@phosphor-icons/react";
+import {
+    ArrowLeftIcon,
+    ChatCircleTextIcon,
+    SignOutIcon
+} from "@phosphor-icons/react";
 import { useIsDashboard } from "../../dashboard/dashboard-nav";
 import {
     SETTING_CONTROL_WIDTH,
@@ -29,6 +33,8 @@ import {
 } from "../../../lib/ui-state";
 import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
 import { SETUP_URL } from "../../../lib/url";
+import { useAppModal } from "../../../components/open-app-modal";
+import { openFeedbackForm } from "../../feedback/open-feedback";
 import { m } from "../../../paraglide/messages";
 import { useLibraryId } from "../../../lib/library";
 import { ReloadButton } from "../../library/components/reload-button";
@@ -38,9 +44,6 @@ import {
 } from "../../library/components/version-approval";
 import { RefreshAdminTeamButton } from "../../admin-team/components/refresh-admin-team-button";
 import { AdminTeamSetting } from "../../admin-team/components/admin-team-setting";
-
-/** The FRCDesign Discord, where feedback and support now live. */
-const DISCORD_INVITE_URL = "https://discord.gg/PMgzEUTgB7";
 
 /** The usage dashboard, served standalone and needing no sign-in. */
 const DASHBOARD_URL = "/dashboard";
@@ -107,6 +110,7 @@ function UserSettings(): ReactNode {
     const libraryId = useLibraryId();
     const isConnected = useIsConnectedToOnshape();
     const isDashboard = useIsDashboard();
+    const modal = useAppModal();
 
     return (
         <Stack gap="sm">
@@ -130,8 +134,16 @@ function UserSettings(): ReactNode {
                     <OpenUrlButton text="Open dashboard" url={DASHBOARD_URL} />
                 </InputRow>
             )}
-            <InputRow label="Discord">
-                <OpenUrlButton text="Join discord" url={DISCORD_INVITE_URL} />
+            <InputRow label={m.settingsFeedback()}>
+                <Button
+                    leftSection={<ChatCircleTextIcon />}
+                    onClick={() => {
+                        modal.close();
+                        openFeedbackForm();
+                    }}
+                >
+                    {m.settingsLeaveFeedback()}
+                </Button>
             </InputRow>
             {/* Only worth offering to somebody who is not already running the
                 app, which inside Onshape's panel they are. */}

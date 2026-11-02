@@ -2,6 +2,11 @@ import { LibraryId } from "../library/library-id";
 import { ElementType } from "../../lib/onshape/element-type";
 import type { ElementPath } from "../../lib/onshape/path";
 import { InsertSource } from "./usage";
+import type {
+    FeedbackCategory,
+    FeedbackSource,
+    FeedbackTopic
+} from "../feedback/contract";
 
 /** Every type is listed, so an unused one reads as zero. */
 export type InsertTargets = Record<ElementType, number>;
@@ -113,6 +118,10 @@ export interface LibrarySummaryOut {
     /** Also over the range, for the chart and the sparklines. */
     metricSeries: DailyMetricPoint[];
     growth: GrowthOut;
+    /** Over the range, for the library's own topic. */
+    reports: ReportSummary;
+    /** The library's parts reported over the range, most reported first. */
+    reportedParts: ReportedPartOut[];
     from: string;
     to: string;
 }
@@ -130,6 +139,27 @@ export interface VersionManagerTotals {
     links: number;
 }
 
+/** Reports of one kind about one topic, over the range. */
+export interface ReportCount {
+    topic: FeedbackTopic;
+    category: FeedbackCategory;
+    source: FeedbackSource;
+    count: number;
+}
+
+/** A part reported over the range, most reported first. */
+export interface ReportedPartOut {
+    /** The version-pinned tab, as the parts table links it. */
+    path: ElementPath;
+    name: string;
+    count: number;
+}
+
+export interface ReportSummary {
+    /** Every report over the range; only the kinds that happened are listed. */
+    counts: ReportCount[];
+}
+
 export interface AnalyticsOverviewOut {
     /** Over the requested range, for the headline cards. */
     totals: AnalyticsTotals;
@@ -140,6 +170,8 @@ export interface AnalyticsOverviewOut {
     sources: InsertSourceUsage[];
     /** Over the range, but for `links`. */
     versionManager: VersionManagerTotals;
+    /** Over the range, for every topic. */
+    reports: ReportSummary;
     from: string;
     to: string;
     growth: GrowthOut;

@@ -43,6 +43,8 @@ import {
     getVersionManagerTotals,
     toTargets
 } from "./metric-queries";
+import { getReportedParts, getReportSummary } from "./report-queries";
+import { libraryTopic } from "../feedback/contract";
 import {
     clampRange,
     getTrackingSince,
@@ -72,6 +74,7 @@ analyticsRoutes.get(
             metricSeries,
             sources,
             versionManager,
+            reports,
             growth
         ] = await Promise.all([
             getTotals(db, undefined, range),
@@ -80,6 +83,7 @@ analyticsRoutes.get(
             getMetricSeries(db, range),
             getSources(db, requested),
             getVersionManagerTotals(db, requested),
+            getReportSummary(db, requested),
             getGrowth(db, toReportingDay(Date.now()), trackingSince)
         ]);
 
@@ -90,6 +94,7 @@ analyticsRoutes.get(
             metricSeries,
             sources,
             versionManager,
+            reports,
             growth,
             ...requested
         };
@@ -108,16 +113,26 @@ analyticsRoutes.get(
         const trackingSince = await getTrackingSince(db);
         const range = clampRange(requested, trackingSince);
 
-        const [totals, metricSeries, growth] = await Promise.all([
-            getTotals(db, libraryId, range),
-            getMetricSeries(db, range, libraryId),
-            getGrowth(db, toReportingDay(Date.now()), trackingSince, libraryId)
-        ]);
+        const [totals, metricSeries, growth, reports, reportedParts] =
+            await Promise.all([
+                getTotals(db, libraryId, range),
+                getMetricSeries(db, range, libraryId),
+                getGrowth(
+                    db,
+                    toReportingDay(Date.now()),
+                    trackingSince,
+                    libraryId
+                ),
+                getReportSummary(db, requested, libraryTopic(libraryId)),
+                getReportedParts(db, libraryId, requested)
+            ]);
 
         const out: LibrarySummaryOut = {
             totals,
             metricSeries,
             growth,
+            reports,
+            reportedParts,
             ...requested
         };
         return c.json(out);

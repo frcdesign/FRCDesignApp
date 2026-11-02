@@ -151,7 +151,12 @@ export function ConfigurationWrapper(
 
     // A failed fetch also leaves `whole` undefined, so check this first.
     if (query.isError) {
-        return <SectionError title="Failed to load selection." />;
+        return (
+            <SectionError
+                title="Failed to load selection."
+                error={query.error}
+            />
+        );
     }
     if (query.isPending || !whole) {
         return (

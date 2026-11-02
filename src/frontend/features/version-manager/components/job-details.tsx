@@ -3,7 +3,9 @@ import { CircleIcon, MinusCircleIcon } from "@phosphor-icons/react";
 import { type ReactNode } from "react";
 import {
     jobOutcome,
+    VersionJobOutcome,
     VersionJobState,
+    type VersionJobStatus,
     VersionTaskState,
     workspaceKey,
     type VersionTask,
@@ -31,6 +33,9 @@ import {
 import { plural } from "../../../lib/plural";
 import { useVersionJobQuery } from "../queries";
 import { documentLabel } from "../document-label";
+import { FeedbackTopic } from "@backend/features/feedback/contract";
+import { ReportButton } from "../../feedback/components/report-button";
+import { type ReportedError } from "../../feedback/diagnostics";
 
 interface JobDetailsTitleProps {
     workspace: WorkspacePath;
@@ -79,6 +84,7 @@ export function JobDetails(props: JobDetailsProps): ReactNode {
     if (!status) {
         return null;
     }
+    const report = toJobReport(status);
 
     return (
         <Stack gap="md">
@@ -99,8 +105,34 @@ export function JobDetails(props: JobDetailsProps): ReactNode {
             {groupByDocument(status.tasks ?? []).map((group) => (
                 <DocumentSteps key={group.key} group={group} />
             ))}
+            {report && (
+                <Group>
+                    <ReportButton
+                        report={report}
+                        topic={FeedbackTopic.VERSION_MANAGER}
+                    />
+                </Group>
+            )}
         </Stack>
     );
+}
+
+/** A run that didn't fully succeed, as a report carries it; undefined otherwise. */
+function toJobReport(status: VersionJobStatus): ReportedError | undefined {
+    const outcome = jobOutcome(status);
+    if (!outcome || outcome === VersionJobOutcome.SUCCESS) {
+        return undefined;
+    }
+    const failures = (status.tasks ?? [])
+        .filter((task) => task.state === VersionTaskState.FAILED)
+        .map(
+            (task) =>
+                `${TASK_LABEL[task.action]} in ${documentLabel(task.documentName)}: ${task.reason ?? "no reason given"}`
+        );
+    return {
+        shown: `${jobHeadline(status, outcome)}.`,
+        detail: [status.error, ...failures].filter(Boolean).join("\n")
+    };
 }
 
 interface DocumentGroup {

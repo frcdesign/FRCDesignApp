@@ -72,7 +72,11 @@ On the client, `apiGet`/`apiPost` throw an `AppError` holding that body. A
 mutation's `onError` is `getAppErrorHandler(defaultMessage, toastId)`, which
 shows the body's message for `handled` and `forbidden`, adds a **Sign in**
 action for `sign-in-required`, and shows `defaultMessage` for `internal` or any
-non-`AppError`. Images use `loadImage`, which throws `ImageLoadError` with only
+non-`AppError`. Every toast but sign-in's carries a **Report** button
+(`showReportableErrorToast`), which opens a report holding what was shown and
+the error behind it, `internal` message included; a failed load shown as
+`SectionError` or `PageError` says "If the problem persists, send a report."
+beside **Send a report**. See [feedback.md](./feedback.md). Images use `loadImage`, which throws `ImageLoadError` with only
 the status.
 
 ## Retries and timeouts
@@ -114,7 +118,7 @@ which is how a loading toast turns into its result.
 | Loading | blue, spinner | Never, no close button | Work the user is waiting on; always given an id     |
 | Success | green         | 4 s                    | The same id, when the work lands                    |
 | Info    | blue          | 4 s, or as given       | Background work started; tips                       |
-| Error   | red           | 4 s                    | Through `handleAppError`, on the loading toast's id |
+| Error   | red           | 8 s, with **Report**   | Through `handleAppError`, on the loading toast's id |
 
 The flows that use them:
 

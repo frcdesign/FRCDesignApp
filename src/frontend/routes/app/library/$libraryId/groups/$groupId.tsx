@@ -61,7 +61,12 @@ function GroupList(): ReactNode {
     if (libraryQuery.isPending) {
         return <SectionLoading title={m.groupPageLoading()} />;
     } else if (libraryQuery.isError) {
-        return <SectionError title={m.groupPageLoadFailed()} />;
+        return (
+            <SectionError
+                title={m.groupPageLoadFailed()}
+                error={libraryQuery.error}
+            />
+        );
     }
     const groups = libraryQuery.data.groups;
     const insertables = libraryQuery.data.insertables;

@@ -35,6 +35,7 @@ export function FavoritesList(): ReactNode {
         return (
             <SectionError
                 title="Failed to load favorites."
+                error={libraryQuery.error ?? favoritesQuery.error}
                 icon={
                     <AppIcon
                         icon={HeartBreakIcon}

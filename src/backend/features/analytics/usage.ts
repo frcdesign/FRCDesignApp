@@ -10,7 +10,9 @@ export enum EventType {
     INSERT = "insert",
     APP_OPEN = "app_open",
     /** One finished push or pull; see `features/version-manager`. */
-    VERSION_RUN = "version_run"
+    VERSION_RUN = "version_run",
+    /** One report posted to Discord; see `features/feedback`. */
+    REPORT = "report"
 }
 
 /** Not whether the part is favorited. */

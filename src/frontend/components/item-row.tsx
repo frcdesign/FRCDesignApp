@@ -138,14 +138,26 @@ interface ItemRowProps {
     rightSection?: ReactNode;
     /** Shows the explicit "..." button that opens the same menu. */
     moreButton?: boolean;
+    /** Dots the "..." button while the menu holds a new feature. */
+    isNew?: boolean;
+    /** When the menu closes, however it was opened. */
+    onMenuClose?: () => void;
 }
 
 /** Render inside an `ItemTable`. */
 export function ItemRow(props: ItemRowProps): ReactNode {
-    const { left, menuItems, onClick, rightSection, moreButton = true } = props;
+    const {
+        left,
+        menuItems,
+        onClick,
+        rightSection,
+        moreButton = true,
+        isNew,
+        onMenuClose
+    } = props;
 
     return (
-        <AppContextMenu menuItems={menuItems}>
+        <AppContextMenu menuItems={menuItems} onClose={onMenuClose}>
             <Table.Tr onClick={onClick}>
                 <Table.Td>
                     <Group>
@@ -155,7 +167,11 @@ export function ItemRow(props: ItemRowProps): ReactNode {
                             justify="flex-end"
                             className={styles.noShrink}
                         >
-                            {moreButton && <MenuButton>{menuItems}</MenuButton>}
+                            {moreButton && (
+                                <MenuButton isNew={isNew} onClose={onMenuClose}>
+                                    {menuItems}
+                                </MenuButton>
+                            )}
                             {rightSection}
                         </Group>
                     </Group>

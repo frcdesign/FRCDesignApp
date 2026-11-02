@@ -35,7 +35,18 @@ VITE_ACCESS_LEVEL_OVERRIDE=admin
 # Signs you in as a fake user, so signed-in UI can be tested without an Onshape
 # session. Onshape calls it reveals won't work, so leave it unset normally.
 FORCE_SIGNED_IN=false
+
+# Discord forum-channel webhooks reports are posted to (Optional). A topic whose
+# webhook is unset refuses reports. Point these at a test forum, not the real ones.
+DISCORD_APP_WEBHOOK_URL=<Webhook for FRCDesignApp and Version Manager reports>
+DISCORD_FRC_DESIGN_LIB_WEBHOOK_URL=<Webhook for FRCDesignLib and MKCad reports>
+DISCORD_CONFIG_LIB_WEBHOOK_URL=<Webhook for ConfigLib reports>
 ```
+
+In a deployed environment, set the webhooks as secrets with
+`npx wrangler secret put <NAME> --env <environment>`. The forums' channel
+names, invites and tag ids aren't secret, and live in
+`src/backend/features/feedback/discord-forums.ts`.
 
 ## Onshape OAuth App Setup
 

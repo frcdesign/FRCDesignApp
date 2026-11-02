@@ -16,6 +16,7 @@ import {
     dailyInsertableMetrics,
     dailyInsertableUsers,
     dailyMetrics,
+    dailyReportMetrics,
     dailyTargetMetrics,
     dailySourceMetrics,
     dailyUserActivity,
@@ -93,6 +94,7 @@ export async function resetDb(db: Db): Promise<void> {
         db.delete(dailyConfigurationMetrics),
         db.delete(dailyAppOpens),
         db.delete(dailyVersionMetrics),
+        db.delete(dailyReportMetrics),
         db.delete(userStats),
         db.delete(workspaceLinks)
     ]);

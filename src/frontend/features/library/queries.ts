@@ -27,12 +27,17 @@ import {
 import { queryClient } from "../../lib/query-client";
 import { getQueryUpdater } from "../../lib/query-cache";
 import {
-    showErrorToast,
     showInfoToast,
     showLoadingToast,
     showSuccessToast
 } from "../../lib/notifications";
-import { getAppErrorHandler, appError, handleAppError } from "../../lib/errors";
+import {
+    getAppErrorHandler,
+    appError,
+    handleAppError,
+    showReportableErrorToast
+} from "../../lib/errors";
+import { m } from "../../paraglide/messages";
 import { modals } from "@mantine/modals";
 import {
     INVALID_DOCUMENT_URL,
@@ -153,8 +158,8 @@ export function useSetGroupOrderMutation() {
                 })
             );
         },
-        onError: () => {
-            showErrorToast("Unexpectedly failed to reorder group.");
+        onError: (error) => {
+            showReportableErrorToast(m.libraryReorderGroupFailed(), error);
         },
         // A failure bumps nothing, so the patch has to be dropped explicitly.
         onSettled: (_result, error) =>

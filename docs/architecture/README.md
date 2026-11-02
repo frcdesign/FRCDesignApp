@@ -31,6 +31,7 @@ read and comment on, the ones a branch changed first with their diffs; the
 | [analytics.md](./analytics.md)             | Usage tracking, rollups, and the public dashboard                                  |
 | [build-issues.md](./build-issues.md)       | Build issues, the checks that raise them, and the admin card editors fix them from |
 | [version-manager.md](./version-manager.md) | Links between Onshape workspaces, and the pushes and pulls along them              |
+| [feedback.md](./feedback.md)               | Reports to Discord: the feedback form, part reports, error reports                 |
 | [platform.md](./platform.md)               | Onshape client, errors, retries and timeouts, concurrency, toasts, pushes, caching |
 
 [REFERENCE.md](../REFERENCE.md) is the tour of the whole system and links here
