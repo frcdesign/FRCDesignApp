@@ -1,8 +1,8 @@
 # Build issues and the admin card: strings
 
-What [build-issues.md](../architecture/build-issues.md) shows an editor. Issue
-text is in `src/backend/features/build-checker/issues.ts`; the rest is in
-`src/frontend/features/build-status/`.
+What [build-issues.md](../architecture/build-issues.md) shows an editor. Every
+string is a message in `src/frontend/messages/en.json`, keyed
+`buildIssue…` for the checks and `adminCard…` for the rest.
 
 ## Build checks
 

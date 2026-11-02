@@ -1,0 +1,227 @@
+{
+    "$schema": "https://inlang.com/schema/inlang-message-format",
+    "buildIssueThumbnailFailed": "Thumbnail failed to render",
+    "buildIssueThumbnailFailedHelp": "Use Reload thumbnail to try again.",
+    "buildIssueNoThumbnailTab": "No document thumbnail set",
+    "buildIssueNoVendors": "No vendors found",
+    "buildIssueNoParts": "Part studio has no parts",
+    "buildIssueNoUnhiddenInsertables": "Every element is hidden",
+    "buildIssueConfigurationLimitExceeded": "Too many configurations to index",
+    "buildIssueConfigurationLimitExceededHelp": "Stop indexing parameters to get under {max: number}.",
+    "buildIssueManualIndexingRequired": "Indexing is off",
+    "buildIssueManualIndexingRequiredHelp": "Elements with {threshold: number}+ configurations must be enabled manually.",
+    "buildIssueMultipleParts": "Part studio has more than one part",
+    "buildIssueConfigurationMultipleParts": [
+        {
+            "declarations": [
+                "input count",
+                "local countPlural = count: plural",
+                "local formatted = count: number"
+            ],
+            "selectors": ["countPlural"],
+            "match": {
+                "countPlural=one": "A configuration has more than one part",
+                "countPlural=other": "{formatted} configurations have more than one part"
+            }
+        }
+    ],
+    "buildIssueUnstableComposite": [
+        {
+            "declarations": [
+                "input count",
+                "local countPlural = count: plural",
+                "local formatted = count: number"
+            ],
+            "selectors": ["countPlural"],
+            "match": {
+                "countPlural=one": "A configuration has no open composite part",
+                "countPlural=other": "{formatted} configurations have no open composite part"
+            }
+        }
+    ],
+    "buildIssueUnstableCompositeHelp": "The default configuration has one, so every configuration should.",
+    "buildIssueUnstableMateConnector": "First mate connector isn't stable",
+    "buildIssueUnstableMateConnectorHelp": "The first mate connector must be stable across all configurations.",
+    "buildIssueInsertablesFailed": "Some elements failed to load",
+    "buildIssueLoadFailed": "Document failed to load",
+    "buildIssueNotLoaded": "Document not loaded yet",
+    "buildIssueNotLoadedHelp": "Use Reload if it doesn't start loading.",
+    "adminCardAllChecksPass": "All checks pass",
+    "adminCardErrorCount": [
+        {
+            "declarations": [
+                "input count",
+                "local countPlural = count: plural",
+                "local formatted = count: number"
+            ],
+            "selectors": ["countPlural"],
+            "match": {
+                "countPlural=one": "{formatted} error",
+                "countPlural=other": "{formatted} errors"
+            }
+        }
+    ],
+    "adminCardWarningCount": [
+        {
+            "declarations": [
+                "input count",
+                "local countPlural = count: plural",
+                "local formatted = count: number"
+            ],
+            "selectors": ["countPlural"],
+            "match": {
+                "countPlural=one": "{formatted} warning",
+                "countPlural=other": "{formatted} warnings"
+            }
+        }
+    ],
+    "adminCardInfoCount": "{count: number} info",
+    "adminCardPartStudio": "Part studio",
+    "adminCardAssembly": "Assembly",
+    "adminCardVersionUnknown": "Unknown",
+    "adminCardLoading": "Being loaded from Onshape in the background.",
+    "adminCardAwaitingApproval": "Awaiting approval",
+    "adminCardBuildChecks": "Build checks",
+    "adminCardSettings": "Settings",
+    "adminCardConfiguration": "Configuration",
+    "adminCardUsage": "Usage",
+    "adminCardVisibleToUsers": "Visible to users",
+    "adminCardHideTitle": "Hide elements",
+    "adminCardHideBody": "You are about to hide one or more elements. This will also permanently remove them from all users' favorites. Are you sure?",
+    "adminCardHideConfirm": "Hide",
+    "adminCardHideCancel": "Cancel",
+    "adminCardShowing": [
+        {
+            "declarations": [
+                "input count",
+                "local countPlural = count: plural"
+            ],
+            "selectors": ["countPlural"],
+            "match": {
+                "countPlural=one": "Showing element...",
+                "countPlural=other": "Showing elements..."
+            }
+        }
+    ],
+    "adminCardHiding": [
+        {
+            "declarations": [
+                "input count",
+                "local countPlural = count: plural"
+            ],
+            "selectors": ["countPlural"],
+            "match": {
+                "countPlural=one": "Hiding element...",
+                "countPlural=other": "Hiding elements..."
+            }
+        }
+    ],
+    "adminCardShown": [
+        {
+            "declarations": [
+                "input count",
+                "local countPlural = count: plural"
+            ],
+            "selectors": ["countPlural"],
+            "match": {
+                "countPlural=one": "Element shown.",
+                "countPlural=other": "Elements shown."
+            }
+        }
+    ],
+    "adminCardHidden": [
+        {
+            "declarations": [
+                "input count",
+                "local countPlural = count: plural"
+            ],
+            "selectors": ["countPlural"],
+            "match": {
+                "countPlural=one": "Element hidden.",
+                "countPlural=other": "Elements hidden."
+            }
+        }
+    ],
+    "adminCardVisibilityFailed": "Unexpectedly failed to modify visibility.",
+    "adminCardInsertAndFasten": "Insert and fasten",
+    "adminCardNoMateConnector": "No mate connector found",
+    "adminCardEnablingFasten": "Enabling insert and fasten...",
+    "adminCardDisablingFasten": "Disabling insert and fasten...",
+    "adminCardEnabledFasten": "Enabled insert and fasten.",
+    "adminCardDisabledFasten": "Disabled insert and fasten.",
+    "adminCardFastenFailed": "Unexpectedly failed to update insert and fasten.",
+    "adminCardVendors": "Vendors",
+    "adminCardNoVendors": "None found",
+    "adminCardSortAlphabetically": "Sort alphabetically",
+    "adminCardSortFailed": "Unexpectedly failed to update sort order.",
+    "adminCardUnsaved": "Unsaved",
+    "adminCardIndexConfigurations": "Index configurations",
+    "adminCardCountUncounted": "Over {max: number} configurations",
+    "adminCardCountNothing": "Nothing to index",
+    "adminCardCountAutomatic": [
+        {
+            "declarations": [
+                "input count",
+                "local countPlural = count: plural",
+                "local formatted = count: number"
+            ],
+            "selectors": ["countPlural"],
+            "match": {
+                "countPlural=one": "1 configuration, indexed automatically",
+                "countPlural=other": "{formatted} configurations, indexed automatically"
+            }
+        }
+    ],
+    "adminCardCountManual": [
+        {
+            "declarations": [
+                "input count",
+                "local countPlural = count: plural",
+                "local formatted = count: number"
+            ],
+            "selectors": ["countPlural"],
+            "match": {
+                "countPlural=one": "1 configuration",
+                "countPlural=other": "{formatted} configurations"
+            }
+        }
+    ],
+    "adminCardCountExceeded": [
+        {
+            "declarations": [
+                "input count",
+                "input max",
+                "local countPlural = count: plural",
+                "local formatted = count: number",
+                "local formattedMax = max: number"
+            ],
+            "selectors": ["countPlural"],
+            "match": {
+                "countPlural=one": "1 configuration, over the limit of {formattedMax}",
+                "countPlural=other": "{formatted} configurations, over the limit of {formattedMax}"
+            }
+        }
+    ],
+    "adminCardIndexLimit": "At most {max: number} configurations can be indexed. Uncheck parameters until it is under the limit.",
+    "adminCardParameter": "Parameter",
+    "adminCardType": "Type",
+    "adminCardIndexed": "Indexed",
+    "adminCardTypeNotIndexed": "{type} parameters aren't indexed.",
+    "adminCardRoleNotIndexed": ", so never indexed.",
+    "adminCardEnumBadge": "{type} · {count: number}",
+    "adminCardDefaultOption": "Default",
+    "adminCardDiscard": "Discard",
+    "adminCardSave": "Save",
+    "adminCardReindexing": "Reindexing...",
+    "adminCardReindexed": "Reindexed.",
+    "adminCardIndexingFailed": "Unexpectedly failed to update indexing.",
+    "adminCardOpenDashboard": "Open in dashboard",
+    "adminCardInserts": "Inserts",
+    "adminCardPerMonth": "Per month",
+    "adminCardFavorites": "Favorites",
+    "parameterTypeEnum": "Enum",
+    "parameterTypeBoolean": "Boolean",
+    "parameterTypeQuantity": "Quantity",
+    "parameterTypeText": "Text",
+    "settingsAdminSettings": "Admin settings"
+}

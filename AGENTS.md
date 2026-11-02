@@ -122,6 +122,29 @@ default" — goes through `canonicalValue`/`canonicalValues`, never through a ke
 Don't add a third form: if something needs a different view of a selection, it
 wants a function in `selection.ts`, not a new shape.
 
+# User-facing strings
+
+Text the app shows is a message in `src/frontend/messages/en.json`, compiled by
+Paraglide into typed functions: `m.adminCardUnsaved()`,
+`m.adminCardShowing({ count })`. Import `m` from `src/frontend/paraglide/messages`.
+`npm run messages` compiles it, and runs before `tsc`, `test` and `build` and
+after install; the Vite plugin recompiles in dev. `src/frontend/paraglide/` is
+generated and git-ignored: never edit it.
+
+- Keys are camelCase, prefixed by area: `buildIssue…`, `adminCard…`.
+- A count goes through a `plural` selector and a number through `: number`,
+  never `count === 1 ? … : …` or `toLocaleString` in code.
+- A sentence is one message with parameters, never pieces joined in code.
+- Text from Onshape — a part, parameter or option name — is a parameter, not a
+  message.
+- A value with a known set of cases maps to its message in an exhaustive
+  `switch`, so a new case without one fails `tsc`; never index `m` by a built
+  key.
+
+The build-status feature is migrated. The rest moves over as it is worked on:
+a new string goes in the catalog, and a component you change has its strings
+moved there in the same change. `docs/strings/` lists them for review.
+
 # Architecture docs
 
 `docs/architecture/` holds one document per feature area, indexed in its

@@ -29,6 +29,7 @@ import {
 } from "../../../lib/ui-state";
 import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
 import { SETUP_URL } from "../../../lib/url";
+import { m } from "../../../paraglide/messages";
 import { useLibraryId } from "../../../lib/library";
 import { ReloadButton } from "../../library/components/reload-button";
 import {
@@ -191,7 +192,10 @@ function AdminSettingsSection(): ReactNode {
             opened={opened}
             onChange={(next) => setOpenedSections(ADMIN_SECTION_IDS, next)}
         >
-            <AppSection value={SectionId.ADMIN_SETTINGS} name="Admin settings">
+            <AppSection
+                value={SectionId.ADMIN_SETTINGS}
+                name={m.settingsAdminSettings()}
+            >
                 <AdminSettings />
             </AppSection>
         </AppSections>

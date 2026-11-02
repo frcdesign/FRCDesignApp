@@ -47,6 +47,7 @@ import { IssueIcon } from "./issues";
 import { CardSection } from "./card-section";
 import { SectionId } from "../../../lib/ui-state";
 import { getParameterTypeLabel } from "../parameter-type-label";
+import { m } from "../../../paraglide/messages";
 import styles from "../../../lib/styles.module.css";
 
 /** Tall enough for a handful of parameters before the table starts scrolling. */
@@ -77,7 +78,7 @@ export function ConfigurationSection(
     return (
         <CardSection
             id={SectionId.CONFIGURATION}
-            title="Configuration"
+            title={m.adminCardConfiguration()}
             actions={<UnsavedBadge isUnsaved={view.isUnsaved} />}
         >
             <ConfigurationEditor
@@ -99,7 +100,7 @@ function UnsavedBadge(props: UnsavedBadgeProps): ReactNode {
     if (!props.isUnsaved) return null;
     return (
         <Badge color={StatusColor.WARNING} className={styles.noShrink}>
-            Unsaved
+            {m.adminCardUnsaved()}
         </Badge>
     );
 }
@@ -131,7 +132,7 @@ function ConfigurationEditor(props: ConfigurationEditorProps): ReactNode {
     return (
         <Stack gap="sm">
             <HoverBubbleRow
-                label="Index configurations"
+                label={m.adminCardIndexConfigurations()}
                 description={describeCount(count, band)}
             >
                 <IndexingControl
@@ -153,12 +154,12 @@ function ConfigurationEditor(props: ConfigurationEditorProps): ReactNode {
                 >
                     <Table.Thead>
                         <Table.Tr c={StatusColor.DIMMED}>
-                            <Table.Th>Parameter</Table.Th>
+                            <Table.Th>{m.adminCardParameter()}</Table.Th>
                             <Table.Th w={TYPE_COLUMN_WIDTH} ta="center">
-                                Type
+                                {m.adminCardType()}
                             </Table.Th>
                             <Table.Th w={INDEXED_COLUMN_WIDTH} ta="center">
-                                Indexed
+                                {m.adminCardIndexed()}
                             </Table.Th>
                         </Table.Tr>
                     </Table.Thead>
@@ -184,22 +185,21 @@ function ConfigurationEditor(props: ConfigurationEditorProps): ReactNode {
 
 function describeCount(count: number | undefined, band: IndexingBand): string {
     if (count === undefined) {
-        return `Over ${MAX_COUNTED_CONFIGURATIONS.toLocaleString()} configurations`;
+        return m.adminCardCountUncounted({ max: MAX_COUNTED_CONFIGURATIONS });
     }
     if (count === 0) {
-        return "Nothing to index";
+        return m.adminCardCountNothing();
     }
-    const counted =
-        count === 1
-            ? "1 configuration"
-            : `${count.toLocaleString()} configurations`;
     switch (band) {
         case IndexingBand.AUTOMATIC:
-            return `${counted}, indexed automatically`;
+            return m.adminCardCountAutomatic({ count });
         case IndexingBand.MANUAL:
-            return counted;
+            return m.adminCardCountManual({ count });
         case IndexingBand.EXCEEDED:
-            return `${counted}, over the limit of ${MAX_PART_NUMBER_CONFIGURATIONS}`;
+            return m.adminCardCountExceeded({
+                count,
+                max: MAX_PART_NUMBER_CONFIGURATIONS
+            });
     }
 }
 
@@ -215,7 +215,9 @@ function IndexingControl(props: IndexingControlProps): ReactNode {
     if (band === IndexingBand.EXCEEDED) {
         return (
             <Tooltip
-                label={`At most ${MAX_PART_NUMBER_CONFIGURATIONS} configurations can be indexed. Uncheck parameters until it is under the limit.`}
+                label={m.adminCardIndexLimit({
+                    max: MAX_PART_NUMBER_CONFIGURATIONS
+                })}
             >
                 <IssueIcon
                     severity={BuildIssueSeverity.ERROR}
@@ -278,10 +280,12 @@ function IndexCheckbox(props: IndexCheckboxProps): ReactNode {
     const reason = parameter.role ? (
         <ParameterRoleLabel
             role={parameter.role}
-            suffix=", so never indexed."
+            suffix={m.adminCardRoleNotIndexed()}
         />
     ) : (
-        `${getParameterTypeLabel(parameter.type)} parameters aren't indexed.`
+        m.adminCardTypeNotIndexed({
+            type: getParameterTypeLabel(parameter.type)
+        })
     );
     return (
         <Tooltip label={reason}>
@@ -333,7 +337,10 @@ function ParameterTypeBadge(props: ParameterTypeBadgeProps): ReactNode {
             below
             target={
                 <Badge size="xs">
-                    {`${getParameterTypeLabel(parameter.type)} · ${parameter.options.length}`}
+                    {m.adminCardEnumBadge({
+                        type: getParameterTypeLabel(parameter.type),
+                        count: parameter.options.length
+                    })}
                 </Badge>
             }
         >
@@ -355,7 +362,7 @@ function EnumOptions(props: EnumOptionsProps): ReactNode {
                     <Text size="sm">{option.name}</Text>
                     {option.id === parameter.default && (
                         <Text size="xs" c={StatusColor.DIMMED}>
-                            Default
+                            {m.adminCardDefaultOption()}
                         </Text>
                     )}
                 </Group>
@@ -390,7 +397,7 @@ function SaveButtons(props: SaveButtonsProps): ReactNode {
                 disabled={!view.isUnsaved}
                 onClick={() => clearIndexingDraft(insertableId)}
             >
-                Discard
+                {m.adminCardDiscard()}
             </Button>
             <Button
                 size="xs"
@@ -398,7 +405,7 @@ function SaveButtons(props: SaveButtonsProps): ReactNode {
                 disabled={!view.isUnsaved}
                 onClick={save}
             >
-                Save
+                {m.adminCardSave()}
             </Button>
         </Group>
     );

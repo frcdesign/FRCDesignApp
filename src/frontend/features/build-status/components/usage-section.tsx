@@ -15,6 +15,7 @@ import {
 } from "../../../lib/style-constants";
 import { CardSection } from "./card-section";
 import { SectionId } from "../../../lib/ui-state";
+import { m } from "../../../paraglide/messages";
 
 interface UsageSectionProps {
     /** Analytics key parts by element, so a reloaded tab keeps its history. */
@@ -28,9 +29,9 @@ export function UsageSection(props: UsageSectionProps): ReactNode {
     return (
         <CardSection
             id={SectionId.USAGE}
-            title="Usage"
+            title={m.adminCardUsage()}
             actions={
-                <Tooltip label="Open in dashboard">
+                <Tooltip label={m.adminCardOpenDashboard()}>
                     <ActionIcon
                         size="sm"
                         component="a"
@@ -69,9 +70,9 @@ function UsageStats(props: UsageStatsProps): ReactNode {
     const part = parts.data?.find((each) => each.path.elementId === elementId);
     return (
         <SimpleGrid cols={3} spacing="xs">
-            <Stat label="Inserts" value={part?.insertCount} />
-            <Stat label="Per month" value={part?.usesPerMonth} />
-            <Stat label="Favorites" value={part?.favorites} />
+            <Stat label={m.adminCardInserts()} value={part?.insertCount} />
+            <Stat label={m.adminCardPerMonth()} value={part?.usesPerMonth} />
+            <Stat label={m.adminCardFavorites()} value={part?.favorites} />
         </SimpleGrid>
     );
 }

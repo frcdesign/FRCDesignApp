@@ -26,6 +26,7 @@ import { LibraryId } from "@backend/features/library/library-id";
 import { useLibraryId } from "../../lib/library";
 import { useCacheVersion } from "../library/queries";
 import { buildStatusQueryKey } from "../../lib/query-keys";
+import { m } from "../../paraglide/messages";
 
 function getBuildStatusQuery(libraryId: LibraryId, cacheVersion: number) {
     return queryOptions<LibraryBuildStatus>({
@@ -87,8 +88,7 @@ export function useSetVisibilityMutation(
     const libraryId = useLibraryId();
     const key = useBuildStatusKey();
     const settle = useSettleBuildStatus();
-    const noun = insertableIds.length === 1 ? "element" : "elements";
-    const capitalizedNoun = insertableIds.length === 1 ? "Element" : "Elements";
+    const count = insertableIds.length;
 
     const mutation = useMutation({
         mutationKey: ["set-insertable-visibility", ...insertableIds],
@@ -105,7 +105,9 @@ export function useSetVisibilityMutation(
         },
         onMutate: () => {
             showLoadingToast(
-                isVisible ? `Showing ${noun}...` : `Hiding ${noun}...`,
+                isVisible
+                    ? m.adminCardShowing({ count })
+                    : m.adminCardHiding({ count }),
                 "set-visibility"
             );
             return patchQuery<LibraryBuildStatus>(key, (status) => {
@@ -118,13 +120,13 @@ export function useSetVisibilityMutation(
         onSuccess: () => {
             showSuccessToast(
                 isVisible
-                    ? `${capitalizedNoun} shown.`
-                    : `${capitalizedNoun} hidden.`,
+                    ? m.adminCardShown({ count })
+                    : m.adminCardHidden({ count }),
                 "set-visibility"
             );
         },
         onError: getAppErrorHandler(
-            "Unexpectedly failed to modify visibility.",
+            m.adminCardVisibilityFailed(),
             "set-visibility"
         ),
         onSettled: settle
@@ -136,10 +138,12 @@ export function useSetVisibilityMutation(
             return;
         }
         modals.openConfirmModal({
-            title: "Hide elements",
-            children:
-                "You are about to hide one or more elements. This will also permanently remove them from all users' favorites. Are you sure?",
-            labels: { confirm: "Hide", cancel: "Cancel" },
+            title: m.adminCardHideTitle(),
+            children: m.adminCardHideBody(),
+            labels: {
+                confirm: m.adminCardHideConfirm(),
+                cancel: m.adminCardHideCancel()
+            },
             confirmProps: { color: "red" },
             onConfirm: () => mutation.mutate()
         });
@@ -166,8 +170,8 @@ export function useToggleInsertAndFastenMutation(insertableId: string) {
         onMutate: (supportsFasten) => {
             showLoadingToast(
                 supportsFasten
-                    ? "Enabling insert and fasten..."
-                    : "Disabling insert and fasten...",
+                    ? m.adminCardEnablingFasten()
+                    : m.adminCardDisablingFasten(),
                 toastId
             );
             return patchInsertable(key, insertableId, (insertable) => {
@@ -178,14 +182,11 @@ export function useToggleInsertAndFastenMutation(insertableId: string) {
         onSuccess: (_result, supportsFasten) =>
             showSuccessToast(
                 supportsFasten
-                    ? "Enabled insert and fasten."
-                    : "Disabled insert and fasten.",
+                    ? m.adminCardEnabledFasten()
+                    : m.adminCardDisabledFasten(),
                 toastId
             ),
-        onError: getAppErrorHandler(
-            "Unexpectedly failed to update insert and fasten.",
-            toastId
-        ),
+        onError: getAppErrorHandler(m.adminCardFastenFailed(), toastId),
         onSettled: settle
     });
 }
@@ -206,16 +207,13 @@ export function useIndexingMutation(insertableId: string) {
                 { body: settings }
             ),
         onMutate: (settings) => {
-            showInfoToast("Reindexing...", { id: toastId });
+            showInfoToast(m.adminCardReindexing(), { id: toastId });
             return patchInsertable(key, insertableId, (insertable) => {
                 Object.assign(insertable, settings);
             });
         },
-        onSuccess: () => showSuccessToast("Reindexed.", toastId),
-        onError: getAppErrorHandler(
-            "Unexpectedly failed to update indexing.",
-            toastId
-        ),
+        onSuccess: () => showSuccessToast(m.adminCardReindexed(), toastId),
+        onError: getAppErrorHandler(m.adminCardIndexingFailed(), toastId),
         onSettled: settle
     });
 }
@@ -236,9 +234,7 @@ export function useToggleSortOrderMutation(groupId: string) {
                 const group = status.groups[groupId];
                 if (group) group.sortAlphabetically = sortAlphabetically;
             }),
-        onError: getAppErrorHandler(
-            "Unexpectedly failed to update sort order."
-        ),
+        onError: getAppErrorHandler(m.adminCardSortFailed()),
         onSettled: settle
     });
 }

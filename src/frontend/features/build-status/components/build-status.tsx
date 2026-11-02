@@ -21,6 +21,7 @@ import { RequireAccessLevel } from "../../auth/components/require-access";
 import { useBuildStatusQuery } from "../queries";
 import { useIsGroupLoading } from "../../library/queries";
 import { useHasIndexingDraft } from "../indexing-draft";
+import { m } from "../../../paraglide/messages";
 import { SectionId } from "../../../lib/ui-state";
 import {
     BuildIssueList,
@@ -101,7 +102,7 @@ function BuildStatusHoverCard({
             <CardSection
                 key="build-checks"
                 id={SectionId.BUILD_CHECKS}
-                title="Build checks"
+                title={m.adminCardBuildChecks()}
             >
                 <BuildIssueList
                     issues={issues}
@@ -147,9 +148,15 @@ function BuildStatusHoverCard({
 }
 
 /** Onshape's own tab icons, which its users already know the two by. */
-const ELEMENT_TYPES: Record<ElementType, { label: string; icon: string }> = {
-    [ElementType.PART_STUDIO]: { label: "Part studio", icon: partStudioIcon },
-    [ElementType.ASSEMBLY]: { label: "Assembly", icon: assemblyIcon }
+const ELEMENT_TYPES: Record<
+    ElementType,
+    { label: () => string; icon: string }
+> = {
+    [ElementType.PART_STUDIO]: {
+        label: m.adminCardPartStudio,
+        icon: partStudioIcon
+    },
+    [ElementType.ASSEMBLY]: { label: m.adminCardAssembly, icon: assemblyIcon }
 };
 
 interface ElementTypeIconProps {
@@ -159,7 +166,7 @@ interface ElementTypeIconProps {
 function ElementTypeIcon(props: ElementTypeIconProps): ReactNode {
     const { elementType } = props;
     return (
-        <Tooltip label={ELEMENT_TYPES[elementType].label}>
+        <Tooltip label={ELEMENT_TYPES[elementType].label()}>
             <Image
                 src={ELEMENT_TYPES[elementType].icon}
                 w={IconSize.MEDIUM}
@@ -181,7 +188,7 @@ function VersionAge(props: VersionAgeProps): ReactNode {
     const loading = useIsGroupLoading(groupId);
     if (loading) {
         return (
-            <Tooltip label="Being loaded from Onshape in the background.">
+            <Tooltip label={m.adminCardLoading()}>
                 <Loader size="xs" className={styles.noShrink} />
             </Tooltip>
         );
@@ -197,7 +204,7 @@ function VersionAge(props: VersionAgeProps): ReactNode {
             <Text size="xs">
                 {versionCreatedAt
                     ? formatShortTimeAgo(versionCreatedAt)
-                    : "Unknown"}
+                    : m.adminCardVersionUnknown()}
             </Text>
         </Group>
     );
@@ -238,7 +245,7 @@ export function InsertableStatusBadge(
                 <CardSection
                     key="settings"
                     id={SectionId.SETTINGS}
-                    title="Settings"
+                    title={m.adminCardSettings()}
                 >
                     <InsertableSettings
                         insertableId={insertableId}
@@ -284,7 +291,7 @@ export function GroupStatusBadge(props: GroupStatusBadgeProps): ReactNode {
                         <CardSection
                             key="settings"
                             id={SectionId.SETTINGS}
-                            title="Settings"
+                            title={m.adminCardSettings()}
                         >
                             <GroupSettings
                                 groupId={groupId}
@@ -312,7 +319,7 @@ function AwaitingApprovalBadge(props: AwaitingApprovalBadgeProps): ReactNode {
             color={StatusColor.WARNING}
             leftSection={<HourglassIcon size={IconSize.TINY} />}
         >
-            Awaiting approval
+            {m.adminCardAwaitingApproval()}
         </Badge>
     );
 }

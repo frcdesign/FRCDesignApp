@@ -34,5 +34,6 @@ user.
 Leave out trivial, uncontroversial strings: a "Save" or "Cancel" button, a
 column heading that only names its column.
 
-Update a file in the same commit as the strings it lists; `AGENTS.md` has the
-rule.
+The text itself lives in the message catalog, `src/frontend/messages/en.json`
+(`AGENTS.md` covers it); these files are where it is reviewed. Update a file in
+the same commit as the messages it lists.

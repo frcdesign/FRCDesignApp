@@ -48,8 +48,6 @@ function toConfigurationIssue(
 ): BuildIssue;
 // Drops types a later deploy removed; the column applies it on every read.
 function knownBuildIssues(issues: BuildIssue[]): BuildIssue[];
-function getIssueTitle(issue: BuildIssue): string;
-function getIssueDescription(issue: BuildIssue): string | undefined;
 function getIssueSeverity(issue: BuildIssue): BuildIssueSeverity;
 function getMaxSeverity(issues: BuildIssue[]): BuildIssueSeverity | undefined;
 function getIssueConfiguration(issue: BuildIssue): PartialSelection | undefined;
@@ -240,6 +238,15 @@ interface IndexingView extends IndexingSettings {
 
 /** An admin's edits, holding only what differs from what is stored. */
 type IndexingDraft = Partial<IndexingSettings>;
+```
+
+`src/frontend/features/build-status/issue-text.ts`, from the messages in
+`src/frontend/messages/en.json`
+
+```ts
+// One message per issue type; a type without one fails tsc.
+function getIssueTitle(issue: BuildIssue): string;
+function getIssueDescription(issue: BuildIssue): string | undefined;
 ```
 
 `src/frontend/features/build-status/components/build-status.tsx`,
