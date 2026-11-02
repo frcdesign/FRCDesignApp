@@ -125,8 +125,9 @@ wants a function in `selection.ts`, not a new shape.
 # Architecture docs
 
 `docs/architecture/` holds one document per feature area, indexed in its
-`README.md`: thumbnails, configurations, loading, favorites, auth (with access
-levels and environment variables), search, analytics, and the version manager. Each states the area's flows, storage,
+`README.md`: thumbnails, configurations, loading, favorites, recents, auth
+(with access levels and environment variables), search, analytics, build
+issues and the admin card, and the version manager. Each states the area's flows, storage,
 **invariants**, failure modes and decisions. Read the area's document before
 changing it, and check the change against its invariants.
 
@@ -138,6 +139,9 @@ Update the document in the same commit when a change:
 - adds, renames or removes an environment variable or binding;
 - changes who may do something (a guard);
 - moves or renames a file a document names (`npm run check:docs` fails on these);
+- adds, rewords or removes a string the user sees that its **User-facing
+  strings** table lists or should list, or a function, interface, type or
+  enum its code map lists;
 - breaks or replaces an invariant. That is a design change: say so in the
   commit message, rewrite the invariant, and add the reason under **Decisions**.
 
