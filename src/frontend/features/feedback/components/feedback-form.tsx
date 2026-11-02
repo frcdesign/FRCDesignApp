@@ -212,11 +212,6 @@ export function FeedbackForm(props: FeedbackFormProps): ReactNode {
                     value={contact}
                     onChange={(event) => setContact(event.currentTarget.value)}
                 />
-                <Text size="sm" c="dimmed">
-                    Sent with your Onshape user id, the page you&apos;re on and
-                    your browser, to help find the problem. Nothing about your
-                    own documents is included.
-                </Text>
             </AppModalBody>
             <AppModalFooter>
                 <Button variant="default" onClick={modal.close}>
