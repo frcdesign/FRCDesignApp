@@ -222,8 +222,11 @@ export function InsertableMenuItems(
             <MenuSection label={m.feedbackMenuSection()}>
                 <ReportIssueItem
                     insertable={insertable}
-                    // The menu's whole selection; a card's search hit names only some.
-                    selection={report?.selection ?? selection}
+                    selection={
+                        inInsertMenu
+                            ? (report?.selection ?? selection)
+                            : undefined
+                    }
                 />
             </MenuSection>
             <AdminMenuSection>

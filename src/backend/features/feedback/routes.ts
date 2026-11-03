@@ -53,6 +53,7 @@ feedbackRoutes.post("/feedback", validate("json", feedbackBody), async (c) => {
                 HttpStatus.NOT_FOUND
             );
         }
+        part.inDocument = body.part.inDocument;
     }
 
     const reportId = crypto.randomUUID();

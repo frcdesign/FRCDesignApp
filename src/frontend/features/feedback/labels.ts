@@ -38,35 +38,38 @@ export function typeLabel(category: FeedbackCategory): string {
             return m.feedbackTypeBrokenConfiguration();
         case FeedbackCategory.THUMBNAIL:
             return m.feedbackTypeThumbnail();
+        case FeedbackCategory.KUDOS:
+            return m.feedbackTypeKudos();
         case FeedbackCategory.OTHER:
             return m.feedbackTypeOther();
     }
 }
 
-/** What the details box asks for, which follows the type. */
-export function detailsPlaceholder(category: FeedbackCategory): string {
+/** What the description box asks for, which follows the type. */
+export function descriptionPlaceholder(category: FeedbackCategory): string {
     switch (category) {
         case FeedbackCategory.BUG:
-            return m.feedbackDetailsBug();
+            return m.feedbackDescriptionBug();
         case FeedbackCategory.FEATURE_REQUEST:
-            return m.feedbackDetailsFeatureRequest();
+            return m.feedbackDescriptionFeatureRequest();
         case FeedbackCategory.PART_REQUEST:
-            return m.feedbackDetailsPartRequest();
+            return m.feedbackDescriptionPartRequest();
         case FeedbackCategory.METADATA:
-            return m.feedbackDetailsMetadata();
+            return m.feedbackDescriptionMetadata();
         case FeedbackCategory.INCORRECT_GEOMETRY:
-            return m.feedbackDetailsIncorrectGeometry();
+            return m.feedbackDescriptionIncorrectGeometry();
         case FeedbackCategory.BROKEN_CONFIGURATION:
-            return m.feedbackDetailsBrokenConfiguration();
+            return m.feedbackDescriptionBrokenConfiguration();
+        case FeedbackCategory.KUDOS:
+            return m.feedbackDescriptionKudos();
         case FeedbackCategory.ORGANIZATION:
         case FeedbackCategory.THUMBNAIL:
         case FeedbackCategory.OTHER:
-            return m.feedbackDetailsOther();
+            return m.feedbackDescriptionOther();
     }
 }
 
 interface TitleContext {
-    topic: FeedbackTopic;
     category: FeedbackCategory;
     /** The part a part report names. */
     partName?: string;
@@ -74,15 +77,20 @@ interface TitleContext {
     errorShown?: string;
 }
 
-/** What the form fills the title in with until the reporter writes their own. */
-export function suggestTitle(context: TitleContext): string {
-    const { topic, category, partName, errorShown } = context;
-    const title = errorShown
-        ? errorShown.replace(/\.$/, "")
-        : m.feedbackSuggestedTitle({
-              type: typeLabel(category),
-              about: partName ?? topicLabel(topic)
-          });
+/** What the form fills the title in with until the reporter writes their own; none for general feedback. */
+export function suggestTitle(context: TitleContext): string | undefined {
+    const { category, partName, errorShown } = context;
+    let title;
+    if (errorShown) {
+        title = errorShown.replace(/\.$/, "");
+    } else if (partName) {
+        title = m.feedbackSuggestedTitle({
+            type: typeLabel(category),
+            about: partName
+        });
+    } else {
+        return undefined;
+    }
     return title.length <= MAX_FEEDBACK_TITLE
         ? title
         : title.slice(0, MAX_FEEDBACK_TITLE - 1) + "…";

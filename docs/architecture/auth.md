@@ -47,9 +47,12 @@ team, plus one owner set by configuration.
   once the feature has been opened: the version manager's page on showing, the
   insert location's card on closing, an insert menu's ⋯ menu offering **Set
   default configuration** on closing, and a part's menu (on its card or in the
-  insert menu) offering **Report an issue** on closing. Signed out, the dot goes for the session only.
-  Kept until deleted; losing it only shows a dot again.
-- **localStorage** (`ui-state`): `accessLevel`, the level the app is viewed as.
+  insert menu) offering **Report an issue** on closing. Kept until deleted;
+  losing it only shows a dot again.
+- **localStorage** (`ui-state`): `accessLevel`, the level the app is viewed as;
+  `seenHints`, the hints dismissed in this browser. `useHasSeenHint` reads them
+  beside the server's list, so signed out a dot stays gone, and signed in a
+  refetch that reads KV before the dismissal lands can't bring it back.
 
 ## Flows
 

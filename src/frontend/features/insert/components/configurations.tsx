@@ -222,6 +222,8 @@ function ParameterCells(props: ParameterCellsProps): ReactNode {
 // Lets a long option sit on one line where there is room.
 const DROPDOWN_PROPS: ComboboxProps = {
     width: "max-content",
+    // Placed before it is measured, a dropdown past the edge would widen a phone's layout viewport.
+    floatingStrategy: "fixed",
     position: "bottom-end",
     middlewares: {
         shift: { padding: 8 },

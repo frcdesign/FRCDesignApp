@@ -10,6 +10,7 @@ import type { AccessLevel } from "@backend/features/auth/access-level";
 import type { LibraryId } from "@backend/features/library/library-id";
 import type { Vendor } from "@backend/features/library/vendors";
 import type { PartialSelection } from "@backend/features/configurations/contract";
+import type { Hint } from "@backend/features/hints/contract";
 import type { AppTab } from "./app-tab";
 
 export enum Theme {
@@ -66,6 +67,8 @@ interface UiState {
     openInsertableId?: string;
     openSelection?: PartialSelection;
     openFavoriteId?: string;
+    /** Hints dismissed in this browser, which a refetch of the server's list can't bring back. */
+    seenHints: Hint[];
 }
 
 /** In localStorage, the persist default. */
@@ -76,7 +79,8 @@ export const useUiState = create<UiState>()(
             sections: {},
             vendorFilters: {},
             searchQuery: "",
-            fasten: true
+            fasten: true,
+            seenHints: []
         }),
         { name: "uiState", version: 1, migrate: migrateUiState }
     )

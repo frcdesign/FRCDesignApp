@@ -19,7 +19,9 @@ export enum FeedbackCategory {
     METADATA = "metadata",
     INCORRECT_GEOMETRY = "incorrect-geometry",
     BROKEN_CONFIGURATION = "broken-configuration",
+    /** Offered by no form; past reports keep their label. */
     THUMBNAIL = "thumbnail",
+    KUDOS = "kudos",
     OTHER = "other"
 }
 
@@ -50,6 +52,7 @@ export const FEEDBACK_CATEGORY_LABELS: Record<FeedbackCategory, string> = {
     [FeedbackCategory.INCORRECT_GEOMETRY]: "Incorrect geometry",
     [FeedbackCategory.BROKEN_CONFIGURATION]: "Broken configuration",
     [FeedbackCategory.THUMBNAIL]: "Wrong or missing thumbnail",
+    [FeedbackCategory.KUDOS]: "Kudos",
     [FeedbackCategory.OTHER]: "Other"
 };
 
@@ -73,6 +76,7 @@ const LIBRARY_CATEGORIES = [
     FeedbackCategory.PART_REQUEST,
     FeedbackCategory.ORGANIZATION,
     FeedbackCategory.BUG,
+    FeedbackCategory.KUDOS,
     FeedbackCategory.OTHER
 ];
 
@@ -81,7 +85,6 @@ const PART_CATEGORIES = [
     FeedbackCategory.METADATA,
     FeedbackCategory.INCORRECT_GEOMETRY,
     FeedbackCategory.BROKEN_CONFIGURATION,
-    FeedbackCategory.THUMBNAIL,
     FeedbackCategory.BUG,
     FeedbackCategory.OTHER
 ];
@@ -184,7 +187,9 @@ export const feedbackBody = z
                 /** Set when the reporter chose to include the configuration. */
                 selection: z
                     .record(z.string().max(MAX_ID), z.string().max(MAX_FIELD))
-                    .optional()
+                    .optional(),
+                /** The reporter thinks the fault is in the library's Onshape document. */
+                inDocument: z.boolean().optional()
             })
             .optional(),
         diagnostics: feedbackDiagnosticsSchema

@@ -19,6 +19,8 @@ export interface ReportedPart {
     url: string;
     /** `Name: value` per shown parameter; absent when the configuration was left out. */
     configuration?: string[];
+    /** The reporter's answer to whether the Onshape document is at fault. */
+    inDocument?: boolean;
 }
 
 export interface Report {
@@ -76,6 +78,7 @@ const RED = 0xe03131;
 const BLUE = 0x1c7ed6;
 const ORANGE = 0xf08c00;
 const GRAY = 0x868e96;
+const GREEN = 0x2f9e44;
 
 const CATEGORY_COLORS: Record<FeedbackCategory, number> = {
     [FeedbackCategory.BUG]: RED,
@@ -86,6 +89,7 @@ const CATEGORY_COLORS: Record<FeedbackCategory, number> = {
     [FeedbackCategory.ORGANIZATION]: ORANGE,
     [FeedbackCategory.FEATURE_REQUEST]: BLUE,
     [FeedbackCategory.PART_REQUEST]: BLUE,
+    [FeedbackCategory.KUDOS]: GREEN,
     [FeedbackCategory.OTHER]: GRAY
 };
 
@@ -123,6 +127,13 @@ function reportFields(report: Report): DiscordEmbedField[] {
     ];
     if (part) {
         fields.push(field("Part", `${part.groupName} / ${part.name}`));
+        fields.push(
+            field(
+                "Problem with the Onshape document",
+                part.inDocument ? "Yes" : "No",
+                true
+            )
+        );
         if (part.configuration?.length) {
             fields.push(
                 field("Configuration", code(part.configuration.join("\n")))

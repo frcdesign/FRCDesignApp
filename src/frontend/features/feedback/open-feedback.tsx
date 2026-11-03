@@ -49,7 +49,9 @@ export function openPartReport(
     openAppModal({
         title: (
             <AppTitle
-                title={m.feedbackPartReportTitle()}
+                title={m.feedbackPartReportTitle({
+                    part: part.insertable.name
+                })}
                 icon={<FlagIcon size={IconSize.MEDIUM} />}
             />
         ),

@@ -53,7 +53,7 @@ const INSERTABLE: InsertableOut = {
     vendors: []
 };
 
-const PART_CALLOUT = /Report an issue in that part's menu/;
+const PART_CALLOUT = /Report an issue button in the configuration menu/;
 
 function sent(): FeedbackIn {
     return mutate.mock.calls[0][0];
@@ -115,6 +115,7 @@ describe("FeedbackForm", () => {
         expect(
             screen.getByRole("option", { name: "New part request" })
         ).toBeTruthy();
+        expect(screen.getByRole("option", { name: "Kudos" })).toBeTruthy();
     });
 
     it("sends what was typed, about the chosen topic", async () => {
@@ -126,19 +127,26 @@ describe("FeedbackForm", () => {
             />
         );
         const send = screen.getByRole("button", { name: "Send" });
-        expect(send).toHaveProperty("disabled", true);
+        const title = screen.getByRole<HTMLInputElement>("textbox", {
+            name: /Title/
+        });
+        expect(title.value).toBe("");
+        expect(title.placeholder).toBe("What is this request about?");
 
         await user.type(
-            screen.getByRole("textbox", { name: /Details/ }),
+            screen.getByRole("textbox", { name: /Description/ }),
             "  Pull is slow.  "
         );
+        // A title is required, and general feedback has none until written.
+        expect(send).toHaveProperty("disabled", true);
+        await user.type(title, "Slow pulls");
         await user.click(send);
 
         expect(sent()).toMatchObject({
             topic: FeedbackTopic.VERSION_MANAGER,
             category: FeedbackCategory.BUG,
             source: FeedbackSource.GENERAL,
-            title: "Bug: Version Manager",
+            title: "Slow pulls",
             message: "Pull is slow."
         });
         expect(sent().part).toBeUndefined();
@@ -167,7 +175,7 @@ describe("FeedbackForm", () => {
 
         await user.clear(title);
         await user.type(
-            screen.getByRole("textbox", { name: /Details/ }),
+            screen.getByRole("textbox", { name: /Description/ }),
             "Sizes over 1 in fail."
         );
         // A title is required, so clearing it can't send.
@@ -178,13 +186,16 @@ describe("FeedbackForm", () => {
 
         await user.type(title, "Large sizes fail");
         await user.click(screen.getByRole("combobox", { name: "Type" }));
+        expect(
+            screen.queryByRole("option", { name: "Wrong or missing thumbnail" })
+        ).toBeNull();
         await user.click(
-            screen.getByRole("option", { name: "Wrong or missing thumbnail" })
+            screen.getByRole("option", { name: "Incorrect geometry" })
         );
         await user.click(screen.getByRole("button", { name: "Send" }));
         expect(sent()).toMatchObject({
             title: "Large sizes fail",
-            category: FeedbackCategory.THUMBNAIL
+            category: FeedbackCategory.INCORRECT_GEOMETRY
         });
     });
 
@@ -204,7 +215,7 @@ describe("FeedbackForm", () => {
             screen.getByText("About Hex shaft in FRCDesignLib.")
         ).toBeTruthy();
         await user.type(
-            screen.getByRole("textbox", { name: /Details/ }),
+            screen.getByRole("textbox", { name: /Description/ }),
             "Wrong length."
         );
 
@@ -212,15 +223,45 @@ describe("FeedbackForm", () => {
         expect(sent()).toMatchObject({
             topic: FeedbackTopic.FRC_DESIGN_LIB,
             category: FeedbackCategory.METADATA,
-            part: { insertableId: "ins", selection: { size: "1/2 in" } }
+            part: {
+                insertableId: "ins",
+                selection: { size: "1/2 in" },
+                inDocument: false
+            }
         });
 
         mutate.mockReset();
         await user.click(
-            screen.getByRole("checkbox", { name: "Include the configuration" })
+            screen.getByRole("checkbox", { name: "Include configuration" })
+        );
+        await user.click(
+            screen.getByRole("checkbox", {
+                name: "Is this a problem with the underlying Onshape document?"
+            })
         );
         await user.click(screen.getByRole("button", { name: "Send" }));
-        expect(sent().part).toEqual({ insertableId: "ins" });
+        expect(sent().part).toEqual({ insertableId: "ins", inDocument: true });
+    });
+
+    it("offers no configuration from a menu with none on screen", async () => {
+        const user = userEvent.setup();
+        renderWithProviders(
+            <FeedbackForm
+                initialTopic={FeedbackTopic.FRC_DESIGN_LIB}
+                source={FeedbackSource.PART}
+                part={{ insertable: INSERTABLE }}
+            />
+        );
+        expect(
+            screen.queryByRole("checkbox", { name: "Include configuration" })
+        ).toBeNull();
+
+        await user.type(
+            screen.getByRole("textbox", { name: /Description/ }),
+            "Wrong length."
+        );
+        await user.click(screen.getByRole("button", { name: "Send" }));
+        expect(sent().part).toEqual({ insertableId: "ins", inDocument: false });
     });
 
     it("sends an error report with nothing typed, carrying the error", async () => {

@@ -31,7 +31,7 @@ import { Status } from "../../../lib/status";
 import { collectDiagnostics, type ReportedError } from "../diagnostics";
 import { useSendFeedbackMutation } from "../queries";
 import {
-    detailsPlaceholder,
+    descriptionPlaceholder,
     suggestTitle,
     topicLabel,
     typeLabel
@@ -41,7 +41,7 @@ import { m } from "../../../paraglide/messages";
 /** The part a report from its menu names, and the configuration on screen. */
 export interface ReportedPartChoice {
     insertable: InsertableOut;
-    /** What the menu had selected; the part's defaults when absent. */
+    /** Set from the insert menu, the only place a configuration is on screen to include. */
     selection?: PartialSelection;
 }
 
@@ -81,15 +81,18 @@ export function FeedbackForm(props: FeedbackFormProps): ReactNode {
     const [message, setMessage] = useState("");
     const [contact, setContact] = useState("");
     const [includeConfiguration, setIncludeConfiguration] = useState(true);
+    const [inDocument, setInDocument] = useState(false);
 
     const title =
         editedTitle ??
         suggestTitle({
-            topic,
             category,
             partName: part?.insertable.name,
             errorShown: error?.shown
-        });
+        }) ??
+        "";
+    const offersConfiguration =
+        !!part?.insertable.isConfigurable && part.selection !== undefined;
     const canSend =
         title.trim().length > 0 &&
         (message.trim().length > 0 || error !== undefined);
@@ -109,9 +112,11 @@ export function FeedbackForm(props: FeedbackFormProps): ReactNode {
             contact: contact.trim() || undefined,
             part: part && {
                 insertableId: part.insertable.id,
-                selection: includeConfiguration
-                    ? namedValues(part.selection)
-                    : undefined
+                selection:
+                    offersConfiguration && includeConfiguration
+                        ? namedValues(part.selection)
+                        : undefined,
+                inDocument
             },
             diagnostics: collectDiagnostics(error)
         });
@@ -166,7 +171,7 @@ export function FeedbackForm(props: FeedbackFormProps): ReactNode {
                 />
                 <TextInput
                     label={m.feedbackTitleLabel()}
-                    description={m.feedbackTitleDescription()}
+                    placeholder={m.feedbackTitlePlaceholder()}
                     required
                     maxLength={MAX_FEEDBACK_TITLE}
                     value={title}
@@ -175,8 +180,8 @@ export function FeedbackForm(props: FeedbackFormProps): ReactNode {
                     }
                 />
                 <Textarea
-                    label={m.feedbackDetailsLabel()}
-                    placeholder={detailsPlaceholder(category)}
+                    label={m.feedbackDescriptionLabel()}
+                    placeholder={descriptionPlaceholder(category)}
                     autosize
                     minRows={4}
                     maxRows={10}
@@ -186,7 +191,7 @@ export function FeedbackForm(props: FeedbackFormProps): ReactNode {
                     onChange={(event) => setMessage(event.currentTarget.value)}
                     data-autofocus
                 />
-                {part?.insertable.isConfigurable && (
+                {offersConfiguration && (
                     <Checkbox
                         label={m.feedbackIncludeConfiguration()}
                         checked={includeConfiguration}
@@ -195,9 +200,17 @@ export function FeedbackForm(props: FeedbackFormProps): ReactNode {
                         }
                     />
                 )}
+                {part && (
+                    <Checkbox
+                        label={m.feedbackInDocument()}
+                        checked={inDocument}
+                        onChange={(event) =>
+                            setInDocument(event.currentTarget.checked)
+                        }
+                    />
+                )}
                 <TextInput
                     label={m.feedbackDiscordUsername()}
-                    description={m.feedbackDiscordUsernameDescription()}
                     value={contact}
                     onChange={(event) => setContact(event.currentTarget.value)}
                 />
