@@ -13,7 +13,6 @@ import {
     renderWithProviders
 } from "../../../__test_utils__/render";
 import { accessDataQueryKey } from "../../lib/query-keys";
-import { updateUiState } from "../../lib/ui-state";
 
 const apiPost = vi.hoisted(() => vi.fn(() => Promise.resolve({})));
 vi.mock("../../lib/api-client", () => ({ apiPost }));
@@ -45,7 +44,6 @@ function renderHint(signedIn: boolean) {
 
 describe("hints", () => {
     beforeEach(() => {
-        updateUiState({ seenHints: [] });
         apiPost.mockClear();
     });
 

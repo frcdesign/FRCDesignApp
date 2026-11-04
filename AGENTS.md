@@ -186,10 +186,17 @@ the code and fixing what disagrees, bump its **Last reviewed** date.
 `npm test` runs three Vitest projects. A backend test that needs bindings (D1,
 R2, KV, Workflows) is named `*.worker.test.ts` and runs in the Workers runtime
 (the `backend` project). Its files share a runtime per Vitest worker, module
-state included, but each starts with D1, KV and R2 emptied and D1 freshly
-migrated (`__test_utils__/apply-migrations.ts`); Durable Objects and Workflow
-instances carry over. That runtime costs far more than most tests, so
-everything else — pure backend logic and the frontend — runs in Node.
+state included, but every test starts with D1, KV and R2 empty
+(`__test_utils__/apply-migrations.ts`); Durable Objects and Workflow instances
+carry over. That runtime costs far more than most tests, so everything else —
+pure backend logic and the frontend — runs in Node.
+
+Every test must pass alone, in any order, beside any other. The tests in a
+file run shuffled, and a run prints its seed: reproduce a failure with
+`--sequence.seed=<seed>`, and shuffle files too with
+`--sequence.shuffle.files`. A test that leaves something running or subscribed
+cleans it up in `afterEach`. Component tests start with every Zustand store at
+its initial state and storage empty (`__test_utils__/dom-setup.ts`).
 
 Most of a run is starting each file, not the tests in it: add a case to an
 existing file rather than a file of one or two cases.

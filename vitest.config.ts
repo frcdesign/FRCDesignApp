@@ -54,6 +54,9 @@ function phosphorIconPerModule(): Plugin {
 
 export default defineConfig({
     test: {
+        // Tests must pass in any order; a run prints the seed that reproduces it.
+        // Shuffling files too nearly doubles a run, so it is left to `--sequence.shuffle.files`.
+        sequence: { shuffle: { files: false, tests: true } },
         projects: [
             {
                 resolve: { alias },
