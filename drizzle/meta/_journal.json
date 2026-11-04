@@ -71,13 +71,6 @@
             "when": 1793657834651,
             "tag": "0009_feedback_reports",
             "breakpoints": true
-        },
-        {
-            "idx": 10,
-            "version": "6",
-            "when": 1793771603100,
-            "tag": "0010_fold_thumbnail_reports",
-            "breakpoints": true
         }
     ]
 }
