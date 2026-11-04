@@ -46,6 +46,7 @@ export const DISCORD_FORUMS: Record<DiscordForum, ForumSettings> = {
             [FeedbackTopic.VERSION_MANAGER]: "1566636709913829576",
             [FeedbackCategory.BUG]: "1566636728180277448",
             [FeedbackCategory.FEATURE_REQUEST]: "1566636742272880640",
+            [FeedbackCategory.KUDOS]: "1567414956595486730",
             [FeedbackCategory.OTHER]: "1566636757770838138",
             [ERROR_REPORT_TAG]: "1566636772836777984"
         }
@@ -62,7 +63,7 @@ export const DISCORD_FORUMS: Record<DiscordForum, ForumSettings> = {
             [FeedbackCategory.METADATA]: "1566635865222942810",
             [FeedbackCategory.INCORRECT_GEOMETRY]: "1566635891412443186",
             [FeedbackCategory.BROKEN_CONFIGURATION]: "1566636000825049179",
-            [FeedbackCategory.THUMBNAIL]: "1566636028092096572",
+            [FeedbackCategory.KUDOS]: "1567414789054005259",
             [FeedbackCategory.OTHER]: "1566636055531102300"
         }
     },
@@ -77,7 +78,7 @@ export const DISCORD_FORUMS: Record<DiscordForum, ForumSettings> = {
             [FeedbackCategory.METADATA]: "1566637098138730647",
             [FeedbackCategory.INCORRECT_GEOMETRY]: "1566637118959394956",
             [FeedbackCategory.BROKEN_CONFIGURATION]: "1566637138064310322",
-            [FeedbackCategory.THUMBNAIL]: "1566637156498411610",
+            [FeedbackCategory.KUDOS]: "1567415082252509356",
             [FeedbackCategory.OTHER]: "1566637169806807151"
         }
     }

@@ -49,7 +49,7 @@ export function ReportSent(props: ReportSentProps): ReactNode {
                 />
             </AppModalBody>
             <AppModalFooter>
-                <Button variant="default" onClick={onClose}>
+                <Button variant="default" ml="auto" onClick={onClose}>
                     {m.feedbackClose()}
                 </Button>
             </AppModalFooter>

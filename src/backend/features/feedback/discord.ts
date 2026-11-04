@@ -34,8 +34,7 @@ export interface Report {
     source: FeedbackSource;
     message: string;
     contact?: string;
-    /** Undefined for a reporter who isn't signed in. */
-    userId?: string;
+    signedIn: boolean;
     userAgent?: string;
     part?: ReportedPart;
     diagnostics: FeedbackDiagnostics;
@@ -49,13 +48,13 @@ interface DiscordEmbedField {
 }
 
 interface DiscordEmbed {
-    title: string;
+    title?: string;
     url?: string;
     description: string;
     color: number;
-    fields: DiscordEmbedField[];
-    footer: { text: string };
-    timestamp: string;
+    fields?: DiscordEmbedField[];
+    footer?: { text: string };
+    timestamp?: string;
 }
 
 export interface DiscordMessage {
@@ -68,10 +67,13 @@ export interface DiscordMessage {
     applied_tags?: string[];
 }
 
-/** Discord's limits on an embed. */
+/** Discord's limits on an embed; the total is across a message's embeds. */
 const TITLE_LIMIT = 256;
 const FIELD_LIMIT = 1024;
-const EMBED_LIMIT = 6000;
+const DESCRIPTION_LIMIT = 4096;
+const EMBEDS_LIMIT = 6000;
+/** Keeps the details block short, whatever a url or browser string holds. */
+const DETAIL_LIMIT = 500;
 const THREAD_NAME_LIMIT = 100;
 
 const RED = 0xe03131;
@@ -85,7 +87,6 @@ const CATEGORY_COLORS: Record<FeedbackCategory, number> = {
     [FeedbackCategory.BROKEN_CONFIGURATION]: RED,
     [FeedbackCategory.INCORRECT_GEOMETRY]: ORANGE,
     [FeedbackCategory.METADATA]: ORANGE,
-    [FeedbackCategory.THUMBNAIL]: ORANGE,
     [FeedbackCategory.ORGANIZATION]: ORANGE,
     [FeedbackCategory.FEATURE_REQUEST]: BLUE,
     [FeedbackCategory.PART_REQUEST]: BLUE,
@@ -118,27 +119,23 @@ function describeLaunch(
     return where.join(", ");
 }
 
+/** What the reporter is reporting, shown first. */
 function reportFields(report: Report): DiscordEmbedField[] {
     const { diagnostics, part } = report;
-    const fields = [
-        field("Topic", FEEDBACK_TOPIC_LABELS[report.topic], true),
-        field("Type", FEEDBACK_CATEGORY_LABELS[report.category], true),
-        field("From", FEEDBACK_SOURCE_LABELS[report.source], true)
-    ];
+    const fields: DiscordEmbedField[] = [];
     if (part) {
         fields.push(field("Part", `${part.groupName} / ${part.name}`));
-        fields.push(
-            field(
-                "Problem with the Onshape document",
-                part.inDocument ? "Yes" : "No",
-                true
-            )
-        );
         if (part.configuration?.length) {
             fields.push(
                 field("Configuration", code(part.configuration.join("\n")))
             );
         }
+        fields.push(
+            field(
+                "Problem with the Onshape document",
+                part.inDocument ? "Yes" : "No"
+            )
+        );
     }
     if (diagnostics.error) {
         const { shown, kind, detail } = diagnostics.error;
@@ -150,59 +147,72 @@ function reportFields(report: Report): DiscordEmbedField[] {
     if (report.contact) {
         fields.push(field("Discord username", report.contact));
     }
-    fields.push(field("Page", code(diagnostics.url)));
-    fields.push(
-        field(
-            "Launched in",
-            describeLaunch(diagnostics.launch) ?? "Not in Onshape",
-            true
-        ),
-        field("Onshape user", report.userId ?? "Not signed in", true),
-        field("Viewed as", diagnostics.viewedAccessLevel ?? "unknown", true),
-        field("Build", diagnostics.build ?? "unknown", true)
-    );
+    return fields;
+}
+
+/** Where and how it was sent, `Label: value` per line, for the team to dig into. */
+function detailLines(report: Report): string[] {
+    const { diagnostics } = report;
+    const lines = [
+        `Topic: ${FEEDBACK_TOPIC_LABELS[report.topic]}`,
+        `Type: ${FEEDBACK_CATEGORY_LABELS[report.category]}`,
+        `From: ${FEEDBACK_SOURCE_LABELS[report.source]}`,
+        `Page: ${truncate(diagnostics.url, DETAIL_LIMIT)}`,
+        `Launched in: ${describeLaunch(diagnostics.launch) ?? "Not in Onshape"}`,
+        `Signed in: ${report.signedIn ? "Yes" : "No"}`,
+        `Viewed as: ${diagnostics.viewedAccessLevel ?? "unknown"}`,
+        `Build: ${diagnostics.build ?? "unknown"}`
+    ];
     if (diagnostics.viewport) {
-        fields.push(field("Window", diagnostics.viewport, true));
+        lines.push(`Window: ${diagnostics.viewport}`);
     }
     if (report.userAgent) {
-        fields.push(field("Browser", code(report.userAgent)));
+        lines.push(`Browser: ${truncate(report.userAgent, DETAIL_LIMIT)}`);
     }
-    return fields;
+    return lines;
 }
 
 function embedLength(embed: DiscordEmbed): number {
     return (
-        embed.title.length +
+        (embed.title?.length ?? 0) +
         embed.description.length +
-        embed.footer.text.length +
-        embed.fields.reduce(
+        (embed.footer?.text.length ?? 0) +
+        (embed.fields ?? []).reduce(
             (total, each) => total + each.name.length + each.value.length,
             0
         )
     );
 }
 
+/**
+ * Two embeds: the report as the reporter wrote it, then a gray block of where
+ * it came from. Discord has no collapsible embed, so the details go last.
+ */
 export function buildReportMessage(report: Report): DiscordMessage {
     const title = truncate(report.title, TITLE_LIMIT);
-    const embed: DiscordEmbed = {
+    const main: DiscordEmbed = {
         title,
         url: report.part?.url,
         description: report.message || "_No description given._",
         color: CATEGORY_COLORS[report.category],
-        fields: reportFields(report),
+        fields: reportFields(report)
+    };
+    const details: DiscordEmbed = {
+        description: code(detailLines(report).join("\n"), DESCRIPTION_LIMIT),
+        color: GRAY,
         footer: { text: `Report ${report.id}` },
         timestamp: report.createdAt.toISOString()
     };
     // The message is what gives: everything else is short and bounded.
-    const excess = embedLength(embed) - EMBED_LIMIT;
+    const excess = embedLength(main) + embedLength(details) - EMBEDS_LIMIT;
     if (excess > 0) {
-        embed.description = truncate(
-            embed.description,
-            embed.description.length - excess
+        main.description = truncate(
+            main.description,
+            main.description.length - excess
         );
     }
     return {
-        embeds: [embed],
+        embeds: [main, details],
         allowed_mentions: { parse: [] },
         thread_name: truncate(title, THREAD_NAME_LIMIT),
         ...(report.tagIds.length > 0 && { applied_tags: report.tagIds })

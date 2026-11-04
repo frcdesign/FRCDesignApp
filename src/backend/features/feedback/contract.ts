@@ -19,8 +19,6 @@ export enum FeedbackCategory {
     METADATA = "metadata",
     INCORRECT_GEOMETRY = "incorrect-geometry",
     BROKEN_CONFIGURATION = "broken-configuration",
-    /** Offered by no form; past reports keep their label. */
-    THUMBNAIL = "thumbnail",
     KUDOS = "kudos",
     OTHER = "other"
 }
@@ -51,7 +49,6 @@ export const FEEDBACK_CATEGORY_LABELS: Record<FeedbackCategory, string> = {
     [FeedbackCategory.METADATA]: "Missing or incorrect metadata",
     [FeedbackCategory.INCORRECT_GEOMETRY]: "Incorrect geometry",
     [FeedbackCategory.BROKEN_CONFIGURATION]: "Broken configuration",
-    [FeedbackCategory.THUMBNAIL]: "Wrong or missing thumbnail",
     [FeedbackCategory.KUDOS]: "Kudos",
     [FeedbackCategory.OTHER]: "Other"
 };
@@ -68,6 +65,7 @@ export const FEEDBACK_TOPICS = Object.values(FeedbackTopic);
 const APP_CATEGORIES = [
     FeedbackCategory.BUG,
     FeedbackCategory.FEATURE_REQUEST,
+    FeedbackCategory.KUDOS,
     FeedbackCategory.OTHER
 ];
 

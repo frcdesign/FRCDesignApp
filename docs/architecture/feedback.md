@@ -11,8 +11,8 @@ the dashboard.
 It is not a support desk: nothing is stored about a report beyond its counts,
 and replies happen only in the report's Discord thread, which the app points
 the reporter to once it is sent. So it asks no questions it can't answer: there
-is no "question" type. It names the reporter by their Onshape user id, but
-sends nothing about their own documents.
+is no "question" type. It says whether the reporter was signed in, but never
+who they are beyond what they typed, nor anything about their own documents.
 
 ## Code map
 
@@ -76,10 +76,8 @@ its topic's, its type's, and **Error report** when it started from an error.
 The keys are the topic values (`app`, `version-manager`, `frc-design-lib`,
 `mkcad`, `config-lib`), the category values (`bug`, `feature-request`,
 `part-request`, `organization`, `metadata`, `incorrect-geometry`,
-`broken-configuration`, `thumbnail`, `kudos`, `other`) and
-`error-report`. A key with no id is left untagged; `kudos` has none in any
-forum yet, and `thumbnail` is offered by no form, kept so past reports keep
-their label. A tag id the forum doesn't
+`broken-configuration`, `kudos`, `other`) and
+`error-report`. A key with no id is left untagged. A tag id the forum doesn't
 have makes Discord refuse the post, which then goes again untagged.
 
 ### Where a report starts
@@ -89,7 +87,7 @@ The source decides what the form offers and what the report carries
 
 - **General** — **Leave feedback** in settings, which is also the app's way
   into the Discord. The reporter picks the topic.
-  The app's topics offer bug, feature request and other; a library's offer
+  The app's topics offer bug, feature request, kudos and other; a library's offer
   new part request, search or organization, bug, kudos and other, the kinds its
   forum is tagged by, and the form says that a problem with one part is
   reported from the insert menu.
@@ -126,15 +124,20 @@ diagnostics }`, where `part` is `{ insertableId, selection?, inDocument }`.
    (100 characters), and that only an error report may have no message.
    Diagnostics are clipped to length rather than refused.
 4. The route resolves the reporter (a user id when signed in, none otherwise)
-   and takes a slot from the rate limit. The post names them by that id, or
-   says they weren't signed in.
+   and takes a slot from the rate limit. The id goes to the limit and the
+   record only; the post says just whether they were signed in.
 5. A part report looks the part up in the topic's library (`findReportedPart`),
    runs the selection through `toSelection`, and builds the Onshape link from
    `onshapeOverrides` and the readable `Name: value` lines from the parameters
    the reporter could see. The link is to the library's own document. The post
    says whether the reporter put the problem in the Onshape document.
-6. `postToDiscord` posts the embed with `?wait=true`, opening a thread named by
-   the title (`thread_name`) under the report's tags (`applied_tags`).
+6. `postToDiscord` posts the message with `?wait=true`, opening a thread named
+   by the title (`thread_name`) under the report's tags (`applied_tags`). The
+   message is two embeds: the report in its type's color (title, link to the
+   part, what they typed, then the part, its configuration, the Onshape
+   document answer, the error and the Discord username), and under it a gray
+   block of `Label: value` lines (topic, type, source, page, launch, signed in,
+   viewed as, build, window, browser) with the report id in its footer.
 7. Once posted, `trackReport` records it in the background, under the id the
    post quotes in its footer.
 8. The form turns into a success notice (`ReportSent`, a `SectionNotice`):
@@ -161,10 +164,11 @@ parts still in the library, each opening the part's page.
   element, company or company domain from the launch. An error's detail is
   sent as it came, since what Onshape said is what the team needs, ids and
   all. The part a part report names is the library's, not theirs.
-  The reporter is named only by their Onshape user id and what they typed.
+- A post names the reporter only by what they typed. Their Onshape user id
+  goes to the rate limit and the record, never to Discord.
 - The route works signed out, since signing in is one of the things that breaks.
-- Every embed stays within Discord's limits (`buildReportMessage` trims the
-  message to fit).
+- Every message stays within Discord's limits (`buildReportMessage` trims what
+  the reporter typed to fit).
 
 ## Failure and recovery
 
@@ -202,9 +206,17 @@ parts still in the library, each opening the part's page.
   only for somebody already in the server. An invite made by hand from the
   forum works for both, so the app names the channel and offers that one
   button.
-- **The reporter, not their documents.** The user id lets the team tell
-  repeat reports from one person apart from many; somebody's own documents are
-  theirs, and the team needs the problem, not the files it happened in.
+- **What they typed, not who they are.** The forum is read by more than the
+  team, and a user id in it says nothing a reader can act on. Whether the
+  reporter was signed in is what matters for a sign-in problem; a reporter who
+  wants an answer gives a Discord username. The dashboard still counts by user
+  id, which stays in D1. Somebody's own documents are theirs, and the team
+  needs the problem, not the files it happened in.
+- **The report first, its details after.** A Discord embed can't collapse, so
+  the details go in a second, gray embed under the report, as compact lines in
+  one block rather than a grid of fields.
+- **Kudos.** Praise goes to the same forum as everything else, under its own
+  tag, so the team sees what works as well as what breaks.
 - **Links on cad's domain.** A reporter's company domain means nothing to the
   person reading the report.
 

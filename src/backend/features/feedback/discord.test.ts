@@ -13,7 +13,7 @@ function report(overrides: Partial<Report> = {}): Report {
         category: FeedbackCategory.METADATA,
         source: FeedbackSource.PART,
         message: "The part number is wrong.",
-        userId: "user-1",
+        signedIn: true,
         userAgent: "Test browser",
         part: {
             name: "Bearing",
@@ -31,7 +31,16 @@ function fieldValue(
     message: ReturnType<typeof buildReportMessage>,
     name: string
 ) {
-    return message.embeds[0].fields.find((field) => field.name === name)?.value;
+    return message.embeds[0].fields?.find((field) => field.name === name)
+        ?.value;
+}
+
+/** A line of the details block under the report. */
+function detail(message: ReturnType<typeof buildReportMessage>, label: string) {
+    return message.embeds[1].description
+        .split("\n")
+        .find((line) => line.startsWith(`${label}: `))
+        ?.slice(label.length + 2);
 }
 
 describe("buildReportMessage", () => {
@@ -41,14 +50,24 @@ describe("buildReportMessage", () => {
 
         expect(message.thread_name).toBe("Bearing's part number");
         expect(embed.title).toBe("Bearing's part number");
-        expect(fieldValue(message, "Type")).toBe(
-            "Missing or incorrect metadata"
-        );
+        expect(detail(message, "Type")).toBe("Missing or incorrect metadata");
         expect(embed.url).toBe("https://cad.onshape.com/documents/d/v/v/e/e");
         expect(embed.description).toBe("The part number is wrong.");
         expect(fieldValue(message, "Part")).toBe("Bearings / Bearing");
         expect(fieldValue(message, "Configuration")).toContain("Size: 1/2 in");
-        expect(embed.footer.text).toBe("Report report-1");
+        expect(message.embeds[1].footer?.text).toBe("Report report-1");
+    });
+
+    it("puts what was reported first, and where it came from after", () => {
+        const message = buildReportMessage(report());
+        expect(message.embeds[0].fields?.map((field) => field.name)).toEqual([
+            "Part",
+            "Configuration",
+            "Problem with the Onshape document"
+        ]);
+        expect(detail(message, "Topic")).toBe("FRCDesignLib");
+        expect(detail(message, "From")).toBe("Part menu");
+        expect(detail(message, "Browser")).toBe("Test browser");
     });
 
     it("never lets typed text mention anyone", () => {
@@ -56,16 +75,11 @@ describe("buildReportMessage", () => {
         expect(message.allowed_mentions).toEqual({ parse: [] });
     });
 
-    it("names the reporter's Onshape user, or that they weren't signed in", () => {
-        expect(fieldValue(buildReportMessage(report()), "Onshape user")).toBe(
-            "user-1"
-        );
+    it("says whether the reporter was signed in, never who they are", () => {
+        expect(detail(buildReportMessage(report()), "Signed in")).toBe("Yes");
         expect(
-            fieldValue(
-                buildReportMessage(report({ userId: undefined })),
-                "Onshape user"
-            )
-        ).toBe("Not signed in");
+            detail(buildReportMessage(report({ signedIn: false })), "Signed in")
+        ).toBe("No");
     });
 
     it("says what kind of tab the app was launched in, never which", () => {
@@ -82,11 +96,11 @@ describe("buildReportMessage", () => {
             })
         );
 
-        expect(fieldValue(message, "Launched in")).toBe(
+        expect(detail(message, "Launched in")).toBe(
             "ASSEMBLY, workspace, Enterprise"
         );
         expect(
-            fieldValue(
+            detail(
                 buildReportMessage(report({ diagnostics: { url: "/" } })),
                 "Launched in"
             )
@@ -149,19 +163,26 @@ describe("buildReportMessage", () => {
                 }
             })
         );
-        const [embed] = message.embeds;
-        const length =
-            embed.title.length +
-            embed.description.length +
-            embed.footer.text.length +
-            embed.fields.reduce(
-                (sum, field) => sum + field.name.length + field.value.length,
-                0
-            );
+        const length = message.embeds.reduce(
+            (total, embed) =>
+                total +
+                (embed.title?.length ?? 0) +
+                embed.description.length +
+                (embed.footer?.text.length ?? 0) +
+                (embed.fields ?? []).reduce(
+                    (sum, field) =>
+                        sum + field.name.length + field.value.length,
+                    0
+                ),
+            0
+        );
 
         expect(length).toBeLessThanOrEqual(6000);
-        for (const field of embed.fields) {
-            expect(field.value.length).toBeLessThanOrEqual(1024);
+        for (const embed of message.embeds) {
+            expect(embed.description.length).toBeLessThanOrEqual(4096);
+            for (const field of embed.fields ?? []) {
+                expect(field.value.length).toBeLessThanOrEqual(1024);
+            }
         }
         expect(message.thread_name.length).toBeLessThanOrEqual(100);
     });

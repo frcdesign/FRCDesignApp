@@ -68,12 +68,9 @@ describe("DISCORD_FORUMS", () => {
             const types = sources.flatMap((source) =>
                 feedbackCategories(topic, source)
             );
-            // Kudos has no tag in any forum yet.
-            const untagged = types.filter(
-                (type) =>
-                    tags[type] === undefined && type !== FeedbackCategory.KUDOS
+            expect(types.filter((type) => tags[type] === undefined)).toEqual(
+                []
             );
-            expect(untagged).toEqual([]);
         }
     );
 });

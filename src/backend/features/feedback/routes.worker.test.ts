@@ -158,16 +158,16 @@ describe("POST /api/feedback", () => {
         const [, message] = post.mock.calls[0];
         const [embed] = message.embeds;
         expect(embed.title).toBe("Something broke");
-        expect(embed.fields.find((field) => field.name === "Part")?.value).toBe(
-            "Test Group / Test PARTSTUDIO"
-        );
+        expect(
+            embed.fields?.find((field) => field.name === "Part")?.value
+        ).toBe("Test Group / Test PARTSTUDIO");
         expect(embed.url).toContain(`/e/${TEST_PART_STUDIO_PATH.elementId}`);
         expect(embed.url).toContain("configuration=boolean%3Dfalse");
         expect(
-            embed.fields.find((field) => field.name === "Configuration")?.value
+            embed.fields?.find((field) => field.name === "Configuration")?.value
         ).toContain("Test boolean: No");
         expect(
-            embed.fields.find(
+            embed.fields?.find(
                 (field) => field.name === "Problem with the Onshape document"
             )?.value
         ).toBe("Yes");
@@ -193,7 +193,7 @@ describe("POST /api/feedback", () => {
 
         const [embed] = post.mock.calls[0][1].embeds;
         expect(embed.url).not.toContain("configuration=");
-        expect(embed.fields.map((field) => field.name)).not.toContain(
+        expect(embed.fields?.map((field) => field.name)).not.toContain(
             "Configuration"
         );
     });
@@ -258,20 +258,18 @@ describe("POST /api/feedback", () => {
         expect(res.status).toBe(200);
         const [, message] = post.mock.calls[0];
         expect(
-            message.embeds[0].fields.find((field) => field.name === "Error")
+            message.embeds[0].fields?.find((field) => field.name === "Error")
         ).toBeDefined();
     });
 
-    it("names the reporter by their Onshape user id", async () => {
+    it("says the reporter was signed in, never who they are", async () => {
         const userId = "5eace32713a966103efd2a9d";
 
         await send(body(), { userId });
 
-        expect(
-            post.mock.calls[0][1].embeds[0].fields.find(
-                (field) => field.name === "Onshape user"
-            )?.value
-        ).toBe(userId);
+        const posted = post.mock.calls[0][1];
+        expect(JSON.stringify(posted)).not.toContain(userId);
+        expect(posted.embeds[1].description).toContain("Signed in: Yes");
     });
 
     it("takes a report from somebody who isn't signed in", async () => {
