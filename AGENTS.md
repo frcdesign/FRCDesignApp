@@ -183,10 +183,16 @@ the code and fixing what disagrees, bump its **Last reviewed** date.
 
 # Tests
 
-`npm test` runs two Vitest projects. A backend test that needs bindings (D1,
+`npm test` runs three Vitest projects. A backend test that needs bindings (D1,
 R2, KV, Workflows) is named `*.worker.test.ts` and runs in the Workers runtime
-against a freshly migrated D1; that setup costs far more than most tests, so
+(the `backend` project). Its files share a runtime per Vitest worker, module
+state included, but each starts with D1, KV and R2 emptied and D1 freshly
+migrated (`__test_utils__/apply-migrations.ts`); Durable Objects and Workflow
+instances carry over. That runtime costs far more than most tests, so
 everything else — pure backend logic and the frontend — runs in Node.
+
+Most of a run is starting each file, not the tests in it: add a case to an
+existing file rather than a file of one or two cases.
 
 Component tests are `*.test.tsx` and run in jsdom (the `dom` project).
 `renderWithProviders` in `__test_utils__/render.tsx` renders the way the app
