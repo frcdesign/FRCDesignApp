@@ -49,11 +49,11 @@ export interface LinkedWorkspace {
     isOpenable: boolean;
     documentName?: string;
     workspaceName?: string;
-    /**
-     * Parents only: edits since its own last version, which a pull versions.
-     * Absent where Onshape would not say.
-     */
-    unversionedChanges?: number;
+}
+
+/** A parent's edits since its own last version, which a pull versions; absent where Onshape would not say. */
+export interface WorkspaceChangesOut {
+    changes?: number;
 }
 
 /** The workspace just linked, named for the toast; unnamed where Onshape wouldn't say. */

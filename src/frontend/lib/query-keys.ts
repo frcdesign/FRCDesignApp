@@ -106,6 +106,14 @@ export function workspaceLinksQueryKey(workspace: InstancePath | undefined) {
     return ["workspace-links", workspace];
 }
 
+/** Under the links' key, so whatever refreshes the list refreshes these with it. */
+export function workspaceChangesQueryKey(
+    workspace: InstancePath | undefined,
+    parent: InstancePath
+) {
+    return [...workspaceLinksQueryKey(workspace), "changes", parent];
+}
+
 export function versionJobQueryKey(workspace: InstancePath | undefined) {
     return ["version-job", workspace];
 }

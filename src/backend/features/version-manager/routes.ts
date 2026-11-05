@@ -33,6 +33,7 @@ import {
     workspaceKey,
     type AddLinkOut,
     type VersionJobDocument,
+    type WorkspaceChangesOut,
     type WorkspaceLinksData,
     type WorkspacePath
 } from "./contract";
@@ -59,7 +60,13 @@ import {
     toEdge,
     toLinkedWorkspace
 } from "./links";
-import { describeWorkspace, forgetWorkspace } from "./workspace-cache";
+import {
+    canRead,
+    describeWorkspace,
+    forgetPermissions,
+    forgetWorkspace,
+    getUnversionedChanges
+} from "./workspace-cache";
 
 export const versionManagerRoutes = getApp();
 
@@ -151,17 +158,17 @@ async function requirePermissions(
     }
 }
 
-/** What every route that only shows a workspace asks for. */
-function requireRead(
+/** For a route that answers from our own storage; one that asks Onshape is refused by Onshape. */
+async function requireRead(
+    c: AppContext,
     client: OnshapeApi,
     workspace: WorkspacePath
 ): Promise<void> {
-    return requirePermissions(
-        client,
-        workspace,
-        "read this document",
-        OnshapePermission.READ
-    );
+    if (!(await canRead(c, client, workspace))) {
+        throw forbiddenError(
+            "You do not have permission to read this document in Onshape."
+        );
+    }
 }
 
 /** GET /api/workspace-links?documentId=&instanceId= — the links either side of a workspace. */
@@ -173,8 +180,8 @@ versionManagerRoutes.get(
     async (c) => {
         const workspace = toWorkspace(c.req.valid("query"));
         const client = await c.var.getOnshapeApi();
-        await requireRead(client, workspace);
 
+        // The document's own fetch is what refuses a caller who can't read it.
         const db = getDb(c.env.DB);
         const [parentRows, childRows, document] = await Promise.all([
             getParentLinks(db, workspace),
@@ -182,21 +189,20 @@ versionManagerRoutes.get(
             getDocument(client, workspace)
         ]);
 
-        const describe = (rows: typeof parentRows, countChanges: boolean) =>
+        const describe = (rows: typeof parentRows) =>
             Promise.all(
                 rows.map((row) =>
                     toLinkedWorkspace(
                         c,
                         client,
                         row.id,
-                        otherEnd(row, workspace),
-                        countChanges
+                        otherEnd(row, workspace)
                     )
                 )
             );
         const [parents, children] = await Promise.all([
-            describe(parentRows, true),
-            describe(childRows, false)
+            describe(parentRows),
+            describe(childRows)
         ]);
 
         const out: WorkspaceLinksData = {
@@ -205,6 +211,34 @@ versionManagerRoutes.get(
             documentName: document.name
         };
         return c.json(out);
+    }
+);
+
+/**
+ * GET /api/workspace-changes?documentId=&instanceId= — a parent's edits since
+ * its own last version, asked by its row once the list shows, since counting
+ * is the slowest thing Onshape is asked for the list.
+ */
+versionManagerRoutes.get(
+    "/workspace-changes",
+    requireSignInMiddleware,
+    cacheMiddleware(),
+    validate("query", workspaceSchema),
+    async (c) => {
+        const workspace = toWorkspace(c.req.valid("query"));
+        const client = await c.var.getOnshapeApi();
+        await requireRead(c, client, workspace);
+        let changes: number | undefined;
+        try {
+            changes = await getUnversionedChanges(c, client, workspace);
+        } catch (error) {
+            // A row without a badge, not a failure the page shows.
+            console.warn(
+                `Failed to count changes in ${workspace.documentId}`,
+                error
+            );
+        }
+        return c.json({ changes } satisfies WorkspaceChangesOut);
     }
 );
 
@@ -217,7 +251,7 @@ versionManagerRoutes.post(
     validate("json", refreshBody),
     async (c) => {
         const workspace = toWorkspace(c.req.valid("json").workspace);
-        await requireRead(await c.var.getOnshapeApi(), workspace);
+        await requireRead(c, await c.var.getOnshapeApi(), workspace);
 
         const db = getDb(c.env.DB);
         const rows = (
@@ -226,11 +260,12 @@ versionManagerRoutes.post(
                 getChildLinks(db, workspace)
             ])
         ).flat();
-        await Promise.all(
-            rows.map((row) =>
+        await Promise.all([
+            forgetPermissions(c.env.KV, workspace),
+            ...rows.map((row) =>
                 forgetWorkspace(c.env.KV, otherEnd(row, workspace))
             )
-        );
+        ]);
         return c.json({ success: true });
     }
 );
@@ -774,7 +809,7 @@ versionManagerRoutes.get(
     validate("query", workspaceSchema),
     async (c) => {
         const workspace = toWorkspace(c.req.valid("query"));
-        await requireRead(await c.var.getOnshapeApi(), workspace);
+        await requireRead(c, await c.var.getOnshapeApi(), workspace);
         return c.json(await getJobStatus(c.env, workspace));
     }
 );
@@ -787,9 +822,10 @@ versionManagerRoutes.get(
     validate("query", workspaceSchema),
     async (c) => {
         const workspace = toWorkspace(c.req.valid("query"));
-        const client = await c.var.getOnshapeApi();
-        await requireRead(client, workspace);
-        const versions = await getVersions(client, workspace);
+        const versions = await getVersions(
+            await c.var.getOnshapeApi(),
+            workspace
+        );
         return c.json({
             name: nextVersionName(versions.map((version) => version.name))
         });
@@ -808,16 +844,16 @@ versionManagerRoutes.get(
         const query = c.req.valid("query");
         const workspace = toWorkspace(query);
         const client = await c.var.getOnshapeApi();
-        await requireRead(client, workspace);
 
         let bytes: ArrayBuffer;
         try {
             bytes = await getWorkspaceThumbnail(client, workspace, query.size);
         } catch (error) {
-            // No picture: the client shows its placeholder.
+            // No picture, or no access to it: the client shows its placeholder.
             if (
                 error instanceof OnshapeApiError &&
-                error.status === HttpStatus.NOT_FOUND
+                (error.status === HttpStatus.NOT_FOUND ||
+                    error.status === HttpStatus.FORBIDDEN)
             ) {
                 return c.body(null, HttpStatus.NOT_FOUND);
             }
