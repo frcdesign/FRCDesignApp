@@ -193,6 +193,12 @@ describe("the webhook probe", () => {
         expect((await register()).error).toContain("no company");
     });
 
+    it("is a short way from /webhook", async () => {
+        const res = await createTestApp().request("/webhook", {}, env);
+        expect(res.status).toBe(302);
+        expect(res.headers.get("Location")).toBe("/api/webhook-probe");
+    });
+
     it("is the owner's alone", async () => {
         const res = await createTestApp().request(
             "/api/webhook-probe/state",

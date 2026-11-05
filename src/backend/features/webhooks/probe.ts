@@ -54,6 +54,12 @@ async function saveProbe(kv: KVNamespace, probe: Probe): Promise<void> {
 
 export const webhookProbeRoutes = getApp();
 
+/** Mounted at the root, for `/webhook`. */
+export const webhookProbeShortcut = getApp();
+
+/** GET /webhook: a short way to the page. */
+webhookProbeShortcut.get("/webhook", (c) => c.redirect("/api/webhook-probe"));
+
 /** GET /api/webhook-probe: the page that drives the routes below. */
 webhookProbeRoutes.get("/webhook-probe", requireOwnerMiddleware, (c) =>
     c.html(PAGE)

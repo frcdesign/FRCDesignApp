@@ -86,6 +86,15 @@ sits in an info tooltip at the callout's end.
 
 ## Settings menu
 
-| String           | Kind          | Where                            | When                                         | Review |
-| ---------------- | ------------- | -------------------------------- | -------------------------------------------- | ------ |
-| "Admin settings" | Section title | Below the user settings, folding | The user's highest access is editor or above |        |
+| String                                  | Kind               | Where                                     | When                                         | Review    |
+| --------------------------------------- | ------------------ | ----------------------------------------- | -------------------------------------------- | --------- |
+| "Admin settings"                        | Section title      | Below the user settings, folding          | The user's highest access is editor or above |           |
+| "Open outside Onshape" / "Open app"     | Row label / button | User settings                             | Inside Onshape's panel                       |           |
+| "Usage dashboard" / "Open dashboard"    | Row label / button | User settings                             | Outside the dashboard                        |           |
+| "Main app" / "Open app"                 | Row label / button | User settings                             | On the dashboard                             |           |
+| "Get the FRCDesignApp" / "Instructions" | Row label / button | User settings                             | Standalone                                   |           |
+| "Onshape account" / "Sign out"          | Row label / button | User settings                             | Standalone and signed in                     |           |
+| "Access level"                          | Select label       | Admin settings                            | Always                                       |           |
+| "Outdated documents" / "All documents"  | Row labels         | Admin settings, beside the reload buttons | Editor or above / owner                      |           |
+| "Onshape webhooks" / "Open probe"       | Row label / button | Admin settings                            | Owner; opens `/webhook`                      | **⚑** New |
+| "Admin team members"                    | Row label          | Admin settings                            | Admin or above                               |           |

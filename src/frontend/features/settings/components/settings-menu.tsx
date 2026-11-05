@@ -117,21 +117,24 @@ function UserSettings(): ReactNode {
             {/* Only worth offering from inside Onshape's panel, which is what
                 the standalone app is roomier than. */}
             {isConnected && (
-                <InputRow label="Open outside Onshape">
+                <InputRow label={m.settingsOpenOutsideOnshape()}>
                     <OpenUrlButton
-                        text="Open app"
+                        text={m.settingsOpenApp()}
                         url={standaloneUrl(libraryId)}
                     />
                 </InputRow>
             )}
             {/* The dashboard is where the app is the thing worth offering. */}
             {isDashboard ? (
-                <InputRow label="Main app">
+                <InputRow label={m.settingsMainApp()}>
                     <OpenAppButton tabId={libraryId} />
                 </InputRow>
             ) : (
-                <InputRow label="Usage dashboard">
-                    <OpenUrlButton text="Open dashboard" url={DASHBOARD_URL} />
+                <InputRow label={m.settingsUsageDashboard()}>
+                    <OpenUrlButton
+                        text={m.settingsOpenDashboard()}
+                        url={DASHBOARD_URL}
+                    />
                 </InputRow>
             )}
             <InputRow label={m.settingsFeedback()}>
@@ -148,21 +151,24 @@ function UserSettings(): ReactNode {
             {/* Only worth offering to somebody who is not already running the
                 app, which inside Onshape's panel they are. */}
             {!isConnected && (
-                <InputRow label="Get the FRCDesignApp">
-                    <OpenUrlButton text="Instructions" url={SETUP_URL} />
+                <InputRow label={m.settingsGetApp()}>
+                    <OpenUrlButton
+                        text={m.settingsInstructions()}
+                        url={SETUP_URL}
+                    />
                 </InputRow>
             )}
             {/* Onshape owns the session the panel runs in, so signing out is
                 only the standalone app's to offer. */}
             {!isConnected && (
                 <RequireSignIn>
-                    <InputRow label="Onshape account">
+                    <InputRow label={m.settingsOnshapeAccount()}>
                         <Button
                             leftSection={<SignOutIcon />}
                             color={StatusColor.ERROR}
                             onClick={startSignOut}
                         >
-                            Sign out
+                            {m.settingsSignOut()}
                         </Button>
                     </InputRow>
                 </RequireSignIn>
@@ -189,10 +195,13 @@ function OpenAppButton(props: OpenAppButtonProps): ReactNode {
                 window.location.href = standaloneUrl(props.tabId);
             }}
         >
-            Open app
+            {m.settingsOpenApp()}
         </Button>
     );
 }
+
+/** The owner's page for finding out which Onshape events fire; see the README. */
+const WEBHOOK_PROBE_URL = "/webhook";
 
 const ADMIN_SECTION_IDS = [SectionId.ADMIN_SETTINGS];
 
@@ -220,13 +229,19 @@ function AdminSettings(): ReactNode {
             {/* Always show the access level select so admins can change access level if needed */}
             <AccessLevelSelect />
             <RequireAccessLevel>
-                <InputRow label="Outdated documents">
+                <InputRow label={m.settingsOutdatedDocuments()}>
                     <ReloadButton />
                 </InputRow>
             </RequireAccessLevel>
             <RequireAccessLevel accessLevel={AccessLevel.OWNER}>
-                <InputRow label="All documents">
+                <InputRow label={m.settingsAllDocuments()}>
                     <ReloadButton all />
+                </InputRow>
+                <InputRow label={m.settingsWebhooks()}>
+                    <OpenUrlButton
+                        text={m.settingsOpenWebhookProbe()}
+                        url={WEBHOOK_PROBE_URL}
+                    />
                 </InputRow>
             </RequireAccessLevel>
             <RequireAccessLevel accessLevel={AccessLevel.ADMIN}>
@@ -237,7 +252,7 @@ function AdminSettings(): ReactNode {
                 <AdminTeamSetting />
             </RequireAccessLevel>
             <RequireAccessLevel accessLevel={AccessLevel.ADMIN}>
-                <InputRow label="Admin team members">
+                <InputRow label={m.settingsAdminTeamMembers()}>
                     <RefreshAdminTeamButton />
                 </InputRow>
             </RequireAccessLevel>
@@ -250,7 +265,7 @@ function AccessLevelSelect(): ReactNode {
 
     return (
         <SettingSelect
-            label="Access level"
+            label={m.settingsAccessLevel()}
             value={currentAccessLevel}
             options={[
                 AccessLevel.OWNER,
