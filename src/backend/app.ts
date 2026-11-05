@@ -12,6 +12,7 @@ import { libraryRoutes } from "./features/library/routes";
 import { thumbnailRoutes } from "./features/thumbnails/routes";
 import { versionManagerRoutes } from "./features/version-manager/routes";
 import { webhookRoutes } from "./features/webhooks/routes";
+import { webhookProbeRoutes } from "./features/webhooks/probe";
 import { pushRoutes } from "./features/push/routes";
 import { adminTeamRoutes } from "./features/admin-team/routes";
 import { loadRoutes } from "./features/load/routes";
@@ -36,6 +37,7 @@ const apiRoutes = [
     buildStatusRoutes,
     analyticsRoutes,
     webhookRoutes,
+    webhookProbeRoutes,
     pushRoutes,
     adminTeamRoutes,
     loadRoutes,

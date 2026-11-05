@@ -106,6 +106,17 @@ printf '%s' '<token>' > .tunnel-token
 
 Only one person can use the tunnel at a time: Cloudflare spreads requests across everyone running it, so stop yours when you're done.
 
+### Testing webhooks
+
+`/api/webhook-probe` (owner only) registers a webhook with whatever events and
+params you pick, under your own Onshape token, pointed back at the app, and
+lists every delivery it receives, Onshape's registration ping included. Use it
+to find out which events fire for what, before building on one: sign in, open
+the page on cert or through the tunnel, register, make the change in Onshape,
+and watch the deliveries appear. Onshape's refusal, if it refuses, shows
+beside the probe. Probes and deliveries are kept for a day; **Delete**
+unregisters one.
+
 ### Creating the tunnel (maintainers)
 
 Done once, by someone with access to the frcdesign.org Cloudflare account:

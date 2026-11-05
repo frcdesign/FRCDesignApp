@@ -1,5 +1,13 @@
 import { env } from "cloudflare:workers";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+    afterEach,
+    beforeEach,
+    describe,
+    expect,
+    it,
+    type MockInstance,
+    vi
+} from "vitest";
 import {
     TEST_GROUP_ID,
     createTestApp,
@@ -11,6 +19,8 @@ import { getDb } from "../../db/client";
 import { groups, onshapeWebhooks, WebhookSubject } from "../../db/schema";
 import * as Jobs from "../load/jobs";
 import * as Holds from "../load/holds";
+import { AccessLevel } from "../auth/access-level";
+import { MockOnshapeApi } from "../../../__test_utils__/mock-onshape-api";
 import { WebhookEvent } from "./registration";
 
 const db = getDb(env.DB);
@@ -97,5 +107,98 @@ describe("receiving a webhook", () => {
         const token = await registered(WebhookSubject.DOCUMENT, DOCUMENT);
         await deliver({ event: WebhookEvent.UNREGISTER }, token);
         expect(await db.select().from(onshapeWebhooks).all()).toEqual([]);
+    });
+});
+
+describe("the webhook probe", () => {
+    const onshape = new MockOnshapeApi();
+    let post: MockInstance<MockOnshapeApi["post"]>;
+    const owner = () =>
+        createTestApp({ accessLevel: AccessLevel.OWNER, onshapeApi: onshape });
+    /** The body the probe sent Onshape on its first create. */
+    const sentBody = () =>
+        (post.mock.calls[0][1] as { body: Record<string, unknown> }).body;
+
+    beforeEach(() => {
+        post = vi.spyOn(onshape, "post");
+    });
+    afterEach(() => vi.restoreAllMocks());
+
+    async function register(params: object = {}) {
+        const res = await owner().request(
+            "/api/webhook-probe",
+            jsonRequest("POST", {
+                events: ["onshape.team.addmember"],
+                params
+            }),
+            env
+        );
+        return res.json<{ id: string; webhookId?: string; error?: string }>();
+    }
+
+    async function state() {
+        const res = await owner().request(
+            "/api/webhook-probe/state",
+            jsonRequest("GET"),
+            env
+        );
+        return res.json<{ id: string; deliveries: { body: unknown }[] }[]>();
+    }
+
+    it("registers the events and params asked for, pointed back at itself", async () => {
+        post.mockResolvedValue({ id: "hook-1" });
+
+        const answer = await register({ companyId: "company-1" });
+
+        expect(answer.webhookId).toBe("hook-1");
+        expect(post.mock.calls[0][0]).toBe("/webhooks");
+        const body = sentBody();
+        expect(body).toMatchObject({
+            events: ["onshape.team.addmember"],
+            companyId: "company-1",
+            isTransient: true
+        });
+        expect(body.url).toContain(
+            `/api/webhook-probe/deliveries?probe=${answer.id}&token=`
+        );
+    });
+
+    it("keeps what Onshape sends, and turns away a delivery without its token", async () => {
+        post.mockResolvedValue({ id: "hook-1" });
+        const { id } = await register();
+        const url = String(sentBody().url);
+        const deliveryPath = new URL(url).pathname + new URL(url).search;
+
+        const delivered = await createTestApp().request(
+            deliveryPath,
+            jsonRequest("POST", { event: "onshape.team.addmember" }),
+            env
+        );
+        const forged = await createTestApp().request(
+            `/api/webhook-probe/deliveries?probe=${id}&token=wrong`,
+            jsonRequest("POST", { event: "forged" }),
+            env
+        );
+
+        expect(delivered.status).toBe(200);
+        expect(forged.status).toBe(403);
+        const [probe] = await state();
+        expect(probe.deliveries.map((each) => each.body)).toEqual([
+            { event: "onshape.team.addmember" }
+        ]);
+    });
+
+    it("shows Onshape's refusal", async () => {
+        post.mockRejectedValue(new Error("no company"));
+        expect((await register()).error).toContain("no company");
+    });
+
+    it("is the owner's alone", async () => {
+        const res = await createTestApp().request(
+            "/api/webhook-probe/state",
+            jsonRequest("GET"),
+            env
+        );
+        expect(res.status).toBe(403);
     });
 });
