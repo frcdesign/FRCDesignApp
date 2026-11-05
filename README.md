@@ -28,9 +28,9 @@ API_SECRET_KEY=<Your API Secret Key>
 OAUTH_CLIENT_ID=<Your OAuth client id>
 OAUTH_CLIENT_SECRET=<Your OAuth client secret>
 
-# One of admin, editor, or user. Granted by the server and viewed by the client,
+# One of owner, admin, editor, or user. Granted by the server and viewed by the client,
 # so both sides agree. Ignored in production.
-VITE_ACCESS_LEVEL_OVERRIDE=admin
+VITE_ACCESS_LEVEL_OVERRIDE=owner
 
 # Signs you in as a fake user, so signed-in UI can be tested without an Onshape
 # session. Onshape calls it reveals won't work, so leave it unset normally.
