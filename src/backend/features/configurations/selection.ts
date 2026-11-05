@@ -203,6 +203,15 @@ export function fillDerivationValues(
     return next;
 }
 
+/** The values a partial selection names, for a place that holds a `Selection` without the parameters to fill it. */
+export function namedValues(selection: PartialSelection): Selection {
+    return Object.fromEntries(
+        Object.entries(selection).filter(
+            (entry): entry is [string, string] => entry[1] !== undefined
+        )
+    );
+}
+
 /** Strips derivation variables before a selection is stored or shared. */
 export function toStoredSelection(
     selection: PartialSelection,

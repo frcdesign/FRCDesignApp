@@ -2,6 +2,7 @@ import {
     type ConfigurationKey,
     type PartialSelection
 } from "@backend/features/configurations/contract";
+import { namedValues } from "@backend/features/configurations/selection";
 import { ActionIcon, Menu } from "@mantine/core";
 import { HeartIcon, HeartBreakIcon } from "@phosphor-icons/react";
 import { IconSize, StatusColor } from "../../../lib/style-constants";
@@ -43,14 +44,15 @@ function updateFavorites(
     args: UpdateFavoritesArgs,
     libraryId: LibraryId
 ): FavoritesData | undefined {
-    const { favoriteId, configurationKey } = args;
+    const { favoriteId, selection, configurationKey } = args;
     const insertableId = args.insertable.id;
     if (args.operation === Operation.ADD) {
         const fav: Favorite = {
             id: favoriteId,
             insertableId,
             libraryId,
-            // Left to the refetch, which answers with it made whole.
+            // As favorited; the refetch answers with it made whole, and its record.
+            defaultSelection: selection && namedValues(selection),
             configurationKey
         };
         data.favorites[favoriteId] = fav;

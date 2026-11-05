@@ -42,7 +42,9 @@ number.
 ### Writing
 
 - **Add**: the client picks the favorite's id, so the optimistic entry and the
-  server row agree. The selection, if any, is stored with `toStoredSelection`
+  server row agree. The optimistic entry carries the selection as favorited
+  (`namedValues`) and its key, so the row opens in that configuration before
+  the refetch. The server stores the selection with `toStoredSelection`
   (whole, derivation variables removed). Past `MAX_FAVORITES` (250) answers 409.
 - **Delete**, **reorder** and **set configuration**: every write is scoped to the
   caller's user id, so another user's favorite id matches nothing. A reorder is

@@ -20,10 +20,8 @@ import {
     MAX_TEAM_NUMBER,
     topicLibrary
 } from "@backend/features/feedback/contract";
-import {
-    type PartialSelection,
-    type Selection
-} from "@backend/features/configurations/contract";
+import { type PartialSelection } from "@backend/features/configurations/contract";
+import { namedValues } from "@backend/features/configurations/selection";
 import { type InsertableOut } from "@backend/features/library/contract";
 import { AppModalBody, AppModalFooter } from "../../../components/app-modal";
 import { useAppModal } from "../../../components/open-app-modal";
@@ -44,15 +42,6 @@ export interface ReportedPartChoice {
     insertable: InsertableOut;
     /** Set from the insert menu, the only place a configuration is on screen to include. */
     selection?: PartialSelection;
-}
-
-/** The values a selection names; the server fills in the rest from the part's defaults. */
-function namedValues(selection: PartialSelection = {}): Selection {
-    return Object.fromEntries(
-        Object.entries(selection).filter(
-            (entry): entry is [string, string] => entry[1] !== undefined
-        )
-    );
 }
 
 interface FeedbackFormProps {
@@ -116,7 +105,9 @@ export function FeedbackForm(props: FeedbackFormProps): ReactNode {
             part: part && {
                 insertableId: part.insertable.id,
                 selection:
-                    offersConfiguration && includeConfiguration
+                    part.selection &&
+                    offersConfiguration &&
+                    includeConfiguration
                         ? namedValues(part.selection)
                         : undefined
             },
