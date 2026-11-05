@@ -40,7 +40,7 @@ type VersionRunColumns = Pick<
 /** What only a report fills in. */
 type ReportColumns = Pick<
     LoggedEvent,
-    "reportTopic" | "reportCategory" | "reportSource"
+    "reportTopic" | "reportCategory" | "reportSource" | "reportTeamNumber"
 >;
 
 /** The part an insert placed, or a part report named. */
@@ -89,7 +89,8 @@ export const NOT_A_VERSION_RUN: VersionRunColumns = {
 export const NOT_A_REPORT: ReportColumns = {
     reportTopic: null,
     reportCategory: null,
-    reportSource: null
+    reportSource: null,
+    reportTeamNumber: null
 };
 
 /** A logged run, whose own columns a reader can then count on. */

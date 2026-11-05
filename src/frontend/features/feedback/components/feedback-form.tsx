@@ -1,6 +1,7 @@
 import {
     Button,
     Checkbox,
+    NumberInput,
     Select,
     Text,
     Textarea,
@@ -17,6 +18,7 @@ import {
     FeedbackTopic,
     MAX_FEEDBACK_MESSAGE,
     MAX_FEEDBACK_TITLE,
+    MAX_TEAM_NUMBER,
     topicLibrary
 } from "@backend/features/feedback/contract";
 import {
@@ -80,6 +82,8 @@ export function FeedbackForm(props: FeedbackFormProps): ReactNode {
     const [editedTitle, setEditedTitle] = useState<string>();
     const [message, setMessage] = useState("");
     const [contact, setContact] = useState("");
+    // NumberInput gives a string while empty or part-typed.
+    const [teamNumber, setTeamNumber] = useState<number | string>("");
     const [includeConfiguration, setIncludeConfiguration] = useState(true);
     const [inDocument, setInDocument] = useState(false);
 
@@ -110,6 +114,7 @@ export function FeedbackForm(props: FeedbackFormProps): ReactNode {
             title: title.trim(),
             message: message.trim(),
             contact: contact.trim() || undefined,
+            teamNumber: typeof teamNumber === "number" ? teamNumber : undefined,
             part: part && {
                 insertableId: part.insertable.id,
                 selection:
@@ -213,6 +218,17 @@ export function FeedbackForm(props: FeedbackFormProps): ReactNode {
                     label={m.feedbackDiscordUsername()}
                     value={contact}
                     onChange={(event) => setContact(event.currentTarget.value)}
+                />
+                <NumberInput
+                    label={m.feedbackTeamNumber()}
+                    value={teamNumber}
+                    onChange={setTeamNumber}
+                    min={1}
+                    max={MAX_TEAM_NUMBER}
+                    allowDecimal={false}
+                    allowNegative={false}
+                    clampBehavior="strict"
+                    hideControls
                 />
             </AppModalBody>
             <AppModalFooter>

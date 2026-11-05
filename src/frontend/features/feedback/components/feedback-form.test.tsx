@@ -140,6 +140,10 @@ describe("FeedbackForm", () => {
         // A title is required, and general feedback has none until written.
         expect(send).toHaveProperty("disabled", true);
         await user.type(title, "Slow pulls");
+        await user.type(
+            screen.getByRole("textbox", { name: /Team number/ }),
+            "254"
+        );
         await user.click(send);
 
         expect(sent()).toMatchObject({
@@ -147,7 +151,8 @@ describe("FeedbackForm", () => {
             category: FeedbackCategory.BUG,
             source: FeedbackSource.GENERAL,
             title: "Slow pulls",
-            message: "Pull is slow."
+            message: "Pull is slow.",
+            teamNumber: 254
         });
         expect(sent().part).toBeUndefined();
         expect(sent().diagnostics.url).toBe(window.location.pathname);
@@ -279,6 +284,7 @@ describe("FeedbackForm", () => {
         await user.click(screen.getByRole("button", { name: "Send" }));
 
         expect(sent().message).toBe("");
+        expect(sent().teamNumber).toBeUndefined();
         expect(sent().diagnostics.error).toEqual(error);
     });
 });

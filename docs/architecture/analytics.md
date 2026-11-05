@@ -41,8 +41,9 @@ no foreign key crosses between them):
   element path, insertable, target tab type, canonical selection, source, and
   the favorite, quick-insert and fasten flags, and a version run adds its kind,
   scope, whether it was update-only, its outcome, and how many steps failed,
-  versions it created and tabs it updated. A report adds its topic, category
-  and source, and a part report the element path and insertable. Keyed on
+  versions it created and tabs it updated. A report adds its topic, category,
+  source and the team number the reporter gave, and a part report the element
+  path and insertable. Keyed on
   Onshape's element id with no foreign keys, so history survives a reload or a
   re-added tab.
 - `library_id` is null for an event that belongs to no library: an app open,

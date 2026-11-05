@@ -43,8 +43,8 @@ who they are beyond what they typed, nor anything about their own documents.
 - **KV** `feedback-sent:` — by reporter (`user:<id>` signed in, `ip:<address>`
   otherwise), the times of their reports in the last hour, for an hour.
 - **D1** — one `events` row per sent report (`type` `report`, with
-  `report_topic`, `report_category`, `report_source`, and the element columns
-  for a part report) and its `daily_report_metrics` rollup; see
+  `report_topic`, `report_category`, `report_source`, `report_team_number`, and
+  the element columns for a part report) and its `daily_report_metrics` rollup; see
   [analytics.md](./analytics.md).
 
 ## Flows
@@ -107,12 +107,15 @@ The source decides what the form offers and what the report carries
 
 ### Sending
 
-1. The form sends `{ topic, category, source, title, message, contact?, part?,
-diagnostics }`, where `part` is `{ insertableId, selection?, inDocument }`.
+1. The form sends `{ topic, category, source, title, message, contact?,
+teamNumber?, part?, diagnostics }`, where `part` is `{ insertableId,
+selection?, inDocument }`.
    The title is the reporter's. A part or error report fills it in with
    `suggestTitle` until they write their own: the type and the part ("Broken
    configuration: Hex Shaft"), or the error they were shown. General feedback
-   starts with it empty. The contact is a Discord username, if they give one.
+   starts with it empty. The contact is a Discord username and the team number
+   an FRC or FTC team (a whole number up to `MAX_TEAM_NUMBER`), each only if
+   they give one.
 2. Diagnostics (`collectDiagnostics`) are gathered as it sends, and never name
    the document the reporter was in: the app's own path
    and params with Onshape's launch params removed, the build id, the kind of
@@ -135,11 +138,12 @@ diagnostics }`, where `part` is `{ insertableId, selection?, inDocument }`.
    by the title (`thread_name`) under the report's tags (`applied_tags`). The
    message is two embeds: the report in its type's color (title, link to the
    part, what they typed, then the part, its configuration, the Onshape
-   document answer, the error and the Discord username), and under it a gray
+   document answer, the error, the Discord username and the team number), and
+   under it a gray
    block of `Label: value` lines (topic, type, source, page, launch, signed in,
    viewed as, build, window, browser) with the report id in its footer.
 7. Once posted, `trackReport` records it in the background, under the id the
-   post quotes in its footer.
+   post quotes in its footer, with the team number when there is one.
 8. The form turns into a success notice (`ReportSent`, a `SectionNotice`):
    "Report sent!", "You can find your report in #frcdesignlib-feedback if you want
    to follow up in Discord.", and **Open Discord**, the forum's invite

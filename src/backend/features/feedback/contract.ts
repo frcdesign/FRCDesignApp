@@ -129,6 +129,8 @@ export const MAX_FEEDBACK_MESSAGE = 2000;
 /** The title names the report's forum thread, which Discord caps at 100. */
 export const MAX_FEEDBACK_TITLE = 100;
 const MAX_CONTACT = 200;
+/** FRC and FTC team numbers both fit; neither program is near it. */
+export const MAX_TEAM_NUMBER = 99999;
 const MAX_FIELD = 1000;
 const MAX_ID = 100;
 
@@ -178,6 +180,7 @@ export const feedbackBody = z
         /** May be empty only for an error, which says something on its own. */
         message: z.string().trim().max(MAX_FEEDBACK_MESSAGE),
         contact: z.string().trim().max(MAX_CONTACT).optional(),
+        teamNumber: z.int().min(1).max(MAX_TEAM_NUMBER).optional(),
         /** Only from a part's menu, whose library must be the topic's. */
         part: z
             .object({

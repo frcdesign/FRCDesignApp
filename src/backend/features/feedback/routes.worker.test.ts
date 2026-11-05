@@ -109,7 +109,8 @@ describe("POST /api/feedback", () => {
         const res = await send(
             body({
                 topic: FeedbackTopic.MKCAD,
-                category: FeedbackCategory.PART_REQUEST
+                category: FeedbackCategory.PART_REQUEST,
+                teamNumber: 254
             }),
             { userId }
         );
@@ -123,8 +124,14 @@ describe("POST /api/feedback", () => {
             reportTopic: FeedbackTopic.MKCAD,
             reportCategory: FeedbackCategory.PART_REQUEST,
             reportSource: FeedbackSource.GENERAL,
+            reportTeamNumber: 254,
             elementId: null
         });
+        expect(
+            post.mock.calls[0][1].embeds[0].fields?.find(
+                (field) => field.name === "Team number"
+            )?.value
+        ).toBe("254");
         expect(await db.select().from(dailyReportMetrics).all()).toEqual([
             expect.objectContaining({
                 topic: FeedbackTopic.MKCAD,
@@ -229,6 +236,7 @@ describe("POST /api/feedback", () => {
         ["no message", body({ message: "  " })],
         ["no title", body({ title: "  " })],
         ["a title too long for a thread", body({ title: "x".repeat(101) })],
+        ["a team number that isn't one", body({ teamNumber: 25.4 })],
         [
             "a part outside a part report",
             body({ part: { insertableId: TEST_PART_STUDIO_ID } })

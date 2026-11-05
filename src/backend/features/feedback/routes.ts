@@ -68,6 +68,7 @@ feedbackRoutes.post("/feedback", validate("json", feedbackBody), async (c) => {
             source: body.source,
             message: body.message,
             contact: body.contact || undefined,
+            teamNumber: body.teamNumber,
             signedIn: userId !== undefined,
             userAgent: c.req.header("User-Agent"),
             part,
@@ -83,6 +84,7 @@ feedbackRoutes.post("/feedback", validate("json", feedbackBody), async (c) => {
         topic: body.topic,
         category: body.category,
         source: body.source,
+        teamNumber: body.teamNumber,
         part
     });
     return c.json({ reportId } satisfies FeedbackOut);

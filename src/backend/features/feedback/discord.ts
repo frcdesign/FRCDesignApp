@@ -34,6 +34,7 @@ export interface Report {
     source: FeedbackSource;
     message: string;
     contact?: string;
+    teamNumber?: number;
     signedIn: boolean;
     userAgent?: string;
     part?: ReportedPart;
@@ -145,7 +146,10 @@ function reportFields(report: Report): DiscordEmbedField[] {
         fields.push(field("Error", code(lines.join("\n"))));
     }
     if (report.contact) {
-        fields.push(field("Discord username", report.contact));
+        fields.push(field("Discord username", report.contact, true));
+    }
+    if (report.teamNumber !== undefined) {
+        fields.push(field("Team number", String(report.teamNumber), true));
     }
     return fields;
 }

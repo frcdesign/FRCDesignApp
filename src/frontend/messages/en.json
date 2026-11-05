@@ -270,6 +270,7 @@
     "feedbackIncludeConfiguration": "Include configuration",
     "feedbackInDocument": "Is this a problem with the underlying Onshape document?",
     "feedbackDiscordUsername": "Discord username (optional)",
+    "feedbackTeamNumber": "Team number (optional)",
     "feedbackCancel": "Cancel",
     "feedbackSend": "Send",
     "feedbackSendFailed": "Failed to send the report.",

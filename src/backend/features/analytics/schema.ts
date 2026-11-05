@@ -75,7 +75,8 @@ export const events = sqliteTable(
         // A report's own columns; a part report also sets the element's.
         reportTopic: text("report_topic").$type<FeedbackTopic>(),
         reportCategory: text("report_category").$type<FeedbackCategory>(),
-        reportSource: text("report_source").$type<FeedbackSource>()
+        reportSource: text("report_source").$type<FeedbackSource>(),
+        reportTeamNumber: integer("report_team_number")
     },
     // Only used to rebuild the rollups, which walk by day.
     (t) => [index("events_day_idx").on(t.day)]

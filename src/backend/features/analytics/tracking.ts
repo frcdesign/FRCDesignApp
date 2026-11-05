@@ -176,6 +176,8 @@ export interface ReportEvent {
     topic: FeedbackTopic;
     category: FeedbackCategory;
     source: FeedbackSource;
+    /** The reporter's FRC or FTC team, when they gave it. */
+    teamNumber?: number;
     /** Set for a report from a part's menu. */
     part?: { path: ElementPath; insertableId: string };
 }
@@ -200,7 +202,8 @@ export function trackReport(c: AppContext, event: ReportEvent): Promise<void> {
                 ...NOT_A_VERSION_RUN,
                 reportTopic: event.topic,
                 reportCategory: event.category,
-                reportSource: event.source
+                reportSource: event.source,
+                reportTeamNumber: event.teamNumber ?? null
             },
             []
         )
