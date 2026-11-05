@@ -376,7 +376,7 @@ interface SaveButtonsProps {
     view: IndexingView;
 }
 
-/** Always shown, and disabled with nothing to save, so the form keeps its shape. */
+/** Only while edits are pending. */
 function SaveButtons(props: SaveButtonsProps): ReactNode {
     const { insertableId, view } = props;
     const mutation = useIndexingMutation(insertableId);
@@ -389,22 +389,19 @@ function SaveButtons(props: SaveButtonsProps): ReactNode {
         clearIndexingDraft(insertableId);
     };
 
+    if (!view.isUnsaved) {
+        return null;
+    }
     return (
         <Group justify="flex-end" gap="xs">
             <Button
                 size="xs"
                 variant="default"
-                disabled={!view.isUnsaved}
                 onClick={() => clearIndexingDraft(insertableId)}
             >
                 {m.adminCardDiscard()}
             </Button>
-            <Button
-                size="xs"
-                variant="filled"
-                disabled={!view.isUnsaved}
-                onClick={save}
-            >
+            <Button size="xs" variant="filled" onClick={save}>
                 {m.adminCardSave()}
             </Button>
         </Group>

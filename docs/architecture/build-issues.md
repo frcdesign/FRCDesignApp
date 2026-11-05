@@ -357,7 +357,8 @@ Admin settings start open; Configuration starts closed.
    and refetches when it settles. Hiding asks first.
 5. **Configuration** lists every parameter with its type and whether search
    indexes it; an enum's badge opens a bubble listing its options. Edits
-   collect as a draft; **Save** sends both settings in one reindex.
+   collect as a draft; **Discard** and **Save** show only while it differs
+   from what is stored, and **Save** sends both settings in one reindex.
 6. **Usage** reads the part's all-time numbers from the dashboard's parts
    report; **Open in dashboard** under them opens that part's report.
 

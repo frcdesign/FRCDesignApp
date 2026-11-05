@@ -69,6 +69,13 @@ function saveButton(): HTMLButtonElement {
     return screen.getByRole("button", { name: "Save" });
 }
 
+function hasSaveButtons(): boolean {
+    return (
+        screen.queryByRole("button", { name: "Save" }) !== null ||
+        screen.queryByRole("button", { name: "Discard" }) !== null
+    );
+}
+
 function checkbox(name: string): HTMLInputElement {
     return within(row(name)).getByRole("checkbox");
 }
@@ -161,15 +168,15 @@ describe("configuration section", () => {
 
     it("has nothing to save once an edit is undone", async () => {
         await renderOpen([enumParam("size", ["s", "l"]), boolParam("holes")]);
-        expect(saveButton().disabled).toBe(true);
+        expect(hasSaveButtons()).toBe(false);
 
         await userEvent.click(checkbox("holes"));
         expect(screen.getByText("Unsaved")).toBeTruthy();
-        expect(saveButton().disabled).toBe(false);
+        expect(hasSaveButtons()).toBe(true);
         await userEvent.click(checkbox("holes"));
 
         expect(screen.queryByText("Unsaved")).toBeNull();
-        expect(saveButton().disabled).toBe(true);
+        expect(hasSaveButtons()).toBe(false);
     });
 
     it("offers the switch only once there are too many to index automatically", async () => {
