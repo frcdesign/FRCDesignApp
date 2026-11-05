@@ -16,7 +16,10 @@ import {
     Text,
     Tooltip
 } from "@mantine/core";
-import { useIsDashboard } from "./features/dashboard/dashboard-nav";
+import {
+    useDashboardLibraryId,
+    useIsDashboard
+} from "./features/dashboard/dashboard-nav";
 import { LibraryId } from "@backend/features/library/library-id";
 import { useIsVersionManager } from "./features/version-manager/navigation";
 import {
@@ -66,7 +69,7 @@ export function getLibraryShade(libraryId: string): string {
  * app is showing, the way a library's color says which library is.
  */
 export enum AppColor {
-    /** FRCDesign's own, whichever library the dashboard is reporting on. */
+    /** FRCDesign's own, on the dashboard pages that span every library. */
     DASHBOARD = "frcGreen",
     /** The version manager acts on the open document, which is no library's. */
     VERSION_MANAGER = "blue"
@@ -74,14 +77,17 @@ export enum AppColor {
 
 /**
  * What the app is themed in right now: the page's own color where it has one,
- * and the library's otherwise.
+ * and the library's otherwise, a library's dashboard pages included.
  */
 export function useAppColor(libraryId: string): string {
     const isDashboard = useIsDashboard();
+    const dashboardLibraryId = useDashboardLibraryId();
     const isVersionManager = useIsVersionManager();
 
     if (isDashboard) {
-        return AppColor.DASHBOARD;
+        return dashboardLibraryId
+            ? getLibraryColor(dashboardLibraryId)
+            : AppColor.DASHBOARD;
     }
     if (isVersionManager) {
         return AppColor.VERSION_MANAGER;

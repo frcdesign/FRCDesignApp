@@ -5,6 +5,14 @@ export function useIsDashboard(): boolean {
     return useMatch({ from: "/dashboard", shouldThrow: false }) !== undefined;
 }
 
+/** The library a dashboard page reports on; undefined on the app dashboard. */
+export function useDashboardLibraryId(): LibraryId | undefined {
+    return useMatch({
+        from: "/dashboard/library/$libraryId",
+        shouldThrow: false
+    })?.params.libraryId;
+}
+
 /** The dashboards reachable from the navbar. */
 export type DashboardKey = "app" | "library" | "unused" | "part";
 
