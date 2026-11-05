@@ -42,8 +42,8 @@ const changeCounts = kvStore<{ changes: number }>("linked-workspace-changes", {
 });
 
 /**
- * A day: a sharing change is heard about through the metadata webhook, which is
- * undocumented for it, so the expiry and the refresh button are the backstop.
+ * A day: a sharing change is heard about through the `shared` webhook, and
+ * the expiry and the refresh button cover one Onshape drops.
  */
 const PERMISSIONS_TTL_SECONDS = 24 * 3600;
 

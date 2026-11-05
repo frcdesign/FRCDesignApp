@@ -19,12 +19,14 @@ const UPDATE_WORKSPACE_UNITS = "onshape.model.lifecycle.updateworkspaceunits";
 /**
  * What can change what the version manager shows of a linked workspace: its
  * name and its document's (`metadata`), how far it has moved since its last
- * version (`changed`, and `createversion`, which resets the count).
+ * version (`changed`, and `createversion`, which resets the count), and who may
+ * read it (`shared`, sent for sharing and unsharing alike).
  */
 const LINKED_WORKSPACE_EVENTS = [
     "onshape.model.lifecycle.changed",
     "onshape.model.lifecycle.metadata",
-    "onshape.model.lifecycle.createversion"
+    "onshape.model.lifecycle.createversion",
+    "onshape.document.lifecycle.shared"
 ];
 
 interface TransientWebhook {

@@ -234,7 +234,7 @@ describe("version manager routes", () => {
         });
     });
 
-    it("asks Onshape for a caller's permissions once, until the document's webhook says it changed", async () => {
+    it("asks Onshape for a caller's permissions once, until the document is shared or unshared", async () => {
         grant({ root: ALL });
         const readJob = () =>
             app.request(
@@ -249,7 +249,15 @@ describe("version manager routes", () => {
 
         const delivery = await app.request(
             `/api/webhooks/linked-workspace?documentId=${ROOT.documentId}&workspaceId=${ROOT.instanceId}`,
-            jsonRequest("POST", { event: "onshape.model.lifecycle.metadata" }),
+            // As Onshape sent it when a document was shared with someone.
+            jsonRequest("POST", {
+                event: "onshape.document.lifecycle.shared",
+                documentId: ROOT.documentId,
+                entryType: "USER",
+                shareAction: "Create",
+                oldPermissionSet: [],
+                newPermissionSet: ["WRITE", "COPY", "EXPORT", "COMMENT"]
+            }),
             env
         );
         expect(delivery.status).toBe(200);

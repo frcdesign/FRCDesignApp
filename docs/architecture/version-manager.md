@@ -301,8 +301,11 @@ color and with its icon, for as long as the status is kept. It cannot be closed,
 ### Keeping a linked workspace current
 
 A cache miss on a linked workspace's names registers a transient webhook on it for
-`onshape.model.lifecycle.changed`, `.metadata` and `.createversion`. A delivery
-drops both cached entries, so the next panel to open asks Onshape again. Onshape
+`onshape.model.lifecycle.changed`, `.metadata` and `.createversion`, and
+`onshape.document.lifecycle.shared`, which Onshape sends for sharing and
+unsharing alike. A delivery drops the workspace's cached entries and every
+caller's permissions on its document, so the next panel to open asks Onshape
+again. Onshape
 deletes a transient webhook that goes quiet, so the entries expire as well.
 
 ## Invariants
@@ -395,7 +398,7 @@ deletes a transient webhook that goes quiet, so the entries expire as well.
   every request. Reads from our own storage — names, change counts, run status
   — still need one, and asking Onshape for each linked document on every open
   made the list slow, so the set is cached per caller and dropped by the
-  metadata webhook. A stale answer can show a name to somebody who has just
+  `shared` webhook. A stale answer can show a name to somebody who has just
   lost access, which is accepted. Runs and links check live, before they start.
 - **Thumbnails are proxied.** `GET /api/workspace-thumbnail` fetches the
   workspace's own thumbnail under the caller's OAuth token. Letting the image
