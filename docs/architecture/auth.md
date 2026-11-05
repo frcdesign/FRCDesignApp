@@ -58,12 +58,18 @@ team, plus one owner set by configuration.
 
 ### Launch and sign-in
 
-1. Onshape opens `/init?documentId=…&instanceType=…&elementId=…&sessionCompanyId=…`.
-   A version or microversion goes to `/version-error`.
-2. With no session, or one for another company than the document's, `/init`
-   sends the caller through sign-in and back, marked so it never loops.
-3. `/auth/sign-in` stores `{ state, redirectUrl }` in the login cookie and
-   redirects to Onshape's authorize page. The redirect url must be a local path.
+1. Onshape opens `/init?documentId=…&instanceType=…&elementId=…&companyId=…`,
+   `companyId` being the company that owns the document (`cad` for a personal
+   one), which Onshape adds to every launch (`getDocumentCompanyId`). An
+   enterprise and an educator plan's classroom are both companies. A version
+   or microversion goes to `/version-error`.
+2. With no session, or one whose grant is for another company than the
+   document's, `/init` sends the caller through sign-in for the document's
+   company and back, marked so it never loops.
+3. `/auth/sign-in?companyId=` stores `{ state, redirectUrl }` in the login
+   cookie and redirects to Onshape's authorize page, naming the company as
+   `company_id`; for a personal document it names none, and Onshape asks the
+   caller which account. The redirect url must be a local path.
 4. The authorize request names `APP_URL/auth/callback` as its redirect uri,
    which must be registered on the OAuth app. Onshape returns there; the callback checks
    the state, exchanges the code, starts a session (a new id), and redirects back.
@@ -71,23 +77,15 @@ team, plus one owner set by configuration.
    permissions on the document (`getPermissions`). With `WRITE` the app opens.
    Without it, whether the grant can't see the document at all (no
    permissions, or a 404) or can only view it, `/init` sends the launch to
-   `/document-access`: inserting needs edit access, and a public document is
-   visible to anybody, so seeing it says nothing about the grant. A grant is
-   per Onshape account, so one given to somebody's personal account can't
-   reach their Enterprise's documents however the session's company reads,
-   and sign-in can ask Onshape for an Enterprise but never for a personal
-   account.
-6. `/document-access` says the app can't edit the document, and what to do,
-   chosen by the launch's `sessionCompanyId`: the company of the caller's
-   Onshape session, which need not own the document. Sign-in grants the
-   session's company, so:
-    - **An Enterprise session** can't reach a document in the personal
-      account. **Sign in** goes through sign-in naming no company, where
-      Onshape lets them choose their personal account, and back to `/init`
-      without the Enterprise, which then expects that account.
-    - **A personal session** that can't edit is a classroom that hasn't
-      authorized the app: **Open Applications page** (Onshape's, where a
-      classroom authorizes it), then reopen the app.
+   `/document-access` with the `problem` (`AccessProblem`): `other-account`
+   when the grant is still another company's than the document's, which only
+   the caller can have chosen, and `view-only` otherwise.
+6. `/document-access` says the app can't edit the document, and what to do:
+    - **`other-account` on a personal document**: "Sign in and choose your
+      personal account". **Sign in** goes through sign-in naming no company and
+      back to `/init`.
+    - **Anything else**: the caller can only view the document, a public one
+      or one shared view-only.
 
     Both offer **Send a report**, its kind naming which. With no session, or
     Onshape not answering, the app opens as before: the check never keeps
@@ -177,25 +175,31 @@ declared in `wrangler.jsonc` per environment and typed in `AppBindings`. Run
 
 ## Failure and recovery
 
-| Failure                                    | Result                                         | Recovery                                      |
-| ------------------------------------------ | ---------------------------------------------- | --------------------------------------------- |
-| Access token expired                       | Refreshed on the next call                     | Automatic                                     |
-| Refresh token revoked or expired           | Treated as signed out                          | Sign in again                                 |
-| Session's company differs from the grant's | `/init` sends the caller through sign-in       | Automatic, once                               |
-| Enterprise session opening a personal doc  | `/init` sends the launch to `/document-access` | **Sign in**, choosing the personal account    |
-| Classroom hasn't authorized the app        | `/init` sends the launch to `/document-access` | Authorize it on the Applications page, reopen |
-| Document public or shared view-only        | `/init` sends the launch to `/document-access` | Edit access from the document's owner         |
-| Team membership changed in Onshape         | Stale access until synced                      | **Refresh** beside the admin team             |
-| No saved background session                | A load whose requester's session lapses fails  | The owner or a team member opens the app      |
+| Failure                                            | Result                                                              | Recovery                                   |
+| -------------------------------------------------- | ------------------------------------------------------------------- | ------------------------------------------ |
+| Access token expired                               | Refreshed on the next call                                          | Automatic                                  |
+| Refresh token revoked or expired                   | Treated as signed out                                               | Sign in again                              |
+| The grant is another company's than the document's | `/init` sends the caller through sign-in for the document's company | Automatic, once                            |
+| A company's grant for a personal document          | `/init` sends the launch to `/document-access`                      | **Sign in**, choosing the personal account |
+| Document public or shared view-only                | `/init` sends the launch to `/document-access`                      | Edit access from the document's owner      |
+| Team membership changed in Onshape                 | Stale access until synced                                           | **Refresh** beside the admin team          |
+| No saved background session                        | A load whose requester's session lapses fails                       | The owner or a team member opens the app   |
 
 ## Decisions
 
+- **Sign in as the document's company.** Onshape adds the company that owns
+  the document to every launch, and a grant is per company, so asking for that
+  one gets a grant that can edit it: an enterprise's, or an educator plan's
+  classroom's, without the caller having to authorize anything by hand. The
+  session's company says only where the caller happens to be signed in. A
+  personal account can't be asked for by id, so a personal document is the one
+  case the caller can answer wrongly, and the one the access page explains.
 - **Onshape teams as the permission source.** Library admins already manage the
   documents in Onshape; the app mirrors that rather than keeping its own roles.
 - **Synced, not live.** Asking Onshape on every request would spend the
   allocation and add latency; membership rarely changes.
-- **Ask about the document, not only the company.** The session's company can
-  match the document's while the grant still can't edit it, which surfaced as
+- **Ask about the document, not only the company.** The grant's company can
+  match the document's while it still can't edit it, which surfaced as
   a 403 on the first insert. One permissions call per launch finds it before
   anything is tried.
 - **Login state in a cookie, not KV.** A caller who abandons sign-in keeps the

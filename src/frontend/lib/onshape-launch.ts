@@ -17,8 +17,10 @@ export const OnshapeLaunchType = z.object({
     elementType: z.enum(ElementType).optional().catch(undefined),
     /** Onshape's own origin, which a client message has to be addressed to. */
     server: z.string().optional().catch(undefined),
-    /** The company the session is scoped to, which sign-in asks Onshape for. */
-    sessionCompanyId: z.string().optional().catch(undefined)
+    /** The company the session is scoped to, which reports name. */
+    sessionCompanyId: z.string().optional().catch(undefined),
+    /** The company that owns the document, `cad` for a personal one, which sign-in asks Onshape for. */
+    companyId: z.string().optional().catch(undefined)
 });
 
 export type OnshapeLaunch = z.infer<typeof OnshapeLaunchType>;

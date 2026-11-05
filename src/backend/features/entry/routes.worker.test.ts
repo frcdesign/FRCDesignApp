@@ -47,21 +47,18 @@ describe("GET /init", () => {
         return new URL(res.headers.get("Location")!, "http://x");
     }
 
-    it("signs in a caller Onshape will not take, scoped to their company", async () => {
-        const location = await signInRedirect(
-            "/init?sessionCompanyId=company-1"
-        );
+    // An enterprise's, or an educator plan's classroom's, document.
+    it("signs in a caller Onshape will not take, scoped to the document's company", async () => {
+        const location = await signInRedirect("/init?companyId=company-1");
 
         expect(location.pathname).toBe("/auth/sign-in");
-        expect(location.searchParams.get("sessionCompanyId")).toBe("company-1");
+        expect(location.searchParams.get("companyId")).toBe("company-1");
         const redirectUrl = new URL(
             location.searchParams.get("redirectUrl")!,
             "http://x"
         );
         expect(redirectUrl.pathname).toBe("/init");
-        expect(redirectUrl.searchParams.get("sessionCompanyId")).toBe(
-            "company-1"
-        );
+        expect(redirectUrl.searchParams.get("companyId")).toBe("company-1");
     });
 
     // There's no personal company to ask Onshape for, so this would loop.
@@ -83,9 +80,9 @@ describe("GET /init", () => {
         expect(entry.searchParams.has("signInAttempted")).toBe(false);
     });
 
-    it("signs in a caller whose session is scoped to another company", async () => {
+    it("signs in a caller whose grant is for another company than the document's", async () => {
         const res = await createTestApp({ isAuthenticated: false }).request(
-            "/init?sessionCompanyId=company-1",
+            "/init?companyId=company-1",
             jsonRequest("GET"),
             env
         );
@@ -141,7 +138,7 @@ describe("GET /init's document access check", () => {
         options: Parameters<typeof createTestApp>[0] = {}
     ): Promise<URL> {
         const res = await createTestApp(options).request(
-            "/init?documentId=doc&instanceType=w&instanceId=ws&sessionCompanyId=company-1",
+            "/init?documentId=doc&instanceType=w&instanceId=ws&companyId=company-1",
             jsonRequest("GET"),
             env
         );
@@ -164,7 +161,9 @@ describe("GET /init's document access check", () => {
         expect(location.pathname).toBe("/document-access");
         // The page goes back through /init, or on to the app, with these.
         expect(location.searchParams.get("documentId")).toBe("doc");
-        expect(location.searchParams.get("sessionCompanyId")).toBe("company-1");
+        expect(location.searchParams.get("companyId")).toBe("company-1");
+        // The grant is the document's company's, so all it can do is view.
+        expect(location.searchParams.get("problem")).toBe("view-only");
     });
 
     it("explains a grant that can't see the document after a sign-in", async () => {
@@ -179,6 +178,8 @@ describe("GET /init's document access check", () => {
         const location = new URL(res.headers.get("Location")!, "http://x");
         expect(location.pathname).toBe("/document-access");
         expect(location.searchParams.has("signInAttempted")).toBe(false);
+        // The caller chose another account than the document's when asked.
+        expect(location.searchParams.get("problem")).toBe("other-account");
     });
 
     it("reads Onshape's 404 as a grant that can't see the document", async () => {

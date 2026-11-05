@@ -1,108 +1,87 @@
 import { Button, Group } from "@mantine/core";
 import { SignInIcon } from "@phosphor-icons/react";
 import { createFileRoute } from "@tanstack/react-router";
+import * as z from "zod";
 import { type ReactNode } from "react";
 import { PERSONAL_COMPANY_ID } from "@backend/features/auth/personal-company";
+import {
+    ACCESS_PROBLEM_PARAM,
+    AccessProblem
+} from "@backend/features/entry/access-problem";
 import { PageNotice } from "../../components/app-notice";
-import { OpenUrlButton } from "../../components/open-url-button";
 import { ReportButton } from "../../features/feedback/components/report-button";
 import {
     type OnshapeLaunch,
     OnshapeLaunchType
 } from "../../lib/onshape-launch";
 import { parseSearch } from "../../lib/search-params";
-import { APPLICATIONS_PATH, toOnshapeOrigin } from "../../lib/url";
 import { m } from "../../paraglide/messages";
+
+const DocumentAccessSearch = OnshapeLaunchType.extend({
+    [ACCESS_PROBLEM_PARAM]: z.enum(AccessProblem).optional().catch(undefined)
+});
 
 export const Route = createFileRoute("/_pages/document-access")({
     component: DocumentAccess,
-    validateSearch: (search) => parseSearch(OnshapeLaunchType, search)
+    validateSearch: (search) => parseSearch(DocumentAccessSearch, search)
 });
 
 /**
  * Where `/init` sends a launch whose Onshape grant can't edit the document.
- * Sign-in grants the session's company, so an Enterprise session can't reach a
- * personal document; a personal session that can't is a classroom that hasn't
- * authorized the app.
+ * Sign-in asks for the document's own company, so the one grant a caller can
+ * get wrong is a company's for a personal document, which Onshape never asks
+ * about; anything else that can't edit is view-only.
  */
 function DocumentAccess(): ReactNode {
-    const launch = Route.useSearch();
-    const inEnterprise =
-        !!launch.sessionCompanyId &&
-        launch.sessionCompanyId !== PERSONAL_COMPANY_ID;
-    return inEnterprise ? (
-        <EnterpriseSession launch={launch} />
-    ) : (
-        <ClassroomAccess launch={launch} />
-    );
-}
-
-interface EnterpriseSessionProps {
-    launch: OnshapeLaunch;
-}
-
-function EnterpriseSession(props: EnterpriseSessionProps): ReactNode {
-    const { launch } = props;
+    const { [ACCESS_PROBLEM_PARAM]: problem, ...launch } = Route.useSearch();
+    const isPersonalDocument =
+        (launch.companyId ?? PERSONAL_COMPANY_ID) === PERSONAL_COMPANY_ID;
     const title = m.documentAccessTitle();
+
+    if (problem === AccessProblem.OTHER_ACCOUNT && isPersonalDocument) {
+        return (
+            <PageNotice
+                title={title}
+                description={m.documentAccessOtherAccount()}
+                action={
+                    <Group gap="xs" justify="center" wrap="wrap">
+                        <Button
+                            leftSection={<SignInIcon />}
+                            onClick={() => signInToPersonalAccount(launch)}
+                        >
+                            {m.documentAccessSignIn()}
+                        </Button>
+                        <ReportButton
+                            report={{ shown: title, kind: problem }}
+                        />
+                    </Group>
+                }
+            />
+        );
+    }
     return (
         <PageNotice
             title={title}
-            description={m.documentAccessEnterprise()}
+            description={m.documentAccessViewOnly()}
             action={
-                <Group gap="xs" justify="center" wrap="wrap">
-                    <Button
-                        leftSection={<SignInIcon />}
-                        onClick={() => signInToPersonalAccount(launch)}
-                    >
-                        {m.documentAccessSignIn()}
-                    </Button>
-                    <ReportButton
-                        report={{ shown: title, kind: "enterprise-session" }}
-                    />
-                </Group>
+                <ReportButton
+                    report={{ shown: title, kind: AccessProblem.VIEW_ONLY }}
+                />
             }
         />
     );
 }
 
 /**
- * Asks for no company, so Onshape lets them choose their personal account, and
- * returns to `/init` without the Enterprise, which then expects that account.
+ * Asks for no company, so Onshape lets the caller choose their personal
+ * account, and returns to `/init`, which checks the grant against the document.
  */
 function signInToPersonalAccount(launch: OnshapeLaunch): void {
     const entries = Object.entries(launch).filter(
-        (entry): entry is [string, string] =>
-            typeof entry[1] === "string" && entry[0] !== "sessionCompanyId"
+        (entry): entry is [string, string] => typeof entry[1] === "string"
     );
     const query = new URLSearchParams({
         redirectUrl: `/init?${new URLSearchParams(entries).toString()}`
     });
     window.location.href = `/auth/sign-in?${query.toString()}`;
-}
-
-interface ClassroomAccessProps {
-    launch: OnshapeLaunch;
-}
-
-function ClassroomAccess(props: ClassroomAccessProps): ReactNode {
-    const { launch } = props;
-    const title = m.documentAccessTitle();
-    return (
-        <PageNotice
-            title={title}
-            description={m.documentAccessClassroom()}
-            action={
-                <Group gap="xs" justify="center" wrap="wrap">
-                    {/* The caller's Onshape, so the page opens on their account. */}
-                    <OpenUrlButton
-                        text={m.documentAccessOpenApplications()}
-                        url={toOnshapeOrigin(launch.server) + APPLICATIONS_PATH}
-                    />
-                    <ReportButton
-                        report={{ shown: title, kind: "classroom" }}
-                    />
-                </Group>
-            }
-        />
-    );
 }

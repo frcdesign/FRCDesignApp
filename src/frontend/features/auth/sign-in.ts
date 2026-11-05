@@ -5,9 +5,9 @@ export function startSignIn(): void {
     const query = new URLSearchParams({
         redirectUrl: window.location.pathname + window.location.search
     });
-    const { sessionCompanyId } = useOnshapeLaunch.getState();
-    if (sessionCompanyId) {
-        query.set("sessionCompanyId", sessionCompanyId);
+    const { companyId } = useOnshapeLaunch.getState();
+    if (companyId) {
+        query.set("companyId", companyId);
     }
     window.location.href = "/auth/sign-in?" + query.toString();
 }

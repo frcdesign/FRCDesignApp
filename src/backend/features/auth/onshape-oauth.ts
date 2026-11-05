@@ -45,7 +45,7 @@ export function doSignIn(
         state,
         []
     );
-    // Onshape only accepts a real enterprise's company_id.
+    // A personal account has no company id to ask for; Onshape asks the caller.
     if (companyId && companyId !== PERSONAL_COMPANY_ID) {
         authorizationUrl.searchParams.set("company_id", companyId);
     }
