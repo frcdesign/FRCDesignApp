@@ -86,13 +86,13 @@ Worded on the server, so they aren't in the catalog.
 `/document-access`, where `/init` sends a launch whose Onshape grant can't edit
 the document: one notice per cause, chosen by the session's company.
 
-| String                                                                                         | Kind             | Where                        | When                                     | Review    |
-| ---------------------------------------------------------------------------------------------- | ---------------- | ---------------------------- | ---------------------------------------- | --------- |
-| "The FRCDesignApp can't edit this document."                                                   | Page title       | `/document-access`           | Always                                   | **⚑** New |
-| "Sign in and choose your personal account."                                                    | Page description | Under it                     | The launch's session is in an Enterprise | **⚑** New |
-| "Sign in"                                                                                      | Button           | Under it, with Send a report | Same                                     | **⚑** New |
-| "Authorize the FRCDesignApp for your classroom on the Applications page, then reopen the app." | Page description | Under the title              | The launch's session is personal         | **⚑** New |
-| "Open Applications page"                                                                       | Button           | Under it, with Send a report | Same                                     |           |
+| String                                                                                                                                 | Kind             | Where                        | When                                     | Review    |
+| -------------------------------------------------------------------------------------------------------------------------------------- | ---------------- | ---------------------------- | ---------------------------------------- | --------- |
+| "The FRCDesignApp can't edit this document."                                                                                           | Page title       | `/document-access`           | Always                                   | **⚑** New |
+| "Sign in and choose your personal account. If the problem persists, send a report."                                                    | Page description | Under it                     | The launch's session is in an Enterprise | **⚑** New |
+| "Sign in"                                                                                                                              | Button           | Under it, with Send a report | Same                                     | **⚑** New |
+| "Authorize the FRCDesignApp for your classroom on the Applications page, then reopen the app. If the problem persists, send a report." | Page description | Under the title              | The launch's session is personal         | **⚑** New |
+| "Open Applications page"                                                                                                               | Button           | Under it, with Send a report | Same                                     |           |
 
 ## The dashboard
 
