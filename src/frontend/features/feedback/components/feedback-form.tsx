@@ -1,9 +1,9 @@
 import {
+    Anchor,
     Button,
     Checkbox,
     NumberInput,
     Select,
-    Text,
     Textarea,
     TextInput
 } from "@mantine/core";
@@ -29,6 +29,9 @@ import { type InsertableOut } from "@backend/features/library/contract";
 import { AppModalBody, AppModalFooter } from "../../../components/app-modal";
 import { useAppModal } from "../../../components/open-app-modal";
 import { Callout } from "../../../components/callout";
+import { MessageMarkup } from "../../../components/message-markup";
+import { useOnshapeOrigin } from "../../../lib/onshape-params";
+import { makeUrl } from "../../../lib/url";
 import { Status } from "../../../lib/status";
 import { collectDiagnostics, type ReportedError } from "../diagnostics";
 import { useSendFeedbackMutation } from "../queries";
@@ -70,6 +73,7 @@ export function FeedbackForm(props: FeedbackFormProps): ReactNode {
     const { source, part, error } = props;
     const modal = useAppModal();
     const sendMutation = useSendFeedbackMutation();
+    const origin = useOnshapeOrigin();
 
     const [topic, setTopic] = useState(props.initialTopic);
     const categories = feedbackCategories(topic, source);
@@ -85,7 +89,7 @@ export function FeedbackForm(props: FeedbackFormProps): ReactNode {
     // NumberInput gives a string while empty or part-typed.
     const [teamNumber, setTeamNumber] = useState<number | string>("");
     const [includeConfiguration, setIncludeConfiguration] = useState(true);
-    const [inDocument, setInDocument] = useState(false);
+    const [inDocument, setInDocument] = useState(true);
 
     const title =
         editedTitle ??
@@ -136,14 +140,7 @@ export function FeedbackForm(props: FeedbackFormProps): ReactNode {
                         text={m.feedbackIncludesError({ error: error.shown })}
                     />
                 )}
-                {part ? (
-                    <Text>
-                        {m.feedbackAboutPart({
-                            part: part.insertable.name,
-                            library: topicLabel(topic)
-                        })}
-                    </Text>
-                ) : (
+                {!part && (
                     <Select
                         label={m.feedbackTopicLabel()}
                         data={FEEDBACK_TOPICS.map((value) => ({
@@ -207,7 +204,26 @@ export function FeedbackForm(props: FeedbackFormProps): ReactNode {
                 )}
                 {part && (
                     <Checkbox
-                        label={m.feedbackInDocument()}
+                        label={
+                            <MessageMarkup
+                                parts={m.feedbackInDocument.parts()}
+                                markup={{
+                                    link: (children) => (
+                                        <Anchor
+                                            href={makeUrl(
+                                                origin,
+                                                part.insertable.path,
+                                                part.selection
+                                            )}
+                                            target="_blank"
+                                            inherit
+                                        >
+                                            {children}
+                                        </Anchor>
+                                    )
+                                }}
+                            />
+                        }
                         checked={inDocument}
                         onChange={(event) =>
                             setInDocument(event.currentTarget.checked)

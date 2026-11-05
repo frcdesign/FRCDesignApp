@@ -216,9 +216,12 @@ describe("FeedbackForm", () => {
                 }}
             />
         );
+        // The document link opens the part in the configuration on screen.
         expect(
-            screen.getByText("About Hex shaft in FRCDesignLib.")
-        ).toBeTruthy();
+            screen
+                .getByRole("link", { name: "Onshape document" })
+                .getAttribute("href")
+        ).toMatch(/\/documents\/doc\/v\/ver\/e\/el\?configuration=/);
         await user.type(
             screen.getByRole("textbox", { name: /Description/ }),
             "Wrong length."
@@ -231,7 +234,7 @@ describe("FeedbackForm", () => {
             part: {
                 insertableId: "ins",
                 selection: { size: "1/2 in" },
-                inDocument: false
+                inDocument: true
             }
         });
 
@@ -241,11 +244,11 @@ describe("FeedbackForm", () => {
         );
         await user.click(
             screen.getByRole("checkbox", {
-                name: "Is this a problem with the underlying Onshape document?"
+                name: "Problem in the underlying Onshape document"
             })
         );
         await user.click(screen.getByRole("button", { name: "Send" }));
-        expect(sent().part).toEqual({ insertableId: "ins", inDocument: true });
+        expect(sent().part).toEqual({ insertableId: "ins", inDocument: false });
     });
 
     it("offers no configuration from a menu with none on screen", async () => {
@@ -266,7 +269,7 @@ describe("FeedbackForm", () => {
             "Wrong length."
         );
         await user.click(screen.getByRole("button", { name: "Send" }));
-        expect(sent().part).toEqual({ insertableId: "ins", inDocument: false });
+        expect(sent().part).toEqual({ insertableId: "ins", inDocument: true });
     });
 
     it("sends an error report with nothing typed, carrying the error", async () => {

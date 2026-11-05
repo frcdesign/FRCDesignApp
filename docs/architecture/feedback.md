@@ -97,7 +97,8 @@ The source decides what the form offers and what the report carries
   form is titled **Report issue with** the part, and the topic is the part's
   library. It offers missing or incorrect metadata, incorrect geometry, broken
   configuration, bug (a part that won't insert is one) and other, and asks
-  whether the problem is in the underlying Onshape document. From the insert
+  whether the problem is in the underlying Onshape document (on by default),
+  which links to the part in Onshape in the configuration on screen. From the insert
   menu, **Include configuration** (on by default) sends the selection on
   screen; a card's menu has no configuration on screen, so it sends none.
 - **Error** — **Report** on an error toast, or **Send a report** under an
