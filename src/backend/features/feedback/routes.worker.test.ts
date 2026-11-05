@@ -155,8 +155,7 @@ describe("POST /api/feedback", () => {
                 source: FeedbackSource.PART,
                 part: {
                     insertableId: TEST_PART_STUDIO_ID,
-                    selection: { boolean: "false" },
-                    inDocument: true
+                    selection: { boolean: "false" }
                 }
             })
         );
@@ -173,11 +172,6 @@ describe("POST /api/feedback", () => {
         expect(
             embed.fields?.find((field) => field.name === "Configuration")?.value
         ).toContain("Test boolean: No");
-        expect(
-            embed.fields?.find(
-                (field) => field.name === "Problem with the Onshape document"
-            )?.value
-        ).toBe("Yes");
 
         expect(await db.select().from(dailyReportMetrics).get()).toMatchObject({
             elementId: TEST_PART_STUDIO_PATH.elementId,

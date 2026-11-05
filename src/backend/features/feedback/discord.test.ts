@@ -62,8 +62,7 @@ describe("buildReportMessage", () => {
         const message = buildReportMessage(report());
         expect(message.embeds[0].fields?.map((field) => field.name)).toEqual([
             "Part",
-            "Configuration",
-            "Problem with the Onshape document"
+            "Configuration"
         ]);
         expect(detail(message, "Topic")).toBe("FRCDesignLib");
         expect(detail(message, "From")).toBe("Part menu");

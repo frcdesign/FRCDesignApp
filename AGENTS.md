@@ -134,9 +134,7 @@ generated and git-ignored: never edit it.
 - Keys are camelCase, prefixed by area: `buildIssue…`, `adminCard…`.
 - A count goes through a `plural` selector and a number through `: number`,
   never `count === 1 ? … : …` or `toLocaleString` in code.
-- A sentence is one message with parameters, never pieces joined in code. A
-  link inside one is markup in the message (`{#link}…{/link}`), rendered from
-  its `parts()` by `MessageMarkup` (`components/message-markup.tsx`).
+- A sentence is one message with parameters, never pieces joined in code.
 - Text from Onshape — a part, parameter or option name — is a parameter, not a
   message.
 - A value with a known set of cases maps to its message in an exhaustive

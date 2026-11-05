@@ -96,9 +96,7 @@ The source decides what the form offers and what the report carries
   ⋯ buttons opening it carry the blue dot (`Hint.OPENED_REPORT_ISSUE`). The
   form is titled **Report issue with** the part, and the topic is the part's
   library. It offers missing or incorrect metadata, incorrect geometry, broken
-  configuration, bug (a part that won't insert is one) and other, and asks
-  whether the problem is in the underlying Onshape document (on by default),
-  which links to the part in Onshape in the configuration on screen. From the insert
+  configuration, bug (a part that won't insert is one) and other. From the insert
   menu, **Include configuration** (on by default) sends the selection on
   screen; a card's menu has no configuration on screen, so it sends none.
 - **Error** — **Report** on an error toast, or **Send a report** under an
@@ -110,7 +108,7 @@ The source decides what the form offers and what the report carries
 
 1. The form sends `{ topic, category, source, title, message, contact?,
 teamNumber?, part?, diagnostics }`, where `part` is `{ insertableId,
-selection?, inDocument }`.
+selection? }`.
    The title is the reporter's. A part or error report fills it in with
    `suggestTitle` until they write their own: the type and the part ("Broken
    configuration: Hex Shaft"), or the error they were shown. General feedback
@@ -138,8 +136,7 @@ selection?, inDocument }`.
 6. `postToDiscord` posts the message with `?wait=true`, opening a thread named
    by the title (`thread_name`) under the report's tags (`applied_tags`). The
    message is two embeds: the report in its type's color (title, link to the
-   part, what they typed, then the part, its configuration, the Onshape
-   document answer, the error, the Discord username and the team number), and
+   part, what they typed, then the part, its configuration, the error, the Discord username and the team number), and
    under it a gray
    block of `Label: value` lines (topic, type, source, page, launch, signed in,
    viewed as, build, window, browser) with the report id in its footer.

@@ -19,8 +19,6 @@ export interface ReportedPart {
     url: string;
     /** `Name: value` per shown parameter; absent when the configuration was left out. */
     configuration?: string[];
-    /** The reporter's answer to whether the Onshape document is at fault. */
-    inDocument?: boolean;
 }
 
 export interface Report {
@@ -131,12 +129,6 @@ function reportFields(report: Report): DiscordEmbedField[] {
                 field("Configuration", code(part.configuration.join("\n")))
             );
         }
-        fields.push(
-            field(
-                "Problem with the Onshape document",
-                part.inDocument ? "Yes" : "No"
-            )
-        );
     }
     if (diagnostics.error) {
         const { shown, kind, detail } = diagnostics.error;

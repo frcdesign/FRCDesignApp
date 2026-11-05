@@ -188,9 +188,7 @@ export const feedbackBody = z
                 /** Set when the reporter chose to include the configuration. */
                 selection: z
                     .record(z.string().max(MAX_ID), z.string().max(MAX_FIELD))
-                    .optional(),
-                /** The reporter thinks the fault is in the library's Onshape document. */
-                inDocument: z.boolean().optional()
+                    .optional()
             })
             .optional(),
         diagnostics: feedbackDiagnosticsSchema

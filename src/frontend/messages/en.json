@@ -267,7 +267,6 @@
     "feedbackDescriptionKudos": "What would you like to thank the team for?",
     "feedbackDescriptionOther": "Tell us more.",
     "feedbackIncludeConfiguration": "Include configuration",
-    "feedbackInDocument": "Problem in the underlying {#link}Onshape document{/link}",
     "feedbackDiscordUsername": "Discord username (optional)",
     "feedbackTeamNumber": "Team number (optional)",
     "feedbackCancel": "Cancel",
