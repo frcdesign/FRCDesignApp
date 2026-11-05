@@ -1,6 +1,4 @@
 import { DEFAULT_CONFIGURATION_KEY } from "@backend/features/configurations/contract";
-import { Menu } from "@mantine/core";
-import { XIcon } from "@phosphor-icons/react";
 import { ReactNode } from "react";
 import type { RecentInsert } from "@backend/features/recents/contract";
 import { InsertableOut } from "@backend/features/library/contract";
@@ -25,7 +23,6 @@ import { useIsAssemblyInPartStudio } from "../../insert/insert-hooks";
 import { MenuSection } from "../../../components/app-menu";
 import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
 import { openCannotDeriveAssemblyAlert } from "../../../components/alerts";
-import { useRemoveRecentMutation } from "../queries";
 import { type SearchHit } from "../../search/search";
 
 interface RecentCardProps {
@@ -127,7 +124,6 @@ function RecentMenuItems(props: RecentMenuItemsProps): ReactNode {
 
     const favorite = useFavorite(insertable.id);
     const isConnected = useIsConnectedToOnshape();
-    const removeRecentMutation = useRemoveRecentMutation();
 
     return (
         <>
@@ -141,14 +137,6 @@ function RecentMenuItems(props: RecentMenuItemsProps): ReactNode {
                     />
                 </MenuSection>
             )}
-            <MenuSection label="Recently used">
-                <Menu.Item
-                    leftSection={<XIcon />}
-                    onClick={() => removeRecentMutation.mutate(recent.id)}
-                >
-                    Remove
-                </Menu.Item>
-            </MenuSection>
             <MenuSection label="Favorites">
                 <FavoriteInsertableItem
                     favorite={favorite}

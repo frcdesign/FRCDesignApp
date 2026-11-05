@@ -1,12 +1,7 @@
-import { and, desc, eq } from "drizzle-orm";
+import { desc } from "drizzle-orm";
 import { cacheMiddleware } from "../../lib/cache";
 import { getApp } from "../../lib/context";
-import {
-    getLibraryParam,
-    getRecentParam,
-    libraryRoute,
-    recentRoute
-} from "../../lib/route-params";
+import { getLibraryParam, libraryRoute } from "../../lib/route-params";
 import { getDb, type Db } from "../../db/client";
 import { recentInserts } from "../../db/schema";
 import {
@@ -66,19 +61,3 @@ recentRoutes.get(
         return c.json(await getRecents(db, userId, getLibraryParam(c)));
     }
 );
-
-/** DELETE /api/recent/:recentId */
-recentRoutes.delete(recentRoute(), requireSignInMiddleware, async (c) => {
-    const userId = await c.var.getUserId();
-    const db = getDb(c.env.DB);
-    // Scoped to the owner, so another user's recent matches nothing.
-    await db
-        .delete(recentInserts)
-        .where(
-            and(
-                eq(recentInserts.id, getRecentParam(c)),
-                eq(recentInserts.userId, userId)
-            )
-        );
-    return c.json({ success: true });
-});

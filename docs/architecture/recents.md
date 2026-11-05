@@ -17,7 +17,7 @@ configuration and are read only by their owner.
 | ----------------------------------------------------------- | -------------------------------------------------------------- |
 | `src/backend/features/recents/contract.ts`                  | `RecentInsert`, `RecentsData`, `MAX_RECENTS`                   |
 | `src/backend/features/recents/store.ts`                     | `recordRecentInsert`, `writeRecentInsert`: record one insert   |
-| `src/backend/features/recents/routes.ts`                    | List the caller's recents, and remove one                      |
+| `src/backend/features/recents/routes.ts`                    | List the caller's recents                                      |
 | `src/backend/features/configurations/stored-selections.ts`  | Reading a stored selection back, with its key and record       |
 | `src/backend/features/library/insertables/routes.ts`        | The insert routes, which record each insert                    |
 | `src/frontend/features/recents/queries.ts`                  | The query, its prefetch, and removing one                      |
@@ -81,9 +81,8 @@ A row opens the insert menu on the stored selection, with
 configuration's render (see [thumbnails.md](./thumbnails.md)), and the icon
 beside its title lists that configuration on hover (see
 [configurations.md](./configurations.md)). The row's menu
-offers quick insert, favoriting with that selection, and **Remove**, which is
-`DELETE /api/recent/:recentId`, removing that configuration only, applied
-optimistically and refetched on settle.
+offers quick insert and favoriting with that selection; a recent can't be
+removed by hand, since later inserts push it out.
 
 ## Invariants
 
@@ -100,10 +99,10 @@ optimistically and refetched on settle.
 
 ## Failure and recovery
 
-| Failure                              | Result                                                                                                             | Recovery                               |
-| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------ | -------------------------------------- |
-| The recent write fails               | The insert succeeds; the list misses it                                                                            | The next insert of that configuration  |
-| A reload changes a part's parameters | A row may name an option that is gone, or two rows may now open on one configuration; accepted, since this is rare | Pushed out by later inserts, or Remove |
+| Failure                              | Result                                                                                                             | Recovery                              |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------- |
+| The recent write fails               | The insert succeeds; the list misses it                                                                            | The next insert of that configuration |
+| A reload changes a part's parameters | A row may name an option that is gone, or two rows may now open on one configuration; accepted, since this is rare | Pushed out by later inserts           |
 
 ## Decisions
 

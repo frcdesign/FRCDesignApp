@@ -1,14 +1,12 @@
-import { queryOptions, useMutation, useQuery } from "@tanstack/react-query";
-import { apiDelete, apiGet } from "../../lib/api-client";
+import { queryOptions, useQuery } from "@tanstack/react-query";
+import { apiGet } from "../../lib/api-client";
 import type { RecentsData } from "@backend/features/recents/contract";
 import { LibraryId } from "@backend/features/library/library-id";
 import { getAccessDataQuery, useIsSignedIn } from "../auth/access-level";
 import { useLibraryId } from "../../lib/library";
 import { queryClient } from "../../lib/query-client";
 import { recentsQueryKey } from "../../lib/query-keys";
-import { toLibraryPath, toRecentPath } from "../../lib/api-paths";
-import { getAppErrorHandler } from "../../lib/errors";
-import { patchQuery } from "../../lib/query-cache";
+import { toLibraryPath } from "../../lib/api-paths";
 
 function getRecentsQuery(libraryId: LibraryId) {
     return queryOptions<RecentsData>({
@@ -41,24 +39,5 @@ export function useRecentsQuery() {
 export function invalidateRecents(libraryId: LibraryId): Promise<void> {
     return queryClient.invalidateQueries({
         queryKey: recentsQueryKey(libraryId)
-    });
-}
-
-export function useRemoveRecentMutation() {
-    const libraryId = useLibraryId();
-    const queryKey = recentsQueryKey(libraryId);
-    return useMutation({
-        mutationKey: ["remove-recent"],
-        mutationFn: (recentId: string) => apiDelete(toRecentPath(recentId)),
-        onMutate: (recentId: string) =>
-            patchQuery(queryKey, (data: RecentsData) => {
-                data.recents = data.recents.filter(
-                    (recent) => recent.id !== recentId
-                );
-            }),
-        onError: getAppErrorHandler(
-            "Unexpectedly failed to remove the part from recently used."
-        ),
-        onSettled: () => invalidateRecents(libraryId)
     });
 }

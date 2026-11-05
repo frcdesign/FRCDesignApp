@@ -259,42 +259,6 @@ describe("recents routes", () => {
         expect(await db.select().from(recentInserts).all()).toEqual([]);
     });
 
-    it("DELETE removes one configuration, leaving the part's others", async () => {
-        await seedPartStudio(db);
-        await seedConfiguration(db);
-        await writeConfigured({ boolean: "false" }, 1000);
-        await writeConfigured({ boolean: "true" }, 2000);
-        const [newest] = (await getRecents()).recents;
-
-        const res = await createTestApp().request(
-            `/api/recent/${newest.id}`,
-            jsonRequest("DELETE"),
-            env
-        );
-        expect(res.status).toBe(200);
-
-        const { recents } = await getRecents();
-        expect(recents.map((recent) => recent.selection)).toEqual([
-            { boolean: "false" }
-        ]);
-    });
-
-    it("DELETE leaves another user's recent alone", async () => {
-        await seedPartStudio(db);
-        await writeRecent(TEST_PART_STUDIO_ID, 1000, "someone-else");
-        const [theirs] = (await getRecents("someone-else")).recents;
-
-        await createTestApp().request(
-            `/api/recent/${theirs.id}`,
-            jsonRequest("DELETE"),
-            env
-        );
-
-        expect(recentIds(await getRecents("someone-else"))).toEqual([
-            TEST_PART_STUDIO_ID
-        ]);
-    });
-
     it("requires sign-in", async () => {
         const res = await createTestApp({ signedIn: false }).request(
             recentsUrl,
