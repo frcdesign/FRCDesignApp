@@ -122,8 +122,15 @@ Onshape:
 
 `getAccessLevel` returns owner for `OWNER_USER_ID`, otherwise looks the caller
 up in the library's stored `admin_team`. It is a database read, never an Onshape
-call; the team is synced when the owner sets it or an admin presses **Refresh**,
-because Onshape's team webhooks need a company, which a personal account lacks.
+call. The team is synced when the owner sets it, when Onshape's
+`onshape.team.addmember` or `.removemember` arrives for it, and when an admin
+presses **Refresh**. Onshape sends a team's events only to a webhook on the
+company that owns it, an enterprise or an educator plan's classroom, so setting
+a team checks its owner (`getTeam`) and refuses one a person owns, an old kind
+Onshape no longer creates. The webhook is registered under the owner's session
+with that company's id, and unregistered once no library has the team; a
+delivery about another of the company's teams is ignored, and one about this
+team syncs every library that has it, under a background session.
 
 Routes gate with `requireSignInMiddleware`, `requireEditorMiddleware`,
 `requireAdminMiddleware` and `requireOwnerMiddleware`. A library-gated route
@@ -175,15 +182,15 @@ declared in `wrangler.jsonc` per environment and typed in `AppBindings`. Run
 
 ## Failure and recovery
 
-| Failure                                            | Result                                                              | Recovery                                   |
-| -------------------------------------------------- | ------------------------------------------------------------------- | ------------------------------------------ |
-| Access token expired                               | Refreshed on the next call                                          | Automatic                                  |
-| Refresh token revoked or expired                   | Treated as signed out                                               | Sign in again                              |
-| The grant is another company's than the document's | `/init` sends the caller through sign-in for the document's company | Automatic, once                            |
-| A company's grant for a personal document          | `/init` sends the launch to `/document-access`                      | **Sign in**, choosing the personal account |
-| Document public or shared view-only                | `/init` sends the launch to `/document-access`                      | Edit access from the document's owner      |
-| Team membership changed in Onshape                 | Stale access until synced                                           | **Refresh** beside the admin team          |
-| No saved background session                        | A load whose requester's session lapses fails                       | The owner or a team member opens the app   |
+| Failure                                            | Result                                                              | Recovery                                                 |
+| -------------------------------------------------- | ------------------------------------------------------------------- | -------------------------------------------------------- |
+| Access token expired                               | Refreshed on the next call                                          | Automatic                                                |
+| Refresh token revoked or expired                   | Treated as signed out                                               | Sign in again                                            |
+| The grant is another company's than the document's | `/init` sends the caller through sign-in for the document's company | Automatic, once                                          |
+| A company's grant for a personal document          | `/init` sends the launch to `/document-access`                      | **Sign in**, choosing the personal account               |
+| Document public or shared view-only                | `/init` sends the launch to `/document-access`                      | Edit access from the document's owner                    |
+| Team membership changed in Onshape                 | Synced when its webhook arrives                                     | **Refresh** beside the admin team, for a missed delivery |
+| No saved background session                        | A load whose requester's session lapses fails                       | The owner or a team member opens the app                 |
 
 ## Decisions
 
@@ -197,7 +204,8 @@ declared in `wrangler.jsonc` per environment and typed in `AppBindings`. Run
 - **Onshape teams as the permission source.** Library admins already manage the
   documents in Onshape; the app mirrors that rather than keeping its own roles.
 - **Synced, not live.** Asking Onshape on every request would spend the
-  allocation and add latency; membership rarely changes.
+  allocation and add latency; membership rarely changes, and Onshape says when
+  it does.
 - **Ask about the document, not only the company.** The grant's company can
   match the document's while it still can't edit it, which surfaced as
   a 403 on the first insert. One permissions call per launch finds it before

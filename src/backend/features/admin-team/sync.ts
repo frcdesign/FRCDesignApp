@@ -8,6 +8,7 @@ import { getTeamMembers } from "../../lib/onshape/endpoints/teams";
 import { bumpLibraryVersion } from "../library/db";
 import type { LibraryId } from "../library/library-id";
 import { pushLibraryChanged } from "../push/notify";
+import { getBackgroundOnshapeApi } from "../auth/background-sessions";
 
 export async function syncAdminTeam(
     env: AppBindings,
@@ -35,4 +36,27 @@ export async function syncAdminTeam(
 
     await bumpLibraryVersion(db, libraryId);
     await pushLibraryChanged(env, libraryId);
+}
+
+/** Every library whose admin team it is, after Onshape says the team's members changed. */
+export async function syncTeamLibraries(
+    env: AppBindings,
+    teamId: string
+): Promise<void> {
+    const rows = await getDb(env.DB)
+        .select({ id: libraries.id })
+        .from(libraries)
+        .where(eq(libraries.adminTeamId, teamId));
+    const libraryIds = rows.map((row) => row.id);
+    if (libraryIds.length === 0) {
+        return;
+    }
+    const onshapeApi = await getBackgroundOnshapeApi(env, libraryIds);
+    if (!onshapeApi) {
+        console.warn(`No session to sync team ${teamId} with`);
+        return;
+    }
+    for (const libraryId of libraryIds) {
+        await syncAdminTeam(env, onshapeApi, libraryId);
+    }
 }

@@ -239,7 +239,9 @@ export const recentInserts = sqliteTable(
 );
 
 export enum WebhookSubject {
-    DOCUMENT = "document"
+    DOCUMENT = "document",
+    /** A library's admin team, heard about through its company. */
+    TEAM = "team"
 }
 
 /**
@@ -250,7 +252,7 @@ export const onshapeWebhooks = sqliteTable(
     "onshape_webhooks",
     {
         subject: text("subject").$type<WebhookSubject>().notNull(),
-        // The document id.
+        // The document's id, or the team's.
         subjectId: text("subject_id").notNull(),
         webhookId: text("webhook_id"),
         token: text("token").notNull().unique()

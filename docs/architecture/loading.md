@@ -51,7 +51,8 @@ stopped. One reload holds a library at a time.
   null when nothing is held. Set by the webhook, cleared by a load.
 - `libraries.hold_new_versions` — whether a new version waits for approval;
   on unless an admin turns it off.
-- `onshape_webhooks` — one row per document: its webhook id and delivery token.
+- `onshape_webhooks` — one row per document, and one per admin team (see
+  [auth.md](./auth.md)): its webhook id and delivery token.
 
 **R2**: `search-index/` — each library's serialized search index, rebuilt by
 every reload that wrote. Thumbnails are in [thumbnails.md](./thumbnails.md).

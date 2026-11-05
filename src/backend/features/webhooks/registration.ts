@@ -1,6 +1,7 @@
 /**
- * One per library document, for its new versions, registered with
- * `isTransient: false`, which exempts it from Onshape's cleanup.
+ * One per library document, for its new versions, and one per admin team, for
+ * its members, registered with `isTransient: false`, which exempts it from
+ * Onshape's cleanup.
  */
 import { and, eq } from "drizzle-orm";
 import type { AppBindings } from "../../lib/context";
@@ -18,6 +19,8 @@ export const WEBHOOK_ROUTE = "/webhooks/onshape";
 
 export enum WebhookEvent {
     CREATE_VERSION = "onshape.model.lifecycle.createversion",
+    TEAM_ADD_MEMBER = "onshape.team.addmember",
+    TEAM_REMOVE_MEMBER = "onshape.team.removemember",
     UNREGISTER = "webhook.unregister"
 }
 
@@ -30,12 +33,25 @@ function whereSubject(subject: WebhookSubject, subjectId: string) {
     );
 }
 
-function subjectParams(subject: WebhookSubject, subjectId: string) {
+/** A team's events are only heard company-wide, so its webhook names the company that owns it. */
+function subjectParams(
+    subject: WebhookSubject,
+    subjectId: string,
+    companyId: string | undefined
+) {
     switch (subject) {
         case WebhookSubject.DOCUMENT:
             return {
                 documentId: subjectId,
                 events: [WebhookEvent.CREATE_VERSION]
+            };
+        case WebhookSubject.TEAM:
+            return {
+                companyId,
+                events: [
+                    WebhookEvent.TEAM_ADD_MEMBER,
+                    WebhookEvent.TEAM_REMOVE_MEMBER
+                ]
             };
     }
 }
@@ -64,7 +80,9 @@ export async function ensureWebhook(
     env: AppBindings,
     onshapeApi: OAuthApi,
     subject: WebhookSubject,
-    subjectId: string
+    subjectId: string,
+    /** A team's owning company, which its webhook is registered with. */
+    companyId?: string
 ): Promise<void> {
     const db = getDb(env.DB);
     const existing = await db
@@ -99,7 +117,7 @@ export async function ensureWebhook(
     url.searchParams.set("token", token);
 
     const webhook = await createWebhook(onshapeApi, {
-        ...subjectParams(subject, subjectId),
+        ...subjectParams(subject, subjectId, companyId),
         url: url.href,
         name: "FRCDesignApp",
         description: `Keeps the FRCDesignApp in step with this ${subject}.`,

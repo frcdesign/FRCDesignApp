@@ -6,7 +6,15 @@ import { handledError } from "../../lib/api-error";
 import { getLibraryParam, libraryRoute } from "../../lib/route-params";
 import { validate } from "../../lib/validate";
 import { type Db, getDb } from "../../db/client";
-import { libraries } from "../../db/schema";
+import { libraries, WebhookSubject } from "../../db/schema";
+import { runInBackground } from "../../lib/background";
+import type { OnshapeApi } from "../../lib/onshape/client";
+import {
+    getTeam,
+    OnshapeOwnerType,
+    type OnshapeTeamInfo
+} from "../../lib/onshape/endpoints/teams";
+import { ensureWebhook, removeWebhook } from "../webhooks/registration";
 import {
     requireAdminMiddleware,
     requireEditorMiddleware,
@@ -23,6 +31,28 @@ const setAdminTeamBody = z.object({
     /** Null takes the team away, leaving only the owner able to edit. */
     teamId: z.string().trim().min(1).nullable()
 });
+
+async function readTeam(
+    onshapeApi: OnshapeApi,
+    teamId: string
+): Promise<OnshapeTeamInfo> {
+    try {
+        return await getTeam(onshapeApi, teamId);
+    } catch (error) {
+        console.error(`Failed to read team ${teamId}`, error);
+        throw handledError(UNREADABLE_TEAM, HttpStatus.UNPROCESSABLE_ENTITY);
+    }
+}
+
+/** Whether any library still has the team, so its webhook is still wanted. */
+async function isAdminTeam(db: Db, teamId: string): Promise<boolean> {
+    const row = await db
+        .select({ id: libraries.id })
+        .from(libraries)
+        .where(eq(libraries.adminTeamId, teamId))
+        .get();
+    return row !== undefined;
+}
 
 async function getAdminTeam(
     db: Db,
@@ -49,7 +79,15 @@ adminTeamRoutes.get(
     async (c) => c.json(await getAdminTeam(getDb(c.env.DB), getLibraryParam(c)))
 );
 
-/** POST /api/admin-team/library/:libraryId: sets the team and pulls its members. */
+const UNREADABLE_TEAM =
+    "Couldn't read that team's members from Onshape. Check the team id.";
+
+/**
+ * POST /api/admin-team/library/:libraryId: sets the team, pulls its members,
+ * and watches it for changes. Only a company's team, an enterprise's or a
+ * classroom's, can be watched; one owned by a person is an old kind Onshape
+ * no longer creates, so it is refused.
+ */
 adminTeamRoutes.post(
     "/admin-team" + libraryRoute(),
     requireOwnerMiddleware,
@@ -59,6 +97,14 @@ adminTeamRoutes.post(
         const { teamId } = c.req.valid("json");
         const db = getDb(c.env.DB);
         const onshapeApi = await c.var.getOnshapeApi();
+
+        const team = teamId ? await readTeam(onshapeApi, teamId) : undefined;
+        if (team && team.owner.type !== OnshapeOwnerType.COMPANY) {
+            throw handledError(
+                "That team belongs to a person rather than a classroom or company, so Onshape can't say when its members change. Use a team that belongs to a classroom or company.",
+                HttpStatus.UNPROCESSABLE_ENTITY
+            );
+        }
 
         await ensureLibrary(db, libraryId);
         const previous = (await getAdminTeam(db, libraryId)).teamId;
@@ -77,10 +123,35 @@ adminTeamRoutes.post(
             await setTeam(previous);
             console.error(`Failed to read team ${teamId}`, error);
             throw handledError(
-                "Couldn't read that team's members from Onshape. Check the team id.",
+                UNREADABLE_TEAM,
                 HttpStatus.UNPROCESSABLE_ENTITY
             );
         }
+
+        // The team is set either way; a webhook that won't register leaves the refresh button.
+        await runInBackground(c, "watch the admin team", async () => {
+            if (team) {
+                await ensureWebhook(
+                    c.env,
+                    onshapeApi,
+                    WebhookSubject.TEAM,
+                    team.id,
+                    team.owner.id
+                );
+            }
+            if (
+                previous &&
+                previous !== teamId &&
+                !(await isAdminTeam(db, previous))
+            ) {
+                await removeWebhook(
+                    c.env,
+                    onshapeApi,
+                    WebhookSubject.TEAM,
+                    previous
+                );
+            }
+        });
 
         return c.json(await getAdminTeam(db, libraryId));
     }
@@ -88,8 +159,7 @@ adminTeamRoutes.post(
 
 /**
  * POST /api/admin-team/refresh/library/:libraryId: pulls the team's members
- * again. Onshape's team webhooks need a company, which a personal account
- * lacks, so a change in Onshape waits for this.
+ * again, for a change Onshape's webhook didn't deliver.
  */
 adminTeamRoutes.post(
     "/admin-team/refresh" + libraryRoute(),
