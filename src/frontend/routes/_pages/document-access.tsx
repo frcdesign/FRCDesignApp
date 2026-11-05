@@ -1,5 +1,5 @@
 import { Button, Group } from "@mantine/core";
-import { ArrowClockwiseIcon } from "@phosphor-icons/react";
+import { SignInIcon } from "@phosphor-icons/react";
 import { createFileRoute } from "@tanstack/react-router";
 import { type ReactNode } from "react";
 import { PERSONAL_COMPANY_ID } from "@backend/features/auth/personal-company";
@@ -22,8 +22,8 @@ export const Route = createFileRoute("/_pages/document-access")({
 /**
  * Where `/init` sends a launch whose Onshape grant can't edit the document.
  * Sign-in grants the session's company, so an Enterprise session can't reach a
- * personal document; a personal session that can't is most often a classroom
- * that hasn't authorized the app.
+ * personal document; a personal session that can't is a classroom that hasn't
+ * authorized the app.
  */
 function DocumentAccess(): ReactNode {
     const launch = Route.useSearch();
@@ -31,21 +31,53 @@ function DocumentAccess(): ReactNode {
         !!launch.sessionCompanyId &&
         launch.sessionCompanyId !== PERSONAL_COMPANY_ID;
     return inEnterprise ? (
-        <EnterpriseSession />
+        <EnterpriseSession launch={launch} />
     ) : (
         <ClassroomAccess launch={launch} />
     );
 }
 
-function EnterpriseSession(): ReactNode {
-    const title = m.documentAccessEnterpriseTitle();
+interface EnterpriseSessionProps {
+    launch: OnshapeLaunch;
+}
+
+function EnterpriseSession(props: EnterpriseSessionProps): ReactNode {
+    const { launch } = props;
+    const title = m.documentAccessTitle();
     return (
         <PageNotice
             title={title}
-            description={m.documentAccessEnterpriseDescription()}
-            action={<ReportButton report={{ shown: title }} />}
+            description={m.documentAccessEnterprise()}
+            action={
+                <Group gap="xs" justify="center" wrap="wrap">
+                    <Button
+                        leftSection={<SignInIcon />}
+                        onClick={() => signInToPersonalAccount(launch)}
+                    >
+                        {m.documentAccessSignIn()}
+                    </Button>
+                    <ReportButton
+                        report={{ shown: title, kind: "enterprise-session" }}
+                    />
+                </Group>
+            }
         />
     );
+}
+
+/**
+ * Asks for no company, so Onshape lets them choose their personal account, and
+ * returns to `/init` without the Enterprise, which then expects that account.
+ */
+function signInToPersonalAccount(launch: OnshapeLaunch): void {
+    const entries = Object.entries(launch).filter(
+        (entry): entry is [string, string] =>
+            typeof entry[1] === "string" && entry[0] !== "sessionCompanyId"
+    );
+    const query = new URLSearchParams({
+        redirectUrl: `/init?${new URLSearchParams(entries).toString()}`
+    });
+    window.location.href = `/auth/sign-in?${query.toString()}`;
 }
 
 interface ClassroomAccessProps {
@@ -54,16 +86,11 @@ interface ClassroomAccessProps {
 
 function ClassroomAccess(props: ClassroomAccessProps): ReactNode {
     const { launch } = props;
-    const title = m.documentAccessClassroomTitle();
-    const query = new URLSearchParams(
-        Object.entries(launch).filter(
-            (entry): entry is [string, string] => typeof entry[1] === "string"
-        )
-    ).toString();
+    const title = m.documentAccessTitle();
     return (
         <PageNotice
             title={title}
-            description={m.documentAccessClassroomDescription()}
+            description={m.documentAccessClassroom()}
             action={
                 <Group gap="xs" justify="center" wrap="wrap">
                     {/* The caller's Onshape, so the page opens on their account. */}
@@ -71,16 +98,9 @@ function ClassroomAccess(props: ClassroomAccessProps): ReactNode {
                         text={m.documentAccessOpenApplications()}
                         url={toOnshapeOrigin(launch.server) + APPLICATIONS_PATH}
                     />
-                    <Button
-                        variant="default"
-                        leftSection={<ArrowClockwiseIcon />}
-                        onClick={() => {
-                            window.location.href = `/init?${query}`;
-                        }}
-                    >
-                        {m.documentAccessTryAgain()}
-                    </Button>
-                    <ReportButton report={{ shown: title }} />
+                    <ReportButton
+                        report={{ shown: title, kind: "classroom" }}
+                    />
                 </Group>
             }
         />

@@ -77,19 +77,21 @@ team, plus one owner set by configuration.
    reach their Enterprise's documents however the session's company reads,
    and sign-in can ask Onshape for an Enterprise but never for a personal
    account.
-6. `/document-access` shows one notice, chosen by the launch's
-   `sessionCompanyId`, the company of the caller's Onshape session, which need
-   not own the document. Sign-in grants the session's company, so:
+6. `/document-access` says the app can't edit the document, and what to do,
+   chosen by the launch's `sessionCompanyId`: the company of the caller's
+   Onshape session, which need not own the document. Sign-in grants the
+   session's company, so:
     - **An Enterprise session** can't reach a document in the personal
-      account. The fix is to switch to the personal account in Onshape and open
-      the app again; the notice offers **Send a report**.
-    - **A personal session** that can't edit is most often a classroom that
-      hasn't authorized the app. The notice offers **Open Applications page**
-      (Onshape's, where a classroom is authorized), **Try again** (back through
-      `/init`) and **Send a report**.
+      account. **Sign in** goes through sign-in naming no company, where
+      Onshape lets them choose their personal account, and back to `/init`
+      without the Enterprise, which then expects that account.
+    - **A personal session** that can't edit is a classroom that hasn't
+      authorized the app: **Open Applications page** (Onshape's, where a
+      classroom authorizes it), then reopen the app.
 
-    With no session, or Onshape not answering, the app opens as before: the
-    check never keeps anybody out on a guess.
+    Both offer **Send a report**, its kind naming which. With no session, or
+    Onshape not answering, the app opens as before: the check never keeps
+    anybody out on a guess.
 
 ### Sign-out
 
@@ -175,16 +177,16 @@ declared in `wrangler.jsonc` per environment and typed in `AppBindings`. Run
 
 ## Failure and recovery
 
-| Failure                                    | Result                                         | Recovery                                  |
-| ------------------------------------------ | ---------------------------------------------- | ----------------------------------------- |
-| Access token expired                       | Refreshed on the next call                     | Automatic                                 |
-| Refresh token revoked or expired           | Treated as signed out                          | Sign in again                             |
-| Session's company differs from the grant's | `/init` sends the caller through sign-in       | Automatic, once                           |
-| Enterprise session opening a personal doc  | `/init` sends the launch to `/document-access` | Switch to the personal account in Onshape |
-| Classroom hasn't authorized the app        | `/init` sends the launch to `/document-access` | Authorize it on the Applications page     |
-| Document public or shared view-only        | `/init` sends the launch to `/document-access` | Edit access from the document's owner     |
-| Team membership changed in Onshape         | Stale access until synced                      | **Refresh** beside the admin team         |
-| No saved background session                | A load whose requester's session lapses fails  | The owner or a team member opens the app  |
+| Failure                                    | Result                                         | Recovery                                      |
+| ------------------------------------------ | ---------------------------------------------- | --------------------------------------------- |
+| Access token expired                       | Refreshed on the next call                     | Automatic                                     |
+| Refresh token revoked or expired           | Treated as signed out                          | Sign in again                                 |
+| Session's company differs from the grant's | `/init` sends the caller through sign-in       | Automatic, once                               |
+| Enterprise session opening a personal doc  | `/init` sends the launch to `/document-access` | **Sign in**, choosing the personal account    |
+| Classroom hasn't authorized the app        | `/init` sends the launch to `/document-access` | Authorize it on the Applications page, reopen |
+| Document public or shared view-only        | `/init` sends the launch to `/document-access` | Edit access from the document's owner         |
+| Team membership changed in Onshape         | Stale access until synced                      | **Refresh** beside the admin team             |
+| No saved background session                | A load whose requester's session lapses fails  | The owner or a team member opens the app      |
 
 ## Decisions
 
