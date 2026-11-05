@@ -308,7 +308,7 @@
     "favoritesSetDefaultFailed": "Failed to set the default configuration.",
     "documentAccessTitle": "The FRCDesignApp can't edit this document.",
     "documentAccessOtherAccount": "Sign in and choose your personal account. If the problem persists, send a report.",
-    "documentAccessViewOnly": "You can only view this document, so nothing can be inserted into it. If the problem persists, send a report.",
+    "documentAccessViewOnly": "Verify the document has been shared with you. If the problem persists, send a report.",
     "documentAccessSignIn": "Sign in",
     "dashboardReports": "Reports",
     "dashboardReportsFromErrors": "From errors",
