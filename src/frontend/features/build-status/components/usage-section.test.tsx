@@ -63,10 +63,9 @@ describe("usage section", () => {
 describe("usage section, closed", () => {
     afterEach(() => updateUiState({ sections: {} }));
 
-    it("keeps its link, and asks for nothing", () => {
+    it("asks for nothing", () => {
         updateUiState({ sections: { usage: false } });
         const { queryClient } = renderUsage();
-        expect(dashboardLink()).toBeTruthy();
         expect(screen.queryByText("Inserts")).toBeNull();
         expect(queryClient.getQueryCache().getAll()).toHaveLength(0);
     });

@@ -79,10 +79,10 @@ sits in an info tooltip at the callout's end.
 
 ## Usage section
 
-| String                                | Kind        | Where                                | When   | Review    |
-| ------------------------------------- | ----------- | ------------------------------------ | ------ | --------- |
-| "Open in dashboard"                   | Tooltip     | The chart icon in the section header | Always | **⚑** New |
-| "Inserts" / "Per month" / "Favorites" | Stat labels | Under each number                    | Always |           |
+| String                                | Kind        | Where             | When   | Review                                              |
+| ------------------------------------- | ----------- | ----------------- | ------ | --------------------------------------------------- |
+| "Open in dashboard"                   | Link        | Under the numbers | Always | **⚑** Was the tooltip of a chart icon in the header |
+| "Inserts" / "Per month" / "Favorites" | Stat labels | Under each number | Always |                                                     |
 
 ## Settings menu
 

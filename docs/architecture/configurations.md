@@ -88,7 +88,7 @@ icon beside its title (`ConfigurationHoverCard`). Hovering it fetches the
 part's parameters with the insert menu's own query, keyed on the microversion,
 and lists `displayedValues` of the selection the row opens on: the favorite's
 saved one, the recent's, or the hit's matched record, else the defaults.
-Values left at their default are dimmed. Browsing a group shows no icon, since
+Values changed from their default are bold. Browsing a group shows no icon, since
 every row there opens on the defaults.
 
 ## Flows

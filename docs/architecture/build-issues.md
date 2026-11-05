@@ -346,8 +346,10 @@ Admin settings start open; Configuration starts closed.
    group loads, or a hidden mark for a hidden element; a blue dot
    (`DotIndicator`, Mantine's `Indicator`) marks unsaved indexing edits.
 2. Hovering it opens the card: name, element type, version age and severity
-   badges, then the sections, each folding on its own. A closed section is
-   unmounted, so Usage fetches nothing until opened.
+   badges, then the sections, each folding on its own: Mantine's unstyled
+   accordion, whose whole header is the toggle, so nothing that is a control
+   sits in it. A closed section is unmounted, so Usage fetches nothing until
+   opened.
 3. **Build checks** lists one callout per issue. One that blames a
    configuration links to it in Onshape, built from the issue's `values`
    through `toSelection`.
@@ -357,7 +359,7 @@ Admin settings start open; Configuration starts closed.
    indexes it; an enum's badge opens a bubble listing its options. Edits
    collect as a draft; **Save** sends both settings in one reindex.
 6. **Usage** reads the part's all-time numbers from the dashboard's parts
-   report; its icon opens that part's report.
+   report; **Open in dashboard** under them opens that part's report.
 
 ## User-facing strings
 

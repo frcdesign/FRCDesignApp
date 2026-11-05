@@ -98,7 +98,7 @@ function ValueRows(props: ValueRowsProps): ReactNode {
                         </DataList.ItemLabel>
                         {/* What was changed stands out from what was left alone. */}
                         <DataList.ItemValue
-                            c={isDefault ? StatusColor.DIMMED : undefined}
+                            c="var(--mantine-color-text)"
                             fw={isDefault ? undefined : FontWeight.SEMI_BOLD}
                         >
                             {value}

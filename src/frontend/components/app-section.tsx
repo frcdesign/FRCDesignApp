@@ -46,6 +46,8 @@ export function AppSections(props: AppSectionsProps): ReactNode {
                 onChange={onChange}
                 // A closed card section's content fetches nothing.
                 keepMounted={!compact}
+                chevronPosition="right"
+                chevron={<CaretDownIcon size={IconSize.SMALL} />}
                 classNames={{
                     item: classes.item,
                     control: compact ? classes.compactControl : undefined,
@@ -54,7 +56,7 @@ export function AppSections(props: AppSectionsProps): ReactNode {
                         ? classes.compactContent
                         : `${classes.content} ${styles.dividerBottom}`,
                     icon: styles.titleIcon,
-                    chevron: classes.chevron
+                    chevron: compact ? undefined : classes.chevron
                 }}
             >
                 {children}
@@ -71,7 +73,10 @@ interface AppSectionProps {
     /** A title of its own, for a section whose header carries more than a name. */
     title?: ReactNode;
     icon?: ReactNode;
-    /** The section's own controls, between its title and its chevron. */
+    /**
+     * Between the title and the chevron. In a compact section it sits inside the
+     * header's button, so it must not be a control itself.
+     */
     actions?: ReactNode;
     children: ReactNode;
 }
@@ -81,6 +86,22 @@ export function AppSection(props: AppSectionProps): ReactNode {
     const { value, name, title, icon, actions, children } = props;
     const sections = use(SectionsContext);
     const opened = sections.opened.includes(value);
+
+    if (sections.compact) {
+        return (
+            <Accordion.Item value={value}>
+                <Accordion.Control icon={icon}>
+                    <Group gap="xs" wrap="nowrap" justify="space-between">
+                        {title ?? (
+                            <Title order={PANEL_TITLE_ORDER}>{name}</Title>
+                        )}
+                        {actions}
+                    </Group>
+                </Accordion.Control>
+                <Accordion.Panel>{children}</Accordion.Panel>
+            </Accordion.Item>
+        );
+    }
 
     const toggle = () =>
         sections.onChange(
@@ -92,32 +113,23 @@ export function AppSection(props: AppSectionProps): ReactNode {
     return (
         <Accordion.Item value={value}>
             <Group
-                className={
-                    sections.compact
-                        ? undefined
-                        : // The whole row highlights, buttons and chevron included.
-                          `${classes.header} ${styles.sectionHeader} ${styles.dividerBottom} interactive`
-                }
+                // The whole row highlights, buttons and chevron included.
+                className={`${classes.header} ${styles.sectionHeader} ${styles.dividerBottom} interactive`}
                 gap="xs"
-                pr={sections.compact ? undefined : "sm"}
+                pr="sm"
             >
                 <Accordion.Control
                     // Shrinkable, so the buttons beside it keep their width.
                     miw={0}
                     icon={icon}
                 >
-                    {title ??
-                        (sections.compact ? (
-                            <Title order={PANEL_TITLE_ORDER}>{name}</Title>
-                        ) : (
-                            <AppTitle title={name} />
-                        ))}
+                    {title ?? <AppTitle title={name} />}
                 </Accordion.Control>
                 {actions}
                 <SectionChevron
                     opened={opened}
                     onToggle={toggle}
-                    size={sections.compact ? IconSize.SMALL : IconSize.MEDIUM}
+                    size={IconSize.MEDIUM}
                 />
             </Group>
             <Accordion.Panel>{children}</Accordion.Panel>

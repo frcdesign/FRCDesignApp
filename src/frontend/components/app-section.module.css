@@ -25,7 +25,7 @@
     padding: 0;
 }
 
-/* `AppSection` draws its own at the end of the row. */
+/* On a page `AppSection` draws its own, after the actions at the end of the row. */
 .chevron {
     display: none;
 }

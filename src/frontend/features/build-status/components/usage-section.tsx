@@ -1,4 +1,4 @@
-import { ActionIcon, SimpleGrid, Stack, Text, Tooltip } from "@mantine/core";
+import { Anchor, Group, SimpleGrid, Stack, Text } from "@mantine/core";
 import { ChartLineIcon } from "@phosphor-icons/react";
 import { useQuery } from "@tanstack/react-query";
 import { ReactNode } from "react";
@@ -27,24 +27,21 @@ export function UsageSection(props: UsageSectionProps): ReactNode {
     const libraryId = useLibraryId();
 
     return (
-        <CardSection
-            id={SectionId.USAGE}
-            title={m.adminCardUsage()}
-            actions={
-                <Tooltip label={m.adminCardOpenDashboard()}>
-                    <ActionIcon
-                        size="sm"
-                        component="a"
-                        href={partDashboardUrl(libraryId, elementId)}
-                        target="_blank"
-                        rel="noreferrer"
-                    >
+        <CardSection id={SectionId.USAGE} title={m.adminCardUsage()}>
+            <Stack gap="xs" align="flex-start">
+                <UsageStats libraryId={libraryId} elementId={elementId} />
+                <Anchor
+                    size="sm"
+                    href={partDashboardUrl(libraryId, elementId)}
+                    target="_blank"
+                    rel="noreferrer"
+                >
+                    <Group gap={4} wrap="nowrap">
                         <ChartLineIcon size={IconSize.SMALL} />
-                    </ActionIcon>
-                </Tooltip>
-            }
-        >
-            <UsageStats libraryId={libraryId} elementId={elementId} />
+                        {m.adminCardOpenDashboard()}
+                    </Group>
+                </Anchor>
+            </Stack>
         </CardSection>
     );
 }

@@ -45,7 +45,7 @@ export function CardSections(props: CardSectionsProps): ReactNode {
 interface CardSectionProps {
     id: SectionId;
     title: string;
-    /** Beside the title, before the chevron: a link, or what the closed section holds. */
+    /** Beside the title, inside the header's button: what the closed section holds, never a control. */
     actions?: ReactNode;
     children: ReactNode;
 }
