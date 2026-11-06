@@ -114,6 +114,17 @@ function UserSettings(): ReactNode {
 
     return (
         <Stack gap="sm">
+            <InputRow label={m.settingsFeedback()}>
+                <Button
+                    leftSection={<ChatCircleTextIcon />}
+                    onClick={() => {
+                        modal.close();
+                        openFeedbackForm();
+                    }}
+                >
+                    {m.settingsLeaveFeedback()}
+                </Button>
+            </InputRow>
             {/* Only worth offering from inside Onshape's panel, which is what
                 the standalone app is roomier than. */}
             {isConnected && (
@@ -137,17 +148,6 @@ function UserSettings(): ReactNode {
                     />
                 </InputRow>
             )}
-            <InputRow label={m.settingsFeedback()}>
-                <Button
-                    leftSection={<ChatCircleTextIcon />}
-                    onClick={() => {
-                        modal.close();
-                        openFeedbackForm();
-                    }}
-                >
-                    {m.settingsLeaveFeedback()}
-                </Button>
-            </InputRow>
             {/* Only worth offering to somebody who is not already running the
                 app, which inside Onshape's panel they are. */}
             {!isConnected && (

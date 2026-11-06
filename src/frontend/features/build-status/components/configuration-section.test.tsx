@@ -117,7 +117,18 @@ describe("configuration section", () => {
         await userEvent.hover(screen.getByText("Enum · 2"));
         expect(await screen.findByText("Small")).toBeTruthy();
         expect(screen.getByText("Large")).toBeTruthy();
-        expect(screen.getByText("Default")).toBeTruthy();
+        // Marked by a star, named in its tooltip.
+        const star = screen.getByText("Large").nextElementSibling;
+        if (!(star instanceof HTMLElement)) throw new Error("No default mark");
+        expect(screen.getByText("Small").nextElementSibling).toBeNull();
+        await userEvent.hover(star);
+        expect(await screen.findByText("Default")).toBeTruthy();
+    });
+
+    it("keeps an enum's options inside the card, so moving into them doesn't leave it", async () => {
+        const { container } = await renderOpen([enumParam("size", ["s", "l"])]);
+        await userEvent.hover(screen.getByText("Enum · 2"));
+        expect(container.contains(await screen.findByText("s"))).toBe(true);
     });
 
     it("lets enums and booleans be indexed, but not text or a role", async () => {

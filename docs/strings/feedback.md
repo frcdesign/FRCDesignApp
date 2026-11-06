@@ -11,7 +11,7 @@ Discord post are written in `src/backend/features/feedback/`.
 
 | String                                    | Kind               | Where                                                                      | When                                                    | Review |
 | ----------------------------------------- | ------------------ | -------------------------------------------------------------------------- | ------------------------------------------------------- | ------ |
-| "Feedback"                                | Setting label      | Settings                                                                   | Always                                                  |        |
+| "Feedback"                                | Setting label      | The top of settings                                                        | Always                                                  |        |
 | "Leave feedback"                          | Button             | Beside it                                                                  | Always; opens the form                                  |        |
 | "Feedback"                                | Menu section       | A part's menu, on its card or in the insert menu                           | Always                                                  |        |
 | "Report an issue"                         | Menu item, dotted  | Under it                                                                   | Always; dotted until a menu offering it has been closed |        |

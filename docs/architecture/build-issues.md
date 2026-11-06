@@ -261,7 +261,8 @@ function BuildIssueList(props: BuildIssueListProps): ReactNode;
 function InsertableSettings(props: InsertableSettingsProps): ReactNode;
 function GroupSettings(props: GroupSettingsProps): ReactNode;
 function ConfigurationSection(props: ConfigurationSectionProps): ReactNode;
-function UsageSection(props: UsageSectionProps): ReactNode;
+function PartUsageSection(props: PartUsageSectionProps): ReactNode;
+function GroupUsageSection(props: GroupUsageSectionProps): ReactNode;
 
 interface InsertableStatusBadgeProps {
     insertableId: string;
@@ -282,7 +283,7 @@ interface CardSectionsProps {
 interface CardSectionProps {
     id: SectionId;
     title: string;
-    /** Beside the title, before the chevron: a link, or what the closed section holds. */
+    /** Beside the header's button, before the chevron: a control, or what the closed section holds. */
     actions?: ReactNode;
     children: ReactNode;
 }
@@ -347,20 +348,23 @@ Admin settings start open; Configuration starts closed.
    (`DotIndicator`, Mantine's `Indicator`) marks unsaved indexing edits.
 2. Hovering it opens the card: name, element type, version age and severity
    badges, then the sections, each folding on its own: Mantine's unstyled
-   accordion, whose whole header is the toggle, so nothing that is a control
-   sits in it. A closed section is unmounted, so Usage fetches nothing until
-   opened.
+   accordion, whose whole header is the toggle. A section's own buttons sit
+   beside that toggle, before the chevron, as on the version manager's page
+   sections, since a button cannot nest in a button. A closed section is
+   unmounted, so Usage fetches nothing until opened.
 3. **Build checks** lists one callout per issue. One that blames a
    configuration links to it in Onshape, built from the issue's `values`
    through `toSelection`.
 4. **Settings** writes at once: each toggle patches the cached status, posts,
    and refetches when it settles. Hiding asks first.
 5. **Configuration** lists every parameter with its type and whether search
-   indexes it; an enum's badge opens a bubble listing its options. Edits
+   indexes it; an enum's badge opens a bubble listing its options, the
+   default starred in the library's color. Edits
    collect as a draft; **Discard** and **Save** show only while it differs
    from what is stored, and **Save** sends both settings in one reindex.
-6. **Usage** reads the part's all-time numbers from the dashboard's parts
-   report; **Open in dashboard** under them opens that part's report.
+6. **Usage** reads all-time numbers from the dashboard's parts report: a
+   part's own, or for a group the totals of its parts. The chart button in its
+   header opens the part's report, or for a group the library's.
 
 ## User-facing strings
 
@@ -411,8 +415,10 @@ In [strings/build-issues.md](../strings/build-issues.md).
   cost one; a switch is cheap and expected to act.
 - **One open state for every card's section.** An editor checks many cards in
   a row, and wants the same sections open on each.
-- **The enum options bubble opens below its badge.** The card already fills the
-  space to the badge's right, and a bubble shifted over the badge would take
-  the pointer off it and close both.
+- **The enum options bubble opens below its badge, inside the card.** The card
+  already fills the space to the badge's right, and a bubble shifted over the
+  badge would take the pointer off it and close both. Its dropdown stays in the
+  card's DOM (`withinPortal={false}`, Mantine's fix for nested popovers), so
+  moving into it doesn't leave the card.
 
 _Last reviewed: 2026-11-02_

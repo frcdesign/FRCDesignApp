@@ -11,6 +11,7 @@ import {
     Tooltip
 } from "@mantine/core";
 import { ReactNode, useMemo } from "react";
+import { StarIcon } from "@phosphor-icons/react";
 import { InsertableBuildStatus } from "@backend/features/build-checker/contract";
 import { BuildIssueSeverity } from "@backend/features/build-checker/issues";
 import {
@@ -30,7 +31,11 @@ import {
     ParameterRoleIcon,
     ParameterRoleLabel
 } from "../../../components/parameter-role";
-import { IconSize, StatusColor } from "../../../lib/style-constants";
+import {
+    IconSize,
+    PrimaryColor,
+    StatusColor
+} from "../../../lib/style-constants";
 import { useIndexingMutation } from "../queries";
 import {
     clearIndexingDraft,
@@ -334,7 +339,7 @@ function ParameterTypeBadge(props: ParameterTypeBadgeProps): ReactNode {
     return (
         <AppHoverBubble
             padding="sm"
-            below
+            nested
             target={
                 <Badge size="xs">
                     {m.adminCardEnumBadge({
@@ -361,9 +366,16 @@ function EnumOptions(props: EnumOptionsProps): ReactNode {
                 <Group key={option.id} gap="xs" wrap="nowrap">
                     <Text size="sm">{option.name}</Text>
                     {option.id === parameter.default && (
-                        <Text size="xs" c={StatusColor.DIMMED}>
-                            {m.adminCardDefaultOption()}
-                        </Text>
+                        <Tooltip label={m.adminCardDefaultOption()}>
+                            {/* Its points' weight sits low, under text that reads high. */}
+                            <Center className={styles.titleIcon}>
+                                <StarIcon
+                                    weight="fill"
+                                    size={IconSize.SMALL}
+                                    color={PrimaryColor.FILLED}
+                                />
+                            </Center>
+                        </Tooltip>
                     )}
                 </Group>
             ))}

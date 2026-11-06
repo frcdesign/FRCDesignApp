@@ -13,7 +13,6 @@ import type { SearchRecord } from "@backend/features/configurations/contract";
 import { FontWeight, IconSize, StatusColor } from "../lib/style-constants";
 import { meaningfulPartNumber } from "@backend/features/configurations/part-number";
 import { PartNumber } from "./part-number";
-import styles from "../lib/styles.module.css";
 
 interface AppTitleProps {
     title: string;
@@ -31,8 +30,9 @@ export function AppTitle(props: AppTitleProps): ReactNode {
     return (
         <Group gap="sm" miw={0}>
             {/* Centred, not wrapped in a block, where the icon would go back
-                to sitting on the text baseline several pixels low. */}
-            {icon && <Center className={styles.titleIcon}>{icon}</Center>}
+                to sitting on the text baseline several pixels low. At this size
+                the capitals centre on the line box, so it needs no nudge. */}
+            {icon && <Center>{icon}</Center>}
             <Stack gap={0} miw={0}>
                 <Group gap="xs" miw={0}>
                     <Text

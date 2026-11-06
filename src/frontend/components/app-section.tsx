@@ -55,8 +55,7 @@ export function AppSections(props: AppSectionsProps): ReactNode {
                     content: compact
                         ? classes.compactContent
                         : `${classes.content} ${styles.dividerBottom}`,
-                    icon: styles.titleIcon,
-                    chevron: compact ? undefined : classes.chevron
+                    icon: styles.titleIcon
                 }}
             >
                 {children}
@@ -73,10 +72,7 @@ interface AppSectionProps {
     /** A title of its own, for a section whose header carries more than a name. */
     title?: ReactNode;
     icon?: ReactNode;
-    /**
-     * Between the title and the chevron. In a compact section it sits inside the
-     * header's button, so it must not be a control itself.
-     */
+    /** The section's own controls, between its title and its chevron. */
     actions?: ReactNode;
     children: ReactNode;
 }
@@ -87,16 +83,13 @@ export function AppSection(props: AppSectionProps): ReactNode {
     const sections = use(SectionsContext);
     const opened = sections.opened.includes(value);
 
-    if (sections.compact) {
+    const { compact } = sections;
+
+    if (compact && !actions) {
         return (
             <Accordion.Item value={value}>
                 <Accordion.Control icon={icon}>
-                    <Group gap="xs" wrap="nowrap" justify="space-between">
-                        {title ?? (
-                            <Title order={PANEL_TITLE_ORDER}>{name}</Title>
-                        )}
-                        {actions}
-                    </Group>
+                    {title ?? <Title order={PANEL_TITLE_ORDER}>{name}</Title>}
                 </Accordion.Control>
                 <Accordion.Panel>{children}</Accordion.Panel>
             </Accordion.Item>
@@ -113,23 +106,34 @@ export function AppSection(props: AppSectionProps): ReactNode {
     return (
         <Accordion.Item value={value}>
             <Group
-                // The whole row highlights, buttons and chevron included.
-                className={`${classes.header} ${styles.sectionHeader} ${styles.dividerBottom} interactive`}
+                className={
+                    compact
+                        ? undefined
+                        : // The whole row highlights, buttons and chevron included.
+                          `${classes.header} ${styles.sectionHeader} ${styles.dividerBottom} interactive`
+                }
                 gap="xs"
-                pr="sm"
+                wrap="nowrap"
+                pr={compact ? undefined : "sm"}
             >
                 <Accordion.Control
                     // Shrinkable, so the buttons beside it keep their width.
                     miw={0}
                     icon={icon}
+                    classNames={{ chevron: classes.chevron }}
                 >
-                    {title ?? <AppTitle title={name} />}
+                    {title ??
+                        (compact ? (
+                            <Title order={PANEL_TITLE_ORDER}>{name}</Title>
+                        ) : (
+                            <AppTitle title={name} />
+                        ))}
                 </Accordion.Control>
                 {actions}
                 <SectionChevron
                     opened={opened}
                     onToggle={toggle}
-                    size={IconSize.MEDIUM}
+                    size={compact ? IconSize.SMALL : IconSize.MEDIUM}
                 />
             </Group>
             <Accordion.Panel>{children}</Accordion.Panel>

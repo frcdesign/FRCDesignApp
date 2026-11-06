@@ -31,7 +31,7 @@ import {
 } from "./issues";
 import { ConfigurationSection } from "./configuration-section";
 import { GroupSettings, InsertableSettings } from "./admin-section";
-import { UsageSection } from "./usage-section";
+import { GroupUsageSection, PartUsageSection } from "./usage-section";
 import { CardSection, CardSections } from "./card-section";
 import styles from "../../../lib/styles.module.css";
 
@@ -259,7 +259,7 @@ export function InsertableStatusBadge(
                         parameters={parameters}
                     />
                 ),
-                <UsageSection
+                <PartUsageSection
                     key="usage"
                     elementId={insertable.elementPath.elementId}
                 />
@@ -278,6 +278,12 @@ export function GroupStatusBadge(props: GroupStatusBadgeProps): ReactNode {
     const { groupId, name } = props;
     const { data } = useBuildStatusQuery();
     const groupStatus = data?.groups[groupId];
+    const elementIds = (groupStatus?.insertableOrder ?? []).flatMap(
+        (insertableId) => {
+            const insertable = data?.insertables[insertableId];
+            return insertable ? [insertable.elementPath.elementId] : [];
+        }
+    );
     return (
         <>
             {groupStatus && (
@@ -296,7 +302,11 @@ export function GroupStatusBadge(props: GroupStatusBadgeProps): ReactNode {
                                 groupId={groupId}
                                 status={groupStatus}
                             />
-                        </CardSection>
+                        </CardSection>,
+                        <GroupUsageSection
+                            key="usage"
+                            elementIds={elementIds}
+                        />
                     ]}
                 />
             )}

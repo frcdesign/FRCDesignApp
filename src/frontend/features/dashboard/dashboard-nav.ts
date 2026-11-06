@@ -71,6 +71,11 @@ export function partDashboardUrl(
     return `${path}?${new URLSearchParams(search).toString()}`;
 }
 
+/** A library's dashboard as a url, for a link that opens it in a new tab. */
+export function libraryDashboardUrl(libraryId: LibraryId): string {
+    return `/dashboard/library/${libraryId}`;
+}
+
 /** The library a scoped dashboard falls back to when none is selected yet. */
 export const DEFAULT_LIBRARY = LibraryId.FRC_DESIGN_LIB;
 

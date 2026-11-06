@@ -24,8 +24,12 @@ interface AppHoverBubbleProps {
     children?: ReactNode;
     /** Around the whole bubble. @default "md" */
     padding?: MantineSize;
-    /** Under the target, for one inside another bubble, which fills the space to its right. */
-    below?: boolean;
+    /**
+     * Inside another bubble: under the target, since the parent fills the space
+     * to its right, and kept in the parent's DOM, so moving into it doesn't
+     * leave the parent and close it.
+     */
+    nested?: boolean;
 }
 
 /**
@@ -34,14 +38,17 @@ interface AppHoverBubbleProps {
  * header it keeps one width whatever its body; without, it fits its body.
  */
 export function AppHoverBubble(props: AppHoverBubbleProps): ReactNode {
-    const { target, header, interactive, children, padding, below } = props;
+    const { target, header, interactive, children, padding, nested } = props;
 
     return (
         <AppHoverCard
-            position={below ? "bottom" : "right"}
+            position={nested ? "bottom" : "right"}
             middlewares={
-                below ? undefined : { flip: false, shift: { crossAxis: true } }
+                nested ? undefined : { flip: false, shift: { crossAxis: true } }
             }
+            withinPortal={!nested}
+            // Out of the parent's scroll areas, which would clip it.
+            floatingStrategy={nested ? "fixed" : undefined}
             arrowSize={20}
             // Passing the pointer down a list shouldn't open every row's.
             openDelay={150}
