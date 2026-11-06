@@ -9,7 +9,7 @@ import { GroupCard } from "../../../../features/library/components/group-card";
 import { ItemTable } from "../../../../components/item-row";
 import { FavoriteIcon } from "../../../../features/favorites/components/favorite-button";
 import { SearchResults } from "../../../../features/search/components/search-results";
-import { InsertSource } from "@backend/features/analytics/usage";
+import { UseSource } from "@backend/features/analytics/usage";
 import {
     SectionNotice,
     SectionLoading,
@@ -96,7 +96,7 @@ function useHomeSections(): Section[] {
             <SearchResults
                 query={searchQuery}
                 filters={{ vendors: vendorFilters }}
-                source={InsertSource.SEARCH}
+                source={UseSource.SEARCH}
             />
         ),
         opened: isSearchOpen,

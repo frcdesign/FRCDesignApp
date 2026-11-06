@@ -110,17 +110,14 @@ function UsageStats(props: UsageStatsProps): ReactNode {
     const total = parts.data && totalUsage(parts.data, elementIds);
     return (
         <SimpleGrid cols={3} spacing="xs">
-            <Stat label={m.adminCardInserts()} value={total?.insertCount} />
+            <Stat label={m.adminCardUses()} value={total?.useCount} />
             <Stat label={m.adminCardPerMonth()} value={total?.usesPerMonth} />
             <Stat label={m.adminCardFavorites()} value={total?.favorites} />
         </SimpleGrid>
     );
 }
 
-type UsageTotal = Pick<
-    PartUsageOut,
-    "insertCount" | "usesPerMonth" | "favorites"
->;
+type UsageTotal = Pick<PartUsageOut, "useCount" | "usesPerMonth" | "favorites">;
 
 /** Undefined when the report lists none of them, as for a part added since it ran. */
 function totalUsage(
@@ -131,7 +128,7 @@ function totalUsage(
     const listed = parts.filter((part) => wanted.has(part.path.elementId));
     if (listed.length === 0) return undefined;
     return {
-        insertCount: sum(listed, (part) => part.insertCount),
+        useCount: sum(listed, (part) => part.useCount),
         usesPerMonth: sum(listed, (part) => part.usesPerMonth),
         favorites: sum(listed, (part) => part.favorites)
     };

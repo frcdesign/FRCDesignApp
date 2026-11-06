@@ -11,7 +11,7 @@ describe("usesPerMonth", () => {
     });
 
     it("scales a long history down to one month", () => {
-        // 120 inserts over a year is ten a month.
+        // 120 uses over a year is ten a month.
         expect(usesPerMonth(120, ago(360), NOW)).toBe(10);
     });
 

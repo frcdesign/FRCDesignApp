@@ -1,6 +1,6 @@
 import type { PartUsageOut } from "@backend/features/analytics/contract";
 
-export type SortColumn = "name" | "groupName" | "usesPerMonth" | "insertCount";
+export type SortColumn = "name" | "groupName" | "usesPerMonth" | "useCount";
 
 export interface SortState {
     column: SortColumn;
@@ -18,7 +18,7 @@ const DESCENDING_FIRST: Record<SortColumn, boolean> = {
     name: false,
     groupName: false,
     usesPerMonth: true,
-    insertCount: true
+    useCount: true
 };
 
 /** Clicking a column sorts by it, then flips direction on each further click. */
@@ -36,11 +36,9 @@ function compare(a: PartUsageOut, b: PartUsageOut, column: SortColumn): number {
             return a.groupName.localeCompare(b.groupName);
         case "usesPerMonth":
             // Ties are common once rounded, so fall back to the raw total.
-            return (
-                a.usesPerMonth - b.usesPerMonth || a.insertCount - b.insertCount
-            );
-        case "insertCount":
-            return a.insertCount - b.insertCount;
+            return a.usesPerMonth - b.usesPerMonth || a.useCount - b.useCount;
+        case "useCount":
+            return a.useCount - b.useCount;
     }
 }
 

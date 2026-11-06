@@ -31,7 +31,7 @@ import { openInsertMenu } from "../../insert/open-insert-menu";
 import { useFavorite } from "../../favorites/queries";
 import { RequireSignIn } from "../../auth/components/require-access";
 import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
-import { InsertSource } from "@backend/features/analytics/usage";
+import { UseSource } from "@backend/features/analytics/usage";
 import { Hint } from "@backend/features/hints/contract";
 import { ReportIssueItem } from "../../feedback/components/report-issue-item";
 import { m } from "../../../paraglide/messages";
@@ -50,11 +50,11 @@ interface InsertableCardProps extends PropsWithChildren {
     match?: InsertableMatch;
     onClick?: () => void;
     /** Where this card is listed — browsing a group unless told otherwise. */
-    source?: InsertSource;
+    source?: UseSource;
 }
 
 export function InsertableCard(props: InsertableCardProps): ReactNode {
-    const { insertable, match, source = InsertSource.BROWSE } = props;
+    const { insertable, match, source = UseSource.BROWSE } = props;
 
     const favorite = useFavorite(insertable.id);
 
@@ -164,7 +164,7 @@ interface InsertableMenuItemsProps {
     selection?: PartialSelection;
     /** That selection's key, so favoriting can name its thumbnail. */
     configurationKey?: ConfigurationKey;
-    source: InsertSource;
+    source: UseSource;
     /** Inside the insert menu: the configuration on screen, which a favorite can open with. */
     report?: SelectionReport;
 }

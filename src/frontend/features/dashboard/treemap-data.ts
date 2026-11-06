@@ -45,7 +45,7 @@ function shade(color: string, rank: number): string {
 function within(parts: PartUsageOut[], path: TreemapPath): PartUsageOut[] {
     return parts.filter(
         (part) =>
-            part.insertCount > 0 &&
+            part.useCount > 0 &&
             (path.libraryId === undefined ||
                 part.libraryId === path.libraryId) &&
             (path.groupName === undefined || part.groupName === path.groupName)
@@ -60,7 +60,7 @@ function totalsBy<K extends string>(
     const totals = new Map<K, number>();
     for (const part of parts) {
         const key = keyOf(part);
-        totals.set(key, (totals.get(key) ?? 0) + part.insertCount);
+        totals.set(key, (totals.get(key) ?? 0) + part.useCount);
     }
     return [...totals]
         .sort(([, a], [, b]) => b - a)
@@ -101,11 +101,11 @@ export function toNodes(
     }
 
     return shown
-        .sort((a, b) => b.insertCount - a.insertCount)
+        .sort((a, b) => b.useCount - a.useCount)
         .map((part, rank) => ({
             kind: TreemapKind.PART,
             name: part.name,
-            value: part.insertCount,
+            value: part.useCount,
             color: shade(hue, rank),
             libraryId: part.libraryId,
             elementId: part.path.elementId

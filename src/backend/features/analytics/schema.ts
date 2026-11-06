@@ -22,7 +22,7 @@ import {
     FeedbackSource,
     FeedbackTopic
 } from "../feedback/contract";
-import { EventType, InsertSource } from "./usage";
+import { EventType, UseSource, UseTarget } from "./usage";
 
 /**
  * Append-only. Keyed on Onshape's `elementId` with no foreign keys, so a reload
@@ -50,16 +50,16 @@ export const events = sqliteTable(
         instanceType: text("instance_type").$type<InstanceType>(),
         // The app id at event time; kept for debugging, never joined on
         insertableId: text("insertable_id"),
-        // The type of tab the user inserted into, not the insertable's own type
+        // The type of tab the user inserted into, not the insertable's own type; null for a download
         targetElementType: text("target_element_type").$type<ElementType>(),
-        // What the insert applied, minus the parameters it hid.
+        // What the insert or download applied, minus the parameters it hid.
         selection: text("selection", {
             mode: "json"
         }).$type<Selection | null>(),
-        // Favorited at insert time; `source` says where the insert came from.
+        // Favorited at the time of the use; `source` says where the use started.
         isFavorite: integer("is_favorite", { mode: "boolean" }),
         isQuickInsert: integer("is_quick_insert", { mode: "boolean" }),
-        source: text("source").$type<InsertSource>(),
+        source: text("source").$type<UseSource>(),
         // Insert-and-fasten, which Onshape only offers for assembly targets.
         fasten: integer("fasten", { mode: "boolean" }),
         // A version run's own columns: how it was aimed, and what it did.
@@ -100,7 +100,7 @@ export const dailyMetrics = sqliteTable(
     (t) => [primaryKey({ columns: [t.day, t.libraryId, t.type] })]
 );
 
-/** A row per type, so a new target type needs no column. */
+/** A row per target, so a new target needs no column. */
 export const dailyTargetMetrics = sqliteTable(
     "daily_target_metrics",
     {
@@ -108,42 +108,45 @@ export const dailyTargetMetrics = sqliteTable(
         libraryId: text("library_id").$type<LibraryId>().notNull(),
         targetElementType: text("target_element_type")
             .notNull()
-            .$type<ElementType>(),
+            .$type<UseTarget>(),
         count: integer("count").notNull().default(0)
     },
     (t) => [primaryKey({ columns: [t.day, t.libraryId, t.targetElementType] })]
 );
 
-/** Per-day inserts split by where they started, for the source breakdown. */
+/** Per-day uses split by where they started, for the source breakdown. */
 export const dailySourceMetrics = sqliteTable(
     "daily_source_metrics",
     {
         day: text("day").notNull(),
         libraryId: text("library_id").$type<LibraryId>().notNull(),
-        source: text("source").notNull().$type<InsertSource>(),
+        source: text("source").notNull().$type<UseSource>(),
         count: integer("count").notNull().default(0),
         quickInsertCount: integer("quick_insert_count").notNull().default(0)
     },
     (t) => [primaryKey({ columns: [t.day, t.libraryId, t.source] })]
 );
 
-/** Lifetime per-part counts driving the parts table and the unused report. */
+/**
+ * Lifetime per-part counts driving the parts table and the unused report. The
+ * columns are named for inserts and count every use; see analytics.md.
+ */
 export const insertableStats = sqliteTable(
     "insertable_stats",
     {
         libraryId: text("library_id").$type<LibraryId>().notNull(),
         elementId: text("element_id").notNull(),
-        insertCount: integer("insert_count").notNull().default(0),
-        firstInsertedAt: integer("first_inserted_at", {
+        useCount: integer("insert_count").notNull().default(0),
+        firstUsedAt: integer("first_inserted_at", {
             mode: "timestamp_ms"
         }).notNull(),
-        lastInsertedAt: integer("last_inserted_at", {
+        lastUsedAt: integer("last_inserted_at", {
             mode: "timestamp_ms"
         }).notNull()
     },
     (t) => [
         primaryKey({ columns: [t.libraryId, t.elementId] }),
-        index("insertable_stats_count_idx").on(t.libraryId, t.insertCount)
+        index("insertable_stats_count_idx").on(t.libraryId, t.useCount)
     ]
 );
 
@@ -156,7 +159,7 @@ export const dailyInsertableMetrics = sqliteTable(
         elementId: text("element_id").notNull(),
         targetElementType: text("target_element_type")
             .notNull()
-            .$type<ElementType>(),
+            .$type<UseTarget>(),
         count: integer("count").notNull().default(0)
     },
     (t) => [
@@ -192,7 +195,7 @@ export const dailyConfigurationMetrics = sqliteTable(
         parameterId: text("parameter_id").notNull(),
         value: text("value").notNull(),
         /**
-         * What the insert chose for the parameters deciding whether this one was
+         * What the use chose for the parameters deciding whether this one was
          * shown, from `toInstanceKeys`. Empty for a parameter nothing conditions,
          * and on every row written before this column existed. Without it an
          * option two branches both offer cannot be counted for either.
@@ -215,7 +218,7 @@ export const dailyConfigurationMetrics = sqliteTable(
     ]
 );
 
-/** So distinct users is a count over days, not over every insert. */
+/** So distinct users is a count over days, not over every use. */
 export const dailyUserActivity = sqliteTable(
     "daily_user_activity",
     {
@@ -249,7 +252,8 @@ export const userStats = sqliteTable(
     {
         userId: text("user_id").notNull(),
         libraryId: text("library_id").$type<LibraryId>().notNull(),
-        insertCount: integer("insert_count").notNull().default(0),
+        // Every use, despite the column's name; see analytics.md.
+        useCount: integer("insert_count").notNull().default(0),
         firstSeenAt: integer("first_seen_at", {
             mode: "timestamp_ms"
         }).notNull(),

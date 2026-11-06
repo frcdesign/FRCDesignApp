@@ -1,7 +1,7 @@
 /** Points keep the raw key beside the label, so a reference line can match "2026-01". */
 
 import type {
-    DailyInsertPoint,
+    DailyUsePoint,
     DailyMetricPoint
 } from "@backend/features/analytics/contract";
 import { LibraryId } from "@backend/features/library/library-id";
@@ -100,7 +100,7 @@ type ChartPoint = BucketPoint & Record<string, string | number>;
 
 /** One record per x value, keyed by library name for the legend. */
 export function toChartData(
-    series: DailyInsertPoint[],
+    series: DailyUsePoint[],
     libraryIds: LibraryId[],
     granularity: Granularity = pickGranularity(series.map((p) => p.day))
 ): ChartPoint[] {
@@ -129,14 +129,14 @@ export function toChartData(
 
 /** One array per top card, bucketed to the same resolution as the chart. */
 interface SparkSeries {
-    inserts: number[];
+    uses: number[];
     activeUsers: number[];
     usesPerUser: number[];
     appOpens: number[];
 }
 
 interface Bucket {
-    inserts: number;
+    uses: number;
     activeUsers: number;
     appOpens: number;
     days: number;
@@ -148,13 +148,13 @@ export function toSparkSeries(points: DailyMetricPoint[]): SparkSeries {
         points,
         pickGranularity(points.map((point) => point.day)),
         (): Bucket => ({
-            inserts: 0,
+            uses: 0,
             activeUsers: 0,
             appOpens: 0,
             days: 0
         }),
         (bucket, point) => {
-            bucket.inserts += point.inserts;
+            bucket.uses += point.uses;
             bucket.activeUsers += point.activeUsers;
             bucket.appOpens += point.appOpens;
             bucket.days += 1;
@@ -162,10 +162,10 @@ export function toSparkSeries(points: DailyMetricPoint[]): SparkSeries {
     ).map(({ totals }) => totals);
 
     return {
-        inserts: ordered.map((bucket) => bucket.inserts),
+        uses: ordered.map((bucket) => bucket.uses),
         activeUsers: ordered.map((bucket) => bucket.activeUsers / bucket.days),
         usesPerUser: ordered.map((bucket) =>
-            bucket.activeUsers === 0 ? 0 : bucket.inserts / bucket.activeUsers
+            bucket.activeUsers === 0 ? 0 : bucket.uses / bucket.activeUsers
         ),
         appOpens: ordered.map((bucket) => bucket.appOpens)
     };

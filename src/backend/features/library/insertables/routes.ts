@@ -29,7 +29,7 @@ import {
 } from "../../load/parse-configuration-records";
 import { ElementType } from "../../../lib/onshape/element-type";
 import type { IndexingSettings } from "../../build-checker/contract";
-import { InsertSource } from "../../analytics/usage";
+import { UseSource } from "../../analytics/usage";
 import { trackInsert } from "../../analytics/tracking";
 import { recordRecentInsert } from "../../recents/store";
 import { DerivedFeature } from "../../../lib/onshape/objects/derive-feature";
@@ -235,7 +235,7 @@ const insertBody = z.object({
     isFavorite: z.boolean().default(false),
     isQuickInsert: z.boolean().default(false),
     // Defaulted so an older client can't fail the tracking batch on NOT NULL.
-    source: z.enum(InsertSource).default(InsertSource.BROWSE)
+    source: z.enum(UseSource).default(UseSource.BROWSE)
 });
 
 const addToAssemblyBody = insertBody.extend({

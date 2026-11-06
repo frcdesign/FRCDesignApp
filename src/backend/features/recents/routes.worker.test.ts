@@ -9,7 +9,7 @@ import { getDb } from "../../db/client";
 import * as PartStudioEndpoints from "../../lib/onshape/endpoints/part-studios";
 import { MAX_RECENTS, type RecentsData } from "./contract";
 import { writeRecentInsert } from "./store";
-import { InsertSource } from "../analytics/usage";
+import { UseSource } from "../analytics/usage";
 import { dailySourceMetrics } from "../analytics/schema";
 import {
     TEST_ASSEMBLY_ID,
@@ -128,7 +128,7 @@ describe("recents routes", () => {
 
         const res = await createTestApp().request(
             `/api/add-to-part-studio/insertable/${TEST_PART_STUDIO_ID}`,
-            jsonRequest("POST", { targetPath, source: InsertSource.RECENTS }),
+            jsonRequest("POST", { targetPath, source: UseSource.RECENTS }),
             env
         );
         expect(res.status).toBe(200);
@@ -137,7 +137,7 @@ describe("recents routes", () => {
         const rollup = await db
             .select()
             .from(dailySourceMetrics)
-            .where(eq(dailySourceMetrics.source, InsertSource.RECENTS))
+            .where(eq(dailySourceMetrics.source, UseSource.RECENTS))
             .all();
         expect(rollup).toMatchObject([{ count: 1 }]);
     });

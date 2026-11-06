@@ -7,7 +7,8 @@ a part as a STEP file, in the configuration on screen. Inside Onshape the part
 is inserted instead, and the panel offers no download.
 
 It is not an insert ([configurations.md](./configurations.md) covers how a
-selection is sent to Onshape), and it stores nothing: every download is a fresh
+selection is sent to Onshape), though analytics counts both as uses of the part
+([analytics.md](./analytics.md)). It keeps no file: every download is a fresh
 export from Onshape.
 
 ## Code map
@@ -20,7 +21,7 @@ In the order a download runs.
 // Standalone only; signed out, it starts sign-in instead.
 function DownloadStepButton(props: DownloadStepButtonProps): ReactNode;
 
-interface DownloadStepButtonProps {
+interface DownloadStepButtonProps extends DownloadArgs {
     insertable: InsertableOut;
     selection?: PartialSelection;
 }
@@ -32,14 +33,21 @@ interface DownloadStepButtonProps {
 // Starts the export, polls it, then saves the file.
 function useStepExportMutation(
     insertable: InsertableOut,
-    selection: PartialSelection | undefined
+    selection: PartialSelection | undefined,
+    downloadArgs: DownloadArgs
 );
+
+/** What a download records beside the part, as an insert does. */
+interface DownloadArgs {
+    isFavorite: boolean;
+    source: UseSource;
+}
 ```
 
 `src/backend/features/download/routes.ts`
 
 ```text
-POST /api/step-export/insertable/:insertableId    starts the export; body { selection }
+POST /api/step-export/insertable/:insertableId    starts the export and records it; body { selection, isFavorite, source }
 GET  /api/step-export/:translationId              its state
 GET  /api/step-export/:translationId/file         the finished file, as an attachment
 ```
@@ -123,9 +131,12 @@ async function readSelection(
 
 ## Storage
 
-None. Onshape keeps the exported file as external data on the library
-document, under the caller's translation; the app holds only the translation id,
-in the mutation, for as long as the download runs.
+The file itself is not stored: Onshape keeps it as external data on the
+library document, under the caller's translation, and the app holds only the
+translation id, in the mutation, for as long as the download runs.
+
+**D1**, through `trackDownload`: one `download` event per export started, and
+its rollups ([analytics.md](./analytics.md)).
 
 ## Flows
 
@@ -139,7 +150,10 @@ in the mutation, for as long as the download runs.
    (`readSelection`), and starts an Onshape translation of the version-pinned
    tab to STEP under the caller's session: its overrides
    (`onshapeOverrides`, then `encodeConfiguration`), one file for the whole tab
-   (`grouping`), kept outside the document (`storeInDocument: false`).
+   (`grouping`), kept outside the document (`storeInDocument: false`). Once
+   Onshape accepts it, the route records a download (`trackDownload`): the
+   part, its whole selection, whether it is a favorite, and where the menu was
+   opened from (`UseSource`), in the background as an insert is recorded.
 3. The client polls `GET /api/step-export/:translationId`, first after a
    second and then backing off by half again up to five seconds, for at most
    five minutes.
@@ -173,7 +187,9 @@ In [strings/download.md](../strings/download.md).
   as an insert would send them; never a configuration key.
 - The status and file routes answer only for a translation of a library
   document.
-- Nothing is stored: a second download is a second export.
+- The file is never stored: a second download is a second export.
+- Every export Onshape accepts records exactly one download, which counts as a
+  use beside the inserts; a refused export records nothing.
 
 ## Failure and recovery
 

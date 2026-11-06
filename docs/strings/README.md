@@ -12,6 +12,7 @@ user.
 | [library.md](./library.md)           | The library pages: so far the group page             |
 | [feedback.md](./feedback.md)         | Reports, the access page, and the dashboard's counts |
 | [download.md](./download.md)         | STEP downloads from the standalone app               |
+| [analytics.md](./analytics.md)       | The dashboard's usage numbers, charts and tables     |
 
 ## Shape of a file
 

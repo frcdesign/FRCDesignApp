@@ -1,6 +1,6 @@
 import { LineChart, type ChartReferenceLineProps } from "@mantine/charts";
 import { type ReactNode } from "react";
-import type { DailyInsertPoint } from "@backend/features/analytics/contract";
+import type { DailyUsePoint } from "@backend/features/analytics/contract";
 import { LibraryId } from "@backend/features/library/library-id";
 import { getLibraryName } from "../../lib/library";
 import { getLibraryShade } from "../../theme";
@@ -63,8 +63,8 @@ export function MetricDetailChart({
     );
 }
 
-interface LibraryInsertsChartProps {
-    series: DailyInsertPoint[];
+interface LibraryUsesChartProps {
+    series: DailyUsePoint[];
     /** Taller when the chart is the page's own, not a hover panel's. */
     h?: number;
     /** Marks kickoffs and championships; omitted in the tile hover panels. */
@@ -74,12 +74,12 @@ interface LibraryInsertsChartProps {
 }
 
 /** Inserts split by library — the one trend that is genuinely multi-series. */
-export function LibraryInsertsChart({
+export function LibraryUsesChart({
     series,
     h = DETAIL_HEIGHT,
     programs,
     granularity
-}: LibraryInsertsChartProps): ReactNode {
+}: LibraryUsesChartProps): ReactNode {
     const libraryIds = Object.values(LibraryId);
     const data = toChartData(series, libraryIds, granularity);
     return (

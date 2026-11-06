@@ -13,7 +13,7 @@ import { Status } from "../../../../../lib/status";
 import { IconSize } from "../../../../../lib/style-constants";
 import { ReactNode } from "react";
 import { SearchResults } from "../../../../../features/search/components/search-results";
-import { InsertSource } from "@backend/features/analytics/usage";
+import { UseSource } from "@backend/features/analytics/usage";
 import { GroupOut, Insertables } from "@backend/features/library/contract";
 import { filterInsertables } from "../../../../../features/search/filter";
 import { GroupMenuItems } from "../../../../../features/library/components/group-card";
@@ -104,7 +104,7 @@ function GroupList(): ReactNode {
                     vendors: vendorFilters,
                     groupId: group.id
                 }}
-                source={InsertSource.GROUP_SEARCH}
+                source={UseSource.GROUP_SEARCH}
             />
         );
     } else {

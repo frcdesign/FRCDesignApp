@@ -17,6 +17,8 @@ import { toElementPath } from "../../lib/onshape/path";
 import { getInsertableParam, insertableRoute } from "../../lib/route-params";
 import { validate } from "../../lib/validate";
 import { requireSignInMiddleware } from "../auth/guards";
+import { trackDownload } from "../analytics/tracking";
+import { UseSource } from "../analytics/usage";
 import { onshapeOverrides } from "../configurations/selection";
 import { encodeConfiguration } from "../configurations/utils";
 import {
@@ -33,7 +35,11 @@ export const downloadRoutes = getApp();
 
 downloadRoutes.use("/step-export/*", cacheMiddleware());
 
-const stepExportBody = z.object({ selection: selectionSchema });
+const stepExportBody = z.object({
+    selection: selectionSchema,
+    isFavorite: z.boolean().default(false),
+    source: z.enum(UseSource).default(UseSource.BROWSE)
+});
 
 /** POST /api/step-export/insertable/:insertableId */
 downloadRoutes.post(
@@ -49,7 +55,8 @@ downloadRoutes.post(
                 versionId: insertables.versionId,
                 elementId: insertables.elementId,
                 elementType: insertables.elementType,
-                name: insertables.name
+                name: insertables.name,
+                libraryId: insertables.libraryId
             })
             .from(insertables)
             .where(eq(insertables.id, insertableId))
@@ -58,10 +65,11 @@ downloadRoutes.post(
             throw internalError("Insertable not found", HttpStatus.NOT_FOUND);
         }
 
+        const body = c.req.valid("json");
         const { selection, parameters } = await readSelection(
             db,
             insertableId,
-            c.req.valid("json").selection
+            body.selection
         );
         const translation = await startStepExport(
             await c.var.getOnshapeApi(),
@@ -76,6 +84,15 @@ downloadRoutes.post(
                 destinationName: row.name
             }
         );
+        await trackDownload(c, {
+            libraryId: row.libraryId,
+            path: toElementPath(row),
+            insertableId,
+            selection,
+            parameters,
+            isFavorite: body.isFavorite,
+            source: body.source
+        });
         return c.json({
             translationId: translation.id
         } satisfies StepExportOut);

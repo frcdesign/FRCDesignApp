@@ -5,14 +5,14 @@ import { getDb, type Db } from "../../db/client";
 import { events, type LoggedEvent } from "./schema";
 import {
     NO_ELEMENT,
-    NOT_AN_INSERT,
+    NOT_A_USE,
     NOT_A_REPORT,
     NOT_A_VERSION_RUN,
     type ElementColumns,
     type EventCore
 } from "./logged-event";
 import { rollupWrites } from "./rollups";
-import { EVENT_SCHEMA_VERSION, EventType, InsertSource } from "./usage";
+import { EVENT_SCHEMA_VERSION, EventType, UseSource } from "./usage";
 import {
     failedTaskCount,
     jobOutcome,
@@ -37,46 +37,71 @@ import type {
     FeedbackTopic
 } from "../feedback/contract";
 
-/** The caller is the one who inserted; see `trackInsert`. */
-export interface InsertEvent {
+/** What every use records, an insert or a download. The caller is the user. */
+export interface UseEvent {
     libraryId: LibraryId;
     /** The rollups key on the element id; the rest records the version. */
     path: ElementPath;
     insertableId: string;
+    /** The whole selection the use applied; undefined when it has none. */
+    selection: Selection | undefined;
+    /** Passed in, since the route already loaded them. */
+    parameters: ConfigurationParameter[];
+    /** Whether the part was favorited, not where the use came from. */
+    isFavorite: boolean;
+    source: UseSource;
+}
+
+export interface InsertEvent extends UseEvent {
     /** The type of tab the user inserted into. */
     targetElementType: ElementType;
-    /** The whole selection the insert applied; undefined when it has none. */
-    selection: Selection | undefined;
-    /** Passed in, since the insert already loaded them. */
-    parameters: ConfigurationParameter[];
-    /** Whether the part was favorited, not where the insert came from. */
-    isFavorite: boolean;
     isQuickInsert: boolean;
-    source: InsertSource;
     fasten: boolean;
 }
 
 /** After the response, and never failing it: tracking is not what was asked for. */
 export function trackInsert(c: AppContext, event: InsertEvent): Promise<void> {
-    return runInBackground(c, "record an insert", async () =>
+    return trackUse(c, EventType.INSERT, event, {
+        targetElementType: event.targetElementType,
+        isQuickInsert: event.isQuickInsert,
+        fasten: event.fasten
+    });
+}
+
+/** As `trackInsert`, for a STEP export Onshape has accepted. */
+export function trackDownload(c: AppContext, event: UseEvent): Promise<void> {
+    return trackUse(c, EventType.DOWNLOAD, event, {
+        targetElementType: null,
+        isQuickInsert: null,
+        fasten: null
+    });
+}
+
+/** The columns only an insert fills in. */
+type InsertOnlyColumns = Pick<
+    LoggedEvent,
+    "targetElementType" | "isQuickInsert" | "fasten"
+>;
+
+function trackUse(
+    c: AppContext,
+    type: EventType.INSERT | EventType.DOWNLOAD,
+    event: UseEvent,
+    insertOnly: InsertOnlyColumns
+): Promise<void> {
+    return runInBackground(c, `record a ${type}`, async () =>
         record(
             getDb(c.env.DB),
             {
-                ...eventCore(
-                    EventType.INSERT,
-                    event.libraryId,
-                    await c.var.getUserId()
-                ),
+                ...eventCore(type, event.libraryId, await c.var.getUserId()),
                 ...NOT_A_VERSION_RUN,
                 ...NOT_A_REPORT,
                 ...event.path,
                 insertableId: event.insertableId,
-                targetElementType: event.targetElementType,
                 selection: appliedSelection(event.selection, event.parameters),
                 isFavorite: event.isFavorite,
-                isQuickInsert: event.isQuickInsert,
                 source: event.source,
-                fasten: event.fasten
+                ...insertOnly
             },
             event.parameters
         )
@@ -91,7 +116,7 @@ export function trackAppOpen(c: AppContext): Promise<void> {
             {
                 ...eventCore(EventType.APP_OPEN, null, await c.var.getUserId()),
                 ...NO_ELEMENT,
-                ...NOT_AN_INSERT,
+                ...NOT_A_USE,
                 ...NOT_A_VERSION_RUN,
                 ...NOT_A_REPORT
             },
@@ -148,7 +173,7 @@ export async function trackVersionRun(
         {
             ...eventCore(EventType.VERSION_RUN, null, event.userId),
             ...NO_ELEMENT,
-            ...NOT_AN_INSERT,
+            ...NOT_A_USE,
             ...NOT_A_REPORT,
             versionKind: event.kind,
             versionScope: event.scope,
@@ -198,7 +223,7 @@ export function trackReport(c: AppContext, event: ReportEvent): Promise<void> {
                     event.id
                 ),
                 ...element,
-                ...NOT_AN_INSERT,
+                ...NOT_A_USE,
                 ...NOT_A_VERSION_RUN,
                 reportTopic: event.topic,
                 reportCategory: event.category,

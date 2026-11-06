@@ -29,13 +29,12 @@ import {
 } from "../../../__test_utils__";
 import { getDb } from "../../db/client";
 import { createApp } from "../../app";
-import { EventType, InsertSource } from "./usage";
+import { EventType, UseSource, UseTarget } from "./usage";
 import { LibraryId } from "../library/library-id";
 import {
     ParameterType,
     type ConfigurationParameter
 } from "../configurations/contract";
-import { ElementType } from "../../lib/onshape/element-type";
 import {
     type AnalyticsOverviewOut,
     type LibrarySummaryOut,
@@ -91,11 +90,11 @@ interface SeedInsertOptions {
     userId?: string;
     /** The values chosen, counted once per insert. */
     configuration?: Record<string, string>;
-    /** The tab the inserts landed in; left out of the split when absent. */
-    target?: ElementType;
+    /** Where the uses went; left out of the split when absent. */
+    target?: UseTarget;
 }
 
-/** The rollups these inserts would leave, which is all any endpoint reads. */
+/** The rollups these uses would leave, which is all any endpoint reads. */
 async function seedInserts(
     count: number,
     options: SeedInsertOptions = {}
@@ -113,7 +112,7 @@ async function seedInserts(
             day,
             libraryId: TEST_LIBRARY_ID,
             elementId: element,
-            targetElementType: target ?? ElementType.PART_STUDIO,
+            targetElementType: target ?? UseTarget.PART_STUDIO,
             count
         })
         .onConflictDoUpdate({
@@ -167,9 +166,9 @@ async function seedInsertableStats(count: number, insertedAt = new Date()) {
     await db.insert(insertableStats).values({
         libraryId: TEST_LIBRARY_ID,
         elementId,
-        insertCount: count,
-        firstInsertedAt: insertedAt,
-        lastInsertedAt: insertedAt
+        useCount: count,
+        firstUsedAt: insertedAt,
+        lastUsedAt: insertedAt
     });
 }
 
@@ -239,7 +238,7 @@ describe("analytics routes", () => {
             const body: AnalyticsOverviewOut = await res.json();
 
             expect(body.totals).toMatchObject({
-                inserts: 8,
+                uses: 8,
                 appOpens: 7,
                 uniqueUsers: 2
             });
@@ -259,13 +258,13 @@ describe("analytics routes", () => {
                 {
                     day: "2026-03-01",
                     libraryId: TEST_LIBRARY_ID,
-                    targetElementType: ElementType.ASSEMBLY,
+                    targetElementType: UseTarget.ASSEMBLY,
                     count: 5
                 },
                 {
                     day: "2026-03-01",
                     libraryId: TEST_LIBRARY_ID,
-                    targetElementType: ElementType.PART_STUDIO,
+                    targetElementType: UseTarget.PART_STUDIO,
                     count: 5
                 }
             ]);
@@ -276,28 +275,76 @@ describe("analytics routes", () => {
             const body: AnalyticsOverviewOut = await res.json();
 
             expect(body.totals).toMatchObject({
-                inserts: 10,
-                favoriteInserts: 4,
+                uses: 10,
+                favoriteUses: 4,
                 fastenInserts: 3,
                 quickInserts: 6,
                 targets: {
-                    [ElementType.ASSEMBLY]: 5,
-                    [ElementType.PART_STUDIO]: 5
+                    [UseTarget.ASSEMBLY]: 5,
+                    [UseTarget.PART_STUDIO]: 5,
+                    [UseTarget.DOWNLOAD]: 0
                 }
             });
             expect(body.metricSeries[0]).toEqual({
                 day: "2026-03-01",
-                inserts: 10,
+                uses: 10,
                 appOpens: 0,
                 activeUsers: 0,
-                favoriteInserts: 4,
+                favoriteUses: 4,
                 fastenInserts: 3,
                 quickInserts: 6,
                 targets: {
-                    [ElementType.ASSEMBLY]: 5,
-                    [ElementType.PART_STUDIO]: 5
+                    [UseTarget.ASSEMBLY]: 5,
+                    [UseTarget.PART_STUDIO]: 5,
+                    [UseTarget.DOWNLOAD]: 0
                 }
             });
+        });
+
+        it("counts downloads among the uses, and apart in the targets", async () => {
+            await db.insert(dailyMetrics).values([
+                {
+                    day: "2026-03-01",
+                    libraryId: TEST_LIBRARY_ID,
+                    type: EventType.INSERT,
+                    count: 6,
+                    favoriteCount: 1
+                },
+                {
+                    day: "2026-03-01",
+                    libraryId: TEST_LIBRARY_ID,
+                    type: EventType.DOWNLOAD,
+                    count: 4,
+                    favoriteCount: 2
+                }
+            ]);
+            await db.insert(dailyTargetMetrics).values([
+                {
+                    day: "2026-03-01",
+                    libraryId: TEST_LIBRARY_ID,
+                    targetElementType: UseTarget.PART_STUDIO,
+                    count: 6
+                },
+                {
+                    day: "2026-03-01",
+                    libraryId: TEST_LIBRARY_ID,
+                    targetElementType: UseTarget.DOWNLOAD,
+                    count: 4
+                }
+            ]);
+
+            const res = await anonymousGet(
+                "/api/analytics/overview?from=2026-03-01&to=2026-03-31"
+            );
+            const body: AnalyticsOverviewOut = await res.json();
+
+            expect(body.totals).toMatchObject({
+                uses: 10,
+                favoriteUses: 3,
+                targets: { [UseTarget.DOWNLOAD]: 4 }
+            });
+            expect(body.metricSeries[0].uses).toBe(10);
+            expect(body.series[0].counts[TEST_LIBRARY_ID]).toBe(10);
         });
 
         it("counts somebody who only ever opened the app as a user", async () => {
@@ -342,7 +389,7 @@ describe("analytics routes", () => {
             );
             const body: AnalyticsOverviewOut = await res.json();
 
-            expect(body.totals.inserts).toBe(3);
+            expect(body.totals.uses).toBe(3);
             expect(body.totals.uniqueUsers).toBe(1);
         });
 
@@ -392,31 +439,31 @@ describe("analytics routes", () => {
                 "2026-06-19",
                 "2026-06-20"
             ]);
-            expect(body.metricSeries.map((point) => point.inserts)).toEqual([
+            expect(body.metricSeries.map((point) => point.uses)).toEqual([
                 2, 0, 0, 4, 0, 0
             ]);
         });
 
-        it("breaks inserts down by source, listing unused sources as zero", async () => {
+        it("breaks uses down by source, listing unused sources as zero", async () => {
             await db.insert(dailySourceMetrics).values([
                 {
                     day: "2026-03-01",
                     libraryId: TEST_LIBRARY_ID,
-                    source: InsertSource.SEARCH,
+                    source: UseSource.SEARCH,
                     count: 7,
                     quickInsertCount: 2
                 },
                 {
                     day: "2026-03-02",
                     libraryId: TEST_LIBRARY_ID,
-                    source: InsertSource.SEARCH,
+                    source: UseSource.SEARCH,
                     count: 3,
                     quickInsertCount: 1
                 },
                 {
                     day: "2026-03-01",
                     libraryId: TEST_LIBRARY_ID,
-                    source: InsertSource.FAVORITES,
+                    source: UseSource.FAVORITES,
                     count: 5,
                     quickInsertCount: 5
                 }
@@ -430,20 +477,20 @@ describe("analytics routes", () => {
             const bySource = Object.fromEntries(
                 body.sources.map((row) => [row.source, row])
             );
-            expect(bySource[InsertSource.SEARCH]).toMatchObject({
+            expect(bySource[UseSource.SEARCH]).toMatchObject({
                 count: 10,
                 quickInsertCount: 3
             });
-            expect(bySource[InsertSource.FAVORITES]).toMatchObject({
+            expect(bySource[UseSource.FAVORITES]).toMatchObject({
                 count: 5,
                 quickInsertCount: 5
             });
             // So the UI shows every source, including a new one.
-            expect(bySource[InsertSource.BROWSE]).toMatchObject({ count: 0 });
-            expect(bySource[InsertSource.GROUP_SEARCH]).toMatchObject({
+            expect(bySource[UseSource.BROWSE]).toMatchObject({ count: 0 });
+            expect(bySource[UseSource.GROUP_SEARCH]).toMatchObject({
                 count: 0
             });
-            expect(bySource[InsertSource.RECENTS]).toMatchObject({
+            expect(bySource[UseSource.RECENTS]).toMatchObject({
                 count: 0
             });
         });
@@ -453,14 +500,14 @@ describe("analytics routes", () => {
                 {
                     day: "2026-03-01",
                     libraryId: TEST_LIBRARY_ID,
-                    source: InsertSource.SEARCH,
+                    source: UseSource.SEARCH,
                     count: 7,
                     quickInsertCount: 2
                 },
                 {
                     day: "2026-09-01",
                     libraryId: TEST_LIBRARY_ID,
-                    source: InsertSource.SEARCH,
+                    source: UseSource.SEARCH,
                     count: 100,
                     quickInsertCount: 50
                 }
@@ -472,7 +519,7 @@ describe("analytics routes", () => {
             const body: AnalyticsOverviewOut = await res.json();
 
             const search = body.sources.find(
-                (row) => row.source === InsertSource.SEARCH
+                (row) => row.source === UseSource.SEARCH
             );
             expect(search).toMatchObject({ count: 7, quickInsertCount: 2 });
         });
@@ -497,7 +544,7 @@ describe("analytics routes", () => {
                 "2026-06-01"
             ]);
             // The totals follow the range, as the series does.
-            expect(body.totals.inserts).toBe(2);
+            expect(body.totals.uses).toBe(2);
         });
     });
 
@@ -511,7 +558,7 @@ describe("analytics routes", () => {
             );
             const body: LibrarySummaryOut = await res.json();
 
-            expect(body.totals.inserts).toBe(2);
+            expect(body.totals.uses).toBe(2);
         });
     });
 
@@ -628,7 +675,7 @@ describe("analytics routes", () => {
             expect(body).toHaveLength(1);
             expect(body[0]).toMatchObject({
                 name: "Test PARTSTUDIO",
-                insertCount: 0
+                useCount: 0
             });
             // The whole path, which is what the picker's link opens.
             expect(body[0].path).toMatchObject({
@@ -639,7 +686,7 @@ describe("analytics routes", () => {
             expect(body[0].path.instanceId).toBeTruthy();
         });
 
-        it("counts only inserts inside the window", async () => {
+        it("counts only uses inside the window", async () => {
             await seedPartStudio(db);
             await seedInserts(3, { day: "2026-03-01" });
             await seedInserts(7, { day: "2025-03-01" });
@@ -651,8 +698,8 @@ describe("analytics routes", () => {
 
             const windowed: PartUsageOut[] = await inWindow.json();
             const lifetime: PartUsageOut[] = await allTime.json();
-            expect(windowed[0].insertCount).toBe(3);
-            expect(lifetime[0].insertCount).toBe(10);
+            expect(windowed[0].useCount).toBe(3);
+            expect(lifetime[0].useCount).toBe(10);
         });
 
         it("still lists a part that went unused in the window", async () => {
@@ -666,7 +713,7 @@ describe("analytics routes", () => {
             const body: PartUsageOut[] = await res.json();
 
             expect(body).toHaveLength(1);
-            expect(body[0].insertCount).toBe(0);
+            expect(body[0].useCount).toBe(0);
             expect(body[0].usesPerMonth).toBe(0);
         });
 
@@ -678,7 +725,7 @@ describe("analytics routes", () => {
             const body: PartUsageOut[] = await res.json();
 
             expect(body).toHaveLength(1);
-            expect(body[0]).toMatchObject({ insertCount: 9 });
+            expect(body[0]).toMatchObject({ useCount: 9 });
             expect(body[0].path.elementId).toBe(elementId);
         });
 
@@ -691,7 +738,7 @@ describe("analytics routes", () => {
             const body: PartUsageOut[] = await res.json();
 
             expect(body).toHaveLength(1);
-            expect(body[0].insertCount).toBe(3);
+            expect(body[0].useCount).toBe(3);
         });
 
         it("leaves out a part that is no longer in the library", async () => {
@@ -707,7 +754,7 @@ describe("analytics routes", () => {
             expect(body[0]).toMatchObject({
                 name: "Test PARTSTUDIO",
                 groupName: "Test Group",
-                insertCount: 9
+                useCount: 9
             });
         });
 
@@ -722,16 +769,16 @@ describe("analytics routes", () => {
                 {
                     libraryId: TEST_LIBRARY_ID,
                     elementId,
-                    insertCount: 60,
-                    firstInsertedAt: new Date(Date.now() - 730 * day),
-                    lastInsertedAt: new Date()
+                    useCount: 60,
+                    firstUsedAt: new Date(Date.now() - 730 * day),
+                    lastUsedAt: new Date()
                 },
                 {
                     libraryId: TEST_LIBRARY_ID,
                     elementId: TEST_ASSEMBLY_PATH.elementId,
-                    insertCount: 20,
-                    firstInsertedAt: new Date(Date.now() - 60 * day),
-                    lastInsertedAt: new Date()
+                    useCount: 20,
+                    firstUsedAt: new Date(Date.now() - 60 * day),
+                    lastUsedAt: new Date()
                 }
             ]);
             await seedInserts(60, { day: ago(700) });
@@ -746,7 +793,7 @@ describe("analytics routes", () => {
             expect(body[0].path.elementId).toBe(TEST_ASSEMBLY_PATH.elementId);
             expect(body[0].usesPerMonth).toBeGreaterThan(body[1].usesPerMonth);
             // The window's total is still reported alongside the rate.
-            expect(body.map((row) => row.insertCount)).toEqual([20, 60]);
+            expect(body.map((row) => row.useCount)).toEqual([20, 60]);
         });
 
         it("rates a part over its own days, not the whole window", async () => {
@@ -759,16 +806,16 @@ describe("analytics routes", () => {
                 {
                     libraryId: TEST_LIBRARY_ID,
                     elementId,
-                    insertCount: 10,
-                    firstInsertedAt: new Date(Date.now() - 300 * day),
-                    lastInsertedAt: new Date()
+                    useCount: 10,
+                    firstUsedAt: new Date(Date.now() - 300 * day),
+                    lastUsedAt: new Date()
                 },
                 {
                     libraryId: TEST_LIBRARY_ID,
                     elementId: TEST_ASSEMBLY_PATH.elementId,
-                    insertCount: 10,
-                    firstInsertedAt: new Date(Date.now() - 30 * day),
-                    lastInsertedAt: new Date()
+                    useCount: 10,
+                    firstUsedAt: new Date(Date.now() - 30 * day),
+                    lastUsedAt: new Date()
                 }
             ]);
             await seedInserts(10, { day: ago(200) });
@@ -783,7 +830,7 @@ describe("analytics routes", () => {
             expect(body[0].path.elementId).toBe(TEST_ASSEMBLY_PATH.elementId);
         });
 
-        it("plots recent inserts per day, oldest first", async () => {
+        it("plots recent uses per day, oldest first", async () => {
             await seedPartStudio(db);
             await seedInserts(2, { day: toReportingDay(Date.now()) });
 
@@ -813,18 +860,18 @@ describe("analytics routes", () => {
             await seedPartStudio(db);
             await seedInserts(2, {
                 day: last,
-                target: ElementType.PART_STUDIO
+                target: UseTarget.PART_STUDIO
             });
-            await seedInserts(3, { day: last, target: ElementType.ASSEMBLY });
+            await seedInserts(3, { day: last, target: UseTarget.ASSEMBLY });
             await seedInserts(1, {
                 day: addDays(last, -1),
-                target: ElementType.ASSEMBLY
+                target: UseTarget.ASSEMBLY
             });
 
             const res = await anonymousGet(partsUrl());
             const body: PartUsageOut[] = await res.json();
 
-            expect(body[0].insertCount).toBe(6);
+            expect(body[0].useCount).toBe(6);
             expect(body[0].recent.at(-1)).toBe(5);
             expect(body[0].recent.at(-2)).toBe(1);
         });
@@ -977,7 +1024,7 @@ describe("analytics routes", () => {
             );
             const neverBody: PartUsageOut[] = await never.json();
             expect(neverBody).toHaveLength(1);
-            expect(neverBody[0].insertCount).toBe(0);
+            expect(neverBody[0].useCount).toBe(0);
 
             await seedInserts(4);
 
@@ -1095,7 +1142,7 @@ describe("analytics routes", () => {
 
             expect(body).toMatchObject({
                 name: "Test PARTSTUDIO",
-                insertCount: 3,
+                useCount: 3,
                 uniqueUsers: 2
             });
 
@@ -1112,7 +1159,7 @@ describe("analytics routes", () => {
             );
             const body: InsertableReportOut = await res.json();
 
-            expect(body.insertCount).toBe(0);
+            expect(body.useCount).toBe(0);
             expect(body.parameters).toEqual([]);
         });
 
@@ -1129,7 +1176,7 @@ describe("analytics routes", () => {
             );
             const body: InsertableReportOut = await res.json();
 
-            expect(body.insertCount).toBe(0);
+            expect(body.useCount).toBe(0);
             // The parameter is still listed; nothing was recorded against it.
             expect(body.parameters[0].total).toBe(0);
         });
@@ -1147,10 +1194,10 @@ describe("analytics routes", () => {
             expect(body.favorites).toBe(2);
         });
 
-        it("splits inserts by the tab they landed in", async () => {
+        it("splits uses by where they went", async () => {
             await seedPartStudio(db);
-            await seedInserts(3, { target: ElementType.PART_STUDIO });
-            await seedInserts(1, { target: ElementType.ASSEMBLY });
+            await seedInserts(3, { target: UseTarget.PART_STUDIO });
+            await seedInserts(1, { target: UseTarget.ASSEMBLY });
 
             const res = await anonymousGet(
                 `/api/analytics/insertable/library/${TEST_LIBRARY_ID}/element/${elementId}?${ALL_TIME}`
@@ -1158,8 +1205,9 @@ describe("analytics routes", () => {
             const body: InsertableReportOut = await res.json();
 
             expect(body.targets).toEqual({
-                [ElementType.PART_STUDIO]: 3,
-                [ElementType.ASSEMBLY]: 1
+                [UseTarget.PART_STUDIO]: 3,
+                [UseTarget.ASSEMBLY]: 1,
+                [UseTarget.DOWNLOAD]: 0
             });
         });
 
@@ -1177,7 +1225,7 @@ describe("analytics routes", () => {
             const body: InsertableReportOut = await res.json();
 
             // Twelve uses over the 90 days since its first, not over a month.
-            expect(body.insertCount).toBe(12);
+            expect(body.useCount).toBe(12);
             expect(body.usesPerMonth).toBe(4);
         });
     });

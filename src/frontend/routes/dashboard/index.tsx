@@ -9,8 +9,8 @@ import {
     getPartsQuery
 } from "../../features/dashboard/dashboard-queries";
 import { DashboardState } from "../../features/dashboard/dashboard-state";
-import { InsertsByLibraryCard } from "../../features/dashboard/inserts-chart";
-import { InsertSourceBreakdown } from "../../features/dashboard/insert-mix";
+import { UsesByLibraryCard } from "../../features/dashboard/uses-chart";
+import { UseSourceBreakdown } from "../../features/dashboard/use-mix";
 import {
     RangePreset,
     toDayRange,
@@ -23,6 +23,7 @@ import { UsageTreemap } from "../../features/dashboard/usage-treemap";
 import { VersionManagerTiles } from "../../features/dashboard/version-manager-tiles";
 import { TrendTile } from "../../features/dashboard/trend-tile";
 import { OverviewReports } from "../../features/dashboard/report-summary";
+import { m } from "../../paraglide/messages";
 
 export const Route = createFileRoute("/dashboard/")({
     component: DashboardOverview
@@ -58,7 +59,7 @@ function DashboardOverview(): ReactNode {
 
     return (
         <Stack gap="xl">
-            <Section title="Overall">
+            <Section title={m.dashboardOverviewOverall()}>
                 <HeadlineTiles
                     totals={totals}
                     growth={preset === RangePreset.ALL ? growth : undefined}
@@ -67,17 +68,17 @@ function DashboardOverview(): ReactNode {
                 />
             </Section>
 
-            <InsertsByLibraryCard series={series} />
+            <UsesByLibraryCard series={series} />
 
             <VersionManagerTiles totals={versionManager} />
 
             <OverviewReports reports={reports} />
 
-            <Section title="How people use the app">
+            <Section title={m.dashboardOverviewHowUsed()}>
                 <Card>
-                    <InsertSourceBreakdown sources={sources} />
+                    <UseSourceBreakdown sources={sources} />
                 </Card>
-                <SimpleGrid cols={{ base: 1, sm: 3 }}>
+                <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }}>
                     <TrendTile
                         metric={METRICS.quickFraction}
                         totals={totals}
@@ -90,6 +91,11 @@ function DashboardOverview(): ReactNode {
                     />
                     <TrendTile
                         metric={METRICS.assemblyFraction}
+                        totals={totals}
+                        series={metricSeries}
+                    />
+                    <TrendTile
+                        metric={METRICS.downloadFraction}
                         totals={totals}
                         series={metricSeries}
                     />

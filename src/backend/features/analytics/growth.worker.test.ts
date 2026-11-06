@@ -134,13 +134,13 @@ describe("getGrowth", () => {
 
         const growth = await getGrowth(db, THROUGH, "2024-09-01");
 
-        expect(growth.inserts.label).toBe("2025–26 season");
-        expect(growth.inserts.baselineLabel).toBe("2024–25 season");
+        expect(growth.uses.label).toBe("2025–26 season");
+        expect(growth.uses.baselineLabel).toBe("2024–25 season");
         // The chip is terse; the exact season stays in the tooltip above.
-        expect(growth.inserts.baselineShort).toBe("last season");
-        expect(growth.inserts.current).toBe(100);
-        expect(growth.inserts.previous).toBe(50);
-        expect(growth.inserts.changeRatio).toBeCloseTo(1);
+        expect(growth.uses.baselineShort).toBe("last season");
+        expect(growth.uses.current).toBe(100);
+        expect(growth.uses.previous).toBe(50);
+        expect(growth.uses.changeRatio).toBeCloseTo(1);
     });
 
     it("counts an FTC-only autumn the app-wide season would miss on FRC", async () => {
@@ -149,7 +149,7 @@ describe("getGrowth", () => {
 
         const growth = await getGrowth(db, THROUGH, "2024-09-01");
 
-        expect(growth.inserts.current).toBe(40);
+        expect(growth.uses.current).toBe(40);
     });
 
     it("reports each measure over the season, not just uses", async () => {
@@ -172,12 +172,12 @@ describe("getGrowth", () => {
 
         const growth = await getGrowth(db, "2027-02-01", "2024-09-01");
 
-        expect(growth.inserts.label).toBe("2026–27 season so far");
-        expect(growth.inserts.baselineLabel).toBe(
+        expect(growth.uses.label).toBe("2026–27 season so far");
+        expect(growth.uses.baselineLabel).toBe(
             "2025–26 season at the same point"
         );
-        expect(growth.inserts.current).toBe(25);
-        expect(growth.inserts.previous).toBe(40);
+        expect(growth.uses.current).toBe(25);
+        expect(growth.uses.previous).toBe(40);
     });
 
     it("withholds the season change before a second season exists", async () => {
@@ -185,21 +185,17 @@ describe("getGrowth", () => {
 
         const growth = await getGrowth(db, THROUGH, "2025-09-01");
 
-        expect(growth.inserts.current).toBe(100);
-        expect(growth.inserts.changeRatio).toBeUndefined();
-        expect(growth.inserts.unavailable).toBe(
-            ChangeUnavailable.NO_PRIOR_DATA
-        );
+        expect(growth.uses.current).toBe(100);
+        expect(growth.uses.changeRatio).toBeUndefined();
+        expect(growth.uses.unavailable).toBe(ChangeUnavailable.NO_PRIOR_DATA);
     });
 
     it("reports nothing rather than failing with no data at all", async () => {
         const growth = await getGrowth(db, THROUGH, undefined);
 
-        expect(growth.inserts.current).toBe(0);
-        expect(growth.inserts.changeRatio).toBeUndefined();
-        expect(growth.inserts.unavailable).toBe(
-            ChangeUnavailable.NO_PRIOR_DATA
-        );
+        expect(growth.uses.current).toBe(0);
+        expect(growth.uses.changeRatio).toBeUndefined();
+        expect(growth.uses.unavailable).toBe(ChangeUnavailable.NO_PRIOR_DATA);
     });
 
     it("scopes to one library and uses that library's own season", async () => {
@@ -212,7 +208,7 @@ describe("getGrowth", () => {
             "2024-09-01",
             TEST_LIBRARY_ID
         );
-        expect(growth.inserts.current).toBe(30);
+        expect(growth.uses.current).toBe(30);
 
         // ConfigLib runs Sept–Apr, so its off-season season differs.
         const ftc = await getGrowth(
@@ -221,6 +217,6 @@ describe("getGrowth", () => {
             "2024-09-01",
             LibraryId.CONFIG_LIB
         );
-        expect(ftc.inserts.label).toBe("FTC 2025–26");
+        expect(ftc.uses.label).toBe("FTC 2025–26");
     });
 });

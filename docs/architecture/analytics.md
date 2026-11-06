@@ -2,7 +2,8 @@
 
 ## Purpose
 
-Records how the libraries are used — each insert and each launch from Onshape —
+Records how the libraries are used — each **use** of a part, an insert into
+Onshape or a download from the standalone app, and each launch from Onshape —
 and how often people report problems, and shows it on a public dashboard: totals and trends, per-library health,
 which parts and configuration options are used, and which aren't. It exists so
 the library team can see what to maintain and what to cut.
@@ -12,24 +13,25 @@ aggregates.
 
 ## Code map
 
-| Path                                                                  | Role                                                            |
-| --------------------------------------------------------------------- | --------------------------------------------------------------- |
-| `src/backend/features/analytics/tracking.ts`                          | `trackInsert`, `trackAppOpen`, `trackVersionRun`, `trackReport` |
-| `src/backend/features/analytics/usage.ts`                             | `EventType`, `InsertSource`, `EVENT_SCHEMA_VERSION`             |
-| `src/backend/features/analytics/logged-event.ts`                      | Which columns each kind of event sets                           |
-| `src/backend/features/analytics/schema.ts`                            | The event log and every rollup table                            |
-| `src/backend/features/analytics/rollups.ts`                           | `rollupWrites`: the rollup rows one event adds to               |
-| `src/backend/features/analytics/day.ts`                               | Day keys in the reporting time zone                             |
-| `src/backend/features/analytics/seasons.ts`                           | FRC and FTC seasons, for season-over-season comparison          |
-| `src/backend/features/analytics/range.ts`, `growth.ts`                | Date ranges, clamped to when tracking began; growth windows     |
-| `src/backend/features/analytics/metric-queries.ts`, `part-queries.ts` | The dashboard's reads over the rollups                          |
-| `src/backend/features/analytics/health.ts`                            | Build-issue counts per library                                  |
-| `src/backend/features/analytics/parameter-usage.ts`                   | Option usage, per way a parameter is shown                      |
-| `src/backend/features/analytics/report-queries.ts`                    | Report counts, and a library's most reported parts              |
-| `src/backend/features/analytics/routes.ts`                            | `GET /api/analytics/...`                                        |
-| `src/backend/features/entry/routes.ts`                                | `POST /api/app-open`, sent on a launch from Onshape             |
-| `src/frontend/routes/dashboard/`                                      | The dashboard pages: overview, library, part, unused            |
-| `src/frontend/features/dashboard/`                                    | The dashboard's queries, charts and tables                      |
+| Path                                                                  | Role                                                                             |
+| --------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `src/backend/features/analytics/tracking.ts`                          | `trackInsert`, `trackDownload`, `trackAppOpen`, `trackVersionRun`, `trackReport` |
+| `src/backend/features/analytics/usage.ts`                             | `EventType`, `USE_EVENT_TYPES`, `UseTarget`, `UseSource`, `EVENT_SCHEMA_VERSION` |
+| `src/backend/features/analytics/logged-event.ts`                      | Which columns each kind of event sets                                            |
+| `src/backend/features/analytics/schema.ts`                            | The event log and every rollup table                                             |
+| `src/backend/features/analytics/rollups.ts`                           | `rollupWrites`: the rollup rows one event adds to                                |
+| `src/backend/features/analytics/day.ts`                               | Day keys in the reporting time zone                                              |
+| `src/backend/features/analytics/seasons.ts`                           | FRC and FTC seasons, for season-over-season comparison                           |
+| `src/backend/features/analytics/range.ts`, `growth.ts`                | Date ranges, clamped to when tracking began; growth windows                      |
+| `src/backend/features/analytics/metric-queries.ts`, `part-queries.ts` | The dashboard's reads over the rollups                                           |
+| `src/backend/features/analytics/health.ts`                            | Build-issue counts per library                                                   |
+| `src/backend/features/analytics/parameter-usage.ts`                   | Option usage, per way a parameter is shown                                       |
+| `src/backend/features/analytics/report-queries.ts`                    | Report counts, and a library's most reported parts                               |
+| `src/backend/features/analytics/routes.ts`                            | `GET /api/analytics/...`                                                         |
+| `src/backend/features/entry/routes.ts`                                | `POST /api/app-open`, sent on a launch from Onshape                              |
+| `src/backend/features/download/routes.ts`                             | `POST /api/step-export/...`, which records a download                            |
+| `src/frontend/routes/dashboard/`                                      | The dashboard pages: overview, library, part, unused                             |
+| `src/frontend/features/dashboard/`                                    | The dashboard's queries, charts and tables                                       |
 
 ## Storage
 
@@ -37,9 +39,10 @@ aggregates.
 no foreign key crosses between them):
 
 - `events` — the append-only log. Every event has an id, type, time, day key,
-  user and schema version, and the library where it has one; an insert adds the
-  element path, insertable, target tab type, canonical selection, source, and
-  the favorite, quick-insert and fasten flags, and a version run adds its kind,
+  user and schema version, and the library where it has one; a use adds the
+  element path, insertable, canonical selection, source and favorite flag, and
+  an insert also its target tab type and the quick-insert and fasten flags,
+  which a download leaves null; a version run adds its kind,
   scope, whether it was update-only, its outcome, and how many steps failed,
   versions it created and tabs it updated. A report adds its topic, category,
   source and the team number the reporter gave, and a part report the element
@@ -56,6 +59,15 @@ no foreign key crosses between them):
   `daily_insertable_metrics`, `daily_insertable_users`,
   `daily_configuration_metrics`, `daily_user_activity`, `user_stats`,
   `daily_app_opens`, `daily_version_metrics`, `daily_report_metrics`.
+- A use writes every library rollup, an insert and a download alike.
+  `daily_metrics` keeps a row per event type, so the uses are the sum of the
+  `insert` and `download` rows and either can be read alone.
+  `daily_target_metrics` and `daily_insertable_metrics` split by `UseTarget`:
+  an insert's target tab type (`PARTSTUDIO`, `ASSEMBLY`, the same strings as
+  `ElementType`), or `DOWNLOAD`. The targets sum to the uses.
+- `insertable_stats` and `user_stats` count every use in `insert_count`, and
+  `insertable_stats` dates them in `first_inserted_at` and `last_inserted_at`;
+  the code reads them as `useCount`, `firstUsedAt` and `lastUsedAt`.
 - `daily_version_metrics` is keyed by day: runs, update-only runs, runs that
   partially failed and runs that failed outright, versions created and tabs
   updated.
@@ -71,13 +83,15 @@ no foreign key crosses between them):
 
 ### Recording
 
-1. An insert route calls `trackInsert` once the insert succeeded; `/init`'s
+1. An insert route calls `trackInsert` once the insert succeeded;
+   `POST /api/step-export` calls `trackDownload` once Onshape accepts the
+   export (see [download.md](./download.md)); `/init`'s
    handoff calls `POST /api/app-open`, which calls `trackAppOpen`; the
    version manager's workflow calls `trackVersionRun` in its `record-run` step
    once its run has finished, so a run that failed halfway still records what
    it managed; `POST /api/feedback` calls `trackReport` once the report is
    posted to Discord (see [feedback.md](./feedback.md)).
-2. An insert, an open and a report are recorded in the background (`runInBackground`),
+2. A use, an open and a report are recorded in the background (`runInBackground`),
    after the response; a version run's step swallows a failure to record. So
    tracking never slows or fails what the user asked for.
 3. The selection is stored canonically (`canonicalValues`), so `5 in` and
@@ -98,19 +112,21 @@ is nothing like a calendar year; between seasons it shows the last complete one.
 The dashboard is a sibling of `/app`, a full-screen page outside the Onshape
 panel. Its routes read only rollups and return only aggregates:
 
-- **Overview** — totals, per-library summaries, insert and metric series, insert
-  sources, growth, the version manager's own totals, and reports by topic and
-  type.
+- **Overview** — totals, per-library summaries, use and metric series, use
+  sources, growth, the shares of uses that were quick inserts, fastened, into
+  an assembly and downloaded, the version manager's own totals, and reports by
+  topic and type.
 - **Library** — its summary, health (build issues by severity, hidden elements
   left out), its parts table, its reports by type, and its most reported parts.
-- **Part** — one element's history, and usage of each configuration option,
-  split per way the option is shown (`toParameterInstances`).
+- **Part** — one element's history, its uses split by target (into an
+  assembly, downloaded), and usage of each configuration option, split per way
+  the option is shown (`toParameterInstances`).
 - **Unused** — parts and options at or below a usage threshold.
 
 The range, threshold and preset live in the url, so a view can be shared.
 
 The admin card in the app reads the library's **Parts** report, all time and
-fetched once for every card, for a part's inserts, monthly rate and favorites,
+fetched once for every card, for a part's uses, monthly rate and favorites,
 and links to its **Part** report. It asks only while the card's Usage section is
 open, and reuses an answer for five minutes.
 
@@ -134,12 +150,18 @@ only on **All time**, its own window being a season rather than the picked one.
   compile until each kind of event says what it holds.
 - Values are compared and counted canonically, never by configuration key.
 - Changing what a column means bumps `EVENT_SCHEMA_VERSION`.
+- A use is one of `USE_EVENT_TYPES`, and writes every rollup any use writes;
+  only its `UseTarget` and the insert-only flags tell the kinds apart. A count
+  labelled "uses" sums them all; "inserts" means the uses that went into
+  Onshape (`insertsOf`), which quick insert is measured against.
+- Every new or major feature records its use here, in the same change
+  (`AGENTS.md`, Feature tracking).
 
 ## Failure and recovery
 
 | Failure                               | Result                                                       | Recovery                                                        |
 | ------------------------------------- | ------------------------------------------------------------ | --------------------------------------------------------------- |
-| The tracking write fails              | That event is lost; the insert is unaffected                 | None needed                                                     |
+| The tracking write fails              | That event is lost; what it records is unaffected            | None needed                                                     |
 | A rollup is wrong after a code change | Dashboard numbers off                                        | Replay `events` through `rollupWrites`; no script does this yet |
 | A range starts before tracking began  | Clamped; growth withheld when its baseline predates tracking | Automatic                                                       |
 
@@ -149,7 +171,7 @@ only on **All time**, its own window being a season rather than the picked one.
   tab the browser last remembered, and the app resumes into a page that need not
   be a library at all, so the number said more about somebody's last tab than
   about the open. It counts app-wide, in `daily_app_opens`, and a library's
-  users are the people who inserted from it.
+  users are the people who used a part from it.
 - **A version run has no library.** It acts on whatever document Onshape
   launched the app from. Attributing it to the library the person happened to
   have open would say more about their last tab than about anything real, so
@@ -158,9 +180,23 @@ only on **All time**, its own window being a season rather than the picked one.
   a report writes no row to `daily_metrics`, `daily_user_activity` or
   `user_stats`, even when it names a library.
 - **Version runs are not activity.** They write no row to `daily_user_activity`
-  or `user_stats`: "active user" means somebody who inserted
-  something, and counting runs there would move the line under every historical
+  or `user_stats`: "active user" means somebody who used a part,
+  and counting runs there would move the line under every historical
   figure. An open is activity, which is why it is unioned in.
+- **A download is a use.** Somebody who downloads a part is using the library
+  as much as somebody who inserts it, so a download feeds the same totals,
+  users, part counts and configuration counts, and the dashboard says "uses"
+  for them together. A separate set of download rollups would leave every part
+  and option looking less used than it is. `UseTarget` keeps downloads apart
+  where the split matters, without a column per kind.
+- **A download is recorded when the export starts.** That is the request that
+  carries the selection and source; the file route knows only the
+  translation. An export Onshape later fails still counts, as an insert whose
+  fasten fails still does.
+- **The rollup columns keep their insert names.** `insert_count`,
+  `first_inserted_at` and `last_inserted_at` count every use; renaming a column
+  in D1 rebuilds its table for no reader's benefit, so the code's names say
+  uses and the columns' say inserts.
 - **A log plus rollups.** The log keeps everything for replay; rollups keep every
   dashboard read a small indexed query.
 - **Keyed by element, not insertable.** An insertable row is replaced when a tab
