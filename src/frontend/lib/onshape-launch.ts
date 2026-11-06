@@ -6,6 +6,7 @@ import * as z from "zod";
 import { ElementType } from "@backend/lib/onshape/element-type";
 import { INSTANCE_TYPES, type ElementPath } from "@backend/lib/onshape/path";
 import { type WorkspacePath } from "@backend/features/version-manager/contract";
+import { type LaunchContext } from "@backend/features/feedback/contract";
 
 /** All optional, since the app also opens standalone. */
 export const OnshapeLaunchType = z.object({
@@ -50,6 +51,11 @@ export function toTargetElement(
         return undefined;
     }
     return { documentId, instanceId, instanceType, elementId, elementType };
+}
+
+/** Panel when Onshape launched the app into an element; standalone otherwise. */
+export function toLaunchContext(launch: OnshapeLaunch): LaunchContext {
+    return toTargetElement(launch) ? "panel" : "standalone";
 }
 
 /**

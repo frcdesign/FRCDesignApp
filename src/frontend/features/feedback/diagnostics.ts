@@ -3,7 +3,11 @@ import { type FeedbackDiagnostics } from "@backend/features/feedback/contract";
 import { AppError } from "../../lib/errors";
 import { PERSONAL_COMPANY_ID } from "@backend/features/auth/personal-company";
 import { useOnshapeLaunch } from "../../lib/onshape-params";
-import { LAUNCH_KEYS } from "../../lib/onshape-launch";
+import {
+    LAUNCH_KEYS,
+    OnshapeLaunchType,
+    toLaunchContext
+} from "../../lib/onshape-launch";
 import { getUiState } from "../../lib/ui-state";
 
 /** What went wrong, as a report carries it. */
@@ -60,6 +64,7 @@ export function collectDiagnostics(error?: ReportedError): FeedbackDiagnostics {
                 launch.sessionCompanyId !== undefined &&
                 launch.sessionCompanyId !== PERSONAL_COMPANY_ID
         },
+        launchContext: toLaunchContext(OnshapeLaunchType.parse(launch)),
         viewedAccessLevel: getUiState().accessLevel,
         viewport: `${window.innerWidth}x${window.innerHeight}`,
         error

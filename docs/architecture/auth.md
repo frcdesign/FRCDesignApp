@@ -33,7 +33,9 @@ team, plus one owner set by configuration.
 
 ## Storage
 
-- **Cookies** (`SameSite=None; Secure`, since the app runs in Onshape's iframe):
+- **Cookies** (`SameSite=None; Secure; Partitioned`, since the app runs in
+  Onshape's iframe; partitioned so a browser blocking third-party cookies keeps
+  them, and set and deleted with the same `COOKIE_OPTIONS` so a delete matches):
   `frc-design-app-session` holds an opaque session id; `frc-design-app-login`
   holds a sign-in's OAuth state and return path for ten minutes and is read once.
 - **KV** `session:` — the session's access and refresh tokens, expiry, and the
@@ -183,16 +185,17 @@ declared in `wrangler.jsonc` per environment and typed in `AppBindings`. Run
 
 ## Failure and recovery
 
-| Failure                                            | Result                                                              | Recovery                                                 |
-| -------------------------------------------------- | ------------------------------------------------------------------- | -------------------------------------------------------- |
-| Access token expired                               | Refreshed on the next call                                          | Automatic                                                |
-| Refresh token revoked or expired                   | Treated as signed out                                               | Sign in again                                            |
-| The grant is another company's than the document's | `/init` sends the caller through sign-in for the document's company | Automatic, once                                          |
-| The session is another user's than the launch's    | `/init` sends the caller through sign-in for the document's company | Automatic, once                                          |
-| A company's grant for a personal document          | `/init` sends the launch to `/document-access`                      | **Sign in**, choosing the personal account               |
-| Document public or shared view-only                | `/init` sends the launch to `/document-access`                      | Edit access from the document's owner                    |
-| Team membership changed in Onshape                 | Synced when its webhook arrives                                     | **Refresh** beside the admin team, for a missed delivery |
-| No saved background session                        | A load whose requester's session lapses fails                       | The owner or a team member opens the app                 |
+| Failure                                                          | Result                                                                                                 | Recovery                                                 |
+| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ | -------------------------------------------------------- |
+| Access token expired                                             | Refreshed on the next call                                                                             | Automatic                                                |
+| Refresh token revoked or expired                                 | Treated as signed out                                                                                  | Sign in again                                            |
+| The grant is another company's than the document's               | `/init` sends the caller through sign-in for the document's company                                    | Automatic, once                                          |
+| The session is another user's than the launch's                  | `/init` sends the caller through sign-in for the document's company                                    | Automatic, once                                          |
+| A company's grant for a personal document                        | `/init` sends the launch to `/document-access`                                                         | **Sign in**, choosing the personal account               |
+| Document public or shared view-only                              | `/init` sends the launch to `/document-access`                                                         | Edit access from the document's owner                    |
+| Team membership changed in Onshape                               | Synced when its webhook arrives                                                                        | **Refresh** beside the admin team, for a missed delivery |
+| No saved background session                                      | A load whose requester's session lapses fails                                                          | The owner or a team member opens the app                 |
+| Browser refuses even a partitioned cookie (Brave, strict policy) | The callback finds no login cookie and sends the caller to `/cookie-error` (`/safari-error` in Safari) | Allow the app's cookies; **Send a report**               |
 
 ## Decisions
 
@@ -218,6 +221,10 @@ declared in `wrangler.jsonc` per environment and typed in `AppBindings`. Run
   match the document's while it still can't edit it, which surfaced as
   a 403 on the first insert. One permissions call per launch finds it before
   anything is tried.
+- **Partitioned cookies.** Keyed to the top-level site, they survive a browser
+  that blocks third-party cookies. The panel and the standalone app hold
+  separate sessions, each signed in on its own; `/init` already signs the panel
+  in, so nothing relies on sharing one.
 - **Login state in a cookie, not KV.** A caller who abandons sign-in keeps the
   session they had, and nothing needs cleaning up.
 

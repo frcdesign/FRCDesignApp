@@ -119,7 +119,9 @@ selection? }`.
    the document the reporter was in: the app's own path
    and params with Onshape's launch params removed, the build id, the kind of
    tab the app was launched in (Part Studio or Assembly, workspace or not, in
-   an Enterprise or not), the level the app is viewed as, the window size, and
+   an Enterprise or not), the launch context (`panel` when the launch params
+   name an element, `standalone` otherwise, by `toLaunchContext`; computed
+   here so `/cookie-error`, with no session, still has it), the level the app is viewed as, the window size, and
    the error.
 3. `feedbackBody` checks that the category belongs to the topic and source,
    that only a part report names a part, that the title fits a thread's name
@@ -138,7 +140,7 @@ selection? }`.
    message is two embeds: the report in its type's color (title, link to the
    part, what they typed, then the part, its configuration, the error, the Discord username and the team number), and
    under it a gray
-   block of `Label: value` lines (topic, type, source, page, launch, signed in,
+   block of `Label: value` lines (topic, type, source, page, launch, launch context, signed in,
    viewed as, build, window, browser) with the report id in its footer.
 7. Once posted, `trackReport` records it in the background, under the id the
    post quotes in its footer, with the team number when there is one.

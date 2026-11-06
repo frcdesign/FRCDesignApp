@@ -155,6 +155,7 @@ function detailLines(report: Report): string[] {
         `From: ${FEEDBACK_SOURCE_LABELS[report.source]}`,
         `Page: ${truncate(diagnostics.url, DETAIL_LIMIT)}`,
         `Launched in: ${describeLaunch(diagnostics.launch) ?? "Not in Onshape"}`,
+        `Launch context: ${diagnostics.launchContext ?? "unknown"}`,
         `Signed in: ${report.signedIn ? "Yes" : "No"}`,
         `Viewed as: ${diagnostics.viewedAccessLevel ?? "unknown"}`,
         `Build: ${diagnostics.build ?? "unknown"}`
