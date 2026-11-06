@@ -7,6 +7,7 @@ import {
     FEEDBACK_TOPIC_LABELS,
     FeedbackCategory,
     type FeedbackDiagnostics,
+    LAUNCH_CONTEXT_LABELS,
     type FeedbackSource,
     type FeedbackTopic
 } from "./contract";
@@ -155,7 +156,7 @@ function detailLines(report: Report): string[] {
         `From: ${FEEDBACK_SOURCE_LABELS[report.source]}`,
         `Page: ${truncate(diagnostics.url, DETAIL_LIMIT)}`,
         `Launched in: ${describeLaunch(diagnostics.launch) ?? "Not in Onshape"}`,
-        `Launch context: ${diagnostics.launchContext ?? "unknown"}`,
+        `Launch context: ${diagnostics.launchContext ? LAUNCH_CONTEXT_LABELS[diagnostics.launchContext] : "unknown"}`,
         `Signed in: ${report.signedIn ? "Yes" : "No"}`,
         `Viewed as: ${diagnostics.viewedAccessLevel ?? "unknown"}`,
         `Build: ${diagnostics.build ?? "unknown"}`

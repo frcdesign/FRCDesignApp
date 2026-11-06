@@ -119,8 +119,8 @@ selection? }`.
    the document the reporter was in: the app's own path
    and params with Onshape's launch params removed, the build id, the kind of
    tab the app was launched in (Part Studio or Assembly, workspace or not, in
-   an Enterprise or not), the launch context (`panel` when the launch params
-   name an element, `standalone` otherwise, by `toLaunchContext`; computed
+   an Enterprise or not), the launch context (`LaunchContext`: the panel when the launch
+   params name an element, standalone otherwise, by `toLaunchContext`; computed
    here so `/cookie-error`, with no session, still has it), the level the app is viewed as, the window size, and
    the error.
 3. `feedbackBody` checks that the category belongs to the topic and source,

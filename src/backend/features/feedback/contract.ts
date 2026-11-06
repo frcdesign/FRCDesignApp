@@ -33,6 +33,12 @@ export enum FeedbackSource {
     ERROR = "error"
 }
 
+/** Whether the app was in Onshape's panel, read from its launch params. */
+export enum LaunchContext {
+    PANEL = "panel",
+    STANDALONE = "standalone"
+}
+
 export const FEEDBACK_TOPIC_LABELS: Record<FeedbackTopic, string> = {
     [FeedbackTopic.APP]: "FRCDesignApp",
     [FeedbackTopic.VERSION_MANAGER]: "Version Manager",
@@ -57,6 +63,11 @@ export const FEEDBACK_SOURCE_LABELS: Record<FeedbackSource, string> = {
     [FeedbackSource.GENERAL]: "Feedback form",
     [FeedbackSource.PART]: "Part menu",
     [FeedbackSource.ERROR]: "Error report"
+};
+
+export const LAUNCH_CONTEXT_LABELS: Record<LaunchContext, string> = {
+    [LaunchContext.PANEL]: "Onshape panel",
+    [LaunchContext.STANDALONE]: "Standalone"
 };
 
 /** In the order the form lists them. */
@@ -141,10 +152,6 @@ function clipped(max: number) {
 
 const idField = clipped(MAX_ID).optional();
 
-export const LAUNCH_CONTEXTS = ["panel", "standalone"] as const;
-/** Whether the app was in Onshape's panel, read from its launch params. */
-export type LaunchContext = (typeof LAUNCH_CONTEXTS)[number];
-
 /** Gathered by the client, since only it knows the page and the launch. */
 export const feedbackDiagnosticsSchema = z.object({
     /** The app's own path and params; Onshape's launch params are left out. */
@@ -159,7 +166,7 @@ export const feedbackDiagnosticsSchema = z.object({
         })
         .optional(),
     /** Computed by the client, so a report from a page without a session has it. */
-    launchContext: z.enum(LAUNCH_CONTEXTS).optional(),
+    launchContext: z.enum(LaunchContext).optional(),
     /** The level the app is viewed at, which can be below what is granted. */
     viewedAccessLevel: idField,
     viewport: idField,
