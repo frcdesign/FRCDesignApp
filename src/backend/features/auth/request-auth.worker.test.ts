@@ -1,6 +1,6 @@
 import { env } from "cloudflare:workers";
 import { env as processEnv } from "process";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AccessLevel } from "./access-level";
 import { productionAuth } from "./request-auth";
 import { createApp } from "../../app";
@@ -10,6 +10,9 @@ import { libraries } from "../../db/schema";
 import { eq } from "drizzle-orm";
 import { LibraryId } from "../library/library-id";
 import { saveSession } from "./session";
+import * as Users from "../../lib/onshape/endpoints/users";
+import * as Permissions from "../../lib/onshape/endpoints/permissions";
+import { OnshapePermission } from "../../lib/onshape/endpoints/permissions";
 
 const app = createApp(productionAuth);
 
@@ -151,5 +154,51 @@ describe("access from a library's admin team", () => {
         expect(await accessLevelOf(OWNER, LibraryId.CONFIG_LIB)).toBe(
             AccessLevel.OWNER
         );
+    });
+});
+
+describe("the launch's sign-in check", () => {
+    afterEach(() => {
+        vi.restoreAllMocks();
+    });
+
+    /** Where `/init` sends a launch whose session is personal account `sessionUserId`'s. */
+    async function launchAs(sessionUserId: string, query: string) {
+        vi.spyOn(Users, "getSessionInfo").mockResolvedValue({
+            id: sessionUserId,
+            company: null
+        });
+        vi.spyOn(Permissions, "getPermissions").mockResolvedValue([
+            OnshapePermission.READ,
+            OnshapePermission.WRITE
+        ]);
+        const sessionId = crypto.randomUUID();
+        await saveSession(env.KV, sessionId, {
+            accessToken: "token",
+            refreshToken: "refresh",
+            expiresAt: Date.now() + 60_000
+        });
+        const res = await app.request(
+            `/init?documentId=doc&${query}`,
+            {
+                method: "GET",
+                headers: { Cookie: `frc-design-app-session=${sessionId}` }
+            },
+            env
+        );
+        return new URL(res.headers.get("Location")!, "http://x").pathname;
+    }
+
+    it("opens the app for the user Onshape launched", async () => {
+        expect(await launchAs("user-a", "userId=user-a")).toBe("/");
+    });
+
+    // A browser once signed in as another personal account, like a team's shared one.
+    it("signs in again when the session is another personal account's", async () => {
+        expect(await launchAs("user-a", "userId=user-b")).toBe("/auth/sign-in");
+    });
+
+    it("takes the session's word for it when the launch names nobody", async () => {
+        expect(await launchAs("user-a", "")).toBe("/");
     });
 });

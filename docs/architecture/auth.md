@@ -63,9 +63,10 @@ team, plus one owner set by configuration.
    one), which Onshape adds to every launch (`getDocumentCompanyId`). An
    enterprise and an educator plan's classroom are both companies. A version
    or microversion goes to `/version-error`.
-2. With no session, or one whose grant is for another company than the
-   document's, `/init` sends the caller through sign-in for the document's
-   company and back, marked so it never loops.
+2. With no session, one whose grant is for another company than the
+   document's, or one for another user than the launch's `userId`, `/init`
+   sends the caller through sign-in for the document's company and back,
+   marked so it never loops.
 3. `/auth/sign-in?companyId=` stores `{ state, redirectUrl }` in the login
    cookie and redirects to Onshape's authorize page, naming the company as
    `company_id`; for a personal document it names none, and Onshape asks the
@@ -108,8 +109,8 @@ Onshape:
   when expired and on a 401; the refreshed tokens are saved before use.
 - `getUserId` — resolved from Onshape once and kept on the session.
 - `getAccessLevel(libraryId)` — see below.
-- `isAuthenticated` — the session works **and** its company matches the
-  launching document's.
+- `isAuthenticated` — the session works, its company matches the launching
+  document's, **and** its user is the launch's `userId` when Onshape sends one.
 
 ### Access levels
 
@@ -187,6 +188,7 @@ declared in `wrangler.jsonc` per environment and typed in `AppBindings`. Run
 | Access token expired                               | Refreshed on the next call                                          | Automatic                                                |
 | Refresh token revoked or expired                   | Treated as signed out                                               | Sign in again                                            |
 | The grant is another company's than the document's | `/init` sends the caller through sign-in for the document's company | Automatic, once                                          |
+| The session is another user's than the launch's    | `/init` sends the caller through sign-in for the document's company | Automatic, once                                          |
 | A company's grant for a personal document          | `/init` sends the launch to `/document-access`                      | **Sign in**, choosing the personal account               |
 | Document public or shared view-only                | `/init` sends the launch to `/document-access`                      | Edit access from the document's owner                    |
 | Team membership changed in Onshape                 | Synced when its webhook arrives                                     | **Refresh** beside the admin team, for a missed delivery |
@@ -201,6 +203,12 @@ declared in `wrangler.jsonc` per environment and typed in `AppBindings`. Run
   session's company says only where the caller happens to be signed in. A
   personal account can't be asked for by id, so a personal document is the one
   case the caller can answer wrongly, and the one the access page explains.
+- **Match the launch's user, not only its company.** Every personal account
+  shares the company `cad`, so a session left from another personal account,
+  such as a team's shared one on the same browser, passes the company check
+  and then can't see the owner's own document. Onshape names the launching
+  user in `userId`, and the session's user comes back with its company from
+  the same `sessioninfo` call, so comparing them costs nothing.
 - **Onshape teams as the permission source.** Library admins already manage the
   documents in Onshape; the app mirrors that rather than keeping its own roles.
 - **Synced, not live.** Asking Onshape on every request would spend the

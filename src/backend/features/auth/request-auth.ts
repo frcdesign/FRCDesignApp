@@ -80,13 +80,21 @@ function getCachedUserId(c: AppContext): Promise<string> {
     return getUserIdFromSessionId(c.env.KV, getSessionId(c));
 }
 
+/**
+ * The session is the launching user's, for the document's company. Every
+ * personal account shares one company, so only the user id tells two apart.
+ */
 export async function isAuthenticated(c: AppContext): Promise<boolean> {
     try {
         const onshapeApi = await c.var.getOnshapeApi();
         const sessionInfo = await getSessionInfo(onshapeApi);
         // Onshape reports no company outside an enterprise.
         const tokenCompanyId = sessionInfo.company?.id ?? PERSONAL_COMPANY_ID;
-        return getDocumentCompanyId(c) === tokenCompanyId;
+        const launchUserId = c.req.query("userId");
+        return (
+            getDocumentCompanyId(c) === tokenCompanyId &&
+            (launchUserId === undefined || launchUserId === sessionInfo.id)
+        );
     } catch {
         return false;
     }
