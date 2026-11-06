@@ -18,7 +18,7 @@ team, plus one owner set by configuration.
 | `src/backend/features/auth/access-level.ts`                 | `AccessLevel` and its ordering; shared with the client                     |
 | `src/backend/features/auth/guards.ts`                       | Route middleware: sign-in, editor, admin, owner                            |
 | `src/backend/features/auth/background-sessions.ts`          | Sessions a load can borrow when its requester's fails                      |
-| `src/backend/features/auth/company.ts`, `cookie-options.ts` | Enterprise company matching; cross-site cookie settings                    |
+| `src/backend/features/auth/company.ts`, `cookie-options.ts` | Enterprise company matching; writing and clearing the auth cookies         |
 | `src/backend/features/auth/routes.ts`                       | `/auth/sign-in`, `/auth/callback`, `/auth/sign-out`, `/api/access-data`    |
 | `src/backend/features/hints/store.ts`                       | Which features' dots a user has seen, carried by `/api/access-data`        |
 | `src/backend/features/hints/routes.ts`                      | `POST /api/seen-hints`, sent by `useMarkHintSeen` once a feature is opened |
@@ -35,7 +35,8 @@ team, plus one owner set by configuration.
 
 - **Cookies** (`SameSite=None; Secure; Partitioned`, since the app runs in
   Onshape's iframe; partitioned so a browser blocking third-party cookies keeps
-  them, and set and deleted with the same `COOKIE_OPTIONS` so a delete matches):
+  them). `setAuthCookie` and `clearAuthCookie` in `cookie-options.ts` write
+  them, and each also expires an unpartitioned cookie of the same name:
   `frc-design-app-session` holds an opaque session id; `frc-design-app-login`
   holds a sign-in's OAuth state and return path for ten minutes and is read once.
 - **KV** `session:` — the session's access and refresh tokens, expiry, and the
@@ -174,6 +175,10 @@ declared in `wrangler.jsonc` per environment and typed in `AppBindings`. Run
 ## Invariants
 
 - The cookie holds only an opaque id; tokens never leave KV.
+- Auth cookies are written only through `setAuthCookie` and `clearAuthCookie`,
+  so no unpartitioned cookie of the same name outlives a write. The browser
+  sends an older one first and `getCookie` reads the first, so one left behind
+  hides the session: the caller signs in and still reads as signed out.
 - A session is only created by a completed sign-in, with a fresh id.
 - Access is decided on the server per library; the client's viewed level only
   hides UI and can never exceed the server's.
@@ -185,6 +190,11 @@ declared in `wrangler.jsonc` per environment and typed in `AppBindings`. Run
 
 ## Failure and recovery
 
+`/init` logs why a launch needs sign-in (`isAuthenticated`: no session, an
+expired one, another company's or user's) with how many session cookies came;
+the callback logs the cookie names, never values, when its login cookie is
+missing.
+
 | Failure                                                          | Result                                                                                                 | Recovery                                                 |
 | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ | -------------------------------------------------------- |
 | Access token expired                                             | Refreshed on the next call                                                                             | Automatic                                                |
@@ -195,6 +205,7 @@ declared in `wrangler.jsonc` per environment and typed in `AppBindings`. Run
 | Document public or shared view-only                              | `/init` sends the launch to `/document-access`                                                         | Edit access from the document's owner                    |
 | Team membership changed in Onshape                               | Synced when its webhook arrives                                                                        | **Refresh** beside the admin team, for a missed delivery |
 | No saved background session                                      | A load whose requester's session lapses fails                                                          | The owner or a team member opens the app                 |
+| An unpartitioned session cookie from before partitioning         | Expired by the next sign-in, sign-out or session write                                                 | Automatic: `/init` signs a caller it hides in again      |
 | Browser refuses even a partitioned cookie (Brave, strict policy) | The callback finds no login cookie and sends the caller to `/cookie-error` (`/safari-error` in Safari) | Allow the app's cookies; **Send a report**               |
 
 ## Decisions

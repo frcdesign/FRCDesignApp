@@ -7,6 +7,7 @@ import { type AppContext } from "../../lib/context";
 import { type AuthTokens, beginSession } from "./session";
 import { PERSONAL_COMPANY_ID } from "./personal-company";
 import { startLogin, takeLogin } from "./login";
+import { cookieNames } from "./cookie-options";
 
 const AUTH_ENDPOINT = "https://oauth.onshape.com/oauth/authorize";
 export const TOKEN_ENDPOINT = "https://oauth.onshape.com/oauth/token";
@@ -64,6 +65,10 @@ export async function doCallback(c: AppContext): Promise<Response> {
 
     // The redirect cookie was missing.
     if (!login) {
+        console.warn("Sign-in returned without its login cookie", {
+            cookies: cookieNames(c),
+            userAgent: c.req.header("User-Agent")
+        });
         if (isSafari(c.req.raw)) {
             return c.redirect("/safari-error");
         }

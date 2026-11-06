@@ -3,6 +3,7 @@ import { useOnshapeLaunch } from "../../lib/onshape-params";
 import { collectDiagnostics } from "./diagnostics";
 
 const DOCUMENT = "0123456789abcdef01234567";
+const USER = "66f0ab4a55b9ff2109681766";
 
 describe("collectDiagnostics", () => {
     afterEach(() => {
@@ -14,7 +15,7 @@ describe("collectDiagnostics", () => {
         window.history.replaceState(
             null,
             "",
-            `/app/library/frc-design-lib?documentId=${DOCUMENT}&instanceType=w&instanceId=${DOCUMENT}&elementId=${DOCUMENT}&elementType=ASSEMBLY&sessionCompanyId=${DOCUMENT}&server=https%3A%2F%2Fschool.onshape.com&insertable=ins`
+            `/app/library/frc-design-lib?documentId=${DOCUMENT}&instanceType=w&instanceId=${DOCUMENT}&elementId=${DOCUMENT}&elementType=ASSEMBLY&sessionCompanyId=${DOCUMENT}&server=https%3A%2F%2Fschool.onshape.com&userId=${USER}&clientId=client&insertable=ins`
         );
 
         const diagnostics = collectDiagnostics();
@@ -29,6 +30,7 @@ describe("collectDiagnostics", () => {
         });
         expect(JSON.stringify(diagnostics)).not.toContain(DOCUMENT);
         expect(JSON.stringify(diagnostics)).not.toContain("school");
+        expect(JSON.stringify(diagnostics)).not.toContain(USER);
     });
 
     it("reads a personal account as no Enterprise", () => {

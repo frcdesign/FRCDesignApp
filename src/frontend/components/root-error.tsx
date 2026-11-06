@@ -11,10 +11,15 @@ import { ReloadButton } from "../features/library/components/reload-button";
 import { AccessLevel } from "@backend/features/auth/access-level";
 import { DEFAULT_LIBRARY } from "@backend/features/library/library-id";
 
-export function RootAppError(): ReactNode {
+interface RootAppErrorProps {
+    error: unknown;
+}
+
+export function RootAppError(props: RootAppErrorProps): ReactNode {
     return (
         <PageError
             title={m.appCrashed()}
+            error={props.error}
             action={
                 <RequireAccessLevel
                     accessLevel={AccessLevel.OWNER}

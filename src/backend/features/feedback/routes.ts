@@ -4,6 +4,7 @@ import { validate } from "../../lib/validate";
 import { handledError, internalError } from "../../lib/api-error";
 import { getDb } from "../../db/client";
 import { isSignedIn } from "../auth/request-auth";
+import { countSessionCookies } from "../auth/session";
 import { trackReport } from "../analytics/tracking";
 import { feedbackBody, type FeedbackOut, topicLibrary } from "./contract";
 import { getWebhookUrl, reportTagIds } from "./channels";
@@ -69,6 +70,7 @@ feedbackRoutes.post("/feedback", validate("json", feedbackBody), async (c) => {
             contact: body.contact || undefined,
             teamNumber: body.teamNumber,
             signedIn: userId !== undefined,
+            sessionCookies: countSessionCookies(c),
             userAgent: c.req.header("User-Agent"),
             part,
             diagnostics: body.diagnostics,

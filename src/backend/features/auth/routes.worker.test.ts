@@ -89,6 +89,21 @@ describe("GET /auth/sign-out", () => {
         expect(res.headers.get("Set-Cookie")).toContain(`${SESSION_COOKIE}=;`);
     });
 
+    // An unpartitioned copy left from before is sent first and would shadow the session.
+    it("expires the cookie partitioned and unpartitioned", async () => {
+        await seedSession("session-1");
+
+        const res = await signOut("/", "session-1");
+
+        const expired = res.headers
+            .getSetCookie()
+            .filter((cookie) => cookie.startsWith(`${SESSION_COOKIE}=;`));
+        expect(expired).toHaveLength(2);
+        expect(
+            expired.filter((cookie) => cookie.includes("Partitioned"))
+        ).toHaveLength(1);
+    });
+
     it("lands home rather than forwarding the caller offsite", async () => {
         for (const redirectUrl of ["https://example.com", "//example.com"]) {
             const res = await signOut(redirectUrl);

@@ -35,6 +35,8 @@ export interface Report {
     contact?: string;
     teamNumber?: number;
     signedIn: boolean;
+    /** Session cookies the report arrived with; two means a stale one is shadowing the session. */
+    sessionCookies?: number;
     userAgent?: string;
     part?: ReportedPart;
     diagnostics: FeedbackDiagnostics;
@@ -158,7 +160,10 @@ function detailLines(report: Report): string[] {
         `Launched in: ${describeLaunch(diagnostics.launch) ?? "Not in Onshape"}`,
         `Launch context: ${diagnostics.launchContext ? LAUNCH_CONTEXT_LABELS[diagnostics.launchContext] : "unknown"}`,
         `Signed in: ${report.signedIn ? "Yes" : "No"}`,
-        `Viewed as: ${diagnostics.viewedAccessLevel ?? "unknown"}`,
+        ...(report.sessionCookies !== undefined
+            ? [`Session cookies: ${report.sessionCookies}`]
+            : []),
+        `Viewed as: ${diagnostics.viewedAccessLevel ?? "granted level"}`,
         `Build: ${diagnostics.build ?? "unknown"}`
     ];
     if (diagnostics.viewport) {

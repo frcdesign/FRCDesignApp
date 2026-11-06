@@ -5,10 +5,10 @@
  */
 import { HttpStatus } from "http-status-ts";
 import { internalError } from "../../lib/api-error";
-import { deleteCookie, getCookie, setCookie } from "hono/cookie";
+import { getCookie } from "hono/cookie";
 import { type AppContext } from "../../lib/context";
 import { kvStore } from "../../lib/kv-store";
-import { COOKIE_OPTIONS } from "./cookie-options";
+import { clearAuthCookie, countCookies, setAuthCookie } from "./cookie-options";
 
 const SESSION_COOKIE = "frc-design-app-session";
 const SESSION_TTL = 30 * 24 * 3600; // 30 days
@@ -22,6 +22,11 @@ export function getSessionId(c: AppContext): string {
         );
     }
     return sessionId;
+}
+
+/** For logs and reports: anything but one is worth knowing about. */
+export function countSessionCookies(c: AppContext): number {
+    return countCookies(c, SESSION_COOKIE);
 }
 
 export interface AuthTokens {
@@ -43,8 +48,7 @@ export async function endSession(c: AppContext): Promise<void> {
     if (sessionId) {
         await sessions.delete(c.env.KV, sessionId);
     }
-    // Matched to how it was set, or the browser keeps the cookie.
-    deleteCookie(c, SESSION_COOKIE, COOKIE_OPTIONS);
+    clearAuthCookie(c, SESSION_COOKIE);
 }
 
 /** Minted here, so a session is only replaced by a sign-in that finished. */
@@ -54,10 +58,7 @@ export async function beginSession(
 ): Promise<void> {
     const previousSessionId = getCookie(c, SESSION_COOKIE);
     const sessionId = crypto.randomUUID();
-    setCookie(c, SESSION_COOKIE, sessionId, {
-        ...COOKIE_OPTIONS,
-        maxAge: SESSION_TTL
-    });
+    setAuthCookie(c, SESSION_COOKIE, sessionId, SESSION_TTL);
     await saveSession(c.env.KV, sessionId, tokens);
     if (previousSessionId) {
         await sessions.delete(c.env.KV, previousSessionId);

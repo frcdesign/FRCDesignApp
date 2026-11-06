@@ -24,19 +24,28 @@ export function toReportedError(shown: string, error?: unknown): ReportedError {
         };
     }
     if (error instanceof Error) {
-        return {
-            shown,
-            kind: ApiErrorKind.INTERNAL,
-            detail: `${error.name}: ${error.message}`
-        };
+        return { shown, kind: ApiErrorKind.INTERNAL, detail: describe(error) };
     }
     return { shown };
 }
 
-/** The page without Onshape's launch params, which name the person's document and company. */
+/** With its stack, which still says where once minified; the build id says which bundle. */
+function describe(error: Error): string {
+    const summary = `${error.name}: ${error.message}`;
+    if (!error.stack) return summary;
+    // Chrome's stack starts with the summary; Firefox's and Safari's don't.
+    return error.stack.startsWith(summary)
+        ? error.stack
+        : `${summary}\n${error.stack}`;
+}
+
+/** Onshape adds who launched the app and through which OAuth app; a report never says who. */
+const IDENTITY_KEYS = ["userId", "clientId"];
+
+/** The page without Onshape's launch params, which name the person, their document and company. */
 function appPage(url: URL): string {
     const search = new URLSearchParams(url.search);
-    for (const key of LAUNCH_KEYS) {
+    for (const key of [...LAUNCH_KEYS, ...IDENTITY_KEYS]) {
         search.delete(key);
     }
     const query = search.toString();
