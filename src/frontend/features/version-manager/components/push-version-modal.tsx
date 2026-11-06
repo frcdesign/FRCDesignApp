@@ -52,7 +52,7 @@ export function PushVersionForm(props: PushVersionFormProps): ReactNode {
             options={
                 <InfoCheckbox
                     label="Recursive"
-                    info="Also pushes on to the documents linked below the child, saving a new version of each one that has documents below it, so they can use it. Each is numbered from its own versions unless you name them above."
+                    info="Recursively push changes across multiple links."
                     checked={recursive}
                     onChange={setRecursive}
                 />

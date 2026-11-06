@@ -286,6 +286,7 @@ function LinkedWorkspaceRow(props: LinkedWorkspaceRowProps): ReactNode {
             <MenuSection label="Link">
                 {linked.isOpenable && (
                     <Menu.Item
+                        color={StatusColor.INFO}
                         leftSection={
                             <ArrowSquareOutIcon size={IconSize.MEDIUM} />
                         }
