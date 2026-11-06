@@ -1,6 +1,6 @@
 /**
- * Builds the two forms of a configuration: a selection, as entered, and the
- * key derived from it to name a thumbnail. See AGENTS.md.
+ * Builds the two forms of a configuration: a selection, its quantities
+ * collapsed, and the key derived from it to name a thumbnail. See AGENTS.md.
  */
 import {
     type ConfigurationKey,
@@ -23,6 +23,7 @@ import {
 import {
     evaluateBaseValue,
     formatBaseValue,
+    formatValueInUnit,
     formatValueWithUnits
 } from "./input-parser";
 
@@ -36,8 +37,8 @@ export function quantityDefault(
 }
 
 /**
- * Every declared parameter, as entered, with missing ones defaulted. Checkboxes
- * are normalized to Onshape's spelling and quantities trimmed.
+ * Every declared parameter, with missing ones defaulted. Checkboxes are
+ * normalized to Onshape's spelling and quantities collapsed (`collapseQuantity`).
  */
 export function toSelection(
     values: PartialSelection,
@@ -49,12 +50,26 @@ export function toSelection(
         if (parameter.type === ParameterType.BOOLEAN) {
             selection[parameter.id] = value.trim().toLowerCase();
         } else if (parameter.type === ParameterType.QUANTITY) {
-            selection[parameter.id] = value.trim();
+            selection[parameter.id] = collapseQuantity(parameter, value.trim());
         } else {
             selection[parameter.id] = value;
         }
     }
     return selection;
+}
+
+/**
+ * A quantity as its value in the parameter's own unit, to the precision values
+ * are compared at: `(2 + 3) in` is `5 in`, and `1/3 in` keeps every digit that
+ * tells it apart. Left as given when it doesn't evaluate, so the input can say why.
+ */
+function collapseQuantity(parameter: QuantityParameter, value: string): string {
+    const base = evaluateBaseValue(
+        value,
+        parameter.quantityType,
+        parameter.unit
+    );
+    return base === undefined ? value : formatValueInUnit(base, parameter.unit);
 }
 
 /** Drops parameters hidden by a condition, which Onshape never applies. */
@@ -118,7 +133,7 @@ function isDefault(parameter: ConfigurationParameter, value: string): boolean {
     );
 }
 
-/** The values that differ from the element's defaults, as entered. */
+/** The values that differ from the element's defaults. */
 export function onshapeOverrides(
     selection: Selection,
     parameters: ConfigurationParameter[]
@@ -135,9 +150,10 @@ export function onshapeOverrides(
 }
 
 /**
- * What a render sends Onshape, as entered: Onshape names its renders by the
- * value it computes, which differs in the last bit between `2.25 in` and
- * `0.05715 m`. Derivation variables are left out, since each insert's is unique.
+ * What a render sends Onshape: the selection's values, never the key's base
+ * units, since Onshape names its renders by the value it computes, which
+ * differs in the last bit between `2.25 in` and `0.05715 m`. Derivation
+ * variables are left out, since each insert's is unique.
  */
 export function renderOverrides(
     selection: Selection,
@@ -185,6 +201,15 @@ export function fillDerivationValues(
         }
     }
     return next;
+}
+
+/** The values a partial selection names, for a place that holds a `Selection` without the parameters to fill it. */
+export function namedValues(selection: PartialSelection): Selection {
+    return Object.fromEntries(
+        Object.entries(selection).filter(
+            (entry): entry is [string, string] => entry[1] !== undefined
+        )
+    );
 }
 
 /** Strips derivation variables before a selection is stored or shared. */
@@ -307,4 +332,49 @@ export function normalizeSelection(
         current = next;
     }
     return current;
+}
+
+/** One parameter of a configuration, spelled for reading. */
+export interface DisplayedValue {
+    parameter: ConfigurationParameter;
+    /** An enum's option name, a checkbox's Yes or No, a quantity in its own unit. */
+    value: string;
+    isDefault: boolean;
+}
+
+/**
+ * What a selection applies, as the insert menu would settle it, in declaration
+ * order. Hidden parameters and derivation variables are left out.
+ */
+export function displayedValues(
+    selection: PartialSelection,
+    parameters: ConfigurationParameter[]
+): DisplayedValue[] {
+    const applied = appliedValues(
+        normalizeSelection(toSelection(selection, parameters), parameters),
+        parameters
+    );
+    return parameters.flatMap((parameter) => {
+        const value = applied[parameter.id];
+        if (value === undefined || isDerivationVariable(parameter)) {
+            return [];
+        }
+        return [
+            {
+                parameter,
+                value: displayValue(parameter, value),
+                isDefault: isDefault(parameter, value)
+            }
+        ];
+    });
+}
+
+function displayValue(parameter: ConfigurationParameter, value: string) {
+    if (parameter.type === ParameterType.ENUM) {
+        return (
+            parameter.options.find((option) => option.id === value)?.name ??
+            value
+        );
+    }
+    return formatValue(parameter, value);
 }

@@ -11,17 +11,21 @@
     "scripts": {
         "dev": "wrangler d1 migrations apply DB --local && vite dev",
         "tunnel": "cloudflared tunnel run --token-file .tunnel-token",
+        "messages": "paraglide-js compile --project ./project.inlang --outdir ./src/frontend/paraglide --strategy baseLocale --emit-ts-declarations --silent",
+        "pretsc": "npm run messages",
         "tsc": "tsc -b",
-        "build": "tsc -b && vite build",
+        "build": "npm run messages && tsc -b && vite build",
         "lint": "eslint .",
         "preview": "npm run build && vite preview",
         "typegen": "wrangler types",
         "gen:onshape-types": "openapi-ts",
+        "pretest": "npm run messages",
         "test": "vitest run",
         "check:migrations": "node --disable-warning=ExperimentalWarning scripts/check-migrations.js",
         "check:docs": "node scripts/check-docs.js",
         "test:watch": "vitest",
-        "prepare": "husky"
+        "prepare": "husky",
+        "postinstall": "npm run messages"
     },
     "dependencies": {
         "@hono/zod-validator": "^0.9.0",
@@ -51,6 +55,7 @@
         "@cloudflare/vitest-pool-workers": "^0.21.3",
         "@eslint/js": "^10.0.1",
         "@hey-api/openapi-ts": "^0.99.0",
+        "@inlang/paraglide-js": "^2.29.3",
         "@tanstack/react-router-devtools": "^1.166.13",
         "@tanstack/router-plugin": "^1.168.2",
         "@testing-library/dom": "^10.4.2",
@@ -90,6 +95,6 @@
         "esbuild@0.28.1": true,
         "@parcel/watcher@2.5.6": true,
         "sharp@0.35.2": true,
-        "workerd@1.20260811.1": true
+        "workerd@1.20260925.1": true
     }
 }

@@ -37,7 +37,8 @@ import { useSelectAllOnFocus } from "../lib/select-all";
 
 import { AppBrand } from "./app-brand";
 import { AppIcon } from "./app-icon";
-import { NewBadge, NewIndicator } from "./new-feature";
+import { NewBadge } from "./new-feature";
+import { DotIndicator } from "./dot-indicator";
 import { LibraryStatusBadge } from "./library-status-badge";
 import { MenuSection } from "./app-menu";
 import { openSettingsMenu } from "../features/settings/open-settings-menu";
@@ -220,7 +221,7 @@ function PagePicker(): ReactNode {
         <Menu position="bottom-start">
             {/* The dot wraps the target: the menu hands its props to the
                 button, and the wrapper is what the row centres. */}
-            <NewIndicator
+            <DotIndicator
                 shown={pages.some((page) => page.isNew)}
                 my="auto"
                 className={styles.noShrink}
@@ -245,7 +246,7 @@ function PagePicker(): ReactNode {
                         {getTabName(current)}
                     </Button>
                 </Menu.Target>
-            </NewIndicator>
+            </DotIndicator>
             <Menu.Dropdown>
                 {groupPages(pages).map(([group, grouped]) => (
                     <MenuSection key={group} label={group}>
@@ -254,18 +255,16 @@ function PagePicker(): ReactNode {
                                 key={page.tab}
                                 disabled={page.tab === current}
                                 leftSection={
-                                    <NewIndicator
+                                    <DotIndicator
                                         shown={page.isNew ?? false}
                                         offset={-1}
                                     >
-                                        {/* Inline, it sits on a line of text above the label's center */}
                                         <AppIcon
                                             icon={page.icon}
                                             size={IconSize.MEDIUM}
                                             color={toShade(page.color)}
-                                            style={{ display: "block" }}
                                         />
-                                    </NewIndicator>
+                                    </DotIndicator>
                                 }
                                 onClick={() => selectPage(page.tab)}
                             >

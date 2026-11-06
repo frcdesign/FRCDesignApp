@@ -24,6 +24,7 @@ import { OpenDocumentItems } from "../../../components/open-document-items";
 import { AdminMenuSection, MenuSection } from "../../../components/app-menu";
 import { ReloadThumbnailMenuItem } from "./reload-thumbnail-item";
 import { QuickInsertItems } from "../../insert/components/quick-insert-items";
+import { ConfigurationHoverCard } from "../../insert/components/configuration-hover-card";
 import { openCannotDeriveAssemblyAlert } from "../../../components/alerts";
 import { useIsAssemblyInPartStudio } from "../../insert/insert-hooks";
 import { openInsertMenu } from "../../insert/open-insert-menu";
@@ -31,6 +32,10 @@ import { useFavorite } from "../../favorites/queries";
 import { RequireSignIn } from "../../auth/components/require-access";
 import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
 import { InsertSource } from "@backend/features/analytics/usage";
+import { Hint } from "@backend/features/hints/contract";
+import { ReportIssueItem } from "../../feedback/components/report-issue-item";
+import { m } from "../../../paraglide/messages";
+import { useHasSeenHint, useMarkHintSeen } from "../../hints/queries";
 
 interface InsertableMatch extends RowMatch {
     /** The values of the configuration it names, for the menu. */
@@ -58,6 +63,10 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
     const isAssemblyInPartStudio = useIsAssemblyInPartStudio(
         insertable.elementType
     );
+
+    // Every part's menu offers Report an issue, so opening any one sees it.
+    const hasOpenedReport = useHasSeenHint(Hint.OPENED_REPORT_ISSUE);
+    const markReportOpened = useMarkHintSeen(Hint.OPENED_REPORT_ISSUE);
 
     if (isHidden) {
         return null;
@@ -101,11 +110,20 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
             title={insertable.name}
             thumbnail={thumbnail}
             badge={
-                <InsertableStatusBadge
-                    insertableId={insertable.id}
-                    groupId={insertable.groupId}
-                    name={insertable.name}
-                />
+                <>
+                    {/* Browsing opens every part on its defaults; a hit names a configuration. */}
+                    {match && (
+                        <ConfigurationHoverCard
+                            insertable={insertable}
+                            selection={hitSelection}
+                        />
+                    )}
+                    <InsertableStatusBadge
+                        insertableId={insertable.id}
+                        groupId={insertable.groupId}
+                        name={insertable.name}
+                    />
+                </>
             }
         />
     );
@@ -114,6 +132,8 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
         <ItemRow
             onClick={openMenu}
             left={title}
+            isNew={!hasOpenedReport}
+            onMenuClose={markReportOpened}
             rightSection={
                 <RequireSignIn>
                     <FavoriteButton
@@ -197,6 +217,16 @@ export function InsertableMenuItems(
                 <OpenDocumentItems
                     path={insertable.path}
                     selection={selection}
+                />
+            </MenuSection>
+            <MenuSection label={m.feedbackMenuSection()}>
+                <ReportIssueItem
+                    insertable={insertable}
+                    selection={
+                        inInsertMenu
+                            ? (report?.selection ?? selection)
+                            : undefined
+                    }
                 />
             </MenuSection>
             <AdminMenuSection>

@@ -5,7 +5,7 @@ import { internalError } from "../../lib/api-error";
 import { env } from "cloudflare:workers";
 import { type AppContext } from "../../lib/context";
 import { type AuthTokens, beginSession } from "./session";
-import { PERSONAL_COMPANY_ID } from "./company";
+import { PERSONAL_COMPANY_ID } from "./personal-company";
 import { startLogin, takeLogin } from "./login";
 
 const AUTH_ENDPOINT = "https://oauth.onshape.com/oauth/authorize";
@@ -45,7 +45,7 @@ export function doSignIn(
         state,
         []
     );
-    // Onshape only accepts a real enterprise's company_id.
+    // A personal account has no company id to ask for; Onshape asks the caller.
     if (companyId && companyId !== PERSONAL_COMPANY_ID) {
         authorizationUrl.searchParams.set("company_id", companyId);
     }

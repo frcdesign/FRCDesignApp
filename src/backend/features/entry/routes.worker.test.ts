@@ -1,5 +1,5 @@
 import { env } from "cloudflare:workers";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { events } from "../analytics/schema";
 import { EVENT_SCHEMA_VERSION, EventType } from "../analytics/usage";
 import {
@@ -10,6 +10,9 @@ import {
     seedUser
 } from "../../../__test_utils__";
 import { getDb } from "../../db/client";
+import * as Permissions from "../../lib/onshape/endpoints/permissions";
+import { OnshapePermission } from "../../lib/onshape/endpoints/permissions";
+import { OnshapeApiError } from "../../lib/onshape/client";
 
 const db = getDb(env.DB);
 
@@ -44,21 +47,18 @@ describe("GET /init", () => {
         return new URL(res.headers.get("Location")!, "http://x");
     }
 
-    it("signs in a caller Onshape will not take, scoped to their company", async () => {
-        const location = await signInRedirect(
-            "/init?sessionCompanyId=company-1"
-        );
+    // An enterprise's, or an educator plan's classroom's, document.
+    it("signs in a caller Onshape will not take, scoped to the document's company", async () => {
+        const location = await signInRedirect("/init?companyId=company-1");
 
         expect(location.pathname).toBe("/auth/sign-in");
-        expect(location.searchParams.get("sessionCompanyId")).toBe("company-1");
+        expect(location.searchParams.get("companyId")).toBe("company-1");
         const redirectUrl = new URL(
             location.searchParams.get("redirectUrl")!,
             "http://x"
         );
         expect(redirectUrl.pathname).toBe("/init");
-        expect(redirectUrl.searchParams.get("sessionCompanyId")).toBe(
-            "company-1"
-        );
+        expect(redirectUrl.searchParams.get("companyId")).toBe("company-1");
     });
 
     // There's no personal company to ask Onshape for, so this would loop.
@@ -80,9 +80,9 @@ describe("GET /init", () => {
         expect(entry.searchParams.has("signInAttempted")).toBe(false);
     });
 
-    it("signs in a caller whose session is scoped to another company", async () => {
+    it("signs in a caller whose grant is for another company than the document's", async () => {
         const res = await createTestApp({ isAuthenticated: false }).request(
-            "/init?sessionCompanyId=company-1",
+            "/init?companyId=company-1",
             jsonRequest("GET"),
             env
         );
@@ -122,6 +122,100 @@ describe("GET /init", () => {
             env
         );
         expect(res.headers.get("Cache-Control")).toBe("private, no-store");
+    });
+});
+
+describe("GET /init's document access check", () => {
+    afterEach(() => {
+        vi.restoreAllMocks();
+    });
+
+    function grant(permissions: OnshapePermission[]) {
+        vi.spyOn(Permissions, "getPermissions").mockResolvedValue(permissions);
+    }
+
+    async function launch(
+        options: Parameters<typeof createTestApp>[0] = {}
+    ): Promise<URL> {
+        const res = await createTestApp(options).request(
+            "/init?documentId=doc&instanceType=w&instanceId=ws&companyId=company-1",
+            jsonRequest("GET"),
+            env
+        );
+        expect(res.status).toBe(302);
+        return new URL(res.headers.get("Location")!, "http://x");
+    }
+
+    it("opens the app for a grant that can edit the document", async () => {
+        grant([OnshapePermission.READ, OnshapePermission.WRITE]);
+
+        expect((await launch()).pathname).toBe("/");
+    });
+
+    // A personal grant asked about an Enterprise's document, or the reverse.
+    it("explains a grant that can't see the document", async () => {
+        grant([]);
+
+        const location = await launch();
+
+        expect(location.pathname).toBe("/document-access");
+        // The page goes back through /init, or on to the app, with these.
+        expect(location.searchParams.get("documentId")).toBe("doc");
+        expect(location.searchParams.get("companyId")).toBe("company-1");
+        // The grant is the document's company's, so all it can do is view.
+        expect(location.searchParams.get("problem")).toBe("view-only");
+    });
+
+    it("explains a grant that can't see the document after a sign-in", async () => {
+        grant([]);
+
+        const res = await createTestApp({ isAuthenticated: false }).request(
+            "/init?documentId=doc&signInAttempted=1",
+            jsonRequest("GET"),
+            env
+        );
+
+        const location = new URL(res.headers.get("Location")!, "http://x");
+        expect(location.pathname).toBe("/document-access");
+        expect(location.searchParams.has("signInAttempted")).toBe(false);
+        // The caller chose another account than the document's when asked.
+        expect(location.searchParams.get("problem")).toBe("other-account");
+    });
+
+    it("reads Onshape's 404 as a grant that can't see the document", async () => {
+        vi.spyOn(Permissions, "getPermissions").mockRejectedValue(
+            new OnshapeApiError("Not found", 404)
+        );
+
+        expect((await launch()).pathname).toBe("/document-access");
+    });
+
+    // A public document can be seen by anybody; inserting needs edit access.
+    it("explains a document the caller can only view", async () => {
+        grant([OnshapePermission.READ]);
+
+        expect((await launch()).pathname).toBe("/document-access");
+    });
+
+    it("opens the app when Onshape can't answer", async () => {
+        vi.spyOn(Permissions, "getPermissions").mockRejectedValue(
+            new OnshapeApiError("Unavailable", 503)
+        );
+
+        expect((await launch()).pathname).toBe("/");
+    });
+
+    it("leaves a caller with no session to the app's own sign-in", async () => {
+        const getPermissions = vi.spyOn(Permissions, "getPermissions");
+
+        const location = await launch({
+            signedIn: false,
+            isAuthenticated: false
+        });
+
+        // Sent to sign in first, not to the access page.
+        expect(location.pathname).toBe("/auth/sign-in");
+        expect(getPermissions).not.toHaveBeenCalled();
     });
 });
 

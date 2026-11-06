@@ -10,19 +10,35 @@ import {
 } from "../../../__test_utils__";
 import { MockOnshapeApi } from "../../../__test_utils__/mock-onshape-api";
 import { getDb } from "../../db/client";
-import { libraries } from "../../db/schema";
+import { libraries, onshapeWebhooks, WebhookSubject } from "../../db/schema";
 import { OnshapeApiError } from "../../lib/onshape/client";
+import { OnshapeOwnerType } from "../../lib/onshape/endpoints/teams";
+import * as BackgroundSessions from "../auth/background-sessions";
 import { AccessLevel } from "../auth/access-level";
 
 const db = getDb(env.DB);
 const PATH = `/api/admin-team/library/${TEST_LIBRARY_ID}`;
 
-/** Onshape, with a team of one member and one admin. */
+/** Onshape, with a company's team of one member and one admin, and a person's team. */
 function mockOnshape() {
     const onshapeApi = new MockOnshapeApi();
     vi.spyOn(onshapeApi, "get").mockImplementation((path: string) => {
         if (path === "/users/sessioninfo") {
             return Promise.resolve({ id: "owner", company: { id: "company" } });
+        }
+        if (path === "/teams/team") {
+            return Promise.resolve({
+                id: "team",
+                name: "Hornet Robotics",
+                owner: { type: OnshapeOwnerType.COMPANY, id: "company" }
+            });
+        }
+        if (path === "/teams/personal-team") {
+            return Promise.resolve({
+                id: "personal-team",
+                name: "Old team",
+                owner: { type: OnshapeOwnerType.USER, id: "someone" }
+            });
         }
         if (path === "/teams/team/members") {
             return Promise.resolve({
@@ -34,7 +50,24 @@ function mockOnshape() {
         }
         return Promise.reject(new OnshapeApiError("no such team", 404));
     });
-    return { onshapeApi };
+    const createWebhook = vi
+        .spyOn(onshapeApi, "post")
+        .mockResolvedValue({ id: "team-webhook" });
+    const deleteWebhook = vi
+        .spyOn(onshapeApi, "deleteNone")
+        .mockResolvedValue();
+    return { onshapeApi, createWebhook, deleteWebhook };
+}
+
+async function adminTeamOf() {
+    return (await db
+        .select({
+            adminTeamId: libraries.adminTeamId,
+            adminTeam: libraries.adminTeam
+        })
+        .from(libraries)
+        .where(eq(libraries.id, TEST_LIBRARY_ID))
+        .get())!;
 }
 
 function setTeam(teamId: string | null, onshapeApi: MockOnshapeApi) {
@@ -89,6 +122,76 @@ describe("setting a library's admin team", () => {
             .where(eq(libraries.id, TEST_LIBRARY_ID))
             .get();
         expect(library?.adminTeamId).toBe("team");
+    });
+
+    // A team a person owns is an old kind Onshape can't send webhooks for.
+    it("refuses a team that belongs to a person", async () => {
+        const { onshapeApi } = mockOnshape();
+
+        const res = await setTeam("personal-team", onshapeApi);
+
+        expect(res.status).toBe(422);
+        expect((await adminTeamOf()).adminTeamId).toBeNull();
+    });
+
+    it("watches the team through the company that owns it", async () => {
+        const { onshapeApi, createWebhook } = mockOnshape();
+
+        await setTeam("team", onshapeApi);
+
+        const [path, options] = createWebhook.mock.calls[0];
+        expect(path).toBe("/webhooks");
+        expect(options?.body).toMatchObject({
+            companyId: "company",
+            events: ["onshape.team.addmember", "onshape.team.removemember"]
+        });
+        expect(await db.select().from(onshapeWebhooks).all()).toEqual([
+            expect.objectContaining({
+                subject: WebhookSubject.TEAM,
+                subjectId: "team",
+                webhookId: "team-webhook"
+            })
+        ]);
+    });
+
+    it("stops watching a team no library has any more", async () => {
+        const { onshapeApi, deleteWebhook } = mockOnshape();
+        await setTeam("team", onshapeApi);
+
+        await setTeam(null, onshapeApi);
+
+        expect(deleteWebhook).toHaveBeenCalledWith("/webhooks/team-webhook");
+        expect(await db.select().from(onshapeWebhooks).all()).toEqual([]);
+    });
+
+    it("pulls the members again when Onshape says the team changed", async () => {
+        const { onshapeApi } = mockOnshape();
+        await setTeam("team", onshapeApi);
+        const [{ token }] = await db.select().from(onshapeWebhooks).all();
+        await db
+            .update(libraries)
+            .set({ adminTeam: [] })
+            .where(eq(libraries.id, TEST_LIBRARY_ID));
+        vi.spyOn(
+            BackgroundSessions,
+            "getBackgroundOnshapeApi"
+        ).mockResolvedValue(onshapeApi);
+        const deliver = (teamId: string) =>
+            createTestApp().request(
+                `/api/webhooks/onshape?token=${token}`,
+                jsonRequest("POST", {
+                    event: "onshape.team.addmember",
+                    teamId
+                }),
+                env
+            );
+
+        // The company's other teams are no reason to sync this one.
+        await deliver("another-team");
+        expect((await adminTeamOf()).adminTeam).toEqual([]);
+
+        await deliver("team");
+        expect((await adminTeamOf()).adminTeam).toHaveLength(2);
     });
 
     it("takes the team away", async () => {

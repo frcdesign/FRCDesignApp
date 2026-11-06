@@ -38,10 +38,17 @@ import {
 } from "../../../lib/style-constants";
 import { makeUrl, openUrlInNewTab } from "../../../lib/url";
 import styles from "../../../lib/styles.module.css";
-import { useOnshapeOrigin } from "../../../lib/onshape-params";
+import {
+    useOnshapeOrigin,
+    useTargetWorkspace
+} from "../../../lib/onshape-params";
 import { plural } from "../../../lib/plural";
 import { runningHeadline } from "../job-report";
-import { useMoveLinkMutation, useRemoveLinkMutation } from "../queries";
+import {
+    useMoveLinkMutation,
+    useRemoveLinkMutation,
+    useWorkspaceChangesQuery
+} from "../queries";
 import { AddLinkRow } from "./add-link-input";
 import { documentLabel } from "../document-label";
 import { DIRECTION_COPY } from "../direction-copy";
@@ -279,6 +286,7 @@ function LinkedWorkspaceRow(props: LinkedWorkspaceRowProps): ReactNode {
             <MenuSection label="Link">
                 {linked.isOpenable && (
                     <Menu.Item
+                        color={StatusColor.INFO}
                         leftSection={
                             <ArrowSquareOutIcon size={IconSize.MEDIUM} />
                         }
@@ -316,7 +324,12 @@ function LinkedWorkspaceRow(props: LinkedWorkspaceRowProps): ReactNode {
 
     return (
         <ItemRow
-            left={<LinkedWorkspaceTitle linked={linked} />}
+            left={
+                <LinkedWorkspaceTitle
+                    linked={linked}
+                    isParent={direction === LinkDirection.PARENT}
+                />
+            }
             menuItems={menuItems}
             // Its own menu button, so the spinner comes before it.
             moreButton={false}
@@ -365,11 +378,13 @@ function LinkedWorkspaceThumbnail(
 
 interface LinkedWorkspaceTitleProps {
     linked: LinkedWorkspace;
+    /** A parent's row counts its unversioned edits, which a pull versions. */
+    isParent: boolean;
 }
 
 /** The document and workspace a link points at; only that it exists, if unreadable. */
 function LinkedWorkspaceTitle(props: LinkedWorkspaceTitleProps): ReactNode {
-    const { linked } = props;
+    const { linked, isParent } = props;
     const thumbnail = <LinkedWorkspaceThumbnail linked={linked} />;
 
     if (!linked.isOpenable) {
@@ -392,7 +407,9 @@ function LinkedWorkspaceTitle(props: LinkedWorkspaceTitleProps): ReactNode {
             title={documentLabel(linked.documentName)}
             thumbnail={thumbnail}
             badge={
-                <UnversionedChangesBadge changes={linked.unversionedChanges} />
+                isParent && (
+                    <UnversionedChangesBadge parent={linked.workspace} />
+                )
             }
             subtitle={
                 linked.workspaceName && (
@@ -406,15 +423,16 @@ function LinkedWorkspaceTitle(props: LinkedWorkspaceTitleProps): ReactNode {
 }
 
 interface UnversionedChangesBadgeProps {
-    /** Undefined where Onshape was not asked, or would not answer. */
-    changes: number | undefined;
+    parent: WorkspacePath;
 }
 
 /** What the parent has changed since its own last version, which a pull versions. */
 function UnversionedChangesBadge(
     props: UnversionedChangesBadgeProps
 ): ReactNode {
-    const { changes } = props;
+    const workspace = useTargetWorkspace();
+    const changesQuery = useWorkspaceChangesQuery(workspace, props.parent);
+    const changes = changesQuery.data?.changes;
     if (!changes) {
         return null;
     }

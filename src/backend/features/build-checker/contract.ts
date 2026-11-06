@@ -4,10 +4,6 @@ import { ConfigurationParameter } from "../configurations/contract";
 import { ElementType } from "../../lib/onshape/element-type";
 import { Vendor } from "../library/vendors";
 
-interface ConfigurationBuildStatus {
-    parameters: ConfigurationParameter[];
-}
-
 export interface GroupBuildStatus {
     buildIssues: BuildIssue[];
     sortAlphabetically: boolean;
@@ -18,18 +14,27 @@ export interface GroupBuildStatus {
     isHeld: boolean;
 }
 
-export interface InsertableBuildStatus {
+/** What an admin decided about indexing an insertable. */
+export interface IndexingSettings {
+    /** Index even past the automatic threshold. */
+    indexConfigurations: boolean;
+    /** Parameters an admin left out of indexing. */
+    excludedParameterIds: string[];
+}
+
+export interface InsertableBuildStatus extends IndexingSettings {
     buildIssues: BuildIssue[];
     /** The version-pinned tab, so an issue can link out to a configuration of it. */
     elementPath: ElementPath;
     elementType: ElementType;
     isVisible: boolean;
+    /** Inserts place and fasten at its mate connector. */
     supportsFasten: boolean;
-    indexConfigurations: boolean;
-    /** Parameters an admin left out of indexing. */
-    excludedParameterIds: string[];
+    /** An admin turned fastening off; otherwise it is on wherever a connector is found. */
+    fastenDisabled: boolean;
     vendors: Vendor[];
-    configuration?: ConfigurationBuildStatus;
+    /** Empty for an element without configurations. */
+    parameters: ConfigurationParameter[];
     /** When Onshape cut the version this insertable is pinned to (epoch ms). */
     versionCreatedAt?: number;
 }

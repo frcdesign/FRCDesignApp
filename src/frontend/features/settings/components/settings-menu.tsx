@@ -1,5 +1,9 @@
-import { Box, Button, Select, Stack } from "@mantine/core";
-import { ArrowLeftIcon, SignOutIcon } from "@phosphor-icons/react";
+import { Button, Divider, Select, Stack } from "@mantine/core";
+import {
+    ArrowLeftIcon,
+    ChatCircleTextIcon,
+    SignOutIcon
+} from "@phosphor-icons/react";
 import { useIsDashboard } from "../../dashboard/dashboard-nav";
 import {
     SETTING_CONTROL_WIDTH,
@@ -14,16 +18,24 @@ import {
 import { type AppTab, getTabPath } from "../../../lib/app-tab";
 import { InputRow } from "../../../components/input-row";
 import { OpenUrlButton } from "../../../components/open-url-button";
-import { Section } from "../../../components/section";
+import { AppSection, AppSections } from "../../../components/app-section";
 import { useAccessData } from "../../auth/access-level";
 import {
     RequireAccessLevel,
     RequireSignIn
 } from "../../auth/components/require-access";
 import { startSignOut } from "../../auth/sign-out";
-import { updateUiState } from "../../../lib/ui-state";
+import {
+    SectionId,
+    setOpenedSections,
+    updateUiState,
+    useOpenedSections
+} from "../../../lib/ui-state";
 import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
 import { SETUP_URL } from "../../../lib/url";
+import { useAppModal } from "../../../components/open-app-modal";
+import { openFeedbackForm } from "../../feedback/open-feedback";
+import { m } from "../../../paraglide/messages";
 import { useLibraryId } from "../../../lib/library";
 import { ReloadButton } from "../../library/components/reload-button";
 import {
@@ -32,9 +44,6 @@ import {
 } from "../../library/components/version-approval";
 import { RefreshAdminTeamButton } from "../../admin-team/components/refresh-admin-team-button";
 import { AdminTeamSetting } from "../../admin-team/components/admin-team-setting";
-
-/** The FRCDesign Discord, where feedback and support now live. */
-const DISCORD_INVITE_URL = "https://discord.gg/PMgzEUTgB7";
 
 /** The usage dashboard, served standalone and needing no sign-in. */
 const DASHBOARD_URL = "/dashboard";
@@ -88,13 +97,10 @@ export function SettingsMenuContent(): ReactNode {
             {/* Unlike all other checks, this one uses maxAccessLevel so you can
                 still switch back up from user to admin. */}
             {hasEditorAccess(maxAccessLevel) && (
-                <Box mt="md">
-                    {/* The modal title's size, so the admin half of the menu
-                        announces itself rather than reading as another row. */}
-                    <Section title="Admin settings" order={5}>
-                        <AdminSettings />
-                    </Section>
-                </Box>
+                <>
+                    <Divider my="md" />
+                    <AdminSettingsSection />
+                </>
             )}
         </>
     );
@@ -104,50 +110,65 @@ function UserSettings(): ReactNode {
     const libraryId = useLibraryId();
     const isConnected = useIsConnectedToOnshape();
     const isDashboard = useIsDashboard();
+    const modal = useAppModal();
 
     return (
         <Stack gap="sm">
             {/* Only worth offering from inside Onshape's panel, which is what
                 the standalone app is roomier than. */}
             {isConnected && (
-                <InputRow label="Open outside Onshape">
+                <InputRow label={m.settingsOpenOutsideOnshape()}>
                     <OpenUrlButton
-                        text="Open app"
+                        text={m.settingsOpenApp()}
                         url={standaloneUrl(libraryId)}
                     />
                 </InputRow>
             )}
             {/* The dashboard is where the app is the thing worth offering. */}
             {isDashboard ? (
-                <InputRow label="Main app">
+                <InputRow label={m.settingsMainApp()}>
                     <OpenAppButton tabId={libraryId} />
                 </InputRow>
             ) : (
-                <InputRow label="Usage dashboard">
-                    <OpenUrlButton text="Open dashboard" url={DASHBOARD_URL} />
+                <InputRow label={m.settingsUsageDashboard()}>
+                    <OpenUrlButton
+                        text={m.settingsOpenDashboard()}
+                        url={DASHBOARD_URL}
+                    />
                 </InputRow>
             )}
-            <InputRow label="Discord">
-                <OpenUrlButton text="Join discord" url={DISCORD_INVITE_URL} />
+            <InputRow label={m.settingsFeedback()}>
+                <Button
+                    leftSection={<ChatCircleTextIcon />}
+                    onClick={() => {
+                        modal.close();
+                        openFeedbackForm();
+                    }}
+                >
+                    {m.settingsLeaveFeedback()}
+                </Button>
             </InputRow>
             {/* Only worth offering to somebody who is not already running the
                 app, which inside Onshape's panel they are. */}
             {!isConnected && (
-                <InputRow label="Get the FRCDesignApp">
-                    <OpenUrlButton text="Instructions" url={SETUP_URL} />
+                <InputRow label={m.settingsGetApp()}>
+                    <OpenUrlButton
+                        text={m.settingsInstructions()}
+                        url={SETUP_URL}
+                    />
                 </InputRow>
             )}
             {/* Onshape owns the session the panel runs in, so signing out is
                 only the standalone app's to offer. */}
             {!isConnected && (
                 <RequireSignIn>
-                    <InputRow label="Onshape account">
+                    <InputRow label={m.settingsOnshapeAccount()}>
                         <Button
                             leftSection={<SignOutIcon />}
                             color={StatusColor.ERROR}
                             onClick={startSignOut}
                         >
-                            Sign out
+                            {m.settingsSignOut()}
                         </Button>
                     </InputRow>
                 </RequireSignIn>
@@ -174,8 +195,31 @@ function OpenAppButton(props: OpenAppButtonProps): ReactNode {
                 window.location.href = standaloneUrl(props.tabId);
             }}
         >
-            Open app
+            {m.settingsOpenApp()}
         </Button>
+    );
+}
+
+/** The owner's page for finding out which Onshape events fire; see the README. */
+const WEBHOOK_PROBE_URL = "/webhook";
+
+const ADMIN_SECTION_IDS = [SectionId.ADMIN_SETTINGS];
+
+function AdminSettingsSection(): ReactNode {
+    const opened = useOpenedSections(ADMIN_SECTION_IDS);
+    return (
+        <AppSections
+            compact
+            opened={opened}
+            onChange={(next) => setOpenedSections(ADMIN_SECTION_IDS, next)}
+        >
+            <AppSection
+                value={SectionId.ADMIN_SETTINGS}
+                name={m.settingsAdminSettings()}
+            >
+                <AdminSettings />
+            </AppSection>
+        </AppSections>
     );
 }
 
@@ -185,13 +229,19 @@ function AdminSettings(): ReactNode {
             {/* Always show the access level select so admins can change access level if needed */}
             <AccessLevelSelect />
             <RequireAccessLevel>
-                <InputRow label="Outdated documents">
+                <InputRow label={m.settingsOutdatedDocuments()}>
                     <ReloadButton />
                 </InputRow>
             </RequireAccessLevel>
             <RequireAccessLevel accessLevel={AccessLevel.OWNER}>
-                <InputRow label="All documents">
+                <InputRow label={m.settingsAllDocuments()}>
                     <ReloadButton all />
+                </InputRow>
+                <InputRow label={m.settingsWebhooks()}>
+                    <OpenUrlButton
+                        text={m.settingsOpenWebhookProbe()}
+                        url={WEBHOOK_PROBE_URL}
+                    />
                 </InputRow>
             </RequireAccessLevel>
             <RequireAccessLevel accessLevel={AccessLevel.ADMIN}>
@@ -202,7 +252,7 @@ function AdminSettings(): ReactNode {
                 <AdminTeamSetting />
             </RequireAccessLevel>
             <RequireAccessLevel accessLevel={AccessLevel.ADMIN}>
-                <InputRow label="Admin team members">
+                <InputRow label={m.settingsAdminTeamMembers()}>
                     <RefreshAdminTeamButton />
                 </InputRow>
             </RequireAccessLevel>
@@ -215,7 +265,7 @@ function AccessLevelSelect(): ReactNode {
 
     return (
         <SettingSelect
-            label="Access level"
+            label={m.settingsAccessLevel()}
             value={currentAccessLevel}
             options={[
                 AccessLevel.OWNER,

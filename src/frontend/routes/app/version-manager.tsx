@@ -1,3 +1,4 @@
+import { FeedbackTopic } from "@backend/features/feedback/contract";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { type ReactNode, useEffect } from "react";
 import {
@@ -15,7 +16,12 @@ import {
     PageNotice
 } from "../../components/app-notice";
 import { IconSize } from "../../lib/style-constants";
-import { updateUiState, useUiState } from "../../lib/ui-state";
+import {
+    SectionId,
+    setSectionOpened,
+    updateUiState,
+    useSectionOpened
+} from "../../lib/ui-state";
 import { UtilityTab } from "../../lib/app-tab";
 import { getUiLibraryId } from "../../lib/library";
 import { toTargetWorkspace } from "../../lib/onshape-launch";
@@ -87,14 +93,20 @@ interface VersionManagerProps {
 function VersionManager(props: VersionManagerProps): ReactNode {
     const { workspace } = props;
     const linksQuery = useWorkspaceLinksQuery(workspace);
-    const isParentsOpen = useUiState((state) => state.isParentsOpen);
-    const isChildrenOpen = useUiState((state) => state.isChildrenOpen);
+    const isParentsOpen = useSectionOpened(SectionId.PARENTS);
+    const isChildrenOpen = useSectionOpened(SectionId.CHILDREN);
 
     if (linksQuery.isPending) {
         return <PageLoading title="Loading linked documents..." />;
     }
     if (linksQuery.isError || !linksQuery.data) {
-        return <PageError title="Failed to load linked documents." />;
+        return (
+            <PageError
+                title="Failed to load linked documents."
+                error={linksQuery.error}
+                topic={FeedbackTopic.VERSION_MANAGER}
+            />
+        );
     }
 
     const links = linksQuery.data;
@@ -113,10 +125,14 @@ function VersionManager(props: VersionManagerProps): ReactNode {
     ];
 
     const handleChange = (values: string[]) => {
-        updateUiState({
-            isParentsOpen: values.includes(LinkDirection.PARENT),
-            isChildrenOpen: values.includes(LinkDirection.CHILD)
-        });
+        setSectionOpened(
+            SectionId.PARENTS,
+            values.includes(LinkDirection.PARENT)
+        );
+        setSectionOpened(
+            SectionId.CHILDREN,
+            values.includes(LinkDirection.CHILD)
+        );
     };
 
     return (

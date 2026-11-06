@@ -3,6 +3,7 @@ import { unstable_readConfig } from "wrangler";
 import react from "@vitejs/plugin-react";
 import { cloudflare } from "@cloudflare/vite-plugin";
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
+import { paraglideVitePlugin } from "@inlang/paraglide-js";
 import { fileURLToPath } from "url";
 
 const srcPath = (dir: string) =>
@@ -30,6 +31,13 @@ export default defineConfig(({ mode }) => ({
             // Splits each route's component into its own chunk, which is what
             // keeps the dashboard's charts out of the Onshape panel's bundle.
             autoCodeSplitting: true
+        }),
+        // The same options as `npm run messages`, which tsc and the tests use.
+        paraglideVitePlugin({
+            project: "./project.inlang",
+            outdir: "./src/frontend/paraglide",
+            strategy: ["baseLocale"],
+            emitTsDeclarations: true
         }),
         react(),
         cloudflare()

@@ -7,8 +7,10 @@ import { EventType } from "./usage";
 import { VersionJobOutcome } from "../version-manager/contract";
 import {
     asInsert,
+    asReport,
     asVersionRun,
     type LoggedInsert,
+    type LoggedReport,
     type LoggedVersionRun
 } from "./logged-event";
 import type { LibraryId } from "../library/library-id";
@@ -21,6 +23,7 @@ import {
     dailyTargetMetrics,
     dailyAppOpens,
     dailyUserActivity,
+    dailyReportMetrics,
     dailyVersionMetrics,
     insertableStats,
     userStats,
@@ -42,6 +45,11 @@ export function rollupWrites(
     }
     if (event.type === EventType.APP_OPEN) {
         return [countAppOpenDay(db, event)];
+    }
+    // Not activity, even with a library: a report is not a use of the library.
+    const report = asReport(event);
+    if (report) {
+        return [countReportDay(db, report)];
     }
     // Every other rollup is keyed by library.
     if (event.libraryId === null) {
@@ -108,6 +116,30 @@ function countVersionRunDay(db: Db, run: LoggedVersionRun) {
                     values.updatedElements
                 )
             }
+        });
+}
+
+/** A day's reports of one kind, about one part or none. */
+function countReportDay(db: Db, report: LoggedReport) {
+    return db
+        .insert(dailyReportMetrics)
+        .values({
+            day: report.day,
+            topic: report.reportTopic,
+            category: report.reportCategory,
+            source: report.reportSource,
+            elementId: report.elementId ?? "",
+            count: 1
+        })
+        .onConflictDoUpdate({
+            target: [
+                dailyReportMetrics.day,
+                dailyReportMetrics.topic,
+                dailyReportMetrics.category,
+                dailyReportMetrics.source,
+                dailyReportMetrics.elementId
+            ],
+            set: { count: increment(dailyReportMetrics.count) }
         });
 }
 

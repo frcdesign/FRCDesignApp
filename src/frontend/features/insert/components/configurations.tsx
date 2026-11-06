@@ -151,7 +151,12 @@ export function ConfigurationWrapper(
 
     // A failed fetch also leaves `whole` undefined, so check this first.
     if (query.isError) {
-        return <SectionError title="Failed to load selection." />;
+        return (
+            <SectionError
+                title="Failed to load selection."
+                error={query.error}
+            />
+        );
     }
     if (query.isPending || !whole) {
         return (
@@ -217,6 +222,8 @@ function ParameterCells(props: ParameterCellsProps): ReactNode {
 // Lets a long option sit on one line where there is room.
 const DROPDOWN_PROPS: ComboboxProps = {
     width: "max-content",
+    // Placed before it is measured, a dropdown past the edge would widen a phone's layout viewport.
+    floatingStrategy: "fixed",
     position: "bottom-end",
     middlewares: {
         shift: { padding: 8 },
@@ -419,7 +426,7 @@ function QuantityInput(props: ParameterProps<QuantityParameter>): ReactNode {
         if (result.errorMessage) {
             return;
         }
-        // The expression, so the derived feature shows what was typed.
+        // Collapsed once it reaches the selection, which then re-seeds this box.
         setEmitted(result.expression);
         onValueChange(result.expression);
     };

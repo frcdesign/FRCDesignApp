@@ -39,13 +39,20 @@ stopped. One reload holds a library at a time.
 - `groups`, `insertables`, `configurations` — what a load writes.
   `groups.version_id` is the version loaded; a shell group holds
   `PLACEHOLDER_VERSION_ID` until its first load.
+- `insertables.fasten_info` — the mate connector inserts place and fasten at;
+  null when there is none or fastening is off. Written by every load and by
+  the insert-and-fasten switch.
+- `insertables.fasten_disabled`, `is_visible`, `index_configurations`,
+  `excluded_parameter_ids` — an admin's choices, which a load reads but never
+  writes.
 - `libraries.cache_version` — bumped by every load that wrote; every library
   response is cached under it.
 - `groups.held_at` — when a webhook last reported a version not yet loaded;
   null when nothing is held. Set by the webhook, cleared by a load.
 - `libraries.hold_new_versions` — whether a new version waits for approval;
   on unless an admin turns it off.
-- `onshape_webhooks` — one row per document: its webhook id and delivery token.
+- `onshape_webhooks` — one row per document, and one per admin team (see
+  [auth.md](./auth.md)): its webhook id and delivery token.
 
 **R2**: `search-index/` — each library's serialized search index, rebuilt by
 every reload that wrote. Thumbnails are in [thumbnails.md](./thumbnails.md).
@@ -128,9 +135,22 @@ Every build issue is stored. The one that depends on an editor's choice,
 shows or hides elements (`recheckVisibility`), which skips a group with no
 insertables.
 
-`loadInsertable`: probes the tab under the limiter (configuration, parts, fasten
-info, vendors, and a record per indexed combination), fetches its thumbnail
+`loadInsertable`: probes the tab under the limiter (configuration, parts, mate
+connector, vendors, and a record per indexed combination), fetches its thumbnail
 under the thumbnail limiter, runs the insertable checks, and saves the row.
+
+Fastening (`parse-fasten.ts`):
+
+1. Unless an admin turned it off, the load finds the element's first mate
+   connector (`findMateConnector`): a part studio's from its features, an
+   assembly's from its definition.
+2. Inserts fasten, and derives place, at the connector found
+   (`decideFasten`); with none, they don't.
+3. A part studio's connector is unstable when a configuration can suppress it,
+   or one before it, or it fails to regenerate: `UNSTABLE_MATE_CONNECTOR`.
+
+The switch turning it off clears the connector without asking Onshape;
+turning it on finds the connector again, and refuses where there is none.
 
 `finishReload` always runs, success or not: when anything was written it
 rebuilds the search index, then bumps the library version and pushes; then it
@@ -157,7 +177,7 @@ library, so the workflow's step limit is raised to 25,000.
 | `flags-{insertable}`                                       | —                                                                                                       | default     |
 | `config-{insertable}`                                      | `GET /elements/d/{did}/v/{vid}/e/{eid}/configuration`                                                   | `ONSHAPE`   |
 | `parts-{insertable}` (part studios)                        | `GET /parts/d/{did}/v/{vid}/e/{eid}`                                                                    | `ONSHAPE`   |
-| `fasten-{insertable}` (if enabled)                         | Assembly definition, or part studio features                                                            | `ONSHAPE`   |
+| `fasten-{insertable}` (unless turned off)                  | Part studio features, or the assembly definition                                                        | `ONSHAPE`   |
 | `records-{insertable}-{batch}`                             | Per configuration: `GET /parts/...` (part studio) or `GET /metadata/...` (assembly), with the overrides | `ONSHAPE`   |
 | `thumbnail-{insertable}`                                   | `GET /thumbnails/d/{did}/v/{vid}/e/{eid}/s/{size}`, then `/w/{wid}/` on failure, both sizes             | `THUMBNAIL` |
 | `save-{insertable}`                                        | —                                                                                                       | default     |
@@ -238,6 +258,8 @@ approval. A failed load leaves the hold in place.
   generated inside a step so the persisted result is reused.
 - A load reads Onshape as its requester first, and borrows an admin's session
   only when there is none.
+- A load never writes an admin's choices; it reads them to decide what it
+  writes.
 
 ## Failure and recovery
 
@@ -274,6 +296,14 @@ approval. A failed load leaves the hold in place.
   renaming it or moving it into a deprecated folder, keeping it in the
   document for anything that still references it; the library drops it as it
   would a deleted tab. Configuration options are not filtered.
+- **Fastening is on wherever there is a mate connector.** An author adds one
+  to say where the part attaches, so finding it is the signal, for part
+  studios and assemblies alike; an admin only ever turns it off. That costs
+  each changed element one more call per load, an assembly's definition being
+  the larger, for one flag in place of a default per element type.
+- **Stability from the default's feature list.** Whether a configuration
+  decides a feature's suppression is in the one features response, where
+  checking each configuration would cost a call per configuration.
 - **Loads skip unchanged versions.** Reloading spends the Onshape allocation;
   only the owner can force it.
 

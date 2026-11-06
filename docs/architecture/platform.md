@@ -72,7 +72,11 @@ On the client, `apiGet`/`apiPost` throw an `AppError` holding that body. A
 mutation's `onError` is `getAppErrorHandler(defaultMessage, toastId)`, which
 shows the body's message for `handled` and `forbidden`, adds a **Sign in**
 action for `sign-in-required`, and shows `defaultMessage` for `internal` or any
-non-`AppError`. Images use `loadImage`, which throws `ImageLoadError` with only
+non-`AppError`. Every toast but sign-in's carries a **Report** button
+(`showReportableErrorToast`), which opens a report holding what was shown and
+the error behind it, `internal` message included; a failed load shown as
+`SectionError` or `PageError` says "If the problem persists, send a report."
+beside **Send a report**. See [feedback.md](./feedback.md). Images use `loadImage`, which throws `ImageLoadError` with only
 the status.
 
 ## Retries and timeouts
@@ -114,25 +118,24 @@ which is how a loading toast turns into its result.
 | Loading | blue, spinner | Never, no close button | Work the user is waiting on; always given an id     |
 | Success | green         | 4 s                    | The same id, when the work lands                    |
 | Info    | blue          | 4 s, or as given       | Background work started; tips                       |
-| Error   | red           | 4 s                    | Through `handleAppError`, on the loading toast's id |
+| Error   | red           | 8 s, with **Report**   | Through `handleAppError`, on the loading toast's id |
 
 The flows that use them:
 
-| Action                        | Toast id                                                  | While                                  | Then                                                            |
-| ----------------------------- | --------------------------------------------------------- | -------------------------------------- | --------------------------------------------------------------- |
-| Insert                        | per insertable                                            | "Inserting {name}..."                  | "Successfully inserted {name}." (and "…created a Fasten mate.") |
-| Add document                  | `add-group`                                               | "Adding document..."                   | "Added {name}."                                                 |
-| Reload thumbnail              | `reload-thumbnail`                                        | "Reloading thumbnail..."               | "Thumbnail reloaded."                                           |
-| Show or hide elements         | `set-visibility`                                          | "Showing/Hiding insertables..."        | "Insertables shown/hidden."                                     |
-| Toggle insert and fasten      | per insertable                                            | loading                                | success                                                         |
-| Enable or disable indexing    | per insertable                                            | info: "Enabling/Disabling indexing..." | "Indexing enabled/disabled."                                    |
-| Exclude parameters            | per insertable                                            | info: "Reindexing part..."             | "Part reindexed."                                               |
-| Set or refresh the admin team | none                                                      | —                                      | "Admin team set/refreshed: {n} members."                        |
-| Reload documents / approve    | none                                                      | —                                      | info: "Reloading {n} documents..."                              |
-| Save favorite configuration   | none                                                      | —                                      | "Favorite default configuration set."                           |
-| Link a document               | none                                                      | —                                      | "Successfully linked {document} - {workspace}."                 |
-| Refresh the version manager   | none                                                      | the button's spinner                   | "Refreshed linked documents."                                   |
-| Tips                          | `quick-insert-tip`, `thumbnail-wait-tip`, sign-in preview | —                                      | info, 8 s                                                       |
+| Action                        | Toast id                                                  | While                          | Then                                                            |
+| ----------------------------- | --------------------------------------------------------- | ------------------------------ | --------------------------------------------------------------- |
+| Insert                        | per insertable                                            | "Inserting {name}..."          | "Successfully inserted {name}." (and "…created a Fasten mate.") |
+| Add document                  | `add-group`                                               | "Adding document..."           | "Added {name}."                                                 |
+| Reload thumbnail              | `reload-thumbnail`                                        | "Reloading thumbnail..."       | "Thumbnail reloaded."                                           |
+| Show or hide elements         | `set-visibility`                                          | "Showing/Hiding element(s)..." | "Element(s) shown/hidden."                                      |
+| Toggle insert and fasten      | per insertable                                            | loading                        | success                                                         |
+| Save indexing changes         | per insertable                                            | info: "Reindexing part..."     | "Successfully indexed part."                                    |
+| Set or refresh the admin team | none                                                      | —                              | "Admin team set/refreshed: {n} members."                        |
+| Reload documents / approve    | none                                                      | —                              | info: "Reloading {n} documents..."                              |
+| Save favorite configuration   | none                                                      | —                              | "Favorite default configuration set."                           |
+| Link a document               | none                                                      | —                              | "Successfully linked {document} - {workspace}."                 |
+| Refresh the version manager   | none                                                      | the button's spinner           | "Refreshed linked documents."                                   |
+| Tips                          | `quick-insert-tip`, `thumbnail-wait-tip`, sign-in preview | —                              | info, 8 s                                                       |
 
 Loading toasts are for work the user watches; background work gets an info
 toast and then shows its progress where it happens (a group's spinner, a job

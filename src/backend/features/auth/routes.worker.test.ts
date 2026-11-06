@@ -133,14 +133,14 @@ describe("GET /auth/sign-in", () => {
         );
     });
 
-    it("scopes the sign-in to the enterprise that launched it", async () => {
-        const url = await authorizationUrl("sessionCompanyId=company-1");
+    it("scopes the sign-in to the company that owns the document", async () => {
+        const url = await authorizationUrl("companyId=company-1");
         expect(url.searchParams.get("company_id")).toBe("company-1");
     });
 
-    // Onshape rejects "cad", which a non-enterprise user arrives with.
+    // Onshape rejects "cad", which a personal document arrives with.
     it("names no company for a personal account", async () => {
-        const url = await authorizationUrl("sessionCompanyId=cad");
+        const url = await authorizationUrl("companyId=cad");
         expect(url.searchParams.has("company_id")).toBe(false);
     });
 

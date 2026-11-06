@@ -13,6 +13,7 @@ import {
     hasBuildIssue
 } from "../build-checker/issues";
 import { ElementType } from "../../lib/onshape/element-type";
+import type { IndexingSettings } from "../build-checker/contract";
 import type { FastenInfo } from "../library/insertables/fasten";
 import type { ThumbnailUrls } from "../thumbnails/contract";
 import type { Vendor } from "../library/vendors";
@@ -23,14 +24,17 @@ import { getParts } from "../../lib/onshape/endpoints/parts";
 import { checkInsertable } from "../build-checker/checks";
 import { parseOnshapeConfiguration } from "./parse-configuration";
 import { parseVendors } from "./parse-vendors";
-import { parseFastenInfo } from "./parse-fasten";
+import {
+    decideFasten,
+    findMateConnector,
+    type MateConnector
+} from "./parse-fasten";
 import {
     NO_RECORDS,
     computeOpenComposite,
     decideIndexing,
     indexRecords,
     type ConfigurationRecordsResult,
-    type IndexingSettings,
     type ProbeTarget
 } from "./parse-configuration-records";
 import {
@@ -55,7 +59,7 @@ export interface ParsedInsertable {
 
 /** The user-owned flags that decide how much of a load runs. */
 interface InsertableFlags extends IndexingSettings {
-    supportsFasten: boolean;
+    fastenDisabled: boolean;
 }
 
 /** Every Onshape call but the thumbnail's, all under the limiter. */
@@ -129,9 +133,11 @@ async function probeInsertable(
 
     const vendors = parseVendors(target.name, parameters);
 
-    const fastenInfo = flags.supportsFasten
-        ? await parseFastenInfoStep(ctx, target)
-        : null;
+    const fasten = decideFasten(
+        flags.fastenDisabled
+            ? undefined
+            : ((await findMateConnectorStep(ctx, target)) ?? undefined)
+    );
 
     const parts = await readPartsStep(ctx, target);
     const { isOpenComposite } = parts;
@@ -151,7 +157,7 @@ async function probeInsertable(
 
     return {
         vendors,
-        fastenInfo,
+        fastenInfo: fasten.fastenInfo,
         isOpenComposite,
         hasParts,
         partMetadata: recordsResult.partMetadata,
@@ -159,7 +165,8 @@ async function probeInsertable(
         buildIssues: addBuildIssue(
             hasParts ? [] : parts.buildIssues,
             ...recordsResult.buildIssues,
-            ...indexing.buildIssues
+            ...indexing.buildIssues,
+            ...fasten.buildIssues
         )
     };
 }
@@ -172,7 +179,7 @@ function readFlagsStep(
     return ctx.step.do(`flags-${insertableId}`, async () => {
         const row = await getDb(ctx.env.DB)
             .select({
-                supportsFasten: insertables.supportsFasten,
+                fastenDisabled: insertables.fastenDisabled,
                 indexConfigurations: insertables.indexConfigurations,
                 excludedParameterIds: insertables.excludedParameterIds
             })
@@ -181,7 +188,7 @@ function readFlagsStep(
             .get();
         return (
             row ?? {
-                supportsFasten: false,
+                fastenDisabled: false,
                 indexConfigurations: false,
                 excludedParameterIds: []
             }
@@ -239,19 +246,20 @@ function readPartsStep(
     );
 }
 
-function parseFastenInfoStep(
+/** Null when there is none: a step's result can't be undefined. */
+function findMateConnectorStep(
     ctx: LoadContext,
     { insertableId, elementPath, elementType }: InsertableTarget
-): Promise<FastenInfo> {
+): Promise<MateConnector | null> {
     return ctx.step.do(
         `fasten-${insertableId}`,
         { retries: ONSHAPE_STEP_RETRIES },
         async () =>
-            parseFastenInfo(
+            (await findMateConnector(
                 await getOnshapeApiFromContext(ctx),
                 elementPath,
                 elementType
-            )
+            )) ?? null
     );
 }
 
@@ -292,7 +300,6 @@ export async function saveInsertable(
             sortOrder: target.sortOrder,
             // Only on insert, so an existing row keeps the user's choices.
             isVisible: false,
-            supportsFasten: false,
             indexConfigurations: false,
             ...reloaded
         })

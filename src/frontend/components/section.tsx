@@ -1,9 +1,12 @@
 import { Card, Stack, Title, type TitleOrder } from "@mantine/core";
 import { type ReactNode } from "react";
 
+/** A section's title inside a popover or menu: the size of the text under it, set apart by weight. */
+export const PANEL_TITLE_ORDER: TitleOrder = 6;
+
 interface SectionProps {
     title: string;
-    /** Smaller inside a popover than on a page. @default 3 */
+    /** {@link PANEL_TITLE_ORDER} inside a popover or menu. @default 3 */
     order?: TitleOrder;
     children: ReactNode;
 }

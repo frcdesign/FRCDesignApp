@@ -2,8 +2,10 @@
 import { cacheMiddleware } from "../../lib/cache";
 import { getApp, type AppContext } from "../../lib/context";
 import { requireSignInMiddleware } from "../auth/guards";
-import { getSessionCompanyId } from "../auth/company";
+import { getDocumentCompanyId } from "../auth/company";
 import { trackAppOpen } from "../analytics/tracking";
+import { ACCESS_PROBLEM_PARAM, AccessProblem } from "./access-problem";
+import { cannotEditDocument } from "./document-access";
 
 /** Marks the `/init` a sign-in returns to; see {@link needsSignIn}. */
 const SIGN_IN_ATTEMPTED = "signInAttempted";
@@ -27,14 +29,18 @@ function getSignInUrl(c: AppContext): string {
     const query = new URLSearchParams({
         // Cloudflare strips the port in local dev, so come back relatively.
         redirectUrl: url.pathname + url.search,
-        sessionCompanyId: getSessionCompanyId(c)
+        companyId: getDocumentCompanyId(c)
     });
     return `/auth/sign-in?${query.toString()}`;
 }
 
 export const entryRoutes = getApp();
 
-/** GET /init: the app resumes the caller's last tab itself, from the browser's storage. */
+/**
+ * GET /init: the app resumes the caller's last tab itself, from the browser's
+ * storage. A grant that can't edit the document goes to `/document-access`
+ * first: a session for the right company can still be one Onshape refuses.
+ */
 entryRoutes.get("/init", cacheMiddleware(), async (c) => {
     // A version can't be changed, so there is nothing to insert into.
     const instanceType = c.req.query("instanceType");
@@ -47,6 +53,17 @@ entryRoutes.get("/init", cacheMiddleware(), async (c) => {
     const search = new URL(c.req.url).searchParams;
     // Ours, and spent: the app is being opened, however that turned out.
     search.delete(SIGN_IN_ATTEMPTED);
+    if (await cannotEditDocument(c, c.req.query("documentId"))) {
+        // A grant for another account than the document's can only be one the
+        // caller chose; the right account's grant that still can't edit is view-only.
+        search.set(
+            ACCESS_PROBLEM_PARAM,
+            (await c.var.isAuthenticated())
+                ? AccessProblem.VIEW_ONLY
+                : AccessProblem.OTHER_ACCOUNT
+        );
+        return c.redirect(`/document-access?${search.toString()}`);
+    }
     return c.redirect(`/?${search.toString()}`);
 });
 

@@ -24,6 +24,8 @@ team, plus one owner set by configuration.
 | `src/backend/features/hints/routes.ts`                      | `POST /api/seen-hints`, sent by `useMarkHintSeen` once a feature is opened |
 | `src/backend/features/admin-team/`                          | The owner sets a library's admin team; members are synced from Onshape     |
 | `src/backend/features/entry/routes.ts`                      | `/init`, where Onshape launches the app                                    |
+| `src/backend/features/entry/document-access.ts`             | `cannotEditDocument`: whether the grant can edit the document              |
+| `src/frontend/routes/_pages/document-access.tsx`            | `/document-access`: what to do about a grant that can't                    |
 | `src/backend/lib/context.ts`                                | `AppBindings` (every binding and variable) and `bindAuth`                  |
 | `src/frontend/features/auth/access-level.ts`                | `useAccessData`: the server's level and the level the app is viewed as     |
 | `src/frontend/features/auth/components/require-access.tsx`  | `RequireAccessLevel`, `RequireSignIn`: render children only past the guard |
@@ -43,24 +45,51 @@ team, plus one owner set by configuration.
 - **KV** `seen-hints:` — by user id, the features (`Hint`) whose blue dot and
   **New** badge the user no longer needs, recorded by `POST /api/seen-hints`
   once the feature has been opened: the version manager's page on showing, the
-  insert location's card on closing, and an insert menu's ⋯ menu offering **Set
-  default configuration** on closing. Signed out, the dot goes for the session only.
-  Kept until deleted; losing it only shows a dot again.
-- **localStorage** (`ui-state`): `accessLevel`, the level the app is viewed as.
+  insert location's card on closing, an insert menu's ⋯ menu offering **Set
+  default configuration** on closing, and a part's menu (on its card or in the
+  insert menu) offering **Report an issue** on closing. Kept until deleted;
+  losing it only shows a dot again.
+- **localStorage** (`ui-state`): `accessLevel`, the level the app is viewed as;
+  `seenHints`, the hints dismissed in this browser. `useHasSeenHint` reads them
+  beside the server's list, so signed out a dot stays gone, and signed in a
+  refetch that reads KV before the dismissal lands can't bring it back.
 
 ## Flows
 
 ### Launch and sign-in
 
-1. Onshape opens `/init?documentId=…&instanceType=…&elementId=…&sessionCompanyId=…`.
-   A version or microversion goes to `/version-error`.
-2. With no session, or one for another company than the document's, `/init`
-   sends the caller through sign-in and back, marked so it never loops.
-3. `/auth/sign-in` stores `{ state, redirectUrl }` in the login cookie and
-   redirects to Onshape's authorize page. The redirect url must be a local path.
+1. Onshape opens `/init?documentId=…&instanceType=…&elementId=…&companyId=…`,
+   `companyId` being the company that owns the document (`cad` for a personal
+   one), which Onshape adds to every launch (`getDocumentCompanyId`). An
+   enterprise and an educator plan's classroom are both companies. A version
+   or microversion goes to `/version-error`.
+2. With no session, or one whose grant is for another company than the
+   document's, `/init` sends the caller through sign-in for the document's
+   company and back, marked so it never loops.
+3. `/auth/sign-in?companyId=` stores `{ state, redirectUrl }` in the login
+   cookie and redirects to Onshape's authorize page, naming the company as
+   `company_id`; for a personal document it names none, and Onshape asks the
+   caller which account. The redirect url must be a local path.
 4. The authorize request names `APP_URL/auth/callback` as its redirect uri,
    which must be registered on the OAuth app. Onshape returns there; the callback checks
    the state, exchanges the code, starts a session (a new id), and redirects back.
+5. Back at `/init`, `cannotEditDocument` asks Onshape for the caller's
+   permissions on the document (`getPermissions`). With `WRITE` the app opens.
+   Without it, whether the grant can't see the document at all (no
+   permissions, or a 404) or can only view it, `/init` sends the launch to
+   `/document-access` with the `problem` (`AccessProblem`): `other-account`
+   when the grant is still another company's than the document's, which only
+   the caller can have chosen, and `view-only` otherwise.
+6. `/document-access` says the app can't edit the document, and what to do:
+    - **`other-account` on a personal document**: "Sign in and choose your
+      personal account". **Sign in** goes through sign-in naming no company and
+      back to `/init`.
+    - **Anything else**: the caller can only view the document, a public one
+      or one shared view-only.
+
+    Both offer **Send a report**, its kind naming which. With no session, or
+    Onshape not answering, the app opens as before: the check never keeps
+    anybody out on a guess.
 
 ### Sign-out
 
@@ -89,12 +118,19 @@ Onshape:
 | **Owner**  | The user `OWNER_USER_ID` names     | Everything, in every library; set admin teams; **Reload all**                                                                               |
 | **Admin**  | A team admin of the library's team | Editor rights, plus refreshing the team and **Hold new versions**                                                                           |
 | **Editor** | A member of the library's team     | Groups (add, delete, order, sort), element settings and visibility, build status, **Reload**, approving held versions, **Reload thumbnail** |
-| **User**   | Anyone signed in                   | Browse, insert, favorites                                                                                                                   |
+| **User**   | Anyone signed in                   | Browse, insert, favorites, recents                                                                                                          |
 
 `getAccessLevel` returns owner for `OWNER_USER_ID`, otherwise looks the caller
 up in the library's stored `admin_team`. It is a database read, never an Onshape
-call; the team is synced when the owner sets it or an admin presses **Refresh**,
-because Onshape's team webhooks need a company, which a personal account lacks.
+call. The team is synced when the owner sets it, when Onshape's
+`onshape.team.addmember` or `.removemember` arrives for it, and when an admin
+presses **Refresh**. Onshape sends a team's events only to a webhook on the
+company that owns it, an enterprise or an educator plan's classroom, so setting
+a team checks its owner (`getTeam`) and refuses one a person owns, an old kind
+Onshape no longer creates. The webhook is registered under the owner's session
+with that company's id, and unregistered once no library has the team; a
+delivery about another of the company's teams is ignored, and one about this
+team syncs every library that has it, under a background session.
 
 Routes gate with `requireSignInMiddleware`, `requireEditorMiddleware`,
 `requireAdminMiddleware` and `requireOwnerMiddleware`. A library-gated route
@@ -121,6 +157,9 @@ user chose to view the app as, clamped to what the server grants.
 | `VITE_ACCESS_LEVEL_OVERRIDE`             | `.env`                                           | Server and client                              | Server grants it (dev only); client views the app at it by default                                      |
 | `FORCE_SIGNED_IN`                        | `.env`                                           | `request-auth.ts`                              | Dev only: signed in as a fake user with no Onshape session                                              |
 | `APP_URL`                                | `wrangler.jsonc` vars; `.env` to override in dev | `onshape-oauth.ts`, webhooks, `vite.config.ts` | Where the app is served: the OAuth redirect uri, every webhook url, and the host the dev server accepts |
+| `DISCORD_APP_WEBHOOK_URL`                | Secret per environment; `.env` locally           | `feedback/channels.ts`                         | Discord webhook for reports about the app and the version manager; unset refuses them                   |
+| `DISCORD_FRC_DESIGN_LIB_WEBHOOK_URL`     | Secret per environment; `.env` locally           | `feedback/channels.ts`                         | The same, for FRCDesignLib and MKCad                                                                    |
+| `DISCORD_CONFIG_LIB_WEBHOOK_URL`         | Secret per environment; `.env` locally           | `feedback/channels.ts`                         | The same, for ConfigLib                                                                                 |
 
 `README.md` also lists `API_ACCESS_KEY` and `API_SECRET_KEY`, which no code
 reads.
@@ -143,20 +182,34 @@ declared in `wrangler.jsonc` per environment and typed in `AppBindings`. Run
 
 ## Failure and recovery
 
-| Failure                                   | Result                                        | Recovery                                 |
-| ----------------------------------------- | --------------------------------------------- | ---------------------------------------- |
-| Access token expired                      | Refreshed on the next call                    | Automatic                                |
-| Refresh token revoked or expired          | Treated as signed out                         | Sign in again                            |
-| Enterprise session opening a personal doc | `/init` sends the caller through sign-in      | Automatic, once                          |
-| Team membership changed in Onshape        | Stale access until synced                     | **Refresh** beside the admin team        |
-| No saved background session               | A load whose requester's session lapses fails | The owner or a team member opens the app |
+| Failure                                            | Result                                                              | Recovery                                                 |
+| -------------------------------------------------- | ------------------------------------------------------------------- | -------------------------------------------------------- |
+| Access token expired                               | Refreshed on the next call                                          | Automatic                                                |
+| Refresh token revoked or expired                   | Treated as signed out                                               | Sign in again                                            |
+| The grant is another company's than the document's | `/init` sends the caller through sign-in for the document's company | Automatic, once                                          |
+| A company's grant for a personal document          | `/init` sends the launch to `/document-access`                      | **Sign in**, choosing the personal account               |
+| Document public or shared view-only                | `/init` sends the launch to `/document-access`                      | Edit access from the document's owner                    |
+| Team membership changed in Onshape                 | Synced when its webhook arrives                                     | **Refresh** beside the admin team, for a missed delivery |
+| No saved background session                        | A load whose requester's session lapses fails                       | The owner or a team member opens the app                 |
 
 ## Decisions
 
+- **Sign in as the document's company.** Onshape adds the company that owns
+  the document to every launch, and a grant is per company, so asking for that
+  one gets a grant that can edit it: an enterprise's, or an educator plan's
+  classroom's, without the caller having to authorize anything by hand. The
+  session's company says only where the caller happens to be signed in. A
+  personal account can't be asked for by id, so a personal document is the one
+  case the caller can answer wrongly, and the one the access page explains.
 - **Onshape teams as the permission source.** Library admins already manage the
   documents in Onshape; the app mirrors that rather than keeping its own roles.
 - **Synced, not live.** Asking Onshape on every request would spend the
-  allocation and add latency; membership rarely changes.
+  allocation and add latency; membership rarely changes, and Onshape says when
+  it does.
+- **Ask about the document, not only the company.** The grant's company can
+  match the document's while it still can't edit it, which surfaced as
+  a 403 on the first insert. One permissions call per launch finds it before
+  anything is tried.
 - **Login state in a cookie, not KV.** A caller who abandons sign-in keeps the
   session they had, and nothing needs cleaning up.
 

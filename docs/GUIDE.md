@@ -130,6 +130,7 @@ myRoutes.get("/my-thing" + libraryRoute(), async (c) => {
 - `libraryRoute()` — returns `"/library/:libraryId"`. Use `getLibraryParam(c)` to read it.
 - `insertableRoute()` — returns `"/insertable/:insertableId"`. Use `getInsertableParam(c)`.
 - `favoriteRoute()` — returns `"/favorite/:favoriteId"`. Use `getFavoriteParam(c)`.
+- `recentRoute()` — returns `"/recent/:recentId"`. Use `getRecentParam(c)`.
 
 **Protecting routes:** A route that needs elevated access names its library in the path and takes the matching middleware from `src/backend/features/auth/guards.ts`. One acting on a group or element also scopes its query to that library:
 

@@ -6,6 +6,7 @@ import {
     type PushScope,
     VersionJobState,
     type VersionJobStatus,
+    type WorkspaceChangesOut,
     type WorkspaceLinksData,
     type WorkspacePath
 } from "@backend/features/version-manager/contract";
@@ -17,6 +18,7 @@ import { queryClient } from "../../lib/query-client";
 import {
     nextVersionNameQueryKey,
     versionJobQueryKey,
+    workspaceChangesQueryKey,
     workspaceLinksQueryKey
 } from "../../lib/query-keys";
 import { useIsSignedIn } from "../auth/access-level";
@@ -52,6 +54,19 @@ export function useWorkspaceLinksQuery(workspace: WorkspacePath | undefined) {
         workspaceLinksQueryKey(workspace),
         "/workspace-links",
         workspace,
+        Infinity
+    );
+}
+
+/** A parent's unversioned edits, asked by its row once the list shows. */
+export function useWorkspaceChangesQuery(
+    workspace: WorkspacePath | undefined,
+    parent: WorkspacePath
+) {
+    return useWorkspaceQuery<WorkspaceChangesOut>(
+        workspaceChangesQueryKey(workspace, parent),
+        "/workspace-changes",
+        parent,
         Infinity
     );
 }

@@ -5,11 +5,7 @@ import { groups } from "../../db/schema";
 import { bumpLibraryVersion } from "../library/db";
 import type { LibraryId } from "../library/library-id";
 import { pushLibraryChanged } from "../push/notify";
-import {
-    addBuildIssue,
-    BuildIssueType,
-    clearBuildIssue
-} from "../build-checker/issues";
+import { BuildIssueType, replaceBuildIssues } from "../build-checker/issues";
 
 /** Marks each group for an editor to reload; publishing the change is the caller's. */
 export async function flagFailedLoads(
@@ -29,12 +25,10 @@ export async function flagFailedLoads(
                 .update(groups)
                 .set({
                     // A failure says more than that it never loaded.
-                    buildIssues: addBuildIssue(
-                        clearBuildIssue(
-                            row.buildIssues,
-                            BuildIssueType.NOT_LOADED
-                        ),
-                        { type }
+                    buildIssues: replaceBuildIssues(
+                        row.buildIssues,
+                        [BuildIssueType.NOT_LOADED],
+                        [{ type }]
                     )
                 })
                 .where(eq(groups.id, groupId));

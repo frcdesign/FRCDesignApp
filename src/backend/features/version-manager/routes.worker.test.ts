@@ -28,6 +28,9 @@ const CHILD = ws("child");
 
 /** Grants each workspace's document what `granted` lists for it, and nothing else. */
 function grant(granted: Record<string, OnshapePermission[]>) {
+    vi.spyOn(Permissions, "getPermissions").mockImplementation(
+        (_client, path) => Promise.resolve(granted[path.documentId] ?? [])
+    );
     vi.spyOn(Permissions, "hasPermissions").mockImplementation(
         (_client, path, ...needed) =>
             Promise.resolve(
@@ -229,6 +232,65 @@ describe("version manager routes", () => {
             documentName: "Gearbox",
             workspaceName: "Main"
         });
+    });
+
+    it("asks Onshape for a caller's permissions once, until the document is shared or unshared", async () => {
+        grant({ root: ALL });
+        const readJob = () =>
+            app.request(
+                `/api/version-job?${new URLSearchParams(toInput(ROOT))}`,
+                jsonRequest("GET"),
+                env
+            );
+
+        expect((await readJob()).status).toBe(200);
+        expect((await readJob()).status).toBe(200);
+        expect(Permissions.getPermissions).toHaveBeenCalledOnce();
+
+        const delivery = await app.request(
+            `/api/webhooks/linked-workspace?documentId=${ROOT.documentId}&workspaceId=${ROOT.instanceId}`,
+            // As Onshape sent it when a document was shared with someone.
+            jsonRequest("POST", {
+                event: "onshape.document.lifecycle.shared",
+                documentId: ROOT.documentId,
+                entryType: "USER",
+                shareAction: "Create",
+                oldPermissionSet: [],
+                newPermissionSet: ["WRITE", "COPY", "EXPORT", "COMMENT"]
+            }),
+            env
+        );
+        expect(delivery.status).toBe(200);
+
+        expect((await readJob()).status).toBe(200);
+        expect(Permissions.getPermissions).toHaveBeenCalledTimes(2);
+    });
+
+    it("counts a parent's unversioned changes on a request of its own", async () => {
+        grant({ root: ALL });
+        vi.spyOn(WorkspaceCache, "getUnversionedChanges").mockResolvedValue(3);
+
+        const res = await app.request(
+            `/api/workspace-changes?${new URLSearchParams(toInput(ROOT))}`,
+            jsonRequest("GET"),
+            env
+        );
+
+        expect(await res.json()).toEqual({ changes: 3 });
+    });
+
+    it("counts changes only for somebody who may read the parent", async () => {
+        grant({});
+        const count = vi.spyOn(WorkspaceCache, "getUnversionedChanges");
+
+        const res = await app.request(
+            `/api/workspace-changes?${new URLSearchParams(toInput(ROOT))}`,
+            jsonRequest("GET"),
+            env
+        );
+
+        expect(res.status).toBe(403);
+        expect(count).not.toHaveBeenCalled();
     });
 
     it("forgets what is cached of each linked workspace on a refresh", async () => {

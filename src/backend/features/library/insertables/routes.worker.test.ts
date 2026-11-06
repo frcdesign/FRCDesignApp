@@ -8,6 +8,11 @@ import { ElementType } from "../../../lib/onshape/element-type";
 import { Vendor } from "../vendors";
 import type { InsertOut } from "../contract";
 import { MateLocation } from "./fasten";
+import type { IndexingSettings } from "../../build-checker/contract";
+import {
+    featureList,
+    mateConnectorFeature
+} from "../../../../__test_utils__/feature-fixtures";
 import { BuildIssueType } from "../../build-checker/issues";
 import {
     MOCK_ONSHAPE_API,
@@ -17,6 +22,7 @@ import {
     TEST_PART_STUDIO_ID,
     createTestApp,
     jsonRequest,
+    readInsertable,
     resetDb,
     seedAssembly,
     seedConfiguration,
@@ -37,13 +43,20 @@ import {
 
 const db = getDb(env.DB);
 
-/** Reads back a seeded insertable to assert on what a route wrote. */
-function readInsertable(insertableId: string) {
-    return db
-        .select()
-        .from(insertables)
-        .where(eq(insertables.id, insertableId))
-        .get();
+/** Both settings, as the card sends them; a test names only what it changes. */
+function postIndexing(
+    settings: Partial<IndexingSettings>,
+    libraryId: string = TEST_LIBRARY_ID
+) {
+    return createTestApp().request(
+        `/api/indexing/library/${libraryId}/insertable/${TEST_PART_STUDIO_ID}`,
+        jsonRequest("POST", {
+            indexConfigurations: false,
+            excludedParameterIds: [],
+            ...settings
+        }),
+        env
+    );
 }
 
 function readConfig(insertableId: string) {
@@ -69,19 +82,149 @@ describe("insertable routes", () => {
 
     afterEach(() => vi.restoreAllMocks());
 
-    it("POST /toggle-insert-and-fasten can clear fasten support", async () => {
-        await seedPartStudio(db);
-
-        const res = await createTestApp().request(
-            `/api/toggle-insert-and-fasten/library/${TEST_LIBRARY_ID}/insertable/${TEST_PART_STUDIO_ID}`,
-            jsonRequest("POST", { supportsFasten: false }),
+    function toggleFasten(insertableId: string, supportsFasten: boolean) {
+        return createTestApp().request(
+            `/api/toggle-insert-and-fasten/library/${TEST_LIBRARY_ID}/insertable/${insertableId}`,
+            jsonRequest("POST", { supportsFasten }),
             env
         );
+    }
+
+    function mockMateConnector() {
+        return vi
+            .spyOn(PartStudioEndpoints, "getFeatures")
+            .mockResolvedValue(featureList([mateConnectorFeature("mc1")]));
+    }
+
+    const MATE_CONNECTOR = {
+        mateConnectorId: "mc1",
+        mateLocation: MateLocation.Feature,
+        path: []
+    };
+
+    it("POST /toggle-insert-and-fasten turns fastening off without asking Onshape", async () => {
+        await seedPartStudio(db, { fastenInfo: MATE_CONNECTOR });
+        const features = mockMateConnector();
+
+        expect((await toggleFasten(TEST_PART_STUDIO_ID, false)).status).toBe(
+            200
+        );
+
+        expect(features).not.toHaveBeenCalled();
+        expect(await readInsertable(db, TEST_PART_STUDIO_ID)).toMatchObject({
+            fastenDisabled: true,
+            fastenInfo: null
+        });
+    });
+
+    it("POST /toggle-insert-and-fasten turns it back on at the connector it finds", async () => {
+        await seedPartStudio(db, { fastenDisabled: true });
+        mockMateConnector();
+
+        expect((await toggleFasten(TEST_PART_STUDIO_ID, true)).status).toBe(
+            200
+        );
+
+        expect(await readInsertable(db, TEST_PART_STUDIO_ID)).toMatchObject({
+            fastenDisabled: false,
+            fastenInfo: { mateConnectorId: "mc1" }
+        });
+    });
+
+    it("POST /toggle-insert-and-fasten refuses with no mate connector", async () => {
+        await seedPartStudio(db, { fastenDisabled: true });
+        vi.spyOn(PartStudioEndpoints, "getFeatures").mockResolvedValue(
+            featureList()
+        );
+
+        expect((await toggleFasten(TEST_PART_STUDIO_ID, true)).status).toBe(
+            400
+        );
+        expect(
+            (await readInsertable(db, TEST_PART_STUDIO_ID))?.fastenDisabled
+        ).toBe(true);
+    });
+
+    it("POST /toggle-insert-and-fasten finds an assembly's connector too", async () => {
+        await seedAssembly(db);
+        vi.spyOn(AssemblyEndpoints, "getAssembly").mockResolvedValue({
+            rootAssembly: {
+                features: [
+                    {
+                        featureType: "mateConnector",
+                        id: "mc1",
+                        featureData: { occurrence: [] }
+                    }
+                ],
+                instances: []
+            },
+            parts: [],
+            subAssemblies: []
+        });
+
+        expect((await toggleFasten(TEST_ASSEMBLY_ID, true)).status).toBe(200);
+        expect(
+            (await readInsertable(db, TEST_ASSEMBLY_ID))?.fastenInfo
+        ).toMatchObject({ mateConnectorId: "mc1" });
+    });
+
+    it("POST /toggle-insert-and-fasten clears a stale fasten issue", async () => {
+        await seedPartStudio(db, {
+            buildIssues: [
+                { type: BuildIssueType.NO_VENDORS },
+                { type: BuildIssueType.UNSTABLE_MATE_CONNECTOR }
+            ]
+        });
+        mockMateConnector();
+
+        await toggleFasten(TEST_PART_STUDIO_ID, false);
+
+        expect(
+            (await readInsertable(db, TEST_PART_STUDIO_ID))?.buildIssues
+        ).toEqual([{ type: BuildIssueType.NO_VENDORS }]);
+    });
+
+    it("POST /add-to-part-studio places at the mate connector when it fastens", async () => {
+        await seedPartStudio(db, { fastenInfo: MATE_CONNECTOR });
+        const spy = vi
+            .spyOn(PartStudioEndpoints, "addPartStudioFeature")
+            .mockResolvedValue({ feature: { featureId: "feat-1" } });
+
+        await createTestApp().request(
+            `/api/add-to-part-studio/insertable/${TEST_PART_STUDIO_ID}`,
+            jsonRequest("POST", { targetPath }),
+            env
+        );
+
+        expect(JSON.stringify(spy.mock.calls[0][2])).toContain(
+            "AT_MATE_CONNECTOR"
+        );
+    });
+
+    it("POST /indexing applies a switch and exclusions in one reindex", async () => {
+        await seedPartStudio(db);
+        await db.insert(configurations).values({
+            insertableId: TEST_PART_STUDIO_ID,
+            parameters: [
+                enumParam("size", ["s", "l"]),
+                enumParam("finish", ["matte", "gloss"])
+            ]
+        });
+        const parts = vi
+            .spyOn(PartsEndpoints, "getParts")
+            .mockResolvedValue([{ partId: "p", partNumber: "PN" }]);
+
+        const res = await postIndexing({
+            indexConfigurations: true,
+            excludedParameterIds: ["finish"]
+        });
         expect(res.status).toBe(200);
 
-        const row = await readInsertable(TEST_PART_STUDIO_ID);
-        expect(row?.supportsFasten).toBe(false);
-        expect(row?.fastenInfo).toBeNull();
+        expect(await readInsertable(db, TEST_PART_STUDIO_ID)).toMatchObject({
+            indexConfigurations: true,
+            excludedParameterIds: ["finish"]
+        });
+        expect(parts).toHaveBeenCalledTimes(2);
     });
 
     it("POST /add-to-part-studio inserts via the Onshape API", async () => {
@@ -95,7 +238,6 @@ describe("insertable routes", () => {
             jsonRequest("POST", {
                 targetPath,
                 configuration: undefined,
-                useMateConnector: false,
                 isFavorite: false,
                 isQuickInsert: false
             }),
@@ -124,7 +266,6 @@ describe("insertable routes", () => {
             jsonRequest("POST", {
                 targetPath,
                 configuration: undefined,
-                useMateConnector: false,
                 isFavorite: false,
                 isQuickInsert: false,
                 source: InsertSource.GROUP_SEARCH
@@ -148,7 +289,6 @@ describe("insertable routes", () => {
             `/api/add-to-part-studio/insertable/${TEST_PART_STUDIO_ID}`,
             jsonRequest("POST", {
                 targetPath,
-                useMateConnector: false,
                 isFavorite: false,
                 isQuickInsert: false
             }),
@@ -166,7 +306,7 @@ describe("insertable routes", () => {
     });
 
     // The feature dialog shows the typed expression, not its value.
-    it("POST /add-to-part-studio derives with the expression that was typed", async () => {
+    it("POST /add-to-part-studio derives with the value an expression collapses to", async () => {
         await seedPartStudio(db);
         await seedConfiguration(db);
         await db
@@ -188,7 +328,7 @@ describe("insertable routes", () => {
         expect(res.status).toBe(200);
 
         expect(JSON.stringify(spy.mock.calls[0][2])).toContain(
-            '"expression":"(2 + 3) in"'
+            '"expression":"5 in"'
         );
     });
 
@@ -212,7 +352,6 @@ describe("insertable routes", () => {
             jsonRequest("POST", {
                 targetPath,
                 configuration: undefined,
-                useMateConnector: false,
                 isFavorite: false,
                 isQuickInsert: false
             }),
@@ -385,7 +524,7 @@ describe("insertable routes", () => {
         expect(spy.mock.calls[0][4]?.configuration).toBe("boolean=true");
     });
 
-    it("POST /add-to-assembly sends a quantity as the expression typed", async () => {
+    it("POST /add-to-assembly sends a quantity collapsed to its value", async () => {
         await seedAssembly(db);
         await seedConfiguration(db, TEST_ASSEMBLY_ID);
         await db
@@ -406,9 +545,7 @@ describe("insertable routes", () => {
             env
         );
 
-        expect(spy.mock.calls[0][4]?.configuration).toBe(
-            "length=(2%20%2B%203)%20in"
-        );
+        expect(spy.mock.calls[0][4]?.configuration).toBe("length=5%20in");
     });
 
     /** An assembly that supports insert-and-fasten, and a landed insert to fasten. */
@@ -417,7 +554,6 @@ describe("insertable routes", () => {
         await db
             .update(insertables)
             .set({
-                supportsFasten: true,
                 fastenInfo: {
                     mateConnectorId: "mc1",
                     mateLocation: MateLocation.Part,
@@ -487,20 +623,16 @@ describe("insertable routes", () => {
         expect(await loggedInsert()).toMatchObject({ fasten: false });
     });
 
-    it("POST /index-configurations indexes and forces the flag on", async () => {
+    it("POST /indexing indexes and forces the flag on", async () => {
         await seedPartStudio(db);
         vi.spyOn(PartsEndpoints, "getParts").mockResolvedValue([
             { partId: "p", partNumber: "PN-123" }
         ]);
 
-        const res = await createTestApp().request(
-            `/api/index-configurations/library/${TEST_LIBRARY_ID}/insertable/${TEST_PART_STUDIO_ID}`,
-            jsonRequest("POST", { indexConfigurations: true }),
-            env
-        );
+        const res = await postIndexing({ indexConfigurations: true });
         expect(res.status).toBe(200);
 
-        const row = await readInsertable(TEST_PART_STUDIO_ID);
+        const row = await readInsertable(db, TEST_PART_STUDIO_ID);
         expect(row?.indexConfigurations).toBe(true);
 
         expect(row?.partMetadata).toEqual({
@@ -511,7 +643,7 @@ describe("insertable routes", () => {
         expect(await readConfig(TEST_PART_STUDIO_ID)).toBeUndefined();
     });
 
-    it("POST /excluded-parameters stores the exclusion and reindexes without it", async () => {
+    it("POST /indexing stores the exclusion and reindexes without it", async () => {
         await seedPartStudio(db);
         await db.insert(configurations).values({
             insertableId: TEST_PART_STUDIO_ID,
@@ -524,15 +656,12 @@ describe("insertable routes", () => {
             .spyOn(PartsEndpoints, "getParts")
             .mockResolvedValue([{ partId: "p", partNumber: "PN" }]);
 
-        const res = await createTestApp().request(
-            `/api/excluded-parameters/library/${TEST_LIBRARY_ID}/insertable/${TEST_PART_STUDIO_ID}`,
-            jsonRequest("POST", { excludedParameterIds: ["finish"] }),
-            env
-        );
+        const res = await postIndexing({ excludedParameterIds: ["finish"] });
         expect(res.status).toBe(200);
 
         expect(
-            (await readInsertable(TEST_PART_STUDIO_ID))?.excludedParameterIds
+            (await readInsertable(db, TEST_PART_STUDIO_ID))
+                ?.excludedParameterIds
         ).toEqual(["finish"]);
         // The default, then size=l alone: finish rides its default.
         expect(parts).toHaveBeenCalledTimes(2);
@@ -543,28 +672,24 @@ describe("insertable routes", () => {
         ).toEqual([{ size: "l" }]);
     });
 
-    it("POST /index-configurations leaves the flag off when indexing fails", async () => {
+    it("POST /indexing leaves the flag off when indexing fails", async () => {
         await seedPartStudio(db);
         vi.spyOn(PartsEndpoints, "getParts").mockRejectedValue(
             new OnshapeRateLimitError("rate limited", 450)
         );
 
-        const res = await createTestApp().request(
-            `/api/index-configurations/library/${TEST_LIBRARY_ID}/insertable/${TEST_PART_STUDIO_ID}`,
-            jsonRequest("POST", { indexConfigurations: true }),
-            env
-        );
+        const res = await postIndexing({ indexConfigurations: true });
         expect(res.status).toBe(429);
         const body: { message: string } = await res.json();
         expect(body.message).toContain("rate limit");
 
-        const row = await readInsertable(TEST_PART_STUDIO_ID);
+        const row = await readInsertable(db, TEST_PART_STUDIO_ID);
         expect(row?.indexConfigurations).toBe(false);
         // Nothing was written, so no records survive.
         expect(await readConfig(TEST_PART_STUDIO_ID)).toBeUndefined();
     });
 
-    it("POST /index-configurations clears the data when forcing off", async () => {
+    it("POST /indexing clears the data when forcing off", async () => {
         await seedGroup(db);
         await seedInsertable(db);
         await db.insert(configurations).values({
@@ -582,29 +707,21 @@ describe("insertable routes", () => {
         const spy = vi
             .spyOn(PartsEndpoints, "getParts")
             .mockResolvedValue([{ partId: "p", partNumber: "PN-123" }]);
-        await createTestApp().request(
-            `/api/index-configurations/library/${TEST_LIBRARY_ID}/insertable/${TEST_PART_STUDIO_ID}`,
-            jsonRequest("POST", { indexConfigurations: true }),
-            env
-        );
+        await postIndexing({ indexConfigurations: true });
         spy.mockClear();
 
-        const res = await createTestApp().request(
-            `/api/index-configurations/library/${TEST_LIBRARY_ID}/insertable/${TEST_PART_STUDIO_ID}`,
-            jsonRequest("POST", { indexConfigurations: false }),
-            env
-        );
+        const res = await postIndexing({ indexConfigurations: false });
         expect(res.status).toBe(200);
         // Past the threshold it is not auto-eligible, so nothing is re-indexed.
         expect(spy).not.toHaveBeenCalled();
 
-        const row = await readInsertable(TEST_PART_STUDIO_ID);
+        const row = await readInsertable(db, TEST_PART_STUDIO_ID);
         expect(row?.indexConfigurations).toBe(false);
         // The row stays to hold the parameters; only the records go.
         expect((await readConfig(TEST_PART_STUDIO_ID))?.records).toEqual([]);
     });
 
-    it("POST /index-configurations keeps indexing a custom part", async () => {
+    it("POST /indexing keeps indexing a custom part", async () => {
         await seedGroup(db);
         await seedInsertable(db, {
             name: "Custom Bracket",
@@ -614,21 +731,17 @@ describe("insertable routes", () => {
             { partId: "p" }
         ]);
 
-        const res = await createTestApp().request(
-            `/api/index-configurations/library/${TEST_LIBRARY_ID}/insertable/${TEST_PART_STUDIO_ID}`,
-            jsonRequest("POST", { indexConfigurations: false }),
-            env
-        );
+        const res = await postIndexing({ indexConfigurations: false });
         expect(res.status).toBe(200);
 
-        const row = await readInsertable(TEST_PART_STUDIO_ID);
+        const row = await readInsertable(db, TEST_PART_STUDIO_ID);
         expect(row?.partMetadata).not.toBeNull();
         // Nobody sells it, so a missing part number is not worth flagging.
         expect(row?.buildIssues).toEqual([]);
     });
 
     // Indexing's own issues are cleared before merging, or a resolved one sticks.
-    it("POST /index-configurations replaces stale part-number issues", async () => {
+    it("POST /indexing replaces stale part-number issues", async () => {
         await seedPartStudio(db);
         await db
             .update(insertables)
@@ -643,14 +756,10 @@ describe("insertable routes", () => {
             { partId: "p", partNumber: "PN-123" }
         ]);
 
-        const res = await createTestApp().request(
-            `/api/index-configurations/library/${TEST_LIBRARY_ID}/insertable/${TEST_PART_STUDIO_ID}`,
-            jsonRequest("POST", { indexConfigurations: true }),
-            env
-        );
+        const res = await postIndexing({ indexConfigurations: true });
         expect(res.status).toBe(200);
 
-        const row = await readInsertable(TEST_PART_STUDIO_ID);
+        const row = await readInsertable(db, TEST_PART_STUDIO_ID);
         expect(row?.buildIssues).toEqual([{ type: BuildIssueType.NO_VENDORS }]);
     });
 });

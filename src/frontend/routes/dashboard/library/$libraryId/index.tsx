@@ -27,6 +27,7 @@ import {
 import { UsageTreemap } from "../../../../features/dashboard/usage-treemap";
 import { HeadlineTiles } from "../../../../features/dashboard/headline-tiles";
 import { SectionCard } from "../../../../components/section";
+import { LibraryReports } from "../../../../features/dashboard/report-summary";
 
 export const Route = createFileRoute("/dashboard/library/$libraryId/")({
     component: LibraryOverview
@@ -77,7 +78,7 @@ function LibraryBody({
     parts,
     health
 }: LibraryBodyProps): ReactNode {
-    const { totals, metricSeries, growth } = summary;
+    const { totals, metricSeries, growth, reports, reportedParts } = summary;
 
     return (
         <>
@@ -106,6 +107,12 @@ function LibraryBody({
             ) : (
                 <DashboardState query={health} />
             )}
+
+            <LibraryReports
+                libraryId={libraryId}
+                reports={reports}
+                reportedParts={reportedParts}
+            />
 
             {parts.data ? (
                 /* Keyed so a zoom into a group doesn't carry to a library without it. */

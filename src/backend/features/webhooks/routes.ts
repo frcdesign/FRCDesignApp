@@ -21,12 +21,15 @@ import {
 } from "./transient";
 import { forgetUnitInfo } from "../configurations/units";
 import { forgetWorkspace } from "../version-manager/workspace-cache";
+import { syncTeamLibraries } from "../admin-team/sync";
 
 export const webhookRoutes = getApp();
 
 /** The fields read off a notification; Onshape sends more. */
 interface WebhookNotification {
     event: string;
+    /** A team event's team: a company's webhook hears every team it owns. */
+    teamId?: string;
 }
 
 /**
@@ -34,7 +37,7 @@ interface WebhookNotification {
  * after: Onshape deactivates a webhook whose deliveries error or stall.
  */
 webhookRoutes.post(WEBHOOK_ROUTE, async (c) => {
-    const { event } = await c.req.json<WebhookNotification>();
+    const { event, teamId } = await c.req.json<WebhookNotification>();
     const token = c.req.query("token");
     const webhook = token ? await findWebhookByToken(c.env, token) : undefined;
     if (!webhook) {
@@ -48,6 +51,13 @@ webhookRoutes.post(WEBHOOK_ROUTE, async (c) => {
             case WebhookEvent.CREATE_VERSION:
                 if (subject === WebhookSubject.DOCUMENT) {
                     await receiveNewVersion(c.env, subjectId);
+                }
+                break;
+            case WebhookEvent.TEAM_ADD_MEMBER:
+            case WebhookEvent.TEAM_REMOVE_MEMBER:
+                // Another of the company's teams is no reason to sync this one.
+                if (subject === WebhookSubject.TEAM && teamId === subjectId) {
+                    await syncTeamLibraries(c.env, subjectId);
                 }
                 break;
             case WebhookEvent.UNREGISTER:

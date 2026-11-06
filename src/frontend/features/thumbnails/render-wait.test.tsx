@@ -57,6 +57,8 @@ describe("waiting out a render", () => {
         vi.useFakeTimers();
     });
     afterEach(() => {
+        // A test can leave a load waiting, which a later test's push would wake.
+        pushes.listeners.clear();
         vi.useRealTimers();
         vi.restoreAllMocks();
     });

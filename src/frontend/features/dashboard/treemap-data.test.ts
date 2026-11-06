@@ -1,47 +1,25 @@
 import { describe, expect, it } from "vitest";
 import { LibraryId } from "@backend/features/library/library-id";
-import type { PartUsageOut } from "@backend/features/analytics/contract";
+import { partUsage } from "../../../__test_utils__/part-usage-fixtures";
 import { toNodes, TreemapKind } from "./treemap-data";
 
-function part({
-    elementId = "e-1",
-    ...overrides
-}: Partial<PartUsageOut> & { elementId?: string } = {}): PartUsageOut {
-    return {
-        libraryId: LibraryId.FRC_DESIGN_LIB,
-        path: {
-            documentId: "doc-1",
-            instanceId: "v-1",
-            instanceType: "v",
-            elementId
-        },
-        name: "Part",
-        groupName: "Gearboxes",
-        isVisible: true,
-        insertCount: 0,
-        usesPerMonth: 0,
-        recent: [],
-        ...overrides
-    };
-}
-
 const PARTS = [
-    part({ elementId: "e-1", name: "Versa", insertCount: 20 }),
-    part({ elementId: "e-2", name: "MAXPlanetary", insertCount: 10 }),
-    part({
+    partUsage({ elementId: "e-1", name: "Versa", insertCount: 20 }),
+    partUsage({ elementId: "e-2", name: "MAXPlanetary", insertCount: 10 }),
+    partUsage({
         elementId: "e-3",
         name: "Tube",
         groupName: "Structure",
         insertCount: 5
     }),
-    part({
+    partUsage({
         elementId: "e-4",
         name: "Colson",
         libraryId: LibraryId.MKCAD,
         groupName: "Wheels",
         insertCount: 40
     }),
-    part({ elementId: "e-5", name: "Axle", groupName: "Motion" })
+    partUsage({ elementId: "e-5", name: "Axle", groupName: "Motion" })
 ];
 
 describe("toNodes at the library level", () => {
@@ -90,7 +68,7 @@ describe("toNodes at the group level", () => {
 
     it("never darkens as the tiles get smaller", () => {
         const many = Array.from({ length: 10 }, (_, index) =>
-            part({ groupName: `g-${index}`, insertCount: 10 - index })
+            partUsage({ groupName: `g-${index}`, insertCount: 10 - index })
         );
         const shade = /-(\d+)\)$/;
         const steps = toNodes(many, path).map((node) =>
@@ -128,8 +106,8 @@ describe("toNodes at the part level", () => {
 
     it("never mixes in another library's group of the same name", () => {
         const shared = [
-            part({ elementId: "a", groupName: "Wheels", insertCount: 3 }),
-            part({
+            partUsage({ elementId: "a", groupName: "Wheels", insertCount: 3 }),
+            partUsage({
                 elementId: "b",
                 libraryId: LibraryId.MKCAD,
                 groupName: "Wheels",

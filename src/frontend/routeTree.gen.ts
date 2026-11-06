@@ -19,6 +19,7 @@ import { Route as PagesSetupRouteImport } from './routes/_pages/setup'
 import { Route as PagesSafariErrorRouteImport } from './routes/_pages/safari-error'
 import { Route as PagesLicenseRouteImport } from './routes/_pages/license'
 import { Route as PagesGrantDeniedRouteImport } from './routes/_pages/grant-denied'
+import { Route as PagesDocumentAccessRouteImport } from './routes/_pages/document-access'
 import { Route as PagesCookieErrorRouteImport } from './routes/_pages/cookie-error'
 import { Route as PagesBetaCompleteRouteImport } from './routes/_pages/beta-complete'
 import { Route as DashboardLibraryLibraryIdRouteRouteImport } from './routes/dashboard/library/$libraryId/route'
@@ -77,6 +78,11 @@ const PagesLicenseRoute = PagesLicenseRouteImport.update({
 const PagesGrantDeniedRoute = PagesGrantDeniedRouteImport.update({
   id: '/_pages/grant-denied',
   path: '/grant-denied',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PagesDocumentAccessRoute = PagesDocumentAccessRouteImport.update({
+  id: '/_pages/document-access',
+  path: '/document-access',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PagesCookieErrorRoute = PagesCookieErrorRouteImport.update({
@@ -138,6 +144,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRouteRouteWithChildren
   '/beta-complete': typeof PagesBetaCompleteRoute
   '/cookie-error': typeof PagesCookieErrorRoute
+  '/document-access': typeof PagesDocumentAccessRoute
   '/grant-denied': typeof PagesGrantDeniedRoute
   '/license': typeof PagesLicenseRoute
   '/safari-error': typeof PagesSafariErrorRoute
@@ -158,6 +165,7 @@ export interface FileRoutesByTo {
   '/app': typeof AppRouteRouteWithChildren
   '/beta-complete': typeof PagesBetaCompleteRoute
   '/cookie-error': typeof PagesCookieErrorRoute
+  '/document-access': typeof PagesDocumentAccessRoute
   '/grant-denied': typeof PagesGrantDeniedRoute
   '/license': typeof PagesLicenseRoute
   '/safari-error': typeof PagesSafariErrorRoute
@@ -178,6 +186,7 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRouteRouteWithChildren
   '/_pages/beta-complete': typeof PagesBetaCompleteRoute
   '/_pages/cookie-error': typeof PagesCookieErrorRoute
+  '/_pages/document-access': typeof PagesDocumentAccessRoute
   '/_pages/grant-denied': typeof PagesGrantDeniedRoute
   '/_pages/license': typeof PagesLicenseRoute
   '/_pages/safari-error': typeof PagesSafariErrorRoute
@@ -201,6 +210,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/beta-complete'
     | '/cookie-error'
+    | '/document-access'
     | '/grant-denied'
     | '/license'
     | '/safari-error'
@@ -221,6 +231,7 @@ export interface FileRouteTypes {
     | '/app'
     | '/beta-complete'
     | '/cookie-error'
+    | '/document-access'
     | '/grant-denied'
     | '/license'
     | '/safari-error'
@@ -240,6 +251,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/_pages/beta-complete'
     | '/_pages/cookie-error'
+    | '/_pages/document-access'
     | '/_pages/grant-denied'
     | '/_pages/license'
     | '/_pages/safari-error'
@@ -262,6 +274,7 @@ export interface RootRouteChildren {
   DashboardRouteRoute: typeof DashboardRouteRouteWithChildren
   PagesBetaCompleteRoute: typeof PagesBetaCompleteRoute
   PagesCookieErrorRoute: typeof PagesCookieErrorRoute
+  PagesDocumentAccessRoute: typeof PagesDocumentAccessRoute
   PagesGrantDeniedRoute: typeof PagesGrantDeniedRoute
   PagesLicenseRoute: typeof PagesLicenseRoute
   PagesSafariErrorRoute: typeof PagesSafariErrorRoute
@@ -339,6 +352,13 @@ declare module '@tanstack/react-router' {
       path: '/grant-denied'
       fullPath: '/grant-denied'
       preLoaderRoute: typeof PagesGrantDeniedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_pages/document-access': {
+      id: '/_pages/document-access'
+      path: '/document-access'
+      fullPath: '/document-access'
+      preLoaderRoute: typeof PagesDocumentAccessRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_pages/cookie-error': {
@@ -477,6 +497,7 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRouteRoute: DashboardRouteRouteWithChildren,
   PagesBetaCompleteRoute: PagesBetaCompleteRoute,
   PagesCookieErrorRoute: PagesCookieErrorRoute,
+  PagesDocumentAccessRoute: PagesDocumentAccessRoute,
   PagesGrantDeniedRoute: PagesGrantDeniedRoute,
   PagesLicenseRoute: PagesLicenseRoute,
   PagesSafariErrorRoute: PagesSafariErrorRoute,

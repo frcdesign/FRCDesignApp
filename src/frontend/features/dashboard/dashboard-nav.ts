@@ -5,6 +5,14 @@ export function useIsDashboard(): boolean {
     return useMatch({ from: "/dashboard", shouldThrow: false }) !== undefined;
 }
 
+/** The library a dashboard page reports on; undefined on the app dashboard. */
+export function useDashboardLibraryId(): LibraryId | undefined {
+    return useMatch({
+        from: "/dashboard/library/$libraryId",
+        shouldThrow: false
+    })?.params.libraryId;
+}
+
 /** The dashboards reachable from the navbar. */
 export type DashboardKey = "app" | "library" | "unused" | "part";
 
@@ -43,6 +51,25 @@ export const DASHBOARDS: DashboardDefinition[] = [
         needsLibrary: true
     }
 ];
+
+/** One part's report, as a row of the dashboard's tables navigates to it. */
+export function partDashboardLocation(libraryId: LibraryId, elementId: string) {
+    return {
+        to: "/dashboard/library/$libraryId/part",
+        params: { libraryId },
+        search: { element: elementId }
+    } as const;
+}
+
+/** The same report as a url, for a link that opens it in a new tab. */
+export function partDashboardUrl(
+    libraryId: LibraryId,
+    elementId: string
+): string {
+    const { to, params, search } = partDashboardLocation(libraryId, elementId);
+    const path = to.replace("$libraryId", params.libraryId);
+    return `${path}?${new URLSearchParams(search).toString()}`;
+}
 
 /** The library a scoped dashboard falls back to when none is selected yet. */
 export const DEFAULT_LIBRARY = LibraryId.FRC_DESIGN_LIB;

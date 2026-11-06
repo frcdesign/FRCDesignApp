@@ -6,6 +6,26 @@ export interface OnshapeTeamMember {
     member: { id: string };
 }
 
+/** `BTOwnerInfo.type`: who owns a resource. */
+export enum OnshapeOwnerType {
+    USER = 0,
+    /** An enterprise, or an educator plan's classroom. */
+    COMPANY = 1
+}
+
+export interface OnshapeTeamInfo {
+    id: string;
+    name: string;
+    owner: { type: OnshapeOwnerType; id: string };
+}
+
+export function getTeam(
+    client: OnshapeApi,
+    teamId: string
+): Promise<OnshapeTeamInfo> {
+    return client.get(`/teams/${encodeURIComponent(teamId)}`);
+}
+
 /** Onshape pages the list; this is as many as it hands back at once. */
 const PAGE_SIZE = 20;
 

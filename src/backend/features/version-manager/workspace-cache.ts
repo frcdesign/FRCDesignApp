@@ -1,13 +1,17 @@
 /**
- * A linked workspace's names and unversioned changes, cached as `units.ts`
- * caches units: a transient webhook drops the entries, and they expire in case
- * Onshape drops the webhook. Nothing caller-specific is stored.
+ * A linked workspace's names and unversioned changes, and each caller's
+ * permissions on its document, cached as `units.ts` caches units: a transient
+ * webhook drops the entries, and they expire in case Onshape drops the webhook.
  */
 import type { AppContext } from "../../lib/context";
-import type { InstancePath } from "../../lib/onshape/path";
+import type { DocumentPath, InstancePath } from "../../lib/onshape/path";
 import { runInBackground } from "../../lib/background";
 import { kvStore } from "../../lib/kv-store";
 import type { OnshapeApi } from "../../lib/onshape/client";
+import {
+    getPermissions,
+    OnshapePermission
+} from "../../lib/onshape/endpoints/permissions";
 import {
     getDocument,
     getInsertables
@@ -37,7 +41,46 @@ const changeCounts = kvStore<{ changes: number }>("linked-workspace-changes", {
     ttlSeconds: CHANGES_TTL_SECONDS
 });
 
-/** Both entries for a workspace, dropped when its webhook says it changed. */
+/**
+ * A day: a sharing change is heard about through the `shared` webhook, and
+ * the expiry and the refresh button cover one Onshape drops.
+ */
+const PERMISSIONS_TTL_SECONDS = 24 * 3600;
+
+/** By `{documentId}:{userId}`, so a document's entries for every caller can be listed and dropped. */
+const permissionSets = kvStore<OnshapePermission[]>("document-permissions", {
+    ttlSeconds: PERMISSIONS_TTL_SECONDS
+});
+
+/**
+ * Whether the caller may read the document, for guarding what is cached of it.
+ * A stale answer can show a name to somebody who has just lost access, which
+ * is accepted; a route that calls Onshape itself leaves the check to Onshape.
+ */
+export async function canRead(
+    c: AppContext,
+    client: OnshapeApi,
+    document: DocumentPath
+): Promise<boolean> {
+    const id = `${document.documentId}:${await c.var.getUserId()}`;
+    let permissions = await permissionSets.get(c.env.KV, id);
+    if (!permissions) {
+        permissions = await getPermissions(client, document);
+        await permissionSets.put(c.env.KV, id, permissions);
+    }
+    return permissions.includes(OnshapePermission.READ);
+}
+
+/** Every caller's cached permissions on the document. */
+export async function forgetPermissions(
+    kv: KVNamespace,
+    document: DocumentPath
+): Promise<void> {
+    const ids = await permissionSets.list(kv, `${document.documentId}:`);
+    await Promise.all(ids.map((id) => permissionSets.delete(kv, id)));
+}
+
+/** A workspace's entries, and its document's permissions, dropped when its webhook says it changed. */
 export async function forgetWorkspace(
     kv: KVNamespace,
     workspace: InstancePath
@@ -45,7 +88,8 @@ export async function forgetWorkspace(
     const id = workspaceKey(workspace);
     await Promise.all([
         descriptions.delete(kv, id),
-        changeCounts.delete(kv, id)
+        changeCounts.delete(kv, id),
+        forgetPermissions(kv, workspace)
     ]);
 }
 

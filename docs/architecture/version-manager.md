@@ -24,26 +24,26 @@ it.
 
 ## Code map
 
-| Path                                                                            | Role                                                                             |
-| ------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| `src/backend/features/version-manager/contract.ts`                              | `WorkspacePath`, `LinkDirection`, the scopes, `VersionJobStatus`, `workspaceKey` |
-| `src/backend/features/version-manager/schema.ts`                                | `workspace_links`, the feature's own table                                       |
-| `src/backend/features/version-manager/links.ts`                                 | The D1 reads and writes, and resolving a row into what the client shows          |
-| `src/backend/features/version-manager/graph.ts`                                 | Pure: the order a recursive push or pull runs in, and cycle detection            |
-| `src/backend/features/version-manager/references.ts`                            | The reference-update engine both a push and a pull run                           |
-| `src/backend/features/version-manager/workflow.ts`                              | `VersionManagerWorkflow`, one class over a push or a pull                        |
-| `src/backend/features/version-manager/tasks.ts`                                 | Pure: the steps a run will take, which its status lists                          |
-| `src/backend/features/version-manager/jobs.ts`                                  | The run a workspace last started, and its status                                 |
-| `src/backend/features/version-manager/failures.ts`                              | Which Onshape failures to retry, and each in words                               |
-| `src/backend/features/version-manager/workspace-cache.ts`                       | A linked workspace's names and pending-change count, cached                      |
-| `src/backend/features/version-manager/routes.ts`                                | Every route below                                                                |
-| `src/frontend/features/version-manager/queries.ts`                              | The queries and mutations                                                        |
-| `src/frontend/features/version-manager/components/linked-workspace-section.tsx` | A direction's list and its rows                                                  |
-| `src/frontend/features/version-manager/link-actions.ts`                         | `useLinkActions`: everything a direction's section and rows can run              |
-| `src/frontend/features/version-manager/job-report.ts`                           | How a run is going or went, in words                                             |
-| `src/frontend/features/version-manager/components/last-run-callout.tsx`         | The last run, going or finished, as a callout at the top of the page             |
-| `src/frontend/features/version-manager/components/job-details.tsx`              | The run's steps as they complete, in the Details modal                           |
-| `src/frontend/routes/app/version-manager.tsx`                                   | The page: two sections, one per direction                                        |
+| Path                                                                            | Role                                                                                  |
+| ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `src/backend/features/version-manager/contract.ts`                              | `WorkspacePath`, `LinkDirection`, the scopes, `VersionJobStatus`, `workspaceKey`      |
+| `src/backend/features/version-manager/schema.ts`                                | `workspace_links`, the feature's own table                                            |
+| `src/backend/features/version-manager/links.ts`                                 | The D1 reads and writes, and resolving a row into what the client shows               |
+| `src/backend/features/version-manager/graph.ts`                                 | Pure: the order a recursive push or pull runs in, and cycle detection                 |
+| `src/backend/features/version-manager/references.ts`                            | The reference-update engine both a push and a pull run                                |
+| `src/backend/features/version-manager/workflow.ts`                              | `VersionManagerWorkflow`, one class over a push or a pull                             |
+| `src/backend/features/version-manager/tasks.ts`                                 | Pure: the steps a run will take, which its status lists                               |
+| `src/backend/features/version-manager/jobs.ts`                                  | The run a workspace last started, and its status                                      |
+| `src/backend/features/version-manager/failures.ts`                              | Which Onshape failures to retry, and each in words                                    |
+| `src/backend/features/version-manager/workspace-cache.ts`                       | A linked workspace's names and pending-change count, and callers' permissions, cached |
+| `src/backend/features/version-manager/routes.ts`                                | Every route below                                                                     |
+| `src/frontend/features/version-manager/queries.ts`                              | The queries and mutations                                                             |
+| `src/frontend/features/version-manager/components/linked-workspace-section.tsx` | A direction's list and its rows                                                       |
+| `src/frontend/features/version-manager/link-actions.ts`                         | `useLinkActions`: everything a direction's section and rows can run                   |
+| `src/frontend/features/version-manager/job-report.ts`                           | How a run is going or went, in words                                                  |
+| `src/frontend/features/version-manager/components/last-run-callout.tsx`         | The last run, going or finished, as a callout at the top of the page                  |
+| `src/frontend/features/version-manager/components/job-details.tsx`              | The run's steps as they complete, in the Details modal                                |
+| `src/frontend/routes/app/version-manager.tsx`                                   | The page: two sections, one per direction                                             |
 
 ## Storage
 
@@ -65,14 +65,21 @@ document and workspace names, for a week.
 **KV** `linked-workspace-changes:{documentId}|{instanceId}` — its
 `changesSinceVersionSave`, for an hour.
 
-Both are dropped by the linked workspace's webhook when it changes, and by
+**KV** `document-permissions:{documentId}:{userId}` — a caller's Onshape
+permission set on a document (`canRead`), for a day. It guards what the routes
+answer from our own storage; see **Decisions**.
+
+All three are dropped by the linked workspace's webhook when it changes —
+permissions for every caller of that document — and by
 `POST /api/workspace-links/refresh` — the navbar's refresh button, shown on this
-page alone — for every workspace linked to the caller's. A run drops the change
+page alone — for every workspace linked to the caller's, and the caller's own
+document's permissions. A run drops the change
 count of each workspace it versions or moves (`forgetChanges`, a step after
 each of its own), and the client reads the links again once the run ends, so a
 parent's badge reflects the version just cut.
 
-**Browser** `isParentsOpen` and `isChildrenOpen` in `uiState`.
+**Browser** whether each list is open, as `sections.parents` and
+`sections.children` in `uiState`.
 
 ## Flows
 
@@ -91,15 +98,20 @@ The tab appears only when Onshape launched the app in a workspace
 without one.
 
 `GET /api/workspace-links` answers `{ parents, children, documentName }` — the
-last being this workspace's own document, which the page's copy names. For each
-row it asks Onshape whether the caller may read the far end, and — from the
-cache — what it is called. A workspace the caller cannot read comes back `isOpenable: false` and
-unnamed: they are shown that a link exists, not what it points at.
+last being this workspace's own document, which the page's copy names, and
+whose fetch is what refuses a caller who can't read it. For each row it checks,
+from the permission cache, whether the caller may read the far end, and — from
+the name cache — what it is called. A workspace the caller cannot read comes
+back `isOpenable: false` and unnamed: they are shown that a link exists, not
+what it points at.
 
-Each parent also carries `unversionedChanges`: how far it has moved since its
-own last version (`changesSinceVersionSave` on the insertables response, asked
-with no `include` flags so Onshape enumerates nothing). A pull has to cut a
-version to bring those edits in, so the row shows the count as a badge.
+Once the list shows, each readable parent's row asks
+`GET /api/workspace-changes` for how far it has moved since its own last
+version (`changesSinceVersionSave` on the insertables response, asked with no
+`include` flags so Onshape enumerates nothing), the slowest thing the page asks
+Onshape. A pull has to cut a version to bring those edits in, so the row shows
+the count as a badge. The count's query sits under the list's key, so whatever
+refreshes the list refreshes the counts.
 
 ### Linking
 
@@ -289,8 +301,11 @@ color and with its icon, for as long as the status is kept. It cannot be closed,
 ### Keeping a linked workspace current
 
 A cache miss on a linked workspace's names registers a transient webhook on it for
-`onshape.model.lifecycle.changed`, `.metadata` and `.createversion`. A delivery
-drops both cached entries, so the next panel to open asks Onshape again. Onshape
+`onshape.model.lifecycle.changed`, `.metadata` and `.createversion`, and
+`onshape.document.lifecycle.shared`, which Onshape sends for sharing and
+unsharing alike. A delivery drops the workspace's cached entries and every
+caller's permissions on its document, so the next panel to open asks Onshape
+again. Onshape
 deletes a transient webhook that goes quiet, so the entries expire as well.
 
 ## Invariants
@@ -298,8 +313,9 @@ deletes a transient webhook that goes quiet, so the entries expire as well.
 - A link is stored once, as one row. Both directions are read off it.
 - Only a workspace is ever linked, pushed to or pulled into. A version is a
   snapshot with no references to update, and a microversion cannot be written to.
-- Onshape decides what may be done, not the app's access levels. Every route
-  checks the caller's Onshape permissions on the documents it would touch.
+- Onshape decides what may be done, not the app's access levels. A route that
+  asks Onshape about a document is refused by Onshape; one that answers from
+  our own storage checks the caller may read the document first (`canRead`).
 - A push or pull checks every workspace it would write to before it cuts
   anything.
 - One run at a time per workspace, and no run versions one document twice.
@@ -308,9 +324,9 @@ deletes a transient webhook that goes quiet, so the entries expire as well.
 - A recursive push or pull versions, in topological order, every workspace it
   passes through that a later one references, and no other: the workspace a
   pull ends on, and a push's leaves, are only moved.
-- Nothing about a workspace the caller cannot read reaches them: no name, no
-  thumbnail, and no run status. The socket says only that a status changed.
-- Permissions are never cached; names and change counts are.
+- Nothing about a workspace the caller cannot read, as of the permission
+  cache, reaches them: no name, no thumbnail, and no run status. The socket says only that a status changed.
+- A push, pull or link checks live permissions; only reads guard on cached ones.
 - A push or pull always cuts its versions; only an update-only run cuts none.
 - A run that finished, or stopped, says so: its status is stored whichever way
   it ended, step by step.
@@ -377,6 +393,13 @@ deletes a transient webhook that goes quiet, so the entries expire as well.
   time is what keeps a retry from cutting two.
 - **The result is stored, not read off the workflow run.** Its output is
   lost when the run throws, and a failed run is the one whose report matters.
+- **Permissions are cached for reads, and checked only where Onshape isn't.**
+  An explicit check before a call Onshape guards anyway doubles the cost of
+  every request. Reads from our own storage — names, change counts, run status
+  — still need one, and asking Onshape for each linked document on every open
+  made the list slow, so the set is cached per caller and dropped by the
+  `shared` webhook. A stale answer can show a name to somebody who has just
+  lost access, which is accepted. Runs and links check live, before they start.
 - **Thumbnails are proxied.** `GET /api/workspace-thumbnail` fetches the
   workspace's own thumbnail under the caller's OAuth token. Letting the image
   element fetch Onshape directly was tried; Onshape serves a thumbnail only to

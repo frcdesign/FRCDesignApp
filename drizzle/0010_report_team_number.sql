@@ -1,0 +1,1 @@
+ALTER TABLE `events` ADD `report_team_number` integer;

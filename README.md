@@ -28,14 +28,25 @@ API_SECRET_KEY=<Your API Secret Key>
 OAUTH_CLIENT_ID=<Your OAuth client id>
 OAUTH_CLIENT_SECRET=<Your OAuth client secret>
 
-# One of admin, editor, or user. Granted by the server and viewed by the client,
+# One of owner, admin, editor, or user. Granted by the server and viewed by the client,
 # so both sides agree. Ignored in production.
-VITE_ACCESS_LEVEL_OVERRIDE=admin
+VITE_ACCESS_LEVEL_OVERRIDE=owner
 
 # Signs you in as a fake user, so signed-in UI can be tested without an Onshape
 # session. Onshape calls it reveals won't work, so leave it unset normally.
 FORCE_SIGNED_IN=false
+
+# Discord forum-channel webhooks reports are posted to (Optional). A topic whose
+# webhook is unset refuses reports. Point these at a test forum, not the real ones.
+DISCORD_APP_WEBHOOK_URL=<Webhook for FRCDesignApp and Version Manager reports>
+DISCORD_FRC_DESIGN_LIB_WEBHOOK_URL=<Webhook for FRCDesignLib and MKCad reports>
+DISCORD_CONFIG_LIB_WEBHOOK_URL=<Webhook for ConfigLib reports>
 ```
+
+In a deployed environment, set the webhooks as secrets with
+`npx wrangler secret put <NAME> --env <environment>`. The forums' channel
+names, invites and tag ids aren't secret, and live in
+`src/backend/features/feedback/discord-forums.ts`.
 
 ## Onshape OAuth App Setup
 
@@ -94,6 +105,17 @@ printf '%s' '<token>' > .tunnel-token
 `npm run tunnel` runs the tunnel next to `npm run dev`; the `Launch servers` VSCode task starts both. Open the app at https://dev.frcdesign.org.
 
 Only one person can use the tunnel at a time: Cloudflare spreads requests across everyone running it, so stop yours when you're done.
+
+### Testing webhooks
+
+`/api/webhook-probe` (owner only) registers a webhook with whatever events and
+params you pick, under your own Onshape token, pointed back at the app, and
+lists every delivery it receives, Onshape's registration ping included. Use it
+to find out which events fire for what, before building on one: sign in, open
+the page on cert or through the tunnel, register, make the change in Onshape,
+and watch the deliveries appear. Onshape's refusal, if it refuses, shows
+beside the probe. Probes and deliveries are kept for a day; **Delete**
+unregisters one.
 
 ### Creating the tunnel (maintainers)
 

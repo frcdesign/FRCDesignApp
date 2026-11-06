@@ -4,6 +4,7 @@ import { buildStatusRoutes } from "./features/build-checker/routes";
 import { configurationRoutes } from "./features/configurations/routes";
 import { appOpenRoutes, entryRoutes } from "./features/entry/routes";
 import { favoriteRoutes } from "./features/favorites/routes";
+import { recentRoutes } from "./features/recents/routes";
 import { groupRoutes } from "./features/library/groups/routes";
 import { insertLocationRoutes } from "./features/insert-location/routes";
 import { insertableRoutes } from "./features/library/insertables/routes";
@@ -11,10 +12,15 @@ import { libraryRoutes } from "./features/library/routes";
 import { thumbnailRoutes } from "./features/thumbnails/routes";
 import { versionManagerRoutes } from "./features/version-manager/routes";
 import { webhookRoutes } from "./features/webhooks/routes";
+import {
+    webhookProbeRoutes,
+    webhookProbeShortcut
+} from "./features/webhooks/probe";
 import { pushRoutes } from "./features/push/routes";
 import { adminTeamRoutes } from "./features/admin-team/routes";
 import { loadRoutes } from "./features/load/routes";
 import { hintRoutes } from "./features/hints/routes";
+import { feedbackRoutes } from "./features/feedback/routes";
 import { logger } from "hono/logger";
 import { cacheMiddleware } from "./lib/cache";
 import { bindAuth, getApp, type AuthResolver } from "./lib/context";
@@ -30,14 +36,17 @@ const apiRoutes = [
     configurationRoutes,
     thumbnailRoutes,
     favoriteRoutes,
+    recentRoutes,
     buildStatusRoutes,
     analyticsRoutes,
     webhookRoutes,
+    webhookProbeRoutes,
     pushRoutes,
     adminTeamRoutes,
     loadRoutes,
     versionManagerRoutes,
-    hintRoutes
+    hintRoutes,
+    feedbackRoutes
 ];
 
 export function createApp(resolveAuth: AuthResolver) {
@@ -57,6 +66,7 @@ export function createApp(resolveAuth: AuthResolver) {
     app.route("/auth", authRoutes);
 
     app.route("/", entryRoutes);
+    app.route("/", webhookProbeShortcut);
 
     app.onError(errorHandler);
 

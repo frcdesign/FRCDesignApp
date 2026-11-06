@@ -1,7 +1,9 @@
+import { eq } from "drizzle-orm";
 import { type Db } from "@backend/db/client";
 import {
     configurations,
     favorites,
+    recentInserts,
     groups,
     insertables,
     libraries,
@@ -14,6 +16,7 @@ import {
     dailyInsertableMetrics,
     dailyInsertableUsers,
     dailyMetrics,
+    dailyReportMetrics,
     dailyTargetMetrics,
     dailySourceMetrics,
     dailyUserActivity,
@@ -72,6 +75,7 @@ export async function resetDb(db: Db): Promise<void> {
     // One batch, one round trip: this runs before nearly every test.
     await db.batch([
         db.delete(favorites),
+        db.delete(recentInserts),
         db.delete(configurations),
         db.delete(insertables),
         db.delete(groups),
@@ -90,6 +94,7 @@ export async function resetDb(db: Db): Promise<void> {
         db.delete(dailyConfigurationMetrics),
         db.delete(dailyAppOpens),
         db.delete(dailyVersionMetrics),
+        db.delete(dailyReportMetrics),
         db.delete(userStats),
         db.delete(workspaceLinks)
     ]);
@@ -157,6 +162,11 @@ export async function seedInsertable(
     };
     await db.insert(insertables).values(values).onConflictDoNothing();
     return values.id;
+}
+
+/** Reads an insertable back, to assert on what a route or load wrote. */
+export function readInsertable(db: Db, id: string = TEST_PART_STUDIO_ID) {
+    return db.select().from(insertables).where(eq(insertables.id, id)).get();
 }
 
 /** Seeds the standard part-studio insertable (ensures library + groups). */

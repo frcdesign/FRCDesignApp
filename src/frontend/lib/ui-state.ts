@@ -5,10 +5,12 @@
  */
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { useShallow } from "zustand/react/shallow";
 import type { AccessLevel } from "@backend/features/auth/access-level";
 import type { LibraryId } from "@backend/features/library/library-id";
 import type { Vendor } from "@backend/features/library/vendors";
 import type { PartialSelection } from "@backend/features/configurations/contract";
+import type { Hint } from "@backend/features/hints/contract";
 import type { AppTab } from "./app-tab";
 
 export enum Theme {
@@ -16,17 +18,45 @@ export enum Theme {
     LIGHT = "light"
 }
 
+/** Every folding section whose open state is remembered, on a page or in a card. */
+export enum SectionId {
+    FAVORITES = "favorites",
+    RECENTS = "recents",
+    LIBRARY = "library",
+    /** The version manager's two lists. */
+    PARENTS = "parents",
+    CHILDREN = "children",
+    /** The admin card's. */
+    BUILD_CHECKS = "build-checks",
+    SETTINGS = "settings",
+    CONFIGURATION = "configuration",
+    USAGE = "usage",
+    /** The settings menu's. */
+    ADMIN_SETTINGS = "admin-settings"
+}
+
+/** Until someone opens or closes it. Favorites and Configuration are long, and wanted less. */
+const OPENED_BY_DEFAULT: Record<SectionId, boolean> = {
+    [SectionId.FAVORITES]: false,
+    [SectionId.RECENTS]: true,
+    [SectionId.LIBRARY]: true,
+    [SectionId.PARENTS]: true,
+    [SectionId.CHILDREN]: true,
+    [SectionId.BUILD_CHECKS]: true,
+    [SectionId.SETTINGS]: true,
+    [SectionId.CONFIGURATION]: false,
+    [SectionId.USAGE]: true,
+    [SectionId.ADMIN_SETTINGS]: true
+};
+
 interface UiState {
     theme: Theme;
     /** Undefined until one is picked, which the welcome asks for. */
     tabId?: AppTab;
     /** The group last opened in that tab; undefined for the tab itself. */
     groupId?: string;
-    isFavoritesOpen: boolean;
-    isLibraryOpen: boolean;
-    /** The version manager's two sections, which open like the home page's. */
-    isParentsOpen: boolean;
-    isChildrenOpen: boolean;
+    /** Sections someone opened or closed; the rest are at their default. */
+    sections: Partial<Record<SectionId, boolean>>;
     /** Per library; a library with no entry has every vendor active. */
     vendorFilters: Partial<Record<LibraryId, Vendor[]>>;
     searchQuery: string;
@@ -37,6 +67,8 @@ interface UiState {
     openInsertableId?: string;
     openSelection?: PartialSelection;
     openFavoriteId?: string;
+    /** Hints dismissed in this browser, which a refetch of the server's list can't bring back. */
+    seenHints: Hint[];
 }
 
 /** In localStorage, the persist default. */
@@ -44,17 +76,70 @@ export const useUiState = create<UiState>()(
     persist(
         (): UiState => ({
             theme: Theme.DARK,
-            isFavoritesOpen: false,
-            isLibraryOpen: true,
-            isParentsOpen: true,
-            isChildrenOpen: true,
+            sections: {},
             vendorFilters: {},
             searchQuery: "",
-            fasten: true
+            fasten: true,
+            seenHints: []
         }),
-        { name: "uiState" }
+        { name: "uiState", version: 1, migrate: migrateUiState }
     )
 );
+
+/** Version 0 kept a boolean per page section; they move into `sections`. */
+export function migrateUiState(persisted: unknown, version: number): UiState {
+    const state = persisted as UiState & Record<string, unknown>;
+    if (version >= 1) return state;
+    const {
+        isFavoritesOpen,
+        isRecentsOpen,
+        isLibraryOpen,
+        isParentsOpen,
+        isChildrenOpen,
+        ...rest
+    } = state;
+    const sections: Partial<Record<SectionId, boolean>> = {};
+    const carried: [SectionId, unknown][] = [
+        [SectionId.FAVORITES, isFavoritesOpen],
+        [SectionId.RECENTS, isRecentsOpen],
+        [SectionId.LIBRARY, isLibraryOpen],
+        [SectionId.PARENTS, isParentsOpen],
+        [SectionId.CHILDREN, isChildrenOpen]
+    ];
+    for (const [id, opened] of carried) {
+        if (typeof opened === "boolean") sections[id] = opened;
+    }
+    return { ...rest, sections };
+}
+
+export function useSectionOpened(id: SectionId): boolean {
+    return useUiState((state) => state.sections[id] ?? OPENED_BY_DEFAULT[id]);
+}
+
+export function setSectionOpened(id: SectionId, opened: boolean): void {
+    useUiState.setState((state) => ({
+        sections: { ...state.sections, [id]: opened }
+    }));
+}
+
+/** Those of `ids` that are open, as `AppSections` takes them. */
+export function useOpenedSections(ids: SectionId[]): SectionId[] {
+    return useUiState(
+        useShallow((state) =>
+            ids.filter((id) => state.sections[id] ?? OPENED_BY_DEFAULT[id])
+        )
+    );
+}
+
+/** Opens exactly the `opened` of `ids`, as `AppSections` reports them. */
+export function setOpenedSections(ids: SectionId[], opened: string[]): void {
+    useUiState.setState((state) => ({
+        sections: {
+            ...state.sections,
+            ...Object.fromEntries(ids.map((id) => [id, opened.includes(id)]))
+        }
+    }));
+}
 
 export function getUiState(): UiState {
     return useUiState.getState();
