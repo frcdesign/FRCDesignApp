@@ -24,6 +24,8 @@ export enum BuildIssueType {
     /** The mate connector inserts use can change or break between configurations. */
     UNSTABLE_MATE_CONNECTOR = "unstable-mate-connector",
     INSERTABLES_FAILED = "insertables-failed",
+    /** Only people the document is shared with can insert or download from it. */
+    NOT_PUBLIC = "not-public",
     LOAD_FAILED = "load-failed",
     /** A document added but not yet loaded, until its first load saves it. */
     NOT_LOADED = "not-loaded"
@@ -60,6 +62,7 @@ export type BuildIssue =
     | ConfigurationBuildIssueOf<BuildIssueType.UNSTABLE_COMPOSITE>
     | BuildIssueOf<BuildIssueType.UNSTABLE_MATE_CONNECTOR>
     | BuildIssueOf<BuildIssueType.INSERTABLES_FAILED>
+    | BuildIssueOf<BuildIssueType.NOT_PUBLIC>
     | BuildIssueOf<BuildIssueType.LOAD_FAILED>
     | BuildIssueOf<BuildIssueType.NOT_LOADED>;
 
@@ -100,6 +103,7 @@ export function getIssueSeverity(issue: BuildIssue): BuildIssueSeverity {
         case BuildIssueType.UNSTABLE_COMPOSITE:
         case BuildIssueType.UNSTABLE_MATE_CONNECTOR:
         case BuildIssueType.INSERTABLES_FAILED:
+        case BuildIssueType.NOT_PUBLIC:
         case BuildIssueType.LOAD_FAILED:
             return BuildIssueSeverity.ERROR;
         case BuildIssueType.NO_THUMBNAIL_TAB:

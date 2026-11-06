@@ -183,6 +183,8 @@ export interface OnshapeDocumentInfo {
     id: string;
     name: string;
     documentThumbnailElementId?: string;
+    /** Shared with every Onshape user; an enterprise's document never is. */
+    public: boolean;
     /** Not confirmed to always be sent; the load throws when it's absent. */
     defaultWorkspace?: { id: string };
 }

@@ -43,6 +43,8 @@
     "buildIssueUnstableMateConnector": "First mate connector is unstable",
     "buildIssueUnstableMateConnectorHelp": "The first mate connector must be stable across all configurations.",
     "buildIssueInsertablesFailed": "Some elements failed to load",
+    "buildIssueNotPublic": "Document isn't public",
+    "buildIssueNotPublicHelp": "Only people it's shared with can insert or download its parts. Make it public from Share in Onshape.",
     "buildIssueLoadFailed": "Document failed to load",
     "buildIssueNotLoaded": "Document not loaded yet",
     "buildIssueNotLoadedHelp": "Use Reload if it doesn't start loading.",
@@ -317,5 +319,12 @@
     "dashboardReportsAbout": "About",
     "dashboardReportsType": "Type",
     "dashboardReportsCount": "Reports",
-    "dashboardReportsMostReported": "Most reported parts"
+    "dashboardReportsMostReported": "Most reported parts",
+    "downloadStepButton": "Download STEP",
+    "downloadStepSignIn": "Sign in to download",
+    "downloadStepExporting": "Exporting {name} from Onshape...",
+    "downloadStepDownloaded": "Downloaded {name}.",
+    "downloadStepOnshapeFailed": "Onshape couldn't export {name}.",
+    "downloadStepTimedOut": "Onshape is taking too long to export {name}. Try again later.",
+    "downloadStepFailed": "Unexpectedly failed to download {name}."
 }

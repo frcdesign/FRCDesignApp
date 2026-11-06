@@ -39,6 +39,8 @@ export function getIssueTitle(issue: BuildIssue): string {
             return m.buildIssueUnstableMateConnector();
         case BuildIssueType.INSERTABLES_FAILED:
             return m.buildIssueInsertablesFailed();
+        case BuildIssueType.NOT_PUBLIC:
+            return m.buildIssueNotPublic();
         case BuildIssueType.LOAD_FAILED:
             return m.buildIssueLoadFailed();
         case BuildIssueType.NOT_LOADED:
@@ -63,6 +65,8 @@ export function getIssueDescription(issue: BuildIssue): string | undefined {
             return m.buildIssueUnstableCompositeHelp();
         case BuildIssueType.UNSTABLE_MATE_CONNECTOR:
             return m.buildIssueUnstableMateConnectorHelp();
+        case BuildIssueType.NOT_PUBLIC:
+            return m.buildIssueNotPublicHelp();
         case BuildIssueType.NOT_LOADED:
             return m.buildIssueNotLoadedHelp();
         default:

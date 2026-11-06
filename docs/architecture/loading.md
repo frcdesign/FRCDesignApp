@@ -126,7 +126,8 @@ the reload's limiters:
    recorded and the rest carry on.
 4. Stores the group's thumbnail, then saves the group in one step: its fields,
    removals, new order, and the group checks (`checkGroup`), among them
-   `INSERTABLES_FAILED` if any tab failed. A save with no failed tab releases
+   `INSERTABLES_FAILED` if any tab failed, and `NOT_PUBLIC` from the document
+   read that pinned the version (`GroupTarget.isPublic`). A save with no failed tab releases
    the group's hold.
 5. Deletes stale thumbnails, which is never fatal.
 

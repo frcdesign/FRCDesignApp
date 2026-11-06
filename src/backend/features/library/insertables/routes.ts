@@ -11,7 +11,7 @@ import {
     insertableRoute,
     libraryRoute
 } from "../../../lib/route-params";
-import { getDb, type Db } from "../../../db/client";
+import { getDb } from "../../../db/client";
 import {
     requireEditorMiddleware,
     requireSignInMiddleware
@@ -21,10 +21,6 @@ import { bumpLibraryVersion, rebuildSearchDb } from "../db";
 import { type InsertOut } from "../contract";
 import type { LibraryId } from "../library-id";
 import { toElementPath, INSTANCE_TYPES } from "../../../lib/onshape/path";
-import {
-    type ConfigurationParameter,
-    type Selection
-} from "../../configurations/contract";
 import {
     INDEXING_ISSUE_TYPES,
     NO_RECORDS,
@@ -43,7 +39,8 @@ import {
     addAssemblyFeature
 } from "../../../lib/onshape/endpoints/assemblies";
 import { PartType } from "../../../lib/onshape/endpoints/documents";
-import { onshapeOverrides, toSelection } from "../../configurations/selection";
+import { onshapeOverrides } from "../../configurations/selection";
+import { readSelection, selectionSchema } from "./read-selection";
 import { encodeConfiguration } from "../../configurations/utils";
 import { fastenMate } from "../../../lib/onshape/objects/assembly-features";
 import {
@@ -231,33 +228,6 @@ const targetPathSchema = z.object({
     instanceType: z.enum(INSTANCE_TYPES),
     elementId: z.string().min(1)
 });
-
-const selectionSchema = z.record(z.string(), z.string()).optional();
-
-/** Every request goes through here, so nothing past it holds a partial selection. */
-async function readSelection(
-    db: Db,
-    insertableId: string,
-    requested: Selection | undefined
-): Promise<{
-    selection: Selection | undefined;
-    parameters: ConfigurationParameter[];
-}> {
-    const row = await db
-        .select({ parameters: configurations.parameters })
-        .from(configurations)
-        .where(eq(configurations.insertableId, insertableId))
-        .get();
-
-    const parameters = row?.parameters ?? [];
-    return {
-        selection:
-            parameters.length === 0
-                ? undefined
-                : toSelection(requested ?? {}, parameters),
-        parameters
-    };
-}
 
 const insertBody = z.object({
     targetPath: targetPathSchema,

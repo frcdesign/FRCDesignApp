@@ -62,6 +62,7 @@ describe("reloading a thumbnail", () => {
         vi.spyOn(DocumentEndpoints, "getDocument").mockResolvedValue({
             id: "doc",
             name: "Doc",
+            public: true,
             defaultWorkspace: { id: MAIN_WORKSPACE }
         });
     });
