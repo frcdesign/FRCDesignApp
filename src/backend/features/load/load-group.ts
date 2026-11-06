@@ -224,6 +224,7 @@ async function saveGroup(
         );
     const buildIssues = checkGroup({
         hasThumbnailTab: !!target.thumbnailElementId,
+        isPublic: target.isPublic,
         thumbnailUrls,
         hasFailedInsertables,
         hasVisibleInsertable: visibleRows.some(

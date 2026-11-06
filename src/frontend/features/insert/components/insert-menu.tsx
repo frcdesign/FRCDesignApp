@@ -45,6 +45,7 @@ import { useTargetElementType } from "../insert-hooks";
 import { InsertSource } from "@backend/features/analytics/usage";
 import { InsertLocationStatus } from "../../insert-location/components/insert-location-status";
 import { InfoCheckbox } from "../../../components/info-checkbox";
+import { DownloadStepButton } from "../../download/components/download-step-button";
 
 interface UseMenuTitleProps extends Omit<MenuTitleProps, "name"> {
     /** Undefined until known, which leaves the title the opener set. */
@@ -264,6 +265,7 @@ function InsertMenuFooter(props: InsertMenuFooterProps): ReactNode {
                 source={source}
                 onInsert={onInsert}
             />
+            <DownloadStepButton insertable={insertable} selection={selection} />
         </AppModalFooter>
     );
 }

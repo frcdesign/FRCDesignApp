@@ -294,7 +294,8 @@ describe("POST /group", () => {
         await seedGroup(db, TEST_GROUP_ID); // sortOrder 0
         vi.spyOn(DocumentsEndpoint, "getDocument").mockResolvedValue({
             id: "doc-new",
-            name: "New Doc"
+            name: "New Doc",
+            public: true
         });
         const loadSpy = vi.spyOn(Jobs, "requestReload").mockResolvedValue();
 
@@ -330,7 +331,8 @@ describe("POST /group", () => {
         await seedGroup(db, TEST_GROUP_ID); // documentId "doc-test-group"
         vi.spyOn(DocumentsEndpoint, "getDocument").mockResolvedValue({
             id: "doc-test-group",
-            name: "Dup"
+            name: "Dup",
+            public: true
         });
         const loadSpy = vi.spyOn(Jobs, "requestReload");
 

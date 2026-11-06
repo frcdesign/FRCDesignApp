@@ -175,6 +175,7 @@ describe("the launch's sign-in check", () => {
         vi.spyOn(Documents, "getDocument").mockResolvedValue({
             id: "doc",
             name: "Robot",
+            public: false,
             permissionSet: [OnshapePermission.READ, OnshapePermission.WRITE]
         });
         const sessionId = crypto.randomUUID();

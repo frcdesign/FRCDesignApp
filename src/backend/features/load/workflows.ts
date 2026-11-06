@@ -263,7 +263,8 @@ async function resolveGroupTarget(
         readAt: version.readAt,
         workspacePath,
         name: document.name,
-        thumbnailElementId: document.documentThumbnailElementId
+        thumbnailElementId: document.documentThumbnailElementId,
+        isPublic: document.public
     };
 }
 

@@ -15,6 +15,8 @@ interface GroupCheckInput {
     /** Whether any of the group's insertables failed to load. */
     hasFailedInsertables: boolean;
     hasVisibleInsertable: boolean;
+    /** Onshape's `public`: every Onshape user can view and copy it. */
+    isPublic: boolean;
 }
 
 /** Pure: the load resolves the signals. */
@@ -35,6 +37,10 @@ export function checkGroup(input: GroupCheckInput): BuildIssue[] {
         issues = addBuildIssue(issues, {
             type: BuildIssueType.INSERTABLES_FAILED
         });
+    }
+
+    if (!input.isPublic) {
+        issues = addBuildIssue(issues, { type: BuildIssueType.NOT_PUBLIC });
     }
 
     return checkVisibility(issues, input.hasVisibleInsertable);

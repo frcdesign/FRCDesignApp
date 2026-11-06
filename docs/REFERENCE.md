@@ -120,6 +120,7 @@ owns, `lib/` for cross-cutting plumbing, and a small set of files at the root.
     - `admin-team/` — each library's admin team, set by the owner and synced from Onshape
     - `version-manager/` — links between Onshape workspaces and the pushes and pulls along them; see [architecture/version-manager.md](./architecture/version-manager.md)
     - `feedback/` — reports posted to the FRCDesign Discord; see [architecture/feedback.md](./architecture/feedback.md)
+    - `download/` — STEP downloads for the standalone app, exported by Onshape as the signed-in caller; see [architecture/download.md](./architecture/download.md)
     - `favorites/`, `recents/`, `search/`, `analytics/`, `insert-location/`
 
 ### `src/frontend/`

@@ -87,6 +87,7 @@ export interface GroupTarget {
     name: string;
     /** The tab the document renders its thumbnail from, when one is set. */
     thumbnailElementId?: string;
+    isPublic: boolean;
 }
 
 /** An insertable a load reads, and what the document's tab listing told us. */

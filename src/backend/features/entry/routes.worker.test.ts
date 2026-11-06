@@ -143,6 +143,7 @@ describe("GET /init's document access check", () => {
         return vi.spyOn(Documents, "getDocument").mockResolvedValue({
             id: "doc",
             name: "Robot",
+            public: false,
             permissionSet,
             owner: { id: "owner", type, isEnterpriseOwnedResource }
         });
@@ -252,7 +253,8 @@ describe("GET /init's document access check", () => {
     it("opens the app when the document doesn't say what the grant may do", async () => {
         vi.spyOn(Documents, "getDocument").mockResolvedValue({
             id: "doc",
-            name: "Robot"
+            name: "Robot",
+            public: false
         });
 
         expect((await launch()).pathname).toBe("/");
