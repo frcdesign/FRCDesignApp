@@ -7,6 +7,7 @@ import {
 } from "./contract";
 import { toParameterInstances } from "./instances";
 import {
+    alwaysShown,
     boolParam,
     enumParam,
     quantityParam
@@ -96,10 +97,16 @@ describe("toParameterInstances", () => {
     it("names every choice on the way, and only the ones that discriminate", () => {
         const series = enumParam("series", ["old", "new"]);
         const gated = enumParam("vendor", ["generic", "wcp"], {
-            optionConditions: [shownWhen(["wcp"], "series", "new")]
+            optionConditions: [
+                shownWhen(["wcp"], "series", "new"),
+                alwaysShown(["generic"])
+            ]
         });
         const size = enumParam("size", ["s1", "s2"], {
-            optionConditions: [shownWhen(["s2"], "vendor", "wcp")]
+            optionConditions: [
+                shownWhen(["s2"], "vendor", "wcp"),
+                alwaysShown(["s1"])
+            ]
         });
 
         // Both series leave generic the same list, so the series is left off.

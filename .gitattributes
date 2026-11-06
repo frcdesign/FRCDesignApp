@@ -1,0 +1,2 @@
+# Parsed by its signature (scan.ts), so a Windows checkout must keep its line endings
+*.fs text eol=lf

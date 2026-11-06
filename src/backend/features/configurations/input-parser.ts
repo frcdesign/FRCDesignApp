@@ -76,7 +76,10 @@ function tolerantEqualsZero(value: ValueWithUnits) {
     return tolerantEquals(value, { value: 0, type: value.type });
 }
 
-function tolerantEquals(value1: ValueWithUnits, value2: ValueWithUnits) {
+export function tolerantEquals(
+    value1: ValueWithUnits,
+    value2: ValueWithUnits
+): boolean {
     const tolerance = comparisonTolerance(value1, value2);
     return Math.abs(value1.value - value2.value) < tolerance;
 }

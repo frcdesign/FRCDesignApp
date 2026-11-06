@@ -21,8 +21,12 @@
         "gen:onshape-types": "openapi-ts",
         "pretest": "npm run messages",
         "test": "vitest run",
+        "test:node": "vitest run --project node",
+        "test:dom": "vitest run --project dom",
+        "test:backend": "vitest run --project backend",
         "check:migrations": "node --disable-warning=ExperimentalWarning scripts/check-migrations.js",
         "check:docs": "node scripts/check-docs.js",
+        "sync:generated-parts": "node scripts/sync-generated-parts.js",
         "test:watch": "vitest",
         "prepare": "husky",
         "postinstall": "npm run messages"

@@ -3,6 +3,41 @@
 import { type ElementPath } from "@backend/lib/onshape/path";
 import { useEffect } from "react";
 import { useOnshapeServer, useTargetElement } from "./onshape-params";
+import {
+    expectCleared,
+    expectSelection,
+    parseSelections,
+    useOnshapeSelection
+} from "./selection";
+
+/**
+ * What carries the window's whole selection each time it changes: SELECTION,
+ * and while a request is pending, its answers instead, when they have one.
+ */
+const SELECTION_MESSAGES = new Set([
+    "SELECTION",
+    "REQUESTED_SELECTION",
+    "REQUESTED_SELECTION_HIGHLIGHT"
+]);
+
+function carriesSelection(data: unknown): boolean {
+    const { messageName, selections } = data as {
+        messageName?: unknown;
+        selections?: unknown;
+    };
+    return (
+        typeof messageName === "string" &&
+        SELECTION_MESSAGES.has(messageName) &&
+        Array.isArray(selections)
+    );
+}
+
+declare global {
+    interface Window {
+        /** Posts a message to Onshape, addressed to the launching element; from the browser console. */
+        sendToOnshape?: (message: Record<string, unknown>) => void;
+    }
+}
 
 export function useMessageListener() {
     // Nothing to message unless embedded in an Onshape document.
@@ -10,9 +45,16 @@ export function useMessageListener() {
     const server = useOnshapeServer();
 
     useEffect(() => {
-        if (target) {
-            sendInitMessage(target);
+        if (!target) {
+            return;
         }
+        sendInitMessage(target);
+        // For trying messages Onshape doesn't document, from the browser console
+        window.sendToOnshape = (message) =>
+            sendMessage(target, message as unknown as Message);
+        return () => {
+            delete window.sendToOnshape;
+        };
     }, [target]);
 
     useEffect(() => {
@@ -20,9 +62,12 @@ export function useMessageListener() {
             if (server !== event.origin) {
                 return;
             }
-            const { messageName } = event.data as Partial<Message>;
-            if (!messageName) {
-                return;
+            // What Onshape sends about selection is undocumented; this is how to see it
+            console.debug("Received from Onshape", event.data);
+            if (carriesSelection(event.data)) {
+                useOnshapeSelection
+                    .getState()
+                    .receive(parseSelections(event.data));
             }
         };
 
@@ -44,6 +89,111 @@ export function sendOpenFeatureMessage(
     sendMessage(elementPath, {
         messageName: MessageType.OPEN_FEATURE,
         featureId
+    });
+}
+
+/** Onshape wants each request identified uniquely; one highlight is up at a time. */
+const HIGHLIGHT_PREFIX = "highlight-selection-";
+let highlights = 0;
+
+/** Something picked in the assembly, as Onshape names it. */
+export interface HighlightedEntity {
+    entityType: string;
+    selectionId: string;
+    occurrencePath: string[];
+}
+
+/**
+ * Makes `entities` what the Onshape window shows selected, in place of what it
+ * showed. Onshape documents this shape for a Part Studio entity, without
+ * `occurrencePath`; a mate connector's body never lit (see below).
+ */
+export function sendHighlightMessage(
+    elementPath: ElementPath,
+    entities: HighlightedEntity[]
+): string {
+    expectSelection(entities);
+    const messageId = `${HIGHLIGHT_PREFIX}${++highlights}`;
+    sendMessage(elementPath, {
+        messageName: MessageType.REQUEST_HIGHLIGHT_SELECTION,
+        messageId,
+        selections: entities.map((entity) => ({
+            selectionType: "ENTITY",
+            entityType: entity.entityType,
+            selectionId: entity.selectionId,
+            occurrencePath: entity.occurrencePath
+        }))
+    });
+    return messageId;
+}
+
+/**
+ * What the Onshape window lets be picked while a request is pending, as
+ * `requestSelection` takes it: an array of one specifier at each level. Onshape
+ * documents other field names, which it ignores.
+ */
+export interface SelectionFilter {
+    entityTypeSpecifier: string[];
+    selectionTypeSpecifier?: string[];
+    geometryTypeSpecifier?: string[];
+    bodyTypeSpecifier?: string[];
+}
+
+export const CIRCULAR_EDGES: SelectionFilter = {
+    entityTypeSpecifier: ["EDGE"],
+    selectionTypeSpecifier: ["GEOMETRY"],
+    geometryTypeSpecifier: ["CIRCLE"]
+};
+
+/** Whole parts. */
+export const SOLID_BODIES: SelectionFilter = {
+    entityTypeSpecifier: ["BODY"],
+    bodyTypeSpecifier: ["SOLID"]
+};
+export const PLANAR_FACES: SelectionFilter = {
+    entityTypeSpecifier: ["FACE"],
+    selectionTypeSpecifier: ["GEOMETRY"],
+    geometryTypeSpecifier: ["PLANE"]
+};
+
+const SELECTION_PREFIX = "selection-";
+let selectionRequests = 0;
+
+/**
+ * Limits picks in the Onshape window to `filter` until {@link sendStopRequestMessage},
+ * clearing what it shows selected. Picks still arrive as SELECTION messages.
+ * A highlight cancels it.
+ */
+export function sendSelectionRequest(
+    elementPath: ElementPath,
+    filter: SelectionFilter
+): string {
+    expectCleared();
+    const messageId = `${SELECTION_PREFIX}${++selectionRequests}`;
+    sendMessage(elementPath, {
+        messageName: MessageType.REQUEST_SELECTION,
+        messageId,
+        ...filter
+    });
+    return messageId;
+}
+
+/** Ends the request `messageId` names: a selection filter, or a highlight. */
+export function sendStopRequestMessage(
+    elementPath: ElementPath,
+    messageId: string
+) {
+    sendMessage(elementPath, {
+        messageName: MessageType.STOP_REQUEST,
+        messageId
+    });
+}
+
+/** Onshape's blue bubble at the top of the panel. */
+export function sendMessageBubble(elementPath: ElementPath, message: string) {
+    sendMessage(elementPath, {
+        messageName: MessageType.SHOW_MESSAGE_BUBBLE,
+        message
     });
 }
 
@@ -84,5 +234,6 @@ function sendMessage(elementPath: ElementPath, message: Message) {
         workspaceId: elementPath.instanceId,
         elementId: elementPath.elementId
     };
+    console.debug("Sent to Onshape", messageToSend);
     window.parent.postMessage(messageToSend, "*");
 }

@@ -6,3 +6,5 @@ worker-configuration.d.ts
 onshape-api-reference
 # Compiled by Paraglide.
 src/frontend/paraglide
+# Synced by `npm run sync:generated-parts` on one line each, which prettier would spread over tens of thousands.
+src/__test_utils__/fasteners-manifest.gen.ts

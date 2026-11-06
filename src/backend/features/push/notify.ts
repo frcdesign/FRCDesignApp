@@ -41,6 +41,19 @@ export function pushVersionJob(
     return broadcast(env, { type: PushType.VERSION_JOB, workspaceKey });
 }
 
+/** Tells whoever is in an assembly's workspace that the Auto Assembly run in it moved on. */
+export function pushAssemblyJob(
+    env: AppBindings,
+    workspaceKey: string,
+    assemblyKey: string
+): Promise<void> {
+    return broadcast(env, {
+        type: PushType.ASSEMBLY_JOB,
+        workspaceKey,
+        assemblyKey
+    });
+}
+
 export function pushThumbnailRendered(
     env: AppBindings,
     thumbnail: Omit<ThumbnailPush, "type">

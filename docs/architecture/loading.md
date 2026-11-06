@@ -46,7 +46,11 @@ stopped. One reload holds a library at a time.
   `excluded_parameter_ids` — an admin's choices, which a load reads but never
   writes.
 - `libraries.cache_version` — bumped by every load that wrote; every library
-  response is cached under it.
+  response is cached under it, for a year. A bump moves it to the time in
+  milliseconds, or one past it if that's later (`bumpLibraryVersion`), so it
+  never repeats after a database is reset, restored or replaced by a cert dump,
+  where a counter starting over would serve a browser another database's
+  cached library.
 - `groups.held_at` — when a webhook last reported a version not yet loaded;
   null when nothing is held. Set by the webhook, cleared by a load.
 - `libraries.hold_new_versions` — whether a new version waits for approval;
@@ -137,7 +141,9 @@ insertables.
 
 `loadInsertable`: probes the tab under the limiter (configuration, parts, mate
 connector, vendors, and a record per indexed combination), fetches its thumbnail
-under the thumbnail limiter, runs the insertable checks, and saves the row.
+under the thumbnail limiter, runs the insertable checks, and saves the row. A
+generated tab's vendors and records are robot-code's instead, and a tab
+configured otherwise fails (see [generated-parts.md](./generated-parts.md)).
 
 Fastening (`parse-fasten.ts`):
 
@@ -265,7 +271,7 @@ approval. A failed load leaves the hold in place.
 
 | Failure                                     | Result                                                 | Recovery                                                                                      |
 | ------------------------------------------- | ------------------------------------------------------ | --------------------------------------------------------------------------------------------- |
-| An Onshape step fails                       | Retried with backoff, honoring `Retry-After`           | Automatic; exhausted, the group or tab is flagged                                             |
+| An Onshape step fails                       | Retried once after 2 s, honoring `Retry-After`         | Automatic; exhausted, the group or tab is flagged                                             |
 | A tab fails                                 | `LOAD_FAILED` on it, `INSERTABLES_FAILED` on the group | **Reload**                                                                                    |
 | A new document's load never starts          | The shell group keeps `NOT_LOADED`                     | **Reload**                                                                                    |
 | A reload dies holding the library           | Its claim is left behind                               | The next reload or job-status read takes over and flags what it hadn't finished `LOAD_FAILED` |

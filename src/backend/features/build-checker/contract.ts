@@ -32,6 +32,8 @@ export interface InsertableBuildStatus extends IndexingSettings {
     supportsFasten: boolean;
     /** An admin turned fastening off; otherwise it is on wherever a connector is found. */
     fastenDisabled: boolean;
+    /** The generated studio it is (`fasteners/screw`), which indexes every configuration itself. */
+    generatedStudio?: string;
     vendors: Vendor[];
     /** Empty for an element without configurations. */
     parameters: ConfigurationParameter[];

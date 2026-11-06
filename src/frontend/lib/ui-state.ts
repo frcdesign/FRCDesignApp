@@ -12,6 +12,7 @@ import type { Vendor } from "@backend/features/library/vendors";
 import type { PartialSelection } from "@backend/features/configurations/contract";
 import type { Hint } from "@backend/features/hints/contract";
 import type { AppTab } from "./app-tab";
+import { SelectionMode } from "@backend/features/auto-assembly/contract";
 
 export enum Theme {
     DARK = "dark",
@@ -61,6 +62,10 @@ interface UiState {
     vendorFilters: Partial<Record<LibraryId, Vendor[]>>;
     searchQuery: string;
     fasten: boolean;
+    /** What an insert and fasten's picks are: circular edges, or faces with holes to skip. */
+    fastenSelectionMode: SelectionMode;
+    /** How many times an insert and fasten has offered the circular edges tip; see `insert-tips`. */
+    fastenCircularEdgesTipCount: number;
     /** The access level to view the app as; absent means the granted default. */
     accessLevel?: AccessLevel;
     /** So a relaunch can reopen the insert menu. */
@@ -80,7 +85,9 @@ export const useUiState = create<UiState>()(
             vendorFilters: {},
             searchQuery: "",
             fasten: true,
-            seenHints: []
+            seenHints: [],
+            fastenSelectionMode: SelectionMode.LOCATIONS,
+            fastenCircularEdgesTipCount: 0
         }),
         { name: "uiState", version: 1, migrate: migrateUiState }
     )

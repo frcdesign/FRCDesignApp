@@ -9,21 +9,23 @@ their Onshape calls and link here for how those calls behave.
 
 ## Code map
 
-| Path                                              | Role                                                                              |
-| ------------------------------------------------- | --------------------------------------------------------------------------------- |
-| `src/backend/lib/onshape/client.ts`               | `OnshapeApi`, `OAuthApi`, `ApiKeyApi`; `OnshapeApiError`, `OnshapeRateLimitError` |
-| `src/backend/lib/onshape/endpoints/`              | One wrapper per Onshape endpoint, grouped by Onshape's API category               |
-| `src/backend/lib/api-error.ts`                    | `ApiError` and its four kinds; the body every failed `/api` response carries      |
-| `src/backend/lib/errors.ts`                       | `errorHandler`: turns any thrown error into that body and a status                |
-| `src/backend/features/load/steps.ts`              | Workflow retry policies for Onshape and thumbnail steps                           |
-| `src/backend/features/load/context.ts`            | The load's limiters                                                               |
-| `src/backend/lib/cache.ts`                        | `CachePolicy`, `cacheMiddleware`, `setCache`                                      |
-| `src/backend/features/push/`                      | `ClientRelay` Durable Object, message contract, `notify.ts` senders               |
-| `src/frontend/lib/api-client.ts`                  | `apiGet`, `apiPost`, `apiDelete`, `loadImage`; appends `?v=` for cached reads     |
-| `src/frontend/lib/errors.ts`                      | `AppError`, `handleAppError`, `getAppErrorHandler`                                |
-| `src/frontend/lib/notifications.tsx`              | `showLoadingToast`, `showSuccessToast`, `showInfoToast`, `showErrorToast`         |
-| `src/frontend/lib/query-client.ts`                | TanStack Query defaults, including retry                                          |
-| `src/frontend/lib/push-socket.ts`, `push-sync.ts` | The client's WebSocket, and applying pushes to the cache                          |
+| Path                                              | Role                                                                                                                   |
+| ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `src/backend/lib/onshape/client.ts`               | `OnshapeApi`, `OAuthApi`, `ApiKeyApi`; `OnshapeApiError`, `OnshapeRateLimitError`                                      |
+| `src/backend/lib/onshape/endpoints/`              | One wrapper per Onshape endpoint, grouped by Onshape's API category                                                    |
+| `src/backend/lib/api-error.ts`                    | `ApiError` and its four kinds; the body every failed `/api` response carries                                           |
+| `src/backend/lib/errors.ts`                       | `errorHandler`: turns any thrown error into that body and a status                                                     |
+| `src/backend/lib/onshape/failures.ts`             | `onshapeStatus`, `isTransient`, `isRateLimited`; `OnshapeFailure` and `describeOnshapeFailure`: one wording per status |
+| `src/backend/lib/run-failures.ts`                 | `runFailures`: a background run's failures worded at the step and read back at the report                              |
+| `src/backend/features/load/steps.ts`              | Workflow retry policies for Onshape and thumbnail steps                                                                |
+| `src/backend/features/load/context.ts`            | The load's limiters                                                                                                    |
+| `src/backend/lib/cache.ts`                        | `CachePolicy`, `cacheMiddleware`, `setCache`                                                                           |
+| `src/backend/features/push/`                      | `ClientRelay` Durable Object, message contract, `notify.ts` senders                                                    |
+| `src/frontend/lib/api-client.ts`                  | `apiGet`, `apiPost`, `apiDelete`, `loadImage`; appends `?v=` for cached reads                                          |
+| `src/frontend/lib/errors.ts`                      | `AppError`, `handleAppError`, `getAppErrorHandler`                                                                     |
+| `src/frontend/lib/notifications.tsx`              | `showLoadingToast`, `showSuccessToast`, `showInfoToast`, `showErrorToast`                                              |
+| `src/frontend/lib/query-client.ts`                | TanStack Query defaults, including retry                                                                               |
+| `src/frontend/lib/push-socket.ts`, `push-sync.ts` | The client's WebSocket, and applying pushes to the cache                                                               |
 
 ## Calling Onshape
 
@@ -55,18 +57,18 @@ Which calls each flow makes is listed in that flow's document.
 
 A route throws; `errorHandler` answers with `{ kind, message }` and a status:
 
-| Thrown                           | Kind               | Status   | Message the user sees                                       |
-| -------------------------------- | ------------------ | -------- | ----------------------------------------------------------- |
-| `handledError(message, status)`  | `handled`          | as given | `message`                                                   |
-| `signInRequiredError(message)`   | `sign-in-required` | 401      | `message`, with a **Sign in** button                        |
-| `forbiddenError(message)`        | `forbidden`        | 403      | `message`                                                   |
-| `internalError(message, status)` | `internal`         | as given | The caller's default wording; `message` is logged           |
-| `OnshapeRateLimitError`          | `handled`          | 429      | "Onshape rate limit reached. Please try again later."       |
-| `OnshapeApiError` 401            | `sign-in-required` | 401      | "Onshape did not accept the session. Try signing in again." |
-| `OnshapeApiError` 403            | `forbidden`        | 403      | "Onshape rejected the operation. …"                         |
-| Any other `OnshapeApiError`      | `internal`         | 502      | Default wording; logged                                     |
-| A validator's `HTTPException`    | `internal`         | its own  | Default wording; logged                                     |
-| Anything else                    | `internal`         | 500      | Default wording; logged                                     |
+| Thrown                           | Kind               | Status   | Message the user sees                             |
+| -------------------------------- | ------------------ | -------- | ------------------------------------------------- |
+| `handledError(message, status)`  | `handled`          | as given | `message`                                         |
+| `signInRequiredError(message)`   | `sign-in-required` | 401      | `message`, with a **Sign in** button              |
+| `forbiddenError(message)`        | `forbidden`        | 403      | `message`                                         |
+| `internalError(message, status)` | `internal`         | as given | The caller's default wording; `message` is logged |
+| `OnshapeRateLimitError`          | `handled`          | 429      | `OnshapeFailure.RATE_LIMITED`                     |
+| `OnshapeApiError` 401            | `sign-in-required` | 401      | `OnshapeFailure.SIGN_IN_EXPIRED`                  |
+| `OnshapeApiError` 403            | `forbidden`        | 403      | `OnshapeFailure.FORBIDDEN`                        |
+| Any other `OnshapeApiError`      | `internal`         | 502      | Default wording; logged                           |
+| A validator's `HTTPException`    | `internal`         | its own  | Default wording; logged                           |
+| Anything else                    | `internal`         | 500      | Default wording; logged                           |
 
 On the client, `apiGet`/`apiPost` throw an `AppError` holding that body. A
 mutation's `onError` is `getAppErrorHandler(defaultMessage, toastId)`, which
@@ -79,19 +81,37 @@ the error behind it, `internal` message included; a failed load shown as
 beside **Send a report**. See [feedback.md](./feedback.md). Images use `loadImage`, which throws `ImageLoadError` with only
 the status.
 
+A background run (the version manager's, Auto Assembly's) has no response to
+carry a body, so each feature makes a `runFailures(marker)`. A step that fails
+leaves with `word(message)`, the message being `describeOnshapeFailure` with
+the feature's own words for a refusal, or the feature's wording for the step;
+the report reads it back with `describe`, which falls back to what the status
+says and then to `UNEXPECTED_FAILURE`.
+
+| `OnshapeFailure`  | Message                                                                                                                              |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `SIGN_IN_EXPIRED` | "Your Onshape sign-in expired. Sign in again, then try again."                                                                       |
+| `FORBIDDEN`       | "Onshape rejected the operation. Make sure you have access to this document and you're signed in to the correct Onshape enterprise." |
+| `RATE_LIMITED`    | "Onshape is limiting requests. Try again in a few minutes."                                                                          |
+| `UNAVAILABLE`     | "Onshape is having problems. Try again shortly." (5xx)                                                                               |
+| `NO_ANSWER`       | "Onshape stopped responding. Try again shortly." (no response)                                                                       |
+
+`UNEXPECTED_FAILURE` (`src/backend/lib/api-error.ts`): "Something went wrong.
+If it keeps happening, send a report."
+
 ## Retries and timeouts
 
-| Where                           | Setting                            | Policy                                                                                     |
-| ------------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------ |
-| Any Onshape request             | `REQUEST_TIMEOUT_MS`               | Aborts after 60 s                                                                          |
-| Load steps calling Onshape      | `ONSHAPE_STEP_RETRIES`             | 5 retries after 10, 20, 40, 80, 160 s; a 429 waits its `Retry-After` plus 0–20 s of jitter |
-| Load thumbnail steps            | `THUMBNAIL_RETRIES`                | 3 retries after 10, 20, 40 s; a 429 as above                                               |
-| Configuration renders           | `RENDER_RETRIES`                   | 30 retries every 2 s; a 429 waits its `Retry-After` plus jitter                            |
-| A reload waiting its turn       | `TURN_INTERVAL`                    | Checks the library again every 30 s                                                        |
-| Client queries                  | `queryClient` default              | 2 retries, none for an `AppError` that isn't `internal`                                    |
-| Stored thumbnails on the client | `STORED_RETRIES`                   | 1 retry                                                                                    |
-| Waiting on a render             | `RENDER_TIMEOUT_MS`                | Gives up after 60 s without the image                                                      |
-| Push socket                     | `FIRST_RETRY_MS` → `LAST_RETRY_MS` | Reconnects after 1 s, doubling to 30 s                                                     |
+| Where                           | Setting                            | Policy                                                                 |
+| ------------------------------- | ---------------------------------- | ---------------------------------------------------------------------- |
+| Any Onshape request             | `REQUEST_TIMEOUT_MS`               | Aborts after 60 s                                                      |
+| Steps calling Onshape           | `ONSHAPE_STEP_RETRIES`             | 1 retry after 2 s; a 429 waits its `Retry-After` plus 0–20 s of jitter |
+| Load thumbnail steps            | `THUMBNAIL_RETRIES`                | 3 retries after 10, 20, 40 s; a 429 as above                           |
+| Configuration renders           | `RENDER_RETRIES`                   | 30 retries every 2 s; a 429 waits its `Retry-After` plus jitter        |
+| A reload waiting its turn       | `TURN_INTERVAL`                    | Checks the library again every 30 s                                    |
+| Client queries                  | `queryClient` default              | 2 retries, none for an `AppError` that isn't `internal`                |
+| Stored thumbnails on the client | `STORED_RETRIES`                   | 1 retry                                                                |
+| Waiting on a render             | `RENDER_TIMEOUT_MS`                | Gives up after 60 s without the image                                  |
+| Push socket                     | `FIRST_RETRY_MS` → `LAST_RETRY_MS` | Reconnects after 1 s, doubling to 30 s                                 |
 
 Workflows multiply a retry's delay by its backoff curve, so every policy returns
 its own delay from a function and sets `backoff: "constant"`.
@@ -122,20 +142,20 @@ which is how a loading toast turns into its result.
 
 The flows that use them:
 
-| Action                        | Toast id                                                  | While                          | Then                                                            |
-| ----------------------------- | --------------------------------------------------------- | ------------------------------ | --------------------------------------------------------------- |
-| Insert                        | per insertable                                            | "Inserting {name}..."          | "Successfully inserted {name}." (and "…created a Fasten mate.") |
-| Add document                  | `add-group`                                               | "Adding document..."           | "Added {name}."                                                 |
-| Reload thumbnail              | `reload-thumbnail`                                        | "Reloading thumbnail..."       | "Thumbnail reloaded."                                           |
-| Show or hide elements         | `set-visibility`                                          | "Showing/Hiding element(s)..." | "Element(s) shown/hidden."                                      |
-| Toggle insert and fasten      | per insertable                                            | loading                        | success                                                         |
-| Save indexing changes         | per insertable                                            | info: "Reindexing part..."     | "Successfully indexed part."                                    |
-| Set or refresh the admin team | none                                                      | —                              | "Admin team set/refreshed: {n} members."                        |
-| Reload documents / approve    | none                                                      | —                              | info: "Reloading {n} documents..."                              |
-| Save favorite configuration   | none                                                      | —                              | "Favorite default configuration set."                           |
-| Link a document               | none                                                      | —                              | "Successfully linked {document} - {workspace}."                 |
-| Refresh the version manager   | none                                                      | the button's spinner           | "Refreshed linked documents."                                   |
-| Tips                          | `quick-insert-tip`, `thumbnail-wait-tip`, sign-in preview | —                              | info, 8 s                                                       |
+| Action                        | Toast id                                                                               | While                          | Then                                                                                                     |
+| ----------------------------- | -------------------------------------------------------------------------------------- | ------------------------------ | -------------------------------------------------------------------------------------------------------- |
+| Insert                        | per insertable                                                                         | "Inserting {name}..."          | "Successfully inserted {name}." (and "…created a Fasten mate." or "…fastened it to {n} circular edges.") |
+| Add document                  | `add-group`                                                                            | "Adding document..."           | "Added {name}."                                                                                          |
+| Reload thumbnail              | `reload-thumbnail`                                                                     | "Reloading thumbnail..."       | "Thumbnail reloaded."                                                                                    |
+| Show or hide elements         | `set-visibility`                                                                       | "Showing/Hiding element(s)..." | "Element(s) shown/hidden."                                                                               |
+| Toggle insert and fasten      | per insertable                                                                         | loading                        | success                                                                                                  |
+| Save indexing changes         | per insertable                                                                         | info: "Reindexing part..."     | "Successfully indexed part."                                                                             |
+| Set or refresh the admin team | none                                                                                   | —                              | "Admin team set/refreshed: {n} members."                                                                 |
+| Reload documents / approve    | none                                                                                   | —                              | info: "Reloading {n} documents..."                                                                       |
+| Save favorite configuration   | none                                                                                   | —                              | "Favorite default configuration set."                                                                    |
+| Link a document               | none                                                                                   | —                              | "Successfully linked {document} - {workspace}."                                                          |
+| Refresh the version manager   | none                                                                                   | the button's spinner           | "Refreshed linked documents."                                                                            |
+| Tips                          | `quick-insert-tip`, `thumbnail-wait-tip`, `fasten-circular-edges-tip`, sign-in preview | —                              | info, 8 s                                                                                                |
 
 Loading toasts are for work the user watches; background work gets an info
 toast and then shows its progress where it happens (a group's spinner, a job
@@ -148,15 +168,16 @@ One `ClientRelay` Durable Object holds every client's WebSocket
 (`GET /api/push?library=<id>`), hibernating so idle sockets cost nothing, and
 tags each with the library it shows.
 
-| Message       | Sent by                                              | To                       | The client                                                     |
-| ------------- | ---------------------------------------------------- | ------------------------ | -------------------------------------------------------------- |
-| `jobs`        | A reload asked for, claiming, progressing, finishing | That library's sockets   | Sets the job status query (editors only)                       |
-| `library`     | A load that wrote, a shell group, an admin team sync | That library's sockets   | `refreshLibrary()`, which moves to the new cache version       |
-| `thumbnail`   | Each stored render size                              | Every socket             | Refetches rows that missed that render; wakes a waiting render |
-| `version-job` | A push or pull starting, and the workflow ending it  | That workspace's sockets | Sets the run's status query                                    |
+| Message        | Sent by                                              | To                       | The client                                                     |
+| -------------- | ---------------------------------------------------- | ------------------------ | -------------------------------------------------------------- |
+| `jobs`         | A reload asked for, claiming, progressing, finishing | That library's sockets   | Sets the job status query (editors only)                       |
+| `library`      | A load that wrote, a shell group, an admin team sync | That library's sockets   | `refreshLibrary()`, which moves to the new cache version       |
+| `thumbnail`    | Each stored render size                              | Every socket             | Refetches rows that missed that render; wakes a waiting render |
+| `version-job`  | A push or pull starting, and the workflow ending it  | That workspace's sockets | Sets the run's status query                                    |
+| `assembly-job` | A fastener run starting, each step, and its end      | That workspace's sockets | Refetches the run's status, if it's this page's assembly       |
 
 A socket is tagged with the library it shows and, where Onshape launched the app
-in one, the workspace it was launched in — which is what a `version-job` reaches.
+in one, the workspace it was launched in — which is what a `version-job` or `assembly-job` reaches.
 
 A push says only what changed; the client refetches under its own access, so
 nothing private travels over it. A failed send is logged, not thrown. A client
@@ -189,6 +210,11 @@ that reconnects refreshes the library, since pushes during the outage are lost.
 - **Retries at the step, not the request.** A workflow step's retry is durable
   and visible; a retry inside `fetch` would hide attempts inside one step's
   timeout.
+- **One quick retry.** A step's Onshape calls are ones Onshape answers at
+  once, waiting on no background work, so a second failure won't be followed
+  by a success: one retry two seconds on, then the step fails and says why,
+  rather than backing off for minutes. Thumbnails, which Onshape renders in
+  the background, keep their own longer policy.
 - **One push hub.** Pushes are few and small; one instance keeps fan-out simple.
 - **Errors by kind, not status.** The client decides wording from `kind`, so a
   status can change without changing what the user reads.

@@ -43,6 +43,8 @@ export function getIssueTitle(issue: BuildIssue): string {
             return m.buildIssueLoadFailed();
         case BuildIssueType.NOT_LOADED:
             return m.buildIssueNotLoaded();
+        case BuildIssueType.GENERATED_PART_MISMATCH:
+            return m.buildIssueGeneratedPartMismatch();
     }
 }
 
@@ -65,6 +67,8 @@ export function getIssueDescription(issue: BuildIssue): string | undefined {
             return m.buildIssueUnstableMateConnectorHelp();
         case BuildIssueType.NOT_LOADED:
             return m.buildIssueNotLoadedHelp();
+        case BuildIssueType.GENERATED_PART_MISMATCH:
+            return m.buildIssueGeneratedPartMismatchHelp();
         default:
             return undefined;
     }

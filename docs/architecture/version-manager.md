@@ -34,7 +34,7 @@ it.
 | `src/backend/features/version-manager/workflow.ts`                              | `VersionManagerWorkflow`, one class over a push or a pull                             |
 | `src/backend/features/version-manager/tasks.ts`                                 | Pure: the steps a run will take, which its status lists                               |
 | `src/backend/features/version-manager/jobs.ts`                                  | The run a workspace last started, and its status                                      |
-| `src/backend/features/version-manager/failures.ts`                              | Which Onshape failures to retry, and each in words                                    |
+| `src/backend/features/version-manager/failures.ts`                              | Each task's failure in words, on `runFailures`                                        |
 | `src/backend/features/version-manager/workspace-cache.ts`                       | A linked workspace's names and pending-change count, and callers' permissions, cached |
 | `src/backend/features/version-manager/routes.ts`                                | Every route below                                                                     |
 | `src/frontend/features/version-manager/queries.ts`                              | The queries and mutations                                                             |
@@ -229,8 +229,9 @@ alone.
 Each step runs through `runTask` in `workflow.ts`, which reports it started, then
 makes each Onshape call in its own retried Workflow step. A failure that could
 go differently next time — a rate limit, a 408 or 5xx, or a request that never
-got an answer (`isTransient`) — is retried from the top of that step; tabs
-already moved need nothing the second time. Any other fails the step at once,
+got an answer (`isTransient`) — is retried once from the top of that step, two
+seconds later (`ONSHAPE_STEP_RETRIES`); tabs already moved need nothing the
+second time. Any other fails the step at once,
 as a `NonRetryableError` worded by `describeStepFailure` from its status and the
 call that failed ("Couldn't update this document's references."). Onshape's own
 messages are never shown: they are written for developers.

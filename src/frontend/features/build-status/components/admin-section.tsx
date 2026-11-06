@@ -29,7 +29,10 @@ export function InsertableSettings(props: InsertableSettingsProps): ReactNode {
                 insertableId={insertableId}
                 isVisible={status.isVisible}
             />
-            <FastenSwitch insertableId={insertableId} status={status} />
+            {/* A FeatureScript part always fastens */}
+            {!status.generatedStudio && (
+                <FastenSwitch insertableId={insertableId} status={status} />
+            )}
             <HoverBubbleRow label={m.adminCardVendors()}>
                 <VendorBadges vendors={status.vendors} />
             </HoverBubbleRow>

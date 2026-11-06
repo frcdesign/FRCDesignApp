@@ -1,4 +1,4 @@
-import { Stack, Title } from "@mantine/core";
+import { SimpleGrid, Stack, Title } from "@mantine/core";
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { type ReactNode } from "react";
@@ -26,8 +26,12 @@ import {
 } from "../../../../features/dashboard/range";
 import { UsageTreemap } from "../../../../features/dashboard/usage-treemap";
 import { HeadlineTiles } from "../../../../features/dashboard/headline-tiles";
-import { SectionCard } from "../../../../components/section";
+import { Section, SectionCard } from "../../../../components/section";
 import { LibraryReports } from "../../../../features/dashboard/report-summary";
+import {
+    FastenMethodBreakdown,
+    InsertMethodBreakdown
+} from "../../../../features/dashboard/insert-mix";
 
 export const Route = createFileRoute("/dashboard/library/$libraryId/")({
     component: LibraryOverview
@@ -89,6 +93,13 @@ function LibraryBody({
             />
 
             <InsertsOverTimeCard series={metricSeries} libraryId={libraryId} />
+
+            <Section title="How people use it">
+                <SimpleGrid cols={{ base: 1, sm: 2 }}>
+                    <InsertMethodBreakdown totals={totals} />
+                    <FastenMethodBreakdown totals={totals} />
+                </SimpleGrid>
+            </Section>
 
             <SectionCard title="Most used parts">
                 {parts.data ? (

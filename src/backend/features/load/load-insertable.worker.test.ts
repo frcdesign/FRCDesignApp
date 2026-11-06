@@ -37,6 +37,14 @@ import { LOAD_CONCURRENCY, type LoadContext } from "./context";
 import { createLimiter } from "../../lib/limiter";
 import * as LoadContextModule from "./context";
 import { loadInsertable, saveInsertable } from "./load-insertable";
+import { GeneratedPartMismatchError } from "../generated-parts/records";
+import * as BlobEndpoints from "../../lib/onshape/endpoints/blob-elements";
+import { NUT_MANIFEST } from "../../../__test_utils__/generated-fixtures";
+import { Vendor } from "../library/vendors";
+import {
+    type OnshapeConfigurationResponse,
+    OnshapeParameterType
+} from "../../lib/onshape/types";
 
 const db = getDb(env.DB);
 
@@ -356,5 +364,115 @@ describe("loadInsertable", () => {
         expect(row?.buildIssues.map((issue) => issue.type)).not.toContain(
             BuildIssueType.THUMBNAIL_FAILED
         );
+    });
+});
+
+describe("loadInsertable, for a generated studio", () => {
+    // Onshape answers with its configuration as robot-code sent it
+    const nutConfiguration = () =>
+        ({
+            ...structuredClone(NUT_MANIFEST.studios.nut.configuration),
+            btType: "BTConfigurationResponse-2019"
+        }) as unknown as OnshapeConfigurationResponse;
+    // The manifest released beside it says it's the nut studio
+    const generatedTarget = () =>
+        insertableTarget({
+            generated: {
+                set: "fasteners",
+                key: "nut",
+                manifestElementId: "manifest"
+            }
+        });
+
+    beforeEach(async () => {
+        await resetDb(db);
+        await seedGroup(db);
+        vi.spyOn(
+            LoadContextModule,
+            "getOnshapeApiFromContext"
+        ).mockResolvedValue(MOCK_ONSHAPE_API);
+        vi.spyOn(ThumbnailStore, "uploadThumbnails").mockResolvedValue({
+            small: "small",
+            large: "large"
+        });
+        vi.spyOn(PartsEndpoints, "getParts").mockResolvedValue([
+            { partId: "p1" }
+        ]);
+        vi.spyOn(BlobEndpoints, "getBlobText").mockResolvedValue(
+            JSON.stringify(NUT_MANIFEST)
+        );
+        // Its only feature, which makes its mate connector, as its manifest says
+        vi.spyOn(PartStudioEndpoints, "getFeatures").mockResolvedValue({
+            features: [
+                {
+                    featureType: "fastenerNut",
+                    featureId: "nut-feature",
+                    name: "Nut",
+                    suppressed: false
+                }
+            ]
+        });
+    });
+
+    afterEach(() => vi.restoreAllMocks());
+
+    it("indexes every configuration from the generator, without probing one", async () => {
+        vi.spyOn(ConfigurationEndpoints, "getConfiguration").mockResolvedValue(
+            nutConfiguration()
+        );
+
+        await loadInsertable(ctx(), generatedTarget());
+
+        // Its manifest read from the version it's loaded at
+        expect(BlobEndpoints.getBlobText).toHaveBeenCalledWith(
+            MOCK_ONSHAPE_API,
+            { ...TEST_PART_STUDIO_PATH, elementId: "manifest" }
+        );
+        const row = await readInsertable(db);
+        expect(row?.generatedStudio).toBe("fasteners/nut");
+        expect(row?.partMetadata?.name).toBe("#10-32 Nylock Nut");
+        expect(row?.vendors).toContain(Vendor.MCM);
+        expect(row?.fastenDisabled).toBe(false);
+        expect(row?.fastenInfo).toEqual({
+            mateConnectorId: "nut-feature.mateConnector",
+            mateLocation: MateLocation.Feature,
+            path: []
+        });
+        const stored = await db
+            .select()
+            .from(configurations)
+            .where(eq(configurations.insertableId, TEST_PART_STUDIO_ID))
+            .get();
+        const mcmaster = stored?.records.find(
+            (each) =>
+                each.values.vendor === "MCMASTER" &&
+                each.values.size === "NO_10_32" &&
+                each.values.type === "NYLOCK"
+        );
+        expect(mcmaster).toMatchObject({
+            name: "#10-32 Nylock Nut",
+            partNumber: "90631A411",
+            vendor: "McMaster-Carr"
+        });
+        // Only the default parts, for the thumbnail and its composite check
+        expect(PartsEndpoints.getParts).toHaveBeenCalledTimes(1);
+    });
+
+    it("fails, keeping nothing, when the tab isn't configured as generated", async () => {
+        const configuration = nutConfiguration();
+        const type = configuration.configurationParameters.find(
+            (parameter) => parameter.parameterId === "type"
+        );
+        if (type?.btType === OnshapeParameterType.ENUM) {
+            type.options = type.options.slice(1);
+        }
+        vi.spyOn(ConfigurationEndpoints, "getConfiguration").mockResolvedValue(
+            configuration
+        );
+
+        await expect(
+            loadInsertable(ctx(), generatedTarget())
+        ).rejects.toBeInstanceOf(GeneratedPartMismatchError);
+        expect(await readInsertable(db)).toBeUndefined();
     });
 });

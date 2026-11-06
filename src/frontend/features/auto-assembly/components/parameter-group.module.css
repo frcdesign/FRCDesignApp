@@ -1,0 +1,24 @@
+/* Its header and rows span the grid. */
+.header,
+.full {
+    grid-column: 1 / -1;
+}
+
+.header {
+    display: flex;
+    align-items: center;
+    min-height: var(--input-height-sm, rem(36px));
+}
+
+/* Its rows may all be hidden by their conditions, and an empty row would still take a gap */
+.body:empty {
+    display: none;
+}
+
+.body {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--mantine-spacing-sm);
+    align-items: start;
+}

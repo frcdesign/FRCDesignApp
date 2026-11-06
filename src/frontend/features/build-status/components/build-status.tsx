@@ -17,6 +17,7 @@ import { IconSize, StatusColor } from "../../../lib/style-constants";
 import { AppIcon } from "../../../components/app-icon";
 import { AppHoverBubble } from "../../../components/app-hover-bubble";
 import { DotIndicator } from "../../../components/dot-indicator";
+import { GeneratedBadge } from "../../../components/generated-badge";
 import { RequireAccessLevel } from "../../auth/components/require-access";
 import { useBuildStatusQuery } from "../queries";
 import { useIsGroupLoading } from "../../library/queries";
@@ -50,6 +51,8 @@ interface BuildStatusSubject {
     isHidden?: boolean;
     /** Beside the title in place of the status, which the badges under it give. */
     elementType?: ElementType;
+    /** Marks the header as a part FeatureScript generates. */
+    isGenerated?: boolean;
 }
 
 interface BuildStatusBadgeProps extends BuildStatusSubject {
@@ -80,6 +83,7 @@ function BuildStatusHoverCard({
     isHidden,
     sections,
     elementType,
+    isGenerated = false,
     hasUnsavedEdits = false
 }: BuildStatusHoverCardProps): ReactNode {
     const maxSeverity = getMaxSeverity(issues);
@@ -134,10 +138,13 @@ function BuildStatusHoverCard({
                 ),
                 title: name,
                 rightSection: (
-                    <VersionAge
-                        groupId={groupId}
-                        versionCreatedAt={versionCreatedAt}
-                    />
+                    <Group gap="xs" wrap="nowrap">
+                        {isGenerated && <GeneratedBadge />}
+                        <VersionAge
+                            groupId={groupId}
+                            versionCreatedAt={versionCreatedAt}
+                        />
+                    </Group>
                 ),
                 subtitle: <SeverityBadges issues={issues} />
             }}
@@ -235,6 +242,7 @@ export function InsertableStatusBadge(
             versionCreatedAt={insertable.versionCreatedAt}
             isHidden={!insertable.isVisible}
             elementType={insertable.elementType}
+            isGenerated={insertable.generatedStudio !== undefined}
             configurationTarget={
                 parameters.length > 0
                     ? { elementPath: insertable.elementPath, parameters }
@@ -251,14 +259,16 @@ export function InsertableStatusBadge(
                         status={insertable}
                     />
                 </CardSection>,
-                parameters.length > 0 && (
-                    <ConfigurationSection
-                        key="configuration"
-                        insertableId={insertableId}
-                        status={insertable}
-                        parameters={parameters}
-                    />
-                ),
+                // A FeatureScript part indexes every configuration from its code
+                parameters.length > 0 &&
+                    insertable.generatedStudio === undefined && (
+                        <ConfigurationSection
+                            key="configuration"
+                            insertableId={insertableId}
+                            status={insertable}
+                            parameters={parameters}
+                        />
+                    ),
                 <PartUsageSection
                     key="usage"
                     elementId={insertable.elementPath.elementId}

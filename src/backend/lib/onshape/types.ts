@@ -237,7 +237,7 @@ export interface OnshapeAssemblyFeature {
     featureData?: { occurrence: string[] };
 }
 
-/** A top-level instance in the root assembly. */
+/** An instance in the root assembly or a subassembly. */
 export interface OnshapeAssemblyInstance {
     id: string;
     /** "Part", "Assembly", or "Feature" for an inserted sketch. */
@@ -247,10 +247,19 @@ export interface OnshapeAssemblyInstance {
     documentId?: string;
     elementId?: string;
     featureId?: string;
+    /** A part's id in its Part Studio. */
+    partId?: string;
+    /** Encoded, the way it's inserted. */
+    configuration?: string;
+    fullConfiguration?: string;
+    /** Set when it's from a version; otherwise the microversion it's at. */
+    documentVersion?: string;
+    documentMicroversion?: string;
+    isStandardContent?: boolean;
 }
 
 /** Where one instance sits, as a row-major 4×4 and the path that owns it. */
-interface OnshapeOccurrence {
+export interface OnshapeOccurrence {
     /** Instance ids from the root down; one entry for a top-level instance. */
     path: string[];
     transform: number[];
@@ -259,11 +268,23 @@ interface OnshapeOccurrence {
 /** A part in the assembly's flattened `parts` list. */
 interface OnshapeAssemblyPart {
     mateConnectors?: { featureId: string }[];
+    documentId?: string;
+    elementId?: string;
+    partId?: string;
+    configuration?: string;
+    documentVersion?: string;
 }
 
 /** A subassembly in the assembly's flattened `subAssemblies` list. */
 interface OnshapeSubAssembly {
     features: OnshapeAssemblyFeature[];
+    /** Which tab and configuration it is, as an Assembly instance names it. */
+    documentId?: string;
+    elementId?: string;
+    configuration?: string;
+    fullConfiguration?: string;
+    documentMicroversion?: string;
+    instances?: OnshapeAssemblyInstance[];
 }
 
 /** What `parts` is for part instances. */
@@ -408,4 +429,31 @@ export interface OnshapeInsertables {
      * Absent for a version, which is a snapshot and cannot have moved on.
      */
     changesSinceVersionSave?: number;
+}
+
+// === FeatureScript (POST /partstudios/.../featurescript) ===
+
+/** A FeatureScript value, typed by its `btType` (`BTFSValueMap-2062`, or `com.belmonttech.serialize.fsvalue.BTFSValueMap`, ...). */
+export interface OnshapeFeatureScriptValue {
+    btType: string;
+    value?: unknown;
+}
+
+export interface OnshapeFeatureScriptResponse {
+    result?: OnshapeFeatureScriptValue;
+    /** Errors and warnings, among others; an error leaves `result` empty. */
+    notices?: { level?: string; message?: { message?: string } }[];
+}
+
+/** GET /assemblies/.../features: each feature as Onshape stores it. */
+export interface OnshapeAssemblyFeatureList {
+    features: OnshapeListedFeature[];
+}
+
+export interface OnshapeListedFeature {
+    featureId: string;
+    featureType: string;
+    /** Its parameters, whose queries name the instances it references by `path`. */
+    parameters?: unknown[];
+    mateConnectors?: unknown[];
 }

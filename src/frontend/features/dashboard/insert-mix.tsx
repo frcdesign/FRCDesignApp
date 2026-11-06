@@ -1,7 +1,11 @@
-import { Group, Progress, Stack, Text } from "@mantine/core";
+import { Card, Group, Progress, Stack, Text } from "@mantine/core";
 import { type ReactNode } from "react";
-import type { InsertSourceUsage } from "@backend/features/analytics/contract";
+import type {
+    AnalyticsTotals,
+    InsertSourceUsage
+} from "@backend/features/analytics/contract";
 import { InsertSource } from "@backend/features/analytics/usage";
+import { FontWeight } from "../../lib/style-constants";
 import { formatCount, formatFraction } from "./format";
 
 const SOURCE_LABELS: Record<InsertSource, string> = {
@@ -9,41 +13,133 @@ const SOURCE_LABELS: Record<InsertSource, string> = {
     [InsertSource.GROUP_SEARCH]: "Search within a group",
     [InsertSource.BROWSE]: "Browsing a group",
     [InsertSource.FAVORITES]: "Favorites list",
-    [InsertSource.RECENTS]: "Recently used list"
+    [InsertSource.RECENTS]: "Recently used list",
+    [InsertSource.AUTO_ASSEMBLY]: "Auto Assembly"
 };
+
+/** One bar of a breakdown: its share of the bars' sum. */
+interface Share {
+    label: string;
+    count: number;
+}
+
+interface ShareBreakdownProps {
+    title: string;
+    /** What the shares are of, where the title doesn't say. */
+    description?: string;
+    shares: Share[];
+}
+
+/** Each share as a fraction of their sum, in a card of its own. */
+function ShareBreakdown(props: ShareBreakdownProps): ReactNode {
+    const { title, description, shares } = props;
+    const total = shares.reduce((sum, share) => sum + share.count, 0);
+
+    return (
+        <Card>
+            <Stack gap="xs">
+                <div>
+                    <Text fw={FontWeight.SEMI_BOLD}>{title}</Text>
+                    {description && (
+                        <Text size="sm" c="dimmed">
+                            {description}
+                        </Text>
+                    )}
+                </div>
+                {total === 0 ? (
+                    <Text c="dimmed" py="md" ta="center">
+                        None recorded yet.
+                    </Text>
+                ) : (
+                    shares.map((share) => (
+                        <div key={share.label}>
+                            <Group justify="space-between" gap="xs" mb={4}>
+                                <Text>{share.label}</Text>
+                                <Text c="dimmed">
+                                    {formatCount(share.count)} (
+                                    {formatFraction(share.count, total)})
+                                </Text>
+                            </Group>
+                            <Progress
+                                value={(share.count / total) * 100}
+                                size="sm"
+                            />
+                        </div>
+                    ))
+                )}
+            </Stack>
+        </Card>
+    );
+}
 
 interface InsertSourceBreakdownProps {
     sources: InsertSourceUsage[];
 }
 
 /** Where inserts started from, each as a fraction of every insert. */
-export function InsertSourceBreakdown({
-    sources
-}: InsertSourceBreakdownProps): ReactNode {
-    const total = sources.reduce((sum, source) => sum + source.count, 0);
-
-    if (total === 0) {
-        return (
-            <Text c="dimmed" py="xl" ta="center">
-                No inserts recorded yet.
-            </Text>
-        );
-    }
-
+export function InsertSourceBreakdown(
+    props: InsertSourceBreakdownProps
+): ReactNode {
     return (
-        <Stack gap="xs">
-            {sources.map((source) => (
-                <div key={source.source}>
-                    <Group justify="space-between" gap="xs" mb={4}>
-                        <Text>{SOURCE_LABELS[source.source]}</Text>
-                        <Text c="dimmed">
-                            {formatCount(source.count)} (
-                            {formatFraction(source.count, total)})
-                        </Text>
-                    </Group>
-                    <Progress value={(source.count / total) * 100} size="sm" />
-                </div>
-            ))}
-        </Stack>
+        <ShareBreakdown
+            title="Where inserts start"
+            shares={props.sources.map((source) => ({
+                label: SOURCE_LABELS[source.source],
+                count: source.count
+            }))}
+        />
     );
+}
+
+interface TotalsBreakdownProps {
+    totals: AnalyticsTotals;
+}
+
+/** Every insert, by the way it was made. */
+export function InsertMethodBreakdown(props: TotalsBreakdownProps): ReactNode {
+    return (
+        <ShareBreakdown
+            title="How parts are inserted"
+            shares={insertMethodShares(props.totals)}
+        />
+    );
+}
+
+/** A part offering insert and fasten, inserted into an assembly, by how it was placed. */
+export function FastenMethodBreakdown(props: TotalsBreakdownProps): ReactNode {
+    return (
+        <ShareBreakdown
+            title="How insert and fasten parts are placed"
+            description="Inserts into an assembly of a part offering insert and fasten."
+            shares={fastenMethodShares(props.totals)}
+        />
+    );
+}
+
+function insertMethodShares(totals: AnalyticsTotals): Share[] {
+    const { inserts, quickInserts, autoAssemblyInserts } = totals;
+    return [
+        {
+            label: "Insert menu",
+            count: Math.max(0, inserts - quickInserts - autoAssemblyInserts)
+        },
+        { label: "Quick insert", count: quickInserts },
+        { label: "Auto Assembly", count: autoAssemblyInserts }
+    ];
+}
+
+function fastenMethodShares(totals: AnalyticsTotals): Share[] {
+    const { fastenableInserts, preselectedInserts, autoAssemblyInserts } =
+        totals;
+    return [
+        {
+            label: "Inserted normally",
+            count: Math.max(
+                0,
+                fastenableInserts - preselectedInserts - autoAssemblyInserts
+            )
+        },
+        { label: "Fastened to preselected edges", count: preselectedInserts },
+        { label: "Auto Assembly", count: autoAssemblyInserts }
+    ];
 }

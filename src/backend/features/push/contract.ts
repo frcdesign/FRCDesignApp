@@ -7,7 +7,8 @@ export enum PushType {
     JOBS = "jobs",
     LIBRARY = "library",
     THUMBNAIL = "thumbnail",
-    VERSION_JOB = "version-job"
+    VERSION_JOB = "version-job",
+    ASSEMBLY_JOB = "assembly-job"
 }
 
 /** A library's load jobs started or finished. */
@@ -37,11 +38,20 @@ export interface VersionJobPush {
     workspaceKey: string;
 }
 
+/** An Auto Assembly run in an assembly has moved on; sent to everyone in its workspace. */
+export interface AssemblyJobPush {
+    type: PushType.ASSEMBLY_JOB;
+    workspaceKey: string;
+    /** The assembly, as `assemblyKey` spells it. */
+    assemblyKey: string;
+}
+
 export type PushMessage =
     | JobsPush
     | LibraryPush
     | ThumbnailPush
-    | VersionJobPush;
+    | VersionJobPush
+    | AssemblyJobPush;
 
 /** Under `/api`. A client connects here naming the library it is showing. */
 export const PUSH_ROUTE = "/push";

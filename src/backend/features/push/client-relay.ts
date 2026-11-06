@@ -48,6 +48,7 @@ function toTag(message: PushMessage): string | undefined {
         case PushType.THUMBNAIL:
             return undefined;
         case PushType.VERSION_JOB:
+        case PushType.ASSEMBLY_JOB:
             return message.workspaceKey;
         default:
             return message.libraryId;

@@ -11,6 +11,7 @@ import { ElementType } from "../lib/onshape/element-type";
 import { FastenInfo } from "../features/library/insertables/fasten";
 import { DEFAULT_LIBRARY, LibraryId } from "../features/library/library-id";
 import type { AdminTeamMember } from "../features/admin-team/contract";
+import type { GeneratedFeature } from "../features/generated-parts/manifest";
 import { Vendor } from "../features/library/vendors";
 import {
     ConfigurationParameter,
@@ -158,6 +159,9 @@ export const insertables = sqliteTable("insertables", {
     partMetadata: text("part_metadata", {
         mode: "json"
     }).$type<PartMetadata | null>(),
+    // The generated studio it is (`fasteners/screw`), whose records a load
+    // indexes in place of asking Onshape; null for a tab modeled by hand.
+    generatedStudio: text("generated_studio"),
     buildIssues: buildIssues(),
     lastLoadedAt: lastLoadedAt()
 });
@@ -175,6 +179,31 @@ export const configurations = sqliteTable("configurations", {
     // Empty unless indexed; the default part is `insertables.partMetadata`.
     records: configurationRecords()
 });
+
+/**
+ * A generated set's released manifest less its studios, as the last load of
+ * the group releasing it read it: what Auto Assembly sizes fasteners by. The
+ * studios themselves are the group's insertables.
+ */
+export const generatedSets = sqliteTable(
+    "generated_sets",
+    {
+        libraryId: libraryId().references(() => libraries.id),
+        // As the manifest's tab names it, `fasteners`
+        set: text("set").notNull(),
+        groupId: text("group_id")
+            .notNull()
+            .references(() => groups.id, { onDelete: "cascade" }),
+        versionId: text("version_id").notNull(),
+        // Each studio's feature and its mate connector's id, by its key
+        features: text("features", { mode: "json" })
+            .$type<Record<string, GeneratedFeature>>()
+            .notNull(),
+        // Checked against its set's schema where it's read
+        catalog: text("catalog", { mode: "json" }).$type<unknown>().notNull()
+    },
+    (t) => [primaryKey({ columns: [t.libraryId, t.set] })]
+);
 
 export const users = sqliteTable("users", {
     id: text("id").primaryKey(),

@@ -10,6 +10,8 @@ import {
 import {
     OnshapeDocumentContents,
     OnshapeDocumentInfo,
+    OnshapeElement,
+    OnshapeElementType,
     OnshapeExternalReferences,
     OnshapeInsertables
 } from "../types";
@@ -119,4 +121,15 @@ export function updateReferences(
             }
         }
     );
+}
+
+/** A workspace's or version's tabs of one type, each with its microversion: anonymous for a public document. */
+export function getElements(
+    client: OnshapeApi,
+    instancePath: InstancePath,
+    elementType: OnshapeElementType
+): Promise<OnshapeElement[]> {
+    return client.get(`/documents${toInstanceApiPath(instancePath)}/elements`, {
+        query: { elementType }
+    });
 }

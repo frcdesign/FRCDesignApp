@@ -78,6 +78,13 @@
             "when": 1793842489204,
             "tag": "0010_report_team_number",
             "breakpoints": true
+        },
+        {
+            "idx": 11,
+            "version": "6",
+            "when": 1793979486257,
+            "tag": "0011_generated_parts",
+            "breakpoints": true
         }
     ]
 }

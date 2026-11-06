@@ -30,6 +30,8 @@ or the load that probes Onshape ([loading.md](./loading.md)); both consume it.
 | `src/backend/features/load/parse-configuration-records.ts`                | `decideIndexing`, probing each combination into a record                    |
 | `src/backend/features/search/records.ts`                                  | Records to search records, each with its thumbnail key                      |
 | `src/frontend/features/insert/components/configurations.tsx`              | The parameter panel in the insert menu                                      |
+| `src/frontend/components/parameter-input.tsx`                             | `ParameterInput` and `ParameterGrid`: each parameter's row, shared          |
+| `src/frontend/lib/unit-info.ts`                                           | `useUnitInfo`: the document's units, which quantities show in               |
 | `src/frontend/features/insert/components/configuration-hover-card.tsx`    | A row's icon whose card lists the configuration it opens on                 |
 | `src/frontend/features/build-status/components/configuration-section.tsx` | The admin card's parameter table and indexing controls                      |
 | `src/frontend/features/build-status/indexing-draft.ts`                    | Indexing edits held until saved                                             |
@@ -127,6 +129,10 @@ indexed parameter only multiplies the combinations, so the two counts agree
 wherever enumeration doesn't stop, and the card cannot disagree with the load
 about the band.
 
+A generated part skips all of this: every configuration is indexed from
+robot-code's records, whatever its count, and its indexing isn't configurable
+(see [generated-parts.md](./generated-parts.md)).
+
 ### Configuring and inserting
 
 1. The insert menu fetches `GET /api/configuration/insertable/:id?v={microversion}`,
@@ -142,7 +148,8 @@ about the band.
 5. On insert, the server makes the selection whole (`toSelection`) and sends
    only the overrides (`onshapeOverrides`). Onshape refuses a part studio's
    empty configuration (an assembly's is fine), so a part studio left on its
-   defaults is sent its first parameter at its default.
+   defaults is sent its first parameter at its default
+   (`partStudioInsertOverrides`, which Auto Assembly's inserts use too).
 
 ### Search
 

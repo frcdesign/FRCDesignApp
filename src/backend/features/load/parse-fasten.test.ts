@@ -100,6 +100,31 @@ describe("findPartStudioMateConnector", () => {
         );
         expect(found?.isUnstable).toBe(true);
     });
+
+    it("takes a generated feature's mate connector, under the feature's id", () => {
+        const generated = [
+            "fastenerScrew",
+            "fastenerWasher",
+            "fastenerNut"
+        ].map((type) => ({ type, mateConnector: "mateConnector" }));
+        const features = featureList([
+            extrude("sketch"),
+            mateConnectorFeature("off", {
+                featureType: "fastenerNut",
+                suppressed: true
+            }),
+            mateConnectorFeature("nut", { featureType: "fastenerNut" })
+        ]);
+        // Unknown until a set naming it is loaded
+        expect(findPartStudioMateConnector(features)).toBeUndefined();
+        expect(
+            findPartStudioMateConnector(features, generated)?.fastenInfo
+        ).toEqual({
+            mateConnectorId: "nut.mateConnector",
+            mateLocation: MateLocation.Feature,
+            path: []
+        });
+    });
 });
 
 describe("decideFasten", () => {

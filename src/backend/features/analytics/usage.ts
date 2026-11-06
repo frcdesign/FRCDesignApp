@@ -4,7 +4,7 @@
  */
 
 /** Bump when the columns' meaning changes. */
-export const EVENT_SCHEMA_VERSION = 2;
+export const EVENT_SCHEMA_VERSION = 3;
 
 export enum EventType {
     INSERT = "insert",
@@ -24,5 +24,7 @@ export enum InsertSource {
     /** The group's own list of parts. */
     BROWSE = "browse",
     FAVORITES = "favorites",
-    RECENTS = "recents"
+    RECENTS = "recents",
+    /** An Auto Assembly run, which inserts a part per fastener it places. */
+    AUTO_ASSEMBLY = "auto_assembly"
 }

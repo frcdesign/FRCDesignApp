@@ -31,3 +31,11 @@ export function useMarkHintSeen(hint: Hint): () => void {
         }
     }, [hint, seenHere, seenHints, signedIn, isPending]);
 }
+
+/** For a hint the server records as a side effect of a request, shown here at once. */
+export function markHintSeen(hint: Hint): void {
+    const { seenHints } = getUiState();
+    if (!seenHints.includes(hint)) {
+        updateUiState({ seenHints: [...seenHints, hint] });
+    }
+}

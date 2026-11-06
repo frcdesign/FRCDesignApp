@@ -7,6 +7,7 @@ import {
 } from "../configurations/contract";
 import { buildParameterUsage, type ValueCount } from "./parameter-usage";
 import {
+    alwaysShown,
     enumParam,
     quantityParam
 } from "../../../__test_utils__/configuration-fixtures";
@@ -140,7 +141,8 @@ describe("buildParameterUsage", () => {
                             id: "vendor",
                             value: "wcp"
                         }
-                    }
+                    },
+                    alwaysShown(["shared"])
                 ]
             }
         );
@@ -210,7 +212,8 @@ describe("buildParameterUsage", () => {
                         id: "vendor",
                         value: "generic"
                     }
-                }
+                },
+                alwaysShown(["s2"])
             ]
         });
 

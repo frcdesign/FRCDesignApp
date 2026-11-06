@@ -13,6 +13,8 @@ import * as ConfigurationEndpoints from "../../lib/onshape/endpoints/configurati
 import * as PartsEndpoints from "../../lib/onshape/endpoints/parts";
 import * as PartStudioEndpoints from "../../lib/onshape/endpoints/part-studios";
 import { featureList } from "../../../__test_utils__/feature-fixtures";
+import * as BlobEndpoints from "../../lib/onshape/endpoints/blob-elements";
+import { getGeneratedSet } from "../generated-parts/store";
 import * as ThumbnailStore from "../thumbnails/store";
 import { getDb } from "../../db/client";
 import { groups, insertables } from "../../db/schema";
@@ -165,6 +167,21 @@ describe("selectInsertablesToLoad", () => {
         const toLoad = select([tab("e1")], [storedRow("e1")], true);
         expect(toLoad).toHaveLength(1);
         expect(toLoad[0].insertableId).toBe("row-e1");
+    });
+
+    it("marks the tabs a released manifest names as generated", () => {
+        const nut = { set: "fasteners", key: "nut", manifestElementId: "m" };
+        const targets = selectInsertablesToLoad(
+            GROUP,
+            [tab("e-nut"), tab("e-other")],
+            [],
+            false,
+            { "e-nut": nut }
+        );
+        expect(targets.map((target) => target.generated)).toEqual([
+            nut,
+            undefined
+        ]);
     });
 
     it("seeds sortOrder from the tab position", () => {
@@ -337,6 +354,48 @@ describe("loadGroup", () => {
         for (const row of rows) {
             expect(row.versionCreatedAt).toEqual(LOADED_VERSION_CREATED_AT);
         }
+    });
+
+    it("stores a released manifest's catalog, which Auto Assembly sizes fasteners by", async () => {
+        mockContents([
+            tab("e1"),
+            {
+                id: "manifest",
+                name: "fasteners.parts.json",
+                elementType: OnshapeElementType.BLOB,
+                microversionId: "mv-1"
+            }
+        ]);
+        vi.spyOn(ConfigurationEndpoints, "getConfiguration").mockResolvedValue(
+            NO_CONFIGURATION
+        );
+        vi.spyOn(BlobEndpoints, "getBlobText").mockResolvedValue(
+            JSON.stringify({
+                source: "robot-code",
+                studios: {
+                    nut: {
+                        feature: "fastenerNut",
+                        elementId: "elsewhere",
+                        configuration: { configurationParameters: [] },
+                        records: []
+                    }
+                },
+                sizes: [{ id: "NO_10_32" }]
+            })
+        );
+
+        await loadGroup(CTX, LOADED_TARGET, false);
+
+        expect(await getGeneratedSet(db, TEST_LIBRARY_ID, "fasteners")).toEqual(
+            {
+                libraryId: TEST_LIBRARY_ID,
+                set: "fasteners",
+                groupId: TEST_GROUP_ID,
+                versionId: "v-2",
+                features: { nut: { type: "fastenerNut" } },
+                catalog: { sizes: [{ id: "NO_10_32" }] }
+            }
+        );
     });
 
     it("clears a new group's not-loaded issue once it saves", async () => {

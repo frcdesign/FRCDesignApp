@@ -52,6 +52,7 @@ buildStatusRoutes.get(
                     fastenInfo: insertables.fastenInfo,
                     indexConfigurations: insertables.indexConfigurations,
                     excludedParameterIds: insertables.excludedParameterIds,
+                    generatedStudio: insertables.generatedStudio,
                     vendors: insertables.vendors,
                     sortOrder: insertables.sortOrder,
                     versionCreatedAt: insertables.versionCreatedAt
@@ -108,6 +109,7 @@ buildStatusRoutes.get(
                 fastenDisabled: ins.fastenDisabled,
                 indexConfigurations: ins.indexConfigurations,
                 excludedParameterIds: ins.excludedParameterIds,
+                generatedStudio: ins.generatedStudio ?? undefined,
                 vendors: ins.vendors,
                 parameters: parametersById.get(ins.id) ?? [],
                 versionCreatedAt: ins.versionCreatedAt?.getTime()

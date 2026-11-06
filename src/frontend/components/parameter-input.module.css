@@ -1,9 +1,17 @@
-/*
- * Labels share a column, so every control starts at one edge whatever its label
- * says. The column is capped, so a long label wraps rather than squeezing its
- * control down to nothing on a narrow panel.
- */
+/* Rows, one under another. */
 .grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--mantine-spacing-sm);
+    align-items: start;
+}
+
+/*
+ * A label as wide as its own text, and its control the rest of the row, so one
+ * long label moves only its own control. Past 40% of the row, a label wraps.
+ */
+.row {
+    grid-column: 1 / -1;
     display: grid;
     grid-template-columns: fit-content(40%) minmax(0, 1fr);
     gap: var(--mantine-spacing-sm);

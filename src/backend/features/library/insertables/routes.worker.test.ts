@@ -34,7 +34,9 @@ import { getDb } from "../../../db/client";
 import * as PartStudioEndpoints from "../../../lib/onshape/endpoints/part-studios";
 import * as AssemblyEndpoints from "../../../lib/onshape/endpoints/assemblies";
 import * as PartsEndpoints from "../../../lib/onshape/endpoints/parts";
+import * as IndexHoles from "../../auto-assembly/index-holes";
 import { OnshapeRateLimitError } from "../../../lib/onshape/client";
+import { OnshapeFailure } from "../../../lib/onshape/failures";
 import { AUTO_INDEX_THRESHOLD } from "../../configurations/combinations";
 import {
     enumParam,
@@ -225,6 +227,17 @@ describe("insertable routes", () => {
             excludedParameterIds: ["finish"]
         });
         expect(parts).toHaveBeenCalledTimes(2);
+    });
+
+    it("refuses to toggle fasten for a generated part", async () => {
+        await seedPartStudio(db, { generatedStudio: "fasteners/screw" });
+
+        const res = await createTestApp().request(
+            `/api/toggle-insert-and-fasten/library/${TEST_LIBRARY_ID}/insertable/${TEST_PART_STUDIO_ID}`,
+            jsonRequest("POST", { supportsFasten: false }),
+            env
+        );
+        expect(res.status).toBe(400);
     });
 
     it("POST /add-to-part-studio inserts via the Onshape API", async () => {
@@ -623,6 +636,144 @@ describe("insertable routes", () => {
         expect(await loggedInsert()).toMatchObject({ fasten: false });
     });
 
+    function fastenToPicks(body: Record<string, unknown>) {
+        return createTestApp().request(
+            `/api/add-to-assembly/insertable/${TEST_ASSEMBLY_ID}`,
+            jsonRequest("POST", { targetPath, fasten: true, ...body }),
+            env
+        );
+    }
+
+    const EDGE_PICKS = ["JH1", "JH2", "JH3"].map((entityId) => ({
+        occurrencePath: ["base"],
+        entityId,
+        entityType: "EDGE"
+    }));
+
+    /** What `indexHoles` finds for the picks: each edge, with these radii in metres. */
+    function mockIndexHoles(radii: Record<string, number>) {
+        return vi.spyOn(IndexHoles, "indexHoles").mockResolvedValue({
+            circularEdges: Object.entries(radii).map(([edgeId, radius]) => ({
+                key: `base|${edgeId}`,
+                occurrencePath: ["base"],
+                edgeId,
+                center: [0, 0, 0],
+                normal: [0, 0, 1],
+                radius
+            })),
+            holes: [],
+            placed: [],
+            unfound: [],
+            replacements: [],
+            pickEdges: {}
+        });
+    }
+
+    /** Feature types in the order they were added. */
+    function addedFeatureTypes(spy: { mock: { calls: unknown[][] } }) {
+        return spy.mock.calls.map(
+            (call) => (call[2] as { featureType: string }).featureType
+        );
+    }
+
+    it("fastens one inserted instance to each circular edge", async () => {
+        await seedFastenable();
+        const indexHoles = mockIndexHoles({
+            JH1: 0.0025,
+            JH2: 0.0025,
+            JH3: 0.004
+        });
+        const addFeature = vi
+            .spyOn(AssemblyEndpoints, "addAssemblyFeature")
+            .mockResolvedValue({ feature: { featureId: "f1" } });
+
+        const res = await fastenToPicks({ targets: EDGE_PICKS });
+        expect(res.status).toBe(200);
+        const body: InsertOut = await res.json();
+        expect(body).toEqual({ fastenedCount: 3 });
+
+        expect(indexHoles.mock.calls[0][3]).toEqual(EDGE_PICKS);
+        expect(AssemblyEndpoints.addElementToAssembly).toHaveBeenCalledTimes(3);
+        expect(addedFeatureTypes(addFeature)).toEqual(["mate", "mate", "mate"]);
+
+        const mate = JSON.stringify(addFeature.mock.calls[1][2]);
+        expect(mate).toContain('"implicit":true');
+        expect(mate).toContain('"inferenceType":"CENTER"');
+        expect(mate).toContain('qTransient(\\"JH2\\")');
+        expect(mate).toContain('"path":["base"]');
+        expect(await loggedInsert()).toMatchObject({ fasten: true });
+    });
+
+    it("passes faces and the edges to skip through to the scan", async () => {
+        await seedFastenable();
+        const indexHoles = mockIndexHoles({ JH1: 0.0025 });
+        vi.spyOn(AssemblyEndpoints, "addAssemblyFeature").mockResolvedValue({
+            feature: { featureId: "f1" }
+        });
+        const face = {
+            occurrencePath: ["base"],
+            entityId: "JF1",
+            entityType: "FACE"
+        };
+
+        const res = await fastenToPicks({
+            selectionMode: "faces",
+            targets: [face],
+            excluded: [EDGE_PICKS[1]]
+        });
+        expect(res.status).toBe(200);
+        expect(indexHoles.mock.calls[0].slice(3, 5)).toEqual([
+            [face],
+            [EDGE_PICKS[1]]
+        ]);
+    });
+
+    it("refuses faces picked as circular edges", async () => {
+        await seedFastenable();
+        const res = await fastenToPicks({
+            targets: [{ ...EDGE_PICKS[0], entityType: "FACE" }]
+        });
+        expect(res.status).toBe(400);
+        expect(AssemblyEndpoints.addElementToAssembly).not.toHaveBeenCalled();
+    });
+
+    it("inserts nothing when no circular edge is found in the picks", async () => {
+        await seedFastenable();
+        mockIndexHoles({});
+
+        const res = await fastenToPicks({ targets: EDGE_PICKS });
+        expect(res.status).toBe(400);
+        expect(AssemblyEndpoints.addElementToAssembly).not.toHaveBeenCalled();
+    });
+
+    it("inserts and fastens an instance on each edge", async () => {
+        await seedFastenable();
+        mockIndexHoles({ JH1: 0.0025, JH2: 0.004, JH3: 0.0025 });
+        const addFeature = vi
+            .spyOn(AssemblyEndpoints, "addAssemblyFeature")
+            .mockResolvedValue({ feature: { featureId: "f1" } });
+
+        const res = await fastenToPicks({ targets: EDGE_PICKS });
+        expect(res.status).toBe(200);
+
+        expect(AssemblyEndpoints.addElementToAssembly).toHaveBeenCalledTimes(3);
+        expect(addedFeatureTypes(addFeature)).toEqual(["mate", "mate", "mate"]);
+        const features = addFeature.mock.calls.map((call) =>
+            JSON.stringify(call[2])
+        );
+        ["JH1", "JH2", "JH3"].forEach((edge, index) =>
+            expect(features[index]).toContain(edge)
+        );
+        // Each instance is an insert, fastened to what was preselected
+        const logged = await db.select().from(events).all();
+        expect(logged).toHaveLength(3);
+        expect(logged[0]).toMatchObject({
+            fasten: true,
+            fastenable: true,
+            preselected: true
+        });
+    });
+
     it("POST /indexing indexes and forces the flag on", async () => {
         await seedPartStudio(db);
         vi.spyOn(PartsEndpoints, "getParts").mockResolvedValue([
@@ -672,6 +823,29 @@ describe("insertable routes", () => {
         ).toEqual([{ size: "l" }]);
     });
 
+    it("POST /indexing refuses a generated part, which indexes every configuration", async () => {
+        await seedPartStudio(db);
+        await db
+            .update(insertables)
+            .set({ generatedStudio: "fasteners/screw" })
+            .where(eq(insertables.id, TEST_PART_STUDIO_ID));
+        const getParts = vi.spyOn(PartsEndpoints, "getParts");
+
+        const res = await createTestApp().request(
+            `/api/indexing/library/${TEST_LIBRARY_ID}/insertable/${TEST_PART_STUDIO_ID}`,
+            jsonRequest("POST", {
+                indexConfigurations: true,
+                excludedParameterIds: []
+            }),
+            env
+        );
+        expect(res.status).toBe(400);
+        expect(getParts).not.toHaveBeenCalled();
+        expect(
+            (await readInsertable(db, TEST_PART_STUDIO_ID))?.indexConfigurations
+        ).toBe(false);
+    });
+
     it("POST /indexing leaves the flag off when indexing fails", async () => {
         await seedPartStudio(db);
         vi.spyOn(PartsEndpoints, "getParts").mockRejectedValue(
@@ -681,7 +855,7 @@ describe("insertable routes", () => {
         const res = await postIndexing({ indexConfigurations: true });
         expect(res.status).toBe(429);
         const body: { message: string } = await res.json();
-        expect(body.message).toContain("rate limit");
+        expect(body.message).toBe(OnshapeFailure.RATE_LIMITED);
 
         const row = await readInsertable(db, TEST_PART_STUDIO_ID);
         expect(row?.indexConfigurations).toBe(false);
