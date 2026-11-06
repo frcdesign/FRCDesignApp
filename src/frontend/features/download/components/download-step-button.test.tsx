@@ -10,6 +10,7 @@ import {
     stepExportFilePath
 } from "@backend/features/download/contract";
 import { type InsertableOut } from "@backend/features/library/contract";
+import { UseSource } from "@backend/features/analytics/usage";
 import { DEFAULT_LIBRARY } from "@backend/features/library/library-id";
 import { ElementType } from "@backend/lib/onshape/element-type";
 import { renderWithProviders } from "../../../../__test_utils__/render";
@@ -81,6 +82,8 @@ function renderButton() {
         <DownloadStepButton
             insertable={INSERTABLE}
             selection={{ size: "2" }}
+            isFavorite
+            source={UseSource.SEARCH}
         />,
         queryClient
     );
@@ -146,7 +149,11 @@ describe("DownloadStepButton", () => {
             expect(savedFiles).toEqual([stepExportFilePath("tr-1")])
         );
         expect(apiPost).toHaveBeenCalledWith("/step-export/insertable/ins", {
-            body: { selection: { size: "2" } }
+            body: {
+                selection: { size: "2" },
+                isFavorite: true,
+                source: UseSource.SEARCH
+            }
         });
         expect(statusPolls()).toBe(2);
     });

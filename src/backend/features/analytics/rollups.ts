@@ -3,13 +3,13 @@ import { type Db } from "../../db/client";
 import { type ConfigurationParameter } from "../configurations/contract";
 import { toInstanceKeys } from "../configurations/instances";
 import { earliest, increment, latest } from "../../db/updates";
-import { EventType } from "./usage";
+import { EventType, USE_EVENT_TYPES } from "./usage";
 import { VersionJobOutcome } from "../version-manager/contract";
 import {
-    asInsert,
+    asUse,
     asReport,
     asVersionRun,
-    type LoggedInsert,
+    type LoggedUse,
     type LoggedReport,
     type LoggedVersionRun
 } from "./logged-event";
@@ -61,17 +61,17 @@ export function rollupWrites(
         markUserActive(db, event, libraryId),
         countUser(db, event, libraryId)
     ];
-    const insert = asInsert(event);
-    if (!insert) return writes;
+    const use = asUse(event);
+    if (!use) return writes;
 
     return [
         ...writes,
-        countSource(db, insert),
-        countTarget(db, insert),
-        countPartDay(db, insert),
-        markPartUser(db, insert),
-        countPartLifetime(db, insert),
-        ...countValues(db, insert, parameters)
+        countSource(db, use),
+        countTarget(db, use),
+        countPartDay(db, use),
+        markPartUser(db, use),
+        countPartLifetime(db, use),
+        ...countValues(db, use, parameters)
     ];
 }
 
@@ -203,29 +203,29 @@ function markUserActive(db: Db, event: LoggedEvent, libraryId: LibraryId) {
 
 /** The user's lifetime row in one library. */
 function countUser(db: Db, event: LoggedEvent, libraryId: LibraryId) {
-    const insert = event.type === EventType.INSERT ? 1 : 0;
+    const use = isUseEvent(event.type) ? 1 : 0;
 
     return db
         .insert(userStats)
         .values({
             userId: event.userId,
             libraryId,
-            insertCount: insert,
+            useCount: use,
             firstSeenAt: event.createdAt,
             lastSeenAt: event.createdAt
         })
         .onConflictDoUpdate({
             target: [userStats.userId, userStats.libraryId],
             set: {
-                insertCount: increment(userStats.insertCount, insert),
+                useCount: increment(userStats.useCount, use),
                 firstSeenAt: earliest(userStats.firstSeenAt, event.createdAt),
                 lastSeenAt: latest(userStats.lastSeenAt, event.createdAt)
             }
         });
 }
 
-/** Where the insert started, and how many of those used quick insert. */
-function countSource(db: Db, event: LoggedInsert) {
+/** Where the use started, and how many of those used quick insert. */
+function countSource(db: Db, event: LoggedUse) {
     const quickInsert = event.isQuickInsert ? 1 : 0;
 
     return db
@@ -253,14 +253,14 @@ function countSource(db: Db, event: LoggedInsert) {
         });
 }
 
-/** The library's day for the kind of tab this insert landed in. */
-function countTarget(db: Db, event: LoggedInsert) {
+/** The library's day for where this use went. */
+function countTarget(db: Db, event: LoggedUse) {
     return db
         .insert(dailyTargetMetrics)
         .values({
             day: event.day,
             libraryId: event.libraryId,
-            targetElementType: event.targetElementType,
+            targetElementType: event.target,
             count: 1
         })
         .onConflictDoUpdate({
@@ -274,14 +274,14 @@ function countTarget(db: Db, event: LoggedInsert) {
 }
 
 /** {@link countTarget} for one part. */
-function countPartDay(db: Db, event: LoggedInsert) {
+function countPartDay(db: Db, event: LoggedUse) {
     return db
         .insert(dailyInsertableMetrics)
         .values({
             day: event.day,
             libraryId: event.libraryId,
             elementId: event.elementId,
-            targetElementType: event.targetElementType,
+            targetElementType: event.target,
             count: 1
         })
         .onConflictDoUpdate({
@@ -296,7 +296,7 @@ function countPartDay(db: Db, event: LoggedInsert) {
 }
 
 /** {@link markUserActive} for one part. */
-function markPartUser(db: Db, event: LoggedInsert) {
+function markPartUser(db: Db, event: LoggedUse) {
     return db
         .insert(dailyInsertableUsers)
         .values({
@@ -308,39 +308,36 @@ function markPartUser(db: Db, event: LoggedInsert) {
         .onConflictDoNothing();
 }
 
-function countPartLifetime(db: Db, event: LoggedInsert) {
+function countPartLifetime(db: Db, event: LoggedUse) {
     return db
         .insert(insertableStats)
         .values({
             libraryId: event.libraryId,
             elementId: event.elementId,
-            insertCount: 1,
-            firstInsertedAt: event.createdAt,
-            lastInsertedAt: event.createdAt
+            useCount: 1,
+            firstUsedAt: event.createdAt,
+            lastUsedAt: event.createdAt
         })
         .onConflictDoUpdate({
             target: [insertableStats.libraryId, insertableStats.elementId],
             set: {
-                insertCount: increment(insertableStats.insertCount),
-                firstInsertedAt: earliest(
-                    insertableStats.firstInsertedAt,
+                useCount: increment(insertableStats.useCount),
+                firstUsedAt: earliest(
+                    insertableStats.firstUsedAt,
                     event.createdAt
                 ),
-                lastInsertedAt: latest(
-                    insertableStats.lastInsertedAt,
-                    event.createdAt
-                )
+                lastUsedAt: latest(insertableStats.lastUsedAt, event.createdAt)
             }
         });
 }
 
 /**
- * One counter per parameter value the insert applied, keyed by the branch it
+ * One counter per parameter value the use applied, keyed by the branch it
  * was chosen in so a value two branches offer can be counted for each.
  */
 function countValues(
     db: Db,
-    event: LoggedInsert,
+    event: LoggedUse,
     parameters: ConfigurationParameter[]
 ): BatchItem<"sqlite">[] {
     if (!event.selection) return [];
@@ -374,4 +371,8 @@ function countValues(
                 }
             })
     );
+}
+
+function isUseEvent(type: EventType): boolean {
+    return (USE_EVENT_TYPES as readonly EventType[]).includes(type);
 }

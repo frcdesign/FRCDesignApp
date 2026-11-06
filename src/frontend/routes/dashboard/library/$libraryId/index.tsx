@@ -15,7 +15,7 @@ import {
 } from "../../../../features/dashboard/dashboard-queries";
 import { DashboardState } from "../../../../features/dashboard/dashboard-state";
 import { HealthTiles } from "../../../../features/dashboard/health-report";
-import { InsertsOverTimeCard } from "../../../../features/dashboard/inserts-chart";
+import { UsesOverTimeCard } from "../../../../features/dashboard/uses-chart";
 import { PartsTable } from "../../../../features/dashboard/parts-table";
 import { getLibraryName } from "../../../../lib/library";
 import { useCacheVersion } from "../../../../features/library/queries";
@@ -28,6 +28,7 @@ import { UsageTreemap } from "../../../../features/dashboard/usage-treemap";
 import { HeadlineTiles } from "../../../../features/dashboard/headline-tiles";
 import { SectionCard } from "../../../../components/section";
 import { LibraryReports } from "../../../../features/dashboard/report-summary";
+import { m } from "../../../../paraglide/messages";
 
 export const Route = createFileRoute("/dashboard/library/$libraryId/")({
     component: LibraryOverview
@@ -88,14 +89,14 @@ function LibraryBody({
                 series={metricSeries}
             />
 
-            <InsertsOverTimeCard series={metricSeries} libraryId={libraryId} />
+            <UsesOverTimeCard series={metricSeries} libraryId={libraryId} />
 
-            <SectionCard title="Most used parts">
+            <SectionCard title={m.dashboardLibraryMostUsed()}>
                 {parts.data ? (
                     <PartsTable
                         libraryId={libraryId}
                         parts={parts.data}
-                        emptyMessage="No parts have been inserted from this library yet."
+                        emptyMessage={m.dashboardLibraryNoUses()}
                     />
                 ) : (
                     <DashboardState query={parts} />

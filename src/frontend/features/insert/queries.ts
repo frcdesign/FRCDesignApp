@@ -15,7 +15,7 @@ import {
     type InsertOut
 } from "@backend/features/library/contract";
 import { ElementType } from "@backend/lib/onshape/element-type";
-import { InsertSource } from "@backend/features/analytics/usage";
+import { UseSource } from "@backend/features/analytics/usage";
 import { showLoadingToast, showSuccessToast } from "../../lib/notifications";
 import { queryClient } from "../../lib/query-client";
 import { getAppErrorHandler } from "../../lib/errors";
@@ -34,7 +34,7 @@ import { invalidateRecents } from "../recents/queries";
 interface InsertArgs {
     /** Whether the part is favorited — see `source` for where the insert began. */
     isFavorite: boolean;
-    source: InsertSource;
+    source: UseSource;
     isQuickInsert?: boolean;
 }
 

@@ -6,6 +6,7 @@ import { getLibraryName } from "../../lib/library";
 import { AppTreemap } from "./treemap-chart";
 import { AppBreadcrumbs } from "../../components/breadcrumbs";
 import { SectionCard } from "../../components/section";
+import { m } from "../../paraglide/messages";
 import {
     toNodes,
     TreemapKind,
@@ -49,11 +50,11 @@ export function UsageTreemap({
     };
 
     return (
-        <SectionCard title="Usage breakdown">
+        <SectionCard title={m.dashboardTreemapTitle()}>
             <TreemapTrail root={root} path={path} onSelect={setPath} />
             {nodes.length === 0 ? (
                 <Text c="dimmed" py="xl" ta="center">
-                    Nothing was inserted in this range.
+                    {m.dashboardTreemapEmpty()}
                 </Text>
             ) : (
                 <AppTreemap nodes={nodes} h={CHART_HEIGHT} onSelect={select} />
@@ -73,7 +74,7 @@ function TreemapTrail({ root, path, onSelect }: TreemapTrailProps): ReactNode {
     const steps: { label: string; to: TreemapPath }[] = [];
 
     if (root.libraryId === undefined) {
-        steps.push({ label: "All libraries", to: {} });
+        steps.push({ label: m.dashboardTreemapAllLibraries(), to: {} });
     }
     if (path.libraryId !== undefined) {
         steps.push({

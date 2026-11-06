@@ -1,8 +1,17 @@
-import { and, countDistinct, eq, gte, lte, sql, sum } from "drizzle-orm";
+import {
+    and,
+    countDistinct,
+    eq,
+    gte,
+    inArray,
+    lte,
+    sql,
+    sum
+} from "drizzle-orm";
 import { type Db } from "../../db/client";
 import { dailyAppOpens, dailyMetrics } from "./schema";
 import { LibraryId } from "../library/library-id";
-import { EventType } from "./usage";
+import { USE_EVENT_TYPES } from "./usage";
 import {
     baselineWindow,
     LIBRARY_PROGRAM,
@@ -75,14 +84,13 @@ export function toComparison(
 }
 
 /** One event type over two windows, as a single range scan over the rollup. */
-async function countEvents(
+async function countUses(
     db: Db,
     windows: Windows,
-    type: EventType,
     libraryId?: LibraryId
 ): Promise<Counts> {
     const filters = [
-        eq(dailyMetrics.type, type),
+        inArray(dailyMetrics.type, [...USE_EVENT_TYPES]),
         gte(dailyMetrics.day, windows.previous.from),
         lte(dailyMetrics.day, windows.current.to)
     ];
@@ -161,8 +169,8 @@ async function measure(
     trackingSince: string | undefined,
     libraryId?: LibraryId
 ): Promise<GrowthOut> {
-    const [inserts, people, opens] = await Promise.all([
-        countEvents(db, windows, EventType.INSERT, libraryId),
+    const [uses, people, opens] = await Promise.all([
+        countUses(db, windows, libraryId),
         countPeople(db, windows, libraryId),
         libraryId ? undefined : countOpens(db, windows)
     ]);
@@ -177,7 +185,7 @@ async function measure(
         );
 
     return {
-        inserts: compare(inserts),
+        uses: compare(uses),
         activeUsers: compare(people),
         appOpens: opens && compare(opens)
     };

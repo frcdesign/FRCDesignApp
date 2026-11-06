@@ -80,10 +80,10 @@ sits in an info tooltip at the callout's end.
 
 ## Usage section
 
-| String                                | Kind        | Where                          | When                                                  | Review                             |
-| ------------------------------------- | ----------- | ------------------------------ | ----------------------------------------------------- | ---------------------------------- |
-| "Open in dashboard"                   | Tooltip     | The chart button in the header | Always; a part's report, or the library's for a group | **⚑** Was a link under the numbers |
-| "Inserts" / "Per month" / "Favorites" | Stat labels | Under each number              | Always                                                |                                    |
+| String                             | Kind        | Where                          | When                                                  | Review                             |
+| ---------------------------------- | ----------- | ------------------------------ | ----------------------------------------------------- | ---------------------------------- |
+| "Open in dashboard"                | Tooltip     | The chart button in the header | Always; a part's report, or the library's for a group | **⚑** Was a link under the numbers |
+| "Uses" / "Per month" / "Favorites" | Stat labels | Under each number              | Always; uses count inserts and downloads              | **⚑** "Uses" was "Inserts"         |
 
 ## Settings menu
 

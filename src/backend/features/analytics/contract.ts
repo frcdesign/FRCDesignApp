@@ -1,40 +1,46 @@
 import { LibraryId } from "../library/library-id";
-import { ElementType } from "../../lib/onshape/element-type";
 import type { ElementPath } from "../../lib/onshape/path";
-import { InsertSource } from "./usage";
+import { UseSource, UseTarget } from "./usage";
 import type {
     FeedbackCategory,
     FeedbackSource,
     FeedbackTopic
 } from "../feedback/contract";
 
-/** Every type is listed, so an unused one reads as zero. */
-export type InsertTargets = Record<ElementType, number>;
+/** Every target is listed, so an unused one reads as zero. They sum to the uses. */
+export type UseTargets = Record<UseTarget, number>;
 
-export function emptyTargets(): InsertTargets {
+export function emptyTargets(): UseTargets {
     return Object.fromEntries(
-        Object.values(ElementType).map((type) => [type, 0])
-    ) as InsertTargets;
+        Object.values(UseTarget).map((target) => [target, 0])
+    ) as UseTargets;
+}
+
+/** The uses that went into Onshape: quick insert's denominator. */
+export function insertsOf(targets: UseTargets): number {
+    return targets[UseTarget.PART_STUDIO] + targets[UseTarget.ASSEMBLY];
 }
 
 /** Lifetime counts, either overall or scoped to one library. */
 export interface AnalyticsTotals {
-    inserts: number;
+    /** Inserts and downloads; `targets` splits them. */
+    uses: number;
     /** App-wide only; zero for a library. */
     appOpens: number;
     uniqueUsers: number;
-    /** Subsets of `inserts`; divide by it for the percentages. */
-    favoriteInserts: number;
+    /** A subset of `uses`. */
+    favoriteUses: number;
+    /** A subset of the inserts; see {@link insertsOf}. */
     quickInserts: number;
     /** Onshape only offers fasten on assemblies, so compare to that entry of `targets`. */
     fastenInserts: number;
-    targets: InsertTargets;
+    targets: UseTargets;
     /** Current, not over the range: a favorite is state, not an event. */
     favorites: number;
 }
 
 /** One day of the range chart; `counts` is keyed by library id. */
-export interface DailyInsertPoint {
+export interface DailyUsePoint {
     day: string;
     counts: Partial<Record<LibraryId, number>>;
 }
@@ -42,21 +48,21 @@ export interface DailyInsertPoint {
 /** One series backs every trend, so a tile and its chart can't disagree. */
 export interface DailyMetricPoint {
     day: string;
-    inserts: number;
+    uses: number;
     /** App-wide, as `AnalyticsTotals.appOpens`. */
     appOpens: number;
     /** Distinct users active that day; not summable across days. */
     activeUsers: number;
-    favoriteInserts: number;
+    favoriteUses: number;
     quickInserts: number;
     fastenInserts: number;
-    /** That day's inserts by target; the assembly entry is fasten's denominator. */
-    targets: InsertTargets;
+    /** That day's uses by target; the assembly entry is fasten's denominator. */
+    targets: UseTargets;
 }
 
-/** Lifetime inserts started from one part of the app. */
-export interface InsertSourceUsage {
-    source: InsertSource;
+/** Lifetime uses started from one part of the app. */
+export interface UseSourceUsage {
+    source: UseSource;
     count: number;
     /** How many of those used the context-menu quick insert. */
     quickInsertCount: number;
@@ -106,7 +112,7 @@ export interface PeriodComparison {
 
 /** Season to date against the same stretch of the season before. */
 export interface GrowthOut {
-    inserts: PeriodComparison;
+    uses: PeriodComparison;
     activeUsers: PeriodComparison;
     /** Absent for a library: an app open belongs to none. */
     appOpens?: PeriodComparison;
@@ -164,10 +170,10 @@ export interface AnalyticsOverviewOut {
     /** Over the requested range, for the headline cards. */
     totals: AnalyticsTotals;
     libraries: LibrarySummary[];
-    /** Per-library daily inserts, for the inserts tile's split-out detail. */
-    series: DailyInsertPoint[];
+    /** Per-library daily uses, for the uses tile's split-out detail. */
+    series: DailyUsePoint[];
     metricSeries: DailyMetricPoint[];
-    sources: InsertSourceUsage[];
+    sources: UseSourceUsage[];
     /** Over the range, but for `links`. */
     versionManager: VersionManagerTotals;
     /** Over the range, for every topic. */
@@ -186,13 +192,13 @@ export interface PartUsageOut {
     groupName: string;
     /** Hidden parts stay listed: they are in the library, just not insertable. */
     isVisible: boolean;
-    /** Inserts inside the reported window; 0 for a part unused in it. */
-    insertCount: number;
-    /** The window's inserts scaled to a month; see {@link usesPerMonth}. */
+    /** Uses inside the reported window; 0 for a part unused in it. */
+    useCount: number;
+    /** The window's uses scaled to a month; see {@link usesPerMonth}. */
     usesPerMonth: number;
     /** Users who have it favorited now, whatever the window. */
     favorites: number;
-    /** Daily inserts over the last {@link MONTH_DAYS}, oldest first. */
+    /** Daily uses over the last {@link MONTH_DAYS}, oldest first. */
     recent: number[];
 }
 
@@ -237,13 +243,13 @@ export interface InsertableReportOut {
     /** Only a part still in the library is reported on, so both are known. */
     name: string;
     path: ElementPath;
-    insertCount: number;
-    /** Lifetime inserts scaled to a month; see {@link usesPerMonth}. */
+    useCount: number;
+    /** Lifetime uses scaled to a month; see {@link usesPerMonth}. */
     usesPerMonth: number;
     uniqueUsers: number;
     /** How many users currently have this part favorited. */
     favorites: number;
-    /** Inserts by the kind of tab they landed in; derived vs. inserted. */
-    targets: InsertTargets;
+    /** Uses by where the part went: derived, inserted or downloaded. */
+    targets: UseTargets;
     parameters: ConfigurationParameterUsage[];
 }

@@ -42,7 +42,7 @@ import { useIsSignedIn } from "../../auth/access-level";
 import { Hint } from "@backend/features/hints/contract";
 import { useHasSeenHint, useMarkHintSeen } from "../../hints/queries";
 import { useTargetElementType } from "../insert-hooks";
-import { InsertSource } from "@backend/features/analytics/usage";
+import { UseSource } from "@backend/features/analytics/usage";
 import { InsertLocationStatus } from "../../insert-location/components/insert-location-status";
 import { InfoCheckbox } from "../../../components/info-checkbox";
 import { DownloadStepButton } from "../../download/components/download-step-button";
@@ -72,7 +72,7 @@ interface InsertMenuContentProps {
     onSelectionChange?: (selection: Selection) => void;
     /** Before the menu closes itself. */
     onInsert: () => void;
-    source: InsertSource;
+    source: UseSource;
 }
 
 export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
@@ -187,7 +187,7 @@ interface InsertMenuFooterProps {
     /** Whether an insert now is worth pointing out a right-click for. */
     canShowQuickInsertTip: boolean;
     /** Where the insert began, which the menu and the buttons both record. */
-    source: InsertSource;
+    source: UseSource;
     onInsert: () => void;
 }
 
@@ -265,7 +265,12 @@ function InsertMenuFooter(props: InsertMenuFooterProps): ReactNode {
                 source={source}
                 onInsert={onInsert}
             />
-            <DownloadStepButton insertable={insertable} selection={selection} />
+            <DownloadStepButton
+                insertable={insertable}
+                selection={selection}
+                isFavorite={favorite !== undefined}
+                source={source}
+            />
         </AppModalFooter>
     );
 }
@@ -277,7 +282,7 @@ interface InsertButtonsProps {
     selection?: PartialSelection;
     isFavorite: boolean;
     onInsert: () => void;
-    source: InsertSource;
+    source: UseSource;
 }
 
 function InsertButtons(props: InsertButtonsProps): ReactNode {

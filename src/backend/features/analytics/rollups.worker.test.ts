@@ -15,7 +15,7 @@ import { configurations } from "../../db/schema";
 import { type AppContext } from "../../lib/context";
 import { ElementType } from "../../lib/onshape/element-type";
 import { toSelection } from "../configurations/selection";
-import { InsertSource } from "./usage";
+import { UseSource } from "./usage";
 import { rollupWrites } from "./rollups";
 import {
     dailyAppOpens,
@@ -78,7 +78,7 @@ function insertEvent(overrides: Partial<InsertEvent> = {}): InsertEvent {
         parameters: [],
         isFavorite: false,
         isQuickInsert: false,
-        source: InsertSource.BROWSE,
+        source: UseSource.BROWSE,
         fasten: false,
         ...overrides
     };
@@ -127,7 +127,7 @@ describe("rollupWrites", () => {
                 targetElementType: ElementType.ASSEMBLY,
                 isFavorite: true,
                 isQuickInsert: true,
-                source: InsertSource.FAVORITES,
+                source: UseSource.FAVORITES,
                 fasten: true
             })
         );

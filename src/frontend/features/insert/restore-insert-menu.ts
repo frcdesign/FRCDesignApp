@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useShallow } from "zustand/react/shallow";
-import { InsertSource } from "@backend/features/analytics/usage";
+import { UseSource } from "@backend/features/analytics/usage";
 import { updateUiState, useUiState } from "../../lib/ui-state";
 import { useIsSignedIn } from "../auth/access-level";
 import { useLibraryQuery } from "../library/queries";
@@ -67,7 +67,7 @@ export function useRestoreInsertMenu(): void {
                       configurationKey: favorite?.configurationKey
                   }),
             favoriteId: favorite?.id,
-            source: favorite ? InsertSource.FAVORITES : InsertSource.BROWSE
+            source: favorite ? UseSource.FAVORITES : UseSource.BROWSE
         });
     }, [
         openInsertableId,

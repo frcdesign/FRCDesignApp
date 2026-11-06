@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
     emptyTargets,
-    type DailyInsertPoint,
+    type DailyUsePoint,
     type DailyMetricPoint
 } from "@backend/features/analytics/contract";
 import { LibraryId } from "@backend/features/library/library-id";
@@ -12,7 +12,7 @@ const FRC = getLibraryName(LibraryId.FRC_DESIGN_LIB);
 const MKCAD = getLibraryName(LibraryId.MKCAD);
 
 /** Builds `count` consecutive days starting at 2026-01-01. */
-function makeDays(count: number): DailyInsertPoint[] {
+function makeDays(count: number): DailyUsePoint[] {
     return Array.from({ length: count }, (_, index) => {
         const date = new Date(Date.UTC(2026, 0, 1 + index));
         return {
@@ -26,10 +26,10 @@ function makeDays(count: number): DailyInsertPoint[] {
 function day(index: number, values: Partial<DailyMetricPoint> = {}) {
     return {
         day: new Date(Date.UTC(2026, 0, 1 + index)).toISOString().slice(0, 10),
-        inserts: 0,
+        uses: 0,
         appOpens: 0,
         activeUsers: 0,
-        favoriteInserts: 0,
+        favoriteUses: 0,
         quickInserts: 0,
         fastenInserts: 0,
         targets: emptyTargets(),
@@ -100,20 +100,20 @@ describe("toChartData", () => {
 describe("toSparkSeries", () => {
     it("keeps a short range at one point per day", () => {
         const points = Array.from({ length: 30 }, (_, i) =>
-            day(i, { inserts: 1 })
+            day(i, { uses: 1 })
         );
-        expect(toSparkSeries(points).inserts).toHaveLength(30);
+        expect(toSparkSeries(points).uses).toHaveLength(30);
     });
 
     it("folds a long range down, so a year is not a smear", () => {
         const points = Array.from({ length: 365 }, (_, i) =>
-            day(i, { inserts: 2 })
+            day(i, { uses: 2 })
         );
-        const { inserts } = toSparkSeries(points);
+        const { uses } = toSparkSeries(points);
 
         // A week a point, and the first is Jan 1-4 at 2 a day.
-        expect(inserts).toHaveLength(53);
-        expect(inserts[0]).toBe(8);
+        expect(uses).toHaveLength(53);
+        expect(uses[0]).toBe(8);
     });
 
     it("averages users over a bucket rather than summing them", () => {
@@ -128,7 +128,7 @@ describe("toSparkSeries", () => {
 
     it("rates uses per user off the folded totals", () => {
         const points = Array.from({ length: 200 }, (_, i) =>
-            day(i, { inserts: 30, activeUsers: 10 })
+            day(i, { uses: 30, activeUsers: 10 })
         );
         for (const value of toSparkSeries(points).usesPerUser) {
             expect(value).toBe(3);
@@ -136,13 +136,13 @@ describe("toSparkSeries", () => {
     });
 
     it("reads a bucket with nobody in it as zero, not as a division", () => {
-        const points = [day(0, { inserts: 5, activeUsers: 0 })];
+        const points = [day(0, { uses: 5, activeUsers: 0 })];
         expect(toSparkSeries(points).usesPerUser).toEqual([0]);
     });
 
     it("returns empty arrays for an empty range", () => {
         expect(toSparkSeries([])).toEqual({
-            inserts: [],
+            uses: [],
             activeUsers: [],
             usesPerUser: [],
             appOpens: []

@@ -145,6 +145,20 @@ The build-status feature is migrated. The rest moves over as it is worked on:
 a new string goes in the catalog, and a component you change has its strings
 moved there in the same change. `docs/strings/` lists them for review.
 
+# Feature tracking
+
+Every new or major feature records its use in analytics, in the same change:
+an `EventType`, its columns decided in `logged-event.ts`, the rollups it adds
+to, and a place on the dashboard. `docs/architecture/analytics.md` covers the
+area. Record it on the server, once the work has happened, through
+`runInBackground`, so tracking never slows or fails what was asked for.
+
+A way of using a part — inserting it, downloading it — is a **use**: one of
+`USE_EVENT_TYPES`. A use counts toward the same totals, users, part counts and
+configuration counts as every other, and is told apart by its `UseTarget`, so
+the dashboard can show it on its own. Say "uses" for these, on the dashboard
+and in code; "inserts" means only the ones that went into Onshape.
+
 # Architecture docs
 
 `docs/architecture/` holds one document per feature area, indexed in its

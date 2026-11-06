@@ -1,8 +1,10 @@
-import type {
-    AnalyticsTotals,
-    DailyMetricPoint
+import {
+    insertsOf,
+    type AnalyticsTotals,
+    type DailyMetricPoint
 } from "@backend/features/analytics/contract";
-import { ElementType } from "@backend/lib/onshape/element-type";
+import { UseTarget } from "@backend/features/analytics/usage";
+import { m } from "../../paraglide/messages";
 import {
     bucketBy,
     formatBucket,
@@ -12,10 +14,11 @@ import {
 } from "./series";
 
 type MetricKey =
-    | "inserts"
+    | "uses"
     | "fastenFraction"
     | "quickFraction"
-    | "assemblyFraction";
+    | "assemblyFraction"
+    | "downloadFraction";
 
 export interface MetricDefinition {
     key: MetricKey;
@@ -31,40 +34,50 @@ export interface MetricDefinition {
 }
 
 export const METRICS: Record<MetricKey, MetricDefinition> = {
-    inserts: {
-        key: "inserts",
-        label: "Total uses",
-        numerator: (point) => point.inserts,
-        lifetimeValue: (totals) => totals.inserts,
-        detailLabel: "Total uses"
+    uses: {
+        key: "uses",
+        label: m.dashboardMetricUses(),
+        numerator: (point) => point.uses,
+        lifetimeValue: (totals) => totals.uses,
+        detailLabel: m.dashboardMetricUses()
     },
     fastenFraction: {
         key: "fastenFraction",
-        label: "Insert and fasten",
+        label: m.dashboardMetricFasten(),
         numerator: (point) => point.fastenInserts,
         // Onshape only offers fasten on an assembly target.
-        denominator: (point) => point.targets[ElementType.ASSEMBLY],
-        lifetimeDenominator: (totals) => totals.targets[ElementType.ASSEMBLY],
+        denominator: (point) => point.targets[UseTarget.ASSEMBLY],
+        lifetimeDenominator: (totals) => totals.targets[UseTarget.ASSEMBLY],
         lifetimeValue: (totals) => totals.fastenInserts,
-        detailLabel: "% of assembly inserts"
+        detailLabel: m.dashboardMetricOfAssemblyInserts()
     },
     quickFraction: {
         key: "quickFraction",
-        label: "Quick insert",
+        label: m.dashboardMetricQuickInsert(),
         numerator: (point) => point.quickInserts,
-        denominator: (point) => point.inserts,
-        lifetimeDenominator: (totals) => totals.inserts,
+        // Only an insert can be quick, so downloads stay out of the base.
+        denominator: (point) => insertsOf(point.targets),
+        lifetimeDenominator: (totals) => insertsOf(totals.targets),
         lifetimeValue: (totals) => totals.quickInserts,
-        detailLabel: "% of inserts"
+        detailLabel: m.dashboardMetricOfInserts()
     },
     assemblyFraction: {
         key: "assemblyFraction",
-        label: "Into an assembly",
-        numerator: (point) => point.targets[ElementType.ASSEMBLY],
-        denominator: (point) => point.inserts,
-        lifetimeValue: (totals) => totals.targets[ElementType.ASSEMBLY],
-        lifetimeDenominator: (totals) => totals.inserts,
-        detailLabel: "% of inserts"
+        label: m.dashboardMetricIntoAssembly(),
+        numerator: (point) => point.targets[UseTarget.ASSEMBLY],
+        denominator: (point) => point.uses,
+        lifetimeValue: (totals) => totals.targets[UseTarget.ASSEMBLY],
+        lifetimeDenominator: (totals) => totals.uses,
+        detailLabel: m.dashboardMetricOfUses()
+    },
+    downloadFraction: {
+        key: "downloadFraction",
+        label: m.dashboardMetricDownloaded(),
+        numerator: (point) => point.targets[UseTarget.DOWNLOAD],
+        denominator: (point) => point.uses,
+        lifetimeValue: (totals) => totals.targets[UseTarget.DOWNLOAD],
+        lifetimeDenominator: (totals) => totals.uses,
+        detailLabel: m.dashboardMetricOfUses()
     }
 };
 

@@ -30,7 +30,7 @@ import {
     getPartRows,
     getPartSparklines,
     getPartStats,
-    getWindowedInsertCounts,
+    getWindowedUseCounts,
     sumPartTargets,
     toWindowedPart
 } from "./part-queries";
@@ -163,7 +163,7 @@ analyticsRoutes.get(
         const [rows, series, windowed] = await Promise.all([
             getPartRows(db, libraryId),
             getPartSparklines(db, libraryId),
-            getWindowedInsertCounts(db, libraryId, range)
+            getWindowedUseCounts(db, libraryId, range)
         ]);
 
         const out: PartUsageOut[] = rows
@@ -190,17 +190,16 @@ analyticsRoutes.get(
         const [rows, series, windowed] = await Promise.all([
             getPartRows(db, libraryId, { visibleOnly: true }),
             getPartSparklines(db, libraryId),
-            getWindowedInsertCounts(db, libraryId, range)
+            getWindowedUseCounts(db, libraryId, range)
         ]);
 
         const out: PartUsageOut[] = rows
             .map((row) => toWindowedPart(row, windowed, series, range))
             // Least used first: the point of the page is the bottom of the list.
-            .filter((part) => part.insertCount <= threshold)
+            .filter((part) => part.useCount <= threshold)
             .sort(
                 (a, b) =>
-                    a.insertCount - b.insertCount ||
-                    a.name.localeCompare(b.name)
+                    a.useCount - b.useCount || a.name.localeCompare(b.name)
             );
         return c.json(out);
     }
@@ -303,7 +302,7 @@ analyticsRoutes.get(
         ]);
 
         const targets = toTargets(targetRows);
-        const insertCount = Object.values(targets).reduce(
+        const useCount = Object.values(targets).reduce(
             (total, count) => total + count,
             0
         );
@@ -314,7 +313,7 @@ analyticsRoutes.get(
             Date.parse(`${range.to}T23:59:59Z`)
         );
         const firstUsed = Math.max(
-            stats?.firstInsertedAt?.getTime() ?? windowStart,
+            stats?.firstUsedAt?.getTime() ?? windowStart,
             windowStart
         );
 
@@ -328,10 +327,10 @@ analyticsRoutes.get(
         const out: InsertableReportOut = {
             name: insertable.name,
             path: toElementPath({ ...insertable, elementId }),
-            insertCount,
+            useCount,
             usesPerMonth: usesPerMonth(
-                insertCount,
-                insertCount === 0 ? undefined : firstUsed,
+                useCount,
+                useCount === 0 ? undefined : firstUsed,
                 windowEnd
             ),
             uniqueUsers: uniqueUsers?.value ?? 0,

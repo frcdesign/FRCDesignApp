@@ -18,6 +18,9 @@ import {
     seedPartStudio
 } from "../../../__test_utils__";
 import { StepExportState, stepExportFilePath } from "./contract";
+import { events } from "../analytics/schema";
+import { EventType, UseSource } from "../analytics/usage";
+import { OnshapeApiError } from "../../lib/onshape/client";
 
 const db = getDb(env.DB);
 
@@ -70,6 +73,48 @@ describe("step export routes", () => {
                 destinationName: `Test ${ElementType.PART_STUDIO}`
             }
         );
+    });
+
+    it("records the download as a use, with where it started", async () => {
+        await seedConfiguration(db);
+        vi.spyOn(TranslationEndpoints, "startStepExport").mockResolvedValue(
+            translation()
+        );
+
+        await createTestApp().request(
+            `/api/step-export/insertable/${TEST_PART_STUDIO_ID}`,
+            jsonRequest("POST", {
+                selection: { boolean: "false" },
+                isFavorite: true,
+                source: UseSource.FAVORITES
+            }),
+            env
+        );
+
+        expect(await db.select().from(events).all()).toMatchObject([
+            {
+                type: EventType.DOWNLOAD,
+                insertableId: TEST_PART_STUDIO_ID,
+                selection: { boolean: "false" },
+                isFavorite: true,
+                source: UseSource.FAVORITES
+            }
+        ]);
+    });
+
+    it("records nothing when Onshape refuses the export", async () => {
+        vi.spyOn(TranslationEndpoints, "startStepExport").mockRejectedValue(
+            new OnshapeApiError("Forbidden", 403)
+        );
+
+        const res = await createTestApp().request(
+            `/api/step-export/insertable/${TEST_PART_STUDIO_ID}`,
+            jsonRequest("POST", {}),
+            env
+        );
+
+        expect(res.status).toBe(403);
+        expect(await db.select().from(events).all()).toEqual([]);
     });
 
     it("exports the default without naming a configuration", async () => {

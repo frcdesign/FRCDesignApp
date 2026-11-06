@@ -6,6 +6,7 @@ import {
     type StepExportStatus
 } from "@backend/features/download/contract";
 import { type InsertableOut } from "@backend/features/library/contract";
+import { type UseSource } from "@backend/features/analytics/usage";
 import { type PartialSelection } from "@backend/features/configurations/contract";
 import { apiGet, apiPost } from "../../lib/api-client";
 import { appError, getAppErrorHandler } from "../../lib/errors";
@@ -54,10 +55,17 @@ function saveFile(path: string): void {
     link.click();
 }
 
+/** What a download records beside the part, as an insert does. */
+export interface DownloadArgs {
+    isFavorite: boolean;
+    source: UseSource;
+}
+
 export function useStepExportMutation(
     insertable: InsertableOut,
     /** Partial is fine: the server makes it whole. */
-    selection: PartialSelection | undefined
+    selection: PartialSelection | undefined,
+    downloadArgs: DownloadArgs
 ) {
     const toastId = "step-export-" + insertable.id;
     const name = insertable.name;
@@ -67,7 +75,7 @@ export function useStepExportMutation(
             showLoadingToast(m.downloadStepExporting({ name }), toastId);
             const { translationId } = await apiPost<StepExportOut>(
                 "/step-export" + toInsertablePath(insertable.id),
-                { body: { selection } }
+                { body: { selection, ...downloadArgs } }
             );
             await waitForExport(translationId, name);
             saveFile(stepExportFilePath(translationId));

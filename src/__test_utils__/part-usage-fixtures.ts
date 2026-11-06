@@ -17,7 +17,7 @@ export function partUsage({
         name: "Part",
         groupName: "Gearboxes",
         isVisible: true,
-        insertCount: 0,
+        useCount: 0,
         usesPerMonth: 0,
         favorites: 0,
         recent: [],

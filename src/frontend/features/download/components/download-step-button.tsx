@@ -7,20 +7,23 @@ import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
 import { useAccessData } from "../../auth/access-level";
 import { startSignIn } from "../../auth/sign-in";
 import { useIsFetchingConfiguration } from "../../insert/queries";
-import { useStepExportMutation } from "../queries";
+import { type DownloadArgs, useStepExportMutation } from "../queries";
 import { m } from "../../../paraglide/messages";
 
-interface DownloadStepButtonProps {
+interface DownloadStepButtonProps extends DownloadArgs {
     insertable: InsertableOut;
     selection?: PartialSelection;
 }
 
 /** Standalone only: inside Onshape the part is inserted, and Onshape exports it. */
 export function DownloadStepButton(props: DownloadStepButtonProps): ReactNode {
-    const { insertable, selection } = props;
+    const { insertable, selection, isFavorite, source } = props;
     const isConnected = useIsConnectedToOnshape();
     const { signedIn, isPending } = useAccessData();
-    const exportMutation = useStepExportMutation(insertable, selection);
+    const exportMutation = useStepExportMutation(insertable, selection, {
+        isFavorite,
+        source
+    });
     const isLoadingConfiguration = useIsFetchingConfiguration(
         insertable.id,
         insertable.microversionId
