@@ -17,12 +17,8 @@ import {
     makeAuthTokens,
     TOKEN_ENDPOINT
 } from "./onshape-oauth";
-import {
-    countSessionCookies,
-    getSession,
-    getSessionId,
-    saveSession
-} from "./session";
+import { getSession, getSessionId, saveSession } from "./session";
+import { cookieNames } from "./cookie-options";
 import { getDocumentCompanyId } from "./company";
 import { PERSONAL_COMPANY_ID } from "./personal-company";
 
@@ -94,7 +90,7 @@ export async function isAuthenticated(c: AppContext): Promise<boolean> {
     if (problem) {
         console.warn("Launch needs sign-in", {
             problem,
-            sessionCookies: countSessionCookies(c)
+            cookies: cookieNames(c)
         });
     }
     return problem === undefined;

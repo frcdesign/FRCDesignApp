@@ -35,9 +35,9 @@ team, plus one owner set by configuration.
 
 - **Cookies** (`SameSite=None; Secure; Partitioned`, since the app runs in
   Onshape's iframe; partitioned so a browser blocking third-party cookies keeps
-  them). `setAuthCookie` and `clearAuthCookie` in `cookie-options.ts` write
-  them, and each also expires an unpartitioned cookie of the same name:
-  `frc-design-app-session` holds an opaque session id; `frc-design-app-login`
+  them), written only by `setAuthCookie` and `clearAuthCookie` in
+  `cookie-options.ts`:
+  `__Host-frc-design-app-session` holds an opaque session id; `__Host-frc-design-app-login`
   holds a sign-in's OAuth state and return path for ten minutes and is read once.
 - **KV** `session:` — the session's access and refresh tokens, expiry, and the
   user id once resolved, for 30 days.
@@ -175,10 +175,11 @@ declared in `wrangler.jsonc` per environment and typed in `AppBindings`. Run
 ## Invariants
 
 - The cookie holds only an opaque id; tokens never leave KV.
-- Auth cookies are written only through `setAuthCookie` and `clearAuthCookie`,
-  so no unpartitioned cookie of the same name outlives a write. The browser
-  sends an older one first and `getCookie` reads the first, so one left behind
-  hides the session: the caller signs in and still reads as signed out.
+- Auth cookies are written only through `setAuthCookie` and `clearAuthCookie`:
+  always partitioned, and at most one `Set-Cookie` per name per response.
+- No unpartitioned cookie ever carries an auth cookie's name. The browser
+  sends an older one first and `getCookie` reads the first, so one would hide
+  the session: the caller signs in and still reads as signed out.
 - A session is only created by a completed sign-in, with a fresh id.
 - Access is decided on the server per library; the client's viewed level only
   hides UI and can never exceed the server's.
@@ -191,7 +192,7 @@ declared in `wrangler.jsonc` per environment and typed in `AppBindings`. Run
 ## Failure and recovery
 
 `/init` logs why a launch needs sign-in (`isAuthenticated`: no session, an
-expired one, another company's or user's) with how many session cookies came;
+expired one, another company's or user's) with the names of the cookies that came;
 the callback logs the cookie names, never values, when its login cookie is
 missing.
 
@@ -205,7 +206,6 @@ missing.
 | Document public or shared view-only                              | `/init` sends the launch to `/document-access`                                                         | Edit access from the document's owner                    |
 | Team membership changed in Onshape                               | Synced when its webhook arrives                                                                        | **Refresh** beside the admin team, for a missed delivery |
 | No saved background session                                      | A load whose requester's session lapses fails                                                          | The owner or a team member opens the app                 |
-| An unpartitioned session cookie from before partitioning         | Expired by the next sign-in, sign-out or session write                                                 | Automatic: `/init` signs a caller it hides in again      |
 | Browser refuses even a partitioned cookie (Brave, strict policy) | The callback finds no login cookie and sends the caller to `/cookie-error` (`/safari-error` in Safari) | Allow the app's cookies; **Send a report**               |
 
 ## Decisions
@@ -236,6 +236,12 @@ missing.
   that blocks third-party cookies. The panel and the standalone app hold
   separate sessions, each signed in on its own; `/init` already signs the panel
   in, so nothing relies on sharing one.
+- **`__Host-` names, not the names the cookies had unpartitioned.** A
+  partitioned cookie is separate from an unpartitioned one of the same name,
+  and Chrome sends the older first. Expiring the old one in the same response
+  fails in Firefox, which partitions a frame's cookies regardless, so the
+  expiry lands on the new cookie. New names leave the old cookies unread until
+  they expire; `__Host-` also keeps a subdomain from setting them.
 - **Login state in a cookie, not KV.** A caller who abandons sign-in keeps the
   session they had, and nothing needs cleaning up.
 

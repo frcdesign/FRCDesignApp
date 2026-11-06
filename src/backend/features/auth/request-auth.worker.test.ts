@@ -68,7 +68,9 @@ describe("the dev access-level override", () => {
                 "/api/access-data/library/frc-design-lib",
                 {
                     method: "GET",
-                    headers: { Cookie: `frc-design-app-session=${sessionId}` }
+                    headers: {
+                        Cookie: `__Host-frc-design-app-session=${sessionId}`
+                    }
                 },
                 { ...env, VITE_ACCESS_LEVEL_OVERRIDE: override }
             );
@@ -115,7 +117,9 @@ describe("access from a library's admin team", () => {
             `/api/access-data/library/${libraryId}`,
             {
                 method: "GET",
-                headers: { Cookie: `frc-design-app-session=${sessionId}` }
+                headers: {
+                    Cookie: `__Host-frc-design-app-session=${sessionId}`
+                }
             },
             { ...env, OWNER_USER_ID: OWNER }
         );
@@ -182,7 +186,9 @@ describe("the launch's sign-in check", () => {
             `/init?documentId=doc&${query}`,
             {
                 method: "GET",
-                headers: { Cookie: `frc-design-app-session=${sessionId}` }
+                headers: {
+                    Cookie: `__Host-frc-design-app-session=${sessionId}`
+                }
             },
             env
         );

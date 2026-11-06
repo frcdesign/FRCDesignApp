@@ -42,7 +42,7 @@ function get(url: string, sessionId?: string) {
     if (sessionId) {
         init.headers = {
             ...init.headers,
-            Cookie: `frc-design-app-session=${sessionId}`
+            Cookie: `__Host-frc-design-app-session=${sessionId}`
         };
     }
     // Signed in only with a session, as a real caller is.
@@ -273,7 +273,7 @@ describe("rendering a configuration's thumbnail", () => {
         if (signedIn) {
             init.headers = {
                 ...init.headers,
-                Cookie: `frc-design-app-session=${SESSION_ID}`
+                Cookie: `__Host-frc-design-app-session=${SESSION_ID}`
             };
         }
         return createTestApp({ signedIn }).request(

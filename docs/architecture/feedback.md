@@ -142,9 +142,10 @@ selection? }`.
    message is two embeds: the report in its type's color (title, link to the
    part, what they typed, then the part, its configuration, the error, the Discord username and the team number), and
    under it a gray
-   block of `Label: value` lines (topic, type, source, page, launch, launch context, signed in, session
-   cookies (how many the report came with; two means a stale one hides the session),
-   viewed as, build, window, browser) with the report id in its footer.
+   block of `Label: value` lines (topic, type, source, page, launch, launch context, signed in, access
+   level (per library from the server, one level when they agree, and the
+   level viewed at when someone chose one), cookies (names only), build, window,
+   browser) with the report id in its footer.
 7. Once posted, `trackReport` records it in the background, under the id the
    post quotes in its footer, with the team number when there is one.
 8. The form turns into a success notice (`ReportSent`, a `SectionNotice`):

@@ -49,7 +49,7 @@ describe("GET /access-data", () => {
     });
 });
 
-const SESSION_COOKIE = "frc-design-app-session";
+const SESSION_COOKIE = "__Host-frc-design-app-session";
 
 /** A signed-in session, as the OAuth callback would have left it. */
 async function seedSession(sessionId: string) {
@@ -89,19 +89,18 @@ describe("GET /auth/sign-out", () => {
         expect(res.headers.get("Set-Cookie")).toContain(`${SESSION_COOKIE}=;`);
     });
 
-    // An unpartitioned copy left from before is sent first and would shadow the session.
-    it("expires the cookie partitioned and unpartitioned", async () => {
+    // Firefox partitions a frame's cookies regardless, so a second Set-Cookie
+    // for the name would apply to the same cookie and undo the first.
+    it("writes each cookie once per response, partitioned", async () => {
         await seedSession("session-1");
 
         const res = await signOut("/", "session-1");
 
-        const expired = res.headers
+        const written = res.headers
             .getSetCookie()
-            .filter((cookie) => cookie.startsWith(`${SESSION_COOKIE}=;`));
-        expect(expired).toHaveLength(2);
-        expect(
-            expired.filter((cookie) => cookie.includes("Partitioned"))
-        ).toHaveLength(1);
+            .filter((cookie) => cookie.startsWith(`${SESSION_COOKIE}=`));
+        expect(written).toHaveLength(1);
+        expect(written[0]).toContain("Partitioned");
     });
 
     it("lands home rather than forwarding the caller offsite", async () => {
@@ -176,7 +175,7 @@ describe("GET /auth/sign-in", () => {
     });
 });
 
-const LOGIN_COOKIE = "frc-design-app-login";
+const LOGIN_COOKIE = "__Host-frc-design-app-login";
 
 describe("GET /auth/sign-in redirect target", () => {
     async function storedRedirect(query: string): Promise<string | undefined> {

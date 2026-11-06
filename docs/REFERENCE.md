@@ -34,7 +34,7 @@ Queries go through **Drizzle ORM** so you write TypeScript instead of raw SQL. T
 
 KV holds what may expire or be lost. Every key belongs to a `kvStore` (`src/backend/lib/kv-store.ts`) with its own prefix, value type and lifetime:
 
-- `session:` — a signed-in session's access and refresh tokens and user id, keyed by the opaque id in the `frc-design-app-session` cookie, for 30 days (`features/auth/session.ts`). A sign-in in flight keeps nothing here: its state and return path are the whole of the ten-minute `frc-design-app-login` cookie (`features/auth/login.ts`).
+- `session:` — a signed-in session's access and refresh tokens and user id, keyed by the opaque id in the `__Host-frc-design-app-session` cookie, for 30 days (`features/auth/session.ts`). A sign-in in flight keeps nothing here: its state and return path are the whole of the ten-minute `__Host-frc-design-app-login` cookie (`features/auth/login.ts`).
 - `background-session:` — the latest session ids of the owner and each admin team member, so a load nobody is signed in behind can run as one of them.
 - `library-reload:`, `library-reload-queued:` — the reload holding each library, and those waiting for their turn ([architecture/loading.md](./architecture/loading.md)).
 - `feedback-sent:` — when each reporter sent their reports in the last hour, for the reports' rate limit ([architecture/feedback.md](./architecture/feedback.md)).

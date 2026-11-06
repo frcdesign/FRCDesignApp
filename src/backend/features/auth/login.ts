@@ -6,7 +6,7 @@ import { getCookie } from "hono/cookie";
 import { type AppContext } from "../../lib/context";
 import { clearAuthCookie, setAuthCookie } from "./cookie-options";
 
-const LOGIN_COOKIE = "frc-design-app-login";
+const LOGIN_COOKIE = "__Host-frc-design-app-login";
 const LOGIN_TTL = 600; // 10 minutes
 
 /** What the callback needs to finish a sign-in it did not start. */
