@@ -9,21 +9,21 @@ their Onshape calls and link here for how those calls behave.
 
 ## Code map
 
-| Path                                              | Role                                                                              |
-| ------------------------------------------------- | --------------------------------------------------------------------------------- |
-| `src/backend/lib/onshape/client.ts`               | `OnshapeApi`, `OAuthApi`, `ApiKeyApi`; `OnshapeApiError`, `OnshapeRateLimitError` |
-| `src/backend/lib/onshape/endpoints/`              | One wrapper per Onshape endpoint, grouped by Onshape's API category               |
-| `src/backend/lib/api-error.ts`                    | `ApiError` and its four kinds; the body every failed `/api` response carries      |
-| `src/backend/lib/errors.ts`                       | `errorHandler`: turns any thrown error into that body and a status                |
-| `src/backend/features/load/steps.ts`              | Workflow retry policies for Onshape and thumbnail steps                           |
-| `src/backend/features/load/context.ts`            | The load's limiters                                                               |
-| `src/backend/lib/cache.ts`                        | `CachePolicy`, `cacheMiddleware`, `setCache`                                      |
-| `src/backend/features/push/`                      | `ClientRelay` Durable Object, message contract, `notify.ts` senders               |
-| `src/frontend/lib/api-client.ts`                  | `apiGet`, `apiPost`, `apiDelete`, `loadImage`; appends `?v=` for cached reads     |
-| `src/frontend/lib/errors.ts`                      | `AppError`, `handleAppError`, `getAppErrorHandler`                                |
-| `src/frontend/lib/notifications.tsx`              | `showLoadingToast`, `showSuccessToast`, `showInfoToast`, `showErrorToast`         |
-| `src/frontend/lib/query-client.ts`                | TanStack Query defaults, including retry                                          |
-| `src/frontend/lib/push-socket.ts`, `push-sync.ts` | The client's WebSocket, and applying pushes to the cache                          |
+| Path                                              | Role                                                                                  |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `src/backend/lib/onshape/client.ts`               | `OnshapeApi`, `OAuthApi`, `ApiKeyApi`; `OnshapeApiError`, `OnshapeRateLimitError`     |
+| `src/backend/lib/onshape/endpoints/`              | One wrapper per Onshape endpoint, grouped by Onshape's API category                   |
+| `src/backend/lib/api-error.ts`                    | `ApiError` and its four kinds; the body every failed `/api` response carries          |
+| `src/backend/lib/errors.ts`                       | `errorHandler`: turns any thrown error into that body and a status; `findServerError` |
+| `src/backend/features/load/steps.ts`              | Workflow retry policies for Onshape and thumbnail steps                               |
+| `src/backend/features/load/context.ts`            | The load's limiters                                                                   |
+| `src/backend/lib/cache.ts`                        | `CachePolicy`, `cacheMiddleware`, `setCache`                                          |
+| `src/backend/features/push/`                      | `ClientRelay` Durable Object, message contract, `notify.ts` senders                   |
+| `src/frontend/lib/api-client.ts`                  | `apiGet`, `apiPost`, `apiDelete`, `loadImage`; appends `?v=` for cached reads         |
+| `src/frontend/lib/errors.ts`                      | `AppError`, `handleAppError`, `getAppErrorHandler`                                    |
+| `src/frontend/lib/notifications.tsx`              | `showLoadingToast`, `showSuccessToast`, `showInfoToast`, `showErrorToast`             |
+| `src/frontend/lib/query-client.ts`                | TanStack Query defaults, including retry                                              |
+| `src/frontend/lib/push-socket.ts`, `push-sync.ts` | The client's WebSocket, and applying pushes to the cache                              |
 
 ## Calling Onshape
 
@@ -68,7 +68,17 @@ A route throws; `errorHandler` answers with `{ kind, message }` and a status:
 | A validator's `HTTPException`    | `internal`         | its own  | Default wording; logged                                     |
 | Anything else                    | `internal`         | 500      | Default wording; logged                                     |
 
-On the client, `apiGet`/`apiPost` throw an `AppError` holding that body. A
+A logged error's body also carries an `errorId`: the request's Ray ID (`cf-ray`),
+or a random id where there is none, as in tests and local dev. It is logged
+beside the error, so Workers Logs finds it, and the error is kept for a day in
+KV `server-error:` under that id (`describeServerError`): its name and message,
+its causes', and up to ten frames of its stack, never a `DrizzleQueryError`'s
+params, which can hold a user id. A report quoting the id carries it to Discord
+([feedback.md](./feedback.md)).
+
+On the client, `apiGet`/`apiPost`/`apiDelete` throw an `AppError` holding that
+body and the request that failed (`FailedRequest`: method, path without the
+query, status). A
 mutation's `onError` is `getAppErrorHandler(defaultMessage, toastId)`, which
 shows the body's message for `handled` and `forbidden`, adds a **Sign in**
 action for `sign-in-required`, and shows `defaultMessage` for `internal` or any

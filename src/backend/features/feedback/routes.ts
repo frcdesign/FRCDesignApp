@@ -2,6 +2,7 @@ import { HttpStatus } from "http-status-ts";
 import { type AppContext, getApp } from "../../lib/context";
 import { validate } from "../../lib/validate";
 import { handledError, internalError } from "../../lib/api-error";
+import { findServerError } from "../../lib/errors";
 import { getDb } from "../../db/client";
 import { isSignedIn } from "../auth/request-auth";
 import { cookieNames } from "../auth/cookie-options";
@@ -76,6 +77,11 @@ feedbackRoutes.post("/feedback", validate("json", feedbackBody), async (c) => {
         }
     }
 
+    const errorId = body.diagnostics.error?.errorId;
+    const serverError = errorId
+        ? await findServerError(c.env.KV, errorId)
+        : undefined;
+
     const reportId = crypto.randomUUID();
     await postToDiscord(
         webhookUrl,
@@ -94,6 +100,7 @@ feedbackRoutes.post("/feedback", validate("json", feedbackBody), async (c) => {
             accessLevels: await readAccessLevels(c),
             userAgent: c.req.header("User-Agent"),
             part,
+            serverError,
             diagnostics: body.diagnostics,
             createdAt: new Date()
         })

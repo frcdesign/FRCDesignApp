@@ -25,6 +25,7 @@ who they are beyond what they typed, nor anything about their own documents.
 | `src/backend/features/feedback/discord.ts`                    | `buildReportMessage`, `postToDiscord`                                           |
 | `src/backend/features/feedback/reported-part.ts`              | `findReportedPart`: the part, its link and its configuration as the reader sees |
 | `src/backend/features/feedback/rate-limit.ts`                 | `takeReportSlot`: reports per reporter per hour                                 |
+| `src/backend/lib/errors.ts`                                   | `findServerError`: what the server logged for an error a report quotes          |
 | `src/backend/features/analytics/tracking.ts`                  | `trackReport`, which records each sent report                                   |
 | `src/backend/features/analytics/report-queries.ts`            | The dashboard's report counts and most reported parts                           |
 | `src/frontend/features/feedback/components/feedback-form.tsx` | The one form every report is sent from                                          |
@@ -44,6 +45,9 @@ who they are beyond what they typed, nor anything about their own documents.
   channel.
 - **KV** `feedback-sent:` — by reporter (`user:<id>` signed in, `ip:<address>`
   otherwise), the times of their reports in the last hour, for an hour.
+- **KV** `server-error:` — read, not written, here: by error id, what the
+  server logged for an error, for a day; see
+  [platform.md](./platform.md#errors-end-to-end).
 - **D1** — one `events` row per sent report (`type` `report`, with
   `report_topic`, `report_category`, `report_source`, `report_team_number`, and
   the element columns for a part report) and its `daily_report_metrics` rollup; see
@@ -134,7 +138,10 @@ selection? }`.
    params name an element, standalone otherwise, by `toLaunchContext`; computed
    here so `/cookie-error`, with no session, still has it), the level the app is viewed as, the window size, and
    the error: what was shown, and for a thrown `Error` its stack
-   (`toReportedError`), which a crash report sends too.
+   (`toReportedError`), which a crash report sends too. An `AppError` brings
+   its kind and message instead, the request that failed as
+   `GET /api/… → 500` (the query left out, since it can name a document), and
+   the server's `errorId` when it logged one.
 3. `feedbackBody` checks that the category belongs to the topic and source,
    that only a part report names a part, that the title fits a thread's name
    (100 characters), and that only an error report may have no message.
@@ -142,23 +149,28 @@ selection? }`.
 4. The route resolves the reporter (a user id when signed in, none otherwise)
    and takes a slot from the rate limit. The id goes to the limit and the
    record only; the post says just whether they were signed in.
-5. A part report looks the part up in the topic's library (`findReportedPart`),
+5. An error report quoting an `errorId` has what the server logged for it
+   looked up (`findServerError`). An id that has expired, or never existed,
+   leaves it out.
+6. A part report looks the part up in the topic's library (`findReportedPart`),
    runs the selection through `toSelection`, and builds the Onshape link from
    `onshapeOverrides` and the readable `Name: value` lines from the parameters
    the reporter could see. The link is to the library's own document. The post
    says whether the reporter put the problem in the Onshape document.
-6. `postToDiscord` posts the message with `?wait=true`, opening a thread named
+7. `postToDiscord` posts the message with `?wait=true`, opening a thread named
    by the title (`thread_name`) under the report's tags (`applied_tags`). The
    message is two embeds: the report in its type's color (title, link to the
-   part, what they typed, then the part, its configuration, the error, the Discord username and the team number), and
+   part, what they typed, then the part, its configuration, the error (with its
+   request and error id), what the server logged for it, the Discord username
+   and the team number), and
    under it a gray
    block of `Label: value` lines (topic, type, source, page, launch, launch context, signed in, access
    level (per library from the server, one level when they agree, and the
    level viewed at when someone chose one), cookies (names only), build, window,
    browser) with the report id in its footer.
-7. Once posted, `trackReport` records it in the background, under the id the
+8. Once posted, `trackReport` records it in the background, under the id the
    post quotes in its footer, with the team number when there is one.
-8. The form turns into a success notice (`ReportSent`, a `SectionNotice`):
+9. The form turns into a success notice (`ReportSent`, a `SectionNotice`):
    "Report sent!", "You can find your report in #frcdesignlib-feedback if you want
    to follow up in Discord.", and **Open Discord**, the forum's invite
    (`forumInvite`). Replies happen only there. If anything failed, the form
@@ -184,19 +196,23 @@ parts still in the library, each opening the part's page.
   all. The part a part report names is the library's, not theirs.
 - A post names the reporter only by what they typed. Their Onshape user id
   goes to the rate limit and the record, never to Discord.
+- What the server logged reaches Discord only through a report quoting its
+  id, which only the response to the failed request carried, and never holds a
+  query's params.
 - The route works signed out, since signing in is one of the things that breaks.
 - Every message stays within Discord's limits (`buildReportMessage` trims what
   the reporter typed to fit).
 
 ## Failure and recovery
 
-| Failure                         | Result                                        | Recovery                                 |
-| ------------------------------- | --------------------------------------------- | ---------------------------------------- |
-| Topic's webhook secret unset    | 503: "Reports can't be sent right now…"       | Set the secret                           |
-| Discord refuses or is down      | 502; the form stays open with what was typed  | Send again                               |
-| More than 10 reports in an hour | 429: "You've sent a lot of reports recently…" | Wait out the hour                        |
-| Webhook deleted in Discord      | Every report to that topic fails with 502     | Make a new webhook and update the secret |
-| The record fails after the post | The report is in Discord but not counted      | None needed                              |
+| Failure                                      | Result                                            | Recovery                                 |
+| -------------------------------------------- | ------------------------------------------------- | ---------------------------------------- |
+| Topic's webhook secret unset                 | 503: "Reports can't be sent right now…"           | Set the secret                           |
+| Discord refuses or is down                   | 502; the form stays open with what was typed      | Send again                               |
+| More than 10 reports in an hour              | 429: "You've sent a lot of reports recently…"     | Wait out the hour                        |
+| Webhook deleted in Discord                   | Every report to that topic fails with 502         | Make a new webhook and update the secret |
+| The record fails after the post              | The report is in Discord but not counted          | None needed                              |
+| The logged error expired or was never stored | The post has the error id but no **Server error** | Search Workers Logs for the id           |
 
 ## Decisions
 
@@ -235,6 +251,11 @@ parts still in the library, each opening the part's page.
   one block rather than a grid of fields.
 - **Kudos.** Praise goes to the same forum as everything else, under its own
   tag, so the team sees what works as well as what breaks.
+- **The server's error by id, not in the response.** A stack can name tables,
+  queries and Onshape's answers, which a user's browser has no use for. The
+  response carries only an id, and the post looks up what was logged, so the
+  team reads what broke on the server without the Workers dashboard. The id is
+  the Ray ID so the same request can be found in Workers Logs too.
 - **Links on cad's domain.** A reporter's company domain means nothing to the
   person reading the report.
 

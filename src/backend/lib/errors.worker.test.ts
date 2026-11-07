@@ -1,10 +1,12 @@
 import { env } from "cloudflare:workers";
+import { DrizzleQueryError } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
 import { AccessLevel } from "../features/auth/access-level";
 import { LibraryId } from "../features/library/library-id";
 import { ApiErrorKind } from "./api-error";
 import { createTestApp, jsonRequest, resetDb } from "../../__test_utils__";
 import { getDb } from "../db/client";
+import { findServerError } from "./errors";
 
 const db = getDb(env.DB);
 
@@ -59,6 +61,35 @@ describe("api error responses", () => {
         expect(await res.json<unknown>()).toMatchObject({
             kind: ApiErrorKind.INTERNAL
         });
+    });
+
+    it("stores an unexpected error under the request's Ray ID, without the query's params", async () => {
+        const app = createTestApp();
+        app.post("/api/test-crash", () => {
+            throw new DrizzleQueryError(
+                "select * from favorites where user_id = ?",
+                ["a-user-id"],
+                new Error("D1_ERROR: no such table: favorites")
+            );
+        });
+
+        const res = await app.request(
+            "/api/test-crash",
+            { method: "POST", headers: { "cf-ray": "8f00ba11-IAD" } },
+            env
+        );
+
+        expect(res.status).toBe(500);
+        expect(await res.json<unknown>()).toEqual({
+            kind: ApiErrorKind.INTERNAL,
+            message: "Internal Server Error",
+            errorId: "8f00ba11-IAD"
+        });
+        const logged = await findServerError(env.KV, "8f00ba11-IAD");
+        expect(logged).toMatch(
+            /^DrizzleQueryError: Failed query: select \* from favorites where user_id = \?\ncause: Error: D1_ERROR: no such table: favorites\n\s+at /
+        );
+        expect(logged).not.toContain("a-user-id");
     });
 
     it("marks an unknown library as internal rather than explaining it", async () => {

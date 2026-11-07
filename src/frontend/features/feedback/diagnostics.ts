@@ -16,11 +16,16 @@ export type ReportedError = NonNullable<FeedbackDiagnostics["error"]>;
 /** `shown` is what the user read; the rest is what they may not have been shown. */
 export function toReportedError(shown: string, error?: unknown): ReportedError {
     if (error instanceof AppError) {
+        const { request } = error;
         return {
             shown,
             kind: error.body.kind,
             // An internal message is for the logs, which is who reads a report.
-            detail: error.body.message || undefined
+            detail: error.body.message || undefined,
+            request:
+                request &&
+                `${request.method} ${request.path} → ${request.status}`,
+            errorId: error.body.errorId
         };
     }
     if (error instanceof Error) {

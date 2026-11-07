@@ -17,6 +17,8 @@ export enum ApiErrorKind {
 interface ApiErrorOf<K extends ApiErrorKind> {
     kind: K;
     message: string;
+    /** Set when the server logged the error; a report quotes it to carry what was logged. */
+    errorId?: string;
 }
 
 export type ApiErrorBody =

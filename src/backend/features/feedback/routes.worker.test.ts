@@ -179,6 +179,41 @@ describe("POST /api/feedback", () => {
         });
     });
 
+    it("posts what the server logged for the error a report quotes", async () => {
+        const crashing = createTestApp();
+        crashing.get("/api/test-crash", () => {
+            throw new TypeError("Cannot read properties of undefined");
+        });
+        const crash = await crashing.request("/api/test-crash", {}, env);
+        const { errorId } = await crash.json<{ errorId: string }>();
+
+        await send(
+            body({
+                source: FeedbackSource.ERROR,
+                message: "",
+                diagnostics: {
+                    ...DIAGNOSTICS,
+                    error: {
+                        shown: "The app has crashed due to an unexpected error.",
+                        kind: "internal",
+                        detail: "Internal Server Error",
+                        request: "GET /api/test-crash → 500",
+                        errorId
+                    }
+                }
+            })
+        );
+
+        const [embed] = post.mock.calls[0][1].embeds;
+        const value = (name: string) =>
+            embed.fields?.find((field) => field.name === name)?.value;
+        expect(value("Error")).toContain("request: GET /api/test-crash → 500");
+        expect(value("Error")).toContain(`error id: ${errorId}`);
+        expect(value("Server error")).toContain(
+            "TypeError: Cannot read properties of undefined"
+        );
+    });
+
     it("leaves the configuration out when the reporter does", async () => {
         await seedPartStudio(db);
         await seedConfiguration(db);

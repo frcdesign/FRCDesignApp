@@ -7,9 +7,20 @@ import { toReportedError } from "../features/feedback/diagnostics";
 import { openErrorReport } from "../features/feedback/open-feedback";
 import { m } from "../paraglide/messages";
 
-/** `body` is the discriminated shape the backend sends. */
+/** An `/api` call that failed, as a report names it. */
+export interface FailedRequest {
+    method: string;
+    /** Without the query, which can name the user's document. */
+    path: string;
+    status: number;
+}
+
+/** `body` is the discriminated shape the backend sends; `request` is set when it came from one. */
 export class AppError extends Error {
-    constructor(readonly body: ApiErrorBody) {
+    constructor(
+        readonly body: ApiErrorBody,
+        readonly request?: FailedRequest
+    ) {
         super(body.message);
         this.name = "AppError";
         Object.setPrototypeOf(this, new.target.prototype);
@@ -38,14 +49,22 @@ const SPOKEN_KINDS: ApiErrorBody["kind"][] = [
 ];
 
 /** Builds an {@link AppError} from a failed /api response body. */
-export function fromApiErrorBody(body: unknown): AppError {
+export function fromApiErrorBody(
+    body: unknown,
+    request?: FailedRequest
+): AppError {
     const parsed = body as Partial<ApiErrorBody> | undefined;
     const kind = SPOKEN_KINDS.find((spoken) => spoken === parsed?.kind);
     // Anything unrecognized is a failure we did not write wording for.
-    return new AppError({
-        kind: kind ?? ApiErrorKind.INTERNAL,
-        message: parsed?.message ?? ""
-    });
+    return new AppError(
+        {
+            kind: kind ?? ApiErrorKind.INTERNAL,
+            message: parsed?.message ?? "",
+            errorId:
+                typeof parsed?.errorId === "string" ? parsed.errorId : undefined
+        },
+        request
+    );
 }
 
 export function getAppErrorHandler(defaultMessage: string, toastId?: string) {
