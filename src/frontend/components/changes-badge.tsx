@@ -11,17 +11,20 @@ interface ChangesBadgeProps {
 /** What a document or tab has changed since a version, which is what cutting one picks up. */
 export function ChangesBadge(props: ChangesBadgeProps): ReactNode {
     const { changes } = props;
-    const label =
-        changes === undefined
-            ? m.changesBadgeChanged()
-            : m.changesBadge({ count: changes });
-    const tooltip =
-        changes === undefined
-            ? m.changesBadgeChangedTooltip()
-            : m.changesBadgeTooltip({ count: changes });
+    const badge = (
+        <Badge className={styles.noShrink}>
+            {changes === undefined
+                ? m.changesBadgeChanged()
+                : m.changesBadge({ count: changes })}
+        </Badge>
+    );
+    // "Changed" says all there is to say about a tab.
+    if (changes === undefined) {
+        return badge;
+    }
     return (
-        <Tooltip label={tooltip}>
-            <Badge className={styles.noShrink}>{label}</Badge>
+        <Tooltip label={m.changesBadgeTooltip({ count: changes })}>
+            {badge}
         </Tooltip>
     );
 }

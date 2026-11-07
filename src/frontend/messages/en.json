@@ -248,7 +248,7 @@
     "groupPageNoVisibleElements": "This group has no visible elements",
     "groupPageLoadingDocument": "Loading document from Onshape...",
     "groupPageDocumentFailed": "This group failed to load.",
-    "groupPageDocumentFailedHelp": "Reload outdated documents to try again, or delete the group.",
+    "groupPageDocumentFailedHelp": "Reload outdated documents to try again.",
     "groupPageFilteredOut": "All elements are hidden by filters",
     "feedbackFormTitle": "Leave feedback",
     "feedbackPartReportTitle": "Report issue with {part}",
@@ -434,7 +434,6 @@
         }
     ],
     "changesBadgeChanged": "Changed",
-    "changesBadgeChangedTooltip": "Changed since the version the library has.",
     "versionManagerLoading": "Loading...",
     "versionManagerSignInTitle": "Sign in to manage versions",
     "versionManagerSignInDescription": "Pushing and pulling happen in your Onshape documents.",
@@ -484,20 +483,7 @@
     "libraryMenuDocument": "Document",
     "libraryUpdateReferences": "Update references",
     "libraryUpdatingReferences": "Updating references...",
-    "libraryUpdatedReferences": [
-        {
-            "declarations": [
-                "input count",
-                "local countPlural = count: plural",
-                "local formatted = count: number"
-            ],
-            "selectors": ["countPlural"],
-            "match": {
-                "countPlural=one": "Updated references in 1 tab. Cut a version to load it.",
-                "countPlural=other": "Updated references in {formatted} tabs. Cut a version to load them."
-            }
-        }
-    ],
+    "libraryUpdatedReferences": "Updated references.",
     "libraryReferencesUpToDate": "References are already up to date.",
     "libraryUpdateReferencesFailed": "Failed to update references."
 }

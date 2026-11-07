@@ -349,7 +349,7 @@ export function useUpdateReferencesMutation(
         onSuccess: async ({ updatedElements }) => {
             showSuccessToast(
                 updatedElements > 0
-                    ? m.libraryUpdatedReferences({ count: updatedElements })
+                    ? m.libraryUpdatedReferences()
                     : m.libraryReferencesUpToDate(),
                 UPDATE_REFERENCES_TOAST
             );
