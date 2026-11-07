@@ -102,6 +102,7 @@ function ReloadThumbnailButton(props: ReloadThumbnailButtonProps): ReactNode {
     const mutation = useReloadThumbnailMutation(props.target);
     return (
         <Button
+            variant="outline"
             size="compact-sm"
             leftSection={<ImageIcon size={IconSize.SMALL} />}
             loading={mutation.isPending}
@@ -130,6 +131,7 @@ function UpdateReferencesButton(props: UpdateReferencesButtonProps): ReactNode {
             }
         >
             <Button
+                variant="outline"
                 size="compact-sm"
                 leftSection={<ArrowsClockwiseIcon size={IconSize.SMALL} />}
                 loading={mutation.isPending}
@@ -152,6 +154,7 @@ function VisibilityButton(props: VisibilityButtonProps): ReactNode {
     const Icon = isVisible ? EyeIcon : EyeSlashIcon;
     return (
         <Button
+            variant="outline"
             size="compact-sm"
             leftSection={<Icon size={IconSize.SMALL} />}
             loading={mutation.isPending}
@@ -210,6 +213,7 @@ function DeleteGroupButton(props: DeleteGroupButtonProps): ReactNode {
 
     return (
         <Button
+            variant="outline"
             color={StatusColor.ERROR}
             size="compact-sm"
             mr="auto"
