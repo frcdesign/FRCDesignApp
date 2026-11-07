@@ -42,7 +42,7 @@ type ReportColumns = Pick<
     "reportTopic" | "reportCategory" | "reportSource" | "reportTeamNumber"
 >;
 
-/** The part an insert placed, or a part report named. */
+/** The part a use or a part report named. */
 export type ElementColumns = Pick<
     LoggedEvent,
     "elementId" | "documentId" | "instanceId" | "instanceType" | "insertableId"

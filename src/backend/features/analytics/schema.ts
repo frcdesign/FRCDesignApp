@@ -36,7 +36,7 @@ export const events = sqliteTable(
             .$defaultFn(() => crypto.randomUUID()),
         type: text("type").notNull().$type<EventType>(),
         createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
-        // UTC YYYY-MM-DD, denormalized so rollups can be rebuilt with a GROUP BY
+        // YYYY-MM-DD in the reporting time zone (`toDayKey`), so rollups rebuild with a GROUP BY
         day: text("day").notNull(),
         /** Null for an event that belongs to no library, such as a version run. */
         libraryId: text("library_id").$type<LibraryId>(),
