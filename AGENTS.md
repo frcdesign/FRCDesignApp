@@ -154,7 +154,9 @@ area. Record it on the server, once the work has happened, through
 `runInBackground`, so tracking never slows or fails what was asked for.
 
 A way of using a part — inserting it, downloading it — is a **use**: one of
-`USE_EVENT_TYPES`. A use counts toward the same totals, users, part counts and
+`USE_EVENT_TYPES`. A use is one part, so an action that places several, such
+as an Auto Assembly run, records one use per part, and the headline numbers
+count every one. A use counts toward the same totals, users, part counts and
 configuration counts as every other, and is told apart by its `UseTarget`, so
 the dashboard can show it on its own. Say "uses" for these, on the dashboard
 and in code; "inserts" means only the ones that went into Onshape.

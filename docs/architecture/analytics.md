@@ -931,6 +931,12 @@ only on **All time**, its own window being a season rather than the picked one.
   only its `UseTarget` and the insert-only flags tell the kinds apart. A count
   labelled "uses" sums them all; "inserts" means the uses that went into
   Onshape (`insertsOf`), which quick insert is measured against.
+- A use is one part, inserted or downloaded. An action that places several
+  parts — an insert and fasten to several picked edges, an Auto Assembly run —
+  records one use per part, and every count of uses sums them, the headline
+  numbers included.
+- A share of a choice only a person makes, such as quick insert, divides by
+  the uses that choice was open to, not by every use.
 - Every new or major feature records its use here, in the same change
   (`AGENTS.md`, Feature tracking).
 
@@ -968,6 +974,10 @@ only on **All time**, its own window being a season rather than the picked one.
   for them together. A separate set of download rollups would leave every part
   and option looking less used than it is. `UseTarget` keeps downloads apart
   where the split matters, without a column per kind.
+- **Uses count parts, not actions.** The headline numbers say how much of the
+  library ends up in people's work, so a run that places 120 screws adds 120,
+  and grows them as automation places more. A share that measures a person's
+  choice keeps its own denominator instead, so automated parts can't dilute it.
 - **A download is recorded when the export starts.** That is the request that
   carries the selection and source; the file route knows only the
   translation. An export Onshape later fails still counts, as an insert whose
