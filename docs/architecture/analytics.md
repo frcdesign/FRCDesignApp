@@ -720,14 +720,26 @@ function firstPending(
 `src/frontend/features/dashboard/dashboard-state.tsx`
 
 ```ts
-// What stands in for a section while its query has no data: a spinner, or
-// `SectionError` with **Try again** and **Send a report**.
+// What stands in for a section while its query has no data: `SectionLoading`,
+// or `SectionError` with **Try again** and **Send a report**.
 function DashboardState(props: DashboardStateProps): ReactNode;
+// A `SectionNotice` for a section that loaded with nothing to draw.
+function DashboardEmpty(props: DashboardEmptyProps): ReactNode;
 
 interface DashboardStateProps {
     query: UseQueryResult<unknown>;
+    /** Takes the form "Loading {thing}...". */
+    loading: string;
     /** The section's title, for a section whose content draws its own. */
     title?: string;
+}
+
+interface DashboardEmptyProps {
+    title: string;
+    /** @default a dimmed chart */
+    icon?: Icon;
+    /** @default StatusColor.DIMMED */
+    color?: StatusColor;
 }
 ```
 
@@ -883,8 +895,10 @@ panel. Its routes read only rollups and return only aggregates:
 
 The range, threshold and preset live in the url, so a view can be shared.
 
-A section whose query is still loading shows a spinner under its title; one
-that failed, after the query client's two retries, shows "Failed to load
+Every loading, empty and failed section is a notice (`app-notice.tsx`), as
+the rest of the app's are. A section whose query is still loading says what it
+is loading under its title ("Loading usage..."); one that loaded with nothing
+to show says so beside an icon (`DashboardEmpty`); one that failed, after the query client's two retries, shows "Failed to load
 analytics." with **Try again**, which refetches only that query, and **Send a
 report** (`DashboardState`). The rest of the page is unaffected.
 

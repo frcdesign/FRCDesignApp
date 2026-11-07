@@ -22,6 +22,9 @@ import {
 import { formatCount, formatPercent } from "./format";
 import { ImplicitDefaultBadge } from "./implicit-default";
 import { AppBreadcrumbs } from "../../components/breadcrumbs";
+import { SlidersHorizontalIcon } from "@phosphor-icons/react";
+import { DashboardEmpty } from "./dashboard-state";
+import { m } from "../../paraglide/messages";
 
 interface ConfigurationBreakdownProps {
     parameters: ConfigurationParameterUsage[];
@@ -33,9 +36,10 @@ export function ConfigurationBreakdown({
 }: ConfigurationBreakdownProps): ReactNode {
     if (parameters.length === 0) {
         return (
-            <Text c="dimmed" py="xl" ta="center">
-                This insertable has no configuration parameters.
-            </Text>
+            <DashboardEmpty
+                title={m.dashboardPartNoParameters()}
+                icon={SlidersHorizontalIcon}
+            />
         );
     }
 
@@ -66,7 +70,9 @@ function ParameterCard({ parameter }: ParameterCardProps): ReactNode {
                     />
                     <Badge color={CATEGORY_COLOR}>{parameter.type}</Badge>
                 </Group>
-                <Text c="dimmed">{formatCount(parameter.total)} recorded</Text>
+                <Text c="dimmed">
+                    {m.dashboardParameterRecorded({ count: parameter.total })}
+                </Text>
             </Group>
 
             {/* A quantity takes any number the user types, so the list of
@@ -142,7 +148,7 @@ function DefaultBadge({ value }: DefaultBadgeProps): ReactNode {
         );
     }
     if (value.isDefault) {
-        return <Badge size="xs">Default</Badge>;
+        return <Badge size="xs">{m.dashboardOptionDefault()}</Badge>;
     }
     return null;
 }

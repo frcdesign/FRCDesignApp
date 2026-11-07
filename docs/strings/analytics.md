@@ -24,7 +24,7 @@ On the overview. Each share is a trend tile; the detail is its chart's axis.
 | --------------------------------------------------------------------------------------------------------- | ----------------- | --------------------- | ---------------------------------- | ----------------------------------------------------- |
 | "How people use the app"                                                                                  | Section title     |                       | Always                             |                                                       |
 | "Search results" / "Search within a group" / "Browsing a group" / "Favorites list" / "Recently used list" | Bar labels        | The source breakdown  | Always; uses by where they started |                                                       |
-| "No uses recorded yet."                                                                                   | Notice            | In place of the bars  | No use in the range                | **⚑** Was "No inserts recorded yet."                  |
+| "No uses recorded yet."                                                                                   | Empty notice      | In place of the bars  | No use in the range                | **⚑** Was "No inserts recorded yet."                  |
 | "Quick insert" / "% of inserts"                                                                           | Tile label / axis |                       | Always                             | **⚑** Measured against inserts, leaving downloads out |
 | "Insert and fasten" / "% of assembly inserts"                                                             | Tile label / axis |                       | Always                             |                                                       |
 | "Into an assembly" / "% of uses"                                                                          | Tile label / axis | Also on a part's page | Always                             | **⚑** Now a share of every use                        |
@@ -37,15 +37,15 @@ On the overview. Each share is a trend tile; the detail is its chart's axis.
 | "Most used parts"                                        | Card title     | A library's page            | Always                        |                                                                |
 | "Part" / "Group" / "Uses per month" / "Uses"             | Column headers | The parts table             | Always                        |                                                                |
 | "Hidden"                                                 | Badge          | Beside a hidden part's name | The part is hidden from users |                                                                |
-| "No parts from this library have been used yet."         | Notice         | In place of the table       | Nothing used in the range     | **⚑** Was "No parts have been inserted from this library yet." |
-| "No matching part."                                      | Notice         | Same                        | The search matches nothing    |                                                                |
+| "No parts from this library have been used yet."         | Empty notice   | In place of the table       | Nothing used in the range     | **⚑** Was "No parts have been inserted from this library yet." |
+| "No matching part."                                      | Empty notice   | Same                        | The search matches nothing    |                                                                |
 | "Search parts…"                                          | Placeholder    | A part's page, the picker   | Always                        |                                                                |
-| "This library has no parts."                             | Notice         | Under the picker            | The library is empty          |                                                                |
+| "This library has no parts."                             | Empty notice   | Under the picker            | The library is empty          |                                                                |
 | "Uses per month" / "Uses" / "Unique users" / "Favorites" | Card labels    | A part's page               | Always                        |                                                                |
 | "Configuration values"                                   | Heading        | A part's page               | Always                        |                                                                |
 | "Usage breakdown"                                        | Card title     | The treemap                 | Always                        |                                                                |
 | "All libraries"                                          | Breadcrumb     | Above the treemap           | On the overview               |                                                                |
-| "Nothing was used in this range."                        | Notice         | In place of the treemap     | No use in the range           | **⚑** Was "Nothing was inserted in this range."                |
+| "Nothing was used in this range."                        | Empty notice   | In place of the treemap     | No use in the range           | **⚑** Was "Nothing was inserted in this range."                |
 
 ## Every section
 
@@ -65,3 +65,21 @@ On the overview.
 | "Runs" / "Tabs updated" / "Versions created" / "Links" | Tile labels   |             | Always |        |
 | "{n} with failures"                                    | Tile caption  | Under Runs  | Always |        |
 | "Right now"                                            | Tile caption  | Under Links | Always |        |
+
+## Low usage
+
+| String                                                        | Kind                     | Where                         | When                                 | Review |
+| ------------------------------------------------------------- | ------------------------ | ----------------------------- | ------------------------------------ | ------ |
+| "Low-usage parts" / "Low-usage configuration options"         | Card titles              |                               | Always                               |        |
+| "Every visible part is used more than the threshold."         | Empty notice, check mark | In place of the parts table   | No part at or below the threshold    |        |
+| "Every configuration option is used more than the threshold." | Empty notice, check mark | In place of the options table | No option at or below the threshold  |        |
+| "Part" / "Parameter" / "Option" / "Uses" / "Share"            | Column headers           | The options table             | Always                               |        |
+| "Never used" / "Default"                                      | Badges                   | Beside an option              | Nobody picked it / it is the default |        |
+
+## A part's configuration values
+
+| String                                       | Kind         | Where                        | When                       | Review                                                       |
+| -------------------------------------------- | ------------ | ---------------------------- | -------------------------- | ------------------------------------------------------------ |
+| "{n} recorded"                               | Caption      | Beside each parameter's name | Always                     |                                                              |
+| "Default"                                    | Badge        | Beside the default value     | Always                     |                                                              |
+| "This part has no configuration parameters." | Empty notice | In place of the cards        | The part has no parameters | **⚑** Was "This insertable has no configuration parameters." |

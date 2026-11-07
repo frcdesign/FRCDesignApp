@@ -3,6 +3,7 @@ import { type ReactNode } from "react";
 import type { UseSourceUsage } from "@backend/features/analytics/contract";
 import { UseSource } from "@backend/features/analytics/usage";
 import { formatCount, formatFraction } from "./format";
+import { DashboardEmpty } from "./dashboard-state";
 import { m } from "../../paraglide/messages";
 
 function sourceLabel(source: UseSource): string {
@@ -31,11 +32,7 @@ export function UseSourceBreakdown({
     const total = sources.reduce((sum, source) => sum + source.count, 0);
 
     if (total === 0) {
-        return (
-            <Text c="dimmed" py="xl" ta="center">
-                {m.dashboardSourcesEmpty()}
-            </Text>
-        );
+        return <DashboardEmpty title={m.dashboardSourcesEmpty()} />;
     }
 
     return (

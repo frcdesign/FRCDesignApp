@@ -79,7 +79,10 @@ function PartReport(): ReactNode {
                         emptyMessage={m.dashboardPartNoParts()}
                     />
                 ) : (
-                    <DashboardState query={parts} />
+                    <DashboardState
+                        query={parts}
+                        loading={m.dashboardLoadingParts()}
+                    />
                 )}
             </Card>
         </Stack>
@@ -102,7 +105,9 @@ function ReportBody({
     );
 
     if (!query.data) {
-        return <DashboardState query={query} />;
+        return (
+            <DashboardState query={query} loading={m.dashboardLoadingPart()} />
+        );
     }
     const report = query.data;
 

@@ -20,7 +20,11 @@ function Section(props: SectionProps): ReactNode {
         staleTime: 0
     });
     return query.data === undefined ? (
-        <DashboardState query={query} title={props.title} />
+        <DashboardState
+            query={query}
+            loading="Loading the section..."
+            title={props.title}
+        />
     ) : (
         <p>Loaded {query.data}</p>
     );
@@ -60,11 +64,12 @@ describe("DashboardState", () => {
         expect(screen.getByText("Version manager")).not.toBeNull();
     });
 
-    it("shows no error while the section is still loading", () => {
+    it("says what is loading, and shows no error meanwhile", () => {
         renderWithProviders(
             <Section load={() => new Promise<number>(() => undefined)} />
         );
 
+        expect(screen.getByText("Loading the section...")).not.toBeNull();
         expect(screen.queryByText("Failed to load analytics.")).toBeNull();
         expect(screen.queryByText("Send a report")).toBeNull();
     });

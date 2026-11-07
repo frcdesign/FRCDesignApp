@@ -57,7 +57,10 @@ function LibraryOverview(): ReactNode {
                     health={health}
                 />
             ) : (
-                <DashboardState query={summary} />
+                <DashboardState
+                    query={summary}
+                    loading={m.dashboardLoadingLibrary()}
+                />
             )}
         </Stack>
     );
@@ -99,14 +102,20 @@ function LibraryBody({
                         emptyMessage={m.dashboardLibraryNoUses()}
                     />
                 ) : (
-                    <DashboardState query={parts} />
+                    <DashboardState
+                        query={parts}
+                        loading={m.dashboardLoadingParts()}
+                    />
                 )}
             </SectionCard>
 
             {health.data ? (
                 <HealthTiles counts={health.data} />
             ) : (
-                <DashboardState query={health} />
+                <DashboardState
+                    query={health}
+                    loading={m.dashboardLoadingHealth()}
+                />
             )}
 
             <LibraryReports
@@ -123,7 +132,10 @@ function LibraryBody({
                     parts={parts.data.map((part) => ({ ...part, libraryId }))}
                 />
             ) : (
-                <DashboardState query={parts} />
+                <DashboardState
+                    query={parts}
+                    loading={m.dashboardLoadingParts()}
+                />
             )}
         </>
     );

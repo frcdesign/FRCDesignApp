@@ -1,9 +1,9 @@
-import { Text } from "@mantine/core";
 import type { PartUsageOut } from "@backend/features/analytics/contract";
 import { useNavigate } from "@tanstack/react-router";
 import { useMemo, useState, type ReactNode } from "react";
 import { getLibraryName } from "../../lib/library";
 import { AppTreemap } from "./treemap-chart";
+import { DashboardEmpty } from "./dashboard-state";
 import { AppBreadcrumbs } from "../../components/breadcrumbs";
 import { SectionCard } from "../../components/section";
 import { m } from "../../paraglide/messages";
@@ -53,9 +53,7 @@ export function UsageTreemap({
         <SectionCard title={m.dashboardTreemapTitle()}>
             <TreemapTrail root={root} path={path} onSelect={setPath} />
             {nodes.length === 0 ? (
-                <Text c="dimmed" py="xl" ta="center">
-                    {m.dashboardTreemapEmpty()}
-                </Text>
+                <DashboardEmpty title={m.dashboardTreemapEmpty()} />
             ) : (
                 <AppTreemap nodes={nodes} h={CHART_HEIGHT} onSelect={select} />
             )}

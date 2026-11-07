@@ -69,7 +69,10 @@ function DashboardOverview(): ReactNode {
                         withOpens
                     />
                 ) : (
-                    <DashboardState query={usage} />
+                    <DashboardState
+                        query={usage}
+                        loading={m.dashboardLoadingUsage()}
+                    />
                 )}
             </Section>
 
@@ -78,6 +81,7 @@ function DashboardOverview(): ReactNode {
             ) : (
                 <DashboardState
                     query={series}
+                    loading={m.dashboardLoadingUsesOverTime()}
                     title={m.dashboardUsesOverTime()}
                 />
             )}
@@ -87,6 +91,7 @@ function DashboardOverview(): ReactNode {
             ) : (
                 <DashboardState
                     query={versionManager}
+                    loading={m.dashboardLoadingVersionManager()}
                     title={m.dashboardVersionManager()}
                 />
             )}
@@ -94,7 +99,11 @@ function DashboardOverview(): ReactNode {
             {reports.data ? (
                 <OverviewReports reports={reports.data} />
             ) : (
-                <DashboardState query={reports} title={m.dashboardReports()} />
+                <DashboardState
+                    query={reports}
+                    loading={m.dashboardLoadingReports()}
+                    title={m.dashboardReports()}
+                />
             )}
 
             <Section title={m.dashboardOverviewHowUsed()}>
@@ -102,7 +111,10 @@ function DashboardOverview(): ReactNode {
                     {sources.data ? (
                         <UseSourceBreakdown sources={sources.data} />
                     ) : (
-                        <DashboardState query={sources} />
+                        <DashboardState
+                            query={sources}
+                            loading={m.dashboardLoadingSources()}
+                        />
                     )}
                 </Card>
                 {usage.data ? (
@@ -117,13 +129,17 @@ function DashboardOverview(): ReactNode {
                         ))}
                     </SimpleGrid>
                 ) : (
-                    <DashboardState query={usage} />
+                    <DashboardState
+                        query={usage}
+                        loading={m.dashboardLoadingUsage()}
+                    />
                 )}
             </Section>
 
             {pendingParts ? (
                 <DashboardState
                     query={pendingParts}
+                    loading={m.dashboardLoadingParts()}
                     title={m.dashboardTreemapTitle()}
                 />
             ) : (

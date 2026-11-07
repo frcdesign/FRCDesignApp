@@ -14,6 +14,7 @@ import {
     toDayRange,
     useRangePreset
 } from "../../../../features/dashboard/range";
+import { m } from "../../../../paraglide/messages";
 
 export const Route = createFileRoute("/dashboard/library/$libraryId/unused")({
     component: LowUsage
@@ -36,31 +37,37 @@ function LowUsage(): ReactNode {
         <Stack gap="xl">
             <Card>
                 <Title order={4} mb="md">
-                    Low-usage parts
+                    {m.dashboardLowUsageParts()}
                 </Title>
                 {parts.data ? (
                     <PartsTable
                         libraryId={libraryId}
                         parts={parts.data}
-                        emptyMessage="Every visible part is used more than the threshold."
+                        emptyMessage={m.dashboardLowUsagePartsEmpty()}
                     />
                 ) : (
-                    <DashboardState query={parts} />
+                    <DashboardState
+                        query={parts}
+                        loading={m.dashboardLoadingLowUsageParts()}
+                    />
                 )}
             </Card>
 
             <Card>
                 <Title order={4} mb="md">
-                    Low-usage configuration options
+                    {m.dashboardLowUsageOptions()}
                 </Title>
                 {options.data ? (
                     <OptionsTable
                         libraryId={libraryId}
                         options={options.data}
-                        emptyMessage="Every configuration option is used more than the threshold."
+                        emptyMessage={m.dashboardLowUsageOptionsEmpty()}
                     />
                 ) : (
-                    <DashboardState query={options} />
+                    <DashboardState
+                        query={options}
+                        loading={m.dashboardLoadingLowUsageOptions()}
+                    />
                 )}
             </Card>
         </Stack>
