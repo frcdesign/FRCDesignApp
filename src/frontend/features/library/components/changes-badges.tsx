@@ -30,18 +30,18 @@ interface InsertableChangesBadgeProps {
     insertable: InsertableOut;
 }
 
-/** Whether the part's tab was edited since the version the library holds, in admin mode. */
+/** Whether the part's tab changed since the version the library holds, in admin mode. */
 export function InsertableChangesBadge(
     props: InsertableChangesBadgeProps
 ): ReactNode {
     return (
         <RequireAccessLevel>
-            <InsertableEdited insertable={props.insertable} />
+            <InsertableChanged insertable={props.insertable} />
         </RequireAccessLevel>
     );
 }
 
-function InsertableEdited(props: InsertableChangesBadgeProps): ReactNode {
+function InsertableChanged(props: InsertableChangesBadgeProps): ReactNode {
     const { documentId, elementId, microversionId } = props.insertable;
     const changesQuery = useDocumentChangesQuery(documentId, true);
     const current = changesQuery.data?.elements?.[elementId];

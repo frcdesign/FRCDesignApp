@@ -13,11 +13,11 @@ export function ChangesBadge(props: ChangesBadgeProps): ReactNode {
     const { changes } = props;
     const label =
         changes === undefined
-            ? m.changesBadgeEdited()
+            ? m.changesBadgeChanged()
             : m.changesBadge({ count: changes });
     const tooltip =
         changes === undefined
-            ? m.changesBadgeEditedTooltip()
+            ? m.changesBadgeChangedTooltip()
             : m.changesBadgeTooltip({ count: changes });
     return (
         <Tooltip label={tooltip}>

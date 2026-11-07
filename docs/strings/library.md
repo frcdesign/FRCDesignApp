@@ -26,5 +26,5 @@ manager; see [version-manager.md](../architecture/version-manager.md).
 | ------------------------------------------------------------------------------ | ------- | --------------------------------- | ----------------------------------------------------------------- | --------- |
 | "1 change" / "{count} changes"                                                 | Badge   | Beside a group's or parent's name | Its document's workspace has edits its last version doesn't carry |           |
 | "1 change since the last version." / "{count} changes since the last version." | Tooltip | On that badge                     | Hovering it                                                       |           |
-| "Changed"                                                                      | Badge   | Beside a part's name              | Its tab was edited since the version the library holds            | **⚑** New |
-| "Edited since the version the library has."                                    | Tooltip | On that badge                     | Hovering it                                                       | **⚑** New |
+| "Changed"                                                                      | Badge   | Beside a part's name              | Its tab changed since the version the library holds               | **⚑** New |
+| "Changed since the version the library has."                                   | Tooltip | On that badge                     | Hovering it                                                       | **⚑** New |

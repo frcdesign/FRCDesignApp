@@ -128,7 +128,7 @@ refreshes the list refreshes the counts.
 
 In admin mode — the viewed level at editor or above — each group card shows
 its document's edits since its last version, and each part card shows
-**Changed** when its tab was edited since the version the library holds. Both
+**Changed** when its tab changed since the version the library holds. Both
 ask `GET /api/workspace-changes` with the document alone:
 
 1. With no `instanceId`, the route reads the document's default workspace — the
@@ -138,9 +138,10 @@ ask `GET /api/workspace-changes` with the document alone:
 3. It answers the count, and with `elements=true` each tab's microversion in
    that workspace (`getElementMicroversions`, from `contents`).
 4. A part card compares its tab's microversion there with the insertable's
-   stored `microversionId`, the tab as of the library's version. A tab moves to
-   a new microversion only when it is edited, which is what the load's own
-   skip of unchanged tabs relies on too.
+   stored `microversionId`, the tab as of the library's version. A tab's
+   microversion moves whenever it changes, an edit to a tab it depends on
+   included, and with no version cut; the load's skip of unchanged tabs and
+   the thumbnail cache rely on the same.
 
 A group card asks without `elements`; the cards of one group's parts share one
 query with them. The queries sit under the library's key

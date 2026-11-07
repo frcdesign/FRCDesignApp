@@ -58,7 +58,7 @@ export type ElementMicroversions = Record<string, string>;
 export interface WorkspaceChangesOut {
     /** Edits since the workspace's own last version, which a pull versions. */
     changes?: number;
-    /** Only when asked for: a tab whose microversion differs from a version's was edited since it. */
+    /** Only when asked for: a tab whose microversion differs from a version's changed since it. */
     elements?: ElementMicroversions;
 }
 

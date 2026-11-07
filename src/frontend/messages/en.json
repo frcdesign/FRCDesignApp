@@ -433,6 +433,6 @@
             }
         }
     ],
-    "changesBadgeEdited": "Changed",
-    "changesBadgeEditedTooltip": "Edited since the version the library has."
+    "changesBadgeChanged": "Changed",
+    "changesBadgeChangedTooltip": "Changed since the version the library has."
 }
