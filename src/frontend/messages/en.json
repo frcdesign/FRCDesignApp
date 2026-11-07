@@ -517,6 +517,5 @@
     "librarySearchSection": "Search Results",
     "libraryAddGroup": "Add group",
     "libraryAddGroupPlaceholder": "Document url...",
-    "libraryAddGroupSubmit": "Add",
-    "adminCardOrder": "Order"
+    "libraryAddGroupSubmit": "Add"
 }

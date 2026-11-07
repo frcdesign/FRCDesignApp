@@ -80,7 +80,7 @@ describe("the admin card's actions", () => {
         expect(apiPost).toHaveBeenCalledWith("/update-references", {
             body: { documentId: "gearbox" }
         });
-        expect(screen.getByText("Order")).toBeTruthy();
+        expect(screen.getByRole("button", { name: "Move up" })).toBeTruthy();
         expect(
             screen.getByRole("button", { name: "Delete group" })
         ).toBeTruthy();
@@ -96,7 +96,7 @@ describe("the admin card's actions", () => {
             />
         );
 
-        expect(screen.queryByText("Order")).toBeNull();
+        expect(screen.queryByRole("button", { name: "Move up" })).toBeNull();
         expect(
             screen.queryByRole("button", { name: "Delete group" })
         ).toBeNull();

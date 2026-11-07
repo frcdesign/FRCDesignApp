@@ -1,4 +1,4 @@
-import { ActionIcon, Button, Group, Stack, Tooltip } from "@mantine/core";
+import { Button, Group, Stack, Tooltip } from "@mantine/core";
 import {
     ArrowsClockwiseIcon,
     EyeIcon,
@@ -11,7 +11,6 @@ import type {
     GroupBuildStatus,
     InsertableBuildStatus
 } from "@backend/features/build-checker/contract";
-import { HoverBubbleRow } from "../../../components/app-hover-bubble";
 import { openDeleteConfirm } from "../../../components/alerts";
 import { getMoveOptions } from "../../../lib/move-order";
 import { useIsHome } from "../../../lib/library";
@@ -81,7 +80,7 @@ export function GroupActions(props: GroupActionsProps): ReactNode {
             </Group>
             {isHome && (
                 <>
-                    <GroupOrderRow
+                    <GroupOrderButtons
                         groupId={groupId}
                         groupOrder={libraryQuery.data?.groupOrder ?? []}
                     />
@@ -165,12 +164,13 @@ function VisibilityButton(props: VisibilityButtonProps): ReactNode {
     );
 }
 
-interface GroupOrderRowProps {
+interface GroupOrderButtonsProps {
     groupId: string;
     groupOrder: string[];
 }
 
-function GroupOrderRow(props: GroupOrderRowProps): ReactNode {
+/** The moves the group's place allows, in menu order. */
+function GroupOrderButtons(props: GroupOrderButtonsProps): ReactNode {
     const { groupId, groupOrder } = props;
     const mutation = useSetGroupOrderMutation();
     const options = getMoveOptions(groupId, groupOrder);
@@ -178,19 +178,19 @@ function GroupOrderRow(props: GroupOrderRowProps): ReactNode {
         return null;
     }
     return (
-        <HoverBubbleRow label={m.adminCardOrder()}>
-            <Group gap={4}>
-                {options.map((option) => (
-                    <Tooltip key={option.label} label={option.label}>
-                        <ActionIcon
-                            onClick={() => mutation.mutate(option.order)}
-                        >
-                            <option.icon size={IconSize.SMALL} />
-                        </ActionIcon>
-                    </Tooltip>
-                ))}
-            </Group>
-        </HoverBubbleRow>
+        <Group gap={6} wrap="wrap">
+            {options.map((option) => (
+                <Button
+                    key={option.label}
+                    variant="outline"
+                    size="compact-sm"
+                    leftSection={<option.icon size={IconSize.SMALL} />}
+                    onClick={() => mutation.mutate(option.order)}
+                >
+                    {option.label}
+                </Button>
+            ))}
+        </Group>
     );
 }
 

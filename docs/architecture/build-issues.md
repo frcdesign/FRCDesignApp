@@ -378,8 +378,8 @@ Actions, Usage and Admin settings start open; Configuration starts closed.
    **Reload thumbnail** and **Update references**, which moves that tab's
    out-of-date references in the document's default workspace. A group has
    the same for its document as a whole, **Show all** and **Hide all** for its
-   elements, and on the library's own list its **Order** and **Delete
-   group**, which asks first. Updated references reach the library only once
+   elements, and on the library's own list a button per move its place allows
+   and **Delete group**, which asks first. Updated references reach the library only once
    a version holding them is cut and loaded; the change badges count the edit
    at once.
 6. **Configuration** lists every parameter with its type and whether search
