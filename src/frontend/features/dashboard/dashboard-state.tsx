@@ -1,39 +1,37 @@
-import { Alert, Center, Loader } from "@mantine/core";
+import { Button, Center, Loader } from "@mantine/core";
 import { type UseQueryResult } from "@tanstack/react-query";
 import { type ReactNode } from "react";
-import { StatusIcon } from "../../components/status-icon";
-import { Status } from "../../lib/status";
-import { IconSize, StatusColor } from "../../lib/style-constants";
+import { SectionError } from "../../components/app-notice";
+import { Section } from "../../components/section";
+import { m } from "../../paraglide/messages";
 
 interface DashboardStateProps {
     query: UseQueryResult<unknown>;
+    /** The section's title, for a section whose content draws its own. */
+    title?: string;
 }
 
-/** For when a dashboard query has no `data`. */
-export function DashboardState({ query }: DashboardStateProps): ReactNode {
-    if (query.isError) {
-        return (
-            <Alert
-                color={StatusColor.ERROR}
-                icon={
-                    <StatusIcon
-                        status={Status.ERROR}
-                        size={IconSize.MEDIUM}
-                        raised={false}
-                    />
-                }
-                title="Failed to load analytics"
-            >
-                {query.error instanceof Error
-                    ? query.error.message
-                    : "Please try again."}
-            </Alert>
-        );
-    }
-
-    return (
+/** What stands in for a dashboard section while its query has no `data`. */
+export function DashboardState(props: DashboardStateProps): ReactNode {
+    const { query, title } = props;
+    const state = query.isError ? (
+        <SectionError
+            title={m.dashboardLoadFailed()}
+            error={query.error}
+            action={
+                <Button variant="default" onClick={() => void query.refetch()}>
+                    {m.dashboardTryAgain()}
+                </Button>
+            }
+        />
+    ) : (
         <Center py="xl">
             <Loader />
         </Center>
+    );
+    return title === undefined ? (
+        state
+    ) : (
+        <Section title={title}>{state}</Section>
     );
 }

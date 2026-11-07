@@ -1,13 +1,4 @@
-import {
-    and,
-    countDistinct,
-    eq,
-    gte,
-    inArray,
-    lte,
-    sql,
-    sum
-} from "drizzle-orm";
+import { and, eq, gte, inArray, lte, sql, sum } from "drizzle-orm";
 import { type Db } from "../../db/client";
 import { dailyAppOpens, dailyMetrics } from "./schema";
 import { LibraryId } from "../library/library-id";
@@ -23,7 +14,7 @@ import {
     type GrowthOut,
     type PeriodComparison
 } from "./contract";
-import { activeUserRows } from "./metric-queries";
+import { countActiveUsers } from "./metric-queries";
 
 /** Both bounds inclusive, as every day key in this file is. */
 interface Window {
@@ -121,19 +112,11 @@ async function countPeople(
     windows: Windows,
     libraryId?: LibraryId
 ): Promise<Counts> {
-    const inWindow = (window: Window) => {
-        const active = activeUserRows(db, window, libraryId);
-        return db
-            .select({ value: countDistinct(active.userId) })
-            .from(active)
-            .get();
-    };
-
     const [current, previous] = await Promise.all([
-        inWindow(windows.current),
-        inWindow(windows.previous)
+        countActiveUsers(db, windows.current, libraryId),
+        countActiveUsers(db, windows.previous, libraryId)
     ]);
-    return { current: current?.value ?? 0, previous: previous?.value ?? 0 };
+    return { current, previous };
 }
 
 /** App-wide, so there is no library to scope it to; see `daily_app_opens`. */

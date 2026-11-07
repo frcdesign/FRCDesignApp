@@ -1,25 +1,50 @@
-import { queryOptions } from "@tanstack/react-query";
+import { queryOptions, type UseQueryResult } from "@tanstack/react-query";
 import { apiGet } from "../../lib/api-client";
 import type {
-    AnalyticsOverviewOut,
+    DailyUsePoint,
     LibrarySummaryOut,
     InsertableReportOut,
     LibraryHealthCounts,
+    OverviewUsageOut,
     PartUsageOut,
-    UnusedOptionOut
+    ReportSummary,
+    UnusedOptionOut,
+    UseSourceUsage,
+    VersionManagerTotals
 } from "@backend/features/analytics/contract";
 import { LibraryId } from "@backend/features/library/library-id";
 import { type DayRange } from "@backend/features/analytics/day";
 import { toLibraryPath } from "../../lib/api-paths";
 
-export function getOverviewQuery(range: DayRange) {
-    return queryOptions<AnalyticsOverviewOut>({
-        queryKey: ["analytics", "overview", range.from, range.to],
+/** One overview area over `range`; each loads, and fails, on its own. */
+function overviewQuery<T>(area: string, range: DayRange) {
+    return queryOptions<T>({
+        queryKey: ["analytics", "overview", area, range.from, range.to],
         queryFn: () =>
-            apiGet("/analytics/overview", {
+            apiGet("/analytics/overview/" + area, {
                 query: { from: range.from, to: range.to }
             })
     });
+}
+
+export function getOverviewUsageQuery(range: DayRange) {
+    return overviewQuery<OverviewUsageOut>("usage", range);
+}
+
+export function getOverviewSeriesQuery(range: DayRange) {
+    return overviewQuery<DailyUsePoint[]>("series", range);
+}
+
+export function getOverviewSourcesQuery(range: DayRange) {
+    return overviewQuery<UseSourceUsage[]>("sources", range);
+}
+
+export function getVersionManagerQuery(range: DayRange) {
+    return overviewQuery<VersionManagerTotals>("version-manager", range);
+}
+
+export function getOverviewReportsQuery(range: DayRange) {
+    return overviewQuery<ReportSummary>("reports", range);
 }
 
 export function getLibrarySummaryQuery(libraryId: LibraryId, range: DayRange) {
@@ -129,4 +154,14 @@ export function getHealthQuery(libraryId: LibraryId, cacheVersion: number) {
         staleTime: Infinity,
         gcTime: Infinity
     });
+}
+
+/** The first failure among several queries, else the first still loading. */
+export function firstPending(
+    queries: UseQueryResult<unknown>[]
+): UseQueryResult<unknown> | undefined {
+    return (
+        queries.find((query) => query.isError) ??
+        queries.find((query) => query.data === undefined)
+    );
 }

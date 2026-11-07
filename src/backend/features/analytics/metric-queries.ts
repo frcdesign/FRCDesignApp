@@ -32,12 +32,10 @@ import {
     type DailyUsePoint,
     type DailyMetricPoint,
     type UseSourceUsage,
-    type LibrarySummary,
     type VersionManagerTotals
 } from "./contract";
 import { type DayRange } from "./day";
 import { eachDay } from "./range";
-import { getHealthCounts } from "./health";
 
 /** Lifetime totals, or scoped to one library or a window. */
 export async function getTotals(
@@ -135,11 +133,9 @@ export function toTargets(
 /** `user_stats` is all-time, so a range counts the daily rollups. */
 function countUsers(db: Db, libraryId?: LibraryId, range?: DayRange) {
     if (range) {
-        const active = activeUserRows(db, range, libraryId);
-        return db
-            .select({ value: countDistinct(active.userId) })
-            .from(active)
-            .get();
+        return countActiveUsers(db, range, libraryId).then((value) => ({
+            value
+        }));
     }
     return db
         .select({ value: count() })
@@ -195,6 +191,34 @@ export function activeUserRows(db: Db, range: DayRange, libraryId?: LibraryId) {
         .as("active");
 }
 
+/**
+ * Everybody active at any point in the range, as {@link activeUserRows} counts
+ * them. A union of ids alone dedupes them in one pass, which a union of
+ * day-and-id rows can't.
+ */
+export async function countActiveUsers(
+    db: Db,
+    range: DayRange,
+    libraryId?: LibraryId
+): Promise<number> {
+    const activity = db
+        .select({ userId: dailyUserActivity.userId })
+        .from(dailyUserActivity)
+        .where(and(...activityFilters(range, libraryId)));
+    const people = libraryId
+        ? activity.groupBy(dailyUserActivity.userId).as("people")
+        : activity
+              .union(
+                  db
+                      .select({ userId: dailyAppOpens.userId })
+                      .from(dailyAppOpens)
+                      .where(and(...openFilters(range)))
+              )
+              .as("people");
+    const row = await db.select({ value: count() }).from(people).get();
+    return row?.value ?? 0;
+}
+
 /** Favorites standing now, which have no day to be windowed by. */
 function countFavorites(db: Db, libraryId?: LibraryId) {
     return db
@@ -202,16 +226,6 @@ function countFavorites(db: Db, libraryId?: LibraryId) {
         .from(favorites)
         .where(libraryId ? eq(favorites.libraryId, libraryId) : undefined)
         .get();
-}
-
-export async function getLibrarySummaries(db: Db): Promise<LibrarySummary[]> {
-    return Promise.all(
-        Object.values(LibraryId).map(async (libraryId) => ({
-            libraryId,
-            totals: await getTotals(db, libraryId),
-            health: await getHealthCounts(db, libraryId)
-        }))
-    );
 }
 
 /** Daily insert mix (favorites / fasten / quick insert) across the range. */

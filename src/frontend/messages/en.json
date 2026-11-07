@@ -372,5 +372,14 @@
     "dashboardPartFavorites": "Favorites",
     "dashboardPartConfigurationValues": "Configuration values",
     "dashboardPartSearch": "Search parts…",
-    "dashboardPartNoParts": "This library has no parts."
+    "dashboardPartNoParts": "This library has no parts.",
+    "dashboardLoadFailed": "Failed to load analytics.",
+    "dashboardTryAgain": "Try again",
+    "dashboardVersionManager": "Version manager",
+    "dashboardVersionRuns": "Runs",
+    "dashboardVersionTabsUpdated": "Tabs updated",
+    "dashboardVersionVersionsCreated": "Versions created",
+    "dashboardVersionLinks": "Links",
+    "dashboardVersionRightNow": "Right now",
+    "dashboardVersionRunsWithFailures": "{count: number} with failures"
 }

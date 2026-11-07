@@ -77,12 +77,6 @@ export interface LibraryHealthCounts {
     healthyItems: number;
 }
 
-export interface LibrarySummary {
-    libraryId: LibraryId;
-    totals: AnalyticsTotals;
-    health: LibraryHealthCounts;
-}
-
 /** An empty baseline reads as new rather than infinite. */
 export enum ChangeUnavailable {
     NO_PRIOR_DATA = "no-prior-data",
@@ -166,21 +160,15 @@ export interface ReportSummary {
     counts: ReportCount[];
 }
 
-export interface AnalyticsOverviewOut {
+/** The overview's headline numbers, and the series its trends are drawn from. */
+export interface OverviewUsageOut {
     /** Over the requested range, for the headline cards. */
     totals: AnalyticsTotals;
-    libraries: LibrarySummary[];
-    /** Per-library daily uses, for the uses tile's split-out detail. */
-    series: DailyUsePoint[];
+    /** Also over the range, for the sparklines and the trend tiles. */
     metricSeries: DailyMetricPoint[];
-    sources: UseSourceUsage[];
-    /** Over the range, but for `links`. */
-    versionManager: VersionManagerTotals;
-    /** Over the range, for every topic. */
-    reports: ReportSummary;
+    growth: GrowthOut;
     from: string;
     to: string;
-    growth: GrowthOut;
 }
 
 /** A row of the parts table. Only parts still in the library are listed. */
