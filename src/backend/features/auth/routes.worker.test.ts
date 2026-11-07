@@ -147,28 +147,22 @@ describe("GET /auth/sign-in", () => {
         );
     });
 
-    it("scopes the sign-in to the enterprise that owns the document", async () => {
-        const url = await authorizationUrl(
-            "companyId=company-1&sessionCompanyId=company-1"
-        );
+    it("scopes the sign-in to the session's enterprise", async () => {
+        const url = await authorizationUrl("sessionCompanyId=company-1");
         expect(url.searchParams.get("company_id")).toBe("company-1");
     });
 
     // Onshape answers a classroom's id with "Invalid company ID".
-    it.each([
-        [
-            "a classroom, which Onshape gives no session company",
+    it("names no company for a classroom, whose session company is cad", async () => {
+        const url = await authorizationUrl(
             "companyId=classroom-1&sessionCompanyId=cad"
-        ],
-        ["a launch that names no session company", "companyId=classroom-1"]
-    ])("names no company for %s", async (_, query) => {
-        const url = await authorizationUrl(query);
+        );
         expect(url.searchParams.has("company_id")).toBe(false);
     });
 
-    // Onshape rejects "cad", which a personal document arrives with.
+    // Onshape rejects "cad", which every session outside an enterprise arrives with.
     it("names no company for a personal account", async () => {
-        const url = await authorizationUrl("companyId=cad");
+        const url = await authorizationUrl("sessionCompanyId=cad");
         expect(url.searchParams.has("company_id")).toBe(false);
     });
 

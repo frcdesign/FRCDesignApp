@@ -1,15 +1,6 @@
 import { type AppContext } from "../../lib/context";
 import { PERSONAL_COMPANY_ID } from "./personal-company";
 
-/** Who owns the launch's document, which decides what sign-in can ask for. */
-export enum DocumentOwner {
-    PERSONAL = "personal",
-    /** OAuth takes its id as `company_id`. */
-    ENTERPRISE = "enterprise",
-    /** A company outside an enterprise, such as an educator plan's classroom; OAuth refuses its id. */
-    CLASSROOM = "classroom"
-}
-
 /**
  * The company that owns the launch's document, which Onshape adds to every
  * launch as `companyId` (`cad` for a personal document).
@@ -19,23 +10,16 @@ export function getDocumentCompanyId(c: AppContext): string {
 }
 
 /**
- * Told apart by the launch's `sessionCompanyId`, since there is no token to ask
- * Onshape with yet: Onshape fills it in for an enterprise alone, and sends `cad`
- * everywhere else, a classroom included.
+ * The company the caller's Onshape session is in, from the extension's
+ * `{$sessionCompanyId}`: an enterprise's, and `cad` everywhere else, a
+ * classroom included.
  */
-export function getDocumentOwner(c: AppContext): DocumentOwner {
-    if (getDocumentCompanyId(c) === PERSONAL_COMPANY_ID) {
-        return DocumentOwner.PERSONAL;
-    }
-    const sessionCompanyId = c.req.query("sessionCompanyId");
-    return sessionCompanyId && sessionCompanyId !== PERSONAL_COMPANY_ID
-        ? DocumentOwner.ENTERPRISE
-        : DocumentOwner.CLASSROOM;
+export function getSessionCompanyId(c: AppContext): string {
+    return c.req.query("sessionCompanyId") ?? PERSONAL_COMPANY_ID;
 }
 
-/** What sign-in names as `company_id`: an enterprise's alone. */
+/** What sign-in names as `company_id`: OAuth takes an enterprise's id alone. */
 export function getSignInCompanyId(c: AppContext): string | undefined {
-    return getDocumentOwner(c) === DocumentOwner.ENTERPRISE
-        ? getDocumentCompanyId(c)
-        : undefined;
+    const companyId = getSessionCompanyId(c);
+    return companyId === PERSONAL_COMPANY_ID ? undefined : companyId;
 }

@@ -214,7 +214,7 @@ describe("the launch's sign-in check", () => {
         ).toBe("/");
     });
 
-    it("signs in again when the session isn't the document's enterprise's", async () => {
+    it("signs in again when the session isn't the launch's enterprise's", async () => {
         expect(
             await launchAs(
                 "user-a",

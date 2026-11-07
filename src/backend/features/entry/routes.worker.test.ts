@@ -12,6 +12,8 @@ import {
 import { getDb } from "../../db/client";
 import * as Permissions from "../../lib/onshape/endpoints/permissions";
 import { OnshapePermission } from "../../lib/onshape/endpoints/permissions";
+import * as Users from "../../lib/onshape/endpoints/users";
+import { OnshapeOwnerType } from "../../lib/onshape/endpoints/teams";
 import { OnshapeApiError } from "../../lib/onshape/client";
 
 const db = getDb(env.DB);
@@ -47,14 +49,13 @@ describe("GET /init", () => {
         return new URL(res.headers.get("Location")!, "http://x");
     }
 
-    // Sign-in decides from these whether it can name the company.
-    it("signs in a caller Onshape will not take, passing on the document's company", async () => {
+    // Sign-in names it as the company when it is an enterprise's.
+    it("signs in a caller Onshape will not take, passing on the session's company", async () => {
         const location = await signInRedirect(
             "/init?companyId=company-1&sessionCompanyId=company-1"
         );
 
         expect(location.pathname).toBe("/auth/sign-in");
-        expect(location.searchParams.get("companyId")).toBe("company-1");
         expect(location.searchParams.get("sessionCompanyId")).toBe("company-1");
         const redirectUrl = new URL(
             location.searchParams.get("redirectUrl")!,
@@ -156,9 +157,23 @@ describe("GET /init's document access check", () => {
         expect((await launch()).pathname).toBe("/");
     });
 
-    // A personal grant asked about an Enterprise's document, or the reverse.
-    it("explains a grant that can't see the document", async () => {
+    function owner(type: OnshapeOwnerType, isEnterpriseOwnedResource = false) {
+        vi.spyOn(Permissions, "getDocumentAcl").mockResolvedValue({
+            owner: { id: "owner", type, isEnterpriseOwnedResource }
+        });
+    }
+
+    /** The company the grant is for; null for a personal one. */
+    function grantFor(companyId: string | null) {
+        vi.spyOn(Users, "getSessionInfo").mockResolvedValue({
+            id: "user",
+            company: companyId ? { id: companyId } : null
+        });
+    }
+
+    it("explains an enterprise's document the grant can only view", async () => {
         grant([]);
+        owner(OnshapeOwnerType.COMPANY, true);
 
         const location = await launch();
 
@@ -166,22 +181,24 @@ describe("GET /init's document access check", () => {
         // The page goes back through /init, or on to the app, with these.
         expect(location.searchParams.get("documentId")).toBe("doc");
         expect(location.searchParams.get("companyId")).toBe("company-1");
-        // The grant is the document's company's, so all it can do is view.
         expect(location.searchParams.get("problem")).toBe("view-only");
     });
 
     // Sign-in can't ask for a classroom, so the grant is the caller's to give.
     it("explains a classroom's document the grant can't edit", async () => {
         grant([]);
+        owner(OnshapeOwnerType.COMPANY);
 
         const location = await launch({}, "sessionCompanyId=cad");
 
-        expect(location.pathname).toBe("/document-access");
         expect(location.searchParams.get("problem")).toBe("classroom");
     });
 
-    it("explains a grant that can't see the document after a sign-in", async () => {
+    // Only the caller can have chosen a company's grant for their own document.
+    it("explains a personal document under a company's grant", async () => {
         grant([]);
+        owner(OnshapeOwnerType.USER);
+        grantFor("company-1");
 
         const res = await createTestApp({ isAuthenticated: false }).request(
             "/init?documentId=doc&signInAttempted=1",
@@ -192,9 +209,34 @@ describe("GET /init's document access check", () => {
         const location = new URL(res.headers.get("Location")!, "http://x");
         expect(location.pathname).toBe("/document-access");
         expect(location.searchParams.has("signInAttempted")).toBe(false);
-        // The caller chose another account than the document's when asked.
         expect(location.searchParams.get("problem")).toBe("other-account");
     });
+
+    it("explains a personal document the personal grant can only view", async () => {
+        grant([OnshapePermission.READ]);
+        owner(OnshapeOwnerType.USER);
+        grantFor(null);
+
+        expect((await launch()).searchParams.get("problem")).toBe("view-only");
+    });
+
+    // A grant that can't see the document may not read its ACL either.
+    it.each([
+        ["sessionCompanyId=cad", "classroom"],
+        ["sessionCompanyId=company-1", "view-only"]
+    ])(
+        "tells the owner from the launch when the ACL can't be read, given %s",
+        async (session, problem) => {
+            grant([]);
+            vi.spyOn(Permissions, "getDocumentAcl").mockRejectedValue(
+                new OnshapeApiError("Forbidden", 403)
+            );
+
+            const location = await launch({}, session);
+
+            expect(location.searchParams.get("problem")).toBe(problem);
+        }
+    );
 
     it("reads Onshape's 404 as a grant that can't see the document", async () => {
         vi.spyOn(Permissions, "getPermissions").mockRejectedValue(

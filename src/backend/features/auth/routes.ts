@@ -39,7 +39,7 @@ function toLocalPath(redirectUrl: string | undefined): string {
     return redirectUrl;
 }
 
-/** GET /auth/sign-in?redirectUrl=&companyId=&sessionCompanyId= */
+/** GET /auth/sign-in?redirectUrl=&sessionCompanyId= */
 authRoutes.get("/sign-in", (c) => {
     const redirectUrl = toLocalPath(c.req.query("redirectUrl"));
     // Absent but for an enterprise, so the user can pick their account on Onshape.
