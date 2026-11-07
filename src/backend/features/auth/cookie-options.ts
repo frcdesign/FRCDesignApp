@@ -16,16 +16,10 @@ const COOKIE_OPTIONS = {
 } as const;
 
 /**
- * An unpartitioned cookie of the same name is a separate cookie, sent ahead of
- * ours when older, and `getCookie` reads the first: every write expires it.
+ * One Set-Cookie per name per response: Firefox's Total Cookie Protection
+ * partitions a frame's cookies whatever the attribute says, so a second for
+ * the same name lands on the same cookie.
  */
-const UNPARTITIONED_OPTIONS = {
-    httpOnly: true,
-    secure: true,
-    sameSite: "None",
-    path: "/"
-} as const;
-
 export function setAuthCookie(
     c: AppContext,
     name: string,
@@ -33,22 +27,13 @@ export function setAuthCookie(
     maxAge: number
 ): void {
     setCookie(c, name, value, { ...COOKIE_OPTIONS, maxAge });
-    deleteCookie(c, name, UNPARTITIONED_OPTIONS);
 }
 
 export function clearAuthCookie(c: AppContext, name: string): void {
     deleteCookie(c, name, COOKIE_OPTIONS);
-    deleteCookie(c, name, UNPARTITIONED_OPTIONS);
 }
 
-/** More than one is a partitioned and an unpartitioned copy, of which only the first is read. */
-export function countCookies(c: AppContext, name: string): number {
-    return (c.req.header("Cookie") ?? "")
-        .split(";")
-        .filter((pair) => pair.trim().startsWith(`${name}=`)).length;
-}
-
-/** For logs: which cookies arrived, never their values. */
+/** For logs and reports: which cookies arrived, never their values. */
 export function cookieNames(c: AppContext): string[] {
     return (c.req.header("Cookie") ?? "")
         .split(";")

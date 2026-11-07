@@ -32,7 +32,7 @@ function sessionRequest(method: string, body?: unknown): RequestInit {
         ...init,
         headers: {
             ...init.headers,
-            Cookie: "frc-design-app-session=test-session"
+            Cookie: "__Host-frc-design-app-session=test-session"
         }
     };
 }

@@ -1,16 +1,10 @@
 import { OnshapeApi } from "../client";
+import { type OnshapeOwnerType } from "../types";
 
 export interface OnshapeTeamMember {
     /** Whether the member administers the team, not only belongs to it. */
     admin: boolean;
     member: { id: string };
-}
-
-/** `BTOwnerInfo.type`: who owns a resource. */
-export enum OnshapeOwnerType {
-    USER = 0,
-    /** An enterprise, or an educator plan's classroom. */
-    COMPANY = 1
 }
 
 export interface OnshapeTeamInfo {

@@ -10,8 +10,10 @@ import {
     seedUser
 } from "../../../__test_utils__";
 import { getDb } from "../../db/client";
-import * as Permissions from "../../lib/onshape/endpoints/permissions";
+import * as Documents from "../../lib/onshape/endpoints/documents";
 import { OnshapePermission } from "../../lib/onshape/endpoints/permissions";
+import * as Users from "../../lib/onshape/endpoints/users";
+import { OnshapeOwnerType } from "../../lib/onshape/types";
 import { OnshapeApiError } from "../../lib/onshape/client";
 
 const db = getDb(env.DB);
@@ -47,12 +49,14 @@ describe("GET /init", () => {
         return new URL(res.headers.get("Location")!, "http://x");
     }
 
-    // An enterprise's, or an educator plan's classroom's, document.
-    it("signs in a caller Onshape will not take, scoped to the document's company", async () => {
-        const location = await signInRedirect("/init?companyId=company-1");
+    // Sign-in names it as the company when it is an enterprise's.
+    it("signs in a caller Onshape will not take, passing on the session's company", async () => {
+        const location = await signInRedirect(
+            "/init?companyId=company-1&sessionCompanyId=company-1"
+        );
 
         expect(location.pathname).toBe("/auth/sign-in");
-        expect(location.searchParams.get("companyId")).toBe("company-1");
+        expect(location.searchParams.get("sessionCompanyId")).toBe("company-1");
         const redirectUrl = new URL(
             location.searchParams.get("redirectUrl")!,
             "http://x"
@@ -130,15 +134,41 @@ describe("GET /init's document access check", () => {
         vi.restoreAllMocks();
     });
 
-    function grant(permissions: OnshapePermission[]) {
-        vi.spyOn(Permissions, "getPermissions").mockResolvedValue(permissions);
+    /** The document as the grant sees it: what it may do, and who owns it. */
+    function document(
+        permissionSet: OnshapePermission[],
+        type = OnshapeOwnerType.COMPANY,
+        isEnterpriseOwnedResource = true
+    ) {
+        return vi.spyOn(Documents, "getDocument").mockResolvedValue({
+            id: "doc",
+            name: "Robot",
+            public: false,
+            permissionSet,
+            owner: { id: "owner", type, isEnterpriseOwnedResource }
+        });
+    }
+
+    function unseen(status = 404) {
+        vi.spyOn(Documents, "getDocument").mockRejectedValue(
+            new OnshapeApiError("Can't see it", status)
+        );
+    }
+
+    /** The company the grant is for; null for a personal one. */
+    function grantFor(companyId: string | null) {
+        vi.spyOn(Users, "getSessionInfo").mockResolvedValue({
+            id: "user",
+            company: companyId ? { id: companyId } : null
+        });
     }
 
     async function launch(
-        options: Parameters<typeof createTestApp>[0] = {}
+        options: Parameters<typeof createTestApp>[0] = {},
+        session = "sessionCompanyId=company-1"
     ): Promise<URL> {
         const res = await createTestApp(options).request(
-            "/init?documentId=doc&instanceType=w&instanceId=ws&companyId=company-1",
+            `/init?documentId=doc&instanceType=w&instanceId=ws&companyId=company-1&${session}`,
             jsonRequest("GET"),
             env
         );
@@ -147,14 +177,14 @@ describe("GET /init's document access check", () => {
     }
 
     it("opens the app for a grant that can edit the document", async () => {
-        grant([OnshapePermission.READ, OnshapePermission.WRITE]);
+        document([OnshapePermission.READ, OnshapePermission.WRITE]);
 
         expect((await launch()).pathname).toBe("/");
     });
 
-    // A personal grant asked about an Enterprise's document, or the reverse.
-    it("explains a grant that can't see the document", async () => {
-        grant([]);
+    // A public document can be seen by anybody; inserting needs edit access.
+    it("explains an enterprise's document the grant can only view", async () => {
+        document([OnshapePermission.READ]);
 
         const location = await launch();
 
@@ -162,12 +192,22 @@ describe("GET /init's document access check", () => {
         // The page goes back through /init, or on to the app, with these.
         expect(location.searchParams.get("documentId")).toBe("doc");
         expect(location.searchParams.get("companyId")).toBe("company-1");
-        // The grant is the document's company's, so all it can do is view.
         expect(location.searchParams.get("problem")).toBe("view-only");
     });
 
-    it("explains a grant that can't see the document after a sign-in", async () => {
-        grant([]);
+    // Sign-in can't ask for a classroom, so the grant is the caller's to give.
+    it("explains a classroom's document the grant can't edit", async () => {
+        document([OnshapePermission.READ], OnshapeOwnerType.COMPANY, false);
+
+        const location = await launch({}, "sessionCompanyId=cad");
+
+        expect(location.searchParams.get("problem")).toBe("classroom");
+    });
+
+    // Only the caller can have chosen a company's grant for their own document.
+    it("explains a personal document under a company's grant", async () => {
+        document([OnshapePermission.READ], OnshapeOwnerType.USER);
+        grantFor("company-1");
 
         const res = await createTestApp({ isAuthenticated: false }).request(
             "/init?documentId=doc&signInAttempted=1",
@@ -178,35 +218,50 @@ describe("GET /init's document access check", () => {
         const location = new URL(res.headers.get("Location")!, "http://x");
         expect(location.pathname).toBe("/document-access");
         expect(location.searchParams.has("signInAttempted")).toBe(false);
-        // The caller chose another account than the document's when asked.
         expect(location.searchParams.get("problem")).toBe("other-account");
     });
 
-    it("reads Onshape's 404 as a grant that can't see the document", async () => {
-        vi.spyOn(Permissions, "getPermissions").mockRejectedValue(
-            new OnshapeApiError("Not found", 404)
-        );
+    it("explains a personal document the personal grant can only view", async () => {
+        document([OnshapePermission.READ], OnshapeOwnerType.USER);
+        grantFor(null);
 
-        expect((await launch()).pathname).toBe("/document-access");
+        expect((await launch()).searchParams.get("problem")).toBe("view-only");
     });
 
-    // A public document can be seen by anybody; inserting needs edit access.
-    it("explains a document the caller can only view", async () => {
-        grant([OnshapePermission.READ]);
+    // The document can't say who owns it, so the launch does.
+    it.each([
+        [404, "sessionCompanyId=cad", "classroom"],
+        [403, "sessionCompanyId=company-1", "view-only"]
+    ])(
+        "reads Onshape's %s as a grant that can't see the document, given %s",
+        async (status, session, problem) => {
+            unseen(status);
 
-        expect((await launch()).pathname).toBe("/document-access");
-    });
+            const location = await launch({}, session);
+
+            expect(location.pathname).toBe("/document-access");
+            expect(location.searchParams.get("problem")).toBe(problem);
+        }
+    );
 
     it("opens the app when Onshape can't answer", async () => {
-        vi.spyOn(Permissions, "getPermissions").mockRejectedValue(
-            new OnshapeApiError("Unavailable", 503)
-        );
+        unseen(503);
+
+        expect((await launch()).pathname).toBe("/");
+    });
+
+    it("opens the app when the document doesn't say what the grant may do", async () => {
+        vi.spyOn(Documents, "getDocument").mockResolvedValue({
+            id: "doc",
+            name: "Robot",
+            public: false
+        });
 
         expect((await launch()).pathname).toBe("/");
     });
 
     it("leaves a caller with no session to the app's own sign-in", async () => {
-        const getPermissions = vi.spyOn(Permissions, "getPermissions");
+        const getDocument = vi.spyOn(Documents, "getDocument");
 
         const location = await launch({
             signedIn: false,
@@ -215,7 +270,7 @@ describe("GET /init's document access check", () => {
 
         // Sent to sign in first, not to the access page.
         expect(location.pathname).toBe("/auth/sign-in");
-        expect(getPermissions).not.toHaveBeenCalled();
+        expect(getDocument).not.toHaveBeenCalled();
     });
 });
 

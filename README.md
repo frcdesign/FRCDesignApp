@@ -70,8 +70,9 @@ Next, add the necessary Extensions to your OAuth application so you can see it i
     - Location: Element right panel
     - Context: Inside assembly/Inside part studio
     - Action URL:
-        - Assembly: `https://dev.frcdesign.org/init?elementType=ASSEMBLY&documentId={$documentId}&instanceType={$workspaceOrVersion}&instanceId={$workspaceOrVersionId}&elementId={$elementId}`
-        - Part Studio: `https://dev.frcdesign.org/init?elementType=PARTSTUDIO&documentId={$documentId}&instanceType={$workspaceOrVersion}&instanceId={$workspaceOrVersionId}&elementId={$elementId}`
+        - Assembly: `https://dev.frcdesign.org/init?elementType=ASSEMBLY&documentId={$documentId}&instanceType={$workspaceOrVersion}&instanceId={$workspaceOrVersionId}&elementId={$elementId}&sessionCompanyId={$sessionCompanyId}`
+        - Part Studio: `https://dev.frcdesign.org/init?elementType=PARTSTUDIO&documentId={$documentId}&instanceType={$workspaceOrVersion}&instanceId={$workspaceOrVersionId}&elementId={$elementId}&sessionCompanyId={$sessionCompanyId}`
+          `sessionCompanyId` is the enterprise sign-in asks Onshape for; Onshape adds `companyId` and `server` on its own.
     - Icon: You'll need an icon. A good choice is the one at `/public/frc-design-app-dev.svg`.
 4. Open the [Onshape App Store](https://cad.onshape.com/appstore/myapps) and go to My apps. Find your App and Subscribe to it.
     - If it doesn't show up, try creating a Store Entry first.

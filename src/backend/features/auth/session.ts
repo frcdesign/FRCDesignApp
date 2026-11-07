@@ -8,9 +8,9 @@ import { internalError } from "../../lib/api-error";
 import { getCookie } from "hono/cookie";
 import { type AppContext } from "../../lib/context";
 import { kvStore } from "../../lib/kv-store";
-import { clearAuthCookie, countCookies, setAuthCookie } from "./cookie-options";
+import { clearAuthCookie, setAuthCookie } from "./cookie-options";
 
-const SESSION_COOKIE = "frc-design-app-session";
+const SESSION_COOKIE = "__Host-frc-design-app-session";
 const SESSION_TTL = 30 * 24 * 3600; // 30 days
 
 export function getSessionId(c: AppContext): string {
@@ -22,11 +22,6 @@ export function getSessionId(c: AppContext): string {
         );
     }
     return sessionId;
-}
-
-/** For logs and reports: anything but one is worth knowing about. */
-export function countSessionCookies(c: AppContext): number {
-    return countCookies(c, SESSION_COOKIE);
 }
 
 export interface AuthTokens {

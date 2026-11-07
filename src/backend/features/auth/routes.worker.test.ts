@@ -49,7 +49,7 @@ describe("GET /access-data", () => {
     });
 });
 
-const SESSION_COOKIE = "frc-design-app-session";
+const SESSION_COOKIE = "__Host-frc-design-app-session";
 
 /** A signed-in session, as the OAuth callback would have left it. */
 async function seedSession(sessionId: string) {
@@ -89,19 +89,18 @@ describe("GET /auth/sign-out", () => {
         expect(res.headers.get("Set-Cookie")).toContain(`${SESSION_COOKIE}=;`);
     });
 
-    // An unpartitioned copy left from before is sent first and would shadow the session.
-    it("expires the cookie partitioned and unpartitioned", async () => {
+    // Firefox partitions a frame's cookies regardless, so a second Set-Cookie
+    // for the name would apply to the same cookie and undo the first.
+    it("writes each cookie once per response, partitioned", async () => {
         await seedSession("session-1");
 
         const res = await signOut("/", "session-1");
 
-        const expired = res.headers
+        const written = res.headers
             .getSetCookie()
-            .filter((cookie) => cookie.startsWith(`${SESSION_COOKIE}=;`));
-        expect(expired).toHaveLength(2);
-        expect(
-            expired.filter((cookie) => cookie.includes("Partitioned"))
-        ).toHaveLength(1);
+            .filter((cookie) => cookie.startsWith(`${SESSION_COOKIE}=`));
+        expect(written).toHaveLength(1);
+        expect(written[0]).toContain("Partitioned");
     });
 
     it("lands home rather than forwarding the caller offsite", async () => {
@@ -148,14 +147,22 @@ describe("GET /auth/sign-in", () => {
         );
     });
 
-    it("scopes the sign-in to the company that owns the document", async () => {
-        const url = await authorizationUrl("companyId=company-1");
+    it("scopes the sign-in to the session's enterprise", async () => {
+        const url = await authorizationUrl("sessionCompanyId=company-1");
         expect(url.searchParams.get("company_id")).toBe("company-1");
     });
 
-    // Onshape rejects "cad", which a personal document arrives with.
+    // Onshape answers a classroom's id with "Invalid company ID".
+    it("names no company for a classroom, whose session company is cad", async () => {
+        const url = await authorizationUrl(
+            "companyId=classroom-1&sessionCompanyId=cad"
+        );
+        expect(url.searchParams.has("company_id")).toBe(false);
+    });
+
+    // Onshape rejects "cad", which every session outside an enterprise arrives with.
     it("names no company for a personal account", async () => {
-        const url = await authorizationUrl("companyId=cad");
+        const url = await authorizationUrl("sessionCompanyId=cad");
         expect(url.searchParams.has("company_id")).toBe(false);
     });
 
@@ -176,7 +183,7 @@ describe("GET /auth/sign-in", () => {
     });
 });
 
-const LOGIN_COOKIE = "frc-design-app-login";
+const LOGIN_COOKIE = "__Host-frc-design-app-login";
 
 describe("GET /auth/sign-in redirect target", () => {
     async function storedRedirect(query: string): Promise<string | undefined> {
@@ -237,11 +244,42 @@ describe("GET /auth/callback", () => {
         expect(res.headers.get("Location")).toBe("/cookie-error");
     });
 
+    function location(res: Response): URL {
+        return new URL(res.headers.get("Location") ?? "", "https://app");
+    }
+
     it("refuses a state it did not hand out", async () => {
         const res = await callback("code=c&state=forged", {
             state: "s",
-            redirectUrl: "/"
+            redirectUrl: "/init?signInAttempted=1"
         });
-        expect(res.status).toBe(401);
+        const to = location(res);
+        expect(to.pathname).toBe("/sign-in-error");
+        expect(to.searchParams.get("error")).toBe("state_mismatch");
+        expect(to.searchParams.get("redirectUrl")).toBe(
+            "/init?signInAttempted=1"
+        );
+    });
+
+    it("passes Onshape's refusal on to a page, not a bare error", async () => {
+        const res = await callback(
+            "error=invalid_request&error_description=Unknown+company&state=s",
+            { state: "s", redirectUrl: "/init?signInAttempted=1" }
+        );
+        const to = location(res);
+        expect(to.pathname).toBe("/sign-in-error");
+        expect(to.searchParams.get("error")).toBe("invalid_request");
+        expect(to.searchParams.get("description")).toBe("Unknown company");
+        expect(to.searchParams.get("redirectUrl")).toBe(
+            "/init?signInAttempted=1"
+        );
+    });
+
+    it("still says what Onshape refused when the login cookie is gone too", async () => {
+        const res = await callback("error=invalid_scope");
+        const to = location(res);
+        expect(to.pathname).toBe("/sign-in-error");
+        expect(to.searchParams.get("error")).toBe("invalid_scope");
+        expect(to.searchParams.has("redirectUrl")).toBe(false);
     });
 });

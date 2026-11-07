@@ -17,13 +17,9 @@ import {
     makeAuthTokens,
     TOKEN_ENDPOINT
 } from "./onshape-oauth";
-import {
-    countSessionCookies,
-    getSession,
-    getSessionId,
-    saveSession
-} from "./session";
-import { getDocumentCompanyId } from "./company";
+import { getSession, getSessionId, saveSession } from "./session";
+import { cookieNames } from "./cookie-options";
+import { getSessionCompanyId } from "./company";
 import { PERSONAL_COMPANY_ID } from "./personal-company";
 
 /** Stable fake user id used for FORCE_SIGNED_IN testing sessions. */
@@ -86,15 +82,16 @@ function getCachedUserId(c: AppContext): Promise<string> {
 }
 
 /**
- * The session is the launching user's, for the document's company. Every
- * personal account shares one company, so only the user id tells two apart.
+ * The session is the launching user's, for the company their Onshape session is
+ * in. Every personal account shares one company, so only the user id tells two
+ * apart.
  */
 export async function isAuthenticated(c: AppContext): Promise<boolean> {
     const problem = await findAuthProblem(c);
     if (problem) {
         console.warn("Launch needs sign-in", {
             problem,
-            sessionCookies: countSessionCookies(c)
+            cookies: cookieNames(c)
         });
     }
     return problem === undefined;
@@ -107,7 +104,7 @@ async function findAuthProblem(c: AppContext): Promise<string | undefined> {
         const sessionInfo = await getSessionInfo(onshapeApi);
         // Onshape reports no company outside an enterprise.
         const tokenCompanyId = sessionInfo.company?.id ?? PERSONAL_COMPANY_ID;
-        if (getDocumentCompanyId(c) !== tokenCompanyId) {
+        if (getSessionCompanyId(c) !== tokenCompanyId) {
             return "session is another company's";
         }
         const launchUserId = c.req.query("userId");

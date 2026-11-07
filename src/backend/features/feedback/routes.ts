@@ -1,10 +1,12 @@
 import { HttpStatus } from "http-status-ts";
-import { getApp } from "../../lib/context";
+import { type AppContext, getApp } from "../../lib/context";
 import { validate } from "../../lib/validate";
 import { handledError, internalError } from "../../lib/api-error";
 import { getDb } from "../../db/client";
 import { isSignedIn } from "../auth/request-auth";
-import { countSessionCookies } from "../auth/session";
+import { cookieNames } from "../auth/cookie-options";
+import { type AccessLevel } from "../auth/access-level";
+import { LibraryId } from "../library/library-id";
 import { trackReport } from "../analytics/tracking";
 import { feedbackBody, type FeedbackOut, topicLibrary } from "./contract";
 import { getWebhookUrl, reportTagIds } from "./channels";
@@ -13,6 +15,24 @@ import { findReportedPart } from "./reported-part";
 import { reporterKey, takeReportSlot } from "./rate-limit";
 
 export const feedbackRoutes = getApp();
+
+/** Per library, as admin teams are; unreadable leaves it out rather than failing the report. */
+async function readAccessLevels(
+    c: AppContext
+): Promise<Record<LibraryId, AccessLevel> | undefined> {
+    try {
+        const entries = await Promise.all(
+            Object.values(LibraryId).map(
+                async (libraryId) =>
+                    [libraryId, await c.var.getAccessLevel(libraryId)] as const
+            )
+        );
+        return Object.fromEntries(entries) as Record<LibraryId, AccessLevel>;
+    } catch (error) {
+        console.warn("Failed to read a reporter's access levels", error);
+        return undefined;
+    }
+}
 
 /**
  * POST /api/feedback: posts a report to the topic's Discord channel. Open to a
@@ -70,7 +90,8 @@ feedbackRoutes.post("/feedback", validate("json", feedbackBody), async (c) => {
             contact: body.contact || undefined,
             teamNumber: body.teamNumber,
             signedIn: userId !== undefined,
-            sessionCookies: countSessionCookies(c),
+            cookies: cookieNames(c),
+            accessLevels: await readAccessLevels(c),
             userAgent: c.req.header("User-Agent"),
             part,
             diagnostics: body.diagnostics,

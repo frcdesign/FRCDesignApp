@@ -31,6 +31,8 @@ who they are beyond what they typed, nor anything about their own documents.
 | `src/frontend/features/feedback/open-feedback.tsx`            | `openFeedbackForm`, `openPartReport`, `openErrorReport`                         |
 | `src/frontend/features/feedback/labels.ts`                    | Each topic's and type's message, the description placeholder, `suggestTitle`    |
 | `src/frontend/features/feedback/diagnostics.ts`               | `collectDiagnostics`, `toReportedError`                                         |
+| `src/frontend/features/feedback/crash-report.ts`              | `useCrashReport`: a crash sent in one click, with no form                       |
+| `src/frontend/components/root-error.tsx`                      | The crash pages, `RootCrash` and `RootAppError`, each with **Send report**      |
 | `src/frontend/features/feedback/components/report-button.tsx` | **Send a report**, beside an error notice                                       |
 | `src/frontend/features/feedback/components/report-sent.tsx`   | What the form becomes once sent: which channel, and **Open Discord**            |
 | `src/frontend/lib/errors.ts`                                  | `handleAppError`, `showReportableErrorToast`: the **Report** button on toasts   |
@@ -103,6 +105,14 @@ The source decides what the form offers and what the report carries
   error notice, a failed version run, the cookie error and `/document-access`.
   The report carries what the user was shown and the error behind it, and may
   be sent with nothing typed.
+- **Crash** — **Send report** on a crash page: `RootCrash`, when the root
+  itself fails (the dashboard's pages have no boundary of their own), and
+  `RootAppError` under `/app`. One click sends it, with no form, since the root's
+  page has nothing to draw one with (`useCrashReport`). It is an error report
+  about the app, a bug, titled "Crash: " and the error, carrying the error's
+  stack and no message. The page then says where the report went, or why it
+  failed and **Try again**; **Open Discord** is the way in when sending can't
+  work.
 
 ### Sending
 
@@ -124,7 +134,7 @@ selection? }`.
    params name an element, standalone otherwise, by `toLaunchContext`; computed
    here so `/cookie-error`, with no session, still has it), the level the app is viewed as, the window size, and
    the error: what was shown, and for a thrown `Error` its stack
-   (`toReportedError`), which the crash page passes on too.
+   (`toReportedError`), which a crash report sends too.
 3. `feedbackBody` checks that the category belongs to the topic and source,
    that only a part report names a part, that the title fits a thread's name
    (100 characters), and that only an error report may have no message.
@@ -142,9 +152,10 @@ selection? }`.
    message is two embeds: the report in its type's color (title, link to the
    part, what they typed, then the part, its configuration, the error, the Discord username and the team number), and
    under it a gray
-   block of `Label: value` lines (topic, type, source, page, launch, launch context, signed in, session
-   cookies (how many the report came with; two means a stale one hides the session),
-   viewed as, build, window, browser) with the report id in its footer.
+   block of `Label: value` lines (topic, type, source, page, launch, launch context, signed in, access
+   level (per library from the server, one level when they agree, and the
+   level viewed at when someone chose one), cookies (names only), build, window,
+   browser) with the report id in its footer.
 7. Once posted, `trackReport` records it in the background, under the id the
    post quotes in its footer, with the team number when there is one.
 8. The form turns into a success notice (`ReportSent`, a `SectionNotice`):
