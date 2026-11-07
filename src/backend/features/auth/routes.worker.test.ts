@@ -236,11 +236,42 @@ describe("GET /auth/callback", () => {
         expect(res.headers.get("Location")).toBe("/cookie-error");
     });
 
+    function location(res: Response): URL {
+        return new URL(res.headers.get("Location") ?? "", "https://app");
+    }
+
     it("refuses a state it did not hand out", async () => {
         const res = await callback("code=c&state=forged", {
             state: "s",
-            redirectUrl: "/"
+            redirectUrl: "/init?signInAttempted=1"
         });
-        expect(res.status).toBe(401);
+        const to = location(res);
+        expect(to.pathname).toBe("/sign-in-error");
+        expect(to.searchParams.get("error")).toBe("state_mismatch");
+        expect(to.searchParams.get("redirectUrl")).toBe(
+            "/init?signInAttempted=1"
+        );
+    });
+
+    it("passes Onshape's refusal on to a page, not a bare error", async () => {
+        const res = await callback(
+            "error=invalid_request&error_description=Unknown+company&state=s",
+            { state: "s", redirectUrl: "/init?signInAttempted=1" }
+        );
+        const to = location(res);
+        expect(to.pathname).toBe("/sign-in-error");
+        expect(to.searchParams.get("error")).toBe("invalid_request");
+        expect(to.searchParams.get("description")).toBe("Unknown company");
+        expect(to.searchParams.get("redirectUrl")).toBe(
+            "/init?signInAttempted=1"
+        );
+    });
+
+    it("still says what Onshape refused when the login cookie is gone too", async () => {
+        const res = await callback("error=invalid_scope");
+        const to = location(res);
+        expect(to.pathname).toBe("/sign-in-error");
+        expect(to.searchParams.get("error")).toBe("invalid_scope");
+        expect(to.searchParams.has("redirectUrl")).toBe(false);
     });
 });

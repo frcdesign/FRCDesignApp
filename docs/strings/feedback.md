@@ -106,6 +106,18 @@ the document: one notice per cause, chosen by why `/init` says it can't.
 | "Sign in"                                                                               | Button           | Under it, with Send a report | Same                                              | **⚑** New |
 | "Verify the document has been shared with you. If the problem persists, send a report." | Page description | Under the title              | Any other launch the app can't edit               | **⚑** New |
 
+## The sign-in error page
+
+`/sign-in-error`, where the OAuth callback sends a sign-in Onshape refused or
+answered with nothing to use.
+
+| String                                                                                                     | Kind             | Where                        | When                                                                 | Review                         |
+| ---------------------------------------------------------------------------------------------------------- | ---------------- | ---------------------------- | -------------------------------------------------------------------- | ------------------------------ |
+| "Onshape couldn't sign you in."                                                                            | Page title       | `/sign-in-error`             | Always                                                               | **⚑** New                      |
+| "Sign in again and choose your account. If the problem persists, send a report."                           | Page description | Under it                     | Onshape gave no description                                          | **⚑** New                      |
+| "Onshape said: "{reason}". Sign in again and choose your account. If the problem persists, send a report." | Page description | Under it                     | Onshape described the refusal; `{reason}` is its `error_description` | **⚑** New; Onshape's own words |
+| "Sign in again"                                                                                            | Button           | Under it, with Send a report | Always; names no company                                             | **⚑** New                      |
+
 ## The dashboard
 
 | String                         | Kind                | Where                            | When                             | Review |

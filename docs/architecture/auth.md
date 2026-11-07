@@ -9,27 +9,29 @@ team, plus one owner set by configuration.
 
 ## Code map
 
-| Path                                                        | Role                                                                       |
-| ----------------------------------------------------------- | -------------------------------------------------------------------------- |
-| `src/backend/features/auth/onshape-oauth.ts`                | The OAuth handshake: authorize url, code exchange, token shape             |
-| `src/backend/features/auth/login.ts`                        | A sign-in in flight, held in its own short cookie                          |
-| `src/backend/features/auth/session.ts`                      | The session cookie and its KV record                                       |
-| `src/backend/features/auth/request-auth.ts`                 | `productionAuth`: resolves the caller, their Onshape client and level      |
-| `src/backend/features/auth/access-level.ts`                 | `AccessLevel` and its ordering; shared with the client                     |
-| `src/backend/features/auth/guards.ts`                       | Route middleware: sign-in, editor, admin, owner                            |
-| `src/backend/features/auth/background-sessions.ts`          | Sessions a load can borrow when its requester's fails                      |
-| `src/backend/features/auth/company.ts`, `cookie-options.ts` | Enterprise company matching; writing and clearing the auth cookies         |
-| `src/backend/features/auth/routes.ts`                       | `/auth/sign-in`, `/auth/callback`, `/auth/sign-out`, `/api/access-data`    |
-| `src/backend/features/hints/store.ts`                       | Which features' dots a user has seen, carried by `/api/access-data`        |
-| `src/backend/features/hints/routes.ts`                      | `POST /api/seen-hints`, sent by `useMarkHintSeen` once a feature is opened |
-| `src/backend/features/admin-team/`                          | The owner sets a library's admin team; members are synced from Onshape     |
-| `src/backend/features/entry/routes.ts`                      | `/init`, where Onshape launches the app                                    |
-| `src/backend/features/entry/document-access.ts`             | `cannotEditDocument`: whether the grant can edit the document              |
-| `src/frontend/routes/_pages/document-access.tsx`            | `/document-access`: what to do about a grant that can't                    |
-| `src/backend/lib/context.ts`                                | `AppBindings` (every binding and variable) and `bindAuth`                  |
-| `src/frontend/features/auth/access-level.ts`                | `useAccessData`: the server's level and the level the app is viewed as     |
-| `src/frontend/features/auth/components/require-access.tsx`  | `RequireAccessLevel`, `RequireSignIn`: render children only past the guard |
-| `wrangler.jsonc`                                            | Per-environment vars and bindings                                          |
+| Path                                                        | Role                                                                          |
+| ----------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| `src/backend/features/auth/onshape-oauth.ts`                | The OAuth handshake: authorize url, code exchange, token shape                |
+| `src/backend/features/auth/login.ts`                        | A sign-in in flight, held in its own short cookie                             |
+| `src/backend/features/auth/session.ts`                      | The session cookie and its KV record                                          |
+| `src/backend/features/auth/request-auth.ts`                 | `productionAuth`: resolves the caller, their Onshape client and level         |
+| `src/backend/features/auth/access-level.ts`                 | `AccessLevel` and its ordering; shared with the client                        |
+| `src/backend/features/auth/guards.ts`                       | Route middleware: sign-in, editor, admin, owner                               |
+| `src/backend/features/auth/background-sessions.ts`          | Sessions a load can borrow when its requester's fails                         |
+| `src/backend/features/auth/company.ts`, `cookie-options.ts` | Enterprise company matching; writing and clearing the auth cookies            |
+| `src/backend/features/auth/routes.ts`                       | `/auth/sign-in`, `/auth/callback`, `/auth/sign-out`, `/api/access-data`       |
+| `src/backend/features/auth/sign-in-error.ts`                | Where the callback sends a sign-in that didn't finish, and its params; a leaf |
+| `src/frontend/routes/_pages/sign-in-error.tsx`              | `/sign-in-error`: **Sign in again**, and a report of what Onshape said        |
+| `src/backend/features/hints/store.ts`                       | Which features' dots a user has seen, carried by `/api/access-data`           |
+| `src/backend/features/hints/routes.ts`                      | `POST /api/seen-hints`, sent by `useMarkHintSeen` once a feature is opened    |
+| `src/backend/features/admin-team/`                          | The owner sets a library's admin team; members are synced from Onshape        |
+| `src/backend/features/entry/routes.ts`                      | `/init`, where Onshape launches the app                                       |
+| `src/backend/features/entry/document-access.ts`             | `cannotEditDocument`: whether the grant can edit the document                 |
+| `src/frontend/routes/_pages/document-access.tsx`            | `/document-access`: what to do about a grant that can't                       |
+| `src/backend/lib/context.ts`                                | `AppBindings` (every binding and variable) and `bindAuth`                     |
+| `src/frontend/features/auth/access-level.ts`                | `useAccessData`: the server's level and the level the app is viewed as        |
+| `src/frontend/features/auth/components/require-access.tsx`  | `RequireAccessLevel`, `RequireSignIn`: render children only past the guard    |
+| `wrangler.jsonc`                                            | Per-environment vars and bindings                                             |
 
 ## Storage
 
@@ -77,6 +79,14 @@ team, plus one owner set by configuration.
 4. The authorize request names `APP_URL/auth/callback` as its redirect uri,
    which must be registered on the OAuth app. Onshape returns there; the callback checks
    the state, exchanges the code, starts a session (a new id), and redirects back.
+   When it can't, it never answers with a bare error, which would leave the
+   panel's frame blank: `access_denied` goes to `/grant-denied`, a missing
+   login cookie to `/cookie-error`, and any other `error` from Onshape, a
+   missing code or a state it didn't hand out to `/sign-in-error`
+   (`signInErrorUrl`). That page carries Onshape's `error` and
+   `error_description` (or a `CallbackProblem`) and where the sign-in was
+   going. Its **Sign in again** names no company, so Onshape lets the caller
+   choose the account, and **Send a report** carries the error.
 5. Back at `/init`, `cannotEditDocument` asks Onshape for the caller's
    permissions on the document (`getPermissions`). With `WRITE` the app opens.
    Without it, whether the grant can't see the document at all (no
@@ -196,17 +206,19 @@ expired one, another company's or user's) with the names of the cookies that cam
 the callback logs the cookie names, never values, when its login cookie is
 missing.
 
-| Failure                                                          | Result                                                                                                 | Recovery                                                 |
-| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ | -------------------------------------------------------- |
-| Access token expired                                             | Refreshed on the next call                                                                             | Automatic                                                |
-| Refresh token revoked or expired                                 | Treated as signed out                                                                                  | Sign in again                                            |
-| The grant is another company's than the document's               | `/init` sends the caller through sign-in for the document's company                                    | Automatic, once                                          |
-| The session is another user's than the launch's                  | `/init` sends the caller through sign-in for the document's company                                    | Automatic, once                                          |
-| A company's grant for a personal document                        | `/init` sends the launch to `/document-access`                                                         | **Sign in**, choosing the personal account               |
-| Document public or shared view-only                              | `/init` sends the launch to `/document-access`                                                         | Edit access from the document's owner                    |
-| Team membership changed in Onshape                               | Synced when its webhook arrives                                                                        | **Refresh** beside the admin team, for a missed delivery |
-| No saved background session                                      | A load whose requester's session lapses fails                                                          | The owner or a team member opens the app                 |
-| Browser refuses even a partitioned cookie (Brave, strict policy) | The callback finds no login cookie and sends the caller to `/cookie-error` (`/safari-error` in Safari) | Allow the app's cookies; **Send a report**               |
+| Failure                                                          | Result                                                                                                 | Recovery                                                   |
+| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------- |
+| Access token expired                                             | Refreshed on the next call                                                                             | Automatic                                                  |
+| Refresh token revoked or expired                                 | Treated as signed out                                                                                  | Sign in again                                              |
+| The grant is another company's than the document's               | `/init` sends the caller through sign-in for the document's company                                    | Automatic, once                                            |
+| The session is another user's than the launch's                  | `/init` sends the caller through sign-in for the document's company                                    | Automatic, once                                            |
+| A company's grant for a personal document                        | `/init` sends the launch to `/document-access`                                                         | **Sign in**, choosing the personal account                 |
+| Document public or shared view-only                              | `/init` sends the launch to `/document-access`                                                         | Edit access from the document's owner                      |
+| Team membership changed in Onshape                               | Synced when its webhook arrives                                                                        | **Refresh** beside the admin team, for a missed delivery   |
+| No saved background session                                      | A load whose requester's session lapses fails                                                          | The owner or a team member opens the app                   |
+| Onshape refuses the sign-in (`error` other than `access_denied`) | The callback logs it and sends the caller to `/sign-in-error` with Onshape's error                     | **Sign in again**, choosing the account; **Send a report** |
+| The callback has no code, or a state it didn't hand out          | The callback sends the caller to `/sign-in-error`                                                      | **Sign in again**                                          |
+| Browser refuses even a partitioned cookie (Brave, strict policy) | The callback finds no login cookie and sends the caller to `/cookie-error` (`/safari-error` in Safari) | Allow the app's cookies; **Send a report**                 |
 
 ## Decisions
 
