@@ -47,12 +47,17 @@ describe("GET /init", () => {
         return new URL(res.headers.get("Location")!, "http://x");
     }
 
-    // An enterprise's, or an educator plan's classroom's, document.
-    it("signs in a caller Onshape will not take, scoped to the document's company", async () => {
-        const location = await signInRedirect("/init?companyId=company-1");
+    // Sign-in decides from the company and server whether it can name the company.
+    it("signs in a caller Onshape will not take, passing on the document's company", async () => {
+        const location = await signInRedirect(
+            "/init?companyId=company-1&server=https%3A%2F%2Facme.onshape.com"
+        );
 
         expect(location.pathname).toBe("/auth/sign-in");
         expect(location.searchParams.get("companyId")).toBe("company-1");
+        expect(location.searchParams.get("server")).toBe(
+            "https://acme.onshape.com"
+        );
         const redirectUrl = new URL(
             location.searchParams.get("redirectUrl")!,
             "http://x"
@@ -135,10 +140,11 @@ describe("GET /init's document access check", () => {
     }
 
     async function launch(
-        options: Parameters<typeof createTestApp>[0] = {}
+        options: Parameters<typeof createTestApp>[0] = {},
+        server = "server=https%3A%2F%2Facme.onshape.com"
     ): Promise<URL> {
         const res = await createTestApp(options).request(
-            "/init?documentId=doc&instanceType=w&instanceId=ws&companyId=company-1",
+            `/init?documentId=doc&instanceType=w&instanceId=ws&companyId=company-1&${server}`,
             jsonRequest("GET"),
             env
         );
@@ -164,6 +170,19 @@ describe("GET /init's document access check", () => {
         expect(location.searchParams.get("companyId")).toBe("company-1");
         // The grant is the document's company's, so all it can do is view.
         expect(location.searchParams.get("problem")).toBe("view-only");
+    });
+
+    // Sign-in can't ask for a classroom, so the grant is the caller's to give.
+    it("explains a classroom's document the grant can't edit", async () => {
+        grant([]);
+
+        const location = await launch(
+            {},
+            "server=https%3A%2F%2Fcad.onshape.com"
+        );
+
+        expect(location.pathname).toBe("/document-access");
+        expect(location.searchParams.get("problem")).toBe("classroom");
     });
 
     it("explains a grant that can't see the document after a sign-in", async () => {

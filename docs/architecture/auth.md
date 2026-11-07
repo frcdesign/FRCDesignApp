@@ -9,29 +9,29 @@ team, plus one owner set by configuration.
 
 ## Code map
 
-| Path                                                        | Role                                                                          |
-| ----------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| `src/backend/features/auth/onshape-oauth.ts`                | The OAuth handshake: authorize url, code exchange, token shape                |
-| `src/backend/features/auth/login.ts`                        | A sign-in in flight, held in its own short cookie                             |
-| `src/backend/features/auth/session.ts`                      | The session cookie and its KV record                                          |
-| `src/backend/features/auth/request-auth.ts`                 | `productionAuth`: resolves the caller, their Onshape client and level         |
-| `src/backend/features/auth/access-level.ts`                 | `AccessLevel` and its ordering; shared with the client                        |
-| `src/backend/features/auth/guards.ts`                       | Route middleware: sign-in, editor, admin, owner                               |
-| `src/backend/features/auth/background-sessions.ts`          | Sessions a load can borrow when its requester's fails                         |
-| `src/backend/features/auth/company.ts`, `cookie-options.ts` | Enterprise company matching; writing and clearing the auth cookies            |
-| `src/backend/features/auth/routes.ts`                       | `/auth/sign-in`, `/auth/callback`, `/auth/sign-out`, `/api/access-data`       |
-| `src/backend/features/auth/sign-in-error.ts`                | Where the callback sends a sign-in that didn't finish, and its params; a leaf |
-| `src/frontend/routes/_pages/sign-in-error.tsx`              | `/sign-in-error`: **Sign in again**, and a report of what Onshape said        |
-| `src/backend/features/hints/store.ts`                       | Which features' dots a user has seen, carried by `/api/access-data`           |
-| `src/backend/features/hints/routes.ts`                      | `POST /api/seen-hints`, sent by `useMarkHintSeen` once a feature is opened    |
-| `src/backend/features/admin-team/`                          | The owner sets a library's admin team; members are synced from Onshape        |
-| `src/backend/features/entry/routes.ts`                      | `/init`, where Onshape launches the app                                       |
-| `src/backend/features/entry/document-access.ts`             | `cannotEditDocument`: whether the grant can edit the document                 |
-| `src/frontend/routes/_pages/document-access.tsx`            | `/document-access`: what to do about a grant that can't                       |
-| `src/backend/lib/context.ts`                                | `AppBindings` (every binding and variable) and `bindAuth`                     |
-| `src/frontend/features/auth/access-level.ts`                | `useAccessData`: the server's level and the level the app is viewed as        |
-| `src/frontend/features/auth/components/require-access.tsx`  | `RequireAccessLevel`, `RequireSignIn`: render children only past the guard    |
-| `wrangler.jsonc`                                            | Per-environment vars and bindings                                             |
+| Path                                                        | Role                                                                            |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| `src/backend/features/auth/onshape-oauth.ts`                | The OAuth handshake: authorize url, code exchange, token shape                  |
+| `src/backend/features/auth/login.ts`                        | A sign-in in flight, held in its own short cookie                               |
+| `src/backend/features/auth/session.ts`                      | The session cookie and its KV record                                            |
+| `src/backend/features/auth/request-auth.ts`                 | `productionAuth`: resolves the caller, their Onshape client and level           |
+| `src/backend/features/auth/access-level.ts`                 | `AccessLevel` and its ordering; shared with the client                          |
+| `src/backend/features/auth/guards.ts`                       | Route middleware: sign-in, editor, admin, owner                                 |
+| `src/backend/features/auth/background-sessions.ts`          | Sessions a load can borrow when its requester's fails                           |
+| `src/backend/features/auth/company.ts`, `cookie-options.ts` | `getDocumentOwner`, `getSignInCompanyId`; writing and clearing the auth cookies |
+| `src/backend/features/auth/routes.ts`                       | `/auth/sign-in`, `/auth/callback`, `/auth/sign-out`, `/api/access-data`         |
+| `src/backend/features/auth/sign-in-error.ts`                | Where the callback sends a sign-in that didn't finish, and its params; a leaf   |
+| `src/frontend/routes/_pages/sign-in-error.tsx`              | `/sign-in-error`: **Sign in again**, and a report of what Onshape said          |
+| `src/backend/features/hints/store.ts`                       | Which features' dots a user has seen, carried by `/api/access-data`             |
+| `src/backend/features/hints/routes.ts`                      | `POST /api/seen-hints`, sent by `useMarkHintSeen` once a feature is opened      |
+| `src/backend/features/admin-team/`                          | The owner sets a library's admin team; members are synced from Onshape          |
+| `src/backend/features/entry/routes.ts`                      | `/init`, where Onshape launches the app                                         |
+| `src/backend/features/entry/document-access.ts`             | `cannotEditDocument`: whether the grant can edit the document                   |
+| `src/frontend/routes/_pages/document-access.tsx`            | `/document-access`: what to do about a grant that can't                         |
+| `src/backend/lib/context.ts`                                | `AppBindings` (every binding and variable) and `bindAuth`                       |
+| `src/frontend/features/auth/access-level.ts`                | `useAccessData`: the server's level and the level the app is viewed as          |
+| `src/frontend/features/auth/components/require-access.tsx`  | `RequireAccessLevel`, `RequireSignIn`: render children only past the guard      |
+| `wrangler.jsonc`                                            | Per-environment vars and bindings                                               |
 
 ## Storage
 
@@ -65,17 +65,24 @@ team, plus one owner set by configuration.
 
 1. Onshape opens `/init?documentId=…&instanceType=…&elementId=…&companyId=…`,
    `companyId` being the company that owns the document (`cad` for a personal
-   one), which Onshape adds to every launch (`getDocumentCompanyId`). An
-   enterprise and an educator plan's classroom are both companies. A version
-   or microversion goes to `/version-error`.
-2. With no session, one whose grant is for another company than the
-   document's, or one for another user than the launch's `userId`, `/init`
-   sends the caller through sign-in for the document's company and back,
-   marked so it never loops.
-3. `/auth/sign-in?companyId=` stores `{ state, redirectUrl }` in the login
-   cookie and redirects to Onshape's authorize page, naming the company as
-   `company_id`; for a personal document it names none, and Onshape asks the
-   caller which account. The redirect url must be a local path.
+   one), which Onshape adds to every launch (`getDocumentCompanyId`), with
+   `server`, the Onshape origin it was launched from. `getDocumentOwner` reads
+   the two as a `DocumentOwner`: personal for `cad`, an enterprise when
+   `server` is a domain of its own, and a classroom, a company on
+   `cad.onshape.com` such as an educator plan's, otherwise. A version or
+   microversion goes to `/version-error`.
+2. With no session, one for another user than the launch's `userId`, or one
+   whose grant is for another company than the document's (never asked of a
+   classroom's document, whose grant sign-in can't ask for), `/init` sends the
+   caller through sign-in and back, passing on `companyId` and `server`, marked
+   so it never loops.
+3. `/auth/sign-in?companyId=&server=` stores `{ state, redirectUrl }` in the
+   login cookie and redirects to Onshape's authorize page. It names the company
+   as `company_id` for an enterprise alone (`getSignInCompanyId`): OAuth
+   refuses a classroom's id ("Invalid company ID"), and a personal account has
+   none. Otherwise Onshape asks the caller which account. The app's own
+   **Sign in** passes the launch's `companyId` and `server` the same way. The
+   redirect url must be a local path.
 4. The authorize request names `APP_URL/auth/callback` as its redirect uri,
    which must be registered on the OAuth app. Onshape returns there; the callback checks
    the state, exchanges the code, starts a session (a new id), and redirects back.
@@ -91,17 +98,21 @@ team, plus one owner set by configuration.
    permissions on the document (`getPermissions`). With `WRITE` the app opens.
    Without it, whether the grant can't see the document at all (no
    permissions, or a 404) or can only view it, `/init` sends the launch to
-   `/document-access` with the `problem` (`AccessProblem`): `other-account`
-   when the grant is still another company's than the document's, which only
-   the caller can have chosen, and `view-only` otherwise.
+   `/document-access` with the `problem` (`AccessProblem`): `classroom` for a
+   classroom's document; `other-account` when the grant is still another
+   company's than the document's, which only the caller can have chosen; and
+   `view-only` otherwise.
 6. `/document-access` says the app can't edit the document, and what to do:
     - **`other-account` on a personal document**: "Sign in and choose your
       personal account". **Sign in** goes through sign-in naming no company and
       back to `/init`.
+    - **`classroom`**: the grant for a classroom is the caller's to give on
+      Onshape's side, so **Open Applications page** opens Onshape's
+      Applications page (`/user/applications` on the launch's server).
     - **Anything else**: the caller can only view the document, a public one
       or one shared view-only.
 
-    Both offer **Send a report**, its kind naming which. With no session, or
+    Each offers **Send a report**, its kind naming which. With no session, or
     Onshape not answering, the app opens as before: the check never keeps
     anybody out on a guess.
 
@@ -123,7 +134,8 @@ Onshape:
 - `getUserId` — resolved from Onshape once and kept on the session.
 - `getAccessLevel(libraryId)` — see below.
 - `isAuthenticated` — the session works, its company matches the launching
-  document's, **and** its user is the launch's `userId` when Onshape sends one.
+  document's unless that is a classroom, **and** its user is the launch's
+  `userId` when Onshape sends one.
 
 ### Access levels
 
@@ -212,6 +224,7 @@ missing.
 | Refresh token revoked or expired                                 | Treated as signed out                                                                                  | Sign in again                                              |
 | The grant is another company's than the document's               | `/init` sends the caller through sign-in for the document's company                                    | Automatic, once                                            |
 | The session is another user's than the launch's                  | `/init` sends the caller through sign-in for the document's company                                    | Automatic, once                                            |
+| A classroom's document the grant can't edit                      | `/init` sends the launch to `/document-access` with `classroom`                                        | **Open Applications page**; **Send a report**              |
 | A company's grant for a personal document                        | `/init` sends the launch to `/document-access`                                                         | **Sign in**, choosing the personal account                 |
 | Document public or shared view-only                              | `/init` sends the launch to `/document-access`                                                         | Edit access from the document's owner                      |
 | Team membership changed in Onshape                               | Synced when its webhook arrives                                                                        | **Refresh** beside the admin team, for a missed delivery   |
@@ -222,13 +235,19 @@ missing.
 
 ## Decisions
 
-- **Sign in as the document's company.** Onshape adds the company that owns
-  the document to every launch, and a grant is per company, so asking for that
-  one gets a grant that can edit it: an enterprise's, or an educator plan's
-  classroom's, without the caller having to authorize anything by hand. The
-  session's company says only where the caller happens to be signed in. A
-  personal account can't be asked for by id, so a personal document is the one
-  case the caller can answer wrongly, and the one the access page explains.
+- **Sign in as the document's enterprise.** Onshape adds the company that owns
+  the document to every launch, and a grant is per company, so asking for an
+  enterprise's gets a grant that can edit its documents without the caller
+  having to authorize anything by hand. The session's company says only where
+  the caller happens to be signed in. A personal account can't be asked for by
+  id, so a personal document is one case the caller can answer wrongly.
+- **Never ask for a classroom.** OAuth answers an educator plan classroom's id
+  with `invalid_request`, "Invalid company ID", which left every classroom
+  launch unable to sign in. So sign-in asks for no company there, `/init`
+  doesn't require the session to be the classroom's (it can't ask for one, so
+  asking again would only repeat), and a grant that still can't edit gets the
+  access page's own notice. An enterprise and a classroom look alike in the
+  launch but for `server`: only an enterprise has a domain of its own.
 - **Match the launch's user, not only its company.** Every personal account
   shares the company `cad`, so a session left from another personal account,
   such as a team's shared one on the same browser, passes the company check

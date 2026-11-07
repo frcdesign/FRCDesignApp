@@ -6,6 +6,7 @@ import { isSignedIn } from "./request-auth";
 import { getSeenHints } from "../hints/store";
 import { doCallback, doSignIn } from "./onshape-oauth";
 import { endSession } from "./session";
+import { getSignInCompanyId } from "./company";
 
 /** The OAuth redirects, mounted at /auth. */
 export const authRoutes = getApp();
@@ -38,12 +39,11 @@ function toLocalPath(redirectUrl: string | undefined): string {
     return redirectUrl;
 }
 
-/** GET /auth/sign-in?redirectUrl=&companyId= */
+/** GET /auth/sign-in?redirectUrl=&companyId=&server= */
 authRoutes.get("/sign-in", (c) => {
     const redirectUrl = toLocalPath(c.req.query("redirectUrl"));
-    // Absent standalone, so the user can pick their account on Onshape.
-    const companyId = c.req.query("companyId");
-    return c.redirect(doSignIn(c, redirectUrl, companyId));
+    // Absent but for an enterprise, so the user can pick their account on Onshape.
+    return c.redirect(doSignIn(c, redirectUrl, getSignInCompanyId(c)));
 });
 
 /** Standalone only: inside Onshape, the session is Onshape's to end. */

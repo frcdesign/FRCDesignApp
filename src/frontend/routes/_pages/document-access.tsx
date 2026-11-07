@@ -9,6 +9,8 @@ import {
     AccessProblem
 } from "@backend/features/entry/access-problem";
 import { PageNotice } from "../../components/app-notice";
+import { OpenUrlButton } from "../../components/open-url-button";
+import { APPLICATIONS_PATH, toOnshapeOrigin } from "../../lib/url";
 import { ReportButton } from "../../features/feedback/components/report-button";
 import {
     type OnshapeLaunch,
@@ -28,9 +30,10 @@ export const Route = createFileRoute("/_pages/document-access")({
 
 /**
  * Where `/init` sends a launch whose Onshape grant can't edit the document.
- * Sign-in asks for the document's own company, so the one grant a caller can
- * get wrong is a company's for a personal document, which Onshape never asks
- * about; anything else that can't edit is view-only.
+ * Sign-in asks for an enterprise's own company, so the grants a caller can get
+ * wrong are a company's for a personal document, which Onshape never asks
+ * about, and any for a classroom's, which sign-in can't ask for; anything else
+ * that can't edit is view-only.
  */
 function DocumentAccess(): ReactNode {
     const { [ACCESS_PROBLEM_PARAM]: problem, ...launch } = Route.useSearch();
@@ -38,6 +41,28 @@ function DocumentAccess(): ReactNode {
         (launch.companyId ?? PERSONAL_COMPANY_ID) === PERSONAL_COMPANY_ID;
     const title = m.documentAccessTitle();
 
+    if (problem === AccessProblem.CLASSROOM) {
+        return (
+            <PageNotice
+                title={title}
+                description={m.documentAccessClassroom()}
+                action={
+                    <Group gap="xs" justify="center" wrap="wrap">
+                        <OpenUrlButton
+                            text={m.documentAccessOpenApplications()}
+                            url={
+                                toOnshapeOrigin(launch.server) +
+                                APPLICATIONS_PATH
+                            }
+                        />
+                        <ReportButton
+                            report={{ shown: title, kind: problem }}
+                        />
+                    </Group>
+                }
+            />
+        );
+    }
     if (problem === AccessProblem.OTHER_ACCOUNT && isPersonalDocument) {
         return (
             <PageNotice

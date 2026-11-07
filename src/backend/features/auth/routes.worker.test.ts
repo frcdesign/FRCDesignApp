@@ -147,9 +147,23 @@ describe("GET /auth/sign-in", () => {
         );
     });
 
-    it("scopes the sign-in to the company that owns the document", async () => {
-        const url = await authorizationUrl("companyId=company-1");
+    it("scopes the sign-in to the enterprise that owns the document", async () => {
+        const url = await authorizationUrl(
+            "companyId=company-1&server=https%3A%2F%2Facme.onshape.com"
+        );
         expect(url.searchParams.get("company_id")).toBe("company-1");
+    });
+
+    // Onshape answers a classroom's id with "Invalid company ID".
+    it.each([
+        [
+            "a classroom on the shared server",
+            "companyId=classroom-1&server=https%3A%2F%2Fcad.onshape.com"
+        ],
+        ["a launch that names no server", "companyId=classroom-1"]
+    ])("names no company for %s", async (_, query) => {
+        const url = await authorizationUrl(query);
+        expect(url.searchParams.has("company_id")).toBe(false);
     });
 
     // Onshape rejects "cad", which a personal document arrives with.

@@ -318,6 +318,8 @@
     "documentAccessOtherAccount": "Sign in and choose your personal account. If the problem persists, send a report.",
     "documentAccessViewOnly": "Verify the document has been shared with you. If the problem persists, send a report.",
     "documentAccessSignIn": "Sign in",
+    "documentAccessClassroom": "This document belongs to a classroom. Check that the FRCDesignApp has access to the classroom on Onshape's Applications page, then open the app again. If the problem persists, send a report.",
+    "documentAccessOpenApplications": "Open Applications page",
     "dashboardReports": "Reports",
     "dashboardReportsFromErrors": "From errors",
     "dashboardReportsAboutPart": "About a part",

@@ -204,6 +204,25 @@ describe("the launch's sign-in check", () => {
         expect(await launchAs("user-a", "userId=user-b")).toBe("/auth/sign-in");
     });
 
+    // Sign-in can't ask Onshape for a classroom, so asking again would only repeat.
+    it("takes a personal session for a classroom's document", async () => {
+        expect(
+            await launchAs(
+                "user-a",
+                "companyId=classroom-1&server=https%3A%2F%2Fcad.onshape.com"
+            )
+        ).toBe("/");
+    });
+
+    it("signs in again when the session isn't the document's enterprise's", async () => {
+        expect(
+            await launchAs(
+                "user-a",
+                "companyId=company-1&server=https%3A%2F%2Facme.onshape.com"
+            )
+        ).toBe("/auth/sign-in");
+    });
+
     it("takes the session's word for it when the launch names nobody", async () => {
         expect(await launchAs("user-a", "")).toBe("/");
     });

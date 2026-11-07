@@ -19,7 +19,11 @@ import {
 } from "./onshape-oauth";
 import { getSession, getSessionId, saveSession } from "./session";
 import { cookieNames } from "./cookie-options";
-import { getDocumentCompanyId } from "./company";
+import {
+    DocumentOwner,
+    getDocumentCompanyId,
+    getDocumentOwner
+} from "./company";
 import { PERSONAL_COMPANY_ID } from "./personal-company";
 
 /** Stable fake user id used for FORCE_SIGNED_IN testing sessions. */
@@ -82,8 +86,9 @@ function getCachedUserId(c: AppContext): Promise<string> {
 }
 
 /**
- * The session is the launching user's, for the document's company. Every
- * personal account shares one company, so only the user id tells two apart.
+ * The session is the launching user's, for the document's company unless that
+ * is a classroom. Every personal account shares one company, so only the user
+ * id tells two apart.
  */
 export async function isAuthenticated(c: AppContext): Promise<boolean> {
     const problem = await findAuthProblem(c);
@@ -103,7 +108,11 @@ async function findAuthProblem(c: AppContext): Promise<string | undefined> {
         const sessionInfo = await getSessionInfo(onshapeApi);
         // Onshape reports no company outside an enterprise.
         const tokenCompanyId = sessionInfo.company?.id ?? PERSONAL_COMPANY_ID;
-        if (getDocumentCompanyId(c) !== tokenCompanyId) {
+        // A classroom's grant can't be asked for, so no company's is wrong for it.
+        if (
+            getDocumentOwner(c) !== DocumentOwner.CLASSROOM &&
+            getDocumentCompanyId(c) !== tokenCompanyId
+        ) {
             return "session is another company's";
         }
         const launchUserId = c.req.query("userId");

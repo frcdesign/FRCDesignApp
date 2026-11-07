@@ -99,12 +99,14 @@ Worded on the server, so they aren't in the catalog.
 `/document-access`, where `/init` sends a launch whose Onshape grant can't edit
 the document: one notice per cause, chosen by why `/init` says it can't.
 
-| String                                                                                  | Kind             | Where                        | When                                              | Review    |
-| --------------------------------------------------------------------------------------- | ---------------- | ---------------------------- | ------------------------------------------------- | --------- |
-| "The FRCDesignApp can't edit this document."                                            | Page title       | `/document-access`           | Always                                            | **⚑** New |
-| "Sign in and choose your personal account. If the problem persists, send a report."     | Page description | Under it                     | The grant is a company's, for a personal document | **⚑** New |
-| "Sign in"                                                                               | Button           | Under it, with Send a report | Same                                              | **⚑** New |
-| "Verify the document has been shared with you. If the problem persists, send a report." | Page description | Under the title              | Any other launch the app can't edit               | **⚑** New |
+| String                                                                                                                                                                                           | Kind             | Where                        | When                                                    | Review    |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------- | ---------------------------- | ------------------------------------------------------- | --------- |
+| "The FRCDesignApp can't edit this document."                                                                                                                                                     | Page title       | `/document-access`           | Always                                                  | **⚑** New |
+| "Sign in and choose your personal account. If the problem persists, send a report."                                                                                                              | Page description | Under it                     | The grant is a company's, for a personal document       | **⚑** New |
+| "Sign in"                                                                                                                                                                                        | Button           | Under it, with Send a report | Same                                                    | **⚑** New |
+| "Verify the document has been shared with you. If the problem persists, send a report."                                                                                                          | Page description | Under the title              | Any other launch the app can't edit                     | **⚑** New |
+| "This document belongs to a classroom. Check that the FRCDesignApp has access to the classroom on Onshape's Applications page, then open the app again. If the problem persists, send a report." | Page description | Under the title              | A classroom's document the grant can't edit             | **⚑** New |
+| "Open Applications page"                                                                                                                                                                         | Button           | Under it, with Send a report | Same; opens `/user/applications` on the launch's server | **⚑** New |
 
 ## The sign-in error page
 

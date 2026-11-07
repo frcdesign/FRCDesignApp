@@ -3,7 +3,6 @@ import { generateState, OAuth2Client, OAuth2Tokens } from "arctic";
 import { env } from "cloudflare:workers";
 import { type AppContext } from "../../lib/context";
 import { type AuthTokens, beginSession } from "./session";
-import { PERSONAL_COMPANY_ID } from "./personal-company";
 import { startLogin, takeLogin } from "./login";
 import { cookieNames } from "./cookie-options";
 import { CallbackProblem, signInErrorUrl } from "./sign-in-error";
@@ -45,8 +44,8 @@ export function doSignIn(
         state,
         []
     );
-    // A personal account has no company id to ask for; Onshape asks the caller.
-    if (companyId && companyId !== PERSONAL_COMPANY_ID) {
+    // Without one, Onshape asks the caller which account.
+    if (companyId) {
         authorizationUrl.searchParams.set("company_id", companyId);
     }
     return authorizationUrl.toString();
