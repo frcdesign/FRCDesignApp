@@ -1,6 +1,7 @@
 /** Reading a pasted Onshape url. A leaf, so the parsing can be tested alone. */
 import { INSTANCE_TYPES, type InstanceType } from "@backend/lib/onshape/path";
 import { type WorkspacePath } from "@backend/features/version-manager/contract";
+import { parseUrl } from "@backend/lib/parse-url";
 
 /** What an Onshape url names. A link to a document carries only its id. */
 export interface OnshapeUrlPath {
@@ -24,7 +25,7 @@ export const INVALID_WORKSPACE_URL =
  * after it is dropped.
  */
 export function parseOnshapeUrl(urlString: string): OnshapeUrlPath | undefined {
-    const url = URL.parse(urlString);
+    const url = parseUrl(urlString);
     if (!url) {
         return undefined;
     }

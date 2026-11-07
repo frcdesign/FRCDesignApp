@@ -4,6 +4,7 @@ import {
     DEFAULT_CONFIGURATION_KEY
 } from "../configurations/contract";
 import { ThumbnailSize } from "./contract";
+import { parseUrl } from "../../lib/parse-url";
 
 /** Everything a thumbnail is stored under, and what reconciliation scans. */
 export const THUMBNAIL_PREFIX = "thumbnails/";
@@ -75,7 +76,7 @@ export function thumbnailUrl({
 /** Groups store only these urls, so reconciliation reads the subject back from them. */
 export function parseThumbnailUrl(url: string): ThumbnailSubject | undefined {
     // Relative, so it needs a base to parse against; the origin is discarded.
-    const parsed = URL.parse(url, "https://x.invalid");
+    const parsed = parseUrl(url, "https://x.invalid");
     if (!parsed) {
         return undefined;
     }

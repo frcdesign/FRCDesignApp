@@ -21,6 +21,7 @@ their Onshape calls and link here for how those calls behave.
 | `src/backend/features/push/`                      | `ClientRelay` Durable Object, message contract, `notify.ts` senders               |
 | `src/frontend/lib/api-client.ts`                  | `apiGet`, `apiPost`, `apiDelete`, `loadImage`; appends `?v=` for cached reads     |
 | `src/frontend/lib/errors.ts`                      | `AppError`, `handleAppError`, `getAppErrorHandler`                                |
+| `src/frontend/lib/stale-build.ts`                 | `reloadOnStaleBuild`: reloads a tab whose build a deploy removed                  |
 | `src/frontend/lib/notifications.tsx`              | `showLoadingToast`, `showSuccessToast`, `showInfoToast`, `showErrorToast`         |
 | `src/frontend/lib/query-client.ts`                | TanStack Query defaults, including retry                                          |
 | `src/frontend/lib/push-socket.ts`, `push-sync.ts` | The client's WebSocket, and applying pushes to the cache                          |
@@ -83,8 +84,14 @@ non-`AppError`. Every toast but sign-in's carries a **Report** button
 (`showReportableErrorToast`), which opens a report holding what was shown and
 the error behind it, `internal` message included; a failed load shown as
 `SectionError` or `PageError` says "If the problem persists, send a report."
-beside **Send a report**. See [feedback.md](./feedback.md). Images use `loadImage`, which throws `ImageLoadError` with only
-the status.
+beside **Send a report**. See [feedback.md](./feedback.md). Images use
+`loadImage`, which throws `ImageLoadError` with only the status.
+
+A tab opened before a deploy fails its next lazy import, since the deploy
+removed the old build's chunks. Vite reports that as `vite:preloadError`, and
+`reloadOnStaleBuild` reloads the tab to fetch the new build, at most once in
+10 s (`sessionStorage`), so a chunk still missing after the reload reaches the
+crash page.
 
 ## Retries and timeouts
 

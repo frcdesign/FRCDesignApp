@@ -5,6 +5,7 @@ import { parseThumbnailUrl } from "@backend/features/thumbnails/keys";
 import { RenderStatus } from "@backend/features/thumbnails/contract";
 import { loadImage } from "../../lib/api-client";
 import { subscribePushes } from "../../lib/push-socket";
+import { parseUrl } from "@backend/lib/parse-url";
 
 /** As long as `RenderThumbnailWorkflow` tries. */
 const RENDER_TIMEOUT_MS = 60_000;
@@ -29,7 +30,7 @@ export function isRenderOf(url: string, message: PushMessage): boolean {
     }
     const subject = parseThumbnailUrl(url);
     const configurationKey =
-        URL.parse(url, window.location.origin)?.searchParams.get(
+        parseUrl(url, window.location.origin)?.searchParams.get(
             "configurationKey"
         ) ?? DEFAULT_CONFIGURATION_KEY;
     return (

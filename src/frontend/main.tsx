@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 // Router
 import { RouterProvider } from "@tanstack/react-router";
 import { router } from "./router";
+import { reloadOnStaleBuild } from "./lib/stale-build";
 
 // Used to make static assets work in dev
 import "vite/modulepreload-polyfill";
@@ -13,6 +14,8 @@ import "@mantine/notifications/styles.layer.css";
 
 // Custom css
 import "./main.scss";
+
+reloadOnStaleBuild();
 
 const rootElement: HTMLElement = document.getElementById("root")!;
 
