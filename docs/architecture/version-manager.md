@@ -12,7 +12,7 @@ app from, under the caller's own Onshape permissions, and the library's access
 levels have no say over it. A library borrows two things from it: the change
 count, which in admin mode shows on each group and part what its document has
 changed since a version, read through the same route; and updating a
-document's references, which the admin card's **Update references** runs.
+document's references, which **Update references** in its Admin menu runs.
 
 ## Terms
 
@@ -326,9 +326,9 @@ in somebody's document.
 
 ### Updating a library document's references
 
-The admin card's **Update references** ([build-issues.md](./build-issues.md))
-calls `POST /api/update-references` with a library document, and for an
-element's card its tab.
+**Update references** in a library group's or part's Admin menu
+calls `POST /api/update-references` with a library document, and for a
+part its tab.
 
 1. It resolves the document's default workspace, the one a library loads
    versions from (`findDefaultWorkspace`), and needs write on it.

@@ -8,7 +8,10 @@ import {
 } from "@tanstack/react-query";
 import { apiDelete, apiGet, apiPost } from "../../lib/api-client";
 import { type LibraryOut } from "@backend/features/library/contract";
-import { type WorkspaceChangesOut } from "@backend/features/version-manager/contract";
+import type {
+    UpdateReferencesOut,
+    WorkspaceChangesOut
+} from "@backend/features/version-manager/contract";
 import {
     type ApproveVersionsOut,
     type HoldNewVersionsOut,
@@ -317,5 +320,46 @@ export function useReloadThumbnailMutation(
             showSuccessToast("Thumbnail reloaded.", "reload-thumbnail");
             await refreshLibrary();
         }
+    });
+}
+
+const UPDATE_REFERENCES_TOAST = "update-references";
+
+/**
+ * Moves the document's out-of-date references, or one tab's, in its default
+ * workspace. The library holds versions, so it shows nothing new until one is
+ * cut; the change badges count the edit straight away.
+ */
+export function useUpdateReferencesMutation(
+    documentId: string,
+    elementId?: string
+) {
+    const libraryId = useLibraryId();
+    return useMutation({
+        mutationKey: ["update-references", documentId, elementId],
+        mutationFn: () => {
+            showLoadingToast(
+                m.libraryUpdatingReferences(),
+                UPDATE_REFERENCES_TOAST
+            );
+            return apiPost<UpdateReferencesOut>("/update-references", {
+                body: { documentId, elementId }
+            });
+        },
+        onSuccess: async ({ updatedElements }) => {
+            showSuccessToast(
+                updatedElements > 0
+                    ? m.libraryUpdatedReferences({ count: updatedElements })
+                    : m.libraryReferencesUpToDate(),
+                UPDATE_REFERENCES_TOAST
+            );
+            await queryClient.invalidateQueries({
+                queryKey: documentChangesQueryKey(libraryId, documentId)
+            });
+        },
+        onError: getAppErrorHandler(
+            m.libraryUpdateReferencesFailed(),
+            UPDATE_REFERENCES_TOAST
+        )
     });
 }

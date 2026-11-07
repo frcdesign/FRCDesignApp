@@ -21,7 +21,9 @@ import {
     type RowMatch
 } from "../../../components/item-row";
 import { OpenDocumentItems } from "../../../components/open-document-items";
-import { MenuSection } from "../../../components/app-menu";
+import { AdminMenuSection, MenuSection } from "../../../components/app-menu";
+import { ReloadThumbnailMenuItem } from "./reload-thumbnail-item";
+import { UpdateReferencesMenuItem } from "./update-references-item";
 import { InsertableChangesBadge } from "./changes-badges";
 import { QuickInsertItems } from "../../insert/components/quick-insert-items";
 import { ConfigurationHoverCard } from "../../insert/components/configuration-hover-card";
@@ -230,6 +232,15 @@ export function InsertableMenuItems(
                     }
                 />
             </MenuSection>
+            <AdminMenuSection>
+                <ReloadThumbnailMenuItem
+                    target={{ insertableId: insertable.id }}
+                />
+                <UpdateReferencesMenuItem
+                    documentId={insertable.documentId}
+                    elementId={insertable.elementId}
+                />
+            </AdminMenuSection>
         </>
     );
 }

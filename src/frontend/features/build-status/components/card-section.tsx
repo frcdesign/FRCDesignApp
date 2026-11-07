@@ -10,7 +10,6 @@ import {
 const CARD_SECTION_IDS = [
     SectionId.BUILD_CHECKS,
     SectionId.SETTINGS,
-    SectionId.ACTIONS,
     SectionId.CONFIGURATION,
     SectionId.USAGE
 ];

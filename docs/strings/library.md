@@ -6,14 +6,16 @@ keyed `groupPage…`, `changesBadge…` and `library…` in
 `src/frontend/messages/en.json`. Only what has moved into the catalog is
 listed so far: the rest join as their strings move there.
 
-## Home list and menus
+## Menus
 
-| String                                                | Kind                 | Where                                     | When                                                        | Review                         |
-| ----------------------------------------------------- | -------------------- | ----------------------------------------- | ----------------------------------------------------------- | ------------------------------ |
-| "Favorites" / "Recently Used" / "Search Results"      | Section titles       | The library's home list                   | Signed in, for the first two; while searching, for the last |                                |
-| "Add group"                                           | Tooltip, modal title | The **+** in the library section's header | An editor or above                                          | **⚑** Was in each group's menu |
-| "Document url..."                                     | Placeholder          | The Add group modal                       | Always                                                      |                                |
-| "Insert" / "Configuration" / "Favorites" / "Document" | Menu sections        | A part's or group's menu                  | As each applies; there is no Admin section                  | **⚑** Admin section removed    |
+| String                                                                                                                   | Kind          | Where                                         | When                                                  | Review    |
+| ------------------------------------------------------------------------------------------------------------------------ | ------------- | --------------------------------------------- | ----------------------------------------------------- | --------- |
+| "Insert" / "Configuration" / "Favorites" / "Document"                                                                    | Menu sections | A part's menu                                 | As each applies                                       |           |
+| "Update references"                                                                                                      | Menu item     | The Admin section of a part's or group's menu | An editor or above                                    | **⚑** New |
+| "Updating references..."                                                                                                 | Loading toast |                                               | While the update runs                                 | **⚑** New |
+| "Updated references in 1 tab. Cut a version to load it." / "Updated references in {n} tabs. Cut a version to load them." | Success toast |                                               | Something moved                                       | **⚑** New |
+| "References are already up to date."                                                                                     | Success toast |                                               | Nothing was out of date                               | **⚑** New |
+| "Failed to update references."                                                                                           | Error toast   |                                               | The update failed for a reason the server didn't word | **⚑** New |
 
 ## Group page
 

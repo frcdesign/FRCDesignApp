@@ -1,30 +1,33 @@
 import { useAddGroupMutation } from "../queries";
-import { ActionIcon, Button, TextInput, Tooltip } from "@mantine/core";
+import { Button, Menu, TextInput } from "@mantine/core";
 import { openAppModal } from "../../../components/open-app-modal";
 import { AppModalBody, AppModalFooter } from "../../../components/app-modal";
 import { PlusIcon } from "@phosphor-icons/react";
 import { ReactNode, useState } from "react";
-import { IconSize } from "../../../lib/style-constants";
-import { m } from "../../../paraglide/messages";
 
-function openAddGroupMenu() {
+function openAddGroupMenu(selectedGroupId?: string) {
     openAppModal({
-        title: m.libraryAddGroup(),
-        children: <AddGroupMenuContent />
+        title: "Add group",
+        children: <AddGroupMenuContent selectedGroupId={selectedGroupId} />
     });
 }
 
-function AddGroupMenuContent(): ReactNode {
+interface AddGroupMenuContentProps {
+    selectedGroupId?: string;
+}
+
+function AddGroupMenuContent(props: AddGroupMenuContentProps): ReactNode {
+    const { selectedGroupId } = props;
     const [url, setUrl] = useState("");
 
-    const mutation = useAddGroupMutation();
+    const mutation = useAddGroupMutation(selectedGroupId);
 
     return (
         <>
             <AppModalBody>
                 <TextInput
                     data-autofocus
-                    placeholder={m.libraryAddGroupPlaceholder()}
+                    placeholder="Document url..."
                     value={url}
                     onChange={(event) => setUrl(event.currentTarget.value)}
                     error={mutation.isError}
@@ -37,29 +40,32 @@ function AddGroupMenuContent(): ReactNode {
                     onClick={() => mutation.mutate(url)}
                     loading={mutation.isPending}
                 >
-                    {m.libraryAddGroupSubmit()}
+                    Add
                 </Button>
             </AppModalFooter>
         </>
     );
 }
 
-/** The empty library's call to action. */
 export function AddGroupButton(): ReactNode {
     return (
-        <Button leftSection={<PlusIcon />} onClick={openAddGroupMenu}>
-            {m.libraryAddGroup()}
+        <Button leftSection={<PlusIcon />} onClick={() => openAddGroupMenu()}>
+            Add group
         </Button>
     );
 }
 
-/** In the library section's header, beside its chevron. */
-export function AddGroupIconButton(): ReactNode {
+interface AddGroupItemProps {
+    selectedGroupId?: string;
+}
+
+export function AddGroupItem(props: AddGroupItemProps): ReactNode {
     return (
-        <Tooltip label={m.libraryAddGroup()}>
-            <ActionIcon variant="subtle" onClick={openAddGroupMenu}>
-                <PlusIcon size={IconSize.SMALL} />
-            </ActionIcon>
-        </Tooltip>
+        <Menu.Item
+            leftSection={<PlusIcon />}
+            onClick={() => openAddGroupMenu(props.selectedGroupId)}
+        >
+            Add group
+        </Menu.Item>
     );
 }

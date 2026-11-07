@@ -25,12 +25,7 @@ import type {
 import { LibraryId } from "@backend/features/library/library-id";
 import { useLibraryId } from "../../lib/library";
 import { useCacheVersion } from "../library/queries";
-import {
-    buildStatusQueryKey,
-    documentChangesQueryKey
-} from "../../lib/query-keys";
-import { queryClient } from "../../lib/query-client";
-import type { UpdateReferencesOut } from "@backend/features/version-manager/contract";
+import { buildStatusQueryKey } from "../../lib/query-keys";
 import { m } from "../../paraglide/messages";
 
 function getBuildStatusQuery(libraryId: LibraryId, cacheVersion: number) {
@@ -241,46 +236,5 @@ export function useToggleSortOrderMutation(groupId: string) {
             }),
         onError: getAppErrorHandler(m.adminCardSortFailed()),
         onSettled: settle
-    });
-}
-
-const UPDATE_REFERENCES_TOAST = "update-references";
-
-/**
- * Moves the document's out-of-date references, or one tab's, in its default
- * workspace. The library holds versions, so it shows nothing new until one is
- * cut; the change badges count the edit straight away.
- */
-export function useUpdateReferencesMutation(
-    documentId: string,
-    elementId?: string
-) {
-    const libraryId = useLibraryId();
-    return useMutation({
-        mutationKey: ["update-references", documentId, elementId],
-        mutationFn: () => {
-            showLoadingToast(
-                m.adminCardUpdatingReferences(),
-                UPDATE_REFERENCES_TOAST
-            );
-            return apiPost<UpdateReferencesOut>("/update-references", {
-                body: { documentId, elementId }
-            });
-        },
-        onSuccess: async ({ updatedElements }) => {
-            showSuccessToast(
-                updatedElements > 0
-                    ? m.adminCardUpdatedReferences({ count: updatedElements })
-                    : m.adminCardReferencesUpToDate(),
-                UPDATE_REFERENCES_TOAST
-            );
-            await queryClient.invalidateQueries({
-                queryKey: documentChangesQueryKey(libraryId, documentId)
-            });
-        },
-        onError: getAppErrorHandler(
-            m.adminCardUpdateReferencesFailed(),
-            UPDATE_REFERENCES_TOAST
-        )
     });
 }

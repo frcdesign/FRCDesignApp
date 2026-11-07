@@ -16,11 +16,7 @@ import {
     SectionError
 } from "../../../../components/app-notice";
 import { RequireAccessLevel } from "../../../../features/auth/components/require-access";
-import {
-    AddGroupButton,
-    AddGroupIconButton
-} from "../../../../features/library/components/add-group-menu";
-import { m } from "../../../../paraglide/messages";
+import { AddGroupButton } from "../../../../features/library/components/add-group-menu";
 import { FavoritesList } from "../../../../features/favorites/components/favorites-list";
 import { RecentsList } from "../../../../features/recents/components/recents-list";
 import { RecentIcon } from "../../../../features/recents/components/recent-icon";
@@ -52,8 +48,6 @@ interface Section {
     icon: ReactNode;
     /** A title of its own, for a section whose header carries more than a name. */
     title?: ReactNode;
-    /** Controls in its header, beside the chevron. */
-    actions?: ReactNode;
     panel: ReactNode;
     opened: boolean;
     setOpened: (opened: boolean) => void;
@@ -73,7 +67,7 @@ function useHomeSections(): Section[] {
 
     const favorites: Section = {
         value: "favorites",
-        name: m.libraryFavoritesSection(),
+        name: "Favorites",
         icon: <FavoriteIcon size={IconSize.MEDIUM} />,
         panel: <FavoritesList />,
         opened: isFavoritesOpen,
@@ -82,7 +76,7 @@ function useHomeSections(): Section[] {
 
     const recents: Section = {
         value: "recents",
-        name: m.libraryRecentsSection(),
+        name: "Recently Used",
         icon: <RecentIcon size={IconSize.MEDIUM} />,
         panel: <RecentsList />,
         opened: isRecentsOpen,
@@ -91,7 +85,7 @@ function useHomeSections(): Section[] {
 
     const search: Section = {
         value: "search",
-        name: m.librarySearchSection(),
+        name: "Search Results",
         icon: (
             <MagnifyingGlassIcon
                 size={IconSize.MEDIUM}
@@ -114,11 +108,6 @@ function useHomeSections(): Section[] {
         name: getLibraryName(libraryId),
         icon: <BooksIcon size={IconSize.MEDIUM} color={PrimaryColor.FILLED} />,
         title: <LibraryTitle libraryId={libraryId} />,
-        actions: (
-            <RequireAccessLevel>
-                <AddGroupIconButton />
-            </RequireAccessLevel>
-        ),
         panel: <LibraryList />,
         opened: isLibraryOpen,
         setOpened: (opened) => setSectionOpened(SectionId.LIBRARY, opened)
@@ -159,7 +148,6 @@ function SectionAccordion(props: SectionAccordionProps): ReactNode {
                     name={section.name}
                     title={section.title}
                     icon={section.icon}
-                    actions={section.actions}
                 >
                     {section.panel}
                 </AppSection>

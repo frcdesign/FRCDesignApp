@@ -31,7 +31,6 @@ import {
 } from "./issues";
 import { ConfigurationSection } from "./configuration-section";
 import { GroupSettings, InsertableSettings } from "./admin-section";
-import { GroupActions, InsertableActions } from "./actions-section";
 import { GroupUsageSection, PartUsageSection } from "./usage-section";
 import { CardSection, CardSections } from "./card-section";
 import styles from "../../../lib/styles.module.css";
@@ -252,16 +251,6 @@ export function InsertableStatusBadge(
                         status={insertable}
                     />
                 </CardSection>,
-                <CardSection
-                    key="actions"
-                    id={SectionId.ACTIONS}
-                    title={m.adminCardActions()}
-                >
-                    <InsertableActions
-                        insertableId={insertableId}
-                        status={insertable}
-                    />
-                </CardSection>,
                 parameters.length > 0 && (
                     <ConfigurationSection
                         key="configuration"
@@ -311,17 +300,6 @@ export function GroupStatusBadge(props: GroupStatusBadgeProps): ReactNode {
                         >
                             <GroupSettings
                                 groupId={groupId}
-                                status={groupStatus}
-                            />
-                        </CardSection>,
-                        <CardSection
-                            key="actions"
-                            id={SectionId.ACTIONS}
-                            title={m.adminCardActions()}
-                        >
-                            <GroupActions
-                                groupId={groupId}
-                                name={name}
                                 status={groupStatus}
                             />
                         </CardSection>,

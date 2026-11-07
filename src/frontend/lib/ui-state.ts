@@ -29,7 +29,6 @@ export enum SectionId {
     /** The admin card's. */
     BUILD_CHECKS = "build-checks",
     SETTINGS = "settings",
-    ACTIONS = "actions",
     CONFIGURATION = "configuration",
     USAGE = "usage",
     /** The settings menu's. */
@@ -45,7 +44,6 @@ const OPENED_BY_DEFAULT: Record<SectionId, boolean> = {
     [SectionId.CHILDREN]: true,
     [SectionId.BUILD_CHECKS]: true,
     [SectionId.SETTINGS]: true,
-    [SectionId.ACTIONS]: true,
     [SectionId.CONFIGURATION]: false,
     [SectionId.USAGE]: true,
     [SectionId.ADMIN_SETTINGS]: true
