@@ -23,10 +23,9 @@ export enum SectionId {
     FAVORITES = "favorites",
     RECENTS = "recents",
     LIBRARY = "library",
-    /** The version manager's two lists, and the parents it suggests. */
+    /** The version manager's two lists. */
     PARENTS = "parents",
     CHILDREN = "children",
-    SUGGESTED_PARENTS = "suggested-parents",
     /** The admin card's. */
     BUILD_CHECKS = "build-checks",
     SETTINGS = "settings",
@@ -43,7 +42,6 @@ const OPENED_BY_DEFAULT: Record<SectionId, boolean> = {
     [SectionId.LIBRARY]: true,
     [SectionId.PARENTS]: true,
     [SectionId.CHILDREN]: true,
-    [SectionId.SUGGESTED_PARENTS]: true,
     [SectionId.BUILD_CHECKS]: true,
     [SectionId.SETTINGS]: true,
     [SectionId.CONFIGURATION]: false,

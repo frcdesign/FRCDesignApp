@@ -42,7 +42,7 @@ it.
 | `src/backend/features/version-manager/routes.ts`                                  | Every route below                                                                     |
 | `src/frontend/features/version-manager/queries.ts`                                | The queries and mutations                                                             |
 | `src/frontend/features/version-manager/components/linked-workspace-section.tsx`   | A direction's list and its rows                                                       |
-| `src/frontend/features/version-manager/components/link-suggestions.tsx`           | The suggested parents: the page's section, and the welcome page's card                |
+| `src/frontend/features/version-manager/components/link-suggestions.tsx`           | Suggestion rows for the parents' list, its **Link all**, and the welcome page's card  |
 | `src/frontend/features/version-manager/components/version-manager-zero-state.tsx` | The welcome page, shown while nothing is linked                                       |
 | `src/frontend/features/version-manager/link-actions.ts`                           | `useLinkActions`: everything a direction's section and rows can run                   |
 | `src/frontend/features/version-manager/job-report.ts`                             | How a run is going or went, in words                                                  |
@@ -92,8 +92,8 @@ count and tabs of each workspace it versions or moves (`forgetChanges`, a step a
 each of its own), and the client reads the links again once the run ends, so a
 parent's badge reflects the version just cut.
 
-**Browser** whether each list is open, as `sections.parents`,
-`sections.children` and `sections.suggested-parents` in `uiState`.
+**Browser** whether each list is open, as `sections.parents` and
+`sections.children` in `uiState`.
 
 Suggestions store nothing of their own. Each referenced document goes through
 the permission, default-workspace and name caches above, so a miss watches it
@@ -189,12 +189,15 @@ page offers those it has no link to.
 3. A document the caller can't read (`canRead`), or whose default workspace
    Onshape doesn't name, is dropped without a trace. The rest come back at
    their default workspace, named from the cache and sorted by name.
-4. While nothing is linked, the welcome page shows them in a card above the
-   field for linking by hand. Otherwise they are the page's last section,
-   **Suggested parents**, which folds like the other two and is absent when
-   there is nothing to suggest.
+4. While nothing is linked, the welcome page shows them in a **Suggested
+   links** card in place of the card for linking by url; **Link a different
+   document** swaps that card back in, for a child or an unreferenced parent.
+   Otherwise they are rows in the parents' list, after the links and before
+   the field: dimmed, marked with a bulb, each with its own **Link**. They
+   stand in for the list's "No linked parents".
 5. A row's **Link** is the ordinary `POST /api/workspace-links` as a parent.
-   **Link all** sends every suggestion to `POST /api/workspace-links/parents`,
+   **Link all** — the card's button, or under **Suggestions** in the parents'
+   header menu — sends every suggestion to `POST /api/workspace-links/parents`,
    which needs write on this workspace, checks read on each parent live, and
    skips a document already linked, this one's own, or one the caller can't
    read rather than refusing the lot. It answers how many it linked.
@@ -498,6 +501,10 @@ In [strings/version-manager.md](../strings/version-manager.md).
   version, which cannot be linked; the default workspace is where a version of
   it is normally cut. A team that versions from another workspace links it by
   url instead.
+- **Suggestions sit in the parents' list.** They are parents not yet linked,
+  so they belong where the parents are; a section of their own pushed the
+  children further down for the same documents. Dimmed and marked, they read
+  apart from the links, and run nothing until linked.
 - **Suggestions are offered, never linked by themselves.** Many references
   are to shared hardware or parts libraries nobody wants to push or pull, and
   **Update all references** already moves those without a link.

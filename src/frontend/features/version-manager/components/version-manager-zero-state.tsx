@@ -1,5 +1,6 @@
 import {
     Box,
+    Button,
     Card,
     Paper,
     Radio,
@@ -76,6 +77,10 @@ interface VersionManagerZeroStateProps {
 export function VersionManagerZeroState(
     props: VersionManagerZeroStateProps
 ): ReactNode {
+    const { workspace, documentName, suggestions } = props;
+    const [showsUrlCard, setShowsUrlCard] = useState(false);
+    const isSuggesting = suggestions.length > 0 && !showsUrlCard;
+
     return (
         // One column, so the text, the picture and the card share their edges.
         <Box w={COLUMN_SHARE} maw={COLUMN_WIDTH} mx="auto">
@@ -92,17 +97,32 @@ export function VersionManagerZeroState(
                 action={
                     <Stack gap="lg" w="100%">
                         <LinkExampleDiagram />
-                        {props.suggestions.length > 0 && (
+                        {isSuggesting ? (
                             <SuggestedLinksCard
-                                workspace={props.workspace}
-                                documentName={props.documentName}
-                                suggestions={props.suggestions}
+                                workspace={workspace}
+                                documentName={documentName}
+                                suggestions={suggestions}
+                            />
+                        ) : (
+                            <AddFirstLinkCard
+                                workspace={workspace}
+                                documentName={documentName}
                             />
                         )}
-                        <AddFirstLinkCard
-                            workspace={props.workspace}
-                            documentName={props.documentName}
-                        />
+                        {/* A child, or a parent nothing references yet, is
+                            only linked by url. */}
+                        {suggestions.length > 0 && (
+                            <Button
+                                variant="subtle"
+                                size="compact-sm"
+                                mx="auto"
+                                onClick={() => setShowsUrlCard(isSuggesting)}
+                            >
+                                {isSuggesting
+                                    ? m.versionManagerSuggestionsLinkOther()
+                                    : m.versionManagerSuggestionsShow()}
+                            </Button>
+                        )}
                     </Stack>
                 }
             />

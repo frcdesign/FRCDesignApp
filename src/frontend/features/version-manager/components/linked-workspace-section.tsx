@@ -13,6 +13,7 @@ import {
     LinkDirection,
     workspaceThumbnailUrl,
     type LinkedWorkspace,
+    type SuggestedLink,
     type VersionJobStatus,
     type WorkspacePath
 } from "@backend/features/version-manager/contract";
@@ -42,6 +43,10 @@ import {
     useWorkspaceChangesQuery
 } from "../queries";
 import { AddLinkRow } from "./add-link-input";
+import {
+    LinkSuggestionsMenuSection,
+    SuggestedLinkRows
+} from "./link-suggestions";
 import { documentLabel } from "../document-label";
 import { DIRECTION_COPY } from "../direction-copy";
 import { type LinkActions } from "../link-actions";
@@ -101,14 +106,17 @@ function RunningIndicator(props: RunningIndicatorProps): ReactNode {
 }
 
 interface SectionActionsProps {
+    workspace: WorkspacePath;
     direction: LinkDirection;
     linked: LinkedWorkspace[];
+    /** Parents only, each offered beside the links. */
+    suggestions: SuggestedLink[];
     actions: LinkActions;
 }
 
 /** The whole section's actions, which sit in its header as a menu. */
 export function SectionActions(props: SectionActionsProps): ReactNode {
-    const { direction, linked, actions } = props;
+    const { workspace, direction, linked, suggestions, actions } = props;
     const { running } = actions;
     const disabled = running !== undefined || linked.length === 0;
 
@@ -131,6 +139,10 @@ export function SectionActions(props: SectionActionsProps): ReactNode {
                     onQuick={() => actions.quickAll(false)}
                     onQuickRecursive={() => actions.quickAll(true)}
                     onUpdate={actions.updateAll}
+                />
+                <LinkSuggestionsMenuSection
+                    workspace={workspace}
+                    suggestions={suggestions}
                 />
             </MenuButton>
         </>
@@ -194,21 +206,23 @@ interface LinkedWorkspaceSectionProps {
     workspace: WorkspacePath;
     direction: LinkDirection;
     linked: LinkedWorkspace[];
+    /** Parents only, listed after the links. */
+    suggestions: SuggestedLink[];
     actions: LinkActions;
 }
 
-/** One direction's links, and the field that adds another underneath them. */
+/** One direction's links, any suggestions, and the field that adds another underneath them. */
 export function LinkedWorkspaceSection(
     props: LinkedWorkspaceSectionProps
 ): ReactNode {
-    const { workspace, direction, linked, actions } = props;
+    const { workspace, direction, linked, suggestions, actions } = props;
     const removeLink = useRemoveLinkMutation(workspace);
     const moveLink = useMoveLinkMutation(workspace);
     const copy = DIRECTION_COPY[direction];
 
     return (
         <>
-            {linked.length === 0 && (
+            {linked.length === 0 && suggestions.length === 0 && (
                 <>
                     <SectionNotice
                         title={copy.empty}
@@ -241,6 +255,10 @@ export function LinkedWorkspaceSection(
                         }
                     />
                 ))}
+                <SuggestedLinkRows
+                    workspace={workspace}
+                    suggestions={suggestions}
+                />
                 <AddLinkRow workspace={workspace} direction={direction} />
             </ItemTable>
         </>

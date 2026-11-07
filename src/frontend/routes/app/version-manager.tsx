@@ -4,6 +4,7 @@ import { type ReactNode, useEffect } from "react";
 import {
     LinkDirection,
     type LinkedWorkspace,
+    type SuggestedLink,
     type WorkspacePath
 } from "@backend/features/version-manager/contract";
 import { AppSection, AppSections } from "../../components/app-section";
@@ -36,7 +37,6 @@ import { DIRECTION_COPY } from "../../features/version-manager/direction-copy";
 import { useLinkActions } from "../../features/version-manager/link-actions";
 import { VersionManagerZeroState } from "../../features/version-manager/components/version-manager-zero-state";
 import { LastRunCallout } from "../../features/version-manager/components/last-run-callout";
-import { SuggestedParentsSection } from "../../features/version-manager/components/link-suggestions";
 import {
     useLinkSuggestionsQuery,
     useWorkspaceLinksQuery
@@ -98,14 +98,13 @@ interface VersionManagerProps {
     workspace: WorkspacePath;
 }
 
-/** The two link lists, each owning its own push or pull, and the parents suggested. */
+/** The two link lists, each owning its own push or pull. */
 function VersionManager(props: VersionManagerProps): ReactNode {
     const { workspace } = props;
     const linksQuery = useWorkspaceLinksQuery(workspace);
     const suggestionsQuery = useLinkSuggestionsQuery(workspace);
     const isParentsOpen = useSectionOpened(SectionId.PARENTS);
     const isChildrenOpen = useSectionOpened(SectionId.CHILDREN);
-    const isSuggestionsOpen = useSectionOpened(SectionId.SUGGESTED_PARENTS);
 
     if (linksQuery.isPending) {
         return <PageLoading title={m.versionManagerLinksLoading()} />;
@@ -135,15 +134,10 @@ function VersionManager(props: VersionManagerProps): ReactNode {
 
     const opened = [
         ...(isParentsOpen ? [LinkDirection.PARENT] : []),
-        ...(isChildrenOpen ? [LinkDirection.CHILD] : []),
-        ...(isSuggestionsOpen ? [SectionId.SUGGESTED_PARENTS] : [])
+        ...(isChildrenOpen ? [LinkDirection.CHILD] : [])
     ];
 
     const handleChange = (values: string[]) => {
-        setSectionOpened(
-            SectionId.SUGGESTED_PARENTS,
-            values.includes(SectionId.SUGGESTED_PARENTS)
-        );
         setSectionOpened(
             SectionId.PARENTS,
             values.includes(LinkDirection.PARENT)
@@ -162,18 +156,13 @@ function VersionManager(props: VersionManagerProps): ReactNode {
                     workspace={workspace}
                     direction={LinkDirection.PARENT}
                     linked={links.parents}
+                    suggestions={suggestions}
                 />
                 <LinkSection
                     workspace={workspace}
                     direction={LinkDirection.CHILD}
                     linked={links.children}
                 />
-                {suggestions.length > 0 && (
-                    <SuggestedParentsSection
-                        workspace={workspace}
-                        suggestions={suggestions}
-                    />
-                )}
             </AppSections>
         </>
     );
@@ -183,11 +172,13 @@ interface LinkSectionProps {
     workspace: WorkspacePath;
     direction: LinkDirection;
     linked: LinkedWorkspace[];
+    /** Parents only: documents referenced and not yet linked. */
+    suggestions?: SuggestedLink[];
 }
 
 /** One direction's section: its links, and the run they share. */
 function LinkSection(props: LinkSectionProps): ReactNode {
-    const { workspace, direction, linked } = props;
+    const { workspace, direction, linked, suggestions = [] } = props;
     const actions = useLinkActions(workspace, direction);
     const copy = DIRECTION_COPY[direction];
 
@@ -204,8 +195,10 @@ function LinkSection(props: LinkSectionProps): ReactNode {
             icon={<DirectionIcon direction={direction} />}
             actions={
                 <SectionActions
+                    workspace={workspace}
                     direction={direction}
                     linked={linked}
+                    suggestions={suggestions}
                     actions={actions}
                 />
             }
@@ -214,6 +207,7 @@ function LinkSection(props: LinkSectionProps): ReactNode {
                 workspace={workspace}
                 direction={direction}
                 linked={linked}
+                suggestions={suggestions}
                 actions={actions}
             />
         </AppSection>

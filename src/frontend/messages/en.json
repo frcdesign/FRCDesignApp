@@ -454,26 +454,9 @@
     "versionManagerExampleRobot": "Robot",
     "versionManagerExampleParents": "Parents",
     "versionManagerExampleChildren": "Children",
-    "versionManagerSuggestionsTitle": "Suggested parents",
-    "versionManagerSuggestionsInfo": "Documents this one references that aren't linked yet.",
-    "versionManagerSuggestionsFound": [
-        {
-            "declarations": [
-                "input count",
-                "local countPlural = count: plural",
-                "local formatted = count: number"
-            ],
-            "selectors": ["countPlural"],
-            "match": {
-                "countPlural=one": "Found 1 document this one references",
-                "countPlural=other": "Found {formatted} documents this one references"
-            }
-        }
-    ],
-    "versionManagerSuggestionsFoundDescription": "Link them as parents to pull their new versions into {documentName}.",
+    "versionManagerSuggestionsTitle": "Suggested links",
     "versionManagerSuggestionsLink": "Link",
     "versionManagerSuggestionsLinkAll": "Link all",
-    "versionManagerSuggestionsLinkAllParents": "Link all as parents",
     "versionManagerSuggestionsOpen": "Open document",
     "versionManagerSuggestionsLinked": [
         {
@@ -489,5 +472,10 @@
             }
         }
     ],
-    "versionManagerSuggestionsLinkFailed": "Unexpectedly failed to link the documents."
+    "versionManagerSuggestionsLinkFailed": "Unexpectedly failed to link the documents.",
+    "versionManagerSuggestionsDescription": "Link these documents to pull changes into {documentName}.",
+    "versionManagerSuggestionsMenuSection": "Suggestions",
+    "versionManagerSuggestionsTooltip": "Suggested: this document references it.",
+    "versionManagerSuggestionsLinkOther": "Link a different document",
+    "versionManagerSuggestionsShow": "Back to suggested links"
 }
