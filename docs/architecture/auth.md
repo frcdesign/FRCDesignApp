@@ -93,19 +93,20 @@ team, plus one owner set by configuration.
    `error_description` (or a `CallbackProblem`) and where the sign-in was
    going. Its **Sign in again** names no company, so Onshape lets the caller
    choose the account, and **Send a report** carries the error.
-5. Back at `/init`, `findAccessProblem` asks Onshape for the caller's
-   permissions on the document (`getPermissions`). With `WRITE` the app opens.
-   Without it, whether the grant can't see the document at all (no
-   permissions, or a 404) or can only view it, it reads who owns the document
-   from its ACL (`getDocumentAcl`): `owner.type` is a user or a company, and
-   `isEnterpriseOwnedResource` tells an enterprise from a classroom, which are
-   both companies. A grant that can't read the ACL falls back to the launch: a
-   `companyId` of `cad` is personal, one matching `sessionCompanyId` an
-   enterprise's, and any other a classroom's. `/init` then sends the launch to
-   `/document-access` with the `problem` (`AccessProblem`): `classroom` for a
-   classroom's document; `other-account` for a personal one under a company's
-   grant (`sessioninfo`), which only the caller can have chosen; and
-   `view-only` otherwise.
+5. Back at `/init`, `findAccessProblem` reads the document as the caller's
+   grant sees it (`getDocument`), whose `permissionSet` says what the grant may
+   do and whose `owner` says who owns it. With `WRITE` the app opens. Without
+   it, whether the grant can only view the document or can't see it at all (a
+   403 or 404), the owner decides the notice: `owner.type` is a user or a
+   company, and `isEnterpriseOwnedResource` tells an enterprise from a
+   classroom, which are both companies. A document the grant can't see says
+   nothing of its owner, so the launch does: a `companyId` of `cad` is
+   personal, one matching `sessionCompanyId` an enterprise's, and any other a
+   classroom's. `/init` then sends the launch to `/document-access` with the
+   `problem` (`AccessProblem`): `classroom` for a classroom's document;
+   `other-account` for a personal one under a company's grant (`sessioninfo`),
+   which only the caller can have chosen; and `view-only` otherwise. A
+   document that sends no `permissionSet` opens the app.
 6. `/document-access` says the app can't edit the document, and what to do:
     - **`other-account` on a personal document**: "Sign in and choose your
       personal account". **Sign in** goes through sign-in naming no company and
@@ -244,11 +245,11 @@ missing.
   fills it in for an enterprise and sends `cad` everywhere else. Asking for the
   document's company instead sent an educator plan classroom's id, which OAuth
   refused as "Invalid company ID", so no classroom launch could sign in.
-- **Who owns the document, from its ACL.** A launch can't tell a classroom
-  from an enterprise by its `companyId`, so once the grant can't edit, the ACL's
-  owner says which notice to show. The launch is the fallback, since a grant
-  that can't see a document may not read its ACL either. The call is made
-  only on a launch that already failed.
+- **Who owns the document, from the document.** A launch can't tell a
+  classroom from an enterprise by its `companyId`, so the document's own
+  `owner` says which notice to show. It comes in the same response as the
+  permissions, so the check is one Onshape call per launch. The launch is the
+  fallback for a document the grant can't see.
 - **Match the launch's user, not only its company.** Every personal account
   shares the company `cad`, so a session left from another personal account,
   such as a team's shared one on the same browser, passes the company check
@@ -262,8 +263,8 @@ missing.
   it does.
 - **Ask about the document, not only the company.** The grant's company can
   match the document's while it still can't edit it, which surfaced as
-  a 403 on the first insert. One permissions call per launch finds it before
-  anything is tried.
+  a 403 on the first insert. One call per launch finds it before anything is
+  tried.
 - **Partitioned cookies.** Keyed to the top-level site, they survive a browser
   that blocks third-party cookies. The panel and the standalone app hold
   separate sessions, each signed in on its own; `/init` already signs the panel

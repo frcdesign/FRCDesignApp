@@ -10,10 +10,10 @@ import {
     seedUser
 } from "../../../__test_utils__";
 import { getDb } from "../../db/client";
-import * as Permissions from "../../lib/onshape/endpoints/permissions";
+import * as Documents from "../../lib/onshape/endpoints/documents";
 import { OnshapePermission } from "../../lib/onshape/endpoints/permissions";
 import * as Users from "../../lib/onshape/endpoints/users";
-import { OnshapeOwnerType } from "../../lib/onshape/endpoints/teams";
+import { OnshapeOwnerType } from "../../lib/onshape/types";
 import { OnshapeApiError } from "../../lib/onshape/client";
 
 const db = getDb(env.DB);
@@ -134,8 +134,32 @@ describe("GET /init's document access check", () => {
         vi.restoreAllMocks();
     });
 
-    function grant(permissions: OnshapePermission[]) {
-        vi.spyOn(Permissions, "getPermissions").mockResolvedValue(permissions);
+    /** The document as the grant sees it: what it may do, and who owns it. */
+    function document(
+        permissionSet: OnshapePermission[],
+        type = OnshapeOwnerType.COMPANY,
+        isEnterpriseOwnedResource = true
+    ) {
+        return vi.spyOn(Documents, "getDocument").mockResolvedValue({
+            id: "doc",
+            name: "Robot",
+            permissionSet,
+            owner: { id: "owner", type, isEnterpriseOwnedResource }
+        });
+    }
+
+    function unseen(status = 404) {
+        vi.spyOn(Documents, "getDocument").mockRejectedValue(
+            new OnshapeApiError("Can't see it", status)
+        );
+    }
+
+    /** The company the grant is for; null for a personal one. */
+    function grantFor(companyId: string | null) {
+        vi.spyOn(Users, "getSessionInfo").mockResolvedValue({
+            id: "user",
+            company: companyId ? { id: companyId } : null
+        });
     }
 
     async function launch(
@@ -152,28 +176,14 @@ describe("GET /init's document access check", () => {
     }
 
     it("opens the app for a grant that can edit the document", async () => {
-        grant([OnshapePermission.READ, OnshapePermission.WRITE]);
+        document([OnshapePermission.READ, OnshapePermission.WRITE]);
 
         expect((await launch()).pathname).toBe("/");
     });
 
-    function owner(type: OnshapeOwnerType, isEnterpriseOwnedResource = false) {
-        vi.spyOn(Permissions, "getDocumentAcl").mockResolvedValue({
-            owner: { id: "owner", type, isEnterpriseOwnedResource }
-        });
-    }
-
-    /** The company the grant is for; null for a personal one. */
-    function grantFor(companyId: string | null) {
-        vi.spyOn(Users, "getSessionInfo").mockResolvedValue({
-            id: "user",
-            company: companyId ? { id: companyId } : null
-        });
-    }
-
+    // A public document can be seen by anybody; inserting needs edit access.
     it("explains an enterprise's document the grant can only view", async () => {
-        grant([]);
-        owner(OnshapeOwnerType.COMPANY, true);
+        document([OnshapePermission.READ]);
 
         const location = await launch();
 
@@ -186,8 +196,7 @@ describe("GET /init's document access check", () => {
 
     // Sign-in can't ask for a classroom, so the grant is the caller's to give.
     it("explains a classroom's document the grant can't edit", async () => {
-        grant([]);
-        owner(OnshapeOwnerType.COMPANY);
+        document([OnshapePermission.READ], OnshapeOwnerType.COMPANY, false);
 
         const location = await launch({}, "sessionCompanyId=cad");
 
@@ -196,8 +205,7 @@ describe("GET /init's document access check", () => {
 
     // Only the caller can have chosen a company's grant for their own document.
     it("explains a personal document under a company's grant", async () => {
-        grant([]);
-        owner(OnshapeOwnerType.USER);
+        document([OnshapePermission.READ], OnshapeOwnerType.USER);
         grantFor("company-1");
 
         const res = await createTestApp({ isAuthenticated: false }).request(
@@ -213,56 +221,45 @@ describe("GET /init's document access check", () => {
     });
 
     it("explains a personal document the personal grant can only view", async () => {
-        grant([OnshapePermission.READ]);
-        owner(OnshapeOwnerType.USER);
+        document([OnshapePermission.READ], OnshapeOwnerType.USER);
         grantFor(null);
 
         expect((await launch()).searchParams.get("problem")).toBe("view-only");
     });
 
-    // A grant that can't see the document may not read its ACL either.
+    // The document can't say who owns it, so the launch does.
     it.each([
-        ["sessionCompanyId=cad", "classroom"],
-        ["sessionCompanyId=company-1", "view-only"]
+        [404, "sessionCompanyId=cad", "classroom"],
+        [403, "sessionCompanyId=company-1", "view-only"]
     ])(
-        "tells the owner from the launch when the ACL can't be read, given %s",
-        async (session, problem) => {
-            grant([]);
-            vi.spyOn(Permissions, "getDocumentAcl").mockRejectedValue(
-                new OnshapeApiError("Forbidden", 403)
-            );
+        "reads Onshape's %s as a grant that can't see the document, given %s",
+        async (status, session, problem) => {
+            unseen(status);
 
             const location = await launch({}, session);
 
+            expect(location.pathname).toBe("/document-access");
             expect(location.searchParams.get("problem")).toBe(problem);
         }
     );
 
-    it("reads Onshape's 404 as a grant that can't see the document", async () => {
-        vi.spyOn(Permissions, "getPermissions").mockRejectedValue(
-            new OnshapeApiError("Not found", 404)
-        );
-
-        expect((await launch()).pathname).toBe("/document-access");
-    });
-
-    // A public document can be seen by anybody; inserting needs edit access.
-    it("explains a document the caller can only view", async () => {
-        grant([OnshapePermission.READ]);
-
-        expect((await launch()).pathname).toBe("/document-access");
-    });
-
     it("opens the app when Onshape can't answer", async () => {
-        vi.spyOn(Permissions, "getPermissions").mockRejectedValue(
-            new OnshapeApiError("Unavailable", 503)
-        );
+        unseen(503);
+
+        expect((await launch()).pathname).toBe("/");
+    });
+
+    it("opens the app when the document doesn't say what the grant may do", async () => {
+        vi.spyOn(Documents, "getDocument").mockResolvedValue({
+            id: "doc",
+            name: "Robot"
+        });
 
         expect((await launch()).pathname).toBe("/");
     });
 
     it("leaves a caller with no session to the app's own sign-in", async () => {
-        const getPermissions = vi.spyOn(Permissions, "getPermissions");
+        const getDocument = vi.spyOn(Documents, "getDocument");
 
         const location = await launch({
             signedIn: false,
@@ -271,7 +268,7 @@ describe("GET /init's document access check", () => {
 
         // Sent to sign in first, not to the access page.
         expect(location.pathname).toBe("/auth/sign-in");
-        expect(getPermissions).not.toHaveBeenCalled();
+        expect(getDocument).not.toHaveBeenCalled();
     });
 });
 

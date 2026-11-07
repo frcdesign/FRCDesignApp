@@ -12,7 +12,7 @@ import { MockOnshapeApi } from "../../../__test_utils__/mock-onshape-api";
 import { getDb } from "../../db/client";
 import { libraries, onshapeWebhooks, WebhookSubject } from "../../db/schema";
 import { OnshapeApiError } from "../../lib/onshape/client";
-import { OnshapeOwnerType } from "../../lib/onshape/endpoints/teams";
+import { OnshapeOwnerType } from "../../lib/onshape/types";
 import * as BackgroundSessions from "../auth/background-sessions";
 import { AccessLevel } from "../auth/access-level";
 

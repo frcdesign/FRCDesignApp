@@ -1,17 +1,13 @@
 /** Whether the caller's Onshape grant can edit the document Onshape launched in, and why not. */
 import { HttpStatus } from "http-status-ts";
-import {
-    type OAuthApi,
-    type OnshapeApi,
-    OnshapeApiError
-} from "../../lib/onshape/client";
-import {
-    getDocumentAcl,
-    getPermissions,
-    OnshapePermission
-} from "../../lib/onshape/endpoints/permissions";
-import { OnshapeOwnerType } from "../../lib/onshape/endpoints/teams";
+import { type OAuthApi, OnshapeApiError } from "../../lib/onshape/client";
+import { getDocument } from "../../lib/onshape/endpoints/documents";
+import { OnshapePermission } from "../../lib/onshape/endpoints/permissions";
 import { getSessionInfo } from "../../lib/onshape/endpoints/users";
+import {
+    OnshapeOwnerType,
+    type OnshapeDocumentInfo
+} from "../../lib/onshape/types";
 import { type AppContext } from "../../lib/context";
 import { getDocumentCompanyId, getSessionCompanyId } from "../auth/company";
 import { PERSONAL_COMPANY_ID } from "../auth/personal-company";
@@ -42,9 +38,23 @@ export async function findAccessProblem(
     } catch {
         return undefined;
     }
-    if (!(await cannotEdit(api, documentId))) return undefined;
 
-    switch (await getDocumentOwner(c, api, documentId)) {
+    // Undefined for a document the grant can't see at all.
+    let document: OnshapeDocumentInfo | undefined;
+    try {
+        document = await getDocument(api, { documentId });
+    } catch (error) {
+        if (!isUnseen(error)) return undefined;
+    }
+    if (document) {
+        // Onshape doesn't promise to send it, and an absent one can't say no.
+        if (!document.permissionSet) return undefined;
+        if (document.permissionSet.includes(OnshapePermission.WRITE)) {
+            return undefined;
+        }
+    }
+
+    switch (toOwner(document) ?? ownerFromLaunch(c)) {
         case DocumentOwner.CLASSROOM:
             return AccessProblem.CLASSROOM;
         case DocumentOwner.PERSONAL:
@@ -57,44 +67,32 @@ export async function findAccessProblem(
     }
 }
 
-async function cannotEdit(api: OnshapeApi, documentId: string) {
-    try {
-        const permissions = await getPermissions(api, { documentId });
-        return !permissions.includes(OnshapePermission.WRITE);
-    } catch (error) {
-        // Onshape answers 404 for a document the grant can't see at all.
-        return (
-            error instanceof OnshapeApiError &&
-            error.status === HttpStatus.NOT_FOUND
-        );
+/** Onshape answers 403 or 404 for a document the grant can't see. */
+function isUnseen(error: unknown): boolean {
+    return (
+        error instanceof OnshapeApiError &&
+        (error.status === HttpStatus.FORBIDDEN ||
+            error.status === HttpStatus.NOT_FOUND)
+    );
+}
+
+function toOwner(
+    document: OnshapeDocumentInfo | undefined
+): DocumentOwner | undefined {
+    switch (document?.owner?.type) {
+        case OnshapeOwnerType.USER:
+            return DocumentOwner.PERSONAL;
+        case OnshapeOwnerType.COMPANY:
+            return document.owner.isEnterpriseOwnedResource
+                ? DocumentOwner.ENTERPRISE
+                : DocumentOwner.CLASSROOM;
+        default:
+            return undefined;
     }
 }
 
-/**
- * From the ACL's owner, which a grant that can't see the document may not be
- * able to read; from the launch then, where only an enterprise's session
- * company is the document's own company.
- */
-async function getDocumentOwner(
-    c: AppContext,
-    api: OnshapeApi,
-    documentId: string
-): Promise<DocumentOwner> {
-    try {
-        const { owner } = await getDocumentAcl(api, { documentId });
-        if (owner.type === OnshapeOwnerType.USER) {
-            return DocumentOwner.PERSONAL;
-        }
-        if (owner.type === OnshapeOwnerType.COMPANY) {
-            return owner.isEnterpriseOwnedResource
-                ? DocumentOwner.ENTERPRISE
-                : DocumentOwner.CLASSROOM;
-        }
-    } catch (error) {
-        console.warn("Couldn't read the launch document's ACL", {
-            error: error instanceof Error ? error.message : String(error)
-        });
-    }
+/** For a document the grant can't see: only an enterprise's session company is the document's own company. */
+function ownerFromLaunch(c: AppContext): DocumentOwner {
     const companyId = getDocumentCompanyId(c);
     if (companyId === PERSONAL_COMPANY_ID) return DocumentOwner.PERSONAL;
     return companyId === getSessionCompanyId(c)

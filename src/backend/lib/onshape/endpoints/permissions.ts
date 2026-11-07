@@ -1,7 +1,6 @@
 import { HttpStatus } from "http-status-ts";
 import { OnshapeApi, OnshapeApiError } from "../client";
 import { DocumentPath } from "../path";
-import { OnshapeOwnerType } from "./teams";
 
 /** The permissions the app asks about; Onshape sends others nothing reads. */
 export enum OnshapePermission {
@@ -48,21 +47,4 @@ export async function hasPermissions(
 ): Promise<boolean> {
     const permissions = await getPermissions(client, documentPath);
     return needed.every((permission) => permissions.includes(permission));
-}
-
-export interface OnshapeDocumentAcl {
-    owner: {
-        id: string;
-        type: OnshapeOwnerType;
-        /** Tells an enterprise from a classroom, which are both companies. */
-        isEnterpriseOwnedResource?: boolean;
-    };
-}
-
-/** `GET /documents/{did}/acl`, also without a `/d/` segment. */
-export function getDocumentAcl(
-    client: OnshapeApi,
-    documentPath: DocumentPath
-): Promise<OnshapeDocumentAcl> {
-    return client.get(`/documents/${documentPath.documentId}/acl`);
 }

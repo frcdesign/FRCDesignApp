@@ -11,9 +11,9 @@ import { runInBackground } from "../../lib/background";
 import type { OnshapeApi } from "../../lib/onshape/client";
 import {
     getTeam,
-    OnshapeOwnerType,
     type OnshapeTeamInfo
 } from "../../lib/onshape/endpoints/teams";
+import { OnshapeOwnerType } from "../../lib/onshape/types";
 import { ensureWebhook, removeWebhook } from "../webhooks/registration";
 import {
     requireAdminMiddleware,

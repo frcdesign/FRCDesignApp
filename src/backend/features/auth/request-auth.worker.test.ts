@@ -11,7 +11,7 @@ import { eq } from "drizzle-orm";
 import { LibraryId } from "../library/library-id";
 import { saveSession } from "./session";
 import * as Users from "../../lib/onshape/endpoints/users";
-import * as Permissions from "../../lib/onshape/endpoints/permissions";
+import * as Documents from "../../lib/onshape/endpoints/documents";
 import { OnshapePermission } from "../../lib/onshape/endpoints/permissions";
 
 const app = createApp(productionAuth);
@@ -172,10 +172,11 @@ describe("the launch's sign-in check", () => {
             id: sessionUserId,
             company: null
         });
-        vi.spyOn(Permissions, "getPermissions").mockResolvedValue([
-            OnshapePermission.READ,
-            OnshapePermission.WRITE
-        ]);
+        vi.spyOn(Documents, "getDocument").mockResolvedValue({
+            id: "doc",
+            name: "Robot",
+            permissionSet: [OnshapePermission.READ, OnshapePermission.WRITE]
+        });
         const sessionId = crypto.randomUUID();
         await saveSession(env.KV, sessionId, {
             accessToken: "token",
