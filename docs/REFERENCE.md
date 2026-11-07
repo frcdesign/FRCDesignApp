@@ -1,6 +1,6 @@
 # FRCDesignApp — System Reference
 
-This document explains what FRCDesignApp is, how its pieces fit together, and where to find things in the codebase. If you want step-by-step recipes for adding new features, see [GUIDE.md](./GUIDE.md).
+This document explains what FRCDesignApp is, how its pieces fit together, and where to find things in the codebase. If you want step-by-step recipes for adding new features, see [GUIDE.md](./GUIDE.md); for how Onshape itself behaves, see [ONSHAPE.md](./ONSHAPE.md).
 
 ## What Is This App?
 

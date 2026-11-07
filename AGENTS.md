@@ -197,6 +197,16 @@ When a document and the code disagree and it isn't clear which is intended,
 ask rather than quietly changing either. After reading a whole document against
 the code and fixing what disagrees, bump its **Last reviewed** date.
 
+# Onshape
+
+`docs/ONSHAPE.md` holds what we know about how Onshape behaves: microversions,
+configurations, accounts and companies, permissions, webhooks, thumbnails.
+Read the section you are relying on before writing code that calls Onshape,
+and trust it over your own memory of Onshape. Each fact is marked documented,
+observed or unverified; build on an unverified one only knowing it may be
+wrong. When you learn something new, or find an entry wrong, update the file
+in the same change.
+
 # Tests
 
 `npm test` runs three Vitest projects. A backend test that needs bindings (D1,

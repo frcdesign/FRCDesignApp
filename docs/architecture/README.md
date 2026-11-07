@@ -36,7 +36,9 @@ read and comment on, the ones a branch changed first with their diffs; the
 | [platform.md](./platform.md)               | Onshape client, errors, retries and timeouts, concurrency, toasts, pushes, caching |
 
 [REFERENCE.md](../REFERENCE.md) is the tour of the whole system and links here
-for depth; [GUIDE.md](../GUIDE.md) holds recipes.
+for depth; [GUIDE.md](../GUIDE.md) holds recipes; [ONSHAPE.md](../ONSHAPE.md)
+holds what we know of Onshape itself, which these documents link to rather than
+repeat.
 
 ## Shape of a document
 
