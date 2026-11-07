@@ -1,18 +1,20 @@
 import { env } from "cloudflare:workers";
-import { DrizzleQueryError } from "drizzle-orm";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AccessLevel } from "../features/auth/access-level";
 import { LibraryId } from "../features/library/library-id";
 import { ApiErrorKind } from "./api-error";
 import { createTestApp, jsonRequest, resetDb } from "../../__test_utils__";
 import { getDb } from "../db/client";
-import { findServerError } from "./errors";
 
 const db = getDb(env.DB);
 
 describe("api error responses", () => {
     beforeEach(async () => {
         await resetDb(db);
+    });
+
+    afterEach(() => {
+        vi.restoreAllMocks();
     });
 
     // Written for the user, and the kind tells the client what to offer them.
@@ -63,14 +65,14 @@ describe("api error responses", () => {
         });
     });
 
-    it("stores an unexpected error under the request's Ray ID, without the query's params", async () => {
+    it("logs an unexpected error under the request's Ray ID, and names it in the response", async () => {
+        const logged = vi
+            .spyOn(console, "error")
+            .mockImplementation(() => undefined);
+        const error = new Error("D1_ERROR: no such table: favorites");
         const app = createTestApp();
         app.post("/api/test-crash", () => {
-            throw new DrizzleQueryError(
-                "select * from favorites where user_id = ?",
-                ["a-user-id"],
-                new Error("D1_ERROR: no such table: favorites")
-            );
+            throw error;
         });
 
         const res = await app.request(
@@ -85,11 +87,7 @@ describe("api error responses", () => {
             message: "Internal Server Error",
             errorId: "8f00ba11-IAD"
         });
-        const logged = await findServerError(env.KV, "8f00ba11-IAD");
-        expect(logged).toMatch(
-            /^DrizzleQueryError: Failed query: select \* from favorites where user_id = \?\ncause: Error: D1_ERROR: no such table: favorites\n\s+at /
-        );
-        expect(logged).not.toContain("a-user-id");
+        expect(logged).toHaveBeenCalledWith("Server error 8f00ba11-IAD", error);
     });
 
     it("marks an unknown library as internal rather than explaining it", async () => {

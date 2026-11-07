@@ -44,8 +44,6 @@ export interface Report {
     accessLevels?: Record<LibraryId, AccessLevel>;
     userAgent?: string;
     part?: ReportedPart;
-    /** What the server logged for the reported error, found by its id. */
-    serverError?: string;
     diagnostics: FeedbackDiagnostics;
     createdAt: Date;
 }
@@ -169,9 +167,6 @@ function reportFields(report: Report): DiscordEmbedField[] {
         if (errorId) lines.push(`error id: ${errorId}`);
         if (detail && detail !== shown) lines.push(`detail: ${detail}`);
         fields.push(field("Error", code(lines.join("\n"))));
-    }
-    if (report.serverError) {
-        fields.push(field("Server error", code(report.serverError)));
     }
     if (report.contact) {
         fields.push(field("Discord username", report.contact, true));
