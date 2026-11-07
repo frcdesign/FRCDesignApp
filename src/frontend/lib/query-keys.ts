@@ -78,6 +78,20 @@ export function isVersionedLibraryQuery(queryKey: readonly unknown[]): boolean {
     );
 }
 
+/** Under the library, so its refresh asks again. */
+export function documentChangesQueryKey(
+    libraryId: LibraryId,
+    documentId: string,
+    includeElements: boolean
+) {
+    return [
+        ...libraryQueryKey(libraryId),
+        "document-changes",
+        documentId,
+        includeElements
+    ];
+}
+
 export function jobStatusQueryKey(libraryId: LibraryId) {
     return [...libraryQueryKey(libraryId), "job-status"];
 }

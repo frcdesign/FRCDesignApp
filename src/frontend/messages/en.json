@@ -404,5 +404,35 @@
     "dashboardLowUsageParts": "Low-usage parts",
     "dashboardLowUsageOptions": "Low-usage configuration options",
     "dashboardLowUsagePartsEmpty": "Every visible part is used more than the threshold.",
-    "dashboardLowUsageOptionsEmpty": "Every configuration option is used more than the threshold."
+    "dashboardLowUsageOptionsEmpty": "Every configuration option is used more than the threshold.",
+    "changesBadge": [
+        {
+            "declarations": [
+                "input count",
+                "local countPlural = count: plural",
+                "local formatted = count: number"
+            ],
+            "selectors": ["countPlural"],
+            "match": {
+                "countPlural=one": "1 change",
+                "countPlural=other": "{formatted} changes"
+            }
+        }
+    ],
+    "changesBadgeTooltip": [
+        {
+            "declarations": [
+                "input count",
+                "local countPlural = count: plural",
+                "local formatted = count: number"
+            ],
+            "selectors": ["countPlural"],
+            "match": {
+                "countPlural=one": "1 change since the last version.",
+                "countPlural=other": "{formatted} changes since the last version."
+            }
+        }
+    ],
+    "changesBadgeEdited": "Changed",
+    "changesBadgeEditedTooltip": "Edited since the version the library has."
 }

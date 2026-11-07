@@ -9,7 +9,9 @@ references onto their latest versions.
 
 It is not part of a library. It acts on whatever document Onshape launched the
 app from, under the caller's own Onshape permissions, and the library's access
-levels have no say over it.
+levels have no say over it. The one thing a library borrows from it is the
+change count: in admin mode, each group and part shows what its document has
+changed since a version, read through the same route.
 
 ## Terms
 
@@ -35,7 +37,7 @@ it.
 | `src/backend/features/version-manager/tasks.ts`                                 | Pure: the steps a run will take, which its status lists                               |
 | `src/backend/features/version-manager/jobs.ts`                                  | The run a workspace last started, and its status                                      |
 | `src/backend/features/version-manager/failures.ts`                              | Which Onshape failures to retry, and each in words                                    |
-| `src/backend/features/version-manager/workspace-cache.ts`                       | A linked workspace's names and pending-change count, and callers' permissions, cached |
+| `src/backend/features/version-manager/workspace-cache.ts`                       | Workspace names, change counts and tabs, default workspaces, and callers' permissions |
 | `src/backend/features/version-manager/routes.ts`                                | Every route below                                                                     |
 | `src/frontend/features/version-manager/queries.ts`                              | The queries and mutations                                                             |
 | `src/frontend/features/version-manager/components/linked-workspace-section.tsx` | A direction's list and its rows                                                       |
@@ -44,6 +46,8 @@ it.
 | `src/frontend/features/version-manager/components/last-run-callout.tsx`         | The last run, going or finished, as a callout at the top of the page                  |
 | `src/frontend/features/version-manager/components/job-details.tsx`              | The run's steps as they complete, in the Details modal                                |
 | `src/frontend/routes/app/version-manager.tsx`                                   | The page: two sections, one per direction                                             |
+| `src/frontend/components/changes-badge.tsx`                                     | `ChangesBadge`: "3 changes", or "Changed" for a tab; a parent's and the library's     |
+| `src/frontend/features/library/components/changes-badges.tsx`                   | `GroupChangesBadge`, `InsertableChangesBadge`: the library's, in admin mode only      |
 
 ## Storage
 
@@ -65,16 +69,23 @@ document and workspace names, for a week.
 **KV** `linked-workspace-changes:{documentId}|{instanceId}` — its
 `changesSinceVersionSave`, for an hour.
 
+**KV** `workspace-elements:{documentId}|{instanceId}` — each tab's
+microversion in the workspace (`ElementMicroversions`), for an hour, read only
+when a library part asks.
+
+**KV** `default-workspace:{documentId}` — the document's default workspace,
+which a library group's change count is read from, for a week.
+
 **KV** `document-permissions:{documentId}:{userId}` — a caller's Onshape
 permission set on a document (`canRead`), for a day. It guards what the routes
 answer from our own storage; see **Decisions**.
 
-All three are dropped by the linked workspace's webhook when it changes —
+All but the default workspace are dropped by the workspace's webhook when it changes —
 permissions for every caller of that document — and by
 `POST /api/workspace-links/refresh` — the navbar's refresh button, shown on this
 page alone — for every workspace linked to the caller's, and the caller's own
 document's permissions. A run drops the change
-count of each workspace it versions or moves (`forgetChanges`, a step after
+count and tabs of each workspace it versions or moves (`forgetChanges`, a step after
 each of its own), and the client reads the links again once the run ends, so a
 parent's badge reflects the version just cut.
 
@@ -112,6 +123,29 @@ version (`changesSinceVersionSave` on the insertables response, asked with no
 Onshape. A pull has to cut a version to bring those edits in, so the row shows
 the count as a badge. The count's query sits under the list's key, so whatever
 refreshes the list refreshes the counts.
+
+### Changes in a library document
+
+In admin mode — the viewed level at editor or above — each group card shows
+its document's edits since its last version, and each part card shows
+**Changed** when its tab was edited since the version the library holds. Both
+ask `GET /api/workspace-changes` with the document alone:
+
+1. With no `instanceId`, the route reads the document's default workspace — the
+   one a load versions from — from `default-workspace`, or from Onshape on a
+   miss, which also registers the transient webhook a linked workspace gets.
+2. It checks the caller may read the document (`canRead`), as for a parent.
+3. It answers the count, and with `elements=true` each tab's microversion in
+   that workspace (`getElementMicroversions`, from `contents`).
+4. A part card compares its tab's microversion there with the insertable's
+   stored `microversionId`, the tab as of the library's version. A tab moves to
+   a new microversion only when it is edited, which is what the load's own
+   skip of unchanged tabs relies on too.
+
+A group card asks without `elements`; the cards of one group's parts share one
+query with them. The queries sit under the library's key
+(`documentChangesQueryKey`), so a library refresh asks again, and are fresh
+for a minute.
 
 ### Linking
 
@@ -327,6 +361,8 @@ deletes a transient webhook that goes quiet, so the entries expire as well.
 - Nothing about a workspace the caller cannot read, as of the permission
   cache, reaches them: no name, no thumbnail, and no run status. The socket says only that a status changed.
 - A push, pull or link checks live permissions; only reads guard on cached ones.
+- The library's change badges show only in admin mode, and ask nothing
+  outside it.
 - A push or pull always cuts its versions; only an update-only run cuts none.
 - A run that finished, or stopped, says so: its status is stored whichever way
   it ended, step by step.
@@ -400,6 +436,13 @@ deletes a transient webhook that goes quiet, so the entries expire as well.
   made the list slow, so the set is cached per caller and dropped by the
   `shared` webhook. A stale answer can show a name to somebody who has just
   lost access, which is accepted. Runs and links check live, before they start.
+- **A part is compared with the library's version, a group with its own.**
+  Onshape counts edits per workspace and has no count per tab, so a part can
+  only say whether its tab moved, and the version it is measured from is the
+  one the library would have to load again to pick the edit up. A group's
+  count is Onshape's own, since its last version. With a version held for
+  approval, a part edited before it shows **Changed** while its group counts
+  nothing new: the held version is what carries the edit.
 - **Thumbnails are proxied.** `GET /api/workspace-thumbnail` fetches the
   workspace's own thumbnail under the caller's OAuth token. Letting the image
   element fetch Onshape directly was tried; Onshape serves a thumbnail only to

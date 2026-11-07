@@ -63,8 +63,10 @@ import {
 import {
     canRead,
     describeWorkspace,
+    findDefaultWorkspace,
     forgetPermissions,
     forgetWorkspace,
+    getElementMicroversions,
     getUnversionedChanges
 } from "./workspace-cache";
 
@@ -214,31 +216,63 @@ versionManagerRoutes.get(
     }
 );
 
+const changesQuery = z.object({
+    documentId: z.string().min(1),
+    /** Omitted, the document's default workspace, which a library loads from. */
+    instanceId: z.string().min(1).optional(),
+    /** Adds each tab's microversion, for telling which tabs were edited. */
+    elements: z.stringbool().default(false)
+});
+
 /**
- * GET /api/workspace-changes?documentId=&instanceId= — a parent's edits since
- * its own last version, asked by its row once the list shows, since counting
- * is the slowest thing Onshape is asked for the list.
+ * GET /api/workspace-changes?documentId=&instanceId=&elements= — how far a
+ * workspace has moved since its own last version: a version manager parent's
+ * row, or a library group and its parts. Asked on its own because counting is
+ * the slowest thing either page asks Onshape.
  */
 versionManagerRoutes.get(
     "/workspace-changes",
     requireSignInMiddleware,
     cacheMiddleware(),
-    validate("query", workspaceSchema),
+    validate("query", changesQuery),
     async (c) => {
-        const workspace = toWorkspace(c.req.valid("query"));
+        const { documentId, instanceId, elements } = c.req.valid("query");
         const client = await c.var.getOnshapeApi();
-        await requireRead(c, client, workspace);
-        let changes: number | undefined;
-        try {
-            changes = await getUnversionedChanges(c, client, workspace);
-        } catch (error) {
-            // A row without a badge, not a failure the page shows.
-            console.warn(
-                `Failed to count changes in ${workspace.documentId}`,
-                error
-            );
+        const workspace = instanceId
+            ? toWorkspacePath(documentId, instanceId)
+            : await findDefaultWorkspace(c, client, { documentId });
+        if (!workspace) {
+            return c.json({} satisfies WorkspaceChangesOut);
         }
-        return c.json({ changes } satisfies WorkspaceChangesOut);
+        await requireRead(c, client, workspace);
+
+        // A missing count or list is a missing badge, not a failure the page shows.
+        const [changes, microversions] = await Promise.all([
+            getUnversionedChanges(c, client, workspace).catch(
+                (error: unknown) => {
+                    console.warn(
+                        `Failed to count changes in ${documentId}`,
+                        error
+                    );
+                    return undefined;
+                }
+            ),
+            elements
+                ? getElementMicroversions(c, client, workspace).catch(
+                      (error: unknown) => {
+                          console.warn(
+                              `Failed to list the tabs of ${documentId}`,
+                              error
+                          );
+                          return undefined;
+                      }
+                  )
+                : undefined
+        ]);
+        return c.json({
+            changes,
+            elements: microversions
+        } satisfies WorkspaceChangesOut);
     }
 );
 

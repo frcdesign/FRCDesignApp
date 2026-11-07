@@ -1,12 +1,4 @@
-import {
-    Badge,
-    Center,
-    Divider,
-    Loader,
-    Menu,
-    Text,
-    Tooltip
-} from "@mantine/core";
+import { Center, Divider, Loader, Menu, Text, Tooltip } from "@mantine/core";
 import {
     ArrowLineDownIcon,
     ArrowLineUpIcon,
@@ -30,6 +22,7 @@ import { InfoTooltip } from "../../../components/info-tooltip";
 import { openDeleteConfirm } from "../../../components/alerts";
 import { CardTitle, ItemRow, ItemTable } from "../../../components/item-row";
 import { SectionNotice } from "../../../components/app-notice";
+import { ChangesBadge } from "../../../components/changes-badge";
 import { CardThumbnail } from "../../thumbnails/components/thumbnail";
 import {
     IconSize,
@@ -42,7 +35,6 @@ import {
     useOnshapeOrigin,
     useTargetWorkspace
 } from "../../../lib/onshape-params";
-import { plural } from "../../../lib/plural";
 import { runningHeadline } from "../job-report";
 import {
     useMoveLinkMutation,
@@ -436,12 +428,5 @@ function UnversionedChangesBadge(
     if (!changes) {
         return null;
     }
-
-    return (
-        <Tooltip label={`${plural(changes, "change")} since the last version.`}>
-            <Badge className={styles.noShrink}>
-                {plural(changes, "change")}
-            </Badge>
-        </Tooltip>
-    );
+    return <ChangesBadge changes={changes} />;
 }

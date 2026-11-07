@@ -1,0 +1,27 @@
+import { Badge, Tooltip } from "@mantine/core";
+import { type ReactNode } from "react";
+import styles from "../lib/styles.module.css";
+import { m } from "../paraglide/messages";
+
+interface ChangesBadgeProps {
+    /** Edits since the last version; omitted for a tab, which Onshape doesn't count. */
+    changes?: number;
+}
+
+/** What a document or tab has changed since a version, which is what cutting one picks up. */
+export function ChangesBadge(props: ChangesBadgeProps): ReactNode {
+    const { changes } = props;
+    const label =
+        changes === undefined
+            ? m.changesBadgeEdited()
+            : m.changesBadge({ count: changes });
+    const tooltip =
+        changes === undefined
+            ? m.changesBadgeEditedTooltip()
+            : m.changesBadgeTooltip({ count: changes });
+    return (
+        <Tooltip label={tooltip}>
+            <Badge className={styles.noShrink}>{label}</Badge>
+        </Tooltip>
+    );
+}

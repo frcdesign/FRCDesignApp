@@ -2,7 +2,13 @@ import { env } from "cloudflare:workers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createTestApp, jsonRequest } from "../../../__test_utils__";
 import { getDb } from "../../db/client";
+import * as Documents from "../../lib/onshape/endpoints/documents";
 import * as Permissions from "../../lib/onshape/endpoints/permissions";
+import type {
+    OnshapeDocumentContents,
+    OnshapeDocumentInfo
+} from "../../lib/onshape/types";
+import * as Transient from "../webhooks/transient";
 import { OnshapePermission } from "../../lib/onshape/endpoints/permissions";
 import {
     LinkDirection,
@@ -291,6 +297,60 @@ describe("version manager routes", () => {
 
         expect(res.status).toBe(403);
         expect(count).not.toHaveBeenCalled();
+    });
+
+    it("reads a library document's default workspace, once, with each tab's microversion", async () => {
+        grant({ root: ALL });
+        const getDocument = vi
+            .spyOn(Documents, "getDocument")
+            .mockResolvedValue({
+                id: ROOT.documentId,
+                defaultWorkspace: { id: ROOT.instanceId }
+            } as OnshapeDocumentInfo);
+        vi.spyOn(Transient, "watchLinkedWorkspace").mockResolvedValue();
+        vi.spyOn(Documents, "getInsertables").mockResolvedValue({
+            changesSinceVersionSave: 2
+        });
+        const getContents = vi
+            .spyOn(Documents, "getContents")
+            .mockResolvedValue({
+                elements: [{ id: "tab", microversionId: "mv" }]
+            } as OnshapeDocumentContents);
+
+        const read = (elements: boolean) =>
+            app.request(
+                `/api/workspace-changes?${new URLSearchParams({ documentId: ROOT.documentId, elements: String(elements) })}`,
+                jsonRequest("GET"),
+                env
+            );
+
+        expect(await (await read(false)).json()).toEqual({ changes: 2 });
+        expect(getContents).not.toHaveBeenCalled();
+        expect(await (await read(true)).json()).toEqual({
+            changes: 2,
+            elements: { tab: "mv" }
+        });
+        expect(getDocument).toHaveBeenCalledOnce();
+        expect(getContents.mock.calls[0][1]).toEqual(ROOT);
+    });
+
+    it("lists a document's tabs only for somebody who may read it", async () => {
+        grant({});
+        vi.spyOn(Documents, "getDocument").mockResolvedValue({
+            id: ROOT.documentId,
+            defaultWorkspace: { id: ROOT.instanceId }
+        } as OnshapeDocumentInfo);
+        vi.spyOn(Transient, "watchLinkedWorkspace").mockResolvedValue();
+        const getContents = vi.spyOn(Documents, "getContents");
+
+        const res = await app.request(
+            `/api/workspace-changes?documentId=${ROOT.documentId}&elements=true`,
+            jsonRequest("GET"),
+            env
+        );
+
+        expect(res.status).toBe(403);
+        expect(getContents).not.toHaveBeenCalled();
     });
 
     it("forgets what is cached of each linked workspace on a refresh", async () => {

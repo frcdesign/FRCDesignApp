@@ -1,10 +1,15 @@
 /**
- * A linked workspace's names and unversioned changes, and each caller's
- * permissions on its document, cached as `units.ts` caches units: a transient
- * webhook drops the entries, and they expire in case Onshape drops the webhook.
+ * A workspace's names and unversioned changes, a document's default workspace,
+ * and each caller's permissions on a document, cached as `units.ts` caches
+ * units: a transient webhook drops the entries, and they expire in case Onshape
+ * drops the webhook.
  */
 import type { AppContext } from "../../lib/context";
-import type { DocumentPath, InstancePath } from "../../lib/onshape/path";
+import {
+    toDefaultWorkspacePath,
+    type DocumentPath,
+    type InstancePath
+} from "../../lib/onshape/path";
 import { runInBackground } from "../../lib/background";
 import { kvStore } from "../../lib/kv-store";
 import type { OnshapeApi } from "../../lib/onshape/client";
@@ -13,12 +18,18 @@ import {
     OnshapePermission
 } from "../../lib/onshape/endpoints/permissions";
 import {
+    getContents,
     getDocument,
     getInsertables
 } from "../../lib/onshape/endpoints/documents";
 import { getWorkspaces } from "../../lib/onshape/endpoints/workspaces";
 import { watchLinkedWorkspace } from "../webhooks/transient";
-import { workspaceKey, type WorkspacePath } from "./contract";
+import {
+    toWorkspacePath,
+    workspaceKey,
+    type ElementMicroversions,
+    type WorkspacePath
+} from "./contract";
 
 /** What the list shows of a workspace, minus what the caller may do with it. */
 interface WorkspaceDescription {
@@ -39,6 +50,17 @@ const descriptions = kvStore<WorkspaceDescription>("linked-workspace", {
 /** Boxed, so a cached zero is a hit rather than a miss. */
 const changeCounts = kvStore<{ changes: number }>("linked-workspace-changes", {
     ttlSeconds: CHANGES_TTL_SECONDS
+});
+
+/** Each tab's microversion, which moves with every edit to that tab. */
+const elementMicroversions = kvStore<ElementMicroversions>(
+    "workspace-elements",
+    { ttlSeconds: CHANGES_TTL_SECONDS }
+);
+
+/** By document id. Onshape never moves a document's default workspace. */
+const defaultWorkspaces = kvStore<{ instanceId: string }>("default-workspace", {
+    ttlSeconds: DESCRIPTION_TTL_SECONDS
 });
 
 /**
@@ -89,6 +111,7 @@ export async function forgetWorkspace(
     await Promise.all([
         descriptions.delete(kv, id),
         changeCounts.delete(kv, id),
+        elementMicroversions.delete(kv, id),
         forgetPermissions(kv, workspace)
     ]);
 }
@@ -98,7 +121,11 @@ export async function forgetChanges(
     kv: KVNamespace,
     workspace: InstancePath
 ): Promise<void> {
-    await changeCounts.delete(kv, workspaceKey(workspace));
+    const id = workspaceKey(workspace);
+    await Promise.all([
+        changeCounts.delete(kv, id),
+        elementMicroversions.delete(kv, id)
+    ]);
 }
 
 /** Best effort: a webhook that can't be registered leaves the expiry. */
@@ -160,4 +187,50 @@ export async function getUnversionedChanges(
 
     await changeCounts.put(c.env.KV, id, { changes });
     return changes;
+}
+
+/** Every tab's microversion in the workspace, by element id. */
+export async function getElementMicroversions(
+    c: AppContext,
+    client: OnshapeApi,
+    workspace: WorkspacePath
+): Promise<ElementMicroversions> {
+    const id = workspaceKey(workspace);
+    const cached = await elementMicroversions.get(c.env.KV, id);
+    if (cached) {
+        return cached;
+    }
+
+    const contents = await getContents(client, workspace);
+    const microversions: ElementMicroversions = Object.fromEntries(
+        contents.elements.map((element) => [element.id, element.microversionId])
+    );
+    await elementMicroversions.put(c.env.KV, id, microversions);
+    return microversions;
+}
+
+/**
+ * The workspace a library loads the document's versions from; undefined where
+ * Onshape names none. A miss watches it, as naming a linked workspace does.
+ */
+export async function findDefaultWorkspace(
+    c: AppContext,
+    client: OnshapeApi,
+    document: DocumentPath
+): Promise<WorkspacePath | undefined> {
+    const cached = await defaultWorkspaces.get(c.env.KV, document.documentId);
+    if (cached) {
+        return toWorkspacePath(document.documentId, cached.instanceId);
+    }
+
+    const found = toDefaultWorkspacePath(await getDocument(client, document));
+    if (!found) {
+        return undefined;
+    }
+    const workspace = toWorkspacePath(found.documentId, found.instanceId);
+    await defaultWorkspaces.put(c.env.KV, document.documentId, {
+        instanceId: workspace.instanceId
+    });
+    await watch(c, client, workspace);
+    return workspace;
 }

@@ -2,11 +2,13 @@
 import {
     keepPreviousData,
     queryOptions,
+    skipToken,
     useMutation,
     useQuery
 } from "@tanstack/react-query";
 import { apiDelete, apiGet, apiPost } from "../../lib/api-client";
 import { type LibraryOut } from "@backend/features/library/contract";
+import { type WorkspaceChangesOut } from "@backend/features/version-manager/contract";
 import {
     type ApproveVersionsOut,
     type HoldNewVersionsOut,
@@ -15,10 +17,11 @@ import {
 } from "@backend/features/load/contract";
 import { hasEditorAccess } from "@backend/features/auth/access-level";
 import { LibraryId } from "@backend/features/library/library-id";
-import { useAccessData } from "../auth/access-level";
+import { useAccessData, useIsSignedIn } from "../auth/access-level";
 import { toLibraryPath } from "../../lib/api-paths";
 import { useLibraryId } from "../../lib/library";
 import {
+    documentChangesQueryKey,
     holdNewVersionsQueryKey,
     jobStatusQueryKey,
     libraryDataQueryKey,
@@ -44,6 +47,35 @@ import {
     parseOnshapeDocumentId
 } from "../../lib/onshape-url";
 import { useRefreshLibrary } from "../../lib/refresh";
+
+/** The server answers from KV, so a minute only bounds how often a page of cards asks. */
+const DOCUMENT_CHANGES_STALE_TIME = 60 * 1000;
+
+/**
+ * How far a group's document has moved in its default workspace since its last
+ * version; with `includeElements`, each tab's microversion there too.
+ */
+export function useDocumentChangesQuery(
+    documentId: string,
+    includeElements: boolean
+) {
+    const libraryId = useLibraryId();
+    const isSignedIn = useIsSignedIn();
+    return useQuery<WorkspaceChangesOut>({
+        queryKey: documentChangesQueryKey(
+            libraryId,
+            documentId,
+            includeElements
+        ),
+        queryFn: isSignedIn
+            ? () =>
+                  apiGet("/workspace-changes", {
+                      query: { documentId, elements: includeElements }
+                  })
+            : skipToken,
+        staleTime: DOCUMENT_CHANGES_STALE_TIME
+    });
+}
 
 export function getLibraryQuery(libraryId: LibraryId, cacheVersion: number) {
     return queryOptions<LibraryOut>({

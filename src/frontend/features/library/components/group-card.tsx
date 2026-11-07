@@ -16,6 +16,7 @@ import { ReloadThumbnailMenuItem } from "./reload-thumbnail-item";
 import { CardTitle, ItemRow } from "../../../components/item-row";
 import { OpenDocumentItems } from "../../../components/open-document-items";
 import { AddGroupItem } from "./add-group-menu";
+import { GroupChangesBadge } from "./changes-badges";
 import { CardThumbnail } from "../../thumbnails/components/thumbnail";
 import { GroupStatusBadge } from "../../build-status/components/build-status";
 import {
@@ -56,10 +57,13 @@ export function GroupCard(props: GroupCardProps): ReactNode {
                         />
                     }
                     badge={
-                        <GroupStatusBadge
-                            groupId={group.id}
-                            name={group.name}
-                        />
+                        <>
+                            <GroupChangesBadge documentId={group.documentId} />
+                            <GroupStatusBadge
+                                groupId={group.id}
+                                name={group.name}
+                            />
+                        </>
                     }
                 />
             }
