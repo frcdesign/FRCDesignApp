@@ -26,28 +26,31 @@ it.
 
 ## Code map
 
-| Path                                                                            | Role                                                                                  |
-| ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| `src/backend/features/version-manager/contract.ts`                              | `WorkspacePath`, `LinkDirection`, the scopes, `VersionJobStatus`, `workspaceKey`      |
-| `src/backend/features/version-manager/schema.ts`                                | `workspace_links`, the feature's own table                                            |
-| `src/backend/features/version-manager/links.ts`                                 | The D1 reads and writes, and resolving a row into what the client shows               |
-| `src/backend/features/version-manager/graph.ts`                                 | Pure: the order a recursive push or pull runs in, and cycle detection                 |
-| `src/backend/features/version-manager/references.ts`                            | The reference-update engine both a push and a pull run                                |
-| `src/backend/features/version-manager/workflow.ts`                              | `VersionManagerWorkflow`, one class over a push or a pull                             |
-| `src/backend/features/version-manager/tasks.ts`                                 | Pure: the steps a run will take, which its status lists                               |
-| `src/backend/features/version-manager/jobs.ts`                                  | The run a workspace last started, and its status                                      |
-| `src/backend/features/version-manager/failures.ts`                              | Which Onshape failures to retry, and each in words                                    |
-| `src/backend/features/version-manager/workspace-cache.ts`                       | Workspace names, change counts and tabs, default workspaces, and callers' permissions |
-| `src/backend/features/version-manager/routes.ts`                                | Every route below                                                                     |
-| `src/frontend/features/version-manager/queries.ts`                              | The queries and mutations                                                             |
-| `src/frontend/features/version-manager/components/linked-workspace-section.tsx` | A direction's list and its rows                                                       |
-| `src/frontend/features/version-manager/link-actions.ts`                         | `useLinkActions`: everything a direction's section and rows can run                   |
-| `src/frontend/features/version-manager/job-report.ts`                           | How a run is going or went, in words                                                  |
-| `src/frontend/features/version-manager/components/last-run-callout.tsx`         | The last run, going or finished, as a callout at the top of the page                  |
-| `src/frontend/features/version-manager/components/job-details.tsx`              | The run's steps as they complete, in the Details modal                                |
-| `src/frontend/routes/app/version-manager.tsx`                                   | The page: two sections, one per direction                                             |
-| `src/frontend/components/changes-badge.tsx`                                     | `ChangesBadge`: "3 changes", or "Changed" for a tab; a parent's and the library's     |
-| `src/frontend/features/library/components/changes-badges.tsx`                   | `GroupChangesBadge`, `InsertableChangesBadge`: the library's, in admin mode only      |
+| Path                                                                              | Role                                                                                  |
+| --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `src/backend/features/version-manager/contract.ts`                                | `WorkspacePath`, `LinkDirection`, the scopes, `VersionJobStatus`, `SuggestedLink`     |
+| `src/backend/features/version-manager/schema.ts`                                  | `workspace_links`, the feature's own table                                            |
+| `src/backend/features/version-manager/links.ts`                                   | The D1 reads and writes, and resolving a row into what the client shows               |
+| `src/backend/features/version-manager/suggestions.ts`                             | `suggestParents`: the documents a workspace references and has no link to             |
+| `src/backend/features/version-manager/graph.ts`                                   | Pure: the order a recursive push or pull runs in, and cycle detection                 |
+| `src/backend/features/version-manager/references.ts`                              | The reference-update engine both a push and a pull run                                |
+| `src/backend/features/version-manager/workflow.ts`                                | `VersionManagerWorkflow`, one class over a push or a pull                             |
+| `src/backend/features/version-manager/tasks.ts`                                   | Pure: the steps a run will take, which its status lists                               |
+| `src/backend/features/version-manager/jobs.ts`                                    | The run a workspace last started, and its status                                      |
+| `src/backend/features/version-manager/failures.ts`                                | Which Onshape failures to retry, and each in words                                    |
+| `src/backend/features/version-manager/workspace-cache.ts`                         | Workspace names, change counts and tabs, default workspaces, and callers' permissions |
+| `src/backend/features/version-manager/routes.ts`                                  | Every route below                                                                     |
+| `src/frontend/features/version-manager/queries.ts`                                | The queries and mutations                                                             |
+| `src/frontend/features/version-manager/components/linked-workspace-section.tsx`   | A direction's list and its rows                                                       |
+| `src/frontend/features/version-manager/components/link-suggestions.tsx`           | The suggested parents: the page's section, and the welcome page's card                |
+| `src/frontend/features/version-manager/components/version-manager-zero-state.tsx` | The welcome page, shown while nothing is linked                                       |
+| `src/frontend/features/version-manager/link-actions.ts`                           | `useLinkActions`: everything a direction's section and rows can run                   |
+| `src/frontend/features/version-manager/job-report.ts`                             | How a run is going or went, in words                                                  |
+| `src/frontend/features/version-manager/components/last-run-callout.tsx`           | The last run, going or finished, as a callout at the top of the page                  |
+| `src/frontend/features/version-manager/components/job-details.tsx`                | The run's steps as they complete, in the Details modal                                |
+| `src/frontend/routes/app/version-manager.tsx`                                     | The page: two sections, one per direction                                             |
+| `src/frontend/components/changes-badge.tsx`                                       | `ChangesBadge`: "3 changes", or "Changed" for a tab; a parent's and the library's     |
+| `src/frontend/features/library/components/changes-badges.tsx`                     | `GroupChangesBadge`, `InsertableChangesBadge`: the library's, in admin mode only      |
 
 ## Storage
 
@@ -89,8 +92,12 @@ count and tabs of each workspace it versions or moves (`forgetChanges`, a step a
 each of its own), and the client reads the links again once the run ends, so a
 parent's badge reflects the version just cut.
 
-**Browser** whether each list is open, as `sections.parents` and
-`sections.children` in `uiState`.
+**Browser** whether each list is open, as `sections.parents`,
+`sections.children` and `sections.suggested-parents` in `uiState`.
+
+Suggestions store nothing of their own. Each referenced document goes through
+the permission, default-workspace and name caches above, so a miss watches it
+as a linked workspace is watched.
 
 ## Flows
 
@@ -166,6 +173,34 @@ row instead, the unique index over the four ids allowing only one.
 
 `DELETE /api/workspace-link/:linkId` needs write on **either** end: a link
 belongs to both workspaces.
+
+### Suggesting parents
+
+A workspace's parents are usually the documents it already references, so the
+page offers those it has no link to.
+
+1. Beside the list, the client asks `GET /api/workspace-link-suggestions`.
+   It reads the workspace's `externalreferences` as the caller, which Onshape
+   refuses for a caller who can't read it, and the documents linked to it
+   either way (`getLinkedDocumentIds`).
+2. `suggestParents` takes each referenced document once
+   (`referencedDocumentIds`), drops this one's own and any already linked, and
+   keeps at most `MAX_SUGGESTED_LINKS`, five at a time.
+3. A document the caller can't read (`canRead`), or whose default workspace
+   Onshape doesn't name, is dropped without a trace. The rest come back at
+   their default workspace, named from the cache and sorted by name.
+4. While nothing is linked, the welcome page shows them in a card above the
+   field for linking by hand. Otherwise they are the page's last section,
+   **Suggested parents**, which folds like the other two and is absent when
+   there is nothing to suggest.
+5. A row's **Link** is the ordinary `POST /api/workspace-links` as a parent.
+   **Link all** sends every suggestion to `POST /api/workspace-links/parents`,
+   which needs write on this workspace, checks read on each parent live, and
+   skips a document already linked, this one's own, or one the caller can't
+   read rather than refusing the lot. It answers how many it linked.
+
+The suggestions sit under the list's query key, so a link added, moved or
+removed asks for them again, and the navbar's refresh does too.
 
 ### Pushing
 
@@ -343,6 +378,10 @@ caller's permissions on its document, so the next panel to open asks Onshape
 again. Onshape
 deletes a transient webhook that goes quiet, so the entries expire as well.
 
+## User-facing strings
+
+In [strings/version-manager.md](../strings/version-manager.md).
+
 ## Invariants
 
 - A link is stored once, as one row. Both directions are read off it.
@@ -362,6 +401,11 @@ deletes a transient webhook that goes quiet, so the entries expire as well.
 - Nothing about a workspace the caller cannot read, as of the permission
   cache, reaches them: no name, no thumbnail, and no run status. The socket says only that a status changed.
 - A push, pull or link checks live permissions; only reads guard on cached ones.
+- A suggestion is a document the workspace references, linked to it neither
+  way, that the caller may read. Nothing about any other referenced document
+  reaches them.
+- Only parents are suggested, and a suggestion is never linked without
+  somebody choosing **Link** or **Link all**.
 - The library's change badges show only in admin mode, and ask nothing
   outside it.
 - A push or pull always cuts its versions; only an update-only run cuts none.
@@ -386,6 +430,8 @@ deletes a transient webhook that goes quiet, so the entries expire as well.
 | A run is already going from here         | The new one is refused, and the UI disables it | Wait for it to finish                              |
 | A webhook Onshape dropped                | A name or count is stale                       | The entry expires, and the next read watches again |
 | The socket drops mid-run                 | No result toast                                | The reconnect refetches the run; the callout shows |
+| The suggestions fail to load             | No suggestions show; the links work as before  | Refresh                                            |
+| A suggestion is deleted or unshared      | It is left out; **Link all** skips it          | None needed                                        |
 
 ## Decisions
 
@@ -444,6 +490,19 @@ deletes a transient webhook that goes quiet, so the entries expire as well.
   count is Onshape's own, since its last version. With a version held for
   approval, a part edited before it shows **Changed** while its group counts
   nothing new: the held version is what carries the edit.
+- **Only parents are suggested.** `externalreferences` answers what a
+  workspace references; Onshape has no call we know of for what references it.
+  Linking a parent from the child's page fills in the parent's list of
+  children too, a link being one row.
+- **A suggestion is the document's default workspace.** A reference names a
+  version, which cannot be linked; the default workspace is where a version of
+  it is normally cut. A team that versions from another workspace links it by
+  url instead.
+- **Suggestions are offered, never linked by themselves.** Many references
+  are to shared hardware or parts libraries nobody wants to push or pull, and
+  **Update all references** already moves those without a link.
+- **Link all skips what it can't link.** It is aimed at a list read moments
+  earlier; a document linked or unshared since should not stop the rest.
 - **Thumbnails are proxied.** `GET /api/workspace-thumbnail` fetches the
   workspace's own thumbnail under the caller's OAuth token. Letting the image
   element fetch Onshape directly was tried; Onshape serves a thumbnail only to

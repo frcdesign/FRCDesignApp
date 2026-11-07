@@ -128,6 +128,11 @@ export function workspaceChangesQueryKey(
     return [...workspaceLinksQueryKey(workspace), "changes", parent];
 }
 
+/** Under the links' key, so a link added or removed asks for them again. */
+export function linkSuggestionsQueryKey(workspace: InstancePath | undefined) {
+    return [...workspaceLinksQueryKey(workspace), "suggestions"];
+}
+
 export function versionJobQueryKey(workspace: InstancePath | undefined) {
     return ["version-job", workspace];
 }

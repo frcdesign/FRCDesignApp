@@ -23,6 +23,7 @@ import { getSessionId } from "../auth/session";
 import {
     isSameWorkspace,
     LinkDirection,
+    MAX_SUGGESTED_LINKS,
     MAX_VERSION_NAME_LENGTH,
     nextVersionName,
     PullScopeKind,
@@ -32,6 +33,8 @@ import {
     VersionJobState,
     workspaceKey,
     type AddLinkOut,
+    type LinkParentsOut,
+    type LinkSuggestionsOut,
     type VersionJobDocument,
     type WorkspaceChangesOut,
     type WorkspaceLinksData,
@@ -54,6 +57,7 @@ import {
     deleteLink,
     getChildLinks,
     getLink,
+    getLinkedDocumentIds,
     getParentLinks,
     otherEnd,
     reverseLink,
@@ -69,6 +73,7 @@ import {
     getElementMicroversions,
     getUnversionedChanges
 } from "./workspace-cache";
+import { suggestParents } from "./suggestions";
 
 export const versionManagerRoutes = getApp();
 
@@ -87,6 +92,11 @@ const addLinkBody = z.object({
     workspace: workspaceSchema,
     linked: workspaceSchema,
     direction: z.enum(LinkDirection)
+});
+
+const linkParentsBody = z.object({
+    workspace: workspaceSchema,
+    parents: z.array(workspaceSchema).min(1).max(MAX_SUGGESTED_LINKS)
 });
 
 const moveLinkBody = z.object({
@@ -213,6 +223,29 @@ versionManagerRoutes.get(
             documentName: document.name
         };
         return c.json(out);
+    }
+);
+
+/**
+ * GET /api/workspace-link-suggestions?documentId=&instanceId= — the documents
+ * the workspace references and has no link to, as parents. Asked beside the
+ * list rather than in it, since it reads every referenced document.
+ */
+versionManagerRoutes.get(
+    "/workspace-link-suggestions",
+    requireSignInMiddleware,
+    cacheMiddleware(),
+    validate("query", workspaceSchema),
+    async (c) => {
+        const workspace = toWorkspace(c.req.valid("query"));
+        // Onshape refuses the references of a workspace the caller can't read.
+        const suggestions = await suggestParents(
+            c,
+            getDb(c.env.DB),
+            await c.var.getOnshapeApi(),
+            workspace
+        );
+        return c.json({ suggestions } satisfies LinkSuggestionsOut);
     }
 );
 
@@ -380,6 +413,50 @@ async function refuseLinkedDocument(
         );
     }
 }
+
+/**
+ * POST /api/workspace-links/parents — links several parents at once, for
+ * **Link all**. A document already linked, this one's own, or one the caller
+ * can't read is skipped rather than refused, so the rest still land.
+ */
+versionManagerRoutes.post(
+    "/workspace-links/parents",
+    requireSignInMiddleware,
+    validate("json", linkParentsBody),
+    async (c) => {
+        const body = c.req.valid("json");
+        const workspace = toWorkspace(body.workspace);
+        const client = await c.var.getOnshapeApi();
+        await requirePermissions(
+            client,
+            workspace,
+            "edit this document",
+            OnshapePermission.WRITE
+        );
+
+        const db = getDb(c.env.DB);
+        const taken = await getLinkedDocumentIds(db, workspace);
+        taken.add(workspace.documentId);
+        const candidates = body.parents.map(toWorkspace).filter((parent) => {
+            if (taken.has(parent.documentId)) {
+                return false;
+            }
+            taken.add(parent.documentId);
+            return true;
+        });
+
+        const readable = await Promise.all(
+            candidates.map((parent) =>
+                hasPermissions(client, parent, OnshapePermission.READ)
+            )
+        );
+        const parents = candidates.filter((_, index) => readable[index]);
+        for (const parent of parents) {
+            await addLink(db, parent, workspace);
+        }
+        return c.json({ linked: parents.length } satisfies LinkParentsOut);
+    }
+);
 
 /** DELETE /api/workspace-link/:linkId — needs write on either end, a link being both workspaces'. */
 versionManagerRoutes.delete(

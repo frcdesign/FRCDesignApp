@@ -57,6 +57,20 @@ export function getParentLinks(
     return db.select().from(workspaceLinks).where(isChild(workspace)).all();
 }
 
+/** Every document linked to `workspace` either way, in any of its workspaces. */
+export async function getLinkedDocumentIds(
+    db: Db,
+    workspace: WorkspacePath
+): Promise<Set<string>> {
+    const rows = (
+        await Promise.all([
+            getParentLinks(db, workspace),
+            getChildLinks(db, workspace)
+        ])
+    ).flat();
+    return new Set(rows.map((row) => otherEnd(row, workspace).documentId));
+}
+
 export function getLink(
     db: Db,
     linkId: string

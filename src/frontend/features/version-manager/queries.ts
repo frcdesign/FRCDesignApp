@@ -2,6 +2,8 @@ import { skipToken, useMutation, useQuery } from "@tanstack/react-query";
 import {
     type AddLinkOut,
     LinkDirection,
+    type LinkParentsOut,
+    type LinkSuggestionsOut,
     type PullScope,
     type PushScope,
     VersionJobState,
@@ -16,6 +18,7 @@ import { getAppErrorHandler } from "../../lib/errors";
 import { showSuccessToast } from "../../lib/notifications";
 import { queryClient } from "../../lib/query-client";
 import {
+    linkSuggestionsQueryKey,
     nextVersionNameQueryKey,
     versionJobQueryKey,
     workspaceChangesQueryKey,
@@ -23,6 +26,7 @@ import {
 } from "../../lib/query-keys";
 import { useIsSignedIn } from "../auth/access-level";
 import { documentLabel } from "./document-label";
+import { m } from "../../paraglide/messages";
 
 /** A GET about the workspace; idle without one, or signed out. */
 function useWorkspaceQuery<T>(
@@ -67,6 +71,16 @@ export function useWorkspaceChangesQuery(
         workspaceChangesQueryKey(workspace, parent),
         "/workspace-changes",
         parent,
+        Infinity
+    );
+}
+
+/** The documents this workspace references and has no link to; refreshed with the list. */
+export function useLinkSuggestionsQuery(workspace: WorkspacePath | undefined) {
+    return useWorkspaceQuery<LinkSuggestionsOut>(
+        linkSuggestionsQueryKey(workspace),
+        "/workspace-link-suggestions",
+        workspace,
         Infinity
     );
 }
@@ -118,6 +132,24 @@ export function useAddLinkMutation(workspace: WorkspacePath) {
             await refreshLinks(workspace);
         },
         onError: getAppErrorHandler("Unexpectedly failed to add the link.")
+    });
+}
+
+/** Links every suggestion at once, as parents. */
+export function useLinkParentsMutation(workspace: WorkspacePath) {
+    return useMutation({
+        mutationKey: ["link-workspace-parents", workspace],
+        mutationFn: (parents: WorkspacePath[]) =>
+            apiPost<LinkParentsOut>("/workspace-links/parents", {
+                body: { workspace, parents }
+            }),
+        onSuccess: async ({ linked }) => {
+            showSuccessToast(
+                m.versionManagerSuggestionsLinked({ count: linked })
+            );
+            await refreshLinks(workspace);
+        },
+        onError: getAppErrorHandler(m.versionManagerSuggestionsLinkFailed())
     });
 }
 

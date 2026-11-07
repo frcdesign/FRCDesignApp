@@ -15,6 +15,7 @@ import {
 import { useState, type ReactNode } from "react";
 import {
     LinkDirection,
+    type SuggestedLink,
     type WorkspacePath
 } from "@backend/features/version-manager/contract";
 import { AppIcon } from "../../../components/app-icon";
@@ -25,31 +26,50 @@ import {
     PrimaryColor,
     StatusColor
 } from "../../../lib/style-constants";
+import { m } from "../../../paraglide/messages";
 import { AddLinkInput } from "./add-link-input";
+import { SuggestedLinksCard } from "./link-suggestions";
 import classes from "./version-manager-zero-state.module.css";
+
+interface DirectionChoice {
+    label: string;
+    icon: typeof ArrowLineDownIcon;
+    description: string;
+}
 
 /**
  * What each direction is called, what picking it would mean, and the arrow that
  * runs it: down for what this document pulls in, up for what it pushes out.
  */
-const DIRECTION_CHOICE = {
-    [LinkDirection.PARENT]: {
-        label: "A parent",
-        icon: ArrowLineDownIcon,
-        description: (documentName: string) =>
-            `I want to pull changes from the linked document into this document (${documentName}).`
-    },
-    [LinkDirection.CHILD]: {
-        label: "A child",
-        icon: ArrowLineUpIcon,
-        description: (documentName: string) =>
-            `I want to push changes from this document (${documentName}) to the linked document.`
+function directionChoice(
+    direction: LinkDirection,
+    documentName: string
+): DirectionChoice {
+    switch (direction) {
+        case LinkDirection.PARENT:
+            return {
+                label: m.versionManagerWelcomeParent(),
+                icon: ArrowLineDownIcon,
+                description: m.versionManagerWelcomeParentDescription({
+                    documentName
+                })
+            };
+        case LinkDirection.CHILD:
+            return {
+                label: m.versionManagerWelcomeChild(),
+                icon: ArrowLineUpIcon,
+                description: m.versionManagerWelcomeChildDescription({
+                    documentName
+                })
+            };
     }
-} as const;
+}
 
 interface VersionManagerZeroStateProps {
     workspace: WorkspacePath;
     documentName: string;
+    /** The documents it already references, offered above the field. */
+    suggestions: SuggestedLink[];
 }
 
 /** The page before anything is linked, where linking one document is the whole of getting started. */
@@ -67,11 +87,18 @@ export function VersionManagerZeroState(
                         color={PrimaryColor.FILLED}
                     />
                 }
-                title="Welcome to Version Manager!"
-                description="Version Manager lets you automatically push and pull versions between Onshape documents. To get started, paste the link of another associated Onshape document."
+                title={m.versionManagerWelcomeTitle()}
+                description={m.versionManagerWelcomeDescription()}
                 action={
                     <Stack gap="lg" w="100%">
                         <LinkExampleDiagram />
+                        {props.suggestions.length > 0 && (
+                            <SuggestedLinksCard
+                                workspace={props.workspace}
+                                documentName={props.documentName}
+                                suggestions={props.suggestions}
+                            />
+                        )}
                         <AddFirstLinkCard
                             workspace={props.workspace}
                             documentName={props.documentName}
@@ -107,7 +134,7 @@ function AddFirstLinkCard(props: AddFirstLinkCardProps): ReactNode {
                 <Radio.Group
                     value={direction}
                     onChange={setDirection}
-                    label="The document I'm linking to is..."
+                    label={m.versionManagerWelcomeDirectionLabel()}
                 >
                     <SimpleGrid cols={2} spacing="xs" mt={6}>
                         <DirectionCard
@@ -133,7 +160,7 @@ interface DirectionCardProps {
 
 function DirectionCard(props: DirectionCardProps): ReactNode {
     const { direction, documentName } = props;
-    const choice = DIRECTION_CHOICE[direction];
+    const choice = directionChoice(direction, documentName);
 
     return (
         // A grid, so the notice fills the card: a button centres its content.
@@ -154,33 +181,35 @@ function DirectionCard(props: DirectionCardProps): ReactNode {
                     />
                 }
                 title={choice.label}
-                description={choice.description(documentName)}
+                description={choice.description}
             />
         </Radio.Card>
     );
 }
 
-const EXAMPLE_PARENTS = ["Intake", "Drivetrain", "Shooter"];
-const EXAMPLE_CHILD = "Robot";
-
 const DOCUMENT_GAP = 20;
 
 /** What a link is, drawn: three subsystem documents, and the robot that uses all three. */
 function LinkExampleDiagram(): ReactNode {
+    const parents = [
+        m.versionManagerExampleIntake(),
+        m.versionManagerExampleDrivetrain(),
+        m.versionManagerExampleShooter()
+    ];
     return (
         <Stack gap={8}>
             <SimpleGrid cols={3} spacing={DOCUMENT_GAP}>
-                {EXAMPLE_PARENTS.map((name) => (
+                {parents.map((name) => (
                     <ExampleDocument key={name} name={name} />
                 ))}
             </SimpleGrid>
-            <DiagramLabel>Parents</DiagramLabel>
+            <DiagramLabel>{m.versionManagerExampleParents()}</DiagramLabel>
             <Connector />
-            <DiagramLabel>Children</DiagramLabel>
+            <DiagramLabel>{m.versionManagerExampleChildren()}</DiagramLabel>
             <SimpleGrid cols={3} spacing={DOCUMENT_GAP}>
                 {/* The middle column, so the robot is one document wide. */}
                 <Box style={{ gridColumnStart: 2 }}>
-                    <ExampleDocument name={EXAMPLE_CHILD} />
+                    <ExampleDocument name={m.versionManagerExampleRobot()} />
                 </Box>
             </SimpleGrid>
         </Stack>

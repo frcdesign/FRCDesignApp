@@ -6,7 +6,8 @@ import * as Documents from "../../lib/onshape/endpoints/documents";
 import * as Permissions from "../../lib/onshape/endpoints/permissions";
 import type {
     OnshapeDocumentContents,
-    OnshapeDocumentInfo
+    OnshapeDocumentInfo,
+    OnshapeExternalReferences
 } from "../../lib/onshape/types";
 import * as Transient from "../webhooks/transient";
 import { OnshapePermission } from "../../lib/onshape/endpoints/permissions";
@@ -20,7 +21,7 @@ import {
 } from "./contract";
 import * as Jobs from "./jobs";
 import * as WorkspaceCache from "./workspace-cache";
-import { addLink } from "./links";
+import { addLink, getParentLinks } from "./links";
 import { workspaceLinks } from "./schema";
 
 const db = getDb(env.DB);
@@ -364,4 +365,88 @@ describe("version manager routes", () => {
         expect(res.status).toBe(200);
         expect(forget.mock.calls.map((call) => call[1])).toEqual([ROOT]);
     });
+    it("suggests each referenced document, unlinked and readable, at its default workspace", async () => {
+        grant({ child: ALL, gearbox: ALL, secret: [] });
+        vi.spyOn(Documents, "getExternalReferences").mockResolvedValue({
+            elementExternalReferences: {
+                assembly: [
+                    reference("gearbox", "v1"),
+                    // Already linked, as this workspace's parent.
+                    reference("root", "v2"),
+                    reference("secret", "v3")
+                ],
+                drawing: [reference("gearbox", "v1"), reference("child", "v4")]
+            }
+        } satisfies OnshapeExternalReferences);
+        vi.spyOn(Documents, "getDocument").mockImplementation((_client, path) =>
+            Promise.resolve({
+                id: path.documentId,
+                name: `${path.documentId} document`,
+                defaultWorkspace: { id: `${path.documentId}-main` }
+            } as OnshapeDocumentInfo)
+        );
+        vi.spyOn(WorkspaceCache, "describeWorkspace").mockResolvedValue({
+            documentName: "Gearbox",
+            workspaceName: "Main"
+        });
+        vi.spyOn(Transient, "watchLinkedWorkspace").mockResolvedValue();
+
+        const res = await app.request(
+            `/api/workspace-link-suggestions?${new URLSearchParams(toInput(CHILD))}`,
+            jsonRequest("GET"),
+            env
+        );
+
+        expect(await res.json()).toEqual({
+            suggestions: [
+                {
+                    workspace: ws("gearbox", "gearbox-main"),
+                    documentName: "Gearbox",
+                    workspaceName: "Main"
+                }
+            ]
+        });
+    });
+
+    it("links every readable parent asked for, skipping those already linked", async () => {
+        grant({ child: ALL, gearbox: ALL, intake: ALL, secret: [] });
+        const res = await post("/workspace-links/parents", {
+            workspace: toInput(CHILD),
+            parents: [
+                toInput(ws("gearbox")),
+                toInput(ws("gearbox", "gearbox-branch")),
+                toInput(ws("root", "root-other")),
+                toInput(ws("secret")),
+                toInput(ws("intake"))
+            ]
+        });
+
+        expect(await res.json()).toEqual({ linked: 2 });
+        const parents = await getParentLinks(db, CHILD);
+        expect(parents.map((row) => row.sourceDocumentId).sort()).toEqual([
+            "gearbox",
+            "intake",
+            "root"
+        ]);
+    });
+
+    it("links no parents for somebody who can't edit the workspace", async () => {
+        grant({ child: [OnshapePermission.READ], gearbox: ALL });
+        const res = await post("/workspace-links/parents", {
+            workspace: toInput(CHILD),
+            parents: [toInput(ws("gearbox"))]
+        });
+
+        expect(res.status).toBe(403);
+        expect(await getParentLinks(db, CHILD)).toHaveLength(1);
+    });
 });
+
+function reference(documentId: string, versionId: string) {
+    return {
+        documentId,
+        id: versionId,
+        isOutOfDate: false,
+        referencedElements: ["tab"]
+    };
+}

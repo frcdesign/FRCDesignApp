@@ -68,6 +68,28 @@ export interface AddLinkOut {
     workspaceName?: string;
 }
 
+/**
+ * A document the workspace references and has no link to, offered as a parent
+ * at its default workspace. Only a document the caller may read is offered.
+ */
+export interface SuggestedLink {
+    workspace: WorkspacePath;
+    documentName?: string;
+    workspaceName?: string;
+}
+
+export interface LinkSuggestionsOut {
+    suggestions: SuggestedLink[];
+}
+
+/** How many parents one request may link, which is also the most suggested. */
+export const MAX_SUGGESTED_LINKS = 25;
+
+/** How many of the parents asked for were linked; the rest were linked already or unreadable. */
+export interface LinkParentsOut {
+    linked: number;
+}
+
 export interface WorkspaceLinksData {
     parents: LinkedWorkspace[];
     children: LinkedWorkspace[];

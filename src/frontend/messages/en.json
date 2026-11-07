@@ -434,5 +434,60 @@
         }
     ],
     "changesBadgeChanged": "Changed",
-    "changesBadgeChangedTooltip": "Changed since the version the library has."
+    "changesBadgeChangedTooltip": "Changed since the version the library has.",
+    "versionManagerLoading": "Loading...",
+    "versionManagerSignInTitle": "Sign in to manage versions",
+    "versionManagerSignInDescription": "Pushing and pulling happen in your Onshape documents.",
+    "versionManagerSignIn": "Sign in",
+    "versionManagerLinksLoading": "Loading linked documents...",
+    "versionManagerLinksFailed": "Failed to load linked documents.",
+    "versionManagerWelcomeTitle": "Welcome to Version Manager!",
+    "versionManagerWelcomeDescription": "Version Manager lets you automatically push and pull versions between Onshape documents. To get started, paste the link of another associated Onshape document.",
+    "versionManagerWelcomeDirectionLabel": "The document I'm linking to is...",
+    "versionManagerWelcomeParent": "A parent",
+    "versionManagerWelcomeParentDescription": "I want to pull changes from the linked document into this document ({documentName}).",
+    "versionManagerWelcomeChild": "A child",
+    "versionManagerWelcomeChildDescription": "I want to push changes from this document ({documentName}) to the linked document.",
+    "versionManagerExampleIntake": "Intake",
+    "versionManagerExampleDrivetrain": "Drivetrain",
+    "versionManagerExampleShooter": "Shooter",
+    "versionManagerExampleRobot": "Robot",
+    "versionManagerExampleParents": "Parents",
+    "versionManagerExampleChildren": "Children",
+    "versionManagerSuggestionsTitle": "Suggested parents",
+    "versionManagerSuggestionsInfo": "Documents this one references that aren't linked yet.",
+    "versionManagerSuggestionsFound": [
+        {
+            "declarations": [
+                "input count",
+                "local countPlural = count: plural",
+                "local formatted = count: number"
+            ],
+            "selectors": ["countPlural"],
+            "match": {
+                "countPlural=one": "Found 1 document this one references",
+                "countPlural=other": "Found {formatted} documents this one references"
+            }
+        }
+    ],
+    "versionManagerSuggestionsFoundDescription": "Link them as parents to pull their new versions into {documentName}.",
+    "versionManagerSuggestionsLink": "Link",
+    "versionManagerSuggestionsLinkAll": "Link all",
+    "versionManagerSuggestionsLinkAllParents": "Link all as parents",
+    "versionManagerSuggestionsOpen": "Open document",
+    "versionManagerSuggestionsLinked": [
+        {
+            "declarations": [
+                "input count",
+                "local countPlural = count: plural",
+                "local formatted = count: number"
+            ],
+            "selectors": ["countPlural"],
+            "match": {
+                "countPlural=one": "Linked 1 document.",
+                "countPlural=other": "Linked {formatted} documents."
+            }
+        }
+    ],
+    "versionManagerSuggestionsLinkFailed": "Unexpectedly failed to link the documents."
 }

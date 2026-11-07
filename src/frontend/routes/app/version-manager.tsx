@@ -36,11 +36,16 @@ import { DIRECTION_COPY } from "../../features/version-manager/direction-copy";
 import { useLinkActions } from "../../features/version-manager/link-actions";
 import { VersionManagerZeroState } from "../../features/version-manager/components/version-manager-zero-state";
 import { LastRunCallout } from "../../features/version-manager/components/last-run-callout";
-import { useWorkspaceLinksQuery } from "../../features/version-manager/queries";
+import { SuggestedParentsSection } from "../../features/version-manager/components/link-suggestions";
+import {
+    useLinkSuggestionsQuery,
+    useWorkspaceLinksQuery
+} from "../../features/version-manager/queries";
 import { useNeedsSignIn } from "../../features/auth/access-level";
 import { startSignIn } from "../../features/auth/sign-in";
 import { useMarkHintSeen } from "../../features/hints/queries";
 import { Hint } from "@backend/features/hints/contract";
+import { m } from "../../paraglide/messages";
 
 export const Route = createFileRoute("/app/version-manager")({
     component: VersionManagerPage,
@@ -70,15 +75,19 @@ function VersionManagerPage(): ReactNode {
 
     if (!workspace) {
         // What renders on the way out, `beforeLoad` having redirected.
-        return <PageLoading title="Loading..." />;
+        return <PageLoading title={m.versionManagerLoading()} />;
     }
     if (needsSignIn) {
         return (
             <PageNotice
                 icon={<GitBranchIcon size={IconSize.SECTION} />}
-                title="Sign in to manage versions"
-                description="Pushing and pulling happen in your Onshape documents."
-                action={<Button onClick={startSignIn}>Sign in</Button>}
+                title={m.versionManagerSignInTitle()}
+                description={m.versionManagerSignInDescription()}
+                action={
+                    <Button onClick={startSignIn}>
+                        {m.versionManagerSignIn()}
+                    </Button>
+                }
             />
         );
     }
@@ -89,20 +98,22 @@ interface VersionManagerProps {
     workspace: WorkspacePath;
 }
 
-/** The two link lists, each owning its own push or pull. */
+/** The two link lists, each owning its own push or pull, and the parents suggested. */
 function VersionManager(props: VersionManagerProps): ReactNode {
     const { workspace } = props;
     const linksQuery = useWorkspaceLinksQuery(workspace);
+    const suggestionsQuery = useLinkSuggestionsQuery(workspace);
     const isParentsOpen = useSectionOpened(SectionId.PARENTS);
     const isChildrenOpen = useSectionOpened(SectionId.CHILDREN);
+    const isSuggestionsOpen = useSectionOpened(SectionId.SUGGESTED_PARENTS);
 
     if (linksQuery.isPending) {
-        return <PageLoading title="Loading linked documents..." />;
+        return <PageLoading title={m.versionManagerLinksLoading()} />;
     }
     if (linksQuery.isError || !linksQuery.data) {
         return (
             <PageError
-                title="Failed to load linked documents."
+                title={m.versionManagerLinksFailed()}
                 error={linksQuery.error}
                 topic={FeedbackTopic.VERSION_MANAGER}
             />
@@ -110,21 +121,29 @@ function VersionManager(props: VersionManagerProps): ReactNode {
     }
 
     const links = linksQuery.data;
+    // A failed read is only missing suggestions; the links still work.
+    const suggestions = suggestionsQuery.data?.suggestions ?? [];
     if (links.parents.length === 0 && links.children.length === 0) {
         return (
             <VersionManagerZeroState
                 workspace={workspace}
                 documentName={links.documentName}
+                suggestions={suggestions}
             />
         );
     }
 
     const opened = [
         ...(isParentsOpen ? [LinkDirection.PARENT] : []),
-        ...(isChildrenOpen ? [LinkDirection.CHILD] : [])
+        ...(isChildrenOpen ? [LinkDirection.CHILD] : []),
+        ...(isSuggestionsOpen ? [SectionId.SUGGESTED_PARENTS] : [])
     ];
 
     const handleChange = (values: string[]) => {
+        setSectionOpened(
+            SectionId.SUGGESTED_PARENTS,
+            values.includes(SectionId.SUGGESTED_PARENTS)
+        );
         setSectionOpened(
             SectionId.PARENTS,
             values.includes(LinkDirection.PARENT)
@@ -149,6 +168,12 @@ function VersionManager(props: VersionManagerProps): ReactNode {
                     direction={LinkDirection.CHILD}
                     linked={links.children}
                 />
+                {suggestions.length > 0 && (
+                    <SuggestedParentsSection
+                        workspace={workspace}
+                        suggestions={suggestions}
+                    />
+                )}
             </AppSections>
         </>
     );
