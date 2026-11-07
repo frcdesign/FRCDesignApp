@@ -243,7 +243,11 @@ export const dailyAppOpens = sqliteTable(
         userId: text("user_id").notNull(),
         opens: integer("opens").notNull().default(0)
     },
-    (t) => [primaryKey({ columns: [t.day, t.userId] })]
+    (t) => [
+        primaryKey({ columns: [t.day, t.userId] }),
+        // Covers summing a range's opens, which the primary key's index can't.
+        index("daily_app_opens_day_opens_idx").on(t.day, t.opens)
+    ]
 );
 
 /** One row per user per library, keeping unique-user counts a cheap COUNT. */

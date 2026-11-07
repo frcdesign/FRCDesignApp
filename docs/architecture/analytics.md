@@ -289,7 +289,11 @@ library's summary clamp them to when tracking began (`clampRange`,
 `getTrackingSince`).
 
 ```text
-GET /api/analytics/overview                                         AnalyticsOverviewOut
+GET /api/analytics/overview/usage                                   OverviewUsageOut
+GET /api/analytics/overview/series                                  DailyUsePoint[], per library
+GET /api/analytics/overview/sources                                 UseSourceUsage[]
+GET /api/analytics/overview/version-manager                         VersionManagerTotals
+GET /api/analytics/overview/reports                                 ReportSummary
 GET /api/analytics/summary/library/:libraryId                       LibrarySummaryOut
 GET /api/analytics/health/library/:libraryId?v=                     LibraryHealthCounts, cached by the library's version
 GET /api/analytics/parts/library/:libraryId                         PartUsageOut[]
@@ -323,13 +327,18 @@ async function getSources(
     range: DayRange,
     libraryId?: LibraryId
 ): Promise<UseSourceUsage[]>;
-async function getLibrarySummaries(db: Db): Promise<LibrarySummary[]>;
 async function getVersionManagerTotals(
     db: Db,
     range: DayRange
 ): Promise<VersionManagerTotals>;
 // Who was about each day: library activity unioned with app opens.
 function activeUserRows(db: Db, range: DayRange, libraryId?: LibraryId);
+// How many of them over the whole range: a union of ids, which dedupes them.
+async function countActiveUsers(
+    db: Db,
+    range: DayRange,
+    libraryId?: LibraryId
+): Promise<number>;
 // Season to date against the same stretch of the season before.
 async function getGrowth(
     db: Db,
@@ -499,12 +508,6 @@ interface LibraryHealthCounts {
     healthyItems: number;
 }
 
-interface LibrarySummary {
-    libraryId: LibraryId;
-    totals: AnalyticsTotals;
-    health: LibraryHealthCounts;
-}
-
 /** An empty baseline reads as new rather than infinite. */
 enum ChangeUnavailable {
     NO_PRIOR_DATA = "no-prior-data",
@@ -588,21 +591,15 @@ interface ReportSummary {
     counts: ReportCount[];
 }
 
-interface AnalyticsOverviewOut {
+/** The overview's headline numbers, and the series its trends are drawn from. */
+interface OverviewUsageOut {
     /** Over the requested range, for the headline cards. */
     totals: AnalyticsTotals;
-    libraries: LibrarySummary[];
-    /** Per-library daily uses, for the uses tile's split-out detail. */
-    series: DailyUsePoint[];
+    /** Also over the range, for the sparklines and the trend tiles. */
     metricSeries: DailyMetricPoint[];
-    sources: UseSourceUsage[];
-    /** Over the range, but for `links`. */
-    versionManager: VersionManagerTotals;
-    /** Over the range, for every topic. */
-    reports: ReportSummary;
+    growth: GrowthOut;
     from: string;
     to: string;
-    growth: GrowthOut;
 }
 
 /** A row of the parts table. Only parts still in the library are listed. */
@@ -690,7 +687,12 @@ keyed by the range; and `src/frontend/routes/dashboard/`, the pages: overview,
 library, part, unused
 
 ```ts
-function getOverviewQuery(range: DayRange);
+// One per overview area; each loads, and fails, on its own.
+function getOverviewUsageQuery(range: DayRange);
+function getOverviewSeriesQuery(range: DayRange);
+function getOverviewSourcesQuery(range: DayRange);
+function getVersionManagerQuery(range: DayRange);
+function getOverviewReportsQuery(range: DayRange);
 function getLibrarySummaryQuery(libraryId: LibraryId, range: DayRange);
 function getPartsQuery(libraryId: LibraryId, range: DayRange);
 function getUnusedQuery(
@@ -709,6 +711,24 @@ function getInsertableReportQuery(
     range: DayRange
 );
 function getHealthQuery(libraryId: LibraryId, cacheVersion: number);
+// The first failure among several queries, else the first still loading.
+function firstPending(
+    queries: UseQueryResult<unknown>[]
+): UseQueryResult<unknown> | undefined;
+```
+
+`src/frontend/features/dashboard/dashboard-state.tsx`
+
+```ts
+// What stands in for a section while its query has no data: a spinner, or
+// `SectionError` with **Try again** and **Send a report**.
+function DashboardState(props: DashboardStateProps): ReactNode;
+
+interface DashboardStateProps {
+    query: UseQueryResult<unknown>;
+    /** The section's title, for a section whose content draws its own. */
+    title?: string;
+}
 ```
 
 `src/frontend/features/dashboard/metrics.ts`, what each trend tile and chart
@@ -809,7 +829,11 @@ no foreign key crosses between them):
 - `daily_app_opens` is keyed by day and user: the count is the app's sessions,
   and the user id is what makes somebody who only ever opened it a user. Every
   app-level count of people is that table unioned with `daily_user_activity`
-  (`activeUserRows`), since a library rollup has no row for them.
+  (`activeUserRows`), since a library rollup has no row for them. It is also
+  indexed on day and opens (`daily_app_opens_day_opens_idx`), so a range's
+  opens sum from the index alone.
+- `favorites`, in `db/schema.ts`, is read for each part's standing favorites,
+  through its index on `insertable_id` (`favorites_insertable_idx`).
 
 ## Flows
 
@@ -844,10 +868,12 @@ is nothing like a calendar year; between seasons it shows the last complete one.
 The dashboard is a sibling of `/app`, a full-screen page outside the Onshape
 panel. Its routes read only rollups and return only aggregates:
 
-- **Overview** — totals, per-library summaries, use and metric series, use
-  sources, growth, the shares of uses that were quick inserts, fastened, into
-  an assembly and downloaded, the version manager's own totals, and reports by
-  topic and type.
+- **Overview** — one route per area, each fetched by its own query, so every
+  section shows as soon as its numbers arrive: **usage** (totals, the metric
+  series behind the headline tiles and the trend tiles, growth), **series**
+  (uses per library per day), **sources**, the **version manager**'s totals,
+  and **reports** by topic and type. Its usage breakdown reads each library's
+  **Parts** report.
 - **Library** — its summary, health (build issues by severity, hidden elements
   left out), its parts table, its reports by type, and its most reported parts.
 - **Part** — one element's history, its uses split by target (into an
@@ -856,6 +882,11 @@ panel. Its routes read only rollups and return only aggregates:
 - **Unused** — parts and options at or below a usage threshold.
 
 The range, threshold and preset live in the url, so a view can be shared.
+
+A section whose query is still loading shows a spinner under its title; one
+that failed, after the query client's two retries, shows "Failed to load
+analytics." with **Try again**, which refetches only that query, and **Send a
+report** (`DashboardState`). The rest of the page is unaffected.
 
 The admin card in the app reads the library's **Parts** report, all time and
 fetched once for every card, for a part's uses, monthly rate and favorites,
@@ -891,11 +922,12 @@ only on **All time**, its own window being a season rather than the picked one.
 
 ## Failure and recovery
 
-| Failure                               | Result                                                       | Recovery                                                    |
-| ------------------------------------- | ------------------------------------------------------------ | ----------------------------------------------------------- |
-| The tracking write fails              | That event is lost; what it records is unaffected            | None needed                                                 |
-| A rollup is wrong after a code change | Dashboard numbers off                                        | Replay `events` through `rollupWrites`; no script does this |
-| A range starts before tracking began  | Clamped; growth withheld when its baseline predates tracking | Automatic                                                   |
+| Failure                                       | Result                                                       | Recovery                                                            |
+| --------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------------- |
+| The tracking write fails                      | That event is lost; what it records is unaffected            | None needed                                                         |
+| A rollup is wrong after a code change         | Dashboard numbers off                                        | Replay `events` through `rollupWrites`; no script does this         |
+| A range starts before tracking began          | Clamped; growth withheld when its baseline predates tracking | Automatic                                                           |
+| D1 refuses a query, overloaded by queued ones | That section's zero state; the others still show             | Retried twice, then **Try again**; **Send a report** if it persists |
 
 ## Decisions
 
@@ -930,6 +962,17 @@ only on **All time**, its own window being a season rather than the picked one.
   `first_inserted_at` and `last_inserted_at` count every use; renaming a column
   in D1 rebuilds its table for no reader's benefit, so the code's names say
   uses and the columns' say inserts.
+- **The overview is one route per area.** One request computing everything
+  failed whole when any query did, showed nothing until the slowest finished,
+  and held D1 for all of it at once. Per area, a section fails or waits on its
+  own, and its zero state says which.
+- **Indexes for the dashboard's reads.** D1 runs one query at a time per
+  database, so a slow read queues every other, the app's included, until D1
+  refuses them. `favorites_insertable_idx` serves the parts table's favorite
+  counts, which otherwise scan every favorite per part, and
+  `daily_app_opens_day_opens_idx` covers summing a range's opens, which the
+  primary key's index can't. At a season's volume they take the overview
+  page's reads from about 3 s to under 0.4 s.
 - **A log plus rollups.** The log keeps everything for replay; rollups keep every
   dashboard read a small indexed query.
 - **Keyed by element, not insertable.** An insertable row is replaced when a tab

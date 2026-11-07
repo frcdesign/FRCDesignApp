@@ -46,3 +46,22 @@ On the overview. Each share is a trend tile; the detail is its chart's axis.
 | "Usage breakdown"                                        | Card title     | The treemap                 | Always                        |                                                                |
 | "All libraries"                                          | Breadcrumb     | Above the treemap           | On the overview               |                                                                |
 | "Nothing was used in this range."                        | Notice         | In place of the treemap     | No use in the range           | **⚑** Was "Nothing was inserted in this range."                |
+
+## Every section
+
+| String                                    | Kind                   | Where                           | When                                                        | Review    |
+| ----------------------------------------- | ---------------------- | ------------------------------- | ----------------------------------------------------------- | --------- |
+| "Failed to load analytics."               | Zero state title       | In place of a section's content | Its query failed after two retries; the section title stays | **⚑** New |
+| "If the problem persists, send a report." | Zero state description | Under it                        | Same; shared with the app's other section errors            |           |
+| "Try again" / "Send a report"             | Buttons                | Under it                        | Same; Try again refetches that section alone                | **⚑** New |
+
+## Version manager
+
+On the overview.
+
+| String                                                 | Kind          | Where       | When   | Review |
+| ------------------------------------------------------ | ------------- | ----------- | ------ | ------ |
+| "Version manager"                                      | Section title |             | Always |        |
+| "Runs" / "Tabs updated" / "Versions created" / "Links" | Tile labels   |             | Always |        |
+| "{n} with failures"                                    | Tile caption  | Under Runs  | Always |        |
+| "Right now"                                            | Tile caption  | Under Links | Always |        |

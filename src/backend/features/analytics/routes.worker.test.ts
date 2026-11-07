@@ -36,12 +36,14 @@ import {
     type ConfigurationParameter
 } from "../configurations/contract";
 import {
-    type AnalyticsOverviewOut,
+    type DailyUsePoint,
+    type OverviewUsageOut,
+    type ReportSummary,
+    type UseSourceUsage,
     type LibrarySummaryOut,
     type UnusedOptionOut,
     type InsertableReportOut,
     type LibraryHealthCounts,
-    type LibrarySummary,
     type PartUsageOut
 } from "./contract";
 import { MONTH_DAYS } from "./measures";
@@ -172,6 +174,15 @@ async function seedInsertableStats(count: number, insertedAt = new Date()) {
     });
 }
 
+/** Every overview route, one per area of the page. */
+const OVERVIEW_AREAS = [
+    "usage",
+    "series",
+    "sources",
+    "version-manager",
+    "reports"
+];
+
 describe("analytics routes", () => {
     beforeEach(async () => {
         await resetDb(db);
@@ -182,7 +193,9 @@ describe("analytics routes", () => {
             await seedTestData(db);
 
             const paths = [
-                `/api/analytics/overview?${ALL_TIME}`,
+                ...OVERVIEW_AREAS.map(
+                    (area) => `/api/analytics/overview/${area}?${ALL_TIME}`
+                ),
                 `/api/analytics/summary/library/${TEST_LIBRARY_ID}?${ALL_TIME}`,
                 `/api/analytics/parts/library/${TEST_LIBRARY_ID}?${ALL_TIME}`,
                 `/api/analytics/unused/library/${TEST_LIBRARY_ID}?${ALL_TIME}`,
@@ -202,7 +215,7 @@ describe("analytics routes", () => {
         });
     });
 
-    describe("GET /analytics/overview", () => {
+    describe("GET /analytics/overview/...", () => {
         it("sums the range's totals and counts unique users", async () => {
             await seedMetric("2026-01-01", 5);
             await seedMetric("2026-01-02", 3);
@@ -233,9 +246,9 @@ describe("analytics routes", () => {
             ]);
 
             const res = await anonymousGet(
-                `/api/analytics/overview?${ALL_TIME}`
+                `/api/analytics/overview/usage?${ALL_TIME}`
             );
-            const body: AnalyticsOverviewOut = await res.json();
+            const body: OverviewUsageOut = await res.json();
 
             expect(body.totals).toMatchObject({
                 uses: 8,
@@ -270,9 +283,9 @@ describe("analytics routes", () => {
             ]);
 
             const res = await anonymousGet(
-                "/api/analytics/overview?from=2026-03-01&to=2026-03-31"
+                "/api/analytics/overview/usage?from=2026-03-01&to=2026-03-31"
             );
-            const body: AnalyticsOverviewOut = await res.json();
+            const body: OverviewUsageOut = await res.json();
 
             expect(body.totals).toMatchObject({
                 uses: 10,
@@ -334,9 +347,9 @@ describe("analytics routes", () => {
             ]);
 
             const res = await anonymousGet(
-                "/api/analytics/overview?from=2026-03-01&to=2026-03-31"
+                "/api/analytics/overview/usage?from=2026-03-01&to=2026-03-31"
             );
-            const body: AnalyticsOverviewOut = await res.json();
+            const body: OverviewUsageOut = await res.json();
 
             expect(body.totals).toMatchObject({
                 uses: 10,
@@ -344,16 +357,21 @@ describe("analytics routes", () => {
                 targets: { [UseTarget.DOWNLOAD]: 4 }
             });
             expect(body.metricSeries[0].uses).toBe(10);
-            expect(body.series[0].counts[TEST_LIBRARY_ID]).toBe(10);
+            const series: DailyUsePoint[] = await (
+                await anonymousGet(
+                    "/api/analytics/overview/series?from=2026-03-01&to=2026-03-31"
+                )
+            ).json();
+            expect(series[0].counts[TEST_LIBRARY_ID]).toBe(10);
         });
 
         it("counts somebody who only ever opened the app as a user", async () => {
             await seedOpens("2026-06-15", 2, "opener");
 
             const res = await anonymousGet(
-                `/api/analytics/overview?${ALL_TIME}`
+                `/api/analytics/overview/usage?${ALL_TIME}`
             );
-            const body: AnalyticsOverviewOut = await res.json();
+            const body: OverviewUsageOut = await res.json();
 
             expect(body.totals).toMatchObject({
                 appOpens: 2,
@@ -385,9 +403,9 @@ describe("analytics routes", () => {
             ]);
 
             const res = await anonymousGet(
-                "/api/analytics/overview?from=2026-06-01&to=2026-06-30"
+                "/api/analytics/overview/usage?from=2026-06-01&to=2026-06-30"
             );
-            const body: AnalyticsOverviewOut = await res.json();
+            const body: OverviewUsageOut = await res.json();
 
             expect(body.totals.uses).toBe(3);
             expect(body.totals.uniqueUsers).toBe(1);
@@ -410,9 +428,9 @@ describe("analytics routes", () => {
             ]);
 
             const res = await anonymousGet(
-                "/api/analytics/overview?from=2026-06-15&to=2026-06-15"
+                "/api/analytics/overview/usage?from=2026-06-15&to=2026-06-15"
             );
-            const body: AnalyticsOverviewOut = await res.json();
+            const body: OverviewUsageOut = await res.json();
 
             const day = body.metricSeries.find(
                 (point) => point.day === "2026-06-15"
@@ -426,9 +444,9 @@ describe("analytics routes", () => {
             await seedMetric("2026-06-18", 4);
 
             const res = await anonymousGet(
-                "/api/analytics/overview?from=2026-06-01&to=2026-06-20"
+                "/api/analytics/overview/usage?from=2026-06-01&to=2026-06-20"
             );
-            const body: AnalyticsOverviewOut = await res.json();
+            const body: OverviewUsageOut = await res.json();
 
             // "All time" reaches to 2000, so it clamps to the first recorded day.
             expect(body.metricSeries.map((point) => point.day)).toEqual([
@@ -470,12 +488,12 @@ describe("analytics routes", () => {
             ]);
 
             const res = await anonymousGet(
-                "/api/analytics/overview?from=2026-03-01&to=2026-03-31"
+                "/api/analytics/overview/sources?from=2026-03-01&to=2026-03-31"
             );
-            const body: AnalyticsOverviewOut = await res.json();
+            const body: UseSourceUsage[] = await res.json();
 
             const bySource = Object.fromEntries(
-                body.sources.map((row) => [row.source, row])
+                body.map((row) => [row.source, row])
             );
             expect(bySource[UseSource.SEARCH]).toMatchObject({
                 count: 10,
@@ -514,13 +532,11 @@ describe("analytics routes", () => {
             ]);
 
             const res = await anonymousGet(
-                "/api/analytics/overview?from=2026-03-01&to=2026-03-31"
+                "/api/analytics/overview/sources?from=2026-03-01&to=2026-03-31"
             );
-            const body: AnalyticsOverviewOut = await res.json();
+            const body: UseSourceUsage[] = await res.json();
 
-            const search = body.sources.find(
-                (row) => row.source === UseSource.SEARCH
-            );
+            const search = body.find((row) => row.source === UseSource.SEARCH);
             expect(search).toMatchObject({ count: 7, quickInsertCount: 2 });
         });
 
@@ -529,15 +545,18 @@ describe("analytics routes", () => {
             await seedMetric("2026-06-01", 2);
             await seedMetric("2026-12-01", 4);
 
-            const res = await anonymousGet(
-                "/api/analytics/overview?from=2026-05-01&to=2026-07-01"
-            );
-            const body: AnalyticsOverviewOut = await res.json();
+            const range = "from=2026-05-01&to=2026-07-01";
+            const series: DailyUsePoint[] = await (
+                await anonymousGet(`/api/analytics/overview/series?${range}`)
+            ).json();
+            const body: OverviewUsageOut = await (
+                await anonymousGet(`/api/analytics/overview/usage?${range}`)
+            ).json();
 
-            expect(body.series).toHaveLength(62);
-            expect(body.series[0].day).toBe("2026-05-01");
-            expect(body.series.at(-1)?.day).toBe("2026-07-01");
-            const withCounts = body.series.filter(
+            expect(series).toHaveLength(62);
+            expect(series[0].day).toBe("2026-05-01");
+            expect(series.at(-1)?.day).toBe("2026-07-01");
+            const withCounts = series.filter(
                 (point) => Object.keys(point.counts).length > 0
             );
             expect(withCounts.map((point) => point.day)).toEqual([
@@ -591,11 +610,11 @@ describe("analytics routes", () => {
             await seedReports(5, FeedbackTopic.APP, { day: "2025-01-01" });
 
             const res = await anonymousGet(
-                "/api/analytics/overview?from=2026-05-01&to=2026-07-01"
+                "/api/analytics/overview/reports?from=2026-05-01&to=2026-07-01"
             );
-            const body: AnalyticsOverviewOut = await res.json();
+            const body: ReportSummary = await res.json();
 
-            expect(body.reports.counts).toEqual(
+            expect(body.counts).toEqual(
                 expect.arrayContaining([
                     expect.objectContaining({
                         topic: FeedbackTopic.APP,
@@ -608,7 +627,7 @@ describe("analytics routes", () => {
                     })
                 ])
             );
-            expect(body.reports.counts).toHaveLength(2);
+            expect(body.counts).toHaveLength(2);
         });
 
         it("gives a library its own reports and its most reported parts", async () => {
@@ -907,9 +926,9 @@ describe("analytics routes", () => {
             await seedMetric("2020-01-01", 1);
 
             const res = await anonymousGet(
-                "/api/analytics/overview?from=2026-01-01&to=2026-01-02"
+                "/api/analytics/overview/usage?from=2026-01-01&to=2026-01-02"
             );
-            const body: AnalyticsOverviewOut = await res.json();
+            const body: OverviewUsageOut = await res.json();
 
             // seedTestData favorites the part studio and the assembly.
             expect(body.totals.favorites).toBe(2);
@@ -921,7 +940,7 @@ describe("analytics routes", () => {
             const res = await anonymousGet(
                 `/api/analytics/summary/library/${LibraryId.MKCAD}?${ALL_TIME}`
             );
-            const body: LibrarySummary = await res.json();
+            const body: LibrarySummaryOut = await res.json();
 
             expect(body.totals.favorites).toBe(0);
         });
