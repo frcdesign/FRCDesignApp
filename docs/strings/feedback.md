@@ -126,5 +126,5 @@ answered with nothing to use.
 | ------------------------------ | ------------------- | -------------------------------- | -------------------------------- | ------ |
 | "Reports"                      | Section title; tile | Overview and each library's page | Always                           |        |
 | "From errors" / "About a part" | Tiles               | Beside it                        | Always                           |        |
-| "No reports in this range."    | Empty text          | In place of the table            | No reports in the range          |        |
+| "No reports in this range."    | Empty notice        | In place of the table            | No reports in the range          |        |
 | "Most reported parts"          | Table title         | A library's page                 | A part was reported in the range |        |

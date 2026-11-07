@@ -1,7 +1,11 @@
 import { partDashboardLocation } from "./dashboard-nav";
 import { AppLink } from "../../components/app-link";
-import { Badge, Group, Table, Text } from "@mantine/core";
-import { CaretDownIcon, CaretUpIcon } from "@phosphor-icons/react";
+import { Badge, Group, Table } from "@mantine/core";
+import {
+    CaretDownIcon,
+    CaretUpIcon,
+    MagnifyingGlassIcon
+} from "@phosphor-icons/react";
 import { useMemo, useState, type ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { AppSparkline } from "./sparkline";
@@ -22,6 +26,7 @@ import {
 import { usePagedRows } from "./paged-rows";
 import { TablePagination } from "./table-pagination";
 import { m } from "../../paraglide/messages";
+import { DashboardEmpty } from "./dashboard-state";
 
 /** Small enough to sit in a row without stretching it. */
 const ROW_SPARKLINE = { h: 24, w: 80 };
@@ -94,12 +99,14 @@ export function PartsTable({
     };
 
     if (shown.length === 0) {
-        return (
-            <Text c="dimmed" py="xl" ta="center">
-                {search.trim() === ""
-                    ? emptyMessage
-                    : m.dashboardPartsNoMatch()}
-            </Text>
+        return search.trim() === "" ? (
+            <DashboardEmpty title={emptyMessage} />
+        ) : (
+            <DashboardEmpty
+                title={m.dashboardPartsNoMatch()}
+                icon={MagnifyingGlassIcon}
+                color={StatusColor.WARNING}
+            />
         );
     }
 

@@ -1,4 +1,4 @@
-import { Card, SimpleGrid, Table, Text } from "@mantine/core";
+import { Card, SimpleGrid, Table } from "@mantine/core";
 import { useNavigate } from "@tanstack/react-router";
 import { type ReactNode } from "react";
 import type {
@@ -13,6 +13,7 @@ import { type LibraryId } from "@backend/features/library/library-id";
 import { Section } from "../../components/section";
 import { StatTile } from "./stat-tiles";
 import { formatCount } from "./format";
+import { DashboardEmpty } from "./dashboard-state";
 
 function total(counts: ReportCount[], source?: FeedbackSource): number {
     return counts
@@ -72,7 +73,7 @@ function ReportTiles({ reports, withTopic }: ReportTilesProps): ReactNode {
             </SimpleGrid>
             <Card>
                 {rows.length === 0 ? (
-                    <Text c="dimmed">{m.dashboardReportsEmpty()}</Text>
+                    <DashboardEmpty title={m.dashboardReportsEmpty()} />
                 ) : (
                     <Table>
                         <Table.Thead>
