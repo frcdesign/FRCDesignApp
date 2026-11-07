@@ -82,14 +82,11 @@ export function isVersionedLibraryQuery(queryKey: readonly unknown[]): boolean {
 export function documentChangesQueryKey(
     libraryId: LibraryId,
     documentId: string,
-    includeElements: boolean
+    includeElements?: boolean
 ) {
-    return [
-        ...libraryQueryKey(libraryId),
-        "document-changes",
-        documentId,
-        includeElements
-    ];
+    const key = [...libraryQueryKey(libraryId), "document-changes", documentId];
+    // Left out, the key is a prefix of the document's queries with and without tabs.
+    return includeElements === undefined ? key : [...key, includeElements];
 }
 
 export function jobStatusQueryKey(libraryId: LibraryId) {

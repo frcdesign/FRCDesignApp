@@ -108,7 +108,8 @@ meanwhile.
 
 ### Reload thumbnail
 
-Editors can refetch one insertable's or group's thumbnail from its menu
+Editors can refetch one insertable's or group's thumbnail from the Actions in
+its admin card
 (`POST /api/reload-thumbnail/library/:libraryId`, naming the group or insertable
 in the body). It fetches again as a load does (the version, then the
 document's workspace), overwriting each stored size only once its new image is

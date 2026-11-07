@@ -440,6 +440,54 @@ describe("version manager routes", () => {
         expect(res.status).toBe(403);
         expect(await getParentLinks(db, CHILD)).toHaveLength(1);
     });
+
+    it("moves one tab's out-of-date references in a document's default workspace", async () => {
+        grant({ root: ALL });
+        vi.spyOn(Documents, "getDocument").mockResolvedValue({
+            id: ROOT.documentId,
+            defaultWorkspace: { id: ROOT.instanceId }
+        } as OnshapeDocumentInfo);
+        vi.spyOn(Transient, "watchLinkedWorkspace").mockResolvedValue();
+        vi.spyOn(Documents, "getExternalReferences").mockResolvedValue({
+            elementExternalReferences: {
+                assembly: [
+                    { ...reference("gearbox", "v1"), isOutOfDate: true }
+                ],
+                drawing: [{ ...reference("gearbox", "v1"), isOutOfDate: true }]
+            },
+            latestVersions: [{ documentId: "gearbox", id: "v2" }]
+        } satisfies OnshapeExternalReferences);
+        const update = vi
+            .spyOn(Documents, "updateReferences")
+            .mockResolvedValue();
+
+        const res = await post("/update-references", {
+            documentId: ROOT.documentId,
+            elementId: "assembly"
+        });
+
+        expect(await res.json()).toEqual({ updatedElements: 1 });
+        expect(update.mock.calls.map((call) => call[1])).toEqual([
+            { ...ROOT, elementId: "assembly" }
+        ]);
+    });
+
+    it("updates no references for somebody who can't edit the document", async () => {
+        grant({ root: [OnshapePermission.READ] });
+        vi.spyOn(Documents, "getDocument").mockResolvedValue({
+            id: ROOT.documentId,
+            defaultWorkspace: { id: ROOT.instanceId }
+        } as OnshapeDocumentInfo);
+        vi.spyOn(Transient, "watchLinkedWorkspace").mockResolvedValue();
+        const read = vi.spyOn(Documents, "getExternalReferences");
+
+        const res = await post("/update-references", {
+            documentId: ROOT.documentId
+        });
+
+        expect(res.status).toBe(403);
+        expect(read).not.toHaveBeenCalled();
+    });
 });
 
 function reference(documentId: string, versionId: string) {

@@ -1,34 +1,16 @@
-import { Menu } from "@mantine/core";
-import {
-    ArrowRightIcon,
-    EyeIcon,
-    EyeSlashIcon,
-    TrashIcon
-} from "@phosphor-icons/react";
-import { openDeleteConfirm } from "../../../components/alerts";
-import { IconSize, StatusColor } from "../../../lib/style-constants";
+import { ArrowRightIcon } from "@phosphor-icons/react";
+import { IconSize } from "../../../lib/style-constants";
 import { useNavigate } from "@tanstack/react-router";
 import { PropsWithChildren, ReactNode } from "react";
 import { GroupOut } from "@backend/features/library/contract";
-import { ChangeOrderItems } from "../../../components/change-order";
-import { AdminMenuSection, MenuSection } from "../../../components/app-menu";
-import { ReloadThumbnailMenuItem } from "./reload-thumbnail-item";
+import { MenuSection } from "../../../components/app-menu";
 import { CardTitle, ItemRow } from "../../../components/item-row";
 import { OpenDocumentItems } from "../../../components/open-document-items";
-import { AddGroupItem } from "./add-group-menu";
 import { GroupChangesBadge } from "./changes-badges";
 import { CardThumbnail } from "../../thumbnails/components/thumbnail";
 import { GroupStatusBadge } from "../../build-status/components/build-status";
-import {
-    useBuildStatusQuery,
-    useSetVisibilityMutation
-} from "../../build-status/queries";
-import {
-    useDeleteGroupMutation,
-    useLibraryQuery,
-    useSetGroupOrderMutation
-} from "../queries";
-import { useIsHome, useLibraryId } from "../../../lib/library";
+import { useLibraryId } from "../../../lib/library";
+import { m } from "../../../paraglide/messages";
 
 interface GroupCardProps extends PropsWithChildren {
     group: GroupOut;
@@ -81,116 +63,8 @@ interface GroupMenuItemsProps {
 export function GroupMenuItems(props: GroupMenuItemsProps): ReactNode {
     const { group } = props;
     return (
-        <>
-            <MenuSection label="Document">
-                <OpenDocumentItems path={group.path} />
-            </MenuSection>
-            {/* Owns its own section, so a group with no build status leaves no
-                Admin label standing over nothing. */}
-            <GroupAdminMenuItems group={group} />
-        </>
-    );
-}
-
-interface GroupAdminMenuItemsProps {
-    group: GroupOut;
-}
-
-function GroupAdminMenuItems({ group }: GroupAdminMenuItemsProps): ReactNode {
-    const groupId = group.id;
-    const isHome = useIsHome();
-    const buildStatusQuery = useBuildStatusQuery();
-    const libraryQuery = useLibraryQuery();
-    const groupStatus = buildStatusQuery.data?.groups[groupId];
-    const groupOrder = libraryQuery.data?.groupOrder ?? [];
-    const setGroupOrderMutation = useSetGroupOrderMutation();
-
-    if (!groupStatus) return null;
-
-    return (
-        <AdminMenuSection>
-            {isHome && (
-                <ChangeOrderItems
-                    id={groupId}
-                    order={groupOrder}
-                    onOrderChange={(newOrder) =>
-                        setGroupOrderMutation.mutate(newOrder)
-                    }
-                />
-            )}
-            <ShowAllElementsMenuItem
-                insertableOrder={groupStatus.insertableOrder}
-            />
-            <HideAllElementsMenuItem
-                insertableOrder={groupStatus.insertableOrder}
-            />
-            <ReloadThumbnailMenuItem target={{ groupId }} />
-            {isHome && (
-                <>
-                    <Menu.Divider />
-                    <DeleteGroupMenuItem groupId={groupId} name={group.name} />
-                    <AddGroupItem />
-                </>
-            )}
-        </AdminMenuSection>
-    );
-}
-
-interface AllElementsVisibilityProps {
-    insertableOrder: string[];
-}
-
-function ShowAllElementsMenuItem(props: AllElementsVisibilityProps): ReactNode {
-    const mutation = useSetVisibilityMutation(props.insertableOrder, true);
-    return (
-        <Menu.Item
-            color={StatusColor.INFO}
-            leftSection={<EyeIcon />}
-            onClick={() => mutation.mutate()}
-        >
-            Show all elements
-        </Menu.Item>
-    );
-}
-
-function HideAllElementsMenuItem(props: AllElementsVisibilityProps): ReactNode {
-    const mutation = useSetVisibilityMutation(props.insertableOrder, false);
-    return (
-        <Menu.Item
-            color={StatusColor.ERROR}
-            leftSection={<EyeSlashIcon />}
-            onClick={() => mutation.mutate()}
-        >
-            Hide all elements
-        </Menu.Item>
-    );
-}
-
-interface DeleteGroupMenuItemProps {
-    groupId: string;
-    name: string;
-}
-
-function DeleteGroupMenuItem(props: DeleteGroupMenuItemProps): ReactNode {
-    const { groupId, name } = props;
-    const mutation = useDeleteGroupMutation(groupId);
-
-    const confirmDelete = () => {
-        openDeleteConfirm({
-            title: "Delete group",
-            text: `Are you sure you want to delete ${name}? All favorites which reference it will be permanently deleted.`,
-            confirmLabel: "Delete group",
-            onConfirm: () => mutation.mutate()
-        });
-    };
-
-    return (
-        <Menu.Item
-            leftSection={<TrashIcon />}
-            color={StatusColor.ERROR}
-            onClick={confirmDelete}
-        >
-            Delete
-        </Menu.Item>
+        <MenuSection label={m.libraryMenuDocument()}>
+            <OpenDocumentItems path={group.path} />
+        </MenuSection>
     );
 }

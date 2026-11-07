@@ -2,7 +2,6 @@ import { PropsWithChildren, ReactNode } from "react";
 import { FloatingPosition, Menu, ActionIcon } from "@mantine/core";
 import { DotsThreeIcon } from "@phosphor-icons/react";
 import { IconSize } from "../lib/style-constants";
-import { RequireAccessLevel } from "../features/auth/components/require-access";
 import classes from "./app-menu.module.css";
 import { DotIndicator } from "./dot-indicator";
 
@@ -114,14 +113,5 @@ export function MenuSection(props: MenuSectionProps): ReactNode {
             <Menu.Label>{label}</Menu.Label>
             {children}
         </>
-    );
-}
-
-/** In place rather than in a submenu; the label marks them as admin. */
-export function AdminMenuSection(props: PropsWithChildren): ReactNode {
-    return (
-        <RequireAccessLevel>
-            <MenuSection label="Admin">{props.children}</MenuSection>
-        </RequireAccessLevel>
     );
 }

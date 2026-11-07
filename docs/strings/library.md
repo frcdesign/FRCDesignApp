@@ -2,9 +2,18 @@
 
 The library's pages, which have no architecture document of their own; how a
 document loads is in [loading.md](../architecture/loading.md). Messages are
-keyed `groupPage…` and `changesBadge…` in `src/frontend/messages/en.json`.
-Only the group page and the change badges are listed so far: the rest join as
-their strings move into the catalog.
+keyed `groupPage…`, `changesBadge…` and `library…` in
+`src/frontend/messages/en.json`. Only what has moved into the catalog is
+listed so far: the rest join as their strings move there.
+
+## Home list and menus
+
+| String                                                | Kind                 | Where                                     | When                                                        | Review                         |
+| ----------------------------------------------------- | -------------------- | ----------------------------------------- | ----------------------------------------------------------- | ------------------------------ |
+| "Favorites" / "Recently Used" / "Search Results"      | Section titles       | The library's home list                   | Signed in, for the first two; while searching, for the last |                                |
+| "Add group"                                           | Tooltip, modal title | The **+** in the library section's header | An editor or above                                          | **⚑** Was in each group's menu |
+| "Document url..."                                     | Placeholder          | The Add group modal                       | Always                                                      |                                |
+| "Insert" / "Configuration" / "Favorites" / "Document" | Menu sections        | A part's or group's menu                  | As each applies; there is no Admin section                  | **⚑** Admin section removed    |
 
 ## Group page
 

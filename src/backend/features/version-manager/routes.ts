@@ -31,10 +31,13 @@ import {
     toWorkspacePath,
     VersionJobKind,
     VersionJobState,
+    VersionTaskAction,
+    VersionTaskState,
     workspaceKey,
     type AddLinkOut,
     type LinkParentsOut,
     type LinkSuggestionsOut,
+    type UpdateReferencesOut,
     type VersionJobDocument,
     type WorkspaceChangesOut,
     type WorkspaceLinksData,
@@ -68,12 +71,16 @@ import {
     canRead,
     describeWorkspace,
     findDefaultWorkspace,
+    forgetChanges,
     forgetPermissions,
     forgetWorkspace,
     getElementMicroversions,
     getUnversionedChanges
 } from "./workspace-cache";
 import { suggestParents } from "./suggestions";
+import { updateOutdatedReferences } from "./references";
+import { runInBackground } from "../../lib/background";
+import { trackVersionRun } from "../analytics/tracking";
 
 export const versionManagerRoutes = getApp();
 
@@ -97,6 +104,12 @@ const addLinkBody = z.object({
 const linkParentsBody = z.object({
     workspace: workspaceSchema,
     parents: z.array(workspaceSchema).min(1).max(MAX_SUGGESTED_LINKS)
+});
+
+const updateReferencesBody = z.object({
+    documentId: z.string().min(1),
+    /** One tab's references; omitted, every tab's. */
+    elementId: z.string().min(1).optional()
 });
 
 const moveLinkBody = z.object({
@@ -911,6 +924,67 @@ async function resolvePullSources(
     }
     return { sources: order(), edges };
 }
+
+/**
+ * POST /api/update-references — moves a document's out-of-date references, or
+ * one tab's, onto the newest versions, in its default workspace: the admin
+ * card's **Update references**. In the request, not a workflow: it cuts no
+ * version, so clicking again picks up where a failure stopped.
+ */
+versionManagerRoutes.post(
+    "/update-references",
+    requireSignInMiddleware,
+    validate("json", updateReferencesBody),
+    async (c) => {
+        const { documentId, elementId } = c.req.valid("json");
+        const client = await c.var.getOnshapeApi();
+        const workspace = await findDefaultWorkspace(c, client, {
+            documentId
+        });
+        if (!workspace) {
+            throw handledError(
+                "Onshape names no default workspace for this document.",
+                HttpStatus.CONFLICT
+            );
+        }
+        await requirePermissions(
+            client,
+            workspace,
+            "edit this document",
+            OnshapePermission.WRITE
+        );
+
+        const { updatedElements } = await updateOutdatedReferences(
+            client,
+            workspace,
+            { onlyElementIds: elementId ? [elementId] : undefined }
+        );
+        await forgetChanges(c.env.KV, workspace);
+
+        const userId = await c.var.getUserId();
+        await runInBackground(c, "record a reference update", () =>
+            trackVersionRun(c.env, {
+                userId,
+                kind: VersionJobKind.PULL,
+                scope: PullScopeKind.ALL,
+                status: {
+                    state: VersionJobState.COMPLETE,
+                    updateOnly: true,
+                    tasks: [
+                        {
+                            workspace,
+                            action: VersionTaskAction.REFERENCES,
+                            state: VersionTaskState.DONE,
+                            updatedElements
+                        }
+                    ],
+                    result: { updatedElements, createdVersions: 0 }
+                }
+            })
+        );
+        return c.json({ updatedElements } satisfies UpdateReferencesOut);
+    }
+);
 
 /** GET /api/version-job?documentId=&instanceId= */
 versionManagerRoutes.get(

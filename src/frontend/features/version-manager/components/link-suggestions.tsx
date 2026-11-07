@@ -143,7 +143,7 @@ interface SuggestedLinkRowProps {
     onLink: () => void;
 }
 
-/** Dimmed and marked with a bulb, so it reads apart from the links around it. */
+/** Dimmed and marked with a yellow bulb, so it reads apart from the links around it. */
 function SuggestedLinkRow(props: SuggestedLinkRowProps): ReactNode {
     const { suggestion, isLinking, onLink } = props;
     const origin = useOnshapeOrigin();
@@ -190,7 +190,7 @@ function SuggestedLinkRow(props: SuggestedLinkRowProps): ReactNode {
                             <AppIcon
                                 icon={LightbulbIcon}
                                 className={styles.noShrink}
-                                color={StatusColor.DIMMED}
+                                color={StatusColor.WARNING}
                             />
                         </Tooltip>
                     }

@@ -477,5 +477,46 @@
     "versionManagerSuggestionsMenuSection": "Suggestions",
     "versionManagerSuggestionsTooltip": "Suggested: this document references it.",
     "versionManagerSuggestionsLinkOther": "Link a different document",
-    "versionManagerSuggestionsShow": "Back to suggested links"
+    "versionManagerSuggestionsShow": "Back to suggested links",
+    "changeOrderMoveUp": "Move up",
+    "changeOrderMoveDown": "Move down",
+    "changeOrderMoveToTop": "Move to top",
+    "changeOrderMoveToBottom": "Move to bottom",
+    "adminCardActions": "Actions",
+    "adminCardReloadThumbnail": "Reload thumbnail",
+    "adminCardUpdateReferences": "Update references",
+    "adminCardUpdateReferencesTabHelp": "Moves this tab's out-of-date references onto the newest versions, in the document's default workspace.",
+    "adminCardUpdateReferencesDocumentHelp": "Moves every out-of-date reference in the document's default workspace onto the newest versions.",
+    "adminCardUpdatingReferences": "Updating references...",
+    "adminCardUpdatedReferences": [
+        {
+            "declarations": [
+                "input count",
+                "local countPlural = count: plural",
+                "local formatted = count: number"
+            ],
+            "selectors": ["countPlural"],
+            "match": {
+                "countPlural=one": "Updated references in 1 tab. Cut a version to load it.",
+                "countPlural=other": "Updated references in {formatted} tabs. Cut a version to load them."
+            }
+        }
+    ],
+    "adminCardReferencesUpToDate": "References are already up to date.",
+    "adminCardUpdateReferencesFailed": "Failed to update references.",
+    "adminCardShowAll": "Show all",
+    "adminCardHideAll": "Hide all",
+    "adminCardDeleteGroup": "Delete group",
+    "adminCardDeleteGroupConfirm": "Are you sure you want to delete {name}? All favorites which reference it will be permanently deleted.",
+    "libraryMenuInsert": "Insert",
+    "libraryMenuConfiguration": "Configuration",
+    "libraryMenuFavorites": "Favorites",
+    "libraryMenuDocument": "Document",
+    "libraryFavoritesSection": "Favorites",
+    "libraryRecentsSection": "Recently Used",
+    "librarySearchSection": "Search Results",
+    "libraryAddGroup": "Add group",
+    "libraryAddGroupPlaceholder": "Document url...",
+    "libraryAddGroupSubmit": "Add",
+    "adminCardOrder": "Order"
 }

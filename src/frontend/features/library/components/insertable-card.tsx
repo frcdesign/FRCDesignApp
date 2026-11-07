@@ -21,8 +21,7 @@ import {
     type RowMatch
 } from "../../../components/item-row";
 import { OpenDocumentItems } from "../../../components/open-document-items";
-import { AdminMenuSection, MenuSection } from "../../../components/app-menu";
-import { ReloadThumbnailMenuItem } from "./reload-thumbnail-item";
+import { MenuSection } from "../../../components/app-menu";
 import { InsertableChangesBadge } from "./changes-badges";
 import { QuickInsertItems } from "../../insert/components/quick-insert-items";
 import { ConfigurationHoverCard } from "../../insert/components/configuration-hover-card";
@@ -188,7 +187,7 @@ export function InsertableMenuItems(
     return (
         <>
             {!inInsertMenu && isConnected && (
-                <MenuSection label="Insert">
+                <MenuSection label={m.libraryMenuInsert()}>
                     <QuickInsertItems
                         insertable={insertable}
                         selection={selection}
@@ -199,14 +198,14 @@ export function InsertableMenuItems(
             )}
             <RequireSignIn>
                 {favorite && report && (
-                    <MenuSection label="Configuration">
+                    <MenuSection label={m.libraryMenuConfiguration()}>
                         <SetDefaultConfigurationItem
                             favorite={favorite}
                             report={report}
                         />
                     </MenuSection>
                 )}
-                <MenuSection label="Favorites">
+                <MenuSection label={m.libraryMenuFavorites()}>
                     <FavoriteInsertableItem
                         favorite={favorite}
                         insertable={insertable}
@@ -215,7 +214,7 @@ export function InsertableMenuItems(
                     />
                 </MenuSection>
             </RequireSignIn>
-            <MenuSection label="Document">
+            <MenuSection label={m.libraryMenuDocument()}>
                 <OpenDocumentItems
                     path={insertable.path}
                     selection={selection}
@@ -231,11 +230,6 @@ export function InsertableMenuItems(
                     }
                 />
             </MenuSection>
-            <AdminMenuSection>
-                <ReloadThumbnailMenuItem
-                    target={{ insertableId: insertable.id }}
-                />
-            </AdminMenuSection>
         </>
     );
 }

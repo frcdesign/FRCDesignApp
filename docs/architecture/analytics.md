@@ -857,7 +857,8 @@ no foreign key crosses between them):
    handoff calls `POST /api/app-open`, which calls `trackAppOpen`; the
    version manager's workflow calls `trackVersionRun` in its `record-run` step
    once its run has finished, so a run that failed halfway still records what
-   it managed; `POST /api/feedback` calls `trackReport` once the report is
+   it managed; `POST /api/update-references` records one in the background once
+   it has updated a library document's references; `POST /api/feedback` calls `trackReport` once the report is
    posted to Discord (see [feedback.md](./feedback.md)).
 2. A use, an open and a report are recorded in the background (`runInBackground`),
    after the response; a version run's step swallows a failure to record. So

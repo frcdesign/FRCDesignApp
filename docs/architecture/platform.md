@@ -141,6 +141,7 @@ The flows that use them:
 | Insert                        | per insertable                                            | "Inserting {name}..."          | "Successfully inserted {name}." (and "…created a Fasten mate.") |
 | Add document                  | `add-group`                                               | "Adding document..."           | "Added {name}."                                                 |
 | Reload thumbnail              | `reload-thumbnail`                                        | "Reloading thumbnail..."       | "Thumbnail reloaded."                                           |
+| Update references             | `update-references`                                       | "Updating references..."       | "Updated references in {n} tabs. Cut a version to load them."   |
 | Show or hide elements         | `set-visibility`                                          | "Showing/Hiding element(s)..." | "Element(s) shown/hidden."                                      |
 | Toggle insert and fasten      | per insertable                                            | loading                        | success                                                         |
 | Save indexing changes         | per insertable                                            | info: "Reindexing part..."     | "Successfully indexed part."                                    |

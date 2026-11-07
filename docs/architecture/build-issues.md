@@ -7,7 +7,10 @@ A load checks each group and element it saves, and stores what it finds as
 connector a configuration can suppress. Editors see them in the **admin card**,
 the hover card on the status icon beside every group and element, which is also
 where they change what the issues are about: visibility, insert and fasten,
-indexing, a group's sort order.
+indexing, a group's sort order. Its **Actions** are everything else an editor
+does to a group or element: reloading a thumbnail, updating out-of-date
+references, showing or hiding a document's elements, ordering and deleting
+groups. A row's own menu holds nothing an editor alone may use.
 
 It is not the load ([loading.md](./loading.md)), which decides when checks run,
 nor indexing itself ([configurations.md](./configurations.md)). Users never see
@@ -164,6 +167,11 @@ POST /api/toggle-insert-and-fasten/library/:libraryId/insertable/:insertableId  
 POST /api/indexing/library/:libraryId/insertable/:insertableId                           reindexes; replaces INDEXING_ISSUE_TYPES
 ```
 
+The card's actions, owned elsewhere: **Reload thumbnail**
+([thumbnails.md](./thumbnails.md)), **Update references**
+(`POST /api/update-references`, [version-manager.md](./version-manager.md)),
+and the group order and delete routes of the library.
+
 `src/backend/features/build-checker/contract.ts`
 
 ```ts
@@ -217,6 +225,8 @@ function useSetVisibilityMutation(insertableIds: string[], isVisible: boolean);
 function useToggleInsertAndFastenMutation(insertableId: string);
 function useIndexingMutation(insertableId: string);
 function useToggleSortOrderMutation(groupId: string);
+// One tab's references, or the whole document's, in its default workspace.
+function useUpdateReferencesMutation(documentId: string, elementId?: string);
 // The stored settings with the unsaved draft laid over them.
 function useIndexingView(
     insertableId: string,
@@ -265,6 +275,9 @@ function BuildIssueList(props: BuildIssueListProps): ReactNode;
 function InsertableSettings(props: InsertableSettingsProps): ReactNode;
 function GroupSettings(props: GroupSettingsProps): ReactNode;
 function ConfigurationSection(props: ConfigurationSectionProps): ReactNode;
+// In `actions-section.tsx`; ordering and deleting only on the library's own list.
+function InsertableActions(props: InsertableActionsProps): ReactNode;
+function GroupActions(props: GroupActionsProps): ReactNode;
 function PartUsageSection(props: PartUsageSectionProps): ReactNode;
 function GroupUsageSection(props: GroupUsageSectionProps): ReactNode;
 
@@ -327,9 +340,9 @@ the previous version stays shown while the next loads.
 made against.
 
 **Browser** `uiState.sections`: whether each card section is open
-(`build-checks`, `settings`, `configuration`, `usage`), shared by every card;
-and the settings menu's `admin-settings`. Build checks, Settings, Usage and
-Admin settings start open; Configuration starts closed.
+(`build-checks`, `settings`, `actions`, `configuration`, `usage`), shared by
+every card; and the settings menu's `admin-settings`. Build checks, Settings,
+Actions, Usage and Admin settings start open; Configuration starts closed.
 
 ## Flows
 
@@ -361,12 +374,20 @@ Admin settings start open; Configuration starts closed.
    through `toSelection`.
 4. **Settings** writes at once: each toggle patches the cached status, posts,
    and refetches when it settles. Hiding asks first.
-5. **Configuration** lists every parameter with its type and whether search
+5. **Actions** act at once, each with its own toast. An element has
+   **Reload thumbnail** and **Update references**, which moves that tab's
+   out-of-date references in the document's default workspace. A group has
+   the same for its document as a whole, **Show all** and **Hide all** for its
+   elements, and on the library's own list its **Order** and **Delete
+   group**, which asks first. Updated references reach the library only once
+   a version holding them is cut and loaded; the change badges count the edit
+   at once.
+6. **Configuration** lists every parameter with its type and whether search
    indexes it; an enum's badge opens a bubble listing its options, the
    default starred in the library's color. Edits
    collect as a draft; **Discard** and **Save** show only while it differs
    from what is stored, and **Save** sends both settings in one reindex.
-6. **Usage** reads all-time numbers from the dashboard's parts report: a
+7. **Usage** reads all-time numbers from the dashboard's parts report: a
    part's own, or for a group the totals of its parts. The chart button in its
    header opens the part's report, or for a group the library's.
 
@@ -399,15 +420,15 @@ In [strings/build-issues.md](../strings/build-issues.md).
 
 ## Failure and recovery
 
-| What goes wrong                                 | Shows as                                        | Put right by                           |
-| ----------------------------------------------- | ----------------------------------------------- | -------------------------------------- |
-| A thumbnail never lands                         | `THUMBNAIL_FAILED`                              | **Reload thumbnail** in the row's menu |
-| A load throws                                   | `LOAD_FAILED` on the group; its old issues stay | Reload the document                    |
-| A document was added but its load never started | `NOT_LOADED`                                    | Reload                                 |
-| A document isn't public                         | `NOT_PUBLIC` on the group                       | Make it public in Onshape, then reload |
-| A write fails                                   | Error toast; the patch is discarded on refetch  | Retry the toggle or save               |
-| A reindex's probe fails                         | Error toast; nothing is written                 | Save again                             |
-| A deploy removes an issue type                  | Nothing: dropped on read                        | —                                      |
+| What goes wrong                                 | Shows as                                        | Put right by                               |
+| ----------------------------------------------- | ----------------------------------------------- | ------------------------------------------ |
+| A thumbnail never lands                         | `THUMBNAIL_FAILED`                              | **Reload thumbnail** in the card's Actions |
+| A load throws                                   | `LOAD_FAILED` on the group; its old issues stay | Reload the document                        |
+| A document was added but its load never started | `NOT_LOADED`                                    | Reload                                     |
+| A document isn't public                         | `NOT_PUBLIC` on the group                       | Make it public in Onshape, then reload     |
+| A write fails                                   | Error toast; the patch is discarded on refetch  | Retry the toggle or save                   |
+| A reindex's probe fails                         | Error toast; nothing is written                 | Save again                                 |
+| A deploy removes an issue type                  | Nothing: dropped on read                        | —                                          |
 
 ## Decisions
 
@@ -425,6 +446,11 @@ In [strings/build-issues.md](../strings/build-issues.md).
   "Anyone with the link" gives view-only access through the link, which an API
   call by another user doesn't go through. An enterprise's documents can't be
   public, so a library of one would carry the issue on every group.
+- **Editor actions live in the card, not the row's menu.** The card is where
+  an editor already looks at a group or element, and the menu is every user's:
+  an Admin section in it pushed the items users want further down. Adding a
+  group, which belongs to no row, is the **+** in the library section's
+  header.
 - **One open state for every card's section.** An editor checks many cards in
   a row, and wants the same sections open on each.
 - **The enum options bubble opens below its badge, inside the card.** The card

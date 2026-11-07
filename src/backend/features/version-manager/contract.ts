@@ -90,6 +90,11 @@ export interface LinkParentsOut {
     linked: number;
 }
 
+/** How many tabs an update of a document's references moved; zero when none were out of date. */
+export interface UpdateReferencesOut {
+    updatedElements: number;
+}
+
 export interface WorkspaceLinksData {
     parents: LinkedWorkspace[];
     children: LinkedWorkspace[];

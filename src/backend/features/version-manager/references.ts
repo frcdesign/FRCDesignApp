@@ -15,6 +15,8 @@ export interface ReferenceUpdateOptions {
      * reference is fair game, which is what a plain pull asks for.
      */
     onlyDocumentIds?: string[];
+    /** Only move the references these tabs make. Omitted, every tab's. */
+    onlyElementIds?: string[];
     /**
      * The version to move a document's references to, overriding the newest one
      * Onshape reports. A push sets this for the versions it has just cut.
@@ -41,8 +43,9 @@ export function planReferenceUpdates(
     externalReferences: OnshapeExternalReferences,
     options: ReferenceUpdateOptions = {}
 ): ElementUpdatePlan[] {
-    const { onlyDocumentIds, pinnedVersions } = options;
+    const { onlyDocumentIds, onlyElementIds, pinnedVersions } = options;
     const wanted = onlyDocumentIds ? new Set(onlyDocumentIds) : undefined;
+    const wantedElements = onlyElementIds ? new Set(onlyElementIds) : undefined;
 
     const latestVersions = new Map(
         (externalReferences.latestVersions ?? []).map((version) => [
@@ -55,6 +58,7 @@ export function planReferenceUpdates(
     for (const [elementId, references] of Object.entries(
         externalReferences.elementExternalReferences ?? {}
     )) {
+        if (wantedElements && !wantedElements.has(elementId)) continue;
         const updates: ReferenceUpdate[] = [];
         for (const reference of references) {
             const { documentId } = reference;

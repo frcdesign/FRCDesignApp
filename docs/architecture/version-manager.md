@@ -9,9 +9,10 @@ references onto their latest versions.
 
 It is not part of a library. It acts on whatever document Onshape launched the
 app from, under the caller's own Onshape permissions, and the library's access
-levels have no say over it. The one thing a library borrows from it is the
-change count: in admin mode, each group and part shows what its document has
-changed since a version, read through the same route.
+levels have no say over it. A library borrows two things from it: the change
+count, which in admin mode shows on each group and part what its document has
+changed since a version, read through the same route; and updating a
+document's references, which the admin card's **Update references** runs.
 
 ## Terms
 
@@ -193,7 +194,7 @@ page offers those it has no link to.
    links** card in place of the card for linking by url; **Link a different
    document** swaps that card back in, for a child or an unreferenced parent.
    Otherwise they are rows in the parents' list, after the links and before
-   the field: dimmed, marked with a bulb, each with its own **Link**. They
+   the field: dimmed, marked with a yellow bulb, each with its own **Link**. They
    stand in for the list's "No linked parents".
 5. A row's **Link** is the ordinary `POST /api/workspace-links` as a parent.
    **Link all** — the card's button, or under **Suggestions** in the parents'
@@ -323,13 +324,32 @@ Tabs are updated one at a time. The port's comment says doing them concurrently
 caused problems and does not say why, so this follows it rather than finding out
 in somebody's document.
 
+### Updating a library document's references
+
+The admin card's **Update references** ([build-issues.md](./build-issues.md))
+calls `POST /api/update-references` with a library document, and for an
+element's card its tab.
+
+1. It resolves the document's default workspace, the one a library loads
+   versions from (`findDefaultWorkspace`), and needs write on it.
+2. It runs `updateOutdatedReferences` in the request, every out-of-date
+   reference onto the newest version Onshape reports, limited to the one tab
+   when named (`onlyElementIds`). Nothing is versioned.
+3. It drops the workspace's cached change count and tabs (`forgetChanges`),
+   records a version run, and answers how many tabs it moved.
+
+It is no run: no job status, no socket, and no lock against a run from the
+version manager page.
+
 ### Recording a run
 
 Once the run has finished or stopped, its `record-run` step calls
 `trackVersionRun` with its kind, how it was aimed, whether it was update-only,
 its outcome (`jobOutcome`: success, partial or failed), how many steps failed,
 and the versions it created and tabs it updated. A failure to record is logged
-and swallowed. The event belongs to no library, and rolls up into
+and swallowed. A library document's reference update records one too, in the
+background once it has succeeded: an update-only pull of scope `all`. The event
+belongs to no library, and rolls up into
 `daily_version_metrics`, which the app dashboard reports as runs (and how many
 had failures), tabs updated and versions created, beside the documents linked
 right now. See [analytics.md](./analytics.md).
@@ -510,6 +530,11 @@ In [strings/version-manager.md](../strings/version-manager.md).
   **Update all references** already moves those without a link.
 - **Link all skips what it can't link.** It is aimed at a list read moments
   earlier; a document linked or unshared since should not stop the rest.
+- **A library's reference update runs in the request.** It cuts no version,
+  so a failure partway leaves nothing to resume: clicking again plans afresh
+  and moves only what is still out of date. Its caller is the library page,
+  whose socket is not tagged with the document's workspace, so a workflow's
+  status would never reach it.
 - **Thumbnails are proxied.** `GET /api/workspace-thumbnail` fetches the
   workspace's own thumbnail under the caller's OAuth token. Letting the image
   element fetch Onshape directly was tried; Onshape serves a thumbnail only to
