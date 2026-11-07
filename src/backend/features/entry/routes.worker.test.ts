@@ -47,17 +47,15 @@ describe("GET /init", () => {
         return new URL(res.headers.get("Location")!, "http://x");
     }
 
-    // Sign-in decides from the company and server whether it can name the company.
+    // Sign-in decides from these whether it can name the company.
     it("signs in a caller Onshape will not take, passing on the document's company", async () => {
         const location = await signInRedirect(
-            "/init?companyId=company-1&server=https%3A%2F%2Facme.onshape.com"
+            "/init?companyId=company-1&sessionCompanyId=company-1"
         );
 
         expect(location.pathname).toBe("/auth/sign-in");
         expect(location.searchParams.get("companyId")).toBe("company-1");
-        expect(location.searchParams.get("server")).toBe(
-            "https://acme.onshape.com"
-        );
+        expect(location.searchParams.get("sessionCompanyId")).toBe("company-1");
         const redirectUrl = new URL(
             location.searchParams.get("redirectUrl")!,
             "http://x"
@@ -141,10 +139,10 @@ describe("GET /init's document access check", () => {
 
     async function launch(
         options: Parameters<typeof createTestApp>[0] = {},
-        server = "server=https%3A%2F%2Facme.onshape.com"
+        session = "sessionCompanyId=company-1"
     ): Promise<URL> {
         const res = await createTestApp(options).request(
-            `/init?documentId=doc&instanceType=w&instanceId=ws&companyId=company-1&${server}`,
+            `/init?documentId=doc&instanceType=w&instanceId=ws&companyId=company-1&${session}`,
             jsonRequest("GET"),
             env
         );
@@ -176,10 +174,7 @@ describe("GET /init's document access check", () => {
     it("explains a classroom's document the grant can't edit", async () => {
         grant([]);
 
-        const location = await launch(
-            {},
-            "server=https%3A%2F%2Fcad.onshape.com"
-        );
+        const location = await launch({}, "sessionCompanyId=cad");
 
         expect(location.pathname).toBe("/document-access");
         expect(location.searchParams.get("problem")).toBe("classroom");

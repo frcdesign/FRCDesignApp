@@ -209,7 +209,7 @@ describe("the launch's sign-in check", () => {
         expect(
             await launchAs(
                 "user-a",
-                "companyId=classroom-1&server=https%3A%2F%2Fcad.onshape.com"
+                "companyId=classroom-1&sessionCompanyId=cad"
             )
         ).toBe("/");
     });
@@ -218,7 +218,7 @@ describe("the launch's sign-in check", () => {
         expect(
             await launchAs(
                 "user-a",
-                "companyId=company-1&server=https%3A%2F%2Facme.onshape.com"
+                "companyId=company-1&sessionCompanyId=company-1"
             )
         ).toBe("/auth/sign-in");
     });

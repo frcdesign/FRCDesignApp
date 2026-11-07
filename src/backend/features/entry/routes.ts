@@ -31,7 +31,7 @@ function getSignInUrl(c: AppContext): string {
         redirectUrl: url.pathname + url.search
     });
     // Sign-in decides from these whether it can name the company.
-    for (const key of ["companyId", "server"]) {
+    for (const key of ["companyId", "sessionCompanyId"]) {
         const value = c.req.query(key);
         if (value) query.set(key, value);
     }

@@ -149,7 +149,7 @@ describe("GET /auth/sign-in", () => {
 
     it("scopes the sign-in to the enterprise that owns the document", async () => {
         const url = await authorizationUrl(
-            "companyId=company-1&server=https%3A%2F%2Facme.onshape.com"
+            "companyId=company-1&sessionCompanyId=company-1"
         );
         expect(url.searchParams.get("company_id")).toBe("company-1");
     });
@@ -157,10 +157,10 @@ describe("GET /auth/sign-in", () => {
     // Onshape answers a classroom's id with "Invalid company ID".
     it.each([
         [
-            "a classroom on the shared server",
-            "companyId=classroom-1&server=https%3A%2F%2Fcad.onshape.com"
+            "a classroom, which Onshape gives no session company",
+            "companyId=classroom-1&sessionCompanyId=cad"
         ],
-        ["a launch that names no server", "companyId=classroom-1"]
+        ["a launch that names no session company", "companyId=classroom-1"]
     ])("names no company for %s", async (_, query) => {
         const url = await authorizationUrl(query);
         expect(url.searchParams.has("company_id")).toBe(false);

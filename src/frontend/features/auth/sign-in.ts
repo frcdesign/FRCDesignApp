@@ -6,8 +6,8 @@ export function startSignIn(): void {
         redirectUrl: window.location.pathname + window.location.search
     });
     // Sign-in decides from these whether it can name the company.
-    const { companyId, server } = useOnshapeLaunch.getState();
+    const { companyId, sessionCompanyId } = useOnshapeLaunch.getState();
     if (companyId) query.set("companyId", companyId);
-    if (server) query.set("server", server);
+    if (sessionCompanyId) query.set("sessionCompanyId", sessionCompanyId);
     window.location.href = "/auth/sign-in?" + query.toString();
 }

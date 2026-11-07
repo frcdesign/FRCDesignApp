@@ -63,25 +63,27 @@ team, plus one owner set by configuration.
 
 ### Launch and sign-in
 
-1. Onshape opens `/init?documentId=…&instanceType=…&elementId=…&companyId=…`,
-   `companyId` being the company that owns the document (`cad` for a personal
-   one), which Onshape adds to every launch (`getDocumentCompanyId`), with
-   `server`, the Onshape origin it was launched from. `getDocumentOwner` reads
-   the two as a `DocumentOwner`: personal for `cad`, an enterprise when
-   `server` is a domain of its own, and a classroom, a company on
-   `cad.onshape.com` such as an educator plan's, otherwise. A version or
+1. Onshape opens `/init?documentId=…&instanceType=…&elementId=…&sessionCompanyId=…&companyId=…`.
+   `companyId` is the company that owns the document (`cad` for a personal
+   one), which Onshape adds to every launch (`getDocumentCompanyId`).
+   `sessionCompanyId` is the extension's `{$sessionCompanyId}`, which Onshape
+   fills in for an enterprise alone and sends as `cad` everywhere else, so the
+   action URL must name it. `getDocumentOwner` reads the two as a
+   `DocumentOwner`: personal for a `companyId` of `cad`, an enterprise when
+   `sessionCompanyId` is a company too, and a classroom, a company outside an
+   enterprise such as an educator plan's, otherwise. A version or
    microversion goes to `/version-error`.
 2. With no session, one for another user than the launch's `userId`, or one
    whose grant is for another company than the document's (never asked of a
    classroom's document, whose grant sign-in can't ask for), `/init` sends the
-   caller through sign-in and back, passing on `companyId` and `server`, marked
+   caller through sign-in and back, passing on `companyId` and `sessionCompanyId`, marked
    so it never loops.
-3. `/auth/sign-in?companyId=&server=` stores `{ state, redirectUrl }` in the
+3. `/auth/sign-in?companyId=&sessionCompanyId=` stores `{ state, redirectUrl }` in the
    login cookie and redirects to Onshape's authorize page. It names the company
    as `company_id` for an enterprise alone (`getSignInCompanyId`): OAuth
    refuses a classroom's id ("Invalid company ID"), and a personal account has
    none. Otherwise Onshape asks the caller which account. The app's own
-   **Sign in** passes the launch's `companyId` and `server` the same way. The
+   **Sign in** passes the launch's `companyId` and `sessionCompanyId` the same way. The
    redirect url must be a local path.
 4. The authorize request names `APP_URL/auth/callback` as its redirect uri,
    which must be registered on the OAuth app. Onshape returns there; the callback checks
@@ -246,8 +248,11 @@ missing.
   launch unable to sign in. So sign-in asks for no company there, `/init`
   doesn't require the session to be the classroom's (it can't ask for one, so
   asking again would only repeat), and a grant that still can't edit gets the
-  access page's own notice. An enterprise and a classroom look alike in the
-  launch but for `server`: only an enterprise has a domain of its own.
+  access page's own notice. Both arrive with a `companyId`; only an
+  enterprise's launch has a `sessionCompanyId` other than `cad`, which is
+  Onshape's documented sign of one. A launch without it reads as a classroom:
+  sign-in asks Onshape for no company, and an enterprise's grant that can't
+  edit gets the classroom's notice.
 - **Match the launch's user, not only its company.** Every personal account
   shares the company `cad`, so a session left from another personal account,
   such as a team's shared one on the same browser, passes the company check
