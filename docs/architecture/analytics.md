@@ -976,8 +976,11 @@ only on **All time**, its own window being a season rather than the picked one.
   where the split matters, without a column per kind.
 - **Uses count parts, not actions.** The headline numbers say how much of the
   library ends up in people's work, so a run that places 120 screws adds 120,
-  and grows them as automation places more. A share that measures a person's
-  choice keeps its own denominator instead, so automated parts can't dilute it.
+  and grows them as automation places more. A part's counts, its rank and its
+  options' counts include automated parts the same way, with nothing to tell
+  a person's pick from a planner's, and no event records which action placed
+  it. A share that measures a person's choice keeps its own denominator
+  instead, so automated parts can't dilute it.
 - **A download is recorded when the export starts.** That is the request that
   carries the selection and source; the file route knows only the
   translation. An export Onshape later fails still counts, as an insert whose
