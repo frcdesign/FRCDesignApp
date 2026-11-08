@@ -23,11 +23,11 @@ keyed `testbench…`. Labels that only name an input are left out.
 
 ## Custom toolbar
 
-| String                                                                                                                                                                                                            | Kind        | Where                     | When        | Review          |
-| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | ------------------------- | ----------- | --------------- |
-| "Reads, adds to and removes from your custom toolbar through the internal endpoints Onshape's web client calls. They're undocumented: try the app's API version first, then 14, the version the web client uses." | Description | Top of the tab            | Always      | **⚑** New, long |
-| "{total} tools, {own} of them yours"                                                                                                                                                                              | Count       | Beside the list's heading | Once listed | **⚑** New       |
-| "Copy to create" / "Remove"                                                                                                                                                                                       | Buttons     | Each of the owner's tools | Once listed | **⚑** New       |
+| String                                                                                                                                                                                 | Kind        | Where                     | When        | Review          |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | ------------------------- | ----------- | --------------- |
+| "Reads, adds to and removes from your custom toolbar through the internal endpoints Onshape's web client calls. They don't work with the app's token; the tab stays for trying again." | Description | Top of the tab            | Always      | **⚑** New, long |
+| "{total} tools, {own} of them yours"                                                                                                                                                   | Count       | Beside the list's heading | Once listed | **⚑** New       |
+| "Copy to create" / "Remove"                                                                                                                                                            | Buttons     | Each of the owner's tools | Once listed | **⚑** New       |
 
 ## Webhooks
 

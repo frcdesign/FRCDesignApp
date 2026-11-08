@@ -1,10 +1,14 @@
-import { Alert, Container, Loader, Tabs, Text } from "@mantine/core";
+import { Alert, Container, Group, Loader, Tabs, Text } from "@mantine/core";
 import { type ReactNode, useState } from "react";
 import {
     AccessLevel,
     isWithinAccessLevel
 } from "@backend/features/auth/access-level";
-import { NavbarRow, SettingsControls } from "../../../components/app-navbar";
+import {
+    NavbarRow,
+    SettingsControls,
+    SignInButton
+} from "../../../components/app-navbar";
 import { m } from "../../../paraglide/messages";
 import { useAccessData } from "../../auth/access-level";
 import { DEFAULT_DRAFT } from "../call-draft";
@@ -29,7 +33,10 @@ export function TestbenchPage(): ReactNode {
                 <Text fw={600} style={{ alignSelf: "center" }}>
                     {m.testbenchTitle()}
                 </Text>
-                <SettingsControls />
+                <Group gap="xs" ml="auto">
+                    <SignInButton />
+                    <SettingsControls />
+                </Group>
             </NavbarRow>
             <Container size="lg" py="md">
                 {access.isPending ? (

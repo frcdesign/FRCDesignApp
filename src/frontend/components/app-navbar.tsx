@@ -119,7 +119,7 @@ export function AppNavbar(): ReactNode {
     );
 }
 
-function SignInButton(): ReactNode {
+export function SignInButton(): ReactNode {
     const needsSignIn = useNeedsSignIn();
     // Otherwise the button flashes on every load for someone signed in.
     if (!needsSignIn) return null;

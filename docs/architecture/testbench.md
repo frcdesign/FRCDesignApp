@@ -122,13 +122,15 @@ calls and the shapes observed of them; the tabs are in
 
 ### The custom toolbar tab
 
-1. Reads the owner's user id (`/users/sessioninfo`) and lists
+1. **List tools** reads the owner's user id (`/users/sessioninfo`) and lists
    `GET /toolbar/tools` at the chosen version, showing the owner's own tools
-   (`ownerType` 0).
+   (`ownerType` 0). Nothing is called until it's clicked.
 2. **Create** posts the edited body to `/toolbar/tools/u/{userId}/create`;
    **Copy to create** fills it from a listed tool. **Remove** sends
    `DELETE /toolbar/tools/u/{userId}/delete` with `{ remove: [id] }`.
-3. Each answer is shown whole, so a refusal says what Onshape wanted.
+3. Each answer is shown whole, so a refusal says what Onshape wanted. Onshape
+   refuses all of them from the app's token (see
+   [ONSHAPE.md](../ONSHAPE.md#custom-toolbar)).
 
 ### The webhooks tab
 
@@ -170,8 +172,7 @@ calls and the shapes observed of them; the tabs are in
   Onshape's statuses and headers, which the app's own client turns into
   errors.
 - **Calls are made with the owner's OAuth token.** That is what the app's
-  features use, so the limits reported are the ones they meet; whether a limit
-  is per user, per app or per account is something a check from a second user
-  would show.
+  features use, so the limits reported are the ones they meet, counted per
+  user.
 
 _Last reviewed: 2026-11-08_

@@ -7,7 +7,7 @@ import {
     Table,
     Text
 } from "@mantine/core";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
 import { ONSHAPE_API_VERSION } from "@backend/lib/onshape/client";
 import type { OnshapeCallBody } from "@backend/features/testbench/contract";
@@ -39,34 +39,27 @@ export function ToolbarPanel(): ReactNode {
     const [createBody, setCreateBody] = useState(
         JSON.stringify(SAMPLE_CREATE_BODY, null, 2)
     );
-    const queryClient = useQueryClient();
-    const session = useQuery({
-        queryKey: ["testbench", "session-info"],
-        queryFn: () =>
-            callOnshape({
+    // Only on a click: each is a call against the owner's limit.
+    const tools = useMutation({
+        mutationFn: async () => {
+            const session = await callOnshape({
                 method: "GET",
                 version: ONSHAPE_API_VERSION,
                 path: "/users/sessioninfo"
-            }),
-        // Every retry is another call against the account's allocation.
-        retry: false
-    });
-    const tools = useQuery({
-        queryKey: ["testbench", "toolbar", version],
-        queryFn: () => callOnshape(listToolsCall(version)),
-        // Every retry is another call against the account's allocation.
-        retry: false
+            });
+            return {
+                userId: (session.body as SessionInfo | undefined)?.id,
+                list: await callOnshape(listToolsCall(version))
+            };
+        }
     });
     const write = useMutation({
-        mutationFn: (body: OnshapeCallBody) => callOnshape(body),
-        onSettled: () =>
-            queryClient.invalidateQueries({
-                queryKey: ["testbench", "toolbar"]
-            })
+        mutationFn: (body: OnshapeCallBody) => callOnshape(body)
     });
 
-    const userId = (session.data?.body as SessionInfo | undefined)?.id;
-    const listed = (tools.data?.body as ToolbarToolList | undefined)?.items;
+    const userId = tools.data?.userId;
+    const listed = (tools.data?.list.body as ToolbarToolList | undefined)
+        ?.items;
     const own = listed?.filter((tool) => tool.ownerType === USER_OWNER_TYPE);
 
     const create = () => {
@@ -133,8 +126,14 @@ export function ToolbarPanel(): ReactNode {
             </Group>
 
             <Group gap="xs">
-                <Text fw={600}>{m.testbenchToolbarList()}</Text>
-                {tools.data && <StatusBadge status={tools.data.status} />}
+                <Button
+                    variant="default"
+                    loading={tools.isPending}
+                    onClick={() => tools.mutate()}
+                >
+                    {m.testbenchToolbarList()}
+                </Button>
+                {tools.data && <StatusBadge status={tools.data.list.status} />}
                 {listed && (
                     <Text size="sm" c="dimmed">
                         {m.testbenchToolbarCounts({
@@ -145,7 +144,7 @@ export function ToolbarPanel(): ReactNode {
                 )}
             </Group>
             {tools.error && <CallError error={tools.error} />}
-            {tools.data && !listed && <CallResult result={tools.data} />}
+            {tools.data && !listed && <CallResult result={tools.data.list} />}
             {own && own.length > 0 && (
                 <Table striped>
                     <Table.Thead>

@@ -228,9 +228,10 @@ errors.
     Which calls share a count is _unverified_: Part Studio features, assembly
     features and session info counted down together (8990, 8989, 8988), while
     document elements stood apart (8998) — consistent with a count per endpoint
-    group, not proven. The window the counts refill over, and whether they are
-    per user, per app or per account, are _unverified_; checking again an hour
-    later, or as a second user, would tell.
+    group, not proven. The counts are per user, so one person's heavy use
+    doesn't spend another's — _unverified_, the owner's understanding. The
+    window they refill over is _unverified_; checking again an hour later would
+    tell.
 
 - **Internal endpoints** — the ones Onshape's own web client calls, such as the
   custom toolbar's — are served at `/api/v14` — _observed_. Whether the same
@@ -246,9 +247,9 @@ errors.
 ## Custom toolbar
 
 What Onshape's web client sends to change someone's custom toolbar, captured
-from the browser — _observed_. None of it is documented; the testbench's Custom
-toolbar tab tries each from the app's OAuth token, which has not yet been seen
-to work — _unverified_.
+from the browser — _observed_. None of it is documented, and none of it works
+from the app's OAuth token: the testbench's Custom toolbar tab tried each, and
+Onshape refused them all — _observed_. The app can't manage anyone's toolbar.
 
 - `GET /toolbar/tools` lists every tool the signed-in user can see: Onshape's
   built-in ones (`ownerType` 2) and the user's own custom features
