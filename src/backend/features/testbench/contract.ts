@@ -16,7 +16,7 @@ export const onshapeCallBody = z.object({
         .refine((path) => !path.split("/").includes(".."), "No .. segments"),
     query: z.record(z.string(), z.string()).default({}),
     body: z.unknown().optional(),
-    /** Off for a burst, which reads only statuses and headers. */
+    /** Off for a rate-limit check, which reads only the status and headers. */
     includeBody: z.boolean().default(true)
 });
 

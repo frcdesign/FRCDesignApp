@@ -33,13 +33,8 @@ interface SessionInfo {
     id: string;
 }
 
-interface ToolbarPanelProps {
-    active: boolean;
-}
-
 /** Whether a custom toolbar can be read, added to and pruned from outside Onshape's web client. */
-export function ToolbarPanel(props: ToolbarPanelProps): ReactNode {
-    const { active } = props;
+export function ToolbarPanel(): ReactNode {
     const [version, setVersion] = useState(ONSHAPE_API_VERSION);
     const [createBody, setCreateBody] = useState(
         JSON.stringify(SAMPLE_CREATE_BODY, null, 2)
@@ -53,14 +48,12 @@ export function ToolbarPanel(props: ToolbarPanelProps): ReactNode {
                 version: ONSHAPE_API_VERSION,
                 path: "/users/sessioninfo"
             }),
-        enabled: active,
         // Every retry is another call against the account's allocation.
         retry: false
     });
     const tools = useQuery({
         queryKey: ["testbench", "toolbar", version],
         queryFn: () => callOnshape(listToolsCall(version)),
-        enabled: active,
         // Every retry is another call against the account's allocation.
         retry: false
     });

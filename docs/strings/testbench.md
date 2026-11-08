@@ -13,15 +13,13 @@ keyed `testbench…`. Labels that only name an input are left out.
 
 ## Rate limits
 
-| String                                                                                                                                                                         | Kind              | Where             | When                           | Review          |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------- | ----------------- | ------------------------------ | --------------- |
-| "Every call here counts against the account's Onshape API allocation, and a burst can make hundreds. Onshape may also rate-limit your own use of Onshape while a limit lasts." | Alert             | Top of the tab    | Always                         | **⚑** New, long |
-| "An Onshape url, copied from the address bar with the right tab open."                                                                                                         | Field description | Element           | A preset that needs an element | **⚑** New       |
-| "That url doesn't name a tab in a document."                                                                                                                                   | Field error       | Element           | The url names no element       | **⚑** New       |
-| "Stop at the first 429 and time how long the limit lasts"                                                                                                                      | Checkbox          | Above Start       | Always                         | **⚑** New       |
-| "{sent} sent: {ok} ok, {limited} limited, {failed} failed, over {seconds} s; {rate} calls a second until the first 429."                                                       | Summary           | Under the buttons | After a burst starts           | **⚑** New       |
-| "First 429 on call {index}, after {okBefore} ok calls and {seconds} s." / "No 429."                                                                                            | Summary           | Same              | Same                           | **⚑** New       |
-| "The limit lifted within {seconds} s of the first 429." / "The limit hadn't lifted when the wait ended."                                                                       | Summary           | Same              | After a 429                    | **⚑** New       |
+| String                                                                        | Kind              | Where                 | When                              | Review    |
+| ----------------------------------------------------------------------------- | ----------------- | --------------------- | --------------------------------- | --------- |
+| "Makes each call once and shows the rate-limit headers Onshape answers with." | Description       | Top of the tab        | Always                            | **⚑** New |
+| "An Onshape url, copied from the address bar with the tab open."              | Field description | Part Studio, Assembly | Always                            | **⚑** New |
+| "That url doesn't name a tab in a document."                                  | Field error       | Same                  | The url names no element          | **⚑** New |
+| "Needs the url above"                                                         | Row note          | A call's row          | Its url isn't pasted              | **⚑** New |
+| "No rate-limit headers; every header"                                         | Disclosure        | A checked row         | Onshape sent no limit-like header | **⚑** New |
 
 ## Custom toolbar
 

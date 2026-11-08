@@ -50,12 +50,11 @@ export function TestbenchPage(): ReactNode {
 function TestbenchTabs(): ReactNode {
     const [rawDraft, setRawDraft] = useState(DEFAULT_DRAFT);
     const [tab, setTab] = useState(TestbenchTab.RATE_LIMITS);
-    // Mounted throughout, so a burst keeps going on another tab; the rest
-    // call Onshape only while shown.
     return (
         <Tabs
             value={tab}
             onChange={(value) => value && setTab(value as TestbenchTab)}
+            keepMounted={false}
         >
             <Tabs.List mb="md">
                 <Tabs.Tab value={TestbenchTab.RATE_LIMITS}>
@@ -75,10 +74,10 @@ function TestbenchTabs(): ReactNode {
                 <RateLimitPanel rawDraft={rawDraft} />
             </Tabs.Panel>
             <Tabs.Panel value={TestbenchTab.TOOLBAR}>
-                <ToolbarPanel active={tab === TestbenchTab.TOOLBAR} />
+                <ToolbarPanel />
             </Tabs.Panel>
             <Tabs.Panel value={TestbenchTab.WEBHOOKS}>
-                <WebhooksPanel active={tab === TestbenchTab.WEBHOOKS} />
+                <WebhooksPanel />
             </Tabs.Panel>
             <Tabs.Panel value={TestbenchTab.RAW}>
                 <OnshapeCallForm draft={rawDraft} onChange={setRawDraft} />

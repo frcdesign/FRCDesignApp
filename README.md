@@ -113,11 +113,9 @@ Only one person can use the tunnel at a time: Cloudflare spreads requests across
 Onshape behaves before building on it. Sign in, open it on cert or through the
 tunnel, and:
 
-- **Rate limits** repeats one call — evaluating FeatureScript, reading an
-  assembly or Part Studio, or any call you set up — until Onshape answers 429,
-  then calls once at a time to time how long the limit lasts. **Copy results
-  as JSON** keeps what it found. Every call counts against the account's API
-  allocation.
+- **Rate limits** makes each of the calls the app makes most — evaluating
+  FeatureScript, reading an assembly or Part Studio — once, and shows the
+  rate-limit headers Onshape answers with.
 - **Custom toolbar** lists, adds to and removes from your custom toolbar
   through the internal endpoints Onshape's web client calls.
 - **Webhooks** registers a webhook with whatever events and params you pick,

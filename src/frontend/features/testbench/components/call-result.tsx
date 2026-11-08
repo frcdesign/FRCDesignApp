@@ -2,7 +2,7 @@ import { Badge, Code, Group, Stack, Text } from "@mantine/core";
 import { type ReactNode } from "react";
 import type { OnshapeCallResult } from "@backend/features/testbench/contract";
 import { m } from "../../../paraglide/messages";
-import { isLimitHeader } from "../burst";
+import { limitHeaderLines } from "../rate-limit";
 
 interface CallResultProps {
     result: OnshapeCallResult;
@@ -11,9 +11,7 @@ interface CallResultProps {
 /** Onshape's answer to one call: status, timing, headers and body. */
 export function CallResult(props: CallResultProps): ReactNode {
     const { result } = props;
-    const limitHeaders = Object.entries(result.headers).filter(([name]) =>
-        isLimitHeader(name)
-    );
+    const limitHeaders = limitHeaderLines(result.headers);
     return (
         <Stack gap="xs">
             <Group gap="xs">
@@ -26,11 +24,7 @@ export function CallResult(props: CallResultProps): ReactNode {
                 </Text>
             </Group>
             {limitHeaders.length > 0 && (
-                <Code block>
-                    {limitHeaders
-                        .map(([name, value]) => `${name}: ${value}`)
-                        .join("\n")}
-                </Code>
+                <Code block>{limitHeaders.join("\n")}</Code>
             )}
             <details>
                 <summary>{m.testbenchHeaders()}</summary>

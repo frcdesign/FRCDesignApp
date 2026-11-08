@@ -29,13 +29,8 @@ const SCOPE_KEYS = ["documentId", "workspaceId", "companyId"] as const;
 
 type Scope = Record<(typeof SCOPE_KEYS)[number], string>;
 
-interface WebhooksPanelProps {
-    active: boolean;
-}
-
 /** Registers a webhook pointed back at the app, and lists what Onshape sends it. */
-export function WebhooksPanel(props: WebhooksPanelProps): ReactNode {
-    const { active } = props;
+export function WebhooksPanel(): ReactNode {
     const [events, setEvents] = useState<string[]>([]);
     const [other, setOther] = useState("");
     const [scope, setScope] = useState<Scope>({
@@ -44,7 +39,7 @@ export function WebhooksPanel(props: WebhooksPanelProps): ReactNode {
         companyId: ""
     });
     const [params, setParams] = useState("{}");
-    const probes = useQuery({ ...webhookProbesQuery, enabled: active });
+    const probes = useQuery(webhookProbesQuery);
     const register = useRegisterProbeMutation();
 
     const submit = () => {

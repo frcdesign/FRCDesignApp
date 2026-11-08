@@ -1,8 +1,12 @@
 /**
- * The calls a burst can repeat: the uncached ones Auto Assembly and insert make
- * per hole or per part, against the element a pasted url names.
+ * The calls whose rate limits matter: the uncached ones Auto Assembly and
+ * insert make per hole or per part, against the tabs pasted urls name.
  */
-import { toElementApiPath, type ElementPath } from "@backend/lib/onshape/path";
+import {
+    toElementApiPath,
+    toInstanceApiPath,
+    type ElementPath
+} from "@backend/lib/onshape/path";
 import type {
     OnshapeCallBody,
     OnshapeMethod
@@ -20,7 +24,7 @@ export enum PresetId {
 
 export const PRESET_IDS = Object.values(PresetId);
 
-/** The smallest script Onshape will evaluate, so the burst measures the endpoint. */
+/** A cheap script, so the check costs Onshape little beyond the endpoint itself. */
 export const DEFAULT_SCRIPT =
     "function(context is Context, queries is map) { return size(evaluateQuery(context, qEverything(EntityType.BODY))); }";
 
@@ -30,13 +34,19 @@ interface PresetCall {
     body?: unknown;
 }
 
+/** The tabs the presets call against, each pasted as a url. */
+export interface PresetElements {
+    partStudio?: ElementPath;
+    assembly?: ElementPath;
+}
+
 /** Undefined when the preset needs an element and none was given. */
 export function presetCall(
     id: PresetId,
-    element: ElementPath | undefined,
+    elements: PresetElements,
     script: string
 ): OnshapeCallBody | undefined {
-    const call = presetPath(id, element, script);
+    const call = presetPath(id, elements, script);
     return (
         call && { ...call, version: ONSHAPE_API_VERSION, includeBody: false }
     );
@@ -44,35 +54,50 @@ export function presetCall(
 
 function presetPath(
     id: PresetId,
-    element: ElementPath | undefined,
+    elements: PresetElements,
     script: string
 ): PresetCall | undefined {
-    if (id === PresetId.SESSION_INFO) {
-        return { method: "GET", path: "/users/sessioninfo" };
-    }
-    if (!element) {
-        return undefined;
-    }
-    const at = toElementApiPath(element);
+    const { partStudio, assembly } = elements;
     switch (id) {
+        case PresetId.SESSION_INFO:
+            return { method: "GET", path: "/users/sessioninfo" };
         case PresetId.EVALUATE_FEATURESCRIPT:
-            return {
-                method: "POST",
-                path: `/partstudios${at}/featurescript`,
-                body: { script, queries: [] }
-            };
+            return (
+                partStudio && {
+                    method: "POST",
+                    path: `/partstudios${toElementApiPath(partStudio)}/featurescript`,
+                    body: { script, queries: [] }
+                }
+            );
         case PresetId.PART_STUDIO_FEATURES:
-            return { method: "GET", path: `/partstudios${at}/features` };
+            return (
+                partStudio && {
+                    method: "GET",
+                    path: `/partstudios${toElementApiPath(partStudio)}/features`
+                }
+            );
         case PresetId.ASSEMBLY_DEFINITION:
-            return { method: "GET", path: `/assemblies${at}` };
+            return (
+                assembly && {
+                    method: "GET",
+                    path: `/assemblies${toElementApiPath(assembly)}`
+                }
+            );
         case PresetId.ASSEMBLY_FEATURES:
-            return { method: "GET", path: `/assemblies${at}/features` };
+            return (
+                assembly && {
+                    method: "GET",
+                    path: `/assemblies${toElementApiPath(assembly)}/features`
+                }
+            );
         case PresetId.DOCUMENT_ELEMENTS: {
-            const { documentId, instanceType, instanceId } = element;
-            return {
-                method: "GET",
-                path: `/documents/d/${documentId}/${instanceType}/${instanceId}/elements`
-            };
+            const element = partStudio ?? assembly;
+            return (
+                element && {
+                    method: "GET",
+                    path: `/documents${toInstanceApiPath(element)}/elements`
+                }
+            );
         }
     }
 }

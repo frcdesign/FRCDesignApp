@@ -1,7 +1,6 @@
 /**
  * The owner's testbench: one Onshape call at a time, made as the owner, for
- * exploring endpoints and their rate limits. The page drives bursts, so no
- * Worker request runs long or makes many subrequests.
+ * exploring endpoints and the rate limits Onshape reports for them.
  */
 import { getApp } from "../../lib/context";
 import { onshapeUrl } from "../../lib/onshape/client";

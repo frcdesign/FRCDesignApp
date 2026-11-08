@@ -4,7 +4,7 @@
 
 The owner's page for finding out how Onshape behaves before building on it:
 which webhook events fire, whether the custom toolbar can be changed through
-its internal endpoints, and where Onshape starts rate-limiting the calls the
+its internal endpoints, and what rate limits Onshape reports for the calls the
 app makes most. It is at `/testbench`, beside `/dashboard` outside the panel's
 shell, opened from **Admin settings → Testbench**. It's a tool, not a feature
 anyone uses, so it records no analytics.
@@ -57,35 +57,18 @@ interface OnshapeCallResult {
 }
 ```
 
-`src/frontend/features/testbench/burst.ts` and
-`src/frontend/features/testbench/presets.ts`
+`src/frontend/features/testbench/presets.ts` and
+`src/frontend/features/testbench/rate-limit.ts`
 
 ```ts
-function runBurst(
-    send: BurstSend,
-    options: BurstOptions,
-    onSample: (sample: BurstSample) => void,
-    signal: AbortSignal
-): Promise<void>;
-function summarizeBurst(samples: BurstSample[]): BurstSummary;
-// Names Onshape might put a limit, a count left or a reset time under.
-function isLimitHeader(name: string): boolean;
 function presetCall(
     id: PresetId,
-    element: ElementPath | undefined,
+    elements: PresetElements,
     script: string
 ): OnshapeCallBody | undefined;
-
-interface BurstOptions {
-    total: number;
-    concurrency: number;
-    /** Stop the burst at the first 429 and start watching for the reset. */
-    stopOnLimit: boolean;
-    /** Seconds between calls while watching for the reset. */
-    pollSeconds: number;
-    /** Give up watching after this long. */
-    maxWaitSeconds: number;
-}
+// Names Onshape might put a limit, a count left or a reset time under.
+function isLimitHeader(name: string): boolean;
+function limitHeaderLines(headers: Record<string, string>): string[];
 
 enum PresetId {
     EVALUATE_FEATURESCRIPT = "evaluate-featurescript",
@@ -94,6 +77,12 @@ enum PresetId {
     ASSEMBLY_FEATURES = "assembly-features",
     DOCUMENT_ELEMENTS = "document-elements",
     SESSION_INFO = "session-info"
+}
+
+/** The tabs the presets call against, each pasted as a url. */
+interface PresetElements {
+    partStudio?: ElementPath;
+    assembly?: ElementPath;
 }
 ```
 
@@ -106,8 +95,8 @@ calls and the shapes observed of them; the tabs are in
 
 - **KV** `webhook-probe` (one key, every probe) and
   `webhook-probe-deliveries` (per probe, its last 50 deliveries): a day.
-- Nothing else. A burst's samples live in the page until it's closed; **Copy
-  results as JSON** is the way to keep them.
+- Nothing else. A rate-limit check's answers live in the page until it's
+  closed.
 
 ## Flows
 
@@ -120,21 +109,15 @@ calls and the shapes observed of them; the tabs are in
 3. Answers 200 with Onshape's status, headers, timing and, unless
    `includeBody` is off, its body. A 429 is an answer here, not an error.
 
-### A burst — the Rate limits tab
+### A rate-limit check — the Rate limits tab
 
-1. Picks a call: a preset against the element a pasted url names, or the Raw
-   request tab's call. Presets are the uncached calls Auto Assembly and insert
-   make per hole or per part.
-2. `runBurst` makes `total` calls, `concurrency` at a time, each its own
-   `POST /api/testbench/onshape` from the page, without bodies.
-3. With **Stop at the first 429**, the first 429 ends the burst; then one call
-   every `pollSeconds` until one isn't a 429 or `maxWaitSeconds` pass. The time
-   from the first 429 to that call is how long the limit lasted, to within
-   `pollSeconds`.
-4. A call the app refused (no answer from Onshape) ends the burst at once.
-5. `summarizeBurst` reports counts, the rate reached before the first 429, how
-   many calls succeeded before it, latencies, when the limit lifted, and every
-   header whose name looks like a limit's, with the values it took.
+1. Each preset is a call Auto Assembly or insert makes per hole or per part,
+   uncached, against the Part Studio or assembly a pasted url names; the Raw
+   request tab's call is checked beside them.
+2. **Check** makes one call; **Check all** makes each in turn, one at a time,
+   without bodies.
+3. Each row shows Onshape's status and every header whose name looks like a
+   limit's (`limitHeaderLines`), or every header when none does.
 
 ### The custom toolbar tab
 
@@ -164,33 +147,30 @@ calls and the shapes observed of them; the tabs are in
   delivery route takes only a probe's own token.
 - A call goes to `cad.onshape.com` under `/api/`, with the owner's token, and
   nowhere else.
-- The Worker makes one Onshape call per request; bursts are driven by the
-  page, so no request runs long or fans out.
+- The Worker makes one Onshape call per request, so no request runs long or
+  fans out.
 - Nothing the testbench does is retried: each retry would be another call
-  against the account's allocation and would blur what a burst measures.
+  against the account's allocation.
 
 ## Failure and recovery
 
-| What goes wrong                   | What happens                              | What puts it right                    |
-| --------------------------------- | ----------------------------------------- | ------------------------------------- |
-| The owner's session has lapsed    | Calls answer 401; a burst stops at once   | Sign in again                         |
-| A burst leaves Onshape limiting   | The owner's own Onshape use may be slowed | Wait out the limit the burst measured |
-| Onshape refuses a probe's webhook | The probe shows Onshape's refusal         | Change the params; delete the probe   |
-| The page is closed mid-burst      | The burst stops; its samples are lost     | Copy results before closing           |
+| What goes wrong                   | What happens                      | What puts it right                  |
+| --------------------------------- | --------------------------------- | ----------------------------------- |
+| The owner's session has lapsed    | Calls answer 401, shown in red    | Sign in again                       |
+| Onshape refuses a probe's webhook | The probe shows Onshape's refusal | Change the params; delete the probe |
 
 ## Decisions
 
-- **The page drives bursts, not the Worker.** A Worker request has a
-  subrequest limit and a burst of hundreds would run for minutes; one call per
-  request avoids both, shows progress live, and stops when the page does. The
-  round trip from the page adds latency, so `durationMs` is Onshape's own time,
-  measured in the Worker.
+- **Limits are read from headers, not found by exhausting them.** One call
+  per endpoint shows what Onshape reports of its limit, at the cost of a call;
+  burning a limit down to time its reset costs hundreds and slows the owner's
+  own Onshape use while it lasts.
 - **A raw call answers 200 whatever Onshape said.** The point is to see
   Onshape's statuses and headers, which the app's own client turns into
   errors.
 - **Calls are made with the owner's OAuth token.** That is what the app's
-  features use, so the limits measured are the ones they meet; whether a limit
-  is per user, per app or per account is something a burst from a second user
+  features use, so the limits reported are the ones they meet; whether a limit
+  is per user, per app or per account is something a check from a second user
   would show.
 
 _Last reviewed: 2026-11-08_
