@@ -15,9 +15,7 @@ export const onshapeCallBody = z.object({
         .regex(/^(\/[A-Za-z0-9_\-.~%:]+)+$/)
         .refine((path) => !path.split("/").includes(".."), "No .. segments"),
     query: z.record(z.string(), z.string()).default({}),
-    body: z.unknown().optional(),
-    /** Off for a rate-limit check, which reads only the status and headers. */
-    includeBody: z.boolean().default(true)
+    body: z.unknown().optional()
 });
 
 export type OnshapeCallBody = z.input<typeof onshapeCallBody>;
@@ -30,7 +28,7 @@ export interface OnshapeCallResult {
     /** Every header Onshape answered with, names lowercased. */
     headers: Record<string, string>;
     /** Parsed when it is JSON, otherwise text; cut at {@link MAX_BODY_CHARS}. */
-    body?: unknown;
+    body: unknown;
     truncated?: boolean;
 }
 

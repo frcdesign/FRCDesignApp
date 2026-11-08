@@ -557,5 +557,6 @@
     "testbenchNeedsElement": "Needs the url above",
     "testbenchNoLimitHeaders": "No rate-limit headers; every header",
     "testbenchPartStudioUrl": "Part Studio",
-    "testbenchAssemblyUrl": "Assembly"
+    "testbenchAssemblyUrl": "Assembly",
+    "testbenchOnshapeAnswer": "Onshape's answer"
 }

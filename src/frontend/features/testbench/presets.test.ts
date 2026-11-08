@@ -12,7 +12,7 @@ const PART_STUDIO: ElementPath = {
 const ASSEMBLY: ElementPath = { ...PART_STUDIO, elementId: "asm" };
 
 describe("presetCall", () => {
-    it("evaluates the script in the Part Studio, without the body back", () => {
+    it("evaluates the script in the Part Studio, as Auto Assembly does", () => {
         expect(
             presetCall(
                 PresetId.EVALUATE_FEATURESCRIPT,
@@ -23,8 +23,7 @@ describe("presetCall", () => {
             method: "POST",
             version: 17,
             path: "/partstudios/d/d1/w/w1/e/ps/featurescript",
-            body: { script: "script", queries: [] },
-            includeBody: false
+            body: { script: "script" }
         });
     });
 

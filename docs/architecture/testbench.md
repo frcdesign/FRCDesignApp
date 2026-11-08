@@ -42,7 +42,7 @@ interface SendOptions extends QueryOptions {
 `src/backend/features/testbench/contract.ts`
 
 ```ts
-const onshapeCallBody: ZodObject; // method, version, path, query, body, includeBody
+const onshapeCallBody: ZodObject; // method, version, path, query, body
 
 interface OnshapeCallResult {
     url: string;
@@ -52,7 +52,7 @@ interface OnshapeCallResult {
     /** Every header Onshape answered with, names lowercased. */
     headers: Record<string, string>;
     /** Parsed when it is JSON, otherwise text; cut at MAX_BODY_CHARS. */
-    body?: unknown;
+    body: unknown;
     truncated?: boolean;
 }
 ```
@@ -106,18 +106,19 @@ calls and the shapes observed of them; the tabs are in
    with no `..`, a version from 1 to 99.
 2. `OnshapeApi.send` calls `https://cad.onshape.com/api/v{version}{path}` with
    the owner's token, refreshing it on a 401 as every call does.
-3. Answers 200 with Onshape's status, headers, timing and, unless
-   `includeBody` is off, its body. A 429 is an answer here, not an error.
+3. Answers 200 with Onshape's status, headers, timing and body. A 429 is an
+   answer here, not an error.
 
 ### A rate-limit check — the Rate limits tab
 
 1. Each preset is a call Auto Assembly or insert makes per hole or per part,
    uncached, against the Part Studio or assembly a pasted url names; the Raw
    request tab's call is checked beside them.
-2. **Check** makes one call; **Check all** makes each in turn, one at a time,
-   without bodies.
+2. **Check** makes one call; **Check all** makes each in turn, one at a time.
+   Evaluating FeatureScript sends `{ script }` alone, as Auto Assembly does.
 3. Each row shows Onshape's status and every header whose name looks like a
-   limit's (`limitHeaderLines`), or every header when none does.
+   limit's (`limitHeaderLines`), or every header when none does; a call
+   Onshape refused shows its answer too.
 
 ### The custom toolbar tab
 

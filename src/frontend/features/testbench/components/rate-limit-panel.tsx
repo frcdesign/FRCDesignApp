@@ -89,8 +89,7 @@ export function RateLimitPanel(props: RateLimitPanelProps): ReactNode {
         if (target !== RAW_TARGET) {
             return presetCall(target, elements, script);
         }
-        const body = toCallBody(rawDraft);
-        return body && { ...body, includeBody: false };
+        return toCallBody(rawDraft);
     };
 
     const check = async (target: Target) => {
@@ -247,17 +246,34 @@ interface LimitHeadersProps {
     result: OnshapeCallResult;
 }
 
-/** Every header, when none looks like a limit's, so a differently named one isn't missed. */
+/**
+ * Every header, when none looks like a limit's, so a differently named one
+ * isn't missed; and Onshape's answer to a call it refused.
+ */
 function LimitHeaders(props: LimitHeadersProps): ReactNode {
     const { result } = props;
     const lines = limitHeaderLines(result.headers);
-    if (lines.length > 0) {
-        return <Code block>{lines.join("\n")}</Code>;
-    }
+    const refused = result.status >= 300;
     return (
-        <details>
-            <summary>{m.testbenchNoLimitHeaders()}</summary>
-            <Code block>{JSON.stringify(result.headers, null, 2)}</Code>
-        </details>
+        <Stack gap={4}>
+            {lines.length > 0 ? (
+                <Code block>{lines.join("\n")}</Code>
+            ) : (
+                <details>
+                    <summary>{m.testbenchNoLimitHeaders()}</summary>
+                    <Code block>{JSON.stringify(result.headers, null, 2)}</Code>
+                </details>
+            )}
+            {refused && (
+                <details>
+                    <summary>{m.testbenchOnshapeAnswer()}</summary>
+                    <Code block>
+                        {typeof result.body === "string"
+                            ? result.body
+                            : JSON.stringify(result.body, null, 2)}
+                    </Code>
+                </details>
+            )}
+        </Stack>
     );
 }

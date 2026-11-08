@@ -47,9 +47,7 @@ export function presetCall(
     script: string
 ): OnshapeCallBody | undefined {
     const call = presetPath(id, elements, script);
-    return (
-        call && { ...call, version: ONSHAPE_API_VERSION, includeBody: false }
-    );
+    return call && { ...call, version: ONSHAPE_API_VERSION };
 }
 
 function presetPath(
@@ -66,7 +64,7 @@ function presetPath(
                 partStudio && {
                     method: "POST",
                     path: `/partstudios${toElementApiPath(partStudio)}/featurescript`,
-                    body: { script, queries: [] }
+                    body: { script }
                 }
             );
         case PresetId.PART_STUDIO_FEATURES:

@@ -20,8 +20,7 @@ testbenchRoutes.post(
     requireOwnerMiddleware,
     validate("json", onshapeCallBody),
     async (c) => {
-        const { method, version, path, query, body, includeBody } =
-            c.req.valid("json");
+        const { method, version, path, query, body } = c.req.valid("json");
         const client = await c.var.getOnshapeApi();
         const started = performance.now();
         const response = await client.send(method, path, {
@@ -32,16 +31,15 @@ testbenchRoutes.post(
         const text = await response.text();
         const durationMs = Math.round(performance.now() - started);
 
+        const truncated = text.length > MAX_BODY_CHARS;
         const result: OnshapeCallResult = {
             url: onshapeUrl(path, { version, query }),
             status: response.status,
             durationMs,
-            headers: Object.fromEntries(response.headers)
+            headers: Object.fromEntries(response.headers),
+            body: parseBody(text.slice(0, MAX_BODY_CHARS)),
+            truncated
         };
-        if (includeBody) {
-            result.truncated = text.length > MAX_BODY_CHARS;
-            result.body = parseBody(text.slice(0, MAX_BODY_CHARS));
-        }
         return c.json(result);
     }
 );

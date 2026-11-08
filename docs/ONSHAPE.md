@@ -216,10 +216,22 @@ errors.
 - **Rate limits** answer 429 — _documented_ — usually with `Retry-After`,
   which is sometimes absent — _observed_. Calls also count against the account's API
   allocation, which a full library reload spends a lot of — _documented_.
-- **Rate limits for the calls the app makes most** — evaluating FeatureScript,
-  reading assembly and Part Studio definitions and features — are not
-  published. Onshape reports a limit in each answer's headers — _unverified_;
-  the testbench's Rate limits tab reads them, and what it finds belongs here.
+- **Each answer says how many calls are left** in `x-rate-limit-remaining`,
+  and in no other header: nothing names the limit or when it resets —
+  _observed_ (2026-11-08, the owner's OAuth token through the testbench). What
+  it read after one check of each:
+    - assembly definition (`GET /assemblies/d/…/e/…`): about 3,000;
+    - everything else checked — evaluating FeatureScript, Part Studio and
+      assembly features, document elements, session info: about 9,000.
+
+    So reading an assembly's definition is the scarce one, a third of the rest.
+    Which calls share a count is _unverified_: Part Studio features, assembly
+    features and session info counted down together (8990, 8989, 8988), while
+    document elements stood apart (8998) — consistent with a count per endpoint
+    group, not proven. The window the counts refill over, and whether they are
+    per user, per app or per account, are _unverified_; checking again an hour
+    later, or as a second user, would tell.
+
 - **Internal endpoints** — the ones Onshape's own web client calls, such as the
   custom toolbar's — are served at `/api/v14` — _observed_. Whether the same
   paths answer at the app's own version is _unverified_.

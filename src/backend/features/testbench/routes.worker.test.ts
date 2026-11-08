@@ -93,24 +93,6 @@ describe("the testbench's Onshape calls", () => {
         ]);
     });
 
-    it("leaves the body out when asked to", async () => {
-        const api = new CannedOnshapeApi(() => new Response('{"id":"me"}'));
-
-        const response = await call(
-            {
-                method: "GET",
-                version: 17,
-                path: "/users/sessioninfo",
-                includeBody: false
-            },
-            api
-        );
-
-        const result = await response.json<OnshapeCallResult>();
-        expect(result.status).toBe(200);
-        expect(result.body).toBeUndefined();
-    });
-
     it("is the owner's alone", async () => {
         const api = new CannedOnshapeApi(() => new Response("{}"));
 
