@@ -1,7 +1,11 @@
 import { partDashboardLocation } from "./dashboard-nav";
 import { AppLink } from "../../components/app-link";
-import { Badge, Group, Table, Text } from "@mantine/core";
-import { CaretDownIcon, CaretUpIcon } from "@phosphor-icons/react";
+import { Badge, Group, Table } from "@mantine/core";
+import {
+    CaretDownIcon,
+    CaretUpIcon,
+    MagnifyingGlassIcon
+} from "@phosphor-icons/react";
 import { useMemo, useState, type ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { AppSparkline } from "./sparkline";
@@ -21,6 +25,8 @@ import {
 } from "./parts-sort";
 import { usePagedRows } from "./paged-rows";
 import { TablePagination } from "./table-pagination";
+import { m } from "../../paraglide/messages";
+import { DashboardEmpty } from "./dashboard-state";
 
 /** Small enough to sit in a row without stretching it. */
 const ROW_SPARKLINE = { h: 24, w: 80 };
@@ -45,18 +51,22 @@ interface SortableColumn {
 
 /** The sortable headings, in the order they are shown. */
 const SORTABLE_COLUMNS: SortableColumn[] = [
-    { label: "Part", column: "name" },
-    { label: "Group", column: "groupName", width: COLUMN_WIDTH.group },
+    { label: m.dashboardPartsColumnPart(), column: "name" },
     {
-        label: "Uses per month",
+        label: m.dashboardPartsColumnGroup(),
+        column: "groupName",
+        width: COLUMN_WIDTH.group
+    },
+    {
+        label: m.dashboardUsesPerMonth(),
         column: "usesPerMonth",
         align: "right",
         width: COLUMN_WIDTH.usesPerMonth
     },
     {
         // Not "total": this is the selected window's count.
-        label: "Uses",
-        column: "insertCount",
+        label: m.dashboardUses(),
+        column: "useCount",
         align: "right",
         width: COLUMN_WIDTH.uses
     }
@@ -89,10 +99,14 @@ export function PartsTable({
     };
 
     if (shown.length === 0) {
-        return (
-            <Text c="dimmed" py="xl" ta="center">
-                {search.trim() === "" ? emptyMessage : "No matching part."}
-            </Text>
+        return search.trim() === "" ? (
+            <DashboardEmpty title={emptyMessage} />
+        ) : (
+            <DashboardEmpty
+                title={m.dashboardPartsNoMatch()}
+                icon={MagnifyingGlassIcon}
+                color={StatusColor.WARNING}
+            />
         );
     }
 
@@ -196,14 +210,16 @@ function PartRow({ libraryId, part }: PartRowProps): ReactNode {
                 <Group gap="xs">
                     {part.name}
                     {!part.isVisible && (
-                        <Badge color={StatusColor.INFO}>Hidden</Badge>
+                        <Badge color={StatusColor.INFO}>
+                            {m.dashboardPartsHidden()}
+                        </Badge>
                     )}
                 </Group>
             </Table.Td>
             <Table.Td>{part.groupName}</Table.Td>
             <Table.Td ta="right">{formatCount(part.usesPerMonth)}</Table.Td>
             <Table.Td ta="right" c="dimmed">
-                {formatCount(part.insertCount)}
+                {formatCount(part.useCount)}
             </Table.Td>
             <Table.Td>
                 <AppSparkline data={part.recent} {...ROW_SPARKLINE} />

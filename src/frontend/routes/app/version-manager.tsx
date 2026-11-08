@@ -4,6 +4,7 @@ import { type ReactNode, useEffect } from "react";
 import {
     LinkDirection,
     type LinkedWorkspace,
+    type SuggestedLink,
     type WorkspacePath
 } from "@backend/features/version-manager/contract";
 import { AppSection, AppSections } from "../../components/app-section";
@@ -36,11 +37,15 @@ import { DIRECTION_COPY } from "../../features/version-manager/direction-copy";
 import { useLinkActions } from "../../features/version-manager/link-actions";
 import { VersionManagerZeroState } from "../../features/version-manager/components/version-manager-zero-state";
 import { LastRunCallout } from "../../features/version-manager/components/last-run-callout";
-import { useWorkspaceLinksQuery } from "../../features/version-manager/queries";
+import {
+    useLinkSuggestionsQuery,
+    useWorkspaceLinksQuery
+} from "../../features/version-manager/queries";
 import { useNeedsSignIn } from "../../features/auth/access-level";
 import { startSignIn } from "../../features/auth/sign-in";
 import { useMarkHintSeen } from "../../features/hints/queries";
 import { Hint } from "@backend/features/hints/contract";
+import { m } from "../../paraglide/messages";
 
 export const Route = createFileRoute("/app/version-manager")({
     component: VersionManagerPage,
@@ -70,15 +75,19 @@ function VersionManagerPage(): ReactNode {
 
     if (!workspace) {
         // What renders on the way out, `beforeLoad` having redirected.
-        return <PageLoading title="Loading..." />;
+        return <PageLoading title={m.versionManagerLoading()} />;
     }
     if (needsSignIn) {
         return (
             <PageNotice
                 icon={<GitBranchIcon size={IconSize.SECTION} />}
-                title="Sign in to manage versions"
-                description="Pushing and pulling happen in your Onshape documents."
-                action={<Button onClick={startSignIn}>Sign in</Button>}
+                title={m.versionManagerSignInTitle()}
+                description={m.versionManagerSignInDescription()}
+                action={
+                    <Button onClick={startSignIn}>
+                        {m.versionManagerSignIn()}
+                    </Button>
+                }
             />
         );
     }
@@ -93,16 +102,17 @@ interface VersionManagerProps {
 function VersionManager(props: VersionManagerProps): ReactNode {
     const { workspace } = props;
     const linksQuery = useWorkspaceLinksQuery(workspace);
+    const suggestionsQuery = useLinkSuggestionsQuery(workspace);
     const isParentsOpen = useSectionOpened(SectionId.PARENTS);
     const isChildrenOpen = useSectionOpened(SectionId.CHILDREN);
 
     if (linksQuery.isPending) {
-        return <PageLoading title="Loading linked documents..." />;
+        return <PageLoading title={m.versionManagerLinksLoading()} />;
     }
     if (linksQuery.isError || !linksQuery.data) {
         return (
             <PageError
-                title="Failed to load linked documents."
+                title={m.versionManagerLinksFailed()}
                 error={linksQuery.error}
                 topic={FeedbackTopic.VERSION_MANAGER}
             />
@@ -110,11 +120,14 @@ function VersionManager(props: VersionManagerProps): ReactNode {
     }
 
     const links = linksQuery.data;
+    // A failed read is only missing suggestions; the links still work.
+    const suggestions = suggestionsQuery.data?.suggestions ?? [];
     if (links.parents.length === 0 && links.children.length === 0) {
         return (
             <VersionManagerZeroState
                 workspace={workspace}
                 documentName={links.documentName}
+                suggestions={suggestions}
             />
         );
     }
@@ -143,6 +156,7 @@ function VersionManager(props: VersionManagerProps): ReactNode {
                     workspace={workspace}
                     direction={LinkDirection.PARENT}
                     linked={links.parents}
+                    suggestions={suggestions}
                 />
                 <LinkSection
                     workspace={workspace}
@@ -158,11 +172,13 @@ interface LinkSectionProps {
     workspace: WorkspacePath;
     direction: LinkDirection;
     linked: LinkedWorkspace[];
+    /** Parents only: documents referenced and not yet linked. */
+    suggestions?: SuggestedLink[];
 }
 
 /** One direction's section: its links, and the run they share. */
 function LinkSection(props: LinkSectionProps): ReactNode {
-    const { workspace, direction, linked } = props;
+    const { workspace, direction, linked, suggestions = [] } = props;
     const actions = useLinkActions(workspace, direction);
     const copy = DIRECTION_COPY[direction];
 
@@ -179,8 +195,10 @@ function LinkSection(props: LinkSectionProps): ReactNode {
             icon={<DirectionIcon direction={direction} />}
             actions={
                 <SectionActions
+                    workspace={workspace}
                     direction={direction}
                     linked={linked}
+                    suggestions={suggestions}
                     actions={actions}
                 />
             }
@@ -189,6 +207,7 @@ function LinkSection(props: LinkSectionProps): ReactNode {
                 workspace={workspace}
                 direction={direction}
                 linked={linked}
+                suggestions={suggestions}
                 actions={actions}
             />
         </AppSection>

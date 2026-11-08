@@ -44,7 +44,17 @@ export default defineConfig([
             "@typescript-eslint/only-throw-error": "off",
 
             // prefer `if (!x)` over `??=` — style preference
-            "@typescript-eslint/prefer-nullish-coalescing": "off"
+            "@typescript-eslint/prefer-nullish-coalescing": "off",
+
+            // Onshape's panel runs in browsers older than URL.parse.
+            "no-restricted-properties": [
+                "error",
+                {
+                    object: "URL",
+                    property: "parse",
+                    message: "Use parseUrl from @backend/lib/parse-url."
+                }
+            ]
         },
         languageOptions: {
             globals: globals.browser,

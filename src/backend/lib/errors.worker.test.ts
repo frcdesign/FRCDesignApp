@@ -1,5 +1,5 @@
 import { env } from "cloudflare:workers";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AccessLevel } from "../features/auth/access-level";
 import { LibraryId } from "../features/library/library-id";
 import { ApiErrorKind } from "./api-error";
@@ -11,6 +11,10 @@ const db = getDb(env.DB);
 describe("api error responses", () => {
     beforeEach(async () => {
         await resetDb(db);
+    });
+
+    afterEach(() => {
+        vi.restoreAllMocks();
     });
 
     // Written for the user, and the kind tells the client what to offer them.
@@ -59,6 +63,31 @@ describe("api error responses", () => {
         expect(await res.json<unknown>()).toMatchObject({
             kind: ApiErrorKind.INTERNAL
         });
+    });
+
+    it("logs an unexpected error under the request's Ray ID, and names it in the response", async () => {
+        const logged = vi
+            .spyOn(console, "error")
+            .mockImplementation(() => undefined);
+        const error = new Error("D1_ERROR: no such table: favorites");
+        const app = createTestApp();
+        app.post("/api/test-crash", () => {
+            throw error;
+        });
+
+        const res = await app.request(
+            "/api/test-crash",
+            { method: "POST", headers: { "cf-ray": "8f00ba11-IAD" } },
+            env
+        );
+
+        expect(res.status).toBe(500);
+        expect(await res.json<unknown>()).toEqual({
+            kind: ApiErrorKind.INTERNAL,
+            message: "Internal Server Error",
+            errorId: "8f00ba11-IAD"
+        });
+        expect(logged).toHaveBeenCalledWith("Server error 8f00ba11-IAD", error);
     });
 
     it("marks an unknown library as internal rather than explaining it", async () => {

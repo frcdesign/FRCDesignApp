@@ -23,6 +23,7 @@ sits in an info tooltip at the callout's end.
 | "A configuration has no open composite part" / "{n} configurations have no open composite part" | "Composite parts must be consistent across all configurations."                                                                                                | Error    | Element           | The default is an open composite, but some indexed configurations aren't. Links to the first       |
 | "First mate connector is unstable"                                                              | "The first mate connector must be stable across all configurations."                                                                                           | Error    | Element           | A configuration can suppress the first mate connector, or one before it, or it fails to regenerate |
 | "Some elements failed to load"                                                                  | —                                                                                                                                                              | Error    | Document          | One or more of its tabs failed in the last load                                                    |
+| "Document isn't public"                                                                         | "Only people it's shared with can insert or download its parts. Make it public from Share in Onshape."                                                         | Error    | Document          | Onshape doesn't report the document as public. **⚑** New                                           |
 | "Document failed to load"                                                                       | —                                                                                                                                                              | Error    | Document          | The last load threw before saving                                                                  |
 | "Document not loaded yet"                                                                       | "Use Reload if it doesn't start loading."                                                                                                                      | Warning  | Document          | Added, and its first load hasn't saved                                                             |
 | "Not configured as generated"                                                                   | "Its configuration isn't the one robot-code generated, so it keeps its last load. Configure the studio with fs configure-studio, or sync the generated parts." | Error    | Element           | A generated tab's configuration differs from the set's manifest                                    |
@@ -81,10 +82,10 @@ sits in an info tooltip at the callout's end.
 
 ## Usage section
 
-| String                                | Kind        | Where                          | When                                                  | Review                             |
-| ------------------------------------- | ----------- | ------------------------------ | ----------------------------------------------------- | ---------------------------------- |
-| "Open in dashboard"                   | Tooltip     | The chart button in the header | Always; a part's report, or the library's for a group | **⚑** Was a link under the numbers |
-| "Inserts" / "Per month" / "Favorites" | Stat labels | Under each number              | Always                                                |                                    |
+| String                             | Kind        | Where                          | When                                                  | Review                             |
+| ---------------------------------- | ----------- | ------------------------------ | ----------------------------------------------------- | ---------------------------------- |
+| "Open in dashboard"                | Tooltip     | The chart button in the header | Always; a part's report, or the library's for a group | **⚑** Was a link under the numbers |
+| "Uses" / "Per month" / "Favorites" | Stat labels | Under each number              | Always; uses count inserts and downloads              | **⚑** "Uses" was "Inserts"         |
 
 ## Settings menu
 

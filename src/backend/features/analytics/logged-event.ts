@@ -1,5 +1,4 @@
 /** The one place that knows which columns each kind of event sets. */
-import { type ElementType } from "../../lib/onshape/element-type";
 import { type LibraryId } from "../library/library-id";
 import type {
     VersionJobKind,
@@ -10,7 +9,7 @@ import type {
     FeedbackSource,
     FeedbackTopic
 } from "../feedback/contract";
-import { EventType, type InsertSource } from "./usage";
+import { EventType, UseTarget, type UseSource } from "./usage";
 import { type LoggedEvent } from "./schema";
 
 /** What every event carries, whatever kind of event it is. */
@@ -43,14 +42,14 @@ type ReportColumns = Pick<
     "reportTopic" | "reportCategory" | "reportSource" | "reportTeamNumber"
 >;
 
-/** The part an insert placed, or a part report named. */
+/** The part a use or a part report named. */
 export type ElementColumns = Pick<
     LoggedEvent,
     "elementId" | "documentId" | "instanceId" | "instanceType" | "insertableId"
 >;
 
-/** What only an insert fills in. */
-type InsertColumns = Omit<
+/** What only a use, an insert or a download, fills in. */
+type UseColumns = Omit<
     LoggedEvent,
     | keyof EventCore
     | keyof VersionRunColumns
@@ -59,7 +58,7 @@ type InsertColumns = Omit<
 >;
 
 /** Spelled out, so a new column fails to compile until someone decides its value here. */
-export const NOT_AN_INSERT: InsertColumns = {
+export const NOT_A_USE: UseColumns = {
     targetElementType: null,
     selection: null,
     isFavorite: null,
@@ -112,24 +111,39 @@ export function asVersionRun(event: LoggedEvent): LoggedVersionRun | undefined {
     return isRun ? (event as LoggedVersionRun) : undefined;
 }
 
-/** A logged insert, whose own columns a reader can then count on. */
-export type LoggedInsert = LoggedEvent & {
-    /** An insert is always from a library, whatever the column allows. */
+/** A logged insert or download, whose own columns a reader can then count on. */
+export type LoggedUse = LoggedEvent & {
+    /** A use is always from a library, whatever the column allows. */
     libraryId: LibraryId;
     elementId: string;
-    targetElementType: ElementType;
-    source: InsertSource;
+    source: UseSource;
+    /** Where the part went, which the rollups split by. */
+    target: UseTarget;
 };
 
 /** Undefined for another kind, or an insert from a version that didn't set these columns. */
-export function asInsert(event: LoggedEvent): LoggedInsert | undefined {
-    const isInsert =
-        event.type === EventType.INSERT &&
+export function asUse(event: LoggedEvent): LoggedUse | undefined {
+    const target = targetOf(event);
+    const isUse =
+        target !== undefined &&
         event.libraryId !== null &&
         event.elementId !== null &&
-        event.targetElementType !== null &&
         event.source !== null;
-    return isInsert ? (event as LoggedInsert) : undefined;
+    return isUse ? ({ ...event, target } as LoggedUse) : undefined;
+}
+
+function targetOf(event: LoggedEvent): UseTarget | undefined {
+    switch (event.type) {
+        case EventType.DOWNLOAD:
+            return UseTarget.DOWNLOAD;
+        case EventType.INSERT:
+            // The two enums share their values.
+            return (event.targetElementType ?? undefined) as
+                | UseTarget
+                | undefined;
+        default:
+            return undefined;
+    }
 }
 
 /** A logged report, whose own columns a reader can then count on. */

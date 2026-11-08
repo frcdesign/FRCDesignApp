@@ -11,7 +11,7 @@ import { eq } from "drizzle-orm";
 import { LibraryId } from "../library/library-id";
 import { saveSession } from "./session";
 import * as Users from "../../lib/onshape/endpoints/users";
-import * as Permissions from "../../lib/onshape/endpoints/permissions";
+import * as Documents from "../../lib/onshape/endpoints/documents";
 import { OnshapePermission } from "../../lib/onshape/endpoints/permissions";
 
 const app = createApp(productionAuth);
@@ -68,7 +68,9 @@ describe("the dev access-level override", () => {
                 "/api/access-data/library/frc-design-lib",
                 {
                     method: "GET",
-                    headers: { Cookie: `frc-design-app-session=${sessionId}` }
+                    headers: {
+                        Cookie: `__Host-frc-design-app-session=${sessionId}`
+                    }
                 },
                 { ...env, VITE_ACCESS_LEVEL_OVERRIDE: override }
             );
@@ -115,7 +117,9 @@ describe("access from a library's admin team", () => {
             `/api/access-data/library/${libraryId}`,
             {
                 method: "GET",
-                headers: { Cookie: `frc-design-app-session=${sessionId}` }
+                headers: {
+                    Cookie: `__Host-frc-design-app-session=${sessionId}`
+                }
             },
             { ...env, OWNER_USER_ID: OWNER }
         );
@@ -168,10 +172,12 @@ describe("the launch's sign-in check", () => {
             id: sessionUserId,
             company: null
         });
-        vi.spyOn(Permissions, "getPermissions").mockResolvedValue([
-            OnshapePermission.READ,
-            OnshapePermission.WRITE
-        ]);
+        vi.spyOn(Documents, "getDocument").mockResolvedValue({
+            id: "doc",
+            name: "Robot",
+            public: false,
+            permissionSet: [OnshapePermission.READ, OnshapePermission.WRITE]
+        });
         const sessionId = crypto.randomUUID();
         await saveSession(env.KV, sessionId, {
             accessToken: "token",
@@ -182,7 +188,9 @@ describe("the launch's sign-in check", () => {
             `/init?documentId=doc&${query}`,
             {
                 method: "GET",
-                headers: { Cookie: `frc-design-app-session=${sessionId}` }
+                headers: {
+                    Cookie: `__Host-frc-design-app-session=${sessionId}`
+                }
             },
             env
         );
@@ -196,6 +204,25 @@ describe("the launch's sign-in check", () => {
     // A browser once signed in as another personal account, like a team's shared one.
     it("signs in again when the session is another personal account's", async () => {
         expect(await launchAs("user-a", "userId=user-b")).toBe("/auth/sign-in");
+    });
+
+    // Sign-in can't ask Onshape for a classroom, so asking again would only repeat.
+    it("takes a personal session for a classroom's document", async () => {
+        expect(
+            await launchAs(
+                "user-a",
+                "companyId=classroom-1&sessionCompanyId=cad"
+            )
+        ).toBe("/");
+    });
+
+    it("signs in again when the session isn't the launch's enterprise's", async () => {
+        expect(
+            await launchAs(
+                "user-a",
+                "companyId=company-1&sessionCompanyId=company-1"
+            )
+        ).toBe("/auth/sign-in");
     });
 
     it("takes the session's word for it when the launch names nobody", async () => {

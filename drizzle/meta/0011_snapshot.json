@@ -1,7 +1,7 @@
 {
     "version": "6",
     "dialect": "sqlite",
-    "id": "1a4f7394-b844-4a26-add4-e20c993f5af1",
+    "id": "37bb4e4c-1e83-444b-a08a-499eff6b6112",
     "prevId": "3ae84bd0-78c3-4374-909e-1bf7c4d2ceae",
     "tables": {
         "configurations": {
@@ -102,6 +102,11 @@
                 }
             },
             "indexes": {
+                "favorites_insertable_idx": {
+                    "name": "favorites_insertable_idx",
+                    "columns": ["insertable_id"],
+                    "isUnique": false
+                },
                 "favorites_user_id_library_id_insertable_id_unique": {
                     "name": "favorites_user_id_library_id_insertable_id_unique",
                     "columns": ["user_id", "library_id", "insertable_id"],
@@ -138,82 +143,6 @@
                 }
             },
             "compositePrimaryKeys": {},
-            "uniqueConstraints": {},
-            "checkConstraints": {}
-        },
-        "generated_sets": {
-            "name": "generated_sets",
-            "columns": {
-                "library_id": {
-                    "name": "library_id",
-                    "type": "text",
-                    "primaryKey": false,
-                    "notNull": true,
-                    "autoincrement": false
-                },
-                "set": {
-                    "name": "set",
-                    "type": "text",
-                    "primaryKey": false,
-                    "notNull": true,
-                    "autoincrement": false
-                },
-                "group_id": {
-                    "name": "group_id",
-                    "type": "text",
-                    "primaryKey": false,
-                    "notNull": true,
-                    "autoincrement": false
-                },
-                "version_id": {
-                    "name": "version_id",
-                    "type": "text",
-                    "primaryKey": false,
-                    "notNull": true,
-                    "autoincrement": false
-                },
-                "features": {
-                    "name": "features",
-                    "type": "text",
-                    "primaryKey": false,
-                    "notNull": true,
-                    "autoincrement": false
-                },
-                "catalog": {
-                    "name": "catalog",
-                    "type": "text",
-                    "primaryKey": false,
-                    "notNull": true,
-                    "autoincrement": false
-                }
-            },
-            "indexes": {},
-            "foreignKeys": {
-                "generated_sets_library_id_libraries_id_fk": {
-                    "name": "generated_sets_library_id_libraries_id_fk",
-                    "tableFrom": "generated_sets",
-                    "tableTo": "libraries",
-                    "columnsFrom": ["library_id"],
-                    "columnsTo": ["id"],
-                    "onDelete": "no action",
-                    "onUpdate": "no action"
-                },
-                "generated_sets_group_id_groups_id_fk": {
-                    "name": "generated_sets_group_id_groups_id_fk",
-                    "tableFrom": "generated_sets",
-                    "tableTo": "groups",
-                    "columnsFrom": ["group_id"],
-                    "columnsTo": ["id"],
-                    "onDelete": "cascade",
-                    "onUpdate": "no action"
-                }
-            },
-            "compositePrimaryKeys": {
-                "generated_sets_library_id_set_pk": {
-                    "columns": ["library_id", "set"],
-                    "name": "generated_sets_library_id_set_pk"
-                }
-            },
             "uniqueConstraints": {},
             "checkConstraints": {}
         },
@@ -489,13 +418,6 @@
                 },
                 "part_metadata": {
                     "name": "part_metadata",
-                    "type": "text",
-                    "primaryKey": false,
-                    "notNull": false,
-                    "autoincrement": false
-                },
-                "generated_studio": {
-                    "name": "generated_studio",
                     "type": "text",
                     "primaryKey": false,
                     "notNull": false,
@@ -782,7 +704,13 @@
                     "default": 0
                 }
             },
-            "indexes": {},
+            "indexes": {
+                "daily_app_opens_day_opens_idx": {
+                    "name": "daily_app_opens_day_opens_idx",
+                    "columns": ["day", "opens"],
+                    "isUnique": false
+                }
+            },
             "foreignKeys": {},
             "compositePrimaryKeys": {
                 "daily_app_opens_day_user_id_pk": {
@@ -1027,30 +955,6 @@
                 },
                 "quick_insert_count": {
                     "name": "quick_insert_count",
-                    "type": "integer",
-                    "primaryKey": false,
-                    "notNull": true,
-                    "autoincrement": false,
-                    "default": 0
-                },
-                "fastenable_count": {
-                    "name": "fastenable_count",
-                    "type": "integer",
-                    "primaryKey": false,
-                    "notNull": true,
-                    "autoincrement": false,
-                    "default": 0
-                },
-                "preselected_count": {
-                    "name": "preselected_count",
-                    "type": "integer",
-                    "primaryKey": false,
-                    "notNull": true,
-                    "autoincrement": false,
-                    "default": 0
-                },
-                "auto_assembly_count": {
-                    "name": "auto_assembly_count",
                     "type": "integer",
                     "primaryKey": false,
                     "notNull": true,
@@ -1474,20 +1378,6 @@
                 },
                 "fasten": {
                     "name": "fasten",
-                    "type": "integer",
-                    "primaryKey": false,
-                    "notNull": false,
-                    "autoincrement": false
-                },
-                "fastenable": {
-                    "name": "fastenable",
-                    "type": "integer",
-                    "primaryKey": false,
-                    "notNull": false,
-                    "autoincrement": false
-                },
-                "preselected": {
-                    "name": "preselected",
                     "type": "integer",
                     "primaryKey": false,
                     "notNull": false,

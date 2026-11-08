@@ -82,6 +82,17 @@ export function isVersionedLibraryQuery(queryKey: readonly unknown[]): boolean {
     );
 }
 
+/** Under the library, so its refresh asks again. */
+export function documentChangesQueryKey(
+    libraryId: LibraryId,
+    documentId: string,
+    includeElements?: boolean
+) {
+    const key = [...libraryQueryKey(libraryId), "document-changes", documentId];
+    // Left out, the key is a prefix of the document's queries with and without tabs.
+    return includeElements === undefined ? key : [...key, includeElements];
+}
+
 export function jobStatusQueryKey(libraryId: LibraryId) {
     return [...libraryQueryKey(libraryId), "job-status"];
 }
@@ -116,6 +127,11 @@ export function workspaceChangesQueryKey(
     parent: InstancePath
 ) {
     return [...workspaceLinksQueryKey(workspace), "changes", parent];
+}
+
+/** Under the links' key, so a link added or removed asks for them again. */
+export function linkSuggestionsQueryKey(workspace: InstancePath | undefined) {
+    return [...workspaceLinksQueryKey(workspace), "suggestions"];
 }
 
 export function versionJobQueryKey(workspace: InstancePath | undefined) {

@@ -29,12 +29,14 @@ import { getDb } from "../../db/client";
 import { type AppContext } from "../../lib/context";
 import {
     trackAppOpen,
+    trackDownload,
     trackInsert,
     trackVersionRun,
-    type InsertEvent
+    type InsertEvent,
+    type UseEvent
 } from "./tracking";
 import { toDayKey } from "./day";
-import { EVENT_SCHEMA_VERSION, EventType, InsertSource } from "./usage";
+import { EVENT_SCHEMA_VERSION, EventType, UseSource, UseTarget } from "./usage";
 import {
     boolParam,
     enumParam,
@@ -83,7 +85,7 @@ function insertEvent(overrides: Partial<InsertEvent> = {}): InsertEvent {
         parameters: [],
         isFavorite: false,
         isQuickInsert: false,
-        source: InsertSource.BROWSE,
+        source: UseSource.BROWSE,
         fasten: false,
         fastenable: false,
         preselected: false,
@@ -148,13 +150,13 @@ describe("tracking", () => {
             expect(event?.day).toBe(toDayKey(Date.now()));
 
             const stats = await db.select().from(insertableStats).get();
-            expect(stats?.insertCount).toBe(1);
+            expect(stats?.useCount).toBe(1);
 
             const daily = await db.select().from(dailyMetrics).get();
             expect(daily?.count).toBe(1);
 
             const user = await db.select().from(userStats).get();
-            expect(user?.insertCount).toBe(1);
+            expect(user?.useCount).toBe(1);
         });
 
         it("increments the rollups rather than duplicating rows", async () => {
@@ -174,7 +176,7 @@ describe("tracking", () => {
 
             const stats = await db.select().from(insertableStats).all();
             expect(stats).toHaveLength(1);
-            expect(stats[0].insertCount).toBe(3);
+            expect(stats[0].useCount).toBe(3);
 
             const daily = await db.select().from(dailyMetrics).all();
             expect(daily).toHaveLength(1);
@@ -182,7 +184,7 @@ describe("tracking", () => {
 
             const users = await db.select().from(userStats).all();
             expect(users).toHaveLength(1);
-            expect(users[0].insertCount).toBe(3);
+            expect(users[0].useCount).toBe(3);
 
             expect(await db.select().from(events).all()).toHaveLength(3);
         });
@@ -331,7 +333,7 @@ describe("tracking", () => {
             ).toEqual({ size: "small", length: "0.0254 m" });
         });
 
-        it("counts the flag subsets against the day's inserts", async () => {
+        it("counts the flag subsets against the day's uses", async () => {
             await trackInsert(
                 fakeContext(),
                 insertEvent({ isFavorite: true, fasten: true })
@@ -375,7 +377,7 @@ describe("tracking", () => {
                     ...assembly,
                     fastenable: true,
                     fasten: true,
-                    source: InsertSource.AUTO_ASSEMBLY
+                    source: UseSource.AUTO_ASSEMBLY
                 })
             );
             // A derive can't fasten, so it isn't a fastenable insert
@@ -408,7 +410,7 @@ describe("tracking", () => {
                 preselectedCount: 3
             });
             expect(await db.select().from(insertableStats).get()).toMatchObject(
-                { insertCount: 3 }
+                { useCount: 3 }
             );
         });
 
@@ -448,21 +450,21 @@ describe("tracking", () => {
             });
         });
 
-        it("splits inserts by source, tracking quick insert within each", async () => {
+        it("splits uses by source, tracking quick insert within each", async () => {
             await trackInsert(
                 fakeContext(),
-                insertEvent({ source: InsertSource.SEARCH })
+                insertEvent({ source: UseSource.SEARCH })
             );
             await trackInsert(
                 fakeContext(),
                 insertEvent({
-                    source: InsertSource.SEARCH,
+                    source: UseSource.SEARCH,
                     isQuickInsert: true
                 })
             );
             await trackInsert(
                 fakeContext(),
-                insertEvent({ source: InsertSource.FAVORITES })
+                insertEvent({ source: UseSource.FAVORITES })
             );
 
             const rows = await db.select().from(dailySourceMetrics).all();
@@ -473,31 +475,31 @@ describe("tracking", () => {
                 ])
             );
             expect(bySource).toEqual({
-                [InsertSource.SEARCH]: { count: 2, quick: 1 },
-                [InsertSource.FAVORITES]: { count: 1, quick: 0 }
+                [UseSource.SEARCH]: { count: 2, quick: 1 },
+                [UseSource.FAVORITES]: { count: 1, quick: 0 }
             });
         });
 
         it("counts a search inside a group apart from one across the library", async () => {
             await trackInsert(
                 fakeContext(),
-                insertEvent({ source: InsertSource.SEARCH })
+                insertEvent({ source: UseSource.SEARCH })
             );
             await trackInsert(
                 fakeContext(),
-                insertEvent({ source: InsertSource.GROUP_SEARCH })
+                insertEvent({ source: UseSource.GROUP_SEARCH })
             );
             await trackInsert(
                 fakeContext(),
-                insertEvent({ source: InsertSource.GROUP_SEARCH })
+                insertEvent({ source: UseSource.GROUP_SEARCH })
             );
 
             const rows = await db.select().from(dailySourceMetrics).all();
             expect(
                 Object.fromEntries(rows.map((row) => [row.source, row.count]))
             ).toEqual({
-                [InsertSource.SEARCH]: 1,
-                [InsertSource.GROUP_SEARCH]: 2
+                [UseSource.SEARCH]: 1,
+                [UseSource.GROUP_SEARCH]: 2
             });
         });
 
@@ -507,19 +509,19 @@ describe("tracking", () => {
                 fakeContext(),
                 insertEvent({
                     isFavorite: true,
-                    source: InsertSource.SEARCH
+                    source: UseSource.SEARCH
                 })
             );
 
             const event = await db.select().from(events).get();
             expect(event).toMatchObject({
                 isFavorite: true,
-                source: InsertSource.SEARCH
+                source: UseSource.SEARCH
             });
 
             const rows = await db.select().from(dailySourceMetrics).all();
             expect(rows).toHaveLength(1);
-            expect(rows[0].source).toBe(InsertSource.SEARCH);
+            expect(rows[0].source).toBe(UseSource.SEARCH);
         });
 
         it("records nothing extra for an insertable with no configuration", async () => {
@@ -530,6 +532,91 @@ describe("tracking", () => {
             ).toEqual([]);
             const event = await db.select().from(events).get();
             expect(event?.selection).toBeNull();
+        });
+    });
+
+    describe("trackDownload", () => {
+        /** A download from search; it carries none of an insert's own flags. */
+        function downloadEvent(overrides: Partial<UseEvent> = {}): UseEvent {
+            return {
+                libraryId: TEST_LIBRARY_ID,
+                path: TEST_PART_STUDIO_PATH,
+                insertableId: TEST_PART_STUDIO_ID,
+                selection: undefined,
+                parameters: [],
+                isFavorite: true,
+                source: UseSource.SEARCH,
+                ...overrides
+            };
+        }
+
+        it("logs a download with no target tab", async () => {
+            await trackDownload(fakeContext(), downloadEvent());
+
+            expect(await db.select().from(events).get()).toMatchObject({
+                type: EventType.DOWNLOAD,
+                targetElementType: null,
+                isQuickInsert: null,
+                fasten: null,
+                isFavorite: true,
+                source: UseSource.SEARCH
+            });
+        });
+
+        it("counts as a use beside an insert, and as a download of its own", async () => {
+            await trackInsert(fakeContext(), insertEvent());
+            await trackDownload(fakeContext(), downloadEvent());
+
+            const stats = await db.select().from(insertableStats).get();
+            expect(stats?.useCount).toBe(2);
+            const user = await db.select().from(userStats).get();
+            expect(user?.useCount).toBe(2);
+            expect(
+                await db.select().from(dailyUserActivity).all()
+            ).toHaveLength(1);
+
+            const byType = await db.select().from(dailyMetrics).all();
+            expect(
+                Object.fromEntries(byType.map((row) => [row.type, row.count]))
+            ).toEqual({ [EventType.INSERT]: 1, [EventType.DOWNLOAD]: 1 });
+
+            const targets = await db.select().from(dailyTargetMetrics).all();
+            expect(
+                Object.fromEntries(
+                    targets.map((row) => [row.targetElementType, row.count])
+                )
+            ).toEqual({ [UseTarget.PART_STUDIO]: 1, [UseTarget.DOWNLOAD]: 1 });
+
+            const part = await db.select().from(dailyInsertableMetrics).all();
+            expect(part.map((row) => row.targetElementType).sort()).toEqual([
+                UseTarget.DOWNLOAD,
+                UseTarget.PART_STUDIO
+            ]);
+
+            const sources = await db.select().from(dailySourceMetrics).all();
+            expect(
+                Object.fromEntries(
+                    sources.map((row) => [row.source, row.count])
+                )
+            ).toEqual({ [UseSource.BROWSE]: 1, [UseSource.SEARCH]: 1 });
+        });
+
+        it("counts the configuration it downloaded", async () => {
+            await seedSizeConfiguration();
+            await trackDownload(
+                fakeContext(),
+                downloadEvent({
+                    selection: toSelection({ size: "large" }, SIZE_PARAMETERS),
+                    parameters: SIZE_PARAMETERS
+                })
+            );
+
+            const sizes = await db
+                .select()
+                .from(dailyConfigurationMetrics)
+                .where(eq(dailyConfigurationMetrics.parameterId, "size"))
+                .all();
+            expect(sizes).toMatchObject([{ value: "large", count: 1 }]);
         });
     });
 

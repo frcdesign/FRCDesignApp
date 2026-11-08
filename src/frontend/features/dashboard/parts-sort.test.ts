@@ -13,22 +13,22 @@ const part = (overrides: Partial<PartUsageOut> = {}) =>
     partUsage({ elementId: overrides.name, ...overrides });
 
 const PARTS = [
-    part({ name: "Bearing", insertCount: 3, usesPerMonth: 3 }),
+    part({ name: "Bearing", useCount: 3, usesPerMonth: 3 }),
     part({
         name: "Tube",
         groupName: "Structure",
-        insertCount: 10,
+        useCount: 10,
         usesPerMonth: 1
     }),
-    part({ name: "Axle", insertCount: 0, usesPerMonth: 0 }),
-    part({ name: "Spacer", insertCount: 3, usesPerMonth: 3 })
+    part({ name: "Axle", useCount: 0, usesPerMonth: 0 }),
+    part({ name: "Spacer", useCount: 3, usesPerMonth: 3 })
 ];
 
 const names = (parts: PartUsageOut[]) => parts.map((p) => p.name);
 
 describe("filterAndSort", () => {
     it("puts the highest rate first by default, not the highest total", () => {
-        // Tube has the most inserts but the lowest rate.
+        // Tube has the most uses but the lowest rate.
         expect(names(filterAndSort(PARTS, "", DEFAULT_SORT))).toEqual([
             "Bearing",
             "Spacer",
@@ -39,8 +39,8 @@ describe("filterAndSort", () => {
 
     it("breaks a rounded rate tie on the raw total", () => {
         const parts = [
-            part({ name: "Low", insertCount: 5, usesPerMonth: 2 }),
-            part({ name: "High", insertCount: 40, usesPerMonth: 2 })
+            part({ name: "Low", useCount: 5, usesPerMonth: 2 }),
+            part({ name: "High", useCount: 40, usesPerMonth: 2 })
         ];
         expect(names(filterAndSort(parts, "", DEFAULT_SORT))).toEqual([
             "High",
@@ -49,7 +49,7 @@ describe("filterAndSort", () => {
     });
 
     it("still sorts by lifetime total when asked", () => {
-        const sort: SortState = { column: "insertCount", descending: true };
+        const sort: SortState = { column: "useCount", descending: true };
         expect(names(filterAndSort(PARTS, "", sort))).toEqual([
             "Tube",
             "Bearing",
@@ -95,8 +95,8 @@ describe("nextSort", () => {
 
     it("starts a count column at its largest value", () => {
         const byName: SortState = { column: "name", descending: false };
-        expect(nextSort(byName, "insertCount")).toEqual({
-            column: "insertCount",
+        expect(nextSort(byName, "useCount")).toEqual({
+            column: "useCount",
             descending: true
         });
     });

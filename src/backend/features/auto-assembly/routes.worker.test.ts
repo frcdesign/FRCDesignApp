@@ -26,7 +26,7 @@ function post(path: string, body: unknown) {
             ...jsonRequest("POST", body),
             headers: {
                 "Content-Type": "application/json",
-                Cookie: "frc-design-app-session=session"
+                Cookie: "__Host-frc-design-app-session=session"
             }
         },
         env

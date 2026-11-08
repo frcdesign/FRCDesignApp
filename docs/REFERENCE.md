@@ -1,6 +1,6 @@
 # FRCDesignApp — System Reference
 
-This document explains what FRCDesignApp is, how its pieces fit together, and where to find things in the codebase. If you want step-by-step recipes for adding new features, see [GUIDE.md](./GUIDE.md).
+This document explains what FRCDesignApp is, how its pieces fit together, and where to find things in the codebase. If you want step-by-step recipes for adding new features, see [GUIDE.md](./GUIDE.md); for how Onshape itself behaves, see [ONSHAPE.md](./ONSHAPE.md).
 
 ## What Is This App?
 
@@ -34,7 +34,7 @@ Queries go through **Drizzle ORM** so you write TypeScript instead of raw SQL. T
 
 KV holds what may expire or be lost. Every key belongs to a `kvStore` (`src/backend/lib/kv-store.ts`) with its own prefix, value type and lifetime:
 
-- `session:` — a signed-in session's access and refresh tokens and user id, keyed by the opaque id in the `frc-design-app-session` cookie, for 30 days (`features/auth/session.ts`). A sign-in in flight keeps nothing here: its state and return path are the whole of the ten-minute `frc-design-app-login` cookie (`features/auth/login.ts`).
+- `session:` — a signed-in session's access and refresh tokens and user id, keyed by the opaque id in the `__Host-frc-design-app-session` cookie, for 30 days (`features/auth/session.ts`). A sign-in in flight keeps nothing here: its state and return path are the whole of the ten-minute `__Host-frc-design-app-login` cookie (`features/auth/login.ts`).
 - `background-session:` — the latest session ids of the owner and each admin team member, so a load nobody is signed in behind can run as one of them.
 - `library-reload:`, `library-reload-queued:` — the reload holding each library, and those waiting for their turn ([architecture/loading.md](./architecture/loading.md)).
 - `feedback-sent:` — when each reporter sent their reports in the last hour, for the reports' rate limit ([architecture/feedback.md](./architecture/feedback.md)).
@@ -123,6 +123,7 @@ owns, `lib/` for cross-cutting plumbing, and a small set of files at the root.
     - `auto-assembly/` — sizing and inserting fasteners in an assembly's holes, from the fasteners FRCDesignLib loaded; see [architecture/auto-assembly.md](./architecture/auto-assembly.md)
     - `generated-parts/` — library parts FeatureScript generates, whose records robot-code writes and loads index; see [architecture/generated-parts.md](./architecture/generated-parts.md)
     - `feedback/` — reports posted to the FRCDesign Discord; see [architecture/feedback.md](./architecture/feedback.md)
+    - `download/` — STEP downloads for the standalone app, exported by Onshape as the signed-in caller; see [architecture/download.md](./architecture/download.md)
     - `favorites/`, `recents/`, `search/`, `analytics/`, `insert-location/`
 
 ### `src/frontend/`

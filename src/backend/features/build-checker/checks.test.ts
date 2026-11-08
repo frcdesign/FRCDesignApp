@@ -26,7 +26,8 @@ const HEALTHY_GROUP = {
     hasThumbnailTab: true,
     thumbnailUrls: THUMBNAILS,
     hasFailedInsertables: false,
-    hasVisibleInsertable: true
+    hasVisibleInsertable: true,
+    isPublic: true
 };
 
 describe("checkGroup", () => {
@@ -53,6 +54,11 @@ describe("checkGroup", () => {
             hasFailedInsertables: true
         });
         expect(issues).toEqual([{ type: BuildIssueType.INSERTABLES_FAILED }]);
+    });
+
+    it("errors when the document isn't public", () => {
+        const issues = checkGroup({ ...HEALTHY_GROUP, isPublic: false });
+        expect(issues).toEqual([{ type: BuildIssueType.NOT_PUBLIC }]);
     });
 
     it("errors when every insertable is hidden", () => {

@@ -8,6 +8,8 @@ export const EVENT_SCHEMA_VERSION = 3;
 
 export enum EventType {
     INSERT = "insert",
+    /** A part exported to a file from the standalone app; see `features/download`. */
+    DOWNLOAD = "download",
     APP_OPEN = "app_open",
     /** One finished push or pull; see `features/version-manager`. */
     VERSION_RUN = "version_run",
@@ -15,8 +17,21 @@ export enum EventType {
     REPORT = "report"
 }
 
-/** Not whether the part is favorited. */
-export enum InsertSource {
+/** A use is an insert or a download: each counts toward a part's usage. */
+export const USE_EVENT_TYPES = [EventType.INSERT, EventType.DOWNLOAD] as const;
+
+/**
+ * Where a used part went. An insert's is the kind of tab it landed in, which
+ * share `ElementType`'s values, so its rows read either way.
+ */
+export enum UseTarget {
+    PART_STUDIO = "PARTSTUDIO",
+    ASSEMBLY = "ASSEMBLY",
+    DOWNLOAD = "DOWNLOAD"
+}
+
+/** Where the use started, not whether the part is favorited. */
+export enum UseSource {
     /** Searching the whole library, from its home list. */
     SEARCH = "search",
     /** Searching inside one group, which filters the results to it. */

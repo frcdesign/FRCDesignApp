@@ -43,13 +43,13 @@ function dashboardLink(): string | null | undefined {
 const parts = [
     partUsage({
         elementId: "other",
-        insertCount: 3,
+        useCount: 3,
         usesPerMonth: 5,
         favorites: 2
     }),
     partUsage({
         elementId: "e1",
-        insertCount: 1240,
+        useCount: 1240,
         usesPerMonth: 85,
         favorites: 42
     })
@@ -100,7 +100,7 @@ describe("usage section, closed", () => {
     it("asks for nothing, and still links to the dashboard", () => {
         updateUiState({ sections: { usage: false } });
         const { queryClient } = renderUsage();
-        expect(screen.queryByText("Inserts")).toBeNull();
+        expect(screen.queryByText("Uses")).toBeNull();
         expect(queryClient.getQueryCache().getAll()).toHaveLength(0);
         expect(dashboardLink()).toBe(PART_DASHBOARD);
     });

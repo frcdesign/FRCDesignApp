@@ -18,7 +18,8 @@ import {
     TOKEN_ENDPOINT
 } from "./onshape-oauth";
 import { getSession, getSessionId, saveSession } from "./session";
-import { getDocumentCompanyId } from "./company";
+import { cookieNames } from "./cookie-options";
+import { getSessionCompanyId } from "./company";
 import { PERSONAL_COMPANY_ID } from "./personal-company";
 
 /** Stable fake user id used for FORCE_SIGNED_IN testing sessions. */
@@ -81,22 +82,38 @@ function getCachedUserId(c: AppContext): Promise<string> {
 }
 
 /**
- * The session is the launching user's, for the document's company. Every
- * personal account shares one company, so only the user id tells two apart.
+ * The session is the launching user's, for the company their Onshape session is
+ * in. Every personal account shares one company, so only the user id tells two
+ * apart.
  */
 export async function isAuthenticated(c: AppContext): Promise<boolean> {
+    const problem = await findAuthProblem(c);
+    if (problem) {
+        console.warn("Launch needs sign-in", {
+            problem,
+            cookies: cookieNames(c)
+        });
+    }
+    return problem === undefined;
+}
+
+/** Why the session can't open this launch, for the log; undefined when it can. */
+async function findAuthProblem(c: AppContext): Promise<string | undefined> {
     try {
         const onshapeApi = await c.var.getOnshapeApi();
         const sessionInfo = await getSessionInfo(onshapeApi);
         // Onshape reports no company outside an enterprise.
         const tokenCompanyId = sessionInfo.company?.id ?? PERSONAL_COMPANY_ID;
+        if (getSessionCompanyId(c) !== tokenCompanyId) {
+            return "session is another company's";
+        }
         const launchUserId = c.req.query("userId");
-        return (
-            getDocumentCompanyId(c) === tokenCompanyId &&
-            (launchUserId === undefined || launchUserId === sessionInfo.id)
-        );
-    } catch {
-        return false;
+        if (launchUserId !== undefined && launchUserId !== sessionInfo.id) {
+            return "session is another user's";
+        }
+        return undefined;
+    } catch (error) {
+        return error instanceof Error ? error.message : String(error);
     }
 }
 

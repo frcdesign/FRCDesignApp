@@ -13,7 +13,7 @@ import {
     insertableRoute,
     libraryRoute
 } from "../../../lib/route-params";
-import { getDb, type Db } from "../../../db/client";
+import { getDb } from "../../../db/client";
 import {
     requireEditorMiddleware,
     requireSignInMiddleware
@@ -24,10 +24,6 @@ import { type InsertOut } from "../contract";
 import type { LibraryId } from "../library-id";
 import { toElementPath, INSTANCE_TYPES } from "../../../lib/onshape/path";
 import {
-    type ConfigurationParameter,
-    type Selection
-} from "../../configurations/contract";
-import {
     INDEXING_ISSUE_TYPES,
     NO_RECORDS,
     decideIndexing,
@@ -35,7 +31,7 @@ import {
 } from "../../load/parse-configuration-records";
 import { ElementType } from "../../../lib/onshape/element-type";
 import type { IndexingSettings } from "../../build-checker/contract";
-import { InsertSource } from "../../analytics/usage";
+import { UseSource } from "../../analytics/usage";
 import { trackInsert } from "../../analytics/tracking";
 import { recordRecentInsert } from "../../recents/store";
 import { DerivedFeature } from "../../../lib/onshape/objects/derive-feature";
@@ -47,9 +43,9 @@ import {
 import { PartType } from "../../../lib/onshape/endpoints/documents";
 import {
     onshapeOverrides,
-    partStudioInsertOverrides,
-    toSelection
+    partStudioInsertOverrides
 } from "../../configurations/selection";
+import { readSelection, selectionSchema } from "./read-selection";
 import { encodeConfiguration } from "../../configurations/utils";
 import { fastenMate } from "../../../lib/onshape/objects/assembly-features";
 import {
@@ -274,33 +270,6 @@ const targetPathSchema = z.object({
     elementId: z.string().min(1)
 });
 
-const selectionSchema = z.record(z.string(), z.string()).optional();
-
-/** Every request goes through here, so nothing past it holds a partial selection. */
-async function readSelection(
-    db: Db,
-    insertableId: string,
-    requested: Selection | undefined
-): Promise<{
-    selection: Selection | undefined;
-    parameters: ConfigurationParameter[];
-}> {
-    const row = await db
-        .select({ parameters: configurations.parameters })
-        .from(configurations)
-        .where(eq(configurations.insertableId, insertableId))
-        .get();
-
-    const parameters = row?.parameters ?? [];
-    return {
-        selection:
-            parameters.length === 0
-                ? undefined
-                : toSelection(requested ?? {}, parameters),
-        parameters
-    };
-}
-
 const insertBody = z.object({
     targetPath: targetPathSchema,
     selection: selectionSchema,
@@ -309,9 +278,9 @@ const insertBody = z.object({
     // Defaulted so an older client can't fail the tracking batch on NOT NULL.
     // An Auto Assembly run records its own inserts
     source: z
-        .enum(InsertSource)
+        .enum(UseSource)
         .exclude(["AUTO_ASSEMBLY"])
-        .default(InsertSource.BROWSE)
+        .default(UseSource.BROWSE)
 });
 
 const addToAssemblyBody = insertBody

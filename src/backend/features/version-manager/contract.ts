@@ -51,15 +51,48 @@ export interface LinkedWorkspace {
     workspaceName?: string;
 }
 
-/** A parent's edits since its own last version, which a pull versions; absent where Onshape would not say. */
+/** Each tab's microversion in a workspace, by element id. */
+export type ElementMicroversions = Record<string, string>;
+
+/** How far a workspace has moved; each field absent where Onshape would not say. */
 export interface WorkspaceChangesOut {
+    /** Edits since the workspace's own last version, which a pull versions. */
     changes?: number;
+    /** Only when asked for: a tab whose microversion differs from a version's changed since it. */
+    elements?: ElementMicroversions;
 }
 
 /** The workspace just linked, named for the toast; unnamed where Onshape wouldn't say. */
 export interface AddLinkOut {
     documentName?: string;
     workspaceName?: string;
+}
+
+/**
+ * A document the workspace references and has no link to, offered as a parent
+ * at its default workspace. Only a document the caller may read is offered.
+ */
+export interface SuggestedLink {
+    workspace: WorkspacePath;
+    documentName?: string;
+    workspaceName?: string;
+}
+
+export interface LinkSuggestionsOut {
+    suggestions: SuggestedLink[];
+}
+
+/** How many parents one request may link, which is also the most suggested. */
+export const MAX_SUGGESTED_LINKS = 25;
+
+/** How many of the parents asked for were linked; the rest were linked already or unreadable. */
+export interface LinkParentsOut {
+    linked: number;
+}
+
+/** How many tabs an update of a document's references moved; zero when none were out of date. */
+export interface UpdateReferencesOut {
+    updatedElements: number;
 }
 
 export interface WorkspaceLinksData {

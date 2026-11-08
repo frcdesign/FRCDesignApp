@@ -59,6 +59,7 @@ const GROUP: GroupTarget = {
     },
     versionCreatedAt: TEST_VERSION_CREATED_AT,
     readAt: 0,
+    isPublic: true,
     workspacePath: {
         documentId: "doc-1",
         instanceId: "w-1",
@@ -265,6 +266,7 @@ const LOADED_TARGET: GroupTarget = {
     },
     versionCreatedAt: LOADED_VERSION_CREATED_AT,
     readAt: LOADED_READ_AT.getTime(),
+    isPublic: true,
     workspacePath: {
         documentId: `doc-${TEST_GROUP_ID}`,
         instanceId: "w-main",
@@ -412,6 +414,19 @@ describe("loadGroup", () => {
 
         expect((await readGroup())?.buildIssues).not.toContainEqual({
             type: BuildIssueType.NOT_LOADED
+        });
+    });
+
+    it("flags a document that isn't public", async () => {
+        mockContents([tab("e1")]);
+        vi.spyOn(ConfigurationEndpoints, "getConfiguration").mockResolvedValue(
+            NO_CONFIGURATION
+        );
+
+        await loadGroup(CTX, { ...LOADED_TARGET, isPublic: false }, false);
+
+        expect((await readGroup())?.buildIssues).toContainEqual({
+            type: BuildIssueType.NOT_PUBLIC
         });
     });
 

@@ -2,16 +2,15 @@
 import { cacheMiddleware } from "../../lib/cache";
 import { getApp, type AppContext } from "../../lib/context";
 import { requireSignInMiddleware } from "../auth/guards";
-import { getDocumentCompanyId } from "../auth/company";
 import { trackAppOpen } from "../analytics/tracking";
-import { ACCESS_PROBLEM_PARAM, AccessProblem } from "./access-problem";
-import { cannotEditDocument } from "./document-access";
+import { ACCESS_PROBLEM_PARAM } from "./access-problem";
+import { findAccessProblem } from "./document-access";
 
 /** Marks the `/init` a sign-in returns to; see {@link needsSignIn}. */
 const SIGN_IN_ATTEMPTED = "signInAttempted";
 
 /**
- * No session, or one for another company than the document's. Asked once,
+ * No session, or one for another company than the caller's Onshape session. Asked once,
  * marked by `SIGN_IN_ATTEMPTED`: Onshape may hand back a token for the company
  * the caller is signed in to whatever is asked, which would otherwise loop.
  */
@@ -26,11 +25,15 @@ async function needsSignIn(c: AppContext): Promise<boolean> {
 function getSignInUrl(c: AppContext): string {
     const url = new URL(c.req.url);
     url.searchParams.set(SIGN_IN_ATTEMPTED, "1");
+    // Cloudflare strips the port in local dev, so come back relatively.
     const query = new URLSearchParams({
-        // Cloudflare strips the port in local dev, so come back relatively.
-        redirectUrl: url.pathname + url.search,
-        companyId: getDocumentCompanyId(c)
+        redirectUrl: url.pathname + url.search
     });
+    // Sign-in names it as the company when it is an enterprise's.
+    const sessionCompanyId = c.req.query("sessionCompanyId");
+    if (sessionCompanyId) {
+        query.set("sessionCompanyId", sessionCompanyId);
+    }
     return `/auth/sign-in?${query.toString()}`;
 }
 
@@ -53,15 +56,9 @@ entryRoutes.get("/init", cacheMiddleware(), async (c) => {
     const search = new URL(c.req.url).searchParams;
     // Ours, and spent: the app is being opened, however that turned out.
     search.delete(SIGN_IN_ATTEMPTED);
-    if (await cannotEditDocument(c, c.req.query("documentId"))) {
-        // A grant for another account than the document's can only be one the
-        // caller chose; the right account's grant that still can't edit is view-only.
-        search.set(
-            ACCESS_PROBLEM_PARAM,
-            (await c.var.isAuthenticated())
-                ? AccessProblem.VIEW_ONLY
-                : AccessProblem.OTHER_ACCOUNT
-        );
+    const problem = await findAccessProblem(c, c.req.query("documentId"));
+    if (problem) {
+        search.set(ACCESS_PROBLEM_PARAM, problem);
         return c.redirect(`/document-access?${search.toString()}`);
     }
     return c.redirect(`/?${search.toString()}`);

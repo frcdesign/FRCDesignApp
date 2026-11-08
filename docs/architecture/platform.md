@@ -23,6 +23,7 @@ their Onshape calls and link here for how those calls behave.
 | `src/backend/features/push/`                      | `ClientRelay` Durable Object, message contract, `notify.ts` senders                                                    |
 | `src/frontend/lib/api-client.ts`                  | `apiGet`, `apiPost`, `apiDelete`, `loadImage`; appends `?v=` for cached reads                                          |
 | `src/frontend/lib/errors.ts`                      | `AppError`, `handleAppError`, `getAppErrorHandler`                                                                     |
+| `src/frontend/lib/stale-build.ts`                 | `reloadOnStaleBuild`: reloads a tab whose build a deploy removed                                                       |
 | `src/frontend/lib/notifications.tsx`              | `showLoadingToast`, `showSuccessToast`, `showInfoToast`, `showErrorToast`                                              |
 | `src/frontend/lib/query-client.ts`                | TanStack Query defaults, including retry                                                                               |
 | `src/frontend/lib/push-socket.ts`, `push-sync.ts` | The client's WebSocket, and applying pushes to the cache                                                               |
@@ -70,7 +71,14 @@ A route throws; `errorHandler` answers with `{ kind, message }` and a status:
 | A validator's `HTTPException`    | `internal`         | its own  | Default wording; logged                           |
 | Anything else                    | `internal`         | 500      | Default wording; logged                           |
 
-On the client, `apiGet`/`apiPost` throw an `AppError` holding that body. A
+A logged error's body also carries an `errorId`: the request's Ray ID (`cf-ray`),
+or a random id where there is none, as in tests and local dev. It is logged as
+`Server error <errorId>` beside the error and its stack, so a report quoting it
+([feedback.md](./feedback.md)) finds the stack in Workers Logs.
+
+On the client, `apiGet`/`apiPost`/`apiDelete` throw an `AppError` holding that
+body and the request that failed (`FailedRequest`: method, path without the
+query, status). A
 mutation's `onError` is `getAppErrorHandler(defaultMessage, toastId)`, which
 shows the body's message for `handled` and `forbidden`, adds a **Sign in**
 action for `sign-in-required`, and shows `defaultMessage` for `internal` or any
@@ -78,8 +86,14 @@ non-`AppError`. Every toast but sign-in's carries a **Report** button
 (`showReportableErrorToast`), which opens a report holding what was shown and
 the error behind it, `internal` message included; a failed load shown as
 `SectionError` or `PageError` says "If the problem persists, send a report."
-beside **Send a report**. See [feedback.md](./feedback.md). Images use `loadImage`, which throws `ImageLoadError` with only
-the status.
+beside **Send a report**. See [feedback.md](./feedback.md). Images use
+`loadImage`, which throws `ImageLoadError` with only the status.
+
+A tab opened before a deploy fails its next lazy import, since the deploy
+removed the old build's chunks. Vite reports that as `vite:preloadError`, and
+`reloadOnStaleBuild` reloads the tab to fetch the new build, at most once in
+10 s (`sessionStorage`), so a chunk still missing after the reload reaches the
+crash page.
 
 A background run (the version manager's, Auto Assembly's) has no response to
 carry a body, so each feature makes a `runFailures(marker)`. A step that fails
@@ -147,6 +161,7 @@ The flows that use them:
 | Insert                        | per insertable                                                                         | "Inserting {name}..."          | "Successfully inserted {name}." (and "…created a Fasten mate." or "…fastened it to {n} circular edges.") |
 | Add document                  | `add-group`                                                                            | "Adding document..."           | "Added {name}."                                                                                          |
 | Reload thumbnail              | `reload-thumbnail`                                                                     | "Reloading thumbnail..."       | "Thumbnail reloaded."                                                                                    |
+| Update references             | `update-references`                                                                    | "Updating references..."       | "Updated references."                                                                                    |
 | Show or hide elements         | `set-visibility`                                                                       | "Showing/Hiding element(s)..." | "Element(s) shown/hidden."                                                                               |
 | Toggle insert and fasten      | per insertable                                                                         | loading                        | success                                                                                                  |
 | Save indexing changes         | per insertable                                                                         | info: "Reindexing part..."     | "Successfully indexed part."                                                                             |
@@ -154,6 +169,7 @@ The flows that use them:
 | Reload documents / approve    | none                                                                                   | —                              | info: "Reloading {n} documents..."                                                                       |
 | Save favorite configuration   | none                                                                                   | —                              | "Favorite default configuration set."                                                                    |
 | Link a document               | none                                                                                   | —                              | "Successfully linked {document} - {workspace}."                                                          |
+| Link all suggested parents    | none                                                                                   | —                              | "Linked {count} documents."                                                                              |
 | Refresh the version manager   | none                                                                                   | the button's spinner           | "Refreshed linked documents."                                                                            |
 | Tips                          | `quick-insert-tip`, `thumbnail-wait-tip`, `fasten-circular-edges-tip`, sign-in preview | —                              | info, 8 s                                                                                                |
 

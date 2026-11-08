@@ -4,20 +4,21 @@ import {
     type AnalyticsTotals,
     emptyTargets
 } from "@backend/features/analytics/contract";
+import { UseTarget } from "@backend/features/analytics/usage";
 import { renderWithProviders } from "../../../__test_utils__/render";
-import { FastenMethodBreakdown, InsertMethodBreakdown } from "./insert-mix";
+import { FastenMethodBreakdown, InsertMethodBreakdown } from "./use-mix";
 
 const TOTALS: AnalyticsTotals = {
-    inserts: 20,
+    uses: 20,
     appOpens: 0,
     uniqueUsers: 1,
-    favoriteInserts: 0,
+    favoriteUses: 0,
     quickInserts: 5,
     fastenInserts: 8,
     fastenableInserts: 10,
     preselectedInserts: 2,
     autoAssemblyInserts: 3,
-    targets: emptyTargets(),
+    targets: { ...emptyTargets(), [UseTarget.ASSEMBLY]: 20 },
     favorites: 0
 };
 
@@ -27,6 +28,19 @@ describe("insert breakdowns", () => {
         expect(screen.getByText("12 (60.0%)")).toBeTruthy();
         expect(screen.getByText("5 (25.0%)")).toBeTruthy();
         expect(screen.getByText("3 (15.0%)")).toBeTruthy();
+    });
+
+    it("leaves downloads out of the inserts it splits", () => {
+        renderWithProviders(
+            <InsertMethodBreakdown
+                totals={{
+                    ...TOTALS,
+                    uses: 30,
+                    targets: { ...TOTALS.targets, [UseTarget.DOWNLOAD]: 10 }
+                }}
+            />
+        );
+        expect(screen.getByText("12 (60.0%)")).toBeTruthy();
     });
 
     it("splits a fastenable part's inserts by how they were placed", () => {

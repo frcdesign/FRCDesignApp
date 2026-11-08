@@ -15,7 +15,7 @@ import {
 } from "../../../../features/dashboard/dashboard-queries";
 import { DashboardState } from "../../../../features/dashboard/dashboard-state";
 import { HealthTiles } from "../../../../features/dashboard/health-report";
-import { InsertsOverTimeCard } from "../../../../features/dashboard/inserts-chart";
+import { UsesOverTimeCard } from "../../../../features/dashboard/uses-chart";
 import { PartsTable } from "../../../../features/dashboard/parts-table";
 import { getLibraryName } from "../../../../lib/library";
 import { useCacheVersion } from "../../../../features/library/queries";
@@ -31,7 +31,8 @@ import { LibraryReports } from "../../../../features/dashboard/report-summary";
 import {
     FastenMethodBreakdown,
     InsertMethodBreakdown
-} from "../../../../features/dashboard/insert-mix";
+} from "../../../../features/dashboard/use-mix";
+import { m } from "../../../../paraglide/messages";
 
 export const Route = createFileRoute("/dashboard/library/$libraryId/")({
     component: LibraryOverview
@@ -60,7 +61,10 @@ function LibraryOverview(): ReactNode {
                     health={health}
                 />
             ) : (
-                <DashboardState query={summary} />
+                <DashboardState
+                    query={summary}
+                    loading={m.dashboardLoadingLibrary()}
+                />
             )}
         </Stack>
     );
@@ -92,31 +96,37 @@ function LibraryBody({
                 series={metricSeries}
             />
 
-            <InsertsOverTimeCard series={metricSeries} libraryId={libraryId} />
+            <UsesOverTimeCard series={metricSeries} libraryId={libraryId} />
 
-            <Section title="How people use it">
+            <Section title={m.dashboardLibraryHowUsed()}>
                 <SimpleGrid cols={{ base: 1, sm: 2 }}>
                     <InsertMethodBreakdown totals={totals} />
                     <FastenMethodBreakdown totals={totals} />
                 </SimpleGrid>
             </Section>
 
-            <SectionCard title="Most used parts">
+            <SectionCard title={m.dashboardLibraryMostUsed()}>
                 {parts.data ? (
                     <PartsTable
                         libraryId={libraryId}
                         parts={parts.data}
-                        emptyMessage="No parts have been inserted from this library yet."
+                        emptyMessage={m.dashboardLibraryNoUses()}
                     />
                 ) : (
-                    <DashboardState query={parts} />
+                    <DashboardState
+                        query={parts}
+                        loading={m.dashboardLoadingParts()}
+                    />
                 )}
             </SectionCard>
 
             {health.data ? (
                 <HealthTiles counts={health.data} />
             ) : (
-                <DashboardState query={health} />
+                <DashboardState
+                    query={health}
+                    loading={m.dashboardLoadingHealth()}
+                />
             )}
 
             <LibraryReports
@@ -133,7 +143,10 @@ function LibraryBody({
                     parts={parts.data.map((part) => ({ ...part, libraryId }))}
                 />
             ) : (
-                <DashboardState query={parts} />
+                <DashboardState
+                    query={parts}
+                    loading={m.dashboardLoadingParts()}
+                />
             )}
         </>
     );

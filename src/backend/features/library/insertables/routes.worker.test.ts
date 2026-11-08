@@ -3,7 +3,7 @@ import { env } from "cloudflare:workers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { configurations, insertables } from "../../../db/schema";
 import { dailyConfigurationMetrics, events } from "../../analytics/schema";
-import { InsertSource } from "../../analytics/usage";
+import { UseSource } from "../../analytics/usage";
 import { ElementType } from "../../../lib/onshape/element-type";
 import { Vendor } from "../vendors";
 import type { InsertOut } from "../contract";
@@ -281,14 +281,14 @@ describe("insertable routes", () => {
                 configuration: undefined,
                 isFavorite: false,
                 isQuickInsert: false,
-                source: InsertSource.GROUP_SEARCH
+                source: UseSource.GROUP_SEARCH
             }),
             env
         );
         expect(res.status).toBe(200);
 
         const event = await db.select().from(events).get();
-        expect(event?.source).toBe(InsertSource.GROUP_SEARCH);
+        expect(event?.source).toBe(UseSource.GROUP_SEARCH);
     });
 
     it("POST /add-to-part-studio fills the selection it was not given", async () => {

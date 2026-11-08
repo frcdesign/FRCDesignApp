@@ -34,7 +34,7 @@ import { getJobStatus } from "./jobs";
 import type { AssemblyJobParams } from "./workflow";
 import { getDb } from "../../db/client";
 import { events, dailyMetrics } from "../analytics/schema";
-import { InsertSource } from "../analytics/usage";
+import { UseSource } from "../analytics/usage";
 import { seedGroup, seedInsertable } from "../../../__test_utils__/seed";
 
 /** Runs the workflow to its end and answers what it stored. */
@@ -241,7 +241,7 @@ describe("AutoAssemblyWorkflow", () => {
         ).toEqual(
             ["washerStudio", "screwStudio", "nutStudio"].map((elementId) => [
                 elementId,
-                InsertSource.AUTO_ASSEMBLY,
+                UseSource.AUTO_ASSEMBLY,
                 true,
                 true,
                 "user"

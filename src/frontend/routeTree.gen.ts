@@ -16,6 +16,7 @@ import { Route as DashboardIndexRouteImport } from './routes/dashboard/index'
 import { Route as AppVersionManagerRouteImport } from './routes/app/version-manager'
 import { Route as AppAutoAssemblyRouteImport } from './routes/app/auto-assembly'
 import { Route as PagesVersionErrorRouteImport } from './routes/_pages/version-error'
+import { Route as PagesSignInErrorRouteImport } from './routes/_pages/sign-in-error'
 import { Route as PagesSetupRouteImport } from './routes/_pages/setup'
 import { Route as PagesSafariErrorRouteImport } from './routes/_pages/safari-error'
 import { Route as PagesLicenseRouteImport } from './routes/_pages/license'
@@ -64,6 +65,11 @@ const AppAutoAssemblyRoute = AppAutoAssemblyRouteImport.update({
 const PagesVersionErrorRoute = PagesVersionErrorRouteImport.update({
   id: '/_pages/version-error',
   path: '/version-error',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PagesSignInErrorRoute = PagesSignInErrorRouteImport.update({
+  id: '/_pages/sign-in-error',
+  path: '/sign-in-error',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PagesSetupRoute = PagesSetupRouteImport.update({
@@ -155,6 +161,7 @@ export interface FileRoutesByFullPath {
   '/license': typeof PagesLicenseRoute
   '/safari-error': typeof PagesSafariErrorRoute
   '/setup': typeof PagesSetupRoute
+  '/sign-in-error': typeof PagesSignInErrorRoute
   '/version-error': typeof PagesVersionErrorRoute
   '/app/auto-assembly': typeof AppAutoAssemblyRoute
   '/app/version-manager': typeof AppVersionManagerRoute
@@ -177,6 +184,7 @@ export interface FileRoutesByTo {
   '/license': typeof PagesLicenseRoute
   '/safari-error': typeof PagesSafariErrorRoute
   '/setup': typeof PagesSetupRoute
+  '/sign-in-error': typeof PagesSignInErrorRoute
   '/version-error': typeof PagesVersionErrorRoute
   '/app/auto-assembly': typeof AppAutoAssemblyRoute
   '/app/version-manager': typeof AppVersionManagerRoute
@@ -199,6 +207,7 @@ export interface FileRoutesById {
   '/_pages/license': typeof PagesLicenseRoute
   '/_pages/safari-error': typeof PagesSafariErrorRoute
   '/_pages/setup': typeof PagesSetupRoute
+  '/_pages/sign-in-error': typeof PagesSignInErrorRoute
   '/_pages/version-error': typeof PagesVersionErrorRoute
   '/app/auto-assembly': typeof AppAutoAssemblyRoute
   '/app/version-manager': typeof AppVersionManagerRoute
@@ -224,6 +233,7 @@ export interface FileRouteTypes {
     | '/license'
     | '/safari-error'
     | '/setup'
+    | '/sign-in-error'
     | '/version-error'
     | '/app/auto-assembly'
     | '/app/version-manager'
@@ -246,6 +256,7 @@ export interface FileRouteTypes {
     | '/license'
     | '/safari-error'
     | '/setup'
+    | '/sign-in-error'
     | '/version-error'
     | '/app/auto-assembly'
     | '/app/version-manager'
@@ -267,6 +278,7 @@ export interface FileRouteTypes {
     | '/_pages/license'
     | '/_pages/safari-error'
     | '/_pages/setup'
+    | '/_pages/sign-in-error'
     | '/_pages/version-error'
     | '/app/auto-assembly'
     | '/app/version-manager'
@@ -291,6 +303,7 @@ export interface RootRouteChildren {
   PagesLicenseRoute: typeof PagesLicenseRoute
   PagesSafariErrorRoute: typeof PagesSafariErrorRoute
   PagesSetupRoute: typeof PagesSetupRoute
+  PagesSignInErrorRoute: typeof PagesSignInErrorRoute
   PagesVersionErrorRoute: typeof PagesVersionErrorRoute
 }
 
@@ -343,6 +356,13 @@ declare module '@tanstack/react-router' {
       path: '/version-error'
       fullPath: '/version-error'
       preLoaderRoute: typeof PagesVersionErrorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_pages/sign-in-error': {
+      id: '/_pages/sign-in-error'
+      path: '/sign-in-error'
+      fullPath: '/sign-in-error'
+      preLoaderRoute: typeof PagesSignInErrorRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_pages/setup': {
@@ -523,6 +543,7 @@ const rootRouteChildren: RootRouteChildren = {
   PagesLicenseRoute: PagesLicenseRoute,
   PagesSafariErrorRoute: PagesSafariErrorRoute,
   PagesSetupRoute: PagesSetupRoute,
+  PagesSignInErrorRoute: PagesSignInErrorRoute,
   PagesVersionErrorRoute: PagesVersionErrorRoute,
 }
 export const routeTree = rootRouteImport

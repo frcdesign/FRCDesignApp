@@ -39,7 +39,7 @@ export function eachDay(range: DayRange): string[] {
  * insert or open rollup holds.
  */
 export async function getTrackingSince(db: Db): Promise<string | undefined> {
-    const [inserts, opens] = await Promise.all([
+    const [uses, opens] = await Promise.all([
         db
             .select({ day: min(dailyMetrics.day) })
             .from(dailyMetrics)
@@ -49,7 +49,7 @@ export async function getTrackingSince(db: Db): Promise<string | undefined> {
             .from(dailyAppOpens)
             .get()
     ]);
-    const days = [inserts?.day, opens?.day].filter(
+    const days = [uses?.day, opens?.day].filter(
         (day): day is string => day !== null && day !== undefined
     );
     return days.length ? days.reduce((a, b) => (a < b ? a : b)) : undefined;

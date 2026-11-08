@@ -21,7 +21,10 @@ function reload(accessLevel: AccessLevel, forceReload: boolean) {
         PATH,
         {
             ...init,
-            headers: { ...init.headers, Cookie: "frc-design-app-session=s" }
+            headers: {
+                ...init.headers,
+                Cookie: "__Host-frc-design-app-session=s"
+            }
         },
         env
     );
@@ -88,7 +91,10 @@ describe("approving versions", () => {
             accessLevel: AccessLevel.EDITOR
         }).request(
             `/api/approve-versions/library/${LibraryId.FRC_DESIGN_LIB}`,
-            { method: "POST", headers: { Cookie: "frc-design-app-session=s" } },
+            {
+                method: "POST",
+                headers: { Cookie: "__Host-frc-design-app-session=s" }
+            },
             env
         );
         expect(await res.json()).toEqual({ documents: 2 });
@@ -109,7 +115,10 @@ describe("holding new versions", () => {
             HOLD_PATH,
             {
                 ...init,
-                headers: { ...init.headers, Cookie: "frc-design-app-session=s" }
+                headers: {
+                    ...init.headers,
+                    Cookie: "__Host-frc-design-app-session=s"
+                }
             },
             env
         );

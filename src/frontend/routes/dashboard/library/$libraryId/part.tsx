@@ -6,7 +6,8 @@ import { createFileRoute, retainSearchParams } from "@tanstack/react-router";
 import { useState, type ReactNode } from "react";
 import * as z from "zod";
 import { LibraryId } from "@backend/features/library/library-id";
-import { ElementType } from "@backend/lib/onshape/element-type";
+import { UseTarget } from "@backend/features/analytics/usage";
+import { m } from "../../../../paraglide/messages";
 import type { InsertableReportOut } from "@backend/features/analytics/contract";
 import { parseSearch } from "../../../../lib/search-params";
 import { makeUrl } from "../../../../lib/url";
@@ -65,7 +66,7 @@ function PartReport(): ReactNode {
                 <TextInput
                     w={360}
                     mb="md"
-                    placeholder="Search parts…"
+                    placeholder={m.dashboardPartSearch()}
                     leftSection={<MagnifyingGlassIcon />}
                     value={search}
                     onChange={(event) => setSearch(event.currentTarget.value)}
@@ -75,10 +76,13 @@ function PartReport(): ReactNode {
                         libraryId={libraryId}
                         parts={parts.data}
                         search={search}
-                        emptyMessage="This library has no parts."
+                        emptyMessage={m.dashboardPartNoParts()}
                     />
                 ) : (
-                    <DashboardState query={parts} />
+                    <DashboardState
+                        query={parts}
+                        loading={m.dashboardLoadingParts()}
+                    />
                 )}
             </Card>
         </Stack>
@@ -101,7 +105,9 @@ function ReportBody({
     );
 
     if (!query.data) {
-        return <DashboardState query={query} />;
+        return (
+            <DashboardState query={query} loading={m.dashboardLoadingPart()} />
+        );
     }
     const report = query.data;
 
@@ -109,35 +115,42 @@ function ReportBody({
         <Stack gap="xl">
             <PartTitle report={report} />
 
-            <SimpleGrid cols={{ base: 1, sm: 3, lg: 5 }}>
+            <SimpleGrid cols={{ base: 1, sm: 3, lg: 6 }}>
                 <SummaryCard
-                    label="Uses per month"
+                    label={m.dashboardUsesPerMonth()}
                     value={formatCount(report.usesPerMonth)}
                 />
                 <SummaryCard
-                    label="Uses"
-                    value={formatCount(report.insertCount)}
+                    label={m.dashboardUses()}
+                    value={formatCount(report.useCount)}
                 />
                 <SummaryCard
-                    label="Unique users"
+                    label={m.dashboardPartUniqueUsers()}
                     value={formatCount(report.uniqueUsers)}
                 />
                 <SummaryCard
-                    label="Favorites"
+                    label={m.dashboardPartFavorites()}
                     value={formatCount(report.favorites)}
                 />
                 <SummaryCard
                     label={METRICS.assemblyFraction.label}
                     value={formatFraction(
-                        report.targets[ElementType.ASSEMBLY],
-                        report.insertCount
+                        report.targets[UseTarget.ASSEMBLY],
+                        report.useCount
+                    )}
+                />
+                <SummaryCard
+                    label={METRICS.downloadFraction.label}
+                    value={formatFraction(
+                        report.targets[UseTarget.DOWNLOAD],
+                        report.useCount
                     )}
                 />
             </SimpleGrid>
 
             <div>
                 <Title order={4} mb="md">
-                    Configuration values
+                    {m.dashboardPartConfigurationValues()}
                 </Title>
                 <ConfigurationBreakdown parameters={report.parameters} />
             </div>

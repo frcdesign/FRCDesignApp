@@ -4,7 +4,7 @@ import { ReactNode, useCallback } from "react";
 import { InsertableOut } from "@backend/features/library/contract";
 import { type PartialSelection } from "@backend/features/configurations/contract";
 import { ElementType } from "@backend/lib/onshape/element-type";
-import { InsertSource } from "@backend/features/analytics/usage";
+import { UseSource } from "@backend/features/analytics/usage";
 import { StatusColor } from "../../../lib/style-constants";
 import { openCannotDeriveAssemblyAlert } from "../../../components/alerts";
 import {
@@ -18,7 +18,7 @@ interface QuickInsertItemsProps {
     insertable: InsertableOut;
     selection?: PartialSelection;
     isFavorite: boolean;
-    source: InsertSource;
+    source: UseSource;
 }
 
 /** Inserting straight from a row's menu, without opening the insert menu. */

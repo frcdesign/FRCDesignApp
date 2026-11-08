@@ -1,12 +1,11 @@
 /** The Onshape OAuth handshake: where we send the user, and what comes back. */
-import { HttpStatus } from "http-status-ts";
 import { generateState, OAuth2Client, OAuth2Tokens } from "arctic";
-import { internalError } from "../../lib/api-error";
 import { env } from "cloudflare:workers";
 import { type AppContext } from "../../lib/context";
 import { type AuthTokens, beginSession } from "./session";
-import { PERSONAL_COMPANY_ID } from "./personal-company";
 import { startLogin, takeLogin } from "./login";
+import { cookieNames } from "./cookie-options";
+import { CallbackProblem, signInErrorUrl } from "./sign-in-error";
 
 const AUTH_ENDPOINT = "https://oauth.onshape.com/oauth/authorize";
 export const TOKEN_ENDPOINT = "https://oauth.onshape.com/oauth/token";
@@ -45,8 +44,8 @@ export function doSignIn(
         state,
         []
     );
-    // A personal account has no company id to ask for; Onshape asks the caller.
-    if (companyId && companyId !== PERSONAL_COMPANY_ID) {
+    // Without one, Onshape asks the caller which account.
+    if (companyId) {
         authorizationUrl.searchParams.set("company_id", companyId);
     }
     return authorizationUrl.toString();
@@ -62,8 +61,29 @@ export async function doCallback(c: AppContext): Promise<Response> {
 
     const login = takeLogin(c);
 
+    // Any other refusal is Onshape's to explain, so pass its words on.
+    if (search.error) {
+        console.warn("Onshape refused a sign-in", {
+            error: search.error,
+            description: search.error_description,
+            cookies: cookieNames(c),
+            userAgent: c.req.header("User-Agent")
+        });
+        return c.redirect(
+            signInErrorUrl({
+                error: search.error,
+                description: search.error_description,
+                redirectUrl: login?.redirectUrl
+            })
+        );
+    }
+
     // The redirect cookie was missing.
     if (!login) {
+        console.warn("Sign-in returned without its login cookie", {
+            cookies: cookieNames(c),
+            userAgent: c.req.header("User-Agent")
+        });
         if (isSafari(c.req.raw)) {
             return c.redirect("/safari-error");
         }
@@ -71,9 +91,12 @@ export async function doCallback(c: AppContext): Promise<Response> {
     }
 
     if (!search.code || login.state !== search.state) {
-        throw internalError(
-            "Invalid response from Onshape",
-            HttpStatus.UNAUTHORIZED
+        const problem = search.code
+            ? CallbackProblem.STATE_MISMATCH
+            : CallbackProblem.MISSING_CODE;
+        console.warn("Sign-in returned an invalid response", { problem });
+        return c.redirect(
+            signInErrorUrl({ error: problem, redirectUrl: login.redirectUrl })
         );
     }
 

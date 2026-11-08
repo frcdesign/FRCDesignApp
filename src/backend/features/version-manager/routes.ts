@@ -23,6 +23,7 @@ import { getSessionId } from "../auth/session";
 import {
     isSameWorkspace,
     LinkDirection,
+    MAX_SUGGESTED_LINKS,
     MAX_VERSION_NAME_LENGTH,
     nextVersionName,
     PullScopeKind,
@@ -30,8 +31,13 @@ import {
     toWorkspacePath,
     VersionJobKind,
     VersionJobState,
+    VersionTaskAction,
+    VersionTaskState,
     workspaceKey,
     type AddLinkOut,
+    type LinkParentsOut,
+    type LinkSuggestionsOut,
+    type UpdateReferencesOut,
     type VersionJobDocument,
     type WorkspaceChangesOut,
     type WorkspaceLinksData,
@@ -54,6 +60,7 @@ import {
     deleteLink,
     getChildLinks,
     getLink,
+    getLinkedDocumentIds,
     getParentLinks,
     otherEnd,
     reverseLink,
@@ -63,10 +70,17 @@ import {
 import {
     canRead,
     describeWorkspace,
+    findDefaultWorkspace,
+    forgetChanges,
     forgetPermissions,
     forgetWorkspace,
+    getElementMicroversions,
     getUnversionedChanges
 } from "./workspace-cache";
+import { suggestParents } from "./suggestions";
+import { updateOutdatedReferences } from "./references";
+import { runInBackground } from "../../lib/background";
+import { trackVersionRun } from "../analytics/tracking";
 
 export const versionManagerRoutes = getApp();
 
@@ -85,6 +99,17 @@ const addLinkBody = z.object({
     workspace: workspaceSchema,
     linked: workspaceSchema,
     direction: z.enum(LinkDirection)
+});
+
+const linkParentsBody = z.object({
+    workspace: workspaceSchema,
+    parents: z.array(workspaceSchema).min(1).max(MAX_SUGGESTED_LINKS)
+});
+
+const updateReferencesBody = z.object({
+    documentId: z.string().min(1),
+    /** One tab's references; omitted, every tab's. */
+    elementId: z.string().min(1).optional()
 });
 
 const moveLinkBody = z.object({
@@ -215,30 +240,85 @@ versionManagerRoutes.get(
 );
 
 /**
- * GET /api/workspace-changes?documentId=&instanceId= — a parent's edits since
- * its own last version, asked by its row once the list shows, since counting
- * is the slowest thing Onshape is asked for the list.
+ * GET /api/workspace-link-suggestions?documentId=&instanceId= — the documents
+ * the workspace references and has no link to, as parents. Asked beside the
+ * list rather than in it, since it reads every referenced document.
  */
 versionManagerRoutes.get(
-    "/workspace-changes",
+    "/workspace-link-suggestions",
     requireSignInMiddleware,
     cacheMiddleware(),
     validate("query", workspaceSchema),
     async (c) => {
         const workspace = toWorkspace(c.req.valid("query"));
+        // Onshape refuses the references of a workspace the caller can't read.
+        const suggestions = await suggestParents(
+            c,
+            getDb(c.env.DB),
+            await c.var.getOnshapeApi(),
+            workspace
+        );
+        return c.json({ suggestions } satisfies LinkSuggestionsOut);
+    }
+);
+
+const changesQuery = z.object({
+    documentId: z.string().min(1),
+    /** Omitted, the document's default workspace, which a library loads from. */
+    instanceId: z.string().min(1).optional(),
+    /** Adds each tab's microversion, for telling which tabs were edited. */
+    elements: z.stringbool().default(false)
+});
+
+/**
+ * GET /api/workspace-changes?documentId=&instanceId=&elements= — how far a
+ * workspace has moved since its own last version: a version manager parent's
+ * row, or a library group and its parts. Asked on its own because counting is
+ * the slowest thing either page asks Onshape.
+ */
+versionManagerRoutes.get(
+    "/workspace-changes",
+    requireSignInMiddleware,
+    cacheMiddleware(),
+    validate("query", changesQuery),
+    async (c) => {
+        const { documentId, instanceId, elements } = c.req.valid("query");
         const client = await c.var.getOnshapeApi();
-        await requireRead(c, client, workspace);
-        let changes: number | undefined;
-        try {
-            changes = await getUnversionedChanges(c, client, workspace);
-        } catch (error) {
-            // A row without a badge, not a failure the page shows.
-            console.warn(
-                `Failed to count changes in ${workspace.documentId}`,
-                error
-            );
+        const workspace = instanceId
+            ? toWorkspacePath(documentId, instanceId)
+            : await findDefaultWorkspace(c, client, { documentId });
+        if (!workspace) {
+            return c.json({} satisfies WorkspaceChangesOut);
         }
-        return c.json({ changes } satisfies WorkspaceChangesOut);
+        await requireRead(c, client, workspace);
+
+        // A missing count or list is a missing badge, not a failure the page shows.
+        const [changes, microversions] = await Promise.all([
+            getUnversionedChanges(c, client, workspace).catch(
+                (error: unknown) => {
+                    console.warn(
+                        `Failed to count changes in ${documentId}`,
+                        error
+                    );
+                    return undefined;
+                }
+            ),
+            elements
+                ? getElementMicroversions(c, client, workspace).catch(
+                      (error: unknown) => {
+                          console.warn(
+                              `Failed to list the tabs of ${documentId}`,
+                              error
+                          );
+                          return undefined;
+                      }
+                  )
+                : undefined
+        ]);
+        return c.json({
+            changes,
+            elements: microversions
+        } satisfies WorkspaceChangesOut);
     }
 );
 
@@ -346,6 +426,50 @@ async function refuseLinkedDocument(
         );
     }
 }
+
+/**
+ * POST /api/workspace-links/parents — links several parents at once, for
+ * **Link all**. A document already linked, this one's own, or one the caller
+ * can't read is skipped rather than refused, so the rest still land.
+ */
+versionManagerRoutes.post(
+    "/workspace-links/parents",
+    requireSignInMiddleware,
+    validate("json", linkParentsBody),
+    async (c) => {
+        const body = c.req.valid("json");
+        const workspace = toWorkspace(body.workspace);
+        const client = await c.var.getOnshapeApi();
+        await requirePermissions(
+            client,
+            workspace,
+            "edit this document",
+            OnshapePermission.WRITE
+        );
+
+        const db = getDb(c.env.DB);
+        const taken = await getLinkedDocumentIds(db, workspace);
+        taken.add(workspace.documentId);
+        const candidates = body.parents.map(toWorkspace).filter((parent) => {
+            if (taken.has(parent.documentId)) {
+                return false;
+            }
+            taken.add(parent.documentId);
+            return true;
+        });
+
+        const readable = await Promise.all(
+            candidates.map((parent) =>
+                hasPermissions(client, parent, OnshapePermission.READ)
+            )
+        );
+        const parents = candidates.filter((_, index) => readable[index]);
+        for (const parent of parents) {
+            await addLink(db, parent, workspace);
+        }
+        return c.json({ linked: parents.length } satisfies LinkParentsOut);
+    }
+);
 
 /** DELETE /api/workspace-link/:linkId — needs write on either end, a link being both workspaces'. */
 versionManagerRoutes.delete(
@@ -800,6 +924,67 @@ async function resolvePullSources(
     }
     return { sources: order(), edges };
 }
+
+/**
+ * POST /api/update-references — moves a document's out-of-date references, or
+ * one tab's, onto the newest versions, in its default workspace: the admin
+ * card's **Update references**. In the request, not a workflow: it cuts no
+ * version, so clicking again picks up where a failure stopped.
+ */
+versionManagerRoutes.post(
+    "/update-references",
+    requireSignInMiddleware,
+    validate("json", updateReferencesBody),
+    async (c) => {
+        const { documentId, elementId } = c.req.valid("json");
+        const client = await c.var.getOnshapeApi();
+        const workspace = await findDefaultWorkspace(c, client, {
+            documentId
+        });
+        if (!workspace) {
+            throw handledError(
+                "Onshape names no default workspace for this document.",
+                HttpStatus.CONFLICT
+            );
+        }
+        await requirePermissions(
+            client,
+            workspace,
+            "edit this document",
+            OnshapePermission.WRITE
+        );
+
+        const { updatedElements } = await updateOutdatedReferences(
+            client,
+            workspace,
+            { onlyElementIds: elementId ? [elementId] : undefined }
+        );
+        await forgetChanges(c.env.KV, workspace);
+
+        const userId = await c.var.getUserId();
+        await runInBackground(c, "record a reference update", () =>
+            trackVersionRun(c.env, {
+                userId,
+                kind: VersionJobKind.PULL,
+                scope: PullScopeKind.ALL,
+                status: {
+                    state: VersionJobState.COMPLETE,
+                    updateOnly: true,
+                    tasks: [
+                        {
+                            workspace,
+                            action: VersionTaskAction.REFERENCES,
+                            state: VersionTaskState.DONE,
+                            updatedElements
+                        }
+                    ],
+                    result: { updatedElements, createdVersions: 0 }
+                }
+            })
+        );
+        return c.json({ updatedElements } satisfies UpdateReferencesOut);
+    }
+);
 
 /** GET /api/version-job?documentId=&instanceId= */
 versionManagerRoutes.get(

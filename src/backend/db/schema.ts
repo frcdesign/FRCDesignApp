@@ -235,7 +235,11 @@ export const favorites = sqliteTable(
         // Null on rows older than the column.
         createdAt: integer("created_at", { mode: "timestamp_ms" })
     },
-    (t) => [unique().on(t.userId, t.libraryId, t.insertableId)]
+    (t) => [
+        unique().on(t.userId, t.libraryId, t.insertableId),
+        // Counting a part's favorites would otherwise scan every favorite.
+        index("favorites_insertable_idx").on(t.insertableId)
+    ]
 );
 
 /** One row per user, insertable and configuration, moved to the front by each insert. */

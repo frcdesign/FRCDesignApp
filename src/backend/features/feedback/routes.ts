@@ -1,17 +1,38 @@
 import { HttpStatus } from "http-status-ts";
-import { getApp } from "../../lib/context";
+import { type AppContext, getApp } from "../../lib/context";
 import { validate } from "../../lib/validate";
 import { handledError, internalError } from "../../lib/api-error";
 import { getDb } from "../../db/client";
 import { isSignedIn } from "../auth/request-auth";
+import { cookieNames } from "../auth/cookie-options";
+import { type AccessLevel } from "../auth/access-level";
+import { LibraryId } from "../library/library-id";
 import { trackReport } from "../analytics/tracking";
 import { feedbackBody, type FeedbackOut, topicLibrary } from "./contract";
 import { getWebhookUrl, reportTagIds } from "./channels";
-import { buildReportMessage, postToDiscord } from "./discord";
+import { buildReportMessage, postToDiscord, type Report } from "./discord";
 import { findReportedPart } from "./reported-part";
 import { reporterKey, takeReportSlot } from "./rate-limit";
 
 export const feedbackRoutes = getApp();
+
+/** Per library, as admin teams are; unreadable leaves it out rather than failing the report. */
+async function readAccessLevels(
+    c: AppContext
+): Promise<Record<LibraryId, AccessLevel> | undefined> {
+    try {
+        const entries = await Promise.all(
+            Object.values(LibraryId).map(
+                async (libraryId) =>
+                    [libraryId, await c.var.getAccessLevel(libraryId)] as const
+            )
+        );
+        return Object.fromEntries(entries) as Record<LibraryId, AccessLevel>;
+    } catch (error) {
+        console.warn("Failed to read a reporter's access levels", error);
+        return undefined;
+    }
+}
 
 /**
  * POST /api/feedback: posts a report to the topic's Discord channel. Open to a
@@ -56,25 +77,27 @@ feedbackRoutes.post("/feedback", validate("json", feedbackBody), async (c) => {
     }
 
     const reportId = crypto.randomUUID();
-    await postToDiscord(
-        webhookUrl,
-        buildReportMessage({
-            id: reportId,
-            title: body.title,
-            tagIds: reportTagIds(body.topic, body.category, body.source),
-            topic: body.topic,
-            category: body.category,
-            source: body.source,
-            message: body.message,
-            contact: body.contact || undefined,
-            teamNumber: body.teamNumber,
-            signedIn: userId !== undefined,
-            userAgent: c.req.header("User-Agent"),
-            part,
-            diagnostics: body.diagnostics,
-            createdAt: new Date()
-        })
-    );
+    const report: Report = {
+        id: reportId,
+        title: body.title,
+        tagIds: reportTagIds(body.topic, body.category, body.source),
+        topic: body.topic,
+        category: body.category,
+        source: body.source,
+        message: body.message,
+        contact: body.contact || undefined,
+        teamNumber: body.teamNumber,
+        signedIn: userId !== undefined,
+        cookies: cookieNames(c),
+        accessLevels: await readAccessLevels(c),
+        userAgent: c.req.header("User-Agent"),
+        part,
+        diagnostics: body.diagnostics,
+        createdAt: new Date()
+    };
+    // To Workers Logs, so a report can be looked up there by its id.
+    console.log({ event: "report", userId, ...report });
+    await postToDiscord(webhookUrl, buildReportMessage(report));
 
     await trackReport(c, {
         id: reportId,

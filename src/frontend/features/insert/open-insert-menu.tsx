@@ -14,7 +14,7 @@ import {
 } from "../../lib/notifications";
 import { InsertMenuContent } from "./components/insert-menu";
 import { MenuTitle } from "../../components/app-title";
-import { InsertSource } from "@backend/features/analytics/usage";
+import { UseSource } from "@backend/features/analytics/usage";
 
 interface OpenInsertMenuProps {
     insertable: InsertableOut;
@@ -24,7 +24,7 @@ interface OpenInsertMenuProps {
     configurationKey?: ConfigurationKey;
     /** The favorite this was opened from, so a relaunch can reopen it as one. */
     favoriteId?: string;
-    source: InsertSource;
+    source: UseSource;
 }
 
 /** Nothing is open, which is what closing the menu leaves behind. */
@@ -81,7 +81,7 @@ export function openInsertMenu(props: OpenInsertMenuProps) {
 /** Offers the menu back, configured the way it was closed. */
 function showRestoreToast(
     insertable: InsertableOut,
-    source: InsertSource,
+    source: UseSource,
     selection?: PartialSelection
 ) {
     const restoreButton: NotificationAction = {

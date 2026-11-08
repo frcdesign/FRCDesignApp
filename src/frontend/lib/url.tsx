@@ -10,6 +10,7 @@ import { encodeQueryConfiguration } from "@backend/features/configurations/utils
 import { notifications } from "@mantine/notifications";
 import { LinkIcon } from "@phosphor-icons/react";
 import { IconSize } from "./style-constants";
+import { parseUrl } from "@backend/lib/parse-url";
 
 /** Onshape for anyone outside a company, and for a caller who never launched. */
 export const DEFAULT_ONSHAPE_ORIGIN = "https://cad.onshape.com";
@@ -26,7 +27,7 @@ export const APPLICATIONS_PATH = "/user/applications";
  * onshape.com origins: anyone can write a launch url.
  */
 export function toOnshapeOrigin(server: string | undefined): string {
-    const url = server ? URL.parse(server) : null;
+    const url = server ? parseUrl(server) : undefined;
     const isOnshape =
         url?.protocol === "https:" &&
         (url.hostname === "onshape.com" ||

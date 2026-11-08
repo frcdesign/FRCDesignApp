@@ -3,6 +3,7 @@ import { type ReactNode } from "react";
 import type { VersionManagerTotals } from "@backend/features/analytics/contract";
 import { Section } from "../../components/section";
 import { StatTile } from "./stat-tiles";
+import { m } from "../../paraglide/messages";
 
 interface VersionManagerTilesProps {
     totals: VersionManagerTotals;
@@ -13,22 +14,27 @@ export function VersionManagerTiles({
     totals
 }: VersionManagerTilesProps): ReactNode {
     return (
-        <Section title="Version manager">
+        <Section title={m.dashboardVersionManager()}>
             <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }}>
                 <StatTile
-                    label="Runs"
+                    label={m.dashboardVersionRuns()}
                     value={totals.runs}
-                    caption={`${totals.runsWithFailures} with failures`}
+                    caption={m.dashboardVersionRunsWithFailures({
+                        count: totals.runsWithFailures
+                    })}
                 />
-                <StatTile label="Tabs updated" value={totals.updatedElements} />
                 <StatTile
-                    label="Versions created"
+                    label={m.dashboardVersionTabsUpdated()}
+                    value={totals.updatedElements}
+                />
+                <StatTile
+                    label={m.dashboardVersionVersionsCreated()}
                     value={totals.createdVersions}
                 />
                 <StatTile
-                    label="Links"
+                    label={m.dashboardVersionLinks()}
                     value={totals.links}
-                    caption="Right now"
+                    caption={m.dashboardVersionRightNow()}
                 />
             </SimpleGrid>
         </Section>

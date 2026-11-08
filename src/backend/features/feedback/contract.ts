@@ -177,7 +177,11 @@ export const feedbackDiagnosticsSchema = z.object({
             shown: clipped(MAX_FIELD),
             kind: idField,
             /** The error's own message, which the user may not have been shown. */
-            detail: clipped(MAX_FIELD).optional()
+            detail: clipped(MAX_FIELD).optional(),
+            /** The API call that failed: method, path and status. */
+            request: clipped(MAX_FIELD).optional(),
+            /** The server's id for the error it logged, which finds what it logged. */
+            errorId: idField
         })
         .optional()
 });

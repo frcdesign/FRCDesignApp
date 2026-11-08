@@ -8,13 +8,13 @@ import { SectionLoading, SectionError } from "../../../components/app-notice";
 import { NoSearchResultError, SearchCallout } from "./search-errors";
 import { useLibraryQuery } from "../../library/queries";
 import { useSearchDbQuery } from "../queries";
-import { InsertSource } from "@backend/features/analytics/usage";
+import { UseSource } from "@backend/features/analytics/usage";
 
 interface SearchResultsProps {
     query: string;
     filters: SearchFilters;
     /** Required: neither is the obvious default. */
-    source: InsertSource.SEARCH | InsertSource.GROUP_SEARCH;
+    source: UseSource.SEARCH | UseSource.GROUP_SEARCH;
 }
 
 export function SearchResults(props: SearchResultsProps): ReactNode {

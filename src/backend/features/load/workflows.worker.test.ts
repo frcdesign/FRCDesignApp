@@ -145,6 +145,7 @@ describe("ReloadLibraryWorkflow", () => {
                 Promise.resolve({
                     id: documentId,
                     name: documentId,
+                    public: true,
                     defaultWorkspace: { id: "w" }
                 })
         );

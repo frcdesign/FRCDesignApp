@@ -8,9 +8,9 @@ part, or an error the app hit. Each report is posted to the topic's Discord
 channel with enough about the page and the launch to act on it, and counted for
 the dashboard.
 
-It is not a support desk: nothing is stored about a report beyond its counts,
-and replies happen only in the report's Discord thread, which the app points
-the reporter to once it is sent. So it asks no questions it can't answer: there
+It is not a support desk: nothing is kept about a report beyond its counts
+and a week in the Worker's logs, and replies happen only in the report's
+Discord thread, which the app points the reporter to once it is sent. So it asks no questions it can't answer: there
 is no "question" type. It says whether the reporter was signed in, but never
 who they are beyond what they typed, nor anything about their own documents.
 
@@ -31,6 +31,8 @@ who they are beyond what they typed, nor anything about their own documents.
 | `src/frontend/features/feedback/open-feedback.tsx`            | `openFeedbackForm`, `openPartReport`, `openErrorReport`                         |
 | `src/frontend/features/feedback/labels.ts`                    | Each topic's and type's message, the description placeholder, `suggestTitle`    |
 | `src/frontend/features/feedback/diagnostics.ts`               | `collectDiagnostics`, `toReportedError`                                         |
+| `src/frontend/features/feedback/crash-report.ts`              | `useCrashReport`: a crash sent in one click, with no form                       |
+| `src/frontend/components/root-error.tsx`                      | The crash pages, `RootCrash` and `RootAppError`, each with **Send report**      |
 | `src/frontend/features/feedback/components/report-button.tsx` | **Send a report**, beside an error notice                                       |
 | `src/frontend/features/feedback/components/report-sent.tsx`   | What the form becomes once sent: which channel, and **Open Discord**            |
 | `src/frontend/lib/errors.ts`                                  | `handleAppError`, `showReportableErrorToast`: the **Report** button on toasts   |
@@ -42,6 +44,9 @@ who they are beyond what they typed, nor anything about their own documents.
   channel.
 - **KV** `feedback-sent:` — by reporter (`user:<id>` signed in, `ip:<address>`
   otherwise), the times of their reports in the last hour, for an hour.
+- **Workers Logs** — each report as one `event: "report"` entry: everything
+  the post holds, plus the reporter's user id, by the report's `id`, for 7
+  days.
 - **D1** — one `events` row per sent report (`type` `report`, with
   `report_topic`, `report_category`, `report_source`, `report_team_number`, and
   the element columns for a part report) and its `daily_report_metrics` rollup; see
@@ -103,6 +108,14 @@ The source decides what the form offers and what the report carries
   error notice, a failed version run, the cookie error and `/document-access`.
   The report carries what the user was shown and the error behind it, and may
   be sent with nothing typed.
+- **Crash** — **Send report** on a crash page: `RootCrash`, when the root
+  itself fails (the dashboard's pages have no boundary of their own), and
+  `RootAppError` under `/app`. One click sends it, with no form, since the root's
+  page has nothing to draw one with (`useCrashReport`). It is an error report
+  about the app, a bug, titled "Crash: " and the error, carrying the error's
+  stack and no message. The page then says where the report went, or why it
+  failed and **Try again**; **Open Discord** is the way in when sending can't
+  work.
 
 ### Sending
 
@@ -117,31 +130,39 @@ selection? }`.
    they give one.
 2. Diagnostics (`collectDiagnostics`) are gathered as it sends, and never name
    the document the reporter was in: the app's own path
-   and params with Onshape's launch params removed, the build id, the kind of
+   and params with Onshape's launch params and the `userId` and `clientId` it
+   adds removed, the build id, the kind of
    tab the app was launched in (Part Studio or Assembly, workspace or not, in
    an Enterprise or not), the launch context (`LaunchContext`: the panel when the launch
    params name an element, standalone otherwise, by `toLaunchContext`; computed
    here so `/cookie-error`, with no session, still has it), the level the app is viewed as, the window size, and
-   the error.
+   the error: what was shown, and for a thrown `Error` its stack
+   (`toReportedError`), which a crash report sends too. An `AppError` brings
+   its kind and message instead, the request that failed as
+   `GET /api/… → 500` (the query left out, since it can name a document), and
+   the server's `errorId` when it logged one.
 3. `feedbackBody` checks that the category belongs to the topic and source,
    that only a part report names a part, that the title fits a thread's name
    (100 characters), and that only an error report may have no message.
    Diagnostics are clipped to length rather than refused.
 4. The route resolves the reporter (a user id when signed in, none otherwise)
-   and takes a slot from the rate limit. The id goes to the limit and the
-   record only; the post says just whether they were signed in.
+   and takes a slot from the rate limit. The id goes to the limit, the
+   record and the log only; the post says just whether they were signed in.
 5. A part report looks the part up in the topic's library (`findReportedPart`),
    runs the selection through `toSelection`, and builds the Onshape link from
    `onshapeOverrides` and the readable `Name: value` lines from the parameters
    the reporter could see. The link is to the library's own document. The post
    says whether the reporter put the problem in the Onshape document.
-6. `postToDiscord` posts the message with `?wait=true`, opening a thread named
-   by the title (`thread_name`) under the report's tags (`applied_tags`). The
+6. The report is logged, then `postToDiscord` posts the message with
+   `?wait=true`, opening a thread named by the title (`thread_name`) under the report's tags (`applied_tags`). The
    message is two embeds: the report in its type's color (title, link to the
-   part, what they typed, then the part, its configuration, the error, the Discord username and the team number), and
+   part, what they typed, then the part, its configuration, the error (with its
+   request and error id), the Discord username and the team number), and
    under it a gray
-   block of `Label: value` lines (topic, type, source, page, launch, launch context, signed in,
-   viewed as, build, window, browser) with the report id in its footer.
+   block of `Label: value` lines (topic, type, source, page, launch, launch context, signed in, access
+   level (per library from the server, one level when they agree, and the
+   level viewed at when someone chose one), cookies (names only), build, window,
+   browser) with the report id in its footer.
 7. Once posted, `trackReport` records it in the background, under the id the
    post quotes in its footer, with the team number when there is one.
 8. The form turns into a success notice (`ReportSent`, a `SectionNotice`):
@@ -169,7 +190,7 @@ parts still in the library, each opening the part's page.
   sent as it came, since what Onshape said is what the team needs, ids and
   all. The part a part report names is the library's, not theirs.
 - A post names the reporter only by what they typed. Their Onshape user id
-  goes to the rate limit and the record, never to Discord.
+  goes to the rate limit, the record and the log, never to Discord.
 - The route works signed out, since signing in is one of the things that breaks.
 - Every message stays within Discord's limits (`buildReportMessage` trims what
   the reporter typed to fit).
@@ -221,6 +242,12 @@ parts still in the library, each opening the part's page.
   one block rather than a grid of fields.
 - **Kudos.** Praise goes to the same forum as everything else, under its own
   tag, so the team sees what works as well as what breaks.
+- **A week in Workers Logs, not a store of our own.** Each report and each
+  server error is already in the Worker's logs, which keep 7 days and are
+  queried by id from the dashboard or the Workers Observability API, so a
+  report can be read back without Discord. A report quotes the failed
+  request's Ray ID rather than carrying the server's stack: the stack stays
+  out of the user's browser, and the logs have it under that id.
 - **Links on cad's domain.** A reporter's company domain means nothing to the
   person reading the report.
 

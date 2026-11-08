@@ -4,20 +4,20 @@ import { partUsage } from "../../../__test_utils__/part-usage-fixtures";
 import { toNodes, TreemapKind } from "./treemap-data";
 
 const PARTS = [
-    partUsage({ elementId: "e-1", name: "Versa", insertCount: 20 }),
-    partUsage({ elementId: "e-2", name: "MAXPlanetary", insertCount: 10 }),
+    partUsage({ elementId: "e-1", name: "Versa", useCount: 20 }),
+    partUsage({ elementId: "e-2", name: "MAXPlanetary", useCount: 10 }),
     partUsage({
         elementId: "e-3",
         name: "Tube",
         groupName: "Structure",
-        insertCount: 5
+        useCount: 5
     }),
     partUsage({
         elementId: "e-4",
         name: "Colson",
         libraryId: LibraryId.MKCAD,
         groupName: "Wheels",
-        insertCount: 40
+        useCount: 40
     }),
     partUsage({ elementId: "e-5", name: "Axle", groupName: "Motion" })
 ];
@@ -68,7 +68,7 @@ describe("toNodes at the group level", () => {
 
     it("never darkens as the tiles get smaller", () => {
         const many = Array.from({ length: 10 }, (_, index) =>
-            partUsage({ groupName: `g-${index}`, insertCount: 10 - index })
+            partUsage({ groupName: `g-${index}`, useCount: 10 - index })
         );
         const shade = /-(\d+)\)$/;
         const steps = toNodes(many, path).map((node) =>
@@ -106,12 +106,12 @@ describe("toNodes at the part level", () => {
 
     it("never mixes in another library's group of the same name", () => {
         const shared = [
-            partUsage({ elementId: "a", groupName: "Wheels", insertCount: 3 }),
+            partUsage({ elementId: "a", groupName: "Wheels", useCount: 3 }),
             partUsage({
                 elementId: "b",
                 libraryId: LibraryId.MKCAD,
                 groupName: "Wheels",
-                insertCount: 9
+                useCount: 9
             })
         ];
         const nodes = toNodes(shared, {

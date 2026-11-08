@@ -77,7 +77,7 @@ and part number are underlined, and the vendor filters then apply per row.
 ### Opening and removing
 
 A row opens the insert menu on the stored selection, with
-`InsertSource.RECENTS` as its source; its thumbnail asks for that
+`UseSource.RECENTS` as its source; its thumbnail asks for that
 configuration's render (see [thumbnails.md](./thumbnails.md)), and the icon
 beside its title lists that configuration on hover (see
 [configurations.md](./configurations.md)). The row's menu

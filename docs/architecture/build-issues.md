@@ -75,6 +75,8 @@ enum BuildIssueType {
     /** The mate connector inserts use can change or break between configurations. */
     UNSTABLE_MATE_CONNECTOR = "unstable-mate-connector",
     INSERTABLES_FAILED = "insertables-failed",
+    /** Only people the document is shared with can insert or download from it. */
+    NOT_PUBLIC = "not-public",
     LOAD_FAILED = "load-failed",
     /** A document added but not yet loaded, until its first load saves it. */
     NOT_LOADED = "not-loaded"
@@ -128,6 +130,8 @@ interface GroupCheckInput {
     /** Whether any of the group's insertables failed to load. */
     hasFailedInsertables: boolean;
     hasVisibleInsertable: boolean;
+    /** Onshape's `public`: every Onshape user can view and copy it. */
+    isPublic: boolean;
 }
 
 interface InsertableCheckInput {
@@ -400,6 +404,7 @@ In [strings/build-issues.md](../strings/build-issues.md).
 | A thumbnail never lands                         | `THUMBNAIL_FAILED`                              | **Reload thumbnail** in the row's menu |
 | A load throws                                   | `LOAD_FAILED` on the group; its old issues stay | Reload the document                    |
 | A document was added but its load never started | `NOT_LOADED`                                    | Reload                                 |
+| A document isn't public                         | `NOT_PUBLIC` on the group                       | Make it public in Onshape, then reload |
 | A write fails                                   | Error toast; the patch is discarded on refetch  | Retry the toggle or save               |
 | A reindex's probe fails                         | Error toast; nothing is written                 | Save again                             |
 | A deploy removes an issue type                  | Nothing: dropped on read                        | —                                      |
@@ -413,6 +418,13 @@ In [strings/build-issues.md](../strings/build-issues.md).
 - **Indexing edits are a draft; the other settings save at once.** A reindex
   probes Onshape and can take a while, so several checkbox changes should
   cost one; a switch is cheap and expected to act.
+- **Public, not link sharing.** Inserts and downloads run as the user, through
+  the API: an insert needs link permission and a download export permission
+  on the source document. A public document is the only sharing that reaches
+  every Onshape user (export from it is undocumented, and unverified);
+  "Anyone with the link" gives view-only access through the link, which an API
+  call by another user doesn't go through. An enterprise's documents can't be
+  public, so a library of one would carry the issue on every group.
 - **One open state for every card's section.** An editor checks many cards in
   a row, and wants the same sections open on each.
 - **The enum options bubble opens below its badge, inside the card.** The card

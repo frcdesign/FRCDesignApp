@@ -9,6 +9,7 @@ import { formatRate } from "./format";
 import { perUnit } from "./derived";
 import { toSparkSeries } from "./series";
 import { StatTile } from "./stat-tiles";
+import { m } from "../../paraglide/messages";
 
 interface HeadlineTilesProps {
     /** Over the selected window. */
@@ -28,33 +29,33 @@ export function HeadlineTiles({
     withOpens = false
 }: HeadlineTilesProps): ReactNode {
     const perUser =
-        totals.uniqueUsers === 0 ? 0 : totals.inserts / totals.uniqueUsers;
+        totals.uniqueUsers === 0 ? 0 : totals.uses / totals.uniqueUsers;
     const spark = toSparkSeries(series);
 
     return (
         <SimpleGrid cols={{ base: 1, sm: 2, lg: withOpens ? 4 : 3 }}>
             <StatTile
-                label="Total uses"
-                value={totals.inserts}
-                change={growth?.inserts}
-                spark={spark.inserts}
+                label={m.dashboardMetricUses()}
+                value={totals.uses}
+                change={growth?.uses}
+                spark={spark.uses}
             />
             <StatTile
-                label="Total users"
+                label={m.dashboardTileUsers()}
                 value={totals.uniqueUsers}
                 change={growth?.activeUsers}
                 spark={spark.activeUsers}
             />
             <StatTile
-                label="Uses per user"
+                label={m.dashboardTileUsesPerUser()}
                 value={perUser}
                 format={formatRate}
-                change={growth && perUnit(growth.inserts, growth.activeUsers)}
+                change={growth && perUnit(growth.uses, growth.activeUsers)}
                 spark={spark.usesPerUser}
             />
             {withOpens && (
                 <StatTile
-                    label="App sessions"
+                    label={m.dashboardTileAppSessions()}
                     value={totals.appOpens}
                     change={growth?.appOpens}
                     spark={spark.appOpens}

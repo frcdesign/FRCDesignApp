@@ -161,6 +161,15 @@ export interface OnshapeVersionInfo {
     creator?: { id: string };
 }
 
+// === owners (BTOwnerInfo, on a document or a team) ===
+
+/** `BTOwnerInfo.type`: who owns a resource. */
+export enum OnshapeOwnerType {
+    USER = 0,
+    /** An enterprise, or an educator plan's classroom. */
+    COMPANY = 1
+}
+
 // === documents (GET /documents/{did}, GET .../contents) ===
 
 /** Element (tab) types in a document (the Onshape `GBTElementType` values we handle). */
@@ -183,8 +192,18 @@ export interface OnshapeDocumentInfo {
     id: string;
     name: string;
     documentThumbnailElementId?: string;
+    /** Shared with every Onshape user; an enterprise's document never is. */
+    public: boolean;
     /** Not confirmed to always be sent; the load throws when it's absent. */
     defaultWorkspace?: { id: string };
+    /** The caller's permissions on it, as `GET /documents/{did}/permissionset` answers. */
+    permissionSet?: string[];
+    owner?: {
+        id: string;
+        type: OnshapeOwnerType;
+        /** Tells an enterprise from a classroom, which are both companies. */
+        isEnterpriseOwnedResource?: boolean;
+    };
 }
 
 /** A workspace, as much of Onshape's `BTWorkspaceInfo` as anything reads. */

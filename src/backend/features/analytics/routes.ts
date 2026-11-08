@@ -8,11 +8,15 @@ import { validate } from "../../lib/validate";
 import { getDb } from "../../db/client";
 import { configurations, insertables } from "../../db/schema";
 import type {
-    AnalyticsOverviewOut,
+    DailyUsePoint,
     InsertableReportOut,
+    OverviewUsageOut,
     LibrarySummaryOut,
     PartUsageOut,
-    UnusedOptionOut
+    ReportSummary,
+    UnusedOptionOut,
+    UseSourceUsage,
+    VersionManagerTotals
 } from "./contract";
 import { ParameterType } from "../configurations/contract";
 import { usesPerMonth } from "./measures";
@@ -30,12 +34,11 @@ import {
     getPartRows,
     getPartSparklines,
     getPartStats,
-    getWindowedInsertCounts,
+    getWindowedUseCounts,
     sumPartTargets,
     toWindowedPart
 } from "./part-queries";
 import {
-    getLibrarySummaries,
     getMetricSeries,
     getSeries,
     getSources,
@@ -56,9 +59,11 @@ export const analyticsRoutes = getApp();
 
 /** Public: never call `getUserId()` or `getOnshapeApi()`, and return only aggregates. */
 
-/** GET /api/analytics/overview */
+// The overview is one route per area, so each section loads on its own.
+
+/** GET /api/analytics/overview/usage */
 analyticsRoutes.get(
-    "/analytics/overview",
+    "/analytics/overview/usage",
     validate("query", rangeQuery),
     async (c) => {
         const db = getDb(c.env.DB);
@@ -67,38 +72,64 @@ analyticsRoutes.get(
         // Series are densified, so they need the clamped range.
         const range = clampRange(requested, trackingSince);
 
-        const [
-            totals,
-            perLibrary,
-            series,
-            metricSeries,
-            sources,
-            versionManager,
-            reports,
-            growth
-        ] = await Promise.all([
+        const [totals, metricSeries, growth] = await Promise.all([
             getTotals(db, undefined, range),
-            getLibrarySummaries(db),
-            getSeries(db, range),
             getMetricSeries(db, range),
-            getSources(db, requested),
-            getVersionManagerTotals(db, requested),
-            getReportSummary(db, requested),
             getGrowth(db, toReportingDay(Date.now()), trackingSince)
         ]);
-
-        const out: AnalyticsOverviewOut = {
+        return c.json({
             totals,
-            libraries: perLibrary,
-            series,
             metricSeries,
-            sources,
-            versionManager,
-            reports,
             growth,
             ...requested
-        };
-        return c.json(out);
+        } satisfies OverviewUsageOut);
+    }
+);
+
+/** GET /api/analytics/overview/series */
+analyticsRoutes.get(
+    "/analytics/overview/series",
+    validate("query", rangeQuery),
+    async (c) => {
+        const db = getDb(c.env.DB);
+        const range = clampRange(
+            c.req.valid("query"),
+            await getTrackingSince(db)
+        );
+        return c.json((await getSeries(db, range)) satisfies DailyUsePoint[]);
+    }
+);
+
+/** GET /api/analytics/overview/sources */
+analyticsRoutes.get(
+    "/analytics/overview/sources",
+    validate("query", rangeQuery),
+    async (c) => {
+        const db = getDb(c.env.DB);
+        const sources = await getSources(db, c.req.valid("query"));
+        return c.json(sources satisfies UseSourceUsage[]);
+    }
+);
+
+/** GET /api/analytics/overview/version-manager */
+analyticsRoutes.get(
+    "/analytics/overview/version-manager",
+    validate("query", rangeQuery),
+    async (c) => {
+        const db = getDb(c.env.DB);
+        const totals = await getVersionManagerTotals(db, c.req.valid("query"));
+        return c.json(totals satisfies VersionManagerTotals);
+    }
+);
+
+/** GET /api/analytics/overview/reports */
+analyticsRoutes.get(
+    "/analytics/overview/reports",
+    validate("query", rangeQuery),
+    async (c) => {
+        const db = getDb(c.env.DB);
+        const reports = await getReportSummary(db, c.req.valid("query"));
+        return c.json(reports satisfies ReportSummary);
     }
 );
 
@@ -163,7 +194,7 @@ analyticsRoutes.get(
         const [rows, series, windowed] = await Promise.all([
             getPartRows(db, libraryId),
             getPartSparklines(db, libraryId),
-            getWindowedInsertCounts(db, libraryId, range)
+            getWindowedUseCounts(db, libraryId, range)
         ]);
 
         const out: PartUsageOut[] = rows
@@ -190,17 +221,16 @@ analyticsRoutes.get(
         const [rows, series, windowed] = await Promise.all([
             getPartRows(db, libraryId, { visibleOnly: true }),
             getPartSparklines(db, libraryId),
-            getWindowedInsertCounts(db, libraryId, range)
+            getWindowedUseCounts(db, libraryId, range)
         ]);
 
         const out: PartUsageOut[] = rows
             .map((row) => toWindowedPart(row, windowed, series, range))
             // Least used first: the point of the page is the bottom of the list.
-            .filter((part) => part.insertCount <= threshold)
+            .filter((part) => part.useCount <= threshold)
             .sort(
                 (a, b) =>
-                    a.insertCount - b.insertCount ||
-                    a.name.localeCompare(b.name)
+                    a.useCount - b.useCount || a.name.localeCompare(b.name)
             );
         return c.json(out);
     }
@@ -303,7 +333,7 @@ analyticsRoutes.get(
         ]);
 
         const targets = toTargets(targetRows);
-        const insertCount = Object.values(targets).reduce(
+        const useCount = Object.values(targets).reduce(
             (total, count) => total + count,
             0
         );
@@ -314,7 +344,7 @@ analyticsRoutes.get(
             Date.parse(`${range.to}T23:59:59Z`)
         );
         const firstUsed = Math.max(
-            stats?.firstInsertedAt?.getTime() ?? windowStart,
+            stats?.firstUsedAt?.getTime() ?? windowStart,
             windowStart
         );
 
@@ -328,10 +358,10 @@ analyticsRoutes.get(
         const out: InsertableReportOut = {
             name: insertable.name,
             path: toElementPath({ ...insertable, elementId }),
-            insertCount,
+            useCount,
             usesPerMonth: usesPerMonth(
-                insertCount,
-                insertCount === 0 ? undefined : firstUsed,
+                useCount,
+                useCount === 0 ? undefined : firstUsed,
                 windowEnd
             ),
             uniqueUsers: uniqueUsers?.value ?? 0,

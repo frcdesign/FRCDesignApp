@@ -24,7 +24,7 @@ import {
 } from "../../../components/alerts";
 import { useFavoritesQuery, useSetFavoriteOrderMutation } from "../queries";
 import { SearchHit } from "../../search/search";
-import { InsertSource } from "@backend/features/analytics/usage";
+import { UseSource } from "@backend/features/analytics/usage";
 import { useVendorFilters } from "../../settings/vendor-filters";
 
 interface FavoriteCardProps {
@@ -67,7 +67,7 @@ export function FavoriteCard(props: FavoriteCardProps): ReactNode {
                     initialSelection: favorite.defaultSelection,
                     configurationKey: favorite.configurationKey,
                     favoriteId: favorite.id,
-                    source: InsertSource.FAVORITES
+                    source: UseSource.FAVORITES
                 });
             }}
             left={
@@ -136,7 +136,7 @@ function FavoriteMenuItems(props: FavoriteMenuItemsProps): ReactNode {
                         insertable={insertable}
                         selection={favorite.defaultSelection}
                         isFavorite
-                        source={InsertSource.FAVORITES}
+                        source={UseSource.FAVORITES}
                     />
                 </MenuSection>
             )}

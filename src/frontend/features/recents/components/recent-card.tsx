@@ -2,7 +2,7 @@ import { DEFAULT_CONFIGURATION_KEY } from "@backend/features/configurations/cont
 import { ReactNode } from "react";
 import type { RecentInsert } from "@backend/features/recents/contract";
 import { InsertableOut } from "@backend/features/library/contract";
-import { InsertSource } from "@backend/features/analytics/usage";
+import { UseSource } from "@backend/features/analytics/usage";
 import { openInsertMenu } from "../../insert/open-insert-menu";
 import {
     FavoriteButton,
@@ -66,7 +66,7 @@ export function RecentCard(props: RecentCardProps): ReactNode {
                     insertable,
                     initialSelection: recent.selection,
                     configurationKey: recent.configurationKey,
-                    source: InsertSource.RECENTS
+                    source: UseSource.RECENTS
                 });
             }}
             left={
@@ -133,7 +133,7 @@ function RecentMenuItems(props: RecentMenuItemsProps): ReactNode {
                         insertable={insertable}
                         selection={recent.selection}
                         isFavorite={favorite !== undefined}
-                        source={InsertSource.RECENTS}
+                        source={UseSource.RECENTS}
                     />
                 </MenuSection>
             )}

@@ -36,6 +36,20 @@ function externalReferences(
 }
 
 describe("planReferenceUpdates", () => {
+    it("moves only the tabs asked for", () => {
+        const references = externalReferences();
+        expect(
+            planReferenceUpdates(WORKSPACE, references, {
+                onlyElementIds: ["other-tab"]
+            })
+        ).toEqual([]);
+        expect(
+            planReferenceUpdates(WORKSPACE, references, {
+                onlyElementIds: ["tab"]
+            })
+        ).toHaveLength(1);
+    });
+
     it("moves an out-of-date reference onto the latest version", () => {
         const plans = planReferenceUpdates(WORKSPACE, externalReferences());
         expect(plans).toHaveLength(1);

@@ -162,6 +162,22 @@ Onshape. Each call spends the user's Onshape API allocation, and a write to a
 library document can't be undone. Tests mock Onshape and need no asking. When
 the user runs a command themselves, say exactly what to run.
 
+# Feature tracking
+
+Every new or major feature records its use in analytics, in the same change:
+an `EventType`, its columns decided in `logged-event.ts`, the rollups it adds
+to, and a place on the dashboard. `docs/architecture/analytics.md` covers the
+area. Record it on the server, once the work has happened, through
+`runInBackground`, so tracking never slows or fails what was asked for.
+
+A way of using a part — inserting it, downloading it — is a **use**: one of
+`USE_EVENT_TYPES`. A use is one part, so an action that places several, such
+as an Auto Assembly run, records one use per part, and the headline numbers
+count every one. A use counts toward the same totals, users, part counts and
+configuration counts as every other, and is told apart by its `UseTarget`, so
+the dashboard can show it on its own. Say "uses" for these, on the dashboard
+and in code; "inserts" means only the ones that went into Onshape.
+
 # Architecture docs
 
 `docs/architecture/` holds one document per feature area, indexed in its
@@ -198,6 +214,16 @@ code rather than pasting it.
 When a document and the code disagree and it isn't clear which is intended,
 ask rather than quietly changing either. After reading a whole document against
 the code and fixing what disagrees, bump its **Last reviewed** date.
+
+# Onshape
+
+`docs/ONSHAPE.md` holds what we know about how Onshape behaves: microversions,
+configurations, accounts and companies, permissions, webhooks, thumbnails.
+Read the section you are relying on before writing code that calls Onshape,
+and trust it over your own memory of Onshape. Each fact is marked documented,
+observed or unverified; build on an unverified one only knowing it may be
+wrong. When you learn something new, or find an entry wrong, update the file
+in the same change.
 
 # Tests
 

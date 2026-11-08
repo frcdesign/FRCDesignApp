@@ -11,7 +11,14 @@ import {
     internalError,
     signInRequiredError
 } from "./api-error";
-import type { AppContextEnv } from "./context";
+import type { AppContext, AppContextEnv } from "./context";
+
+/** The Ray ID, which Workers Logs filters on, so a report quoting it finds the stack; tests and local dev have none. */
+function logServerError(c: AppContext, error: unknown): string {
+    const errorId = c.req.header("cf-ray") ?? crypto.randomUUID();
+    console.error(`Server error ${errorId}`, error);
+    return errorId;
+}
 
 /** Anything not named here stays generic. */
 function fromOnshapeError(error: OnshapeApiError): ApiError {
@@ -39,22 +46,31 @@ export const errorHandler: ErrorHandler<AppContextEnv> = (err, c) => {
     }
     if (err instanceof OnshapeApiError) {
         const apiError = fromOnshapeError(err);
-        if (apiError.body.kind === ApiErrorKind.INTERNAL) {
-            console.error(err);
+        if (apiError.body.kind !== ApiErrorKind.INTERNAL) {
+            return c.json(apiError.body, apiError.status);
         }
-        return c.json(apiError.body, apiError.status);
+        return c.json(
+            { ...apiError.body, errorId: logServerError(c, err) },
+            apiError.status
+        );
     }
     // A validator rejecting a malformed request: our bug, not the user's.
     if (err instanceof HTTPException) {
-        console.error(err);
         return c.json(
-            { kind: ApiErrorKind.INTERNAL, message: err.message },
+            {
+                kind: ApiErrorKind.INTERNAL,
+                message: err.message,
+                errorId: logServerError(c, err)
+            },
             err.status
         );
     }
-    console.error(err);
     return c.json(
-        { kind: ApiErrorKind.INTERNAL, message: "Internal Server Error" },
+        {
+            kind: ApiErrorKind.INTERNAL,
+            message: "Internal Server Error",
+            errorId: logServerError(c, err)
+        },
         HttpStatus.INTERNAL_SERVER_ERROR
     );
 };

@@ -8,9 +8,12 @@ import {
     FeedbackCategory,
     type FeedbackDiagnostics,
     LAUNCH_CONTEXT_LABELS,
+    libraryTopic,
     type FeedbackSource,
     type FeedbackTopic
 } from "./contract";
+import { type AccessLevel } from "../auth/access-level";
+import { type LibraryId } from "../library/library-id";
 
 /** The part a report names, as the server found it. */
 export interface ReportedPart {
@@ -35,6 +38,10 @@ export interface Report {
     contact?: string;
     teamNumber?: number;
     signedIn: boolean;
+    /** The names of the cookies the report arrived with, never their values. */
+    cookies?: string[];
+    /** What the server grants the reporter, per library. */
+    accessLevels?: Record<LibraryId, AccessLevel>;
     userAgent?: string;
     part?: ReportedPart;
     diagnostics: FeedbackDiagnostics;
@@ -119,6 +126,27 @@ function describeLaunch(
     return where.join(", ");
 }
 
+/** One level when every library agrees; the level chosen to view at, when one was. */
+function describeAccess(
+    levels: Report["accessLevels"],
+    viewedAs: string | undefined
+): string {
+    let granted = "unknown";
+    if (levels) {
+        const distinct = new Set(Object.values(levels));
+        granted =
+            distinct.size === 1
+                ? [...distinct][0]
+                : Object.entries(levels)
+                      .map(
+                          ([libraryId, level]) =>
+                              `${FEEDBACK_TOPIC_LABELS[libraryTopic(libraryId as LibraryId)]} ${level}`
+                      )
+                      .join(", ");
+    }
+    return viewedAs ? `${granted} (viewing as ${viewedAs})` : granted;
+}
+
 /** What the reporter is reporting, shown first. */
 function reportFields(report: Report): DiscordEmbedField[] {
     const { diagnostics, part } = report;
@@ -132,9 +160,11 @@ function reportFields(report: Report): DiscordEmbedField[] {
         }
     }
     if (diagnostics.error) {
-        const { shown, kind, detail } = diagnostics.error;
+        const { shown, kind, detail, request, errorId } = diagnostics.error;
         const lines = [shown];
         if (kind) lines.push(`kind: ${kind}`);
+        if (request) lines.push(`request: ${request}`);
+        if (errorId) lines.push(`error id: ${errorId}`);
         if (detail && detail !== shown) lines.push(`detail: ${detail}`);
         fields.push(field("Error", code(lines.join("\n"))));
     }
@@ -158,7 +188,12 @@ function detailLines(report: Report): string[] {
         `Launched in: ${describeLaunch(diagnostics.launch) ?? "Not in Onshape"}`,
         `Launch context: ${diagnostics.launchContext ? LAUNCH_CONTEXT_LABELS[diagnostics.launchContext] : "unknown"}`,
         `Signed in: ${report.signedIn ? "Yes" : "No"}`,
-        `Viewed as: ${diagnostics.viewedAccessLevel ?? "unknown"}`,
+        `Access level: ${describeAccess(report.accessLevels, diagnostics.viewedAccessLevel)}`,
+        ...(report.cookies
+            ? [
+                  `Cookies: ${truncate(report.cookies.join(", ") || "none", DETAIL_LIMIT)}`
+              ]
+            : []),
         `Build: ${diagnostics.build ?? "unknown"}`
     ];
     if (diagnostics.viewport) {

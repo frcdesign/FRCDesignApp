@@ -23,6 +23,8 @@ import {
 import { OpenDocumentItems } from "../../../components/open-document-items";
 import { AdminMenuSection, MenuSection } from "../../../components/app-menu";
 import { ReloadThumbnailMenuItem } from "./reload-thumbnail-item";
+import { UpdateReferencesMenuItem } from "./update-references-item";
+import { InsertableChangesBadge } from "./changes-badges";
 import { QuickInsertItems } from "../../insert/components/quick-insert-items";
 import { ConfigurationHoverCard } from "../../insert/components/configuration-hover-card";
 import { openCannotDeriveAssemblyAlert } from "../../../components/alerts";
@@ -31,7 +33,7 @@ import { openInsertMenu } from "../../insert/open-insert-menu";
 import { useFavorite } from "../../favorites/queries";
 import { RequireSignIn } from "../../auth/components/require-access";
 import { useIsConnectedToOnshape } from "../../../lib/onshape-params";
-import { InsertSource } from "@backend/features/analytics/usage";
+import { UseSource } from "@backend/features/analytics/usage";
 import { Hint } from "@backend/features/hints/contract";
 import { ReportIssueItem } from "../../feedback/components/report-issue-item";
 import { m } from "../../../paraglide/messages";
@@ -50,11 +52,11 @@ interface InsertableCardProps extends PropsWithChildren {
     match?: InsertableMatch;
     onClick?: () => void;
     /** Where this card is listed — browsing a group unless told otherwise. */
-    source?: InsertSource;
+    source?: UseSource;
 }
 
 export function InsertableCard(props: InsertableCardProps): ReactNode {
-    const { insertable, match, source = InsertSource.BROWSE } = props;
+    const { insertable, match, source = UseSource.BROWSE } = props;
 
     const favorite = useFavorite(insertable.id);
 
@@ -118,6 +120,7 @@ export function InsertableCard(props: InsertableCardProps): ReactNode {
                             selection={hitSelection}
                         />
                     )}
+                    <InsertableChangesBadge insertable={insertable} />
                     <InsertableStatusBadge
                         insertableId={insertable.id}
                         groupId={insertable.groupId}
@@ -164,7 +167,7 @@ interface InsertableMenuItemsProps {
     selection?: PartialSelection;
     /** That selection's key, so favoriting can name its thumbnail. */
     configurationKey?: ConfigurationKey;
-    source: InsertSource;
+    source: UseSource;
     /** Inside the insert menu: the configuration on screen, which a favorite can open with. */
     report?: SelectionReport;
 }
@@ -186,7 +189,7 @@ export function InsertableMenuItems(
     return (
         <>
             {!inInsertMenu && isConnected && (
-                <MenuSection label="Insert">
+                <MenuSection label={m.libraryMenuInsert()}>
                     <QuickInsertItems
                         insertable={insertable}
                         selection={selection}
@@ -197,14 +200,14 @@ export function InsertableMenuItems(
             )}
             <RequireSignIn>
                 {favorite && report && (
-                    <MenuSection label="Configuration">
+                    <MenuSection label={m.libraryMenuConfiguration()}>
                         <SetDefaultConfigurationItem
                             favorite={favorite}
                             report={report}
                         />
                     </MenuSection>
                 )}
-                <MenuSection label="Favorites">
+                <MenuSection label={m.libraryMenuFavorites()}>
                     <FavoriteInsertableItem
                         favorite={favorite}
                         insertable={insertable}
@@ -213,7 +216,7 @@ export function InsertableMenuItems(
                     />
                 </MenuSection>
             </RequireSignIn>
-            <MenuSection label="Document">
+            <MenuSection label={m.libraryMenuDocument()}>
                 <OpenDocumentItems
                     path={insertable.path}
                     selection={selection}
@@ -232,6 +235,10 @@ export function InsertableMenuItems(
             <AdminMenuSection>
                 <ReloadThumbnailMenuItem
                     target={{ insertableId: insertable.id }}
+                />
+                <UpdateReferencesMenuItem
+                    documentId={insertable.documentId}
+                    elementId={insertable.elementId}
                 />
             </AdminMenuSection>
         </>

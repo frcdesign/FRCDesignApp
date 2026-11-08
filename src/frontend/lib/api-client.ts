@@ -34,7 +34,7 @@ export async function apiPost<T>(
         body: JSON.stringify(options?.body ?? {}),
         signal: options?.signal
     });
-    return handleResponse<T>(response);
+    return handleResponse<T>(response, "POST", path);
 }
 
 interface QueryOptionsWithCacheId extends QueryOptions {
@@ -52,7 +52,7 @@ export async function apiGet<T>(
             signal: options?.signal
         }
     );
-    return handleResponse<T>(response);
+    return handleResponse<T>(response, "GET", path);
 }
 
 export async function apiGetText(
@@ -97,14 +97,22 @@ export async function apiDelete<T>(
         method: "DELETE",
         signal: options?.signal
     });
-    return handleResponse<T>(response);
+    return handleResponse<T>(response, "DELETE", path);
 }
 
 /** Asserted, not parsed: the backend owns the contract. */
-async function handleResponse<T>(response: Response): Promise<T> {
+async function handleResponse<T>(
+    response: Response,
+    method: string,
+    path: string
+): Promise<T> {
     const json: unknown = await response.json().catch(() => undefined);
     if (!response.ok) {
-        throw fromApiErrorBody(json);
+        throw fromApiErrorBody(json, {
+            method,
+            path: "/api" + path,
+            status: response.status
+        });
     }
     return json as T;
 }

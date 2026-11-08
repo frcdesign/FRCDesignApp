@@ -5,14 +5,14 @@ import { getDb, type Db } from "../../db/client";
 import { events, type LoggedEvent } from "./schema";
 import {
     NO_ELEMENT,
-    NOT_AN_INSERT,
+    NOT_A_USE,
     NOT_A_REPORT,
     NOT_A_VERSION_RUN,
     type ElementColumns,
     type EventCore
 } from "./logged-event";
 import { rollupWrites } from "./rollups";
-import { EVENT_SCHEMA_VERSION, EventType, InsertSource } from "./usage";
+import { EVENT_SCHEMA_VERSION, EventType, UseSource } from "./usage";
 import {
     failedTaskCount,
     jobOutcome,
@@ -37,22 +37,25 @@ import type {
     FeedbackTopic
 } from "../feedback/contract";
 
-/** The caller is the one who inserted; see `trackInsert`. */
-export interface InsertEvent {
+/** What every use records, an insert or a download. The caller is the user. */
+export interface UseEvent {
     libraryId: LibraryId;
     /** The rollups key on the element id; the rest records the version. */
     path: ElementPath;
     insertableId: string;
+    /** The whole selection the use applied; undefined when it has none. */
+    selection: Selection | undefined;
+    /** Passed in, since the route already loaded them. */
+    parameters: ConfigurationParameter[];
+    /** Whether the part was favorited, not where the use came from. */
+    isFavorite: boolean;
+    source: UseSource;
+}
+
+export interface InsertEvent extends UseEvent {
     /** The type of tab the user inserted into. */
     targetElementType: ElementType;
-    /** The whole selection the insert applied; undefined when it has none. */
-    selection: Selection | undefined;
-    /** Passed in, since the insert already loaded them. */
-    parameters: ConfigurationParameter[];
-    /** Whether the part was favorited, not where the insert came from. */
-    isFavorite: boolean;
     isQuickInsert: boolean;
-    source: InsertSource;
     fasten: boolean;
     /** Whether the part offered insert and fasten. */
     fastenable: boolean;
@@ -62,7 +65,7 @@ export interface InsertEvent {
 
 /**
  * After the response, and never failing it: tracking is not what was asked
- * for. Each of the `instances` the insert placed is an insert of its own.
+ * for. Each of the `instances` the insert placed is a use of its own.
  */
 export function trackInsert(
     c: AppContext,
@@ -84,20 +87,13 @@ export async function recordInserts(
     userId: string,
     inserts: InsertEvent[]
 ): Promise<void> {
-    await record(
+    await recordBatch(
         db,
         inserts.map((event) => ({
             event: {
-                ...eventCore(EventType.INSERT, event.libraryId, userId),
-                ...NOT_A_VERSION_RUN,
-                ...NOT_A_REPORT,
-                ...event.path,
-                insertableId: event.insertableId,
+                ...columnsOfUse(EventType.INSERT, event, userId),
                 targetElementType: event.targetElementType,
-                selection: appliedSelection(event.selection, event.parameters),
-                isFavorite: event.isFavorite,
                 isQuickInsert: event.isQuickInsert,
-                source: event.source,
                 fasten: event.fasten,
                 fastenable: event.fastenable,
                 preselected: event.preselected
@@ -107,25 +103,60 @@ export async function recordInserts(
     );
 }
 
+/** As `trackInsert`, for a STEP export Onshape has accepted. */
+export function trackDownload(c: AppContext, event: UseEvent): Promise<void> {
+    return runInBackground(c, "record a download", async () =>
+        record(
+            getDb(c.env.DB),
+            {
+                ...columnsOfUse(
+                    EventType.DOWNLOAD,
+                    event,
+                    await c.var.getUserId()
+                ),
+                targetElementType: null,
+                isQuickInsert: null,
+                fasten: null,
+                fastenable: null,
+                preselected: null
+            },
+            event.parameters
+        )
+    );
+}
+
+/** The columns every use fills in; its kind adds the rest. */
+function columnsOfUse(
+    type: EventType.INSERT | EventType.DOWNLOAD,
+    event: UseEvent,
+    userId: string
+) {
+    return {
+        ...eventCore(type, event.libraryId, userId),
+        ...NOT_A_VERSION_RUN,
+        ...NOT_A_REPORT,
+        ...event.path,
+        insertableId: event.insertableId,
+        selection: appliedSelection(event.selection, event.parameters),
+        isFavorite: event.isFavorite,
+        source: event.source
+    };
+}
+
 /** As `trackInsert`, for a launch from Onshape. */
 export function trackAppOpen(c: AppContext): Promise<void> {
     return runInBackground(c, "record an app open", async () =>
-        record(getDb(c.env.DB), [
+        record(
+            getDb(c.env.DB),
             {
-                event: {
-                    ...eventCore(
-                        EventType.APP_OPEN,
-                        null,
-                        await c.var.getUserId()
-                    ),
-                    ...NO_ELEMENT,
-                    ...NOT_AN_INSERT,
-                    ...NOT_A_VERSION_RUN,
-                    ...NOT_A_REPORT
-                },
-                parameters: []
-            }
-        ])
+                ...eventCore(EventType.APP_OPEN, null, await c.var.getUserId()),
+                ...NO_ELEMENT,
+                ...NOT_A_USE,
+                ...NOT_A_VERSION_RUN,
+                ...NOT_A_REPORT
+            },
+            []
+        )
     );
 }
 
@@ -172,24 +203,23 @@ export async function trackVersionRun(
     event: VersionRunEvent
 ): Promise<void> {
     const { status } = event;
-    await record(getDb(env.DB), [
+    await record(
+        getDb(env.DB),
         {
-            event: {
-                ...eventCore(EventType.VERSION_RUN, null, event.userId),
-                ...NO_ELEMENT,
-                ...NOT_AN_INSERT,
-                ...NOT_A_REPORT,
-                versionKind: event.kind,
-                versionScope: event.scope,
-                versionUpdateOnly: status.updateOnly ?? false,
-                versionOutcome: jobOutcome(status) ?? VersionJobOutcome.FAILED,
-                failedSteps: failedTaskCount(status),
-                createdVersions: status.result?.createdVersions ?? 0,
-                updatedElements: status.result?.updatedElements ?? 0
-            },
-            parameters: []
-        }
-    ]);
+            ...eventCore(EventType.VERSION_RUN, null, event.userId),
+            ...NO_ELEMENT,
+            ...NOT_A_USE,
+            ...NOT_A_REPORT,
+            versionKind: event.kind,
+            versionScope: event.scope,
+            versionUpdateOnly: status.updateOnly ?? false,
+            versionOutcome: jobOutcome(status) ?? VersionJobOutcome.FAILED,
+            failedSteps: failedTaskCount(status),
+            createdVersions: status.result?.createdVersions ?? 0,
+            updatedElements: status.result?.updatedElements ?? 0
+        },
+        []
+    );
 }
 
 /** Who sent a report, when they weren't signed in. */
@@ -218,37 +248,44 @@ export function trackReport(c: AppContext, event: ReportEvent): Promise<void> {
         ? { ...event.part.path, insertableId: event.part.insertableId }
         : NO_ELEMENT;
     return runInBackground(c, "record a report", () =>
-        record(getDb(c.env.DB), [
+        record(
+            getDb(c.env.DB),
             {
-                event: {
-                    ...eventCore(
-                        EventType.REPORT,
-                        event.libraryId ?? null,
-                        event.userId ?? SIGNED_OUT_USER_ID,
-                        event.id
-                    ),
-                    ...element,
-                    ...NOT_AN_INSERT,
-                    ...NOT_A_VERSION_RUN,
-                    reportTopic: event.topic,
-                    reportCategory: event.category,
-                    reportSource: event.source,
-                    reportTeamNumber: event.teamNumber ?? null
-                },
-                parameters: []
-            }
-        ])
+                ...eventCore(
+                    EventType.REPORT,
+                    event.libraryId ?? null,
+                    event.userId ?? SIGNED_OUT_USER_ID,
+                    event.id
+                ),
+                ...element,
+                ...NOT_A_USE,
+                ...NOT_A_VERSION_RUN,
+                reportTopic: event.topic,
+                reportCategory: event.category,
+                reportSource: event.source,
+                reportTeamNumber: event.teamNumber ?? null
+            },
+            []
+        )
     );
 }
 
-/** An event, and the part's parameters its rollups key configuration counts by. */
+/** Batched so neither half lands without the other. */
+function record(
+    db: Db,
+    event: LoggedEvent,
+    parameters: ConfigurationParameter[]
+): Promise<void> {
+    return recordBatch(db, [{ event, parameters }]);
+}
+
 interface Recorded {
     event: LoggedEvent;
     parameters: ConfigurationParameter[];
 }
 
-/** Batched so no event lands without its rollups, nor they without it. */
-async function record(db: Db, recorded: Recorded[]): Promise<void> {
+/** Several events and their rollups in one batch, so none lands without the rest. */
+async function recordBatch(db: Db, recorded: Recorded[]): Promise<void> {
     if (recorded.length === 0) return;
     const writes: BatchItem<"sqlite">[] = recorded.flatMap(
         ({ event, parameters }) => [

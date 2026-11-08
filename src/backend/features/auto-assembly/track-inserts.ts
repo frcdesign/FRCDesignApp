@@ -5,7 +5,7 @@ import { insertables } from "../../db/schema";
 import { ElementType } from "../../lib/onshape/element-type";
 import { toElementPath } from "../../lib/onshape/path";
 import { type InsertEvent, recordInserts } from "../analytics/tracking";
-import { InsertSource } from "../analytics/usage";
+import { UseSource } from "../analytics/usage";
 import { toSelection } from "../configurations/selection";
 import { type PartPlacement } from "./insert";
 import { type FastenerSet } from "./studios";
@@ -55,7 +55,7 @@ export async function recordRunInserts(
                 // Not looked up: a run picks parts by size, not from favorites
                 isFavorite: false,
                 isQuickInsert: false,
-                source: InsertSource.AUTO_ASSEMBLY,
+                source: UseSource.AUTO_ASSEMBLY,
                 fasten: mated.has(index),
                 fastenable: true,
                 preselected: false

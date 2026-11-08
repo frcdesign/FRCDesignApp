@@ -23,20 +23,10 @@ Open with **F12**. Two tabs are most useful during development:
 
 ## Working with Onshape
 
-This section covers core information important for working with Onshape.
-
-### How Onshape organizes content
-
-Everything in Onshape is nested: a **Document** contains one or more **Workspaces** (or Versions, or Microversions), and each Workspace contains **Elements** (tabs — Part Studios, Assemblies, Feature Studios, etc.).
-
-Each level has a unique string ID:
-
-- `documentId` — identifies the document
-- `instanceId` — identifies the workspace (or version, or microversion) within that document
-- `instanceType` — `"w"` for workspace, `"v"` for version, `"m"` for microversion
-- `elementId` — identifies a specific tab within the instance
-
-In the database, Groups correspond to Documents (or more specifically Versions of a Document) and Insertables correspond to Elements (tabs).
+How Onshape itself behaves — documents, workspaces, versions and microversions,
+configurations, accounts, webhooks — is in [ONSHAPE.md](./ONSHAPE.md). This
+section covers working with it in this codebase. A group is a document, pinned
+to one of its versions, and an insertable is one of its elements (tabs).
 
 ### Path types in the codebase
 

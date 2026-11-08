@@ -1,5 +1,5 @@
 import { partDashboardLocation } from "./dashboard-nav";
-import { Badge, Group, Table, Text } from "@mantine/core";
+import { Badge, Group, Table } from "@mantine/core";
 import { useNavigate } from "@tanstack/react-router";
 import { type ReactNode } from "react";
 import type {
@@ -13,11 +13,20 @@ import { ImplicitDefaultBadge } from "./implicit-default";
 import { AppBreadcrumbs } from "../../components/breadcrumbs";
 import { usePagedRows } from "./paged-rows";
 import { TablePagination } from "./table-pagination";
+import { SealCheckIcon } from "@phosphor-icons/react";
+import { DashboardEmpty } from "./dashboard-state";
+import { m } from "../../paraglide/messages";
 
 /** Below this the part and parameter names wrap into each other. */
 const MIN_TABLE_WIDTH = 760;
 
-const COLUMNS = ["Part", "Parameter", "Option", "Uses", "Share"];
+const COLUMNS = [
+    m.dashboardOptionsColumnPart(),
+    m.dashboardOptionsColumnParameter(),
+    m.dashboardOptionsColumnOption(),
+    m.dashboardUses(),
+    m.dashboardOptionsColumnShare()
+];
 
 /** The last two columns are counts, which read right-aligned. */
 const NUMERIC_COLUMNS = 2;
@@ -37,9 +46,11 @@ export function OptionsTable({
 
     if (options.length === 0) {
         return (
-            <Text c="dimmed" py="xl" ta="center">
-                {emptyMessage}
-            </Text>
+            <DashboardEmpty
+                title={emptyMessage}
+                icon={SealCheckIcon}
+                color={StatusColor.SUCCESS}
+            />
         );
     }
 
@@ -130,7 +141,9 @@ function OptionLabel({ value }: OptionLabelProps): ReactNode {
         <Group gap="xs">
             {value.label}
             {value.count === 0 && (
-                <Badge color={StatusColor.INFO}>Never used</Badge>
+                <Badge color={StatusColor.INFO}>
+                    {m.dashboardOptionNeverUsed()}
+                </Badge>
             )}
             {/* A default nobody picks is the strongest signal the parameter
                 is wrong. An implicit one is stronger still: it is what this
@@ -139,7 +152,9 @@ function OptionLabel({ value }: OptionLabelProps): ReactNode {
                 <ImplicitDefaultBadge color={StatusColor.WARNING} size="sm" />
             )}
             {value.isDefault && (
-                <Badge color={StatusColor.WARNING}>Default</Badge>
+                <Badge color={StatusColor.WARNING}>
+                    {m.dashboardOptionDefault()}
+                </Badge>
             )}
         </Group>
     );

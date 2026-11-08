@@ -5,6 +5,7 @@ import {
     countDistinct,
     eq,
     gte,
+    inArray,
     lte,
     sum,
     type SQL
@@ -22,22 +23,19 @@ import {
     userStats
 } from "./schema";
 import { workspaceLinks } from "../version-manager/schema";
-import { EventType, InsertSource } from "./usage";
+import { USE_EVENT_TYPES, UseSource, type UseTarget } from "./usage";
 import { LibraryId } from "../library/library-id";
-import { ElementType } from "../../lib/onshape/element-type";
 import {
     emptyTargets,
-    type InsertTargets,
+    type UseTargets,
     type AnalyticsTotals,
-    type DailyInsertPoint,
+    type DailyUsePoint,
     type DailyMetricPoint,
-    type InsertSourceUsage,
-    type LibrarySummary,
+    type UseSourceUsage,
     type VersionManagerTotals
 } from "./contract";
 import { type DayRange } from "./day";
 import { eachDay } from "./range";
-import { getHealthCounts } from "./health";
 
 /** Lifetime totals, or scoped to one library or a window. */
 export async function getTotals(
@@ -54,19 +52,18 @@ export async function getTotals(
             countAppOpens(db, libraryId, range)
         ]);
 
-    const byType = new Map(metrics.map((row) => [row.type, row]));
-    const inserts = byType.get(EventType.INSERT);
+    const uses = metrics;
 
     return {
-        inserts: Number(inserts?.total ?? 0),
+        uses: Number(uses?.total ?? 0),
         appOpens: Number(opens?.value ?? 0),
         uniqueUsers: uniqueUsers?.value ?? 0,
-        favoriteInserts: Number(inserts?.favorites ?? 0),
-        quickInserts: Number(inserts?.quickInserts ?? 0),
-        fastenInserts: Number(inserts?.fastens ?? 0),
-        fastenableInserts: Number(inserts?.fastenables ?? 0),
-        preselectedInserts: Number(inserts?.preselected ?? 0),
-        autoAssemblyInserts: Number(inserts?.autoAssemblys ?? 0),
+        favoriteUses: Number(uses?.favorites ?? 0),
+        quickInserts: Number(uses?.quickInserts ?? 0),
+        fastenInserts: Number(uses?.fastens ?? 0),
+        fastenableInserts: Number(uses?.fastenables ?? 0),
+        preselectedInserts: Number(uses?.preselected ?? 0),
+        autoAssemblyInserts: Number(uses?.autoAssemblys ?? 0),
         targets: toTargets(targets),
         favorites: favoriteCount?.value ?? 0
     };
@@ -86,13 +83,20 @@ function scopeFilters(
     return filters;
 }
 
-/** Each event type's counters, summed over whatever the caller scoped to. */
+/** Only the uses: an insert or a download, not another kind of event. */
+function usesOnly(): SQL {
+    return inArray(dailyMetrics.type, [...USE_EVENT_TYPES]);
+}
+
+/** The uses' counters, summed over whatever the caller scoped to. */
 function countMetrics(db: Db, libraryId?: LibraryId, range?: DayRange) {
-    const filters = scopeFilters(dailyMetrics, libraryId, range);
+    const filters = [
+        usesOnly(),
+        ...scopeFilters(dailyMetrics, libraryId, range)
+    ];
 
     return db
         .select({
-            type: dailyMetrics.type,
             total: sum(dailyMetrics.count),
             favorites: sum(dailyMetrics.favoriteCount),
             fastens: sum(dailyMetrics.fastenCount),
@@ -102,9 +106,8 @@ function countMetrics(db: Db, libraryId?: LibraryId, range?: DayRange) {
             autoAssemblys: sum(dailyMetrics.autoAssemblyCount)
         })
         .from(dailyMetrics)
-        .where(filters.length ? and(...filters) : undefined)
-        .groupBy(dailyMetrics.type)
-        .all();
+        .where(and(...filters))
+        .get();
 }
 
 /** Inserts by target, over whatever the caller scoped to. */
@@ -124,8 +127,8 @@ function countTargets(db: Db, libraryId?: LibraryId, range?: DayRange) {
 
 /** Rows of one target apiece, as the whole-of-enum shape the contract states. */
 export function toTargets(
-    rows: { targetElementType: ElementType; total: string | number | null }[]
-): InsertTargets {
+    rows: { targetElementType: UseTarget; total: string | number | null }[]
+): UseTargets {
     const targets = emptyTargets();
     for (const row of rows) {
         targets[row.targetElementType] = Number(row.total ?? 0);
@@ -136,11 +139,9 @@ export function toTargets(
 /** `user_stats` is all-time, so a range counts the daily rollups. */
 function countUsers(db: Db, libraryId?: LibraryId, range?: DayRange) {
     if (range) {
-        const active = activeUserRows(db, range, libraryId);
-        return db
-            .select({ value: countDistinct(active.userId) })
-            .from(active)
-            .get();
+        return countActiveUsers(db, range, libraryId).then((value) => ({
+            value
+        }));
     }
     return db
         .select({ value: count() })
@@ -196,6 +197,34 @@ export function activeUserRows(db: Db, range: DayRange, libraryId?: LibraryId) {
         .as("active");
 }
 
+/**
+ * Everybody active at any point in the range, as {@link activeUserRows} counts
+ * them. A union of ids alone dedupes them in one pass, which a union of
+ * day-and-id rows can't.
+ */
+export async function countActiveUsers(
+    db: Db,
+    range: DayRange,
+    libraryId?: LibraryId
+): Promise<number> {
+    const activity = db
+        .select({ userId: dailyUserActivity.userId })
+        .from(dailyUserActivity)
+        .where(and(...activityFilters(range, libraryId)));
+    const people = libraryId
+        ? activity.groupBy(dailyUserActivity.userId).as("people")
+        : activity
+              .union(
+                  db
+                      .select({ userId: dailyAppOpens.userId })
+                      .from(dailyAppOpens)
+                      .where(and(...openFilters(range)))
+              )
+              .as("people");
+    const row = await db.select({ value: count() }).from(people).get();
+    return row?.value ?? 0;
+}
+
 /** Favorites standing now, which have no day to be windowed by. */
 function countFavorites(db: Db, libraryId?: LibraryId) {
     return db
@@ -205,31 +234,23 @@ function countFavorites(db: Db, libraryId?: LibraryId) {
         .get();
 }
 
-export async function getLibrarySummaries(db: Db): Promise<LibrarySummary[]> {
-    return Promise.all(
-        Object.values(LibraryId).map(async (libraryId) => ({
-            libraryId,
-            totals: await getTotals(db, libraryId),
-            health: await getHealthCounts(db, libraryId)
-        }))
-    );
-}
-
 /** Daily insert mix (favorites / fasten / quick insert) across the range. */
 function activityFilters(range: DayRange, libraryId?: LibraryId) {
     return scopeFilters(dailyUserActivity, libraryId, range);
 }
 
-/** Each event type's counters per day, summed across libraries when unscoped. */
+/** The uses' counters per day, summed across libraries when unscoped. */
 function countMetricsByDay(db: Db, range: DayRange, libraryId?: LibraryId) {
-    const filters = scopeFilters(dailyMetrics, libraryId, range);
+    const filters = [
+        usesOnly(),
+        ...scopeFilters(dailyMetrics, libraryId, range)
+    ];
 
     return db
         .select({
             day: dailyMetrics.day,
-            type: dailyMetrics.type,
             total: sum(dailyMetrics.count),
-            favoriteInserts: sum(dailyMetrics.favoriteCount),
+            favoriteUses: sum(dailyMetrics.favoriteCount),
             fastenInserts: sum(dailyMetrics.fastenCount),
             quickInserts: sum(dailyMetrics.quickInsertCount),
             fastenableInserts: sum(dailyMetrics.fastenableCount),
@@ -238,11 +259,11 @@ function countMetricsByDay(db: Db, range: DayRange, libraryId?: LibraryId) {
         })
         .from(dailyMetrics)
         .where(and(...filters))
-        .groupBy(dailyMetrics.day, dailyMetrics.type)
+        .groupBy(dailyMetrics.day)
         .all();
 }
 
-/** Each day's inserts by target, summed across libraries when unscoped. */
+/** Each day's uses by target, summed across libraries when unscoped. */
 function countTargetsByDay(db: Db, range: DayRange, libraryId?: LibraryId) {
     const filters = scopeFilters(dailyTargetMetrics, libraryId, range);
 
@@ -298,10 +319,10 @@ export async function getMetricSeries(
         if (existing) return existing;
         const created: DailyMetricPoint = {
             day,
-            inserts: 0,
+            uses: 0,
             appOpens: 0,
             activeUsers: 0,
-            favoriteInserts: 0,
+            favoriteUses: 0,
             quickInserts: 0,
             fastenInserts: 0,
             fastenableInserts: 0,
@@ -314,10 +335,9 @@ export async function getMetricSeries(
     };
 
     for (const row of rows) {
-        if (row.type !== EventType.INSERT) continue;
         const point = pointFor(row.day);
-        point.inserts = Number(row.total ?? 0);
-        point.favoriteInserts = Number(row.favoriteInserts ?? 0);
+        point.uses = Number(row.total ?? 0);
+        point.favoriteUses = Number(row.favoriteUses ?? 0);
         point.fastenInserts = Number(row.fastenInserts ?? 0);
         point.quickInserts = Number(row.quickInserts ?? 0);
         point.fastenableInserts = Number(row.fastenableInserts ?? 0);
@@ -342,7 +362,7 @@ export async function getMetricSeries(
     return [...byDay.values()].sort((a, b) => a.day.localeCompare(b.day));
 }
 
-/** Lifetime inserts split by which part of the app they started from. */
+/** Lifetime uses split by which part of the app they started from. */
 function countBySource(db: Db, range: DayRange, libraryId?: LibraryId) {
     const filters = [
         gte(dailySourceMetrics.day, range.from),
@@ -366,25 +386,21 @@ export async function getSources(
     db: Db,
     range: DayRange,
     libraryId?: LibraryId
-): Promise<InsertSourceUsage[]> {
+): Promise<UseSourceUsage[]> {
     const rows = await countBySource(db, range, libraryId);
 
     const bySource = new Map(rows.map((row) => [row.source, row]));
     // Every source is listed, so one nobody uses reads as a zero, not a gap.
-    return Object.values(InsertSource).map((source) => ({
+    return Object.values(UseSource).map((source) => ({
         source,
         count: Number(bySource.get(source)?.count ?? 0),
         quickInsertCount: Number(bySource.get(source)?.quickInsertCount ?? 0)
     }));
 }
 
-function countInsertsByLibraryDay(
-    db: Db,
-    range: DayRange,
-    libraryId?: LibraryId
-) {
+function countUsesByLibraryDay(db: Db, range: DayRange, libraryId?: LibraryId) {
     const filters = [
-        eq(dailyMetrics.type, EventType.INSERT),
+        usesOnly(),
         gte(dailyMetrics.day, range.from),
         lte(dailyMetrics.day, range.to)
     ];
@@ -394,26 +410,27 @@ function countInsertsByLibraryDay(
         .select({
             day: dailyMetrics.day,
             libraryId: dailyMetrics.libraryId,
-            count: dailyMetrics.count
+            count: sum(dailyMetrics.count)
         })
         .from(dailyMetrics)
         .where(and(...filters))
+        .groupBy(dailyMetrics.day, dailyMetrics.libraryId)
         .orderBy(asc(dailyMetrics.day))
         .all();
 }
 
-/** Daily insert counts per library, as one row per day for the chart. */
+/** Daily use counts per library, as one row per day for the chart. */
 export async function getSeries(
     db: Db,
     range: DayRange,
     libraryId?: LibraryId
-): Promise<DailyInsertPoint[]> {
-    const rows = await countInsertsByLibraryDay(db, range, libraryId);
+): Promise<DailyUsePoint[]> {
+    const rows = await countUsesByLibraryDay(db, range, libraryId);
 
-    const byDay = new Map<string, DailyInsertPoint>();
+    const byDay = new Map<string, DailyUsePoint>();
     for (const row of rows) {
         const point = byDay.get(row.day) ?? { day: row.day, counts: {} };
-        point.counts[row.libraryId] = row.count;
+        point.counts[row.libraryId] = Number(row.count ?? 0);
         byDay.set(row.day, point);
     }
     // A missing day is a zero, or the line jumps across it.

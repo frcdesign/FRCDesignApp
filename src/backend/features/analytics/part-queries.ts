@@ -27,7 +27,7 @@ export interface PartRow {
     documentId: string;
     versionId: string;
     isVisible: boolean;
-    firstInsertedAt: Date | null;
+    firstUsedAt: Date | null;
     favorites: number;
 }
 
@@ -51,7 +51,7 @@ export function getPartRows(
                 documentId: insertables.documentId,
                 versionId: insertables.versionId,
                 isVisible: insertables.isVisible,
-                firstInsertedAt: insertableStats.firstInsertedAt,
+                firstUsedAt: insertableStats.firstUsedAt,
                 favorites: sql<number>`(select count(*) from ${favorites} where ${favorites.insertableId} = ${insertables.id})`
             })
             .from(insertables)
@@ -77,9 +77,9 @@ export function toWindowedPart(
 ): PartUsageOut {
     const from = Date.parse(`${range.from}T00:00:00Z`);
     const to = Math.min(Date.now(), Date.parse(`${range.to}T23:59:59Z`));
-    const insertCount = windowed.get(row.elementId) ?? 0;
+    const useCount = windowed.get(row.elementId) ?? 0;
     // Over the days it existed, so arriving late doesn't read as unpopular.
-    const firstUsed = Math.max(row.firstInsertedAt?.getTime() ?? from, from);
+    const firstUsed = Math.max(row.firstUsedAt?.getTime() ?? from, from);
 
     return {
         libraryId: row.libraryId,
@@ -87,10 +87,10 @@ export function toWindowedPart(
         name: row.name,
         groupName: row.groupName,
         isVisible: row.isVisible,
-        insertCount,
+        useCount,
         usesPerMonth: usesPerMonth(
-            insertCount,
-            insertCount === 0 ? undefined : firstUsed,
+            useCount,
+            useCount === 0 ? undefined : firstUsed,
             to
         ),
         favorites: row.favorites,
@@ -99,7 +99,7 @@ export function toWindowedPart(
 }
 
 /** A range scan on `daily_insertable_metrics_day_idx`. */
-export async function getWindowedInsertCounts(
+export async function getWindowedUseCounts(
     db: Db,
     libraryId: LibraryId,
     range: DayRange
@@ -276,7 +276,7 @@ export function countPartUsers(
         .get();
 }
 
-/** One part's inserts inside the window, by the kind of tab they landed in. */
+/** One part's uses inside the window, by where they went. */
 export function sumPartTargets(
     db: Db,
     libraryId: LibraryId,

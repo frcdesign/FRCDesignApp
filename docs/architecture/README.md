@@ -35,10 +35,13 @@ read and comment on, the ones a branch changed first with their diffs; the
 | [feedback.md](./feedback.md)               | Reports to Discord: the feedback form, part reports, error reports                 |
 | [auto-assembly.md](./auto-assembly.md)     | Auto Assembly: sizing fasteners to holes, scanning and caching, inserting, picking |
 | [generated-parts.md](./generated-parts.md) | Library parts FeatureScript generates: syncing their records, loading, the badge   |
+| [download.md](./download.md)               | STEP downloads from the standalone app, and why they need sign-in                  |
 | [platform.md](./platform.md)               | Onshape client, errors, retries and timeouts, concurrency, toasts, pushes, caching |
 
 [REFERENCE.md](../REFERENCE.md) is the tour of the whole system and links here
-for depth; [GUIDE.md](../GUIDE.md) holds recipes.
+for depth; [GUIDE.md](../GUIDE.md) holds recipes; [ONSHAPE.md](../ONSHAPE.md)
+holds what we know of Onshape itself, which these documents link to rather than
+repeat.
 
 ## Shape of a document
 

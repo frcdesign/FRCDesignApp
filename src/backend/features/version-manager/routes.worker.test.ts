@@ -2,7 +2,14 @@ import { env } from "cloudflare:workers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createTestApp, jsonRequest } from "../../../__test_utils__";
 import { getDb } from "../../db/client";
+import * as Documents from "../../lib/onshape/endpoints/documents";
 import * as Permissions from "../../lib/onshape/endpoints/permissions";
+import type {
+    OnshapeDocumentContents,
+    OnshapeDocumentInfo,
+    OnshapeExternalReferences
+} from "../../lib/onshape/types";
+import * as Transient from "../webhooks/transient";
 import { OnshapePermission } from "../../lib/onshape/endpoints/permissions";
 import {
     LinkDirection,
@@ -14,7 +21,7 @@ import {
 } from "./contract";
 import * as Jobs from "./jobs";
 import * as WorkspaceCache from "./workspace-cache";
-import { addLink } from "./links";
+import { addLink, getParentLinks } from "./links";
 import { workspaceLinks } from "./schema";
 
 const db = getDb(env.DB);
@@ -59,7 +66,7 @@ function postSignedIn(path: string, body: unknown) {
             ...jsonRequest("POST", body),
             headers: {
                 "Content-Type": "application/json",
-                Cookie: "frc-design-app-session=session"
+                Cookie: "__Host-frc-design-app-session=session"
             }
         },
         env
@@ -293,6 +300,60 @@ describe("version manager routes", () => {
         expect(count).not.toHaveBeenCalled();
     });
 
+    it("reads a library document's default workspace, once, with each tab's microversion", async () => {
+        grant({ root: ALL });
+        const getDocument = vi
+            .spyOn(Documents, "getDocument")
+            .mockResolvedValue({
+                id: ROOT.documentId,
+                defaultWorkspace: { id: ROOT.instanceId }
+            } as OnshapeDocumentInfo);
+        vi.spyOn(Transient, "watchLinkedWorkspace").mockResolvedValue();
+        vi.spyOn(Documents, "getInsertables").mockResolvedValue({
+            changesSinceVersionSave: 2
+        });
+        const getContents = vi
+            .spyOn(Documents, "getContents")
+            .mockResolvedValue({
+                elements: [{ id: "tab", microversionId: "mv" }]
+            } as OnshapeDocumentContents);
+
+        const read = (elements: boolean) =>
+            app.request(
+                `/api/workspace-changes?${new URLSearchParams({ documentId: ROOT.documentId, elements: String(elements) })}`,
+                jsonRequest("GET"),
+                env
+            );
+
+        expect(await (await read(false)).json()).toEqual({ changes: 2 });
+        expect(getContents).not.toHaveBeenCalled();
+        expect(await (await read(true)).json()).toEqual({
+            changes: 2,
+            elements: { tab: "mv" }
+        });
+        expect(getDocument).toHaveBeenCalledOnce();
+        expect(getContents.mock.calls[0][1]).toEqual(ROOT);
+    });
+
+    it("lists a document's tabs only for somebody who may read it", async () => {
+        grant({});
+        vi.spyOn(Documents, "getDocument").mockResolvedValue({
+            id: ROOT.documentId,
+            defaultWorkspace: { id: ROOT.instanceId }
+        } as OnshapeDocumentInfo);
+        vi.spyOn(Transient, "watchLinkedWorkspace").mockResolvedValue();
+        const getContents = vi.spyOn(Documents, "getContents");
+
+        const res = await app.request(
+            `/api/workspace-changes?documentId=${ROOT.documentId}&elements=true`,
+            jsonRequest("GET"),
+            env
+        );
+
+        expect(res.status).toBe(403);
+        expect(getContents).not.toHaveBeenCalled();
+    });
+
     it("forgets what is cached of each linked workspace on a refresh", async () => {
         grant({ child: ALL });
         const forget = vi
@@ -304,4 +365,136 @@ describe("version manager routes", () => {
         expect(res.status).toBe(200);
         expect(forget.mock.calls.map((call) => call[1])).toEqual([ROOT]);
     });
+    it("suggests each referenced document, unlinked and readable, at its default workspace", async () => {
+        grant({ child: ALL, gearbox: ALL, secret: [] });
+        vi.spyOn(Documents, "getExternalReferences").mockResolvedValue({
+            elementExternalReferences: {
+                assembly: [
+                    reference("gearbox", "v1"),
+                    // Already linked, as this workspace's parent.
+                    reference("root", "v2"),
+                    reference("secret", "v3")
+                ],
+                drawing: [reference("gearbox", "v1"), reference("child", "v4")]
+            }
+        } satisfies OnshapeExternalReferences);
+        vi.spyOn(Documents, "getDocument").mockImplementation((_client, path) =>
+            Promise.resolve({
+                id: path.documentId,
+                name: `${path.documentId} document`,
+                defaultWorkspace: { id: `${path.documentId}-main` }
+            } as OnshapeDocumentInfo)
+        );
+        vi.spyOn(WorkspaceCache, "describeWorkspace").mockResolvedValue({
+            documentName: "Gearbox",
+            workspaceName: "Main"
+        });
+        vi.spyOn(Transient, "watchLinkedWorkspace").mockResolvedValue();
+
+        const res = await app.request(
+            `/api/workspace-link-suggestions?${new URLSearchParams(toInput(CHILD))}`,
+            jsonRequest("GET"),
+            env
+        );
+
+        expect(await res.json()).toEqual({
+            suggestions: [
+                {
+                    workspace: ws("gearbox", "gearbox-main"),
+                    documentName: "Gearbox",
+                    workspaceName: "Main"
+                }
+            ]
+        });
+    });
+
+    it("links every readable parent asked for, skipping those already linked", async () => {
+        grant({ child: ALL, gearbox: ALL, intake: ALL, secret: [] });
+        const res = await post("/workspace-links/parents", {
+            workspace: toInput(CHILD),
+            parents: [
+                toInput(ws("gearbox")),
+                toInput(ws("gearbox", "gearbox-branch")),
+                toInput(ws("root", "root-other")),
+                toInput(ws("secret")),
+                toInput(ws("intake"))
+            ]
+        });
+
+        expect(await res.json()).toEqual({ linked: 2 });
+        const parents = await getParentLinks(db, CHILD);
+        expect(parents.map((row) => row.sourceDocumentId).sort()).toEqual([
+            "gearbox",
+            "intake",
+            "root"
+        ]);
+    });
+
+    it("links no parents for somebody who can't edit the workspace", async () => {
+        grant({ child: [OnshapePermission.READ], gearbox: ALL });
+        const res = await post("/workspace-links/parents", {
+            workspace: toInput(CHILD),
+            parents: [toInput(ws("gearbox"))]
+        });
+
+        expect(res.status).toBe(403);
+        expect(await getParentLinks(db, CHILD)).toHaveLength(1);
+    });
+
+    it("moves one tab's out-of-date references in a document's default workspace", async () => {
+        grant({ root: ALL });
+        vi.spyOn(Documents, "getDocument").mockResolvedValue({
+            id: ROOT.documentId,
+            defaultWorkspace: { id: ROOT.instanceId }
+        } as OnshapeDocumentInfo);
+        vi.spyOn(Transient, "watchLinkedWorkspace").mockResolvedValue();
+        vi.spyOn(Documents, "getExternalReferences").mockResolvedValue({
+            elementExternalReferences: {
+                assembly: [
+                    { ...reference("gearbox", "v1"), isOutOfDate: true }
+                ],
+                drawing: [{ ...reference("gearbox", "v1"), isOutOfDate: true }]
+            },
+            latestVersions: [{ documentId: "gearbox", id: "v2" }]
+        } satisfies OnshapeExternalReferences);
+        const update = vi
+            .spyOn(Documents, "updateReferences")
+            .mockResolvedValue();
+
+        const res = await post("/update-references", {
+            documentId: ROOT.documentId,
+            elementId: "assembly"
+        });
+
+        expect(await res.json()).toEqual({ updatedElements: 1 });
+        expect(update.mock.calls.map((call) => call[1])).toEqual([
+            { ...ROOT, elementId: "assembly" }
+        ]);
+    });
+
+    it("updates no references for somebody who can't edit the document", async () => {
+        grant({ root: [OnshapePermission.READ] });
+        vi.spyOn(Documents, "getDocument").mockResolvedValue({
+            id: ROOT.documentId,
+            defaultWorkspace: { id: ROOT.instanceId }
+        } as OnshapeDocumentInfo);
+        vi.spyOn(Transient, "watchLinkedWorkspace").mockResolvedValue();
+        const read = vi.spyOn(Documents, "getExternalReferences");
+
+        const res = await post("/update-references", {
+            documentId: ROOT.documentId
+        });
+
+        expect(res.status).toBe(403);
+        expect(read).not.toHaveBeenCalled();
+    });
 });
+
+function reference(documentId: string, versionId: string) {
+    return {
+        documentId,
+        id: versionId,
+        isOutOfDate: false,
+        referencedElements: ["tab"]
+    };
+}

@@ -179,6 +179,46 @@ describe("POST /api/feedback", () => {
         });
     });
 
+    it("logs the report under its id, and posts the failed request and the server's error id", async () => {
+        const logged = vi
+            .spyOn(console, "log")
+            .mockImplementation(() => undefined);
+        const userId = crypto.randomUUID();
+        const error = {
+            shown: "The app has crashed due to an unexpected error.",
+            kind: "internal",
+            detail: "Internal Server Error",
+            request: "GET /api/library-data/library/mkcad → 500",
+            errorId: "8f00ba11-IAD"
+        };
+
+        const res = await send(
+            body({
+                source: FeedbackSource.ERROR,
+                message: "",
+                diagnostics: { ...DIAGNOSTICS, error }
+            }),
+            { userId }
+        );
+        const { reportId } = await res.json<FeedbackOut>();
+
+        expect(logged).toHaveBeenCalledWith(
+            expect.objectContaining({
+                event: "report",
+                id: reportId,
+                userId,
+                title: "Something broke",
+                diagnostics: { ...DIAGNOSTICS, error }
+            })
+        );
+        const [embed] = post.mock.calls[0][1].embeds;
+        const errorField = embed.fields?.find(
+            (field) => field.name === "Error"
+        )?.value;
+        expect(errorField).toContain(`request: ${error.request}`);
+        expect(errorField).toContain("error id: 8f00ba11-IAD");
+    });
+
     it("leaves the configuration out when the reporter does", async () => {
         await seedPartStudio(db);
         await seedConfiguration(db);
