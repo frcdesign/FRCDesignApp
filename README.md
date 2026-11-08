@@ -107,16 +107,29 @@ printf '%s' '<token>' > .tunnel-token
 
 Only one person can use the tunnel at a time: Cloudflare spreads requests across everyone running it, so stop yours when you're done.
 
-### Testing webhooks
+### The testbench
 
-`/api/webhook-probe` (owner only) registers a webhook with whatever events and
-params you pick, under your own Onshape token, pointed back at the app, and
-lists every delivery it receives, Onshape's registration ping included. Use it
-to find out which events fire for what, before building on one: sign in, open
-the page on cert or through the tunnel, register, make the change in Onshape,
-and watch the deliveries appear. Onshape's refusal, if it refuses, shows
-beside the probe. Probes and deliveries are kept for a day; **Delete**
-unregisters one.
+`/testbench` (owner only; **Admin settings → Testbench**) is for finding out how
+Onshape behaves before building on it. Sign in, open it on cert or through the
+tunnel, and:
+
+- **Rate limits** repeats one call — evaluating FeatureScript, reading an
+  assembly or Part Studio, or any call you set up — until Onshape answers 429,
+  then calls once at a time to time how long the limit lasts. **Copy results
+  as JSON** keeps what it found. Every call counts against the account's API
+  allocation.
+- **Custom toolbar** lists, adds to and removes from your custom toolbar
+  through the internal endpoints Onshape's web client calls.
+- **Webhooks** registers a webhook with whatever events and params you pick,
+  pointed back at the app, and lists every delivery it receives, Onshape's
+  registration ping included. Probes and deliveries are kept for a day;
+  **Delete** unregisters one.
+- **Raw request** makes any call, at any API version, and shows Onshape's
+  whole answer.
+
+Record what you learn in [docs/ONSHAPE.md](docs/ONSHAPE.md).
+[docs/architecture/testbench.md](docs/architecture/testbench.md) covers how it
+works.
 
 ### Creating the tunnel (maintainers)
 

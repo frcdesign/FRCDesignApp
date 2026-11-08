@@ -33,6 +33,7 @@ read and comment on, the ones a branch changed first with their diffs; the
 | [version-manager.md](./version-manager.md) | Links between Onshape workspaces, and the pushes and pulls along them              |
 | [feedback.md](./feedback.md)               | Reports to Discord: the feedback form, part reports, error reports                 |
 | [download.md](./download.md)               | STEP downloads from the standalone app, and why they need sign-in                  |
+| [testbench.md](./testbench.md)             | The owner's page for probing Onshape: raw calls, rate limits, toolbar, webhooks    |
 | [platform.md](./platform.md)               | Onshape client, errors, retries and timeouts, concurrency, toasts, pushes, caching |
 
 [REFERENCE.md](../REFERENCE.md) is the tour of the whole system and links here

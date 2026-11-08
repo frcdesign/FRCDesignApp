@@ -12,10 +12,8 @@ import { libraryRoutes } from "./features/library/routes";
 import { thumbnailRoutes } from "./features/thumbnails/routes";
 import { versionManagerRoutes } from "./features/version-manager/routes";
 import { webhookRoutes } from "./features/webhooks/routes";
-import {
-    webhookProbeRoutes,
-    webhookProbeShortcut
-} from "./features/webhooks/probe";
+import { webhookProbeRoutes } from "./features/testbench/webhook-probe";
+import { testbenchRoutes } from "./features/testbench/routes";
 import { pushRoutes } from "./features/push/routes";
 import { adminTeamRoutes } from "./features/admin-team/routes";
 import { loadRoutes } from "./features/load/routes";
@@ -42,6 +40,7 @@ const apiRoutes = [
     analyticsRoutes,
     webhookRoutes,
     webhookProbeRoutes,
+    testbenchRoutes,
     pushRoutes,
     adminTeamRoutes,
     loadRoutes,
@@ -68,7 +67,6 @@ export function createApp(resolveAuth: AuthResolver) {
     app.route("/auth", authRoutes);
 
     app.route("/", entryRoutes);
-    app.route("/", webhookProbeShortcut);
 
     app.onError(errorHandler);
 

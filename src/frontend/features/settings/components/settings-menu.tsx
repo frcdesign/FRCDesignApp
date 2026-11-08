@@ -200,8 +200,8 @@ function OpenAppButton(props: OpenAppButtonProps): ReactNode {
     );
 }
 
-/** The owner's page for finding out which Onshape events fire; see the README. */
-const WEBHOOK_PROBE_URL = "/webhook";
+/** The owner's page for finding out how Onshape behaves; see the README. */
+const TESTBENCH_URL = "/testbench";
 
 const ADMIN_SECTION_IDS = [SectionId.ADMIN_SETTINGS];
 
@@ -239,8 +239,8 @@ function AdminSettings(): ReactNode {
                 </InputRow>
                 <InputRow label={m.settingsWebhooks()}>
                     <OpenUrlButton
-                        text={m.settingsOpenWebhookProbe()}
-                        url={WEBHOOK_PROBE_URL}
+                        text={m.settingsOpenTestbench()}
+                        url={TESTBENCH_URL}
                     />
                 </InputRow>
             </RequireAccessLevel>

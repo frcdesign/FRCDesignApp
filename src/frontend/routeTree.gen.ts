@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TestbenchRouteImport } from './routes/testbench'
 import { Route as DashboardRouteRouteImport } from './routes/dashboard/route'
 import { Route as AppRouteRouteImport } from './routes/app/route'
 import { Route as IndexRouteImport } from './routes/index'
@@ -31,6 +32,11 @@ import { Route as DashboardLibraryLibraryIdUnusedRouteImport } from './routes/da
 import { Route as DashboardLibraryLibraryIdPartRouteImport } from './routes/dashboard/library/$libraryId/part'
 import { Route as AppLibraryLibraryIdGroupsGroupIdRouteImport } from './routes/app/library/$libraryId/groups/$groupId'
 
+const TestbenchRoute = TestbenchRouteImport.update({
+  id: '/testbench',
+  path: '/testbench',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DashboardRouteRoute = DashboardRouteRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -148,6 +154,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/app': typeof AppRouteRouteWithChildren
   '/dashboard': typeof DashboardRouteRouteWithChildren
+  '/testbench': typeof TestbenchRoute
   '/beta-complete': typeof PagesBetaCompleteRoute
   '/cookie-error': typeof PagesCookieErrorRoute
   '/document-access': typeof PagesDocumentAccessRoute
@@ -170,6 +177,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/app': typeof AppRouteRouteWithChildren
+  '/testbench': typeof TestbenchRoute
   '/beta-complete': typeof PagesBetaCompleteRoute
   '/cookie-error': typeof PagesCookieErrorRoute
   '/document-access': typeof PagesDocumentAccessRoute
@@ -192,6 +200,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/app': typeof AppRouteRouteWithChildren
   '/dashboard': typeof DashboardRouteRouteWithChildren
+  '/testbench': typeof TestbenchRoute
   '/_pages/beta-complete': typeof PagesBetaCompleteRoute
   '/_pages/cookie-error': typeof PagesCookieErrorRoute
   '/_pages/document-access': typeof PagesDocumentAccessRoute
@@ -217,6 +226,7 @@ export interface FileRouteTypes {
     | '/'
     | '/app'
     | '/dashboard'
+    | '/testbench'
     | '/beta-complete'
     | '/cookie-error'
     | '/document-access'
@@ -239,6 +249,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/app'
+    | '/testbench'
     | '/beta-complete'
     | '/cookie-error'
     | '/document-access'
@@ -260,6 +271,7 @@ export interface FileRouteTypes {
     | '/'
     | '/app'
     | '/dashboard'
+    | '/testbench'
     | '/_pages/beta-complete'
     | '/_pages/cookie-error'
     | '/_pages/document-access'
@@ -284,6 +296,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRouteRoute: typeof AppRouteRouteWithChildren
   DashboardRouteRoute: typeof DashboardRouteRouteWithChildren
+  TestbenchRoute: typeof TestbenchRoute
   PagesBetaCompleteRoute: typeof PagesBetaCompleteRoute
   PagesCookieErrorRoute: typeof PagesCookieErrorRoute
   PagesDocumentAccessRoute: typeof PagesDocumentAccessRoute
@@ -297,6 +310,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/testbench': {
+      id: '/testbench'
+      path: '/testbench'
+      fullPath: '/testbench'
+      preLoaderRoute: typeof TestbenchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/dashboard': {
       id: '/dashboard'
       path: '/dashboard'
@@ -515,6 +535,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRouteRoute: AppRouteRouteWithChildren,
   DashboardRouteRoute: DashboardRouteRouteWithChildren,
+  TestbenchRoute: TestbenchRoute,
   PagesBetaCompleteRoute: PagesBetaCompleteRoute,
   PagesCookieErrorRoute: PagesCookieErrorRoute,
   PagesDocumentAccessRoute: PagesDocumentAccessRoute,

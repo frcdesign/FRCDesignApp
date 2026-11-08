@@ -14,8 +14,9 @@ entry wrong, fix the entry and every piece of code that relied on it.
 
 [Glassworks](https://cad.onshape.com/glassworks/explorer) runs any endpoint
 against your own account, which is the quickest way to check an entry. The
-webhook probe (`src/backend/features/webhooks/probe.ts`) shows which events
-fire, and what for.
+owner's testbench at `/testbench` ([testbench.md](./architecture/testbench.md))
+makes any call at any API version, shows which webhook events fire, and
+measures where Onshape starts answering 429.
 
 ## Documents, workspaces, versions and microversions
 
@@ -215,6 +216,14 @@ errors.
 - **Rate limits** answer 429 — _documented_ — usually with `Retry-After`,
   which is sometimes absent — _observed_. Calls also count against the account's API
   allocation, which a full library reload spends a lot of — _documented_.
+- **Rate limits for the calls the app makes most** — evaluating FeatureScript,
+  reading assembly and Part Studio definitions and features — are not
+  published; the testbench's Rate limits tab measures them. Until a burst has
+  been run and its results recorded here, what triggers a 429 and how long it
+  lasts are _unverified_.
+- **Internal endpoints** — the ones Onshape's own web client calls, such as the
+  custom toolbar's — are served at `/api/v14` — _observed_. Whether the same
+  paths answer at the app's own version is _unverified_.
 - **Onshape's error messages** are written for developers, not for the people
   using the app — _observed_.
 - **Translations** (STEP export) run asynchronously and are polled. The file is
@@ -222,5 +231,23 @@ errors.
   it — _observed_. [download.md](./architecture/download.md) covers the flow.
 - **A fasten mate** between two instances, neither of them fixed, tends to
   move the first onto the second — _observed_.
+
+## Custom toolbar
+
+What Onshape's web client sends to change someone's custom toolbar, captured
+from the browser — _observed_. None of it is documented; the testbench's Custom
+toolbar tab tries each from the app's OAuth token, which has not yet been seen
+to work — _unverified_.
+
+- `GET /toolbar/tools` lists every tool the signed-in user can see: Onshape's
+  built-in ones (`ownerType` 2) and the user's own custom features
+  (`ownerType` 0, `ownerId` the user's id).
+- `POST /toolbar/tools/u/{userId}/create` adds tools under `parentId` (a node
+  of the user's toolbar; where its id comes from is _unverified_), each as
+  `{ insertableId, tool }`. A custom feature's `tool` names its Feature Studio
+  as `commandDetails`, `d{documentId}::v{versionId}::e{elementId}::m{microversionId}`,
+  with `command` its feature type and `signature` the two joined by `::`.
+- `DELETE /toolbar/tools/u/{userId}/delete` takes `{ "remove": [toolId] }` as
+  its body.
 
 _Last reviewed: 2026-11-07_
