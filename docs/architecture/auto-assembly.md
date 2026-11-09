@@ -400,7 +400,8 @@ interface AutoAssemblyIn {
 
 enum SelectionMode {
     FACES = "faces",
-    LOCATIONS = "locations"
+    LOCATIONS = "locations",
+    SCREWS = "screws"
 }
 
 interface SelectedEntity {
@@ -964,8 +965,8 @@ The panel is a `ParameterGrid` of the configuration dialog's own inputs
 3. Automatic only: _Stop condition_ (**All holes**, or **First gap** with the
    widest gap to ignore), _Limit screw length_, a checkbox off by default that
    shows _Max length_ while ticked, and _Max thread depth_.
-4. **Selections**, last: _Select by_ (Circular edges, the default, or Faces),
-   its query lists, the first focused, and _Screws to replace_.
+4. **Selections**, last: _Select by_ (Circular edges, the default, Faces, or
+   Screws), and its query lists, the first focused.
 
 The studios' parameters are their configurations as Onshape answers them,
 parsed by `parseOnshapeConfiguration`, so their options show as the Part
@@ -986,16 +987,18 @@ _Select by_ decides what the picks are:
 - **Circular edges** — each picked circular edge is a hole to fasten; nothing
   is skipped.
 - **Faces** — every circular edge of each planar face is a hole to fasten;
-  _Holes to skip_ takes the edges of holes in them to leave out.
+  _Edges to exclude_ takes the edges of holes in them to leave out.
+- **Screws** — _Screws to replace_ takes library screws already in the
+  assembly, as whole solid parts (`SOLID_BODIES`), each row named "Screw {n}";
+  the run decides which picks are screws.
 
-_Screws to replace_ takes library screws already in the assembly, as whole
-solid parts (`SOLID_BODIES`), each row named "Screw {n}"; the run decides which picks are screws.
-Insert needs a pick in either.
+A run takes one kind: only the lists Select by shows are sent, and changing
+Select by clears every pick. Insert needs a pick.
 
-`insertBody` in `routes.ts` refuses a body whose picks don't match its mode,
-one with neither holes nor screws to replace, and a part its studio doesn't
-make (`isMade`) or not in the screw's size. Changing the mode clears the picks,
-but not the screws to replace.
+`insertBody` in `routes.ts` refuses a body whose picks don't match its mode
+(`isConsistentPick`: faces with edges to exclude, circular edges alone, or
+screws alone), one with neither holes nor screws to replace, and a part its
+studio doesn't make (`isMade`) or not in the screw's size.
 
 ### Checking picks — `POST /api/auto-assembly/check`
 

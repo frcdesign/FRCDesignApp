@@ -81,7 +81,7 @@ describe("pickProblems", () => {
             {
                 key: "plate|E",
                 message:
-                    "A library screw is already in this hole. Pick it under Screws to replace to change it.",
+                    "A library screw is already in this hole. Select it by Screws to replace it.",
                 severity: ProblemSeverity.ERROR
             },
             {

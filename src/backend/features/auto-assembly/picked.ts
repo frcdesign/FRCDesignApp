@@ -16,24 +16,36 @@ interface PickedEntities {
     selectionMode: SelectionMode;
     targets: z.infer<typeof entitySchema>[];
     excluded: z.infer<typeof entitySchema>[];
+    replaced?: z.infer<typeof entitySchema>[];
 }
 
-/** Faces with edges to skip, or circular edges alone. */
+const allOf = (
+    entities: z.infer<typeof entitySchema>[],
+    entityType: SelectedEntityType
+) => entities.every((each) => each.entityType === entityType);
+
+/** Faces with edges to exclude, circular edges alone, or screws alone, as Select by says. */
 export function isConsistentPick(body: PickedEntities): boolean {
-    return body.selectionMode === SelectionMode.FACES
-        ? body.targets.every(
-              (each) => each.entityType === SelectedEntityType.FACE
-          ) &&
-              body.excluded.every(
-                  (each) => each.entityType === SelectedEntityType.EDGE
-              )
-        : body.targets.every(
-              (each) => each.entityType === SelectedEntityType.EDGE
-          ) && body.excluded.length === 0;
+    const replaced = body.replaced ?? [];
+    switch (body.selectionMode) {
+        case SelectionMode.FACES:
+            return (
+                allOf(body.targets, SelectedEntityType.FACE) &&
+                allOf(body.excluded, SelectedEntityType.EDGE) &&
+                replaced.length === 0
+            );
+        case SelectionMode.LOCATIONS:
+            return (
+                allOf(body.targets, SelectedEntityType.EDGE) &&
+                body.excluded.length === 0 &&
+                replaced.length === 0
+            );
+        case SelectionMode.SCREWS:
+            return body.targets.length === 0 && body.excluded.length === 0;
+    }
 }
 
-export const INCONSISTENT_PICK_MESSAGE =
-    "Select either faces or circular edges to fasten to, not both.";
+export const INCONSISTENT_PICK_MESSAGE = "Select only what Select by asks for.";
 
 /** A pick as the client keys its rows: its part's path and its id. */
 export function pickKey(entity: {

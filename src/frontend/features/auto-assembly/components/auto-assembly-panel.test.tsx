@@ -104,16 +104,16 @@ describe("AutoAssemblyPanel", () => {
         expect(screen.queryByRole("button", { name: "Insert" })).toBeNull();
     });
 
-    it("picks circular edges by default, or faces with holes to skip", async () => {
+    it("picks circular edges by default, or faces with edges to exclude", async () => {
         renderPanel();
         expect(
             screen.getByText("Circular edges", { selector: "p" })
         ).toBeTruthy();
-        expect(screen.queryByText("Holes to skip")).toBeNull();
+        expect(screen.queryByText("Edges to exclude")).toBeNull();
 
         await choose("Select by", "Faces");
 
-        expect(screen.getByText("Holes to skip")).toBeTruthy();
+        expect(screen.getByText("Edges to exclude")).toBeTruthy();
     });
 
     it("inserts what's picked with the parts chosen, then clears the picks", async () => {
@@ -149,17 +149,20 @@ describe("AutoAssemblyPanel", () => {
         expect(useAutoAssemblyStore.getState().targets).toEqual([]);
     });
 
-    it("replaces the screws picked, with nothing else picked", async () => {
+    it("replaces the screws picked, selected by Screws", async () => {
         renderPanel();
-        await userEvent.click(screen.getByText("Screws to replace"));
-        // The focus moved from Circular edges, whose request this clears
-        act(() => useOnshapeSelection.getState().receive([]));
+        await choose("Select by", "Screws");
+        // Screws to replace is the only list, so it takes picks
+        expect(
+            screen.queryByText("Circular edges", { selector: "p" })
+        ).toBeNull();
         select({ ...face("S"), entityType: "BODY" });
         expect(screen.getByText("Screw 1")).toBeTruthy();
 
         await userEvent.click(insertButton());
         expect(apiPost).toHaveBeenCalledWith("/auto-assembly/insert", {
             body: expect.objectContaining({
+                selectionMode: SelectionMode.SCREWS,
                 targets: [],
                 replaced: [
                     {

@@ -104,20 +104,30 @@ function AutoAssemblyForm(props: AutoAssemblyFormProps): ReactNode {
     const settled = useMemo(() => settleChoices(set, choices), [set, choices]);
     const mode = selectionMode(settled);
     const isFaces = mode === SelectionMode.FACES;
+    const isScrews = mode === SelectionMode.SCREWS;
+    // Only the lists Select by shows
+    const picks = useMemo(
+        () => ({
+            targets: isScrews ? [] : toSelectedEntities(targets),
+            excluded: isFaces ? toSelectedEntities(excluded) : [],
+            replaced: isScrews ? toSelectedEntities(replaced) : []
+        }),
+        [isFaces, isScrews, targets, excluded, replaced]
+    );
+    const pickCount =
+        picks.targets.length + picks.excluded.length + picks.replaced.length;
     const isFtc = settled.form[FormInput.PROGRAM] === Program.FTC;
     const checkBody = useMemo(
         (): PickCheckIn | undefined =>
-            targets.length + excluded.length + replaced.length === 0
+            pickCount === 0
                 ? undefined
                 : {
                       assembly,
                       selectionMode: mode,
-                      targets: toSelectedEntities(targets),
-                      excluded: isFaces ? toSelectedEntities(excluded) : [],
-                      replaced: toSelectedEntities(replaced),
+                      ...picks,
                       options: isFtc ? undefined : fastenerOptions(settled)
                   },
-        [assembly, mode, isFaces, isFtc, settled, targets, excluded, replaced]
+        [assembly, mode, isFtc, settled, picks, pickCount]
     );
     const problems = usePickProblems(checkBody);
 
@@ -129,9 +139,7 @@ function AutoAssemblyForm(props: AutoAssemblyFormProps): ReactNode {
         const body: AutoAssemblyIn = {
             assembly,
             selectionMode: mode,
-            targets: toSelectedEntities(targets),
-            excluded: isFaces ? toSelectedEntities(excluded) : [],
-            replaced: toSelectedEntities(replaced),
+            ...picks,
             options: fastenerOptions(settled)
         };
         insertMutation.mutate(body, {
@@ -150,7 +158,7 @@ function AutoAssemblyForm(props: AutoAssemblyFormProps): ReactNode {
                 <FastenerOptionsForm settled={settled} />
                 <ParameterGroup title={m.autoAssemblySelections()}>
                     <FormInputRow id={FormInput.SELECT_BY} settled={settled} />
-                    {isFaces ? (
+                    {mode === SelectionMode.FACES && (
                         <>
                             <FullWidthRow>
                                 <QueryList
@@ -168,8 +176,8 @@ function AutoAssemblyForm(props: AutoAssemblyFormProps): ReactNode {
                             <FullWidthRow>
                                 <QueryList
                                     id="auto-assembly-excluded"
-                                    label={m.autoAssemblyHolesToSkip()}
-                                    prompt={m.autoAssemblyHolesToSkipPrompt()}
+                                    label={m.autoAssemblyEdgesToExclude()}
+                                    prompt={m.autoAssemblyEdgesToExcludePrompt()}
                                     entities={excluded}
                                     onChange={setExcluded}
                                     accepts={isEdge}
@@ -178,7 +186,8 @@ function AutoAssemblyForm(props: AutoAssemblyFormProps): ReactNode {
                                 />
                             </FullWidthRow>
                         </>
-                    ) : (
+                    )}
+                    {mode === SelectionMode.LOCATIONS && (
                         <FullWidthRow>
                             <QueryList
                                 id="auto-assembly-locations"
@@ -193,27 +202,30 @@ function AutoAssemblyForm(props: AutoAssemblyFormProps): ReactNode {
                             />
                         </FullWidthRow>
                     )}
-                    <FullWidthRow>
-                        <QueryList
-                            id="auto-assembly-replaced"
-                            label={m.autoAssemblyScrewsToReplace()}
-                            prompt={m.autoAssemblyScrewsToReplacePrompt()}
-                            entities={replaced}
-                            onChange={setReplaced}
-                            accepts={isBody}
-                            filter={SOLID_BODIES}
-                            problem={problem}
-                            describe={(_entity, index) =>
-                                m.autoAssemblyScrewRow({ index: index + 1 })
-                            }
-                        />
-                    </FullWidthRow>
+                    {mode === SelectionMode.SCREWS && (
+                        <FullWidthRow>
+                            <QueryList
+                                id="auto-assembly-replaced"
+                                autoFocus
+                                label={m.autoAssemblyScrewsToReplace()}
+                                prompt={m.autoAssemblyScrewsToReplacePrompt()}
+                                entities={replaced}
+                                onChange={setReplaced}
+                                accepts={isBody}
+                                filter={SOLID_BODIES}
+                                problem={problem}
+                                describe={(_entity, index) =>
+                                    m.autoAssemblyScrewRow({ index: index + 1 })
+                                }
+                            />
+                        </FullWidthRow>
+                    )}
                 </ParameterGroup>
             </ParameterGrid>
             <Button
                 disabled={
                     isFtc ||
-                    (targets.length === 0 && replaced.length === 0) ||
+                    picks.targets.length + picks.replaced.length === 0 ||
                     isRunning ||
                     insertMutation.isPending
                 }

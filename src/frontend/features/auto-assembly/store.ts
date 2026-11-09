@@ -47,7 +47,7 @@ export const useAutoAssemblyStore = create<AutoAssemblyState>()(
                     form: { ...state.form, [id]: value },
                     // Picks of one kind mean nothing as the other
                     ...(id === FormInput.SELECT_BY && state.form[id] !== value
-                        ? { targets: [], excluded: [] }
+                        ? { targets: [], excluded: [], replaced: [] }
                         : {})
                 })),
             setMode: (mode) => set({ mode }),

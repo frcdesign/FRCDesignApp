@@ -368,7 +368,7 @@ enum MateLocation {
 | "Successfully inserted {name} and fastened it to {n} circular edges."                                             | Success toast, with picks                       |
 | "Successfully inserted {name} and created a Fasten mate."                                                         | Success toast, without                          |
 | "No circular edges were found in what was selected."                                                              | Error toast, picks with no circular edge        |
-| "Select either faces or circular edges to fasten to, not both."                                                   | Validation error, inconsistent picks            |
+| "Select only what Select by asks for."                                                                            | Validation error, inconsistent picks            |
 | "{name} does not support insert and fasten."                                                                      | Error toast                                     |
 | "Tip: You can select circular edges in Onshape before you insert and fasten to automatically fasten to each one." | Tip toast                                       |
 

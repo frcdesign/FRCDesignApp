@@ -218,7 +218,7 @@ function listLabel(list: PickList, picks: RunPick[]): string {
                 ? m.autoAssemblyFaces()
                 : m.autoAssemblyCircularEdges();
         case PickList.EXCLUDED:
-            return m.autoAssemblyHolesToSkip();
+            return m.autoAssemblyEdgesToExclude();
         case PickList.REPLACED:
             return m.autoAssemblyScrewsToReplace();
     }

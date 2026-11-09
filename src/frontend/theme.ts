@@ -14,7 +14,8 @@ import {
     rem,
     Table,
     Text,
-    Tooltip
+    Tooltip,
+    Select
 } from "@mantine/core";
 import {
     useDashboardLibraryId,
@@ -162,6 +163,8 @@ export function createAppTheme(primaryColor: string) {
             }),
             Input: Input.extend({ styles: { section: ICON_SECTION } }),
             Modal: Modal.extend({ defaultProps: { centered: true } }),
+            // A select reads as a field, not a dropdown button
+            Select: Select.extend({ defaultProps: { rightSection: null } }),
             Table: Table.extend({
                 defaultProps: { highlightOnHover: true },
                 // Headings the weight of other labels, not Mantine's bold.

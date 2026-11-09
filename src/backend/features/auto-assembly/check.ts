@@ -10,7 +10,7 @@ import { type IndexedHoles } from "./index-holes";
 import { pickKey } from "./picked";
 
 const ALREADY_FASTENED =
-    "A library screw is already in this hole. Pick it under Screws to replace to change it.";
+    "A library screw is already in this hole. Select it by Screws to replace it.";
 
 type Problem = Omit<PickProblem, "key">;
 

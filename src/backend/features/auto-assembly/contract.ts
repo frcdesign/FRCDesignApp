@@ -43,10 +43,11 @@ export interface FastenerOptions {
     maxThreadDepth: number;
 }
 
-/** What the picks are: faces to fasten every hole in, or the holes' own edges. */
+/** What the picks are: faces to fasten every hole in, the holes' own edges, or library screws to replace. */
 export enum SelectionMode {
     FACES = "faces",
-    LOCATIONS = "locations"
+    LOCATIONS = "locations",
+    SCREWS = "screws"
 }
 
 /** An edge or face picked in the assembly. */

@@ -71,7 +71,8 @@ function inchParameter(
 export const FORM_PARAMETERS: ConfigurationParameter[] = [
     enumParameter(FormInput.SELECT_BY, m.autoAssemblySelectBy(), [
         { id: SelectionMode.LOCATIONS, name: m.autoAssemblyCircularEdges() },
-        { id: SelectionMode.FACES, name: m.autoAssemblyFaces() }
+        { id: SelectionMode.FACES, name: m.autoAssemblyFaces() },
+        { id: SelectionMode.SCREWS, name: m.autoAssemblyScrews() }
     ]),
     enumParameter(FormInput.PROGRAM, m.autoAssemblyProgram(), [
         { id: Program.FRC, name: "FRC" },
