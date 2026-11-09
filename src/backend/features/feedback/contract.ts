@@ -198,7 +198,7 @@ export const feedbackBody = z
         message: z.string().trim().max(MAX_FEEDBACK_MESSAGE),
         contact: z.string().trim().max(MAX_CONTACT).optional(),
         teamNumber: z.int().min(1).max(MAX_TEAM_NUMBER).optional(),
-        /** Only from a part's menu, whose library must be the topic's. */
+        /** From a part's menu, or an error about one part, such as a failed insert. */
         part: z
             .object({
                 insertableId: z.string().min(1).max(MAX_ID),
@@ -216,8 +216,11 @@ export const feedbackBody = z
         "The category doesn't belong to the topic."
     )
     .refine(
-        (body) => (body.source === FeedbackSource.PART) === !!body.part,
-        "Only a part report names a part."
+        (body) =>
+            body.source === FeedbackSource.PART
+                ? !!body.part
+                : !body.part || body.source === FeedbackSource.ERROR,
+        "Only a part or error report names a part, and a part report must."
     )
     .refine(
         (body) =>

@@ -37,17 +37,17 @@ import {
 } from "../labels";
 import { m } from "../../../paraglide/messages";
 
-/** The part a report from its menu names, and the configuration on screen. */
+/** The part a report names, and the configuration on screen or the one that failed. */
 export interface ReportedPartChoice {
     insertable: InsertableOut;
-    /** Set from the insert menu, the only place a configuration is on screen to include. */
+    /** Set from the insert menu, the only place a configuration is on screen to include, or by a failed insert. */
     selection?: PartialSelection;
 }
 
 interface FeedbackFormProps {
     initialTopic: FeedbackTopic;
     source: FeedbackSource;
-    /** Set for a report from a part's menu. */
+    /** Set for a report from a part's menu, or an error about one part. */
     part?: ReportedPartChoice;
     /** Set for a report from an error. */
     error?: ReportedError;

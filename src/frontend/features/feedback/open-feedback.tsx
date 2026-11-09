@@ -66,11 +66,19 @@ export function openPartReport(
     });
 }
 
+interface ErrorReportOptions {
+    /** @default FeedbackTopic.APP */
+    topic?: FeedbackTopic;
+    /** The part the error was about, such as one that failed to insert. */
+    part?: ReportedPartChoice;
+}
+
 /** From an error's Report button, carrying the error. */
 export function openErrorReport(
     error: ReportedError,
-    initialTopic = FeedbackTopic.APP
+    options: ErrorReportOptions = {}
 ): void {
+    const { topic = FeedbackTopic.APP, part } = options;
     openAppModal({
         title: (
             <AppTitle
@@ -81,9 +89,10 @@ export function openErrorReport(
         size: REPORT_MODAL_SIZE,
         children: (
             <FeedbackForm
-                initialTopic={initialTopic}
+                initialTopic={topic}
                 source={FeedbackSource.ERROR}
                 error={error}
+                part={part}
             />
         )
     });

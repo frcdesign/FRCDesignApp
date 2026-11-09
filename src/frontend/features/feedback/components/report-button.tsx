@@ -19,7 +19,7 @@ export function ReportButton(props: ReportButtonProps): ReactNode {
         <Button
             variant="default"
             leftSection={<FlagIcon />}
-            onClick={() => openErrorReport(report, topic)}
+            onClick={() => openErrorReport(report, { topic })}
         >
             {m.feedbackSendAReport()}
         </Button>

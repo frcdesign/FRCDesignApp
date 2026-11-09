@@ -233,6 +233,12 @@ errors.
     window they refill over is _unverified_; checking again an hour later would
     tell.
 
+- **Inserts can go a minute without an answer** — _observed_: in the week to
+  2026-11-09, Workers Logs held 13 inserts (assembly instances and Part Studio
+  derives) aborted at the 60 s timeout, and no insert answered 5xx. Whether
+  Onshape still finishes an insert after the app stops waiting is
+  _unverified_, and so is whether a 5xx means nothing was inserted; the app
+  retries only the 5xx.
 - **Internal endpoints** — the ones Onshape's own web client calls, such as the
   custom toolbar's — are served at `/api/v14` — _observed_. Whether the same
   paths answer at the app's own version is _unverified_.

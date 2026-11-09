@@ -42,6 +42,16 @@ const DEFAULT_RETRY_AFTER_SECONDS = 60;
 /** Well under a workflow step's ten minutes, so the step can still retry. */
 const REQUEST_TIMEOUT_MS = 60_000;
 
+/** Onshape gave no answer before {@link REQUEST_TIMEOUT_MS}; it may still be doing the work. */
+export class OnshapeTimeoutError extends Error {
+    constructor() {
+        super(
+            `Onshape request timed out: no answer after ${REQUEST_TIMEOUT_MS / 1000} s`
+        );
+        this.name = "OnshapeTimeoutError";
+    }
+}
+
 /**
  * The wait is also in the message, since that's all that survives Workflows
  * rebuilding the error; {@link readRetryAfterSeconds} reads it back.
@@ -149,11 +159,21 @@ export abstract class OnshapeApi {
         const headers = options?.accept
             ? new Headers({ Accept: options.accept })
             : undefined;
-        const res = await this._request(method, url, {
-            body: body !== undefined ? JSON.stringify(body) : undefined,
-            signal: options?.signal ?? AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-            headers
-        });
+        let res: Response;
+        try {
+            res = await this._request(method, url, {
+                body: body !== undefined ? JSON.stringify(body) : undefined,
+                signal:
+                    options?.signal ?? AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+                headers
+            });
+        } catch (error) {
+            // What `AbortSignal.timeout` aborts with; a caller's own signal aborts as `AbortError`.
+            if (error instanceof Error && error.name === "TimeoutError") {
+                throw new OnshapeTimeoutError();
+            }
+            throw error;
+        }
 
         if (!res.ok) {
             const text = await res.text();

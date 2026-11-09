@@ -39,6 +39,7 @@ import {
     addAssemblyFeature
 } from "../../../lib/onshape/endpoints/assemblies";
 import { PartType } from "../../../lib/onshape/endpoints/documents";
+import { retryOnServerError } from "../../../lib/onshape/retry";
 import { onshapeOverrides } from "../../configurations/selection";
 import { readSelection, selectionSchema } from "./read-selection";
 import { encodeConfiguration } from "../../configurations/utils";
@@ -291,10 +292,8 @@ insertableRoutes.post(
             parameters
         );
 
-        const result = await addPartStudioFeature(
-            onshapeApi,
-            targetPath,
-            feature.getFeature()
+        const result = await retryOnServerError(() =>
+            addPartStudioFeature(onshapeApi, targetPath, feature.getFeature())
         );
 
         await recordRecentInsert(c, {
@@ -395,16 +394,14 @@ insertableRoutes.post(
               )
             : undefined;
 
-        const result = await addElementToAssembly(
-            onshapeApi,
-            targetPath,
-            sourcePath,
-            row.elementType,
-            {
-                configuration,
-                partTypes,
-                transform
-            }
+        const result = await retryOnServerError(() =>
+            addElementToAssembly(
+                onshapeApi,
+                targetPath,
+                sourcePath,
+                row.elementType,
+                { configuration, partTypes, transform }
+            )
         );
 
         // The part is in the assembly whatever the fasten does.

@@ -34,7 +34,11 @@ import { getDb } from "../../../db/client";
 import * as PartStudioEndpoints from "../../../lib/onshape/endpoints/part-studios";
 import * as AssemblyEndpoints from "../../../lib/onshape/endpoints/assemblies";
 import * as PartsEndpoints from "../../../lib/onshape/endpoints/parts";
-import { OnshapeRateLimitError } from "../../../lib/onshape/client";
+import {
+    OnshapeApiError,
+    OnshapeRateLimitError,
+    OnshapeTimeoutError
+} from "../../../lib/onshape/client";
 import { AUTO_INDEX_THRESHOLD } from "../../configurations/combinations";
 import {
     enumParam,
@@ -621,6 +625,37 @@ describe("insertable routes", () => {
 
         expect((await insertIntoAssembly(true)).status).toBe(400);
         expect(await loggedInsert()).toMatchObject({ fasten: false });
+    });
+
+    it("tries an insert again when Onshape answers 5xx", async () => {
+        await seedAssembly(db);
+        vi.spyOn(console, "warn").mockImplementation(() => undefined);
+        const insert = vi
+            .spyOn(AssemblyEndpoints, "addElementToAssembly")
+            .mockRejectedValueOnce(new OnshapeApiError("boom", 500))
+            .mockResolvedValueOnce({});
+
+        expect((await insertIntoAssembly(false)).status).toBe(200);
+        expect(insert).toHaveBeenCalledTimes(2);
+        expect(await loggedInsert()).toBeDefined();
+    });
+
+    // Onshape may still finish the first, so a second could insert twice.
+    it("does not try a timed-out insert again, and says it timed out", async () => {
+        await seedAssembly(db);
+        vi.spyOn(console, "error").mockImplementation(() => undefined);
+        const insert = vi
+            .spyOn(AssemblyEndpoints, "addElementToAssembly")
+            .mockRejectedValue(new OnshapeTimeoutError());
+
+        const res = await insertIntoAssembly(false);
+
+        expect(res.status).toBe(504);
+        expect(await res.json()).toMatchObject({
+            kind: "internal",
+            message: expect.stringContaining("timed out")
+        });
+        expect(insert).toHaveBeenCalledTimes(1);
     });
 
     it("POST /indexing indexes and forces the flag on", async () => {

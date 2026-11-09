@@ -219,6 +219,34 @@ describe("POST /api/feedback", () => {
         expect(errorField).toContain("error id: 8f00ba11-IAD");
     });
 
+    it("names the part an error report from a failed insert is about, from any library", async () => {
+        await seedPartStudio(db);
+        await seedConfiguration(db);
+
+        const res = await send(
+            body({
+                source: FeedbackSource.ERROR,
+                message: "",
+                part: {
+                    insertableId: TEST_PART_STUDIO_ID,
+                    selection: { boolean: "false" }
+                },
+                diagnostics: {
+                    ...DIAGNOSTICS,
+                    error: { shown: "Failed to insert Test PARTSTUDIO." }
+                }
+            })
+        );
+
+        expect(res.status).toBe(200);
+        expect(postedTo()).toEqual([WEBHOOKS.DISCORD_APP_WEBHOOK_URL]);
+        const [embed] = post.mock.calls[0][1].embeds;
+        expect(embed.url).toContain("configuration=boolean%3Dfalse");
+        expect(
+            embed.fields?.find((field) => field.name === "Configuration")?.value
+        ).toContain("Test boolean: No");
+    });
+
     it("leaves the configuration out when the reporter does", async () => {
         await seedPartStudio(db);
         await seedConfiguration(db);

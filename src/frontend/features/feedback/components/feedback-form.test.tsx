@@ -278,4 +278,28 @@ describe("FeedbackForm", () => {
         expect(sent().teamNumber).toBeUndefined();
         expect(sent().diagnostics.error).toEqual(error);
     });
+
+    it("sends a failed insert's part and configuration with its error, to the app", async () => {
+        const user = userEvent.setup();
+        renderWithProviders(
+            <FeedbackForm
+                initialTopic={FeedbackTopic.APP}
+                source={FeedbackSource.ERROR}
+                error={{ shown: "Unexpectedly failed to insert Hex shaft." }}
+                part={{
+                    insertable: INSERTABLE,
+                    selection: { size: "1/2 in" }
+                }}
+            />
+        );
+
+        await user.click(screen.getByRole("button", { name: "Send" }));
+
+        expect(sent()).toMatchObject({
+            topic: FeedbackTopic.APP,
+            source: FeedbackSource.ERROR,
+            title: "Unexpectedly failed to insert Hex shaft",
+            part: { insertableId: "ins", selection: { size: "1/2 in" } }
+        });
+    });
 });

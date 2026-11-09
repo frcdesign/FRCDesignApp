@@ -5,6 +5,7 @@ import { renderNotification, showErrorToast } from "./notifications";
 import { startSignIn } from "../features/auth/sign-in";
 import { toReportedError } from "../features/feedback/diagnostics";
 import { openErrorReport } from "../features/feedback/open-feedback";
+import { type ReportedPartChoice } from "../features/feedback/components/feedback-form";
 import { m } from "../paraglide/messages";
 
 /** An `/api` call that failed, as a report names it. */
@@ -74,23 +75,31 @@ export function getAppErrorHandler(defaultMessage: string, toastId?: string) {
 /** Long enough to reach the Report button before the toast goes. */
 const REPORTABLE_AUTO_CLOSE_MS = 8000;
 
-/** An error toast with a Report button, which carries `error` into the report. */
+/** An error toast with a Report button, which carries `error` and the part it was about into the report. */
 export function showReportableErrorToast(
     message: string,
     error?: unknown,
-    toastKey?: string
+    toastKey?: string,
+    part?: ReportedPartChoice
 ): void {
     const body: ReactNode = renderNotification(message, {
         text: m.feedbackToastReport(),
         // Clicked only once the toast is up, so `id` is set by then.
         onClick: () => {
             notifications.hide(id);
-            openErrorReport(toReportedError(message, error));
+            openErrorReport(toReportedError(message, error), { part });
         }
     });
     const id = showErrorToast(body, toastKey, {
         autoClose: REPORTABLE_AUTO_CLOSE_MS
     });
+}
+
+export interface AppErrorOptions {
+    /** False for no Report button. */
+    reportable?: boolean;
+    /** The part the failure was about, so a report links to it in this configuration. */
+    part?: ReportedPartChoice;
 }
 
 /**
@@ -101,8 +110,9 @@ export function handleAppError(
     error: Error,
     defaultMessage: string,
     toastKey?: string,
-    reportable = true
+    options: AppErrorOptions = {}
 ) {
+    const { reportable = true, part } = options;
     let message = defaultMessage;
     if (error instanceof AppError) {
         switch (error.body.kind) {
@@ -124,7 +134,7 @@ export function handleAppError(
         }
     }
     if (reportable) {
-        showReportableErrorToast(message, error, toastKey);
+        showReportableErrorToast(message, error, toastKey, part);
     } else {
         showErrorToast(message, toastKey);
     }

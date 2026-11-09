@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { OnshapeApi, OnshapeApiError, OnshapeRateLimitError } from "./client";
+import {
+    OnshapeApi,
+    OnshapeApiError,
+    OnshapeRateLimitError,
+    OnshapeTimeoutError
+} from "./client";
 
 /** Minimal concrete client whose `_request` returns a canned response. */
 class TestApi extends OnshapeApi {
@@ -61,6 +66,17 @@ describe("OnshapeApi error handling", () => {
         await api.get("/x");
         expect(api.lastInit?.signal).toBeInstanceOf(AbortSignal);
         expect(api.lastInit?.signal?.aborted).toBe(false);
+    });
+
+    it("names a call that timed out", async () => {
+        const api = new (class extends OnshapeApi {
+            protected _request(): Promise<Response> {
+                return Promise.reject(
+                    new DOMException("timed out", "TimeoutError")
+                );
+            }
+        })();
+        await expect(api.get("/x")).rejects.toBeInstanceOf(OnshapeTimeoutError);
     });
 
     it("lets a caller's own signal win", async () => {

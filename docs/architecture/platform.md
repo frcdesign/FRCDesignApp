@@ -9,22 +9,23 @@ their Onshape calls and link here for how those calls behave.
 
 ## Code map
 
-| Path                                              | Role                                                                              |
-| ------------------------------------------------- | --------------------------------------------------------------------------------- |
-| `src/backend/lib/onshape/client.ts`               | `OnshapeApi`, `OAuthApi`, `ApiKeyApi`; `OnshapeApiError`, `OnshapeRateLimitError` |
-| `src/backend/lib/onshape/endpoints/`              | One wrapper per Onshape endpoint, grouped by Onshape's API category               |
-| `src/backend/lib/api-error.ts`                    | `ApiError` and its four kinds; the body every failed `/api` response carries      |
-| `src/backend/lib/errors.ts`                       | `errorHandler`: turns any thrown error into that body and a status                |
-| `src/backend/features/load/steps.ts`              | Workflow retry policies for Onshape and thumbnail steps                           |
-| `src/backend/features/load/context.ts`            | The load's limiters                                                               |
-| `src/backend/lib/cache.ts`                        | `CachePolicy`, `cacheMiddleware`, `setCache`                                      |
-| `src/backend/features/push/`                      | `ClientRelay` Durable Object, message contract, `notify.ts` senders               |
-| `src/frontend/lib/api-client.ts`                  | `apiGet`, `apiPost`, `apiDelete`, `loadImage`; appends `?v=` for cached reads     |
-| `src/frontend/lib/errors.ts`                      | `AppError`, `handleAppError`, `getAppErrorHandler`                                |
-| `src/frontend/lib/stale-build.ts`                 | `reloadOnStaleBuild`: reloads a tab whose build a deploy removed                  |
-| `src/frontend/lib/notifications.tsx`              | `showLoadingToast`, `showSuccessToast`, `showInfoToast`, `showErrorToast`         |
-| `src/frontend/lib/query-client.ts`                | TanStack Query defaults, including retry                                          |
-| `src/frontend/lib/push-socket.ts`, `push-sync.ts` | The client's WebSocket, and applying pushes to the cache                          |
+| Path                                              | Role                                                                                                     |
+| ------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `src/backend/lib/onshape/client.ts`               | `OnshapeApi`, `OAuthApi`, `ApiKeyApi`; `OnshapeApiError`, `OnshapeRateLimitError`, `OnshapeTimeoutError` |
+| `src/backend/lib/onshape/retry.ts`                | `retryOnServerError`: calling again on an Onshape 5xx                                                    |
+| `src/backend/lib/onshape/endpoints/`              | One wrapper per Onshape endpoint, grouped by Onshape's API category                                      |
+| `src/backend/lib/api-error.ts`                    | `ApiError` and its four kinds; the body every failed `/api` response carries                             |
+| `src/backend/lib/errors.ts`                       | `errorHandler`: turns any thrown error into that body and a status                                       |
+| `src/backend/features/load/steps.ts`              | Workflow retry policies for Onshape and thumbnail steps                                                  |
+| `src/backend/features/load/context.ts`            | The load's limiters                                                                                      |
+| `src/backend/lib/cache.ts`                        | `CachePolicy`, `cacheMiddleware`, `setCache`                                                             |
+| `src/backend/features/push/`                      | `ClientRelay` Durable Object, message contract, `notify.ts` senders                                      |
+| `src/frontend/lib/api-client.ts`                  | `apiGet`, `apiPost`, `apiDelete`, `loadImage`; appends `?v=` for cached reads                            |
+| `src/frontend/lib/errors.ts`                      | `AppError`, `handleAppError`, `getAppErrorHandler`                                                       |
+| `src/frontend/lib/stale-build.ts`                 | `reloadOnStaleBuild`: reloads a tab whose build a deploy removed                                         |
+| `src/frontend/lib/notifications.tsx`              | `showLoadingToast`, `showSuccessToast`, `showInfoToast`, `showErrorToast`                                |
+| `src/frontend/lib/query-client.ts`                | TanStack Query defaults, including retry                                                                 |
+| `src/frontend/lib/push-socket.ts`, `push-sync.ts` | The client's WebSocket, and applying pushes to the cache                                                 |
 
 ## Calling Onshape
 
@@ -37,7 +38,8 @@ Every call goes through `OnshapeApi._call` to
   second 401 is thrown. `ApiKeyApi` signs with an HMAC for scripts.
 - **Timeout.** Each request aborts after 60 s (`REQUEST_TIMEOUT_MS`), well under
   a workflow step's 10-minute limit, so a hung call fails the step and it
-  retries.
+  retries. The abort throws `OnshapeTimeoutError`, whose message says it timed
+  out.
 - **Query.** Built by `toQueryString` (`src/backend/lib/query-params.ts`),
   which spells a space `%20`: Onshape reads a `+` literally, and a
   configuration sent with one (`0.1524+m`) is ignored without an error.
@@ -48,7 +50,8 @@ Every call goes through `OnshapeApi._call` to
   (60 s when absent), and spells it into the message, since a Workflow rebuilds
   errors and only the message survives; `readRetryAfterSeconds` reads it back.
 - **No retry in the client.** A request is tried once (plus the 401 refresh). Retrying
-  belongs to the caller: a workflow step's policy, or the user.
+  belongs to the caller: a workflow step's policy, `retryOnServerError` around
+  an insert, or the user.
 
 Which calls each flow makes is listed in that flow's document.
 
@@ -66,6 +69,7 @@ A route throws; `errorHandler` answers with `{ kind, message }` and a status:
 | `OnshapeApiError` 401            | `sign-in-required` | 401      | "Onshape did not accept the session. Try signing in again." |
 | `OnshapeApiError` 403            | `forbidden`        | 403      | "Onshape rejected the operation. …"                         |
 | Any other `OnshapeApiError`      | `internal`         | 502      | Default wording; logged                                     |
+| `OnshapeTimeoutError`            | `internal`         | 504      | Default wording; logged                                     |
 | A validator's `HTTPException`    | `internal`         | its own  | Default wording; logged                                     |
 | Anything else                    | `internal`         | 500      | Default wording; logged                                     |
 
@@ -98,6 +102,7 @@ crash page.
 | Where                           | Setting                            | Policy                                                                                     |
 | ------------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------ |
 | Any Onshape request             | `REQUEST_TIMEOUT_MS`               | Aborts after 60 s                                                                          |
+| An insert's Onshape call        | `SERVER_ERROR_RETRY`               | 1 retry after 1 s on a 5xx; none on a timeout, a 4xx or a 429                              |
 | Load steps calling Onshape      | `ONSHAPE_STEP_RETRIES`             | 5 retries after 10, 20, 40, 80, 160 s; a 429 waits its `Retry-After` plus 0–20 s of jitter |
 | Load thumbnail steps            | `THUMBNAIL_RETRIES`                | 3 retries after 10, 20, 40 s; a 429 as above                                               |
 | Configuration renders           | `RENDER_RETRIES`                   | 30 retries every 2 s; a 429 waits its `Retry-After` plus jitter                            |
@@ -205,6 +210,9 @@ that reconnects refreshes the library, since pushes during the outage are lost.
 - **Retries at the step, not the request.** A workflow step's retry is durable
   and visible; a retry inside `fetch` would hide attempts inside one step's
   timeout.
+- **An insert retries a 5xx, never a timeout.** Someone is watching the toast,
+  so one quick retry rides out a blip. A timeout is not one: Onshape may still
+  finish the first call, and a second would insert the part twice.
 - **One push hub.** Pushes are few and small; one instance keeps fan-out simple.
 - **Errors by kind, not status.** The client decides wording from `kind`, so a
   status can change without changing what the user reads.

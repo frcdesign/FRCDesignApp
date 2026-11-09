@@ -1,7 +1,11 @@
 import type { ErrorHandler } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { HttpStatus } from "http-status-ts";
-import { OnshapeApiError, OnshapeRateLimitError } from "./onshape/client";
+import {
+    OnshapeApiError,
+    OnshapeRateLimitError,
+    OnshapeTimeoutError
+} from "./onshape/client";
 import {
     ApiError,
     ApiErrorKind,
@@ -55,6 +59,17 @@ export const errorHandler: ErrorHandler<AppContextEnv> = (err, c) => {
         return c.json(
             { ...apiError.body, errorId: logServerError(c, err) },
             apiError.status
+        );
+    }
+    // Said as itself, so a report can tell Onshape being slow from our own failure.
+    if (err instanceof OnshapeTimeoutError) {
+        return c.json(
+            {
+                kind: ApiErrorKind.INTERNAL,
+                message: err.message,
+                errorId: logServerError(c, err)
+            },
+            HttpStatus.GATEWAY_TIMEOUT
         );
     }
     // A validator rejecting a malformed request: our bug, not the user's.

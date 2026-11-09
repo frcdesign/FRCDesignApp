@@ -18,7 +18,7 @@ import { ElementType } from "@backend/lib/onshape/element-type";
 import { UseSource } from "@backend/features/analytics/usage";
 import { showLoadingToast, showSuccessToast } from "../../lib/notifications";
 import { queryClient } from "../../lib/query-client";
-import { getAppErrorHandler } from "../../lib/errors";
+import { handleAppError } from "../../lib/errors";
 import { sendOpenFeatureMessage } from "../../lib/messages";
 import { useTargetElement } from "../../lib/onshape-params";
 import {
@@ -133,10 +133,13 @@ export function useInsertMutation(
                 { body }
             );
         },
-        onError: getAppErrorHandler(
-            `Unexpectedly failed to insert ${insertable.name}.`,
-            toastId
-        ),
+        onError: (error) =>
+            handleAppError(
+                error,
+                `Unexpectedly failed to insert ${insertable.name}.`,
+                toastId,
+                { part: { insertable, selection } }
+            ),
         onSuccess: (result) => {
             if (target && result.featureId !== undefined) {
                 sendOpenFeatureMessage(target, result.featureId);

@@ -107,7 +107,11 @@ The source decides what the form offers and what the report carries
 - **Error** — **Report** on an error toast, or **Send a report** under an
   error notice, a failed version run, the cookie error and `/document-access`.
   The report carries what the user was shown and the error behind it, and may
-  be sent with nothing typed.
+  be sent with nothing typed. A failed insert's report also names the part and
+  the configuration it was inserted in (`handleAppError`'s `part`), with
+  **Include configuration** as in the insert menu, so the post links to that
+  configuration in Onshape: a configuration that can't build reads apart from
+  Onshape failing. The topic stays the app's, and isn't offered.
 - **Crash** — **Send report** on a crash page: `RootCrash`, when the root
   itself fails (the dashboard's pages have no boundary of their own), and
   `RootAppError` under `/app`. One click sends it, with no form, since the root's
@@ -148,7 +152,9 @@ selection? }`.
 4. The route resolves the reporter (a user id when signed in, none otherwise)
    and takes a slot from the rate limit. The id goes to the limit, the
    record and the log only; the post says just whether they were signed in.
-5. A part report looks the part up in the topic's library (`findReportedPart`),
+5. A report naming a part looks it up in the topic's library
+   (`findReportedPart`), or in any library for an error report under the app's
+   topics (`ANY_LIBRARY`), since the app's forum covers them all. It
    runs the selection through `toSelection`, and builds the Onshape link from
    `onshapeOverrides` and the readable `Name: value` lines from the parameters
    the reporter could see. The link is to the library's own document. The post
@@ -183,8 +189,10 @@ parts still in the library, each opening the part's page.
 - A report reaches Discord before it is recorded; a failed post records
   nothing, and a failed record never fails the report.
 - Text a reporter typed can never mention anyone (`allowed_mentions` is empty).
-- A part report names a part in the topic's own library, looked up on the
-  server; its configuration is sent as a selection, never as a key.
+- A report names a part in the topic's own library, or any library for an
+  error report under the app's topics, looked up on the server; its
+  configuration is sent as a selection, never as a key. Only part and error
+  reports name one.
 - A post never gathers the reporter's own documents: no document, workspace,
   element, company or company domain from the launch. An error's detail is
   sent as it came, since what Onshape said is what the team needs, ids and
