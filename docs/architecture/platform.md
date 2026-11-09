@@ -103,6 +103,7 @@ crash page.
 | ------------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------ |
 | Any Onshape request             | `REQUEST_TIMEOUT_MS`               | Aborts after 60 s                                                                          |
 | An insert's Onshape call        | `INSERT_RETRY`                     | Aborts after 20 s; 1 retry after 1 s on a 5xx or a timeout, none on a 4xx or a 429         |
+| An insert after a disconnect    | `finishEvenIfDisconnected`         | Keeps running up to 30 s past the client leaving, so Onshape's insert is still recorded    |
 | Load steps calling Onshape      | `ONSHAPE_STEP_RETRIES`             | 5 retries after 10, 20, 40, 80, 160 s; a 429 waits its `Retry-After` plus 0–20 s of jitter |
 | Load thumbnail steps            | `THUMBNAIL_RETRIES`                | 3 retries after 10, 20, 40 s; a 429 as above                                               |
 | Configuration renders           | `RENDER_RETRIES`                   | 30 retries every 2 s; a 429 waits its `Retry-After` plus jitter                            |
