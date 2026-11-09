@@ -71,8 +71,7 @@ webhookRoutes.post(WEBHOOK_ROUTE, async (c) => {
 
 /**
  * A transient webhook's delivery: a change to the workspace it watches, which
- * drops what is cached of it, after answering 200 as the main route does.
- * Registration and pings only want the 200.
+ * drops what is cached of it. Registration and pings only want a 200.
  */
 function forgetOnChange(
     forget: (kv: KVNamespace, workspace: InstancePath) => Promise<void>
@@ -84,9 +83,7 @@ function forgetOnChange(
         }
         const { event } = await c.req.json<WebhookNotification>();
         if (!event.startsWith("webhook.")) {
-            await runInBackground(c, `handle ${event}`, () =>
-                forget(c.env.KV, workspace)
-            );
+            await forget(c.env.KV, workspace);
         }
         return c.json({});
     };

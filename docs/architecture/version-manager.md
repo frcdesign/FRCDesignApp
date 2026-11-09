@@ -396,11 +396,9 @@ color and with its icon, for as long as the status is kept. It cannot be closed,
 A cache miss on a linked workspace's names registers a transient webhook on it for
 `onshape.model.lifecycle.changed`, `.metadata` and `.createversion`, and
 `onshape.document.lifecycle.shared`, which Onshape sends for sharing and
-unsharing alike. A delivery is answered 200 at once, since Onshape deactivates
-a webhook whose deliveries error; after that it drops the workspace's cached
-entries and every caller's permissions on its document, so the next panel to
-open asks Onshape again. A drop that fails is logged, and the entry expires.
-Onshape
+unsharing alike. A delivery drops the workspace's cached entries and every
+caller's permissions on its document, so the next panel to open asks Onshape
+again. Onshape
 deletes a transient webhook that goes quiet, so the entries expire as well.
 
 ## User-facing strings
@@ -454,7 +452,6 @@ In [strings/version-manager.md](../strings/version-manager.md).
 | The links form a cycle                   | A recursive push or pull is refused            | Remove a link                                      |
 | A run is already going from here         | The new one is refused, and the UI disables it | Wait for it to finish                              |
 | A webhook Onshape dropped                | A name or count is stale                       | The entry expires, and the next read watches again |
-| A delivery's KV delete fails             | Logged; the delivery is still answered 200     | The entry expires                                  |
 | The socket drops mid-run                 | No result toast                                | The reconnect refetches the run; the callout shows |
 | The suggestions fail to load             | No suggestions show; the links work as before  | Refresh                                            |
 | A suggestion is deleted or unshared      | It is left out; **Link all** skips it          | None needed                                        |

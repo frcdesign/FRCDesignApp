@@ -61,30 +61,6 @@ describe("receiving a webhook", () => {
         expect(res.status).toBe(200);
     });
 
-    it.each(["linked-workspace", "units"])(
-        "answers a %s delivery 200 even when forgetting fails",
-        async (route) => {
-            vi.spyOn(env.KV, "delete").mockRejectedValue(
-                new Error("KV DELETE failed: 429 Too Many Requests")
-            );
-            vi.spyOn(env.KV, "list").mockRejectedValue(new Error("KV down"));
-            const logged = vi
-                .spyOn(console, "error")
-                .mockImplementation(() => undefined);
-
-            const res = await createTestApp().request(
-                `http://localhost/api/webhooks/${route}?documentId=d&workspaceId=w`,
-                jsonRequest("POST", {
-                    event: "onshape.model.lifecycle.changed"
-                }),
-                env
-            );
-
-            expect(res.status).toBe(200);
-            expect(logged).toHaveBeenCalled();
-        }
-    );
-
     // Registration fails unless Onshape's own check is answered.
     it("answers Onshape's registration check", async () => {
         const token = await registered(WebhookSubject.DOCUMENT, DOCUMENT);
