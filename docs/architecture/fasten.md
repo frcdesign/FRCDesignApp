@@ -6,7 +6,7 @@ Inserting a part into an assembly can also mate it in place: a fasten mate from
 the part's own mate connector either to nothing yet, for the user to finish in
 the mate dialog, or to circular edges picked in the Onshape window, with an
 instance of the part on each. The picks are circular edges, or faces whose every
-hole is fastened to, less holes to skip; they can be made from the navbar before
+hole is fastened to, less edges to exclude; they can be made from the navbar before
 a quick insert or in the insert menu, and work the way Auto Assembly's do,
 sharing its selection store, query list and hole scan
 ([auto-assembly.md](./auto-assembly.md)). Part studios derive instead and are
@@ -285,7 +285,7 @@ enum MateLocation {
   fastener, which owns it.
 - **KV** `seen-hints:` — `Hint.FASTENED_TO_CIRCULAR_EDGES`, once the user has
   fastened to circular edges; see [auth.md](./auth.md).
-- **Memory** `useFastenPicks` — the targets and holes to skip, for the tab,
+- **Memory** `useFastenPicks` — the targets and edges to exclude, for the tab,
   shared by the navbar and the insert menu.
 - **localStorage** (`ui-state`): `fasten`, `fastenSelectionMode` and
   `fastenCircularEdgesTipCount`.
@@ -305,7 +305,7 @@ enum MateLocation {
    would both take picks; both read `useFastenPicks`, so what was picked from
    the navbar is in the menu's list, and the other way round.
 3. The card holds the mode (**Circular edges** or planar **Faces**), the targets'
-   query list, and in faces mode **Holes to skip**. It stays mounted while
+   query list, and in faces mode **Edges to exclude**. It stays mounted while
    hidden (`keepMounted`), so its lists take picks with the card closed, and
    the icon turns the primary colour while one of them is focused. The targets'
    list is `autoFocus`: it is focused on mount, and again whenever the focused
@@ -349,28 +349,7 @@ enum MateLocation {
 
 ## User-facing strings
 
-| String                                                                                                            | Where                                           |
-| ----------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
-| "{n} circular edges selected" / "{n} faces selected"                                                              | Card title, with picks                          |
-| "No circular edges selected" / "No faces selected"                                                                | Card title, without                             |
-| "New"                                                                                                             | Badge beside the title until the hint is seen   |
-| "Select edges to automatically fasten inserted parts to."                                                         | Card description, circular edges, none picked   |
-| "The part will be fastened to the selected edge."                                                                 | Card description, one edge                      |
-| "A part will be inserted and fastened to each selected edge."                                                     | Card description, several edges                 |
-| "Select faces to automatically fasten inserted parts to every hole in them."                                      | Card description, faces, none picked            |
-| "A part will be inserted and fastened to every hole in the selected faces."                                       | Card description, faces                         |
-| "Circular edges" / "Faces"                                                                                        | Mode, and the targets list's label              |
-| "Holes to skip"                                                                                                   | Second list's label, faces                      |
-| "Select circular edges to fasten parts to."                                                                       | Targets list's prompt, in Onshape's bubble      |
-| "Select faces to fasten parts to every hole in."                                                                  | Targets list's prompt, faces                    |
-| "Select the edges of holes to leave out."                                                                         | Holes to skip's prompt                          |
-| "Clear"                                                                                                           | A list with picks, inside its box (`QueryList`) |
-| "Successfully inserted {name} and fastened it to {n} circular edges."                                             | Success toast, with picks                       |
-| "Successfully inserted {name} and created a Fasten mate."                                                         | Success toast, without                          |
-| "No circular edges were found in what was selected."                                                              | Error toast, picks with no circular edge        |
-| "Select only what Select by asks for."                                                                            | Validation error, inconsistent picks            |
-| "{name} does not support insert and fasten."                                                                      | Error toast                                     |
-| "Tip: You can select circular edges in Onshape before you insert and fasten to automatically fasten to each one." | Tip toast                                       |
+In [strings/fasten.md](../strings/fasten.md).
 
 ## Invariants
 

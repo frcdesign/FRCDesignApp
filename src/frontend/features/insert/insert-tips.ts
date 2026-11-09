@@ -5,6 +5,7 @@ import { useIsThumbnailRendering } from "../thumbnails/queries";
 import { useIsConnectedToOnshape } from "../../lib/onshape-params";
 import { useAccessData } from "../auth/access-level";
 import { startSignIn } from "../auth/sign-in";
+import { m } from "../../paraglide/messages";
 import { Hint } from "@backend/features/hints/contract";
 import { useHasSeenHint } from "../hints/queries";
 import { getUiState, updateUiState } from "../../lib/ui-state";
@@ -46,7 +47,7 @@ export function useFastenCircularEdgesTip(): (fasten: boolean) => void {
             }
             updateUiState({ fastenCircularEdgesTipCount: shown + 1 });
             showTipToast(
-                "Tip: You can select circular edges in Onshape before you insert and fasten to automatically fasten to each one.",
+                m.fastenCircularEdgesTip(),
                 "fasten-circular-edges-tip"
             );
         },

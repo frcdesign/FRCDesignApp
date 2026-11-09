@@ -1,4 +1,4 @@
-/** What an insert and fasten mates to: circular edges, or faces less holes to skip, picked in the Onshape window. */
+/** What an insert and fasten mates to: circular edges, or faces less edges to exclude, picked in the Onshape window. */
 import { useEffect } from "react";
 import { create } from "zustand";
 import {

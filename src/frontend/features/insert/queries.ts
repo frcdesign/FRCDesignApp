@@ -21,7 +21,7 @@ import { useInsertLocationId } from "../insert-location/queries";
 import { useLibraryId } from "../../lib/library";
 import { invalidateRecents } from "../recents/queries";
 import { getUiState } from "../../lib/ui-state";
-import { plural } from "../../lib/plural";
+import { m } from "../../paraglide/messages";
 import { Hint } from "@backend/features/hints/contract";
 import { markHintSeen } from "../hints/queries";
 import { clearFastenPicks, useFastenPicks } from "./fasten-picks";
@@ -122,7 +122,7 @@ export function useInsertMutation(
             );
         },
         onError: getAppErrorHandler(
-            `Unexpectedly failed to insert ${insertable.name}.`,
+            m.insertFailed({ name: insertable.name }),
             toastId
         ),
         onSuccess: (result) => {
@@ -133,7 +133,10 @@ export function useInsertMutation(
                 clearFastenPicks();
                 markHintSeen(Hint.FASTENED_TO_CIRCULAR_EDGES);
                 showSuccessToast(
-                    `Successfully inserted ${insertable.name} and fastened it to ${plural(result.fastenedCount, "circular edge")}.`,
+                    m.fastenInsertedAndFastened({
+                        name: insertable.name,
+                        count: result.fastenedCount
+                    }),
                     toastId
                 );
                 return;
@@ -144,8 +147,8 @@ export function useInsertMutation(
                 target?.elementType === ElementType.ASSEMBLY;
             showSuccessToast(
                 fastened
-                    ? `Successfully inserted ${insertable.name} and created a Fasten mate.`
-                    : `Successfully inserted ${insertable.name}.`,
+                    ? m.fastenInsertedWithMate({ name: insertable.name })
+                    : m.insertSucceeded({ name: insertable.name }),
                 toastId
             );
         },

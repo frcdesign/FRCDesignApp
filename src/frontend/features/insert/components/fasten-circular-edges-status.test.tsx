@@ -98,14 +98,14 @@ describe("FastenCircularEdgesStatus", () => {
         ]);
     });
 
-    it("picks faces, and the edges of holes to skip, in faces mode", async () => {
+    it("picks faces, and and edges to exclude, in faces mode", async () => {
         updateUiState({ fastenSelectionMode: SelectionMode.FACES });
         renderStatus();
         selectInOnshape(face("JF1"), edge("JH1"));
         await openCard();
 
         expect(screen.getByText("1 face selected")).toBeTruthy();
-        expect(screen.getByText("Holes to skip")).toBeTruthy();
+        expect(screen.getByText("Edges to exclude")).toBeTruthy();
     });
 
     it("inserts a part for each circular edge", async () => {

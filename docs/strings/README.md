@@ -16,6 +16,7 @@ user.
 | [analytics.md](./analytics.md)             | The dashboard's usage numbers, charts and tables        |
 | [testbench.md](./testbench.md)             | The owner's testbench page                              |
 | [auto-assembly.md](./auto-assembly.md)     | Auto Assembly's page, its runs, and pick problems       |
+| [fasten.md](./fasten.md)                   | Insert and fasten's card, toasts and tip                |
 
 ## Shape of a file
 

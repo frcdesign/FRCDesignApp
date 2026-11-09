@@ -22,7 +22,7 @@ import { DotIndicator } from "../../../components/dot-indicator";
 import { QueryList } from "../../../components/query-list";
 import { Status } from "../../../lib/status";
 import { IconSize, PrimaryColor } from "../../../lib/style-constants";
-import { plural } from "../../../lib/plural";
+import { m } from "../../../paraglide/messages";
 import {
     isEdge,
     type OnshapeSelection,
@@ -108,7 +108,6 @@ export function FastenCircularEdgesStatus(): ReactNode {
     const found = targets.length > 0;
     const isNew = !found && !hasFastened;
     const status = found ? Status.SUCCESS : Status.ERROR;
-    const noun = isFaces ? "face" : "circular edge";
 
     return (
         <AppHoverCard
@@ -137,9 +136,7 @@ export function FastenCircularEdgesStatus(): ReactNode {
                     }
                     title={
                         <Group gap="xs">
-                            {found
-                                ? `${plural(targets.length, noun)} selected`
-                                : `No ${noun}s selected`}
+                            {describeSelected(mode, targets.length)}
                             {isNew && <NewBadge />}
                         </Group>
                     }
@@ -151,9 +148,9 @@ export function FastenCircularEdgesStatus(): ReactNode {
                     data={[
                         {
                             value: SelectionMode.LOCATIONS,
-                            label: "Circular edges"
+                            label: m.fastenCircularEdges()
                         },
-                        { value: SelectionMode.FACES, label: "Faces" }
+                        { value: SelectionMode.FACES, label: m.fastenFaces() }
                     ]}
                     value={mode}
                     onChange={(value) =>
@@ -164,11 +161,11 @@ export function FastenCircularEdgesStatus(): ReactNode {
                 />
                 <QueryList
                     id={FASTEN_TARGETS_LIST}
-                    label={isFaces ? "Faces" : "Circular edges"}
+                    label={isFaces ? m.fastenFaces() : m.fastenCircularEdges()}
                     prompt={
                         isFaces
-                            ? "Select faces to fasten parts to every hole in."
-                            : "Select circular edges to fasten parts to."
+                            ? m.fastenFacesPrompt()
+                            : m.fastenCircularEdgesPrompt()
                     }
                     entities={targets}
                     onChange={setFastenTargets}
@@ -180,8 +177,8 @@ export function FastenCircularEdgesStatus(): ReactNode {
                 {isFaces && (
                     <QueryList
                         id={FASTEN_EXCLUDED_LIST}
-                        label="Holes to skip"
-                        prompt="Select the edges of holes to leave out."
+                        label={m.fastenEdgesToExclude()}
+                        prompt={m.fastenEdgesToExcludePrompt()}
                         entities={excluded}
                         onChange={setFastenExcluded}
                         accepts={isEdge}
@@ -194,17 +191,26 @@ export function FastenCircularEdgesStatus(): ReactNode {
     );
 }
 
-function describeFasten(mode: SelectionMode, count: number): string {
+function describeSelected(mode: SelectionMode, count: number): string {
     if (mode === SelectionMode.FACES) {
         return count === 0
-            ? "Select faces to automatically fasten inserted parts to every hole in them."
-            : "A part will be inserted and fastened to every hole in the selected faces.";
+            ? m.fastenNoFacesSelected()
+            : m.fastenFacesSelected({ count });
+    }
+    return count === 0
+        ? m.fastenNoCircularEdgesSelected()
+        : m.fastenCircularEdgesSelected({ count });
+}
+
+function describeFasten(mode: SelectionMode, count: number): string {
+    if (mode === SelectionMode.FACES) {
+        return count === 0 ? m.fastenFacesNone() : m.fastenFacesSome();
     }
     if (count === 0) {
-        return "Select edges to automatically fasten inserted parts to.";
+        return m.fastenCircularEdgesNone();
     }
     if (count === 1) {
-        return "The part will be fastened to the selected edge.";
+        return m.fastenCircularEdgesOne();
     }
-    return "A part will be inserted and fastened to each selected edge.";
+    return m.fastenCircularEdgesMany();
 }

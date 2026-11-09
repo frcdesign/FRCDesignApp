@@ -62,7 +62,7 @@ interface UiState {
     vendorFilters: Partial<Record<LibraryId, Vendor[]>>;
     searchQuery: string;
     fasten: boolean;
-    /** What an insert and fasten's picks are: circular edges, or faces with holes to skip. */
+    /** What an insert and fasten's picks are: circular edges, or faces with edges to exclude. */
     fastenSelectionMode: SelectionMode;
     /** How many times an insert and fasten has offered the circular edges tip; see `insert-tips`. */
     fastenCircularEdgesTipCount: number;

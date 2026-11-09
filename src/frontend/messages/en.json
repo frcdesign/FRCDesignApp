@@ -698,5 +698,65 @@
     "autoAssemblyFinishedToast": "{headline}.",
     "autoAssemblyDetails": "Details",
     "autoAssemblyNoRecentRun": "No recent run",
-    "autoAssemblyStoppedEarly": "Stopped early."
+    "autoAssemblyStoppedEarly": "Stopped early.",
+    "fastenCircularEdgesSelected": [
+        {
+            "declarations": [
+                "input count",
+                "local countPlural = count: plural",
+                "local countFormatted = count: number"
+            ],
+            "selectors": ["countPlural"],
+            "match": {
+                "countPlural=one": "1 circular edge selected",
+                "countPlural=other": "{countFormatted} circular edges selected"
+            }
+        }
+    ],
+    "fastenFacesSelected": [
+        {
+            "declarations": [
+                "input count",
+                "local countPlural = count: plural",
+                "local countFormatted = count: number"
+            ],
+            "selectors": ["countPlural"],
+            "match": {
+                "countPlural=one": "1 face selected",
+                "countPlural=other": "{countFormatted} faces selected"
+            }
+        }
+    ],
+    "fastenNoCircularEdgesSelected": "No circular edges selected",
+    "fastenNoFacesSelected": "No faces selected",
+    "fastenCircularEdgesNone": "Select edges to automatically fasten inserted parts to.",
+    "fastenCircularEdgesOne": "The part will be fastened to the selected edge.",
+    "fastenCircularEdgesMany": "A part will be inserted and fastened to each selected edge.",
+    "fastenFacesNone": "Select faces to automatically fasten inserted parts to every hole in them.",
+    "fastenFacesSome": "A part will be inserted and fastened to every hole in the selected faces.",
+    "fastenCircularEdges": "Circular edges",
+    "fastenFaces": "Faces",
+    "fastenEdgesToExclude": "Edges to exclude",
+    "fastenCircularEdgesPrompt": "Select circular edges to fasten parts to.",
+    "fastenFacesPrompt": "Select faces to fasten parts to every hole in.",
+    "fastenEdgesToExcludePrompt": "Select circular edges to exclude.",
+    "fastenInsertedAndFastened": [
+        {
+            "declarations": [
+                "input name",
+                "input count",
+                "local countPlural = count: plural",
+                "local countFormatted = count: number"
+            ],
+            "selectors": ["countPlural"],
+            "match": {
+                "countPlural=one": "Successfully inserted {name} and fastened it to 1 circular edge.",
+                "countPlural=other": "Successfully inserted {name} and fastened it to {countFormatted} circular edges."
+            }
+        }
+    ],
+    "fastenInsertedWithMate": "Successfully inserted {name} and created a Fasten mate.",
+    "fastenCircularEdgesTip": "Tip: You can select circular edges in Onshape before you insert and fasten to automatically fasten to each one.",
+    "insertSucceeded": "Successfully inserted {name}.",
+    "insertFailed": "Unexpectedly failed to insert {name}."
 }
