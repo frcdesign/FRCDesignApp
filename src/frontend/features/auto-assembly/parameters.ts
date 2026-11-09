@@ -13,6 +13,7 @@ import {
 import { QuantityType, Unit } from "@backend/features/configurations/enums";
 import { quantityDefault } from "@backend/features/configurations/selection";
 import { Program } from "@backend/features/auto-assembly/catalog";
+import { m } from "../../paraglide/messages";
 import {
     FastenerMode,
     SelectionMode,
@@ -68,30 +69,30 @@ function inchParameter(
 }
 
 export const FORM_PARAMETERS: ConfigurationParameter[] = [
-    enumParameter(FormInput.SELECT_BY, "Select by", [
-        { id: SelectionMode.LOCATIONS, name: "Circular edges" },
-        { id: SelectionMode.FACES, name: "Faces" }
+    enumParameter(FormInput.SELECT_BY, m.autoAssemblySelectBy(), [
+        { id: SelectionMode.LOCATIONS, name: m.autoAssemblyCircularEdges() },
+        { id: SelectionMode.FACES, name: m.autoAssemblyFaces() }
     ]),
-    enumParameter(FormInput.PROGRAM, "Program", [
+    enumParameter(FormInput.PROGRAM, m.autoAssemblyProgram(), [
         { id: Program.FRC, name: "FRC" },
         { id: Program.FTC, name: "FTC" }
     ]),
-    enumParameter(FormInput.STOP, "Stop condition", [
-        { id: StopCondition.ALL_HOLES, name: "All holes" },
-        { id: StopCondition.FIRST_GAP, name: "First gap" }
+    enumParameter(FormInput.STOP, m.autoAssemblyStopCondition(), [
+        { id: StopCondition.ALL_HOLES, name: m.autoAssemblyStopAllHoles() },
+        { id: StopCondition.FIRST_GAP, name: m.autoAssemblyStopFirstGap() }
     ]),
-    booleanParameter(FormInput.LIMIT_LENGTH, "Limit screw length"),
-    inchParameter(FormInput.MAX_LENGTH, "Max length", {
+    booleanParameter(FormInput.LIMIT_LENGTH, m.autoAssemblyLimitLength()),
+    inchParameter(FormInput.MAX_LENGTH, m.autoAssemblyMaxLength(), {
         default: 3,
         min: 0.25,
         max: 10
     }),
-    inchParameter(FormInput.MAX_GAP, "Max gap to ignore", {
+    inchParameter(FormInput.MAX_GAP, m.autoAssemblyMaxGap(), {
         default: 0.03125,
         min: 0,
         max: 1
     }),
-    inchParameter(FormInput.MAX_THREAD_DEPTH, "Max thread depth", {
+    inchParameter(FormInput.MAX_THREAD_DEPTH, m.autoAssemblyMaxThreadDepth(), {
         default: 0.5,
         min: 0.0625,
         max: 10
@@ -110,11 +111,11 @@ export function formParameter(id: FormInput): ConfigurationParameter {
 export const SIZING_PARAMETER: EnumParameter = {
     type: ParameterType.ENUM,
     id: "sizing",
-    name: "Sizing",
+    name: m.autoAssemblySizing(),
     default: FastenerMode.AUTOMATIC,
     options: [
-        { id: FastenerMode.AUTOMATIC, name: "Automatic" },
-        { id: FastenerMode.PRESET, name: "Manual" }
+        { id: FastenerMode.AUTOMATIC, name: m.autoAssemblySizingAutomatic() },
+        { id: FastenerMode.PRESET, name: m.autoAssemblySizingManual() }
     ],
     optionConditions: []
 };

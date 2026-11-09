@@ -10,6 +10,7 @@ import {
     AssemblyTaskState,
     HoleStatus,
     type AssemblyJobStatus,
+    ProblemSeverity,
     SelectedEntityType,
     SelectionMode
 } from "./contract";
@@ -217,7 +218,13 @@ describe("POST /api/auto-assembly/check", () => {
         const res = await post("/auto-assembly/check", check);
         expect(res.status).toBe(200);
         expect(await res.json()).toEqual({
-            problems: [{ key: "top|TOP-top", message: "Not a circular edge." }]
+            problems: [
+                {
+                    key: "top|TOP-top",
+                    message: "Not a circular edge.",
+                    severity: ProblemSeverity.ERROR
+                }
+            ]
         });
     });
 });

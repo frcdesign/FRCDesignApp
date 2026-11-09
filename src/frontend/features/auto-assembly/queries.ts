@@ -10,7 +10,9 @@ import {
     type AssemblyJobStatus,
     type AutoAssemblyIn,
     type PickCheckIn,
-    type PickCheckOut
+    type PickCheckOut,
+    type PickProblem,
+    ProblemSeverity
 } from "@backend/features/auto-assembly/contract";
 import { type FastenerSet } from "@backend/features/auto-assembly/studios";
 import { type ElementPath } from "@backend/lib/onshape/path";
@@ -23,6 +25,9 @@ import {
     pickCheckQueryKey
 } from "../../lib/query-keys";
 import { useIsSignedIn } from "../auth/access-level";
+import { type RowProblem } from "../../components/query-list";
+import { Status } from "../../lib/status";
+import { m } from "../../paraglide/messages";
 
 /** The fasteners the library loaded, which change only when it reloads them; null before it loads them. */
 export function useFastenerSetQuery() {
@@ -61,7 +66,7 @@ export function useInsertMutation(assembly: ElementPath) {
             apiPost<AssemblyJobStatus>("/auto-assembly/insert", { body }),
         onSuccess: (status) =>
             queryClient.setQueryData(assemblyJobQueryKey(assembly), status),
-        onError: getAppErrorHandler("Unexpectedly failed to start inserting.")
+        onError: getAppErrorHandler(m.autoAssemblyStartFailed())
     });
 }
 
@@ -74,7 +79,7 @@ const PICK_CHECK_DELAY_MS = 600;
  */
 export function usePickProblems(
     body: PickCheckIn | undefined
-): Map<string, string> {
+): Map<string, RowProblem> {
     const isSignedIn = useIsSignedIn();
     const [settled] = useDebouncedValue(body, PICK_CHECK_DELAY_MS);
     const { data } = useQuery<PickCheckOut>({
@@ -93,9 +98,20 @@ export function usePickProblems(
             new Map(
                 (data?.problems ?? []).map((problem) => [
                     problem.key,
-                    problem.message
+                    toRowProblem(problem)
                 ])
             ),
         [data]
     );
+}
+
+/** A problem as a list row shows it. */
+export function toRowProblem(problem: Omit<PickProblem, "key">): RowProblem {
+    return {
+        message: problem.message,
+        status:
+            problem.severity === ProblemSeverity.WARNING
+                ? Status.WARNING
+                : Status.ERROR
+    };
 }

@@ -44,6 +44,7 @@ import {
 import { useAutoAssemblyStore } from "../store";
 import { FastenerOptionsForm, FormInputRow } from "./fastener-options-form";
 import { LastRunCallout } from "./last-run-callout";
+import { m } from "../../../paraglide/messages";
 import { FullWidthRow, ParameterGroup } from "./parameter-group";
 
 interface AutoAssemblyPanelProps {
@@ -56,10 +57,10 @@ export function AutoAssemblyPanel(props: AutoAssemblyPanelProps): ReactNode {
     const { data: set, isPending, isError } = useFastenerSetQuery();
 
     if (isPending) {
-        return <SectionLoading title="Loading fasteners..." />;
+        return <SectionLoading title={m.autoAssemblyFastenersLoading()} />;
     }
     if (isError) {
-        return <SectionError title="Couldn't load the fasteners." />;
+        return <SectionError title={m.autoAssemblyFastenersFailed()} />;
     }
     if (!set) {
         return (
@@ -67,8 +68,8 @@ export function AutoAssemblyPanel(props: AutoAssemblyPanelProps): ReactNode {
                 icon={
                     <StatusIcon status={Status.WARNING} size={IconSize.PAGE} />
                 }
-                title="No fasteners are loaded yet."
-                description="Auto Assembly uses the fasteners in FRCDesignLib's Fasteners group, once they're loaded."
+                title={m.autoAssemblyNoFastenersTitle()}
+                description={m.autoAssemblyNoFastenersDescription()}
             />
         );
     }
@@ -147,7 +148,7 @@ function AutoAssemblyForm(props: AutoAssemblyFormProps): ReactNode {
             <LastRunCallout assembly={assembly} />
             <ParameterGrid>
                 <FastenerOptionsForm settled={settled} />
-                <ParameterGroup title="Selections">
+                <ParameterGroup title={m.autoAssemblySelections()}>
                     <FormInputRow id={FormInput.SELECT_BY} settled={settled} />
                     {isFaces ? (
                         <>
@@ -155,8 +156,8 @@ function AutoAssemblyForm(props: AutoAssemblyFormProps): ReactNode {
                                 <QueryList
                                     id="auto-assembly-faces"
                                     autoFocus
-                                    label="Faces"
-                                    prompt="Select faces to fasten every hole in."
+                                    label={m.autoAssemblyFaces()}
+                                    prompt={m.autoAssemblyFacesPrompt()}
                                     entities={targets}
                                     onChange={setTargets}
                                     accepts={isFace}
@@ -167,8 +168,8 @@ function AutoAssemblyForm(props: AutoAssemblyFormProps): ReactNode {
                             <FullWidthRow>
                                 <QueryList
                                     id="auto-assembly-excluded"
-                                    label="Holes to skip"
-                                    prompt="Select the edges of holes to leave out."
+                                    label={m.autoAssemblyHolesToSkip()}
+                                    prompt={m.autoAssemblyHolesToSkipPrompt()}
                                     entities={excluded}
                                     onChange={setExcluded}
                                     accepts={isEdge}
@@ -182,8 +183,8 @@ function AutoAssemblyForm(props: AutoAssemblyFormProps): ReactNode {
                             <QueryList
                                 id="auto-assembly-locations"
                                 autoFocus
-                                label="Circular edges"
-                                prompt="Select the circular edges of holes to fasten."
+                                label={m.autoAssemblyCircularEdges()}
+                                prompt={m.autoAssemblyCircularEdgesPrompt()}
                                 entities={targets}
                                 onChange={setTargets}
                                 accepts={isEdge}
@@ -195,14 +196,16 @@ function AutoAssemblyForm(props: AutoAssemblyFormProps): ReactNode {
                     <FullWidthRow>
                         <QueryList
                             id="auto-assembly-replaced"
-                            label="Screws to replace"
-                            prompt="Select screws to take out, with their washers and nuts, and fasten again."
+                            label={m.autoAssemblyScrewsToReplace()}
+                            prompt={m.autoAssemblyScrewsToReplacePrompt()}
                             entities={replaced}
                             onChange={setReplaced}
                             accepts={isBody}
                             filter={SOLID_BODIES}
                             problem={problem}
-                            describe={(_entity, index) => `Screw ${index + 1}`}
+                            describe={(_entity, index) =>
+                                m.autoAssemblyScrewRow({ index: index + 1 })
+                            }
                         />
                     </FullWidthRow>
                 </ParameterGroup>
@@ -217,7 +220,7 @@ function AutoAssemblyForm(props: AutoAssemblyFormProps): ReactNode {
                 loading={insertMutation.isPending}
                 onClick={insert}
             >
-                Insert
+                {m.autoAssemblyInsert()}
             </Button>
         </Stack>
     );

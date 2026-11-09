@@ -27,7 +27,11 @@ import {
     type AssemblyJobResult,
     type AssemblyJobStatus,
     type AssemblyTask,
+    PickList,
+    type PickProblem,
     type PlannedHole,
+    type RunPick,
+    type SelectedEntity,
     pendingTasks,
     type AutoAssemblyIn
 } from "./contract";
@@ -51,6 +55,8 @@ import { reportJob } from "./jobs";
 import { recordRunInserts } from "./track-inserts";
 import { orphanedMates, type Replacement } from "./replace";
 import { planHoles } from "./planner";
+import { pickProblems } from "./check";
+import { pickKey } from "./picked";
 
 export interface AssemblyJobParams {
     /** Whose Onshape session the run borrows; see the load workflow. */
@@ -69,6 +75,7 @@ interface RunContext {
     assembly: ElementPath;
     tasks: AssemblyTask[];
     holes?: PlannedHole[];
+    picks?: RunPick[];
     result: AssemblyJobResult;
     status: (state: AssemblyJobState) => AssemblyJobStatus;
 }
@@ -108,6 +115,7 @@ export class AutoAssemblyWorkflow extends WorkflowEntrypoint<
                 jobId: event.instanceId,
                 tasks,
                 ...(ctx.holes ? { holes: ctx.holes } : {}),
+                ...(ctx.picks ? { picks: ctx.picks } : {}),
                 result: ctx.result
             })
         };
@@ -151,16 +159,25 @@ async function runSteps(ctx: RunContext, request: AutoAssemblyIn) {
                 set,
                 request.replaced
             );
+            const plans = planHoles(
+                indexed.circularEdges,
+                indexed.holes,
+                indexed.placed,
+                request.options,
+                set.catalog
+            );
             return {
-                plans: planHoles(
-                    indexed.circularEdges,
-                    indexed.holes,
-                    indexed.placed,
-                    request.options,
-                    set.catalog
-                ),
+                plans,
                 unfound: indexed.unfound,
-                replacements: indexed.replacements
+                replacements: indexed.replacements,
+                picks: runPicks(
+                    request,
+                    pickProblems(
+                        request,
+                        indexed,
+                        plans.map((plan) => plan.planned)
+                    )
+                )
             };
         })
     );
@@ -170,6 +187,8 @@ async function runSteps(ctx: RunContext, request: AutoAssemblyIn) {
     }
     const { plans } = indexed;
     ctx.holes = [...plans.map((plan) => plan.planned), ...indexed.unfound];
+    ctx.picks = indexed.picks;
+    warnTask(ctx, AssemblyTaskAction.INDEX, picksWarning(indexed.picks));
 
     // Named as the studios' records name each configuration, for its mates
     const parts = await ctx.step.do("part-names", () =>
@@ -211,6 +230,14 @@ async function runSteps(ctx: RunContext, request: AutoAssemblyIn) {
     await runTask(ctx, AssemblyTaskAction.FASTEN, (run) =>
         fastenParts(ctx, set, run, parts, paths, mated)
     );
+    const unmated = ctx.result.inserted - ctx.result.fastened;
+    if (unmated > 0) {
+        warnTask(
+            ctx,
+            AssemblyTaskAction.FASTEN,
+            `${unmated} of ${ctx.result.inserted} parts weren't fastened, so they sit unmated.`
+        );
+    }
     // Whatever fastening managed, what was inserted counts
     await ctx.step.do("record-inserts", () =>
         recordRunInserts(
@@ -392,5 +419,46 @@ async function runTask<T>(
         task.state = AssemblyTaskState.FAILED;
         task.reason = describeRunFailure(error);
         return undefined;
+    }
+}
+
+/** Each pick of a run, in the form's order, with its problem. */
+function runPicks(request: AutoAssemblyIn, problems: PickProblem[]): RunPick[] {
+    const byKey = new Map(
+        problems.map(({ key, ...problem }) => [key, problem])
+    );
+    const lists: [PickList, SelectedEntity[]][] = [
+        [PickList.TARGETS, request.targets],
+        [PickList.EXCLUDED, request.excluded],
+        [PickList.REPLACED, request.replaced]
+    ];
+    return lists.flatMap(([list, entities]) =>
+        entities.map((entity) => {
+            const problem = byKey.get(pickKey(entity));
+            return { list, entity, ...(problem ? { problem } : {}) };
+        })
+    );
+}
+
+/** "2 picks have problems", or nothing when none do. */
+function picksWarning(picks: RunPick[]): string | undefined {
+    const count = picks.filter((pick) => pick.problem).length;
+    if (count === 0) {
+        return undefined;
+    }
+    return count === 1
+        ? "1 pick has a problem."
+        : `${count} picks have problems.`;
+}
+
+/** Marks a finished task with what it left undone. */
+function warnTask(
+    ctx: RunContext,
+    action: AssemblyTaskAction,
+    warning: string | undefined
+): void {
+    const task = ctx.tasks.find((each) => each.action === action);
+    if (task?.state === AssemblyTaskState.DONE && warning) {
+        task.warning = warning;
     }
 }

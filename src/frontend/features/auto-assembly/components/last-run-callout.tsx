@@ -13,6 +13,7 @@ import { IconSize } from "../../../lib/style-constants";
 import { jobHeadline, OUTCOME_STATUS, runningHeadline } from "../job-report";
 import { openJobDetails } from "../open-job-details";
 import { useAssemblyJobQuery } from "../queries";
+import { m } from "../../../paraglide/messages";
 
 interface LastRunCalloutProps {
     assembly: ElementPath;
@@ -44,7 +45,7 @@ export function LastRunCallout(props: LastRunCalloutProps): ReactNode {
                     icon={<ListBulletsIcon size={IconSize.SMALL} />}
                     onClick={() => openJobDetails(assembly)}
                 >
-                    Details
+                    {m.autoAssemblyDetails()}
                 </CalloutButton>
             }
         />
@@ -54,10 +55,13 @@ export function LastRunCallout(props: LastRunCalloutProps): ReactNode {
 function calloutText(status: AssemblyJobStatus): string {
     const outcome = assemblyJobOutcome(status);
     if (!outcome) {
-        return `${runningHeadline(status)}... You can leave this page.`;
+        return m.autoAssemblyRunningCallout({ step: runningHeadline(status) });
     }
-    const when = status.finishedAt
-        ? ` ${formatTimeAgo(status.finishedAt)}`
-        : "";
-    return `${jobHeadline(status, outcome)}${when}.`;
+    const headline = jobHeadline(status, outcome);
+    return status.finishedAt
+        ? m.autoAssemblyFinishedCallout({
+              headline,
+              timeAgo: formatTimeAgo(status.finishedAt)
+          })
+        : m.autoAssemblyFinishedToast({ headline });
 }

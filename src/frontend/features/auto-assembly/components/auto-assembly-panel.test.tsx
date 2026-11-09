@@ -6,6 +6,9 @@ import {
     FastenerMode,
     AssemblyTaskAction,
     AssemblyTaskState,
+    PickList,
+    ProblemSeverity,
+    SelectedEntityType,
     SelectionMode
 } from "@backend/features/auto-assembly/contract";
 import {
@@ -24,7 +27,9 @@ import {
 } from "../../../lib/selection";
 import { defaultChoices } from "../options";
 import { useAutoAssemblyStore } from "../store";
+import { useOnshapeLaunch } from "../../../lib/onshape-params";
 import { AutoAssemblyPanel } from "./auto-assembly-panel";
+import { JobDetails } from "./job-details";
 
 vi.mock("../../../lib/api-client", () => ({
     apiGet: vi.fn(),
@@ -283,5 +288,71 @@ describe("AutoAssemblyPanel", () => {
 
         await userEvent.click(screen.getByLabelText("Limit screw length"));
         expect(screen.getByLabelText("Max length")).toBeTruthy();
+    });
+});
+
+describe("JobDetails", () => {
+    const edge = (id: string) => ({
+        occurrencePath: ["plate"],
+        entityId: id,
+        entityType: SelectedEntityType.EDGE
+    });
+
+    it("warns on a step that left problems, and lists each pick with its own, lighting it up on hover", async () => {
+        useOnshapeLaunch.setState({
+            documentId: "doc",
+            instanceId: "ws",
+            instanceType: "w",
+            elementId: "asm",
+            elementType: "ASSEMBLY" as never
+        });
+        const queryClient = createTestQueryClient();
+        queryClient.setQueryData(assemblyJobQueryKey(ASSEMBLY), {
+            state: AssemblyJobState.COMPLETE,
+            tasks: [
+                {
+                    action: AssemblyTaskAction.INDEX,
+                    state: AssemblyTaskState.DONE,
+                    warning: "1 pick has a problem."
+                },
+                {
+                    action: AssemblyTaskAction.INSERT,
+                    state: AssemblyTaskState.DONE
+                }
+            ],
+            picks: [
+                { list: PickList.TARGETS, entity: edge("A") },
+                {
+                    list: PickList.TARGETS,
+                    entity: edge("B"),
+                    problem: {
+                        message: "The 3/8 in screw is too long.",
+                        severity: ProblemSeverity.WARNING
+                    }
+                }
+            ],
+            result: { inserted: 4, fastened: 4, replaced: 0 }
+        });
+        renderWithProviders(<JobDetails assembly={ASSEMBLY} />, queryClient);
+
+        expect(screen.getByText("1 pick has a problem.")).toBeTruthy();
+        expect(screen.getByText("Circular edges")).toBeTruthy();
+        expect(screen.getByText("Edge 1")).toBeTruthy();
+        expect(screen.getByText("The 3/8 in screw is too long.")).toBeTruthy();
+
+        const posted = vi.spyOn(window.parent, "postMessage");
+        await userEvent.hover(screen.getByText("Edge 2"));
+        expect(posted).toHaveBeenCalledWith(
+            expect.objectContaining({
+                messageName: "requestSelectionHighlight",
+                selections: [
+                    expect.objectContaining({
+                        selectionId: "B",
+                        occurrencePath: ["plate"]
+                    })
+                ]
+            }),
+            "*"
+        );
     });
 });

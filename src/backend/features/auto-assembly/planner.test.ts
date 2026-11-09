@@ -302,6 +302,61 @@ describe("planHoles", () => {
         expect(small.planned.reason).toMatch(/too small for a #10-32/);
     });
 
+    describe("lengths that don't fit", () => {
+        const preset = (length: string) => ({
+            mode: FastenerMode.PRESET,
+            screw: { length }
+        });
+        const tapped = (bottom: number, closedAtEnd: boolean) => [
+            hole("top", 0, 0.25, 0.201),
+            hole("block", 0.25, bottom, 0.159, { closedAtEnd })
+        ];
+
+        it("refuses a screw too short to reach through the nut, across a gap, naming its length", () => {
+            const gapped = [
+                hole("top", 0, 0.25, 0.201),
+                hole("far", 0.375, 0.625, 0.201)
+            ];
+            const { planned } = plan(gapped, preset("IN_0_375"));
+            expect(planned.status).toBe(HoleStatus.NO_FIT);
+            expect(planned.reason).toMatch(
+                /^The 3\/8 in screw is [\d.]+ in too short to reach through the nut\.$/
+            );
+        });
+
+        it("warns of a screw that bottoms out in a tapped hole, and fastens it", () => {
+            const { planned } = plan(tapped(0.5, true), preset("IN_0_5"));
+            expect(planned.status).toBe(HoleStatus.READY);
+            expect(planned.screw?.length).toBe("IN_0_5");
+            // A thread short of the bottom, at 0.46875 in.
+            expect(planned.warning).toBe(
+                "The 1/2 in screw is 0.031 in too long, so it bottoms out in the hole."
+            );
+        });
+
+        it("lets a screw come out the far side of threads with no bottom", () => {
+            const { planned } = plan(tapped(0.5, false), preset("IN_0_5"));
+            expect(planned.status).toBe(HoleStatus.READY);
+            expect(planned.warning).toBeUndefined();
+        });
+
+        it("warns of a screw too short to go far enough into the threads", () => {
+            const { planned } = plan(tapped(1.25, true), preset("IN_0_25"));
+            expect(planned.status).toBe(HoleStatus.READY);
+            expect(planned.warning).toBe(
+                "The 1/4 in screw is 0.19 in too short: it goes only 0 in into the threads."
+            );
+        });
+
+        it("fastens the closest automatic screw where none fits, saying how it misses", () => {
+            const { planned } = plan(tapped(1.25, true), {
+                maxThreadDepth: 0.01 * INCH
+            });
+            expect(planned.status).toBe(HoleStatus.READY);
+            expect(planned.warning).toMatch(/^The closest screw, [^,]+ in,/);
+        });
+    });
+
     it("puts a preset screw where it fits", () => {
         const preset = {
             mode: FastenerMode.PRESET,

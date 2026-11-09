@@ -28,6 +28,7 @@ import {
 } from "../parameters";
 import { useAutoAssemblyStore } from "../store";
 import { FullWidthRow, ParameterGroup } from "./parameter-group";
+import { m } from "../../../paraglide/messages";
 
 interface FormInputRowProps {
     id: FormInput;
@@ -65,12 +66,12 @@ export function FastenerOptionsForm(
 
     return (
         <>
-            <ParameterGroup title="Fastener">
+            <ParameterGroup title={m.autoAssemblyFastener()}>
                 <FormInputRow id={FormInput.PROGRAM} settled={settled} />
                 {isFtc ? (
                     <FullWidthRow>
                         <Text size="sm" c={StatusColor.DIMMED}>
-                            FTC fasteners aren&apos;t available yet.
+                            {m.autoAssemblyFtcUnavailable()}
                         </Text>
                     </FullWidthRow>
                 ) : (
@@ -82,19 +83,19 @@ export function FastenerOptionsForm(
                     {!isCountersunk(settled.set, settled.screw.head) && (
                         <PartGroup
                             part={Part.SCREW_WASHER}
-                            title="Add screw washer"
+                            title={m.autoAssemblyAddScrewWasher()}
                             settled={settled}
                         />
                     )}
                     <PartGroup
                         part={Part.NUT}
-                        title="Add nut"
+                        title={m.autoAssemblyAddNut()}
                         settled={settled}
                     />
                     {settled.added[Part.NUT] && (
                         <PartGroup
                             part={Part.NUT_WASHER}
-                            title="Add nut washer"
+                            title={m.autoAssemblyAddNutWasher()}
                             settled={settled}
                         />
                     )}

@@ -10,6 +10,7 @@ import {
     useOnshapeSelection,
     type OnshapeSelection
 } from "../lib/selection";
+import { Status } from "../lib/status";
 import { QueryList } from "./query-list";
 
 const PROMPT = "Select edges.";
@@ -357,26 +358,35 @@ describe("QueryList", () => {
         expect(useOnshapeSelection.getState().focused).toBe("first");
     });
 
-    it("marks a row with a problem in red, with why under it", () => {
+    it("marks a row with an error in red and a warning in yellow, with why under each", () => {
         renderWithProviders(
             <QueryList
                 id="checked"
                 label="Checked"
                 prompt="Select edges."
-                entities={[edge("A"), edge("B")]}
+                entities={[edge("A"), edge("B"), edge("C")]}
                 onChange={() => undefined}
                 accepts={() => true}
                 filter={CIRCULAR_EDGES}
                 problem={(entity) =>
                     entity.selectionId === "B"
-                        ? "Not a circular edge."
-                        : undefined
+                        ? {
+                              message: "Not a circular edge.",
+                              status: Status.ERROR
+                          }
+                        : entity.selectionId === "C"
+                          ? { message: "Too long.", status: Status.WARNING }
+                          : undefined
                 }
             />
         );
         expect(screen.getByText("Not a circular edge.")).toBeTruthy();
+        expect(screen.getByText("Too long.")).toBeTruthy();
         expect(screen.getByText("Edge 2").getAttribute("style")).toContain(
             "red"
+        );
+        expect(screen.getByText("Edge 3").getAttribute("style")).toContain(
+            "yellow"
         );
         expect(
             screen.getByText("Edge 1").getAttribute("style") ?? ""

@@ -86,15 +86,37 @@ export interface PickCheckIn {
     options?: FastenerOptions;
 }
 
-/** Why a pick won't be fastened or replaced as asked, keyed as the client keys its rows. */
+export enum ProblemSeverity {
+    /** It won't be fastened or replaced as asked. */
+    ERROR = "error",
+    /** It will be, but not as well as it should: a screw that doesn't fit, say. */
+    WARNING = "warning"
+}
+
+/** Why a pick won't be fastened or replaced as asked, or what's off about how it will be, keyed as the client keys its rows. */
 export interface PickProblem {
     /** The pick's part path, joined with "/", then "|" and its id. */
     key: string;
     message: string;
+    severity: ProblemSeverity;
 }
 
 export interface PickCheckOut {
     problems: PickProblem[];
+}
+
+/** Which of the form's lists a pick was made in. */
+export enum PickList {
+    TARGETS = "targets",
+    EXCLUDED = "excluded",
+    REPLACED = "replaced"
+}
+
+/** A pick a run was given, with its problem, as the check would have marked it. */
+export interface RunPick {
+    list: PickList;
+    entity: SelectedEntity;
+    problem?: Omit<PickProblem, "key">;
 }
 
 export enum HoleStatus {
@@ -121,6 +143,8 @@ export interface PlannedHole {
     status: HoleStatus;
     /** Why it can't be fastened, in words, when it can't. */
     reason?: string;
+    /** What's off about how it's fastened, in words: a screw that doesn't fit as it should, or no nut. */
+    warning?: string;
     end?: HoleEnd;
     /** Metres, from the circular edge to where the stack ends. */
     depth?: number;
@@ -158,6 +182,8 @@ export interface AssemblyTask {
     state: AssemblyTaskState;
     /** Why it failed, written for the user. */
     reason?: string;
+    /** What it left undone, though it finished, written for the user. */
+    warning?: string;
 }
 
 /** A run's steps, none started. */
@@ -192,6 +218,8 @@ export interface AssemblyJobStatus {
     tasks?: AssemblyTask[];
     /** Each hole picked, and what it got or why it got nothing, once indexed. */
     holes?: PlannedHole[];
+    /** Each pick, with its problem, once indexed. */
+    picks?: RunPick[];
     result?: AssemblyJobResult;
     /** Why the whole run stopped, when it did. Written for the user. */
     error?: string;
@@ -221,7 +249,7 @@ export function assemblyJobOutcome(
         (task) => task.state === AssemblyTaskState.FAILED
     );
     const allReady = (status.holes ?? []).every(
-        (hole) => hole.status !== HoleStatus.NO_FIT
+        (hole) => hole.status !== HoleStatus.NO_FIT && !hole.warning
     );
     const allFastened = (status.result?.fastened ?? 0) === inserted;
     if (

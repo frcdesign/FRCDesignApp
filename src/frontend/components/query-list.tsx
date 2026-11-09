@@ -27,6 +27,7 @@ import {
     type OnshapeSelection
 } from "../lib/selection";
 import { IconSize, StatusColor } from "../lib/style-constants";
+import { Status, STATUS_COLOR } from "../lib/status";
 
 interface QueryListProps {
     /** Unique on the page: which list takes picks. */
@@ -46,8 +47,14 @@ interface QueryListProps {
     rowSection?: (entity: OnshapeSelection) => ReactNode;
     /** Takes picks whenever no list does, as a form's first list should. */
     autoFocus?: boolean;
-    /** Why a row won't do what it was picked for; shown under it, in red. */
-    problem?: (entity: OnshapeSelection) => string | undefined;
+    /** What's wrong with a row: shown under it, in its status's color. */
+    problem?: (entity: OnshapeSelection) => RowProblem | undefined;
+}
+
+/** Why a row won't do what it was picked for (an error), or what's off about how it will (a warning). */
+export interface RowProblem {
+    message: string;
+    status: Status.ERROR | Status.WARNING;
 }
 
 function toHighlighted(entity: OnshapeSelection): HighlightedEntity {
@@ -221,7 +228,10 @@ export function QueryList(props: QueryListProps): ReactNode {
                         {/* Left as a whole, so moving between rows lights each alone without the rest between */}
                         <Stack gap={2} onMouseLeave={unhighlight}>
                             {entities.map((entity, index) => {
-                                const message = problem?.(entity);
+                                const rowProblem = problem?.(entity);
+                                const color =
+                                    rowProblem &&
+                                    STATUS_COLOR[rowProblem.status];
                                 return (
                                     <Stack
                                         key={selectionKey(entity)}
@@ -234,11 +244,7 @@ export function QueryList(props: QueryListProps): ReactNode {
                                                 size="sm"
                                                 flex={1}
                                                 truncate
-                                                c={
-                                                    message
-                                                        ? StatusColor.ERROR
-                                                        : undefined
-                                                }
+                                                c={color}
                                             >
                                                 {describe(entity, index)}
                                             </Text>
@@ -255,12 +261,9 @@ export function QueryList(props: QueryListProps): ReactNode {
                                                 <XIcon size={IconSize.TINY} />
                                             </ActionIcon>
                                         </Group>
-                                        {message && (
-                                            <Text
-                                                size="xs"
-                                                c={StatusColor.ERROR}
-                                            >
-                                                {message}
+                                        {rowProblem && (
+                                            <Text size="xs" c={color}>
+                                                {rowProblem.message}
                                             </Text>
                                         )}
                                     </Stack>

@@ -24,9 +24,12 @@ import {
     AssemblyJobOutcome,
     assemblyJobOutcome,
     AssemblyJobState,
+    AssemblyTaskAction,
     AssemblyTaskState,
     HoleEnd,
     HoleStatus,
+    PickList,
+    ProblemSeverity,
     SelectedEntityType,
     type AssemblyJobStatus
 } from "./contract";
@@ -291,6 +294,34 @@ describe("AutoAssemblyWorkflow", () => {
                 reason: "Not a circular edge."
             }
         ]);
+        // Each pick, with the problem the check would have marked it with
+        expect(status.picks).toEqual([
+            { list: PickList.TARGETS, entity: BODY.targets[0] },
+            {
+                list: PickList.TARGETS,
+                entity: expect.objectContaining({ occurrencePath: ["gone"] }),
+                problem: {
+                    message: "Couldn't find this part in the assembly.",
+                    severity: ProblemSeverity.ERROR
+                }
+            },
+            {
+                list: PickList.TARGETS,
+                entity: expect.objectContaining({ entityId: "TOP-face" }),
+                problem: {
+                    message: "Not a circular edge.",
+                    severity: ProblemSeverity.ERROR
+                }
+            }
+        ]);
+        expect(
+            status.tasks?.find(
+                (task) => task.action === AssemblyTaskAction.INDEX
+            )
+        ).toMatchObject({
+            state: AssemblyTaskState.DONE,
+            warning: "2 picks have problems."
+        });
     });
 
     describe("alike holes", () => {

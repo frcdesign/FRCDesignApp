@@ -14,6 +14,7 @@ import { IconSize, PrimaryColor } from "../../lib/style-constants";
 import { useNeedsSignIn } from "../../features/auth/access-level";
 import { startSignIn } from "../../features/auth/sign-in";
 import { AutoAssemblyPanel } from "../../features/auto-assembly/components/auto-assembly-panel";
+import { m } from "../../paraglide/messages";
 import { useMarkHintSeen } from "../../features/hints/queries";
 import { Hint } from "@backend/features/hints/contract";
 
@@ -53,14 +54,14 @@ function AutoAssemblyPage(): ReactNode {
 
     if (!target) {
         // What renders on the way out, `beforeLoad` having redirected.
-        return <PageLoading title="Loading..." />;
+        return <PageLoading title={m.autoAssemblyLoading()} />;
     }
     if (target.elementType !== ElementType.ASSEMBLY) {
         return (
             <PageNotice
                 icon={PAGE_ICON}
-                title="Open an assembly to fasten parts"
-                description="Auto Assembly puts screws, washers and nuts in the holes of an assembly's parts. Open it from an assembly's panel."
+                title={m.autoAssemblyOpenAssemblyTitle()}
+                description={m.autoAssemblyOpenAssemblyDescription()}
             />
         );
     }
@@ -68,9 +69,13 @@ function AutoAssemblyPage(): ReactNode {
         return (
             <PageNotice
                 icon={PAGE_ICON}
-                title="Sign in to fasten parts"
-                description="Auto Assembly reads your assembly's holes and inserts fasteners into it."
-                action={<Button onClick={startSignIn}>Sign in</Button>}
+                title={m.autoAssemblySignInTitle()}
+                description={m.autoAssemblySignInDescription()}
+                action={
+                    <Button onClick={startSignIn}>
+                        {m.autoAssemblySignIn()}
+                    </Button>
+                }
             />
         );
     }

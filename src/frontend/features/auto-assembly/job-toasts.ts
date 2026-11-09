@@ -18,6 +18,7 @@ import { useTargetAssembly } from "../../lib/onshape-params";
 import { jobHeadline } from "./job-report";
 import { openJobDetails } from "./open-job-details";
 import { useAssemblyJobQuery } from "./queries";
+import { m } from "../../paraglide/messages";
 
 /** One toast for the run going, so a second run replaces the first's result rather than stacking under it. */
 const JOB_TOAST_ID = "assembly-job";
@@ -27,14 +28,16 @@ function showJobToast(status: AssemblyJobStatus, assembly: ElementPath): void {
     if (!outcome) {
         return;
     }
-    const message = `${jobHeadline(status, outcome)}.`;
+    const message = m.autoAssemblyFinishedToast({
+        headline: jobHeadline(status, outcome)
+    });
     if (outcome === AssemblyJobOutcome.SUCCESS) {
         showSuccessToast(message, JOB_TOAST_ID);
         return;
     }
     // Up until closed: somebody has something to do about these
     const withDetails = renderNotification(message, {
-        text: "Details",
+        text: m.autoAssemblyDetails(),
         onClick: () => openJobDetails(assembly)
     });
     if (outcome === AssemblyJobOutcome.PARTIAL) {
@@ -62,7 +65,7 @@ export function useAssemblyJobToasts(): void {
             showJobToast(data, assembly);
         }
         if (isRunning && wasRunning.current !== key) {
-            showLoadingToast("Inserting fasteners...", JOB_TOAST_ID);
+            showLoadingToast(m.autoAssemblyInserting(), JOB_TOAST_ID);
         }
         wasRunning.current = isRunning ? key : undefined;
     }, [data, assembly]);

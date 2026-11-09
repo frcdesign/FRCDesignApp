@@ -571,5 +571,128 @@
     "testbenchNoLimitHeaders": "No rate-limit headers; every header",
     "testbenchPartStudioUrl": "Part Studio",
     "testbenchAssemblyUrl": "Assembly",
-    "testbenchOnshapeAnswer": "Onshape's answer"
+    "testbenchOnshapeAnswer": "Onshape's answer",
+    "autoAssemblyLoading": "Loading...",
+    "autoAssemblyOpenAssemblyTitle": "Open an assembly to fasten parts",
+    "autoAssemblyOpenAssemblyDescription": "Auto Assembly puts screws, washers and nuts in the holes of an assembly's parts. Open it from an assembly's panel.",
+    "autoAssemblySignInTitle": "Sign in to fasten parts",
+    "autoAssemblySignInDescription": "Auto Assembly reads your assembly's holes and inserts fasteners into it.",
+    "autoAssemblySignIn": "Sign in",
+    "autoAssemblyFastenersLoading": "Loading fasteners...",
+    "autoAssemblyFastenersFailed": "Couldn't load the fasteners.",
+    "autoAssemblyNoFastenersTitle": "No fasteners are loaded yet.",
+    "autoAssemblyNoFastenersDescription": "Auto Assembly uses the fasteners in FRCDesignLib's Fasteners group, once they're loaded.",
+    "autoAssemblySelections": "Selections",
+    "autoAssemblySelectBy": "Select by",
+    "autoAssemblyFaces": "Faces",
+    "autoAssemblyFacesPrompt": "Select faces to fasten every hole in.",
+    "autoAssemblyHolesToSkip": "Holes to skip",
+    "autoAssemblyHolesToSkipPrompt": "Select the edges of holes to leave out.",
+    "autoAssemblyCircularEdges": "Circular edges",
+    "autoAssemblyCircularEdgesPrompt": "Select the circular edges of holes to fasten.",
+    "autoAssemblyScrewsToReplace": "Screws to replace",
+    "autoAssemblyScrewsToReplacePrompt": "Select screws to take out, with their washers and nuts, and fasten again.",
+    "autoAssemblyFaceRow": "Face {index}",
+    "autoAssemblyEdgeRow": "Edge {index}",
+    "autoAssemblyScrewRow": "Screw {index}",
+    "autoAssemblyInsert": "Insert",
+    "autoAssemblyStartFailed": "Unexpectedly failed to start inserting.",
+    "autoAssemblyFastener": "Fastener",
+    "autoAssemblyProgram": "Program",
+    "autoAssemblyFtcUnavailable": "FTC fasteners aren't available yet.",
+    "autoAssemblySizing": "Sizing",
+    "autoAssemblySizingAutomatic": "Automatic",
+    "autoAssemblySizingManual": "Manual",
+    "autoAssemblyAddScrewWasher": "Add screw washer",
+    "autoAssemblyAddNut": "Add nut",
+    "autoAssemblyAddNutWasher": "Add nut washer",
+    "autoAssemblyStopCondition": "Stop condition",
+    "autoAssemblyStopAllHoles": "All holes",
+    "autoAssemblyStopFirstGap": "First gap",
+    "autoAssemblyLimitLength": "Limit screw length",
+    "autoAssemblyMaxLength": "Max length",
+    "autoAssemblyMaxGap": "Max gap to ignore",
+    "autoAssemblyMaxThreadDepth": "Max thread depth",
+    "autoAssemblyTaskIndex": "Index holes",
+    "autoAssemblyTaskRemove": "Remove replaced parts",
+    "autoAssemblyTaskInsert": "Insert parts",
+    "autoAssemblyTaskFasten": "Fasten parts",
+    "autoAssemblyTaskIndexRunning": "Indexing holes...",
+    "autoAssemblyTaskRemoveRunning": "Removing replaced parts...",
+    "autoAssemblyTaskInsertRunning": "Inserting parts...",
+    "autoAssemblyTaskFastenRunning": "Fastening parts...",
+    "autoAssemblyInserting": "Inserting fasteners...",
+    "autoAssemblyRunningCallout": "{step} You can leave this page.",
+    "autoAssemblyInserted": [
+        {
+            "declarations": [
+                "input count",
+                "local countPlural = count: plural",
+                "local countFormatted = count: number"
+            ],
+            "selectors": ["countPlural"],
+            "match": {
+                "countPlural=one": "Inserted 1 part",
+                "countPlural=other": "Inserted {countFormatted} parts"
+            }
+        }
+    ],
+    "autoAssemblyInsertedReplacing": [
+        {
+            "declarations": [
+                "input count",
+                "local countPlural = count: plural",
+                "local countFormatted = count: number",
+                "input replaced",
+                "local replacedPlural = replaced: plural",
+                "local replacedFormatted = replaced: number"
+            ],
+            "selectors": ["countPlural", "replacedPlural"],
+            "match": {
+                "countPlural=one, replacedPlural=one": "Inserted 1 part, replacing 1 screw",
+                "countPlural=one, replacedPlural=other": "Inserted 1 part, replacing {replacedFormatted} screws",
+                "countPlural=other, replacedPlural=one": "Inserted {countFormatted} parts, replacing 1 screw",
+                "countPlural=other, replacedPlural=other": "Inserted {countFormatted} parts, replacing {replacedFormatted} screws"
+            }
+        }
+    ],
+    "autoAssemblyInsertedWithProblems": [
+        {
+            "declarations": [
+                "input count",
+                "local countPlural = count: plural",
+                "local countFormatted = count: number"
+            ],
+            "selectors": ["countPlural"],
+            "match": {
+                "countPlural=one": "Inserted 1 part with problems",
+                "countPlural=other": "Inserted {countFormatted} parts with problems"
+            }
+        }
+    ],
+    "autoAssemblyInsertedReplacingWithProblems": [
+        {
+            "declarations": [
+                "input count",
+                "local countPlural = count: plural",
+                "local countFormatted = count: number",
+                "input replaced",
+                "local replacedPlural = replaced: plural",
+                "local replacedFormatted = replaced: number"
+            ],
+            "selectors": ["countPlural", "replacedPlural"],
+            "match": {
+                "countPlural=one, replacedPlural=one": "Inserted 1 part, replacing 1 screw with problems",
+                "countPlural=one, replacedPlural=other": "Inserted 1 part, replacing {replacedFormatted} screws with problems",
+                "countPlural=other, replacedPlural=one": "Inserted {countFormatted} parts, replacing 1 screw with problems",
+                "countPlural=other, replacedPlural=other": "Inserted {countFormatted} parts, replacing {replacedFormatted} screws with problems"
+            }
+        }
+    ],
+    "autoAssemblyFailed": "Couldn't insert fasteners",
+    "autoAssemblyFinishedCallout": "{headline} {timeAgo}.",
+    "autoAssemblyFinishedToast": "{headline}.",
+    "autoAssemblyDetails": "Details",
+    "autoAssemblyNoRecentRun": "No recent run",
+    "autoAssemblyStoppedEarly": "Stopped early."
 }

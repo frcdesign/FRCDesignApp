@@ -5,7 +5,7 @@ import {
     AssemblyTaskState,
     type AssemblyJobStatus
 } from "@backend/features/auto-assembly/contract";
-import { plural } from "../../lib/plural";
+import { m } from "../../paraglide/messages";
 import { Status } from "../../lib/status";
 
 export const OUTCOME_STATUS: Record<AssemblyJobOutcome, Status> = {
@@ -14,26 +14,38 @@ export const OUTCOME_STATUS: Record<AssemblyJobOutcome, Status> = {
     [AssemblyJobOutcome.FAILED]: Status.ERROR
 };
 
-export const TASK_LABEL: Record<AssemblyTaskAction, string> = {
-    [AssemblyTaskAction.INDEX]: "Index holes",
-    [AssemblyTaskAction.REMOVE]: "Remove replaced parts",
-    [AssemblyTaskAction.INSERT]: "Insert parts",
-    [AssemblyTaskAction.FASTEN]: "Fasten parts"
-};
+export function taskLabel(action: AssemblyTaskAction): string {
+    switch (action) {
+        case AssemblyTaskAction.INDEX:
+            return m.autoAssemblyTaskIndex();
+        case AssemblyTaskAction.REMOVE:
+            return m.autoAssemblyTaskRemove();
+        case AssemblyTaskAction.INSERT:
+            return m.autoAssemblyTaskInsert();
+        case AssemblyTaskAction.FASTEN:
+            return m.autoAssemblyTaskFasten();
+    }
+}
 
-const TASK_RUNNING: Record<AssemblyTaskAction, string> = {
-    [AssemblyTaskAction.INDEX]: "Indexing holes",
-    [AssemblyTaskAction.REMOVE]: "Removing replaced parts",
-    [AssemblyTaskAction.INSERT]: "Inserting parts",
-    [AssemblyTaskAction.FASTEN]: "Fastening parts"
-};
+function taskRunning(action: AssemblyTaskAction): string {
+    switch (action) {
+        case AssemblyTaskAction.INDEX:
+            return m.autoAssemblyTaskIndexRunning();
+        case AssemblyTaskAction.REMOVE:
+            return m.autoAssemblyTaskRemoveRunning();
+        case AssemblyTaskAction.INSERT:
+            return m.autoAssemblyTaskInsertRunning();
+        case AssemblyTaskAction.FASTEN:
+            return m.autoAssemblyTaskFastenRunning();
+    }
+}
 
-/** "Indexing holes", or whichever step is going. */
+/** "Indexing holes...", or whichever step is going. */
 export function runningHeadline(status: AssemblyJobStatus): string {
     const task = status.tasks?.find(
         (each) => each.state === AssemblyTaskState.RUNNING
     );
-    return task ? TASK_RUNNING[task.action] : "Inserting fasteners";
+    return task ? taskRunning(task.action) : m.autoAssemblyInserting();
 }
 
 /** "Inserted 12 parts", or how it stopped short. */
@@ -41,18 +53,21 @@ export function jobHeadline(
     status: AssemblyJobStatus,
     outcome: AssemblyJobOutcome
 ): string {
-    const inserted = `Inserted ${plural(status.result?.inserted ?? 0, "part")}`;
+    const count = status.result?.inserted ?? 0;
     const replaced = status.result?.replaced ?? 0;
-    const parts =
-        replaced > 0
-            ? `${inserted}, replacing ${plural(replaced, "screw")}`
-            : inserted;
     switch (outcome) {
         case AssemblyJobOutcome.SUCCESS:
-            return parts;
+            return replaced > 0
+                ? m.autoAssemblyInsertedReplacing({ count, replaced })
+                : m.autoAssemblyInserted({ count });
         case AssemblyJobOutcome.PARTIAL:
-            return `${parts} with problems`;
+            return replaced > 0
+                ? m.autoAssemblyInsertedReplacingWithProblems({
+                      count,
+                      replaced
+                  })
+                : m.autoAssemblyInsertedWithProblems({ count });
         case AssemblyJobOutcome.FAILED:
-            return "Couldn't insert fasteners";
+            return m.autoAssemblyFailed();
     }
 }

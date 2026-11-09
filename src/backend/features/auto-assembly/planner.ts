@@ -11,6 +11,7 @@
 import {
     type Catalog,
     type CatalogSize,
+    Program,
     getHead,
     getLengths,
     getNut,
@@ -99,6 +100,8 @@ interface PlanOptions extends FastenerOptions {
     catalog: Catalog;
 }
 
+const INCH = 0.0254;
+
 /** Two threads past a nut, so it's fully engaged. */
 const THREADS_PAST_NUT = 2;
 
@@ -176,15 +179,16 @@ function planHole(
     const stack = followStack(segments, first, size, options);
     const end = stack.end;
     const washers = chooseWashers(options, head.countersunk, end);
-    const screw = pickScrew(options, size, stack, washers);
-    if (typeof screw === "string") {
-        return plan({ status: HoleStatus.NO_FIT, reason: screw, end });
+    const picked = pickScrew(options, size, stack, washers);
+    if ("error" in picked) {
+        return plan({ status: HoleStatus.NO_FIT, reason: picked.error, end });
     }
     const planned: Omit<PlannedHole, "key"> = {
         status: HoleStatus.READY,
         end,
         depth: stack.depth,
-        screw,
+        screw: picked.screw,
+        ...(picked.warning ? { warning: picked.warning } : {}),
         ...(washers.start ? { screwWasher: washers.start } : {})
     };
 
@@ -196,9 +200,11 @@ function planHole(
         (edge) => Math.abs(edge.t - stack.depth) < LINEAR_TOLERANCE
     );
     if (!exitEdge) {
+        const noNut =
+            "No edge on the far side to fasten a nut to, so it gets no nut.";
         return plan({
             ...planned,
-            reason: "No edge on the far side to fasten a nut to."
+            warning: planned.warning ? `${planned.warning} ${noNut}` : noNut
         });
     }
     return {
@@ -410,13 +416,23 @@ function nutChoice(options: PlanOptions, end: HoleEnd): PartChoice | undefined {
     return end === HoleEnd.THROUGH ? options.nut : undefined;
 }
 
+/** A stack's screw, with what's off about it; or why it gets none. */
+type ScrewPick = { screw: ScrewChoice; warning?: string } | { error: string };
+
+/** A distance as a message gives it: inches for FRC, millimetres for FTC. */
+function formatDistance(meters: number, program: Program): string {
+    return program === Program.FTC
+        ? `${Number((meters * 1000).toFixed(1))} mm`
+        : `${Number((meters / INCH).toFixed(3))} in`;
+}
+
 /** The screw for a stack, or why there's none. */
 function pickScrew(
     options: PlanOptions,
     size: CatalogSize,
     stack: Stack,
     washers: Washers
-): ScrewChoice | string {
+): ScrewPick {
     const made = getLengths(
         options.catalog,
         options.screw.vendor,
@@ -425,18 +441,23 @@ function pickScrew(
         options.screw.finish
     );
     if (made.length === 0) {
-        return "The vendor doesn't make this head in this size.";
+        return { error: "The vendor doesn't make this head in this size." };
     }
-    // Where its tip is, for each length: a flat head's top is flush with the circular edge
-    const tip = (length: number) => length - washers.startThickness;
-    const lengths =
-        options.mode === FastenerMode.PRESET
-            ? made.filter((each) => each.id === options.screw.length)
-            : made.filter(
-                  (each) =>
-                      options.maxLength === undefined ||
-                      each.length <= options.maxLength + LINEAR_TOLERANCE
-              );
+    const isPreset = options.mode === FastenerMode.PRESET;
+    const lengths = isPreset
+        ? made.filter((each) => each.id === options.screw.length)
+        : made.filter(
+              (each) =>
+                  options.maxLength === undefined ||
+                  each.length <= options.maxLength + LINEAR_TOLERANCE
+          );
+    if (lengths.length === 0) {
+        return {
+            error: isPreset
+                ? "The vendor doesn't make this length in this size and head."
+                : "No screw is made within the maximum length."
+        };
+    }
     const choose = (lengthId: string): ScrewChoice => ({
         vendor: options.screw.vendor,
         size: size.id,
@@ -444,11 +465,12 @@ function pickScrew(
         finish: options.screw.finish,
         length: lengthId,
         // A preset's is chosen with its length; an automatic screw is partly threaded, the standard
-        fullyThreaded:
-            options.mode === FastenerMode.PRESET
-                ? options.screw.fullyThreaded
-                : "false"
+        fullyThreaded: isPreset ? options.screw.fullyThreaded : "false"
     });
+    const distance = (meters: number) =>
+        formatDistance(meters, options.program);
+    // Where its tip is, for each length: a flat head's top is flush with the circular edge
+    const tip = (length: number) => length - washers.startThickness;
 
     if (stack.end === HoleEnd.THROUGH) {
         const nut = nutChoice(options, stack.end);
@@ -463,49 +485,80 @@ function pickScrew(
                   nutHeight +
                   THREADS_PAST_NUT * size.pitch
                 : 0);
-        if (options.mode === FastenerMode.PRESET) {
-            return lengths.length > 0
-                ? choose(lengths[0].id)
-                : "The vendor doesn't make this length in this size and head.";
-        }
-        const shortest = lengths.find(
+        const reaching = lengths.find(
             (each) => tip(each.length) >= needed - LINEAR_TOLERANCE
         );
-        if (shortest) {
-            return choose(shortest.id);
+        if (reaching) {
+            return { screw: choose(reaching.id) };
         }
-        return options.maxLength !== undefined
-            ? "No screw reaches through within the maximum length."
-            : "No screw is long enough to reach through.";
+        const longest = lengths[lengths.length - 1];
+        const named = isPreset
+            ? `The ${longest.name} screw`
+            : options.maxLength !== undefined
+              ? `The longest screw within the maximum length, ${longest.name},`
+              : `The longest screw, ${longest.name},`;
+        return {
+            error: `${named} is ${distance(needed - tip(longest.length))} too short to reach through ${nut ? "the nut" : "the parts"}.`
+        };
     }
 
-    // Into threads, or the bottom of a blind hole: as far in as fits, short of the bottom
-    const isPreset = options.mode === FastenerMode.PRESET;
-    const bottom = stack.depth - (stack.last.closedFar ? size.pitch : 0);
+    // Into threads, or a blind hole: as far in as fits, short of a bottom if it has one
+    const bottom =
+        stack.end === HoleEnd.BLIND || stack.last.closedFar
+            ? stack.depth - size.pitch
+            : Infinity;
     // A preset is its own length, so only automatic stops at the maximum thread depth
-    const deepest = isPreset
-        ? bottom
-        : Math.min(bottom, stack.engagementStart + options.maxThreadDepth);
-    const engagement = Math.min(
-        stack.depth - stack.engagementStart,
-        MIN_ENGAGEMENT_DIAMETERS * size.majorDiameter,
-        isPreset ? Infinity : options.maxThreadDepth
-    );
-    const fitting = lengths.filter(
-        (each) =>
-            tip(each.length) <= deepest + LINEAR_TOLERANCE &&
-            tip(each.length) >=
-                stack.engagementStart + engagement - LINEAR_TOLERANCE
-    );
-    if (isPreset) {
-        return fitting.length > 0
-            ? choose(fitting[0].id)
-            : "The screw is too long or too short for this hole.";
+    const maxDepth = isPreset
+        ? Infinity
+        : stack.engagementStart + options.maxThreadDepth;
+    const deepest = Math.min(bottom, maxDepth);
+    const shallowest =
+        stack.engagementStart +
+        Math.min(
+            stack.depth - stack.engagementStart,
+            MIN_ENGAGEMENT_DIAMETERS * size.majorDiameter,
+            isPreset ? Infinity : options.maxThreadDepth
+        );
+    const over = (length: number) => Math.max(0, tip(length) - deepest);
+    const under = (length: number) => Math.max(0, shallowest - tip(length));
+    const fitsWithin = (limit: number) =>
+        lengths.filter(
+            (each) =>
+                tip(each.length) <= limit + LINEAR_TOLERANCE &&
+                under(each.length) <= LINEAR_TOLERANCE
+        );
+    // As deep as fits without coming out the far side; then, through threads, the shortest that comes out of it
+    const inside = fitsWithin(Math.min(stack.depth, deepest));
+    if (inside.length > 0) {
+        return { screw: choose(inside[inside.length - 1].id) };
     }
-    const longest = fitting[fitting.length - 1];
-    return longest
-        ? choose(longest.id)
-        : stack.end === HoleEnd.TAPPED
-          ? "No screw length engages the threads within the maximum thread depth without bottoming out."
-          : "No screw length fits the blind hole within the maximum thread depth.";
+    const [outside] = fitsWithin(deepest);
+    if (outside) {
+        return { screw: choose(outside.id) };
+    }
+
+    // None fits, so the one that misses by least, with a warning that says by how much
+    const closest = lengths.reduce((best, each) =>
+        over(each.length) + under(each.length) <
+        over(best.length) + under(best.length)
+            ? each
+            : best
+    );
+    const named = isPreset
+        ? `The ${closest.name} screw`
+        : `The closest screw, ${closest.name},`;
+    const tipAt = tip(closest.length);
+    let warning: string;
+    if (tipAt > bottom + LINEAR_TOLERANCE) {
+        warning = `${named} is ${distance(tipAt - bottom)} too long, so it bottoms out in the hole.`;
+    } else if (over(closest.length) > LINEAR_TOLERANCE) {
+        warning = `${named} goes ${distance(tipAt - maxDepth)} past the maximum thread depth.`;
+    } else {
+        const into = distance(Math.max(0, tipAt - stack.engagementStart));
+        warning =
+            stack.end === HoleEnd.TAPPED
+                ? `${named} is ${distance(under(closest.length))} too short: it goes only ${into} into the threads.`
+                : `${named} is ${distance(under(closest.length))} too short: it goes only ${into} into the hole.`;
+    }
+    return { screw: choose(closest.id), warning };
 }

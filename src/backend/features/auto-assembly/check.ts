@@ -3,7 +3,8 @@ import {
     HoleStatus,
     type PickCheckIn,
     type PickProblem,
-    type PlannedHole
+    type PlannedHole,
+    ProblemSeverity
 } from "./contract";
 import { type IndexedHoles } from "./index-holes";
 import { pickKey } from "./picked";
@@ -11,21 +12,38 @@ import { pickKey } from "./picked";
 const ALREADY_FASTENED =
     "A library screw is already in this hole. Pick it under Screws to replace to change it.";
 
-/** What's wrong with a hole's plan, if anything. */
-function holeProblem(planned: PlannedHole | undefined): string | undefined {
-    if (!planned || planned.status === HoleStatus.READY) {
+type Problem = Omit<PickProblem, "key">;
+
+const error = (message: string): Problem => ({
+    message,
+    severity: ProblemSeverity.ERROR
+});
+
+/** What's wrong with a hole's plan, if anything: an error where it won't be fastened, a warning where it will be, poorly. */
+function holeProblem(planned: PlannedHole | undefined): Problem | undefined {
+    if (!planned) {
         return undefined;
     }
-    return planned.status === HoleStatus.FASTENED
-        ? ALREADY_FASTENED
-        : (planned.reason ?? "This hole can't be fastened.");
+    switch (planned.status) {
+        case HoleStatus.READY:
+            return planned.warning
+                ? {
+                      message: planned.warning,
+                      severity: ProblemSeverity.WARNING
+                  }
+                : undefined;
+        case HoleStatus.FASTENED:
+            return error(ALREADY_FASTENED);
+        case HoleStatus.NO_FIT:
+            return error(planned.reason ?? "This hole can't be fastened.");
+    }
 }
 
-/** Every hole a pick gave must plan ready; a face says how many of its holes don't. */
+/** Every hole a pick gave must plan ready, without a warning; a face says how many of its holes don't, errors first. */
 function plannedProblem(
     edges: string[],
     plans: Map<string, PlannedHole> | undefined
-): string | undefined {
+): Problem | undefined {
     if (!plans) {
         return undefined;
     }
@@ -33,12 +51,21 @@ function plannedProblem(
         const problem = holeProblem(plans.get(edge));
         return problem ? [problem] : [];
     });
-    if (problems.length === 0) {
+    const errors = problems.filter(
+        (problem) => problem.severity === ProblemSeverity.ERROR
+    );
+    const worst = errors.length > 0 ? errors : problems;
+    if (worst.length === 0) {
         return undefined;
     }
-    return edges.length === 1
-        ? problems[0]
-        : `${problems.length} of ${edges.length} holes can't be fastened: ${problems[0]}`;
+    if (edges.length === 1) {
+        return worst[0];
+    }
+    const counted =
+        worst === errors
+            ? `${worst.length} of ${edges.length} holes can't be fastened`
+            : `${worst.length} of ${edges.length} holes have a warning`;
+    return { ...worst[0], message: `${counted}: ${worst[0].message}` };
 }
 
 /** Plans are left out when there are no options to plan with. */
@@ -56,15 +83,19 @@ export function pickProblems(
             (pick) => indexed.pickEdges[pickKey(pick)] ?? []
         )
     );
-    const problem = (key: string, message: string | undefined) =>
-        message ? [{ key, message }] : [];
+    const problem = (key: string, found: Problem | undefined) =>
+        found ? [{ key, ...found }] : [];
+    const unfoundProblem = (key: string) => {
+        const reason = unfound.get(key);
+        return reason === undefined ? undefined : error(reason);
+    };
 
     return [
         ...request.targets.flatMap((pick) => {
             const key = pickKey(pick);
             return problem(
                 key,
-                unfound.get(key) ??
+                unfoundProblem(key) ??
                     plannedProblem(indexed.pickEdges[key] ?? [], plans)
             );
         }),
@@ -75,17 +106,20 @@ export function pickProblems(
                 key,
                 edges.some((edge) => targetEdges.has(edge))
                     ? undefined
-                    : "Not a hole in the faces picked."
+                    : error("Not a hole in the faces picked.")
             );
         }),
         ...request.replaced.flatMap((pick) => {
             const key = pickKey(pick);
-            const reason = plannedProblem(indexed.pickEdges[key] ?? [], plans);
+            const planned = plannedProblem(indexed.pickEdges[key] ?? [], plans);
             return problem(
                 key,
-                unfound.get(key) ??
-                    (reason &&
-                        `Its hole can't be fastened again, so it stays: ${reason}`)
+                unfoundProblem(key) ??
+                    (planned?.severity === ProblemSeverity.ERROR
+                        ? error(
+                              `Its hole can't be fastened again, so it stays: ${planned.message}`
+                          )
+                        : planned)
             );
         })
     ];
