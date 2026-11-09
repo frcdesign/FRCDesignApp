@@ -414,4 +414,26 @@ describe("parseSelections", () => {
         ]);
         expect(parseSelections({ messageName: "SELECTION" })).toEqual([]);
     });
+
+    it("takes a part picked, which Onshape sends as a BODY selection with no entity type", () => {
+        expect(
+            parseSelections({
+                messageName: "REQUESTED_SELECTION",
+                selections: [
+                    {
+                        selectionType: "BODY",
+                        selectionId: "JHD",
+                        occurrencePath: ["MqPZYE6jkMIvygncF"],
+                        workspaceMicroversionId: "d387758a175b94d2bc97bee4"
+                    }
+                ]
+            })
+        ).toEqual([
+            {
+                entityType: "BODY",
+                selectionId: "JHD",
+                occurrencePath: ["MqPZYE6jkMIvygncF"]
+            }
+        ]);
+    });
 });

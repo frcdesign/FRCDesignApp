@@ -244,6 +244,19 @@ errors.
 - **A fasten mate** between two instances, neither of them fixed, tends to
   move the first onto the second — _observed_.
 
+## Selection messages
+
+What the panel's window messages say about what's picked, in `SELECTION` and
+`REQUESTED_SELECTION` messages (`parseSelections` in `src/frontend/lib/selection.ts`).
+
+- Each of `selections` names a `selectionType`. A face or edge is `ENTITY`,
+  with its `entityType`, `selectionId` and `occurrencePath`. _Observed._
+- A part, picked while the panel asks for solid bodies, is `BODY`, with a
+  `selectionId` and `occurrencePath` but no `entityType`, and a
+  `workspaceMicroversionId`. One message can name the same part twice.
+  _Observed._
+- A whole instance is `OCCURRENCE`. _Observed._
+
 ## Custom toolbar
 
 What Onshape's web client sends to change someone's custom toolbar, captured

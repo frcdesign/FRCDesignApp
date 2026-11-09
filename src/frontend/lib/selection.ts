@@ -52,8 +52,9 @@ function isStringArray(value: unknown): value is string[] {
 /**
  * The entities in a SELECTION message, which Onshape doesn't document: each
  * of its `selections` names a `selectionType`, and an entity also its
- * `entityType`, `selectionId` and `occurrencePath`. An `OCCURRENCE` (a whole
- * instance) and anything else is left out.
+ * `entityType`, `selectionId` and `occurrencePath`. A part is a `BODY`
+ * selection with no `entityType`, taken as a `BODY` entity. An `OCCURRENCE`
+ * (a whole instance) and anything else is left out.
  */
 export function parseSelections(data: unknown): OnshapeSelection[] {
     const selections = (data as { selections?: unknown }).selections;
@@ -62,9 +63,14 @@ export function parseSelections(data: unknown): OnshapeSelection[] {
     }
     return selections.flatMap((each: unknown) => {
         const entry = each as Record<string, unknown>;
+        const entityType =
+            entry.selectionType === "BODY"
+                ? SelectedEntityType.BODY
+                : entry.selectionType === "ENTITY"
+                  ? entry.entityType
+                  : undefined;
         if (
-            entry.selectionType !== "ENTITY" ||
-            typeof entry.entityType !== "string" ||
+            typeof entityType !== "string" ||
             typeof entry.selectionId !== "string" ||
             !isStringArray(entry.occurrencePath) ||
             entry.occurrencePath.length === 0
@@ -73,7 +79,7 @@ export function parseSelections(data: unknown): OnshapeSelection[] {
         }
         return [
             {
-                entityType: entry.entityType,
+                entityType,
                 selectionId: entry.selectionId,
                 occurrencePath: entry.occurrencePath
             }
