@@ -14,6 +14,7 @@ import {
     type AssemblyJobStatus,
     pendingTasks,
     type PickCheckOut,
+    SelectedEntityType,
     SelectionMode,
     StopCondition
 } from "./contract";
@@ -111,6 +112,22 @@ const assemblySchema = z.object({
     elementId: z.string().min(1)
 });
 
+/** A face to stop at goes with the Face stop condition, and only with it. */
+function hasStopFace(body: {
+    stopFace?: { entityType: SelectedEntityType };
+    options?: { stop: StopCondition };
+}): boolean {
+    if (!body.options) {
+        return true;
+    }
+    return body.options.stop === StopCondition.FACE
+        ? body.stopFace?.entityType === SelectedEntityType.FACE
+        : body.stopFace === undefined;
+}
+
+const STOP_FACE_MESSAGE =
+    "Select a face to stop at, with the Face stop condition.";
+
 const insertBody = z
     .object({
         assembly: assemblySchema,
@@ -118,9 +135,11 @@ const insertBody = z
         targets: z.array(entitySchema).max(MAX_SELECTIONS).default([]),
         excluded: z.array(entitySchema).max(MAX_SELECTIONS).default([]),
         replaced: z.array(entitySchema).max(MAX_SELECTIONS).default([]),
+        stopFace: entitySchema.optional(),
         options: optionsSchema
     })
     .refine(isConsistentPick, INCONSISTENT_PICK_MESSAGE)
+    .refine(hasStopFace, STOP_FACE_MESSAGE)
     .refine(
         (body) => body.targets.length > 0 || body.replaced.length > 0,
         "Select holes to fasten or screws to replace."
@@ -133,9 +152,11 @@ const checkBody = z
         targets: z.array(entitySchema).max(MAX_SELECTIONS).default([]),
         excluded: z.array(entitySchema).max(MAX_SELECTIONS).default([]),
         replaced: z.array(entitySchema).max(MAX_SELECTIONS).default([]),
+        stopFace: entitySchema.optional(),
         options: optionsSchema.optional()
     })
-    .refine(isConsistentPick, INCONSISTENT_PICK_MESSAGE);
+    .refine(isConsistentPick, INCONSISTENT_PICK_MESSAGE)
+    .refine(hasStopFace, STOP_FACE_MESSAGE);
 
 /**
  * POST /api/auto-assembly/check — what's wrong with each pick, found as a run
@@ -160,7 +181,8 @@ autoAssemblyRoutes.post(
             targets,
             excluded,
             set,
-            replaced
+            replaced,
+            request.stopFace
         );
         // Only parts the catalog makes can be planned with
         const canPlan =
@@ -174,7 +196,8 @@ autoAssemblyRoutes.post(
                   indexed.holes,
                   indexed.placed,
                   options,
-                  set.catalog
+                  set.catalog,
+                  indexed.stopPlane
               ).map((plan) => plan.planned)
             : undefined;
         return c.json({

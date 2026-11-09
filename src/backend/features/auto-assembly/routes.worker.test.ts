@@ -12,7 +12,8 @@ import {
     type AssemblyJobStatus,
     ProblemSeverity,
     SelectedEntityType,
-    SelectionMode
+    SelectionMode,
+    StopCondition
 } from "./contract";
 import { reportJob } from "./jobs";
 import * as IndexHoles from "./index-holes";
@@ -156,6 +157,35 @@ describe("POST /api/auto-assembly/insert", () => {
                 await post("/auto-assembly/insert", {
                     ...BODY,
                     excluded: BODY.targets
+                })
+            ).status
+        ).toBe(400);
+    });
+
+    it("takes a face to stop at only with the Face stop condition", async () => {
+        publish();
+        const stopFace = {
+            ...BODY.targets[0],
+            entityType: SelectedEntityType.FACE
+        };
+        const atFace = { ...BODY.options, stop: StopCondition.FACE };
+        const missing = await post("/auto-assembly/insert", {
+            ...BODY,
+            options: atFace
+        });
+        expect(missing.status).toBe(400);
+        expect(JSON.stringify(await missing.json())).toContain(
+            "Select a face to stop at"
+        );
+        expect(
+            (await post("/auto-assembly/insert", { ...BODY, stopFace })).status
+        ).toBe(400);
+        expect(
+            (
+                await post("/auto-assembly/insert", {
+                    ...BODY,
+                    options: atFace,
+                    stopFace: BODY.targets[0]
                 })
             ).status
         ).toBe(400);

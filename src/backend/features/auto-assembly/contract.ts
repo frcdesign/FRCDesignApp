@@ -15,7 +15,9 @@ export enum StopCondition {
     /** Through every hole on the axis, gaps and all. */
     ALL_HOLES = "all-holes",
     /** At the first gap between parts wider than the maximum gap. */
-    FIRST_GAP = "first-gap"
+    FIRST_GAP = "first-gap",
+    /** At a planar face picked to stop at (`stopFace`), where each hole's axis meets it. */
+    FACE = "face"
 }
 
 /** Inches, so the defaults read as the round numbers they are. */
@@ -74,6 +76,8 @@ export interface AutoAssemblyIn {
     excluded: SelectedEntity[];
     /** Picks on library screws to take out, with their washers and nuts, and fasten again. */
     replaced: SelectedEntity[];
+    /** The planar face `StopCondition.FACE` stops at; only with it. */
+    stopFace?: SelectedEntity;
     options: FastenerOptions;
 }
 
@@ -84,6 +88,7 @@ export interface PickCheckIn {
     targets: SelectedEntity[];
     excluded: SelectedEntity[];
     replaced: SelectedEntity[];
+    stopFace?: SelectedEntity;
     options?: FastenerOptions;
 }
 
@@ -110,7 +115,8 @@ export interface PickCheckOut {
 export enum PickList {
     TARGETS = "targets",
     EXCLUDED = "excluded",
-    REPLACED = "replaced"
+    REPLACED = "replaced",
+    STOP_FACE = "stop-face"
 }
 
 /** A pick a run was given, with its problem, as the check would have marked it. */

@@ -18,6 +18,12 @@ import {
     StudioInput
 } from "@backend/features/auto-assembly/studios";
 import { ParameterInput } from "../../../components/parameter-input";
+import { QueryList, type RowProblem } from "../../../components/query-list";
+import { PLANAR_FACES } from "../../../lib/messages";
+import {
+    isFace as isFaceSelection,
+    type OnshapeSelection
+} from "../../../lib/selection";
 import { StatusColor } from "../../../lib/style-constants";
 import { Part, PART_KIND, type SettledChoices } from "../options";
 import {
@@ -52,6 +58,8 @@ export function FormInputRow(props: FormInputRowProps): ReactNode {
 
 interface FastenerOptionsFormProps {
     settled: SettledChoices;
+    /** A pick's problem, from the background check, for the face to stop at. */
+    problem: (entity: OnshapeSelection) => RowProblem | undefined;
 }
 
 /**
@@ -61,7 +69,7 @@ interface FastenerOptionsFormProps {
 export function FastenerOptionsForm(
     props: FastenerOptionsFormProps
 ): ReactNode {
-    const { settled } = props;
+    const { settled, problem } = props;
     const isFtc = settled.form[FormInput.PROGRAM] === Program.FTC;
 
     return (
@@ -100,7 +108,7 @@ export function FastenerOptionsForm(
                         />
                     )}
                     {settled.mode === FastenerMode.AUTOMATIC && (
-                        <StopInputs settled={settled} />
+                        <StopInputs settled={settled} problem={problem} />
                     )}
                 </>
             )}
@@ -242,18 +250,36 @@ function PartGroup(props: PartGroupProps): ReactNode {
 
 interface StopInputsProps {
     settled: SettledChoices;
+    problem: (entity: OnshapeSelection) => RowProblem | undefined;
 }
 
 /** Where an automatic screw stops, how long it may be, and how deep into threads it goes. */
 function StopInputs(props: StopInputsProps): ReactNode {
-    const { settled } = props;
+    const { settled, problem } = props;
+    const stopFace = useAutoAssemblyStore((state) => state.stopFace);
+    const setStopFace = useAutoAssemblyStore((state) => state.setStopFace);
     const isFirstGap = settled.form[FormInput.STOP] === StopCondition.FIRST_GAP;
+    const isFace = settled.form[FormInput.STOP] === StopCondition.FACE;
     const isLimited = settled.form[FormInput.LIMIT_LENGTH] === "true";
     return (
         <>
             <FormInputRow id={FormInput.STOP} settled={settled} />
             {isFirstGap && (
                 <FormInputRow id={FormInput.MAX_GAP} settled={settled} />
+            )}
+            {isFace && (
+                <FullWidthRow>
+                    <QueryList
+                        id="auto-assembly-stop-face"
+                        label={m.autoAssemblyStopFaceList()}
+                        prompt={m.autoAssemblyStopFacePrompt()}
+                        entities={stopFace}
+                        onChange={setStopFace}
+                        accepts={isFaceSelection}
+                        filter={PLANAR_FACES}
+                        problem={problem}
+                    />
+                </FullWidthRow>
             )}
             <FormInputRow id={FormInput.LIMIT_LENGTH} settled={settled} />
             {isLimited && (

@@ -18,6 +18,7 @@ import {
 } from "./planner";
 import {
     type ScannedCircularEdge,
+    type ScannedPlane,
     type ScannedHole,
     type StudioSelection,
     type StudioSource
@@ -195,22 +196,30 @@ export function placedScrews(
 /** What's picked in each studio, by its source's key. */
 export function selectionsByStudio(
     entities: SelectedEntity[],
-    occurrences: Map<string, PartOccurrence>
+    occurrences: Map<string, PartOccurrence>,
+    /** Planar faces to stop at, scanned for their planes. */
+    planes: SelectedEntity[] = []
 ): Map<string, StudioSelection> {
     const selections = new Map<string, StudioSelection>();
-    for (const entity of entities) {
+    const picks = [
+        ...entities.map((entity) => ({ entity, isPlane: false })),
+        ...planes.map((entity) => ({ entity, isPlane: true }))
+    ];
+    for (const { entity, isPlane } of picks) {
         const occurrence = occurrences.get(pathKey(entity.occurrencePath));
         if (!occurrence) {
             continue;
         }
         const selection = selections.get(occurrence.source.key) ?? {
             edges: [],
-            faces: []
+            faces: [],
+            planes: []
         };
-        const ids =
-            entity.entityType === SelectedEntityType.EDGE
-                ? selection.edges
-                : selection.faces;
+        const ids = isPlane
+            ? selection.planes
+            : entity.entityType === SelectedEntityType.EDGE
+              ? selection.edges
+              : selection.faces;
         if (!ids.includes(entity.entityId)) {
             ids.push(entity.entityId);
         }
@@ -261,6 +270,32 @@ export function toAssemblyCircularEdges(
         }
     }
     return circularEdges;
+}
+
+/** A plane in the assembly: a point on it and its unit normal. */
+export interface AssemblyPlane {
+    point: Vec3;
+    normal: Vec3;
+}
+
+/** The plane of a planar face picked to stop at, moved into the assembly; none when its scan found none. */
+export function toAssemblyPlane(
+    scanned: ScannedPlane[],
+    entity: SelectedEntity,
+    occurrences: Map<string, PartOccurrence>
+): AssemblyPlane | undefined {
+    const occurrence = occurrences.get(pathKey(entity.occurrencePath));
+    const plane = scanned.find(
+        (each) =>
+            each.id === entity.entityId && each.partId === occurrence?.partId
+    );
+    if (!occurrence || !plane) {
+        return undefined;
+    }
+    return {
+        point: transformPoint(occurrence.transform, plane.origin),
+        normal: transformDirection(occurrence.transform, plane.normal)
+    };
 }
 
 /** A part's holes, moved into the assembly. */

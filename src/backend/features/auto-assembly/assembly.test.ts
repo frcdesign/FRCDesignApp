@@ -7,6 +7,7 @@ import {
     selectionsByStudio,
     toAssemblyCircularEdges,
     toAssemblyHoles,
+    toAssemblyPlane,
     withoutExcluded
 } from "./assembly";
 import { SelectedEntityType } from "./contract";
@@ -129,7 +130,10 @@ describe("partOccurrences", () => {
         ];
         expect(selectionsByStudio(picked, byPath)).toEqual(
             new Map([
-                ["doc|e|emv|studio|default", { edges: ["E1"], faces: [] }]
+                [
+                    "doc|e|emv|studio|default",
+                    { edges: ["E1"], faces: [], planes: [] }
+                ]
             ])
         );
         const [circularEdge] = toAssemblyCircularEdges(
@@ -147,6 +151,33 @@ describe("partOccurrences", () => {
         );
         expect(circularEdge.key).toBe("plate|E1");
         expect(circularEdge.center).toEqual([0, 0, 1]);
+
+        const stopFace = {
+            ...picked[0],
+            entityId: "P1",
+            entityType: SelectedEntityType.FACE
+        };
+        expect(selectionsByStudio([], byPath, [stopFace])).toEqual(
+            new Map([
+                [
+                    "doc|e|emv|studio|default",
+                    { edges: [], faces: [], planes: ["P1"] }
+                ]
+            ])
+        );
+        const plane = {
+            id: "P1",
+            partId: "JHD",
+            origin: [0, 0, 0.01] as [number, number, number],
+            normal: [0, 0, 1] as [number, number, number]
+        };
+        expect(toAssemblyPlane([plane], stopFace, byPath)).toEqual({
+            point: [0, 0, 1.01],
+            normal: [0, 0, 1]
+        });
+        expect(
+            toAssemblyPlane([{ ...plane, partId: "other" }], stopFace, byPath)
+        ).toBeUndefined();
     });
 
     it("finds the screws already placed", () => {

@@ -12,6 +12,8 @@ interface AutoAssemblyState extends Choices {
     excluded: OnshapeSelection[];
     /** Screws to take out and fasten again. */
     replaced: OnshapeSelection[];
+    /** The planar face the Face stop condition stops at: one at most. */
+    stopFace: OnshapeSelection[];
     setForm: (id: FormInput, value: string) => void;
     setMode: (mode: FastenerMode) => void;
     setScrew: (id: string, value: string) => void;
@@ -20,6 +22,7 @@ interface AutoAssemblyState extends Choices {
     setTargets: (targets: OnshapeSelection[]) => void;
     setExcluded: (excluded: OnshapeSelection[]) => void;
     setReplaced: (replaced: OnshapeSelection[]) => void;
+    setStopFace: (stopFace: OnshapeSelection[]) => void;
 }
 
 /** Every part from a vendor; each settles back to one making it. */
@@ -42,6 +45,7 @@ export const useAutoAssemblyStore = create<AutoAssemblyState>()(
             targets: [],
             excluded: [],
             replaced: [],
+            stopFace: [],
             setForm: (id, value) =>
                 set((state) => ({
                     form: { ...state.form, [id]: value },
@@ -70,7 +74,9 @@ export const useAutoAssemblyStore = create<AutoAssemblyState>()(
                 set((state) => ({ added: { ...state.added, [part]: added } })),
             setTargets: (targets) => set({ targets }),
             setExcluded: (excluded) => set({ excluded }),
-            setReplaced: (replaced) => set({ replaced })
+            setReplaced: (replaced) => set({ replaced }),
+            // A new pick takes the old one's place
+            setStopFace: (stopFace) => set({ stopFace: stopFace.slice(-1) })
         }),
         {
             name: "autoAssembly",

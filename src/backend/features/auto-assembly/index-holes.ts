@@ -6,6 +6,7 @@ import { getElements } from "../../lib/onshape/endpoints/documents";
 import { type ElementPath } from "../../lib/onshape/path";
 import { OnshapeElementType } from "../../lib/onshape/types";
 import {
+    type AssemblyPlane,
     type ElementMicroversions,
     isFromStudio,
     isLocal,
@@ -16,6 +17,7 @@ import {
     selectionsByStudio,
     toAssemblyCircularEdges,
     toAssemblyHoles,
+    toAssemblyPlane,
     withoutExcluded,
     type PartOccurrence
 } from "./assembly";
@@ -48,6 +50,10 @@ export interface IndexedHoles {
     replacements: Replacement[];
     /** The circular edges' keys each pick gave, by `pickKey`; none for one in `unfound`. */
     pickEdges: Record<string, string[]>;
+    /** The plane of the face picked to stop at, in the assembly. */
+    stopPlane?: AssemblyPlane;
+    /** Why the face picked to stop at gave no plane. */
+    stopFaceProblem?: string;
 }
 
 function isFastener(
@@ -91,7 +97,9 @@ export async function indexHoles(
     // Fasteners already placed, which have no holes to fasten through; none before the library loads them
     fasteners: FastenerSet | undefined,
     /** Picks on screws whose stacks are taken out and their holes planned again. */
-    replaced: SelectedEntity[] = []
+    replaced: SelectedEntity[] = [],
+    /** The planar face to stop at, scanned for its plane. */
+    stopFace?: SelectedEntity
 ): Promise<IndexedHoles> {
     const definition = await getAssembly(client, assembly, {
         excludeSuppressed: true
@@ -118,11 +126,17 @@ export async function indexHoles(
         (occurrence) =>
             !occurrence.isStandardContent && !isFastener(occurrence, fasteners)
     );
-    const selections = selectionsByStudio([...targets, ...excluded], byPath);
+    const stopFaces = stopFace ? [stopFace] : [];
+    const selections = selectionsByStudio(
+        [...targets, ...excluded],
+        byPath,
+        stopFaces
+    );
     const sources = new Map(
-        [...scanned, ...byPathValues(byPath, [...targets, ...excluded])].map(
-            (occurrence) => [occurrence.source.key, occurrence.source]
-        )
+        [
+            ...scanned,
+            ...byPathValues(byPath, [...targets, ...excluded, ...stopFaces])
+        ].map((occurrence) => [occurrence.source.key, occurrence.source])
     );
 
     const limit = createLimiter(SCAN_CONCURRENCY);
@@ -131,7 +145,8 @@ export async function indexHoles(
             [...sources].map(async ([key, source]) => {
                 const selection = selections.get(key) ?? {
                     edges: [],
-                    faces: []
+                    faces: [],
+                    planes: []
                 };
                 const scan = await limit(() =>
                     scanStudio(client, kv, source, selection)
@@ -250,6 +265,23 @@ export async function indexHoles(
                 .map((part) => part.path[0])
         };
     });
+    const stopOccurrence =
+        stopFace && byPath.get(pathKey(stopFace.occurrencePath));
+    const stopPlane =
+        stopFace &&
+        stopOccurrence &&
+        toAssemblyPlane(
+            scans.get(stopOccurrence.source.key)?.planes ?? [],
+            stopFace,
+            byPath
+        );
+    const stopFaceProblem = !stopFace
+        ? undefined
+        : !stopOccurrence
+          ? "Couldn't find this part in the assembly."
+          : !stopPlane
+            ? "Not a planar face."
+            : undefined;
     const picked = withoutExcluded(
         circularEdgesOf(targets),
         circularEdgesOf(excluded)
@@ -273,7 +305,9 @@ export async function indexHoles(
             fasteners?.studios[FastenerKind.SCREW].location
         ),
         replacements,
-        pickEdges
+        pickEdges,
+        ...(stopPlane ? { stopPlane } : {}),
+        ...(stopFaceProblem ? { stopFaceProblem } : {})
     };
 }
 

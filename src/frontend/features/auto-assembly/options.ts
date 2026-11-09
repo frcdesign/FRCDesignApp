@@ -18,7 +18,7 @@ import {
     FastenerMode,
     type FastenerOptions,
     type SelectionMode,
-    type StopCondition
+    StopCondition
 } from "@backend/features/auto-assembly/contract";
 import {
     FastenerKind,
@@ -155,7 +155,11 @@ export function fastenerOptions(settled: SettledChoices): FastenerOptions {
         screwWasher: part(Part.SCREW_WASHER),
         nut: part(Part.NUT),
         nutWasher: part(Part.NUT_WASHER),
-        stop: form[FormInput.STOP] as StopCondition,
+        // The form asks for a stop condition only for an automatic screw
+        stop:
+            settled.mode === FastenerMode.AUTOMATIC
+                ? (form[FormInput.STOP] as StopCondition)
+                : StopCondition.ALL_HOLES,
         maxLength:
             form[FormInput.LIMIT_LENGTH] === "true"
                 ? metres(form, FormInput.MAX_LENGTH)

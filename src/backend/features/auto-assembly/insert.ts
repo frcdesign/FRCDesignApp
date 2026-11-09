@@ -240,7 +240,8 @@ export async function washerTopEdges(
         if (!byConfiguration.has(source.key)) {
             const scan = await scanStudio(client, kv, source, {
                 edges: [],
-                faces: []
+                faces: [],
+                planes: []
             });
             byConfiguration.set(source.key, washerTopEdge(scan.parts));
         }

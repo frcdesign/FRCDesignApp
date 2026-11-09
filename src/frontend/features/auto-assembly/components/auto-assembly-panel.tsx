@@ -5,8 +5,10 @@ import { Program } from "@backend/features/auto-assembly/catalog";
 import {
     AssemblyJobState,
     type AutoAssemblyIn,
+    FastenerMode,
     type PickCheckIn,
-    SelectionMode
+    SelectionMode,
+    StopCondition
 } from "@backend/features/auto-assembly/contract";
 import { type FastenerSet } from "@backend/features/auto-assembly/studios";
 import { type ElementPath } from "@backend/lib/onshape/path";
@@ -96,6 +98,7 @@ function AutoAssemblyForm(props: AutoAssemblyFormProps): ReactNode {
     const targets = useAutoAssemblyStore((state) => state.targets);
     const excluded = useAutoAssemblyStore((state) => state.excluded);
     const replaced = useAutoAssemblyStore((state) => state.replaced);
+    const stopFace = useAutoAssemblyStore((state) => state.stopFace);
     const setTargets = useAutoAssemblyStore((state) => state.setTargets);
     const setExcluded = useAutoAssemblyStore((state) => state.setExcluded);
     const setReplaced = useAutoAssemblyStore((state) => state.setReplaced);
@@ -105,14 +108,20 @@ function AutoAssemblyForm(props: AutoAssemblyFormProps): ReactNode {
     const mode = selectionMode(settled);
     const isFaces = mode === SelectionMode.FACES;
     const isScrews = mode === SelectionMode.SCREWS;
-    // Only the lists Select by shows
+    const isStopFace =
+        settled.mode === FastenerMode.AUTOMATIC &&
+        settled.form[FormInput.STOP] === StopCondition.FACE;
+    // Only the lists showing
     const picks = useMemo(
         () => ({
             targets: isScrews ? [] : toSelectedEntities(targets),
             excluded: isFaces ? toSelectedEntities(excluded) : [],
-            replaced: isScrews ? toSelectedEntities(replaced) : []
+            replaced: isScrews ? toSelectedEntities(replaced) : [],
+            ...(isStopFace && stopFace.length > 0
+                ? { stopFace: toSelectedEntities(stopFace)[0] }
+                : {})
         }),
-        [isFaces, isScrews, targets, excluded, replaced]
+        [isFaces, isScrews, isStopFace, targets, excluded, replaced, stopFace]
     );
     const pickCount =
         picks.targets.length + picks.excluded.length + picks.replaced.length;
@@ -155,7 +164,7 @@ function AutoAssemblyForm(props: AutoAssemblyFormProps): ReactNode {
         <Stack gap="md" p="md">
             <LastRunCallout assembly={assembly} />
             <ParameterGrid>
-                <FastenerOptionsForm settled={settled} />
+                <FastenerOptionsForm settled={settled} problem={problem} />
                 <ParameterGroup title={m.autoAssemblySelections()}>
                     <FormInputRow id={FormInput.SELECT_BY} settled={settled} />
                     {mode === SelectionMode.FACES && (
@@ -226,6 +235,7 @@ function AutoAssemblyForm(props: AutoAssemblyFormProps): ReactNode {
                 disabled={
                     isFtc ||
                     picks.targets.length + picks.replaced.length === 0 ||
+                    (isStopFace && !picks.stopFace) ||
                     isRunning ||
                     insertMutation.isPending
                 }

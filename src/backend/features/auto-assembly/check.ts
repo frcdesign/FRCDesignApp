@@ -70,7 +70,10 @@ function plannedProblem(
 
 /** Plans are left out when there are no options to plan with. */
 export function pickProblems(
-    request: Pick<PickCheckIn, "targets" | "excluded" | "replaced">,
+    request: Pick<
+        PickCheckIn,
+        "targets" | "excluded" | "replaced" | "stopFace"
+    >,
     indexed: IndexedHoles,
     planned?: PlannedHole[]
 ): PickProblem[] {
@@ -109,6 +112,14 @@ export function pickProblems(
                     : error("Not a hole in the faces picked.")
             );
         }),
+        ...(request.stopFace
+            ? problem(
+                  pickKey(request.stopFace),
+                  indexed.stopFaceProblem === undefined
+                      ? undefined
+                      : error(indexed.stopFaceProblem)
+              )
+            : []),
         ...request.replaced.flatMap((pick) => {
             const key = pickKey(pick);
             const planned = plannedProblem(indexed.pickEdges[key] ?? [], plans);

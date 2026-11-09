@@ -221,6 +221,8 @@ function listLabel(list: PickList, picks: RunPick[]): string {
             return m.autoAssemblyEdgesToExclude();
         case PickList.REPLACED:
             return m.autoAssemblyScrewsToReplace();
+        case PickList.STOP_FACE:
+            return m.autoAssemblyStopFaceList();
     }
 }
 

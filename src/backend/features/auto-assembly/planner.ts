@@ -27,6 +27,7 @@ import {
     StopCondition
 } from "./contract";
 import { type PartChoice, type ScrewChoice } from "./studios";
+import { type AssemblyPlane } from "./assembly";
 import {
     add,
     distanceToLine,
@@ -95,9 +96,10 @@ interface Segment {
     edges: { id: string; t: number }[];
 }
 
-/** The run's options, with the catalog the parts come from. */
+/** The run's options, with the catalog the parts come from, and the plane `StopCondition.FACE` stops at. */
 interface PlanOptions extends FastenerOptions {
     catalog: Catalog;
+    stopPlane?: AssemblyPlane;
 }
 
 const INCH = 0.0254;
@@ -116,10 +118,15 @@ export function planHoles(
     holes: AssemblyHole[],
     placed: PlacedScrew[],
     options: FastenerOptions,
-    catalog: Catalog
+    catalog: Catalog,
+    stopPlane?: AssemblyPlane
 ): HolePlan[] {
     return circularEdges.map((circularEdge) =>
-        planHole(circularEdge, holes, placed, { ...options, catalog })
+        planHole(circularEdge, holes, placed, {
+            ...options,
+            catalog,
+            stopPlane
+        })
     );
 }
 
@@ -176,7 +183,22 @@ function planHole(
         });
     }
 
-    const stack = followStack(segments, first, size, options);
+    // Where the axis meets the face to stop at, along it from the circular edge
+    let stopAt: number | undefined;
+    if (options.stop === StopCondition.FACE) {
+        stopAt =
+            options.stopPlane &&
+            meetsPlane(circularEdge, into, options.stopPlane);
+        if (stopAt === undefined || stopAt <= LINEAR_TOLERANCE) {
+            return plan({
+                status: HoleStatus.NO_FIT,
+                reason: options.stopPlane
+                    ? "The face to stop at isn't past this hole along its axis."
+                    : "Select a face to stop at."
+            });
+        }
+    }
+    const stack = followStack(segments, first, size, options, stopAt);
     const end = stack.end;
     const washers = chooseWashers(options, head.countersunk, end);
     const picked = pickScrew(options, size, stack, washers);
@@ -302,13 +324,34 @@ function longestLength(options: PlanOptions): number {
     return lengths.length > 0 ? lengths[lengths.length - 1].length : 0;
 }
 
-/** The deepest a stack is followed, and the widest gap it reaches across. */
-function stopLimits(options: PlanOptions): {
+/** How far along the axis from the circular edge it meets the plane; none when it runs along it. */
+function meetsPlane(
+    circularEdge: AssemblyCircularEdge,
+    into: Vec3,
+    plane: AssemblyPlane
+): number | undefined {
+    const along = dot(into, plane.normal);
+    if (Math.abs(along) < 1e-9) {
+        return undefined;
+    }
+    return (
+        (dot(plane.point, plane.normal) -
+            dot(circularEdge.center, plane.normal)) /
+        along
+    );
+}
+
+/** The deepest a stack is followed, and the widest gap it reaches across: to the face to stop at, if any. */
+function stopLimits(
+    options: PlanOptions,
+    stopAt: number | undefined
+): {
     reach: number;
     gap: number;
 } {
+    const longest = options.maxLength ?? longestLength(options);
     return {
-        reach: options.maxLength ?? longestLength(options),
+        reach: stopAt === undefined ? longest : Math.min(stopAt, longest),
         gap:
             options.stop === StopCondition.FIRST_GAP ? options.maxGap : Infinity
     };
@@ -328,9 +371,10 @@ function followStack(
     segments: Segment[],
     first: Segment,
     size: CatalogSize,
-    options: PlanOptions
+    options: PlanOptions,
+    stopAt: number | undefined
 ): Stack {
-    const limits = stopLimits(options);
+    const limits = stopLimits(options, stopAt);
     let reach = first.far;
     let last = first;
     if (first.closedFar) {
@@ -348,7 +392,7 @@ function followStack(
         const gap = segment.near - reach;
         if (
             gap > limits.gap + LINEAR_TOLERANCE ||
-            segment.near > limits.reach
+            segment.near > limits.reach - LINEAR_TOLERANCE
         ) {
             break;
         }

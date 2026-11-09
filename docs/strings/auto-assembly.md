@@ -28,7 +28,9 @@ page shows them as they come.
 | "FTC fasteners aren't available yet."                                 | Note                   | In place of the Fastener group's rows | FTC chosen                                                     | **⚑** FTC's are now released  |
 | "Sizing" / "Automatic" / "Manual"                                     | Dropdown, options      | Fastener group                        | Always                                                         |                               |
 | "Add screw washer" / "Add nut" / "Add nut washer"                     | Group titles, checkbox | Under the Fastener group              | Screw washer not under a flat head; nut washer only with a nut |                               |
-| "Stop condition" / "All holes" / "First gap"                          | Dropdown, options      | Last group                            | Automatic sizing                                               |                               |
+| "Stop condition" / "All holes" / "First gap" / "Face"                 | Dropdown, options      | Last group                            | Automatic sizing                                               | **⚑** Face is new             |
+| "Face to stop at"                                                     | Query list label       | Last group, under Stop condition      | The Face stop condition                                        | **⚑** New                     |
+| "Select a planar face to stop at."                                    | Prompt                 | Onshape's message bubble              | Face to stop at focused, or something else picked              | **⚑** New                     |
 | "Limit screw length"                                                  | Checkbox               | Last group                            | Automatic sizing                                               |                               |
 | "Max length" / "Max gap to ignore" / "Max thread depth"               | Length inputs          | Last group                            | Automatic sizing; Max gap with First gap                       |                               |
 | "Selections"                                                          | Section title          | Last                                  | Always                                                         |                               |
@@ -59,7 +61,7 @@ page shows them as they come.
 | "Index holes" / "Remove replaced parts" / "Insert parts" / "Fasten parts"                           | Step names                   | Details                        | Always                                                                     |                                 |
 | "{n} pick(s) has/have problems."                                                                    | Step warning                 | Under Index holes, in Details  | A pick has an error or a warning                                           | **⚑** New                       |
 | "{n} of {m} parts weren't fastened, so they sit unmated."                                           | Step warning                 | Under Fasten parts, in Details | Fewer parts fastened than inserted                                         | **⚑** New                       |
-| "Faces" / "Circular edges" / "Edges to exclude" / "Screws to replace"                               | Group labels                 | Details, under the steps       | The run had picks in that list                                             | **⚑** New                       |
+| "Faces" / "Circular edges" / "Edges to exclude" / "Screws to replace" / "Face to stop at"           | Group labels                 | Details, under the steps       | The run had picks in that list                                             | **⚑** New                       |
 
 ## A pick's problem
 
@@ -80,42 +82,46 @@ picks are checked, and in the run's details for the picks it was given.
 | "This screw is in a subassembly, which Auto Assembly doesn't change."         | Error    | A screw to replace in a subassembly                  |           |
 | "Couldn't find the hole this screw is in."                                    | Error    | A screw to replace on no hole                        |           |
 | "This hole can't be fastened."                                                | Error    | A hole with an error and no reason                   |           |
+| "Not a planar face."                                                          | Error    | A face to stop at that isn't planar                  | **⚑** New |
 
 A hole's own problem, written by the planner, follows. A preset length names
 itself, "The {length} screw"; automatic, the length it chose.
 
-| String                                                                                                                         | Severity | When                                                          | Review                        |
-| ------------------------------------------------------------------------------------------------------------------------------ | -------- | ------------------------------------------------------------- | ----------------------------- |
-| "The head isn't made in this size."                                                                                            | Error    | The head has no dimensions in the size                        |                               |
-| "No hole goes into the part from this circular edge."                                                                          | Error    | Nothing under the circular edge                               |                               |
-| "The hole is too small for a {size} screw."                                                                                    | Error    | The hole is narrower than the screw                           |                               |
-| "The vendor doesn't make this head in this size."                                                                              | Error    | No lengths in the size, head and finish                       |                               |
-| "The vendor doesn't make this length in this size and head."                                                                   | Error    | A preset length the vendor doesn't make                       |                               |
-| "No screw is made within the maximum length."                                                                                  | Error    | Every length is over the maximum length                       | **⚑** New                     |
-| "The longest screw[ within the maximum length], {length}, is {distance} too short to reach through the nut." / "...the parts." | Error    | Out the far side, no length reaches                           | **⚑** New, names the length   |
-| "The {length} screw is {distance} too short to reach through the nut." / "...the parts."                                       | Error    | Out the far side, a preset length doesn't reach               | **⚑** New: was inserted short |
-| "The closest screw, {length}, is {distance} too long, so it bottoms out in the hole."                                          | Warning  | Into a hole with a bottom, every length goes too deep         | **⚑** New                     |
-| "The closest screw, {length}, goes {distance} past the maximum thread depth."                                                  | Warning  | Into threads, every length goes past the maximum thread depth | **⚑** New                     |
-| "The closest screw, {length}, is {distance} too short: it goes only {distance} into the threads."                              | Warning  | Into threads, no length engages a diameter of thread          | **⚑** New                     |
-| "The closest screw, {length}, is {distance} too short: it goes only {distance} into the hole."                                 | Warning  | Into a blind hole, likewise                                   | **⚑** New                     |
-| "No edge on the far side to fasten a nut to, so it gets no nut."                                                               | Warning  | Out the far side, but no edge there                           | **⚑** Reworded, now a warning |
+| String                                                                                                                         | Severity | When                                                                     | Review                        |
+| ------------------------------------------------------------------------------------------------------------------------------ | -------- | ------------------------------------------------------------------------ | ----------------------------- |
+| "The head isn't made in this size."                                                                                            | Error    | The head has no dimensions in the size                                   |                               |
+| "No hole goes into the part from this circular edge."                                                                          | Error    | Nothing under the circular edge                                          |                               |
+| "The hole is too small for a {size} screw."                                                                                    | Error    | The hole is narrower than the screw                                      |                               |
+| "The vendor doesn't make this head in this size."                                                                              | Error    | No lengths in the size, head and finish                                  |                               |
+| "The vendor doesn't make this length in this size and head."                                                                   | Error    | A preset length the vendor doesn't make                                  |                               |
+| "No screw is made within the maximum length."                                                                                  | Error    | Every length is over the maximum length                                  | **⚑** New                     |
+| "The longest screw[ within the maximum length], {length}, is {distance} too short to reach through the nut." / "...the parts." | Error    | Out the far side, no length reaches                                      | **⚑** New, names the length   |
+| "The {length} screw is {distance} too short to reach through the nut." / "...the parts."                                       | Error    | Out the far side, a preset length doesn't reach                          | **⚑** New: was inserted short |
+| "The closest screw, {length}, is {distance} too long, so it bottoms out in the hole."                                          | Warning  | Into a hole with a bottom, every length goes too deep                    | **⚑** New                     |
+| "The closest screw, {length}, goes {distance} past the maximum thread depth."                                                  | Warning  | Into threads, every length goes past the maximum thread depth            | **⚑** New                     |
+| "The closest screw, {length}, is {distance} too short: it goes only {distance} into the threads."                              | Warning  | Into threads, no length engages a diameter of thread                     | **⚑** New                     |
+| "The closest screw, {length}, is {distance} too short: it goes only {distance} into the hole."                                 | Warning  | Into a blind hole, likewise                                              | **⚑** New                     |
+| "No edge on the far side to fasten a nut to, so it gets no nut."                                                               | Warning  | Out the far side, but no edge there                                      | **⚑** Reworded, now a warning |
+| "The face to stop at isn't past this hole along its axis."                                                                     | Error    | The Face stop condition, with the face behind the hole or along its axis | **⚑** New                     |
+| "Select a face to stop at."                                                                                                    | Error    | The face to stop at gave no plane                                        | **⚑** New                     |
 
 ## A run's failures
 
-| String                                                                      | Kind                | When                                    | Review                       |
-| --------------------------------------------------------------------------- | ------------------- | --------------------------------------- | ---------------------------- |
-| "Auto Assembly stopped: {why}"                                              | The run's error     | The run stopped                         |                              |
-| "Couldn't read the assembly's holes."                                       | A step's failure    | Index failed                            |                              |
-| "Couldn't remove the screws to replace."                                    | A step's failure    | Remove failed                           |                              |
-| "Couldn't insert the fasteners."                                            | A step's failure    | Insert failed                           |                              |
-| "Couldn't fasten the inserted parts."                                       | A step's failure    | Fasten failed                           |                              |
-| "You don't have permission to edit this assembly."                          | A step's failure    | Onshape answered 403                    |                              |
-| "A fastener's studio has no mate connector to fasten by. Reload its group." | Fasten step failure | A studio's load found no mate connector |                              |
-| "The run stopped unexpectedly."                                             | The run's error     | The workflow ended without reporting    |                              |
-| "Auto Assembly's parts aren't published yet."                               | Error, insert route | No fasteners loaded                     |                              |
-| "Auto Assembly doesn't have FTC fasteners yet."                             | Error, insert route | FTC chosen                              | **⚑** FTC's are now released |
-| "Fasteners are already being inserted in this assembly."                    | Error, insert route | A run is going                          |                              |
-| "Select holes to fasten or screws to replace."                              | Error, insert route | Nothing picked                          |                              |
-| "Select only what Select by asks for."                                      | Error, insert route | Picks Select by doesn't ask for         |                              |
-| "Every part must be one its vendor makes, in the screw's size."             | Error, insert route | A part the catalog doesn't make         |                              |
-| "A nut washer goes under a nut."                                            | Error, insert route | A nut washer without a nut              |                              |
+| String                                                                      | Kind                | When                                                | Review                       |
+| --------------------------------------------------------------------------- | ------------------- | --------------------------------------------------- | ---------------------------- |
+| "Auto Assembly stopped: {why}"                                              | The run's error     | The run stopped                                     |                              |
+| "Couldn't read the assembly's holes."                                       | A step's failure    | Index failed                                        |                              |
+| "Couldn't remove the screws to replace."                                    | A step's failure    | Remove failed                                       |                              |
+| "Couldn't insert the fasteners."                                            | A step's failure    | Insert failed                                       |                              |
+| "Couldn't fasten the inserted parts."                                       | A step's failure    | Fasten failed                                       |                              |
+| "You don't have permission to edit this assembly."                          | A step's failure    | Onshape answered 403                                |                              |
+| "A fastener's studio has no mate connector to fasten by. Reload its group." | Fasten step failure | A studio's load found no mate connector             |                              |
+| "The run stopped unexpectedly."                                             | The run's error     | The workflow ended without reporting                |                              |
+| "Auto Assembly's parts aren't published yet."                               | Error, insert route | No fasteners loaded                                 |                              |
+| "Auto Assembly doesn't have FTC fasteners yet."                             | Error, insert route | FTC chosen                                          | **⚑** FTC's are now released |
+| "Fasteners are already being inserted in this assembly."                    | Error, insert route | A run is going                                      |                              |
+| "Select holes to fasten or screws to replace."                              | Error, insert route | Nothing picked                                      |                              |
+| "Select only what Select by asks for."                                      | Error, insert route | Picks Select by doesn't ask for                     |                              |
+| "Every part must be one its vendor makes, in the screw's size."             | Error, insert route | A part the catalog doesn't make                     |                              |
+| "A nut washer goes under a nut."                                            | Error, insert route | A nut washer without a nut                          |                              |
+| "Select a face to stop at, with the Face stop condition."                   | Error, insert route | A face to stop at without Face, or Face without one | **⚑** New                    |

@@ -39,6 +39,13 @@ const circularEdgeSchema = z.object({
     faceId: z.string().optional()
 });
 
+const planeSchema = z.object({
+    id: z.string(),
+    partId: z.string(),
+    origin: vec3,
+    normal: vec3
+});
+
 const partsSchema = z.record(
     z.string(),
     z.object({ holes: z.array(holeSchema) })
@@ -47,12 +54,14 @@ const partsSchema = z.record(
 const scanSchema = z.object({
     parts: partsSchema,
     // The scan's own key, from robot-code's FeatureScript.
-    circles: z.array(circularEdgeSchema)
+    circles: z.array(circularEdgeSchema),
+    planes: z.array(planeSchema).default([])
 });
 
 /** In the Part Studio's coordinates, in metres. */
 export type ScannedHole = z.infer<typeof holeSchema>;
 export type ScannedCircularEdge = z.infer<typeof circularEdgeSchema>;
+export type ScannedPlane = z.infer<typeof planeSchema>;
 export type ScannedParts = z.infer<typeof partsSchema>;
 export type StudioScan = z.infer<typeof scanSchema>;
 
@@ -70,6 +79,8 @@ export interface StudioSource {
 export interface StudioSelection {
     edges: string[];
     faces: string[];
+    /** Planar faces to stop at. */
+    planes: string[];
 }
 
 /** A month: a key is never stale, so this only bounds what's kept for studios nobody fastens to again. */
@@ -113,6 +124,9 @@ export function scanScript(selection: StudioSelection): string {
             : []),
         ...(selection.faces.length > 0
             ? [`"faces" : ${query(selection.faces)}`]
+            : []),
+        ...(selection.planes.length > 0
+            ? [`"planes" : ${query(selection.planes)}`]
             : [])
     ];
     return `function(context is Context, queries is map)
@@ -160,7 +174,11 @@ export function parseStudioScan(value: unknown): StudioScan {
 }
 
 function isSelectionEmpty(selection: StudioSelection): boolean {
-    return selection.edges.length === 0 && selection.faces.length === 0;
+    return (
+        selection.edges.length === 0 &&
+        selection.faces.length === 0 &&
+        selection.planes.length === 0
+    );
 }
 
 /**
@@ -176,7 +194,7 @@ export async function scanStudio(
     if (isSelectionEmpty(selection)) {
         const parts = await holeScans.get(kv, source.key);
         if (parts) {
-            return { parts, circles: [] };
+            return { parts, circles: [], planes: [] };
         }
     }
     const response = await evaluateFeatureScript(

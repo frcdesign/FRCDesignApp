@@ -80,7 +80,8 @@ export const FORM_PARAMETERS: ConfigurationParameter[] = [
     ]),
     enumParameter(FormInput.STOP, m.autoAssemblyStopCondition(), [
         { id: StopCondition.ALL_HOLES, name: m.autoAssemblyStopAllHoles() },
-        { id: StopCondition.FIRST_GAP, name: m.autoAssemblyStopFirstGap() }
+        { id: StopCondition.FIRST_GAP, name: m.autoAssemblyStopFirstGap() },
+        { id: StopCondition.FACE, name: m.autoAssemblyStopFace() }
     ]),
     booleanParameter(FormInput.LIMIT_LENGTH, m.autoAssemblyLimitLength()),
     inchParameter(FormInput.MAX_LENGTH, m.autoAssemblyMaxLength(), {

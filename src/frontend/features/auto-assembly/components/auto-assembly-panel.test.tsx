@@ -9,7 +9,8 @@ import {
     PickList,
     ProblemSeverity,
     SelectedEntityType,
-    SelectionMode
+    SelectionMode,
+    StopCondition
 } from "@backend/features/auto-assembly/contract";
 import {
     createTestQueryClient,
@@ -86,7 +87,8 @@ beforeEach(() => {
         ...defaultChoices(),
         targets: [],
         excluded: [],
-        replaced: []
+        replaced: [],
+        stopFace: []
     });
 });
 
@@ -283,6 +285,33 @@ describe("AutoAssemblyPanel", () => {
 
         await choose("Sizing", "Manual");
         expect(screen.queryByLabelText("Stop condition")).toBeNull();
+    });
+
+    it("stops at a planar face picked, and won't insert without one", async () => {
+        renderPanel();
+        await userEvent.click(
+            screen.getByText("Circular edges", { selector: "p" })
+        );
+        select({ ...face("E"), entityType: "EDGE" });
+        await choose("Stop condition", "Face");
+        expect(insertButton().disabled).toBe(true);
+
+        await userEvent.click(screen.getByText("Face to stop at"));
+        select(face("P"), face("Q"));
+        expect(screen.getByText("Face 1")).toBeTruthy();
+        expect(screen.queryByText("Face 2")).toBeNull();
+        await userEvent.click(insertButton());
+
+        expect(apiPost).toHaveBeenCalledWith("/auto-assembly/insert", {
+            body: expect.objectContaining({
+                stopFace: {
+                    occurrencePath: ["plate"],
+                    entityId: "Q",
+                    entityType: "FACE"
+                },
+                options: expect.objectContaining({ stop: StopCondition.FACE })
+            })
+        });
     });
 
     it("asks for a maximum length only once screw length is limited", async () => {

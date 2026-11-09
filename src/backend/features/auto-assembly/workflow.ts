@@ -157,14 +157,16 @@ async function runSteps(ctx: RunContext, request: AutoAssemblyIn) {
                 request.targets,
                 request.excluded,
                 set,
-                request.replaced
+                request.replaced,
+                request.stopFace
             );
             const plans = planHoles(
                 indexed.circularEdges,
                 indexed.holes,
                 indexed.placed,
                 request.options,
-                set.catalog
+                set.catalog,
+                indexed.stopPlane
             );
             return {
                 plans,
@@ -430,7 +432,8 @@ function runPicks(request: AutoAssemblyIn, problems: PickProblem[]): RunPick[] {
     const lists: [PickList, SelectedEntity[]][] = [
         [PickList.TARGETS, request.targets],
         [PickList.EXCLUDED, request.excluded],
-        [PickList.REPLACED, request.replaced]
+        [PickList.REPLACED, request.replaced],
+        [PickList.STOP_FACE, request.stopFace ? [request.stopFace] : []]
     ];
     return lists.flatMap(([list, entities]) =>
         entities.map((entity) => {

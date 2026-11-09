@@ -263,7 +263,9 @@ enum StopCondition {
     /** Through every hole on the axis, gaps and all. */
     ALL_HOLES = "all-holes",
     /** At the first gap between parts wider than the maximum gap. */
-    FIRST_GAP = "first-gap"
+    FIRST_GAP = "first-gap",
+    /** At a planar face picked to stop at (`stopFace`), where each hole's axis meets it. */
+    FACE = "face"
 }
 
 interface AssemblyJobStatus {
@@ -301,7 +303,8 @@ interface RunPick {
 enum PickList {
     TARGETS = "targets",
     EXCLUDED = "excluded",
-    REPLACED = "replaced"
+    REPLACED = "replaced",
+    STOP_FACE = "stop-face"
 }
 
 interface PickProblem {
@@ -395,6 +398,8 @@ interface AutoAssemblyIn {
     excluded: SelectedEntity[];
     /** Picks on library screws to take out, with their washers and nuts, and fasten again. */
     replaced: SelectedEntity[];
+    /** The planar face `StopCondition.FACE` stops at; only with it. */
+    stopFace?: SelectedEntity;
     options: FastenerOptions;
 }
 
@@ -456,7 +461,8 @@ async function indexHoles(
     targets: SelectedEntity[],
     excluded: SelectedEntity[],
     fasteners: FastenerSet | undefined,
-    replaced: SelectedEntity[]
+    replaced: SelectedEntity[],
+    stopFace?: SelectedEntity
 ): Promise<IndexedHoles>;
 // Every part occurrence, through subassemblies, with the edit it's from.
 function partOccurrences(
@@ -490,6 +496,16 @@ interface IndexedHoles {
     replacements: Replacement[];
     /** The circular edges' keys each pick gave, by `pickKey`; none for one in `unfound`. */
     pickEdges: Record<string, string[]>;
+    /** The plane of the face picked to stop at, in the assembly. */
+    stopPlane?: AssemblyPlane;
+    /** Why the face picked to stop at gave no plane. */
+    stopFaceProblem?: string;
+}
+
+/** A plane in the assembly: a point on it and its unit normal. */
+interface AssemblyPlane {
+    point: Vec3;
+    normal: Vec3;
 }
 
 type ElementMicroversions = Map<string, string>;
@@ -516,6 +532,8 @@ interface StudioSource {
 interface StudioSelection {
     edges: string[];
     faces: string[];
+    /** Planar faces to stop at, scanned for their planes. */
+    planes: string[];
 }
 
 type StudioScan = z.infer<typeof scanSchema>;
@@ -539,7 +557,8 @@ function planHoles(
     holes: AssemblyHole[],
     placed: PlacedScrew[],
     options: FastenerOptions,
-    catalog: Catalog
+    catalog: Catalog,
+    stopPlane?: AssemblyPlane
 ): HolePlan[];
 function getLengths(
     catalog: Catalog,
@@ -962,8 +981,9 @@ The panel is a `ParameterGrid` of the configuration dialog's own inputs
    Finish show only where there's a choice, so a Generic washer, one in each
    size, shows its checkbox alone. The screw washer is gone under a countersunk
    head, and the nut washer without a nut.
-3. Automatic only: _Stop condition_ (**All holes**, or **First gap** with the
-   widest gap to ignore), _Limit screw length_, a checkbox off by default that
+3. Automatic only: _Stop condition_ (**All holes**, **First gap** with the
+   widest gap to ignore, or **Face** with _Face to stop at_, a query list of
+   one planar face, where a new pick takes the old one's place), _Limit screw length_, a checkbox off by default that
    shows _Max length_ while ticked, and _Max thread depth_.
 4. **Selections**, last: _Select by_ (Circular edges, the default, Faces, or
    Screws), and its query lists, the first focused.
@@ -993,11 +1013,15 @@ _Select by_ decides what the picks are:
   the run decides which picks are screws.
 
 A run takes one kind: only the lists Select by shows are sent, and changing
-Select by clears every pick. Insert needs a pick.
+Select by clears every pick. Insert needs a pick, and, under the Face stop
+condition, a face to stop at; manual sizing sends **All holes**, whatever the
+hidden stop condition says.
 
 `insertBody` in `routes.ts` refuses a body whose picks don't match its mode
 (`isConsistentPick`: faces with edges to exclude, circular edges alone, or
-screws alone), one with neither holes nor screws to replace, and a part its
+screws alone), one with neither holes nor screws to replace, one with a face
+to stop at without the Face stop condition or the other way round
+(`hasStopFace`), and a part its
 studio doesn't make (`isMade`) or not in the screw's size.
 
 ### Checking picks — `POST /api/auto-assembly/check`
@@ -1019,7 +1043,8 @@ options (`planHoles`), and answers each pick's problem (`pickProblems` in
 - a hole that plans ready with a warning, as a warning; a face, how many of its
   holes have one, and the first, when none of its holes has an error;
 - a hole to skip that isn't a hole in the faces picked;
-- a screw to replace that isn't one, or whose hole won't plan ready.
+- a screw to replace that isn't one, or whose hole won't plan ready;
+- a face to stop at whose part is gone, or that isn't planar.
 
 Nothing picked asks Onshape nothing. FTC, or parts the catalog doesn't make,
 is checked without planning. The last check's marks stay while the next goes,
@@ -1057,13 +1082,16 @@ recorded with why, and the steps after it are skipped.
        its Part Studio (`partOccurrences`).
     3. Scans each distinct pinned Part Studio once, six at a time: from the
        cache unless something is picked in it, by evaluating the hole scan
-       otherwise, with the picked edges and faces as `qTransient` queries.
+       otherwise, with the picked edges and faces, and the face to stop at, as
+       `qTransient` queries.
        Fasteners of the catalog's own studios and standard content aren't
        scanned.
     4. Moves every part's holes, and the picked circular edges (an edge's own,
        or every circular edge of a face), into the assembly; drops the skipped
        ones. A pick that gives no circular edge is reported as a hole that
-       can't be fastened, saying why (`IndexedHoles.unfound`).
+       can't be fastened, saying why (`IndexedHoles.unfound`). The face to
+       stop at's plane is moved in too (`toAssemblyPlane`), or the reason it
+       gave none kept (`stopFaceProblem`).
     5. Each screw to replace: its part must be a top-level instance of the
        screw studio. Its hole is the scanned hole edge it sits on
        (`seatEdge`), which joins the circular edges as if picked, and it no
@@ -1081,8 +1109,11 @@ recorded with why, and the steps after it are skipped.
            (threads, or a hole at its tap drill narrower than the screw), to the
            bottom of a blind hole, or out the far side. **All holes** reaches
            across any gap; **First gap** stops at the first gap wider than the
-           maximum gap. Either stops past the maximum length when screw length
-           is limited, and past the vendor's longest screw otherwise.
+           maximum gap; **Face** takes the holes that start before where the
+           axis meets the face's plane, and gives a hole whose axis meets it
+           behind the circular edge, or never, no screw. Each stops past the
+           maximum length when screw length is limited, and past the vendor's
+           longest screw otherwise.
         4. Washers (`chooseWashers`): the screw washer chosen, never under a
            flat head; the nut washer only under a nut.
         5. Length (`pickScrew`), from the lengths the vendor makes the size

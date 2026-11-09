@@ -12,6 +12,7 @@ import(path : "onshape/std/common.fs", version : "2960.0");
  * @param queries {{
  *      @field edges {Query} : @optional Circular edges selected to fasten.
  *      @field faces {Query} : @optional Faces selected to fasten each hole in.
+ *      @field planes {Query} : @optional Planar faces selected to stop at.
  * }}
  * @returns {{
  *      @field parts {map} : By part id, its `holes`: each cylindrical hole's `origin` and `direction` (its axis), its
@@ -22,6 +23,8 @@ import(path : "onshape/std/common.fs", version : "2960.0");
  *      @field circles {array} : Each selected circle, and each circle bounding a selected face: its `id`, its `partId`,
  *              its `center`, `radius`, and `normal` (out of the part, along the hole), and `faceId` if it came from a
  *              selected face.
+ *      @field planes {array} : Each selected planar face: its `id`, its `partId`, a point on it (`origin`), and its
+ *              `normal`.
  * }}
  */
 export function fastenerHoleScan(context is Context, queries is map) returns map
@@ -164,5 +167,19 @@ export function fastenerHoleScan(context is Context, queries is map) returns map
             }
         }
     }
-    return { "parts" : parts, "circles" : circles };
+    var planes = [];
+    if (queries.planes != undefined)
+    {
+        for (var face in evaluateQuery(context, queries.planes->qGeometry(GeometryType.PLANE)))
+        {
+            const plane = evPlane(context, { "face" : face });
+            planes = append(planes, {
+                        "id" : idOf(face),
+                        "partId" : idOf(evaluateQuery(context, qOwnerBody(face))[0]),
+                        "origin" : toMeters(plane.origin),
+                        "normal" : toArray(plane.normal)
+                    });
+        }
+    }
+    return { "parts" : parts, "circles" : circles, "planes" : planes };
 }

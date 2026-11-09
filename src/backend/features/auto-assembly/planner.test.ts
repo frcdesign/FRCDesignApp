@@ -269,6 +269,26 @@ describe("planHoles", () => {
             );
         });
 
+        it("stops at the face picked, taking in only the plates before it", () => {
+            const atFace = (depth: number) => {
+                const [only] = planHoles(
+                    [CIRCULAR_EDGE],
+                    gapped(0.25),
+                    [],
+                    options({ stop: StopCondition.FACE }),
+                    FASTENER_SET.catalog,
+                    { point: [1, 1, -depth * INCH], normal: [0, 0, 1] }
+                );
+                return only.planned;
+            };
+            // The far plate's top face, and its bottom face
+            expect(atFace(0.5).depth).toBeCloseTo(0.25 * INCH);
+            expect(atFace(0.75).depth).toBeCloseTo(0.75 * INCH);
+            const behind = atFace(-0.5);
+            expect(behind.status).toBe(HoleStatus.NO_FIT);
+            expect(behind.reason).toMatch(/isn't past this hole/);
+        });
+
         it("says no screw reaches past the maximum length", () => {
             const deep = [
                 hole("top", 0, 2, 0.201),

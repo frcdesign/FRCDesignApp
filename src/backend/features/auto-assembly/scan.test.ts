@@ -81,21 +81,42 @@ describe("parseStudioScan", () => {
             decodeFeatureScriptValue(
                 map({
                     parts: map({ JHD: map({ holes: array(hole) }) }),
-                    circles: array()
+                    circles: array(),
+                    planes: array(
+                        map({
+                            id: string("P"),
+                            partId: string("JHD"),
+                            origin: array(number(0), number(0), number(0.01)),
+                            normal: array(number(0), number(0), number(1))
+                        })
+                    )
                 })
             )
         );
         expect(scan.parts.JHD.holes[0].closedAtEnd).toBe(true);
         expect(scan.parts.JHD.holes[0].edges).toEqual([{ id: "E", at: 0 }]);
+        expect(scan.planes).toEqual([
+            {
+                id: "P",
+                partId: "JHD",
+                origin: [0, 0, 0.01],
+                normal: [0, 0, 1]
+            }
+        ]);
     });
 });
 
 describe("scanScript", () => {
     it("passes the picked entities in as transient queries", () => {
-        const script = scanScript({ edges: ["JKB", "JKC"], faces: [] });
+        const script = scanScript({
+            edges: ["JKB", "JKC"],
+            faces: [],
+            planes: ["JKD"]
+        });
         expect(script).toContain(
             '"edges" : qUnion([qTransient("JKB"), qTransient("JKC")])'
         );
+        expect(script).toContain('"planes" : qUnion([qTransient("JKD")])');
         expect(script).not.toContain('"faces"');
         expect(
             script.startsWith("function(context is Context, queries is map)")
@@ -103,7 +124,7 @@ describe("scanScript", () => {
     });
 
     it("passes nothing when nothing's picked", () => {
-        expect(scanScript({ edges: [], faces: [] })).toContain(
+        expect(scanScript({ edges: [], faces: [], planes: [] })).toContain(
             "return scan(context, {  });"
         );
     });
@@ -116,12 +137,12 @@ describe("scanScript", () => {
 
 describe("holeScanLambda", () => {
     it("is hole-scan.fs's function body, as a lambda", () => {
-        const script = scanScript({ edges: [], faces: [] });
+        const script = scanScript({ edges: [], faces: [], planes: [] });
         expect(script).toContain(
             "const scan = function(context is Context, queries is map)\n{\n"
         );
         expect(script).toContain(
-            'return { "parts" : parts, "circles" : circles };'
+            'return { "parts" : parts, "circles" : circles, "planes" : planes };'
         );
     });
 
