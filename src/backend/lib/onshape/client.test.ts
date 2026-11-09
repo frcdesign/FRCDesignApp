@@ -5,19 +5,34 @@ import { OnshapeApi, OnshapeApiError, OnshapeRateLimitError } from "./client";
 class TestApi extends OnshapeApi {
     /** What the last call handed the transport, for asserting on the signal. */
     lastInit?: RequestInit;
+    lastUrl?: string;
 
     constructor(private readonly response: Response) {
         super();
     }
     protected _request(
         _method: string,
-        _url: string,
+        url: string,
         init: RequestInit
     ): Promise<Response> {
         this.lastInit = init;
+        this.lastUrl = url;
         return Promise.resolve(this.response.clone());
     }
 }
+
+describe("OnshapeApi.send", () => {
+    it("answers a failure instead of throwing, at the version asked for", async () => {
+        const api = new TestApi(new Response("boom", { status: 429 }));
+        const response = await api.send("GET", "/toolbar/tools", {
+            version: 14
+        });
+        expect(response.status).toBe(429);
+        expect(api.lastUrl).toBe(
+            "https://cad.onshape.com/api/v14/toolbar/tools?"
+        );
+    });
+});
 
 describe("OnshapeApi error handling", () => {
     it("throws OnshapeRateLimitError with the Retry-After seconds on 429", async () => {

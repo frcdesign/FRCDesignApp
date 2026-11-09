@@ -99,5 +99,5 @@ sits in an info tooltip at the callout's end.
 | "Onshape account" / "Sign out"          | Row label / button | User settings                             | Standalone and signed in                     |           |
 | "Access level"                          | Select label       | Admin settings                            | Always                                       |           |
 | "Outdated documents" / "All documents"  | Row labels         | Admin settings, beside the reload buttons | Editor or above / owner                      |           |
-| "Onshape webhooks" / "Open probe"       | Row label / button | Admin settings                            | Owner; opens `/webhook`                      | **⚑** New |
+| "Testbench" / "Open testbench"          | Row label / button | Admin settings                            | Owner; opens `/testbench`                    | **⚑** New |
 | "Admin team members"                    | Row label          | Admin settings                            | Admin or above                               |           |

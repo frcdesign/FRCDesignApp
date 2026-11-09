@@ -6,11 +6,24 @@ import {
 } from "../query-params";
 
 // The same in every environment.
-const ONSHAPE_API_BASE_PATH = "https://cad.onshape.com";
-const ONSHAPE_API_VERSION = 17;
+export const ONSHAPE_API_BASE_PATH = "https://cad.onshape.com";
+export const ONSHAPE_API_VERSION = 17;
 
-function getBaseUrl(): string {
-    return `${ONSHAPE_API_BASE_PATH}/api/v${ONSHAPE_API_VERSION}`;
+function getBaseUrl(version = ONSHAPE_API_VERSION): string {
+    return `${ONSHAPE_API_BASE_PATH}/api/v${version}`;
+}
+
+export function onshapeUrl(
+    path: string,
+    options?: Pick<SendOptions, "version" | "query">
+): string {
+    return `${getBaseUrl(options?.version)}${path}?${toQueryString(options?.query)}`;
+}
+
+export interface SendOptions extends QueryOptions {
+    /** The API version to call; the app's own by default. */
+    version?: number;
+    body?: unknown;
 }
 
 export class OnshapeApiError extends Error {
@@ -109,6 +122,21 @@ export abstract class OnshapeApi {
 
     async deleteNone(path: string, options?: QueryOptions): Promise<void> {
         await this._call("DELETE", path, options);
+    }
+
+    /** Onshape's response whatever its status, for probing Onshape rather than using it. */
+    async send(
+        method: string,
+        path: string,
+        options?: SendOptions
+    ): Promise<Response> {
+        return this._request(method, onshapeUrl(path, options), {
+            body:
+                options?.body !== undefined
+                    ? JSON.stringify(options.body)
+                    : undefined,
+            signal: options?.signal ?? AbortSignal.timeout(REQUEST_TIMEOUT_MS)
+        });
     }
 
     private async _call(

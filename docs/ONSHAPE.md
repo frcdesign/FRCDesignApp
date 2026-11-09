@@ -14,8 +14,9 @@ entry wrong, fix the entry and every piece of code that relied on it.
 
 [Glassworks](https://cad.onshape.com/glassworks/explorer) runs any endpoint
 against your own account, which is the quickest way to check an entry. The
-webhook probe (`src/backend/features/webhooks/probe.ts`) shows which events
-fire, and what for.
+owner's testbench at `/testbench` ([testbench.md](./architecture/testbench.md))
+makes any call at any API version, shows which webhook events fire, and
+shows the rate-limit headers Onshape answers each call with.
 
 ## Documents, workspaces, versions and microversions
 
@@ -215,6 +216,26 @@ errors.
 - **Rate limits** answer 429 — _documented_ — usually with `Retry-After`,
   which is sometimes absent — _observed_. Calls also count against the account's API
   allocation, which a full library reload spends a lot of — _documented_.
+- **Each answer says how many calls are left** in `x-rate-limit-remaining`,
+  and in no other header: nothing names the limit or when it resets —
+  _observed_ (2026-11-08, the owner's OAuth token through the testbench). What
+  it read after one check of each:
+    - assembly definition (`GET /assemblies/d/…/e/…`): about 3,000;
+    - everything else checked — evaluating FeatureScript, Part Studio and
+      assembly features, document elements, session info: about 9,000.
+
+    So reading an assembly's definition is the scarce one, a third of the rest.
+    Which calls share a count is _unverified_: Part Studio features, assembly
+    features and session info counted down together (8990, 8989, 8988), while
+    document elements stood apart (8998) — consistent with a count per endpoint
+    group, not proven. The counts are per user, so one person's heavy use
+    doesn't spend another's — _unverified_, the owner's understanding. The
+    window they refill over is _unverified_; checking again an hour later would
+    tell.
+
+- **Internal endpoints** — the ones Onshape's own web client calls, such as the
+  custom toolbar's — are served at `/api/v14` — _observed_. Whether the same
+  paths answer at the app's own version is _unverified_.
 - **Onshape's error messages** are written for developers, not for the people
   using the app — _observed_.
 - **Translations** (STEP export) run asynchronously and are polled. The file is
@@ -222,5 +243,23 @@ errors.
   it — _observed_. [download.md](./architecture/download.md) covers the flow.
 - **A fasten mate** between two instances, neither of them fixed, tends to
   move the first onto the second — _observed_.
+
+## Custom toolbar
+
+What Onshape's web client sends to change someone's custom toolbar, captured
+from the browser — _observed_. None of it is documented, and none of it works
+from the app's OAuth token: the testbench's Custom toolbar tab tried each, and
+Onshape refused them all — _observed_. The app can't manage anyone's toolbar.
+
+- `GET /toolbar/tools` lists every tool the signed-in user can see: Onshape's
+  built-in ones (`ownerType` 2) and the user's own custom features
+  (`ownerType` 0, `ownerId` the user's id).
+- `POST /toolbar/tools/u/{userId}/create` adds tools under `parentId` (a node
+  of the user's toolbar; where its id comes from is _unverified_), each as
+  `{ insertableId, tool }`. A custom feature's `tool` names its Feature Studio
+  as `commandDetails`, `d{documentId}::v{versionId}::e{elementId}::m{microversionId}`,
+  with `command` its feature type and `signature` the two joined by `::`.
+- `DELETE /toolbar/tools/u/{userId}/delete` takes `{ "remove": [toolId] }` as
+  its body.
 
 _Last reviewed: 2026-11-07_
