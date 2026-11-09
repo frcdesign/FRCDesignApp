@@ -752,5 +752,9 @@
     "fastenCircularEdgesTip": "Tip: You can select circular edges in Onshape before you insert and fasten to automatically fasten to each one.",
     "insertSucceeded": "Successfully inserted {name}.",
     "insertFailed": "Unexpectedly failed to insert {name}.",
-    "queryListClear": "Clear"
+    "queryListClear": "Clear",
+    "autoAssemblyScrewsAvailable": "Screws are also available via Auto Assembly.",
+    "autoAssemblyWashersAvailable": "Washers are also available via Auto Assembly.",
+    "autoAssemblyNutsAvailable": "Nuts are also available via Auto Assembly.",
+    "autoAssemblyOpen": "Auto Assembly"
 }

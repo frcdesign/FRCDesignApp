@@ -941,6 +941,12 @@ who has an element to act on and has never opened the page
 against the user in KV (`useMarkHintSeen`, see [auth.md](./auth.md)), so the
 dot stays gone on every computer they use.
 
+The insert menu of one of the loaded fasteners' own parts (a studio's
+`insertableId` in the `FastenerSet`), opened in an assembly, starts with a
+callout saying screws, washers or nuts are also available via Auto Assembly
+(`AutoAssemblyCallout`, in the style of the app's other callouts); its button
+closes the menu and switches to the page.
+
 ### Picking
 
 1. Once the app sends `applicationInit`, Onshape sends the window's whole

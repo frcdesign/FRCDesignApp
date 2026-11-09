@@ -7,6 +7,13 @@ written by the backend (`planner.ts`, `check.ts`, `index-holes.ts`,
 `failures.ts`, `workflow.ts`, `routes.ts`) with the values they name, and the
 page shows them as they come.
 
+## Getting there
+
+| String                                                                                                                                          | Kind           | Where                  | When                                                    | Review    |
+| ----------------------------------------------------------------------------------------------------------------------------------------------- | -------------- | ---------------------- | ------------------------------------------------------- | --------- |
+| "Screws are also available via Auto Assembly." / "Washers are also available via Auto Assembly." / "Nuts are also available via Auto Assembly." | Callout        | Top of the insert menu | The library's screw, washer or nut part, in an assembly | **⚑** New |
+| "Auto Assembly"                                                                                                                                 | Callout button | Beside it              | With it: closes the menu and opens Auto Assembly        | **⚑** New |
+
 ## The page
 
 | String                                                                                                                      | Kind                      | Where              | When                               | Review |

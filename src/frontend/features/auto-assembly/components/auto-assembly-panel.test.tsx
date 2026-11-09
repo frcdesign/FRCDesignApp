@@ -32,6 +32,9 @@ import { useAutoAssemblyStore } from "../store";
 import { useOnshapeLaunch } from "../../../lib/onshape-params";
 import { AutoAssemblyPanel } from "./auto-assembly-panel";
 import { JobDetails, JobDetailsTitle } from "./job-details";
+import { AutoAssemblyCallout } from "./auto-assembly-callout";
+import { UtilityTab } from "../../../lib/app-tab";
+import { FastenerKind } from "@backend/features/auto-assembly/studios";
 
 vi.mock("../../../lib/api-client", () => ({
     apiGet: vi.fn(),
@@ -39,6 +42,9 @@ vi.mock("../../../lib/api-client", () => ({
         Promise.resolve({ state: AssemblyJobState.RUNNING, tasks: [] })
     )
 }));
+
+const { navigateToTab } = vi.hoisted(() => ({ navigateToTab: vi.fn() }));
+vi.mock("../../../lib/tabs", () => ({ useNavigateToTab: () => navigateToTab }));
 
 // Signed out, so the job query only reads what a test seeds
 vi.mock("../../auth/access-level", () => ({ useIsSignedIn: () => false }));
@@ -322,6 +328,52 @@ describe("AutoAssemblyPanel", () => {
                 options: expect.objectContaining({ stop: StopCondition.FACE })
             })
         });
+    });
+});
+
+describe("AutoAssemblyCallout", () => {
+    const renderCallout = (insertableId: string, onOpen = vi.fn()) => {
+        const queryClient = createTestQueryClient();
+        queryClient.setQueryData(FASTENER_SET_QUERY_KEY, FASTENER_SET);
+        renderWithProviders(
+            <AutoAssemblyCallout insertableId={insertableId} onOpen={onOpen} />,
+            queryClient
+        );
+        return onOpen;
+    };
+    const launch = (elementType: string) =>
+        useOnshapeLaunch.setState({
+            documentId: "doc",
+            instanceId: "ws",
+            instanceType: "w",
+            elementId: "asm",
+            elementType: elementType as never
+        });
+
+    it("points a library nut inserted into an assembly at Auto Assembly, switching to it", async () => {
+        launch("ASSEMBLY");
+        const onOpen = renderCallout(
+            FASTENER_SET.studios[FastenerKind.NUT].insertableId
+        );
+        expect(
+            screen.getByText("Nuts are also available via Auto Assembly.")
+        ).toBeTruthy();
+
+        await userEvent.click(
+            screen.getByRole("button", { name: "Auto Assembly" })
+        );
+        expect(onOpen).toHaveBeenCalled();
+        expect(navigateToTab).toHaveBeenCalledWith(UtilityTab.AUTO_ASSEMBLY);
+    });
+
+    it("says nothing for another part, or in a Part Studio", () => {
+        launch("ASSEMBLY");
+        renderCallout("bracket-row");
+        launch("PARTSTUDIO");
+        renderCallout(FASTENER_SET.studios[FastenerKind.SCREW].insertableId);
+        expect(
+            screen.queryByText(/also available via Auto Assembly/)
+        ).toBeNull();
     });
 });
 

@@ -22,6 +22,7 @@ import { PreviewImageCard } from "../../thumbnails/components/thumbnail";
 import { FavoriteButton } from "../../favorites/components/favorite-button";
 import { MenuButton } from "../../../components/app-menu";
 import { GetAppCallout } from "../../../components/get-app";
+import { AutoAssemblyCallout } from "../../auto-assembly/components/auto-assembly-callout";
 import { InsertableMenuItems } from "../../library/components/insertable-card";
 import { ConfigurationWrapper, type SelectionReport } from "./configurations";
 import { ResetConfigurationButton } from "./reset-configuration-button";
@@ -149,6 +150,10 @@ export function InsertMenuContent(props: InsertMenuContentProps): ReactNode {
             <AppModalTop>
                 <Stack gap="sm">
                     <GetAppCallout />
+                    <AutoAssemblyCallout
+                        insertableId={insertable.id}
+                        onOpen={() => modal.close()}
+                    />
                     <PreviewImageCard
                         path={insertable.path}
                         insertableId={insertable.id}
