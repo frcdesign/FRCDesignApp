@@ -9,8 +9,8 @@ import {
 import { type IndexedHoles } from "./index-holes";
 import { pickKey } from "./picked";
 
-const ALREADY_FASTENED =
-    "A library screw is already in this hole. Select it by Screws to replace it.";
+const ALREADY_FASTENED = "This hole already has a screw and will be ignored.";
+const SOME_FASTENED = "Some holes already have screws and will be ignored.";
 
 type Problem = Omit<PickProblem, "key">;
 
@@ -19,7 +19,7 @@ const error = (message: string): Problem => ({
     severity: ProblemSeverity.ERROR
 });
 
-/** What's wrong with a hole's plan, if anything: an error where it won't be fastened, a warning where it will be, poorly. */
+/** What's wrong with a hole's plan, if anything: an error where it won't be fastened, a warning where it will be, poorly. A hole with a screw already is left out. */
 function holeProblem(planned: PlannedHole | undefined): Problem | undefined {
     if (!planned) {
         return undefined;
@@ -33,13 +33,16 @@ function holeProblem(planned: PlannedHole | undefined): Problem | undefined {
                   }
                 : undefined;
         case HoleStatus.FASTENED:
-            return error(ALREADY_FASTENED);
+            return undefined;
         case HoleStatus.NO_FIT:
             return error(planned.reason ?? "This hole can't be fastened.");
     }
 }
 
-/** Every hole a pick gave must plan ready, without a warning; a face says how many of its holes don't, errors first. */
+/**
+ * Every hole a pick gave must plan ready, without a warning; a face says how
+ * many of its holes don't, errors first, then that some have screws already.
+ */
 function plannedProblem(
     edges: string[],
     plans: Map<string, PlannedHole> | undefined
@@ -56,7 +59,16 @@ function plannedProblem(
     );
     const worst = errors.length > 0 ? errors : problems;
     if (worst.length === 0) {
-        return undefined;
+        const isFastened = edges.some(
+            (edge) => plans.get(edge)?.status === HoleStatus.FASTENED
+        );
+        return isFastened
+            ? {
+                  message:
+                      edges.length === 1 ? ALREADY_FASTENED : SOME_FASTENED,
+                  severity: ProblemSeverity.WARNING
+              }
+            : undefined;
     }
     if (edges.length === 1) {
         return worst[0];

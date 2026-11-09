@@ -57,18 +57,22 @@ describe("pickProblems", () => {
         ]);
     });
 
-    it("gives a hole's own reason, and counts a face's holes that won't fit", () => {
+    it("gives a hole's own reason, counts a face's holes that won't fit, and warns of holes with screws already", () => {
         const face = pick("F", SelectedEntityType.FACE);
+        const other = pick("G", SelectedEntityType.FACE);
         const problems = pickProblems(
-            { targets: [pick("E"), face], excluded: [], replaced: [] },
+            { targets: [pick("E"), face, other], excluded: [], replaced: [] },
             indexed({
                 pickEdges: {
                     "plate|E": ["plate|E"],
-                    "plate|F": ["plate|F1", "plate|F2"]
+                    "plate|F": ["plate|F1", "plate|F2"],
+                    "plate|G": ["plate|G1", "plate|G2"]
                 }
             }),
             [
                 { key: "plate|E", status: HoleStatus.FASTENED },
+                { key: "plate|G1", status: HoleStatus.FASTENED },
+                ready("plate|G2"),
                 ready("plate|F1"),
                 {
                     key: "plate|F2",
@@ -80,15 +84,19 @@ describe("pickProblems", () => {
         expect(problems).toEqual([
             {
                 key: "plate|E",
-                message:
-                    "A library screw is already in this hole. Select it by Screws to replace it.",
-                severity: ProblemSeverity.ERROR
+                message: "This hole already has a screw and will be ignored.",
+                severity: ProblemSeverity.WARNING
             },
             {
                 key: "plate|F",
                 message:
                     "1 of 2 holes can't be fastened: The hole is too small for a #10-32 screw.",
                 severity: ProblemSeverity.ERROR
+            },
+            {
+                key: "plate|G",
+                message: "Some holes already have screws and will be ignored.",
+                severity: ProblemSeverity.WARNING
             }
         ]);
     });

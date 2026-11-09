@@ -91,6 +91,11 @@ export function parseSelections(data: unknown): OnshapeSelection[] {
 export interface SelectionChange {
     added: OnshapeSelection[];
     removed: OnshapeSelection[];
+    /**
+     * Onshape cleared a highlight the app made, as a click in its window does,
+     * so nothing is removed and the list shows its picks again.
+     */
+    isHighlightCleared: boolean;
 }
 
 type PickHandler = (change: SelectionChange) => void;
@@ -107,9 +112,18 @@ interface SelectionState {
      * keeps a selection that never arrives from holding picks back.
      */
     awaited?: { keys: string; until: number };
+    /** Whether the window shows a highlight the app asked for, since its last selection request. */
+    isHighlighted: boolean;
+    /** Counts query lists mounting and unmounting, so the focused one asks Onshape for picks again. */
+    layout: number;
     /** Takes a SELECTION message's whole selection. */
     receive: (selection: OnshapeSelection[]) => void;
     focus: (listId: string | undefined) => void;
+}
+
+/** A list shown or hidden: the focused list's prompt and request go again. */
+export function bumpLayout(): void {
+    useOnshapeSelection.setState((state) => ({ layout: state.layout + 1 }));
 }
 
 /** Long enough for Onshape to answer, short of anyone picking in its window after clicking the panel. */
@@ -122,7 +136,8 @@ function keysOf(selection: OnshapeSelection[]): string {
 /** Says the app made the Onshape window show `selection`, rather than someone picking it. */
 export function expectSelection(selection: OnshapeSelection[]): void {
     useOnshapeSelection.setState({
-        awaited: { keys: keysOf(selection), until: Date.now() + AWAIT_MS }
+        awaited: { keys: keysOf(selection), until: Date.now() + AWAIT_MS },
+        isHighlighted: selection.length > 0
     });
 }
 
@@ -131,6 +146,7 @@ export function expectCleared(): void {
     if (useOnshapeSelection.getState().shown.length > 0) {
         expectSelection([]);
     }
+    useOnshapeSelection.setState({ isHighlighted: false });
 }
 
 /** `selections` less any in `removed`. */
@@ -165,6 +181,11 @@ export function holdPicks(
     };
 }
 
+/** A list's picks, as it last held them. */
+export function heldPicks(listId: string): OnshapeSelection[] {
+    return picksByList.get(listId) ?? [];
+}
+
 /** The focused list's picks; none with no list focused. */
 export function focusedPicks(): OnshapeSelection[] {
     const { focused } = useOnshapeSelection.getState();
@@ -173,8 +194,10 @@ export function focusedPicks(): OnshapeSelection[] {
 
 export const useOnshapeSelection = create<SelectionState>()((set, get) => ({
     shown: [],
+    isHighlighted: false,
+    layout: 0,
     receive: (selection) => {
-        const { shown: previous, awaited, focused } = get();
+        const { shown: previous, awaited, focused, isHighlighted } = get();
         set({ shown: selection });
         if (awaited) {
             if (
@@ -186,9 +209,13 @@ export const useOnshapeSelection = create<SelectionState>()((set, get) => ({
             return;
         }
         if (focused) {
+            const removed = without(previous, selection);
+            // Until Onshape can resume a selection, a click after a highlight clears it all
+            const isHighlightCleared = isHighlighted && removed.length > 1;
             handlers.get(focused)?.({
                 added: without(selection, previous),
-                removed: without(previous, selection)
+                removed: isHighlightCleared ? [] : removed,
+                isHighlightCleared
             });
         }
     },

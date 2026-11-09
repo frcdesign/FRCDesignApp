@@ -4,10 +4,14 @@ import { type ReactNode } from "react";
 import {
     assemblyJobOutcome,
     AssemblyJobState,
+    AssemblyTaskAction,
     AssemblyTaskState,
     PickList,
     type AssemblyTask,
+    type RunPart,
+    RunPartRole,
     type RunPick,
+    type RunScrew,
     SelectedEntityType
 } from "@backend/features/auto-assembly/contract";
 import { type ElementPath } from "@backend/lib/onshape/path";
@@ -15,18 +19,16 @@ import { AppIcon } from "../../../components/app-icon";
 import { SectionNotice } from "../../../components/app-notice";
 import { AppTitle } from "../../../components/app-title";
 import { StatusIcon } from "../../../components/status-icon";
-import { sendHighlightMessage } from "../../../lib/messages";
+import {
+    type HighlightedEntity,
+    sendHighlightMessage
+} from "../../../lib/messages";
 import { useTargetElement } from "../../../lib/onshape-params";
 import { focusedPicks, type OnshapeSelection } from "../../../lib/selection";
 import { Status, STATUS_COLOR } from "../../../lib/status";
 import { IconSize, StatusColor } from "../../../lib/style-constants";
 import { m } from "../../../paraglide/messages";
-import {
-    jobHeadline,
-    OUTCOME_STATUS,
-    runningHeadline,
-    taskLabel
-} from "../job-report";
+import { jobHeadline, OUTCOME_STATUS, runningHeadline } from "../job-report";
 import { toRowProblem, useAssemblyJobQuery } from "../queries";
 
 /** Mantine's `sm` gap, between a row's icon and its text. */
@@ -72,16 +74,28 @@ interface JobDetailsProps {
     assembly: ElementPath;
 }
 
-/** The run this assembly last started, step by step, then each pick with what went wrong with it. */
+/**
+ * The run this assembly last started: indexing, then each screw's steps, then
+ * each pick with what went wrong with it. Hovering a step that put a part in
+ * the assembly, or a pick, lights it up in Onshape.
+ */
 export function JobDetails(props: JobDetailsProps): ReactNode {
     const { data: status } = useAssemblyJobQuery(props.assembly);
+    const show = useShowInOnshape();
     if (!status) {
         return null;
     }
+    const tasks = status.tasks ?? [];
+    const task = (action: AssemblyTaskAction) =>
+        tasks.find((each) => each.action === action);
+    const index = task(AssemblyTaskAction.INDEX);
+    const stopped =
+        status.error ??
+        tasks.find((each) => each.state === AssemblyTaskState.FAILED)?.reason;
 
     return (
         <Stack gap="md">
-            {status.error && (
+            {stopped && (
                 <SectionNotice
                     align="left"
                     py={0}
@@ -92,12 +106,26 @@ export function JobDetails(props: JobDetailsProps): ReactNode {
                         />
                     }
                     title={m.autoAssemblyStoppedEarly()}
-                    description={status.error}
+                    description={stopped}
                 />
             )}
-            <Stack gap={6}>
-                {(status.tasks ?? []).map((task) => (
-                    <TaskRow key={task.action} task={task} />
+            <Stack gap="sm" onMouseLeave={() => show(focusedPicks())}>
+                {index && (
+                    <StepRow
+                        step={stepOf(index)}
+                        label={m.autoAssemblyTaskIndex()}
+                    />
+                )}
+                {(status.screws ?? []).map((screw, screwIndex) => (
+                    <ScrewSteps
+                        key={screw.hole}
+                        screw={screw}
+                        index={screwIndex}
+                        remove={task(AssemblyTaskAction.REMOVE)}
+                        insert={task(AssemblyTaskAction.INSERT)}
+                        fasten={task(AssemblyTaskAction.FASTEN)}
+                        show={show}
+                    />
                 ))}
             </Stack>
             {status.picks && status.picks.length > 0 && (
@@ -107,19 +135,33 @@ export function JobDetails(props: JobDetailsProps): ReactNode {
     );
 }
 
-interface TaskStateIconProps {
-    task: AssemblyTask;
+/** How a step went: a run's own step, or one screw's part of it. */
+interface Step {
+    state: AssemblyTaskState;
+    /** Why it failed, or what it left undone, written for the user. */
+    detail?: string;
+    hasWarning?: boolean;
 }
 
-function TaskStateIcon(props: TaskStateIconProps): ReactNode {
-    const { task } = props;
-    switch (task.state) {
+const stepOf = (task: AssemblyTask): Step => ({
+    state: task.state,
+    detail: task.state === AssemblyTaskState.DONE ? task.warning : task.reason,
+    hasWarning: task.warning !== undefined
+});
+
+interface StepIconProps {
+    step: Step;
+}
+
+function StepIcon(props: StepIconProps): ReactNode {
+    const { step } = props;
+    switch (step.state) {
         case AssemblyTaskState.RUNNING:
             return <Loader size={IconSize.SMALL} />;
         case AssemblyTaskState.DONE:
             return (
                 <StatusIcon
-                    status={task.warning ? Status.WARNING : Status.SUCCESS}
+                    status={step.hasWarning ? Status.WARNING : Status.SUCCESS}
                     size={IconSize.MEDIUM}
                     raised={false}
                 />
@@ -174,37 +216,133 @@ function DetailRow(props: DetailRowProps): ReactNode {
     );
 }
 
-interface TaskRowProps {
-    task: AssemblyTask;
+interface StepRowProps {
+    step: Step;
+    label: string;
+    onHover?: () => void;
 }
 
-function TaskRow(props: TaskRowProps): ReactNode {
-    const { task } = props;
+function StepRow(props: StepRowProps): ReactNode {
+    const { step, label, onHover } = props;
     const isQuiet =
-        task.state === AssemblyTaskState.PENDING ||
-        task.state === AssemblyTaskState.SKIPPED;
-    const detail =
-        task.state === AssemblyTaskState.FAILED
-            ? task.reason
-            : task.state === AssemblyTaskState.DONE
-              ? task.warning
-              : undefined;
+        step.state === AssemblyTaskState.PENDING ||
+        step.state === AssemblyTaskState.SKIPPED;
 
     return (
-        <DetailRow
-            icon={<TaskStateIcon task={task} />}
-            detail={
-                detail && (
-                    <Text size="xs" c={StatusColor.DIMMED}>
-                        {detail}
-                    </Text>
-                )
-            }
-        >
-            <Text c={isQuiet ? StatusColor.DIMMED : undefined}>
-                {taskLabel(task.action)}
+        <div onMouseEnter={onHover}>
+            <DetailRow
+                icon={<StepIcon step={step} />}
+                detail={
+                    step.detail && (
+                        <Text size="xs" c={StatusColor.DIMMED}>
+                            {step.detail}
+                        </Text>
+                    )
+                }
+            >
+                <Text c={isQuiet ? StatusColor.DIMMED : undefined}>
+                    {label}
+                </Text>
+            </DetailRow>
+        </div>
+    );
+}
+
+/** Where a screw's parts are listed, whatever order they were inserted in. */
+const ROLE_ORDER = [
+    RunPartRole.SCREW,
+    RunPartRole.SCREW_WASHER,
+    RunPartRole.NUT,
+    RunPartRole.NUT_WASHER
+];
+
+function partLabel(role: RunPartRole): string {
+    switch (role) {
+        case RunPartRole.SCREW:
+            return m.autoAssemblyTaskInsertScrew();
+        case RunPartRole.SCREW_WASHER:
+            return m.autoAssemblyTaskAddScrewWasher();
+        case RunPartRole.NUT:
+            return m.autoAssemblyTaskAddNut();
+        case RunPartRole.NUT_WASHER:
+            return m.autoAssemblyTaskAddNutWasher();
+    }
+}
+
+/** A part's step: inserted with the rest, then fastened where it sits. */
+function partStep(
+    part: RunPart,
+    insert: AssemblyTask | undefined,
+    fasten: AssemblyTask | undefined
+): Step {
+    if (!insert || insert.state !== AssemblyTaskState.DONE) {
+        return { state: insert?.state ?? AssemblyTaskState.PENDING };
+    }
+    if (!part.path) {
+        return {
+            state: AssemblyTaskState.FAILED,
+            detail: m.autoAssemblyPartNotInserted()
+        };
+    }
+    if (
+        !fasten ||
+        fasten.state === AssemblyTaskState.PENDING ||
+        fasten.state === AssemblyTaskState.RUNNING
+    ) {
+        return { state: AssemblyTaskState.RUNNING };
+    }
+    return part.isFastened
+        ? { state: AssemblyTaskState.DONE }
+        : {
+              state: AssemblyTaskState.DONE,
+              detail: m.autoAssemblyPartUnmated(),
+              hasWarning: true
+          };
+}
+
+interface ScrewStepsProps {
+    screw: RunScrew;
+    index: number;
+    remove: AssemblyTask | undefined;
+    insert: AssemblyTask | undefined;
+    fasten: AssemblyTask | undefined;
+    show: (shown: HighlightedEntity[]) => void;
+}
+
+/** One screw's steps: deleting the one it updates, then adding each part. */
+function ScrewSteps(props: ScrewStepsProps): ReactNode {
+    const { screw, index, remove, insert, fasten, show } = props;
+    const parts = [...screw.parts].sort(
+        (a, b) => ROLE_ORDER.indexOf(a.role) - ROLE_ORDER.indexOf(b.role)
+    );
+
+    return (
+        <Stack gap={6}>
+            <Text size="xs" c={StatusColor.DIMMED}>
+                {m.autoAssemblyScrewTasks({ index: index + 1 })}
             </Text>
-        </DetailRow>
+            {screw.isUpdate && remove && (
+                <StepRow
+                    step={{ state: remove.state }}
+                    label={m.autoAssemblyTaskDeleteScrew()}
+                />
+            )}
+            {parts.map((part) => {
+                const { path } = part;
+                return (
+                    <StepRow
+                        key={part.role}
+                        step={partStep(part, insert, fasten)}
+                        label={partLabel(part.role)}
+                        onHover={
+                            path
+                                ? () => show([{ occurrencePath: path }])
+                                : undefined
+                        }
+                    />
+                );
+            })}
+        </Stack>
     );
 }
 
@@ -220,7 +358,7 @@ function listLabel(list: PickList, picks: RunPick[]): string {
         case PickList.EXCLUDED:
             return m.autoAssemblyEdgesToExclude();
         case PickList.REPLACED:
-            return m.autoAssemblyScrewsToReplace();
+            return m.autoAssemblyScrewsToUpdate();
         case PickList.STOP_FACE:
             return m.autoAssemblyStopFaceList();
     }
@@ -238,6 +376,16 @@ function pickName(pick: RunPick, index: number): string {
     }
 }
 
+/** Lights entities up in the Onshape window, in place of what it shows. */
+function useShowInOnshape(): (shown: HighlightedEntity[]) => void {
+    const target = useTargetElement();
+    return (shown) => {
+        if (target) {
+            sendHighlightMessage(target, shown);
+        }
+    };
+}
+
 function toSelection(pick: RunPick): OnshapeSelection {
     return {
         entityType: pick.entity.entityType,
@@ -253,13 +401,7 @@ interface PickGroupsProps {
 /** The run's picks under the lists they were made in. Hovering one lights it up in Onshape. */
 function PickGroups(props: PickGroupsProps): ReactNode {
     const { picks } = props;
-    const target = useTargetElement();
-
-    const show = (shown: OnshapeSelection[]) => {
-        if (target) {
-            sendHighlightMessage(target, shown);
-        }
-    };
+    const show = useShowInOnshape();
     const groups = Object.values(PickList).flatMap((list) => {
         const listed = picks.filter((pick) => pick.list === list);
         return listed.length > 0 ? [{ list, listed }] : [];

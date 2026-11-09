@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import { Program } from "./catalog";
 import { FASTENER_SET } from "../../../__test_utils__/fastener-set";
 import {
-    DEFAULT_MAX_GAP,
     DEFAULT_MAX_LENGTH,
     DEFAULT_MAX_THREAD_DEPTH,
     FastenerMode,
@@ -87,9 +86,8 @@ function options(extra: ExtraOptions = {}): FastenerOptions {
             ...screw
         },
         nut: NYLOCK,
-        stop: StopCondition.ALL_HOLES,
+        stop: StopCondition.MAX_LENGTH,
         maxLength: DEFAULT_MAX_LENGTH,
-        maxGap: DEFAULT_MAX_GAP,
         maxThreadDepth: DEFAULT_MAX_THREAD_DEPTH,
         ...rest
     };
@@ -116,18 +114,26 @@ const TWO_PLATES = [
 ];
 
 describe("planHoles", () => {
+    it("takes a screw just through a nut, not past it", () => {
+        // A 1/4 in. plate and a 0.234 in. nylock: WCP's 1/2 in. reaches through
+        const { planned } = plan([hole("top", 0, 0.25, 0.201)], {
+            screw: { vendor: "WCP" }
+        });
+        expect(planned.screw?.length).toBe("IN_0_5");
+    });
+
     it("bolts through two plates, long enough for a nylock", () => {
         const { planned, exit } = plan(TWO_PLATES);
         expect(planned.status).toBe(HoleStatus.READY);
         expect(planned.end).toBe(HoleEnd.THROUGH);
         expect(planned.depth).toBeCloseTo(0.5 * INCH);
-        // 1/2 in. of plate, a 0.236 in. nut and two threads: 0.7985 in.
+        // 1/2 in. of plate and a 0.234 in. nut, through to its far face: 0.734 in.
         expect(planned.screw).toEqual({
             vendor: "GENERIC",
             size: "NO_10_32",
             head: "BUTTON",
             finish: "BLACK",
-            length: "IN_0_875",
+            length: "IN_0_75",
             fullyThreaded: "false"
         });
         expect(planned.nut).toEqual({
@@ -147,8 +153,8 @@ describe("planHoles", () => {
             screwWasher: WASHER,
             nutWasher: WASHER
         });
-        // Two 0.049 in. washers more: 0.8965 in.
-        expect(planned.screw?.length).toBe("IN_1");
+        // Two 0.049 in. washers more: 0.832 in.
+        expect(planned.screw?.length).toBe("IN_0_875");
         expect(planned.screwWasher).toEqual(WASHER);
         expect(planned.nutWasher).toEqual(WASHER);
     });
@@ -252,21 +258,14 @@ describe("planHoles", () => {
             expect(short.planned.screw?.length).toBe("IN_0_25");
         });
 
-        it("reaches as far as the longest screw made when length isn't limited", () => {
-            const unlimited = plan(gapped(3), { maxLength: undefined });
+        it("reaches as far as the longest screw made under All holes", () => {
+            const unlimited = plan(gapped(3), {
+                stop: StopCondition.ALL_HOLES,
+                maxLength: undefined
+            });
             expect(unlimited.planned.depth).toBeCloseTo(3.5 * INCH);
             // Within a 3 in. limit, the far plate is out of reach
             expect(plan(gapped(3)).planned.depth).toBeCloseTo(0.25 * INCH);
-        });
-
-        it("respects a gap wider than the maximum gap, and ignores a narrower one", () => {
-            const firstGap = { stop: StopCondition.FIRST_GAP };
-            expect(plan(gapped(0.25), firstGap).planned.depth).toBeCloseTo(
-                0.25 * INCH
-            );
-            expect(plan(gapped(0.02), firstGap).planned.depth).toBeCloseTo(
-                0.52 * INCH
-            );
         });
 
         it("stops at the face picked, taking in only the plates before it", () => {

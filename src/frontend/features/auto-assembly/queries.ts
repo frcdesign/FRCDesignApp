@@ -73,16 +73,21 @@ export function useInsertMutation(assembly: ElementPath) {
 /** Long enough that picking several in a row checks them once. */
 const PICK_CHECK_DELAY_MS = 600;
 
+export interface PickProblems {
+    /** Each pick's problem, by its row key. */
+    problems: Map<string, RowProblem>;
+    /** Whether a check is waiting for the picks to settle, or going. */
+    isChecking: boolean;
+}
+
 /**
- * Each pick's problem by its row key, checked in the background once the
- * picks settle; each check reads the assembly in Onshape. Memoize `body`.
+ * Each pick's problem, checked in the background once the picks settle; each
+ * check reads the assembly in Onshape. Memoize `body`.
  */
-export function usePickProblems(
-    body: PickCheckIn | undefined
-): Map<string, RowProblem> {
+export function usePickProblems(body: PickCheckIn | undefined): PickProblems {
     const isSignedIn = useIsSignedIn();
     const [settled] = useDebouncedValue(body, PICK_CHECK_DELAY_MS);
-    const { data } = useQuery<PickCheckOut>({
+    const { data, isFetching } = useQuery<PickCheckOut>({
         queryKey: pickCheckQueryKey(settled),
         queryFn:
             settled && isSignedIn
@@ -93,7 +98,7 @@ export function usePickProblems(
         staleTime: Infinity,
         retry: false
     });
-    return useMemo(
+    const problems = useMemo(
         () =>
             new Map(
                 (data?.problems ?? []).map((problem) => [
@@ -103,6 +108,11 @@ export function usePickProblems(
             ),
         [data]
     );
+    return {
+        problems,
+        isChecking:
+            isSignedIn && body !== undefined && (settled !== body || isFetching)
+    };
 }
 
 /** A problem as a list row shows it. */

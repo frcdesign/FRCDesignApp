@@ -60,16 +60,17 @@ interface FastenerOptionsFormProps {
     settled: SettledChoices;
     /** A pick's problem, from the background check, for the face to stop at. */
     problem: (entity: OnshapeSelection) => RowProblem | undefined;
+    isChecking: boolean;
 }
 
 /**
- * Which fastener goes in each hole, in a `ParameterGrid`: the screw, a group
- * for each washer and the nut, then, sized automatically, where it stops.
+ * Which fastener goes in each hole, in a `ParameterGrid`: the screw and,
+ * sized automatically, where it stops, then a group for each washer and the nut.
  */
 export function FastenerOptionsForm(
     props: FastenerOptionsFormProps
 ): ReactNode {
-    const { settled, problem } = props;
+    const { settled, problem, isChecking } = props;
     const isFtc = settled.form[FormInput.PROGRAM] === Program.FTC;
 
     return (
@@ -83,7 +84,16 @@ export function FastenerOptionsForm(
                         </Text>
                     </FullWidthRow>
                 ) : (
-                    <ScrewInputs settled={settled} />
+                    <>
+                        <ScrewInputs settled={settled} />
+                        {settled.mode === FastenerMode.AUTOMATIC && (
+                            <StopInputs
+                                settled={settled}
+                                problem={problem}
+                                isChecking={isChecking}
+                            />
+                        )}
+                    </>
                 )}
             </ParameterGroup>
             {!isFtc && (
@@ -106,9 +116,6 @@ export function FastenerOptionsForm(
                             title={m.autoAssemblyAddNutWasher()}
                             settled={settled}
                         />
-                    )}
-                    {settled.mode === FastenerMode.AUTOMATIC && (
-                        <StopInputs settled={settled} problem={problem} />
                     )}
                 </>
             )}
@@ -251,21 +258,22 @@ function PartGroup(props: PartGroupProps): ReactNode {
 interface StopInputsProps {
     settled: SettledChoices;
     problem: (entity: OnshapeSelection) => RowProblem | undefined;
+    isChecking: boolean;
 }
 
-/** Where an automatic screw stops, how long it may be, and how deep into threads it goes. */
+/** Where an automatic screw stops, and how deep into threads it goes. */
 function StopInputs(props: StopInputsProps): ReactNode {
-    const { settled, problem } = props;
+    const { settled, problem, isChecking } = props;
     const stopFace = useAutoAssemblyStore((state) => state.stopFace);
     const setStopFace = useAutoAssemblyStore((state) => state.setStopFace);
-    const isFirstGap = settled.form[FormInput.STOP] === StopCondition.FIRST_GAP;
+    const isMaxLength =
+        settled.form[FormInput.STOP] === StopCondition.MAX_LENGTH;
     const isFace = settled.form[FormInput.STOP] === StopCondition.FACE;
-    const isLimited = settled.form[FormInput.LIMIT_LENGTH] === "true";
     return (
         <>
             <FormInputRow id={FormInput.STOP} settled={settled} />
-            {isFirstGap && (
-                <FormInputRow id={FormInput.MAX_GAP} settled={settled} />
+            {isMaxLength && (
+                <FormInputRow id={FormInput.MAX_LENGTH} settled={settled} />
             )}
             {isFace && (
                 <FullWidthRow>
@@ -278,12 +286,9 @@ function StopInputs(props: StopInputsProps): ReactNode {
                         accepts={isFaceSelection}
                         filter={PLANAR_FACES}
                         problem={problem}
+                        isChecking={isChecking}
                     />
                 </FullWidthRow>
-            )}
-            <FormInputRow id={FormInput.LIMIT_LENGTH} settled={settled} />
-            {isLimited && (
-                <FormInputRow id={FormInput.MAX_LENGTH} settled={settled} />
             )}
             <FormInputRow id={FormInput.MAX_THREAD_DEPTH} settled={settled} />
         </>

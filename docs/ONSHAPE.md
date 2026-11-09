@@ -256,6 +256,11 @@ What the panel's window messages say about what's picked, in `SELECTION` and
   `workspaceMicroversionId`. One message can name the same part twice.
   _Observed._
 - A whole instance is `OCCURRENCE`. _Observed._
+- A click in the window after a `requestSelectionHighlight` deselects
+  everything the highlight selected, in one `SELECTION` message, and nothing
+  resumes a selection request it cancelled. _Observed._
+- A highlight of a whole instance, as an `OCCURRENCE` selection with its
+  `occurrencePath` alone, lights that instance up. _Unverified._
 
 ## Custom toolbar
 

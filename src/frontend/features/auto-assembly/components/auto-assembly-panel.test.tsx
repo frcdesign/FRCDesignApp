@@ -8,6 +8,7 @@ import {
     AssemblyTaskState,
     PickList,
     ProblemSeverity,
+    RunPartRole,
     SelectedEntityType,
     SelectionMode,
     StopCondition
@@ -30,7 +31,7 @@ import { defaultChoices } from "../options";
 import { useAutoAssemblyStore } from "../store";
 import { useOnshapeLaunch } from "../../../lib/onshape-params";
 import { AutoAssemblyPanel } from "./auto-assembly-panel";
-import { JobDetails } from "./job-details";
+import { JobDetails, JobDetailsTitle } from "./job-details";
 
 vi.mock("../../../lib/api-client", () => ({
     apiGet: vi.fn(),
@@ -275,16 +276,25 @@ describe("AutoAssemblyPanel", () => {
         expect(screen.queryByText("Add screw washer")).toBeNull();
     });
 
-    it("stops an automatic screw by the condition chosen, and a manual one not at all", async () => {
+    it("stops an automatic screw by the condition chosen, asked in the Fastener group, and a manual one not at all", async () => {
         renderPanel();
-        expect(screen.queryByLabelText("Max gap to ignore")).toBeNull();
+        expect(screen.queryByLabelText("Max length")).toBeNull();
         expect(screen.getByLabelText("Max thread depth")).toBeTruthy();
+        // Asked before the washers and nut
+        expect(
+            screen
+                .getByLabelText("Stop condition")
+                .compareDocumentPosition(
+                    screen.getByRole("checkbox", { name: "Add nut" })
+                ) & Node.DOCUMENT_POSITION_FOLLOWING
+        ).toBeTruthy();
 
-        await choose("Stop condition", "First gap");
-        expect(screen.getByLabelText("Max gap to ignore")).toBeTruthy();
+        await choose("Stop condition", "Max length");
+        expect(screen.getByLabelText("Max length")).toBeTruthy();
 
         await choose("Sizing", "Manual");
         expect(screen.queryByLabelText("Stop condition")).toBeNull();
+        expect(screen.queryByLabelText("Max thread depth")).toBeNull();
     });
 
     it("stops at a planar face picked, and won't insert without one", async () => {
@@ -312,14 +322,6 @@ describe("AutoAssemblyPanel", () => {
                 options: expect.objectContaining({ stop: StopCondition.FACE })
             })
         });
-    });
-
-    it("asks for a maximum length only once screw length is limited", async () => {
-        renderPanel();
-        expect(screen.queryByLabelText("Max length")).toBeNull();
-
-        await userEvent.click(screen.getByLabelText("Limit screw length"));
-        expect(screen.getByLabelText("Max length")).toBeTruthy();
     });
 });
 
@@ -382,6 +384,82 @@ describe("JobDetails", () => {
                         selectionId: "B",
                         occurrencePath: ["plate"]
                     })
+                ]
+            }),
+            "*"
+        );
+    });
+
+    it("lists each screw's steps, lighting up what one inserted on hover, and says it updated screws", async () => {
+        useOnshapeLaunch.setState({
+            documentId: "doc",
+            instanceId: "ws",
+            instanceType: "w",
+            elementId: "asm",
+            elementType: "ASSEMBLY" as never
+        });
+        const queryClient = createTestQueryClient();
+        const done = (action: AssemblyTaskAction) => ({
+            action,
+            state: AssemblyTaskState.DONE
+        });
+        queryClient.setQueryData(assemblyJobQueryKey(ASSEMBLY), {
+            state: AssemblyJobState.COMPLETE,
+            tasks: [
+                done(AssemblyTaskAction.INDEX),
+                done(AssemblyTaskAction.REMOVE),
+                done(AssemblyTaskAction.INSERT),
+                done(AssemblyTaskAction.FASTEN)
+            ],
+            screws: [
+                {
+                    hole: "plate|E",
+                    isUpdate: true,
+                    parts: [
+                        {
+                            role: RunPartRole.NUT,
+                            path: ["nut1"],
+                            isFastened: false
+                        },
+                        {
+                            role: RunPartRole.SCREW,
+                            path: ["screw1"],
+                            isFastened: true
+                        }
+                    ]
+                }
+            ],
+            result: { inserted: 2, fastened: 1, replaced: 1 }
+        });
+        renderWithProviders(
+            <>
+                <JobDetailsTitle assembly={ASSEMBLY} />
+                <JobDetails assembly={ASSEMBLY} />
+            </>,
+            queryClient
+        );
+
+        expect(screen.getByText("Updated 1 screw with problems")).toBeTruthy();
+        expect(screen.getByText("Index holes")).toBeTruthy();
+        expect(screen.getByText("Screw 1")).toBeTruthy();
+        const steps = ["Delete screw", "Insert screw", "Add nut"].map((name) =>
+            screen.getByText(name)
+        );
+        expect(
+            steps[1].compareDocumentPosition(steps[2]) &
+                Node.DOCUMENT_POSITION_FOLLOWING
+        ).toBeTruthy();
+        expect(
+            screen.getByText("Not fastened, so it sits unmated.")
+        ).toBeTruthy();
+
+        const posted = vi.spyOn(window.parent, "postMessage");
+        await userEvent.hover(screen.getByText("Add nut"));
+        expect(posted).toHaveBeenCalledWith(
+            expect.objectContaining({
+                messageName: "requestSelectionHighlight",
+                selections: [
+                    { selectionType: "OCCURRENCE", occurrencePath: ["nut1"] }
                 ]
             }),
             "*"

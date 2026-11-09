@@ -6,8 +6,6 @@ import {
 } from "@backend/lib/onshape/types";
 import { Program } from "@backend/features/auto-assembly/catalog";
 import {
-    DEFAULT_MAX_GAP,
-    DEFAULT_MAX_LENGTH,
     DEFAULT_MAX_THREAD_DEPTH,
     FastenerMode,
     type AutoAssemblyIn,
@@ -134,8 +132,6 @@ export const BODY: AutoAssemblyIn = {
         },
         nut: { vendor: "MCMASTER", size: "NO_10_32", type: "NYLOCK" },
         stop: StopCondition.ALL_HOLES,
-        maxLength: DEFAULT_MAX_LENGTH,
-        maxGap: DEFAULT_MAX_GAP,
         maxThreadDepth: DEFAULT_MAX_THREAD_DEPTH
     }
 };

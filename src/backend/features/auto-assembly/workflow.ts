@@ -30,7 +30,9 @@ import {
     PickList,
     type PickProblem,
     type PlannedHole,
+    type RunPart,
     type RunPick,
+    type RunScrew,
     type SelectedEntity,
     pendingTasks,
     type AutoAssemblyIn
@@ -76,6 +78,7 @@ interface RunContext {
     tasks: AssemblyTask[];
     holes?: PlannedHole[];
     picks?: RunPick[];
+    screws?: RunScrew[];
     result: AssemblyJobResult;
     status: (state: AssemblyJobState) => AssemblyJobStatus;
 }
@@ -116,6 +119,7 @@ export class AutoAssemblyWorkflow extends WorkflowEntrypoint<
                 tasks,
                 ...(ctx.holes ? { holes: ctx.holes } : {}),
                 ...(ctx.picks ? { picks: ctx.picks } : {}),
+                ...(ctx.screws ? { screws: ctx.screws } : {}),
                 result: ctx.result
             })
         };
@@ -221,6 +225,9 @@ async function runSteps(ctx: RunContext, request: AutoAssemblyIn) {
         return;
     }
 
+    const runParts = parts.map((part): RunPart => ({ role: part.role }));
+    ctx.screws = runScrews(parts, runParts, removing);
+
     const paths = await runTask(ctx, AssemblyTaskAction.INSERT, (run) =>
         insertParts(ctx, set, run, parts)
     );
@@ -228,10 +235,18 @@ async function runSteps(ctx: RunContext, request: AutoAssemblyIn) {
         skipRest(ctx);
         return;
     }
+    for (const [index, path] of paths.entries()) {
+        if (path) {
+            runParts[index].path = path;
+        }
+    }
     const mated = new Set<number>();
     await runTask(ctx, AssemblyTaskAction.FASTEN, (run) =>
         fastenParts(ctx, set, run, parts, paths, mated)
     );
+    for (const index of mated) {
+        runParts[index].isFastened = true;
+    }
     const unmated = ctx.result.inserted - ctx.result.fastened;
     if (unmated > 0) {
         warnTask(
@@ -339,7 +354,7 @@ async function removeStacks(
             client,
             ctx.assembly,
             instanceIds,
-            "Auto Assembly: replace screws"
+            "Auto Assembly: update screws"
         );
         return true;
     });
@@ -422,6 +437,26 @@ async function runTask<T>(
         task.reason = describeRunFailure(error);
         return undefined;
     }
+}
+
+/** The parts grouped by the screw they go with, sharing each `RunPart` so the run can mark it as it goes. */
+function runScrews(
+    parts: PartPlacement[],
+    runParts: RunPart[],
+    removing: Replacement[]
+): RunScrew[] {
+    const updated = new Set(removing.map((replacement) => replacement.key));
+    const screws = new Map<string, RunScrew>();
+    for (const [index, part] of parts.entries()) {
+        const screw = screws.get(part.hole) ?? {
+            hole: part.hole,
+            isUpdate: updated.has(part.hole),
+            parts: []
+        };
+        screw.parts.push(runParts[index]);
+        screws.set(part.hole, screw);
+    }
+    return [...screws.values()];
 }
 
 /** Each pick of a run, in the form's order, with its problem. */

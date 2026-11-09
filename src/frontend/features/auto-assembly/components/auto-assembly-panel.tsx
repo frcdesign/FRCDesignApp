@@ -138,7 +138,7 @@ function AutoAssemblyForm(props: AutoAssemblyFormProps): ReactNode {
                   },
         [assembly, mode, isFtc, settled, picks, pickCount]
     );
-    const problems = usePickProblems(checkBody);
+    const { problems, isChecking } = usePickProblems(checkBody);
 
     const isRunning = job?.state === AssemblyJobState.RUNNING;
     const problem = (entity: OnshapeSelection) =>
@@ -164,7 +164,11 @@ function AutoAssemblyForm(props: AutoAssemblyFormProps): ReactNode {
         <Stack gap="md" p="md">
             <LastRunCallout assembly={assembly} />
             <ParameterGrid>
-                <FastenerOptionsForm settled={settled} problem={problem} />
+                <FastenerOptionsForm
+                    settled={settled}
+                    problem={problem}
+                    isChecking={isChecking}
+                />
                 <ParameterGroup title={m.autoAssemblySelections()}>
                     <FormInputRow id={FormInput.SELECT_BY} settled={settled} />
                     {mode === SelectionMode.FACES && (
@@ -180,6 +184,7 @@ function AutoAssemblyForm(props: AutoAssemblyFormProps): ReactNode {
                                     accepts={isFace}
                                     filter={PLANAR_FACES}
                                     problem={problem}
+                                    isChecking={isChecking}
                                 />
                             </FullWidthRow>
                             <FullWidthRow>
@@ -192,6 +197,7 @@ function AutoAssemblyForm(props: AutoAssemblyFormProps): ReactNode {
                                     accepts={isEdge}
                                     filter={CIRCULAR_EDGES}
                                     problem={problem}
+                                    isChecking={isChecking}
                                 />
                             </FullWidthRow>
                         </>
@@ -208,6 +214,7 @@ function AutoAssemblyForm(props: AutoAssemblyFormProps): ReactNode {
                                 accepts={isEdge}
                                 filter={CIRCULAR_EDGES}
                                 problem={problem}
+                                isChecking={isChecking}
                             />
                         </FullWidthRow>
                     )}
@@ -216,13 +223,14 @@ function AutoAssemblyForm(props: AutoAssemblyFormProps): ReactNode {
                             <QueryList
                                 id="auto-assembly-replaced"
                                 autoFocus
-                                label={m.autoAssemblyScrewsToReplace()}
-                                prompt={m.autoAssemblyScrewsToReplacePrompt()}
+                                label={m.autoAssemblyScrewsToUpdate()}
+                                prompt={m.autoAssemblyScrewsToUpdatePrompt()}
                                 entities={replaced}
                                 onChange={setReplaced}
                                 accepts={isBody}
                                 filter={SOLID_BODIES}
                                 problem={problem}
+                                isChecking={isChecking}
                                 describe={(_entity, index) =>
                                     m.autoAssemblyScrewRow({ index: index + 1 })
                                 }

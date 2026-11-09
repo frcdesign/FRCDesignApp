@@ -1,6 +1,7 @@
 import {
     ActionIcon,
     Group,
+    Loader,
     Paper,
     Stack,
     Text,
@@ -18,7 +19,9 @@ import {
 } from "../lib/messages";
 import { useTargetElement } from "../lib/onshape-params";
 import {
+    bumpLayout,
     focusedPicks,
+    heldPicks,
     holdPicks,
     onPick,
     selectionKey,
@@ -28,6 +31,7 @@ import {
 } from "../lib/selection";
 import { IconSize, StatusColor } from "../lib/style-constants";
 import { Status, STATUS_COLOR } from "../lib/status";
+import { m } from "../paraglide/messages";
 
 interface QueryListProps {
     /** Unique on the page: which list takes picks. */
@@ -49,6 +53,8 @@ interface QueryListProps {
     autoFocus?: boolean;
     /** What's wrong with a row: shown under it, in its status's color. */
     problem?: (entity: OnshapeSelection) => RowProblem | undefined;
+    /** Whether the rows' problems are being worked out, shown by a spinner beside Clear. */
+    isChecking?: boolean;
 }
 
 /** Why a row won't do what it was picked for (an error), or what's off about how it will (a warning). */
@@ -77,10 +83,12 @@ function defaultName(entity: OnshapeSelection, index: number): string {
  * deselected is dropped. Hover a row to light its entity up alone. A form's
  * first list takes `autoFocus`, so whenever no list is focused it is.
  *
- * The filter is asked for on focus. A highlight cancels it, and a request
- * clears what the window shows, so hovering a row highlights its entity alone,
- * leaving lights the focused list's picks up, and the filter is off until the
- * list is clicked again.
+ * On focus, when a list is shown or hidden, and once its picks are cleared,
+ * the focused list puts its prompt in Onshape's bubble and asks for the filter
+ * or, holding picks, lights them up. A highlight cancels the filter, and a
+ * request clears what the window shows, so hovering a row highlights its
+ * entity alone, leaving lights the focused list's picks up, and the filter is
+ * off until the list is clicked again.
  */
 export function QueryList(props: QueryListProps): ReactNode {
     const {
@@ -94,19 +102,22 @@ export function QueryList(props: QueryListProps): ReactNode {
         describe = defaultName,
         rowSection,
         autoFocus = false,
-        problem
+        problem,
+        isChecking = false
     } = props;
     const target = useTargetElement();
     const isFocused = useOnshapeSelection((state) => state.focused === id);
     const isUnclaimed = useOnshapeSelection(
         (state) => state.focused === undefined
     );
+    const layout = useOnshapeSelection((state) => state.layout);
+    const isEmpty = entities.length === 0;
     // The stop names the request it ends
     const selectionRequest = useRef<string>(undefined);
 
     useEffect(
         () =>
-            onPick(id, ({ added, removed }) => {
+            onPick(id, ({ added, removed, isHighlightCleared }) => {
                 const kept = without(entities, removed);
                 const keys = new Set(kept.map(selectionKey));
                 const taken = added.filter(
@@ -116,6 +127,12 @@ export function QueryList(props: QueryListProps): ReactNode {
                 if (target && added.some((entity) => !accepts(entity))) {
                     sendMessageBubble(target, prompt);
                 }
+                if (target && isHighlightCleared) {
+                    sendHighlightMessage(
+                        target,
+                        [...kept, ...taken].map(toHighlighted)
+                    );
+                }
                 if (taken.length > 0 || kept.length !== entities.length) {
                     onChange([...kept, ...taken]);
                 }
@@ -124,6 +141,11 @@ export function QueryList(props: QueryListProps): ReactNode {
     );
 
     useEffect(() => holdPicks(id, entities), [id, entities]);
+
+    useEffect(() => {
+        bumpLayout();
+        return bumpLayout;
+    }, []);
 
     useEffect(() => {
         if (autoFocus && isUnclaimed) {
@@ -145,22 +167,36 @@ export function QueryList(props: QueryListProps): ReactNode {
         if (!target || !isFocused) {
             return;
         }
-        selectionRequest.current = sendSelectionRequest(target, filter);
+        sendMessageBubble(target, prompt);
+        const picks = heldPicks(id);
+        if (picks.length > 0) {
+            sendHighlightMessage(target, picks.map(toHighlighted));
+        } else {
+            selectionRequest.current = sendSelectionRequest(target, filter);
+        }
         return () => {
             if (selectionRequest.current) {
                 sendStopRequestMessage(target, selectionRequest.current);
+                selectionRequest.current = undefined;
             }
         };
-    }, [target, isFocused, filter]);
+    }, [target, isFocused, filter, prompt, id, layout]);
+
+    // Cleared, by Clear, its last row's removal or the form, it asks for picks again
+    const wasEmpty = useRef(isEmpty);
+    useEffect(() => {
+        if (target && isFocused && isEmpty && !wasEmpty.current) {
+            sendMessageBubble(target, prompt);
+            selectionRequest.current = sendSelectionRequest(target, filter);
+        }
+        wasEmpty.current = isEmpty;
+    }, [target, isFocused, isEmpty, prompt, filter]);
 
     const focus = () => {
         useOnshapeSelection.getState().focus(id);
-        if (!target) {
-            return;
-        }
-        sendMessageBubble(target, prompt);
-        // Already focused, the request was cancelled by a highlight since
-        if (isFocused) {
+        // Newly focused, the focus effect asks; already, a highlight has cancelled the request since
+        if (target && isFocused) {
+            sendMessageBubble(target, prompt);
             selectionRequest.current = sendSelectionRequest(target, filter);
         }
     };
@@ -182,13 +218,7 @@ export function QueryList(props: QueryListProps): ReactNode {
         onChange(rest);
     };
 
-    // A request clears the window's selection, and keeps picks limited
-    const clear = () => {
-        onChange([]);
-        if (target && isFocused) {
-            selectionRequest.current = sendSelectionRequest(target, filter);
-        }
-    };
+    const clear = () => onChange([]);
 
     return (
         <Stack gap={4}>
@@ -214,16 +244,19 @@ export function QueryList(props: QueryListProps): ReactNode {
                             <Text size="xs" c={StatusColor.DIMMED}>
                                 {label}
                             </Text>
-                            <UnstyledButton
-                                onClick={(event) => {
-                                    event.stopPropagation();
-                                    clear();
-                                }}
-                            >
-                                <Text size="xs" c={StatusColor.DIMMED}>
-                                    Clear
-                                </Text>
-                            </UnstyledButton>
+                            <Group gap={6}>
+                                {isChecking && <Loader size={IconSize.TINY} />}
+                                <UnstyledButton
+                                    onClick={(event) => {
+                                        event.stopPropagation();
+                                        clear();
+                                    }}
+                                >
+                                    <Text size="xs" c={StatusColor.DIMMED}>
+                                        {m.queryListClear()}
+                                    </Text>
+                                </UnstyledButton>
+                            </Group>
                         </Group>
                         {/* Left as a whole, so moving between rows lights each alone without the rest between */}
                         <Stack gap={2} onMouseLeave={unhighlight}>

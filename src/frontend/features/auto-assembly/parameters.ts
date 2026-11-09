@@ -4,7 +4,6 @@
  * decides what shows, so a hidden choice keeps its value for when it's back.
  */
 import {
-    type BooleanParameter,
     type ConfigurationParameter,
     type EnumParameter,
     ParameterType,
@@ -24,9 +23,7 @@ export enum FormInput {
     SELECT_BY = "selectBy",
     PROGRAM = "program",
     STOP = "stop",
-    LIMIT_LENGTH = "limitLength",
     MAX_LENGTH = "maxLength",
-    MAX_GAP = "maxGap",
     MAX_THREAD_DEPTH = "maxThreadDepth"
 }
 
@@ -43,10 +40,6 @@ function enumParameter(
         options,
         optionConditions: []
     };
-}
-
-function booleanParameter(id: FormInput, name: string): BooleanParameter {
-    return { type: ParameterType.BOOLEAN, id, name, default: "false" };
 }
 
 /** Inches, as the document's own units show them. */
@@ -80,19 +73,13 @@ export const FORM_PARAMETERS: ConfigurationParameter[] = [
     ]),
     enumParameter(FormInput.STOP, m.autoAssemblyStopCondition(), [
         { id: StopCondition.ALL_HOLES, name: m.autoAssemblyStopAllHoles() },
-        { id: StopCondition.FIRST_GAP, name: m.autoAssemblyStopFirstGap() },
+        { id: StopCondition.MAX_LENGTH, name: m.autoAssemblyStopMaxLength() },
         { id: StopCondition.FACE, name: m.autoAssemblyStopFace() }
     ]),
-    booleanParameter(FormInput.LIMIT_LENGTH, m.autoAssemblyLimitLength()),
     inchParameter(FormInput.MAX_LENGTH, m.autoAssemblyMaxLength(), {
         default: 3,
         min: 0.25,
         max: 10
-    }),
-    inchParameter(FormInput.MAX_GAP, m.autoAssemblyMaxGap(), {
-        default: 0.03125,
-        min: 0,
-        max: 1
     }),
     inchParameter(FormInput.MAX_THREAD_DEPTH, m.autoAssemblyMaxThreadDepth(), {
         default: 0.5,

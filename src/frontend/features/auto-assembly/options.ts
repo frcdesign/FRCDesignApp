@@ -148,6 +148,11 @@ function metres(form: Selection, id: FormInput): number {
 export function fastenerOptions(settled: SettledChoices): FastenerOptions {
     const { form, parts, added } = settled;
     const part = (each: Part) => (added[each] ? parts[each] : undefined);
+    // The form asks for a stop condition only for an automatic screw
+    const stop =
+        settled.mode === FastenerMode.AUTOMATIC
+            ? (form[FormInput.STOP] as StopCondition)
+            : StopCondition.ALL_HOLES;
     return {
         program: form[FormInput.PROGRAM] as Program,
         mode: settled.mode,
@@ -155,16 +160,11 @@ export function fastenerOptions(settled: SettledChoices): FastenerOptions {
         screwWasher: part(Part.SCREW_WASHER),
         nut: part(Part.NUT),
         nutWasher: part(Part.NUT_WASHER),
-        // The form asks for a stop condition only for an automatic screw
-        stop:
-            settled.mode === FastenerMode.AUTOMATIC
-                ? (form[FormInput.STOP] as StopCondition)
-                : StopCondition.ALL_HOLES,
+        stop,
         maxLength:
-            form[FormInput.LIMIT_LENGTH] === "true"
+            stop === StopCondition.MAX_LENGTH
                 ? metres(form, FormInput.MAX_LENGTH)
                 : undefined,
-        maxGap: metres(form, FormInput.MAX_GAP),
         maxThreadDepth: metres(form, FormInput.MAX_THREAD_DEPTH)
     };
 }

@@ -30,7 +30,8 @@ describe("useMessageListener", () => {
         useOnshapeSelection.setState({
             focused: "list",
             shown: [],
-            awaited: undefined
+            awaited: undefined,
+            isHighlighted: false
         });
         stopPicking = onPick("list", picked);
         renderHook(() => useMessageListener());
@@ -53,13 +54,21 @@ describe("useMessageListener", () => {
 
     it("hands the focused list what a SELECTION message added", () => {
         post({ messageName: "SELECTION", selections: [edge] });
-        expect(picked).toHaveBeenCalledWith({ added: picks, removed: [] });
+        expect(picked).toHaveBeenCalledWith({
+            added: picks,
+            removed: [],
+            isHighlightCleared: false
+        });
     });
 
     it("hands it what was deselected, as Onshape sends the whole selection", () => {
         post({ messageName: "SELECTION", selections: [edge] });
         post({ messageName: "SELECTION", selections: [] });
-        expect(picked).toHaveBeenLastCalledWith({ added: [], removed: picks });
+        expect(picked).toHaveBeenLastCalledWith({
+            added: [],
+            removed: picks,
+            isHighlightCleared: false
+        });
     });
 
     it("follows a pending selection request's answers, which carry the selection in its place", () => {
@@ -72,9 +81,17 @@ describe("useMessageListener", () => {
             });
         answer([]);
         answer([edge]);
-        expect(picked).toHaveBeenLastCalledWith({ added: picks, removed: [] });
+        expect(picked).toHaveBeenLastCalledWith({
+            added: picks,
+            removed: [],
+            isHighlightCleared: false
+        });
         answer([]);
-        expect(picked).toHaveBeenLastCalledWith({ added: [], removed: picks });
+        expect(picked).toHaveBeenLastCalledWith({
+            added: [],
+            removed: picks,
+            isHighlightCleared: false
+        });
     });
 
     it("follows a highlight's answers too, past what it lit up", () => {
@@ -91,7 +108,29 @@ describe("useMessageListener", () => {
         expect(picked).not.toHaveBeenCalled();
 
         answer({ selections: [] });
-        expect(picked).toHaveBeenCalledWith({ added: [], removed: picks });
+        expect(picked).toHaveBeenCalledWith({
+            added: [],
+            removed: picks,
+            isHighlightCleared: false
+        });
+    });
+
+    it("keeps picks a click clears from a highlight of several, until Onshape can resume a selection", () => {
+        const both = [edge, { ...edge, selectionId: "JHE" }];
+        expectSelection(
+            both.map(({ entityType, selectionId, occurrencePath }) => ({
+                entityType,
+                selectionId,
+                occurrencePath
+            }))
+        );
+        post({ messageName: "SELECTION", selections: both });
+        post({ messageName: "SELECTION", selections: [] });
+        expect(picked).toHaveBeenCalledWith({
+            added: [],
+            removed: [],
+            isHighlightCleared: true
+        });
     });
 
     it("lets the console send a message, addressed to the launching element", () => {
@@ -136,6 +175,10 @@ describe("useMessageListener", () => {
         expect(picked).not.toHaveBeenCalled();
 
         post({ messageName: "SELECTION", selections: [] });
-        expect(picked).toHaveBeenCalledWith({ added: [], removed: picks });
+        expect(picked).toHaveBeenCalledWith({
+            added: [],
+            removed: picks,
+            isHighlightCleared: false
+        });
     });
 });

@@ -14,25 +14,12 @@ export const OUTCOME_STATUS: Record<AssemblyJobOutcome, Status> = {
     [AssemblyJobOutcome.FAILED]: Status.ERROR
 };
 
-export function taskLabel(action: AssemblyTaskAction): string {
-    switch (action) {
-        case AssemblyTaskAction.INDEX:
-            return m.autoAssemblyTaskIndex();
-        case AssemblyTaskAction.REMOVE:
-            return m.autoAssemblyTaskRemove();
-        case AssemblyTaskAction.INSERT:
-            return m.autoAssemblyTaskInsert();
-        case AssemblyTaskAction.FASTEN:
-            return m.autoAssemblyTaskFasten();
-    }
-}
-
 function taskRunning(action: AssemblyTaskAction): string {
     switch (action) {
         case AssemblyTaskAction.INDEX:
             return m.autoAssemblyTaskIndexRunning();
         case AssemblyTaskAction.REMOVE:
-            return m.autoAssemblyTaskRemoveRunning();
+            return m.autoAssemblyTaskDeleteRunning();
         case AssemblyTaskAction.INSERT:
             return m.autoAssemblyTaskInsertRunning();
         case AssemblyTaskAction.FASTEN:
@@ -48,25 +35,22 @@ export function runningHeadline(status: AssemblyJobStatus): string {
     return task ? taskRunning(task.action) : m.autoAssemblyInserting();
 }
 
-/** "Inserted 12 parts", or how it stopped short. */
+/** "Inserted 12 parts", "Updated 3 screws", or how it stopped short. */
 export function jobHeadline(
     status: AssemblyJobStatus,
     outcome: AssemblyJobOutcome
 ): string {
-    const count = status.result?.inserted ?? 0;
-    const replaced = status.result?.replaced ?? 0;
+    const inserted = status.result?.inserted ?? 0;
+    const updated = status.result?.replaced ?? 0;
     switch (outcome) {
         case AssemblyJobOutcome.SUCCESS:
-            return replaced > 0
-                ? m.autoAssemblyInsertedReplacing({ count, replaced })
-                : m.autoAssemblyInserted({ count });
+            return updated > 0
+                ? m.autoAssemblyUpdated({ count: updated })
+                : m.autoAssemblyInserted({ count: inserted });
         case AssemblyJobOutcome.PARTIAL:
-            return replaced > 0
-                ? m.autoAssemblyInsertedReplacingWithProblems({
-                      count,
-                      replaced
-                  })
-                : m.autoAssemblyInsertedWithProblems({ count });
+            return updated > 0
+                ? m.autoAssemblyUpdatedWithProblems({ count: updated })
+                : m.autoAssemblyInsertedWithProblems({ count: inserted });
         case AssemblyJobOutcome.FAILED:
             return m.autoAssemblyFailed();
     }

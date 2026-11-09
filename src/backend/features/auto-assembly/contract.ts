@@ -14,15 +14,14 @@ export enum FastenerMode {
 export enum StopCondition {
     /** Through every hole on the axis, gaps and all. */
     ALL_HOLES = "all-holes",
-    /** At the first gap between parts wider than the maximum gap. */
-    FIRST_GAP = "first-gap",
+    /** Within the maximum length (`maxLength`). */
+    MAX_LENGTH = "max-length",
     /** At a planar face picked to stop at (`stopFace`), where each hole's axis meets it. */
     FACE = "face"
 }
 
 /** Inches, so the defaults read as the round numbers they are. */
 export const DEFAULT_MAX_LENGTH = 3 * 0.0254;
-export const DEFAULT_MAX_GAP = 0.03125 * 0.0254;
 export const DEFAULT_MAX_THREAD_DEPTH = 0.5 * 0.0254;
 
 export interface FastenerOptions {
@@ -37,10 +36,8 @@ export interface FastenerOptions {
     /** Under the nut; only with one. */
     nutWasher?: PartChoice;
     stop: StopCondition;
-    /** Metres; the longest screw an automatic one may be, under either stop condition. Unlimited when absent. */
+    /** Metres; the longest an automatic screw may be; with `StopCondition.MAX_LENGTH` only. */
     maxLength?: number;
-    /** Metres; the widest gap `StopCondition.FIRST_GAP` reaches across. */
-    maxGap: number;
     /** Metres; the farthest an automatic screw goes past where threads, or a blind hole, start. */
     maxThreadDepth: number;
 }
@@ -215,14 +212,42 @@ export interface AssemblyJobResult {
     inserted: number;
     /** Parts fastened to where they sit. */
     fastened: number;
-    /** Screws taken out, with their washers and nuts, for new ones. */
+    /** Screws updated: taken out, with their washers and nuts, for new ones. */
     replaced: number;
+}
+
+/** What a part a run inserts is, in the stack on its hole. */
+export enum RunPartRole {
+    SCREW_WASHER = "screw-washer",
+    SCREW = "screw",
+    NUT_WASHER = "nut-washer",
+    NUT = "nut"
+}
+
+/** A part a run inserts, as it goes. */
+export interface RunPart {
+    role: RunPartRole;
+    /** Its occurrence path in the assembly, once inserted. */
+    path?: string[];
+    /** Whether it's mated where it sits. */
+    isFastened?: boolean;
+}
+
+/** A screw a run puts in a hole, with the parts that go with it. */
+export interface RunScrew {
+    /** The planned hole's key. */
+    hole: string;
+    /** Whether it updates a screw already there, which is deleted first. */
+    isUpdate: boolean;
+    parts: RunPart[];
 }
 
 export interface AssemblyJobStatus {
     state: AssemblyJobState;
     jobId?: string;
     tasks?: AssemblyTask[];
+    /** Each screw the run puts in, once its parts are known. */
+    screws?: RunScrew[];
     /** Each hole picked, and what it got or why it got nothing, once indexed. */
     holes?: PlannedHole[];
     /** Each pick, with its problem, once indexed. */

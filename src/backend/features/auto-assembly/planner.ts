@@ -4,9 +4,9 @@
  *
  * A hole is followed from its circular edge into the parts, through every hole on the
  * same axis, until it ends: in threads (tapped), at the bottom of a hole
- * (blind), or out the far side (through, where a nut goes). It stops at the
- * maximum length, or at the first gap wider than the maximum gap. A screw goes
- * no deeper into threads than the maximum thread depth.
+ * (blind), or out the far side (through, where a nut goes). It stops past the
+ * longest screw made, the maximum length, or the face to stop at, by the stop
+ * condition. A screw goes no deeper into threads than the maximum thread depth.
  */
 import {
     type Catalog,
@@ -103,9 +103,6 @@ interface PlanOptions extends FastenerOptions {
 }
 
 const INCH = 0.0254;
-
-/** Two threads past a nut, so it's fully engaged. */
-const THREADS_PAST_NUT = 2;
 
 /** A screw goes at least this many diameters into threads, or as far as they go. */
 const MIN_ENGAGEMENT_DIAMETERS = 1;
@@ -341,20 +338,17 @@ function meetsPlane(
     );
 }
 
-/** The deepest a stack is followed, and the widest gap it reaches across: to the face to stop at, if any. */
-function stopLimits(
-    options: PlanOptions,
-    stopAt: number | undefined
-): {
-    reach: number;
-    gap: number;
-} {
-    const longest = options.maxLength ?? longestLength(options);
-    return {
-        reach: stopAt === undefined ? longest : Math.min(stopAt, longest),
-        gap:
-            options.stop === StopCondition.FIRST_GAP ? options.maxGap : Infinity
-    };
+/** The longest an automatic screw may be, when its stop condition limits it. */
+function lengthLimit(options: PlanOptions): number | undefined {
+    return options.stop === StopCondition.MAX_LENGTH
+        ? options.maxLength
+        : undefined;
+}
+
+/** The deepest a stack is followed: to the face to stop at, if any, and no farther than the longest screw allowed. */
+function stopReach(options: PlanOptions, stopAt: number | undefined): number {
+    const longest = lengthLimit(options) ?? longestLength(options);
+    return stopAt === undefined ? longest : Math.min(stopAt, longest);
 }
 
 interface Stack {
@@ -374,7 +368,7 @@ function followStack(
     options: PlanOptions,
     stopAt: number | undefined
 ): Stack {
-    const limits = stopLimits(options, stopAt);
+    const limit = stopReach(options, stopAt);
     let reach = first.far;
     let last = first;
     if (first.closedFar) {
@@ -389,11 +383,7 @@ function followStack(
         if (segment === first || segment.far <= reach + LINEAR_TOLERANCE) {
             continue;
         }
-        const gap = segment.near - reach;
-        if (
-            gap > limits.gap + LINEAR_TOLERANCE ||
-            segment.near > limits.reach - LINEAR_TOLERANCE
-        ) {
+        if (segment.near > limit - LINEAR_TOLERANCE) {
             break;
         }
         const isThreaded =
@@ -417,7 +407,7 @@ function followStack(
         }
         reach = segment.far;
         last = segment;
-        if (reach > limits.reach) {
+        if (reach > limit) {
             break;
         }
     }
@@ -488,12 +478,12 @@ function pickScrew(
         return { error: "The vendor doesn't make this head in this size." };
     }
     const isPreset = options.mode === FastenerMode.PRESET;
+    const limit = lengthLimit(options);
     const lengths = isPreset
         ? made.filter((each) => each.id === options.screw.length)
         : made.filter(
               (each) =>
-                  options.maxLength === undefined ||
-                  each.length <= options.maxLength + LINEAR_TOLERANCE
+                  limit === undefined || each.length <= limit + LINEAR_TOLERANCE
           );
     if (lengths.length === 0) {
         return {
@@ -522,13 +512,9 @@ function pickScrew(
             ? (getNut(options.catalog, nut.vendor, nut.size, nut.type)
                   ?.height ?? 0)
             : 0;
+        // Flush with the nut's far face engages every thread, a nylock's insert included
         const needed =
-            stack.depth +
-            (nut
-                ? washers.endThickness +
-                  nutHeight +
-                  THREADS_PAST_NUT * size.pitch
-                : 0);
+            stack.depth + (nut ? washers.endThickness + nutHeight : 0);
         const reaching = lengths.find(
             (each) => tip(each.length) >= needed - LINEAR_TOLERANCE
         );
@@ -538,7 +524,7 @@ function pickScrew(
         const longest = lengths[lengths.length - 1];
         const named = isPreset
             ? `The ${longest.name} screw`
-            : options.maxLength !== undefined
+            : limit !== undefined
               ? `The longest screw within the maximum length, ${longest.name},`
               : `The longest screw, ${longest.name},`;
         return {

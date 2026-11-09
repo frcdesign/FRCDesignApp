@@ -41,7 +41,6 @@ export const autoAssemblyRoutes = getApp();
 
 /** Inches: the longest standard screw, and a gap wider than any worth ignoring. */
 const MAX_LENGTH_LIMIT = 10 * 0.0254;
-const MAX_GAP_LIMIT = 1 * 0.0254;
 
 const optionId = z.string().min(1);
 
@@ -96,9 +95,14 @@ const optionsSchema = z
         nutWasher: partSchema.optional(),
         stop: z.enum(StopCondition),
         maxLength: z.number().positive().max(MAX_LENGTH_LIMIT).optional(),
-        maxGap: z.number().min(0).max(MAX_GAP_LIMIT),
         maxThreadDepth: z.number().positive().max(MAX_LENGTH_LIMIT)
     })
+    .refine(
+        (options) =>
+            (options.stop === StopCondition.MAX_LENGTH) ===
+            (options.maxLength !== undefined),
+        "A maximum length goes with the Max length stop condition."
+    )
     .refine(
         (options) => !options.nutWasher || options.nut,
         "A nut washer goes under a nut."
@@ -142,7 +146,7 @@ const insertBody = z
     .refine(hasStopFace, STOP_FACE_MESSAGE)
     .refine(
         (body) => body.targets.length > 0 || body.replaced.length > 0,
-        "Select holes to fasten or screws to replace."
+        "Select holes to fasten or screws to update."
     );
 
 const checkBody = z

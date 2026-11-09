@@ -28,6 +28,7 @@ import {
     AssemblyTaskState,
     HoleEnd,
     HoleStatus,
+    RunPartRole,
     PickList,
     ProblemSeverity,
     SelectedEntityType,
@@ -191,8 +192,25 @@ describe("AutoAssemblyWorkflow", () => {
         ]);
         expect(status.holes?.[0]).toMatchObject({
             status: HoleStatus.READY,
-            screw: { length: "IN_1" }
+            screw: { length: "IN_0_875" }
         });
+        // Each part with the screw it goes with, as inserted and fastened
+        expect(status.screws).toEqual([
+            {
+                hole: status.holes?.[0].key,
+                isUpdate: false,
+                parts: [
+                    RunPartRole.SCREW_WASHER,
+                    RunPartRole.SCREW,
+                    RunPartRole.NUT_WASHER,
+                    RunPartRole.NUT
+                ].map((role, index) => ({
+                    role,
+                    path: [`part${index}`],
+                    isFastened: true
+                }))
+            }
+        ]);
         // Washer, screw, washer, nut
         expect(status.result).toEqual({
             inserted: 4,

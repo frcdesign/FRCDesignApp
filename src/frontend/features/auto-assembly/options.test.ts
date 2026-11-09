@@ -1,8 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { FASTENER_SET } from "../../../__test_utils__/fastener-set";
 import {
-    DEFAULT_MAX_GAP,
-    DEFAULT_MAX_LENGTH,
     DEFAULT_MAX_THREAD_DEPTH,
     FastenerMode,
     StopCondition
@@ -42,7 +40,6 @@ describe("settleChoices", () => {
         expect(options.mode).toBe(FastenerMode.AUTOMATIC);
         expect(options.stop).toBe(StopCondition.ALL_HOLES);
         expect(options.maxLength).toBeUndefined();
-        expect(options.maxGap).toBeCloseTo(DEFAULT_MAX_GAP);
         expect(options.maxThreadDepth).toBeCloseTo(DEFAULT_MAX_THREAD_DEPTH);
         expect(isMade(FASTENER_SET, FastenerKind.SCREW, options.screw)).toBe(
             true
@@ -106,31 +103,26 @@ describe("settleChoices", () => {
         expect(options.nutWasher).toBeUndefined();
     });
 
-    it("sends the quantities typed, in metres", () => {
-        const options = fastenerOptions(
-            settleChoices(
-                FASTENER_SET,
-                choices({
-                    form: {
-                        [FormInput.STOP]: StopCondition.FIRST_GAP,
-                        [FormInput.MAX_GAP]: "(1 + 1) / 16 in"
-                    }
-                })
-            )
-        );
-        expect(options.stop).toBe(StopCondition.FIRST_GAP);
-        expect(options.maxGap).toBeCloseTo(0.125 * 0.0254);
-    });
-
-    it("sends a maximum length only while screw length is limited", () => {
-        const limited = (limitLength: string) =>
+    it("sends the maximum length typed, in metres, only with the Max length stop condition", () => {
+        const sent = (stop: StopCondition, mode = FastenerMode.AUTOMATIC) =>
             fastenerOptions(
                 settleChoices(
                     FASTENER_SET,
-                    choices({ form: { [FormInput.LIMIT_LENGTH]: limitLength } })
+                    choices({
+                        mode,
+                        form: {
+                            [FormInput.STOP]: stop,
+                            [FormInput.MAX_LENGTH]: "(1 + 1) / 4 in"
+                        }
+                    })
                 )
-            ).maxLength;
-        expect(limited("true")).toBeCloseTo(DEFAULT_MAX_LENGTH);
-        expect(limited("false")).toBeUndefined();
+            );
+        expect(sent(StopCondition.MAX_LENGTH).maxLength).toBeCloseTo(
+            0.5 * 0.0254
+        );
+        expect(sent(StopCondition.ALL_HOLES).maxLength).toBeUndefined();
+        const manual = sent(StopCondition.MAX_LENGTH, FastenerMode.PRESET);
+        expect(manual.stop).toBe(StopCondition.ALL_HOLES);
+        expect(manual.maxLength).toBeUndefined();
     });
 });

@@ -98,7 +98,7 @@ describe("FastenCircularEdgesStatus", () => {
         ]);
     });
 
-    it("picks faces, and and edges to exclude, in faces mode", async () => {
+    it("picks faces, and edges to exclude, in faces mode", async () => {
         updateUiState({ fastenSelectionMode: SelectionMode.FACES });
         renderStatus();
         selectInOnshape(face("JF1"), edge("JH1"));
@@ -132,8 +132,9 @@ describe("FastenCircularEdgesStatus", () => {
             </>
         );
         expect(document.querySelectorAll("[data-focused]")).toHaveLength(1);
-        // The menu's request clears the window, keeping the picks
+        // The menu's list lights the picks up: Onshape clears the window, then shows them
         act(() => useOnshapeSelection.getState().receive([]));
+        act(() => useOnshapeSelection.getState().receive([edge("JH1")]));
         selectInOnshape(edge("JH2"));
         expect(useFastenPicks.getState().targets).toEqual([
             edge("JH1"),

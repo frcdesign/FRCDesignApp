@@ -96,33 +96,48 @@ export function sendOpenFeatureMessage(
 const HIGHLIGHT_PREFIX = "highlight-selection-";
 let highlights = 0;
 
-/** Something picked in the assembly, as Onshape names it. */
+/** Something picked in the assembly, as Onshape names it; a whole part instance by its occurrence path alone. */
 export interface HighlightedEntity {
-    entityType: string;
-    selectionId: string;
+    entityType?: string;
+    selectionId?: string;
     occurrencePath: string[];
+}
+
+function isEntity(
+    entity: HighlightedEntity
+): entity is Required<HighlightedEntity> {
+    return entity.entityType !== undefined && entity.selectionId !== undefined;
 }
 
 /**
  * Makes `entities` what the Onshape window shows selected, in place of what it
  * showed. Onshape documents this shape for a Part Studio entity, without
- * `occurrencePath`; a mate connector's body never lit (see below).
+ * `occurrencePath`; a mate connector's body never lit (see below). An
+ * instance goes as an `OCCURRENCE`, whose SELECTION answer names nothing a
+ * list takes.
  */
 export function sendHighlightMessage(
     elementPath: ElementPath,
     entities: HighlightedEntity[]
 ): string {
-    expectSelection(entities);
+    expectSelection(entities.filter(isEntity));
     const messageId = `${HIGHLIGHT_PREFIX}${++highlights}`;
     sendMessage(elementPath, {
         messageName: MessageType.REQUEST_HIGHLIGHT_SELECTION,
         messageId,
-        selections: entities.map((entity) => ({
-            selectionType: "ENTITY",
-            entityType: entity.entityType,
-            selectionId: entity.selectionId,
-            occurrencePath: entity.occurrencePath
-        }))
+        selections: entities.map((entity) =>
+            isEntity(entity)
+                ? {
+                      selectionType: "ENTITY",
+                      entityType: entity.entityType,
+                      selectionId: entity.selectionId,
+                      occurrencePath: entity.occurrencePath
+                  }
+                : {
+                      selectionType: "OCCURRENCE",
+                      occurrencePath: entity.occurrencePath
+                  }
+        )
     });
     return messageId;
 }

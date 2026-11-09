@@ -146,12 +146,13 @@ describe("QueryList", () => {
             (message) => (message as { messageName: string }).messageName
         );
         expect(names).toEqual([
-            "showMessageBubble",
             "stopRequest",
+            "showMessageBubble",
             "requestSelection"
         ]);
         // The edges' request, by its id
-        expect(messages[1]).toMatchObject({ messageId });
+        expect(messages[0]).toMatchObject({ messageId });
+        expect(messages[1]).toMatchObject({ message: "Select faces." });
         expect(messages[2]).toMatchObject({
             entityTypeSpecifier: ["FACE"],
             geometryTypeSpecifier: ["PLANE"]
@@ -286,7 +287,7 @@ describe("QueryList", () => {
         expect(screen.getByText("Edge 1")).toBeTruthy();
     });
 
-    it("clears the Onshape window's selection with its picks, keeping them limited", async () => {
+    it("clears the Onshape window's selection with its picks, prompting and limiting picks again", async () => {
         renderWithProviders(<Harness />);
         await userEvent.click(screen.getByText("Holes"));
         select(edge("A"));
@@ -296,10 +297,95 @@ describe("QueryList", () => {
         expect(screen.queryByText("Edge 1")).toBeNull();
         expect(messages).toEqual([
             expect.objectContaining({
+                messageName: "showMessageBubble",
+                message: PROMPT
+            }),
+            expect.objectContaining({
                 messageName: "requestSelection",
                 entityTypeSpecifier: ["EDGE"]
             })
         ]);
+    });
+
+    it("prompts again as lists show and hide, lighting its picks up if it has some", async () => {
+        const Toggled = () => {
+            const [shown, setShown] = useState(false);
+            return (
+                <>
+                    <Harness />
+                    <button onClick={() => setShown(!shown)}>Toggle</button>
+                    {shown && (
+                        <QueryList
+                            id="faces"
+                            label="Faces"
+                            prompt="Select faces."
+                            entities={[]}
+                            onChange={() => undefined}
+                            accepts={() => true}
+                            filter={PLANAR_FACES}
+                        />
+                    )}
+                </>
+            );
+        };
+        renderWithProviders(<Toggled />);
+        await userEvent.click(screen.getByText("Holes"));
+        select(edge("A"));
+
+        messages = [];
+        await userEvent.click(screen.getByText("Toggle"));
+        expect(messages).toContainEqual(
+            expect.objectContaining({
+                messageName: "showMessageBubble",
+                message: PROMPT
+            })
+        );
+        expect(messages).toContainEqual(
+            expect.objectContaining({
+                messageName: "requestSelectionHighlight",
+                selections: [expect.objectContaining({ selectionId: "A" })]
+            })
+        );
+    });
+
+    it("keeps its picks when a click in Onshape clears a highlight of them, lighting them up again", async () => {
+        renderWithProviders(<Harness />);
+        await userEvent.click(screen.getByText("Holes"));
+        select(edge("A"), edge("B"));
+        // Lit up as the mouse leaves its rows
+        await userEvent.unhover(screen.getByText("Edge 1"));
+        act(() =>
+            useOnshapeSelection.getState().receive([edge("A"), edge("B")])
+        );
+
+        messages = [];
+        act(() => useOnshapeSelection.getState().receive([]));
+        expect(screen.getByText("Edge 2")).toBeTruthy();
+        expect(messages).toContainEqual(
+            expect.objectContaining({
+                messageName: "requestSelectionHighlight",
+                selections: [
+                    expect.objectContaining({ selectionId: "A" }),
+                    expect.objectContaining({ selectionId: "B" })
+                ]
+            })
+        );
+    });
+
+    it("shows a spinner beside Clear while its rows are checked", () => {
+        renderWithProviders(
+            <QueryList
+                id="holes"
+                label="Holes"
+                prompt={PROMPT}
+                entities={[edge("A")]}
+                onChange={() => undefined}
+                accepts={() => true}
+                filter={CIRCULAR_EDGES}
+                isChecking
+            />
+        );
+        expect(document.querySelector(".mantine-Loader-root")).toBeTruthy();
     });
 
     it("hands picks to one list at a time", async () => {

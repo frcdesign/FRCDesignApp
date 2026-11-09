@@ -591,8 +591,8 @@
     "autoAssemblyCircularEdges": "Circular edges",
     "autoAssemblyScrews": "Screws",
     "autoAssemblyCircularEdgesPrompt": "Select the circular edges of holes to use.",
-    "autoAssemblyScrewsToReplace": "Screws to replace",
-    "autoAssemblyScrewsToReplacePrompt": "Select screws to replace.",
+    "autoAssemblyScrewsToUpdate": "Screws to update",
+    "autoAssemblyScrewsToUpdatePrompt": "Select screws to update.",
     "autoAssemblyFaceRow": "Face {index}",
     "autoAssemblyEdgeRow": "Edge {index}",
     "autoAssemblyScrewRow": "Screw {index}",
@@ -609,20 +609,23 @@
     "autoAssemblyAddNutWasher": "Add nut washer",
     "autoAssemblyStopCondition": "Stop condition",
     "autoAssemblyStopAllHoles": "All holes",
-    "autoAssemblyStopFirstGap": "First gap",
+    "autoAssemblyStopMaxLength": "Max length",
     "autoAssemblyStopFace": "Face",
     "autoAssemblyStopFaceList": "Face to stop at",
     "autoAssemblyStopFacePrompt": "Select a planar face to stop at.",
-    "autoAssemblyLimitLength": "Limit screw length",
     "autoAssemblyMaxLength": "Max length",
-    "autoAssemblyMaxGap": "Max gap to ignore",
     "autoAssemblyMaxThreadDepth": "Max thread depth",
     "autoAssemblyTaskIndex": "Index holes",
-    "autoAssemblyTaskRemove": "Remove replaced parts",
-    "autoAssemblyTaskInsert": "Insert parts",
-    "autoAssemblyTaskFasten": "Fasten parts",
+    "autoAssemblyScrewTasks": "Screw {index}",
+    "autoAssemblyTaskDeleteScrew": "Delete screw",
+    "autoAssemblyTaskInsertScrew": "Insert screw",
+    "autoAssemblyTaskAddScrewWasher": "Add screw washer",
+    "autoAssemblyTaskAddNut": "Add nut",
+    "autoAssemblyTaskAddNutWasher": "Add nut washer",
+    "autoAssemblyPartNotInserted": "Onshape didn't insert it.",
+    "autoAssemblyPartUnmated": "Not fastened, so it sits unmated.",
     "autoAssemblyTaskIndexRunning": "Indexing holes...",
-    "autoAssemblyTaskRemoveRunning": "Removing replaced parts...",
+    "autoAssemblyTaskDeleteRunning": "Deleting screws...",
     "autoAssemblyTaskInsertRunning": "Inserting parts...",
     "autoAssemblyTaskFastenRunning": "Fastening parts...",
     "autoAssemblyInserting": "Inserting fasteners...",
@@ -641,22 +644,17 @@
             }
         }
     ],
-    "autoAssemblyInsertedReplacing": [
+    "autoAssemblyUpdated": [
         {
             "declarations": [
                 "input count",
                 "local countPlural = count: plural",
-                "local countFormatted = count: number",
-                "input replaced",
-                "local replacedPlural = replaced: plural",
-                "local replacedFormatted = replaced: number"
+                "local countFormatted = count: number"
             ],
-            "selectors": ["countPlural", "replacedPlural"],
+            "selectors": ["countPlural"],
             "match": {
-                "countPlural=one, replacedPlural=one": "Inserted 1 part, replacing 1 screw",
-                "countPlural=one, replacedPlural=other": "Inserted 1 part, replacing {replacedFormatted} screws",
-                "countPlural=other, replacedPlural=one": "Inserted {countFormatted} parts, replacing 1 screw",
-                "countPlural=other, replacedPlural=other": "Inserted {countFormatted} parts, replacing {replacedFormatted} screws"
+                "countPlural=one": "Updated 1 screw",
+                "countPlural=other": "Updated {countFormatted} screws"
             }
         }
     ],
@@ -674,22 +672,17 @@
             }
         }
     ],
-    "autoAssemblyInsertedReplacingWithProblems": [
+    "autoAssemblyUpdatedWithProblems": [
         {
             "declarations": [
                 "input count",
                 "local countPlural = count: plural",
-                "local countFormatted = count: number",
-                "input replaced",
-                "local replacedPlural = replaced: plural",
-                "local replacedFormatted = replaced: number"
+                "local countFormatted = count: number"
             ],
-            "selectors": ["countPlural", "replacedPlural"],
+            "selectors": ["countPlural"],
             "match": {
-                "countPlural=one, replacedPlural=one": "Inserted 1 part, replacing 1 screw with problems",
-                "countPlural=one, replacedPlural=other": "Inserted 1 part, replacing {replacedFormatted} screws with problems",
-                "countPlural=other, replacedPlural=one": "Inserted {countFormatted} parts, replacing 1 screw with problems",
-                "countPlural=other, replacedPlural=other": "Inserted {countFormatted} parts, replacing {replacedFormatted} screws with problems"
+                "countPlural=one": "Updated 1 screw with problems",
+                "countPlural=other": "Updated {countFormatted} screws with problems"
             }
         }
     ],
@@ -758,5 +751,6 @@
     "fastenInsertedWithMate": "Successfully inserted {name} and created a Fasten mate.",
     "fastenCircularEdgesTip": "Tip: You can select circular edges in Onshape before you insert and fasten to automatically fasten to each one.",
     "insertSucceeded": "Successfully inserted {name}.",
-    "insertFailed": "Unexpectedly failed to insert {name}."
+    "insertFailed": "Unexpectedly failed to insert {name}.",
+    "queryListClear": "Clear"
 }

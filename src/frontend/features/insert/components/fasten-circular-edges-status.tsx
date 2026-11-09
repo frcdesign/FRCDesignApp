@@ -100,7 +100,7 @@ export function FastenCircularEdgesStatus(): ReactNode {
                   },
         [assembly, mode, isFaces, targets, excluded]
     );
-    const problems = usePickProblems(checkBody);
+    const { problems, isChecking } = usePickProblems(checkBody);
     useFastenPicksForMode(mode);
 
     const problem = (entity: OnshapeSelection) =>
@@ -173,6 +173,7 @@ export function FastenCircularEdgesStatus(): ReactNode {
                     filter={targetFilter(mode)}
                     autoFocus
                     problem={problem}
+                    isChecking={isChecking}
                 />
                 {isFaces && (
                     <QueryList
@@ -184,6 +185,7 @@ export function FastenCircularEdgesStatus(): ReactNode {
                         accepts={isEdge}
                         filter={CIRCULAR_EDGES}
                         problem={problem}
+                        isChecking={isChecking}
                     />
                 )}
             </Stack>

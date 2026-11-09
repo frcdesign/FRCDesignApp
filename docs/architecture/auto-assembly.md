@@ -74,6 +74,8 @@ interface SelectionState {
 interface SelectionChange {
     added: OnshapeSelection[];
     removed: OnshapeSelection[];
+    /** Onshape cleared a highlight the app made, as a click in its window does, so nothing is removed. */
+    isHighlightCleared: boolean;
 }
 
 type PickHandler = (change: SelectionChange) => void;
@@ -98,6 +100,8 @@ interface QueryListProps {
     autoFocus?: boolean;
     /** What's wrong with a row: shown under it, in its status's color. */
     problem?: (entity: OnshapeSelection) => RowProblem | undefined;
+    /** Whether the rows' problems are being worked out, shown by a spinner beside Clear. */
+    isChecking?: boolean;
 }
 
 /** Why a row won't do what it was picked for (an error), or what's off about how it will (a warning). */
@@ -159,9 +163,7 @@ enum FormInput {
     SELECT_BY = "selectBy",
     PROGRAM = "program",
     STOP = "stop",
-    LIMIT_LENGTH = "limitLength",
     MAX_LENGTH = "maxLength",
-    MAX_GAP = "maxGap",
     MAX_THREAD_DEPTH = "maxThreadDepth"
 }
 
@@ -244,10 +246,8 @@ interface FastenerOptions {
     /** Under the nut; only with one. */
     nutWasher?: PartChoice;
     stop: StopCondition;
-    /** Metres; the longest screw an automatic one may be, under either stop condition. Unlimited when absent. */
+    /** Metres; the longest an automatic screw may be; with `StopCondition.MAX_LENGTH` only. */
     maxLength?: number;
-    /** Metres; the widest gap `StopCondition.FIRST_GAP` reaches across. */
-    maxGap: number;
     /** Metres; the farthest an automatic screw goes past where threads, or a blind hole, start. */
     maxThreadDepth: number;
 }
@@ -262,8 +262,8 @@ enum FastenerMode {
 enum StopCondition {
     /** Through every hole on the axis, gaps and all. */
     ALL_HOLES = "all-holes",
-    /** At the first gap between parts wider than the maximum gap. */
-    FIRST_GAP = "first-gap",
+    /** Within the maximum length (`maxLength`). */
+    MAX_LENGTH = "max-length",
     /** At a planar face picked to stop at (`stopFace`), where each hole's axis meets it. */
     FACE = "face"
 }
@@ -272,6 +272,8 @@ interface AssemblyJobStatus {
     state: AssemblyJobState;
     jobId?: string;
     tasks?: AssemblyTask[];
+    /** Each screw the run puts in, once its parts are known. */
+    screws?: RunScrew[];
     /** Each hole picked, and what it got or why it got nothing, once indexed. */
     holes?: PlannedHole[];
     /** Each pick, with its problem, once indexed. */
@@ -351,13 +353,38 @@ interface AssemblyJobResult {
     inserted: number;
     /** Parts fastened to where they sit. */
     fastened: number;
-    /** Screws taken out, with their washers and nuts, for new ones. */
+    /** Screws updated: taken out, with their washers and nuts, for new ones. */
     replaced: number;
+}
+
+/** A screw a run puts in a hole, with the parts that go with it. */
+interface RunScrew {
+    /** The planned hole's key. */
+    hole: string;
+    /** Whether it updates a screw already there, which is deleted first. */
+    isUpdate: boolean;
+    parts: RunPart[];
+}
+
+/** A part a run inserts, as it goes. */
+interface RunPart {
+    role: RunPartRole;
+    /** Its occurrence path in the assembly, once inserted. */
+    path?: string[];
+    /** Whether it's mated where it sits. */
+    isFastened?: boolean;
+}
+
+enum RunPartRole {
+    SCREW_WASHER = "screw-washer",
+    SCREW = "screw",
+    NUT_WASHER = "nut-washer",
+    NUT = "nut"
 }
 
 enum AssemblyTaskAction {
     INDEX = "index",
-    /** Skipped when no screw to replace has a new plan. */
+    /** Skipped when no screw to update has a new plan. */
     REMOVE = "remove",
     INSERT = "insert",
     FASTEN = "fasten"
@@ -859,7 +886,6 @@ function runFailure(message: string): Error;
 `src/frontend/features/auto-assembly/job-toasts.ts`
 
 ```ts
-function taskLabel(action: AssemblyTaskAction): string;
 function runningHeadline(status: AssemblyJobStatus): string;
 function jobHeadline(
     status: AssemblyJobStatus,
@@ -938,7 +964,9 @@ dot stays gone on every computer they use.
    what's picked of the kind it takes, drops what's deselected, and repeats its
    prompt in the bubble for anything else picked. The panel shows no prompt of
    its own. With no list focused, the selection is ignored. A list is named
-   inside its box, as Onshape's query parameters are.
+   inside its box, as Onshape's query parameters are. While the background
+   check works out its rows' problems, a spinner shows beside **Clear**
+   (`isChecking`).
 3. While focused, a list holds a `requestSelection` with its `filter`
    (`sendSelectionRequest`), which limits what the Onshape window lets be
    picked: `CIRCULAR_EDGES` (`entityTypeSpecifier: ["EDGE"]`,
@@ -947,8 +975,11 @@ dot stays gone on every computer they use.
    `SOLID_BODIES` (`["BODY"]` with `bodyTypeSpecifier: ["SOLID"]`). Onshape
    documents other field names, which it ignores. The request clears the
    window's selection, and Onshape shows what's picked under it, so nothing is
-   sent as picks arrive. **Clear** empties the list and asks for the filter
-   again, clearing the window too. Losing focus or unmounting sends
+   sent as picks arrive. As a list is focused, as any list shows or hides
+   (`bumpLayout`), and once its picks are cleared (by **Clear**, removing its
+   last row, or the form), the focused list puts its prompt in the bubble
+   again and asks for the filter, or, holding picks, lights them up instead.
+   Losing focus or unmounting sends
    `stopRequest`. Every stop names the request it ends by its `messageId`,
    which Onshape answers as `stoppedRequestId`.
 4. Hovering a row, in any list, lights its entity up alone
@@ -959,6 +990,11 @@ dot stays gone on every computer they use.
    the rest up. A highlight cancels any pending selection request, and a
    request clears what the window shows, so the filter stays off after a
    hover until the focused list is clicked again, which asks for it again.
+5. A click in the Onshape window clears a highlight, which reads as every
+   highlighted entity deselected at once. Until Onshape can resume a selection,
+   a change after a highlight that removes more than one entity removes
+   nothing (`isHighlightCleared`): the focused list keeps its picks, takes
+   any new one, and lights them all up again.
 
 ### The form
 
@@ -972,7 +1008,11 @@ The panel is a `ParameterGrid` of the configuration dialog's own inputs
 1. **Fastener**: Program, then the screw studio's Vendor, Size, Head and
    Finish, then _Sizing_ in place of its Length: **Automatic** (the default)
    picks a length for each hole, and **Manual** shows the studio's Length, and,
-   beside a length sold both ways, its Fully threaded.
+   beside a length sold both ways, its Fully threaded. Sized automatically, it
+   goes on with _Stop condition_ (**All holes**, the default; **Max length**
+   with _Max length_; or **Face** with _Face to stop at_, a query list of one
+   planar face, where a new pick takes the old one's place), then _Max thread
+   depth_.
 2. **Add screw washer**, **Add nut** and **Add nut washer**, each a group its
    checkbox shows: the washer or nut studio's parameters but its Size, which is
    the screw's. A washer's Vendor offers those making it in that size, and is
@@ -981,11 +1021,7 @@ The panel is a `ParameterGrid` of the configuration dialog's own inputs
    Finish show only where there's a choice, so a Generic washer, one in each
    size, shows its checkbox alone. The screw washer is gone under a countersunk
    head, and the nut washer without a nut.
-3. Automatic only: _Stop condition_ (**All holes**, **First gap** with the
-   widest gap to ignore, or **Face** with _Face to stop at_, a query list of
-   one planar face, where a new pick takes the old one's place), _Limit screw length_, a checkbox off by default that
-   shows _Max length_ while ticked, and _Max thread depth_.
-4. **Selections**, last: _Select by_ (Circular edges, the default, Faces, or
+3. **Selections**, last: _Select by_ (Circular edges, the default, Faces, or
    Screws), and its query lists, the first focused.
 
 The studios' parameters are their configurations as Onshape answers them,
@@ -1008,7 +1044,7 @@ _Select by_ decides what the picks are:
   is skipped.
 - **Faces** — every circular edge of each planar face is a hole to fasten;
   _Edges to exclude_ takes the edges of holes in them to leave out.
-- **Screws** — _Screws to replace_ takes library screws already in the
+- **Screws** — _Screws to update_ takes library screws already in the
   assembly, as whole solid parts (`SOLID_BODIES`), each row named "Screw {n}";
   the run decides which picks are screws.
 
@@ -1019,7 +1055,7 @@ hidden stop condition says.
 
 `insertBody` in `routes.ts` refuses a body whose picks don't match its mode
 (`isConsistentPick`: faces with edges to exclude, circular edges alone, or
-screws alone), one with neither holes nor screws to replace, one with a face
+screws alone), one with neither holes nor screws to update, one with a face
 to stop at without the Face stop condition or the other way round
 (`hasStopFace`), and a part its
 studio doesn't make (`isMade`) or not in the screw's size.
@@ -1037,13 +1073,14 @@ options (`planHoles`), and answers each pick's problem (`pickProblems` in
 `check.ts`, keyed by `pickKey`, as the client keys its rows):
 
 - a target that gave no circular edge: why, as a run reports it;
-- a hole that won't plan ready, as an error: its plan's reason, or that a
-  library screw is already in it; a face, how many of its holes won't, and the
-  first reason;
+- a hole that won't plan ready, as an error: its plan's reason; a face, how
+  many of its holes won't, and the first reason;
 - a hole that plans ready with a warning, as a warning; a face, how many of its
   holes have one, and the first, when none of its holes has an error;
+- a hole with a library screw already in it, which the run leaves alone, as a
+  warning, when nothing else is wrong; a face says some of its holes have one;
 - a hole to skip that isn't a hole in the faces picked;
-- a screw to replace that isn't one, or whose hole won't plan ready;
+- a screw to update that isn't one, or whose hole won't plan ready;
 - a face to stop at whose part is gone, or that isn't planar.
 
 Nothing picked asks Onshape nothing. FTC, or parts the catalog doesn't make,
@@ -1092,7 +1129,7 @@ recorded with why, and the steps after it are skipped.
        can't be fastened, saying why (`IndexedHoles.unfound`). The face to
        stop at's plane is moved in too (`toAssemblyPlane`), or the reason it
        gave none kept (`stopFaceProblem`).
-    5. Each screw to replace: its part must be a top-level instance of the
+    5. Each screw to update: its part must be a top-level instance of the
        screw studio. Its hole is the scanned hole edge it sits on
        (`seatEdge`), which joins the circular edges as if picked, and it no
        longer counts as placed there. Its stack is it and the library washers
@@ -1107,21 +1144,20 @@ recorded with why, and the steps after it are skipped.
            least the size's major diameter across.
         3. Follow the holes (`followStack`): into a hole tapped for the size
            (threads, or a hole at its tap drill narrower than the screw), to the
-           bottom of a blind hole, or out the far side. **All holes** reaches
-           across any gap; **First gap** stops at the first gap wider than the
-           maximum gap; **Face** takes the holes that start before where the
-           axis meets the face's plane, and gives a hole whose axis meets it
-           behind the circular edge, or never, no screw. Each stops past the
-           maximum length when screw length is limited, and past the vendor's
-           longest screw otherwise.
+           bottom of a blind hole, or out the far side, across any gap. **All
+           holes** stops past the vendor's longest screw; **Max length** past
+           the maximum length; **Face** takes the holes that start before where
+           the axis meets the face's plane, no farther than the longest screw,
+           and gives a hole whose axis meets it behind the circular edge, or
+           never, no screw.
         4. Washers (`chooseWashers`): the screw washer chosen, never under a
            flat head; the nut washer only under a nut.
         5. Length (`pickScrew`), from the lengths the vendor makes the size
            and head in, in the finish chosen (`getLengths`; within the maximum
-           length when limited), partly threaded; preset, only the chosen
+           length under **Max length**), partly threaded; preset, only the chosen
            length, fully threaded if chosen:
             - Out the far side, the shortest reaching through the stack, its
-              washers, its nut and two threads past it. When none does, the
+              washers and its nut, flush with the nut's far face or past it. When none does, the
               hole gets no screw, and its reason names the longest length and
               how far short it is.
             - Into threads or a blind hole, the longest reaching no farther
@@ -1141,7 +1177,7 @@ recorded with why, and the steps after it are skipped.
     7. Stores each hole's plan with the status, and each pick with the problem
        the check would mark it with (`runPicks`, from `pickProblems`). With any
        pick's problem, the step finishes with a warning saying how many.
-2. **Remove replaced parts** (`remove`), skipped unless a screw to replace has
+2. **Delete screws** (`remove`), skipped unless a screw to update has
    a ready plan; one whose hole doesn't keeps its parts. Deletes every replaced
    stack's instances in one `modify` call (`remove-instances`), then each mate
    still naming one of them (`orphaned-mates`, `remove-mate-{n}`). The
@@ -1152,7 +1188,10 @@ recorded with why, and the steps after it are skipped.
    inserts them all in one `transformedinstances` call, from each studio's
    released version, with its configuration. Skipped when no hole is ready.
    Each part is named as its studio's records name its configuration
-   (`namePlacements`, `part-names`), which its mate takes.
+   (`namePlacements`, `part-names`), which its mate takes. Before inserting,
+   the run groups the parts by the hole they go in (`RunScrew`, each part with
+   its `RunPartRole`), and records each part's occurrence path as Onshape
+   answers it, then, once fastening ends, whether it was mated.
 4. **Fasten parts**:
     1. Takes each studio's mate connector id from its load
        (`FastenerStudio.mateConnectorId`, the insertable's fasten info); with
@@ -1173,7 +1212,7 @@ recorded with why, and the steps after it are skipped.
    library (`recordRunInserts`); see [analytics.md](./analytics.md). A
    failure to record is logged and nothing else.
 6. **Finish** (`finish-job`): stores `COMPLETE` or `FAILED`, with how many parts
-   were inserted and fastened and screws replaced, and when.
+   were inserted and fastened and screws updated, and when.
 
 ### Reporting
 
@@ -1185,11 +1224,18 @@ running step reads failed and the rest skipped.
 
 The page shows the run in a callout above the options — its step while it
 goes, saying the page can be left, then how it went — with a Details modal
-(`JobDetails`). It lists the steps, a finished one with a warning in yellow with
-its warning under it, then the run's picks under the lists they were made in,
-each named as its list names it, with a check, warning or error and its problem
-under it. Hovering a pick lights it up in Onshape, and leaving the picks puts
-back the focused list's. A run with a hole's warning reads as partly done
+(`JobDetails`). It lists **Index holes**, with its warning in yellow under it,
+then each screw ("Screw {n}") with its own steps: **Delete screw** for a screw
+it updates, then **Insert screw**, **Add screw washer**, **Add nut** and **Add
+nut washer**, as the screw has them. A part's step follows the run's insert and
+fasten steps, and finishes with a warning when the part sits unmated. A step
+that failed puts its reason in a notice at the top. Then come the run's picks
+under the lists they were made in, each named as its list names it, with a
+check, warning or error and its problem under it. Hovering a pick, or a step
+whose part is in the assembly, lights it up in Onshape (a part as its whole
+occurrence), and leaving them puts back the focused list's picks. The headline
+counts parts inserted, or, for a run that updated screws, the screws ("Updated
+3 screws"). A run with a hole's warning reads as partly done
 (`assemblyJobOutcome`). `useAssemblyJobToasts`, in the app shell, shows a toast as
 a run starts ("Inserting fasteners..."), which becomes how it finished, from
 any tab of the app. A step's failure shows in our words; Onshape's own message
@@ -1250,6 +1296,19 @@ In [strings/auto-assembly.md](../strings/auto-assembly.md).
 
 ## Decisions
 
+- **Stack depth is limited by one stop condition.** All holes, Max length and
+  Face each say how far a screw may reach; a gap between parts never stops
+  one, since a spacer or an air gap is still fastened through.
+- **A screw out the far side reaches flush with its nut.** That engages every
+  thread of the nut, a nylock's insert included, so threads past it only add
+  length; a 1/4 in. plate with a #10-32 nylock takes a 1/2 in. screw.
+- **A click after a highlight keeps the picks.** Onshape can't resume a
+  selection, and clicking its window after a highlight deselects everything
+  highlighted, which would empty the focused list. Taking a change that
+  removes more than one entity at once as that click is a stopgap until
+  Onshape offers a way to resume one.
+- **A hole with a screw already is a warning, not an error.** The run leaves
+  it alone and fastens the rest of the face, so there's nothing to fix.
 - **Picks are checked as they're made, in Onshape.** Whether an edge is a
   hole, and what would fit it, takes the scan and the planner, so a check
   reads the assembly and scans each Part Studio holding a pick, under the

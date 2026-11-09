@@ -21,7 +21,7 @@ import {
 } from "../library/insertables/part-name";
 import { encodeConfiguration } from "../configurations/utils";
 import { type Catalog, getWasher } from "./catalog";
-import { HoleStatus } from "./contract";
+import { HoleStatus, RunPartRole } from "./contract";
 import { add, frameTransform, scale, type Vec3 } from "./geometry";
 import { type HolePlan, type MateEdge } from "./planner";
 import { scanStudio, type ScannedParts, type StudioSource } from "./scan";
@@ -38,6 +38,9 @@ export type PartSeat = { edge: MateEdge } | { washer: number };
 /** One part to insert: from which studio, configured how, placed where, and fastened to what. */
 export interface PartPlacement {
     kind: FastenerKind;
+    role: RunPartRole;
+    /** The planned hole's key, which a run reports its parts under. */
+    hole: string;
     /** The studio's overrides of its defaults. */
     configuration: Selection;
     transform: number[];
@@ -103,6 +106,8 @@ export function placements(
             screwSeat = { washer: parts.length };
             parts.push({
                 kind: FastenerKind.WASHER,
+                role: RunPartRole.SCREW_WASHER,
+                hole: planned.key,
                 configuration: studioConfiguration(
                     set,
                     FastenerKind.WASHER,
@@ -115,6 +120,8 @@ export function placements(
         }
         parts.push({
             kind: FastenerKind.SCREW,
+            role: RunPartRole.SCREW,
+            hole: planned.key,
             configuration: studioConfiguration(
                 set,
                 FastenerKind.SCREW,
@@ -139,6 +146,8 @@ export function placements(
             nutSeat = { washer: parts.length };
             parts.push({
                 kind: FastenerKind.WASHER,
+                role: RunPartRole.NUT_WASHER,
+                hole: planned.key,
                 configuration: studioConfiguration(
                     set,
                     FastenerKind.WASHER,
@@ -155,6 +164,8 @@ export function placements(
         );
         parts.push({
             kind: FastenerKind.NUT,
+            role: RunPartRole.NUT,
+            hole: planned.key,
             configuration: studioConfiguration(
                 set,
                 FastenerKind.NUT,
