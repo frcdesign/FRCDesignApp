@@ -31,8 +31,7 @@ import {
     type GeneratedTab,
     parseManifest,
     releasedStudio,
-    type ReleasedStudio,
-    toGeneratedStudio
+    type ReleasedStudio
 } from "../generated-parts/manifest";
 import { getBlobText } from "../../lib/onshape/endpoints/blob-elements";
 import { parseOnshapeConfiguration } from "./parse-configuration";
@@ -68,8 +67,8 @@ export interface ParsedInsertable {
     /** The element's own part data; null when nothing was probed. */
     partMetadata: PartMetadata | null;
     configuration: Configuration;
-    /** The generated studio it is, as `set/key`; null for a tab modeled by hand. */
-    generatedStudio: string | null;
+    /** Whether it's a Part Studio robot-code generates, rather than one modeled by hand. */
+    isGenerated: boolean;
 }
 
 /** The user-owned flags that decide how much of a load runs. */
@@ -86,7 +85,7 @@ interface ProbedInsertable {
     hasParts: boolean;
     partMetadata: PartMetadata | null;
     configuration: Configuration;
-    generatedStudio: string | null;
+    isGenerated: boolean;
     /** Everything raised so far; the thumbnail check adds its own. */
     buildIssues: BuildIssue[];
 }
@@ -129,7 +128,7 @@ export async function loadInsertable(
         ),
         partMetadata: probed.partMetadata,
         configuration: probed.configuration,
-        generatedStudio: probed.generatedStudio
+        isGenerated: probed.isGenerated
     };
 
     await ctx.step.do(`save-${insertableId}`, () =>
@@ -148,15 +147,12 @@ async function probeInsertable(
 
     const parameters = await parseConfigurationStep(ctx, target);
 
-    // Its records are robot-code's, which a mismatch throws over rather than probe
+    // Its records are robot-code's, released with its configuration
     const released = target.generated
         ? await readReleasedStudioStep(ctx, target, target.generated)
         : undefined;
-    const studio = released && toGeneratedStudio(released);
     const generated =
-        released &&
-        studio &&
-        generatedConfiguration(studio, parameters, released.records);
+        released && generatedConfiguration(parameters, released.records);
 
     const vendors = generated
         ? generated.vendors
@@ -169,6 +165,7 @@ async function probeInsertable(
                   ctx,
                   target,
                   released && {
+                      elementId: elementPath.elementId,
                       type: released.feature,
                       mateConnector: released.mateConnector
                   }
@@ -207,7 +204,7 @@ async function probeInsertable(
         hasParts,
         partMetadata: recordsResult.partMetadata,
         configuration: { parameters, records: recordsResult.records },
-        generatedStudio: studio ? `${studio.set}/${studio.key}` : null,
+        isGenerated: released !== undefined,
         buildIssues: addBuildIssue(
             hasParts ? [] : parts.buildIssues,
             ...recordsResult.buildIssues,
@@ -379,7 +376,7 @@ export async function saveInsertable(
         fastenInfo: parsed.fastenInfo,
         isOpenComposite: parsed.isOpenComposite,
         partMetadata: parsed.partMetadata,
-        generatedStudio: parsed.generatedStudio,
+        isGenerated: parsed.isGenerated,
         buildIssues: parsed.buildIssues,
         lastLoadedAt: new Date(),
         // Not an editor's to change: a generated part fastens

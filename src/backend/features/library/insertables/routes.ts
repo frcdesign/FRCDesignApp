@@ -85,8 +85,8 @@ function inLibrary(libraryId: LibraryId, insertableId: string) {
 const setFastenBody = z.object({ supportsFasten: z.boolean() });
 
 /** A generated part always fastens, which its load sets. */
-function refuseGenerated(generatedStudio: string | null): void {
-    if (generatedStudio !== null) {
+function refuseGenerated(isGenerated: boolean): void {
+    if (isGenerated) {
         throw handledError(
             "A FeatureScript part always inserts and fastens.",
             HttpStatus.BAD_REQUEST
@@ -120,14 +120,14 @@ insertableRoutes.post(
                 elementId: insertables.elementId,
                 elementType: insertables.elementType,
                 buildIssues: insertables.buildIssues,
-                generatedStudio: insertables.generatedStudio
+                isGenerated: insertables.isGenerated
             })
             .from(insertables)
             .where(inLibrary(libraryId, insertableId))
             .get();
         if (!row)
             throw internalError("Insertable not found", HttpStatus.NOT_FOUND);
-        refuseGenerated(row.generatedStudio);
+        refuseGenerated(row.isGenerated);
 
         // Off asks nothing of Onshape; on finds the connector again, in case it moved.
         const found = supportsFasten
@@ -196,7 +196,7 @@ async function reindex(
             elementType: insertables.elementType,
             isOpenComposite: insertables.isOpenComposite,
             buildIssues: insertables.buildIssues,
-            generatedStudio: insertables.generatedStudio,
+            isGenerated: insertables.isGenerated,
             parameters: configurations.parameters
         })
         .from(insertables)
@@ -210,7 +210,7 @@ async function reindex(
         throw internalError("Insertable not found", HttpStatus.NOT_FOUND);
     }
     // Every configuration is indexed from its generator, whatever the settings
-    if (row.generatedStudio !== null) {
+    if (row.isGenerated) {
         throw handledError(
             "A generated part's indexing isn't configurable.",
             HttpStatus.BAD_REQUEST

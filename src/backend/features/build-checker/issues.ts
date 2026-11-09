@@ -27,8 +27,6 @@ export enum BuildIssueType {
     /** Only people the document is shared with can insert or download from it. */
     NOT_PUBLIC = "not-public",
     LOAD_FAILED = "load-failed",
-    /** A generated studio's tab isn't configured as robot-code generated it, so its load failed. */
-    GENERATED_PART_MISMATCH = "generated-part-mismatch",
     /** A document added but not yet loaded, until its first load saves it. */
     NOT_LOADED = "not-loaded"
 }
@@ -59,7 +57,6 @@ export type BuildIssue =
     | BuildIssueOf<BuildIssueType.NO_UNHIDDEN_INSERTABLES>
     | BuildIssueOf<BuildIssueType.CONFIGURATION_LIMIT_EXCEEDED>
     | BuildIssueOf<BuildIssueType.MANUAL_INDEXING_REQUIRED>
-    | BuildIssueOf<BuildIssueType.GENERATED_PART_MISMATCH>
     | BuildIssueOf<BuildIssueType.MULTIPLE_PARTS>
     | ConfigurationBuildIssueOf<BuildIssueType.CONFIGURATION_MULTIPLE_PARTS>
     | ConfigurationBuildIssueOf<BuildIssueType.UNSTABLE_COMPOSITE>
@@ -108,7 +105,6 @@ export function getIssueSeverity(issue: BuildIssue): BuildIssueSeverity {
         case BuildIssueType.INSERTABLES_FAILED:
         case BuildIssueType.NOT_PUBLIC:
         case BuildIssueType.LOAD_FAILED:
-        case BuildIssueType.GENERATED_PART_MISMATCH:
             return BuildIssueSeverity.ERROR;
         case BuildIssueType.NO_THUMBNAIL_TAB:
         case BuildIssueType.CONFIGURATION_LIMIT_EXCEEDED:

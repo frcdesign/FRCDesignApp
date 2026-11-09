@@ -9,7 +9,6 @@ export interface GeneratedSetRow extends ReleasedCatalog {
     libraryId: LibraryId;
     set: string;
     groupId: string;
-    versionId: string;
 }
 
 export async function saveGeneratedSet(
@@ -23,7 +22,6 @@ export async function saveGeneratedSet(
             target: [generatedSets.libraryId, generatedSets.set],
             set: {
                 groupId: row.groupId,
-                versionId: row.versionId,
                 features: row.features,
                 catalog: row.catalog
             }

@@ -159,9 +159,10 @@ export const insertables = sqliteTable("insertables", {
     partMetadata: text("part_metadata", {
         mode: "json"
     }).$type<PartMetadata | null>(),
-    // The generated studio it is (`fasteners/screw`), whose records a load
-    // indexes in place of asking Onshape; null for a tab modeled by hand.
-    generatedStudio: text("generated_studio"),
+    // A Part Studio robot-code generates, whose records come from its manifest
+    isGenerated: integer("is_generated", { mode: "boolean" })
+        .notNull()
+        .default(false),
     buildIssues: buildIssues(),
     lastLoadedAt: lastLoadedAt()
 });
@@ -194,8 +195,7 @@ export const generatedSets = sqliteTable(
         groupId: text("group_id")
             .notNull()
             .references(() => groups.id, { onDelete: "cascade" }),
-        versionId: text("version_id").notNull(),
-        // Each studio's feature and its mate connector's id, by its key
+        // Each studio's tab, feature and mate connector's id, by its key
         features: text("features", { mode: "json" })
             .$type<Record<string, GeneratedFeature>>()
             .notNull(),

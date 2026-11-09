@@ -1,4 +1,4 @@
-/** A `FastenerSet` as a library loads one, from robot-code's manifest (synced by `npm run sync:generated-parts`). */
+/** A `FastenerSet` as a library loads one, from a released manifest. */
 import { catalogSchema } from "@backend/features/auto-assembly/catalog";
 import {
     FastenerKind,
@@ -7,7 +7,7 @@ import {
 } from "@backend/features/auto-assembly/studios";
 import { parseOnshapeConfiguration } from "@backend/features/load/parse-configuration";
 import { type OnshapeConfigurationResponse } from "@backend/lib/onshape/types";
-import { FASTENERS_MANIFEST } from "./fasteners-manifest.gen";
+import { FASTENERS_MANIFEST } from "./fasteners-manifest";
 
 /** Where the tests' studios are released: one version, a tab each. */
 export const FASTENERS_VERSION = { documentId: "lib", versionId: "libv" };

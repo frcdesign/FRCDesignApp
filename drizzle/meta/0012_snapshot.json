@@ -1,7 +1,7 @@
 {
     "version": "6",
     "dialect": "sqlite",
-    "id": "ecdb70da-466e-48c7-9861-1c0bc2d4d430",
+    "id": "e88ffbb6-5768-4b2c-879d-8f46b3889301",
     "prevId": "37bb4e4c-1e83-444b-a08a-499eff6b6112",
     "tables": {
         "configurations": {
@@ -165,13 +165,6 @@
                 },
                 "group_id": {
                     "name": "group_id",
-                    "type": "text",
-                    "primaryKey": false,
-                    "notNull": true,
-                    "autoincrement": false
-                },
-                "version_id": {
-                    "name": "version_id",
                     "type": "text",
                     "primaryKey": false,
                     "notNull": true,
@@ -499,12 +492,13 @@
                     "notNull": false,
                     "autoincrement": false
                 },
-                "generated_studio": {
-                    "name": "generated_studio",
-                    "type": "text",
+                "is_generated": {
+                    "name": "is_generated",
+                    "type": "integer",
                     "primaryKey": false,
-                    "notNull": false,
-                    "autoincrement": false
+                    "notNull": true,
+                    "autoincrement": false,
+                    "default": false
                 },
                 "build_issues": {
                     "name": "build_issues",

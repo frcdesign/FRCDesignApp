@@ -37,14 +37,10 @@ import { LOAD_CONCURRENCY, type LoadContext } from "./context";
 import { createLimiter } from "../../lib/limiter";
 import * as LoadContextModule from "./context";
 import { loadInsertable, saveInsertable } from "./load-insertable";
-import { GeneratedPartMismatchError } from "../generated-parts/records";
 import * as BlobEndpoints from "../../lib/onshape/endpoints/blob-elements";
 import { NUT_MANIFEST } from "../../../__test_utils__/generated-fixtures";
 import { Vendor } from "../library/vendors";
-import {
-    type OnshapeConfigurationResponse,
-    OnshapeParameterType
-} from "../../lib/onshape/types";
+import { type OnshapeConfigurationResponse } from "../../lib/onshape/types";
 
 const db = getDb(env.DB);
 
@@ -429,7 +425,7 @@ describe("loadInsertable, for a generated studio", () => {
             { ...TEST_PART_STUDIO_PATH, elementId: "manifest" }
         );
         const row = await readInsertable(db);
-        expect(row?.generatedStudio).toBe("fasteners/nut");
+        expect(row?.isGenerated).toBe(true);
         expect(row?.partMetadata?.name).toBe("#10-32 Nylock Nut");
         expect(row?.vendors).toContain(Vendor.MCM);
         expect(row?.fastenDisabled).toBe(false);
@@ -456,23 +452,5 @@ describe("loadInsertable, for a generated studio", () => {
         });
         // Only the default parts, for the thumbnail and its composite check
         expect(PartsEndpoints.getParts).toHaveBeenCalledTimes(1);
-    });
-
-    it("fails, keeping nothing, when the tab isn't configured as generated", async () => {
-        const configuration = nutConfiguration();
-        const type = configuration.configurationParameters.find(
-            (parameter) => parameter.parameterId === "type"
-        );
-        if (type?.btType === OnshapeParameterType.ENUM) {
-            type.options = type.options.slice(1);
-        }
-        vi.spyOn(ConfigurationEndpoints, "getConfiguration").mockResolvedValue(
-            configuration
-        );
-
-        await expect(
-            loadInsertable(ctx(), generatedTarget())
-        ).rejects.toBeInstanceOf(GeneratedPartMismatchError);
-        expect(await readInsertable(db)).toBeUndefined();
     });
 });

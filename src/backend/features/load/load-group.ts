@@ -24,7 +24,6 @@ import {
     withoutDeprecated
 } from "./parse-document-contents";
 import { loadInsertable, nonRetryable } from "./load-insertable";
-import { GeneratedPartMismatchError } from "../generated-parts/records";
 import {
     findManifestTabs,
     generatedTabs,
@@ -112,8 +111,10 @@ export async function loadGroup(
         storedInsertables
     );
 
-    const { failedInsertableIds, mismatchedInsertableIds } =
-        await loadInsertables(ctx, insertablesToLoad);
+    const { failedInsertableIds } = await loadInsertables(
+        ctx,
+        insertablesToLoad
+    );
 
     const thumbnailUrls = await loadDocumentThumbnail(ctx, target, contents);
 
@@ -122,8 +123,7 @@ export async function loadGroup(
             thumbnailUrls,
             removedInsertableIds,
             movedInsertables,
-            failedInsertableIds,
-            mismatchedInsertableIds
+            failedInsertableIds
         })
     );
 
@@ -155,8 +155,6 @@ export async function loadGroup(
 
 interface LoadedInsertables {
     failedInsertableIds: string[];
-    /** Those of the failed whose tab isn't configured as its generated studio. */
-    mismatchedInsertableIds: string[];
 }
 
 /**
@@ -168,7 +166,6 @@ async function loadInsertables(
     targets: InsertableTarget[]
 ): Promise<LoadedInsertables> {
     const failedInsertableIds: string[] = [];
-    const mismatchedInsertableIds: string[] = [];
     await Promise.all(
         targets.map(async (target) => {
             try {
@@ -180,13 +177,10 @@ async function loadInsertables(
                     error
                 );
                 failedInsertableIds.push(target.insertableId);
-                if (error instanceof GeneratedPartMismatchError) {
-                    mismatchedInsertableIds.push(target.insertableId);
-                }
             }
         })
     );
-    return { failedInsertableIds, mismatchedInsertableIds };
+    return { failedInsertableIds };
 }
 
 async function loadDocumentThumbnail(
@@ -228,8 +222,6 @@ interface SaveGroupInput {
     movedInsertables: InsertableOrder[];
     /** Insertables that threw while loading. */
     failedInsertableIds: string[];
-    /** Those of them whose tab isn't configured as its generated studio. */
-    mismatchedInsertableIds: string[];
 }
 
 async function saveGroup(
@@ -301,11 +293,7 @@ async function saveGroup(
         writes.push(db.delete(insertables).where(inArray(insertables.id, ids)));
     }
     writes.push(
-        ...(await flagFailedInsertables(
-            db,
-            input.failedInsertableIds,
-            input.mismatchedInsertableIds
-        ))
+        ...(await flagFailedInsertables(db, input.failedInsertableIds))
     );
 
     await db.batch(writes as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]]);
@@ -317,10 +305,8 @@ async function saveGroup(
  */
 async function flagFailedInsertables(
     db: Db,
-    failedInsertableIds: string[],
-    mismatchedInsertableIds: string[]
+    failedInsertableIds: string[]
 ): Promise<BatchItem<"sqlite">[]> {
-    const mismatched = new Set(mismatchedInsertableIds);
     // Chunked: a rate-limited load can fail more ids than one statement binds.
     const reads = await Promise.all(
         chunkForInArray(failedInsertableIds).map((ids) =>
@@ -338,17 +324,9 @@ async function flagFailedInsertables(
         db
             .update(insertables)
             .set({
-                buildIssues: addBuildIssue(
-                    row.buildIssues,
-                    { type: BuildIssueType.LOAD_FAILED },
-                    ...(mismatched.has(row.id)
-                        ? [
-                              {
-                                  type: BuildIssueType.GENERATED_PART_MISMATCH as const
-                              }
-                          ]
-                        : [])
-                )
+                buildIssues: addBuildIssue(row.buildIssues, {
+                    type: BuildIssueType.LOAD_FAILED
+                })
             })
             .where(eq(insertables.id, row.id))
     );
@@ -419,7 +397,6 @@ async function readGeneratedTabsStep(
                     libraryId: target.libraryId,
                     set: setOf(tab),
                     groupId: target.groupId,
-                    versionId: target.versionPath.instanceId,
                     ...releasedCatalog(manifest)
                 });
             }

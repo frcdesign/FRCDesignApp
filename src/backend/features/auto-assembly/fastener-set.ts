@@ -1,5 +1,5 @@
 /** The fasteners a library loaded, read back for Auto Assembly. */
-import { and, eq, like } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { type Db } from "../../db/client";
 import { configurations, insertables } from "../../db/schema";
 import { getGeneratedSet } from "../generated-parts/store";
@@ -26,13 +26,18 @@ export async function getFastenerSet(
 ): Promise<FastenerSet | undefined> {
     const stored = await getGeneratedSet(db, libraryId, FASTENERS);
     const catalog = catalogSchema.safeParse(stored?.catalog);
-    if (!catalog.success) {
+    if (!stored || !catalog.success) {
         return undefined;
     }
+    // Each kind's tab, as the manifest the set's group loaded names it
+    const kindByElement = new Map(
+        Object.entries(stored.features).flatMap(([key, feature]) =>
+            isKind(key) ? [[feature.elementId, key] as const] : []
+        )
+    );
     const rows = await db
         .select({
             insertableId: insertables.id,
-            generatedStudio: insertables.generatedStudio,
             documentId: insertables.documentId,
             versionId: insertables.versionId,
             elementId: insertables.elementId,
@@ -46,14 +51,15 @@ export async function getFastenerSet(
         )
         .where(
             and(
-                eq(insertables.libraryId, libraryId),
-                like(insertables.generatedStudio, `${FASTENERS}/%`)
+                eq(insertables.groupId, stored.groupId),
+                eq(insertables.isGenerated, true),
+                inArray(insertables.elementId, [...kindByElement.keys()])
             )
         );
     const studios: Partial<Record<FastenerKind, FastenerStudio>> = {};
     for (const row of rows) {
-        const kind = row.generatedStudio?.slice(FASTENERS.length + 1);
-        if (!isKind(kind)) {
+        const kind = kindByElement.get(row.elementId);
+        if (!kind) {
             continue;
         }
         studios[kind] = {

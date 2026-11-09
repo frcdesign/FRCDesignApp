@@ -149,6 +149,24 @@ generated and git-ignored: never edit it.
   `switch`, so a new case without one fails `tsc`; never index `m` by a built
   key.
 
+## Wording
+
+Users read in a narrow panel, mid-task. Keep it short and plain:
+
+- **Labels are a few words.** A button names its action ("Insert", "Clear"),
+  an input its value ("Max length"), a list what it holds ("Edges to
+  exclude").
+- **A description is one sentence saying what the control does.** Leave out
+  side effects, consequences and results unless they're critical and not
+  obvious.
+- **An error names what went wrong, in a few words.** "Invalid manifest",
+  "Failed to find manifest's part studio". Leave the technical detail for the
+  console.
+- **Say it once.** No restating the label in the description, and no "so",
+  "which" or "rather than" clauses tacking a second idea onto a sentence.
+- **Prefer the plain word.** "Delete" over "remove the replaced parts",
+  "screw" over "fastener" when it's a screw.
+
 The build-status feature is migrated. The rest moves over as it is worked on:
 a new string goes in the catalog, and a component you change has its strings
 moved there in the same change. `docs/strings/` lists them for review.
@@ -210,6 +228,10 @@ rather than repeating them.
 Write them as comments are written: what is true now, no history, no hedging.
 Name code by path and symbol in backticks; describe behavior and point at the
 code rather than pasting it.
+
+Keep sentences short: one idea each, about 25 words at most. When a sentence
+lists three or more things, or chains clauses with colons, semicolons and
+parentheses, make it a list or split it.
 
 When a document and the code disagree and it isn't clear which is intended,
 ask rather than quietly changing either. After reading a whole document against

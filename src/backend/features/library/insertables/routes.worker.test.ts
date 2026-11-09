@@ -230,7 +230,7 @@ describe("insertable routes", () => {
     });
 
     it("refuses to toggle fasten for a generated part", async () => {
-        await seedPartStudio(db, { generatedStudio: "fasteners/screw" });
+        await seedPartStudio(db, { isGenerated: true });
 
         const res = await createTestApp().request(
             `/api/toggle-insert-and-fasten/library/${TEST_LIBRARY_ID}/insertable/${TEST_PART_STUDIO_ID}`,
@@ -827,7 +827,7 @@ describe("insertable routes", () => {
         await seedPartStudio(db);
         await db
             .update(insertables)
-            .set({ generatedStudio: "fasteners/screw" })
+            .set({ isGenerated: true })
             .where(eq(insertables.id, TEST_PART_STUDIO_ID));
         const getParts = vi.spyOn(PartsEndpoints, "getParts");
 

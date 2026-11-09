@@ -106,7 +106,11 @@ describe("findPartStudioMateConnector", () => {
             "fastenerScrew",
             "fastenerWasher",
             "fastenerNut"
-        ].map((type) => ({ type, mateConnector: "mateConnector" }));
+        ].map((type) => ({
+            elementId: type,
+            type,
+            mateConnector: "mateConnector"
+        }));
         const features = featureList([
             extrude("sketch"),
             mateConnectorFeature("off", {

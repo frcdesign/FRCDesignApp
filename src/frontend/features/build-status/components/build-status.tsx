@@ -242,7 +242,7 @@ export function InsertableStatusBadge(
             versionCreatedAt={insertable.versionCreatedAt}
             isHidden={!insertable.isVisible}
             elementType={insertable.elementType}
-            isGenerated={insertable.generatedStudio !== undefined}
+            isGenerated={insertable.isGenerated}
             configurationTarget={
                 parameters.length > 0
                     ? { elementPath: insertable.elementPath, parameters }
@@ -260,15 +260,14 @@ export function InsertableStatusBadge(
                     />
                 </CardSection>,
                 // A FeatureScript part indexes every configuration from its code
-                parameters.length > 0 &&
-                    insertable.generatedStudio === undefined && (
-                        <ConfigurationSection
-                            key="configuration"
-                            insertableId={insertableId}
-                            status={insertable}
-                            parameters={parameters}
-                        />
-                    ),
+                parameters.length > 0 && !insertable.isGenerated && (
+                    <ConfigurationSection
+                        key="configuration"
+                        insertableId={insertableId}
+                        status={insertable}
+                        parameters={parameters}
+                    />
+                ),
                 <PartUsageSection
                     key="usage"
                     elementId={insertable.elementPath.elementId}

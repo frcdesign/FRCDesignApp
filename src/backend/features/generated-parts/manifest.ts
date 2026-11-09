@@ -5,15 +5,15 @@
  * tab's records are always its own release's.
  */
 import { z } from "zod";
-import { parseOnshapeConfiguration } from "../load/parse-configuration";
 import {
-    type OnshapeConfigurationResponse,
     OnshapeElementType,
     type OnshapeElement
 } from "../../lib/onshape/types";
-import { type GeneratedStudio } from "./studios";
 
 export const RELEASED_MANIFEST_SUFFIX = ".parts.json";
+
+/** The most a Workflow step returns, which a studio's part of a manifest has to fit in. */
+const MAX_STEP_RESULT_BYTES = 1024 * 1024;
 
 const recordSchema = z.object({
     values: z.record(z.string(), z.string()),
@@ -26,13 +26,11 @@ const recordSchema = z.object({
 
 export type GeneratedRecord = z.infer<typeof recordSchema>;
 
+// Its configuration too, which robot-code writes to the tab, and a load doesn't read
 const studioSchema = z.object({
     feature: z.string(),
     mateConnector: z.string().optional(),
     elementId: z.string(),
-    configuration: z
-        .object({ configurationParameters: z.array(z.unknown()) })
-        .loose(),
     records: z.array(recordSchema)
 });
 
@@ -47,24 +45,22 @@ export interface GeneratedTab {
     manifestElementId: string;
 }
 
-/** One studio of a released manifest, as small as a step can return. */
 /**
- * A generated studio's feature type, and the id it gives the mate connector it
- * makes, under its own: a fasten mate names that `<featureId>.<mateConnector>`,
- * and Onshape's API shows no mate connector a feature makes.
+ * A generated studio's tab, its feature type, and the id the feature gives the
+ * mate connector it makes: a fasten mate names that
+ * `<featureId>.<mateConnector>`, and Onshape's API shows no mate connector a
+ * feature makes.
  */
 export interface GeneratedFeature {
+    elementId: string;
     type: string;
     mateConnector?: string;
 }
 
+/** One studio of a released manifest, as small as a step can return. */
 export interface ReleasedStudio {
-    set: string;
-    key: string;
     feature: string;
     mateConnector?: string;
-    /** As robot-code sends it to Onshape, as an update call. */
-    configuration: Omit<OnshapeConfigurationResponse, "btType">;
     records: GeneratedRecord[];
 }
 
@@ -91,13 +87,13 @@ export function parseManifest(
     try {
         json = JSON.parse(text);
     } catch {
-        throw new GeneratedManifestError(`${tabName} isn't JSON.`);
+        throw new GeneratedManifestError(`Invalid manifest: ${tabName}`);
     }
     const parsed = manifestSchema.safeParse(json);
     if (!parsed.success) {
-        throw new GeneratedManifestError(
-            `${tabName} isn't a part set's manifest: ${parsed.error.message}`
-        );
+        // The schema's complaint is for whoever fixes robot-code, so it's logged
+        console.error(`Invalid manifest: ${tabName}`, parsed.error.message);
+        throw new GeneratedManifestError(`Invalid manifest: ${tabName}`);
     }
     return parsed.data;
 }
@@ -123,20 +119,21 @@ export function releasedStudio(
     const studio = manifest.studios[tab.key];
     if (!studio) {
         throw new GeneratedManifestError(
-            `${tab.set}'s manifest has no studio ${tab.key}.`
+            `Failed to find manifest's part studio: ${tab.set}/${tab.key}`
         );
     }
-    return {
-        set: tab.set,
-        key: tab.key,
+    const released = {
         feature: studio.feature,
         mateConnector: studio.mateConnector,
-        configuration: studio.configuration as unknown as Omit<
-            OnshapeConfigurationResponse,
-            "btType"
-        >,
         records: studio.records
     };
+    const bytes = new TextEncoder().encode(JSON.stringify(released)).length;
+    if (bytes > MAX_STEP_RESULT_BYTES) {
+        throw new GeneratedManifestError(
+            `Manifest too large: ${tab.set}/${tab.key}`
+        );
+    }
+    return released;
 }
 
 /** What a load keeps of a manifest beyond its studios' tabs: each studio's feature, and the rest of it. */
@@ -155,23 +152,13 @@ export function releasedCatalog(
         features: Object.fromEntries(
             Object.entries(studios).map(([key, studio]) => [
                 key,
-                { type: studio.feature, mateConnector: studio.mateConnector }
+                {
+                    elementId: studio.elementId,
+                    type: studio.feature,
+                    mateConnector: studio.mateConnector
+                }
             ])
         ),
         catalog
-    };
-}
-
-/** A released studio as the records check reads it. */
-export function toGeneratedStudio(studio: ReleasedStudio): GeneratedStudio {
-    return {
-        set: studio.set,
-        key: studio.key,
-        feature: studio.feature,
-        // As Onshape answers it, which robot-code sends as an update call
-        parameters: parseOnshapeConfiguration({
-            ...studio.configuration,
-            btType: "BTConfigurationResponse-2019"
-        })
     };
 }

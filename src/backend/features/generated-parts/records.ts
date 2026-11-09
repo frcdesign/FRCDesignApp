@@ -3,18 +3,14 @@
  * released beside them (see `manifest.ts`): what a load indexes in place of
  * asking Onshape about each configuration.
  */
-import { enumerateConfigurations } from "../configurations/combinations";
 import {
     type ConfigurationParameter,
     type ConfigurationRecord,
-    type PartialSelection,
-    ParameterType,
     type PartMetadata
 } from "../configurations/contract";
 import { sameSelection, toSelection } from "../configurations/selection";
 import { parseVendor, type Vendor } from "../library/vendors";
 import { type GeneratedRecord } from "./manifest";
-import { type GeneratedStudio } from "./studios";
 
 /** What a load stores for a generated studio, as it would from probing. */
 export interface GeneratedConfiguration {
@@ -24,13 +20,6 @@ export interface GeneratedConfiguration {
     records: ConfigurationRecord[];
     vendors: Vendor[];
 }
-
-/**
- * The tab's configuration isn't the one robot-code generated, so its parts
- * aren't the generated records either: the generator is the source of truth,
- * so the load fails rather than probe.
- */
-export class GeneratedPartMismatchError extends Error {}
 
 // A record's url is where to buy it, which its feature sets as its description
 function toRecord(record: GeneratedRecord): ConfigurationRecord {
@@ -46,65 +35,11 @@ function toRecord(record: GeneratedRecord): ConfigurationRecord {
     };
 }
 
-function key(values: PartialSelection): string {
-    return JSON.stringify(Object.entries(values).sort());
-}
-
-/**
- * Why a tab's parameters aren't its studio's, or undefined when they are: the
- * same parameters, options and defaults, offering exactly the configurations
- * robot-code named a part for. Conditions are compared by what they show, not
- * how Onshape spells them.
- */
-export function describeMismatch(
-    studio: GeneratedStudio,
-    parameters: ConfigurationParameter[],
-    records: GeneratedRecord[]
-): string | undefined {
-    const shape = (each: ConfigurationParameter[]) =>
-        JSON.stringify(
-            each.map((parameter) => ({
-                id: parameter.id,
-                name: parameter.name,
-                type: parameter.type,
-                default: parameter.default,
-                options:
-                    parameter.type === ParameterType.ENUM
-                        ? parameter.options
-                        : undefined
-            }))
-        );
-    if (shape(parameters) !== shape(studio.parameters)) {
-        return "Its configuration's inputs aren't the generated ones.";
-    }
-    const { configurations, capped } = enumerateConfigurations(
-        parameters,
-        [],
-        records.length
-    );
-    const offered = new Set(configurations.map(key));
-    if (
-        capped ||
-        offered.size !== records.length ||
-        records.some((record) => !offered.has(key(record.values)))
-    ) {
-        return "Its configuration offers other options than the generated parts.";
-    }
-    return undefined;
-}
-
-/** A generated studio's parts, once its tab's parameters are checked against it. */
+/** A generated studio's parts, the default's told apart by the tab's own parameters. */
 export function generatedConfiguration(
-    studio: GeneratedStudio,
     parameters: ConfigurationParameter[],
     generatedRecords: GeneratedRecord[]
 ): GeneratedConfiguration {
-    const mismatch = describeMismatch(studio, parameters, generatedRecords);
-    if (mismatch) {
-        throw new GeneratedPartMismatchError(
-            `${studio.set}/${studio.key}: ${mismatch}`
-        );
-    }
     const defaults = toSelection({}, parameters);
     const records = generatedRecords.map(toRecord);
     const defaultRecord = records.find((record) =>

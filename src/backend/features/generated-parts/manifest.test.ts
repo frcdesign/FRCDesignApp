@@ -68,7 +68,7 @@ describe("parseManifest", () => {
                 }),
                 "fasteners.parts.json"
             )
-        ).toThrow(/isn't a part set's manifest/);
+        ).toThrow("Invalid manifest: fasteners.parts.json");
     });
 
     it("refuses a tab its manifest has no studio for", () => {
@@ -82,6 +82,25 @@ describe("parseManifest", () => {
                 key: "screw",
                 manifestElementId: "manifest"
             })
-        ).toThrow(/no studio screw/);
+        ).toThrow("Failed to find manifest's part studio: fasteners/screw");
+    });
+
+    it("refuses a studio too large for a step to return", () => {
+        const manifest = parseManifest(
+            JSON.stringify(NUT_MANIFEST),
+            "fasteners.parts.json"
+        );
+        const nut = manifest.studios.nut;
+        manifest.studios.nut = {
+            ...nut,
+            records: Array.from({ length: 20000 }, () => nut.records[0])
+        };
+        expect(() =>
+            releasedStudio(manifest, {
+                set: "fasteners",
+                key: "nut",
+                manifestElementId: "manifest"
+            })
+        ).toThrow("Manifest too large: fasteners/nut");
     });
 });

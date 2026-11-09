@@ -10,7 +10,7 @@ import {
     TEST_LIBRARY_ID
 } from "../../../__test_utils__";
 import { FASTENER_SET } from "../../../__test_utils__/fastener-set";
-import { FASTENERS_MANIFEST } from "../../../__test_utils__/fasteners-manifest.gen";
+import { FASTENERS_MANIFEST } from "../../../__test_utils__/fasteners-manifest";
 import { releasedCatalog } from "../generated-parts/manifest";
 import { generatedFeatures, saveGeneratedSet } from "../generated-parts/store";
 import { getFastenerSet } from "./fastener-set";
@@ -24,8 +24,7 @@ async function storeCatalog() {
         libraryId: TEST_LIBRARY_ID,
         set: "fasteners",
         groupId: TEST_GROUP_ID,
-        versionId: "libv",
-        // A released manifest names each studio's tab; the synced one, where it's released
+        // Each studio's tab, as the group's insertables name them
         ...releasedCatalog({
             ...FASTENERS_MANIFEST,
             studios: Object.fromEntries(
@@ -48,7 +47,7 @@ async function storeStudios(kinds = Object.values(FastenerKind)) {
             elementId: `${kind}Studio`,
             documentId: "lib",
             versionId: "libv",
-            generatedStudio: `fasteners/${kind}`,
+            isGenerated: true,
             fastenInfo: {
                 mateConnectorId: `${kind}MC`,
                 mateLocation: MateLocation.Feature,
@@ -93,9 +92,21 @@ describe("getFastenerSet", () => {
                 a.type.localeCompare(b.type)
             )
         ).toEqual([
-            { type: "fastenerNut", mateConnector: "mateConnector" },
-            { type: "fastenerScrew", mateConnector: "mateConnector" },
-            { type: "fastenerWasher", mateConnector: "mateConnector" }
+            {
+                elementId: "nutStudio",
+                type: "fastenerNut",
+                mateConnector: "mateConnector"
+            },
+            {
+                elementId: "screwStudio",
+                type: "fastenerScrew",
+                mateConnector: "mateConnector"
+            },
+            {
+                elementId: "washerStudio",
+                type: "fastenerWasher",
+                mateConnector: "mateConnector"
+            }
         ]);
     });
 });
