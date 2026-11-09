@@ -46,11 +46,12 @@ export function addElementToAssembly(
         partTypes?: PartType[];
         /** Where to land it; the origin when left out. */
         transform?: number[];
+        timeoutMs?: number;
     } = {}
 ): Promise<OnshapeInsertInstancesResponse> {
     assertWorkspace(assemblyPath);
 
-    const { configuration, partTypes, transform } = options;
+    const { configuration, partTypes, transform, timeoutMs } = options;
 
     const instance: Record<string, unknown> = {
         ...toElementApiObject(elementPath)
@@ -71,7 +72,7 @@ export function addElementToAssembly(
         instance.isWholePartStudio = true;
     }
 
-    return insertInstance(client, assemblyPath, instance, transform);
+    return insertInstance(client, assemblyPath, instance, transform, timeoutMs);
 }
 
 /** In metres. Excludes sketches, so a marker doesn't widen it. */
@@ -107,7 +108,8 @@ function insertInstance(
     client: OnshapeApi,
     assemblyPath: ElementPath,
     instance: Record<string, unknown>,
-    transform?: number[]
+    transform?: number[],
+    timeoutMs?: number
 ): Promise<OnshapeInsertInstancesResponse> {
     return client.post(
         `/assemblies${toElementApiPath(assemblyPath)}/transformedinstances`,
@@ -119,7 +121,8 @@ function insertInstance(
                         transform: transform ?? IDENTITY_TRANSFORM
                     }
                 ]
-            }
+            },
+            timeoutMs
         }
     );
 }

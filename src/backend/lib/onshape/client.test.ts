@@ -68,7 +68,7 @@ describe("OnshapeApi error handling", () => {
         expect(api.lastInit?.signal?.aborted).toBe(false);
     });
 
-    it("names a call that timed out", async () => {
+    it("names a call that timed out, and how long it waited", async () => {
         const api = new (class extends OnshapeApi {
             protected _request(): Promise<Response> {
                 return Promise.reject(
@@ -76,7 +76,9 @@ describe("OnshapeApi error handling", () => {
                 );
             }
         })();
-        await expect(api.get("/x")).rejects.toBeInstanceOf(OnshapeTimeoutError);
+        const request = api.get("/x", { timeoutMs: 20_000 });
+        await expect(request).rejects.toBeInstanceOf(OnshapeTimeoutError);
+        await expect(request).rejects.toThrow("no answer after 20 s");
     });
 
     it("lets a caller's own signal win", async () => {

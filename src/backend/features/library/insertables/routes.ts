@@ -39,7 +39,7 @@ import {
     addAssemblyFeature
 } from "../../../lib/onshape/endpoints/assemblies";
 import { PartType } from "../../../lib/onshape/endpoints/documents";
-import { retryOnServerError } from "../../../lib/onshape/retry";
+import { retryInsert } from "../../../lib/onshape/retry";
 import { onshapeOverrides } from "../../configurations/selection";
 import { readSelection, selectionSchema } from "./read-selection";
 import { encodeConfiguration } from "../../configurations/utils";
@@ -292,8 +292,13 @@ insertableRoutes.post(
             parameters
         );
 
-        const result = await retryOnServerError(() =>
-            addPartStudioFeature(onshapeApi, targetPath, feature.getFeature())
+        const result = await retryInsert((timeoutMs) =>
+            addPartStudioFeature(
+                onshapeApi,
+                targetPath,
+                feature.getFeature(),
+                timeoutMs
+            )
         );
 
         await recordRecentInsert(c, {
@@ -394,13 +399,13 @@ insertableRoutes.post(
               )
             : undefined;
 
-        const result = await retryOnServerError(() =>
+        const result = await retryInsert((timeoutMs) =>
             addElementToAssembly(
                 onshapeApi,
                 targetPath,
                 sourcePath,
                 row.elementType,
-                { configuration, partTypes, transform }
+                { configuration, partTypes, transform, timeoutMs }
             )
         );
 

@@ -42,11 +42,11 @@ const DEFAULT_RETRY_AFTER_SECONDS = 60;
 /** Well under a workflow step's ten minutes, so the step can still retry. */
 const REQUEST_TIMEOUT_MS = 60_000;
 
-/** Onshape gave no answer before {@link REQUEST_TIMEOUT_MS}; it may still be doing the work. */
+/** Onshape gave no answer in time; it may still be doing the work. */
 export class OnshapeTimeoutError extends Error {
-    constructor() {
+    constructor(timeoutMs: number) {
         super(
-            `Onshape request timed out: no answer after ${REQUEST_TIMEOUT_MS / 1000} s`
+            `Onshape request timed out: no answer after ${timeoutMs / 1000} s`
         );
         this.name = "OnshapeTimeoutError";
     }
@@ -156,6 +156,7 @@ export abstract class OnshapeApi {
         body?: unknown
     ): Promise<Response> {
         const url = `${this._baseUrl}${path}?${toQueryString(options?.query)}`;
+        const timeoutMs = options?.timeoutMs ?? REQUEST_TIMEOUT_MS;
         const headers = options?.accept
             ? new Headers({ Accept: options.accept })
             : undefined;
@@ -163,14 +164,13 @@ export abstract class OnshapeApi {
         try {
             res = await this._request(method, url, {
                 body: body !== undefined ? JSON.stringify(body) : undefined,
-                signal:
-                    options?.signal ?? AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+                signal: options?.signal ?? AbortSignal.timeout(timeoutMs),
                 headers
             });
         } catch (error) {
             // What `AbortSignal.timeout` aborts with; a caller's own signal aborts as `AbortError`.
             if (error instanceof Error && error.name === "TimeoutError") {
-                throw new OnshapeTimeoutError();
+                throw new OnshapeTimeoutError(timeoutMs);
             }
             throw error;
         }

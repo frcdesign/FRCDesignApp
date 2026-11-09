@@ -4,24 +4,33 @@ import {
     OnshapeRateLimitError,
     OnshapeTimeoutError
 } from "./client";
-import { retryOnServerError } from "./retry";
+import { retryInsert } from "./retry";
 
-const NO_WAIT = { retries: 1, delayMs: 0 };
+const NO_WAIT = { retries: 1, delayMs: 0, timeoutMs: 20_000 };
 
-describe("retryOnServerError", () => {
+describe("retryInsert", () => {
     afterEach(() => vi.restoreAllMocks());
 
-    it("calls again when Onshape answers 5xx", async () => {
+    it.each([
+        ["a 5xx", new OnshapeApiError("boom", 500)],
+        ["a timeout", new OnshapeTimeoutError(20_000)]
+    ])("calls again after %s", async (_label, error) => {
         vi.spyOn(console, "warn").mockImplementation(() => undefined);
         const call = vi
             .fn()
-            .mockRejectedValueOnce(new OnshapeApiError("boom", 500))
+            .mockRejectedValueOnce(error)
             .mockResolvedValueOnce("inserted");
 
-        await expect(retryOnServerError(call, NO_WAIT)).resolves.toBe(
-            "inserted"
-        );
+        await expect(retryInsert(call, NO_WAIT)).resolves.toBe("inserted");
         expect(call).toHaveBeenCalledTimes(2);
+    });
+
+    it("gives each attempt the policy's timeout", async () => {
+        const call = vi.fn().mockResolvedValue("inserted");
+
+        await retryInsert(call, NO_WAIT);
+
+        expect(call).toHaveBeenCalledWith(20_000);
     });
 
     it("gives up once its retries are spent", async () => {
@@ -30,7 +39,7 @@ describe("retryOnServerError", () => {
             .fn()
             .mockRejectedValue(new OnshapeApiError("boom", 503));
 
-        await expect(retryOnServerError(call, NO_WAIT)).rejects.toMatchObject({
+        await expect(retryInsert(call, NO_WAIT)).rejects.toMatchObject({
             status: 503
         });
         expect(call).toHaveBeenCalledTimes(2);
@@ -39,12 +48,11 @@ describe("retryOnServerError", () => {
     it.each([
         ["a 4xx", new OnshapeApiError("bad configuration", 400)],
         ["a rate limit", new OnshapeRateLimitError("slow down", 60)],
-        ["a timeout", new OnshapeTimeoutError()],
         ["our own failure", new TypeError("undefined is not a function")]
     ])("does not retry %s", async (_label, error) => {
         const call = vi.fn().mockRejectedValue(error);
 
-        await expect(retryOnServerError(call, NO_WAIT)).rejects.toBe(error);
+        await expect(retryInsert(call, NO_WAIT)).rejects.toBe(error);
         expect(call).toHaveBeenCalledTimes(1);
     });
 });

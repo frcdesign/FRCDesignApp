@@ -39,6 +39,7 @@ import {
     OnshapeRateLimitError,
     OnshapeTimeoutError
 } from "../../../lib/onshape/client";
+import { INSERT_RETRY } from "../../../lib/onshape/retry";
 import { AUTO_INDEX_THRESHOLD } from "../../configurations/combinations";
 import {
     enumParam,
@@ -255,7 +256,8 @@ describe("insertable routes", () => {
         expect(spy).toHaveBeenCalledWith(
             MOCK_ONSHAPE_API,
             targetPath,
-            expect.anything() // DerivedFeature payload
+            expect.anything(), // DerivedFeature payload
+            INSERT_RETRY.timeoutMs
         );
     });
 
@@ -640,22 +642,23 @@ describe("insertable routes", () => {
         expect(await loggedInsert()).toBeDefined();
     });
 
-    // Onshape may still finish the first, so a second could insert twice.
-    it("does not try a timed-out insert again, and says it timed out", async () => {
+    it("tries a timed-out insert again, and says it timed out when that does too", async () => {
         await seedAssembly(db);
+        vi.spyOn(console, "warn").mockImplementation(() => undefined);
         vi.spyOn(console, "error").mockImplementation(() => undefined);
         const insert = vi
             .spyOn(AssemblyEndpoints, "addElementToAssembly")
-            .mockRejectedValue(new OnshapeTimeoutError());
+            .mockRejectedValue(new OnshapeTimeoutError(20_000));
 
         const res = await insertIntoAssembly(false);
 
         expect(res.status).toBe(504);
         expect(await res.json()).toMatchObject({
             kind: "internal",
-            message: expect.stringContaining("timed out")
+            message: "Onshape request timed out: no answer after 20 s"
         });
-        expect(insert).toHaveBeenCalledTimes(1);
+        expect(insert).toHaveBeenCalledTimes(2);
+        expect(insert.mock.calls[0][4]?.timeoutMs).toBe(20_000);
     });
 
     it("POST /indexing indexes and forces the flag on", async () => {

@@ -36,6 +36,8 @@ export function toQueryString(init?: URLSearchParamsInit): string {
 export interface QueryOptions {
     query?: URLSearchParamsInit;
     signal?: AbortSignal;
+    /** How long to wait for Onshape when no `signal` is given; the client's default otherwise. */
+    timeoutMs?: number;
     accept?: string;
 }
 
