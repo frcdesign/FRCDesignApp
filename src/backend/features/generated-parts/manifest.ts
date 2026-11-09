@@ -26,7 +26,6 @@ const recordSchema = z.object({
 
 export type GeneratedRecord = z.infer<typeof recordSchema>;
 
-// Its configuration too, which robot-code writes to the tab, and a load doesn't read
 const studioSchema = z.object({
     feature: z.string(),
     mateConnector: z.string().optional(),

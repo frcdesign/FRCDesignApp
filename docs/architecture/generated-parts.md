@@ -45,7 +45,7 @@ Each release writes the manifest into the library document as a file tab named
 - its tab (`elementId`);
 - its feature;
 - the id the feature gives its mate connector (`mateConnector`);
-- its configuration and records.
+- its records.
 
 The rest of the manifest is the set's catalog, which Auto Assembly reads.
 
