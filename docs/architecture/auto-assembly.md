@@ -82,7 +82,7 @@ interface QueryListProps {
     /** Unique on the page: which list takes picks. */
     id: string;
     label: string;
-    /** What to pick, shown while it's focused, and when something else is picked. */
+    /** What to pick, in Onshape's message bubble when it's focused and when something else is picked. */
     prompt: string;
     entities: OnshapeSelection[];
     onChange: (entities: OnshapeSelection[]) => void;
@@ -846,6 +846,14 @@ vectors, Onshape's 4×4 transforms and `LINEAR_TOLERANCE`.
 
 ## Flows
 
+### Finding the page
+
+The page picker marks Auto Assembly with a dot and a **New** badge for somebody
+who has an element to act on and has never opened the page
+(`useIsAutoAssemblyNew`). Opening it records `Hint.OPENED_AUTO_ASSEMBLY`
+against the user in KV (`useMarkHintSeen`, see [auth.md](./auth.md)), so the
+dot stays gone on every computer they use.
+
 ### Picking
 
 1. Once the app sends `applicationInit`, Onshape sends the window's whole
@@ -867,8 +875,9 @@ vectors, Onshape's 4×4 transforms and `LINEAR_TOLERANCE`.
    focused on mount, and again whenever no list is, as when the focused list
    unmounts; here that's **Faces** or **Circular edges**. The focused list adds
    what's picked of the kind it takes, drops what's deselected, and repeats its
-   prompt for anything else picked. With no list focused, the selection is
-   ignored. A list is named inside its box, as Onshape's query parameters are.
+   prompt in the bubble for anything else picked. The panel shows no prompt of
+   its own. With no list focused, the selection is ignored. A list is named
+   inside its box, as Onshape's query parameters are.
 3. While focused, a list holds a `requestSelection` with its `filter`
    (`sendSelectionRequest`), which limits what the Onshape window lets be
    picked: `CIRCULAR_EDGES` (`entityTypeSpecifier: ["EDGE"]`,
@@ -1088,78 +1097,78 @@ is logged to the console.
 
 ## User-facing strings
 
-| String                                                                                                                                                                  | Where                                                      |
-| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
-| "Open an assembly to fasten parts"                                                                                                                                      | Route notice title, outside an assembly                    |
-| "Auto Assembly puts screws, washers and nuts in the holes of an assembly's parts. Open it from an assembly's panel."                                                    | Route notice description, outside an assembly              |
-| "Sign in to fasten parts" / "Sign in"                                                                                                                                   | Route notice title and button, signed out                  |
-| "Auto Assembly reads your assembly's holes and inserts fasteners into it."                                                                                              | Route notice description, signed out                       |
-| "Loading fasteners..."                                                                                                                                                  | In place of the panel, while the fasteners are read        |
-| "Couldn't load the fasteners."                                                                                                                                          | In place of the panel, the read failed                     |
-| "No fasteners are loaded yet." / "Auto Assembly uses the fasteners in FRCDesignLib's Fasteners group, once they're loaded."                                             | In place of the panel, none loaded                         |
-| "Selections"                                                                                                                                                            | Heading, last                                              |
-| "Select by" / "Circular edges" / "Faces"                                                                                                                                | Selection mode, its options                                |
-| "Faces"                                                                                                                                                                 | Targets list's label, faces                                |
-| "Select faces to fasten every hole in."                                                                                                                                 | Targets list's prompt, faces, in Onshape's bubble and list |
-| "Holes to skip"                                                                                                                                                         | Second list's label, faces                                 |
-| "Select the edges of holes to leave out."                                                                                                                               | Holes to skip's prompt                                     |
-| "Screws to replace" / "Screw {n}"                                                                                                                                       | Third list's label, and its rows                           |
-| "Select screws to take out, with their washers and nuts, and fasten again."                                                                                             | Screws to replace's prompt                                 |
-| "Circular edges"                                                                                                                                                        | Targets list's label, circular edges                       |
-| "Select the circular edges of holes to fasten."                                                                                                                         | Targets list's prompt, circular edges                      |
-| "Clear"                                                                                                                                                                 | A list with picks, inside its box (`QueryList`)            |
-| "{Kind} {n}", e.g. "Edge 1"                                                                                                                                             | A list's row                                               |
-| "Fastener"                                                                                                                                                              | Heading                                                    |
-| "Program" / "FRC" / "FTC"                                                                                                                                               | Program, its options                                       |
-| "FTC fasteners aren't available yet."                                                                                                                                   | In place of the Fastener group's inputs, FTC               |
-| "Sizing" / "Automatic" / "Manual"                                                                                                                                       | How the screw's length is chosen, its options              |
-| "Add screw washer" / "Add nut" / "Add nut washer"                                                                                                                       | Group titles, each a checkbox                              |
-| "Stop condition" / "All holes" / "First gap"                                                                                                                            | Stop condition, its options                                |
-| "Limit screw length"                                                                                                                                                    | Checkbox, showing Max length                               |
-| "Max length" / "Max gap to ignore" / "Max thread depth"                                                                                                                 | Length inputs                                              |
-| "Insert"                                                                                                                                                                | Button                                                     |
-| "Unexpectedly failed to start inserting."                                                                                                                               | Error toast, the request failed                            |
-| "Auto Assembly doesn't have FTC fasteners yet."                                                                                                                         | Error, insert route (400)                                  |
-| "Auto Assembly's parts aren't published yet."                                                                                                                           | Error, insert route (503)                                  |
-| "Fasteners are already being inserted in this assembly."                                                                                                                | Error, insert route (409)                                  |
-| "Every part must be one its vendor makes, in the screw's size."                                                                                                         | Validation error, insert route                             |
-| "A nut washer goes under a nut."                                                                                                                                        | Validation error, insert route                             |
-| "Index holes" / "Remove replaced parts" / "Insert parts" / "Fasten parts"                                                                                               | Details modal, the steps                                   |
-| "{Indexing holes \| Inserting parts \| Fastening parts \| Inserting fasteners}... You can leave this page."                                                             | Callout, while running                                     |
-| "{headline} {time ago}."                                                                                                                                                | Callout, finished                                          |
-| "Inserted {n} parts"                                                                                                                                                    | Headline, succeeded                                        |
-| "Inserted {n} parts, replacing {m} screws"                                                                                                                              | Headline, succeeded, with screws replaced                  |
-| "{parts} with problems"                                                                                                                                                 | Headline, partly                                           |
-| "Couldn't insert fasteners"                                                                                                                                             | Headline, failed                                           |
-| "Details"                                                                                                                                                               | Callout button, and the finished toast's action            |
-| "Inserting fasteners..."                                                                                                                                                | Toast, as a watched run starts                             |
-| "{headline}."                                                                                                                                                           | Toast, when a watched run finishes                         |
-| "No recent run" / "Loading..." / "{running headline}..."                                                                                                                | Details modal title                                        |
-| "Stopped early."                                                                                                                                                        | Details modal notice, with the run's error                 |
-| "The head isn't made in this size."                                                                                                                                     | A hole's plan, in the run's status                         |
-| "No hole goes into the part from this circular edge."                                                                                                                   | A hole's plan, in the run's status                         |
-| "Couldn't find this part in the assembly." / "Not a circular edge." / "No circular edges in this face."                                                                 | A pick that gave no circular edge                          |
-| "The hole is too small for a {size} screw."                                                                                                                             | A hole's plan, in the run's status                         |
-| "The vendor doesn't make this head in this size."                                                                                                                       | A hole's plan, in the run's status                         |
-| "The vendor doesn't make this length in this size and head."                                                                                                            | A hole's plan, no fit, preset                              |
-| "No screw reaches through within the maximum length." / "No screw is long enough to reach through."                                                                     | A hole's plan, no fit, through                             |
-| "The screw is too long or too short for this hole."                                                                                                                     | A hole's plan, no fit, preset into threads                 |
-| "No screw length engages the threads within the maximum thread depth without bottoming out."                                                                            | A hole's plan, no fit, tapped                              |
-| "No screw length fits the blind hole within the maximum thread depth."                                                                                                  | A hole's plan, no fit, blind                               |
-| "No edge on the far side to fasten a nut to."                                                                                                                           | A hole's plan, ready without its nut                       |
-| "Auto Assembly stopped: {why}"                                                                                                                                          | The run's error                                            |
-| "Couldn't read the assembly's holes." / "Couldn't insert the fasteners."                                                                                                | A step's failure, index / insert                           |
-| "Couldn't fasten the inserted parts."                                                                                                                                   | A step's failure, fasten                                   |
-| "Couldn't remove the screws to replace."                                                                                                                                | A step's failure, remove                                   |
-| "A library screw is already in this hole. Pick it under Screws to replace to change it."                                                                                | A row's problem, hole already fastened                     |
-| "{n} of {m} holes can't be fastened: {why}"                                                                                                                             | A face's problem, some holes won't plan                    |
-| "Not a hole in the faces picked."                                                                                                                                       | A hole to skip's problem                                   |
-| "Its hole can't be fastened again, so it stays: {why}"                                                                                                                  | A screw to replace's problem                               |
-| "This hole can't be fastened."                                                                                                                                          | A row's problem, a plan with no reason                     |
-| "Select holes to fasten or screws to replace."                                                                                                                          | Validation error, insert route, nothing picked             |
-| "Not a screw from FRCDesignLib's Fasteners group." / "This screw is in a subassembly, which Auto Assembly doesn't change." / "Couldn't find the hole this screw is in." | A screw to replace that can't be                           |
-| "You don't have permission to edit this assembly."                                                                                                                      | A step's failure, Onshape answered 403                     |
-| "A fastener's studio has no mate connector to fasten by. Reload its group."                                                                                             | Fasten step's failure                                      |
+| String                                                                                                                                                                  | Where                                               |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- |
+| "Open an assembly to fasten parts"                                                                                                                                      | Route notice title, outside an assembly             |
+| "Auto Assembly puts screws, washers and nuts in the holes of an assembly's parts. Open it from an assembly's panel."                                                    | Route notice description, outside an assembly       |
+| "Sign in to fasten parts" / "Sign in"                                                                                                                                   | Route notice title and button, signed out           |
+| "Auto Assembly reads your assembly's holes and inserts fasteners into it."                                                                                              | Route notice description, signed out                |
+| "Loading fasteners..."                                                                                                                                                  | In place of the panel, while the fasteners are read |
+| "Couldn't load the fasteners."                                                                                                                                          | In place of the panel, the read failed              |
+| "No fasteners are loaded yet." / "Auto Assembly uses the fasteners in FRCDesignLib's Fasteners group, once they're loaded."                                             | In place of the panel, none loaded                  |
+| "Selections"                                                                                                                                                            | Heading, last                                       |
+| "Select by" / "Circular edges" / "Faces"                                                                                                                                | Selection mode, its options                         |
+| "Faces"                                                                                                                                                                 | Targets list's label, faces                         |
+| "Select faces to fasten every hole in."                                                                                                                                 | Targets list's prompt, faces, in Onshape's bubble   |
+| "Holes to skip"                                                                                                                                                         | Second list's label, faces                          |
+| "Select the edges of holes to leave out."                                                                                                                               | Holes to skip's prompt                              |
+| "Screws to replace" / "Screw {n}"                                                                                                                                       | Third list's label, and its rows                    |
+| "Select screws to take out, with their washers and nuts, and fasten again."                                                                                             | Screws to replace's prompt                          |
+| "Circular edges"                                                                                                                                                        | Targets list's label, circular edges                |
+| "Select the circular edges of holes to fasten."                                                                                                                         | Targets list's prompt, circular edges               |
+| "Clear"                                                                                                                                                                 | A list with picks, inside its box (`QueryList`)     |
+| "{Kind} {n}", e.g. "Edge 1"                                                                                                                                             | A list's row                                        |
+| "Fastener"                                                                                                                                                              | Heading                                             |
+| "Program" / "FRC" / "FTC"                                                                                                                                               | Program, its options                                |
+| "FTC fasteners aren't available yet."                                                                                                                                   | In place of the Fastener group's inputs, FTC        |
+| "Sizing" / "Automatic" / "Manual"                                                                                                                                       | How the screw's length is chosen, its options       |
+| "Add screw washer" / "Add nut" / "Add nut washer"                                                                                                                       | Group titles, each a checkbox                       |
+| "Stop condition" / "All holes" / "First gap"                                                                                                                            | Stop condition, its options                         |
+| "Limit screw length"                                                                                                                                                    | Checkbox, showing Max length                        |
+| "Max length" / "Max gap to ignore" / "Max thread depth"                                                                                                                 | Length inputs                                       |
+| "Insert"                                                                                                                                                                | Button                                              |
+| "Unexpectedly failed to start inserting."                                                                                                                               | Error toast, the request failed                     |
+| "Auto Assembly doesn't have FTC fasteners yet."                                                                                                                         | Error, insert route (400)                           |
+| "Auto Assembly's parts aren't published yet."                                                                                                                           | Error, insert route (503)                           |
+| "Fasteners are already being inserted in this assembly."                                                                                                                | Error, insert route (409)                           |
+| "Every part must be one its vendor makes, in the screw's size."                                                                                                         | Validation error, insert route                      |
+| "A nut washer goes under a nut."                                                                                                                                        | Validation error, insert route                      |
+| "Index holes" / "Remove replaced parts" / "Insert parts" / "Fasten parts"                                                                                               | Details modal, the steps                            |
+| "{Indexing holes \| Inserting parts \| Fastening parts \| Inserting fasteners}... You can leave this page."                                                             | Callout, while running                              |
+| "{headline} {time ago}."                                                                                                                                                | Callout, finished                                   |
+| "Inserted {n} parts"                                                                                                                                                    | Headline, succeeded                                 |
+| "Inserted {n} parts, replacing {m} screws"                                                                                                                              | Headline, succeeded, with screws replaced           |
+| "{parts} with problems"                                                                                                                                                 | Headline, partly                                    |
+| "Couldn't insert fasteners"                                                                                                                                             | Headline, failed                                    |
+| "Details"                                                                                                                                                               | Callout button, and the finished toast's action     |
+| "Inserting fasteners..."                                                                                                                                                | Toast, as a watched run starts                      |
+| "{headline}."                                                                                                                                                           | Toast, when a watched run finishes                  |
+| "No recent run" / "Loading..." / "{running headline}..."                                                                                                                | Details modal title                                 |
+| "Stopped early."                                                                                                                                                        | Details modal notice, with the run's error          |
+| "The head isn't made in this size."                                                                                                                                     | A hole's plan, in the run's status                  |
+| "No hole goes into the part from this circular edge."                                                                                                                   | A hole's plan, in the run's status                  |
+| "Couldn't find this part in the assembly." / "Not a circular edge." / "No circular edges in this face."                                                                 | A pick that gave no circular edge                   |
+| "The hole is too small for a {size} screw."                                                                                                                             | A hole's plan, in the run's status                  |
+| "The vendor doesn't make this head in this size."                                                                                                                       | A hole's plan, in the run's status                  |
+| "The vendor doesn't make this length in this size and head."                                                                                                            | A hole's plan, no fit, preset                       |
+| "No screw reaches through within the maximum length." / "No screw is long enough to reach through."                                                                     | A hole's plan, no fit, through                      |
+| "The screw is too long or too short for this hole."                                                                                                                     | A hole's plan, no fit, preset into threads          |
+| "No screw length engages the threads within the maximum thread depth without bottoming out."                                                                            | A hole's plan, no fit, tapped                       |
+| "No screw length fits the blind hole within the maximum thread depth."                                                                                                  | A hole's plan, no fit, blind                        |
+| "No edge on the far side to fasten a nut to."                                                                                                                           | A hole's plan, ready without its nut                |
+| "Auto Assembly stopped: {why}"                                                                                                                                          | The run's error                                     |
+| "Couldn't read the assembly's holes." / "Couldn't insert the fasteners."                                                                                                | A step's failure, index / insert                    |
+| "Couldn't fasten the inserted parts."                                                                                                                                   | A step's failure, fasten                            |
+| "Couldn't remove the screws to replace."                                                                                                                                | A step's failure, remove                            |
+| "A library screw is already in this hole. Pick it under Screws to replace to change it."                                                                                | A row's problem, hole already fastened              |
+| "{n} of {m} holes can't be fastened: {why}"                                                                                                                             | A face's problem, some holes won't plan             |
+| "Not a hole in the faces picked."                                                                                                                                       | A hole to skip's problem                            |
+| "Its hole can't be fastened again, so it stays: {why}"                                                                                                                  | A screw to replace's problem                        |
+| "This hole can't be fastened."                                                                                                                                          | A row's problem, a plan with no reason              |
+| "Select holes to fasten or screws to replace."                                                                                                                          | Validation error, insert route, nothing picked      |
+| "Not a screw from FRCDesignLib's Fasteners group." / "This screw is in a subassembly, which Auto Assembly doesn't change." / "Couldn't find the hole this screw is in." | A screw to replace that can't be                    |
+| "You don't have permission to edit this assembly."                                                                                                                      | A step's failure, Onshape answered 403              |
+| "A fastener's studio has no mate connector to fasten by. Reload its group."                                                                                             | Fasten step's failure                               |
 
 ## Invariants
 

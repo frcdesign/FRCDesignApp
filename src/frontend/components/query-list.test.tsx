@@ -75,7 +75,8 @@ describe("QueryList", () => {
         expect(screen.getByText("Holes")).toBeTruthy();
 
         await userEvent.click(screen.getByText("Holes"));
-        expect(screen.getByText(PROMPT)).toBeTruthy();
+        // Said in Onshape, not under the list
+        expect(screen.queryByText(PROMPT)).toBeNull();
         expect(messages).toContainEqual(
             expect.objectContaining({
                 messageName: "showMessageBubble",
@@ -93,8 +94,14 @@ describe("QueryList", () => {
     it("refuses picks it doesn't take, saying what it wants", async () => {
         renderWithProviders(<Harness />);
         await userEvent.click(screen.getByText("Holes"));
+        messages = [];
         select({ ...edge("F"), entityType: "FACE" });
-        expect(screen.getAllByText(PROMPT)).toHaveLength(1);
+        expect(messages).toContainEqual(
+            expect.objectContaining({
+                messageName: "showMessageBubble",
+                message: PROMPT
+            })
+        );
         expect(screen.queryByText("Face 1")).toBeNull();
     });
 

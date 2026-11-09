@@ -58,12 +58,12 @@ import { AppColor, getLibraryColor, toShade } from "../theme";
 import { queryClient } from "../lib/query-client";
 import { InsertLocationStatus } from "../features/insert-location/components/insert-location-status";
 import { NavbarFastenStatus } from "../features/insert/components/fasten-circular-edges-status";
-import {
-    useIsVersionManager,
-    useIsVersionManagerNew
-} from "../features/version-manager/navigation";
+import { useIsVersionManager } from "../features/version-manager/navigation";
 import { useTargetElement, useTargetWorkspace } from "../lib/onshape-params";
-import { useIsAutoAssembly } from "../features/auto-assembly/navigation";
+import {
+    useIsAutoAssembly,
+    useIsAutoAssemblyNew
+} from "../features/auto-assembly/navigation";
 import { type AppTab, UtilityTab } from "../lib/app-tab";
 import { getTabName, useNavigateToTab } from "../lib/tabs";
 import { useRefreshVersionManagerMutation } from "../features/version-manager/queries";
@@ -159,7 +159,7 @@ function useAppPages(): AppPage[] {
     const targetElement = useTargetElement();
     const isVersionManager = useIsVersionManager();
     const isAutoAssembly = useIsAutoAssembly();
-    const isNew = useIsVersionManagerNew();
+    const isNew = useIsAutoAssemblyNew();
 
     const libraries = Object.values(LibraryId).map((libraryId) => ({
         tab: libraryId,
@@ -183,9 +183,7 @@ function useAppPages(): AppPage[] {
                       tab: UtilityTab.VERSION_MANAGER,
                       group: UTILITIES_GROUP,
                       icon: GitBranchIcon,
-                      color: AppColor.VERSION_MANAGER,
-                      badge: isNew ? <NewBadge /> : undefined,
-                      isNew
+                      color: AppColor.VERSION_MANAGER
                   }
               ]
             : []),
@@ -195,7 +193,9 @@ function useAppPages(): AppPage[] {
                       tab: UtilityTab.AUTO_ASSEMBLY,
                       group: UTILITIES_GROUP,
                       icon: ScrewdriverIcon,
-                      color: AppColor.AUTO_ASSEMBLY
+                      color: AppColor.AUTO_ASSEMBLY,
+                      badge: isNew ? <NewBadge /> : undefined,
+                      isNew
                   }
               ]
             : [])

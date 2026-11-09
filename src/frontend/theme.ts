@@ -69,14 +69,14 @@ export function getLibraryShade(libraryId: string): string {
  * The colors of the pages that are not a library's. Each says which part of the
  * app is showing, the way a library's color says which library is.
  */
-export enum AppColor {
+export const AppColor = {
     /** FRCDesign's own, on the dashboard pages that span every library. */
-    DASHBOARD = "frcGreen",
+    DASHBOARD: "frcGreen",
     /** The version manager acts on the open document, which is no library's. */
-    VERSION_MANAGER = "blue",
+    VERSION_MANAGER: "blue",
     /** Auto Assembly's parts are FRCDesign's, but it acts on the open assembly. */
-    AUTO_ASSEMBLY = "orange"
-}
+    AUTO_ASSEMBLY: "blue"
+} as const;
 
 /**
  * What the app is themed in right now: the page's own color where it has one,

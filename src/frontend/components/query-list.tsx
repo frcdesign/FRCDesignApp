@@ -7,7 +7,7 @@ import {
     UnstyledButton
 } from "@mantine/core";
 import { XIcon } from "@phosphor-icons/react";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import {
     sendHighlightMessage,
     sendMessageBubble,
@@ -32,7 +32,7 @@ interface QueryListProps {
     /** Unique on the page: which list takes picks. */
     id: string;
     label: string;
-    /** What to pick, shown while it's focused, and when something else is picked. */
+    /** What to pick, in Onshape's message bubble when it's focused and when something else is picked. */
     prompt: string;
     entities: OnshapeSelection[];
     onChange: (entities: OnshapeSelection[]) => void;
@@ -96,7 +96,6 @@ export function QueryList(props: QueryListProps): ReactNode {
     );
     // The stop names the request it ends
     const selectionRequest = useRef<string>(undefined);
-    const [refused, setRefused] = useState(false);
 
     useEffect(
         () =>
@@ -107,12 +106,14 @@ export function QueryList(props: QueryListProps): ReactNode {
                     (entity) =>
                         accepts(entity) && !keys.has(selectionKey(entity))
                 );
-                setRefused(added.some((entity) => !accepts(entity)));
+                if (target && added.some((entity) => !accepts(entity))) {
+                    sendMessageBubble(target, prompt);
+                }
                 if (taken.length > 0 || kept.length !== entities.length) {
                     onChange([...kept, ...taken]);
                 }
             }),
-        [id, entities, onChange, accepts]
+        [id, entities, onChange, accepts, target, prompt]
     );
 
     useEffect(() => holdPicks(id, entities), [id, entities]);
@@ -147,7 +148,6 @@ export function QueryList(props: QueryListProps): ReactNode {
 
     const focus = () => {
         useOnshapeSelection.getState().focus(id);
-        setRefused(false);
         if (!target) {
             return;
         }
@@ -270,14 +270,6 @@ export function QueryList(props: QueryListProps): ReactNode {
                     </Stack>
                 )}
             </Paper>
-            {isFocused && (refused || entities.length === 0) && (
-                <Text
-                    size="xs"
-                    c={refused ? StatusColor.WARNING : StatusColor.DIMMED}
-                >
-                    {prompt}
-                </Text>
-            )}
         </Stack>
     );
 }

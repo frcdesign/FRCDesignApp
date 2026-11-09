@@ -1,7 +1,7 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { Button } from "@mantine/core";
 import { ScrewdriverIcon } from "@phosphor-icons/react";
-import { type ReactNode } from "react";
+import { type ReactNode, useEffect } from "react";
 import { ElementType } from "@backend/lib/onshape/element-type";
 import { PageLoading, PageNotice } from "../../components/app-notice";
 import { AppIcon } from "../../components/app-icon";
@@ -14,6 +14,8 @@ import { IconSize, PrimaryColor } from "../../lib/style-constants";
 import { useNeedsSignIn } from "../../features/auth/access-level";
 import { startSignIn } from "../../features/auth/sign-in";
 import { AutoAssemblyPanel } from "../../features/auto-assembly/components/auto-assembly-panel";
+import { useMarkHintSeen } from "../../features/hints/queries";
+import { Hint } from "@backend/features/hints/contract";
 
 export const Route = createFileRoute("/app/auto-assembly")({
     component: AutoAssemblyPage,
@@ -45,6 +47,9 @@ const PAGE_ICON = (
 function AutoAssemblyPage(): ReactNode {
     const target = useTargetElement();
     const needsSignIn = useNeedsSignIn();
+    const markOpened = useMarkHintSeen(Hint.OPENED_AUTO_ASSEMBLY);
+
+    useEffect(markOpened, [markOpened]);
 
     if (!target) {
         // What renders on the way out, `beforeLoad` having redirected.

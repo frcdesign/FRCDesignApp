@@ -45,7 +45,7 @@ interface QueryListProps {
     /** Unique on the page: which list takes picks. */
     id: string;
     label: string;
-    /** What to pick, shown while it's focused, and when something else is picked. */
+    /** What to pick, in Onshape's message bubble when it's focused and when something else is picked. */
     prompt: string;
     entities: OnshapeSelection[];
     onChange: (entities: OnshapeSelection[]) => void;
@@ -349,28 +349,28 @@ enum MateLocation {
 
 ## User-facing strings
 
-| String                                                                                                            | Where                                                   |
-| ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
-| "{n} circular edges selected" / "{n} faces selected"                                                              | Card title, with picks                                  |
-| "No circular edges selected" / "No faces selected"                                                                | Card title, without                                     |
-| "New"                                                                                                             | Badge beside the title until the hint is seen           |
-| "Select edges to automatically fasten inserted parts to."                                                         | Card description, circular edges, none picked           |
-| "The part will be fastened to the selected edge."                                                                 | Card description, one edge                              |
-| "A part will be inserted and fastened to each selected edge."                                                     | Card description, several edges                         |
-| "Select faces to automatically fasten inserted parts to every hole in them."                                      | Card description, faces, none picked                    |
-| "A part will be inserted and fastened to every hole in the selected faces."                                       | Card description, faces                                 |
-| "Circular edges" / "Faces"                                                                                        | Mode, and the targets list's label                      |
-| "Holes to skip"                                                                                                   | Second list's label, faces                              |
-| "Select circular edges to fasten parts to."                                                                       | Targets list's prompt, in Onshape's bubble and the list |
-| "Select faces to fasten parts to every hole in."                                                                  | Targets list's prompt, faces                            |
-| "Select the edges of holes to leave out."                                                                         | Holes to skip's prompt                                  |
-| "Clear"                                                                                                           | A list with picks, inside its box (`QueryList`)         |
-| "Successfully inserted {name} and fastened it to {n} circular edges."                                             | Success toast, with picks                               |
-| "Successfully inserted {name} and created a Fasten mate."                                                         | Success toast, without                                  |
-| "No circular edges were found in what was selected."                                                              | Error toast, picks with no circular edge                |
-| "Select either faces or circular edges to fasten to, not both."                                                   | Validation error, inconsistent picks                    |
-| "{name} does not support insert and fasten."                                                                      | Error toast                                             |
-| "Tip: You can select circular edges in Onshape before you insert and fasten to automatically fasten to each one." | Tip toast                                               |
+| String                                                                                                            | Where                                           |
+| ----------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| "{n} circular edges selected" / "{n} faces selected"                                                              | Card title, with picks                          |
+| "No circular edges selected" / "No faces selected"                                                                | Card title, without                             |
+| "New"                                                                                                             | Badge beside the title until the hint is seen   |
+| "Select edges to automatically fasten inserted parts to."                                                         | Card description, circular edges, none picked   |
+| "The part will be fastened to the selected edge."                                                                 | Card description, one edge                      |
+| "A part will be inserted and fastened to each selected edge."                                                     | Card description, several edges                 |
+| "Select faces to automatically fasten inserted parts to every hole in them."                                      | Card description, faces, none picked            |
+| "A part will be inserted and fastened to every hole in the selected faces."                                       | Card description, faces                         |
+| "Circular edges" / "Faces"                                                                                        | Mode, and the targets list's label              |
+| "Holes to skip"                                                                                                   | Second list's label, faces                      |
+| "Select circular edges to fasten parts to."                                                                       | Targets list's prompt, in Onshape's bubble      |
+| "Select faces to fasten parts to every hole in."                                                                  | Targets list's prompt, faces                    |
+| "Select the edges of holes to leave out."                                                                         | Holes to skip's prompt                          |
+| "Clear"                                                                                                           | A list with picks, inside its box (`QueryList`) |
+| "Successfully inserted {name} and fastened it to {n} circular edges."                                             | Success toast, with picks                       |
+| "Successfully inserted {name} and created a Fasten mate."                                                         | Success toast, without                          |
+| "No circular edges were found in what was selected."                                                              | Error toast, picks with no circular edge        |
+| "Select either faces or circular edges to fasten to, not both."                                                   | Validation error, inconsistent picks            |
+| "{name} does not support insert and fasten."                                                                      | Error toast                                     |
+| "Tip: You can select circular edges in Onshape before you insert and fasten to automatically fasten to each one." | Tip toast                                       |
 
 ## Invariants
 
