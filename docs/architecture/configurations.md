@@ -50,7 +50,8 @@ or the load that probes Onshape ([loading.md](./loading.md)); both consume it.
   indexing.
 
 **KV**: `unit-info:` — a workspace's display units, for a week; a transient
-Onshape webhook drops the entry when the units change.
+Onshape webhook drops the entry when the units change, after answering the
+delivery 200.
 
 **URL**: the `config` app parameter carries the selection being edited, so a
 link reopens it.
