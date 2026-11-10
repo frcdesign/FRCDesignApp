@@ -251,7 +251,6 @@ describe("a Part Studio", () => {
             [DesignIssueType.SKETCH_UNDERDEFINED, "Sketch 4"],
             [DesignIssueType.SKETCH_UNDERDEFINED, "Sketch 6"],
             [DesignIssueType.SKETCH_UNDERDEFINED, "Sketch 7"],
-            [DesignIssueType.FEATURE_WARNING, "Origin Cube"],
             [DesignIssueType.PART_NO_MATERIAL, "Part 2"],
             [DesignIssueType.PART_NO_MATERIAL, "Part 3"],
             [DesignIssueType.FEATURE_SUPPRESSED, "Sketch 5"],
@@ -306,6 +305,26 @@ describe("a Part Studio", () => {
                 count: 3
             }
         ]);
+    });
+
+    it("reports a misplaced Origin Cube once, not also as the warning it raises", () => {
+        const snapshot = partStudio({
+            features: [extrude("E1"), originCube()],
+            statuses: { Fcube: "WARNING" }
+        });
+
+        expect(types(snapshot)).toEqual([
+            DesignIssueType.ORIGIN_CUBE_NOT_FIRST
+        ]);
+    });
+
+    it("still reports a yellow Origin Cube that is first", () => {
+        const snapshot = partStudio({
+            features: [originCube()],
+            statuses: { Fcube: "WARNING" }
+        });
+
+        expect(types(snapshot)).toEqual([DesignIssueType.FEATURE_WARNING]);
     });
 
     it("reports a suppressed Origin Cube as itself, not as any suppressed feature", () => {

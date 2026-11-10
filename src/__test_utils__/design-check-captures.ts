@@ -9,9 +9,10 @@ import type {
 } from "@backend/features/design-check/snapshot";
 
 /**
- * The Origin Cube second and yellow; Sketches 2, 4, 6 and 7 under-defined and
- * Sketch 3 over-defined; Extrude 1 red; Sketch 5 suppressed; the rollback bar
- * at the end; Parts 2 and 3 with no material or part number.
+ * The Origin Cube second, and yellow for it; Sketches 2, 4, 6 and 7
+ * under-defined and Sketch 3 over-defined; Extrude 1 red; Extrude 2 missing a
+ * selection; Sketch 5 suppressed; the rollback bar at the end; Parts 2 and 3
+ * with no material or part number.
  */
 export const CAPTURED_PART_STUDIO: PartStudioSnapshot = {
     elementType: ElementType.PART_STUDIO,
@@ -213,7 +214,7 @@ export const CAPTURED_PART_STUDIO: PartStudioSnapshot = {
  * The Origin Cube fastened to the origin and grouped with Part 2 <1>, which
  * Part 2 <2> patterns; Part 3 <1> fixed; Part 4 <1> and Part 1 <2> unmated;
  * Part 2 <3> held only by a suppressed fasten; Part 5 <1> inserted from a part
- * since deleted, and Part 1 <1> from a source since gone. An inserted sketch is
+ * since deleted, and Part 1 <1> from a tab since deleted. An inserted sketch is
  * in the document, and left out of the definition.
  */
 export const CAPTURED_ASSEMBLY: AssemblySnapshot = {
