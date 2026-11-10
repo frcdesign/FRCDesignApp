@@ -2,7 +2,7 @@ import { Anchor, Group, Stack, Text, Tooltip } from "@mantine/core";
 import { type ReactNode } from "react";
 import { type BuildIssueSeverity } from "@backend/features/build-checker/issues";
 import {
-    compareSeverity,
+    compareLevel,
     type DesignCheckOut,
     type DesignIssue,
     type DesignIssueLevels,
@@ -131,7 +131,7 @@ function showAtLevels(
             const severity = getShownSeverity(issue.type, levels);
             return severity ? [{ issue, severity }] : [];
         })
-        .toSorted((a, b) => compareSeverity(a.severity, b.severity));
+        .toSorted((a, b) => compareLevel(a.severity, b.severity));
 }
 
 function groupByType(shown: ShownIssue[]): ShownIssue[][] {

@@ -5,7 +5,7 @@ import {
     type DesignIssueLevel,
     type DesignIssueLevels,
     type DesignIssueType,
-    getDesignIssueSeverity
+    getDefaultLevel
 } from "@backend/features/design-check/contract";
 import { apiGet, apiPost } from "../../lib/api-client";
 import { getAppErrorHandler } from "../../lib/errors";
@@ -67,7 +67,7 @@ export function withLevel(
     level: DesignIssueLevel
 ): DesignIssueLevels {
     const next = { ...levels, [type]: level };
-    if (level === getDesignIssueSeverity(type)) {
+    if (level === getDefaultLevel(type)) {
         delete next[type];
     }
     return next;

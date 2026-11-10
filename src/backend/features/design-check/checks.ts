@@ -8,10 +8,10 @@ import type {
     OnshapeSketchSolveStatus
 } from "../../lib/onshape/types";
 import {
-    compareSeverity,
+    compareLevel,
     type DesignIssue,
     DesignIssueType,
-    getDesignIssueSeverity
+    getDefaultLevel
 } from "./contract";
 import type {
     AssemblySnapshot,
@@ -29,7 +29,7 @@ const ORIGIN_CUBE_NAME = "Origin Cube";
 const ORIGIN_CUBE_PART_NAME = /origin cube|cube of all time/i;
 
 export interface DesignCheckResult {
-    /** Errors first, then warnings, then info. */
+    /** Worst first at FRCDesign's levels, those off by default last. */
     issues: DesignIssue[];
     /** Unsuppressed sketches exist and Onshape reported none's status. */
     sketchStatusUnknown: boolean;
@@ -91,10 +91,7 @@ function checkPartStudio(snapshot: PartStudioSnapshot): DesignCheckResult {
 
 function bySeverity(issues: DesignIssue[]): DesignIssue[] {
     return issues.toSorted((a, b) =>
-        compareSeverity(
-            getDesignIssueSeverity(a.type),
-            getDesignIssueSeverity(b.type)
-        )
+        compareLevel(getDefaultLevel(a.type), getDefaultLevel(b.type))
     );
 }
 

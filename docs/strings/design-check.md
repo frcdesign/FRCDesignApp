@@ -6,27 +6,28 @@ keyed `designCheck…`.
 
 ## The checks
 
-One tinted box per issue type, worst first. The name is its heading, the help
-sits under it, and the feature, part or instance names it was found on are
-listed below that.
+One tinted box per issue type, worst first at the person's levels. The name is
+its heading, the help sits under it, and the feature, part or instance names it
+was found on are listed below that. Default is FRCDesign's level for it, which
+the levels list can change; one off isn't shown.
 
-| Name                            | Help                                                                                                          | Severity | Raised when                                                   | Review                      |
-| ------------------------------- | ------------------------------------------------------------------------------------------------------------- | -------- | ------------------------------------------------------------- | --------------------------- |
-| "Under-defined sketch"          | "Add constraints or dimensions until every line is black."                                                    | Warning  | Onshape reports an unsuppressed sketch under-defined          | **⚑** New                   |
-| "Over-defined sketch"           | "Remove the constraint or dimension that conflicts."                                                          | Error    | Onshape reports an unsuppressed sketch over-defined           | **⚑** New                   |
-| "No Origin Cube"                | "Insert the Origin Cube as the first feature, so assemblies have something to fasten to."                     | Warning  | A Part Studio has no Origin Cube                              | **⚑** New                   |
-| "Origin Cube isn't first"       | "It's feature {position}. Drag it to the top of the list."                                                    | Warning  | The Origin Cube is below the first feature                    | **⚑** New                   |
-| "Origin Cube is suppressed"     | "Unsuppress it: assemblies fasten to it."                                                                     | Error    | The Origin Cube is suppressed                                 | **⚑** New                   |
-| "Feature with an error"         | "Open it to see what failed."                                                                                 | Error    | A feature or mate is red                                      | **⚑** New; also names mates |
-| "Feature with a warning"        | "Open it to see what Onshape is warning about."                                                               | Warning  | A feature or mate is yellow, or a feature lost a pick         | **⚑** New; also names mates |
-| "Suppressed feature"            | "Delete it if it's no longer needed."                                                                         | Info     | A feature or mate is suppressed                               | **⚑** New                   |
-| "Rollback bar isn't at the end" | "It leaves a feature out of the model. Drag it to the bottom of the list." / "It leaves {n} features out of…" | Warning  | A Part Studio's rollback bar is above its last feature        | **⚑** New                   |
-| "Part with no material"         | "Without one, its mass is wrong."                                                                             | Warning  | A solid part has no material                                  | **⚑** New                   |
-| "Part with no part number"      | "Give it one, so it can be found in a bill of materials."                                                     | Info     | A solid part has no part number                               | **⚑** New                   |
-| "Part with no description"      | "Describe it, so others know what it is."                                                                     | Info     | A solid part has no description                               | **⚑** New                   |
-| "Fixed instance"                | "Fasten the Origin Cube to the assembly origin instead of fixing parts."                                      | Warning  | A top-level assembly instance is fixed                        | **⚑** New                   |
-| "Floating instance"             | "Mate or group it, so it can't drift."                                                                        | Warning  | A top-level instance isn't mated, grouped, fixed or patterned | **⚑** New                   |
-| "Broken instance"               | "What it was inserted from is gone or failing. Replace it or delete it."                                      | Error    | Onshape draws an instance red: its source is gone             | **⚑** New                   |
+| Name                            | Help                                                                                                          | Default | Raised when                                                   | Review                      |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------- | ------- | ------------------------------------------------------------- | --------------------------- |
+| "Under-defined sketch"          | "Add constraints or dimensions until every line is black."                                                    | Error   | Onshape reports an unsuppressed sketch under-defined          | **⚑** New                   |
+| "Over-defined sketch"           | "Remove the constraint or dimension that conflicts."                                                          | Error   | Onshape reports an unsuppressed sketch over-defined           | **⚑** New                   |
+| "No Origin Cube"                | "Insert the Origin Cube as the first feature, so assemblies have something to fasten to."                     | Warning | A Part Studio has no Origin Cube                              | **⚑** New                   |
+| "Origin Cube isn't first"       | "It's feature {position}. Drag it to the top of the list."                                                    | Warning | The Origin Cube is below the first feature                    | **⚑** New                   |
+| "Origin Cube is suppressed"     | "Unsuppress it: assemblies fasten to it."                                                                     | Warning | The Origin Cube is suppressed                                 | **⚑** New                   |
+| "Feature with an error"         | "Open it to see what failed."                                                                                 | Error   | A feature or mate is red                                      | **⚑** New; also names mates |
+| "Feature with a warning"        | "Open it to see what Onshape is warning about."                                                               | Error   | A feature or mate is yellow, or a feature lost a pick         | **⚑** New; also names mates |
+| "Suppressed feature"            | "Delete it if it's no longer needed."                                                                         | Info    | A feature or mate is suppressed                               | **⚑** New                   |
+| "Rollback bar isn't at the end" | "It leaves a feature out of the model. Drag it to the bottom of the list." / "It leaves {n} features out of…" | Info    | A Part Studio's rollback bar is above its last feature        | **⚑** New                   |
+| "Part with no material"         | "Without one, its mass is wrong."                                                                             | Error   | A solid part has no material                                  | **⚑** New                   |
+| "Part with no part number"      | "Give it one, so it can be found in a bill of materials."                                                     | Off     | A solid part has no part number                               | **⚑** New                   |
+| "Part with no description"      | "Describe it, so others know what it is."                                                                     | Off     | A solid part has no description                               | **⚑** New                   |
+| "Fixed instance"                | "Fasten the Origin Cube to the assembly origin instead of fixing parts."                                      | Error   | A top-level assembly instance is fixed                        | **⚑** New                   |
+| "Floating instance"             | "Mate or group it, so it can't drift."                                                                        | Error   | A top-level instance isn't mated, grouped, fixed or patterned | **⚑** New                   |
+| "Broken instance"               | "What it was inserted from is gone or failing. Replace it or delete it."                                      | Error   | Onshape draws an instance red: its source is gone             | **⚑** New                   |
 
 ## The page
 
@@ -64,6 +65,6 @@ its name above.
 | "FRCDesign's default: {level}"                                                                                          | Caption          | Under a check's name              | Its level was changed          | **⚑** New |
 | "Reset to defaults"                                                                                                     | Button           | Under the list                    | Any level was changed          | **⚑** New |
 | "Failed to save your levels."                                                                                           | Error toast      | Over the page                     | A save failed                  | **⚑** New |
-| "An issue is hidden by your levels." / "{n} issues are hidden by your levels."                                          | Note             | Under the boxes, or in the notice | A type found is turned off     | **⚑** New |
+| "An issue found is turned off." / "{n} issues found are turned off."                                                    | Note             | Under the boxes, or in the notice | A type found is turned off     | **⚑** New |
 | "Change levels"                                                                                                         | Link             | After that note                   | The levels loaded              | **⚑** New |
 | "Every issue found is turned off"                                                                                       | Notice title     | In place of the list              | Everything found is turned off | **⚑** New |
