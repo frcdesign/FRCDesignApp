@@ -61,12 +61,8 @@ The calls are `getAllFeatures` and `getSketches`
 
 ```ts
 function checkDesign(snapshot: DesignSnapshot): DesignCheckResult;
-// By its FeatureScript's document, or by name for a copy kept elsewhere.
+// By its FeatureScript's document, or by name for a renamed copy kept elsewhere.
 function isOriginCube(feature: Feature): boolean;
-// Whichever top-level field holds a status value; see ONSHAPE.md.
-function sketchStatus(
-    sketch: Record<string, unknown>
-): SketchStatus | undefined;
 
 interface DesignCheckResult {
     /** Errors first, then warnings, then info. */
@@ -182,12 +178,14 @@ Severity follows from the type alone (`getDesignIssueSeverity`).
 | `PART_NO_MATERIAL` / `PART_NO_PART_NUMBER` / `PART_NO_DESCRIPTION` | Warning / Info / Info  | A solid part missing one, the Origin Cube's own cube aside                                                |
 | `INSTANCE_FIXED`                                                   | Warning                | A top-level instance that is fixed                                                                        |
 | `INSTANCE_FLOATING`                                                | Warning                | A top-level instance no unsuppressed mate or group holds and no pattern copies, inserted sketches aside   |
-| `INSTANCE_BROKEN`                                                  | Error                  | An instance whose tab was deleted, or that Onshape draws red                                              |
+| `INSTANCE_BROKEN`                                                  | Error                  | An instance whose part or tab is gone, or that Onshape draws red                                          |
 
 The Origin Cube is FRCDesign's FeatureScript
 (https://frcdesign.org/best-practices/assembly-setup/), known by its document
 id in the feature's `namespace`, or by a name starting "Origin Cube" for a copy
-kept in another document. Its cube is known by its name.
+kept in another document and renamed. Onshape sends its name as the unfilled
+template `#_name`, so its issues call it "Origin Cube". Its cube is known by its
+part name, "Origin Cube".
 
 ## Storage
 
@@ -257,14 +255,13 @@ In [strings/design-check.md](../strings/design-check.md).
 
 ## Failure and recovery
 
-| What goes wrong                                   | Shows as                                                    | Put right by    |
-| ------------------------------------------------- | ----------------------------------------------------------- | --------------- |
-| Signed out                                        | The sign-in notice                                          | **Sign in**     |
-| Onshape refuses or rate-limits the caller         | "Failed to check this tab.", with **Send a report**         | **Check again** |
-| Any other call fails or times out                 | The same                                                    | **Check again** |
-| The sketches can't be listed                      | The other issues, and a note that sketches went unchecked   | **Check again** |
-| Onshape names a sketch's status under another key | Nothing: the status is read from whichever field holds it   | —               |
-| Onshape stops sending a sketch status at all      | The note that sketches went unchecked, on every Part Studio | A change here   |
+| What goes wrong                           | Shows as                                                    | Put right by    |
+| ----------------------------------------- | ----------------------------------------------------------- | --------------- |
+| Signed out                                | The sign-in notice                                          | **Sign in**     |
+| Onshape refuses or rate-limits the caller | "Failed to check this tab.", with **Send a report**         | **Check again** |
+| Any other call fails or times out         | The same                                                    | **Check again** |
+| The sketches can't be listed              | The other issues, and a note that sketches went unchecked   | **Check again** |
+| Onshape stops sending `sketchSolveStatus` | The note that sketches went unchecked, on every Part Studio | A change here   |
 
 ## Decisions
 
@@ -291,4 +288,4 @@ In [strings/design-check.md](../strings/design-check.md).
 - **Grouped by type.** A Part Studio of thirty parts with no part number is one
   box listing thirty names, not thirty boxes.
 
-_Last reviewed: 2026-11-09_
+_Last reviewed: 2026-11-10_
