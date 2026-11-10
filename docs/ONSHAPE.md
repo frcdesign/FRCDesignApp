@@ -97,7 +97,8 @@ problem planted, whose answers are kept, cut down, in
   carries each feature's `featureStatus` in `featureStates`, keyed by feature
   id: `OK`, `INFO`, `WARNING` (yellow), `ERROR` (red) or `UNKNOWN` —
   _documented_, and _observed_. Asked with `includeGeometryIds=false`, a Part
-  Studio's comes back `{}`, every feature's status left out — _observed_.
+  Studio's comes back `{}`, every feature's status left out, with sketches
+  included or not — _observed_.
 - **`rollbackIndex`**, on a Part Studio's list, is the index of the first
   feature below the rollback bar: 10 of 12 features with the bar above the last
   two, and 12 with it at the end — _observed_. The spec's -1 for the end was
