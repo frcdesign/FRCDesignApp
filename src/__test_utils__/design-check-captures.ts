@@ -21,6 +21,18 @@ export const CAPTURED_PART_STUDIO: PartStudioSnapshot = {
             {
                 featureType: "newSketch",
                 featureId: "FXmHyN37VOudwGR_0",
+                parameters: [
+                    {
+                        btType: "BTMParameterQueryList-148",
+                        parameterId: "sketchPlane",
+                        queries: [
+                            {
+                                btType: "BTMIndividualQuery-138",
+                                deterministicIds: []
+                            }
+                        ]
+                    }
+                ],
                 name: "Sketch 1",
                 suppressed: false,
                 namespace: ""
@@ -36,6 +48,18 @@ export const CAPTURED_PART_STUDIO: PartStudioSnapshot = {
             {
                 featureType: "newSketch",
                 featureId: "FzKSHQN3AEjktja_1",
+                parameters: [
+                    {
+                        btType: "BTMParameterQueryList-148",
+                        parameterId: "sketchPlane",
+                        queries: [
+                            {
+                                btType: "BTMIndividualQuery-138",
+                                deterministicIds: []
+                            }
+                        ]
+                    }
+                ],
                 name: "Sketch 2",
                 suppressed: false,
                 namespace: ""
@@ -43,6 +67,18 @@ export const CAPTURED_PART_STUDIO: PartStudioSnapshot = {
             {
                 featureType: "newSketch",
                 featureId: "Ft4L8qxUvRHMnoa_1",
+                parameters: [
+                    {
+                        btType: "BTMParameterQueryList-148",
+                        parameterId: "sketchPlane",
+                        queries: [
+                            {
+                                btType: "BTMIndividualQuery-138",
+                                deterministicIds: []
+                            }
+                        ]
+                    }
+                ],
                 name: "Sketch 3",
                 suppressed: false,
                 namespace: ""
@@ -50,6 +86,28 @@ export const CAPTURED_PART_STUDIO: PartStudioSnapshot = {
             {
                 featureType: "extrude",
                 featureId: "FqGK6Q0t1g3GRNQ_1",
+                parameters: [
+                    {
+                        btType: "BTMParameterQueryList-148",
+                        parameterId: "entities",
+                        queries: [
+                            {
+                                btType: "BTMIndividualQuery-138",
+                                deterministicIds: []
+                            }
+                        ]
+                    },
+                    {
+                        btType: "BTMParameterQueryList-148",
+                        parameterId: "booleanScope",
+                        queries: [
+                            {
+                                btType: "BTMIndividualQuery-138",
+                                deterministicIds: ["JJD"]
+                            }
+                        ]
+                    }
+                ],
                 name: "Extrude 1",
                 suppressed: false,
                 namespace: ""
@@ -57,6 +115,18 @@ export const CAPTURED_PART_STUDIO: PartStudioSnapshot = {
             {
                 featureType: "newSketch",
                 featureId: "F512UKjii2hHrEz_1",
+                parameters: [
+                    {
+                        btType: "BTMParameterQueryList-148",
+                        parameterId: "sketchPlane",
+                        queries: [
+                            {
+                                btType: "BTMIndividualQuery-138",
+                                deterministicIds: []
+                            }
+                        ]
+                    }
+                ],
                 name: "Sketch 4",
                 suppressed: false,
                 namespace: ""
@@ -64,6 +134,32 @@ export const CAPTURED_PART_STUDIO: PartStudioSnapshot = {
             {
                 featureType: "extrude",
                 featureId: "FiBoXckfOmUb2Dg_1",
+                parameters: [
+                    {
+                        btType: "BTMParameterQueryList-148",
+                        parameterId: "entities",
+                        queries: [
+                            {
+                                btType: "BTMIndividualQuery-138",
+                                deterministicIds: ["JlC"]
+                            },
+                            {
+                                btType: "BTMIndividualQuery-138",
+                                deterministicIds: []
+                            }
+                        ]
+                    },
+                    {
+                        btType: "BTMParameterQueryList-148",
+                        parameterId: "booleanScope",
+                        queries: [
+                            {
+                                btType: "BTMIndividualQuery-138",
+                                deterministicIds: ["JJD"]
+                            }
+                        ]
+                    }
+                ],
                 name: "Extrude 2",
                 suppressed: false,
                 namespace: ""
@@ -71,6 +167,18 @@ export const CAPTURED_PART_STUDIO: PartStudioSnapshot = {
             {
                 featureType: "newSketch",
                 featureId: "FN6Zx5HfIn5CgJZ_1",
+                parameters: [
+                    {
+                        btType: "BTMParameterQueryList-148",
+                        parameterId: "sketchPlane",
+                        queries: [
+                            {
+                                btType: "BTMIndividualQuery-138",
+                                deterministicIds: []
+                            }
+                        ]
+                    }
+                ],
                 name: "Sketch 5",
                 suppressed: true,
                 namespace: ""
@@ -78,6 +186,28 @@ export const CAPTURED_PART_STUDIO: PartStudioSnapshot = {
             {
                 featureType: "extrude",
                 featureId: "F7uXatEWaOFAxEi_1",
+                parameters: [
+                    {
+                        btType: "BTMParameterQueryList-148",
+                        parameterId: "entities",
+                        queries: [
+                            {
+                                btType: "BTMIndividualQuery-138",
+                                deterministicIds: ["JhC"]
+                            }
+                        ]
+                    },
+                    {
+                        btType: "BTMParameterQueryList-148",
+                        parameterId: "booleanScope",
+                        queries: [
+                            {
+                                btType: "BTMIndividualQuery-138",
+                                deterministicIds: ["JJD"]
+                            }
+                        ]
+                    }
+                ],
                 name: "Extrude 3",
                 suppressed: false,
                 namespace: ""
@@ -85,6 +215,28 @@ export const CAPTURED_PART_STUDIO: PartStudioSnapshot = {
             {
                 featureType: "extrude",
                 featureId: "FXXccICOX3b1i6w_2",
+                parameters: [
+                    {
+                        btType: "BTMParameterQueryList-148",
+                        parameterId: "entities",
+                        queries: [
+                            {
+                                btType: "BTMIndividualQuery-138",
+                                deterministicIds: ["JjC"]
+                            }
+                        ]
+                    },
+                    {
+                        btType: "BTMParameterQueryList-148",
+                        parameterId: "booleanScope",
+                        queries: [
+                            {
+                                btType: "BTMIndividualQuery-138",
+                                deterministicIds: ["JmD"]
+                            }
+                        ]
+                    }
+                ],
                 name: "Extrude 4",
                 suppressed: false,
                 namespace: ""
@@ -92,6 +244,18 @@ export const CAPTURED_PART_STUDIO: PartStudioSnapshot = {
             {
                 featureType: "newSketch",
                 featureId: "FrFpzPobHzSf0EH_1",
+                parameters: [
+                    {
+                        btType: "BTMParameterQueryList-148",
+                        parameterId: "sketchPlane",
+                        queries: [
+                            {
+                                btType: "BTMIndividualQuery-138",
+                                deterministicIds: []
+                            }
+                        ]
+                    }
+                ],
                 name: "Sketch 6",
                 suppressed: false,
                 namespace: ""
@@ -99,6 +263,18 @@ export const CAPTURED_PART_STUDIO: PartStudioSnapshot = {
             {
                 featureType: "newSketch",
                 featureId: "F8cleltaVQgZKHw_1",
+                parameters: [
+                    {
+                        btType: "BTMParameterQueryList-148",
+                        parameterId: "sketchPlane",
+                        queries: [
+                            {
+                                btType: "BTMIndividualQuery-138",
+                                deterministicIds: []
+                            }
+                        ]
+                    }
+                ],
                 name: "Sketch 7",
                 suppressed: false,
                 namespace: ""

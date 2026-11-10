@@ -415,8 +415,23 @@ interface OnshapePartStudioFeature {
     suppressionConfigured?: boolean;
     /** A custom feature's Feature Studio, `d{documentId}::v{versionId}::e{elementId}::m{microversionId}`. */
     namespace?: string;
-    /** In an assembly, their queries name the instances it references by `path`. */
-    parameters?: unknown[];
+    parameters?: OnshapeFeatureParameter[];
+}
+
+/** A feature's parameter; only a selection box's picks are read. */
+interface OnshapeFeatureParameter {
+    btType?: string;
+    parameterId?: string;
+    /** A query list's picks. */
+    queries?: OnshapeFeatureQuery[];
+}
+
+interface OnshapeFeatureQuery {
+    btType?: string;
+    /** With geometry ids asked for, what the pick resolves to: none once it is gone. */
+    deterministicIds?: string[];
+    /** In an assembly, the instances it names, from the top down. */
+    path?: string[];
 }
 
 type OnshapeFeatureStatus = "OK" | "INFO" | "WARNING" | "ERROR" | "UNKNOWN";
