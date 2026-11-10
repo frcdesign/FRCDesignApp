@@ -15,6 +15,7 @@ import {
     GitBranchIcon,
     ScrewdriverIcon,
     type Icon,
+    ListChecksIcon,
     MagnifyingGlassIcon,
     MoonIcon,
     PuzzlePieceIcon,
@@ -66,11 +67,19 @@ import {
 } from "../features/auto-assembly/navigation";
 import { useIsFeatureScripts } from "../features/featurescripts/navigation";
 import { FeatureScriptSearchBar } from "../features/featurescripts/components/featurescript-search-bar";
+import {
+    useIsDesignCheck,
+    useIsDesignCheckNew
+} from "../features/design-check/navigation";
+import { checkAgain } from "../features/design-check/queries";
 import { type WorkspacePath } from "@backend/features/version-manager/contract";
 import { type AppTab, UtilityTab } from "../lib/app-tab";
 import { getTabName, useNavigateToTab } from "../lib/tabs";
 import { useRefreshVersionManagerMutation } from "../features/version-manager/queries";
 import { RefreshButton } from "./refresh-button";
+import { useIsFetching } from "@tanstack/react-query";
+import { designCheckQueryKey } from "../lib/query-keys";
+import { m } from "../paraglide/messages";
 
 /** Stretched so a full-height child's underline lands on the row's border. */
 export function NavbarRow(props: PropsWithChildren): ReactNode {
@@ -100,11 +109,16 @@ export function NavbarRow(props: PropsWithChildren): ReactNode {
 /** The page picker with the brand and settings, over search and its filters, then the context bar. */
 export function AppNavbar(): ReactNode {
     // Search and its filters belong to a library; FeatureScripts has a search
-    // of its own there, and the Version Manager's and Auto Assembly's pages fill the room.
+    // of its own there, and the other utilities' pages fill the room.
     const isVersionManager = useIsVersionManager();
     const isAutoAssembly = useIsAutoAssembly();
     const isFeatureScripts = useIsFeatureScripts();
-    const isLibrary = !isVersionManager && !isAutoAssembly && !isFeatureScripts;
+    const isDesignCheck = useIsDesignCheck();
+    const isLibrary =
+        !isVersionManager &&
+        !isAutoAssembly &&
+        !isFeatureScripts &&
+        !isDesignCheck;
     const workspace = useTargetWorkspace();
 
     return (
@@ -116,6 +130,7 @@ export function AppNavbar(): ReactNode {
                     {isVersionManager && workspace && (
                         <VersionManagerRefreshButton workspace={workspace} />
                     )}
+                    {isDesignCheck && <DesignCheckRefreshButton />}
                     <SettingsControls />
                 </Group>
             </NavbarRow>
@@ -168,6 +183,8 @@ function useAppPages(): AppPage[] {
     const targetElement = useTargetElement();
     const isAutoAssembly = useIsAutoAssembly();
     const isNew = useIsAutoAssemblyNew();
+    const isDesignCheck = useIsDesignCheck();
+    const isDesignCheckNew = useIsDesignCheckNew();
 
     const libraries = Object.values(LibraryId).map((libraryId) => ({
         tab: libraryId,
@@ -189,7 +206,7 @@ function useAppPages(): AppPage[] {
         icon: PuzzlePieceIcon,
         color: AppColor.FEATURESCRIPTS
     };
-    // Listed while it is showing even without an element, so the picker never names a page it does not offer.
+    // Each is listed while it is showing even without an element, so the picker never names a page it does not offer.
     const autoAssembly: AppPage[] =
         targetElement || isAutoAssembly
             ? [
@@ -203,6 +220,19 @@ function useAppPages(): AppPage[] {
                   }
               ]
             : [];
+    const designCheck: AppPage[] =
+        targetElement || isDesignCheck
+            ? [
+                  {
+                      tab: UtilityTab.DESIGN_CHECK,
+                      group: UTILITIES_GROUP,
+                      icon: ListChecksIcon,
+                      color: AppColor.DESIGN_CHECK,
+                      badge: isDesignCheckNew ? <NewBadge /> : undefined,
+                      isNew: isDesignCheckNew
+                  }
+              ]
+            : [];
 
     return [
         ...libraries,
@@ -213,7 +243,8 @@ function useAppPages(): AppPage[] {
             icon: GitBranchIcon,
             color: AppColor.VERSION_MANAGER
         },
-        ...autoAssembly
+        ...autoAssembly,
+        ...designCheck
     ];
 }
 
@@ -233,6 +264,7 @@ function PagePicker(): ReactNode {
     const isVersionManager = useIsVersionManager();
     const isAutoAssembly = useIsAutoAssembly();
     const isFeatureScripts = useIsFeatureScripts();
+    const isDesignCheck = useIsDesignCheck();
     const navigateToTab = useNavigateToTab();
 
     const current: AppTab = isVersionManager
@@ -241,7 +273,9 @@ function PagePicker(): ReactNode {
           ? UtilityTab.AUTO_ASSEMBLY
           : isFeatureScripts
             ? UtilityTab.FEATURESCRIPTS
-            : currentLibraryId;
+            : isDesignCheck
+              ? UtilityTab.DESIGN_CHECK
+              : currentLibraryId;
     const currentPage = pages.find((page) => page.tab === current);
 
     // Warm the versions on hover, so picking one has nothing left to wait for.
@@ -346,6 +380,22 @@ function VersionManagerRefreshButton(
         <RefreshButton
             loading={refresh.isPending}
             onClick={() => refresh.mutate()}
+        />
+    );
+}
+
+/** Checks the tab again, which spends Onshape calls, so only when asked. */
+function DesignCheckRefreshButton(): ReactNode {
+    const target = useTargetElement();
+    const isFetching = useIsFetching({
+        queryKey: target ? designCheckQueryKey(target) : ["design-check"]
+    });
+    if (!target) return null;
+    return (
+        <RefreshButton
+            label={m.designCheckAgain()}
+            loading={isFetching > 0}
+            onClick={() => void checkAgain(target)}
         />
     );
 }

@@ -9,6 +9,8 @@ import type {
     FeedbackSource,
     FeedbackTopic
 } from "../feedback/contract";
+import { type ElementType } from "../../lib/onshape/element-type";
+import { type DesignIssueCounts } from "../design-check/contract";
 import { EventType, UseTarget, type UseSource } from "./usage";
 import { type LoggedEvent } from "./schema";
 
@@ -45,6 +47,12 @@ type ReportColumns = Pick<
     "reportTopic" | "reportCategory" | "reportSource" | "reportTeamNumber"
 >;
 
+/** What only a design check fills in. */
+type DesignCheckColumns = Pick<
+    LoggedEvent,
+    "checkedElementType" | "designIssueCounts"
+>;
+
 /** The part a use or a part report named. */
 export type ElementColumns = Pick<
     LoggedEvent,
@@ -60,6 +68,7 @@ type UseColumns = Omit<
     | keyof EventCore
     | keyof VersionRunColumns
     | keyof ReportColumns
+    | keyof DesignCheckColumns
     | keyof ElementColumns
     | keyof FeatureAddColumns
 >;
@@ -114,6 +123,11 @@ export const NOT_A_REPORT: ReportColumns = {
     reportCategory: null,
     reportSource: null,
     reportTeamNumber: null
+};
+
+export const NOT_A_DESIGN_CHECK: DesignCheckColumns = {
+    checkedElementType: null,
+    designIssueCounts: null
 };
 
 /** A logged run, whose own columns a reader can then count on. */
@@ -183,4 +197,21 @@ export function asReport(event: LoggedEvent): LoggedReport | undefined {
         event.reportCategory !== null &&
         event.reportSource !== null;
     return isReport ? (event as LoggedReport) : undefined;
+}
+
+/** A logged design check, whose own columns a reader can then count on. */
+export type LoggedDesignCheck = LoggedEvent & {
+    checkedElementType: ElementType;
+    designIssueCounts: DesignIssueCounts;
+};
+
+/** Undefined for another kind of event. */
+export function asDesignCheck(
+    event: LoggedEvent
+): LoggedDesignCheck | undefined {
+    const isCheck =
+        event.type === EventType.DESIGN_CHECK &&
+        event.checkedElementType !== null &&
+        event.designIssueCounts !== null;
+    return isCheck ? (event as LoggedDesignCheck) : undefined;
 }

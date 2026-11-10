@@ -53,13 +53,15 @@ function utilityRoute(tab: UtilityTab) {
             return "/app/auto-assembly" as const;
         case UtilityTab.FEATURESCRIPTS:
             return "/app/featurescripts" as const;
+        case UtilityTab.DESIGN_CHECK:
+            return "/app/design-check" as const;
     }
 }
 
 /**
  * Whether a utility page has what it acts on. The Version Manager acts on the
- * workspace Onshape launched the app in, and Auto Assembly on its tab; neither
- * has a page without one.
+ * workspace Onshape launched the app in, and Auto Assembly and the design check
+ * on its tab; none has a page without one.
  */
 function canResume(tab: UtilityTab, search: Record<string, unknown>): boolean {
     switch (tab) {
@@ -74,5 +76,9 @@ function canResume(tab: UtilityTab, search: Record<string, unknown>): boolean {
         // Browsing needs nothing; adding says why it can't.
         case UtilityTab.FEATURESCRIPTS:
             return true;
+        case UtilityTab.DESIGN_CHECK:
+            return (
+                toTargetElement(OnshapeLaunchType.parse(search)) !== undefined
+            );
     }
 }

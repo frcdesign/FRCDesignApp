@@ -4,9 +4,11 @@
 
 Records how the libraries are used — each **use** of a part, an insert into
 Onshape or a STEP download, and each launch from Onshape —
-how often people report problems, and who uses each of the app's features, and shows it on a public dashboard: totals and trends, per-library health,
+how often people report problems, who uses each of the app's features, and
+what design checks find in people's own CAD, and shows it on a public dashboard:
+totals and trends, per-library health,
 which parts and configuration options are used, and which aren't. It exists so
-the library team can see what to maintain and what to cut.
+the library team can see what to maintain and what to cut, and what to teach.
 
 It records nothing a user sees back about themselves, and reports only
 aggregates.
@@ -37,7 +39,9 @@ enum EventType {
     /** One FeatureScript added to a Part Studio; see `features/featurescripts`. Not a use. */
     FEATURE_ADD = "feature_add",
     /** A favorite's default configuration saved; see `features/favorites`. Not a use. */
-    DEFAULT_SELECTION = "default_selection"
+    DEFAULT_SELECTION = "default_selection",
+    /** One check of a Part Studio or Assembly; see `features/design-check`. */
+    DESIGN_CHECK = "design_check"
 }
 
 /** A use is an insert or a download: each counts toward a part's usage. */
@@ -109,6 +113,10 @@ function trackReport(c: AppContext, event: ReportEvent): Promise<void>;
 function trackDefaultSelection(
     c: AppContext,
     event: DefaultSelectionEvent
+): Promise<void>;
+function trackDesignCheck(
+    c: AppContext,
+    event: DesignCheckEvent
 ): Promise<void>;
 // Awaited inside the workflow's `record-run` step, which swallows its failure.
 async function trackVersionRun(
@@ -188,6 +196,12 @@ interface ReportEvent {
     /** Set for a report from a part's menu. */
     part?: { path: ElementPath; insertableId: string };
 }
+
+/** A finished check of the caller's own tab; see `features/design-check`. */
+interface DesignCheckEvent {
+    elementType: ElementType;
+    issues: DesignIssue[];
+}
 ```
 
 `src/backend/features/analytics/schema.ts`: the `events` table, whose row is
@@ -243,6 +257,9 @@ type LoggedEvent = {
     reportCategory: FeedbackCategory | null;
     reportSource: FeedbackSource | null;
     reportTeamNumber: number | null;
+    /** A design check's own columns: the kind of tab it read, and what it found there. */
+    checkedElementType: ElementType | null;
+    designIssueCounts: DesignIssueCounts | null;
 };
 ```
 
@@ -255,6 +272,7 @@ function asUse(event: LoggedEvent): LoggedUse | undefined;
 function asFeatureAdd(event: LoggedEvent): LoggedFeatureAdd | undefined;
 function asVersionRun(event: LoggedEvent): LoggedVersionRun | undefined;
 function asReport(event: LoggedEvent): LoggedReport | undefined;
+function asDesignCheck(event: LoggedEvent): LoggedDesignCheck | undefined;
 
 /** Who sent a report, when they weren't signed in. */
 const SIGNED_OUT_USER_ID = "signed-out";
@@ -283,6 +301,7 @@ type UseColumns = Omit<
     | keyof EventCore
     | keyof VersionRunColumns
     | keyof ReportColumns
+    | keyof DesignCheckColumns
     | keyof ElementColumns
 >;
 
@@ -304,6 +323,12 @@ type ReportColumns = Pick<
     "reportTopic" | "reportCategory" | "reportSource" | "reportTeamNumber"
 >;
 
+/** What only a design check fills in. */
+type DesignCheckColumns = Pick<
+    LoggedEvent,
+    "checkedElementType" | "designIssueCounts"
+>;
+
 // Every column of its group set to null, spelled out so a new column fails to
 // compile until each kind of event says what it holds.
 const NOT_A_USE: UseColumns;
@@ -311,6 +336,7 @@ const NO_ELEMENT: ElementColumns;
 const NOT_A_VERSION_RUN: VersionRunColumns;
 const NOT_A_REPORT: ReportColumns;
 const NOT_A_FEATURE_ADD: FeatureAddColumns;
+const NOT_A_DESIGN_CHECK: DesignCheckColumns;
 
 /** A logged insert or download, whose own columns a reader can then count on. */
 type LoggedUse = LoggedEvent & {
@@ -337,6 +363,12 @@ type LoggedReport = LoggedEvent & {
     reportTopic: FeedbackTopic;
     reportCategory: FeedbackCategory;
     reportSource: FeedbackSource;
+};
+
+/** A logged design check, whose own columns a reader can then count on. */
+type LoggedDesignCheck = LoggedEvent & {
+    checkedElementType: ElementType;
+    designIssueCounts: DesignIssueCounts;
 };
 ```
 
@@ -368,6 +400,7 @@ GET /api/analytics/overview/version-manager                         VersionManag
 GET /api/analytics/overview/featurescripts                          FeatureScriptUsageOut
 GET /api/analytics/overview/feature-reach                           FeatureReachOut
 GET /api/analytics/overview/health                                  LibraryHealthCounts, every library's
+GET /api/analytics/overview/design-check                            DesignCheckTotals
 GET /api/analytics/overview/reports                                 ReportSummary
 GET /api/analytics/summary/library/:libraryId                       LibrarySummaryOut
 GET /api/analytics/health/library/:libraryId?v=                     LibraryHealthCounts, cached by the library's version
@@ -412,6 +445,10 @@ async function getFeatureScriptUsage(
     db: Db,
     range: DayRange
 ): Promise<FeatureScriptUsageOut>;
+async function getDesignCheckTotals(
+    db: Db,
+    range: DayRange
+): Promise<DesignCheckTotals>;
 // Who was about each day: library activity unioned with app opens.
 function activeUserRows(db: Db, range: DayRange, libraryId?: LibraryId);
 // How many of them over the whole range: a union of ids, which dedupes them.
@@ -665,6 +702,27 @@ interface VersionManagerTotals {
     links: number;
 }
 
+/** What design checks have found, over the range. */
+interface DesignCheckTotals {
+    /** Part studios and assemblies together. */
+    checks: number;
+    /** Checks that found nothing. */
+    cleanChecks: number;
+    partStudioChecks: number;
+    assemblyChecks: number;
+    /** Each type found at least once, in the most checks first. */
+    issueTypes: DesignIssueTypeCount[];
+}
+
+/** One type of design issue, over the range. */
+interface DesignIssueTypeCount {
+    type: DesignIssueType;
+    /** Checks that found it. */
+    checks: number;
+    /** How many were found, across those checks. */
+    issues: number;
+}
+
 /** Reports of one kind about one topic, over the range. */
 interface ReportCount {
     topic: FeedbackTopic;
@@ -820,12 +878,14 @@ export.py      BigQuery to JSONL, one row per logged insert or app open
 build-sql.ts   JSONL to SQL files, each a run of days applied as one import
 ```
 
-`src/backend/features/download/routes.ts` and `src/backend/features/entry/routes.ts`,
-two of the routes that record
+`src/backend/features/download/routes.ts`, `src/backend/features/entry/routes.ts`
+and `src/backend/features/design-check/routes.ts`, three of the routes that
+record
 
 ```text
 POST /api/step-export/insertable/:insertableId    trackDownload, once Onshape accepts the export
 POST /api/app-open                                trackAppOpen, sent by /init's handoff
+GET  /api/design-check                            trackDesignCheck, once the checks have run
 ```
 
 `src/frontend/features/dashboard/dashboard-queries.ts`, one query per route,
@@ -839,6 +899,7 @@ function getOverviewSeriesQuery(range: DayRange);
 function getOverviewSourcesQuery(range: DayRange);
 function getVersionManagerQuery(range: DayRange);
 function getOverviewFeatureScriptsQuery(range: DayRange);
+function getDesignCheckQuery(range: DayRange);
 function getOverviewReportsQuery(range: DayRange);
 function getOverviewFeatureReachQuery(range: DayRange);
 function getLibrarySummaryQuery(libraryId: LibraryId, range: DayRange);
@@ -992,8 +1053,9 @@ Named, not copied: `AppContext` and `AppBindings` (`src/backend/lib/context.ts`)
 and `ConfigurationParameter` ([configurations.md](./configurations.md)), the
 Version Manager's `VersionJobKind`, `VersionJobOutcome`, `VersionJobStatus`,
 `PushScopeKind` and `PullScopeKind` ([version-manager.md](./version-manager.md)),
-and feedback's `FeedbackTopic`, `FeedbackCategory` and `FeedbackSource`
-([feedback.md](./feedback.md)).
+feedback's `FeedbackTopic`, `FeedbackCategory` and `FeedbackSource`
+([feedback.md](./feedback.md)), and the design check's `DesignIssue`,
+`DesignIssueType` and `DesignIssueCounts` ([design-check.md](./design-check.md)).
 
 ## Storage
 
@@ -1014,7 +1076,9 @@ no foreign key crosses between them):
   `feature_type`. A FeatureScript add has its feature's constant in
   `feature_type`, and its Feature Studio's path in the loaded version in the
   element columns. A default configuration saved on a favorite has its library
-  and its part's path and insertable. Keyed on
+  and its part's path and insertable. A design check adds the kind of tab it
+  read and how many of each issue type it found, and no element path: the tab
+  is somebody's own. Keyed on
   Onshape's element id with no foreign keys, so history survives a reload or a
   re-added tab.
 - Rows imported from the legacy app (see Imported history) have
@@ -1026,7 +1090,8 @@ no foreign key crosses between them):
 - `library_id` is null for an event that belongs to no library: an app open,
   which is the app being opened rather than the page it resumes into, a
   version run, which acts on the Onshape document the app was launched from,
-  a FeatureScript add, and a report about the app itself or the FeatureScripts. A report from somebody signed out has
+  a FeatureScript add, a design check, which reads that document too, and a
+  report about the app itself or the FeatureScripts. A report from somebody signed out has
   `user_id` `signed-out` (`SIGNED_OUT_USER_ID`).
 - Rollups, each derived from the log alone: `daily_metrics`,
   `daily_target_metrics`, `daily_source_metrics`, `insertable_stats`,
@@ -1034,7 +1099,8 @@ no foreign key crosses between them):
   `daily_configuration_metrics`, `daily_user_activity`, `user_stats`,
   `daily_app_opens`, `daily_version_metrics`, `daily_report_metrics`,
   `daily_featurescript_metrics`, `daily_featurescript_users`,
-  `daily_feature_users`.
+  `daily_feature_users`, `daily_design_check_metrics`,
+  `daily_design_issue_metrics`.
 - A use writes every library rollup, an insert and a download alike.
   `daily_metrics` keeps a row per event type, so the uses are the sum of the
   `insert` and `download` rows and either can be read alone. Beside its
@@ -1054,6 +1120,10 @@ no foreign key crosses between them):
   adds. `daily_featurescript_users` holds who added each feature on a day, so
   distinct users come from rollups. Keyed by the feature's constant, which
   never changes once released, rather than its row.
+- `daily_design_check_metrics` is keyed by day and the kind of tab checked:
+  checks, and checks that found nothing. `daily_design_issue_metrics` is keyed
+  by day and issue type: the checks that found at least one, and how many they
+  found.
 - `daily_report_metrics` is keyed by day, topic, category, source and element
   (empty for a report that names no part): the count of reports. By topic
   rather than library, since the app's topics belong to none.
@@ -1099,8 +1169,10 @@ no foreign key crosses between them):
    Onshape accepted the feature (see [featurescripts.md](./featurescripts.md));
    `POST /api/default-selection/favorite/:favoriteId` calls
    `trackDefaultSelection` once the default is saved (see
-   [favorites.md](./favorites.md)).
-2. A use, an open, a FeatureScript add, a report and a default configuration are recorded in the background (`runInBackground`),
+   [favorites.md](./favorites.md)); `GET /api/design-check` calls
+   `trackDesignCheck` once its checks have run (see
+   [design-check.md](./design-check.md)).
+2. A use, an open, a FeatureScript add, a report, a default configuration and a design check are recorded in the background (`runInBackground`),
    after the response; a workflow's step swallows a failure to record. So
    tracking never slows or fails what the user asked for.
 3. The selection is stored canonically (`canonicalValues`), so `5 in` and
@@ -1168,9 +1240,9 @@ panel. Its routes read only rollups and return only aggregates:
   history), **health** (every library's parts by kind and build issues,
   standing now), the **Version Manager**'s totals, **featurescripts** (adds and
   distinct users, and each feature's adds and users, every feature in the
-  document listed), **feature usage** (`feature-reach`, below), and
-  **reports**' totals. Its usage breakdown reads each library's **Parts**
-  report.
+  document listed), **feature usage** (`feature-reach`, below), the **design
+  check**'s checks and the issue types it finds most, and **reports**' totals.
+  Its usage breakdown reads each library's **Parts** report.
 - Under **How people use the app**, beside the sources, the usage route's
   totals draw two cards:
     - how every insert was made (`InsertMethodBreakdown`): the insert menu,
@@ -1247,12 +1319,13 @@ is withheld while its baseline reaches back before tracking began.
 - Every rollup is derivable from `events` alone, so the rollups can be rebuilt by
   replaying the log.
 - Besides `daily_feature_users`, which every event that is a use of an
-  `AppFeature` writes, an event without a library writes one rollup and no
-  other: `daily_app_opens` for an open, `daily_version_metrics` for a version
-  run, and a FeatureScript add its two, `daily_featurescript_metrics` and
-  `daily_featurescript_users`. A report writes `daily_report_metrics` alone,
-  with a library or without, and a default configuration nothing else. Every
-  other rollup is keyed by library.
+  `AppFeature` writes, an event without a library writes its own rollups and
+  no other: `daily_app_opens` for an open, `daily_version_metrics` for a
+  version run, a FeatureScript add its two, `daily_featurescript_metrics` and
+  `daily_featurescript_users`, and a design check `daily_design_check_metrics`
+  and a `daily_design_issue_metrics` row per type it found. A report writes
+  `daily_report_metrics` alone, with a library or without, and a default
+  configuration nothing else. Every other rollup is keyed by library.
 - `featuresOf` is the one place that says which events are a use of which
   feature, and the migration that filled `daily_feature_users` matches it for
   every feature recorded before it.
@@ -1349,6 +1422,12 @@ is withheld while its baseline reaches back before tracking began.
   or `user_stats`, only to their own table and `daily_feature_users`: "active user" means somebody who used a part,
   and counting runs there would move the line under every historical
   figure. An open is activity, which is why it is unioned in.
+- **A design check has no library, records no document, and is not
+  activity.** It reads whatever Part Studio or Assembly Onshape launched the
+  app in, which is somebody's own work: the row keeps the kind of tab and
+  what was found, never which document, and rolls up into tables of its own.
+  As with a version run, counting it in `daily_user_activity` would move the
+  line under every historical figure.
 - **A download is a use.** Somebody who downloads a part is using the library
   as much as somebody who inserts it, so a download feeds the same totals,
   users, part counts and configuration counts, and the dashboard says "uses"

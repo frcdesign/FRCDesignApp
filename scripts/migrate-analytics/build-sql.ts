@@ -49,6 +49,7 @@ import {
 import { rollupWrites } from "../../src/backend/features/analytics/rollups";
 import {
     NO_ELEMENT,
+    NOT_A_DESIGN_CHECK,
     NOT_A_FEATURE_ADD,
     NOT_A_REPORT,
     NOT_A_USE,
@@ -374,7 +375,8 @@ const toEvent = (
             ...NOT_A_USE,
             ...NOT_A_VERSION_RUN,
             ...NOT_A_REPORT,
-            ...NOT_A_FEATURE_ADD
+            ...NOT_A_FEATURE_ADD,
+            ...NOT_A_DESIGN_CHECK
         };
         return { event, parameters: [] };
     }
@@ -423,7 +425,8 @@ const toEvent = (
         atInsertLocation: null,
         ...NOT_A_VERSION_RUN,
         ...NOT_A_REPORT,
-        ...NOT_A_FEATURE_ADD
+        ...NOT_A_FEATURE_ADD,
+        ...NOT_A_DESIGN_CHECK
     };
     return { event, parameters };
 };

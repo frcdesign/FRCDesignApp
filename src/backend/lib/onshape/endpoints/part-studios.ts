@@ -4,7 +4,8 @@ import { ElementPath, toElementApiPath } from "../path";
 import {
     OnshapeCreatedFeature,
     OnshapeFeatureListResponse,
-    OnshapeFeatureScriptResponse
+    OnshapeFeatureScriptResponse,
+    OnshapeSketchList
 } from "../types";
 
 export function addPartStudioFeature(
@@ -56,5 +57,32 @@ export function evaluateFeatureScript(
     return client.post(
         `/partstudios${toElementApiPath(partStudioPath)}/featurescript`,
         { query, body: { script } }
+    );
+}
+
+/** Every feature, sketches included, without their geometry. */
+export function getAllFeatures(
+    client: OnshapeApi,
+    partStudioPath: ElementPath
+): Promise<OnshapeFeatureListResponse> {
+    return client.get(
+        `/partstudios${toElementApiPath(partStudioPath)}/features`,
+        {
+            query: {
+                noSketchGeometry: "true",
+                includeGeometryIds: "false"
+            }
+        }
+    );
+}
+
+/** Each sketch and its definition status, without its geometry. */
+export function getSketches(
+    client: OnshapeApi,
+    partStudioPath: ElementPath
+): Promise<OnshapeSketchList> {
+    return client.get(
+        `/partstudios${toElementApiPath(partStudioPath)}/sketches`,
+        { query: { includeGeometry: "false" } }
     );
 }

@@ -9,6 +9,7 @@ import {
     getIssueSeverity
 } from "@backend/features/build-checker/issues";
 import { getIssueDescription, getIssueTitle } from "../issue-text";
+import { severityStatus } from "../severity-status";
 import { m } from "../../../paraglide/messages";
 import { ConfigurationParameter } from "@backend/features/configurations/contract";
 import { toSelection } from "@backend/features/configurations/selection";
@@ -34,33 +35,20 @@ interface IssueIconProps extends Omit<StatusIconProps, "status"> {
     severity?: BuildIssueSeverity;
 }
 
-/** The status a severity is drawn as; none is a build with nothing to say. */
-function severityStatus(severity?: BuildIssueSeverity): Status {
-    switch (severity) {
-        case BuildIssueSeverity.ERROR:
-            return Status.ERROR;
-        case BuildIssueSeverity.WARNING:
-            return Status.WARNING;
-        case BuildIssueSeverity.INFO:
-            return Status.INFO;
-        case undefined:
-            return Status.SUCCESS;
-    }
-}
-
 /** The {@link StatusIcon} for a build-issue severity. */
 export function IssueIcon({ severity, ...others }: IssueIconProps): ReactNode {
     return <StatusIcon status={severityStatus(severity)} {...others} />;
 }
 
 interface SeverityBadgesProps {
-    issues: BuildIssue[];
+    /** One per issue. */
+    severities: BuildIssueSeverity[];
 }
 
 /** Pill badges summarizing the issue counts, or an "all clear" badge. */
 export function SeverityBadges(props: SeverityBadgesProps): ReactNode {
-    const { issues } = props;
-    if (issues.length === 0) {
+    const { severities } = props;
+    if (severities.length === 0) {
         return (
             <Badge
                 color={StatusColor.SUCCESS}
@@ -77,7 +65,7 @@ export function SeverityBadges(props: SeverityBadgesProps): ReactNode {
         );
     }
 
-    const counts = countSeverities(issues);
+    const counts = countSeverities(severities);
     return (
         <Group gap={6} wrap="wrap">
             {counts.error > 0 && (
@@ -129,10 +117,10 @@ interface SeverityCounts {
     info: number;
 }
 
-function countSeverities(issues: BuildIssue[]): SeverityCounts {
+function countSeverities(severities: BuildIssueSeverity[]): SeverityCounts {
     const counts = { error: 0, warning: 0, info: 0 };
-    for (const issue of issues) {
-        switch (getIssueSeverity(issue)) {
+    for (const severity of severities) {
+        switch (severity) {
             case BuildIssueSeverity.ERROR:
                 counts.error += 1;
                 break;

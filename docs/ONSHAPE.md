@@ -86,6 +86,37 @@ them and the urls they become.
 - A part studio's thumbnail is rendered when it is saved, and can still be
   being written out just after — _observed_.
 
+## Features, sketches and assembly definitions
+
+What the design check ([design-check.md](./architecture/design-check.md))
+reads. Nothing here has yet been checked against a captured response.
+
+- **A feature list** (`GET /partstudios/…/features`, `GET /assemblies/…/features`)
+  carries each feature's `featureStatus` in `featureStates`, keyed by feature
+  id: `OK`, `INFO`, `WARNING` or `ERROR` (red), or `UNKNOWN` — _documented_.
+  A Part Studio's also carries `rollbackIndex`, -1 with the bar at the end —
+  _documented_ as a field, its meaning _unverified_.
+- **A custom feature's `namespace`** names its Feature Studio as
+  `d{documentId}::v{versionId}::e{elementId}::m{microversionId}`, which is how
+  the Origin Cube is told from a feature that only shares its name —
+  _unverified_.
+- **A sketch's definition** (`GET /partstudios/…/sketches`) is one of
+  `UNDERDEFINED`, `WELL_DEFINED`, `OVERDEFINED` or `UNKNOWN` — _documented_ in
+  Onshape's changelog (rel-1.183), which doesn't name the key that holds it. The
+  check takes whichever top-level field holds one of those values.
+- **An over-defined sketch is also a red or yellow feature** — _unverified_.
+- **An assembly definition** with `includeMateFeatures=true` lists each mate's
+  two ends as `featureData.matedEntities[].matedOccurrence`, empty for the
+  assembly origin, and each group's members as `featureData.occurrences` —
+  _documented_ in the API guide, not the OpenAPI spec. An occurrence's `fixed`
+  is _documented_, and so is a pattern's `seedToPatternInstances`.
+- **A broken instance** has `status: "DeletedElement"` when its source tab is
+  gone — _documented_ — and `errorStatus: "ERROR"` when it is drawn red —
+  _unverified_.
+- **`openFeatureDialog`**, a client message, opens a feature's dialog in a
+  workspace's Part Studio — _documented_. That it opens a mate in an Assembly
+  is _unverified_.
+
 ## Configurations
 
 A part studio or assembly declares **configuration parameters**

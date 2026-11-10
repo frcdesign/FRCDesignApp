@@ -31,5 +31,7 @@ function getUtilityName(tabId: UtilityTab): string {
             return "Auto Assembly";
         case UtilityTab.FEATURESCRIPTS:
             return m.featureScriptsTabName();
+        case UtilityTab.DESIGN_CHECK:
+            return m.designCheckTabName();
     }
 }

@@ -177,3 +177,7 @@ export function featureScriptsLoadStatusQueryKey() {
 export function featureScriptStatsQueryKey() {
     return ["featurescripts", "stats"];
 }
+
+export function designCheckQueryKey(element: ElementPath) {
+    return ["design-check", element];
+}

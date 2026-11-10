@@ -971,5 +971,90 @@
     "versionManagerFormRecursivePushInfo": "Recursively push changes across multiple links.",
     "versionManagerFormRecursivePullInfo": "Also pulls into the parent from the documents linked above it first, saving a new version of each one along the way so the next can use it. Each is numbered from its own versions unless you name them above.",
     "versionManagerQuickRecursivePushTip": "Tip: Quick recursive push in a link's ⋯ menu does this in one click, without opening the form.",
-    "versionManagerQuickRecursivePullTip": "Tip: Quick recursive pull in a link's ⋯ menu does this in one click, without opening the form."
+    "versionManagerQuickRecursivePullTip": "Tip: Quick recursive pull in a link's ⋯ menu does this in one click, without opening the form.",
+    "dashboardDesignCheck": "Design Check",
+    "dashboardDesignCheckChecks": "Checks",
+    "dashboardDesignCheckByElementType": "{partStudios: number} in Part Studios, {assemblies: number} in assemblies",
+    "dashboardDesignCheckClean": "Came back clean",
+    "dashboardDesignCheckMostFound": "Most found",
+    "dashboardDesignCheckEmpty": "No issues found in this range.",
+    "dashboardLoadingDesignCheck": "Loading design checks...",
+    "designCheckTabName": "Design Check",
+    "designCheckSignInTitle": "Sign in to check this tab",
+    "designCheckSignInDescription": "The design check reads it from your Onshape account.",
+    "designCheckSignIn": "Sign in",
+    "designCheckChecking": "Checking this tab...",
+    "designCheckFailed": "Failed to check this tab.",
+    "designCheckAgain": "Check again",
+    "designCheckCheckedAt": [
+        {
+            "declarations": [
+                "input checkedAt",
+                "local time = checkedAt: datetime timeStyle=short"
+            ],
+            "selectors": [],
+            "match": {
+                "": "Checked at {time}"
+            }
+        }
+    ],
+    "designCheckCleanTitle": "No issues found",
+    "designCheckCleanPartStudio": "This Part Studio follows every practice the design check looks for.",
+    "designCheckCleanAssembly": "This Assembly follows every practice the design check looks for.",
+    "designCheckSketchStatusUnknown": "Onshape didn't say which sketches are fully defined, so under-defined sketches weren't checked. Over-defined sketches still show as features with errors or warnings.",
+    "designCheckOpenFeature": "Open in Onshape",
+    "designCheckSketchUnderdefined": "Under-defined sketch",
+    "designCheckSketchUnderdefinedHelp": "Add constraints or dimensions until every line is black.",
+    "designCheckSketchOverdefined": "Over-defined sketch",
+    "designCheckSketchOverdefinedHelp": "Remove the constraint or dimension that conflicts.",
+    "designCheckOriginCubeMissing": "No Origin Cube",
+    "designCheckOriginCubeMissingHelp": "Insert the Origin Cube as the first feature, so assemblies have something to fasten to.",
+    "designCheckOriginCubeNotFirst": "Origin Cube isn't first",
+    "designCheckOriginCubeNotFirstHelp": [
+        {
+            "declarations": [
+                "input position",
+                "local formatted = position: number"
+            ],
+            "selectors": [],
+            "match": {
+                "": "It's feature {formatted}. Drag it to the top of the list."
+            }
+        }
+    ],
+    "designCheckOriginCubeSuppressed": "Origin Cube is suppressed",
+    "designCheckOriginCubeSuppressedHelp": "Unsuppress it: assemblies fasten to it.",
+    "designCheckFeatureError": "Feature with an error",
+    "designCheckFeatureErrorHelp": "Open it to see what failed.",
+    "designCheckFeatureWarning": "Feature with a warning",
+    "designCheckFeatureWarningHelp": "Open it to see what Onshape is warning about.",
+    "designCheckFeatureSuppressed": "Suppressed feature",
+    "designCheckFeatureSuppressedHelp": "Delete it if it's no longer needed.",
+    "designCheckRollbackNotAtEnd": "Rollback bar isn't at the end",
+    "designCheckRollbackNotAtEndHelp": [
+        {
+            "declarations": [
+                "input count",
+                "local countPlural = count: plural",
+                "local formatted = count: number"
+            ],
+            "selectors": ["countPlural"],
+            "match": {
+                "countPlural=one": "It leaves a feature out of the model. Drag it to the bottom of the list.",
+                "countPlural=other": "It leaves {formatted} features out of the model. Drag it to the bottom of the list."
+            }
+        }
+    ],
+    "designCheckPartNoMaterial": "Part with no material",
+    "designCheckPartNoMaterialHelp": "Without one, its mass is wrong.",
+    "designCheckPartNoPartNumber": "Part with no part number",
+    "designCheckPartNoPartNumberHelp": "Give it one, so it can be found in a bill of materials.",
+    "designCheckPartNoDescription": "Part with no description",
+    "designCheckPartNoDescriptionHelp": "Describe it, so others know what it is.",
+    "designCheckInstanceFixed": "Fixed instance",
+    "designCheckInstanceFixedHelp": "Fasten the Origin Cube to the assembly origin instead of fixing parts.",
+    "designCheckInstanceFloating": "Floating instance",
+    "designCheckInstanceFloatingHelp": "Mate or group it, so it can't drift.",
+    "designCheckInstanceBroken": "Broken instance",
+    "designCheckInstanceBrokenHelp": "What it was inserted from is gone or failing. Replace it or delete it."
 }

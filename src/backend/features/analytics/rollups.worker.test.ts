@@ -27,6 +27,8 @@ import {
     dailyAppOpens,
     dailyConfigurationMetrics,
     dailyFeatureUsers,
+    dailyDesignCheckMetrics,
+    dailyDesignIssueMetrics,
     dailyInsertableMetrics,
     dailyInsertableUsers,
     dailyMetrics,
@@ -43,6 +45,7 @@ import {
     trackDefaultSelection,
     trackDownload,
     trackFeatureAdd,
+    trackDesignCheck,
     trackInsert,
     trackReport,
     trackVersionRun,
@@ -53,6 +56,7 @@ import {
     VersionJobKind,
     VersionJobState
 } from "../version-manager/contract";
+import { DesignIssueType } from "../design-check/contract";
 
 const db = getDb(env.DB);
 const SIZE_PARAMETERS = [enumParam("size", ["small", "large"])];
@@ -69,6 +73,8 @@ const ROLLUPS = [
     dailyConfigurationMetrics,
     dailyVersionMetrics,
     dailyFeatureUsers,
+    dailyDesignCheckMetrics,
+    dailyDesignIssueMetrics,
     insertableStats,
     userStats
 ];
@@ -155,6 +161,17 @@ describe("rollupWrites", () => {
                 state: VersionJobState.COMPLETE,
                 result: { createdVersions: 1, updatedElements: 5 }
             }
+        });
+        await trackDesignCheck(fakeContext(), {
+            elementType: ElementType.PART_STUDIO,
+            issues: [
+                { type: DesignIssueType.FEATURE_ERROR, subject: "Extrude 1" },
+                { type: DesignIssueType.FEATURE_ERROR, subject: "Fillet 1" }
+            ]
+        });
+        await trackDesignCheck(fakeContext(), {
+            elementType: ElementType.ASSEMBLY,
+            issues: []
         });
         clock.mockRestore();
 

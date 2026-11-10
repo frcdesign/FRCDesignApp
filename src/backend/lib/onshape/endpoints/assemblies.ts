@@ -6,9 +6,9 @@ import { ElementType } from "../element-type";
 import { IDENTITY_TRANSFORM } from "../objects/transform";
 import {
     OnshapeAssemblyDefinition,
-    OnshapeAssemblyFeatureList,
     OnshapeBoundingBox,
     OnshapeCreatedFeature,
+    OnshapeFeatureListResponse,
     OnshapeInsertInstancesResponse
 } from "../types";
 
@@ -161,11 +161,11 @@ export function deleteAssemblyInstances(
     );
 }
 
-/** Every feature in an assembly's feature list: its mates, mate connectors and the rest. */
+/** Every feature in an assembly's feature list, its mates, mate connectors and the rest, and whether each regenerated. */
 export function getAssemblyFeatures(
     client: OnshapeApi,
     assemblyPath: ElementPath
-): Promise<OnshapeAssemblyFeatureList> {
+): Promise<OnshapeFeatureListResponse> {
     return client.get(`/assemblies${toElementApiPath(assemblyPath)}/features`);
 }
 

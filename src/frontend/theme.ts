@@ -25,6 +25,7 @@ import { LibraryId } from "@backend/features/library/library-id";
 import { useIsVersionManager } from "./features/version-manager/navigation";
 import { useIsAutoAssembly } from "./features/auto-assembly/navigation";
 import { useIsFeatureScripts } from "./features/featurescripts/navigation";
+import { useIsDesignCheck } from "./features/design-check/navigation";
 import {
     FILLED_SHADE,
     FontWeight,
@@ -80,7 +81,9 @@ export const AppColor = {
     /** Auto Assembly's parts are FRCDesign's, but it acts on the open assembly. */
     AUTO_ASSEMBLY: "blue",
     /** FeatureScripts are their own area, released apart from any library. */
-    FEATURESCRIPTS: "blue"
+    FEATURESCRIPTS: "blue",
+    /** The design check acts on the open tab. */
+    DESIGN_CHECK: "violet"
 } as const;
 
 /**
@@ -93,6 +96,7 @@ export function useAppColor(libraryId: string): string {
     const isVersionManager = useIsVersionManager();
     const isAutoAssembly = useIsAutoAssembly();
     const isFeatureScripts = useIsFeatureScripts();
+    const isDesignCheck = useIsDesignCheck();
 
     if (isDashboard) {
         return dashboardLibraryId
@@ -107,6 +111,9 @@ export function useAppColor(libraryId: string): string {
     }
     if (isFeatureScripts) {
         return AppColor.FEATURESCRIPTS;
+    }
+    if (isDesignCheck) {
+        return AppColor.DESIGN_CHECK;
     }
     return getLibraryColor(libraryId);
 }
