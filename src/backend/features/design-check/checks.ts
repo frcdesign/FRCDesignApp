@@ -7,8 +7,8 @@ import type {
     OnshapeSketchList,
     OnshapeSketchSolveStatus
 } from "../../lib/onshape/types";
-import { BuildIssueSeverity } from "../build-checker/issues";
 import {
+    compareSeverity,
     type DesignIssue,
     DesignIssueType,
     getDesignIssueSeverity
@@ -89,17 +89,12 @@ function checkPartStudio(snapshot: PartStudioSnapshot): DesignCheckResult {
     };
 }
 
-const SEVERITY_ORDER: Record<BuildIssueSeverity, number> = {
-    [BuildIssueSeverity.ERROR]: 0,
-    [BuildIssueSeverity.WARNING]: 1,
-    [BuildIssueSeverity.INFO]: 2
-};
-
 function bySeverity(issues: DesignIssue[]): DesignIssue[] {
-    return issues.toSorted(
-        (a, b) =>
-            SEVERITY_ORDER[getDesignIssueSeverity(a.type)] -
-            SEVERITY_ORDER[getDesignIssueSeverity(b.type)]
+    return issues.toSorted((a, b) =>
+        compareSeverity(
+            getDesignIssueSeverity(a.type),
+            getDesignIssueSeverity(b.type)
+        )
     );
 }
 

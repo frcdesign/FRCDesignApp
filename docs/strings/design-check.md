@@ -47,3 +47,23 @@ listed below that.
 
 The severity badges ("{n} errors", "{n} warnings", "{n} info") are the admin
 card's, listed in [build-issues.md](./build-issues.md).
+
+## Levels
+
+What the levels list ([design-check.md](../architecture/design-check.md#levels))
+and the results say about each person's levels. A check's name in the list is
+its name above.
+
+| String                                                                                                                  | Kind             | Where                             | When                           | Review    |
+| ----------------------------------------------------------------------------------------------------------------------- | ---------------- | --------------------------------- | ------------------------------ | --------- |
+| "Levels"                                                                                                                | Tooltip          | The navbar's sliders button       | On the page, the levels loaded | **⚑** New |
+| "Design Check levels"                                                                                                   | Modal title      | The levels list                   | Opened                         | **⚑** New |
+| "Choose how each check shows, or turn it off. Your levels are saved to your account, and apply to every tab you check." | Description      | Atop the list                     | Same                           | **⚑** New |
+| "Part Studios and Assemblies" / "Part Studios" / "Assemblies"                                                           | Section headings | The list                          | Same                           | **⚑** New |
+| "Error" / "Warning" / "Info" / "Off"                                                                                    | Options          | Each check's level                | Same                           | **⚑** New |
+| "FRCDesign's default: {level}"                                                                                          | Caption          | Under a check's name              | Its level was changed          | **⚑** New |
+| "Reset to defaults"                                                                                                     | Button           | Under the list                    | Any level was changed          | **⚑** New |
+| "Failed to save your levels."                                                                                           | Error toast      | Over the page                     | A save failed                  | **⚑** New |
+| "An issue is hidden by your levels." / "{n} issues are hidden by your levels."                                          | Note             | Under the boxes, or in the notice | A type found is turned off     | **⚑** New |
+| "Change levels"                                                                                                         | Link             | After that note                   | The levels loaded              | **⚑** New |
+| "Every issue found is turned off"                                                                                       | Notice title     | In place of the list              | Everything found is turned off | **⚑** New |

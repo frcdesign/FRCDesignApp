@@ -6,7 +6,8 @@ import {
     Input,
     Menu,
     Stack,
-    TextInput
+    TextInput,
+    Tooltip
 } from "@mantine/core";
 import {
     BooksIcon,
@@ -19,6 +20,7 @@ import {
     MagnifyingGlassIcon,
     MoonIcon,
     PuzzlePieceIcon,
+    SlidersHorizontalIcon,
     SunIcon
 } from "@phosphor-icons/react";
 import {
@@ -71,7 +73,11 @@ import {
     useIsDesignCheck,
     useIsDesignCheckNew
 } from "../features/design-check/navigation";
-import { checkAgain } from "../features/design-check/queries";
+import { openDesignCheckLevels } from "../features/design-check/open-design-check-levels";
+import {
+    checkAgain,
+    useDesignCheckLevelsQuery
+} from "../features/design-check/queries";
 import { type WorkspacePath } from "@backend/features/version-manager/contract";
 import { type AppTab, UtilityTab } from "../lib/app-tab";
 import { getTabName, useNavigateToTab } from "../lib/tabs";
@@ -130,6 +136,7 @@ export function AppNavbar(): ReactNode {
                     {isVersionManager && workspace && (
                         <VersionManagerRefreshButton workspace={workspace} />
                     )}
+                    {isDesignCheck && <DesignCheckLevelsButton />}
                     {isDesignCheck && <DesignCheckRefreshButton />}
                     <SettingsControls />
                 </Group>
@@ -381,6 +388,19 @@ function VersionManagerRefreshButton(
             loading={refresh.isPending}
             onClick={() => refresh.mutate()}
         />
+    );
+}
+
+/** Saved to the account, so only once signed in, and only once they've loaded. */
+function DesignCheckLevelsButton(): ReactNode {
+    const levels = useDesignCheckLevelsQuery();
+    if (!levels.data) return null;
+    return (
+        <Tooltip label={m.designCheckLevels()}>
+            <ActionIcon my="auto" onClick={openDesignCheckLevels}>
+                <SlidersHorizontalIcon size={IconSize.MEDIUM} />
+            </ActionIcon>
+        </Tooltip>
     );
 }
 

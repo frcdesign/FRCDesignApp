@@ -1,5 +1,7 @@
+import { BuildIssueSeverity } from "@backend/features/build-checker/issues";
 import {
     type DesignIssue,
+    type DesignIssueLevel,
     DesignIssueType
 } from "@backend/features/design-check/contract";
 import { m } from "../../paraglide/messages";
@@ -74,5 +76,61 @@ export function getDesignIssueHelp(issue: DesignIssue): string {
             return m.designCheckInstanceFloatingHelp();
         case DesignIssueType.INSTANCE_BROKEN:
             return m.designCheckInstanceBrokenHelp();
+    }
+}
+
+export function getDesignIssueLevelName(level: DesignIssueLevel): string {
+    switch (level) {
+        case BuildIssueSeverity.ERROR:
+            return m.designCheckLevelError();
+        case BuildIssueSeverity.WARNING:
+            return m.designCheckLevelWarning();
+        case BuildIssueSeverity.INFO:
+            return m.designCheckLevelInfo();
+        case "off":
+            return m.designCheckLevelOff();
+    }
+}
+
+/** Which tabs a type of issue is raised in, as the levels list groups them. */
+export enum LevelSection {
+    BOTH = "both",
+    PART_STUDIOS = "part-studios",
+    ASSEMBLIES = "assemblies"
+}
+
+export const LEVEL_SECTIONS = Object.values(LevelSection);
+
+export function getLevelSection(type: DesignIssueType): LevelSection {
+    switch (type) {
+        case DesignIssueType.FEATURE_ERROR:
+        case DesignIssueType.FEATURE_WARNING:
+        case DesignIssueType.FEATURE_SUPPRESSED:
+            return LevelSection.BOTH;
+        case DesignIssueType.SKETCH_UNDERDEFINED:
+        case DesignIssueType.SKETCH_OVERDEFINED:
+        case DesignIssueType.ORIGIN_CUBE_MISSING:
+        case DesignIssueType.ORIGIN_CUBE_NOT_FIRST:
+        case DesignIssueType.ORIGIN_CUBE_SUPPRESSED:
+        case DesignIssueType.ROLLBACK_NOT_AT_END:
+        case DesignIssueType.PART_NO_MATERIAL:
+        case DesignIssueType.PART_NO_PART_NUMBER:
+        case DesignIssueType.PART_NO_DESCRIPTION:
+            return LevelSection.PART_STUDIOS;
+        case DesignIssueType.INSTANCE_FIXED:
+        case DesignIssueType.INSTANCE_FLOATING:
+        case DesignIssueType.INSTANCE_BROKEN:
+            return LevelSection.ASSEMBLIES;
+    }
+}
+
+export function getLevelSectionName(section: LevelSection): string {
+    switch (section) {
+        case LevelSection.BOTH:
+            return m.designCheckLevelsBoth();
+        case LevelSection.PART_STUDIOS:
+            return m.designCheckLevelsPartStudios();
+        case LevelSection.ASSEMBLIES:
+            return m.designCheckLevelsAssemblies();
     }
 }
