@@ -610,7 +610,7 @@ interface VersionManagerTotals {
 interface DesignCheckTotals {
     /** Part studios and assemblies together. */
     checks: number;
-    /** Checks that found nothing. */
+    /** Checks that found nothing FRCDesign's levels show. */
     cleanChecks: number;
     partStudioChecks: number;
     assemblyChecks: number;
@@ -901,9 +901,11 @@ no foreign key crosses between them):
   partially failed and runs that failed outright, versions created and tabs
   updated.
 - `daily_design_check_metrics` is keyed by day and the kind of tab checked:
-  checks, and checks that found nothing. `daily_design_issue_metrics` is keyed
-  by day and issue type: the checks that found at least one, and how many they
-  found.
+  checks, and checks that found nothing FRCDesign's levels show
+  (`isCleanAtDefaults`), so a part with no part number, off by default, leaves a
+  check clean. `daily_design_issue_metrics` is keyed by day and issue type: the
+  checks that found at least one, and how many they found. The dashboard's
+  **Most found** leaves out the types off by default.
 - `daily_report_metrics` is keyed by day, topic, category, source and element
   (empty for a report that names no part): the count of reports. By topic
   rather than library, since the app's topics belong to none.

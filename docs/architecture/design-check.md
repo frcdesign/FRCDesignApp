@@ -100,6 +100,8 @@ function isLevelChanged(
 ): boolean;
 // What analytics records of a check.
 function countDesignIssues(issues: DesignIssue[]): DesignIssueCounts;
+// What analytics calls a clean check: nothing found that FRCDesign's levels show.
+function isCleanAtDefaults(counts: DesignIssueCounts): boolean;
 
 enum DesignIssueType {
     SKETCH_UNDERDEFINED = "sketch-underdefined",
@@ -320,15 +322,17 @@ leave FRCDesign's and no way to change them.
 
 ### The results
 
-Every issue shows at the caller's level for its type (`getShownSeverity`);
-one turned off is left out and counted.
+Every issue shows at the caller's level for its type (`getShownSeverity`).
+One the caller turned off is left out and counted; one off by default and left
+so is left out unmentioned.
 
 1. With nothing found, the page says so for the kind of tab it is; with
    everything found turned off, it says that, with how many.
 2. Otherwise the severity badges head the page, beside the time of the check,
    then one tinted box per issue type, worst first at the caller's levels: its
    name, what to do about it, and every feature, part or instance it was found
-   on. Under the boxes, how many are hidden, with **Change levels**.
+   on. Under the boxes, how many the caller's levels hide, with **Change
+   levels**.
 3. Clicking a feature or mate's name opens it in Onshape's feature dialog
    (`sendOpenFeatureMessage`); a suppressed Part Studio feature, which Onshape
    won't open, is named only. Clicking a part's or a part instance's selects
@@ -362,8 +366,9 @@ In [strings/design-check.md](../strings/design-check.md).
   **Check again**, never on its own: the query is never stale and never
   retried.
 - What a check finds, and what analytics records of it, never depends on
-  levels: the server sends every issue, with no severity, and the page applies
-  the caller's.
+  anyone's levels: the server sends every issue, with no severity, and the page
+  applies the caller's. A check analytics calls clean found nothing
+  FRCDesign's levels show.
 - Levels are the caller's alone, read and written behind
   `requireSignInMiddleware` by their user id; they cost no Onshape call.
 - `checkDesign` is pure, so every check is tested without Onshape.
@@ -427,6 +432,10 @@ In [strings/design-check.md](../strings/design-check.md).
 - **A lost pick counts only beside one that still resolves.** A pick of a
   default plane resolves to nothing as well, so a box where nothing resolves
   can't be told from a sketch on Top.
+- **Off by default goes unmentioned.** Part numbers and descriptions are a
+  team's own convention; counting every part without one as "hidden" would leave
+  nearly every Part Studio short of "No issues found". What a person turned off
+  is counted, since they chose it.
 - **Grouped by type.** A Part Studio of thirty parts with no part number is one
   box listing thirty names, not thirty boxes.
 

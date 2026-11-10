@@ -619,8 +619,8 @@
             ],
             "selectors": ["countPlural"],
             "match": {
-                "countPlural=one": "An issue found is turned off.",
-                "countPlural=other": "{formatted} issues found are turned off."
+                "countPlural=one": "An issue is hidden by your levels.",
+                "countPlural=other": "{formatted} issues are hidden by your levels."
             }
         }
     ],

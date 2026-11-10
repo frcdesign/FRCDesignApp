@@ -130,6 +130,13 @@ export function getShownSeverity(
 /** How many of each type one check found, which analytics records. */
 export type DesignIssueCounts = Partial<Record<DesignIssueType, number>>;
 
+/** Whether a check found nothing FRCDesign's levels show. */
+export function isCleanAtDefaults(counts: DesignIssueCounts): boolean {
+    return (Object.keys(counts) as DesignIssueType[]).every(
+        (type) => getDefaultLevel(type) === "off"
+    );
+}
+
 export function countDesignIssues(issues: DesignIssue[]): DesignIssueCounts {
     const counts: DesignIssueCounts = {};
     for (const issue of issues) {

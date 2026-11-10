@@ -316,7 +316,9 @@ describe("design check results", () => {
         expect(screen.getByText("1 error")).toBeTruthy();
         expect(screen.getByText("1 info")).toBeTruthy();
         expect(screen.queryByText("Sketch 5")).toBeNull();
-        expect(screen.getByText(/An issue found is turned off/)).toBeTruthy();
+        expect(
+            screen.getByText(/An issue is hidden by your levels/)
+        ).toBeTruthy();
 
         await userEvent.click(screen.getByText("Change levels"));
 
@@ -343,8 +345,31 @@ describe("design check results", () => {
         expect(
             screen.getByText("Every issue found is turned off")
         ).toBeTruthy();
-        expect(screen.getByText(/2 issues found are turned off/)).toBeTruthy();
+        expect(
+            screen.getByText(/2 issues are hidden by your levels/)
+        ).toBeTruthy();
         expect(screen.queryByText("No issues found")).toBeNull();
+    });
+
+    it("doesn't mention what is off by default", () => {
+        renderWithProviders(
+            <DesignCheckResults
+                target={target}
+                result={result({
+                    issues: [
+                        {
+                            type: DesignIssueType.PART_NO_PART_NUMBER,
+                            subject: "Plate",
+                            partId: "JHD"
+                        }
+                    ]
+                })}
+            />
+        );
+
+        expect(screen.getByText("No issues found")).toBeTruthy();
+        expect(screen.queryByText(/hidden by your levels/)).toBeNull();
+        expect(screen.queryByText("Plate")).toBeNull();
     });
 
     it("says when sketches went unchecked", () => {
