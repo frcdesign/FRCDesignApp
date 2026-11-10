@@ -173,7 +173,7 @@ Severity follows from the type alone (`getDesignIssueSeverity`).
 | `SKETCH_UNDERDEFINED` / `SKETCH_OVERDEFINED`                       | Warning / Error        | An unsuppressed sketch Onshape reports so                                                                 |
 | `ORIGIN_CUBE_MISSING` / `ORIGIN_CUBE_NOT_FIRST`                    | Warning / Warning      | A Part Studio with no Origin Cube, or with it below the first feature                                     |
 | `ORIGIN_CUBE_SUPPRESSED`                                           | Error                  | The Origin Cube suppressed                                                                                |
-| `FEATURE_ERROR` / `FEATURE_WARNING` / `FEATURE_SUPPRESSED`         | Error / Warning / Info | A feature or mate Onshape draws red or yellow, or one left suppressed; never the Origin Cube for the last |
+| `FEATURE_ERROR` / `FEATURE_WARNING` / `FEATURE_SUPPRESSED`         | Error / Warning / Info | A feature or mate Onshape marks red or yellow, or one left suppressed; never the Origin Cube for the last |
 | `ROLLBACK_NOT_AT_END`                                              | Warning                | A Part Studio's rollback bar above its last feature                                                       |
 | `PART_NO_MATERIAL` / `PART_NO_PART_NUMBER` / `PART_NO_DESCRIPTION` | Warning / Info / Info  | A solid part missing one, the Origin Cube's own cube aside                                                |
 | `INSTANCE_FIXED`                                                   | Warning                | A top-level instance that is fixed                                                                        |
@@ -222,8 +222,9 @@ only with one (`canResume` in `src/frontend/routes/index.tsx`).
    configuration, all calls at once. If the sketches can't be listed for any
    reason but Onshape refusing the caller, the check goes on without their
    status and says so.
-3. `checkDesign` raises the issues, reports an over-defined sketch once rather
-   than also as a red or yellow feature, and sorts them worst first.
+3. `checkDesign` raises the issues and sorts them worst first. An over-defined
+   sketch, and an Origin Cube below the first feature, are each reported once,
+   as themselves, rather than also as the warning they raise.
 4. The route records the check through `trackDesignCheck`, in the background,
    and answers.
 5. The navbar's refresh button, **Check again**, asks again; nothing else does.
@@ -258,13 +259,14 @@ In [strings/design-check.md](../strings/design-check.md).
 
 ## Failure and recovery
 
-| What goes wrong                           | Shows as                                                    | Put right by    |
-| ----------------------------------------- | ----------------------------------------------------------- | --------------- |
-| Signed out                                | The sign-in notice                                          | **Sign in**     |
-| Onshape refuses or rate-limits the caller | "Failed to check this tab.", with **Send a report**         | **Check again** |
-| Any other call fails or times out         | The same                                                    | **Check again** |
-| The sketches can't be listed              | The other issues, and a note that sketches went unchecked   | **Check again** |
-| Onshape stops sending `sketchSolveStatus` | The note that sketches went unchecked, on every Part Studio | A change here   |
+| What goes wrong                              | Shows as                                                         | Put right by    |
+| -------------------------------------------- | ---------------------------------------------------------------- | --------------- |
+| Signed out                                   | The sign-in notice                                               | **Sign in**     |
+| Onshape refuses or rate-limits the caller    | "Failed to check this tab.", with **Send a report**              | **Check again** |
+| Any other call fails or times out            | The same                                                         | **Check again** |
+| A feature is missing a selection, and builds | Nothing: Onshape reports it `OK`; its own list shows the warning | —               |
+| The sketches can't be listed                 | The other issues, and a note that sketches went unchecked        | **Check again** |
+| Onshape stops sending `sketchSolveStatus`    | The note that sketches went unchecked, on every Part Studio      | A change here   |
 
 ## Decisions
 

@@ -55,25 +55,29 @@ export function checkDesign(snapshot: DesignSnapshot): DesignCheckResult {
 function checkPartStudio(snapshot: PartStudioSnapshot): DesignCheckResult {
     const statuses = sketchStatuses(snapshot.sketches);
     const sketches = checkSketches(snapshot.features, statuses);
-    // An over-defined sketch is red or yellow too; it is reported once, as the sketch.
-    const overdefined = new Set(
-        sketches
+    const originCube = checkOriginCube(snapshot.features);
+    // Each is red or yellow too, and reported once, as itself: an over-defined
+    // sketch, and the Origin Cube anywhere but first, which it refuses.
+    const reported = new Set(
+        [...sketches, ...originCube]
             .filter(
-                (issue) => issue.type === DesignIssueType.SKETCH_OVERDEFINED
+                (issue) =>
+                    issue.type === DesignIssueType.SKETCH_OVERDEFINED ||
+                    issue.type === DesignIssueType.ORIGIN_CUBE_NOT_FIRST
             )
             .map((issue) => issue.featureId)
     );
     const features = checkFeatures(snapshot.features).filter(
         (issue) =>
             issue.type === DesignIssueType.FEATURE_SUPPRESSED ||
-            !overdefined.has(issue.featureId)
+            !reported.has(issue.featureId)
     );
     const hasSketches = snapshot.features.features.some(
         (feature) => isSketch(feature) && !feature.suppressed
     );
     return {
         issues: bySeverity([
-            ...checkOriginCube(snapshot.features),
+            ...originCube,
             ...sketches,
             ...features,
             ...checkRollback(snapshot.features),

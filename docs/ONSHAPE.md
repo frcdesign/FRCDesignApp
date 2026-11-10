@@ -107,11 +107,15 @@ problem planted, whose answers are kept, cut down, in
 - **A feature that names itself from a template** comes back with the template
   unfilled: the Origin Cube's `name` is `#_name` — _observed_. Its
   `featureType` is the generic `myFeature`, so it says nothing either.
-- **The Origin Cube was yellow** while second in the list — _observed_. Its
-  warning's text isn't in the API's answer, so why is _unverified_.
-- **Onshape's own list can show a warning the API doesn't**: it drew one on an
-  extrude and on a fasten whose `featureStatus` was `OK` — _observed_. What
-  those warnings were is _unverified_.
+- **The Origin Cube refuses to build anywhere but first.** Second in the list
+  it was `WARNING`, its tooltip reading "Origin Cube should be the first feature
+  in your part studio to function correctly" — _observed_. The API's answer
+  doesn't carry a feature's message.
+- **A missing selection doesn't show in `featureStatus`**: an extrude Onshape
+  drew with a warning, its tooltip "1 missing selection", was `OK` — _observed_.
+- **A fasten to the origin** is drawn with a warning while the assembly also
+  has a fixed instance — "Fastened to origin even though Assembly has fixed
+  part(s)" — and its `featureStatus` is `OK` — _observed_.
 - **A sketch's definition** (`GET /partstudios/…/sketches`) is
   `sketchSolveStatus`: `UNDERDEFINED`, `WELL_DEFINED`, `OVERDEFINED` or
   `UNKNOWN` — the values _documented_ in Onshape's changelog (rel-1.183), the
@@ -130,9 +134,10 @@ problem planted, whose answers are kept, cut down, in
   `suppressed`, are _observed_.
 - **An instance of a deleted part** keeps `type: "Part"`, with `partId: ""`,
   and Onshape draws it red — _observed_.
-- **An instance Onshape draws red** can come back with only its `id` and `name`,
-  no `type` or `partId` — _observed_. The spec's `status: "DeletedElement"` and
-  `errorStatus` were on no instance, healthy or broken.
+- **An instance whose tab was deleted** is drawn red, and comes back with only
+  its `id` and `name`, no `type` or `partId` — _observed_. The spec's
+  `status: "DeletedElement"` and `errorStatus` were on no instance, healthy or
+  broken.
 - **An inserted sketch** is left out of the assembly definition with
   `includeNonSolids=false`, which `getAssembly` sends by default — _observed_.
 - **`openFeatureDialog`**, a client message, opens a feature's dialog in a
