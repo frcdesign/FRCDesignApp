@@ -4,7 +4,8 @@ import type {
     OnshapeAssemblyDefinition,
     OnshapeAssemblyInstance,
     OnshapeFeatureListResponse,
-    OnshapeSketchList
+    OnshapeSketchList,
+    OnshapeSketchSolveStatus
 } from "../../lib/onshape/types";
 import { BuildIssueSeverity } from "../build-checker/issues";
 import {
@@ -20,8 +21,10 @@ import type {
 
 /** FRCDesign's Origin Cube FeatureScript: https://frcdesign.org/best-practices/assembly-setup/ */
 const ORIGIN_CUBE_DOCUMENT_ID = "321c197a842fc5f1a29e6621";
-/** Matches a copy of the FeatureScript kept in another document. */
+/** Matches a copy of the FeatureScript kept in another document, once renamed. */
 const ORIGIN_CUBE_FEATURE_NAME = /^origin cube\b/i;
+/** What the Origin Cube is called where Onshape sends its name unresolved. */
+const ORIGIN_CUBE_NAME = "Origin Cube";
 /** The cube the feature makes, a reference body with no material or part number. */
 const ORIGIN_CUBE_PART_NAME = /origin cube|cube of all time/i;
 
@@ -98,6 +101,13 @@ function isSketch(feature: Feature): boolean {
     return feature.featureType === "newSketch";
 }
 
+/** A FeatureScript feature can name itself from a template, which Onshape sends unfilled, as `#_name`. */
+function featureName(feature: Feature): string {
+    return feature.name.startsWith("#") && isOriginCube(feature)
+        ? ORIGIN_CUBE_NAME
+        : feature.name;
+}
+
 export function isOriginCube(feature: Feature): boolean {
     if (isSketch(feature)) {
         return false;
@@ -115,7 +125,7 @@ function checkOriginCube(response: OnshapeFeatureListResponse): DesignIssue[] {
         return [{ type: DesignIssueType.ORIGIN_CUBE_MISSING }];
     }
     const cube = response.features[index];
-    const target = { subject: cube.name, featureId: cube.featureId };
+    const target = { subject: featureName(cube), featureId: cube.featureId };
     return [
         ...(cube.suppressed
             ? [{ type: DesignIssueType.ORIGIN_CUBE_SUPPRESSED, ...target }]
@@ -132,36 +142,14 @@ function checkOriginCube(response: OnshapeFeatureListResponse): DesignIssue[] {
     ];
 }
 
-type SketchStatus = "UNDERDEFINED" | "WELL_DEFINED" | "OVERDEFINED" | "UNKNOWN";
-
-const SKETCH_STATUSES = new Set<string>([
-    "UNDERDEFINED",
-    "WELL_DEFINED",
-    "OVERDEFINED",
-    "UNKNOWN"
-]);
-
-/** Onshape names the values but not the key that holds them, so any top-level field holding one is taken. */
-export function sketchStatus(
-    sketch: Record<string, unknown>
-): SketchStatus | undefined {
-    for (const value of Object.values(sketch)) {
-        if (typeof value === "string" && SKETCH_STATUSES.has(value)) {
-            return value as SketchStatus;
-        }
-    }
-    return undefined;
-}
-
 /** Keyed by the sketch's feature id. */
 function sketchStatuses(
     sketches: OnshapeSketchList | undefined
-): Map<string, SketchStatus> {
-    const statuses = new Map<string, SketchStatus>();
+): Map<string, OnshapeSketchSolveStatus> {
+    const statuses = new Map<string, OnshapeSketchSolveStatus>();
     for (const sketch of sketches?.sketches ?? []) {
-        const status = sketchStatus(sketch);
-        if (sketch.featureId && status) {
-            statuses.set(sketch.featureId, status);
+        if (sketch.sketchSolveStatus) {
+            statuses.set(sketch.featureId, sketch.sketchSolveStatus);
         }
     }
     return statuses;
@@ -169,13 +157,16 @@ function sketchStatuses(
 
 function checkSketches(
     response: OnshapeFeatureListResponse,
-    statuses: Map<string, SketchStatus>
+    statuses: Map<string, OnshapeSketchSolveStatus>
 ): DesignIssue[] {
     return response.features.flatMap((feature): DesignIssue[] => {
         if (!isSketch(feature) || feature.suppressed) {
             return [];
         }
-        const target = { subject: feature.name, featureId: feature.featureId };
+        const target = {
+            subject: featureName(feature),
+            featureId: feature.featureId
+        };
         switch (statuses.get(feature.featureId)) {
             case "UNDERDEFINED":
                 return [
@@ -194,7 +185,10 @@ function checkSketches(
 /** Red and yellow features or mates, and suppressed ones left in the list. */
 function checkFeatures(response: OnshapeFeatureListResponse): DesignIssue[] {
     return response.features.flatMap((feature): DesignIssue[] => {
-        const target = { subject: feature.name, featureId: feature.featureId };
+        const target = {
+            subject: featureName(feature),
+            featureId: feature.featureId
+        };
         if (feature.suppressed) {
             // The Origin Cube has its own, louder issue.
             return isOriginCube(feature)
@@ -231,7 +225,7 @@ function checkRollback(response: OnshapeFeatureListResponse): DesignIssue[] {
     ];
 }
 
-const isBlank = (value: string | undefined) => !value?.trim();
+const isBlank = (value: string | null | undefined) => !value?.trim();
 
 /** A material for mass properties, a part number and description for the BOM. Solid parts only. */
 function checkParts(snapshot: PartStudioSnapshot): DesignIssue[] {
@@ -258,10 +252,12 @@ function checkParts(snapshot: PartStudioSnapshot): DesignIssue[] {
     });
 }
 
-/** The source tab was deleted, or Onshape draws it red; INFO and UNKNOWN aren't broken. */
+/** The part or tab it was inserted from is gone, or Onshape draws it red; INFO and UNKNOWN aren't broken. */
 function isBroken(instance: OnshapeAssemblyInstance): boolean {
     return (
-        instance.status === "DeletedElement" || instance.errorStatus === "ERROR"
+        (instance.type === "Part" && instance.partId === "") ||
+        instance.status === "DeletedElement" ||
+        instance.errorStatus === "ERROR"
     );
 }
 
@@ -284,6 +280,9 @@ function heldInstances(definition: OnshapeAssemblyDefinition): Set<string> {
     }
     // A pattern's copies move with their seed.
     for (const pattern of root.patterns ?? []) {
+        if (pattern.suppressed) {
+            continue;
+        }
         for (const copies of Object.values(
             pattern.seedToPatternInstances ?? {}
         )) {
@@ -312,13 +311,19 @@ function checkInstances(snapshot: AssemblySnapshot): DesignIssue[] {
             instanceId: instance.id
         };
         const issues: DesignIssue[] = [];
-        if (isBroken(instance)) {
+        const isBrokenInstance = isBroken(instance);
+        if (isBrokenInstance) {
             issues.push({ type: DesignIssueType.INSTANCE_BROKEN, ...target });
         }
         if (fixed.has(instance.id)) {
             issues.push({ type: DesignIssueType.INSTANCE_FIXED, ...target });
-        } else if (instance.type !== "Feature" && !held.has(instance.id)) {
-            // An inserted sketch is a reference, left where it lands.
+        } else if (
+            // An inserted sketch is a reference, left where it lands, and a
+            // broken instance has nothing left to mate.
+            instance.type !== "Feature" &&
+            !isBrokenInstance &&
+            !held.has(instance.id)
+        ) {
             issues.push({ type: DesignIssueType.INSTANCE_FLOATING, ...target });
         }
         return issues;

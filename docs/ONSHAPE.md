@@ -89,30 +89,46 @@ them and the urls they become.
 ## Features, sketches and assembly definitions
 
 What the design check ([design-check.md](./architecture/design-check.md))
-reads. Nothing here has yet been checked against a captured response.
+reads. _Observed_ here means seen on 2026-11-10 in a test document with each
+problem planted, whose answers are kept, cut down, in
+`src/__test_utils__/design-check-captures.ts`.
 
 - **A feature list** (`GET /partstudios/…/features`, `GET /assemblies/…/features`)
   carries each feature's `featureStatus` in `featureStates`, keyed by feature
-  id: `OK`, `INFO`, `WARNING` or `ERROR` (red), or `UNKNOWN` — _documented_.
-  A Part Studio's also carries `rollbackIndex`, -1 with the bar at the end —
-  _documented_ as a field, its meaning _unverified_.
-- **A custom feature's `namespace`** names its Feature Studio as
-  `d{documentId}::v{versionId}::e{elementId}::m{microversionId}`, which is how
-  the Origin Cube is told from a feature that only shares its name —
+  id: `OK`, `INFO`, `WARNING` (yellow), `ERROR` (red) or `UNKNOWN` —
+  _documented_, and _observed_.
+- **`rollbackIndex`**, on a Part Studio's list, is the index of the first
+  feature below the rollback bar: 10 of 12 features with the bar above the last
+  two — _observed_. With the bar at the end it is -1 — _documented_,
   _unverified_.
-- **A sketch's definition** (`GET /partstudios/…/sketches`) is one of
-  `UNDERDEFINED`, `WELL_DEFINED`, `OVERDEFINED` or `UNKNOWN` — _documented_ in
-  Onshape's changelog (rel-1.183), which doesn't name the key that holds it. The
-  check takes whichever top-level field holds one of those values.
-- **An over-defined sketch is also a red or yellow feature** — _unverified_.
+- **A custom feature's `namespace`** names its Feature Studio as
+  `d{documentId}::v{versionId}::e{elementId}::m{microversionId}`; the Origin
+  Cube's starts `d321c197a842fc5f1a29e6621` — _observed_.
+- **A feature that names itself from a template** comes back with the template
+  unfilled: the Origin Cube's `name` is `#_name` — _observed_. Its
+  `featureType` is the generic `myFeature`, so it says nothing either.
+- **The Origin Cube was yellow** while second in the list — _observed_. Its
+  warning's text isn't in the API's answer, so why is _unverified_.
+- **A sketch's definition** (`GET /partstudios/…/sketches`) is
+  `sketchSolveStatus`: `UNDERDEFINED`, `WELL_DEFINED`, `OVERDEFINED` or
+  `UNKNOWN` — the values _documented_ in Onshape's changelog (rel-1.183), the
+  key _observed_. A suppressed sketch, and one below the rollback bar, isn't
+  listed — _observed_.
+- **An over-defined sketch is also yellow** (`WARNING`); an under-defined one is
+  `OK` — _observed_.
+- **A part's unset part number or description** is `null`; with no material,
+  `material` is left out — _observed_. The Origin Cube's part is named "Origin
+  Cube", with the material "Origin Cube Material" — _observed_.
 - **An assembly definition** with `includeMateFeatures=true` lists each mate's
   two ends as `featureData.matedEntities[].matedOccurrence`, empty for the
   assembly origin, and each group's members as `featureData.occurrences` —
-  _documented_ in the API guide, not the OpenAPI spec. An occurrence's `fixed`
-  is _documented_, and so is a pattern's `seedToPatternInstances`.
-- **A broken instance** has `status: "DeletedElement"` when its source tab is
-  gone — _documented_ — and `errorStatus: "ERROR"` when it is drawn red —
-  _unverified_.
+  _documented_ in the API guide, not the OpenAPI spec, and _observed_. An
+  occurrence's `fixed`, and a pattern's `seedToPatternInstances` and
+  `suppressed`, are _observed_.
+- **An instance of a deleted part** keeps `type: "Part"`, with `partId: ""` —
+  _observed_. No instance carried `status` or `errorStatus`, healthy or not.
+  `status: "DeletedElement"` for an instance whose tab was deleted is
+  _documented_, and `errorStatus: "ERROR"` for one drawn red is _unverified_.
 - **`openFeatureDialog`**, a client message, opens a feature's dialog in a
   workspace's Part Studio — _documented_. That it opens a mate in an Assembly
   is _unverified_.

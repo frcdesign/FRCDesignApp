@@ -4,9 +4,14 @@ import type {
     OnshapeAssemblyFeature,
     OnshapeAssemblyInstance,
     OnshapeFeatureListResponse,
-    OnshapePart
+    OnshapePart,
+    OnshapeSketchSolveStatus
 } from "../../lib/onshape/types";
-import { checkDesign, sketchStatus } from "./checks";
+import {
+    CAPTURED_ASSEMBLY,
+    CAPTURED_PART_STUDIO
+} from "../../../__test_utils__/design-check-captures";
+import { checkDesign } from "./checks";
 import { DesignIssueType } from "./contract";
 import type { AssemblySnapshot, PartStudioSnapshot } from "./snapshot";
 
@@ -17,9 +22,10 @@ const CUBE_DOCUMENT_ID = "321c197a842fc5f1a29e6621";
 
 function originCube(overrides: Partial<Feature> = {}): Feature {
     return {
-        featureType: "originCube",
+        featureType: "myFeature",
         featureId: "Fcube",
-        name: "Origin Cube 1",
+        // Onshape sends the name template unfilled.
+        name: "#_name",
         suppressed: false,
         namespace: `d${CUBE_DOCUMENT_ID}::v2565d082d3d8c8e592d34548::ec66db2b954da7f29d438195a::m0123456789abcdef01234567`,
         ...overrides
@@ -59,7 +65,7 @@ function partStudio(options: {
     features: Feature[];
     statuses?: Record<string, FeatureStatus>;
     /** Undefined when Onshape couldn't list the sketches. */
-    sketchStatuses?: Record<string, string> | null;
+    sketchStatuses?: Record<string, OnshapeSketchSolveStatus> | null;
     parts?: OnshapePart[];
     rollbackIndex?: number;
 }): PartStudioSnapshot {
@@ -74,10 +80,9 @@ function partStudio(options: {
             ? undefined
             : {
                   sketches: Object.entries(options.sketchStatuses ?? {}).map(
-                      ([featureId, status]) => ({
+                      ([featureId, sketchSolveStatus]) => ({
                           featureId,
-                          sketch: featureId,
-                          fullyDefinedStatus: status
+                          sketchSolveStatus
                       })
                   )
               };
@@ -232,13 +237,34 @@ describe("a Part Studio", () => {
         expect(result.sketchStatusUnknown).toBe(true);
     });
 
-    it("reads a sketch's status whatever the field is called", () => {
-        expect(sketchStatus({ featureId: "S1", other: "UNDERDEFINED" })).toBe(
-            "UNDERDEFINED"
-        );
+    it("finds everything planted in a captured Part Studio", () => {
+        const result = checkDesign(CAPTURED_PART_STUDIO);
+
+        expect(result.sketchStatusUnknown).toBe(false);
         expect(
-            sketchStatus({ featureId: "S1", sketch: "Sketch 1" })
-        ).toBeUndefined();
+            result.issues.map((issue) => [issue.type, issue.subject])
+        ).toEqual([
+            [DesignIssueType.SKETCH_OVERDEFINED, "Sketch 3"],
+            [DesignIssueType.FEATURE_ERROR, "Extrude 1"],
+            [DesignIssueType.ORIGIN_CUBE_NOT_FIRST, "Origin Cube"],
+            [DesignIssueType.SKETCH_UNDERDEFINED, "Sketch 2"],
+            [DesignIssueType.SKETCH_UNDERDEFINED, "Sketch 4"],
+            [DesignIssueType.FEATURE_WARNING, "Origin Cube"],
+            [DesignIssueType.ROLLBACK_NOT_AT_END, undefined],
+            [DesignIssueType.PART_NO_MATERIAL, "Part 2"],
+            [DesignIssueType.PART_NO_MATERIAL, "Part 3"],
+            [DesignIssueType.FEATURE_SUPPRESSED, "Sketch 5"],
+            [DesignIssueType.PART_NO_PART_NUMBER, "Part 2"],
+            [DesignIssueType.PART_NO_DESCRIPTION, "Part 2"],
+            [DesignIssueType.PART_NO_PART_NUMBER, "Part 3"],
+            [DesignIssueType.PART_NO_DESCRIPTION, "Part 3"],
+            [DesignIssueType.PART_NO_DESCRIPTION, "Part 4"]
+        ]);
+        expect(
+            result.issues.find(
+                (issue) => issue.type === DesignIssueType.ROLLBACK_NOT_AT_END
+            )?.count
+        ).toBe(2);
     });
 
     it("needs an Origin Cube", () => {
@@ -253,8 +279,9 @@ describe("a Part Studio", () => {
         expect(types(partStudio({ features: [renamed] }))).toEqual([]);
     });
 
-    it("knows a copy of the Origin Cube by its name", () => {
+    it("knows a renamed copy of the Origin Cube by its name", () => {
         const copy = originCube({
+            name: "Origin Cube 1",
             namespace: "d0123456789abcdef01234567::v1::e2::m3"
         });
 
@@ -278,7 +305,7 @@ describe("a Part Studio", () => {
         expect(checkDesign(snapshot).issues).toEqual([
             {
                 type: DesignIssueType.ORIGIN_CUBE_NOT_FIRST,
-                subject: "Origin Cube 1",
+                subject: "Origin Cube",
                 featureId: "Fcube",
                 count: 3
             }
@@ -407,6 +434,42 @@ describe("an Assembly", () => {
         });
 
         expect(types(snapshot)).toEqual([]);
+    });
+
+    it("doesn't count a suppressed pattern's copies as held", () => {
+        const snapshot = assembly({
+            instances: [instance("a"), instance("copy")],
+            mates: [fasten("M1", [], ["a"])],
+            patterns: [{ seedToPatternInstances: { a: ["copy"] } }]
+        });
+        snapshot.definition.rootAssembly.patterns = [
+            { suppressed: true, seedToPatternInstances: { a: ["copy"] } }
+        ];
+
+        expect(types(snapshot)).toEqual([DesignIssueType.INSTANCE_FLOATING]);
+    });
+
+    it("calls a part instance broken once its part is gone, and not floating", () => {
+        const snapshot = assembly({
+            instances: [instance("gone", { partId: "" })]
+        });
+
+        expect(types(snapshot)).toEqual([DesignIssueType.INSTANCE_BROKEN]);
+    });
+
+    it("finds everything planted in a captured Assembly", () => {
+        expect(
+            checkDesign(CAPTURED_ASSEMBLY).issues.map((issue) => [
+                issue.type,
+                issue.subject
+            ])
+        ).toEqual([
+            [DesignIssueType.INSTANCE_BROKEN, "Part 5 <1>"],
+            [DesignIssueType.INSTANCE_FIXED, "Part 3 <1>"],
+            [DesignIssueType.INSTANCE_FLOATING, "Part 4 <1>"],
+            [DesignIssueType.INSTANCE_FLOATING, "Part 2 <3>"],
+            [DesignIssueType.FEATURE_SUPPRESSED, "Fastened 2"]
+        ]);
     });
 
     it("leaves an inserted sketch where it lands", () => {

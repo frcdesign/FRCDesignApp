@@ -272,6 +272,8 @@ export interface OnshapeAssemblyInstance {
     /** Optional only so a test fixture can leave it out. */
     name?: string;
     suppressed?: boolean;
+    /** A part's; empty when the part it was inserted from is gone. */
+    partId?: string;
     /** "DeletedElement" when the tab it came from is gone. */
     status?: string;
     /** "ERROR" when Onshape draws the instance red. */
@@ -317,7 +319,10 @@ export interface OnshapeAssemblyDefinition {
         /** The assembly's "Part number" property, when set. */
         partNumber?: string;
         /** Each pattern's copies, keyed by the instance they copy. */
-        patterns?: { seedToPatternInstances?: Record<string, string[]> }[];
+        patterns?: {
+            suppressed?: boolean;
+            seedToPatternInstances?: Record<string, string[]>;
+        }[];
     };
     parts: OnshapeAssemblyPart[];
     subAssemblies: OnshapeSubAssembly[];
@@ -355,11 +360,12 @@ type OnshapePartBodyType = "solid" | "sheet" | "composite";
 /** A part in a part studio (the subset we read). */
 export interface OnshapePart {
     partId: string;
-    /** The part's metadata properties, when set. */
-    partNumber?: string;
+    /** The part's metadata properties; null when unset. */
+    partNumber?: string | null;
     bodyType?: OnshapePartBodyType;
     name?: string;
-    description?: string;
+    description?: string | null;
+    /** Absent when unset. */
     material?: { displayName?: string };
     vendor?: string;
 }
@@ -409,10 +415,19 @@ export interface OnshapeFeatureListResponse {
     rollbackIndex?: number;
 }
 
+export type OnshapeSketchSolveStatus =
+    | "UNDERDEFINED"
+    | "WELL_DEFINED"
+    | "OVERDEFINED"
+    | "UNKNOWN";
+
 /** GET /partstudios/d/{did}/{wvm}/{wvmid}/e/{eid}/sketches (the subset we read). */
 export interface OnshapeSketchList {
-    /** Each also carries its definition status, under a key we don't rely on; see `sketchStatus`. */
-    sketches?: (Record<string, unknown> & { featureId?: string })[];
+    /** Unsuppressed sketches above the rollback bar. */
+    sketches?: {
+        featureId: string;
+        sketchSolveStatus?: OnshapeSketchSolveStatus;
+    }[];
 }
 
 // === external references (GET /documents/d/{did}/w/{wid}/externalreferences) ===

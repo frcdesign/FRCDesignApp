@@ -73,7 +73,9 @@ describe("checking a tab", () => {
     it("reads a Part Studio in three calls and answers what it breaks", async () => {
         const { onshapeApi, get } = mockPartStudio(() =>
             Promise.resolve({
-                sketches: [{ featureId: "S1", status: "UNDERDEFINED" }]
+                sketches: [
+                    { featureId: "S1", sketchSolveStatus: "UNDERDEFINED" }
+                ]
             })
         );
 
