@@ -12,6 +12,7 @@ import {
 } from "@backend/features/design-check/contract";
 import { ElementType } from "@backend/lib/onshape/element-type";
 import { PageNotice } from "../../../components/app-notice";
+import { Callout } from "../../../components/callout";
 import { StatusIcon } from "../../../components/status-icon";
 import {
     sendOpenFeatureMessage,
@@ -35,6 +36,8 @@ interface DesignCheckResultsProps {
     levels?: DesignIssueLevels;
     /** Absent when the levels can't be changed, as when they couldn't be read. */
     onChangeLevels?: () => void;
+    /** Checking again failed, so `result` is the check before. */
+    failedAgain?: boolean;
 }
 
 /**
@@ -42,7 +45,7 @@ interface DesignCheckResultsProps {
  * everything it was found on; a kind the caller turned off is only counted.
  */
 export function DesignCheckResults(props: DesignCheckResultsProps): ReactNode {
-    const { target, result, levels = {}, onChangeLevels } = props;
+    const { target, result, levels = {}, onChangeLevels, failedAgain } = props;
     const shown = showAtLevels(result.issues, levels);
     const groups = groupByType(shown);
     // What is off by default isn't mentioned; what the caller turned off is.
@@ -56,6 +59,9 @@ export function DesignCheckResults(props: DesignCheckResultsProps): ReactNode {
         <Text size="sm" c="dimmed">
             {m.designCheckSketchStatusUnknown()}
         </Text>
+    );
+    const failedNote = failedAgain && (
+        <Callout status={Status.ERROR} text={m.designCheckAgainFailed()} />
     );
     const hiddenNote = hidden > 0 && (
         <HiddenNote count={hidden} onChangeLevels={onChangeLevels} />
@@ -78,6 +84,7 @@ export function DesignCheckResults(props: DesignCheckResultsProps): ReactNode {
                 }
                 description={
                     <Stack gap="xs">
+                        {failedNote}
                         {hiddenNote || getCleanDescription(result.elementType)}
                         {sketchNote}
                         <Text size="xs" c="dimmed">
@@ -91,6 +98,7 @@ export function DesignCheckResults(props: DesignCheckResultsProps): ReactNode {
 
     return (
         <Stack gap="sm" p="sm">
+            {failedNote}
             <Group justify="space-between" wrap="nowrap">
                 <SeverityBadges
                     severities={shown.map((each) => each.severity)}

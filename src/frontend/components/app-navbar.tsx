@@ -52,7 +52,7 @@ import {
     getLibraryProgram,
     useLibraryId
 } from "../lib/library";
-import { useNeedsSignIn } from "../features/auth/access-level";
+import { useIsSignedIn, useNeedsSignIn } from "../features/auth/access-level";
 import { startSignIn } from "../features/auth/sign-in";
 import { getLibraryVersionQuery } from "../features/library/queries";
 import { LibraryId } from "@backend/features/library/library-id";
@@ -149,13 +149,10 @@ export function SignInButton(): ReactNode {
 
     return (
         <Button variant="outline" size="sm" my="auto" onClick={startSignIn}>
-            Sign in
+            {m.navbarSignIn()}
         </Button>
     );
 }
-
-/** What the menu files the pages that are not a library under. */
-const UTILITIES_GROUP = "Utilities";
 
 /** One of the app's top-level pages, as the page picker lists it. */
 interface AppPage {
@@ -192,7 +189,7 @@ function useAppPages(): AppPage[] {
 
     const versionManager: AppPage = {
         tab: UtilityTab.VERSION_MANAGER,
-        group: UTILITIES_GROUP,
+        group: m.navbarUtilities(),
         icon: GitBranchIcon,
         color: AppColor.VERSION_MANAGER,
         badge: isVersionManagerNew ? <NewBadge /> : undefined,
@@ -205,7 +202,7 @@ function useAppPages(): AppPage[] {
             ? [
                   {
                       tab: UtilityTab.DESIGN_CHECK,
-                      group: UTILITIES_GROUP,
+                      group: m.navbarUtilities(),
                       icon: ListChecksIcon,
                       color: AppColor.DESIGN_CHECK,
                       badge: isDesignCheckNew ? <NewBadge /> : undefined,
@@ -360,10 +357,12 @@ function DesignCheckLevelsButton(): ReactNode {
 /** Checks the tab again, which spends Onshape calls, so only when asked. */
 function DesignCheckRefreshButton(): ReactNode {
     const target = useTargetElement();
+    const isSignedIn = useIsSignedIn();
     const isFetching = useIsFetching({
         queryKey: target ? designCheckQueryKey(target) : ["design-check"]
     });
-    if (!target) return null;
+    // Signed out, there is nothing to check again.
+    if (!target || !isSignedIn) return null;
     return (
         <RefreshButton
             label={m.designCheckAgain()}
@@ -378,7 +377,7 @@ function ThemeToggle(): ReactNode {
     const isDark = theme === Theme.DARK;
     return (
         <ActionIcon
-            title={isDark ? "Light mode" : "Dark mode"}
+            title={isDark ? m.navbarLightMode() : m.navbarDarkMode()}
             my="auto"
             size="input-sm"
             onClick={() =>
@@ -397,7 +396,7 @@ function ThemeToggle(): ReactNode {
 function SettingsButton() {
     return (
         <ActionIcon
-            title="Settings"
+            title={m.navbarSettings()}
             my="auto"
             // Matches the filter button.
             size="input-sm"

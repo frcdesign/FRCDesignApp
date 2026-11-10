@@ -26,7 +26,7 @@ export function getTabName(tabId: AppTab): string {
 function getUtilityName(tabId: UtilityTab): string {
     switch (tabId) {
         case UtilityTab.VERSION_MANAGER:
-            return "Version Manager";
+            return m.versionManagerTabName();
         case UtilityTab.DESIGN_CHECK:
             return m.designCheckTabName();
     }

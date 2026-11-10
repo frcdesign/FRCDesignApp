@@ -396,7 +396,7 @@ describe("design check levels", () => {
         renderWithProviders(<DesignCheckLevels />, queryClient);
     }
 
-    it("saves a change on top of the caller's other levels", async () => {
+    it("saves a change on top of the caller's other levels, and shows it at once", async () => {
         renderLevels({
             [DesignIssueType.PART_NO_DESCRIPTION]: BuildIssueSeverity.INFO
         });
@@ -414,11 +414,13 @@ describe("design check levels", () => {
                 }
             }
         });
+        expect(screen.getByText("FRCDesign's default: Error")).toBeTruthy();
     });
 
     it("leaves out a level put back to FRCDesign's, and resets them all", async () => {
         renderLevels({
-            [DesignIssueType.PART_NO_DESCRIPTION]: BuildIssueSeverity.INFO
+            [DesignIssueType.PART_NO_DESCRIPTION]: BuildIssueSeverity.INFO,
+            [DesignIssueType.SKETCH_UNDERDEFINED]: BuildIssueSeverity.WARNING
         });
 
         await userEvent.click(
@@ -428,8 +430,29 @@ describe("design check levels", () => {
         await userEvent.click(screen.getByText("Reset to defaults"));
 
         expect(apiPost.mock.calls.map(([, options]) => options.body)).toEqual([
-            { levels: {} },
+            {
+                levels: {
+                    [DesignIssueType.SKETCH_UNDERDEFINED]: "warning"
+                }
+            },
             { levels: {} }
         ]);
+        expect(screen.queryByText("Reset to defaults")).toBeNull();
+    });
+
+    it("puts the saved levels back when a save fails", async () => {
+        apiPost.mockRejectedValueOnce(new Error("offline"));
+        renderLevels({
+            [DesignIssueType.PART_NO_DESCRIPTION]: BuildIssueSeverity.INFO
+        });
+
+        await userEvent.click(
+            screen.getByLabelText("Part with no description")
+        );
+        await userEvent.click(screen.getByRole("option", { name: "Off" }));
+
+        expect(
+            await screen.findByText("FRCDesign's default: Off")
+        ).toBeTruthy();
     });
 });

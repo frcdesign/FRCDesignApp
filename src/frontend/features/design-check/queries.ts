@@ -1,4 +1,9 @@
-import { skipToken, useMutation, useQuery } from "@tanstack/react-query";
+import {
+    skipToken,
+    useMutation,
+    useQuery,
+    useQueryClient
+} from "@tanstack/react-query";
 import {
     type DesignCheckLevelsOut,
     type DesignCheckOut,
@@ -56,7 +61,9 @@ export function useDesignCheckLevelsQuery() {
     return useQuery<DesignCheckLevelsOut>({
         queryKey: designCheckLevelsQueryKey(),
         queryFn: isSignedIn ? () => apiGet("/design-check/levels") : skipToken,
-        staleTime: Infinity
+        staleTime: Infinity,
+        // The page waits on them, and FRCDesign's stand in when they fail.
+        retry: false
     });
 }
 
@@ -73,22 +80,44 @@ export function withLevel(
     return next;
 }
 
-/** Saves all of the caller's levels, shown before the server confirms. */
+const SAVE_LEVELS_KEY = ["save-design-check-levels"];
+
+/**
+ * Saves all of the caller's levels, shown before the server confirms. Saves
+ * run one at a time, so the server keeps the last pick, and the levels are
+ * read back only once none is waiting.
+ */
 export function useSaveDesignCheckLevelsMutation() {
+    const client = useQueryClient();
     const queryKey = designCheckLevelsQueryKey();
+    const showError = getAppErrorHandler(m.designCheckLevelsFailed());
     return useMutation({
-        mutationKey: ["save-design-check-levels"],
+        mutationKey: SAVE_LEVELS_KEY,
+        scope: { id: SAVE_LEVELS_KEY.join() },
         mutationFn: (levels: DesignIssueLevels) =>
             apiPost<DesignCheckLevelsOut>("/design-check/levels", {
                 body: { levels }
             }),
         onMutate: async (levels) => {
-            await queryClient.cancelQueries({ queryKey });
-            queryClient.setQueryData<DesignCheckLevelsOut>(queryKey, {
+            await client.cancelQueries({ queryKey });
+            const previous =
+                client.getQueryData<DesignCheckLevelsOut>(queryKey);
+            client.setQueryData<DesignCheckLevelsOut>(queryKey, {
                 levels
             });
+            return { previous };
         },
-        onError: getAppErrorHandler(m.designCheckLevelsFailed()),
-        onSettled: () => queryClient.invalidateQueries({ queryKey })
+        onError: (error, _levels, saved) => {
+            if (saved?.previous) {
+                client.setQueryData(queryKey, saved.previous);
+            }
+            showError(error);
+        },
+        onSettled: async () => {
+            // This save still counts as one in flight.
+            if (client.isMutating({ mutationKey: SAVE_LEVELS_KEY }) === 1) {
+                await client.invalidateQueries({ queryKey });
+            }
+        }
     });
 }

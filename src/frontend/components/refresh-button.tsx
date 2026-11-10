@@ -2,6 +2,7 @@ import { ActionIcon, Tooltip } from "@mantine/core";
 import { ArrowClockwiseIcon } from "@phosphor-icons/react";
 import { type ReactNode } from "react";
 import { IconSize, PrimaryColor } from "../lib/style-constants";
+import { m } from "../paraglide/messages";
 
 interface RefreshButtonProps {
     loading: boolean;
@@ -12,7 +13,7 @@ interface RefreshButtonProps {
 
 /** A navbar's refresh, spinning in the page's color while it works. */
 export function RefreshButton(props: RefreshButtonProps): ReactNode {
-    const { loading, onClick, label = "Refresh" } = props;
+    const { loading, onClick, label = m.navbarRefresh() } = props;
     return (
         <Tooltip label={label}>
             <ActionIcon
