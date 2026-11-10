@@ -1,29 +1,10 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import { Button } from "@mantine/core";
-import { ListChecksIcon } from "@phosphor-icons/react";
-import { type ReactNode, useEffect } from "react";
-import { Hint } from "@backend/features/hints/contract";
-import {
-    PageError,
-    PageLoading,
-    PageNotice
-} from "../../components/app-notice";
 import { UtilityTab } from "../../lib/app-tab";
 import { getUiLibraryId } from "../../lib/library";
 import { toTargetElement } from "../../lib/onshape-launch";
-import { useOnshapeLaunch, useTargetElement } from "../../lib/onshape-params";
-import { IconSize } from "../../lib/style-constants";
+import { useOnshapeLaunch } from "../../lib/onshape-params";
 import { updateUiState } from "../../lib/ui-state";
-import { useNeedsSignIn } from "../../features/auth/access-level";
-import { startSignIn } from "../../features/auth/sign-in";
-import { DesignCheckResults } from "../../features/design-check/components/design-check-results";
-import { openDesignCheckLevels } from "../../features/design-check/open-design-check-levels";
-import {
-    useDesignCheckLevelsQuery,
-    useDesignCheckQuery
-} from "../../features/design-check/queries";
-import { useMarkHintSeen } from "../../features/hints/queries";
-import { m } from "../../paraglide/messages";
+import { DesignCheckPage } from "../../features/design-check/components/design-check-page";
 
 export const Route = createFileRoute("/app/design-check")({
     component: DesignCheckPage,
@@ -43,47 +24,3 @@ export const Route = createFileRoute("/app/design-check")({
         }
     }
 });
-
-function DesignCheckPage(): ReactNode {
-    const target = useTargetElement();
-    const needsSignIn = useNeedsSignIn();
-    const query = useDesignCheckQuery(target);
-    const levels = useDesignCheckLevelsQuery();
-    const markOpened = useMarkHintSeen(Hint.OPENED_DESIGN_CHECK);
-
-    useEffect(markOpened, [markOpened]);
-
-    if (!target) {
-        // What renders on the way out, `beforeLoad` having redirected.
-        return <PageLoading title={m.designCheckChecking()} />;
-    }
-    if (needsSignIn) {
-        return (
-            <PageNotice
-                icon={<ListChecksIcon size={IconSize.SECTION} />}
-                title={m.designCheckSignInTitle()}
-                description={m.designCheckSignInDescription()}
-                action={
-                    <Button onClick={startSignIn}>
-                        {m.designCheckSignIn()}
-                    </Button>
-                }
-            />
-        );
-    }
-    if (query.isError) {
-        return <PageError title={m.designCheckFailed()} error={query.error} />;
-    }
-    // Levels that can't be read leave FRCDesign's, and nothing to change them with.
-    if (!query.data || levels.isPending) {
-        return <PageLoading title={m.designCheckChecking()} />;
-    }
-    return (
-        <DesignCheckResults
-            target={target}
-            result={query.data}
-            levels={levels.data?.levels ?? {}}
-            onChangeLevels={levels.data && openDesignCheckLevels}
-        />
-    );
-}

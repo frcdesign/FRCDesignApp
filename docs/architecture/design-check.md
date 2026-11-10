@@ -211,12 +211,21 @@ function getDesignIssueLevelName(level: DesignIssueLevel): string;
 // The levels list's sections: both kinds of tab, Part Studios, Assemblies.
 function getLevelSection(type: DesignIssueType): LevelSection;
 function getLevelSectionName(section: LevelSection): string;
+
+enum LevelSection {
+    BOTH = "both",
+    PART_STUDIOS = "part-studios",
+    ASSEMBLIES = "assemblies"
+}
 ```
 
-`src/frontend/routes/app/design-check.tsx` and
+`src/frontend/routes/app/design-check.tsx` (the route, with its redirect),
+`src/frontend/features/design-check/components/design-check-page.tsx` and
 `src/frontend/features/design-check/components/design-check-results.tsx`
 
 ```ts
+// Waits for the check and the caller's levels; keeps the last results when checking again fails.
+function DesignCheckPage(): ReactNode;
 function DesignCheckResults(props: DesignCheckResultsProps): ReactNode;
 
 interface DesignCheckResultsProps {
@@ -226,8 +235,12 @@ interface DesignCheckResultsProps {
     levels?: DesignIssueLevels;
     /** Absent when the levels can't be changed, as when they couldn't be read. */
     onChangeLevels?: () => void;
+    /** Checking again failed, so `result` is the check before. */
+    failedAgain?: boolean;
 }
 ```
+
+`TargetElement` is the launch's tab (`src/frontend/lib/onshape-launch.ts`).
 
 `src/frontend/features/design-check/components/design-check-levels.tsx` and
 `src/frontend/features/design-check/open-design-check-levels.tsx`
@@ -281,8 +294,8 @@ row.
 
 **Query cache** the last check of each tab, never stale, dropped five minutes
 after the page closes (TanStack's default), so coming back later checks again.
-The caller's levels, never stale; a save sets them at once and reads them
-again when it settles.
+The caller's levels, never stale; a save sets them at once, and they are read
+back once no other save is waiting.
 
 **KV** `seen-hints:`, `Hint.OPENED_DESIGN_CHECK` once the page has been opened
 ([auth.md](./auth.md)).
@@ -337,7 +350,8 @@ so is left out unmentioned.
    (`sendOpenFeatureMessage`); a suppressed Part Studio feature, which Onshape
    won't open, is named only. Clicking a part's or a part instance's selects
    it in the Onshape window (`sendSelectPartMessage`): a part by its id, an
-   instance by its id and its part's. A broken instance is named only.
+   instance by its id and its part's. A sub-assembly or broken instance is
+   named only.
 
 ### Levels
 
@@ -347,8 +361,9 @@ so is left out unmentioned.
    FRCDesign's default under one that was changed.
 2. Picking a level saves every one of the caller's levels,
    `POST /api/design-check/levels`, shown at once (`withLevel`), so the page
-   behind redraws without checking again. A level set back to FRCDesign's is
-   left out, so it follows any change to FRCDesign's.
+   behind redraws without checking again. Saves run one at a time, so the
+   server keeps the last pick. A level set back to FRCDesign's is left out, so
+   it follows any change to FRCDesign's.
 3. **Reset to defaults**, once anything was changed, saves none, which deletes
    the row.
 
@@ -378,17 +393,18 @@ In [strings/design-check.md](../strings/design-check.md).
 
 ## Failure and recovery
 
-| What goes wrong                                 | Shows as                                                    | Put right by    |
-| ----------------------------------------------- | ----------------------------------------------------------- | --------------- |
-| Signed out                                      | The sign-in notice                                          | **Sign in**     |
-| Onshape refuses or rate-limits the caller       | "Failed to check this tab.", with **Send a report**         | **Check again** |
-| Any other call fails or times out               | The same                                                    | **Check again** |
-| A feature lost one of a box's picks, and builds | "Feature with a warning", though Onshape reports it `OK`    | —               |
-| A feature lost every pick in a box, and builds  | Nothing: a box of default planes resolves to nothing too    | —               |
-| The sketches can't be listed, or time out       | The other issues, and a note that sketches went unchecked   | **Check again** |
-| Onshape stops sending `sketchSolveStatus`       | The note that sketches went unchecked, on every Part Studio | A change here   |
-| The levels can't be read                        | Every issue at FRCDesign's level, and no **Levels**         | Reopening       |
-| A level fails to save                           | "Failed to save your levels.", and the saved levels again   | Picking again   |
+| What goes wrong                                 | Shows as                                                                              | Put right by    |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------- | --------------- |
+| Signed out                                      | The sign-in notice                                                                    | **Sign in**     |
+| Onshape refuses or rate-limits the caller       | "Failed to check this tab.", with **Send a report**                                   | **Check again** |
+| Any other call fails or times out               | The same                                                                              | **Check again** |
+| **Check again** fails                           | The last results, under "Failed to check this tab again. These are the last results." | **Check again** |
+| A feature lost one of a box's picks, and builds | "Feature with a warning", though Onshape reports it `OK`                              | —               |
+| A feature lost every pick in a box, and builds  | Nothing: a box of default planes resolves to nothing too                              | —               |
+| The sketches can't be listed, or time out       | The other issues, and a note that sketches went unchecked                             | **Check again** |
+| Onshape stops sending `sketchSolveStatus`       | The note that sketches went unchecked, on every Part Studio                           | A change here   |
+| The levels can't be read                        | Every issue at FRCDesign's level, and no **Levels**                                   | Reopening       |
+| A level fails to save                           | "Failed to save your levels.", and the levels before it                               | Picking again   |
 
 ## Decisions
 
