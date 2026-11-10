@@ -24,7 +24,10 @@ import {
     type LoggedVersionRun,
     type LoggedDesignCheck
 } from "./logged-event";
-import { type DesignIssueType } from "../design-check/contract";
+import {
+    type DesignIssueType,
+    isCleanAtDefaults
+} from "../design-check/contract";
 import type { LibraryId } from "../library/library-id";
 import {
     dailyConfigurationMetrics,
@@ -199,9 +202,9 @@ function countVersionRunDay(db: Db, run: LoggedVersionRun) {
         });
 }
 
-/** A day's checks of one kind of tab, and how many found nothing. */
+/** A day's checks of one kind of tab, and how many found nothing FRCDesign's levels show. */
 function countDesignCheckDay(db: Db, check: LoggedDesignCheck) {
-    const isClean = Object.keys(check.designIssueCounts).length === 0;
+    const isClean = isCleanAtDefaults(check.designIssueCounts);
     const values = {
         day: check.day,
         elementType: check.checkedElementType,

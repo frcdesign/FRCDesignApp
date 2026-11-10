@@ -7,6 +7,7 @@ import {
     type DesignIssue,
     type DesignIssueLevels,
     DesignIssueType,
+    getDefaultLevel,
     getShownSeverity
 } from "@backend/features/design-check/contract";
 import { ElementType } from "@backend/lib/onshape/element-type";
@@ -38,13 +39,18 @@ interface DesignCheckResultsProps {
 
 /**
  * One box per kind of issue, worst first at the caller's levels, naming
- * everything it was found on; a kind turned off is only counted.
+ * everything it was found on; a kind the caller turned off is only counted.
  */
 export function DesignCheckResults(props: DesignCheckResultsProps): ReactNode {
     const { target, result, levels = {}, onChangeLevels } = props;
     const shown = showAtLevels(result.issues, levels);
     const groups = groupByType(shown);
-    const hidden = result.issues.length - shown.length;
+    // What is off by default isn't mentioned; what the caller turned off is.
+    const hidden = result.issues.filter(
+        (issue) =>
+            getDefaultLevel(issue.type) !== "off" &&
+            getShownSeverity(issue.type, levels) === undefined
+    ).length;
     const checkedAt = m.designCheckCheckedAt({ checkedAt: result.checkedAt });
     const sketchNote = result.sketchStatusUnknown && (
         <Text size="sm" c="dimmed">
