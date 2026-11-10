@@ -26,7 +26,7 @@ listed below that.
 | "Part with no description"      | "Describe it, so others know what it is."                                                                     | Info     | A solid part has no description                               | **⚑** New                   |
 | "Fixed instance"                | "Fasten the Origin Cube to the assembly origin instead of fixing parts."                                      | Warning  | A top-level assembly instance is fixed                        | **⚑** New                   |
 | "Floating instance"             | "Mate or group it, so it can't drift."                                                                        | Warning  | A top-level instance isn't mated, grouped, fixed or patterned | **⚑** New                   |
-| "Broken instance"               | "What it was inserted from is gone or failing. Replace it or delete it."                                      | Error    | An instance's part or tab is gone, or Onshape draws it red    | **⚑** New                   |
+| "Broken instance"               | "What it was inserted from is gone or failing. Replace it or delete it."                                      | Error    | Onshape draws an instance red: its source is gone             | **⚑** New                   |
 
 ## The page
 

@@ -177,8 +177,11 @@ Severity follows from the type alone (`getDesignIssueSeverity`).
 | `ROLLBACK_NOT_AT_END`                                              | Warning                | A Part Studio's rollback bar above its last feature                                                       |
 | `PART_NO_MATERIAL` / `PART_NO_PART_NUMBER` / `PART_NO_DESCRIPTION` | Warning / Info / Info  | A solid part missing one, the Origin Cube's own cube aside                                                |
 | `INSTANCE_FIXED`                                                   | Warning                | A top-level instance that is fixed                                                                        |
-| `INSTANCE_FLOATING`                                                | Warning                | A top-level instance no unsuppressed mate or group holds and no pattern copies, inserted sketches aside   |
-| `INSTANCE_BROKEN`                                                  | Error                  | An instance whose part or tab is gone, or that Onshape draws red                                          |
+| `INSTANCE_FLOATING`                                                | Warning                | A top-level instance no unsuppressed mate or group holds and no pattern copies, broken ones aside         |
+| `INSTANCE_BROKEN`                                                  | Error                  | An instance Onshape sends with only its name and id, or a part instance with an empty part id             |
+
+The assembly is read without non-solid instances, so an inserted sketch is
+never checked.
 
 The Origin Cube is FRCDesign's FeatureScript
 (https://frcdesign.org/best-practices/assembly-setup/), known by its document

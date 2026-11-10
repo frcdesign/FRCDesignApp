@@ -252,12 +252,11 @@ function checkParts(snapshot: PartStudioSnapshot): DesignIssue[] {
     });
 }
 
-/** The part or tab it was inserted from is gone, or Onshape draws it red; INFO and UNKNOWN aren't broken. */
+/** What it was inserted from is gone: Onshape no longer says what it is, or which part. */
 function isBroken(instance: OnshapeAssemblyInstance): boolean {
     return (
-        (instance.type === "Part" && instance.partId === "") ||
-        instance.status === "DeletedElement" ||
-        instance.errorStatus === "ERROR"
+        instance.type === undefined ||
+        (instance.type === "Part" && instance.partId === "")
     );
 }
 
@@ -315,15 +314,10 @@ function checkInstances(snapshot: AssemblySnapshot): DesignIssue[] {
         if (isBrokenInstance) {
             issues.push({ type: DesignIssueType.INSTANCE_BROKEN, ...target });
         }
+        // A broken instance has nothing left to mate, so it isn't floating too.
         if (fixed.has(instance.id)) {
             issues.push({ type: DesignIssueType.INSTANCE_FIXED, ...target });
-        } else if (
-            // An inserted sketch is a reference, left where it lands, and a
-            // broken instance has nothing left to mate.
-            instance.type !== "Feature" &&
-            !isBrokenInstance &&
-            !held.has(instance.id)
-        ) {
+        } else if (!isBrokenInstance && !held.has(instance.id)) {
             issues.push({ type: DesignIssueType.INSTANCE_FLOATING, ...target });
         }
         return issues;
