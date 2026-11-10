@@ -113,6 +113,144 @@ describe("design check results", () => {
         );
     });
 
+    it("opens a suppressed mate, but names a suppressed Part Studio feature only", async () => {
+        const postMessage = vi
+            .spyOn(window.parent, "postMessage")
+            .mockImplementation(() => undefined);
+        const suppressed = (subject: string, featureId: string) =>
+            result({
+                issues: [
+                    {
+                        type: DesignIssueType.FEATURE_SUPPRESSED,
+                        subject,
+                        featureId
+                    }
+                ]
+            });
+        const { unmount } = renderWithProviders(
+            <DesignCheckResults
+                target={target}
+                result={suppressed("Sketch 5", "S5")}
+            />
+        );
+
+        expect(screen.queryByRole("button", { name: "Sketch 5" })).toBeNull();
+        unmount();
+
+        renderWithProviders(
+            <DesignCheckResults
+                target={{ ...target, elementType: ElementType.ASSEMBLY }}
+                result={{
+                    ...suppressed("Fastened 2", "M2"),
+                    elementType: ElementType.ASSEMBLY
+                }}
+            />
+        );
+        await userEvent.click(
+            screen.getByRole("button", { name: "Fastened 2" })
+        );
+
+        expect(postMessage).toHaveBeenCalledTimes(1);
+        expect(postMessage).toHaveBeenCalledWith(
+            expect.objectContaining({
+                messageName: "openFeatureDialog",
+                featureId: "M2"
+            }),
+            "*"
+        );
+    });
+
+    it("selects a part instance in Onshape when its name is clicked", async () => {
+        const postMessage = vi
+            .spyOn(window.parent, "postMessage")
+            .mockImplementation(() => undefined);
+        renderWithProviders(
+            <DesignCheckResults
+                target={{ ...target, elementType: ElementType.ASSEMBLY }}
+                result={result({
+                    elementType: ElementType.ASSEMBLY,
+                    issues: [
+                        {
+                            type: DesignIssueType.INSTANCE_BROKEN,
+                            subject: "Gone <1>",
+                            instanceId: "gone"
+                        },
+                        {
+                            type: DesignIssueType.INSTANCE_FLOATING,
+                            subject: "Plate <1>",
+                            instanceId: "M1",
+                            partId: "JHD"
+                        },
+                        {
+                            type: DesignIssueType.INSTANCE_FLOATING,
+                            subject: "Plate <2>",
+                            instanceId: "M2",
+                            partId: "JHD"
+                        }
+                    ]
+                })}
+            />
+        );
+
+        await userEvent.click(screen.getByText("Plate <2>"));
+        await userEvent.click(screen.getByText("Gone <1>"));
+
+        expect(postMessage).toHaveBeenCalledTimes(1);
+        expect(postMessage).toHaveBeenCalledWith(
+            expect.objectContaining({
+                messageName: "requestSelectionHighlight",
+                selections: [
+                    {
+                        selectionType: "ENTITY",
+                        entityType: "BODY",
+                        selectionId: "JHD",
+                        occurrencePath: ["M2"]
+                    }
+                ],
+                documentId: "doc",
+                workspaceId: "work",
+                elementId: "tab"
+            }),
+            "*"
+        );
+    });
+
+    it("selects a part in a Part Studio when its name is clicked", async () => {
+        const postMessage = vi
+            .spyOn(window.parent, "postMessage")
+            .mockImplementation(() => undefined);
+        renderWithProviders(
+            <DesignCheckResults
+                target={target}
+                result={result({
+                    issues: [
+                        {
+                            type: DesignIssueType.PART_NO_MATERIAL,
+                            subject: "Plate",
+                            partId: "JHD"
+                        }
+                    ]
+                })}
+            />
+        );
+
+        await userEvent.click(screen.getByText("Plate"));
+
+        expect(postMessage).toHaveBeenCalledWith(
+            expect.objectContaining({
+                messageName: "requestSelectionHighlight",
+                selections: [
+                    {
+                        selectionType: "ENTITY",
+                        entityType: "BODY",
+                        selectionId: "JHD"
+                    }
+                ]
+            }),
+            "*"
+        );
+    });
+
     it("says when sketches went unchecked", () => {
         renderWithProviders(
             <DesignCheckResults

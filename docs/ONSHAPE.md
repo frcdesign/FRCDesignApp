@@ -141,8 +141,21 @@ problem planted, whose answers are kept, cut down, in
 - **An inserted sketch** is left out of the assembly definition with
   `includeNonSolids=false`, which `getAssembly` sends by default — _observed_.
 - **`openFeatureDialog`**, a client message, opens a feature's dialog in a
-  workspace's Part Studio — _documented_. That it opens a mate in an Assembly
-  is _unverified_.
+  workspace's Part Studio — _documented_ — and a mate's in an Assembly,
+  suppressed or not — _observed_. A suppressed Part Studio feature doesn't
+  open: the message does nothing, and Onshape's own list offers no **Edit** for
+  it — _observed_.
+- **`requestSelectionHighlight`**, a client message, selects the entities in
+  its `selections` in the window. Onshape's example is a Part Studio face,
+  `selectionType: "ENTITY"` with its `entityType` and its `selectionId`, the id
+  `getPartStudioBodyDetails` gives — _documented_. In an Assembly, an entity
+  also takes the `occurrencePath` of the instance it's in, and still needs the
+  part's `selectionId`: the path only says which instance to look in. A
+  top-level part instance's `entityType: "BODY"`, with the instance's `partId`
+  as its `selectionId` and `[instanceId]` as its path, selects that instance,
+  in the window and in the instance list — _observed_. In a Part Studio, a
+  part's `partId` as a `BODY` entity's `selectionId`, with no path, selects the
+  part — _observed_.
 
 ## Configurations
 
@@ -209,7 +222,11 @@ the app makes of them.
   is in: an enterprise's id, and `cad` everywhere else. Onshape sends
   `sessionCompanyId` only when the extension's action url names
   `{$sessionCompanyId}` — _observed_. [auth.md](./architecture/auth.md) covers
-  sign-in.
+  sign-in. A newly made OAuth app's extension, on 2026-11-10, got the
+  placeholder back unfilled, with Onshape's own `sessionCompanyId=cad` added
+  after `companyId`; sign-in sent the placeholder as `company_id`, and Onshape
+  answered with a JSON error in place of its sign-in page — _observed_ once.
+  Why that app's isn't filled is _unverified_.
 - **OAuth's `company_id`** takes an enterprise's id and nothing else: a
   classroom's id is refused as "Invalid company ID", and `cad` is rejected.
   Without one, Onshape asks the caller which account to use — _observed_.

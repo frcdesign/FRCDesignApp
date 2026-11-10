@@ -465,6 +465,25 @@ describe("an Assembly", () => {
         expect(types(snapshot)).toEqual([DesignIssueType.INSTANCE_FLOATING]);
     });
 
+    it("names the part an instance shows, unless the part is gone", () => {
+        const snapshot = assembly({
+            instances: [
+                instance("plate", { partId: "JHD" }),
+                instance("gone", { partId: "" })
+            ]
+        });
+
+        expect(
+            checkDesign(snapshot).issues.map((issue) => [
+                issue.instanceId,
+                issue.partId
+            ])
+        ).toEqual([
+            ["gone", undefined],
+            ["plate", "JHD"]
+        ]);
+    });
+
     it("calls a part instance broken once its part is gone, and not floating", () => {
         const snapshot = assembly({
             instances: [instance("gone", { partId: "" })]

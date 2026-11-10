@@ -275,14 +275,12 @@ export interface OnshapeAssemblyInstance {
     /** Optional only so a test fixture can leave it out. */
     name?: string;
     suppressed?: boolean;
-    /** A part's; empty when the part it was inserted from is gone. */
+    /** A part's id in its Part Studio; empty when the part it was inserted from is gone. */
     partId?: string;
     /** The tab the instance came from, and the feature within it for a sketch. */
     documentId?: string;
     elementId?: string;
     featureId?: string;
-    /** A part's id in its Part Studio. */
-    partId?: string;
     /** Encoded, the way it's inserted. */
     configuration?: string;
     fullConfiguration?: string;

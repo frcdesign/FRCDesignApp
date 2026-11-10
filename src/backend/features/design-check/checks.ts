@@ -311,7 +311,9 @@ function checkInstances(snapshot: AssemblySnapshot): DesignIssue[] {
         }
         const target = {
             subject: instance.name ?? instance.id,
-            instanceId: instance.id
+            instanceId: instance.id,
+            // Empty once the part is deleted, which leaves nothing to select.
+            partId: instance.partId || undefined
         };
         const issues: DesignIssue[] = [];
         const isBrokenInstance = isBroken(instance);

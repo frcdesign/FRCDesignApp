@@ -222,8 +222,39 @@ export function sendStopRequestMessage(
     }
 }
 
+/**
+ * Selects a part in the Onshape window. In an assembly, `occurrencePath` says
+ * which instance, and Onshape still needs the part's id to select anything in it.
+ * In a Part Studio the part's id alone selects it, so no path is sent.
+ */
+export function sendSelectPartMessage(
+    elementPath: ElementPath,
+    partId: string,
+    occurrencePath?: string[]
+) {
+    expectSelection([
+        {
+            entityType: "BODY",
+            selectionId: partId,
+            occurrencePath: occurrencePath ?? []
+        }
+    ]);
+    sendMessage(elementPath, {
+        messageName: MessageType.REQUEST_HIGHLIGHT_SELECTION,
+        messageId: `${HIGHLIGHT_PREFIX}${++highlights}`,
+        selections: [
+            {
+                selectionType: "ENTITY",
+                entityType: "BODY",
+                selectionId: partId,
+                ...(occurrencePath && { occurrencePath })
+            }
+        ]
+    });
+}
+
 /*
- * Highlighting the insert location was tried and dropped:
+ * The insert location isn't highlighted: for its mate connector,
  * `requestSelectionHighlight` answered SUCCESS and painted nothing. Undocumented
  * findings from that:
  *

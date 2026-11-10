@@ -27,8 +27,9 @@ export interface DesignIssue {
     type: DesignIssueType;
     /** The feature, part or instance's name in Onshape; absent for one about the whole tab. */
     subject?: string;
-    /** Set for a feature or mate, which the page opens in Onshape. */
+    /** Set for a feature or mate, which the page opens in Onshape where Onshape will. */
     featureId?: string;
+    /** A part's, or the part a part instance shows; the page selects it in Onshape. */
     partId?: string;
     instanceId?: string;
     /** The Origin Cube's place in the list, or how many features the rollback bar hides. */
