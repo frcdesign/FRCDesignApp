@@ -5,8 +5,9 @@ import {
     type DesignIssueLevel,
     type DesignIssueLevels,
     DesignIssueType,
+    getDefaultLevel,
     getDesignIssueLevel,
-    getDesignIssueSeverity
+    isLevelChanged
 } from "@backend/features/design-check/contract";
 import { IconSize } from "../../../lib/style-constants";
 import { m } from "../../../paraglide/messages";
@@ -38,7 +39,7 @@ export function DesignCheckLevels(): ReactNode {
         return <Loader size="sm" mx="auto" />;
     }
     const { levels } = query.data;
-    const hasChanges = Object.keys(levels).length > 0;
+    const hasChanges = ISSUE_TYPES.some((type) => isLevelChanged(type, levels));
 
     return (
         <Stack gap="md">
@@ -83,7 +84,7 @@ function LevelRow(props: LevelRowProps): ReactNode {
     const { type, levels, onChange } = props;
     const id = useId();
     const level = getDesignIssueLevel(type, levels);
-    const isChanged = levels[type] !== undefined;
+    const isChanged = isLevelChanged(type, levels);
 
     return (
         <Group justify="space-between" wrap="nowrap" gap="sm">
@@ -95,7 +96,7 @@ function LevelRow(props: LevelRowProps): ReactNode {
                     <Text size="xs" c="dimmed">
                         {m.designCheckLevelDefault({
                             level: getDesignIssueLevelName(
-                                getDesignIssueSeverity(type)
+                                getDefaultLevel(type)
                             )
                         })}
                     </Text>

@@ -99,7 +99,8 @@ describe("design check results", () => {
                 "It leaves 3 features out of the model. Drag it to the bottom of the list."
             )
         ).toBeTruthy();
-        expect(screen.getByText("3 warnings")).toBeTruthy();
+        expect(screen.getByText("2 errors")).toBeTruthy();
+        expect(screen.getByText("1 info")).toBeTruthy();
     });
 
     it("opens a feature in Onshape when its name is clicked", async () => {
@@ -280,11 +281,7 @@ describe("design check results", () => {
                 target={target}
                 result={result({
                     issues: [
-                        {
-                            type: DesignIssueType.SKETCH_UNDERDEFINED,
-                            subject: "Sketch 1",
-                            featureId: "S1"
-                        },
+                        { type: DesignIssueType.ROLLBACK_NOT_AT_END, count: 1 },
                         {
                             type: DesignIssueType.FEATURE_SUPPRESSED,
                             subject: "Sketch 5",
@@ -309,16 +306,17 @@ describe("design check results", () => {
         expect(
             screen
                 .getAllByText(
-                    /^(Part with no description|Under-defined sketch)$/
+                    /^(Part with no description|Rollback bar isn't at the end)$/
                 )
                 .map((heading) => heading.textContent)
-        ).toEqual(["Part with no description", "Under-defined sketch"]);
+        ).toEqual([
+            "Part with no description",
+            "Rollback bar isn't at the end"
+        ]);
         expect(screen.getByText("1 error")).toBeTruthy();
-        expect(screen.getByText("1 warning")).toBeTruthy();
+        expect(screen.getByText("1 info")).toBeTruthy();
         expect(screen.queryByText("Sketch 5")).toBeNull();
-        expect(
-            screen.getByText(/An issue is hidden by your levels/)
-        ).toBeTruthy();
+        expect(screen.getByText(/An issue found is turned off/)).toBeTruthy();
 
         await userEvent.click(screen.getByText("Change levels"));
 
@@ -345,9 +343,7 @@ describe("design check results", () => {
         expect(
             screen.getByText("Every issue found is turned off")
         ).toBeTruthy();
-        expect(
-            screen.getByText(/2 issues are hidden by your levels/)
-        ).toBeTruthy();
+        expect(screen.getByText(/2 issues found are turned off/)).toBeTruthy();
         expect(screen.queryByText("No issues found")).toBeNull();
     });
 
@@ -376,30 +372,34 @@ describe("design check levels", () => {
     }
 
     it("saves a change on top of the caller's other levels", async () => {
-        renderLevels({ [DesignIssueType.PART_NO_DESCRIPTION]: "off" });
+        renderLevels({
+            [DesignIssueType.PART_NO_DESCRIPTION]: BuildIssueSeverity.INFO
+        });
 
-        expect(screen.getByText("FRCDesign's default: Info")).toBeTruthy();
+        expect(screen.getByText("FRCDesign's default: Off")).toBeTruthy();
 
         await userEvent.click(screen.getByLabelText("Under-defined sketch"));
-        await userEvent.click(screen.getByRole("option", { name: "Error" }));
+        await userEvent.click(screen.getByRole("option", { name: "Warning" }));
 
         expect(apiPost).toHaveBeenCalledWith("/design-check/levels", {
             body: {
                 levels: {
-                    [DesignIssueType.PART_NO_DESCRIPTION]: "off",
-                    [DesignIssueType.SKETCH_UNDERDEFINED]: "error"
+                    [DesignIssueType.PART_NO_DESCRIPTION]: "info",
+                    [DesignIssueType.SKETCH_UNDERDEFINED]: "warning"
                 }
             }
         });
     });
 
     it("leaves out a level put back to FRCDesign's, and resets them all", async () => {
-        renderLevels({ [DesignIssueType.PART_NO_DESCRIPTION]: "off" });
+        renderLevels({
+            [DesignIssueType.PART_NO_DESCRIPTION]: BuildIssueSeverity.INFO
+        });
 
         await userEvent.click(
             screen.getByLabelText("Part with no description")
         );
-        await userEvent.click(screen.getByRole("option", { name: "Info" }));
+        await userEvent.click(screen.getByRole("option", { name: "Off" }));
         await userEvent.click(screen.getByText("Reset to defaults"));
 
         expect(apiPost.mock.calls.map(([, options]) => options.body)).toEqual([

@@ -69,7 +69,7 @@ function checkDesign(snapshot: DesignSnapshot): DesignCheckResult;
 function isOriginCube(feature: Feature): boolean;
 
 interface DesignCheckResult {
-    /** Errors first, then warnings, then info. */
+    /** Worst first at FRCDesign's levels, those off by default last. */
     issues: DesignIssue[];
     /** Unsuppressed sketches exist and Onshape reported none's status. */
     sketchStatusUnknown: boolean;
@@ -80,8 +80,8 @@ interface DesignCheckResult {
 also imports
 
 ```ts
-// FRCDesign's, which a person's levels may change.
-function getDesignIssueSeverity(type: DesignIssueType): BuildIssueSeverity;
+// FRCDesign's, which a person's levels may change; it may be off.
+function getDefaultLevel(type: DesignIssueType): DesignIssueLevel;
 function getDesignIssueLevel(
     type: DesignIssueType,
     levels: DesignIssueLevels
@@ -91,8 +91,13 @@ function getShownSeverity(
     type: DesignIssueType,
     levels: DesignIssueLevels
 ): BuildIssueSeverity | undefined;
-// Worst first.
-function compareSeverity(a: BuildIssueSeverity, b: BuildIssueSeverity): number;
+// Worst first, and off last.
+function compareLevel(a: DesignIssueLevel, b: DesignIssueLevel): number;
+// Whether the person picked other than FRCDesign's level.
+function isLevelChanged(
+    type: DesignIssueType,
+    levels: DesignIssueLevels
+): boolean;
 // What analytics records of a check.
 function countDesignIssues(issues: DesignIssue[]): DesignIssueCounts;
 
@@ -132,7 +137,7 @@ interface DesignIssue {
 
 interface DesignCheckOut {
     elementType: ElementType;
-    /** Errors first, then warnings, then info. */
+    /** Every issue found, worst first at FRCDesign's levels, those off by default last. */
     issues: DesignIssue[];
     /** Onshape reported no sketch's definition, so under-defined sketches went unchecked. */
     sketchStatusUnknown: boolean;
@@ -145,7 +150,7 @@ type DesignIssueCounts = Partial<Record<DesignIssueType, number>>;
 
 const DESIGN_ISSUE_LEVELS = [ERROR, WARNING, INFO, "off"] as const;
 type DesignIssueLevel = (typeof DESIGN_ISSUE_LEVELS)[number];
-/** One person's choices; a type left out shows at FRCDesign's severity. */
+/** One person's choices; a type left out shows at FRCDesign's level. */
 type DesignIssueLevels = Partial<Record<DesignIssueType, DesignIssueLevel>>;
 
 interface DesignCheckLevelsOut {
@@ -233,20 +238,21 @@ function openDesignCheckLevels(): void;
 
 ## The checks
 
-The severities are FRCDesign's (`getDesignIssueSeverity`); a person's levels
-can raise, lower or turn off any type, for them alone.
+The defaults are FRCDesign's (`getDefaultLevel`), and turn some types off; a
+person's levels can raise, lower, turn off or turn on any type, for them alone.
+A type off by default is still found, sent and counted.
 
-| Type                                                               | Severity               | Raised for                                                                                                                                                                                                                  |
-| ------------------------------------------------------------------ | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `SKETCH_UNDERDEFINED` / `SKETCH_OVERDEFINED`                       | Warning / Error        | An unsuppressed sketch Onshape reports so                                                                                                                                                                                   |
-| `ORIGIN_CUBE_MISSING` / `ORIGIN_CUBE_NOT_FIRST`                    | Warning / Warning      | A Part Studio with no Origin Cube, or with it below the first feature                                                                                                                                                       |
-| `ORIGIN_CUBE_SUPPRESSED`                                           | Error                  | The Origin Cube suppressed                                                                                                                                                                                                  |
-| `FEATURE_ERROR` / `FEATURE_WARNING` / `FEATURE_SUPPRESSED`         | Error / Warning / Info | A feature or mate Onshape marks red or yellow, or one left suppressed; never the Origin Cube for the last. A built Part Studio feature is also yellow when a selection box lost one pick beside another that still resolves |
-| `ROLLBACK_NOT_AT_END`                                              | Warning                | A Part Studio's rollback bar above its last feature                                                                                                                                                                         |
-| `PART_NO_MATERIAL` / `PART_NO_PART_NUMBER` / `PART_NO_DESCRIPTION` | Warning / Info / Info  | A solid part missing one, the Origin Cube's own cube aside                                                                                                                                                                  |
-| `INSTANCE_FIXED`                                                   | Warning                | A top-level instance that is fixed                                                                                                                                                                                          |
-| `INSTANCE_FLOATING`                                                | Warning                | A top-level instance no unsuppressed mate or group holds and no pattern copies, broken ones aside                                                                                                                           |
-| `INSTANCE_BROKEN`                                                  | Error                  | An instance Onshape sends with only its name and id, or a part instance with an empty part id                                                                                                                               |
+| Type                                                               | Default              | Raised for                                                                                                                                                                                                                  |
+| ------------------------------------------------------------------ | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SKETCH_UNDERDEFINED` / `SKETCH_OVERDEFINED`                       | Error / Error        | An unsuppressed sketch Onshape reports so                                                                                                                                                                                   |
+| `ORIGIN_CUBE_MISSING` / `ORIGIN_CUBE_NOT_FIRST`                    | Warning / Warning    | A Part Studio with no Origin Cube, or with it below the first feature                                                                                                                                                       |
+| `ORIGIN_CUBE_SUPPRESSED`                                           | Warning              | The Origin Cube suppressed                                                                                                                                                                                                  |
+| `FEATURE_ERROR` / `FEATURE_WARNING` / `FEATURE_SUPPRESSED`         | Error / Error / Info | A feature or mate Onshape marks red or yellow, or one left suppressed; never the Origin Cube for the last. A built Part Studio feature is also yellow when a selection box lost one pick beside another that still resolves |
+| `ROLLBACK_NOT_AT_END`                                              | Info                 | A Part Studio's rollback bar above its last feature                                                                                                                                                                         |
+| `PART_NO_MATERIAL` / `PART_NO_PART_NUMBER` / `PART_NO_DESCRIPTION` | Error / Off / Off    | A solid part missing one, the Origin Cube's own cube aside                                                                                                                                                                  |
+| `INSTANCE_FIXED`                                                   | Error                | A top-level instance that is fixed                                                                                                                                                                                          |
+| `INSTANCE_FLOATING`                                                | Error                | A top-level instance no unsuppressed mate or group holds and no pattern copies, broken ones aside                                                                                                                           |
+| `INSTANCE_BROKEN`                                                  | Error                | An instance Onshape sends with only its name and id, or a part instance with an empty part id                                                                                                                               |
 
 The assembly is read without non-solid instances, so an inserted sketch is
 never checked.
@@ -374,7 +380,7 @@ In [strings/design-check.md](../strings/design-check.md).
 | A feature lost every pick in a box, and builds  | Nothing: a box of default planes resolves to nothing too    | —               |
 | The sketches can't be listed                    | The other issues, and a note that sketches went unchecked   | **Check again** |
 | Onshape stops sending `sketchSolveStatus`       | The note that sketches went unchecked, on every Part Studio | A change here   |
-| The levels can't be read                        | Every issue at FRCDesign's severity, and no **Levels**      | Reopening       |
+| The levels can't be read                        | Every issue at FRCDesign's level, and no **Levels**         | Reopening       |
 | A level fails to save                           | "Failed to save your levels.", and the saved levels again   | Picking again   |
 
 ## Decisions
@@ -389,20 +395,28 @@ In [strings/design-check.md](../strings/design-check.md).
 - **The default configuration.** The launch doesn't carry the configuration
   showing, so a configured tab is checked as its defaults.
 - **Workspaces only.** A version can't be edited, so there is nothing to act on.
-- **FRCDesign's severities, which each person may change for themselves.** The
-  defaults are what FRCDesign recommends to anybody; a team that numbers no
-  parts, or keeps scrap sketches suppressed, can quiet what doesn't apply to it.
-  There are no team levels: a person's choices follow only them.
+- **FRCDesign's levels, which each person may change for themselves.** The
+  defaults are what FRCDesign recommends to anybody; a team that numbers its
+  parts can turn that on, and one that keeps scrap sketches suppressed can
+  quiet them. There are no team levels: a person's choices follow only them.
 - **Levels applied on the page.** Changing one redraws the last check at once,
   where checking again would spend Onshape calls; and what a check finds stays
   the same for everyone, so analytics counts it the same way.
 - **Levels in D1, per account.** They are a choice meant to last and to follow
   the person to another computer, which KV, for what may be lost, and browser
   storage, for one browser, are not.
-- **A missing Origin Cube is a warning.** Not every Part Studio goes into a
-  robot assembly: a COTS part's needs none.
-- **Part number and description are info.** How a team numbers and describes its
-  parts for a bill of materials is its own convention.
+- **What leaves a model wrong or an assembly loose is an error.** An
+  under-defined sketch can move, a yellow feature has usually lost what it was
+  built from, a part with no material weighs nothing, and a fixed or floating
+  instance isn't held the way FRCDesign sets up an assembly.
+- **The Origin Cube's issues are warnings.** Not every Part Studio goes into a
+  robot assembly: a COTS part's needs none, and a suppressed cube matters only
+  to an assembly fastened to it.
+- **A suppressed feature and a rollback bar above the end are info.** Both are
+  often left on purpose while working.
+- **Part number and description are off.** How a team numbers and describes its
+  parts for a bill of materials is its own convention, so the check stays quiet
+  until someone turns them on.
 - **A part is selected through the part it shows.** Onshape needs the part's
   id to select anything; an instance's occurrence path only says which
   instance to look in ([ONSHAPE.md](../ONSHAPE.md)). A broken instance has no

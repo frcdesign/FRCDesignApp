@@ -93,12 +93,12 @@ describe("checking a tab", () => {
             elementType: ElementType.PART_STUDIO,
             sketchStatusUnknown: false,
             issues: [
-                { type: DesignIssueType.ORIGIN_CUBE_MISSING },
                 {
                     type: DesignIssueType.SKETCH_UNDERDEFINED,
                     subject: "Sketch 1",
                     featureId: "S1"
-                }
+                },
+                { type: DesignIssueType.ORIGIN_CUBE_MISSING }
             ]
         });
         expect(get).toHaveBeenCalledTimes(3);

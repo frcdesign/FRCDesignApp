@@ -38,7 +38,7 @@ export interface DesignIssue {
 
 export interface DesignCheckOut {
     elementType: ElementType;
-    /** Errors first, then warnings, then info. */
+    /** Every issue found, worst first at FRCDesign's levels, those off by default last. */
     issues: DesignIssue[];
     /** Onshape reported no sketch's definition, so under-defined sketches went unchecked. */
     sketchStatusUnknown: boolean;
@@ -46,47 +46,7 @@ export interface DesignCheckOut {
     checkedAt: number;
 }
 
-/** FRCDesign's severity for a type, which a person's levels may change. */
-export function getDesignIssueSeverity(
-    type: DesignIssueType
-): BuildIssueSeverity {
-    switch (type) {
-        case DesignIssueType.SKETCH_OVERDEFINED:
-        case DesignIssueType.ORIGIN_CUBE_SUPPRESSED:
-        case DesignIssueType.FEATURE_ERROR:
-        case DesignIssueType.INSTANCE_BROKEN:
-            return BuildIssueSeverity.ERROR;
-        case DesignIssueType.SKETCH_UNDERDEFINED:
-        case DesignIssueType.ORIGIN_CUBE_MISSING:
-        case DesignIssueType.ORIGIN_CUBE_NOT_FIRST:
-        case DesignIssueType.FEATURE_WARNING:
-        case DesignIssueType.ROLLBACK_NOT_AT_END:
-        case DesignIssueType.PART_NO_MATERIAL:
-        case DesignIssueType.INSTANCE_FIXED:
-        case DesignIssueType.INSTANCE_FLOATING:
-            return BuildIssueSeverity.WARNING;
-        case DesignIssueType.FEATURE_SUPPRESSED:
-        case DesignIssueType.PART_NO_PART_NUMBER:
-        case DesignIssueType.PART_NO_DESCRIPTION:
-            return BuildIssueSeverity.INFO;
-    }
-}
-
-const SEVERITY_RANK: Record<BuildIssueSeverity, number> = {
-    [BuildIssueSeverity.ERROR]: 0,
-    [BuildIssueSeverity.WARNING]: 1,
-    [BuildIssueSeverity.INFO]: 2
-};
-
-/** Worst first. */
-export function compareSeverity(
-    a: BuildIssueSeverity,
-    b: BuildIssueSeverity
-): number {
-    return SEVERITY_RANK[a] - SEVERITY_RANK[b];
-}
-
-/** How a person wants a type shown: at a severity, or not at all. */
+/** How a type is shown: at a severity, or not at all. */
 export const DESIGN_ISSUE_LEVELS = [
     BuildIssueSeverity.ERROR,
     BuildIssueSeverity.WARNING,
@@ -96,7 +56,44 @@ export const DESIGN_ISSUE_LEVELS = [
 
 export type DesignIssueLevel = (typeof DESIGN_ISSUE_LEVELS)[number];
 
-/** One person's choices; a type left out shows at FRCDesign's severity. */
+/** FRCDesign's level for a type, which a person's levels may change. */
+export function getDefaultLevel(type: DesignIssueType): DesignIssueLevel {
+    switch (type) {
+        case DesignIssueType.SKETCH_UNDERDEFINED:
+        case DesignIssueType.SKETCH_OVERDEFINED:
+        case DesignIssueType.FEATURE_ERROR:
+        case DesignIssueType.FEATURE_WARNING:
+        case DesignIssueType.PART_NO_MATERIAL:
+        case DesignIssueType.INSTANCE_FIXED:
+        case DesignIssueType.INSTANCE_FLOATING:
+        case DesignIssueType.INSTANCE_BROKEN:
+            return BuildIssueSeverity.ERROR;
+        case DesignIssueType.ORIGIN_CUBE_MISSING:
+        case DesignIssueType.ORIGIN_CUBE_NOT_FIRST:
+        case DesignIssueType.ORIGIN_CUBE_SUPPRESSED:
+            return BuildIssueSeverity.WARNING;
+        case DesignIssueType.FEATURE_SUPPRESSED:
+        case DesignIssueType.ROLLBACK_NOT_AT_END:
+            return BuildIssueSeverity.INFO;
+        case DesignIssueType.PART_NO_PART_NUMBER:
+        case DesignIssueType.PART_NO_DESCRIPTION:
+            return "off";
+    }
+}
+
+const LEVEL_RANK: Record<DesignIssueLevel, number> = {
+    [BuildIssueSeverity.ERROR]: 0,
+    [BuildIssueSeverity.WARNING]: 1,
+    [BuildIssueSeverity.INFO]: 2,
+    off: 3
+};
+
+/** Worst first, and off last. */
+export function compareLevel(a: DesignIssueLevel, b: DesignIssueLevel): number {
+    return LEVEL_RANK[a] - LEVEL_RANK[b];
+}
+
+/** One person's choices; a type left out shows at FRCDesign's level. */
 export type DesignIssueLevels = Partial<
     Record<DesignIssueType, DesignIssueLevel>
 >;
@@ -110,7 +107,15 @@ export function getDesignIssueLevel(
     type: DesignIssueType,
     levels: DesignIssueLevels
 ): DesignIssueLevel {
-    return levels[type] ?? getDesignIssueSeverity(type);
+    return levels[type] ?? getDefaultLevel(type);
+}
+
+/** Whether the person picked other than FRCDesign's level for a type. */
+export function isLevelChanged(
+    type: DesignIssueType,
+    levels: DesignIssueLevels
+): boolean {
+    return getDesignIssueLevel(type, levels) !== getDefaultLevel(type);
 }
 
 /** The severity a type shows at, or undefined once it is turned off. */

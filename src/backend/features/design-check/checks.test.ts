@@ -196,7 +196,7 @@ describe("a Part Studio", () => {
         });
     });
 
-    it("flags under- and over-defined sketches, errors first", () => {
+    it("flags under- and over-defined sketches", () => {
         const snapshot = partStudio({
             features: [originCube(), sketch("S1"), sketch("S2"), sketch("S3")],
             sketchStatuses: {
@@ -212,8 +212,8 @@ describe("a Part Studio", () => {
                 issue.featureId
             ])
         ).toEqual([
-            [DesignIssueType.SKETCH_OVERDEFINED, "S2"],
-            [DesignIssueType.SKETCH_UNDERDEFINED, "S1"]
+            [DesignIssueType.SKETCH_UNDERDEFINED, "S1"],
+            [DesignIssueType.SKETCH_OVERDEFINED, "S2"]
         ]);
     });
 
@@ -258,16 +258,16 @@ describe("a Part Studio", () => {
         expect(
             result.issues.map((issue) => [issue.type, issue.subject])
         ).toEqual([
-            [DesignIssueType.SKETCH_OVERDEFINED, "Sketch 3"],
-            [DesignIssueType.FEATURE_ERROR, "Extrude 1"],
-            [DesignIssueType.ORIGIN_CUBE_NOT_FIRST, "Origin Cube"],
             [DesignIssueType.SKETCH_UNDERDEFINED, "Sketch 2"],
+            [DesignIssueType.SKETCH_OVERDEFINED, "Sketch 3"],
             [DesignIssueType.SKETCH_UNDERDEFINED, "Sketch 4"],
             [DesignIssueType.SKETCH_UNDERDEFINED, "Sketch 6"],
             [DesignIssueType.SKETCH_UNDERDEFINED, "Sketch 7"],
+            [DesignIssueType.FEATURE_ERROR, "Extrude 1"],
             [DesignIssueType.FEATURE_WARNING, "Extrude 2"],
             [DesignIssueType.PART_NO_MATERIAL, "Part 2"],
             [DesignIssueType.PART_NO_MATERIAL, "Part 3"],
+            [DesignIssueType.ORIGIN_CUBE_NOT_FIRST, "Origin Cube"],
             [DesignIssueType.FEATURE_SUPPRESSED, "Sketch 5"],
             [DesignIssueType.PART_NO_PART_NUMBER, "Part 2"],
             [DesignIssueType.PART_NO_DESCRIPTION, "Part 2"],
@@ -352,7 +352,7 @@ describe("a Part Studio", () => {
         ]);
     });
 
-    it("flags red, yellow and suppressed features, errors first", () => {
+    it("flags red, yellow and suppressed features", () => {
         const snapshot = partStudio({
             features: [
                 originCube(),
@@ -365,8 +365,8 @@ describe("a Part Studio", () => {
         });
 
         expect(types(snapshot)).toEqual([
-            DesignIssueType.FEATURE_ERROR,
             DesignIssueType.FEATURE_WARNING,
+            DesignIssueType.FEATURE_ERROR,
             DesignIssueType.FEATURE_SUPPRESSED
         ]);
     });
@@ -417,8 +417,8 @@ describe("a Part Studio", () => {
 
         expect(types(snapshot)).toEqual([
             DesignIssueType.FEATURE_ERROR,
-            DesignIssueType.ROLLBACK_NOT_AT_END,
-            DesignIssueType.FEATURE_SUPPRESSED
+            DesignIssueType.FEATURE_SUPPRESSED,
+            DesignIssueType.ROLLBACK_NOT_AT_END
         ]);
     });
 
@@ -534,8 +534,8 @@ describe("an Assembly", () => {
                 issue.partId
             ])
         ).toEqual([
-            ["gone", undefined],
-            ["plate", "JHD"]
+            ["plate", "JHD"],
+            ["gone", undefined]
         ]);
     });
 
@@ -554,11 +554,11 @@ describe("an Assembly", () => {
                 issue.subject
             ])
         ).toEqual([
-            [DesignIssueType.INSTANCE_BROKEN, "Part 5 <1>"],
-            [DesignIssueType.INSTANCE_BROKEN, "Part 1 <1>"],
             [DesignIssueType.INSTANCE_FIXED, "Part 3 <1>"],
             [DesignIssueType.INSTANCE_FLOATING, "Part 4 <1>"],
+            [DesignIssueType.INSTANCE_BROKEN, "Part 5 <1>"],
             [DesignIssueType.INSTANCE_FLOATING, "Part 2 <3>"],
+            [DesignIssueType.INSTANCE_BROKEN, "Part 1 <1>"],
             [DesignIssueType.INSTANCE_FLOATING, "Part 1 <2>"],
             [DesignIssueType.FEATURE_SUPPRESSED, "Fastened 2"]
         ]);
