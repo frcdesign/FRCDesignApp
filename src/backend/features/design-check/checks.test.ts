@@ -249,8 +249,9 @@ describe("a Part Studio", () => {
             [DesignIssueType.ORIGIN_CUBE_NOT_FIRST, "Origin Cube"],
             [DesignIssueType.SKETCH_UNDERDEFINED, "Sketch 2"],
             [DesignIssueType.SKETCH_UNDERDEFINED, "Sketch 4"],
+            [DesignIssueType.SKETCH_UNDERDEFINED, "Sketch 6"],
+            [DesignIssueType.SKETCH_UNDERDEFINED, "Sketch 7"],
             [DesignIssueType.FEATURE_WARNING, "Origin Cube"],
-            [DesignIssueType.ROLLBACK_NOT_AT_END, undefined],
             [DesignIssueType.PART_NO_MATERIAL, "Part 2"],
             [DesignIssueType.PART_NO_MATERIAL, "Part 3"],
             [DesignIssueType.FEATURE_SUPPRESSED, "Sketch 5"],
@@ -260,11 +261,6 @@ describe("a Part Studio", () => {
             [DesignIssueType.PART_NO_DESCRIPTION, "Part 3"],
             [DesignIssueType.PART_NO_DESCRIPTION, "Part 4"]
         ]);
-        expect(
-            result.issues.find(
-                (issue) => issue.type === DesignIssueType.ROLLBACK_NOT_AT_END
-            )?.count
-        ).toBe(2);
     });
 
     it("needs an Origin Cube", () => {
@@ -347,6 +343,7 @@ describe("a Part Studio", () => {
         expect(
             checkDesign(partStudio({ features, rollbackIndex: 1 })).issues
         ).toEqual([{ type: DesignIssueType.ROLLBACK_NOT_AT_END, count: 2 }]);
+        // Onshape sends the feature count with the bar at the end.
         expect(types(partStudio({ features, rollbackIndex: 3 }))).toEqual([]);
         expect(types(partStudio({ features, rollbackIndex: -1 }))).toEqual([]);
     });
@@ -465,19 +462,13 @@ describe("an Assembly", () => {
             ])
         ).toEqual([
             [DesignIssueType.INSTANCE_BROKEN, "Part 5 <1>"],
+            [DesignIssueType.INSTANCE_BROKEN, "Part 1 <1>"],
             [DesignIssueType.INSTANCE_FIXED, "Part 3 <1>"],
             [DesignIssueType.INSTANCE_FLOATING, "Part 4 <1>"],
             [DesignIssueType.INSTANCE_FLOATING, "Part 2 <3>"],
+            [DesignIssueType.INSTANCE_FLOATING, "Part 1 <2>"],
             [DesignIssueType.FEATURE_SUPPRESSED, "Fastened 2"]
         ]);
-    });
-
-    it("leaves an inserted sketch where it lands", () => {
-        const snapshot = assembly({
-            instances: [instance("sketch", { type: "Feature" })]
-        });
-
-        expect(types(snapshot)).toEqual([]);
     });
 
     it("ignores suppressed mates and suppressed instances", () => {
@@ -492,37 +483,21 @@ describe("an Assembly", () => {
         ]);
     });
 
-    it("calls an instance broken only when Onshape draws it red", () => {
+    it("calls an instance broken once Onshape sends only its name and id", () => {
         const snapshot = assembly({
-            instances: [
-                instance("info", { errorStatus: "INFO" }),
-                instance("unknown", { errorStatus: "UNKNOWN" }),
-                instance("red", { errorStatus: "ERROR" })
-            ],
-            mates: [fasten("M1", ["info"], ["unknown"], ["red"])]
+            instances: [{ id: "gone", name: "Gone <1>" }]
         });
 
-        expect(
-            checkDesign(snapshot).issues.map((issue) => [
-                issue.type,
-                issue.subject
-            ])
-        ).toEqual([[DesignIssueType.INSTANCE_BROKEN, "red <1>"]]);
+        expect(types(snapshot)).toEqual([DesignIssueType.INSTANCE_BROKEN]);
     });
 
-    it("flags an instance whose tab was deleted, and a red mate", () => {
+    it("flags a red mate", () => {
         const snapshot = assembly({
-            instances: [
-                instance("a"),
-                instance("b", { status: "DeletedElement" })
-            ],
+            instances: [instance("a"), instance("b")],
             mates: [fasten("M1", ["a"], ["b"])],
             statuses: { M1: "ERROR" }
         });
 
-        expect(types(snapshot)).toEqual([
-            DesignIssueType.FEATURE_ERROR,
-            DesignIssueType.INSTANCE_BROKEN
-        ]);
+        expect(types(snapshot)).toEqual([DesignIssueType.FEATURE_ERROR]);
     });
 });

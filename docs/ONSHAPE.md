@@ -99,8 +99,8 @@ problem planted, whose answers are kept, cut down, in
   _documented_, and _observed_.
 - **`rollbackIndex`**, on a Part Studio's list, is the index of the first
   feature below the rollback bar: 10 of 12 features with the bar above the last
-  two — _observed_. With the bar at the end it is -1 — _documented_,
-  _unverified_.
+  two, and 12 with it at the end — _observed_. The spec's -1 for the end was
+  not seen.
 - **A custom feature's `namespace`** names its Feature Studio as
   `d{documentId}::v{versionId}::e{elementId}::m{microversionId}`; the Origin
   Cube's starts `d321c197a842fc5f1a29e6621` — _observed_.
@@ -109,6 +109,9 @@ problem planted, whose answers are kept, cut down, in
   `featureType` is the generic `myFeature`, so it says nothing either.
 - **The Origin Cube was yellow** while second in the list — _observed_. Its
   warning's text isn't in the API's answer, so why is _unverified_.
+- **Onshape's own list can show a warning the API doesn't**: it drew one on an
+  extrude and on a fasten whose `featureStatus` was `OK` — _observed_. What
+  those warnings were is _unverified_.
 - **A sketch's definition** (`GET /partstudios/…/sketches`) is
   `sketchSolveStatus`: `UNDERDEFINED`, `WELL_DEFINED`, `OVERDEFINED` or
   `UNKNOWN` — the values _documented_ in Onshape's changelog (rel-1.183), the
@@ -125,10 +128,13 @@ problem planted, whose answers are kept, cut down, in
   _documented_ in the API guide, not the OpenAPI spec, and _observed_. An
   occurrence's `fixed`, and a pattern's `seedToPatternInstances` and
   `suppressed`, are _observed_.
-- **An instance of a deleted part** keeps `type: "Part"`, with `partId: ""` —
-  _observed_. No instance carried `status` or `errorStatus`, healthy or not.
-  `status: "DeletedElement"` for an instance whose tab was deleted is
-  _documented_, and `errorStatus: "ERROR"` for one drawn red is _unverified_.
+- **An instance of a deleted part** keeps `type: "Part"`, with `partId: ""`,
+  and Onshape draws it red — _observed_.
+- **An instance Onshape draws red** can come back with only its `id` and `name`,
+  no `type` or `partId` — _observed_. The spec's `status: "DeletedElement"` and
+  `errorStatus` were on no instance, healthy or broken.
+- **An inserted sketch** is left out of the assembly definition with
+  `includeNonSolids=false`, which `getAssembly` sends by default — _observed_.
 - **`openFeatureDialog`**, a client message, opens a feature's dialog in a
   workspace's Part Studio — _documented_. That it opens a mate in an Assembly
   is _unverified_.

@@ -9,9 +9,9 @@ import type {
 } from "@backend/features/design-check/snapshot";
 
 /**
- * The Origin Cube second and yellow; Sketches 2 and 4 under-defined and
+ * The Origin Cube second and yellow; Sketches 2, 4, 6 and 7 under-defined and
  * Sketch 3 over-defined; Extrude 1 red; Sketch 5 suppressed; the rollback bar
- * above Sketches 6 and 7; Parts 2 and 3 with no material or part number.
+ * at the end; Parts 2 and 3 with no material or part number.
  */
 export const CAPTURED_PART_STUDIO: PartStudioSnapshot = {
     elementType: ElementType.PART_STUDIO,
@@ -141,10 +141,14 @@ export const CAPTURED_PART_STUDIO: PartStudioSnapshot = {
                 featureStatus: "OK"
             }
         },
-        rollbackIndex: 10
+        rollbackIndex: 12
     },
     sketches: {
         sketches: [
+            {
+                featureId: "FrFpzPobHzSf0EH_1",
+                sketchSolveStatus: "UNDERDEFINED"
+            },
             {
                 featureId: "Ft4L8qxUvRHMnoa_1",
                 sketchSolveStatus: "OVERDEFINED"
@@ -160,6 +164,10 @@ export const CAPTURED_PART_STUDIO: PartStudioSnapshot = {
             {
                 featureId: "FXmHyN37VOudwGR_0",
                 sketchSolveStatus: "WELL_DEFINED"
+            },
+            {
+                featureId: "F8cleltaVQgZKHw_1",
+                sketchSolveStatus: "UNDERDEFINED"
             }
         ]
     },
@@ -203,8 +211,10 @@ export const CAPTURED_PART_STUDIO: PartStudioSnapshot = {
 
 /**
  * The Origin Cube fastened to the origin and grouped with Part 2 <1>, which
- * Part 2 <2> patterns; Part 3 <1> fixed; Part 4 <1> unmated; Part 2 <3> held
- * only by a suppressed fasten; Part 5 <1> inserted from a part since deleted.
+ * Part 2 <2> patterns; Part 3 <1> fixed; Part 4 <1> and Part 1 <2> unmated;
+ * Part 2 <3> held only by a suppressed fasten; Part 5 <1> inserted from a part
+ * since deleted, and Part 1 <1> from a source since gone. An inserted sketch is
+ * in the document, and left out of the definition.
  */
 export const CAPTURED_ASSEMBLY: AssemblySnapshot = {
     elementType: ElementType.ASSEMBLY,
@@ -266,9 +276,25 @@ export const CAPTURED_ASSEMBLY: AssemblySnapshot = {
                     name: "Part 3 <2>",
                     suppressed: false,
                     partId: "JnD"
+                },
+                {
+                    id: "MpCko581ilk3iyFPK",
+                    name: "Part 1 <1>"
+                },
+                {
+                    id: "M34AHWLzF6t1e1jHC",
+                    type: "Part",
+                    name: "Part 1 <2>",
+                    suppressed: false,
+                    partId: "JHD"
                 }
             ],
             occurrences: [
+                {
+                    path: ["M34AHWLzF6t1e1jHC"],
+                    transform: [],
+                    fixed: false
+                },
                 {
                     path: ["MGLhB6zXZpAJ3xUUn"],
                     transform: [],
@@ -296,6 +322,11 @@ export const CAPTURED_ASSEMBLY: AssemblySnapshot = {
                 },
                 {
                     path: ["MkihG1jaczYsVFGWN"],
+                    transform: [],
+                    fixed: false
+                },
+                {
+                    path: ["MpCko581ilk3iyFPK"],
                     transform: [],
                     fixed: false
                 },

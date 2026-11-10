@@ -267,17 +267,16 @@ export interface OnshapeAssemblyFeature {
 /** A top-level instance in the root assembly. */
 export interface OnshapeAssemblyInstance {
     id: string;
-    /** "Part", "Assembly", or "Feature" for an inserted sketch. */
-    type: string;
+    /**
+     * "Part", "Assembly", or "Feature" for an inserted sketch. Absent, with
+     * everything but `id` and `name`, when what it was inserted from is gone.
+     */
+    type?: string;
     /** Optional only so a test fixture can leave it out. */
     name?: string;
     suppressed?: boolean;
     /** A part's; empty when the part it was inserted from is gone. */
     partId?: string;
-    /** "DeletedElement" when the tab it came from is gone. */
-    status?: string;
-    /** "ERROR" when Onshape draws the instance red. */
-    errorStatus?: OnshapeFeatureStatus;
     /** The tab the instance came from, and the feature within it for a sketch. */
     documentId?: string;
     elementId?: string;
