@@ -1,10 +1,13 @@
 import { Anchor, Group, Stack, Text, Tooltip } from "@mantine/core";
 import { type ReactNode } from "react";
+import { type BuildIssueSeverity } from "@backend/features/build-checker/issues";
 import {
+    compareSeverity,
     type DesignCheckOut,
     type DesignIssue,
+    type DesignIssueLevels,
     DesignIssueType,
-    getDesignIssueSeverity
+    getShownSeverity
 } from "@backend/features/design-check/contract";
 import { ElementType } from "@backend/lib/onshape/element-type";
 import { PageNotice } from "../../../components/app-notice";
@@ -27,17 +30,29 @@ import { getDesignIssueHelp, getDesignIssueName } from "../issue-text";
 interface DesignCheckResultsProps {
     target: TargetElement;
     result: DesignCheckOut;
+    /** The caller's. @default FRCDesign's */
+    levels?: DesignIssueLevels;
+    /** Absent when the levels can't be changed, as when they couldn't be read. */
+    onChangeLevels?: () => void;
 }
 
-/** One box per kind of issue, worst first, naming everything it was found on. */
+/**
+ * One box per kind of issue, worst first at the caller's levels, naming
+ * everything it was found on; a kind turned off is only counted.
+ */
 export function DesignCheckResults(props: DesignCheckResultsProps): ReactNode {
-    const { target, result } = props;
-    const groups = groupByType(result.issues);
+    const { target, result, levels = {}, onChangeLevels } = props;
+    const shown = showAtLevels(result.issues, levels);
+    const groups = groupByType(shown);
+    const hidden = result.issues.length - shown.length;
     const checkedAt = m.designCheckCheckedAt({ checkedAt: result.checkedAt });
     const sketchNote = result.sketchStatusUnknown && (
         <Text size="sm" c="dimmed">
             {m.designCheckSketchStatusUnknown()}
         </Text>
+    );
+    const hiddenNote = hidden > 0 && (
+        <HiddenNote count={hidden} onChangeLevels={onChangeLevels} />
     );
 
     if (groups.length === 0) {
@@ -50,10 +65,14 @@ export function DesignCheckResults(props: DesignCheckResultsProps): ReactNode {
                         raised={false}
                     />
                 }
-                title={m.designCheckCleanTitle()}
+                title={
+                    hidden > 0
+                        ? m.designCheckAllHiddenTitle()
+                        : m.designCheckCleanTitle()
+                }
                 description={
                     <Stack gap="xs">
-                        {getCleanDescription(result.elementType)}
+                        {hiddenNote || getCleanDescription(result.elementType)}
                         {sketchNote}
                         <Text size="xs" c="dimmed">
                             {checkedAt}
@@ -68,22 +87,22 @@ export function DesignCheckResults(props: DesignCheckResultsProps): ReactNode {
         <Stack gap="sm" p="sm">
             <Group justify="space-between" wrap="nowrap">
                 <SeverityBadges
-                    severities={result.issues.map((issue) =>
-                        getDesignIssueSeverity(issue.type)
-                    )}
+                    severities={shown.map((each) => each.severity)}
                 />
                 <Text size="xs" c="dimmed">
                     {checkedAt}
                 </Text>
             </Group>
             {sketchNote}
-            {groups.map((issues) => (
+            {groups.map((group) => (
                 <IssueGroup
-                    key={issues[0].type}
+                    key={group[0].issue.type}
                     target={target}
-                    issues={issues}
+                    severity={group[0].severity}
+                    issues={group.map((each) => each.issue)}
                 />
             ))}
+            {hiddenNote}
         </Stack>
     );
 }
@@ -97,21 +116,57 @@ function getCleanDescription(elementType: ElementType): string {
     }
 }
 
-/** In the order they came, which is worst first. */
-function groupByType(issues: DesignIssue[]): DesignIssue[][] {
-    return [...Map.groupBy(issues, (issue) => issue.type).values()];
+interface ShownIssue {
+    issue: DesignIssue;
+    severity: BuildIssueSeverity;
+}
+
+/** At the caller's levels, worst first, otherwise in the order the check found them. */
+function showAtLevels(
+    issues: DesignIssue[],
+    levels: DesignIssueLevels
+): ShownIssue[] {
+    return issues
+        .flatMap((issue) => {
+            const severity = getShownSeverity(issue.type, levels);
+            return severity ? [{ issue, severity }] : [];
+        })
+        .toSorted((a, b) => compareSeverity(a.severity, b.severity));
+}
+
+function groupByType(shown: ShownIssue[]): ShownIssue[][] {
+    return [...Map.groupBy(shown, (each) => each.issue.type).values()];
+}
+
+interface HiddenNoteProps {
+    count: number;
+    onChangeLevels?: () => void;
+}
+
+function HiddenNote(props: HiddenNoteProps): ReactNode {
+    const { count, onChangeLevels } = props;
+    return (
+        <Text size="sm" c="dimmed">
+            {m.designCheckHidden({ count })}{" "}
+            {onChangeLevels && (
+                <Anchor component="button" size="sm" onClick={onChangeLevels}>
+                    {m.designCheckChangeLevels()}
+                </Anchor>
+            )}
+        </Text>
+    );
 }
 
 interface IssueGroupProps {
     target: TargetElement;
+    severity: BuildIssueSeverity;
     /** Every one of the same type. */
     issues: DesignIssue[];
 }
 
 function IssueGroup(props: IssueGroupProps): ReactNode {
-    const { target, issues } = props;
+    const { target, severity, issues } = props;
     const first = issues[0];
-    const severity = getDesignIssueSeverity(first.type);
     const named = issues.filter((issue) => issue.subject !== undefined);
 
     return (

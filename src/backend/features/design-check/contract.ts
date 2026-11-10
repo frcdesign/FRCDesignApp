@@ -46,6 +46,7 @@ export interface DesignCheckOut {
     checkedAt: number;
 }
 
+/** FRCDesign's severity for a type, which a person's levels may change. */
 export function getDesignIssueSeverity(
     type: DesignIssueType
 ): BuildIssueSeverity {
@@ -69,6 +70,56 @@ export function getDesignIssueSeverity(
         case DesignIssueType.PART_NO_DESCRIPTION:
             return BuildIssueSeverity.INFO;
     }
+}
+
+const SEVERITY_RANK: Record<BuildIssueSeverity, number> = {
+    [BuildIssueSeverity.ERROR]: 0,
+    [BuildIssueSeverity.WARNING]: 1,
+    [BuildIssueSeverity.INFO]: 2
+};
+
+/** Worst first. */
+export function compareSeverity(
+    a: BuildIssueSeverity,
+    b: BuildIssueSeverity
+): number {
+    return SEVERITY_RANK[a] - SEVERITY_RANK[b];
+}
+
+/** How a person wants a type shown: at a severity, or not at all. */
+export const DESIGN_ISSUE_LEVELS = [
+    BuildIssueSeverity.ERROR,
+    BuildIssueSeverity.WARNING,
+    BuildIssueSeverity.INFO,
+    "off"
+] as const;
+
+export type DesignIssueLevel = (typeof DESIGN_ISSUE_LEVELS)[number];
+
+/** One person's choices; a type left out shows at FRCDesign's severity. */
+export type DesignIssueLevels = Partial<
+    Record<DesignIssueType, DesignIssueLevel>
+>;
+
+/** GET and POST /api/design-check/levels */
+export interface DesignCheckLevelsOut {
+    levels: DesignIssueLevels;
+}
+
+export function getDesignIssueLevel(
+    type: DesignIssueType,
+    levels: DesignIssueLevels
+): DesignIssueLevel {
+    return levels[type] ?? getDesignIssueSeverity(type);
+}
+
+/** The severity a type shows at, or undefined once it is turned off. */
+export function getShownSeverity(
+    type: DesignIssueType,
+    levels: DesignIssueLevels
+): BuildIssueSeverity | undefined {
+    const level = getDesignIssueLevel(type, levels);
+    return level === "off" ? undefined : level;
 }
 
 /** How many of each type one check found, which analytics records. */

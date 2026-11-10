@@ -1,14 +1,19 @@
 import { env } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createTestApp } from "../../../__test_utils__";
+import { createTestApp, jsonRequest } from "../../../__test_utils__";
 import { MockOnshapeApi } from "../../../__test_utils__/mock-onshape-api";
 import { getDb } from "../../db/client";
 import { OnshapeApiError } from "../../lib/onshape/client";
 import { ElementType } from "../../lib/onshape/element-type";
 import { events } from "../analytics/schema";
 import { EventType } from "../analytics/usage";
-import { type DesignCheckOut, DesignIssueType } from "./contract";
+import {
+    type DesignCheckLevelsOut,
+    type DesignCheckOut,
+    DesignIssueType
+} from "./contract";
+import { designCheckLevels } from "./schema";
 
 const db = getDb(env.DB);
 const TAB = "/d/doc/w/work/e/tab";
@@ -97,6 +102,10 @@ describe("checking a tab", () => {
             ]
         });
         expect(get).toHaveBeenCalledTimes(3);
+        // Without geometry ids, Onshape leaves out every feature's status.
+        expect(get).toHaveBeenCalledWith(`/partstudios${TAB}/features`, {
+            query: { noSketchGeometry: "true", includeGeometryIds: "true" }
+        });
     });
 
     it("still checks the rest when the sketches can't be read", async () => {
@@ -187,5 +196,80 @@ describe("checking a tab", () => {
                 designIssueCounts: { [DesignIssueType.ORIGIN_CUBE_MISSING]: 1 }
             }
         ]);
+    });
+});
+
+describe("levels", () => {
+    const LEVELS_URL = "/api/design-check/levels";
+
+    async function readLevels(userId = "test-user") {
+        const res = await createTestApp({ userId }).request(
+            LEVELS_URL,
+            {},
+            env
+        );
+        expect(res.status).toBe(200);
+        return (await res.json<DesignCheckLevelsOut>()).levels;
+    }
+
+    function saveLevels(levels: unknown, userId = "test-user") {
+        return createTestApp({ userId }).request(
+            LEVELS_URL,
+            jsonRequest("POST", { levels }),
+            env
+        );
+    }
+
+    it("needs someone signed in", async () => {
+        const res = await createTestApp({ signedIn: false }).request(
+            LEVELS_URL,
+            {},
+            env
+        );
+
+        expect(res.status).toBe(401);
+    });
+
+    it("keeps each person's own, until they go back to FRCDesign's", async () => {
+        expect(await readLevels()).toEqual({});
+
+        const saved = {
+            [DesignIssueType.PART_NO_DESCRIPTION]: "off",
+            [DesignIssueType.SKETCH_UNDERDEFINED]: "error"
+        };
+        expect((await saveLevels(saved)).status).toBe(200);
+
+        expect(await readLevels()).toEqual(saved);
+        expect(await readLevels("someone-else")).toEqual({});
+
+        expect((await saveLevels({})).status).toBe(200);
+        expect(await readLevels()).toEqual({});
+        expect(await db.select().from(designCheckLevels)).toEqual([]);
+    });
+
+    it("refuses a level or type it doesn't know", async () => {
+        const badLevel = await saveLevels({
+            [DesignIssueType.PART_NO_DESCRIPTION]: "loud"
+        });
+        const badType = await saveLevels({ "no-such-check": "off" });
+
+        expect(badLevel.status).toBe(400);
+        expect(badType.status).toBe(400);
+    });
+
+    it("drops what a later version no longer has", async () => {
+        await db.insert(designCheckLevels).values({
+            userId: "test-user",
+            levels: {
+                [DesignIssueType.FEATURE_SUPPRESSED]: "off",
+                "retired-check": "warning",
+                [DesignIssueType.PART_NO_MATERIAL]: "loud"
+            },
+            updatedAt: new Date()
+        });
+
+        expect(await readLevels()).toEqual({
+            [DesignIssueType.FEATURE_SUPPRESSED]: "off"
+        });
     });
 });

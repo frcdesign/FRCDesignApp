@@ -17,7 +17,11 @@ import { updateUiState } from "../../lib/ui-state";
 import { useNeedsSignIn } from "../../features/auth/access-level";
 import { startSignIn } from "../../features/auth/sign-in";
 import { DesignCheckResults } from "../../features/design-check/components/design-check-results";
-import { useDesignCheckQuery } from "../../features/design-check/queries";
+import { openDesignCheckLevels } from "../../features/design-check/open-design-check-levels";
+import {
+    useDesignCheckLevelsQuery,
+    useDesignCheckQuery
+} from "../../features/design-check/queries";
 import { useMarkHintSeen } from "../../features/hints/queries";
 import { m } from "../../paraglide/messages";
 
@@ -44,6 +48,7 @@ function DesignCheckPage(): ReactNode {
     const target = useTargetElement();
     const needsSignIn = useNeedsSignIn();
     const query = useDesignCheckQuery(target);
+    const levels = useDesignCheckLevelsQuery();
     const markOpened = useMarkHintSeen(Hint.OPENED_DESIGN_CHECK);
 
     useEffect(markOpened, [markOpened]);
@@ -69,8 +74,16 @@ function DesignCheckPage(): ReactNode {
     if (query.isError) {
         return <PageError title={m.designCheckFailed()} error={query.error} />;
     }
-    if (!query.data) {
+    // Levels that can't be read leave FRCDesign's, and nothing to change them with.
+    if (!query.data || levels.isPending) {
         return <PageLoading title={m.designCheckChecking()} />;
     }
-    return <DesignCheckResults target={target} result={query.data} />;
+    return (
+        <DesignCheckResults
+            target={target}
+            result={query.data}
+            levels={levels.data?.levels ?? {}}
+            onChangeLevels={levels.data && openDesignCheckLevels}
+        />
+    );
 }

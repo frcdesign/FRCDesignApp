@@ -7,22 +7,26 @@ FRCDesign's practices, and listing what it breaks: under- and over-defined
 sketches, a missing or misplaced Origin Cube, red, yellow and suppressed
 features or mates, a rollback bar left above the end, parts without a material,
 part number or description, and fixed, floating or broken assembly instances.
-Anybody signed in can run it on a tab they can read.
+Anybody signed in can run it on a tab they can read, and set for their account
+how loud each kind of issue is, or turn it off.
 
 It is not the library's build check ([build-issues.md](./build-issues.md)),
 which checks the library's own documents when they load and shows editors what
-it stores. A design check reads somebody's own tab when they ask, stores
-nothing, and shows only them. It borrows the build check's severities and its
+it stores. A design check reads somebody's own tab when they ask, keeps no
+result, and shows only them. It borrows the build check's severities and its
 severity badges, so the two read alike.
 
 ## Code map
 
-In the order a check runs: asked, read, checked, drawn.
+In the order a check runs: asked, read, checked, drawn; then the levels it is
+drawn at.
 
 `src/backend/features/design-check/routes.ts`
 
 ```text
 GET /api/design-check?documentId=&instanceId=&elementId=&elementType=    DesignCheckOut; never cached
+GET /api/design-check/levels                                             DesignCheckLevelsOut; never cached
+POST /api/design-check/levels   { levels }                               DesignCheckLevelsOut; replaces the caller's
 ```
 
 `src/backend/features/design-check/snapshot.ts`
@@ -76,7 +80,19 @@ interface DesignCheckResult {
 also imports
 
 ```ts
+// FRCDesign's, which a person's levels may change.
 function getDesignIssueSeverity(type: DesignIssueType): BuildIssueSeverity;
+function getDesignIssueLevel(
+    type: DesignIssueType,
+    levels: DesignIssueLevels
+): DesignIssueLevel;
+// Undefined once the type is turned off.
+function getShownSeverity(
+    type: DesignIssueType,
+    levels: DesignIssueLevels
+): BuildIssueSeverity | undefined;
+// Worst first.
+function compareSeverity(a: BuildIssueSeverity, b: BuildIssueSeverity): number;
 // What analytics records of a check.
 function countDesignIssues(issues: DesignIssue[]): DesignIssueCounts;
 
@@ -126,6 +142,29 @@ interface DesignCheckOut {
 
 /** How many of each type one check found, which analytics records. */
 type DesignIssueCounts = Partial<Record<DesignIssueType, number>>;
+
+const DESIGN_ISSUE_LEVELS = [ERROR, WARNING, INFO, "off"] as const;
+type DesignIssueLevel = (typeof DESIGN_ISSUE_LEVELS)[number];
+/** One person's choices; a type left out shows at FRCDesign's severity. */
+type DesignIssueLevels = Partial<Record<DesignIssueType, DesignIssueLevel>>;
+
+interface DesignCheckLevelsOut {
+    levels: DesignIssueLevels;
+}
+```
+
+`src/backend/features/design-check/levels.ts` and
+`src/backend/features/design-check/schema.ts`
+
+```ts
+// A type or level this version no longer has is dropped.
+async function getLevels(db: Db, userId: string): Promise<DesignIssueLevels>;
+// None left deletes the row.
+async function setLevels(
+    db: Db,
+    userId: string,
+    levels: DesignIssueLevels
+): Promise<void>;
 ```
 
 `BuildIssueSeverity` is the build check's
@@ -141,6 +180,16 @@ function checkAgain(target: TargetElement): Promise<void>;
 function useIsDesignCheck(): boolean;
 // The page picker's dot and New badge, until the page is first opened.
 function useIsDesignCheckNew(): boolean;
+// The caller's levels, never stale: they change only from here.
+function useDesignCheckLevelsQuery();
+// Shown before the server confirms.
+function useSaveDesignCheckLevelsMutation();
+// Leaves out a level set back to FRCDesign's.
+function withLevel(
+    levels: DesignIssueLevels,
+    type: DesignIssueType,
+    level: DesignIssueLevel
+): DesignIssueLevels;
 ```
 
 `src/frontend/features/design-check/issue-text.ts`, from the messages in
@@ -151,6 +200,10 @@ function useIsDesignCheckNew(): boolean;
 function getDesignIssueName(type: DesignIssueType): string;
 // From the first issue of its type, which carries any count.
 function getDesignIssueHelp(issue: DesignIssue): string;
+function getDesignIssueLevelName(level: DesignIssueLevel): string;
+// The levels list's sections: both kinds of tab, Part Studios, Assemblies.
+function getLevelSection(type: DesignIssueType): LevelSection;
+function getLevelSectionName(section: LevelSection): string;
 ```
 
 `src/frontend/routes/app/design-check.tsx` and
@@ -162,12 +215,26 @@ function DesignCheckResults(props: DesignCheckResultsProps): ReactNode;
 interface DesignCheckResultsProps {
     target: TargetElement;
     result: DesignCheckOut;
+    /** The caller's. @default FRCDesign's */
+    levels?: DesignIssueLevels;
+    /** Absent when the levels can't be changed, as when they couldn't be read. */
+    onChangeLevels?: () => void;
 }
+```
+
+`src/frontend/features/design-check/components/design-check-levels.tsx` and
+`src/frontend/features/design-check/open-design-check-levels.tsx`
+
+```ts
+// Every type, by section, each at the caller's level, with a reset.
+function DesignCheckLevels(): ReactNode;
+function openDesignCheckLevels(): void;
 ```
 
 ## The checks
 
-Severity follows from the type alone (`getDesignIssueSeverity`).
+The severities are FRCDesign's (`getDesignIssueSeverity`); a person's levels
+can raise, lower or turn off any type, for them alone.
 
 | Type                                                               | Severity               | Raised for                                                                                                                                                                                                                  |
 | ------------------------------------------------------------------ | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -193,12 +260,20 @@ part name, "Origin Cube".
 
 ## Storage
 
-Nothing of its own on the server: a check is answered and forgotten. Each one
-is recorded as a `design_check` event, with the kind of tab and how many of
-each issue type it found, and no document ([analytics.md](./analytics.md)).
+A check is answered and forgotten. Each one is recorded as a `design_check`
+event, with the kind of tab and how many of each issue type it found, and no
+document ([analytics.md](./analytics.md)).
+
+**D1** `design_check_levels` (`src/backend/features/design-check/schema.ts`):
+one row per person who changed a level, keyed by Onshape user id, holding the
+levels as saved and when. Kept out of `db/schema.ts`, with no foreign key: a row
+names a user, not one of the app's rows. Someone on FRCDesign's levels has no
+row.
 
 **Query cache** the last check of each tab, never stale, dropped five minutes
 after the page closes (TanStack's default), so coming back later checks again.
+The caller's levels, never stale; a save sets them at once and reads them
+again when it settles.
 
 **KV** `seen-hints:`, `Hint.OPENED_DESIGN_CHECK` once the page has been opened
 ([auth.md](./auth.md)).
@@ -231,17 +306,39 @@ only with one (`canResume` in `src/frontend/routes/index.tsx`).
    and answers.
 5. The navbar's refresh button, **Check again**, asks again; nothing else does.
 
+The page asks for the caller's levels, `GET /api/design-check/levels`, beside
+the check, and draws nothing until both have answered. Levels that can't be read
+leave FRCDesign's and no way to change them.
+
 ### The results
 
-1. With nothing found, the page says so for the kind of tab it is.
+Every issue shows at the caller's level for its type (`getShownSeverity`);
+one turned off is left out and counted.
+
+1. With nothing found, the page says so for the kind of tab it is; with
+   everything found turned off, it says that, with how many.
 2. Otherwise the severity badges head the page, beside the time of the check,
-   then one tinted box per issue type, worst first: its name, what to do about
-   it, and every feature, part or instance it was found on.
+   then one tinted box per issue type, worst first at the caller's levels: its
+   name, what to do about it, and every feature, part or instance it was found
+   on. Under the boxes, how many are hidden, with **Change levels**.
 3. Clicking a feature or mate's name opens it in Onshape's feature dialog
    (`sendOpenFeatureMessage`); a suppressed Part Studio feature, which Onshape
    won't open, is named only. Clicking a part's or a part instance's selects
    it in the Onshape window (`sendSelectPartMessage`): a part by its id, an
    instance by its id and its part's. A broken instance is named only.
+
+### Levels
+
+1. The navbar's **Levels** button, once the levels have loaded, and **Change
+   levels** under the results, open `DesignCheckLevels` in a modal: every
+   type, in sections by the tabs it is raised in, each with its level, and
+   FRCDesign's default under one that was changed.
+2. Picking a level saves every one of the caller's levels,
+   `POST /api/design-check/levels`, shown at once (`withLevel`), so the page
+   behind redraws without checking again. A level set back to FRCDesign's is
+   left out, so it follows any change to FRCDesign's.
+3. **Reset to defaults**, once anything was changed, saves none, which deletes
+   the row.
 
 ## User-facing strings
 
@@ -256,7 +353,11 @@ In [strings/design-check.md](../strings/design-check.md).
 - A check runs when the page opens on a tab with no check cached and on
   **Check again**, never on its own: the query is never stale and never
   retried.
-- Severity follows from the type alone; it is not sent.
+- What a check finds, and what analytics records of it, never depends on
+  levels: the server sends every issue, with no severity, and the page applies
+  the caller's.
+- Levels are the caller's alone, read and written behind
+  `requireSignInMiddleware` by their user id; they cost no Onshape call.
 - `checkDesign` is pure, so every check is tested without Onshape.
 - A sketch's definition status failing to arrive fails no other check; Onshape
   refusing the caller fails the whole check.
@@ -273,6 +374,8 @@ In [strings/design-check.md](../strings/design-check.md).
 | A feature lost every pick in a box, and builds  | Nothing: a box of default planes resolves to nothing too    | —               |
 | The sketches can't be listed                    | The other issues, and a note that sketches went unchecked   | **Check again** |
 | Onshape stops sending `sketchSolveStatus`       | The note that sketches went unchecked, on every Part Studio | A change here   |
+| The levels can't be read                        | Every issue at FRCDesign's severity, and no **Levels**      | Reopening       |
+| A level fails to save                           | "Failed to save your levels.", and the saved levels again   | Picking again   |
 
 ## Decisions
 
@@ -286,9 +389,16 @@ In [strings/design-check.md](../strings/design-check.md).
 - **The default configuration.** The launch doesn't carry the configuration
   showing, so a configured tab is checked as its defaults.
 - **Workspaces only.** A version can't be edited, so there is nothing to act on.
-- **One severity per type, the same for everyone.** Per-person levels would need
-  settings and storage of their own; the severities here are the ones
-  FRCDesign recommends to anybody.
+- **FRCDesign's severities, which each person may change for themselves.** The
+  defaults are what FRCDesign recommends to anybody; a team that numbers no
+  parts, or keeps scrap sketches suppressed, can quiet what doesn't apply to it.
+  There are no team levels: a person's choices follow only them.
+- **Levels applied on the page.** Changing one redraws the last check at once,
+  where checking again would spend Onshape calls; and what a check finds stays
+  the same for everyone, so analytics counts it the same way.
+- **Levels in D1, per account.** They are a choice meant to last and to follow
+  the person to another computer, which KV, for what may be lost, and browser
+  storage, for one browser, are not.
 - **A missing Origin Cube is a warning.** Not every Part Studio goes into a
   robot assembly: a COTS part's needs none.
 - **Part number and description are info.** How a team numbers and describes its
