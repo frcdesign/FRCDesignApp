@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createTestApp, jsonRequest } from "../../../__test_utils__";
 import { MockOnshapeApi } from "../../../__test_utils__/mock-onshape-api";
 import { getDb } from "../../db/client";
-import { OnshapeApiError } from "../../lib/onshape/client";
+import { OnshapeApiError, OnshapeTimeoutError } from "../../lib/onshape/client";
 import { ElementType } from "../../lib/onshape/element-type";
 import { events } from "../analytics/schema";
 import { EventType } from "../analytics/usage";
@@ -108,20 +108,24 @@ describe("checking a tab", () => {
         });
     });
 
-    it("still checks the rest when the sketches can't be read", async () => {
-        const { onshapeApi } = mockPartStudio(() =>
-            Promise.reject(new OnshapeApiError("broken", 500))
-        );
+    it.each([
+        ["fails", new OnshapeApiError("broken", 500)],
+        ["times out", new OnshapeTimeoutError(60_000)]
+    ])(
+        "still checks the rest when listing the sketches %s",
+        async (_, error) => {
+            const { onshapeApi } = mockPartStudio(() => Promise.reject(error));
 
-        const res = await check(onshapeApi, ElementType.PART_STUDIO);
+            const res = await check(onshapeApi, ElementType.PART_STUDIO);
 
-        expect(res.status).toBe(200);
-        const body = await res.json<DesignCheckOut>();
-        expect(body.sketchStatusUnknown).toBe(true);
-        expect(body.issues.map((issue) => issue.type)).toEqual([
-            DesignIssueType.ORIGIN_CUBE_MISSING
-        ]);
-    });
+            expect(res.status).toBe(200);
+            const body = await res.json<DesignCheckOut>();
+            expect(body.sketchStatusUnknown).toBe(true);
+            expect(body.issues.map((issue) => issue.type)).toEqual([
+                DesignIssueType.ORIGIN_CUBE_MISSING
+            ]);
+        }
+    );
 
     it("passes on Onshape refusing the caller", async () => {
         const { onshapeApi } = mockPartStudio(() =>

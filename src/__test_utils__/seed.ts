@@ -27,6 +27,7 @@ import {
     insertableStats,
     userStats
 } from "../backend/features/analytics/schema";
+import { designCheckLevels } from "../backend/features/design-check/schema";
 import { workspaceLinks } from "../backend/features/version-manager/schema";
 import {
     ParameterType,
@@ -100,7 +101,8 @@ export async function resetDb(db: Db): Promise<void> {
         db.delete(dailyDesignCheckMetrics),
         db.delete(dailyDesignIssueMetrics),
         db.delete(userStats),
-        db.delete(workspaceLinks)
+        db.delete(workspaceLinks),
+        db.delete(designCheckLevels)
     ]);
 }
 

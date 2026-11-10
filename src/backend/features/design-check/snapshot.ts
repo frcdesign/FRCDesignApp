@@ -1,6 +1,10 @@
 /** The Onshape calls behind one check: three for a Part Studio, two for an Assembly. */
 import { ElementType } from "../../lib/onshape/element-type";
-import { OnshapeApiError, type OnshapeApi } from "../../lib/onshape/client";
+import {
+    OnshapeApiError,
+    type OnshapeApi,
+    OnshapeTimeoutError
+} from "../../lib/onshape/client";
 import { type ElementPath } from "../../lib/onshape/path";
 import {
     getAssembly,
@@ -64,7 +68,10 @@ function skipSketches(error: unknown): undefined {
     const isRefusal =
         error instanceof OnshapeApiError &&
         (error.status === 401 || error.status === 403 || error.status === 429);
-    if (!(error instanceof OnshapeApiError) || isRefusal) {
+    const isOnshapeFailure =
+        error instanceof OnshapeApiError ||
+        error instanceof OnshapeTimeoutError;
+    if (!isOnshapeFailure || isRefusal) {
         throw error;
     }
     console.warn("Skipping sketch status", error);

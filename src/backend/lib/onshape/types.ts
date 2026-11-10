@@ -425,7 +425,7 @@ export interface OnshapeFeatureListResponse {
     features: OnshapePartStudioFeature[];
     /** Keyed by feature id. */
     featureStates?: Record<string, OnshapeFeatureState>;
-    /** The index of the first feature below the rollback bar; -1 at the end. */
+    /** The index of the first feature below the rollback bar: the feature count at the end, or -1 by the spec. */
     rollbackIndex?: number;
 }
 

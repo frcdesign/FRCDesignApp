@@ -298,6 +298,45 @@ describe("a Part Studio", () => {
         expect(types(partStudio({ features: [copy] }))).toEqual([]);
     });
 
+    it("doesn't take a built-in feature or a part named for the cube for it", () => {
+        const snapshot = partStudio({
+            features: [
+                extrude("E1", { name: "Origin Cube Mount", suppressed: true })
+            ],
+            parts: [
+                part("M", { name: "Origin Cube Mount", material: undefined })
+            ]
+        });
+
+        expect(types(snapshot)).toEqual([
+            DesignIssueType.PART_NO_MATERIAL,
+            DesignIssueType.ORIGIN_CUBE_MISSING,
+            DesignIssueType.FEATURE_SUPPRESSED
+        ]);
+    });
+
+    it("still reports a misplaced Origin Cube that is red", () => {
+        const snapshot = partStudio({
+            features: [extrude("E1"), originCube()],
+            statuses: { Fcube: "ERROR" }
+        });
+
+        expect(types(snapshot)).toEqual([
+            DesignIssueType.FEATURE_ERROR,
+            DesignIssueType.ORIGIN_CUBE_NOT_FIRST
+        ]);
+    });
+
+    it("doesn't miss sketch status for sketches only below the rollback bar", () => {
+        const snapshot = partStudio({
+            features: [originCube(), extrude("E1"), sketch("S1")],
+            sketchStatuses: {},
+            rollbackIndex: 2
+        });
+
+        expect(checkDesign(snapshot).sketchStatusUnknown).toBe(false);
+    });
+
     it("doesn't take a sketch named Origin Cube for it", () => {
         const snapshot = partStudio({
             features: [sketch("S1", "Origin Cube sketch")],
@@ -561,6 +600,38 @@ describe("an Assembly", () => {
             [DesignIssueType.INSTANCE_BROKEN, "Part 1 <1>"],
             [DesignIssueType.INSTANCE_FLOATING, "Part 1 <2>"],
             [DesignIssueType.FEATURE_SUPPRESSED, "Fastened 2"]
+        ]);
+    });
+
+    it("reports a suppressed mate named for the Origin Cube, and one with no name", () => {
+        const suppressed = (
+            id: string,
+            name: string
+        ): OnshapeAssemblyFeature => {
+            const mate = fasten(id, [], ["a"]);
+            return {
+                ...mate,
+                suppressed: true,
+                featureData: { ...mate.featureData, name }
+            };
+        };
+        const snapshot = assembly({
+            instances: [instance("a")],
+            mates: [
+                fasten("M1", [], ["a"]),
+                suppressed("M2", "Origin Cube Fasten"),
+                suppressed("M3", "")
+            ]
+        });
+
+        expect(
+            checkDesign(snapshot).issues.map((issue) => [
+                issue.type,
+                issue.subject
+            ])
+        ).toEqual([
+            [DesignIssueType.FEATURE_SUPPRESSED, "Origin Cube Fasten"],
+            [DesignIssueType.FEATURE_SUPPRESSED, "M3"]
         ]);
     });
 

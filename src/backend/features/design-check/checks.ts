@@ -21,12 +21,12 @@ import type {
 
 /** FRCDesign's Origin Cube FeatureScript: https://frcdesign.org/best-practices/assembly-setup/ */
 const ORIGIN_CUBE_DOCUMENT_ID = "321c197a842fc5f1a29e6621";
-/** Matches a copy of the FeatureScript kept in another document, once renamed. */
+/** Matches a copy of the FeatureScript kept in another document, by its name. */
 const ORIGIN_CUBE_FEATURE_NAME = /^origin cube\b/i;
 /** What the Origin Cube is called where Onshape sends its name unresolved. */
 const ORIGIN_CUBE_NAME = "Origin Cube";
-/** The cube the feature makes, a reference body with no material or part number. */
-const ORIGIN_CUBE_PART_NAME = /origin cube|cube of all time/i;
+/** The cube the feature makes, which brings its own material and no part number. */
+const ORIGIN_CUBE_PART_NAME = /^(origin cube|cube of all time)$/i;
 
 export interface DesignCheckResult {
     /** Worst first at FRCDesign's levels, those off by default last. */
@@ -57,8 +57,8 @@ function checkPartStudio(snapshot: PartStudioSnapshot): DesignCheckResult {
     const statuses = sketchStatuses(snapshot.sketches);
     const sketches = checkSketches(snapshot.features, statuses);
     const originCube = checkOriginCube(snapshot.features);
-    // Each is red or yellow too, and reported once, as itself: an over-defined
-    // sketch, and the Origin Cube anywhere but first, which it refuses.
+    // Each is yellow too, and reported once, as itself: an over-defined sketch,
+    // and the Origin Cube anywhere but first, which it refuses. Red still shows.
     const reported = new Set(
         [...sketches, ...originCube]
             .filter(
@@ -70,10 +70,11 @@ function checkPartStudio(snapshot: PartStudioSnapshot): DesignCheckResult {
     );
     const features = checkFeatures(snapshot.features).filter(
         (issue) =>
-            issue.type === DesignIssueType.FEATURE_SUPPRESSED ||
+            issue.type !== DesignIssueType.FEATURE_WARNING ||
             !reported.has(issue.featureId)
     );
-    const hasSketches = snapshot.features.features.some(
+    // Onshape lists no sketch below the rollback bar.
+    const hasSketches = builtFeatures(snapshot.features).some(
         (feature) => isSketch(feature) && !feature.suppressed
     );
     return {
@@ -101,18 +102,23 @@ function isSketch(feature: Feature): boolean {
 
 /** A FeatureScript feature can name itself from a template, which Onshape sends unfilled, as `#_name`. */
 function featureName(feature: Feature): string {
-    return feature.name.startsWith("#") && isOriginCube(feature)
+    // A nameless one goes by its id rather than failing the whole check.
+    const name = feature.name || feature.featureId;
+    return name.startsWith("#") && isOriginCube(feature)
         ? ORIGIN_CUBE_NAME
-        : feature.name;
+        : name;
 }
 
 export function isOriginCube(feature: Feature): boolean {
     if (isSketch(feature)) {
         return false;
     }
+    // Only a custom feature has a namespace, so a mate or extrude named for the
+    // cube isn't taken for it.
+    const namespace = feature.namespace ?? "";
     return (
-        (feature.namespace ?? "").includes(ORIGIN_CUBE_DOCUMENT_ID) ||
-        ORIGIN_CUBE_FEATURE_NAME.test(feature.name)
+        namespace.startsWith(`d${ORIGIN_CUBE_DOCUMENT_ID}::`) ||
+        (namespace !== "" && ORIGIN_CUBE_FEATURE_NAME.test(feature.name))
     );
 }
 
@@ -213,12 +219,7 @@ function checkFeatures(response: OnshapeFeatureListResponse): DesignIssue[] {
 function checkMissingSelections(
     response: OnshapeFeatureListResponse
 ): DesignIssue[] {
-    const { rollbackIndex = -1 } = response;
-    const built =
-        rollbackIndex < 0
-            ? response.features
-            : response.features.slice(0, rollbackIndex);
-    return built
+    return builtFeatures(response)
         .filter((feature) => !feature.suppressed)
         .filter((feature) => {
             const status =
@@ -238,6 +239,14 @@ function hasLostPick(parameter: FeatureParameter): boolean {
         (query) => (query.deterministicIds?.length ?? 0) > 0
     );
     return resolves.includes(true) && resolves.includes(false);
+}
+
+/** The features above the rollback bar, which are all Onshape builds. */
+function builtFeatures(response: OnshapeFeatureListResponse): Feature[] {
+    const { rollbackIndex = -1 } = response;
+    return rollbackIndex < 0
+        ? response.features
+        : response.features.slice(0, rollbackIndex);
 }
 
 /** Features below the rollback bar are left out of the model. */
@@ -350,10 +359,13 @@ function checkInstances(snapshot: AssemblySnapshot): DesignIssue[] {
         if (isBrokenInstance) {
             issues.push({ type: DesignIssueType.INSTANCE_BROKEN, ...target });
         }
-        // A broken instance has nothing left to mate, so it isn't floating too.
         if (fixed.has(instance.id)) {
             issues.push({ type: DesignIssueType.INSTANCE_FIXED, ...target });
-        } else if (!isBrokenInstance && !held.has(instance.id)) {
+        } else if (
+            // A broken instance has nothing left to mate, so it isn't floating too.
+            !isBrokenInstance &&
+            !held.has(instance.id)
+        ) {
             issues.push({ type: DesignIssueType.INSTANCE_FLOATING, ...target });
         }
         return issues;
