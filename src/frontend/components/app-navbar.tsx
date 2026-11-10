@@ -14,6 +14,7 @@ import {
     GearIcon,
     GitBranchIcon,
     type Icon,
+    ListChecksIcon,
     MagnifyingGlassIcon,
     MoonIcon,
     SunIcon
@@ -60,12 +61,20 @@ import {
     useIsVersionManager,
     useIsVersionManagerNew
 } from "../features/version-manager/navigation";
-import { useTargetWorkspace } from "../lib/onshape-params";
+import {
+    useIsDesignCheck,
+    useIsDesignCheckNew
+} from "../features/design-check/navigation";
+import { checkAgain } from "../features/design-check/queries";
+import { useTargetElement, useTargetWorkspace } from "../lib/onshape-params";
 import { type WorkspacePath } from "@backend/features/version-manager/contract";
 import { type AppTab, UtilityTab } from "../lib/app-tab";
 import { getTabName, useNavigateToTab } from "../lib/tabs";
 import { useRefreshVersionManagerMutation } from "../features/version-manager/queries";
 import { RefreshButton } from "./refresh-button";
+import { useIsFetching } from "@tanstack/react-query";
+import { designCheckQueryKey } from "../lib/query-keys";
+import { m } from "../paraglide/messages";
 
 /** Stretched so a full-height child's underline lands on the row's border. */
 export function NavbarRow(props: PropsWithChildren): ReactNode {
@@ -94,9 +103,11 @@ export function NavbarRow(props: PropsWithChildren): ReactNode {
 
 /** The page picker with the brand and settings, over search and its filters. */
 export function AppNavbar(): ReactNode {
-    // Search and its filters belong to a library, and the version manager is
-    // not one; its page fills the room they leave.
+    // Search and its filters belong to a library, and a utility page is not
+    // one; its page fills the room they leave.
     const isVersionManager = useIsVersionManager();
+    const isDesignCheck = useIsDesignCheck();
+    const isUtility = isVersionManager || isDesignCheck;
     const workspace = useTargetWorkspace();
 
     return (
@@ -104,16 +115,17 @@ export function AppNavbar(): ReactNode {
             <NavbarRow>
                 <PagePicker />
                 <Group gap="xs" ml="auto" className={styles.noShrink}>
-                    {/* Inserting is the library's; the version manager inserts nothing. */}
-                    {!isVersionManager && <InsertLocationStatus />}
+                    {/* Inserting is the library's; a utility page inserts nothing. */}
+                    {!isUtility && <InsertLocationStatus />}
                     <SignInButton />
                     {isVersionManager && workspace && (
                         <VersionManagerRefreshButton workspace={workspace} />
                     )}
+                    {isDesignCheck && <DesignCheckRefreshButton />}
                     <SettingsControls />
                 </Group>
             </NavbarRow>
-            {!isVersionManager && (
+            {!isUtility && (
                 <Group gap="xs" px="sm" h={NAVBAR_ROW_HEIGHT}>
                     <SearchBar />
                     <VendorMenu />
@@ -153,7 +165,10 @@ interface AppPage {
 }
 
 function useAppPages(): AppPage[] {
-    const isNew = useIsVersionManagerNew();
+    const targetElement = useTargetElement();
+    const isDesignCheck = useIsDesignCheck();
+    const isVersionManagerNew = useIsVersionManagerNew();
+    const isDesignCheckNew = useIsDesignCheckNew();
 
     const libraries = Object.values(LibraryId).map((libraryId) => ({
         tab: libraryId,
@@ -168,17 +183,30 @@ function useAppPages(): AppPage[] {
         )
     }));
 
-    return [
-        ...libraries,
-        {
-            tab: UtilityTab.VERSION_MANAGER,
-            group: UTILITIES_GROUP,
-            icon: GitBranchIcon,
-            color: AppColor.VERSION_MANAGER,
-            badge: isNew ? <NewBadge /> : undefined,
-            isNew
-        }
-    ];
+    const versionManager: AppPage = {
+        tab: UtilityTab.VERSION_MANAGER,
+        group: UTILITIES_GROUP,
+        icon: GitBranchIcon,
+        color: AppColor.VERSION_MANAGER,
+        badge: isVersionManagerNew ? <NewBadge /> : undefined,
+        isNew: isVersionManagerNew
+    };
+    // Listed while it is showing even without a tab, so the picker never names
+    // a page it does not offer.
+    const designCheck: AppPage[] =
+        targetElement || isDesignCheck
+            ? [
+                  {
+                      tab: UtilityTab.DESIGN_CHECK,
+                      group: UTILITIES_GROUP,
+                      icon: ListChecksIcon,
+                      color: AppColor.DESIGN_CHECK,
+                      badge: isDesignCheckNew ? <NewBadge /> : undefined,
+                      isNew: isDesignCheckNew
+                  }
+              ]
+            : [];
+    return [...libraries, versionManager, ...designCheck];
 }
 
 /** The pages under their headings, each heading where its first page comes. */
@@ -195,11 +223,14 @@ function PagePicker(): ReactNode {
     const pages = useAppPages();
     const currentLibraryId = useLibraryId();
     const isVersionManager = useIsVersionManager();
+    const isDesignCheck = useIsDesignCheck();
     const navigateToTab = useNavigateToTab();
 
     const current: AppTab = isVersionManager
         ? UtilityTab.VERSION_MANAGER
-        : currentLibraryId;
+        : isDesignCheck
+          ? UtilityTab.DESIGN_CHECK
+          : currentLibraryId;
     const currentPage = pages.find((page) => page.tab === current);
 
     // Warm the versions on hover, so picking one has nothing left to wait for.
@@ -302,6 +333,22 @@ function VersionManagerRefreshButton(
         <RefreshButton
             loading={refresh.isPending}
             onClick={() => refresh.mutate()}
+        />
+    );
+}
+
+/** Checks the tab again, which spends Onshape calls, so only when asked. */
+function DesignCheckRefreshButton(): ReactNode {
+    const target = useTargetElement();
+    const isFetching = useIsFetching({
+        queryKey: target ? designCheckQueryKey(target) : ["design-check"]
+    });
+    if (!target) return null;
+    return (
+        <RefreshButton
+            label={m.designCheckAgain()}
+            loading={isFetching > 0}
+            onClick={() => void checkAgain(target)}
         />
     );
 }

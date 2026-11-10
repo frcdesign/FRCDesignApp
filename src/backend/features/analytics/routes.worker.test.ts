@@ -5,6 +5,8 @@ import { configurations, insertables } from "../../db/schema";
 import {
     dailyAppOpens,
     dailyConfigurationMetrics,
+    dailyDesignCheckMetrics,
+    dailyDesignIssueMetrics,
     dailyInsertableMetrics,
     dailyInsertableUsers,
     dailyMetrics,
@@ -39,6 +41,7 @@ import {
     type DailyUsePoint,
     type OverviewUsageOut,
     type ReportSummary,
+    type DesignCheckTotals,
     type UseSourceUsage,
     type LibrarySummaryOut,
     type UnusedOptionOut,
@@ -49,6 +52,8 @@ import {
 import { MONTH_DAYS } from "./measures";
 import { addDays, toDayKey, toReportingDay } from "./day";
 import { BuildIssueType } from "../build-checker/issues";
+import { DesignIssueType } from "../design-check/contract";
+import { ElementType } from "../../lib/onshape/element-type";
 import {
     FeedbackCategory,
     FeedbackSource,
@@ -180,6 +185,7 @@ const OVERVIEW_AREAS = [
     "series",
     "sources",
     "version-manager",
+    "design-check",
     "reports"
 ];
 
@@ -578,6 +584,81 @@ describe("analytics routes", () => {
             const body: LibrarySummaryOut = await res.json();
 
             expect(body.totals.uses).toBe(2);
+        });
+    });
+
+    describe("GET /analytics/overview/design-check", () => {
+        it("totals the range's checks, and ranks issue types by the checks that found them", async () => {
+            await db.insert(dailyDesignCheckMetrics).values([
+                {
+                    day: "2026-06-01",
+                    elementType: ElementType.PART_STUDIO,
+                    checks: 4,
+                    cleanChecks: 1
+                },
+                {
+                    day: "2026-06-02",
+                    elementType: ElementType.ASSEMBLY,
+                    checks: 2,
+                    cleanChecks: 2
+                },
+                {
+                    day: "2025-01-01",
+                    elementType: ElementType.ASSEMBLY,
+                    checks: 9,
+                    cleanChecks: 0
+                }
+            ]);
+            await db.insert(dailyDesignIssueMetrics).values([
+                {
+                    day: "2026-06-01",
+                    issueType: DesignIssueType.PART_NO_MATERIAL,
+                    checks: 1,
+                    issues: 7
+                },
+                {
+                    day: "2026-06-01",
+                    issueType: DesignIssueType.FEATURE_ERROR,
+                    checks: 2,
+                    issues: 2
+                },
+                {
+                    day: "2026-06-02",
+                    issueType: DesignIssueType.PART_NO_MATERIAL,
+                    checks: 2,
+                    issues: 2
+                },
+                {
+                    day: "2025-01-01",
+                    issueType: DesignIssueType.INSTANCE_BROKEN,
+                    checks: 9,
+                    issues: 9
+                }
+            ]);
+
+            const res = await anonymousGet(
+                "/api/analytics/overview/design-check?from=2026-05-01&to=2026-07-01"
+            );
+            const body: DesignCheckTotals = await res.json();
+
+            expect(body).toEqual({
+                checks: 6,
+                cleanChecks: 3,
+                partStudioChecks: 4,
+                assemblyChecks: 2,
+                issueTypes: [
+                    {
+                        type: DesignIssueType.PART_NO_MATERIAL,
+                        checks: 3,
+                        issues: 9
+                    },
+                    {
+                        type: DesignIssueType.FEATURE_ERROR,
+                        checks: 2,
+                        issues: 2
+                    }
+                ]
+            });
         });
     });
 

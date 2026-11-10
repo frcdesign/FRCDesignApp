@@ -166,9 +166,10 @@ and in code; "inserts" means only the ones that went into Onshape.
 `docs/architecture/` holds one document per feature area, indexed in its
 `README.md`: thumbnails, configurations, loading, favorites, recents, auth
 (with access levels and environment variables), search, analytics, build
-issues and the admin card, and the version manager. Each states the area's flows, storage,
-**invariants**, failure modes and decisions. Read the area's document before
-changing it, and check the change against its invariants.
+issues and the admin card, the version manager, and the design check. Each
+states the area's flows, storage, **invariants**, failure modes and decisions.
+Read the area's document before changing it, and check the change against its
+invariants.
 
 Update the document in the same commit when a change:
 

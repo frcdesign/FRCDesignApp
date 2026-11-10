@@ -14,7 +14,9 @@ export enum EventType {
     /** One finished push or pull; see `features/version-manager`. */
     VERSION_RUN = "version_run",
     /** One report posted to Discord; see `features/feedback`. */
-    REPORT = "report"
+    REPORT = "report",
+    /** One check of a Part Studio or Assembly; see `features/design-check`. */
+    DESIGN_CHECK = "design_check"
 }
 
 /** A use is an insert or a download: each counts toward a part's usage. */

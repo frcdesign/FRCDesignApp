@@ -10,6 +10,7 @@ describe("app tabs", () => {
         expect(getTabPath(UtilityTab.VERSION_MANAGER)).toBe(
             "/app/version-manager"
         );
+        expect(getTabPath(UtilityTab.DESIGN_CHECK)).toBe("/app/design-check");
     });
 
     it("tells a library from a utility", () => {

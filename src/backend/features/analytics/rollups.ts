@@ -9,10 +9,13 @@ import {
     asUse,
     asReport,
     asVersionRun,
+    asDesignCheck,
     type LoggedUse,
     type LoggedReport,
-    type LoggedVersionRun
+    type LoggedVersionRun,
+    type LoggedDesignCheck
 } from "./logged-event";
+import { type DesignIssueType } from "../design-check/contract";
 import type { LibraryId } from "../library/library-id";
 import {
     dailyConfigurationMetrics,
@@ -25,6 +28,8 @@ import {
     dailyUserActivity,
     dailyReportMetrics,
     dailyVersionMetrics,
+    dailyDesignCheckMetrics,
+    dailyDesignIssueMetrics,
     insertableStats,
     userStats,
     type LoggedEvent
@@ -45,6 +50,14 @@ export function rollupWrites(
     }
     if (event.type === EventType.APP_OPEN) {
         return [countAppOpenDay(db, event)];
+    }
+    // Not activity either: a check reads the caller's own document, no library's.
+    const check = asDesignCheck(event);
+    if (check) {
+        return [
+            countDesignCheckDay(db, check),
+            ...countDesignIssueDay(db, check)
+        ];
     }
     // Not activity, even with a library: a report is not a use of the library.
     const report = asReport(event);
@@ -117,6 +130,57 @@ function countVersionRunDay(db: Db, run: LoggedVersionRun) {
                 )
             }
         });
+}
+
+/** A day's checks of one kind of tab, and how many found nothing. */
+function countDesignCheckDay(db: Db, check: LoggedDesignCheck) {
+    const isClean = Object.keys(check.designIssueCounts).length === 0;
+    const values = {
+        day: check.day,
+        elementType: check.checkedElementType,
+        checks: 1,
+        cleanChecks: isClean ? 1 : 0
+    };
+
+    return db
+        .insert(dailyDesignCheckMetrics)
+        .values(values)
+        .onConflictDoUpdate({
+            target: [
+                dailyDesignCheckMetrics.day,
+                dailyDesignCheckMetrics.elementType
+            ],
+            set: {
+                checks: increment(dailyDesignCheckMetrics.checks),
+                cleanChecks: increment(
+                    dailyDesignCheckMetrics.cleanChecks,
+                    values.cleanChecks
+                )
+            }
+        });
+}
+
+/** One row per type the check found, counting the check once and each issue. */
+function countDesignIssueDay(db: Db, check: LoggedDesignCheck) {
+    const counts = Object.entries(check.designIssueCounts) as [
+        DesignIssueType,
+        number
+    ][];
+    return counts.map(([issueType, issues]) =>
+        db
+            .insert(dailyDesignIssueMetrics)
+            .values({ day: check.day, issueType, checks: 1, issues })
+            .onConflictDoUpdate({
+                target: [
+                    dailyDesignIssueMetrics.day,
+                    dailyDesignIssueMetrics.issueType
+                ],
+                set: {
+                    checks: increment(dailyDesignIssueMetrics.checks),
+                    issues: increment(dailyDesignIssueMetrics.issues, issues)
+                }
+            })
+    );
 }
 
 /** A day's reports of one kind, about one part or none. */

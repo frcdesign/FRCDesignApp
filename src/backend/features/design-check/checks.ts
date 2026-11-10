@@ -1,0 +1,326 @@
+/** Pure: what a snapshot of a Part Studio or Assembly breaks of FRCDesign's practices. */
+import { ElementType } from "../../lib/onshape/element-type";
+import type {
+    OnshapeAssemblyDefinition,
+    OnshapeAssemblyInstance,
+    OnshapeFeatureListResponse,
+    OnshapeSketchList
+} from "../../lib/onshape/types";
+import { BuildIssueSeverity } from "../build-checker/issues";
+import {
+    type DesignIssue,
+    DesignIssueType,
+    getDesignIssueSeverity
+} from "./contract";
+import type {
+    AssemblySnapshot,
+    DesignSnapshot,
+    PartStudioSnapshot
+} from "./snapshot";
+
+/** FRCDesign's Origin Cube FeatureScript: https://frcdesign.org/best-practices/assembly-setup/ */
+const ORIGIN_CUBE_DOCUMENT_ID = "321c197a842fc5f1a29e6621";
+/** Matches a copy of the FeatureScript kept in another document. */
+const ORIGIN_CUBE_FEATURE_NAME = /^origin cube\b/i;
+/** The cube the feature makes, a reference body with no material or part number. */
+const ORIGIN_CUBE_PART_NAME = /origin cube|cube of all time/i;
+
+export interface DesignCheckResult {
+    /** Errors first, then warnings, then info. */
+    issues: DesignIssue[];
+    /** Unsuppressed sketches exist and Onshape reported none's status. */
+    sketchStatusUnknown: boolean;
+}
+
+type Feature = OnshapeFeatureListResponse["features"][number];
+
+export function checkDesign(snapshot: DesignSnapshot): DesignCheckResult {
+    switch (snapshot.elementType) {
+        case ElementType.PART_STUDIO:
+            return checkPartStudio(snapshot);
+        case ElementType.ASSEMBLY:
+            return {
+                issues: bySeverity([
+                    ...checkFeatures(snapshot.features),
+                    ...checkInstances(snapshot)
+                ]),
+                sketchStatusUnknown: false
+            };
+    }
+}
+
+function checkPartStudio(snapshot: PartStudioSnapshot): DesignCheckResult {
+    const statuses = sketchStatuses(snapshot.sketches);
+    const sketches = checkSketches(snapshot.features, statuses);
+    // An over-defined sketch is red or yellow too; it is reported once, as the sketch.
+    const overdefined = new Set(
+        sketches
+            .filter(
+                (issue) => issue.type === DesignIssueType.SKETCH_OVERDEFINED
+            )
+            .map((issue) => issue.featureId)
+    );
+    const features = checkFeatures(snapshot.features).filter(
+        (issue) =>
+            issue.type === DesignIssueType.FEATURE_SUPPRESSED ||
+            !overdefined.has(issue.featureId)
+    );
+    const hasSketches = snapshot.features.features.some(
+        (feature) => isSketch(feature) && !feature.suppressed
+    );
+    return {
+        issues: bySeverity([
+            ...checkOriginCube(snapshot.features),
+            ...sketches,
+            ...features,
+            ...checkRollback(snapshot.features),
+            ...checkParts(snapshot)
+        ]),
+        sketchStatusUnknown: hasSketches && statuses.size === 0
+    };
+}
+
+const SEVERITY_ORDER: Record<BuildIssueSeverity, number> = {
+    [BuildIssueSeverity.ERROR]: 0,
+    [BuildIssueSeverity.WARNING]: 1,
+    [BuildIssueSeverity.INFO]: 2
+};
+
+function bySeverity(issues: DesignIssue[]): DesignIssue[] {
+    return issues.toSorted(
+        (a, b) =>
+            SEVERITY_ORDER[getDesignIssueSeverity(a.type)] -
+            SEVERITY_ORDER[getDesignIssueSeverity(b.type)]
+    );
+}
+
+function isSketch(feature: Feature): boolean {
+    return feature.featureType === "newSketch";
+}
+
+export function isOriginCube(feature: Feature): boolean {
+    if (isSketch(feature)) {
+        return false;
+    }
+    return (
+        (feature.namespace ?? "").includes(ORIGIN_CUBE_DOCUMENT_ID) ||
+        ORIGIN_CUBE_FEATURE_NAME.test(feature.name)
+    );
+}
+
+/** Every Part Studio starts with the Origin Cube, which is never suppressed. */
+function checkOriginCube(response: OnshapeFeatureListResponse): DesignIssue[] {
+    const index = response.features.findIndex(isOriginCube);
+    if (index === -1) {
+        return [{ type: DesignIssueType.ORIGIN_CUBE_MISSING }];
+    }
+    const cube = response.features[index];
+    const target = { subject: cube.name, featureId: cube.featureId };
+    return [
+        ...(cube.suppressed
+            ? [{ type: DesignIssueType.ORIGIN_CUBE_SUPPRESSED, ...target }]
+            : []),
+        ...(index > 0
+            ? [
+                  {
+                      type: DesignIssueType.ORIGIN_CUBE_NOT_FIRST,
+                      ...target,
+                      count: index + 1
+                  }
+              ]
+            : [])
+    ];
+}
+
+type SketchStatus = "UNDERDEFINED" | "WELL_DEFINED" | "OVERDEFINED" | "UNKNOWN";
+
+const SKETCH_STATUSES = new Set<string>([
+    "UNDERDEFINED",
+    "WELL_DEFINED",
+    "OVERDEFINED",
+    "UNKNOWN"
+]);
+
+/** Onshape names the values but not the key that holds them, so any top-level field holding one is taken. */
+export function sketchStatus(
+    sketch: Record<string, unknown>
+): SketchStatus | undefined {
+    for (const value of Object.values(sketch)) {
+        if (typeof value === "string" && SKETCH_STATUSES.has(value)) {
+            return value as SketchStatus;
+        }
+    }
+    return undefined;
+}
+
+/** Keyed by the sketch's feature id. */
+function sketchStatuses(
+    sketches: OnshapeSketchList | undefined
+): Map<string, SketchStatus> {
+    const statuses = new Map<string, SketchStatus>();
+    for (const sketch of sketches?.sketches ?? []) {
+        const status = sketchStatus(sketch);
+        if (sketch.featureId && status) {
+            statuses.set(sketch.featureId, status);
+        }
+    }
+    return statuses;
+}
+
+function checkSketches(
+    response: OnshapeFeatureListResponse,
+    statuses: Map<string, SketchStatus>
+): DesignIssue[] {
+    return response.features.flatMap((feature): DesignIssue[] => {
+        if (!isSketch(feature) || feature.suppressed) {
+            return [];
+        }
+        const target = { subject: feature.name, featureId: feature.featureId };
+        switch (statuses.get(feature.featureId)) {
+            case "UNDERDEFINED":
+                return [
+                    { type: DesignIssueType.SKETCH_UNDERDEFINED, ...target }
+                ];
+            case "OVERDEFINED":
+                return [
+                    { type: DesignIssueType.SKETCH_OVERDEFINED, ...target }
+                ];
+            default:
+                return [];
+        }
+    });
+}
+
+/** Red and yellow features or mates, and suppressed ones left in the list. */
+function checkFeatures(response: OnshapeFeatureListResponse): DesignIssue[] {
+    return response.features.flatMap((feature): DesignIssue[] => {
+        const target = { subject: feature.name, featureId: feature.featureId };
+        if (feature.suppressed) {
+            // The Origin Cube has its own, louder issue.
+            return isOriginCube(feature)
+                ? []
+                : [{ type: DesignIssueType.FEATURE_SUPPRESSED, ...target }];
+        }
+        switch (response.featureStates?.[feature.featureId]?.featureStatus) {
+            case "ERROR":
+                return [{ type: DesignIssueType.FEATURE_ERROR, ...target }];
+            case "WARNING":
+                return [{ type: DesignIssueType.FEATURE_WARNING, ...target }];
+            default:
+                return [];
+        }
+    });
+}
+
+/** Features below the rollback bar are left out of the model. */
+function checkRollback(response: OnshapeFeatureListResponse): DesignIssue[] {
+    const { rollbackIndex } = response;
+    const total = response.features.length;
+    if (
+        rollbackIndex === undefined ||
+        rollbackIndex < 0 ||
+        rollbackIndex >= total
+    ) {
+        return [];
+    }
+    return [
+        {
+            type: DesignIssueType.ROLLBACK_NOT_AT_END,
+            count: total - rollbackIndex
+        }
+    ];
+}
+
+const isBlank = (value: string | undefined) => !value?.trim();
+
+/** A material for mass properties, a part number and description for the BOM. Solid parts only. */
+function checkParts(snapshot: PartStudioSnapshot): DesignIssue[] {
+    return snapshot.parts.flatMap((part): DesignIssue[] => {
+        const name = part.name ?? part.partId;
+        if (
+            (part.bodyType && part.bodyType !== "solid") ||
+            ORIGIN_CUBE_PART_NAME.test(name)
+        ) {
+            return [];
+        }
+        const target = { subject: name, partId: part.partId };
+        return [
+            ...(part.material
+                ? []
+                : [{ type: DesignIssueType.PART_NO_MATERIAL, ...target }]),
+            ...(isBlank(part.partNumber)
+                ? [{ type: DesignIssueType.PART_NO_PART_NUMBER, ...target }]
+                : []),
+            ...(isBlank(part.description)
+                ? [{ type: DesignIssueType.PART_NO_DESCRIPTION, ...target }]
+                : [])
+        ];
+    });
+}
+
+/** The source tab was deleted, or Onshape draws it red; INFO and UNKNOWN aren't broken. */
+function isBroken(instance: OnshapeAssemblyInstance): boolean {
+    return (
+        instance.status === "DeletedElement" || instance.errorStatus === "ERROR"
+    );
+}
+
+/** Top-level instances an unsuppressed mate or group holds, or a pattern copies. */
+function heldInstances(definition: OnshapeAssemblyDefinition): Set<string> {
+    const root = definition.rootAssembly;
+    const held = new Set<string>();
+    for (const feature of root.features) {
+        if (feature.suppressed) {
+            continue;
+        }
+        for (const entity of feature.featureData?.matedEntities ?? []) {
+            const id = entity.matedOccurrence?.[0];
+            if (id) held.add(id);
+        }
+        for (const member of feature.featureData?.occurrences ?? []) {
+            const id = member.occurrence?.[0];
+            if (id) held.add(id);
+        }
+    }
+    // A pattern's copies move with their seed.
+    for (const pattern of root.patterns ?? []) {
+        for (const copies of Object.values(
+            pattern.seedToPatternInstances ?? {}
+        )) {
+            for (const id of copies) held.add(id);
+        }
+    }
+    return held;
+}
+
+/** FRCDesign fastens the Origin Cube to the assembly origin rather than fixing parts. */
+function checkInstances(snapshot: AssemblySnapshot): DesignIssue[] {
+    const root = snapshot.definition.rootAssembly;
+    const held = heldInstances(snapshot.definition);
+    const fixed = new Set(
+        (root.occurrences ?? [])
+            .filter((occurrence) => occurrence.path.length === 1)
+            .filter((occurrence) => occurrence.fixed)
+            .map((occurrence) => occurrence.path[0])
+    );
+    return root.instances.flatMap((instance): DesignIssue[] => {
+        if (instance.suppressed) {
+            return [];
+        }
+        const target = {
+            subject: instance.name ?? instance.id,
+            instanceId: instance.id
+        };
+        const issues: DesignIssue[] = [];
+        if (isBroken(instance)) {
+            issues.push({ type: DesignIssueType.INSTANCE_BROKEN, ...target });
+        }
+        if (fixed.has(instance.id)) {
+            issues.push({ type: DesignIssueType.INSTANCE_FIXED, ...target });
+        } else if (instance.type !== "Feature" && !held.has(instance.id)) {
+            // An inserted sketch is a reference, left where it lands.
+            issues.push({ type: DesignIssueType.INSTANCE_FLOATING, ...target });
+        }
+        return issues;
+    });
+}

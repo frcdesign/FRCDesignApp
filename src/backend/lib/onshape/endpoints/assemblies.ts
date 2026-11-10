@@ -8,6 +8,7 @@ import {
     OnshapeAssemblyDefinition,
     OnshapeBoundingBox,
     OnshapeCreatedFeature,
+    OnshapeFeatureListResponse,
     OnshapeInsertInstancesResponse
 } from "../types";
 
@@ -32,6 +33,14 @@ export function getAssembly(
             )
         })
     });
+}
+
+/** Its mates, groups and other features, and whether each regenerated. */
+export function getAssemblyFeatures(
+    client: OnshapeApi,
+    assemblyPath: ElementPath
+): Promise<OnshapeFeatureListResponse> {
+    return client.get(`/assemblies${toElementApiPath(assemblyPath)}/features`);
 }
 
 /** For a part studio, `options.partTypes` defaults to PARTS and COMPOSITE_PARTS. */

@@ -10,6 +10,7 @@ import assemblyIcon from "/assembly.svg";
 import { formatShortTimeAgo } from "../../../lib/format-time";
 import {
     BuildIssue,
+    getIssueSeverity,
     getMaxSeverity
 } from "@backend/features/build-checker/issues";
 import { ElementType } from "@backend/lib/onshape/element-type";
@@ -139,7 +140,9 @@ function BuildStatusHoverCard({
                         versionCreatedAt={versionCreatedAt}
                     />
                 ),
-                subtitle: <SeverityBadges issues={issues} />
+                subtitle: (
+                    <SeverityBadges severities={issues.map(getIssueSeverity)} />
+                )
             }}
         >
             <CardSections sections={body} />

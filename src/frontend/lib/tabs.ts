@@ -2,6 +2,7 @@
 import { useNavigate } from "@tanstack/react-router";
 import { type AppTab, getTabPath, isLibraryTab, UtilityTab } from "./app-tab";
 import { getLibraryName } from "./library";
+import { m } from "../paraglide/messages";
 
 export function useNavigateToTab(): (tabId: AppTab) => void {
     const navigate = useNavigate();
@@ -26,5 +27,7 @@ function getUtilityName(tabId: UtilityTab): string {
     switch (tabId) {
         case UtilityTab.VERSION_MANAGER:
             return "Version Manager";
+        case UtilityTab.DESIGN_CHECK:
+            return m.designCheckTabName();
     }
 }

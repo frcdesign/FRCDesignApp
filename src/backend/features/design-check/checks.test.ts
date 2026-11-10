@@ -1,0 +1,465 @@
+import { describe, expect, it } from "vitest";
+import { ElementType } from "../../lib/onshape/element-type";
+import type {
+    OnshapeAssemblyFeature,
+    OnshapeAssemblyInstance,
+    OnshapeFeatureListResponse,
+    OnshapePart
+} from "../../lib/onshape/types";
+import { checkDesign, sketchStatus } from "./checks";
+import { DesignIssueType } from "./contract";
+import type { AssemblySnapshot, PartStudioSnapshot } from "./snapshot";
+
+type Feature = OnshapeFeatureListResponse["features"][number];
+type FeatureStatus = "OK" | "INFO" | "WARNING" | "ERROR";
+
+const CUBE_DOCUMENT_ID = "321c197a842fc5f1a29e6621";
+
+function originCube(overrides: Partial<Feature> = {}): Feature {
+    return {
+        featureType: "originCube",
+        featureId: "Fcube",
+        name: "Origin Cube 1",
+        suppressed: false,
+        namespace: `d${CUBE_DOCUMENT_ID}::v2565d082d3d8c8e592d34548::ec66db2b954da7f29d438195a::m0123456789abcdef01234567`,
+        ...overrides
+    };
+}
+
+function sketch(featureId: string, name = featureId): Feature {
+    return { featureType: "newSketch", featureId, name, suppressed: false };
+}
+
+function extrude(featureId: string, overrides: Partial<Feature> = {}): Feature {
+    return {
+        featureType: "extrude",
+        featureId,
+        name: featureId,
+        suppressed: false,
+        ...overrides
+    };
+}
+
+function part(
+    partId: string,
+    overrides: Partial<OnshapePart> = {}
+): OnshapePart {
+    return {
+        partId,
+        name: `Part ${partId}`,
+        bodyType: "solid",
+        material: { displayName: "Aluminum - 6061" },
+        partNumber: `8033-${partId}`,
+        description: "A good part",
+        ...overrides
+    };
+}
+
+function partStudio(options: {
+    features: Feature[];
+    statuses?: Record<string, FeatureStatus>;
+    /** Undefined when Onshape couldn't list the sketches. */
+    sketchStatuses?: Record<string, string> | null;
+    parts?: OnshapePart[];
+    rollbackIndex?: number;
+}): PartStudioSnapshot {
+    const featureStates = Object.fromEntries(
+        options.features.map((feature) => [
+            feature.featureId,
+            { featureStatus: options.statuses?.[feature.featureId] ?? "OK" }
+        ])
+    );
+    const sketches =
+        options.sketchStatuses === null
+            ? undefined
+            : {
+                  sketches: Object.entries(options.sketchStatuses ?? {}).map(
+                      ([featureId, status]) => ({
+                          featureId,
+                          sketch: featureId,
+                          fullyDefinedStatus: status
+                      })
+                  )
+              };
+    return {
+        elementType: ElementType.PART_STUDIO,
+        features: {
+            features: options.features,
+            featureStates,
+            rollbackIndex: options.rollbackIndex
+        },
+        sketches,
+        parts: options.parts ?? []
+    };
+}
+
+function instance(
+    id: string,
+    overrides: Partial<OnshapeAssemblyInstance> = {}
+): OnshapeAssemblyInstance {
+    return {
+        id,
+        name: `${id} <1>`,
+        type: "Part",
+        suppressed: false,
+        ...overrides
+    };
+}
+
+function fasten(id: string, ...ends: string[][]): OnshapeAssemblyFeature {
+    return {
+        id,
+        featureType: "mate",
+        suppressed: false,
+        featureData: {
+            name: id,
+            matedEntities: ends.map((end) => ({ matedOccurrence: end }))
+        }
+    };
+}
+
+function assembly(options: {
+    instances: OnshapeAssemblyInstance[];
+    fixed?: string[];
+    mates?: OnshapeAssemblyFeature[];
+    patterns?: { seedToPatternInstances: Record<string, string[]> }[];
+    statuses?: Record<string, FeatureStatus>;
+}): AssemblySnapshot {
+    const mates = options.mates ?? [];
+    return {
+        elementType: ElementType.ASSEMBLY,
+        definition: {
+            rootAssembly: {
+                instances: options.instances,
+                occurrences: options.instances.map((each) => ({
+                    path: [each.id],
+                    transform: [],
+                    fixed: options.fixed?.includes(each.id) ?? false
+                })),
+                features: mates,
+                patterns: options.patterns ?? []
+            },
+            parts: [],
+            subAssemblies: []
+        },
+        features: {
+            features: mates.map((mate) => ({
+                featureId: mate.id,
+                name: mate.featureData?.name ?? mate.id,
+                featureType: mate.featureType,
+                suppressed: mate.suppressed ?? false
+            })),
+            featureStates: Object.fromEntries(
+                mates.map((mate) => [
+                    mate.id,
+                    { featureStatus: options.statuses?.[mate.id] ?? "OK" }
+                ])
+            )
+        }
+    };
+}
+
+function types(snapshot: PartStudioSnapshot | AssemblySnapshot) {
+    return checkDesign(snapshot).issues.map((issue) => issue.type);
+}
+
+describe("a Part Studio", () => {
+    it("that follows every practice has no issues", () => {
+        const snapshot = partStudio({
+            features: [originCube(), sketch("S1"), extrude("E1")],
+            sketchStatuses: { S1: "WELL_DEFINED" },
+            parts: [part("JHD")]
+        });
+
+        expect(checkDesign(snapshot)).toEqual({
+            issues: [],
+            sketchStatusUnknown: false
+        });
+    });
+
+    it("flags under- and over-defined sketches, errors first", () => {
+        const snapshot = partStudio({
+            features: [originCube(), sketch("S1"), sketch("S2"), sketch("S3")],
+            sketchStatuses: {
+                S1: "UNDERDEFINED",
+                S2: "OVERDEFINED",
+                S3: "WELL_DEFINED"
+            }
+        });
+
+        expect(
+            checkDesign(snapshot).issues.map((issue) => [
+                issue.type,
+                issue.featureId
+            ])
+        ).toEqual([
+            [DesignIssueType.SKETCH_OVERDEFINED, "S2"],
+            [DesignIssueType.SKETCH_UNDERDEFINED, "S1"]
+        ]);
+    });
+
+    it("reports an over-defined sketch once, not also as a yellow feature", () => {
+        const snapshot = partStudio({
+            features: [originCube(), sketch("S1")],
+            statuses: { S1: "WARNING" },
+            sketchStatuses: { S1: "OVERDEFINED" }
+        });
+
+        expect(types(snapshot)).toEqual([DesignIssueType.SKETCH_OVERDEFINED]);
+    });
+
+    it("skips a suppressed sketch's definition", () => {
+        const snapshot = partStudio({
+            features: [originCube(), { ...sketch("S1"), suppressed: true }],
+            sketchStatuses: { S1: "UNDERDEFINED" }
+        });
+
+        expect(types(snapshot)).toEqual([DesignIssueType.FEATURE_SUPPRESSED]);
+    });
+
+    it("says when no sketch's status came back, and still finds a yellow sketch", () => {
+        const snapshot = partStudio({
+            features: [originCube(), sketch("S1")],
+            statuses: { S1: "WARNING" },
+            sketchStatuses: null
+        });
+
+        const result = checkDesign(snapshot);
+
+        expect(result.issues.map((issue) => issue.type)).toEqual([
+            DesignIssueType.FEATURE_WARNING
+        ]);
+        expect(result.sketchStatusUnknown).toBe(true);
+    });
+
+    it("reads a sketch's status whatever the field is called", () => {
+        expect(sketchStatus({ featureId: "S1", other: "UNDERDEFINED" })).toBe(
+            "UNDERDEFINED"
+        );
+        expect(
+            sketchStatus({ featureId: "S1", sketch: "Sketch 1" })
+        ).toBeUndefined();
+    });
+
+    it("needs an Origin Cube", () => {
+        expect(types(partStudio({ features: [extrude("E1")] }))).toEqual([
+            DesignIssueType.ORIGIN_CUBE_MISSING
+        ]);
+    });
+
+    it("knows the Origin Cube by its FeatureScript, renamed or not", () => {
+        const renamed = originCube({ name: "Ground" });
+
+        expect(types(partStudio({ features: [renamed] }))).toEqual([]);
+    });
+
+    it("knows a copy of the Origin Cube by its name", () => {
+        const copy = originCube({
+            namespace: "d0123456789abcdef01234567::v1::e2::m3"
+        });
+
+        expect(types(partStudio({ features: [copy] }))).toEqual([]);
+    });
+
+    it("doesn't take a sketch named Origin Cube for it", () => {
+        const snapshot = partStudio({
+            features: [sketch("S1", "Origin Cube sketch")],
+            sketchStatuses: { S1: "WELL_DEFINED" }
+        });
+
+        expect(types(snapshot)).toEqual([DesignIssueType.ORIGIN_CUBE_MISSING]);
+    });
+
+    it("wants the Origin Cube first, and says where it is", () => {
+        const snapshot = partStudio({
+            features: [extrude("E1"), extrude("E2"), originCube()]
+        });
+
+        expect(checkDesign(snapshot).issues).toEqual([
+            {
+                type: DesignIssueType.ORIGIN_CUBE_NOT_FIRST,
+                subject: "Origin Cube 1",
+                featureId: "Fcube",
+                count: 3
+            }
+        ]);
+    });
+
+    it("reports a suppressed Origin Cube as itself, not as any suppressed feature", () => {
+        const snapshot = partStudio({
+            features: [originCube({ suppressed: true })]
+        });
+
+        expect(types(snapshot)).toEqual([
+            DesignIssueType.ORIGIN_CUBE_SUPPRESSED
+        ]);
+    });
+
+    it("flags red, yellow and suppressed features, errors first", () => {
+        const snapshot = partStudio({
+            features: [
+                originCube(),
+                extrude("E1", { suppressed: true }),
+                extrude("E2"),
+                extrude("E3"),
+                extrude("E4")
+            ],
+            statuses: { E2: "WARNING", E3: "ERROR", E4: "INFO" }
+        });
+
+        expect(types(snapshot)).toEqual([
+            DesignIssueType.FEATURE_ERROR,
+            DesignIssueType.FEATURE_WARNING,
+            DesignIssueType.FEATURE_SUPPRESSED
+        ]);
+    });
+
+    it("flags a rollback bar above the end, counting what it hides", () => {
+        const features = [originCube(), extrude("E1"), extrude("E2")];
+
+        expect(
+            checkDesign(partStudio({ features, rollbackIndex: 1 })).issues
+        ).toEqual([{ type: DesignIssueType.ROLLBACK_NOT_AT_END, count: 2 }]);
+        expect(types(partStudio({ features, rollbackIndex: 3 }))).toEqual([]);
+        expect(types(partStudio({ features, rollbackIndex: -1 }))).toEqual([]);
+    });
+
+    it("flags a part with no material, part number or description", () => {
+        const snapshot = partStudio({
+            features: [originCube()],
+            parts: [
+                part("A", {
+                    material: undefined,
+                    partNumber: " ",
+                    description: undefined
+                })
+            ]
+        });
+
+        expect(types(snapshot)).toEqual([
+            DesignIssueType.PART_NO_MATERIAL,
+            DesignIssueType.PART_NO_PART_NUMBER,
+            DesignIssueType.PART_NO_DESCRIPTION
+        ]);
+    });
+
+    it("leaves the Origin Cube's part and non-solid bodies alone", () => {
+        const snapshot = partStudio({
+            features: [originCube()],
+            parts: [
+                part("C", {
+                    name: "Cube of All Time",
+                    material: undefined,
+                    partNumber: undefined
+                }),
+                part("S", { bodyType: "sheet", material: undefined })
+            ]
+        });
+
+        expect(types(snapshot)).toEqual([]);
+    });
+});
+
+describe("an Assembly", () => {
+    it("that is fully mated has no issues", () => {
+        const snapshot = assembly({
+            instances: [instance("cube"), instance("plate")],
+            mates: [
+                fasten("M1", [], ["cube"]),
+                fasten("M2", ["cube"], ["plate"])
+            ]
+        });
+
+        expect(types(snapshot)).toEqual([]);
+    });
+
+    it("flags fixed and floating instances", () => {
+        const snapshot = assembly({
+            instances: [instance("cube"), instance("plate"), instance("loose")],
+            fixed: ["cube"],
+            mates: [fasten("M1", ["cube"], ["plate"])]
+        });
+
+        expect(
+            checkDesign(snapshot).issues.map((issue) => [
+                issue.type,
+                issue.instanceId
+            ])
+        ).toEqual([
+            [DesignIssueType.INSTANCE_FIXED, "cube"],
+            [DesignIssueType.INSTANCE_FLOATING, "loose"]
+        ]);
+    });
+
+    it("counts grouped and patterned instances as held", () => {
+        const group: OnshapeAssemblyFeature = {
+            id: "G1",
+            featureType: "mateGroup",
+            featureData: {
+                name: "Group 1",
+                occurrences: [{ occurrence: ["a"] }, { occurrence: ["b"] }]
+            }
+        };
+        const snapshot = assembly({
+            instances: [instance("a"), instance("b"), instance("copy")],
+            mates: [group],
+            patterns: [{ seedToPatternInstances: { b: ["copy"] } }]
+        });
+
+        expect(types(snapshot)).toEqual([]);
+    });
+
+    it("leaves an inserted sketch where it lands", () => {
+        const snapshot = assembly({
+            instances: [instance("sketch", { type: "Feature" })]
+        });
+
+        expect(types(snapshot)).toEqual([]);
+    });
+
+    it("ignores suppressed mates and suppressed instances", () => {
+        const snapshot = assembly({
+            instances: [instance("a"), instance("gone", { suppressed: true })],
+            mates: [{ ...fasten("M1", ["a"], ["gone"]), suppressed: true }]
+        });
+
+        expect(types(snapshot)).toEqual([
+            DesignIssueType.INSTANCE_FLOATING,
+            DesignIssueType.FEATURE_SUPPRESSED
+        ]);
+    });
+
+    it("calls an instance broken only when Onshape draws it red", () => {
+        const snapshot = assembly({
+            instances: [
+                instance("info", { errorStatus: "INFO" }),
+                instance("unknown", { errorStatus: "UNKNOWN" }),
+                instance("red", { errorStatus: "ERROR" })
+            ],
+            mates: [fasten("M1", ["info"], ["unknown"], ["red"])]
+        });
+
+        expect(
+            checkDesign(snapshot).issues.map((issue) => [
+                issue.type,
+                issue.subject
+            ])
+        ).toEqual([[DesignIssueType.INSTANCE_BROKEN, "red <1>"]]);
+    });
+
+    it("flags an instance whose tab was deleted, and a red mate", () => {
+        const snapshot = assembly({
+            instances: [
+                instance("a"),
+                instance("b", { status: "DeletedElement" })
+            ],
+            mates: [fasten("M1", ["a"], ["b"])],
+            statuses: { M1: "ERROR" }
+        });
+
+        expect(types(snapshot)).toEqual([
+            DesignIssueType.FEATURE_ERROR,
+            DesignIssueType.INSTANCE_BROKEN
+        ]);
+    });
+});

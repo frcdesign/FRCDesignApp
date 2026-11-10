@@ -138,3 +138,7 @@ export function versionJobQueryKey(workspace: InstancePath | undefined) {
 export function nextVersionNameQueryKey(workspace: InstancePath | undefined) {
     return ["next-version-name", workspace];
 }
+
+export function designCheckQueryKey(element: ElementPath) {
+    return ["design-check", element];
+}

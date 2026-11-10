@@ -4,5 +4,6 @@ export enum Hint {
     OPENED_VERSION_MANAGER = "ran-version-job",
     OPENED_INSERT_LOCATION = "added-insert-location",
     OPENED_SET_DEFAULT_CONFIGURATION = "opened-set-default-configuration",
-    OPENED_REPORT_ISSUE = "opened-report-issue"
+    OPENED_REPORT_ISSUE = "opened-report-issue",
+    OPENED_DESIGN_CHECK = "opened-design-check"
 }

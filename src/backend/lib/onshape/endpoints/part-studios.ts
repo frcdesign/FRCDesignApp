@@ -1,7 +1,11 @@
 import { OnshapeApi } from "../client";
 import { assertInstanceType } from "../assertions";
 import { ElementPath, toElementApiPath } from "../path";
-import { OnshapeCreatedFeature, OnshapeFeatureListResponse } from "../types";
+import {
+    OnshapeCreatedFeature,
+    OnshapeFeatureListResponse,
+    OnshapeSketchList
+} from "../types";
 
 export function addPartStudioFeature(
     client: OnshapeApi,
@@ -29,5 +33,32 @@ export function getFeatures(
                 includeGeometryIds: "false"
             }
         }
+    );
+}
+
+/** Every feature, sketches included, without their geometry. */
+export function getAllFeatures(
+    client: OnshapeApi,
+    partStudioPath: ElementPath
+): Promise<OnshapeFeatureListResponse> {
+    return client.get(
+        `/partstudios${toElementApiPath(partStudioPath)}/features`,
+        {
+            query: {
+                noSketchGeometry: "true",
+                includeGeometryIds: "false"
+            }
+        }
+    );
+}
+
+/** Each sketch and its definition status, without its geometry. */
+export function getSketches(
+    client: OnshapeApi,
+    partStudioPath: ElementPath
+): Promise<OnshapeSketchList> {
+    return client.get(
+        `/partstudios${toElementApiPath(partStudioPath)}/sketches`,
+        { query: { includeGeometry: "false" } }
     );
 }

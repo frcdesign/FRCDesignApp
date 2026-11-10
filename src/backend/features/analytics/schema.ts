@@ -22,6 +22,10 @@ import {
     FeedbackSource,
     FeedbackTopic
 } from "../feedback/contract";
+import {
+    type DesignIssueCounts,
+    DesignIssueType
+} from "../design-check/contract";
 import { EventType, UseSource, UseTarget } from "./usage";
 
 /**
@@ -76,7 +80,12 @@ export const events = sqliteTable(
         reportTopic: text("report_topic").$type<FeedbackTopic>(),
         reportCategory: text("report_category").$type<FeedbackCategory>(),
         reportSource: text("report_source").$type<FeedbackSource>(),
-        reportTeamNumber: integer("report_team_number")
+        reportTeamNumber: integer("report_team_number"),
+        // A design check's own columns: the kind of tab it read, and what it found there.
+        checkedElementType: text("checked_element_type").$type<ElementType>(),
+        designIssueCounts: text("design_issue_counts", {
+            mode: "json"
+        }).$type<DesignIssueCounts | null>()
     },
     // Only used to rebuild the rollups, which walk by day.
     (t) => [index("events_day_idx").on(t.day)]
@@ -308,4 +317,34 @@ export const dailyReportMetrics = sqliteTable(
             columns: [t.day, t.topic, t.category, t.source, t.elementId]
         })
     ]
+);
+
+/**
+ * A day's design checks, by the kind of tab checked. Keyed by day alone, like a
+ * version run: a check reads someone's own document, not a library.
+ */
+export const dailyDesignCheckMetrics = sqliteTable(
+    "daily_design_check_metrics",
+    {
+        day: text("day").notNull(),
+        elementType: text("element_type").notNull().$type<ElementType>(),
+        checks: integer("checks").notNull().default(0),
+        /** Checks that found nothing. */
+        cleanChecks: integer("clean_checks").notNull().default(0)
+    },
+    (t) => [primaryKey({ columns: [t.day, t.elementType] })]
+);
+
+/** A day's design issues, by type. */
+export const dailyDesignIssueMetrics = sqliteTable(
+    "daily_design_issue_metrics",
+    {
+        day: text("day").notNull(),
+        issueType: text("issue_type").notNull().$type<DesignIssueType>(),
+        /** Checks that found at least one. */
+        checks: integer("checks").notNull().default(0),
+        /** How many were found, across those checks. */
+        issues: integer("issues").notNull().default(0)
+    },
+    (t) => [primaryKey({ columns: [t.day, t.issueType] })]
 );

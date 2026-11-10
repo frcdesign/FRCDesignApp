@@ -1,0 +1,48 @@
+# Design check: strings
+
+What [design-check.md](../architecture/design-check.md) shows a person checking
+their own tab. Every string is a message in `src/frontend/messages/en.json`,
+keyed `designCheck…`.
+
+## The checks
+
+One tinted box per issue type, worst first. The name is its heading, the help
+sits under it, and the feature, part or instance names it was found on are
+listed below that.
+
+| Name                            | Help                                                                                                          | Severity | Raised when                                                   | Review                      |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------- | -------- | ------------------------------------------------------------- | --------------------------- |
+| "Under-defined sketch"          | "Add constraints or dimensions until every line is black."                                                    | Warning  | Onshape reports an unsuppressed sketch under-defined          | **⚑** New                   |
+| "Over-defined sketch"           | "Remove the constraint or dimension that conflicts."                                                          | Error    | Onshape reports an unsuppressed sketch over-defined           | **⚑** New                   |
+| "No Origin Cube"                | "Insert the Origin Cube as the first feature, so assemblies have something to fasten to."                     | Warning  | A Part Studio has no Origin Cube                              | **⚑** New                   |
+| "Origin Cube isn't first"       | "It's feature {position}. Drag it to the top of the list."                                                    | Warning  | The Origin Cube is below the first feature                    | **⚑** New                   |
+| "Origin Cube is suppressed"     | "Unsuppress it: assemblies fasten to it."                                                                     | Error    | The Origin Cube is suppressed                                 | **⚑** New                   |
+| "Feature with an error"         | "Open it to see what failed."                                                                                 | Error    | A feature or mate is red                                      | **⚑** New; also names mates |
+| "Feature with a warning"        | "Open it to see what Onshape is warning about."                                                               | Warning  | A feature or mate is yellow                                   | **⚑** New; also names mates |
+| "Suppressed feature"            | "Delete it if it's no longer needed."                                                                         | Info     | A feature or mate is suppressed                               | **⚑** New                   |
+| "Rollback bar isn't at the end" | "It leaves a feature out of the model. Drag it to the bottom of the list." / "It leaves {n} features out of…" | Warning  | A Part Studio's rollback bar is above its last feature        | **⚑** New                   |
+| "Part with no material"         | "Without one, its mass is wrong."                                                                             | Warning  | A solid part has no material                                  | **⚑** New                   |
+| "Part with no part number"      | "Give it one, so it can be found in a bill of materials."                                                     | Info     | A solid part has no part number                               | **⚑** New                   |
+| "Part with no description"      | "Describe it, so others know what it is."                                                                     | Info     | A solid part has no description                               | **⚑** New                   |
+| "Fixed instance"                | "Fasten the Origin Cube to the assembly origin instead of fixing parts."                                      | Warning  | A top-level assembly instance is fixed                        | **⚑** New                   |
+| "Floating instance"             | "Mate or group it, so it can't drift."                                                                        | Warning  | A top-level instance isn't mated, grouped, fixed or patterned | **⚑** New                   |
+| "Broken instance"               | "What it was inserted from is gone or failing. Replace it or delete it."                                      | Error    | An instance's tab was deleted, or Onshape draws it red        | **⚑** New                   |
+
+## The page
+
+| String                                                                                                                                                                  | Kind               | Where                              | When                                              | Review          |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ | ---------------------------------- | ------------------------------------------------- | --------------- |
+| "Design Check"                                                                                                                                                          | Page name          | The page picker, under Utilities   | Launched in a workspace's Part Studio or Assembly | **⚑** New       |
+| "Sign in to check this tab"                                                                                                                                             | Notice title       | In place of the page               | Signed out                                        | **⚑** New       |
+| "The design check reads it from your Onshape account."                                                                                                                  | Notice description | Under it                           | Same                                              | **⚑** New       |
+| "Checking this tab..."                                                                                                                                                  | Loading            | In place of the page               | The check is running                              | **⚑** New       |
+| "Failed to check this tab."                                                                                                                                             | Page error         | In place of the page               | Onshape refused or failed                         | **⚑** New       |
+| "Check again"                                                                                                                                                           | Tooltip            | The navbar's refresh button        | On the page                                       | **⚑** New       |
+| "Checked at {time}"                                                                                                                                                     | Caption            | Beside the severity badges         | A check has answered                              | **⚑** New       |
+| "No issues found"                                                                                                                                                       | Notice title       | In place of the list               | The check found nothing                           | **⚑** New       |
+| "This Part Studio follows every practice the design check looks for." / "This Assembly follows every practice the design check looks for."                              | Notice description | Under it                           | Same                                              | **⚑** New       |
+| "Onshape didn't say which sketches are fully defined, so under-defined sketches weren't checked. Over-defined sketches still show as features with errors or warnings." | Note               | Under the badges, or in the notice | Onshape listed no sketch's status                 | **⚑** New; long |
+| "Open in Onshape"                                                                                                                                                       | Tooltip            | A feature or mate's name           | Hovered                                           | **⚑** New       |
+
+The severity badges ("{n} errors", "{n} warnings", "{n} info") are the admin
+card's, listed in [build-issues.md](./build-issues.md).

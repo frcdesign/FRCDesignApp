@@ -1,7 +1,11 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { DEFAULT_LIBRARY } from "@backend/features/library/library-id";
 import { isLibraryTab, UtilityTab } from "../lib/app-tab";
-import { OnshapeLaunchType, toTargetWorkspace } from "../lib/onshape-launch";
+import {
+    OnshapeLaunchType,
+    toTargetElement,
+    toTargetWorkspace
+} from "../lib/onshape-launch";
 import { apiPost } from "../lib/api-client";
 import { getUiState } from "../lib/ui-state";
 import { RootAppError } from "../components/root-error";
@@ -45,18 +49,25 @@ function utilityRoute(tab: UtilityTab) {
     switch (tab) {
         case UtilityTab.VERSION_MANAGER:
             return "/app/version-manager" as const;
+        case UtilityTab.DESIGN_CHECK:
+            return "/app/design-check" as const;
     }
 }
 
 /**
  * Whether a utility page has what it acts on. The version manager acts on the
- * workspace Onshape launched the app in.
+ * workspace Onshape launched the app in, and the design check on the tab,
+ * without which it has no page.
  */
 function canResume(tab: UtilityTab, search: Record<string, unknown>): boolean {
     switch (tab) {
         case UtilityTab.VERSION_MANAGER:
             return (
                 toTargetWorkspace(OnshapeLaunchType.parse(search)) !== undefined
+            );
+        case UtilityTab.DESIGN_CHECK:
+            return (
+                toTargetElement(OnshapeLaunchType.parse(search)) !== undefined
             );
     }
 }

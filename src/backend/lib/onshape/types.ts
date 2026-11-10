@@ -252,8 +252,16 @@ export interface OnshapeDocumentContents {
 export interface OnshapeAssemblyFeature {
     featureType: string;
     id: string;
-    /** Present on mate connectors; its `occurrence` is the path to the connector. */
-    featureData?: { occurrence: string[] };
+    suppressed?: boolean;
+    featureData?: {
+        name?: string;
+        /** A mate connector's: the path to the connector. */
+        occurrence?: string[];
+        /** A mate's two ends; an empty `matedOccurrence` is the assembly origin. */
+        matedEntities?: { matedOccurrence?: string[] }[];
+        /** A group's members (`featureType` "mateGroup"). */
+        occurrences?: { occurrence?: string[] }[];
+    };
 }
 
 /** A top-level instance in the root assembly. */
@@ -261,7 +269,13 @@ export interface OnshapeAssemblyInstance {
     id: string;
     /** "Part", "Assembly", or "Feature" for an inserted sketch. */
     type: string;
+    /** Optional only so a test fixture can leave it out. */
+    name?: string;
     suppressed?: boolean;
+    /** "DeletedElement" when the tab it came from is gone. */
+    status?: string;
+    /** "ERROR" when Onshape draws the instance red. */
+    errorStatus?: OnshapeFeatureStatus;
     /** The tab the instance came from, and the feature within it for a sketch. */
     documentId?: string;
     elementId?: string;
@@ -273,6 +287,7 @@ interface OnshapeOccurrence {
     /** Instance ids from the root down; one entry for a top-level instance. */
     path: string[];
     transform: number[];
+    fixed?: boolean;
 }
 
 /** A part in the assembly's flattened `parts` list. */
@@ -301,6 +316,8 @@ export interface OnshapeAssemblyDefinition {
         occurrences?: OnshapeOccurrence[];
         /** The assembly's "Part number" property, when set. */
         partNumber?: string;
+        /** Each pattern's copies, keyed by the instance they copy. */
+        patterns?: { seedToPatternInstances?: Record<string, string[]> }[];
     };
     parts: OnshapeAssemblyPart[];
     subAssemblies: OnshapeSubAssembly[];
@@ -372,11 +389,15 @@ interface OnshapePartStudioFeature {
     suppressed: boolean;
     /** A configuration decides whether it is suppressed. */
     suppressionConfigured?: boolean;
+    /** A custom feature's Feature Studio, `d{documentId}::v{versionId}::e{elementId}::m{microversionId}`. */
+    namespace?: string;
 }
+
+type OnshapeFeatureStatus = "OK" | "INFO" | "WARNING" | "ERROR" | "UNKNOWN";
 
 /** Whether a feature regenerated. */
 interface OnshapeFeatureState {
-    featureStatus?: "OK" | "INFO" | "WARNING" | "ERROR" | "UNKNOWN";
+    featureStatus?: OnshapeFeatureStatus;
 }
 
 /** GET /partstudios/d/{did}/{wvm}/{wvmid}/e/{eid}/features (the subset we read). */
@@ -384,6 +405,14 @@ export interface OnshapeFeatureListResponse {
     features: OnshapePartStudioFeature[];
     /** Keyed by feature id. */
     featureStates?: Record<string, OnshapeFeatureState>;
+    /** The index of the first feature below the rollback bar; -1 at the end. */
+    rollbackIndex?: number;
+}
+
+/** GET /partstudios/d/{did}/{wvm}/{wvmid}/e/{eid}/sketches (the subset we read). */
+export interface OnshapeSketchList {
+    /** Each also carries its definition status, under a key we don't rely on; see `sketchStatus`. */
+    sketches?: (Record<string, unknown> & { featureId?: string })[];
 }
 
 // === external references (GET /documents/d/{did}/w/{wid}/externalreferences) ===
