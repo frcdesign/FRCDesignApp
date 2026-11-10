@@ -30,7 +30,8 @@ export function getFeatures(
             query: {
                 includeSketches: "false",
                 noSketchGeometry: "true",
-                includeGeometryIds: "false"
+                // Without geometry ids, Onshape sends `featureStates` empty.
+                includeGeometryIds: "true"
             }
         }
     );
