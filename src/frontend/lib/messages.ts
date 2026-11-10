@@ -20,6 +20,10 @@ export function useMessageListener() {
             if (server !== event.origin) {
                 return;
             }
+            if (import.meta.env.DEV) {
+                // Onshape documents no answer to most messages; this is how to see them.
+                console.debug("Received from Onshape", event.data);
+            }
             const { messageName } = event.data as Partial<Message>;
             if (!messageName) {
                 return;
@@ -47,8 +51,33 @@ export function sendOpenFeatureMessage(
     });
 }
 
+let highlights = 0;
+
+/**
+ * Selects a part in the Onshape window. In an assembly, `occurrencePath` says
+ * which instance, and Onshape still needs the part's id to select anything in it.
+ */
+export function sendSelectPartMessage(
+    elementPath: ElementPath,
+    partId: string,
+    occurrencePath?: string[]
+) {
+    sendMessage(elementPath, {
+        messageName: MessageType.REQUEST_HIGHLIGHT_SELECTION,
+        messageId: `highlight-${++highlights}`,
+        selections: [
+            {
+                selectionType: "ENTITY",
+                entityType: "BODY",
+                selectionId: partId,
+                ...(occurrencePath && { occurrencePath })
+            }
+        ]
+    });
+}
+
 /*
- * Highlighting the insert location was tried and dropped:
+ * The insert location isn't highlighted: for its mate connector,
  * `requestSelectionHighlight` answered SUCCESS and painted nothing. Undocumented
  * findings from that:
  *

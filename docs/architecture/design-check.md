@@ -105,8 +105,9 @@ interface DesignIssue {
     type: DesignIssueType;
     /** The feature, part or instance's name in Onshape; absent for one about the whole tab. */
     subject?: string;
-    /** Set for a feature or mate, which the page opens in Onshape. */
+    /** Set for a feature or mate, which the page opens in Onshape where Onshape will. */
     featureId?: string;
+    /** A part's, or the part a part instance shows; the page selects it in Onshape. */
     partId?: string;
     instanceId?: string;
     /** The Origin Cube's place in the list, or how many features the rollback bar hides. */
@@ -236,7 +237,10 @@ only with one (`canResume` in `src/frontend/routes/index.tsx`).
    then one tinted box per issue type, worst first: its name, what to do about
    it, and every feature, part or instance it was found on.
 3. Clicking a feature or mate's name opens it in Onshape's feature dialog
-   (`sendOpenFeatureMessage`). A part or instance is named only.
+   (`sendOpenFeatureMessage`); a suppressed Part Studio feature, which Onshape
+   won't open, is named only. Clicking a part's or a part instance's selects
+   it in the Onshape window (`sendSelectPartMessage`): a part by its id, an
+   instance by its id and its part's. A broken instance is named only.
 
 ## User-facing strings
 
@@ -287,9 +291,11 @@ In [strings/design-check.md](../strings/design-check.md).
   robot assembly: a COTS part's needs none.
 - **Part number and description are info.** How a team numbers and describes its
   parts for a bill of materials is its own convention.
-- **A part is named, not highlighted.** Onshape's highlight message cancels any
-  selection request outstanding, which would cancel picking an insert location
-  (`src/frontend/lib/messages.ts`).
+- **A part is selected through the part it shows.** Onshape needs the part's
+  id to select anything; an instance's occurrence path only says which
+  instance to look in ([ONSHAPE.md](../ONSHAPE.md)). A broken instance has no
+  part left, so it is named only. A selection cancels any selection request
+  outstanding, and the page makes none.
 - **Grouped by type.** A Part Studio of thirty parts with no part number is one
   box listing thirty names, not thirty boxes.
 

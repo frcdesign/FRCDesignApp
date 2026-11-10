@@ -594,6 +594,7 @@
     "designCheckCleanAssembly": "This Assembly follows every practice the design check looks for.",
     "designCheckSketchStatusUnknown": "Onshape didn't say which sketches are fully defined, so under-defined sketches weren't checked. Over-defined sketches still show as features with errors or warnings.",
     "designCheckOpenFeature": "Open in Onshape",
+    "designCheckSelectPart": "Select in Onshape",
     "designCheckSketchUnderdefined": "Under-defined sketch",
     "designCheckSketchUnderdefinedHelp": "Add constraints or dimensions until every line is black.",
     "designCheckSketchOverdefined": "Over-defined sketch",
