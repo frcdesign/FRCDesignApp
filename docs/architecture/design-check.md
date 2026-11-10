@@ -250,19 +250,20 @@ A type off by default is still found, sent and counted.
 | `FEATURE_ERROR` / `FEATURE_WARNING` / `FEATURE_SUPPRESSED`         | Error / Error / Info | A feature or mate Onshape marks red or yellow, or one left suppressed; never the Origin Cube for the last. A built Part Studio feature is also yellow when a selection box lost one pick beside another that still resolves |
 | `ROLLBACK_NOT_AT_END`                                              | Info                 | A Part Studio's rollback bar above its last feature                                                                                                                                                                         |
 | `PART_NO_MATERIAL` / `PART_NO_PART_NUMBER` / `PART_NO_DESCRIPTION` | Error / Off / Off    | A solid part missing one, the Origin Cube's own cube aside                                                                                                                                                                  |
-| `INSTANCE_FIXED`                                                   | Error                | A top-level instance that is fixed                                                                                                                                                                                          |
-| `INSTANCE_FLOATING`                                                | Error                | A top-level instance no unsuppressed mate or group holds and no pattern copies, broken ones aside                                                                                                                           |
-| `INSTANCE_BROKEN`                                                  | Error                | An instance Onshape sends with only its name and id, or a part instance with an empty part id                                                                                                                               |
+| `INSTANCE_FIXED`                                                   | Error                | An unsuppressed top-level instance that is fixed                                                                                                                                                                            |
+| `INSTANCE_FLOATING`                                                | Error                | An unsuppressed top-level instance no unsuppressed mate or group holds and no pattern copies, broken ones aside                                                                                                             |
+| `INSTANCE_BROKEN`                                                  | Error                | An unsuppressed instance Onshape sends with only its name and id, or a part instance with an empty part id                                                                                                                  |
 
 The assembly is read without non-solid instances, so an inserted sketch is
 never checked.
 
 The Origin Cube is FRCDesign's FeatureScript
 (https://frcdesign.org/best-practices/assembly-setup/), known by its document
-id in the feature's `namespace`, or by a name starting "Origin Cube" for a copy
-kept in another document and renamed. Onshape sends its name as the unfilled
-template `#_name`, so its issues call it "Origin Cube". Its cube is known by its
-part name, "Origin Cube".
+at the start of the feature's `namespace`, or, for a copy kept in another
+document, by a custom feature's name starting "Origin Cube"; a built-in feature,
+a sketch or a mate named so isn't it. Onshape sends its name as the unfilled
+template `#_name`, so its issues call it "Origin Cube". Its cube is the part
+named exactly "Origin Cube" or "Cube of All Time".
 
 ## Storage
 
@@ -307,7 +308,8 @@ only with one (`canResume` in `src/frontend/routes/index.tsx`).
    check goes on without their status and says so.
 3. `checkDesign` raises the issues and sorts them worst first. An over-defined
    sketch, and an Origin Cube below the first feature, are each reported once,
-   as themselves, rather than also as the warning they raise.
+   as themselves, rather than also as the warning they raise; one that is red
+   is also a feature with an error.
 4. The route records the check through `trackDesignCheck`, in the background,
    and answers.
 5. The navbar's refresh button, **Check again**, asks again; nothing else does.
@@ -378,7 +380,7 @@ In [strings/design-check.md](../strings/design-check.md).
 | Any other call fails or times out               | The same                                                    | **Check again** |
 | A feature lost one of a box's picks, and builds | "Feature with a warning", though Onshape reports it `OK`    | —               |
 | A feature lost every pick in a box, and builds  | Nothing: a box of default planes resolves to nothing too    | —               |
-| The sketches can't be listed                    | The other issues, and a note that sketches went unchecked   | **Check again** |
+| The sketches can't be listed, or time out       | The other issues, and a note that sketches went unchecked   | **Check again** |
 | Onshape stops sending `sketchSolveStatus`       | The note that sketches went unchecked, on every Part Studio | A change here   |
 | The levels can't be read                        | Every issue at FRCDesign's level, and no **Levels**         | Reopening       |
 | A level fails to save                           | "Failed to save your levels.", and the saved levels again   | Picking again   |
