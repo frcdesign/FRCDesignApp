@@ -96,7 +96,8 @@ problem planted, whose answers are kept, cut down, in
 - **A feature list** (`GET /partstudios/…/features`, `GET /assemblies/…/features`)
   carries each feature's `featureStatus` in `featureStates`, keyed by feature
   id: `OK`, `INFO`, `WARNING` (yellow), `ERROR` (red) or `UNKNOWN` —
-  _documented_, and _observed_.
+  _documented_, and _observed_. Asked with `includeGeometryIds=false`, a Part
+  Studio's comes back `{}`, every feature's status left out — _observed_.
 - **`rollbackIndex`**, on a Part Studio's list, is the index of the first
   feature below the rollback bar: 10 of 12 features with the bar above the last
   two, and 12 with it at the end — _observed_. The spec's -1 for the end was
@@ -113,6 +114,11 @@ problem planted, whose answers are kept, cut down, in
   doesn't carry a feature's message.
 - **A missing selection doesn't show in `featureStatus`**: an extrude Onshape
   drew with a warning, its tooltip "1 missing selection", was `OK` — _observed_.
+  It shows in the pick: with geometry ids, each pick in a selection box
+  (`BTMIndividualQuery-138` in a `BTMParameterQueryList-148`) carries
+  `deterministicIds`, what it resolves to, and the lost face's was `[]` beside
+  the remaining face's `["JlC"]`. A sketch plane on Top resolved to `[]` too,
+  and without geometry ids every pick is `[]` — _observed_.
 - **A fasten to the origin** is drawn with a warning while the assembly also
   has a fixed instance — "Fastened to origin even though Assembly has fixed
   part(s)" — and its `featureStatus` is `OK` — _observed_.

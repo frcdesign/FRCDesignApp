@@ -36,7 +36,7 @@ export function getFeatures(
     );
 }
 
-/** Every feature, sketches included, without their geometry. */
+/** Every feature, sketches included, without their geometry, with each feature's status. */
 export function getAllFeatures(
     client: OnshapeApi,
     partStudioPath: ElementPath
@@ -46,7 +46,8 @@ export function getAllFeatures(
         {
             query: {
                 noSketchGeometry: "true",
-                includeGeometryIds: "false"
+                // Without geometry ids, Onshape sends `featureStates` empty.
+                includeGeometryIds: "true"
             }
         }
     );

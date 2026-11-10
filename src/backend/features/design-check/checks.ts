@@ -36,6 +36,7 @@ export interface DesignCheckResult {
 }
 
 type Feature = OnshapeFeatureListResponse["features"][number];
+type FeatureParameter = NonNullable<Feature["parameters"]>[number];
 
 export function checkDesign(snapshot: DesignSnapshot): DesignCheckResult {
     switch (snapshot.elementType) {
@@ -80,6 +81,7 @@ function checkPartStudio(snapshot: PartStudioSnapshot): DesignCheckResult {
             ...originCube,
             ...sketches,
             ...features,
+            ...checkMissingSelections(snapshot.features),
             ...checkRollback(snapshot.features),
             ...checkParts(snapshot)
         ]),
@@ -208,6 +210,42 @@ function checkFeatures(response: OnshapeFeatureListResponse): DesignIssue[] {
                 return [];
         }
     });
+}
+
+/**
+ * Onshape draws a feature yellow once a pick it was given is gone, and still
+ * calls it OK. A selection box holding a pick that resolves beside one that
+ * resolves to nothing has lost that one; a box of only unresolved picks may
+ * hold default planes, which never resolve.
+ */
+function checkMissingSelections(
+    response: OnshapeFeatureListResponse
+): DesignIssue[] {
+    const { rollbackIndex = -1 } = response;
+    const built =
+        rollbackIndex < 0
+            ? response.features
+            : response.features.slice(0, rollbackIndex);
+    return built
+        .filter((feature) => !feature.suppressed)
+        .filter((feature) => {
+            const status =
+                response.featureStates?.[feature.featureId]?.featureStatus;
+            return status !== "WARNING" && status !== "ERROR";
+        })
+        .filter((feature) => feature.parameters?.some(hasLostPick))
+        .map((feature) => ({
+            type: DesignIssueType.FEATURE_WARNING,
+            subject: featureName(feature),
+            featureId: feature.featureId
+        }));
+}
+
+function hasLostPick(parameter: FeatureParameter): boolean {
+    const resolves = (parameter.queries ?? []).map(
+        (query) => (query.deterministicIds?.length ?? 0) > 0
+    );
+    return resolves.includes(true) && resolves.includes(false);
 }
 
 /** Features below the rollback bar are left out of the model. */

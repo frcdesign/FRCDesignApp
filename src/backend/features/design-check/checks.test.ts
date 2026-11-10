@@ -46,6 +46,20 @@ function extrude(featureId: string, overrides: Partial<Feature> = {}): Feature {
     };
 }
 
+/** One selection box, holding a pick per list of the ids it resolves to. */
+function picks(
+    ...resolved: string[][]
+): NonNullable<Feature["parameters"]>[number] {
+    return {
+        btType: "BTMParameterQueryList-148",
+        parameterId: "entities",
+        queries: resolved.map((deterministicIds) => ({
+            btType: "BTMIndividualQuery-138",
+            deterministicIds
+        }))
+    };
+}
+
 function part(
     partId: string,
     overrides: Partial<OnshapePart> = {}
@@ -251,6 +265,7 @@ describe("a Part Studio", () => {
             [DesignIssueType.SKETCH_UNDERDEFINED, "Sketch 4"],
             [DesignIssueType.SKETCH_UNDERDEFINED, "Sketch 6"],
             [DesignIssueType.SKETCH_UNDERDEFINED, "Sketch 7"],
+            [DesignIssueType.FEATURE_WARNING, "Extrude 2"],
             [DesignIssueType.PART_NO_MATERIAL, "Part 2"],
             [DesignIssueType.PART_NO_MATERIAL, "Part 3"],
             [DesignIssueType.FEATURE_SUPPRESSED, "Sketch 5"],
@@ -365,6 +380,46 @@ describe("a Part Studio", () => {
         // Onshape sends the feature count with the bar at the end.
         expect(types(partStudio({ features, rollbackIndex: 3 }))).toEqual([]);
         expect(types(partStudio({ features, rollbackIndex: -1 }))).toEqual([]);
+    });
+
+    it("calls a feature yellow once one of a box's picks is gone", () => {
+        const snapshot = partStudio({
+            features: [
+                originCube(),
+                extrude("lost", { parameters: [picks(["JlC"], [])] }),
+                extrude("whole", { parameters: [picks(["JmC"], ["JnC"])] })
+            ]
+        });
+
+        expect(
+            checkDesign(snapshot).issues.map((issue) => [
+                issue.type,
+                issue.featureId
+            ])
+        ).toEqual([[DesignIssueType.FEATURE_WARNING, "lost"]]);
+    });
+
+    it("looks for lost picks only where Onshape would show them", () => {
+        const lost = [picks(["JlC"], [])];
+        const snapshot = partStudio({
+            features: [
+                originCube(),
+                // A default plane never resolves.
+                { ...sketch("onTop"), parameters: [picks([])] },
+                extrude("red", { parameters: lost }),
+                extrude("off", { parameters: lost, suppressed: true }),
+                extrude("rolledBack", { parameters: lost })
+            ],
+            statuses: { red: "ERROR" },
+            sketchStatuses: { onTop: "WELL_DEFINED" },
+            rollbackIndex: 4
+        });
+
+        expect(types(snapshot)).toEqual([
+            DesignIssueType.FEATURE_ERROR,
+            DesignIssueType.ROLLBACK_NOT_AT_END,
+            DesignIssueType.FEATURE_SUPPRESSED
+        ]);
     });
 
     it("flags a part with no material, part number or description", () => {

@@ -169,17 +169,17 @@ interface DesignCheckResultsProps {
 
 Severity follows from the type alone (`getDesignIssueSeverity`).
 
-| Type                                                               | Severity               | Raised for                                                                                                |
-| ------------------------------------------------------------------ | ---------------------- | --------------------------------------------------------------------------------------------------------- |
-| `SKETCH_UNDERDEFINED` / `SKETCH_OVERDEFINED`                       | Warning / Error        | An unsuppressed sketch Onshape reports so                                                                 |
-| `ORIGIN_CUBE_MISSING` / `ORIGIN_CUBE_NOT_FIRST`                    | Warning / Warning      | A Part Studio with no Origin Cube, or with it below the first feature                                     |
-| `ORIGIN_CUBE_SUPPRESSED`                                           | Error                  | The Origin Cube suppressed                                                                                |
-| `FEATURE_ERROR` / `FEATURE_WARNING` / `FEATURE_SUPPRESSED`         | Error / Warning / Info | A feature or mate Onshape marks red or yellow, or one left suppressed; never the Origin Cube for the last |
-| `ROLLBACK_NOT_AT_END`                                              | Warning                | A Part Studio's rollback bar above its last feature                                                       |
-| `PART_NO_MATERIAL` / `PART_NO_PART_NUMBER` / `PART_NO_DESCRIPTION` | Warning / Info / Info  | A solid part missing one, the Origin Cube's own cube aside                                                |
-| `INSTANCE_FIXED`                                                   | Warning                | A top-level instance that is fixed                                                                        |
-| `INSTANCE_FLOATING`                                                | Warning                | A top-level instance no unsuppressed mate or group holds and no pattern copies, broken ones aside         |
-| `INSTANCE_BROKEN`                                                  | Error                  | An instance Onshape sends with only its name and id, or a part instance with an empty part id             |
+| Type                                                               | Severity               | Raised for                                                                                                                                                                                                                  |
+| ------------------------------------------------------------------ | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SKETCH_UNDERDEFINED` / `SKETCH_OVERDEFINED`                       | Warning / Error        | An unsuppressed sketch Onshape reports so                                                                                                                                                                                   |
+| `ORIGIN_CUBE_MISSING` / `ORIGIN_CUBE_NOT_FIRST`                    | Warning / Warning      | A Part Studio with no Origin Cube, or with it below the first feature                                                                                                                                                       |
+| `ORIGIN_CUBE_SUPPRESSED`                                           | Error                  | The Origin Cube suppressed                                                                                                                                                                                                  |
+| `FEATURE_ERROR` / `FEATURE_WARNING` / `FEATURE_SUPPRESSED`         | Error / Warning / Info | A feature or mate Onshape marks red or yellow, or one left suppressed; never the Origin Cube for the last. A built Part Studio feature is also yellow when a selection box lost one pick beside another that still resolves |
+| `ROLLBACK_NOT_AT_END`                                              | Warning                | A Part Studio's rollback bar above its last feature                                                                                                                                                                         |
+| `PART_NO_MATERIAL` / `PART_NO_PART_NUMBER` / `PART_NO_DESCRIPTION` | Warning / Info / Info  | A solid part missing one, the Origin Cube's own cube aside                                                                                                                                                                  |
+| `INSTANCE_FIXED`                                                   | Warning                | A top-level instance that is fixed                                                                                                                                                                                          |
+| `INSTANCE_FLOATING`                                                | Warning                | A top-level instance no unsuppressed mate or group holds and no pattern copies, broken ones aside                                                                                                                           |
+| `INSTANCE_BROKEN`                                                  | Error                  | An instance Onshape sends with only its name and id, or a part instance with an empty part id                                                                                                                               |
 
 The assembly is read without non-solid instances, so an inserted sketch is
 never checked.
@@ -220,9 +220,10 @@ only with one (`canResume` in `src/frontend/routes/index.tsx`).
    `GET /api/design-check`, signed in. Signed out, the page asks them to sign
    in instead.
 2. The route reads the tab's snapshot as the caller, in the default
-   configuration, all calls at once. If the sketches can't be listed for any
-   reason but Onshape refusing the caller, the check goes on without their
-   status and says so.
+   configuration, all calls at once. A Part Studio's features are asked for
+   with geometry ids, without which Onshape sends no feature's status. If the
+   sketches can't be listed for any reason but Onshape refusing the caller, the
+   check goes on without their status and says so.
 3. `checkDesign` raises the issues and sorts them worst first. An over-defined
    sketch, and an Origin Cube below the first feature, are each reported once,
    as themselves, rather than also as the warning they raise.
@@ -263,14 +264,15 @@ In [strings/design-check.md](../strings/design-check.md).
 
 ## Failure and recovery
 
-| What goes wrong                              | Shows as                                                         | Put right by    |
-| -------------------------------------------- | ---------------------------------------------------------------- | --------------- |
-| Signed out                                   | The sign-in notice                                               | **Sign in**     |
-| Onshape refuses or rate-limits the caller    | "Failed to check this tab.", with **Send a report**              | **Check again** |
-| Any other call fails or times out            | The same                                                         | **Check again** |
-| A feature is missing a selection, and builds | Nothing: Onshape reports it `OK`; its own list shows the warning | —               |
-| The sketches can't be listed                 | The other issues, and a note that sketches went unchecked        | **Check again** |
-| Onshape stops sending `sketchSolveStatus`    | The note that sketches went unchecked, on every Part Studio      | A change here   |
+| What goes wrong                                 | Shows as                                                    | Put right by    |
+| ----------------------------------------------- | ----------------------------------------------------------- | --------------- |
+| Signed out                                      | The sign-in notice                                          | **Sign in**     |
+| Onshape refuses or rate-limits the caller       | "Failed to check this tab.", with **Send a report**         | **Check again** |
+| Any other call fails or times out               | The same                                                    | **Check again** |
+| A feature lost one of a box's picks, and builds | "Feature with a warning", though Onshape reports it `OK`    | —               |
+| A feature lost every pick in a box, and builds  | Nothing: a box of default planes resolves to nothing too    | —               |
+| The sketches can't be listed                    | The other issues, and a note that sketches went unchecked   | **Check again** |
+| Onshape stops sending `sketchSolveStatus`       | The note that sketches went unchecked, on every Part Studio | A change here   |
 
 ## Decisions
 
@@ -296,6 +298,9 @@ In [strings/design-check.md](../strings/design-check.md).
   instance to look in ([ONSHAPE.md](../ONSHAPE.md)). A broken instance has no
   part left, so it is named only. A selection cancels any selection request
   outstanding, and the page makes none.
+- **A lost pick counts only beside one that still resolves.** A pick of a
+  default plane resolves to nothing as well, so a box where nothing resolves
+  can't be told from a sketch on Top.
 - **Grouped by type.** A Part Studio of thirty parts with no part number is one
   box listing thirty names, not thirty boxes.
 
