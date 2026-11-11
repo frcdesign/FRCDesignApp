@@ -102,6 +102,8 @@ interface QueryListProps {
     problem?: (entity: OnshapeSelection) => RowProblem | undefined;
     /** Whether the rows' problems are being worked out, shown by a spinner beside Clear. */
     isChecking?: boolean;
+    /** Takes picks from what the Onshape window has selected, never limiting picks or prompting for them. */
+    isPassive?: boolean;
 }
 
 /** Why a row won't do what it was picked for (an error), or what's off about how it will (a warning). */
@@ -966,7 +968,8 @@ closes the menu and switches to the page.
 2. Clicking a `QueryList` focuses it (one at a time, `useOnshapeSelection`) and
    shows its prompt in Onshape's bubble. A form's first list is `autoFocus`:
    focused on mount, and again whenever no list is, as when the focused list
-   unmounts; here that's **Faces** or **Circular edges**. The focused list adds
+   unmounts; here that's **Faces** or **Circular edges**. Once the person
+   finishes selecting (below), no list is focused until one is clicked. The focused list adds
    what's picked of the kind it takes, drops what's deselected, and repeats its
    prompt in the bubble for anything else picked. The panel shows no prompt of
    its own. With no list focused, the selection is ignored. A list is named
@@ -988,6 +991,11 @@ closes the menu and switches to the page.
    Losing focus or unmounting sends
    `stopRequest`. Every stop names the request it ends by its `messageId`,
    which Onshape answers as `stoppedRequestId`.
+
+    While a request is live (`filtering`), a bar along the bottom of the panel
+    says selections are filtered (`SelectionBar`). Its **Finish selecting**
+    button unfocuses the list (`finishSelecting`), which stops the request.
+
 4. Hovering a row, in any list, lights its entity up alone
    (`requestSelectionHighlight`, which makes it what the Onshape window shows
    selected, each with its own message id). Moving between rows lights each

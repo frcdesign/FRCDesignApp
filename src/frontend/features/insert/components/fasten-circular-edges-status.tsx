@@ -161,6 +161,8 @@ export function FastenCircularEdgesStatus(): ReactNode {
                 />
                 <QueryList
                     id={FASTEN_TARGETS_LIST}
+                    // Picks before an insert are whatever's selected; limiting them would get in the way
+                    isPassive
                     label={isFaces ? m.fastenFaces() : m.fastenCircularEdges()}
                     prompt={
                         isFaces
@@ -178,6 +180,7 @@ export function FastenCircularEdgesStatus(): ReactNode {
                 {isFaces && (
                     <QueryList
                         id={FASTEN_EXCLUDED_LIST}
+                        isPassive
                         label={m.fastenEdgesToExclude()}
                         prompt={m.fastenEdgesToExcludePrompt()}
                         entities={excluded}

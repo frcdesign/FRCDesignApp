@@ -12,6 +12,7 @@ import {
 } from "../lib/selection";
 import { Status } from "../lib/status";
 import { QueryList } from "./query-list";
+import { SelectionBar } from "./selection-bar";
 
 const PROMPT = "Select edges.";
 
@@ -370,6 +371,80 @@ describe("QueryList", () => {
                 ]
             })
         );
+    });
+
+    it("shows a bar while it limits picks, whose button finishes selecting until a list is clicked", async () => {
+        const AutoFocused = () => {
+            const [entities, setEntities] = useState<OnshapeSelection[]>([]);
+            return (
+                <>
+                    <QueryList
+                        id="holes"
+                        label="Holes"
+                        prompt={PROMPT}
+                        entities={entities}
+                        onChange={setEntities}
+                        accepts={() => true}
+                        filter={CIRCULAR_EDGES}
+                        autoFocus
+                    />
+                    <SelectionBar />
+                </>
+            );
+        };
+        renderWithProviders(<AutoFocused />);
+        expect(screen.getByText("Selections are filtered.")).toBeTruthy();
+
+        messages = [];
+        await userEvent.click(
+            screen.getByRole("button", { name: "Finish selecting" })
+        );
+        expect(messages).toEqual([
+            expect.objectContaining({ messageName: "stopRequest" })
+        ]);
+        expect(screen.queryByText("Selections are filtered.")).toBeNull();
+        // The first list stays unfocused, so picks go nowhere
+        expect(useOnshapeSelection.getState().focused).toBeUndefined();
+        select(edge("A"));
+        expect(screen.queryByText("Edge 1")).toBeNull();
+
+        await userEvent.click(screen.getByText("Holes"));
+        expect(screen.getByText("Selections are filtered.")).toBeTruthy();
+    });
+
+    it("takes picks passively, never limiting or prompting for them", async () => {
+        const Passive = () => {
+            const [entities, setEntities] = useState<OnshapeSelection[]>([]);
+            return (
+                <>
+                    <QueryList
+                        id="holes"
+                        label="Holes"
+                        prompt={PROMPT}
+                        entities={entities}
+                        onChange={setEntities}
+                        accepts={(entity) => entity.entityType === "EDGE"}
+                        filter={CIRCULAR_EDGES}
+                        autoFocus
+                        isPassive
+                    />
+                    <SelectionBar />
+                </>
+            );
+        };
+        renderWithProviders(<Passive />);
+        select(edge("A"), { ...edge("F"), entityType: "FACE" });
+        expect(screen.getByText("Edge 1")).toBeTruthy();
+
+        await userEvent.click(screen.getByText("Clear"));
+        await userEvent.click(screen.getByText("Holes"));
+        expect(messages).not.toContainEqual(
+            expect.objectContaining({ messageName: "requestSelection" })
+        );
+        expect(messages).not.toContainEqual(
+            expect.objectContaining({ messageName: "showMessageBubble" })
+        );
+        expect(screen.queryByText("Selections are filtered.")).toBeNull();
     });
 
     it("shows a spinner beside Clear while its rows are checked", () => {

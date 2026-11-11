@@ -59,8 +59,8 @@ interface QueryListProps {
     rowSection?: (entity: OnshapeSelection) => ReactNode;
     /** Takes picks whenever no list does, as a form's first list should. */
     autoFocus?: boolean;
-    /** Why a row won't do what it was picked for; shown under it, in red. */
-    problem?: (entity: OnshapeSelection) => string | undefined;
+    /** Takes picks from what the Onshape window has selected, never limiting picks or prompting for them. */
+    isPassive?: boolean;
 }
 ```
 
@@ -309,10 +309,10 @@ enum MateLocation {
    hidden (`keepMounted`), so its lists take picks with the card closed, and
    the icon turns the primary colour while one of them is focused. The targets'
    list is `autoFocus`: it is focused on mount, and again whenever the focused
-   list unmounts, so one list always takes picks. A focused list limits what
-   the Onshape window lets be picked to its kind, as in Auto Assembly.
-   Hovering a row lights its entity up; clicking a list shows its prompt in
-   Onshape.
+   list unmounts, so one list always takes picks. Both lists are passive
+   (`isPassive`): they take what's selected in the Onshape window, but never
+   limit picks, prompt for them, or light them up on their own. Hovering a row
+   lights its entity up.
 4. Changing the mode clears the picks.
 5. A moment after the picks change, they're checked in the background with
    Auto Assembly's `POST /api/auto-assembly/check`, without options: a pick
@@ -376,13 +376,13 @@ In [strings/fasten.md](../strings/fasten.md).
 ## Decisions
 
 - **One way to pick, shared with Auto Assembly.** The app follows the
-  selection Onshape reports and lets a focused query list take it. A focused list
-  also holds a `requestSelection` limiting the Onshape window to its kind, in
-  the form Onshape answers to rather than the one it documents (see Quick
-  fastener's picking flow); a hovered row lights its own entity up alone, and
-  leaving it lights the focused list's picks up again. The list still refuses other
-  kinds, and the scan drops edges that
-  aren't circular.
+  selection Onshape reports and lets a focused query list take it. A hovered
+  row lights its own entity up alone. The list refuses other kinds, and the
+  scan drops edges that aren't circular.
+- **Picking before an insert is passive.** Someone browsing the library is
+  also selecting in Onshape for their own reasons. Limiting their picks would
+  get in the way, and there's no easy way for them to opt in or out, so the
+  lists only listen.
 - **A list is always focused.** The targets' list is focused in the navbar and
   in the insert menu, so picking in Onshape and then inserting, or quick
   inserting, needs no click in the panel. A list takes what's added to the

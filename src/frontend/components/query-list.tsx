@@ -55,6 +55,8 @@ interface QueryListProps {
     problem?: (entity: OnshapeSelection) => RowProblem | undefined;
     /** Whether the rows' problems are being worked out, shown by a spinner beside Clear. */
     isChecking?: boolean;
+    /** Takes picks from what the Onshape window has selected, never limiting picks or prompting for them. */
+    isPassive?: boolean;
 }
 
 /** Why a row won't do what it was picked for (an error), or what's off about how it will (a warning). */
@@ -81,14 +83,15 @@ function defaultName(entity: OnshapeSelection, index: number): string {
  * inside its box as Onshape's are. Click it to focus it, and it follows the
  * window's selection: what's picked of the kind it takes is added, and what's
  * deselected is dropped. Hover a row to light its entity up alone. A form's
- * first list takes `autoFocus`, so whenever no list is focused it is.
+ * first list takes `autoFocus`, so whenever no list is focused it is, until
+ * the person finishes selecting.
  *
  * On focus, when a list is shown or hidden, and once its picks are cleared,
  * the focused list puts its prompt in Onshape's bubble and asks for the filter
  * or, holding picks, lights them up. A highlight cancels the filter, and a
  * request clears what the window shows, so hovering a row highlights its
  * entity alone, leaving lights the focused list's picks up, and the filter is
- * off until the list is clicked again.
+ * off until the list is clicked again. A passive list does none of this.
  */
 export function QueryList(props: QueryListProps): ReactNode {
     const {
@@ -103,13 +106,15 @@ export function QueryList(props: QueryListProps): ReactNode {
         rowSection,
         autoFocus = false,
         problem,
-        isChecking = false
+        isChecking = false,
+        isPassive = false
     } = props;
     const target = useTargetElement();
     const isFocused = useOnshapeSelection((state) => state.focused === id);
     const isUnclaimed = useOnshapeSelection(
         (state) => state.focused === undefined
     );
+    const isFinished = useOnshapeSelection((state) => state.isFinished);
     const layout = useOnshapeSelection((state) => state.layout);
     const isEmpty = entities.length === 0;
     // The stop names the request it ends
@@ -124,7 +129,11 @@ export function QueryList(props: QueryListProps): ReactNode {
                     (entity) =>
                         accepts(entity) && !keys.has(selectionKey(entity))
                 );
-                if (target && added.some((entity) => !accepts(entity))) {
+                if (
+                    target &&
+                    !isPassive &&
+                    added.some((entity) => !accepts(entity))
+                ) {
                     sendMessageBubble(target, prompt);
                 }
                 if (target && isHighlightCleared) {
@@ -137,7 +146,7 @@ export function QueryList(props: QueryListProps): ReactNode {
                     onChange([...kept, ...taken]);
                 }
             }),
-        [id, entities, onChange, accepts, target, prompt]
+        [id, entities, onChange, accepts, target, prompt, isPassive]
     );
 
     useEffect(() => holdPicks(id, entities), [id, entities]);
@@ -147,11 +156,18 @@ export function QueryList(props: QueryListProps): ReactNode {
         return bumpLayout;
     }, []);
 
+    // Shown, it takes picks if no list does, even once the person finished selecting elsewhere
     useEffect(() => {
-        if (autoFocus && isUnclaimed) {
+        if (autoFocus && useOnshapeSelection.getState().focused === undefined) {
             useOnshapeSelection.getState().focus(id);
         }
-    }, [autoFocus, isUnclaimed, id]);
+    }, [autoFocus, id]);
+
+    useEffect(() => {
+        if (autoFocus && isUnclaimed && !isFinished) {
+            useOnshapeSelection.getState().focus(id);
+        }
+    }, [autoFocus, isUnclaimed, isFinished, id]);
 
     // Gone, it leaves picks to the form's first list
     useEffect(
@@ -164,7 +180,7 @@ export function QueryList(props: QueryListProps): ReactNode {
     );
 
     useEffect(() => {
-        if (!target || !isFocused) {
+        if (!target || !isFocused || isPassive) {
             return;
         }
         sendMessageBubble(target, prompt);
@@ -180,22 +196,22 @@ export function QueryList(props: QueryListProps): ReactNode {
                 selectionRequest.current = undefined;
             }
         };
-    }, [target, isFocused, filter, prompt, id, layout]);
+    }, [target, isFocused, filter, prompt, id, layout, isPassive]);
 
     // Cleared, by Clear, its last row's removal or the form, it asks for picks again
     const wasEmpty = useRef(isEmpty);
     useEffect(() => {
-        if (target && isFocused && isEmpty && !wasEmpty.current) {
+        if (target && isFocused && !isPassive && isEmpty && !wasEmpty.current) {
             sendMessageBubble(target, prompt);
             selectionRequest.current = sendSelectionRequest(target, filter);
         }
         wasEmpty.current = isEmpty;
-    }, [target, isFocused, isEmpty, prompt, filter]);
+    }, [target, isFocused, isEmpty, prompt, filter, isPassive]);
 
     const focus = () => {
         useOnshapeSelection.getState().focus(id);
         // Newly focused, the focus effect asks; already, a highlight has cancelled the request since
-        if (target && isFocused) {
+        if (target && isFocused && !isPassive) {
             sendMessageBubble(target, prompt);
             selectionRequest.current = sendSelectionRequest(target, filter);
         }

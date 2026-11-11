@@ -121,6 +121,8 @@ export function sendHighlightMessage(
     entities: HighlightedEntity[]
 ): string {
     expectSelection(entities.filter(isEntity));
+    // A highlight cancels a pending selection request
+    useOnshapeSelection.setState({ filtering: undefined });
     const messageId = `${HIGHLIGHT_PREFIX}${++highlights}`;
     sendMessage(elementPath, {
         messageName: MessageType.REQUEST_HIGHLIGHT_SELECTION,
@@ -190,6 +192,7 @@ export function sendSelectionRequest(
         messageId,
         ...filter
     });
+    useOnshapeSelection.setState({ filtering: messageId });
     return messageId;
 }
 
@@ -202,6 +205,9 @@ export function sendStopRequestMessage(
         messageName: MessageType.STOP_REQUEST,
         messageId
     });
+    if (useOnshapeSelection.getState().filtering === messageId) {
+        useOnshapeSelection.setState({ filtering: undefined });
+    }
 }
 
 /** Onshape's blue bubble at the top of the panel. */

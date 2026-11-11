@@ -754,5 +754,7 @@
     "autoAssemblyScrewsAvailable": "Screws are also available via Auto Assembly.",
     "autoAssemblyWashersAvailable": "Washers are also available via Auto Assembly.",
     "autoAssemblyNutsAvailable": "Nuts are also available via Auto Assembly.",
-    "autoAssemblyOpen": "Auto Assembly"
+    "autoAssemblyOpen": "Auto Assembly",
+    "selectionBarFiltered": "Selections are filtered.",
+    "selectionBarFinish": "Finish selecting"
 }

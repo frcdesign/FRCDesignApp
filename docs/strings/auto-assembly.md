@@ -49,6 +49,7 @@ page shows them as they come.
 | "Edge {n}" / "Face {n}" / "Screw {n}"                                | Row names              | A list's rows, and the run's picks                                | Something picked                                               |                                                      |
 | "Insert"                                                             | Button                 | Under the form                                                    | Always; disabled with nothing picked                           |                                                      |
 | "Unexpectedly failed to start inserting."                            | Error toast            |                                                                   | The insert request failed                                      |                                                      |
+| "Selections are filtered." / "Finish selecting"                      | Bar text, button       | Along the bottom of the panel                                     | A list limits what Onshape lets be picked                      | **⚑** New                                            |
 | "Clear"                                                              | Button                 | A list's box, with a spinner beside it while its rows are checked | The list has picks                                             |                                                      |
 
 ## A run

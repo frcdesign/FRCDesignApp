@@ -5,6 +5,7 @@ import {
     type SearchSchemaInput
 } from "@tanstack/react-router";
 import { AppShell } from "@mantine/core";
+import { SelectionBar } from "../../components/selection-bar";
 import { useElementSize } from "@mantine/hooks";
 import { Suspense } from "react";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
@@ -91,6 +92,7 @@ function App() {
                 >
                     <Outlet />
                 </Suspense>
+                <SelectionBar />
                 <TanStackRouterDevtools />
             </AppShell.Main>
             {/* Over whichever library the app opened in, until it is answered. */}

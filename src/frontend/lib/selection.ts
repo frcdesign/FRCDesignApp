@@ -116,9 +116,14 @@ interface SelectionState {
     isHighlighted: boolean;
     /** Counts query lists mounting and unmounting, so the focused one asks Onshape for picks again. */
     layout: number;
+    /** The selection request limiting what the Onshape window lets be picked, by its message id. */
+    filtering?: string;
+    /** The person finished selecting: no list takes picks until one is clicked. */
+    isFinished: boolean;
     /** Takes a SELECTION message's whole selection. */
     receive: (selection: OnshapeSelection[]) => void;
     focus: (listId: string | undefined) => void;
+    finishSelecting: () => void;
 }
 
 /** A list shown or hidden: the focused list's prompt and request go again. */
@@ -196,6 +201,7 @@ export const useOnshapeSelection = create<SelectionState>()((set, get) => ({
     shown: [],
     isHighlighted: false,
     layout: 0,
+    isFinished: false,
     receive: (selection) => {
         const { shown: previous, awaited, focused, isHighlighted } = get();
         set({ shown: selection });
@@ -219,5 +225,7 @@ export const useOnshapeSelection = create<SelectionState>()((set, get) => ({
             });
         }
     },
-    focus: (listId) => set({ focused: listId })
+    focus: (listId) => set({ focused: listId, isFinished: false }),
+    // Unfocused, the list stops its request
+    finishSelecting: () => set({ focused: undefined, isFinished: true })
 }));
